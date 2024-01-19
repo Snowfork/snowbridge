@@ -77,12 +77,20 @@ type Data struct {
 	SyncCommitteeUpdate   beaconjson.Update
 	FinalizedHeaderUpdate beaconjson.Update
 	HeaderUpdate          beaconjson.HeaderUpdate
+	InboundMessageTest    InboundMessageTest
+}
+
+type InboundMessageTest struct {
+	ExecutionHeader beaconjson.CompactExecutionHeader `json:"execution_header"`
+	Message         parachain.MessageJSON             `json:"message"`
 }
 
 const (
-	pathToBeaconBenchmarkData    = "parachain/pallets/ethereum-client/src/benchmarking"
-	pathToBenchmarkDataTemplate  = "parachain/templates/benchmarking-fixtures.mustache"
-	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-client/tests/fixtures"
+	pathToBeaconBenchmarkData          = "parachain/pallets/ethereum-client/src/benchmarking"
+	pathToInboundQueueBenchmarkData    = "parachain/pallets/inbound-queue/src/benchmarking"
+	pathToBenchmarkDataTemplate        = "parachain/templates/benchmarking-fixtures.mustache"
+	pathToInboundBenchmarkDataTemplate = "parachain/templates/inbound-fixtures.mustache"
+	pathToBeaconTestFixtureFiles       = "parachain/pallets/ethereum-client/tests/fixtures"
 )
 
 // Only print the hex encoded call as output of this command
@@ -145,9 +153,6 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		specSettings := conf.Source.Beacon.Spec
-
-		SlotTimeDuration := 2 * time.Second
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
 		s := syncer.New(endpoint, conf.Source.Beacon.Spec)
 
@@ -276,11 +281,6 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			BlockNumber:  headerUpdate.ExecutionHeader.BlockNumber,
 		}
 
-		type InboundMessageTest struct {
-			ExecutionHeader beaconjson.CompactExecutionHeader `json:"execution_header"`
-			Message         parachain.MessageJSON             `json:"message"`
-		}
-
 		inboundMessageTest := InboundMessageTest{
 			ExecutionHeader: compactBeaconHeader,
 			Message:         messageJSON,
@@ -322,24 +322,29 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		finalizedUpdate.RemoveLeadingZeroHashes()
 		headerUpdate.RemoveLeadingZeroHashes()
 
-		data := Data{
-			CheckpointUpdate:      initialSync,
-			SyncCommitteeUpdate:   syncCommitteeUpdate,
-			FinalizedHeaderUpdate: finalizedUpdate,
-			HeaderUpdate:          headerUpdate,
-		}
-
 		log.WithFields(log.Fields{
 			"location": pathToBeaconTestFixtureFiles,
 			"template": pathToBenchmarkDataTemplate,
 		}).Info("rendering file using mustache")
 
-		rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
-		if err != nil {
-			return fmt.Errorf("render benchmark fixture: %w", err)
+		inboundMessageTest.Message.RemoveLeadingZeroHashes()
+		inboundMessageTest.ExecutionHeader.RemoveLeadingZeroHashes()
+
+		data := Data{
+			CheckpointUpdate:      initialSync,
+			SyncCommitteeUpdate:   syncCommitteeUpdate,
+			FinalizedHeaderUpdate: finalizedUpdate,
+			HeaderUpdate:          headerUpdate,
+			InboundMessageTest:    inboundMessageTest,
 		}
 
 		filename := fmt.Sprintf("fixtures.rs")
+
+		// writing beacon fixtures
+		rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
+		if err != nil {
+			return fmt.Errorf("render beacon benchmark fixture: %w", err)
+		}
 
 		log.WithFields(log.Fields{
 			"location": pathToBeaconBenchmarkData,
@@ -351,38 +356,46 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		// Generate test fixture in next period(require waiting a long time)
+		// writing inbound queue fixtures
+		rendered, err = mustache.RenderFile(pathToInboundBenchmarkDataTemplate, data)
+		if err != nil {
+			return fmt.Errorf("render inbound queue benchmark fixture: %w", err)
+		}
+
+		log.WithFields(log.Fields{
+			"location": pathToInboundQueueBenchmarkData,
+			"filename": filename,
+		}).Info("writing result file")
+
+		err = writeBenchmarkDataFile(filename, rendered)
+		if err != nil {
+			return err
+		}
+
+		// Generate test fixture in next period (require waiting a long time)
 		waitUntilNextPeriod, err := cmd.Flags().GetBool("wait_until_next_period")
 		if waitUntilNextPeriod {
-			log.Info("waiting finalized_update in next period (5 hours later), be patient and go to sleep first...")
-			elapseEpochs := uint64(1)
-			time.Sleep(time.Duration(specSettings.SlotsInEpoch*(specSettings.EpochsPerSyncCommitteePeriod-elapseEpochs)) * SlotTimeDuration)
-			nextFinalizedUpdateScale, err := s.GetFinalizedUpdate()
-			if err != nil {
-				return fmt.Errorf("get next finalized header update: %w", err)
-			}
-			nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
-			nextFinalizedUpdatePeriod := s.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
-			if initialSyncPeriod+1 != nextFinalizedUpdatePeriod {
-				return fmt.Errorf("nextFinalizedUpdatePeriod should be 1 period ahead of initialSyncPeriod")
-			}
-			err = writeJSONToFile(nextFinalizedUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "next-finalized-header-update.json"))
-			if err != nil {
-				return err
-			}
-			log.Info("created next finalized header update file")
+			log.Info("waiting finalized_update in next period (5 hours later), be patient and wait...")
+			for {
+				nextFinalizedUpdateScale, err := s.GetFinalizedUpdate()
+				if err != nil {
+					return fmt.Errorf("get next finalized header update: %w", err)
+				}
+				nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
+				nextFinalizedUpdatePeriod := s.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
+				if initialSyncPeriod+1 == nextFinalizedUpdatePeriod {
+					err := writeJSONToFile(nextFinalizedUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "next-finalized-header-update.json"))
+					if err != nil {
+						return err
+					}
+					log.Info("created next finalized header update file")
 
-			// generate nextSyncCommitteeUpdate
-			nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod + 1)
-			if err != nil {
-				return fmt.Errorf("get sync committee update: %w", err)
+					break
+				} else {
+					log.WithField("slot", nextFinalizedUpdate.FinalizedHeader.Slot).Info("wait 5 minutes for next sync committee period")
+					time.Sleep(time.Minute * 5)
+				}
 			}
-			nextSyncCommitteeUpdate := nextSyncCommitteeUpdateScale.Payload.ToJSON()
-			err = writeJSONToFile(nextSyncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "next-sync-committee-update.json"))
-			if err != nil {
-				return err
-			}
-			log.Info("created next sync committee update file")
 		}
 
 		log.Info("done")

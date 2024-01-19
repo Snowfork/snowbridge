@@ -5,6 +5,7 @@ package parachain
 
 import (
 	"fmt"
+	"strings"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -90,4 +91,38 @@ func (m Message) ToJSON() MessageJSON {
 			},
 		},
 	}
+}
+
+func (m *MessageJSON) RemoveLeadingZeroHashes() {
+	m.EventLog.RemoveLeadingZeroHashes()
+	m.Proof.RemoveLeadingZeroHashes()
+}
+
+func (e *EventLogJSON) RemoveLeadingZeroHashes() {
+	e.Address = removeLeadingZeroHash(e.Address)
+	e.Topics = removeLeadingZeroHashForSlice(e.Topics)
+	e.Data = removeLeadingZeroHash(e.Data)
+}
+
+func (p *ProofJSON) RemoveLeadingZeroHashes() {
+	p.BlockHash = removeLeadingZeroHash(p.BlockHash)
+	p.Data.RemoveLeadingZeroHashes()
+}
+
+func (p *ProofDataJSON) RemoveLeadingZeroHashes() {
+	p.Keys = removeLeadingZeroHashForSlice(p.Keys)
+	p.Values = removeLeadingZeroHashForSlice(p.Values)
+}
+
+func removeLeadingZeroHashForSlice(s []string) []string {
+	result := make([]string, len(s))
+
+	for i, item := range s {
+		result[i] = removeLeadingZeroHash(item)
+	}
+	return result
+}
+
+func removeLeadingZeroHash(s string) string {
+	return strings.Replace(s, "0x", "", 1)
 }
