@@ -351,7 +351,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			"filename": filename,
 		}).Info("writing result file")
 
-		err = writeBenchmarkDataFile(filename, rendered)
+		err = writeBenchmarkDataFile(fmt.Sprintf("%s/%s", pathToBeaconBenchmarkData, filename), rendered)
 		if err != nil {
 			return err
 		}
@@ -367,7 +367,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			"filename": filename,
 		}).Info("writing result file")
 
-		err = writeBenchmarkDataFile(filename, rendered)
+		err = writeBenchmarkDataFile(fmt.Sprintf("%s/%s", pathToInboundQueueBenchmarkData, filename), rendered)
 		if err != nil {
 			return err
 		}
@@ -429,8 +429,8 @@ func writeJSONToFile(data interface{}, path string) error {
 	return nil
 }
 
-func writeBenchmarkDataFile(filename, fileContents string) error {
-	f, err := os.OpenFile(fmt.Sprintf("%s/%s", pathToBeaconBenchmarkData, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+func writeBenchmarkDataFile(path string, fileContents string) error {
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 
 	if err != nil {
 		return fmt.Errorf("create file: %w", err)

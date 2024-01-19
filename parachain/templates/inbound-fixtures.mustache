@@ -30,15 +30,15 @@ pub fn make_create_message() -> InboundQueueTest {
             },
             proof: Proof {
                 block_hash: hex!("{{InboundMessageTest.Message.Proof.BlockHash}}").into(),
-                tx_index: {{InboundMessageTest.Message.Proof.TxHash}},
+                tx_index: {{InboundMessageTest.Message.Proof.TxIndex}},
                 data: (vec![
-                {{#InboundMessageTest.Message.Proof.Keys}}
+                {{#InboundMessageTest.Message.Proof.Data.Keys}}
                     hex!("{{.}}").to_vec(),
-                {{/InboundMessageTest.Message.Proof.Keys}}
+                {{/InboundMessageTest.Message.Proof.Data.Keys}}
                 ], vec![
-                {{#InboundMessageTest.Message.Proof.Values}}
+                {{#InboundMessageTest.Message.Proof.Data.Values}}
                     hex!("{{.}}").to_vec(),
-                {{/InboundMessageTest.Message.Proof.Values}}
+                {{/InboundMessageTest.Message.Proof.Data.Values}}
                 ]),
             },
         },
