@@ -39,7 +39,7 @@
                     # typescript
                     nodePackages.pnpm
                     nodePackages.yarn
-                    nodejs_20
+                    nodejs-18_x
 
                     # ethereum
                     foundry-bin
