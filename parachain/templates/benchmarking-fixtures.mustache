@@ -5,8 +5,8 @@ use crate::{
 };
 use hex_literal::hex;
 use primitives::{
-	types::deneb::ExecutionPayloadHeader, updates::AncestryProof, BeaconHeader,
-	NextSyncCommitteeUpdate, SyncAggregate, SyncCommittee, VersionedExecutionPayloadHeader,
+    types::deneb, updates::AncestryProof, BeaconHeader, NextSyncCommitteeUpdate, SyncAggregate,
+    SyncCommittee, VersionedExecutionPayloadHeader,
 };
 use sp_core::U256;
 use sp_std::{boxed::Box, vec};
@@ -163,7 +163,7 @@ pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
             gas_used: {{HeaderUpdate.ExecutionHeader.Deneb.GasUsed}},
             timestamp: {{HeaderUpdate.ExecutionHeader.Deneb.Timestamp}},
             extra_data: hex!("{{HeaderUpdate.ExecutionHeader.Deneb.ExtraData}}").into(),
-            base_fee_per_gas: U256::from({{HeaderUpdate.ExecutionHeader.Deneb.BaseFeePerGas}} as u64),
+            base_fee_per_gas: U256::from({{HeaderUpdate.ExecutionHeader.Deneb.BaseFeePerGas}}u64),
             block_hash: hex!("{{HeaderUpdate.ExecutionHeader.Deneb.BlockHash}}").into(),
             transactions_root: hex!("{{HeaderUpdate.ExecutionHeader.Deneb.TransactionRoot}}").into(),
             withdrawals_root: hex!("{{HeaderUpdate.ExecutionHeader.Deneb.WithdrawalsRoot}}").into(),

@@ -769,7 +769,8 @@ fn submit_execution_header_update_that_skips_block() {
 	let checkpoint = Box::new(load_checkpoint_update_fixture());
 	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
 	let execution_header_update = Box::new(load_execution_header_update_fixture());
-	let mut skipped_block_execution_header_update = Box::new(load_execution_header_update_fixture());
+	let mut skipped_block_execution_header_update =
+		Box::new(load_execution_header_update_fixture());
 	let mut skipped_execution_header =
 		skipped_block_execution_header_update.execution_header.clone();
 
