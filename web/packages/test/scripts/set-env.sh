@@ -18,7 +18,7 @@ eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_I
 eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://127.0.0.1:8546}/${INFURA_PROJECT_ID:-}"
 eth_gas_limit="${ETH_GAS_LIMIT:-5000000}"
 eth_chain_id="${ETH_NETWORK_ID:-15}"
-eth_fast_mode="${ETH_FAST_MODE:-false}"
+eth_fast_mode="${ETH_FAST_MODE:-true}"
 etherscan_api_key="${ETHERSCAN_API_KEY:-}"
 
 parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
