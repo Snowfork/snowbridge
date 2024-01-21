@@ -82,7 +82,7 @@ start_lodestar() {
 set_slot_time() {
     local new_value=$1
     echo "Hack lodestar for faster slot time"
-    local preset_mainnet_config_file="$web_dir/node_modules/.pnpm/@lodestar+config@$lodestar_version/node_modules/@lodestar/config/lib/chainConfig/presets/mainnet.js"
+    local preset_mainnet_config_file="$root_dir/lodestar/packages/config/src/chainConfig/presets/mainnet.ts"
     if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
         gsed -i "s/SECONDS_PER_SLOT: .*/SECONDS_PER_SLOT: $new_value,/g" $preset_mainnet_config_file
     else

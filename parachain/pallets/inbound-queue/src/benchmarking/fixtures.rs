@@ -13,9 +13,9 @@ pub struct InboundQueueTest {
 pub fn make_create_message() -> InboundQueueTest {
     InboundQueueTest {
         execution_header: CompactExecutionHeader{
-            parent_hash: hex!("91596cce98b42ad458835e27c7d0f977b54e37e1953aaa0a1c7a6929cf43be22").into(),
-            block_number: 192,
-            state_root: hex!("538f8029002c68622aaafb78e6219784dc7c63c2ca209237fe464b5d0fc0021a").into(),
+            parent_hash: hex!("d82ec63f5c5e6ba61d62f09c188f158e6449b94bdcc31941e68639eec3c4cf7a").into(),
+            block_number: 215,
+            state_root: hex!("8b65545fe5f3216b47b6339b9c91ca2b7f1032a970b04246d9e9fb4460ee34c3").into(),
             receipts_root: hex!("7b1f61b9714c080ef0be014e01657a15f45f0304b477beebc7ca5596c8033095").into(),
         },
         message: Message {
@@ -29,7 +29,7 @@ pub fn make_create_message() -> InboundQueueTest {
                 data: hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002e00a736aa00000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d00e40b54020000000000000000000000000000000000000000000000000000000000").into(),
             },
             proof: Proof {
-                block_hash: hex!("e517bf7cdff73c2469e39234a583f133d1974b74f74bccc744a0baff801225f6").into(),
+                block_hash: hex!("48498dbfbcfae53a7f4c289ee00747aceea925f6260c50ead5a33e1c55c40f98").into(),
                 tx_index: 0,
                 data: (vec![
                     hex!("7b1f61b9714c080ef0be014e01657a15f45f0304b477beebc7ca5596c8033095").to_vec(),

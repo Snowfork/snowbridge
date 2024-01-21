@@ -151,7 +151,7 @@ pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
         {{^HeaderUpdate.AncestryProof}}
         ancestry_proof: None,
         {{/HeaderUpdate.AncestryProof}}
-        execution_header: VersionedExecutionPayloadHeader::Deneb(ExecutionPayloadHeader {
+        execution_header: VersionedExecutionPayloadHeader::Deneb(deneb::ExecutionPayloadHeader {
             parent_hash: hex!("{{HeaderUpdate.ExecutionHeader.Deneb.ParentHash}}").into(),
             fee_recipient: hex!("{{HeaderUpdate.ExecutionHeader.Deneb.FeeRecipient}}").into(),
             state_root: hex!("{{HeaderUpdate.ExecutionHeader.Deneb.StateRoot}}").into(),
