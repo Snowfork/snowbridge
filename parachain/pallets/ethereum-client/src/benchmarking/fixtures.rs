@@ -5,8 +5,8 @@ use crate::{
 };
 use hex_literal::hex;
 use primitives::{
-	types::deneb::ExecutionPayloadHeader, updates::AncestryProof, BeaconHeader,
-	NextSyncCommitteeUpdate, SyncAggregate, SyncCommittee, VersionedExecutionPayloadHeader,
+    ssz::deneb, updates::AncestryProof, BeaconHeader, NextSyncCommitteeUpdate, SyncAggregate,
+    SyncCommittee, VersionedExecutionPayloadHeader,
 };
 use sp_core::U256;
 use sp_std::{boxed::Box, vec};
