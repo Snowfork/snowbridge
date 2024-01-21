@@ -155,8 +155,8 @@ parameter_types! {
 			epoch: 0,
 		},
 		deneb: Fork {
-			version: [144, 0, 0, 115], // 0x90000073
-			epoch: 4294967295,
+			version: [4, 0, 0, 0], // 0x90000073
+			epoch: 0,
 		}
 	};
 	pub const ExecutionHeadersPruneThreshold: u32 = 8192;
