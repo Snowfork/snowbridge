@@ -39,7 +39,7 @@ changes_detected=0
 check_local_changes() {
     local dir=$1
     cd "$dir"
-    if git status --porcelain | grep .; then
+    if git status --untracked-files=no --porcelain . | grep .; then
         changes_detected=1
     fi
     cd -

@@ -272,10 +272,10 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		log.Info("created execution update file")
 
 		compactBeaconHeader := beaconjson.CompactExecutionHeader{
-			ParentHash:   headerUpdate.ExecutionHeader.Capella.ParentHash,
-			StateRoot:    headerUpdate.ExecutionHeader.Capella.StateRoot,
-			ReceiptsRoot: headerUpdate.ExecutionHeader.Capella.ReceiptsRoot,
-			BlockNumber:  headerUpdate.ExecutionHeader.Capella.BlockNumber,
+			ParentHash:   headerUpdate.ExecutionHeader.Deneb.ParentHash,
+			StateRoot:    headerUpdate.ExecutionHeader.Deneb.StateRoot,
+			ReceiptsRoot: headerUpdate.ExecutionHeader.Deneb.ReceiptsRoot,
+			BlockNumber:  headerUpdate.ExecutionHeader.Deneb.BlockNumber,
 		}
 
 		inboundMessageTest := InboundMessageTest{
