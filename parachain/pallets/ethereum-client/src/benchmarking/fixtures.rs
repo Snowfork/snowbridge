@@ -1,18 +1,16 @@
 // Generated, do not edit!
 // See README.md for instructions to generate
-use crate::{
-	CheckpointUpdate, ExecutionHeaderUpdate, Update,
-};
+use crate::{CheckpointUpdate, ExecutionHeaderUpdate, Update};
 use hex_literal::hex;
 use primitives::{
-    ssz::deneb, updates::AncestryProof, BeaconHeader, NextSyncCommitteeUpdate, SyncAggregate,
-    SyncCommittee, VersionedExecutionPayloadHeader,
+	types::deneb, updates::AncestryProof, BeaconHeader, NextSyncCommitteeUpdate, SyncAggregate,
+	SyncCommittee, VersionedExecutionPayloadHeader,
 };
 use sp_core::U256;
 use sp_std::{boxed::Box, vec};
 
 pub fn make_checkpoint() -> Box<CheckpointUpdate> {
-    Box::new(CheckpointUpdate {
+	Box::new(CheckpointUpdate {
         header: BeaconHeader {
             slot: 2496,
             proposer_index: 2,
@@ -557,7 +555,7 @@ pub fn make_checkpoint() -> Box<CheckpointUpdate> {
 }
 
 pub fn make_sync_committee_update() -> Box<Update> {
-    Box::new(Update {
+	Box::new(Update {
         attested_header: BeaconHeader {
             slot: 129,
             proposer_index: 5,
@@ -1123,7 +1121,7 @@ pub fn make_sync_committee_update() -> Box<Update> {
 }
 
 pub fn make_finalized_header_update() -> Box<Update> {
-    Box::new(Update {
+	Box::new(Update {
         attested_header: BeaconHeader {
             slot: 2566,
             proposer_index: 6,
@@ -1164,7 +1162,7 @@ pub fn make_finalized_header_update() -> Box<Update> {
 }
 
 pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
-    Box::new(ExecutionHeaderUpdate {
+	Box::new(ExecutionHeaderUpdate {
         header: BeaconHeader {
             slot: 215,
             proposer_index: 2,
@@ -1202,7 +1200,7 @@ pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
             gas_used: 119301,
             timestamp: 1705859527,
             extra_data: hex!("d983010d0a846765746888676f312e32312e358664617277696e").into(),
-            base_fee_per_gas: U256::from(7 as u64),
+            base_fee_per_gas: U256::from(7u64),
             block_hash: hex!("48498dbfbcfae53a7f4c289ee00747aceea925f6260c50ead5a33e1c55c40f98").into(),
             transactions_root: hex!("5ebc1347fe3df0611d4f66b19bd8e1c6f4eaed0371d850f14c83b1c77ea234e6").into(),
             withdrawals_root: hex!("792930bbd5baac43bcc798ee49aa8185ef76bb3b44ba62b91d86ae569e4bb535").into(),
