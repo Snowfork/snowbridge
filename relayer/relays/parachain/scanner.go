@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -35,16 +36,16 @@ type Scanner struct {
 //  3. Scan parachain blocks to figure out exactly which commitments need to be relayed.
 //  4. For all the parachain blocks with unsettled commitments, determine the relay chain block number in which the
 //     parachain block was included.
-func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*Task, error) {
+func (s *Scanner) Scan(ctx context.Context, relayBlockNumber uint64) ([]*Task, error) {
 	// fetch last parachain header that was finalized *before* the BEEFY block
-	beefyBlockMinusOneHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber - 1))
+	relayBlockMinusOneHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(relayBlockNumber - 1))
 	if err != nil {
-		return nil, fmt.Errorf("fetch block hash for block %v: %w", beefyBlockNumber, err)
+		return nil, fmt.Errorf("fetch block hash for block %v: %w", relayBlockNumber, err)
 	}
 	var paraHead types.Header
-	ok, err := s.relayConn.FetchParachainHead(beefyBlockMinusOneHash, s.paraID, &paraHead)
+	ok, err := s.relayConn.FetchParachainHead(relayBlockMinusOneHash, s.paraID, &paraHead)
 	if err != nil {
-		return nil, fmt.Errorf("fetch head for parachain %v at block %v: %w", s.paraID, beefyBlockMinusOneHash.Hex(), err)
+		return nil, fmt.Errorf("fetch head for parachain %v at block %v: %w", s.paraID, relayBlockMinusOneHash.Hex(), err)
 	}
 	if !ok {
 		return nil, fmt.Errorf("parachain %v is not registered", s.paraID)

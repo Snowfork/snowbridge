@@ -13,6 +13,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/relays/beefy"
 	"github.com/snowfork/snowbridge/relayer/relays/parachain"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -62,7 +63,13 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	relay, err := parachain.NewRelay(&config, keypair)
+	var beefyConfig beefy.Config
+	err = viper.Unmarshal(&beefyConfig)
+	if err != nil {
+		return err
+	}
+
+	relay, err := parachain.NewRelay(&config, &beefyConfig, keypair)
 	if err != nil {
 		return err
 	}

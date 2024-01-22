@@ -28,6 +28,7 @@ config_relayer() {
       .source.contracts.Gateway = $k1
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.Gateway = $k1
+    | .sink.contracts.BeefyClient = $k2
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
@@ -46,6 +47,7 @@ config_relayer() {
       .source.contracts.Gateway = $k1
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.Gateway = $k1
+    | .sink.contracts.BeefyClient = $k2
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
@@ -64,6 +66,7 @@ config_relayer() {
       .source.contracts.Gateway = $k1
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.Gateway = $k1
+    | .sink.contracts.BeefyClient = $k2
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
@@ -82,6 +85,7 @@ config_relayer() {
       .source.contracts.Gateway = $k1
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.Gateway = $k1
+    | .sink.contracts.BeefyClient = $k2
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit

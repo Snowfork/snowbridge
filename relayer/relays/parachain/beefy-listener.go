@@ -2,12 +2,13 @@ package parachain
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"time"
+
+	"github.com/snowfork/snowbridge/relayer/relays/beefy"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -29,6 +30,7 @@ type BeefyListener struct {
 	paraID              uint32
 	tasks               chan<- *Task
 	scanner             *Scanner
+	beefyRelay          *beefy.Relay
 }
 
 func NewBeefyListener(
@@ -36,6 +38,7 @@ func NewBeefyListener(
 	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
+	beefyRelay *beefy.Relay,
 	tasks chan<- *Task,
 ) *BeefyListener {
 	return &BeefyListener{
@@ -43,6 +46,7 @@ func NewBeefyListener(
 		ethereumConn:        ethereumConn,
 		relaychainConn:      relaychainConn,
 		parachainConnection: parachainConnection,
+		beefyRelay:          beefyRelay,
 		tasks:               tasks,
 	}
 }
@@ -79,93 +83,61 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 		paraID:    paraID,
 	}
 
+	ticker := time.NewTicker(time.Second * 18)
+
 	eg.Go(func() error {
 		defer close(li.tasks)
 
-		// Subscribe NewMMRRoot event logs and fetch parachain message commitments
-		// since latest beefy block
-		beefyBlockNumber, _, err := li.fetchLatestBeefyBlock(ctx)
-		if err != nil {
-			return fmt.Errorf("fetch latest beefy block: %w", err)
-		}
-
-		err = li.doScan(ctx, beefyBlockNumber)
-		if err != nil {
-			return fmt.Errorf("scan for sync tasks bounded by BEEFY block %v: %w", beefyBlockNumber, err)
-		}
-
-		err = li.subscribeNewMMRRoots(ctx)
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return nil
+		for {
+			err = li.doScan(ctx)
+			if err != nil {
+				return fmt.Errorf("scan for sync tasks: %w", err)
 			}
-			return err
-		}
 
-		return nil
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-ticker.C:
+				continue
+			}
+		}
 	})
 
 	return nil
 }
 
-func (li *BeefyListener) subscribeNewMMRRoots(ctx context.Context) error {
-	headers := make(chan *gethTypes.Header, 5)
-
-	sub, err := li.ethereumConn.Client().SubscribeNewHead(ctx, headers)
-	if err != nil {
-		return fmt.Errorf("creating ethereum header subscription: %w", err)
-	}
-	defer sub.Unsubscribe()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case err := <-sub.Err():
-			return fmt.Errorf("header subscription: %w", err)
-		case gethheader := <-headers:
-			blockNumber := gethheader.Number.Uint64()
-			contractEvents, err := li.queryBeefyClientEvents(ctx, blockNumber, &blockNumber)
-			if err != nil {
-				return fmt.Errorf("query NewMMRRoot event logs in block %v: %w", blockNumber, err)
-			}
-
-			if len(contractEvents) > 0 {
-				log.Info(fmt.Sprintf("Found %d BeefyLightClient.NewMMRRoot events in block %d", len(contractEvents), blockNumber))
-				// Only process the last emitted event in the block
-				event := contractEvents[len(contractEvents)-1]
-				log.WithFields(log.Fields{
-					"beefyBlockNumber":    event.BlockNumber,
-					"ethereumBlockNumber": event.Raw.BlockNumber,
-					"ethereumTxHash":      event.Raw.TxHash.Hex(),
-				}).Info("Witnessed a new MMRRoot event")
-
-				err = li.doScan(ctx, event.BlockNumber)
-				if err != nil {
-					return fmt.Errorf("scan for sync tasks bounded by BEEFY block %v: %w", event.BlockNumber, err)
-				}
-			}
-		}
-	}
-}
-
-func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) error {
-	tasks, err := li.scanner.Scan(ctx, beefyBlockNumber)
+func (li *BeefyListener) doScan(ctx context.Context) error {
+	finalizedHash, err := li.scanner.relayConn.API().RPC.Chain.GetFinalizedHead()
 	if err != nil {
 		return err
 	}
-
-	for _, task := range tasks {
-		// do final proof generation right before sending. The proof needs to be fresh.
-		task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
+	finalizedHeader, err := li.scanner.relayConn.API().RPC.Chain.GetHeader(finalizedHash)
+	if err != nil {
+		return err
+	}
+	tasks, err := li.scanner.Scan(ctx, uint64(finalizedHeader.Number))
+	if err != nil {
+		return err
+	}
+	if len(tasks) > 0 {
+		// Sync RelayBlockNumber of last task since already ascending ordered
+		lastTask := tasks[len(tasks)-1]
+		err = li.beefyRelay.SyncUpdate(ctx, lastTask.ProofInput.RelayBlockNumber)
 		if err != nil {
-			return err
+			return fmt.Errorf("sync beefy update on demand: %w", err)
 		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case li.tasks <- task:
-			log.Info("Beefy Listener emitted new task")
+		for _, task := range tasks {
+			// Generate final proof after beefy synced and right before sending. The proof needs to be fresh.
+			task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
+			if err != nil {
+				return fmt.Errorf("generate beefy proof on demand: %w", err)
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case li.tasks <- task:
+				log.Info("Beefy Listener emitted new task")
+			}
 		}
 	}
 

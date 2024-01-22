@@ -3,6 +3,7 @@ package beefy
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"golang.org/x/sync/errgroup"
@@ -14,9 +15,8 @@ import (
 )
 
 type PolkadotListener struct {
-	config              *SourceConfig
-	conn                *relaychain.Connection
-	beefyAuthoritiesKey types.StorageKey
+	config *SourceConfig
+	conn   *relaychain.Connection
 }
 
 func NewPolkadotListener(
@@ -35,12 +35,6 @@ func (li *PolkadotListener) Start(
 	currentBeefyBlock uint64,
 	currentValidatorSetID uint64,
 ) (<-chan Request, error) {
-	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "Beefy", "Authorities", nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("create storage key: %w", err)
-	}
-	li.beefyAuthoritiesKey = storageKey
-
 	requests := make(chan Request)
 
 	eg.Go(func() error {
@@ -151,7 +145,11 @@ func (li *PolkadotListener) scanCommitments(
 
 func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]substrate.Authority, error) {
 	var authorities []substrate.Authority
-	ok, err := li.conn.API().RPC.State.GetStorage(li.beefyAuthoritiesKey, &authorities, blockHash)
+	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "Beefy", "Authorities", nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create storage key: %w", err)
+	}
+	ok, err := li.conn.API().RPC.State.GetStorage(storageKey, &authorities, blockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -174,4 +172,81 @@ func (li *PolkadotListener) queryBeefyNextAuthoritySet(blockHash types.Hash) (ty
 	}
 
 	return nextAuthoritySet, nil
+}
+
+func (li *PolkadotListener) generateNextBeefyUpdate(nextBlockNumber uint64) (Request, error) {
+	api := li.conn.API()
+	meta := li.conn.Metadata()
+	var request Request
+	var nextBeefyBlockNumber uint64
+	var nextBeefyBlockHash types.Hash
+	for {
+		finalizedBeefyBlockHash, err := api.RPC.Beefy.GetFinalizedHead()
+		if err != nil {
+			return request, fmt.Errorf("fetch beefy finalized head: %w", err)
+		}
+
+		finalizedBeefyBlockHeader, err := api.RPC.Chain.GetHeader(finalizedBeefyBlockHash)
+		if err != nil {
+			return request, fmt.Errorf("fetch block header: %w", err)
+		}
+
+		nextBeefyBlockNumber = uint64(finalizedBeefyBlockHeader.Number)
+		if nextBeefyBlockNumber < nextBlockNumber {
+			time.Sleep(6 * time.Second)
+			continue
+		} else {
+			nextBeefyBlockHash = finalizedBeefyBlockHash
+			break
+		}
+	}
+
+	nextFinalizedBeefyBlock, err := api.RPC.Chain.GetBlock(nextBeefyBlockHash)
+	if err != nil {
+		return request, fmt.Errorf("fetch block: %w", err)
+	}
+
+	var commitment *types.SignedCommitment
+	for j := range nextFinalizedBeefyBlock.Justifications {
+		sc := types.OptionalSignedCommitment{}
+		if nextFinalizedBeefyBlock.Justifications[j].EngineID() == "BEEF" {
+			err := types.DecodeFromBytes(nextFinalizedBeefyBlock.Justifications[j].Payload(), &sc)
+			if err != nil {
+				return request, fmt.Errorf("decode BEEFY signed commitment: %w", err)
+			}
+			ok, value := sc.Unwrap()
+			if ok {
+				commitment = &value
+			}
+		}
+	}
+	if commitment == nil {
+		return request, fmt.Errorf("beefy block without a valid commitment")
+	}
+
+	proofIsValid, proof, err := makeProof(meta, api, uint32(nextBeefyBlockNumber), nextBeefyBlockHash)
+	if err != nil {
+		return request, fmt.Errorf("proof generation for block %v at hash %v: %w", nextBeefyBlockNumber, nextBeefyBlockHash.Hex(), err)
+	}
+	if !proofIsValid {
+		return request, fmt.Errorf("Proof for leaf is invalid for block %v at hash %v: %w", nextBeefyBlockNumber, nextBeefyBlockHash.Hex(), err)
+	}
+
+	committedBeefyBlockNumber := uint64(commitment.Commitment.BlockNumber)
+	committedBeefyBlockHash, err := api.RPC.Chain.GetBlockHash(uint64(committedBeefyBlockNumber))
+	validatorSetID := commitment.Commitment.ValidatorSetID
+	nextValidatorSetID := uint64(proof.Leaf.BeefyNextAuthoritySet.ID)
+
+	validators, err := li.queryBeefyAuthorities(committedBeefyBlockHash)
+	if err != nil {
+		return request, fmt.Errorf("fetch beefy authorities at block %v: %w", committedBeefyBlockHash, err)
+	}
+	request = Request{
+		Validators:       validators,
+		SignedCommitment: *commitment,
+		Proof:            proof,
+		IsHandover:       nextValidatorSetID == validatorSetID+2,
+	}
+
+	return request, nil
 }

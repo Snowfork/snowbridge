@@ -10,9 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var dataDir string
-var configFile string
-
 var rootCmd = &cobra.Command{
 	Use:          "snowbridge-relay",
 	Short:        "Snowbridge Relay is a bridge between Ethereum and Polkadot",
@@ -32,6 +29,7 @@ func init() {
 	rootCmd.AddCommand(generateBeaconDataCmd())
 	rootCmd.AddCommand(generateBeaconCheckpointCmd())
 	rootCmd.AddCommand(generateExecutionUpdateCmd())
+	rootCmd.AddCommand(syncBeefyCmd())
 }
 
 func Execute() {

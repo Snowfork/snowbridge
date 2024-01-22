@@ -9,6 +9,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
+	"github.com/snowfork/snowbridge/relayer/relays/beefy"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -22,7 +23,7 @@ type Relay struct {
 	beefyListener         *BeefyListener
 }
 
-func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
+func NewRelay(config *Config, beefyConfig *beefy.Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	log.Info("Creating worker")
 
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
@@ -32,7 +33,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	ethereumConn := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
 
 	// channel for messages from beefy listener to ethereum writer
-	var tasks = make(chan *Task, 1)
+	var tasks = make(chan *Task)
 
 	ethereumChannelWriter, err := NewEthereumWriter(
 		&config.Sink,
@@ -43,11 +44,17 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 		return nil, err
 	}
 
+	beefyRelay, err := beefy.NewRelay(beefyConfig, keypair)
+	if err != nil {
+		return nil, err
+	}
+
 	beefyListener := NewBeefyListener(
 		&config.Source,
 		ethereumConn,
 		relaychainConn,
 		parachainConn,
+		beefyRelay,
 		tasks,
 	)
 
