@@ -3,3 +3,4 @@ packages:
   - "packages/api"
   - "packages/contract-types"
   - "packages/test-helpers"
+  - "packages/operations"
