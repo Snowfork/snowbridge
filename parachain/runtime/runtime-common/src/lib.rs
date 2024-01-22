@@ -131,7 +131,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		// Refund remote component of fee to physical origin
 		let result = AssetTransactor::deposit_asset(
 			&Asset { id: AssetId(token_location.clone()), fun: Fungible(remote_fee.into()) },
-			&Location::new(1, [Parachain(para_id.into())]),
+			&Location::new(1, [Parachain(para_id)]),
 			context,
 		);
 		if result.is_err() {
