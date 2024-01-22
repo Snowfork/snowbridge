@@ -2,8 +2,8 @@ use crate::XcmExportFeeToSibling;
 use frame_support::{parameter_types, sp_runtime::testing::H256};
 use snowbridge_core::outbound::{Fee, Message, SendError, SendMessage, SendMessageFeeProvider};
 use xcm::prelude::{
-	Here, Kusama, Asset, Assets, Location, NetworkId, Parachain, XcmContext,
-	XcmError, XcmHash, XcmResult, X1,
+	Asset, Assets, Here, Kusama, Location, NetworkId, Parachain, XcmContext, XcmError, XcmHash,
+	XcmResult, X1,
 };
 use xcm_builder::HandleFee;
 use xcm_executor::{
@@ -59,27 +59,15 @@ impl SendMessageFeeProvider for MockErrOutboundQueue {
 
 pub struct MockAssetTransactor;
 impl TransactAsset for MockAssetTransactor {
-	fn can_check_in(
-		_origin: &Location,
-		_what: &Asset,
-		_context: &XcmContext,
-	) -> XcmResult {
+	fn can_check_in(_origin: &Location, _what: &Asset, _context: &XcmContext) -> XcmResult {
 		Ok(())
 	}
 
-	fn can_check_out(
-		_dest: &Location,
-		_what: &Asset,
-		_context: &XcmContext,
-	) -> XcmResult {
+	fn can_check_out(_dest: &Location, _what: &Asset, _context: &XcmContext) -> XcmResult {
 		Ok(())
 	}
 
-	fn deposit_asset(
-		_what: &Asset,
-		_who: &Location,
-		_context: Option<&XcmContext>,
-	) -> XcmResult {
+	fn deposit_asset(_what: &Asset, _who: &Location, _context: Option<&XcmContext>) -> XcmResult {
 		Ok(())
 	}
 
@@ -118,8 +106,7 @@ fn handle_fee_success() {
 		MockAssetTransactor,
 		MockOkOutboundQueue,
 	>::handle_fee(fee, Some(&ctx), reason);
-	let local_fee =
-		Asset::from((Location::parent(), MockOkOutboundQueue::local_fee())).into();
+	let local_fee = Asset::from((Location::parent(), MockOkOutboundQueue::local_fee())).into();
 	// assert only local fee left
 	assert_eq!(result, local_fee)
 }
