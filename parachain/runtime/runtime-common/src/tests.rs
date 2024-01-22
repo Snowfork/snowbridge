@@ -8,12 +8,11 @@ use xcm::prelude::{
 use xcm_builder::HandleFee;
 use xcm_executor::{
 	traits::{FeeReason, TransactAsset},
-	Assets,
 };
 
 parameter_types! {
 	pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
-	pub TokenLocation: MultiLocation = MultiLocation::parent();
+	pub TokenLocation: Location = Location::parent();
 }
 
 struct MockOkOutboundQueue;
@@ -91,9 +90,9 @@ impl TransactAsset for MockAssetTransactor {
 
 #[test]
 fn handle_fee_success() {
-	let fee: Assets = Asset::from((MultiLocation::parent(), 10_u128)).into();
+	let fee: Assets = Asset::from((Location::parent(), 10_u128)).into();
 	let ctx = XcmContext {
-		origin: Some(Location { parents: 1, interior: X1(Parachain(1000)) }),
+		origin: Some(Location::new(1, Parachain(1000))),
 		message_id: XcmHash::default(),
 		topic: None,
 	};
@@ -151,7 +150,7 @@ fn handle_fee_success_even_when_fee_insufficient() {
 	// insufficient fee not cover the (local_fee + remote_fee) required
 	let fee: Assets = Asset::from((Location::parent(), 1_u128)).into();
 	let ctx = XcmContext {
-		origin: Some(Location { parents: 1, interior: X1(Parachain(1000)) }),
+		origin: Some(Location::new(1, Parachain(1000))),
 		message_id: XcmHash::default(),
 		topic: None,
 	};
