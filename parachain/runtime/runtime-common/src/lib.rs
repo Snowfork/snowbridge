@@ -71,19 +71,18 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		}
 
 		// Get the parachain sovereign from the `context`.
-		let maybe_para_id: Option<u32> = if let Some(XcmContext {
-			origin: Some(Location { parents: 1, interior }),
-			..
-		}) = context
-		{
-			if let Some(Parachain(sibling_para_id)) = interior.first() {
-				Some(*sibling_para_id)
+		let maybe_para_id: Option<u32> =
+			if let Some(XcmContext { origin: Some(Location { parents: 1, interior }), .. }) =
+				context
+			{
+				if let Some(Parachain(sibling_para_id)) = interior.first() {
+					Some(*sibling_para_id)
+				} else {
+					None
+				}
 			} else {
 				None
-			}
-		} else {
-			None
-		};
+			};
 		if maybe_para_id.is_none() {
 			log::error!(
 				target: LOG_TARGET,
@@ -146,10 +145,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		// Return remaining fee to the next fee handler in the chain.
 		let mut modified_fees = fees.inner().clone();
 		modified_fees.remove(fee_index);
-		modified_fees.push(Asset {
-			id: AssetId(token_location),
-			fun: Fungible(local_fee.into()),
-		});
+		modified_fees.push(Asset { id: AssetId(token_location), fun: Fungible(local_fee.into()) });
 		modified_fees.into()
 	}
 }
