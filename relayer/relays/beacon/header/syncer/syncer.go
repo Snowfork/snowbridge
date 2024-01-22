@@ -3,7 +3,6 @@ package syncer
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -158,42 +157,40 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error)
 }
 
 func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
-	beaconStateFilename, err := s.Client.DownloadBeaconState(fmt.Sprintf("%d", slot))
-	switch {
-	case errors.Is(err, api.ErrNotFound):
-		return scale.BlockRootProof{}, ErrBeaconStateAvailableYet
-	case err != nil:
-		return scale.BlockRootProof{}, err
-	}
-
-	defer func() {
-		_ = os.Remove(beaconStateFilename)
-	}()
-
-	data, err := os.ReadFile(beaconStateFilename)
-	if err != nil {
-		return scale.BlockRootProof{}, fmt.Errorf("find beacon state file: %w", err)
-	}
-
+	var blockRootProof scale.BlockRootProof
 	var beaconState state.BeaconState
 	var blockRootsContainer state.BlockRootsContainer
 
+	data, err := s.Client.DownloadBeaconState(strconv.FormatUint(slot, 10))
+	if err != nil {
+		return blockRootProof, fmt.Errorf("download beacon state failed: %w", err)
+	}
+	isDeneb := s.DenebForked(slot)
+
 	if s.activeSpec == config.Minimal {
 		blockRootsContainer = &state.BlockRootsContainerMinimal{}
-		beaconState = &state.BeaconStateCapellaMinimal{}
+		if isDeneb {
+			beaconState = &state.BeaconStateDenebMinimal{}
+		} else {
+			beaconState = &state.BeaconStateCapellaMinimal{}
+		}
 	} else {
 		blockRootsContainer = &state.BlockRootsContainerMainnet{}
-		beaconState = &state.BeaconStateCapellaMainnet{}
+		if isDeneb {
+			beaconState = &state.BeaconStateDenebMainnet{}
+		} else {
+			beaconState = &state.BeaconStateCapellaMainnet{}
+		}
 	}
 
 	err = beaconState.UnmarshalSSZ(data)
 	if err != nil {
-		return scale.BlockRootProof{}, fmt.Errorf("unmarshal beacon state: %w", err)
+		return blockRootProof, fmt.Errorf("unmarshal beacon state: %w", err)
 	}
 
 	stateTree, err := beaconState.GetTree()
 	if err != nil {
-		return scale.BlockRootProof{}, fmt.Errorf("get state tree: %w", err)
+		return blockRootProof, fmt.Errorf("get state tree: %w", err)
 	}
 
 	_ = stateTree.Hash() // necessary to populate the proof tree values
@@ -212,7 +209,7 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 
 	tree, err := blockRootsContainer.GetTree()
 	if err != nil {
-		return scale.BlockRootProof{}, fmt.Errorf("convert block roots to tree: %w", err)
+		return blockRootProof, fmt.Errorf("convert block roots to tree: %w", err)
 	}
 
 	return scale.BlockRootProof{
@@ -379,12 +376,23 @@ func (s *Syncer) GetNextHeaderUpdateBySlotWithCheckpoint(slot uint64, checkpoint
 }
 
 func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
-	block, err := s.Client.GetBeaconBlock(blockRoot)
+	var update scale.HeaderUpdatePayload
+	blockResponse, err := s.Client.GetBeaconBlockResponse(blockRoot)
 	if err != nil {
-		return scale.HeaderUpdatePayload{}, fmt.Errorf("fetch block: %w", err)
+		return update, fmt.Errorf("fetch block: %w", err)
+	}
+	data := blockResponse.Data.Message
+	slot, err := util.ToUint64(data.Slot)
+	if err != nil {
+		return update, err
 	}
 
-	header, err := s.Client.GetHeaderBySlot(block.GetBeaconSlot())
+	sszBlock, err := blockResponse.ToFastSSZ(s.activeSpec, s.DenebForked(slot))
+	if err != nil {
+		return update, err
+	}
+
+	header, err := s.Client.GetHeaderBySlot(sszBlock.GetBeaconSlot())
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("fetch block: %w", err)
 	}
@@ -394,29 +402,39 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("beacon header to scale: %w", err)
 	}
 
-	executionPayloadScale, err := api.CapellaExecutionPayloadToScale(block.GetExecutionPayload(), s.activeSpec)
+	executionHeaderBranch, err := s.getExecutionHeaderBranch(sszBlock)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, err
 	}
 
-	executionHeaderBranch, err := s.getExecutionHeaderBranch(block)
-	if err != nil {
-		return scale.HeaderUpdatePayload{}, err
+	var versionedExecutionPayloadHeader scale.VersionedExecutionPayloadHeader
+	if s.DenebForked(slot) {
+		executionPayloadScale, err := api.DenebExecutionPayloadToScale(sszBlock.ExecutionPayloadDeneb(), s.activeSpec)
+		if err != nil {
+			return scale.HeaderUpdatePayload{}, err
+		}
+		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
+	} else {
+		executionPayloadScale, err := api.CapellaExecutionPayloadToScale(sszBlock.ExecutionPayloadCapella(), s.activeSpec)
+		if err != nil {
+			return scale.HeaderUpdatePayload{}, err
+		}
+		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Capella: &executionPayloadScale}
 	}
 
 	// If checkpoint not provided or slot == finalizedSlot there won't be an ancestry proof because the header state in question is also the finalized header
-	if checkpoint == nil || block.GetBeaconSlot() == checkpoint.Slot {
+	if checkpoint == nil || sszBlock.GetBeaconSlot() == checkpoint.Slot {
 		return scale.HeaderUpdatePayload{
 			Header: beaconHeader,
 			AncestryProof: scale.OptionAncestryProof{
 				HasValue: false,
 			},
-			ExecutionHeader: executionPayloadScale,
+			ExecutionHeader: versionedExecutionPayloadHeader,
 			ExecutionBranch: executionHeaderBranch,
 		}, nil
 	}
 
-	proofScale, err := s.getBlockHeaderAncestryProof(int(block.GetBeaconSlot()), blockRoot, checkpoint.BlockRootsTree)
+	proofScale, err := s.getBlockHeaderAncestryProof(int(sszBlock.GetBeaconSlot()), blockRoot, checkpoint.BlockRootsTree)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, err
 	}
@@ -435,7 +453,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 				FinalizedBlockRoot: types.NewH256(checkpoint.FinalizedBlockRoot.Bytes()),
 			},
 		},
-		ExecutionHeader: executionPayloadScale,
+		ExecutionHeader: versionedExecutionPayloadHeader,
 		ExecutionBranch: executionHeaderBranch,
 	}, nil
 }

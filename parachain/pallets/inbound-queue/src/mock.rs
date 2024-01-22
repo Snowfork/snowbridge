@@ -110,6 +110,10 @@ parameter_types! {
 			version: [3, 0, 0, 1], // 0x03000001
 			epoch: 0,
 		},
+		deneb: Fork {
+			version: [4, 0, 0, 1], // 0x04000001
+			epoch: 4294967295,
+		}
 	};
 }
 

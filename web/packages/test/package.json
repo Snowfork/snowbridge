@@ -9,7 +9,6 @@
     "directory": "web/packages/test"
   },
   "devDependencies": {
-    "@chainsafe/lodestar": "1.8.0",
     "@polkadot/api": "^10.11.1",
     "@polkadot/api-cli": "^0.56.1",
     "@polkadot/keyring": "^12.6.1",

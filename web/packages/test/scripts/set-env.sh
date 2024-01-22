@@ -1,6 +1,8 @@
 root_dir="$(realpath ../../..)"
 web_dir="$root_dir/web"
-lodestar_version="${LODESTAR_VER:-1.8.0}"
+lodestar_version="${LODESTAR_VER:-1.12.0}"
+geth_version="${GETH_VER:-v1.13.5}"
+config_dir="$web_dir/packages/test/config"
 export contract_dir="$root_dir/contracts"
 test_helpers_dir="$web_dir/packages/test-helpers"
 relay_dir="$root_dir/relayer"
@@ -55,6 +57,7 @@ relaychain_ws_url="${RELAYCHAIN_WS_URL:-ws://127.0.0.1:9944}"
 relaychain_sudo_seed="${RELAYCHAIN_SUDO_SEED:-//Alice}"
 
 skip_relayer="${SKIP_RELAYER:-false}"
+reset_ethereum="${RESET_ETHEREUM:-true}"
 
 ## Important accounts
 
