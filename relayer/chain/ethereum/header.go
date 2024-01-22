@@ -5,17 +5,11 @@ package ethereum
 
 import (
 	"fmt"
-	"math/big"
-
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
-	"github.com/snowfork/ethashproof"
-	"github.com/snowfork/ethashproof/ethash"
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	types "github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/chain"
+	"math/big"
 )
 
 type HeaderID struct {
@@ -81,34 +75,6 @@ func (h *Header) ID() HeaderID {
 	}
 }
 
-type DoubleNodeWithMerkleProof struct {
-	DagNodes [2]types.H512
-	Proof    [][16]byte
-}
-
-func MakeHeaderFromEthHeader(
-	gethheader *etypes.Header,
-	proofcache *ethashproof.DatasetMerkleTreeCache,
-	dataDir string,
-) (*chain.Header, error) {
-	headerData, err := MakeHeaderData(gethheader)
-	if err != nil {
-		return nil, err
-	}
-
-	proofData, err := MakeProofData(gethheader, proofcache, dataDir)
-	if err != nil {
-		return nil, err
-	}
-
-	log.WithFields(logrus.Fields{
-		"blockHash":   gethheader.Hash().Hex(),
-		"blockNumber": gethheader.Number,
-	}).Debug("Generated header from Ethereum header")
-
-	return &chain.Header{HeaderData: *headerData, ProofData: proofData}, nil
-}
-
 func MakeHeaderData(gethheader *etypes.Header) (*Header, error) {
 	// Convert Geth types to their Substrate Go client counterparts that match our node
 	var blockNumber uint64
@@ -161,49 +127,4 @@ func MakeHeaderData(gethheader *etypes.Header) (*Header, error) {
 		},
 		header: gethheader,
 	}, nil
-}
-
-func MakeProofData(
-	gethheader *etypes.Header,
-	proofcache *ethashproof.DatasetMerkleTreeCache,
-	dataDir string,
-) ([]DoubleNodeWithMerkleProof, error) {
-	// Generate merkle proofs for Ethash
-	blockNumber := gethheader.Number.Uint64()
-	indices := ethash.Instance.GetVerificationIndices(
-		blockNumber,
-		ethash.Instance.SealHash(gethheader),
-		gethheader.Nonce.Uint64(),
-	)
-
-	proofData := make([]DoubleNodeWithMerkleProof, len(indices))
-	for i, index := range indices {
-		element, proof, err := ethashproof.CalculateProof(blockNumber, index, proofcache, dataDir)
-		if err != nil {
-			return nil, err
-		}
-
-		es := element.ToUint256Array()
-		node1Bytes := make([]byte, 64)
-		node2Bytes := make([]byte, 64)
-		// Each 32 byte sequence is left-padded with 0
-		copy(node1Bytes[32-len(es[0].Bytes()):32], es[0].Bytes())
-		copy(node1Bytes[64-len(es[1].Bytes()):], es[1].Bytes())
-		copy(node2Bytes[32-len(es[2].Bytes()):32], es[2].Bytes())
-		copy(node2Bytes[64-len(es[3].Bytes()):], es[3].Bytes())
-		proofH128 := make([][16]byte, len(proof))
-		for j, pr := range proof {
-			proofH128[j] = [16]byte(pr)
-		}
-
-		proofData[i] = DoubleNodeWithMerkleProof{
-			DagNodes: [2]types.H512{
-				types.NewH512(node1Bytes),
-				types.NewH512(node2Bytes),
-			},
-			Proof: proofH128,
-		}
-	}
-
-	return proofData, nil
 }

@@ -35,6 +35,7 @@ pub struct ForkVersions {
 	pub altair: Fork,
 	pub bellatrix: Fork,
 	pub capella: Fork,
+	pub deneb: Fork,
 }
 
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -312,7 +313,7 @@ impl<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
 )]
 #[cfg_attr(
 	feature = "std",
-	derive(Deserialize),
+	derive(Serialize, Deserialize),
 	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
 )]
 #[codec(mel_bound())]
@@ -387,6 +388,64 @@ pub struct CompactBeaconState {
 	#[codec(compact)]
 	pub slot: u64,
 	pub block_roots_root: H256,
+}
+
+/// VersionedExecutionPayloadHeader
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+#[cfg_attr(
+	feature = "std",
+	derive(Serialize, Deserialize),
+	serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
+)]
+#[codec(mel_bound())]
+pub enum VersionedExecutionPayloadHeader {
+	Capella(ExecutionPayloadHeader),
+	Deneb(deneb::ExecutionPayloadHeader),
+}
+
+/// Convert VersionedExecutionPayloadHeader to CompactExecutionHeader
+impl From<VersionedExecutionPayloadHeader> for CompactExecutionHeader {
+	fn from(versioned_execution_header: VersionedExecutionPayloadHeader) -> Self {
+		match versioned_execution_header {
+			VersionedExecutionPayloadHeader::Capella(execution_payload_header) =>
+				execution_payload_header.into(),
+			VersionedExecutionPayloadHeader::Deneb(execution_payload_header) =>
+				execution_payload_header.into(),
+		}
+	}
+}
+
+impl VersionedExecutionPayloadHeader {
+	pub fn hash_tree_root(&self) -> Result<H256, SimpleSerializeError> {
+		match self {
+			VersionedExecutionPayloadHeader::Capella(execution_payload_header) =>
+				hash_tree_root::<SSZExecutionPayloadHeader>(
+					execution_payload_header.clone().try_into()?,
+				),
+			VersionedExecutionPayloadHeader::Deneb(execution_payload_header) =>
+				hash_tree_root::<crate::ssz::deneb::SSZExecutionPayloadHeader>(
+					execution_payload_header.clone().try_into()?,
+				),
+		}
+	}
+
+	pub fn block_hash(&self) -> H256 {
+		match self {
+			VersionedExecutionPayloadHeader::Capella(execution_payload_header) =>
+				execution_payload_header.block_hash,
+			VersionedExecutionPayloadHeader::Deneb(execution_payload_header) =>
+				execution_payload_header.block_hash,
+		}
+	}
+
+	pub fn block_number(&self) -> u64 {
+		match self {
+			VersionedExecutionPayloadHeader::Capella(execution_payload_header) =>
+				execution_payload_header.block_number,
+			VersionedExecutionPayloadHeader::Deneb(execution_payload_header) =>
+				execution_payload_header.block_number,
+		}
+	}
 }
 
 #[cfg(test)]
@@ -512,4 +571,69 @@ mod tests {
 pub enum Mode {
 	Active,
 	Blocked,
+}
+
+pub mod deneb {
+	use crate::CompactExecutionHeader;
+	use codec::{Decode, Encode};
+	use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
+	use scale_info::TypeInfo;
+	#[cfg(feature = "std")]
+	use serde::{Deserialize, Serialize};
+	use sp_core::{H160, H256, U256};
+	use sp_std::prelude::*;
+
+	/// ExecutionPayloadHeader
+	/// https://github.com/ethereum/consensus-specs/blob/dev/specs/deneb/beacon-chain.md#executionpayloadheader
+	#[derive(
+		Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
+	)]
+	#[cfg_attr(
+		feature = "std",
+		derive(Serialize, Deserialize),
+		serde(deny_unknown_fields, bound(serialize = ""), bound(deserialize = ""))
+	)]
+	#[codec(mel_bound())]
+	pub struct ExecutionPayloadHeader {
+		pub parent_hash: H256,
+		pub fee_recipient: H160,
+		pub state_root: H256,
+		pub receipts_root: H256,
+		#[cfg_attr(
+			feature = "std",
+			serde(deserialize_with = "crate::serde_utils::from_hex_to_bytes")
+		)]
+		pub logs_bloom: Vec<u8>,
+		pub prev_randao: H256,
+		pub block_number: u64,
+		pub gas_limit: u64,
+		pub gas_used: u64,
+		pub timestamp: u64,
+		#[cfg_attr(
+			feature = "std",
+			serde(deserialize_with = "crate::serde_utils::from_hex_to_bytes")
+		)]
+		pub extra_data: Vec<u8>,
+		#[cfg_attr(
+			feature = "std",
+			serde(deserialize_with = "crate::serde_utils::from_int_to_u256")
+		)]
+		pub base_fee_per_gas: U256,
+		pub block_hash: H256,
+		pub transactions_root: H256,
+		pub withdrawals_root: H256,
+		pub blob_gas_used: u64,   // [New in Deneb:EIP4844]
+		pub excess_blob_gas: u64, // [New in Deneb:EIP4844]
+	}
+
+	impl From<ExecutionPayloadHeader> for CompactExecutionHeader {
+		fn from(execution_payload: ExecutionPayloadHeader) -> Self {
+			Self {
+				parent_hash: execution_payload.parent_hash,
+				block_number: execution_payload.block_number,
+				state_root: execution_payload.state_root,
+				receipts_root: execution_payload.receipts_root,
+			}
+		}
+	}
 }

@@ -4,7 +4,7 @@ use crate::{CheckpointUpdate, ExecutionHeaderUpdate, Update};
 use hex_literal::hex;
 use primitives::{
 	updates::AncestryProof, BeaconHeader, ExecutionPayloadHeader, NextSyncCommitteeUpdate,
-	SyncAggregate, SyncCommittee,
+	SyncAggregate, SyncCommittee, VersionedExecutionPayloadHeader,
 };
 use sp_core::U256;
 use sp_std::{boxed::Box, vec};
@@ -221,7 +221,7 @@ pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
             ],
             finalized_block_root: hex!("be7d9cc4483ed0065fc7c32e2a783ca3782d8dbd7bfe899fd7c0bcee82f11629").into(),
         }),
-        execution_header: ExecutionPayloadHeader {
+        execution_header: VersionedExecutionPayloadHeader::Capella(ExecutionPayloadHeader {
             parent_hash: hex!("96b27b6e0919c19a70c4a2f7136fd59d2e63a3ba0453a86775add3f2dd681cea").into(),
             fee_recipient: hex!("0000000000000000000000000000000000000000").into(),
             state_root: hex!("b847ee60946ebdb5bd92c22385da44b8a9aea4c6779f1a1402cc06e22b76fb4a").into(),
@@ -237,7 +237,7 @@ pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
             block_hash: hex!("1871ded7b2b8b4b5b358c904104704811b15aeefc24e49daa2a1a68176d6553a").into(),
             transactions_root: hex!("7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1").into(),
             withdrawals_root: hex!("28ba1834a3a7b657460ce79fa3a1d909ab8828fd557659d4d0554a9bdbc0ec30").into(),
-        },
+        }),
         execution_branch: vec![
             hex!("276d006ecfe51451787321ef00417b194e90b35d4106bd7d51372f39918a4531").into(),
             hex!("336488033fe5f3ef4ccc12af07b9370b92e553e35ecb4a337a1b1c0e4afe1e0e").into(),

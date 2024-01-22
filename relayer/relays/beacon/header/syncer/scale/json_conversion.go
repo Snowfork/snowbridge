@@ -101,3 +101,13 @@ func (s *SyncAggregate) ToJSON() json.SyncAggregate {
 		SyncCommitteeSignature: util.BytesToHexString(s.SyncCommitteeSignature[:]),
 	}
 }
+
+func (v *VersionedExecutionPayloadHeader) ToJSON() json.VersionedExecutionPayloadHeader {
+	if v.Deneb != nil {
+		data := v.Deneb.ToJSON()
+		return json.VersionedExecutionPayloadHeader{Deneb: &data}
+	} else {
+		data := v.Capella.ToJSON()
+		return json.VersionedExecutionPayloadHeader{Capella: &data}
+	}
+}

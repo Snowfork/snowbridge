@@ -11,7 +11,6 @@ import (
 
 	ecommon "github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/snowfork/ethashproof"
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/stretchr/testify/assert"
@@ -77,16 +76,6 @@ func encodedProof11090290() []byte {
 	return encoded
 }
 
-func proofCache11090290() *ethashproof.DatasetMerkleTreeCache {
-	rawData := readTestData("epochCache369.json")
-	var cache ethashproof.DatasetMerkleTreeCache
-	err := json.Unmarshal(rawData, &cache)
-	if err != nil {
-		panic(err)
-	}
-	return &cache
-}
-
 func TestHeader_EncodeDecode11090290(t *testing.T) {
 	gethHeader := gethHeader11090290()
 	// From header.encode() call in Substrate
@@ -134,34 +123,6 @@ func TestHeader_EncodeDecode11090290(t *testing.T) {
 		panic(err)
 	}
 	assert.Equal(t, header.Fields, decoded.Fields, "Decoded Substrate header should match ethereum.Header")
-}
-
-func TestProof_EncodeDecode(t *testing.T) {
-	t.Skip("Skipping test as it depends on external data.")
-
-	gethHeader := gethHeader11090290()
-	cache := proofCache11090290()
-	expectedEncoded := encodedProof11090290()
-
-	dataDir := "/tmp"
-
-	proof, err := ethereum.MakeProofData(&gethHeader, cache, dataDir)
-	if err != nil {
-		panic(err)
-	}
-
-	encoded, err := encodeToBytes(proof)
-	if err != nil {
-		panic(err)
-	}
-	assert.Equal(t, expectedEncoded, encoded, "Encoded ethereum.DoubleNodeWithMerkleProof should match Substrate proof")
-
-	var decoded []ethereum.DoubleNodeWithMerkleProof
-	err = decodeFromBytes(encoded, &decoded)
-	if err != nil {
-		panic(err)
-	}
-	assert.Equal(t, proof, decoded, "Decoded Substrate proof should match ethereum.DoubleNodeWithMerkleProof")
 }
 
 func readTestData(filename string) []byte {

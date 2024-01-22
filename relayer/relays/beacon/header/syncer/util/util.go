@@ -48,6 +48,18 @@ func ToUint64(stringVal string) (uint64, error) {
 	return intVal, err
 }
 
+func ToUint64AllowEmpty(stringVal string) (uint64, error) {
+	if stringVal == "" {
+		return 0, nil
+	}
+	intVal, err := strconv.ParseUint(stringVal, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return intVal, err
+}
+
 func ToUint64Array(items []types.U64) []uint64 {
 	result := []uint64{}
 
@@ -71,6 +83,10 @@ func BytesToHexString(bytes []byte) string {
 }
 
 func HexStringToPublicKey(hexString string) ([48]byte, error) {
+	return HexStringTo48Bytes(hexString)
+}
+
+func HexStringTo48Bytes(hexString string) ([48]byte, error) {
 	var pubkeyBytes [48]byte
 	key, err := hex.DecodeString(strings.Replace(hexString, "0x", "", 1))
 	if err != nil {

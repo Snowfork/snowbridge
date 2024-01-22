@@ -155,7 +155,7 @@ pub mod minimal {
 
 	parameter_types! {
 		pub const ExecutionHeadersPruneThreshold: u32 = 10;
-		pub const ChainForkVersions: ForkVersions = ForkVersions{
+		pub const ChainForkVersions: ForkVersions = ForkVersions {
 			genesis: Fork {
 				version: [0, 0, 0, 1], // 0x00000001
 				epoch: 0,
@@ -171,6 +171,10 @@ pub mod minimal {
 			capella: Fork {
 				version: [3, 0, 0, 1], // 0x03000001
 				epoch: 0,
+			},
+			deneb: Fork {
+				version: [4, 0, 0, 1], // 0x04000001
+				epoch: 4294967295,
 			},
 		};
 	}
@@ -263,6 +267,10 @@ pub mod mainnet {
 				version: [144, 0, 0, 114], // 0x90000072
 				epoch: 56832,
 			},
+			deneb: Fork {
+				version: [144, 0, 0, 115], // 0x90000073
+				epoch: 4294967295,
+			}
 		};
 		pub const ExecutionHeadersPruneThreshold: u32 = 8192;
 	}

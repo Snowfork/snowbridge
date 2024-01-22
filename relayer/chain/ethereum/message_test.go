@@ -8,8 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 )
 
 type TestProof parachain.ProofData
