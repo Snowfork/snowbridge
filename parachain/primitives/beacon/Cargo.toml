@@ -31,7 +31,7 @@ byte-slice-cast = { version = "1.2.1", default-features = false }
 
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 static_assertions = { version = "1.1.0" }
-milagro-bls = { package = "snowbridge-milagro-bls", default-features = false }
+milagro-bls = { package = "snowbridge-milagro-bls", version = "1.5.3", default-features = false }
 
 [dev-dependencies]
 hex-literal = { version = "0.4.1" }
