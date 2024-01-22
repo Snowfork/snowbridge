@@ -57,7 +57,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return fmt.Errorf("create ethereum connection: %w", err)
 	}
 
-	initialBeefyBlock, initialValidatorSetID, err := relay.getInitialState(ctx)
+	initialBeefyBlock, initialValidatorSetID, err := relay.getCurrentState(ctx)
 	if err != nil {
 		return fmt.Errorf("fetch BeefyClient current state: %w", err)
 	}
@@ -79,7 +79,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (relay *Relay) getInitialState(ctx context.Context) (uint64, uint64, error) {
+func (relay *Relay) getCurrentState(ctx context.Context) (uint64, uint64, error) {
 	address := common.HexToAddress(relay.config.Sink.Contracts.BeefyClient)
 	beefyClient, err := contracts.NewBeefyClient(address, relay.ethereumConn.Client())
 	if err != nil {
@@ -103,7 +103,7 @@ func (relay *Relay) getInitialState(ctx context.Context) (uint64, uint64, error)
 	return latestBeefyBlock, currentValidatorSet.Id.Uint64(), nil
 }
 
-func (relay *Relay) SyncUpdate(ctx context.Context, blockNumber uint64) error {
+func (relay *Relay) Initialize(ctx context.Context) error {
 	err := relay.relaychainConn.Connect(ctx)
 	if err != nil {
 		return fmt.Errorf("create relaychain connection: %w", err)
@@ -113,7 +113,11 @@ func (relay *Relay) SyncUpdate(ctx context.Context, blockNumber uint64) error {
 	if err != nil {
 		return fmt.Errorf("create ethereum connection: %w", err)
 	}
-	initialBeefyBlock, initialValidatorSetID, err := relay.getInitialState(ctx)
+	return nil
+}
+
+func (relay *Relay) SyncUpdate(ctx context.Context, blockNumber uint64) error {
+	initialBeefyBlock, initialValidatorSetID, err := relay.getCurrentState(ctx)
 	if err != nil {
 		return fmt.Errorf("fetch BeefyClient current state: %w", err)
 	}
@@ -138,7 +142,7 @@ func (relay *Relay) SyncUpdate(ctx context.Context, blockNumber uint64) error {
 		if err != nil {
 			return fmt.Errorf("fail to submit beefy update: %w", err)
 		}
-		updatedBeefyBlock, _, _ := relay.getInitialState(ctx)
+		updatedBeefyBlock, _, _ := relay.getCurrentState(ctx)
 		if updatedBeefyBlock != uint64(update.SignedCommitment.Commitment.BlockNumber) {
 			return fmt.Errorf("fail to sync beefy update")
 		}

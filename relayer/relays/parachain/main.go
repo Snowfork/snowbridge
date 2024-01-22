@@ -84,6 +84,11 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
+	err = relay.beefyListener.beefyRelay.Initialize(ctx)
+	if err != nil {
+		return err
+	}
+
 	log.Info("Starting beefy listener")
 	err = relay.beefyListener.Start(ctx, eg)
 	if err != nil {

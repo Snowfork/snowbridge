@@ -60,6 +60,10 @@ func SyncBeefyFn(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	blockNumber, _ := cmd.Flags().GetUint64("block")
+	err = relay.Initialize(ctx)
+	if err != nil {
+		return err
+	}
 	err = relay.SyncUpdate(ctx, blockNumber)
 	return err
 }
