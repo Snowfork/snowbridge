@@ -5,7 +5,7 @@ use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_core::{H160, H256, U256};
 use sp_runtime::RuntimeDebug;
-use sp_std::{boxed::Box, prelude::*};
+use sp_std::{boxed::Box, iter::repeat, prelude::*};
 
 use crate::config::{PUBKEY_SIZE, SIGNATURE_SIZE};
 
@@ -189,9 +189,12 @@ pub struct SyncCommitteePrepared<const COMMITTEE_SIZE: usize> {
 
 impl<const COMMITTEE_SIZE: usize> Default for SyncCommitteePrepared<COMMITTEE_SIZE> {
 	fn default() -> Self {
+		let pubkeys: Vec<PublicKeyPrepared> =
+			repeat(PublicKeyPrepared::default()).take(COMMITTEE_SIZE).collect();
+
 		SyncCommitteePrepared {
 			root: H256::default(),
-			pubkeys: Box::new([PublicKeyPrepared::default(); COMMITTEE_SIZE]),
+			pubkeys: Box::new(pubkeys.try_into().expect("checked statically; qed")),
 			aggregate_pubkey: PublicKeyPrepared::default(),
 		}
 	}
