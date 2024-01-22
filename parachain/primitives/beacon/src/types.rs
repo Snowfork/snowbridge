@@ -195,7 +195,12 @@ impl<const COMMITTEE_SIZE: usize> Default for SyncCommitteePrepared<COMMITTEE_SI
 
 		SyncCommitteePrepared {
 			root: H256::default(),
-			pubkeys: Box::new(pubkeys.try_into().expect("checked statically; qed")),
+			pubkeys: Box::new(
+				pubkeys
+					.try_into()
+					.map_err(|_| "invalid conversion")
+					.expect("checked statically; qed"),
+			),
 			aggregate_pubkey: PublicKeyPrepared::default(),
 		}
 	}
@@ -211,7 +216,10 @@ impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
 		let sync_committee_root = sync_committee.hash_tree_root().expect("checked statically; qed");
 
 		Ok(SyncCommitteePrepared::<COMMITTEE_SIZE> {
-			pubkeys: g1_pubkeys.try_into().expect("checked statically; qed"),
+			pubkeys: g1_pubkeys
+				.try_into()
+				.map_err(|_| "invalid conversion")
+				.expect("checked statically; qed"),
 			aggregate_pubkey: prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?,
 			root: sync_committee_root,
 		})

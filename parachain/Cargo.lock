@@ -8908,9 +8908,9 @@ dependencies = [
 
 [[package]]
 name = "snowbridge-amcl"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a941fb693662de212c38b939b914b02c86e6e954546dcfa0c9df8d28b062a950"
+checksum = "460a9ed63cdf03c1b9847e8a12a5f5ba19c4efd5869e4a737e05be25d7c427e5"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -8989,9 +8989,9 @@ dependencies = [
 
 [[package]]
 name = "snowbridge-milagro-bls"
-version = "1.5.3"
+version = "1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e946852d109fbf8cf37acaf8b6f6e3a24e021722569a4e4f84f6c2146f17dc81"
+checksum = "026aa8638f690a53e3f7676024b9e913b1cab0111d1b7b92669d40a188f9d7e6"
 dependencies = [
  "hex",
  "lazy_static",
