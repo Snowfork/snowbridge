@@ -4,22 +4,17 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"path"
-	"strconv"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	"github.com/spf13/viper"
 )
 
 type Format string
@@ -68,10 +63,6 @@ func GetBlockFn(cmd *cobra.Command, _ []string) error {
 		blockHash = &hash
 	}
 	format := Format(cmd.Flags().Lookup("format").Value.String())
-	includeProof, err := strconv.ParseBool(cmd.Flags().Lookup("include-proof").Value.String())
-	if err != nil {
-		return err
-	}
 
 	url := cmd.Flags().Lookup("url").Value.String()
 	header, err := getEthBlock(url, blockHash)
@@ -84,16 +75,7 @@ func GetBlockFn(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if !includeProof {
-		return nil
-	}
-
-	proof, err := getEthHeaderProof(header)
-	if err != nil {
-		return err
-	}
-
-	return printEthHeaderProofForSub(proof)
+	return nil
 }
 
 func getEthBlock(url string, blockHash *gethCommon.Hash) (*gethTypes.Header, error) {
@@ -118,27 +100,6 @@ func getEthBlock(url string, blockHash *gethCommon.Hash) (*gethTypes.Header, err
 	}
 
 	return header, nil
-}
-
-func getEthHeaderProof(header *gethTypes.Header) ([]ethereum.DoubleNodeWithMerkleProof, error) {
-
-	if !viper.IsSet("global.data-dir") {
-		return nil, fmt.Errorf("data-dir not set in config")
-	}
-
-	dataDir := viper.GetString("global.data-dir")
-
-	ethashproofCacheLoader := &ethereum.DefaultCacheLoader{
-		DataDir:  path.Join(dataDir, "ethash-data"),
-		CacheDir: path.Join(dataDir, "ethash-cache"),
-	}
-
-	cache, err := ethashproofCacheLoader.MakeCache(header.Number.Uint64() / 30000)
-	if err != nil {
-		return nil, err
-	}
-
-	return ethereum.MakeProofData(header, cache, ethashproofCacheLoader.DataDir)
 }
 
 func printEthBlockForSub(header *gethTypes.Header, format Format) error {
@@ -246,16 +207,6 @@ func printEthBlockForSub(header *gethTypes.Header, format Format) error {
 	return nil
 }
 
-func printEthHeaderProofForSub(proof []ethereum.DoubleNodeWithMerkleProof) error {
-	var buffer = bytes.Buffer{}
-	err := scale.NewEncoder(&buffer).Encode(proof)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(gethCommon.Bytes2Hex(buffer.Bytes()))
-	return nil
-}
 func bytesAsArray64(bytes []byte) []uint64 {
 	arr := make([]uint64, len(bytes))
 	for i, v := range bytes {

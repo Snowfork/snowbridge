@@ -30,7 +30,7 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*paracha
 	}
 
 	proof := parachain.NewProofData()
-	err = receiptsTrie.Prove(receiptKey, 0, proof)
+	err = receiptsTrie.Prove(receiptKey, proof)
 	if err != nil {
 		return nil, err
 	}

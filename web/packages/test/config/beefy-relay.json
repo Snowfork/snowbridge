@@ -4,7 +4,8 @@
       "endpoint": "ws://127.0.0.1:9944"
     },
     "beefy-activation-block": 0,
-    "fast-forward-depth": 20
+    "fast-forward-depth": 20,
+    "update-period": 0
   },
   "sink": {
     "ethereum": {

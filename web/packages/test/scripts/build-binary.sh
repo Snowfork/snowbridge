@@ -17,7 +17,8 @@ build_binaries() {
     # Check that all 3 binaries are available and no changes made in the polkadot and substrate dirs
     if [[ ! -e "target/release/polkadot" || ! -e "target/release/polkadot-execute-worker" || ! -e "target/release/polkadot-prepare-worker" || "$changes_detected" -eq 1 ]]; then
         echo "Building polkadot binary, due to changes detected in polkadot or substrate, or binaries not found"
-        cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker
+        # Increase session length to 2 mins
+        ROCOCO_EPOCH_DURATION=20 cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker
     else
         echo "No changes detected in polkadot or substrate and binaries are available, not rebuilding relaychain binaries."
     fi
@@ -57,9 +58,33 @@ build_relayer() {
     cp $relay_bin "$output_bin_dir"
 }
 
+hack_beacon_client() {
+    echo "Hack lodestar for faster slot time"
+    local preset_minimal_config_file="$root_dir/lodestar/packages/config/src/chainConfig/presets/minimal.ts"
+    if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
+        gsed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 1/g" $preset_minimal_config_file
+    else
+        sed -i "s/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 1/g" $preset_minimal_config_file
+    fi
+}
+
+build_lodestar() {
+    if [ ! -d "$root_dir/lodestar/packages/cli/lib" ]; then
+        pushd $root_dir/lodestar
+        if [ "$eth_fast_mode" == "true" ]; then
+            hack_beacon_client
+        fi
+        yarn install && yarn run build
+        popd
+    else
+        echo "lodestar has already been built."
+    fi
+}
+
 install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
+    build_lodestar
     build_binaries
     build_contracts
     build_relayer

@@ -1,6 +1,7 @@
 package scale
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -63,7 +64,7 @@ func (o *OptionNextSyncCommitteeUpdatePayload) Decode(decoder scale.Decoder) err
 type HeaderUpdatePayload struct {
 	Header          BeaconHeader
 	AncestryProof   OptionAncestryProof
-	ExecutionHeader ExecutionPayloadHeaderCapella
+	ExecutionHeader VersionedExecutionPayloadHeader
 	ExecutionBranch []types.H256
 }
 
@@ -293,4 +294,27 @@ type CompactBeaconState struct {
 type BeaconState struct {
 	CompactBeaconState
 	BlockRoot types.H256
+}
+
+type VersionedExecutionPayloadHeader struct {
+	Capella *ExecutionPayloadHeaderCapella
+	Deneb   *ExecutionPayloadHeaderDeneb
+}
+
+var (
+	ErrEncodeVersionedExecutionPayloadHeader = errors.New("error scale encode VersionedExecutionPayloadHeader")
+)
+
+func (v VersionedExecutionPayloadHeader) Encode(encoder scale.Encoder) error {
+	var err error
+	if v.Capella != nil {
+		encoder.PushByte(0)
+		err = encoder.Encode(v.Capella)
+	} else if v.Deneb != nil {
+		encoder.PushByte(1)
+		err = encoder.Encode(v.Deneb)
+	} else {
+		err = ErrEncodeVersionedExecutionPayloadHeader
+	}
+	return err
 }
