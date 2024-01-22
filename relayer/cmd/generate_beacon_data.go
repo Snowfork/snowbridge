@@ -70,9 +70,9 @@ type Data struct {
 }
 
 const (
-	pathToBeaconBenchmarkData    = "parachain/pallets/ethereum-beacon-client/src/benchmarking"
+	pathToBeaconBenchmarkData    = "parachain/pallets/ethereum-client/src/benchmarking"
 	pathToBenchmarkDataTemplate  = "parachain/templates/benchmarking-fixtures.mustache"
-	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-beacon-client/tests/fixtures"
+	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-client/tests/fixtures"
 )
 
 // Only print the hex encoded call as output of this command
@@ -110,7 +110,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
-		exportJson, err := cmd.Flags().GetBool("export_json")
+		exportJson, err := cmd.Flags().GetBool("export-json")
 		if exportJson {
 			initialSync := checkPointScale.ToJSON()
 			err = writeJSONToFile(initialSync, "dump-initial-checkpoint.json")

@@ -196,7 +196,8 @@ type BlockRootsContainer interface {
 type BeaconBlock interface {
 	UnmarshalSSZ(buf []byte) error
 	GetBeaconSlot() uint64
-	GetExecutionPayload() *ExecutionPayloadCapella
+	ExecutionPayloadCapella() *ExecutionPayloadCapella
+	ExecutionPayloadDeneb() *ExecutionPayloadDeneb
 	GetTree() (*ssz.Node, error)
 	GetBlockBodyTree() (*ssz.Node, error)
 }
@@ -366,20 +367,12 @@ func (b *BeaconBlockCapellaMinimal) GetBeaconSlot() uint64 {
 	return b.Slot
 }
 
-func (b *BeaconBlockCapellaMinimal) GetExecutionPayload() *ExecutionPayloadCapella {
-	return b.Body.ExecutionPayload
-}
-
 func (b *BeaconBlockCapellaMinimal) GetBlockBodyTree() (*ssz.Node, error) {
 	return b.Body.GetTree()
 }
 
 func (b *BeaconBlockCapellaMainnet) GetBeaconSlot() uint64 {
 	return b.Slot
-}
-
-func (b *BeaconBlockCapellaMainnet) GetExecutionPayload() *ExecutionPayloadCapella {
-	return b.Body.ExecutionPayload
 }
 
 func (b *BeaconBlockCapellaMainnet) GetBlockBodyTree() (*ssz.Node, error) {
@@ -412,4 +405,20 @@ func (b *BeaconStateCapellaMainnet) GetBlockRoots() [][]byte {
 
 func (b *BeaconStateCapellaMainnet) SetBlockRoots(blockRoots [][]byte) {
 	b.BlockRoots = blockRoots
+}
+
+func (b *BeaconBlockCapellaMainnet) ExecutionPayloadCapella() *ExecutionPayloadCapella {
+	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockCapellaMainnet) ExecutionPayloadDeneb() *ExecutionPayloadDeneb {
+	return nil
+}
+
+func (b *BeaconBlockCapellaMinimal) ExecutionPayloadCapella() *ExecutionPayloadCapella {
+	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockCapellaMinimal) ExecutionPayloadDeneb() *ExecutionPayloadDeneb {
+	return nil
 }

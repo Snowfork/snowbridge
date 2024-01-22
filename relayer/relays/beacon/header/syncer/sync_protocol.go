@@ -22,3 +22,7 @@ func (s *Syncer) CalculateNextCheckpointSlot(slot uint64) uint64 {
 
 	return (syncPeriod + 1) * s.setting.SlotsInEpoch * s.setting.EpochsPerSyncCommitteePeriod
 }
+
+func (s *Syncer) DenebForked(slot uint64) bool {
+	return s.ComputeEpochAtSlot(slot) >= s.setting.DenebForkEpoch
+}
