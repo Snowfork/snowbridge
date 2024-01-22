@@ -3,7 +3,7 @@ use frame_support::{parameter_types, sp_runtime::testing::H256};
 use snowbridge_core::outbound::{Fee, Message, SendError, SendMessage, SendMessageFeeProvider};
 use xcm::prelude::{
 	Asset, Assets, Here, Kusama, Location, NetworkId, Parachain, XcmContext, XcmError, XcmHash,
-	XcmResult, X1,
+	XcmResult,
 };
 use xcm_builder::HandleFee;
 use xcm_executor::{
