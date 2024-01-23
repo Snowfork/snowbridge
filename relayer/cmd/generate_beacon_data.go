@@ -84,7 +84,7 @@ type InboundMessageTest struct {
 
 const (
 	pathToBeaconBenchmarkData          = "parachain/pallets/ethereum-client/src/benchmarking"
-	pathToInboundQueueBenchmarkData    = "parachain/pallets/inbound-queue/src/benchmarking"
+	pathToInboundQueueFixtureData      = "parachain/pallets/inbound-queue/src"
 	pathToBenchmarkDataTemplate        = "parachain/templates/benchmarking-fixtures.mustache"
 	pathToInboundBenchmarkDataTemplate = "parachain/templates/inbound-fixtures.mustache"
 	pathToBeaconTestFixtureFiles       = "parachain/pallets/ethereum-client/tests/fixtures"
@@ -360,11 +360,11 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		log.WithFields(log.Fields{
-			"location": pathToInboundQueueBenchmarkData,
+			"location": pathToInboundQueueFixtureData,
 			"filename": filename,
 		}).Info("writing result file")
 
-		err = writeBenchmarkDataFile(fmt.Sprintf("%s/%s", pathToInboundQueueBenchmarkData, filename), rendered)
+		err = writeBenchmarkDataFile(fmt.Sprintf("%s/%s", pathToInboundQueueFixtureData, filename), rendered)
 		if err != nil {
 			return err
 		}

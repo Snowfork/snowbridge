@@ -39,6 +39,9 @@ mod mock;
 #[cfg(test)]
 mod test;
 
+#[cfg(any(test, feature = "test-helpers", feature = "runtime-benchmarks"))]
+pub mod fixtures;
+
 use codec::{Decode, DecodeAll, Encode};
 use envelope::Envelope;
 use frame_support::{
