@@ -44,7 +44,7 @@ pallet-timestamp = { path = "../../../polkadot-sdk/substrate/frame/timestamp", d
 [dev-dependencies]
 rand = "0.8.5"
 sp-keyring = { path = "../../../polkadot-sdk/substrate/primitives/keyring" }
-serde_json = "1.0.96"
+serde_json = "1.0.111"
 hex-literal = "0.4.1"
 pallet-timestamp = { path = "../../../polkadot-sdk/substrate/frame/timestamp" }
 sp-io = { path = "../../../polkadot-sdk/substrate/primitives/io" }
