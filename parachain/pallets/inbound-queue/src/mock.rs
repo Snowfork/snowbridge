@@ -21,7 +21,7 @@ use sp_runtime::{
 	BuildStorage, FixedU128, MultiSignature,
 };
 use sp_std::convert::From;
-use xcm::v4::{prelude::*, SendXcm};
+use xcm::{latest::SendXcm, prelude::*};
 use xcm_executor::AssetsInHolding;
 
 use crate::{self as inbound_queue};
