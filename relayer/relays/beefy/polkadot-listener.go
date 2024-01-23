@@ -245,7 +245,7 @@ func (li *PolkadotListener) generateNextBeefyUpdate(nextBlockNumber uint64) (Req
 		Validators:       validators,
 		SignedCommitment: *commitment,
 		Proof:            proof,
-		IsHandover:       nextValidatorSetID == validatorSetID+2,
+		IsHandover:       nextValidatorSetID == validatorSetID+1,
 	}
 
 	return request, nil
