@@ -5,10 +5,10 @@ use xcm::prelude::{
 	Asset, Assets, Here, Kusama, Location, NetworkId, Parachain, XcmContext, XcmError, XcmHash,
 	XcmResult,
 };
-use xcm_builder::HandleFee;
 use xcm_executor::{
-	traits::{FeeReason, TransactAsset},
+	traits::{FeeReason, TransactAsset}, AssetsInHolding,
 };
+use xcm_builder::HandleFee;
 
 parameter_types! {
 	pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
@@ -74,8 +74,8 @@ impl TransactAsset for MockAssetTransactor {
 		_what: &Asset,
 		_who: &Location,
 		_context: Option<&XcmContext>,
-	) -> Result<Assets, XcmError> {
-		Ok(Assets::default())
+	) -> Result<AssetsInHolding, XcmError> {
+		Ok(Assets::default().into())
 	}
 
 	fn internal_transfer_asset(
@@ -83,8 +83,8 @@ impl TransactAsset for MockAssetTransactor {
 		_from: &Location,
 		_to: &Location,
 		_context: &XcmContext,
-	) -> Result<Assets, XcmError> {
-		Ok(Assets::default())
+	) -> Result<AssetsInHolding, XcmError> {
+		Ok(Assets::default().into())
 	}
 }
 

@@ -629,22 +629,19 @@ fn submit_update_with_skipped_sync_committee_period() {
 
 #[test]
 fn submit_update_execution_headers_too_far_behind() {
-	let checkpoint = load_checkpoint_update_fixture();
-	let finalized_header_update = load_finalized_header_update_fixture();
-	let execution_header_update = load_execution_header_update_fixture();
-	let next_update = load_next_sync_committee_update_fixture();
+	let checkpoint = Box::new(load_checkpoint_update_fixture());
+	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
+	let execution_header_update = Box::new(load_execution_header_update_fixture());
+	let next_update = Box::new(load_next_sync_committee_update_fixture());
 
 	new_tester().execute_with(|| {
 		let far_ahead_finalized_header_slot = finalized_header_update.finalized_header.slot +
 			(EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH * 2) as u64;
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		assert_ok!(EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			Box::new(finalized_header_update)
-		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
 		assert_ok!(EthereumBeaconClient::submit_execution_header(
 			RuntimeOrigin::signed(1),
-			Box::new(execution_header_update)
+			execution_header_update
 		));
 
 		let header_root: H256 = TEST_HASH.into();
@@ -658,7 +655,7 @@ fn submit_update_execution_headers_too_far_behind() {
 		LatestFinalizedBlockRoot::<Test>::set(header_root);
 
 		assert_err!(
-			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(next_update)),
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), next_update),
 			Error::<Test>::ExecutionHeaderTooFarBehind
 		);
 	});
@@ -699,14 +696,14 @@ fn submit_update_with_missing_bootstrap() {
 
 #[test]
 fn submit_update_with_invalid_sync_committee_update() {
-	let checkpoint = load_checkpoint_update_fixture();
-	let update = load_sync_committee_update_fixture();
-	let mut next_update = load_next_sync_committee_update_fixture();
+	let checkpoint = Box::new(load_checkpoint_update_fixture());
+	let update = Box::new(load_sync_committee_update_fixture());
+	let mut next_update = Box::new(load_next_sync_committee_update_fixture());
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
 
-		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(update)));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update));
 
 		// makes update with invalid next_sync_committee
 		<FinalizedBeaconState<Test>>::mutate(<LatestFinalizedBlockRoot<Test>>::get(), |x| {
@@ -719,7 +716,7 @@ fn submit_update_with_invalid_sync_committee_update() {
 		next_update.next_sync_committee_update = Some(next_sync_committee);
 
 		assert_err!(
-			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), Box::new(next_update)),
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), next_update),
 			Error::<Test>::InvalidSyncCommitteeUpdate
 		);
 	});

@@ -52,7 +52,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		FeeProvider,
 	> where
 	Balance: BaseArithmetic + Unsigned + Copy + From<u128> + Into<u128> + Debug,
-	AccountId: Clone + Into<[u8; 32]> + From<[u8; 32]> + FullCodec,
+	AccountId: Clone + FullCodec,
 	FeeAssetLocation: Get<Location>,
 	EthereumNetwork: Get<NetworkId>,
 	AssetTransactor: TransactAsset,
