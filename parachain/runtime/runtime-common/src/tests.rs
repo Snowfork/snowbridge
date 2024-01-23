@@ -5,10 +5,11 @@ use xcm::prelude::{
 	Asset, Assets, Here, Kusama, Location, NetworkId, Parachain, XcmContext, XcmError, XcmHash,
 	XcmResult,
 };
-use xcm_executor::{
-	traits::{FeeReason, TransactAsset}, AssetsInHolding,
-};
 use xcm_builder::HandleFee;
+use xcm_executor::{
+	traits::{FeeReason, TransactAsset},
+	AssetsInHolding,
+};
 
 parameter_types! {
 	pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
