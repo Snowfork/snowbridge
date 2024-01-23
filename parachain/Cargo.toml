@@ -8,6 +8,7 @@ resolver = "2"
 members = [
 	"pallets/ethereum-client",
 	"pallets/inbound-queue",
+	"pallets/inbound-queue/fixtures",
 	"pallets/outbound-queue",
 	"pallets/outbound-queue/merkle-tree",
 	"pallets/outbound-queue/runtime-api",

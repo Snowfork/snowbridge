@@ -1,19 +1,22 @@
 // Generated, do not edit!
 // See ethereum client README.md for instructions to generate
+#![cfg_attr(not(feature = "std"), no_std)]
 use hex_literal::hex;
 use snowbridge_beacon_primitives::CompactExecutionHeader;
 use snowbridge_core::inbound::{Log, Message, Proof};
 use sp_core::RuntimeDebug;
 use sp_std::vec;
 
+pub type RegisterAsset = InboundQueueFixture;
+
 #[derive(Clone, RuntimeDebug)]
-pub struct InboundQueueTest {
+pub struct InboundQueueFixture {
 	pub execution_header: CompactExecutionHeader,
 	pub message: Message,
 }
 
-pub fn make_create_message() -> InboundQueueTest {
-	InboundQueueTest {
+pub fn make_register_asset_message() -> RegisterAsset {
+	RegisterAsset {
         execution_header: CompactExecutionHeader{
             parent_hash: hex!("d82ec63f5c5e6ba61d62f09c188f158e6449b94bdcc31941e68639eec3c4cf7a").into(),
             block_number: 215,

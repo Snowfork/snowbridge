@@ -83,8 +83,8 @@ type InboundMessageTest struct {
 }
 
 const (
-	pathToBeaconBenchmarkData          = "parachain/pallets/ethereum-client/src/benchmarking"
-	pathToInboundQueueFixtureData      = "parachain/pallets/inbound-queue/src"
+	pathToBeaconBenchmarkData          = "parachain/pallets/ethereum-client/src/benchmarking/fixtures.rs"
+	pathToInboundQueueFixtureData      = "parachain/pallets/inbound-queue/fixtures/src/lib.rs"
 	pathToBenchmarkDataTemplate        = "parachain/templates/benchmarking-fixtures.mustache"
 	pathToInboundBenchmarkDataTemplate = "parachain/templates/inbound-fixtures.mustache"
 	pathToBeaconTestFixtureFiles       = "parachain/pallets/ethereum-client/tests/fixtures"
@@ -335,8 +335,6 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			InboundMessageTest:    inboundMessageTest,
 		}
 
-		filename := fmt.Sprintf("fixtures.rs")
-
 		// writing beacon fixtures
 		rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
 		if err != nil {
@@ -345,10 +343,9 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 
 		log.WithFields(log.Fields{
 			"location": pathToBeaconBenchmarkData,
-			"filename": filename,
 		}).Info("writing result file")
 
-		err = writeBenchmarkDataFile(fmt.Sprintf("%s/%s", pathToBeaconBenchmarkData, filename), rendered)
+		err = writeBenchmarkDataFile(fmt.Sprintf("%s", pathToBeaconBenchmarkData), rendered)
 		if err != nil {
 			return err
 		}
@@ -361,10 +358,9 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 
 		log.WithFields(log.Fields{
 			"location": pathToInboundQueueFixtureData,
-			"filename": filename,
 		}).Info("writing result file")
 
-		err = writeBenchmarkDataFile(fmt.Sprintf("%s/%s", pathToInboundQueueFixtureData, filename), rendered)
+		err = writeBenchmarkDataFile(fmt.Sprintf("%s", pathToInboundQueueFixtureData), rendered)
 		if err != nil {
 			return err
 		}

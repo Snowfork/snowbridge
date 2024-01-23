@@ -42,6 +42,7 @@ snowbridge-core = { path = "../../primitives/core", default-features = false }
 snowbridge-ethereum = { path = "../../primitives/ethereum", default-features = false }
 snowbridge-router-primitives = { path = "../../primitives/router", default-features = false }
 snowbridge-beacon-primitives = { path = "../../primitives/beacon", default-features = false }
+snowbridge-pallet-inbound-queue-fixtures = { path = "./fixtures", default-features = false, optional = true }
 
 [dev-dependencies]
 frame-benchmarking = { path = "../../../polkadot-sdk/substrate/frame/benchmarking" }
@@ -90,6 +91,7 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
+	"snowbridge-pallet-inbound-queue-fixtures/runtime-benchmarks",
 ]
 try-runtime = [
 	"frame-support/try-runtime",
@@ -97,7 +99,4 @@ try-runtime = [
 	"pallet-balances/try-runtime",
 	"snowbridge-pallet-ethereum-client/try-runtime",
 	"sp-runtime/try-runtime",
-]
-test-helpers = [
-	"hex-literal",
 ]
