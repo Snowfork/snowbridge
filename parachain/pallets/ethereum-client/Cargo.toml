@@ -86,7 +86,6 @@ runtime-benchmarks = [
 	"frame-system/runtime-benchmarks",
 	"hex-literal",
 	"pallet-timestamp?/runtime-benchmarks",
-	"primitives/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]

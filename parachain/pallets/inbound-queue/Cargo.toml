@@ -84,7 +84,6 @@ runtime-benchmarks = [
 	"frame-system/runtime-benchmarks",
 	"hex-literal",
 	"pallet-balances/runtime-benchmarks",
-	"snowbridge-beacon-primitives/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
 	"snowbridge-pallet-ethereum-client/runtime-benchmarks",
 	"snowbridge-pallet-inbound-queue-fixtures/runtime-benchmarks",
