@@ -4,14 +4,18 @@
 // See README.md for instructions to generate
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use crate::{CheckpointUpdate, ExecutionHeaderUpdate, Update};
 use hex_literal::hex;
-use primitives::{
-    types::deneb, updates::AncestryProof, BeaconHeader, NextSyncCommitteeUpdate, SyncAggregate,
-    SyncCommittee, VersionedExecutionPayloadHeader,
+use snowbridge_beacon_primitives::{
+    types::deneb, updates::AncestryProof, BeaconHeader, ExecutionHeaderUpdate,
+    NextSyncCommitteeUpdate, SyncAggregate, SyncCommittee, VersionedExecutionPayloadHeader,
 };
 use sp_core::U256;
 use sp_std::{boxed::Box, vec};
+
+const SC_SIZE: usize = 512;
+const SC_BITS_SIZE: usize = 64;
+type CheckpointUpdate = snowbridge_beacon_primitives::CheckpointUpdate<SC_SIZE>;
+type Update = snowbridge_beacon_primitives::Update<SC_SIZE, SC_BITS_SIZE>;
 
 pub fn make_checkpoint() -> Box<CheckpointUpdate> {
     Box::new(CheckpointUpdate {
