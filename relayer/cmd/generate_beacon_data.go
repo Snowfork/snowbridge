@@ -38,7 +38,7 @@ func generateBeaconDataCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
-	cmd.Flags().Bool("wait_until_next_period", false, "Waiting until next period")
+	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	cmd.Flags().String("test_case", "register_token", "Inbound test case")
 	return cmd
