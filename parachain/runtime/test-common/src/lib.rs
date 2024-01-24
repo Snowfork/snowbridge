@@ -19,8 +19,6 @@ use xcm_executor::XcmExecutor;
 use sp_keyring::AccountKeyring::*;
 use sp_runtime::AccountId32;
 
-mod fixtures;
-
 type RuntimeHelper<Runtime, AllPalletsWithoutSystem = ()> =
 	parachains_runtimes_test_utils::RuntimeHelper<Runtime, AllPalletsWithoutSystem>;
 

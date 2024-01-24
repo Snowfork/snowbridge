@@ -397,14 +397,6 @@ func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePaylo
 func (h *Header) batchSyncHeaders(ctx context.Context, headerUpdates []scale.HeaderUpdatePayload) error {
 	headerUpdatesInf := make([]interface{}, len(headerUpdates))
 	for i, v := range headerUpdates {
-		log.WithFields(log.Fields{
-			"parent_hash":   v.ExecutionHeader.ParentHash.Hex(),
-			"block_number":  v.ExecutionHeader.BlockNumber,
-			"state_root":    v.ExecutionHeader.StateRoot.Hex(),
-			"receipts_root": v.ExecutionHeader.ReceiptsRoot.Hex(),
-			"block_hash":    v.ExecutionHeader.BlockHash.Hex(),
-		}).Info("header")
-
 		headerUpdatesInf[i] = v
 	}
 	err := h.writer.BatchCall(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdatesInf)

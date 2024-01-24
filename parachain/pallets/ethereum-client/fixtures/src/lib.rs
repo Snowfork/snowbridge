@@ -1,16 +1,20 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 // Generated, do not edit!
 // See README.md for instructions to generate
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use crate::{CheckpointUpdate, ExecutionHeaderUpdate, Update};
 use hex_literal::hex;
 use primitives::{
-	types::deneb, updates::AncestryProof, BeaconHeader, NextSyncCommitteeUpdate, SyncAggregate,
-	SyncCommittee, VersionedExecutionPayloadHeader,
+    types::deneb, updates::AncestryProof, BeaconHeader, NextSyncCommitteeUpdate, SyncAggregate,
+    SyncCommittee, VersionedExecutionPayloadHeader,
 };
 use sp_core::U256;
 use sp_std::{boxed::Box, vec};
 
 pub fn make_checkpoint() -> Box<CheckpointUpdate> {
-	Box::new(CheckpointUpdate {
+    Box::new(CheckpointUpdate {
         header: BeaconHeader {
             slot: 2496,
             proposer_index: 2,
@@ -536,11 +540,11 @@ pub fn make_checkpoint() -> Box<CheckpointUpdate> {
             aggregate_pubkey: hex!("8fbd66eeec2ff69ef0b836f04b1d67d88bcd4dfd495061964ad757c77abe822a39fa1cd8ed0d4d9bc9276cea73fd745c").into(),
         },
         current_sync_committee_branch: vec![
-                hex!("3ade38d498a062b50880a9409e1ca3a7fd4315d91eeb3bb83e56ac6bfe8d6a59").into(),
-                hex!("93880225bf99a0c5ec22b266ff829837754e9c5edf37a68c05b8f803fd82fa45").into(),
-                hex!("4c60656ec9a95fcf11030ad309c716b5b15beb7f60a0bcfc7c9d4eff505472ff").into(),
-                hex!("22d1645fceb4bf9a695043dda19a53e784ec70df6a6b1bd66ea30eba1cca5f2f").into(),
-                hex!("a8fc6cad84ceefc633ec56c2d031d525e1cb4b51c70eb252919fce5bba9a1fde").into(),
+            hex!("3ade38d498a062b50880a9409e1ca3a7fd4315d91eeb3bb83e56ac6bfe8d6a59").into(),
+            hex!("93880225bf99a0c5ec22b266ff829837754e9c5edf37a68c05b8f803fd82fa45").into(),
+            hex!("4c60656ec9a95fcf11030ad309c716b5b15beb7f60a0bcfc7c9d4eff505472ff").into(),
+            hex!("22d1645fceb4bf9a695043dda19a53e784ec70df6a6b1bd66ea30eba1cca5f2f").into(),
+            hex!("a8fc6cad84ceefc633ec56c2d031d525e1cb4b51c70eb252919fce5bba9a1fde").into(),
         ],
         validators_root: hex!("270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69").into(),
         block_roots_root: hex!("d160b7687041891b73e54b06fc4e04f82d0fa8fdd76705895e216c6b24709dfe").into(),
@@ -555,7 +559,7 @@ pub fn make_checkpoint() -> Box<CheckpointUpdate> {
 }
 
 pub fn make_sync_committee_update() -> Box<Update> {
-	Box::new(Update {
+    Box::new(Update {
         attested_header: BeaconHeader {
             slot: 129,
             proposer_index: 5,
@@ -1121,7 +1125,7 @@ pub fn make_sync_committee_update() -> Box<Update> {
 }
 
 pub fn make_finalized_header_update() -> Box<Update> {
-	Box::new(Update {
+    Box::new(Update {
         attested_header: BeaconHeader {
             slot: 2566,
             proposer_index: 6,
@@ -1162,7 +1166,7 @@ pub fn make_finalized_header_update() -> Box<Update> {
 }
 
 pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
-	Box::new(ExecutionHeaderUpdate {
+    Box::new(ExecutionHeaderUpdate {
         header: BeaconHeader {
             slot: 215,
             proposer_index: 2,
