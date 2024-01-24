@@ -5,7 +5,6 @@ package ethereum
 
 import (
 	"bytes"
-	gethCommon "github.com/ethereum/go-ethereum/common"
 
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -53,21 +52,6 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*paracha
 			Data:      proof,
 		},
 	}
-
-	keys := []gethCommon.Hash{}
-	for _, key := range m.Proof.Data.Keys {
-		keys = append(keys, gethCommon.BytesToHash(key))
-	}
-	values := []gethCommon.Hash{}
-	for _, value := range m.Proof.Data.Values {
-		values = append(values, gethCommon.BytesToHash(value))
-	}
-	log.WithFields(logrus.Fields{
-		"Keys": keys,
-	}).Debug("Keys")
-	log.WithFields(logrus.Fields{
-		"Values": values,
-	}).Debug("Values")
 
 	log.WithFields(logrus.Fields{
 		"EventLog":    m.EventLog,

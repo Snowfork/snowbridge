@@ -563,14 +563,7 @@ pub mod pallet {
 			let execution_header_root: H256 = update
 				.execution_header
 				.hash_tree_root()
-				.map_err(|e| {
-					log::error!(
-					target: LOG_TARGET,
-					"💫 BlockBodyHashTreeRootFailed error {}.",
-					e
-				);
-					Error::<T>::BlockBodyHashTreeRootFailed
-				})?;
+				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 
 			ensure!(
 				verify_merkle_branch(
