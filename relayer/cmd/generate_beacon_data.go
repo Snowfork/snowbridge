@@ -221,14 +221,20 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		receiptTrie, err := headerCache.GetReceiptTrie(ctx, event.Raw.BlockHash)
+		if err != nil {
+			return err
+		}
 		inboundMessage, err := ethereum.MakeMessageFromEvent(&event.Raw, receiptTrie)
+		if err != nil {
+			return err
+		}
 		messageBlockNumber := event.Raw.BlockNumber
 
 		log.WithFields(log.Fields{
 			"message":     inboundMessage,
 			"blockHash":   event.Raw.BlockHash.Hex(),
 			"blockNumber": messageBlockNumber,
-		}).WithError(err).Error("event is at block")
+		}).Info("event is at block")
 
 		finalizedUpdateAfterMessage, err := getFinalizedUpdate(*s, messageBlockNumber)
 		if err != nil {
@@ -242,7 +248,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get beacon block containing header: %w", err)
 		}
 
-		beaconBlockSlot, err := strconv.ParseUint(beaconBlock.Data.Message.Body.ExecutionPayload.BlockNumber, 10, 64)
+		beaconBlockSlot, err := strconv.ParseUint(beaconBlock.Data.Message.Slot, 10, 64)
 		if err != nil {
 			return err
 		}
@@ -254,7 +260,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 				"slot":        beaconBlock.Data.Message.Slot,
 				"blockHash":   beaconBlock.Data.Message.Body.ExecutionPayload.BlockHash,
 				"blockNumber": blockNumber,
-			}).WithError(err).Error("found execution header containing event")
+			}).WithError(err).Info("found execution header containing event")
 		}
 
 		checkPoint := cache.Proof{

@@ -6,7 +6,7 @@ use crate::Pallet as InboundQueue;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use snowbridge_pallet_inbound_queue_fixtures::make_register_asset_message;
+use snowbridge_pallet_inbound_queue_fixtures::register_asset::make_register_asset_message;
 
 #[benchmarks]
 mod benchmarks {
