@@ -12,9 +12,9 @@ pub type RegisterAsset = InboundQueueFixture;
 pub fn make_register_asset_message() -> RegisterAsset {
 	RegisterAsset {
         execution_header: CompactExecutionHeader{
-            parent_hash: hex!("77cafb8e9b3283577996fdd0a0bcef6d44d85f1aeb3cb3bc1b5bb8fcf95f9e0e").into(),
-            block_number: 1457,
-            state_root: hex!("df57d750b65c983d2dc410645ea0d8e0fc217e404a7027e6871cbc6eaf1e7553").into(),
+            parent_hash: hex!("3057299569c0526f0f45d505c11aad541b3d0a1d58ca1ecd0ec72e6615362b1c").into(),
+            block_number: 326,
+            state_root: hex!("e22da642f3054f0f8489dec3e99b877d1ba3abfc946074a50eadbb446830361a").into(),
             receipts_root: hex!("7b1f61b9714c080ef0be014e01657a15f45f0304b477beebc7ca5596c8033095").into(),
         },
         message: Message {
@@ -28,7 +28,7 @@ pub fn make_register_asset_message() -> RegisterAsset {
                 data: hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002e00a736aa00000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d00e40b54020000000000000000000000000000000000000000000000000000000000").into(),
             },
             proof: Proof {
-                block_hash: hex!("2506474d3e39ed83f63f415fc413bb8e34ffd5b1560542f9317cf1e5d55c833c").into(),
+                block_hash: hex!("47593b0ddb170422509040562f3f3c3ef98d4cc7f47a2e5533d8a6b4ae9cd238").into(),
                 tx_index: 0,
                 data: (vec![
                     hex!("7b1f61b9714c080ef0be014e01657a15f45f0304b477beebc7ca5596c8033095").to_vec(),
