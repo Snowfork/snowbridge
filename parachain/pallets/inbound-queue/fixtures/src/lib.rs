@@ -4,7 +4,7 @@ use snowbridge_beacon_primitives::CompactExecutionHeader;
 use snowbridge_core::inbound::Message;
 use sp_core::RuntimeDebug;
 
-pub mod register_asset;
+pub mod register_token;
 pub mod send_token;
 
 #[derive(Clone, RuntimeDebug)]

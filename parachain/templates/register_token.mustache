@@ -7,10 +7,10 @@ use snowbridge_beacon_primitives::CompactExecutionHeader;
 use snowbridge_core::inbound::{Log, Message, Proof};
 use sp_std::vec;
 
-pub type RegisterAsset = InboundQueueFixture;
+pub type RegisterToken = InboundQueueFixture;
 
-pub fn make_register_asset_message() -> RegisterAsset {
-    RegisterAsset {
+pub fn make_register_asset_message() -> RegisterToken {
+    RegisterToken {
         execution_header: CompactExecutionHeader{
             parent_hash: hex!("{{InboundMessageTest.ExecutionHeader.ParentHash}}").into(),
             block_number: {{InboundMessageTest.ExecutionHeader.BlockNumber}},

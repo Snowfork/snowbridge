@@ -40,7 +40,7 @@ func generateBeaconDataCmd() *cobra.Command {
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
 	cmd.Flags().Bool("wait_until_next_period", false, "Waiting until next period")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
-	cmd.Flags().String("test_case", "register_asset", "Inbound test case")
+	cmd.Flags().String("test_case", "register_token", "Inbound test case")
 	return cmd
 }
 
@@ -362,7 +362,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		// writing inbound queue fixtures
-		testCase, _ := cmd.Flags().GetString("test_case")
+		testCase, err := cmd.Flags().GetString("test_case")
 		if err != nil {
 			return err
 		}
