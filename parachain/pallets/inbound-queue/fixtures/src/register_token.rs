@@ -9,10 +9,8 @@ use snowbridge_beacon_primitives::CompactExecutionHeader;
 use snowbridge_core::inbound::{Log, Message, Proof};
 use sp_std::vec;
 
-pub type RegisterToken = InboundQueueFixture;
-
-pub fn make_register_token_message() -> RegisterToken {
-	RegisterToken {
+pub fn make_register_token_message() -> InboundQueueFixture {
+	InboundQueueFixture {
         execution_header: CompactExecutionHeader{
             parent_hash: hex!("3057299569c0526f0f45d505c11aad541b3d0a1d58ca1ecd0ec72e6615362b1c").into(),
             block_number: 326,

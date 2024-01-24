@@ -9,10 +9,8 @@ use snowbridge_beacon_primitives::CompactExecutionHeader;
 use snowbridge_core::inbound::{Log, Message, Proof};
 use sp_std::vec;
 
-pub type SendToken = InboundQueueFixture;
-
-pub fn make_send_token_message() -> SendToken {
-	SendToken {
+pub fn make_send_token_message() -> InboundQueueFixture {
+	InboundQueueFixture {
         execution_header: CompactExecutionHeader{
             parent_hash: hex!("28deff91ce77038d14fbb699275329247c8fe06846f1ad536dacbc96d73409c5").into(),
             block_number: 612,
