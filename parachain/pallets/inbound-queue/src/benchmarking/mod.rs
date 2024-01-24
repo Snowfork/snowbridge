@@ -6,7 +6,7 @@ use crate::Pallet as InboundQueue;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use snowbridge_pallet_inbound_queue_fixtures::register_asset::make_register_asset_message;
+use snowbridge_pallet_inbound_queue_fixtures::register_token::make_register_token_message;
 
 #[benchmarks]
 mod benchmarks {
@@ -16,7 +16,7 @@ mod benchmarks {
 	fn submit() -> Result<(), BenchmarkError> {
 		let caller: T::AccountId = whitelisted_caller();
 
-		let create_message = make_register_asset_message();
+		let create_message = make_register_token_message();
 
 		T::Helper::initialize_storage(
 			create_message.message.proof.block_hash,
