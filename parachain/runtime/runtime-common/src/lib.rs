@@ -53,41 +53,36 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 	> where
 	Balance: BaseArithmetic + Unsigned + Copy + From<u128> + Into<u128> + Debug,
 	AccountId: Clone + FullCodec,
-	FeeAssetLocation: Get<MultiLocation>,
+	FeeAssetLocation: Get<Location>,
 	EthereumNetwork: Get<NetworkId>,
 	AssetTransactor: TransactAsset,
 	FeeProvider: SendMessageFeeProvider<Balance = Balance>,
 {
-	fn handle_fee(
-		fees: MultiAssets,
-		context: Option<&XcmContext>,
-		reason: FeeReason,
-	) -> MultiAssets {
+	fn handle_fee(fees: Assets, context: Option<&XcmContext>, reason: FeeReason) -> Assets {
 		let token_location = FeeAssetLocation::get();
 
 		// Check the reason to see if this export is for snowbridge.
 		if !matches!(
 			reason,
-			FeeReason::Export { network: bridged_network, destination }
-				if bridged_network == EthereumNetwork::get() && destination == Here
+			FeeReason::Export { network: bridged_network, ref destination }
+				if bridged_network == EthereumNetwork::get() && destination == &Here
 		) {
 			return fees
 		}
 
 		// Get the parachain sovereign from the `context`.
-		let maybe_para_id: Option<u32> = if let Some(XcmContext {
-			origin: Some(MultiLocation { parents: 1, interior }),
-			..
-		}) = context
-		{
-			if let Some(Parachain(sibling_para_id)) = interior.first() {
-				Some(*sibling_para_id)
+		let maybe_para_id: Option<u32> =
+			if let Some(XcmContext { origin: Some(Location { parents: 1, interior }), .. }) =
+				context
+			{
+				if let Some(Parachain(sibling_para_id)) = interior.first() {
+					Some(*sibling_para_id)
+				} else {
+					None
+				}
 			} else {
 				None
-			}
-		} else {
-			None
-		};
+			};
 		if maybe_para_id.is_none() {
 			log::error!(
 				target: LOG_TARGET,
@@ -104,8 +99,8 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 			.iter()
 			.enumerate()
 			.filter_map(|(index, asset)| {
-				if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = asset {
-					if *location == token_location {
+				if let Asset { id: location, fun: Fungible(amount) } = asset {
+					if location.0 == token_location {
 						return Some((index, (*amount).into()))
 					}
 				}
@@ -134,8 +129,8 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		}
 		// Refund remote component of fee to physical origin
 		let result = AssetTransactor::deposit_asset(
-			&MultiAsset { id: Concrete(token_location), fun: Fungible(remote_fee.into()) },
-			&MultiLocation { parents: 1, interior: X1(Parachain(para_id)) },
+			&Asset { id: AssetId(token_location.clone()), fun: Fungible(remote_fee.into()) },
+			&Location::new(1, [Parachain(para_id)]),
 			context,
 		);
 		if result.is_err() {
@@ -150,8 +145,7 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		// Return remaining fee to the next fee handler in the chain.
 		let mut modified_fees = fees.inner().clone();
 		modified_fees.remove(fee_index);
-		modified_fees
-			.push(MultiAsset { id: Concrete(token_location), fun: Fungible(local_fee.into()) });
+		modified_fees.push(Asset { id: AssetId(token_location), fun: Fungible(local_fee.into()) });
 		modified_fees.into()
 	}
 }

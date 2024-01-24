@@ -2,18 +2,18 @@ use crate::XcmExportFeeToSibling;
 use frame_support::{parameter_types, sp_runtime::testing::H256};
 use snowbridge_core::outbound::{Fee, Message, SendError, SendMessage, SendMessageFeeProvider};
 use xcm::prelude::{
-	Here, Kusama, MultiAsset, MultiAssets, MultiLocation, NetworkId, Parachain, XcmContext,
-	XcmError, XcmHash, XcmResult, X1,
+	Asset, Assets, Here, Kusama, Location, NetworkId, Parachain, XcmContext, XcmError, XcmHash,
+	XcmResult,
 };
 use xcm_builder::HandleFee;
 use xcm_executor::{
 	traits::{FeeReason, TransactAsset},
-	Assets,
+	AssetsInHolding,
 };
 
 parameter_types! {
 	pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
-	pub TokenLocation: MultiLocation = MultiLocation::parent();
+	pub TokenLocation: Location = Location::parent();
 }
 
 struct MockOkOutboundQueue;
@@ -59,53 +59,41 @@ impl SendMessageFeeProvider for MockErrOutboundQueue {
 
 pub struct MockAssetTransactor;
 impl TransactAsset for MockAssetTransactor {
-	fn can_check_in(
-		_origin: &MultiLocation,
-		_what: &MultiAsset,
-		_context: &XcmContext,
-	) -> XcmResult {
+	fn can_check_in(_origin: &Location, _what: &Asset, _context: &XcmContext) -> XcmResult {
 		Ok(())
 	}
 
-	fn can_check_out(
-		_dest: &MultiLocation,
-		_what: &MultiAsset,
-		_context: &XcmContext,
-	) -> XcmResult {
+	fn can_check_out(_dest: &Location, _what: &Asset, _context: &XcmContext) -> XcmResult {
 		Ok(())
 	}
 
-	fn deposit_asset(
-		_what: &MultiAsset,
-		_who: &MultiLocation,
-		_context: Option<&XcmContext>,
-	) -> XcmResult {
+	fn deposit_asset(_what: &Asset, _who: &Location, _context: Option<&XcmContext>) -> XcmResult {
 		Ok(())
 	}
 
 	fn withdraw_asset(
-		_what: &MultiAsset,
-		_who: &MultiLocation,
+		_what: &Asset,
+		_who: &Location,
 		_context: Option<&XcmContext>,
-	) -> Result<Assets, XcmError> {
-		Ok(Assets::default())
+	) -> Result<AssetsInHolding, XcmError> {
+		Ok(Assets::default().into())
 	}
 
 	fn internal_transfer_asset(
-		_what: &MultiAsset,
-		_from: &MultiLocation,
-		_to: &MultiLocation,
+		_what: &Asset,
+		_from: &Location,
+		_to: &Location,
 		_context: &XcmContext,
-	) -> Result<Assets, XcmError> {
-		Ok(Assets::default())
+	) -> Result<AssetsInHolding, XcmError> {
+		Ok(Assets::default().into())
 	}
 }
 
 #[test]
 fn handle_fee_success() {
-	let fee: MultiAssets = MultiAsset::from((MultiLocation::parent(), 10_u128)).into();
+	let fee: Assets = Asset::from((Location::parent(), 10_u128)).into();
 	let ctx = XcmContext {
-		origin: Some(MultiLocation { parents: 1, interior: X1(Parachain(1000)) }),
+		origin: Some(Location::new(1, Parachain(1000))),
 		message_id: XcmHash::default(),
 		topic: None,
 	};
@@ -118,15 +106,14 @@ fn handle_fee_success() {
 		MockAssetTransactor,
 		MockOkOutboundQueue,
 	>::handle_fee(fee, Some(&ctx), reason);
-	let local_fee =
-		MultiAsset::from((MultiLocation::parent(), MockOkOutboundQueue::local_fee())).into();
+	let local_fee = Asset::from((Location::parent(), MockOkOutboundQueue::local_fee())).into();
 	// assert only local fee left
 	assert_eq!(result, local_fee)
 }
 
 #[test]
 fn handle_fee_success_but_not_for_ethereum() {
-	let fee: MultiAssets = MultiAsset::from((MultiLocation::parent(), 10_u128)).into();
+	let fee: Assets = Asset::from((Location::parent(), 10_u128)).into();
 	let ctx = XcmContext { origin: None, message_id: XcmHash::default(), topic: None };
 	// invalid network not for ethereum
 	let reason = FeeReason::Export { network: Kusama, destination: Here };
@@ -144,7 +131,7 @@ fn handle_fee_success_but_not_for_ethereum() {
 
 #[test]
 fn handle_fee_success_even_from_an_invalid_none_origin_location() {
-	let fee: MultiAssets = MultiAsset::from((MultiLocation::parent(), 10_u128)).into();
+	let fee: Assets = Asset::from((Location::parent(), 10_u128)).into();
 	// invalid origin None here not from a sibling chain
 	let ctx = XcmContext { origin: None, message_id: XcmHash::default(), topic: None };
 	let reason = FeeReason::Export { network: EthereumNetwork::get(), destination: Here };
@@ -162,9 +149,9 @@ fn handle_fee_success_even_from_an_invalid_none_origin_location() {
 #[test]
 fn handle_fee_success_even_when_fee_insufficient() {
 	// insufficient fee not cover the (local_fee + remote_fee) required
-	let fee: MultiAssets = MultiAsset::from((MultiLocation::parent(), 1_u128)).into();
+	let fee: Assets = Asset::from((Location::parent(), 1_u128)).into();
 	let ctx = XcmContext {
-		origin: Some(MultiLocation { parents: 1, interior: X1(Parachain(1000)) }),
+		origin: Some(Location::new(1, Parachain(1000))),
 		message_id: XcmHash::default(),
 		topic: None,
 	};
