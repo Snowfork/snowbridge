@@ -1117,6 +1117,8 @@ pub fn make_sync_committee_update() -> Box<Update> {
             hex!("5340ad5877c72dca689ca04bc8fedb78d67a4801d99887937edd8ccd29f87e82").into(),
             hex!("f5ff4b0c6190005015889879568f5f0d9c40134c7ec4ffdda47950dcd92395ad").into(),
         ],
+        execution_header: None,
+        execution_branch: None,
     })
 }
 
@@ -1157,7 +1159,9 @@ pub fn make_finalized_header_update() -> Box<Update> {
             hex!("ecea7e1d3152d8130e83afdfe34b4de4ba2b69a33c9471991096daf454de9cf5").into(),
             hex!("b2bf1758e50b2bfff29169fbc70fdb884b2b05bb615dbc53567574da6f4f1ae2").into(),
             hex!("cd87069daf70975779126d6af833b7d636c75ca4d5e750ebcad0e76408a5e5bf").into(),
-        ]
+        ],
+        execution_header: None,
+        execution_branch: None,
     })
 }
 
