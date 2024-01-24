@@ -83,8 +83,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	beaconHeader := header.New(
 		writer,
 		r.config.Source.Beacon.Endpoint,
-		r.config.GetSpecSettings(),
-		r.config.GetActiveSpec(),
+		r.config.Source.Beacon.Spec,
 	)
 	r.beaconHeader = &beaconHeader
 

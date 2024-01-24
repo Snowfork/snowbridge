@@ -15,7 +15,7 @@ workspace = true
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-serde = { version = "1.0.188", features = ["alloc", "derive"], default-features = false }
+serde = { version = "1.0.195", features = ["alloc", "derive"], default-features = false }
 codec = { version = "3.6.1", package = "parity-scale-codec", default-features = false, features = ["derive"] }
 scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
 hex-literal = { version = "0.4.1", optional = true }
@@ -31,7 +31,7 @@ sp-arithmetic = { path = "../../../polkadot-sdk/substrate/primitives/arithmetic"
 
 bridge-hub-common = { path = "../../../polkadot-sdk/cumulus/parachains/runtimes/bridge-hubs/common", default-features = false }
 
-snowbridge-core = { path = "../../primitives/core", features = ["serde"], default-features = false }
+snowbridge-core = { path = "../../primitives/core", default-features = false, features = ["serde"] }
 snowbridge-outbound-queue-merkle-tree = { path = "merkle-tree", default-features = false }
 ethabi = { git = "https://github.com/snowfork/ethabi-decode.git", package = "ethabi-decode", branch = "master", default-features = false }
 

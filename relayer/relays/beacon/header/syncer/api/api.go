@@ -11,8 +11,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
 var (
@@ -28,15 +27,13 @@ var (
 type BeaconClient struct {
 	httpClient   http.Client
 	endpoint     string
-	activeSpec   config.ActiveSpec
 	slotsInEpoch uint64
 }
 
-func NewBeaconClient(endpoint string, activeSpec config.ActiveSpec, slotsInEpoch uint64) *BeaconClient {
+func NewBeaconClient(endpoint string, slotsInEpoch uint64) *BeaconClient {
 	return &BeaconClient{
 		http.Client{},
 		endpoint,
-		activeSpec,
 		slotsInEpoch,
 	}
 }
@@ -237,6 +234,41 @@ func (b *BeaconClient) GetHeader(blockRoot common.Hash) (BeaconHeader, error) {
 		StateRoot:     common.HexToHash(response.Data.Header.Message.StateRoot),
 		BodyRoot:      common.HexToHash(response.Data.Header.Message.BodyRoot),
 	}, nil
+}
+
+func (b *BeaconClient) GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%d", b.endpoint, slot), nil)
+	if err != nil {
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
+	}
+
+	req.Header.Set("accept", "application/json")
+	res, err := b.httpClient.Do(req)
+	if err != nil {
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
+	}
+
+	if res.StatusCode != http.StatusOK {
+		if res.StatusCode == 404 {
+			return BeaconBlockResponse{}, ErrNotFound
+		}
+
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
+	}
+
+	bodyBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
+	}
+
+	var response BeaconBlockResponse
+
+	err = json.Unmarshal(bodyBytes, &response)
+	if err != nil {
+		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
+	}
+
+	return response, nil
 }
 
 func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {

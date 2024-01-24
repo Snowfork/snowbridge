@@ -5,14 +5,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/util"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
-func DenebExecutionPayloadToScale(e *state.ExecutionPayloadDeneb, activeSpec config.ActiveSpec) (scale.ExecutionPayloadHeaderDeneb, error) {
+func DenebExecutionPayloadToScale(e *state.ExecutionPayloadDeneb) (scale.ExecutionPayloadHeaderDeneb, error) {
 	var payloadHeader scale.ExecutionPayloadHeaderDeneb
 	transactionsContainer := state.TransactionsRootContainer{}
 	transactionsContainer.Transactions = e.Transactions
@@ -24,15 +23,9 @@ func DenebExecutionPayloadToScale(e *state.ExecutionPayloadDeneb, activeSpec con
 
 	var withdrawalRoot types.H256
 
-	if activeSpec == config.Minimal {
-		withdrawalContainer := state.WithdrawalsRootContainerMinimal{}
-		withdrawalContainer.Withdrawals = e.Withdrawals
-		withdrawalRoot, err = withdrawalContainer.HashTreeRoot()
-	} else {
-		withdrawalContainer := state.WithdrawalsRootContainerMainnet{}
-		withdrawalContainer.Withdrawals = e.Withdrawals
-		withdrawalRoot, err = withdrawalContainer.HashTreeRoot()
-	}
+	withdrawalContainer := state.WithdrawalsRootContainerMainnet{}
+	withdrawalContainer.Withdrawals = e.Withdrawals
+	withdrawalRoot, err = withdrawalContainer.HashTreeRoot()
 	if err != nil {
 		return payloadHeader, err
 	}

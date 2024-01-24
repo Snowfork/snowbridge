@@ -26,24 +26,3 @@ type SinkConfig struct {
 }
 
 type ChannelID [32]byte
-
-func (c Config) GetSpecSettings() BeaconConfigs.SpecSettings {
-	if c.Source.Beacon.ActiveSpec == "minimal" {
-		return c.Source.Beacon.Spec.Minimal
-	}
-
-	return c.Source.Beacon.Spec.Mainnet
-}
-
-type ActiveSpec string
-
-func (c Config) GetActiveSpec() BeaconConfigs.ActiveSpec {
-	switch c.Source.Beacon.ActiveSpec {
-	case "mainnet":
-		return BeaconConfigs.Mainnet
-	case "minimal":
-		return BeaconConfigs.Minimal
-	default:
-		return BeaconConfigs.Mainnet
-	}
-}
