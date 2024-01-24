@@ -51,7 +51,7 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
-	cmd.Flags().Bool("export_json", false, "Export Json")
+	cmd.Flags().Bool("export-json", false, "Export Json")
 
 	return cmd
 }

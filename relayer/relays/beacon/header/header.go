@@ -282,6 +282,13 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 		checkpointSlot := checkpoint.Slot
 		if checkpointSlot == 0 {
 			checkpointSlot = h.syncer.CalculateNextCheckpointSlot(slot)
+			lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
+			if err != nil {
+				return cache.Proof{}, fmt.Errorf("fetch parachain last finalized header state: %w", err)
+			}
+			if checkpointSlot > lastFinalizedHeaderState.BeaconSlot {
+				checkpointSlot = lastFinalizedHeaderState.BeaconSlot
+			}
 			log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot}).Info("checkpoint slot not available, try with slot in next sync period instead")
 		}
 		err := h.populateFinalizedCheckpoint(checkpointSlot)
