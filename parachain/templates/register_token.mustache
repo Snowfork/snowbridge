@@ -9,7 +9,7 @@ use sp_std::vec;
 
 pub type RegisterToken = InboundQueueFixture;
 
-pub fn make_register_asset_message() -> RegisterToken {
+pub fn make_register_token_message() -> RegisterToken {
     RegisterToken {
         execution_header: CompactExecutionHeader{
             parent_hash: hex!("{{InboundMessageTest.ExecutionHeader.ParentHash}}").into(),

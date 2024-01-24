@@ -85,9 +85,11 @@ type InboundMessageTest struct {
 }
 
 const (
-	pathToBeaconBenchmarkData    = "parachain/pallets/ethereum-client/src/benchmarking/fixtures.rs"
-	pathToBenchmarkDataTemplate  = "parachain/templates/benchmarking-fixtures.mustache"
-	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-client/tests/fixtures"
+	pathToBeaconBenchmarkData         = "parachain/pallets/ethereum-client/src/benchmarking/fixtures.rs"
+	pathToBenchmarkDataTemplate       = "parachain/templates/benchmarking-fixtures.mustache"
+	pathToBeaconTestFixtureFiles      = "parachain/pallets/ethereum-client/tests/fixtures"
+	pathToInboundQueueFixtureTemplate = "parachain/templates/%s.mustache"
+	pathToInboundQueueFixtureData     = "parachain/pallets/inbound-queue/fixtures/src/%s.rs"
 )
 
 // Only print the hex encoded call as output of this command
@@ -366,10 +368,10 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		pathToInboundBenchmarkDataTemplate := fmt.Sprintf("parachain/templates/%s.mustache", testCase)
-		pathToInboundQueueFixtureData := fmt.Sprintf("parachain/pallets/inbound-queue/fixtures/src/%s.rs", testCase)
+		pathToInboundQueueFixtureTemplate := fmt.Sprintf(pathToInboundQueueFixtureTemplate, testCase)
+		pathToInboundQueueFixtureData := fmt.Sprintf(pathToInboundQueueFixtureData, testCase)
 
-		rendered, err = mustache.RenderFile(pathToInboundBenchmarkDataTemplate, data)
+		rendered, err = mustache.RenderFile(pathToInboundQueueFixtureTemplate, data)
 		if err != nil {
 			return fmt.Errorf("render inbound queue benchmark fixture: %w", err)
 		}
