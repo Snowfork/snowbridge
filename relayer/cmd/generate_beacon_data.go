@@ -38,7 +38,9 @@ func generateBeaconDataCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
-	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
+	cmd.Flags().Bool("wait_until_next_period", false, "Waiting until next period")
+	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
+	cmd.Flags().String("test_case", "register_asset", "Inbound test case")
 	return cmd
 }
 
@@ -83,11 +85,9 @@ type InboundMessageTest struct {
 }
 
 const (
-	pathToBeaconBenchmarkData          = "parachain/pallets/ethereum-client/src/benchmarking/fixtures.rs"
-	pathToInboundQueueFixtureData      = "parachain/pallets/inbound-queue/fixtures/src/lib.rs"
-	pathToBenchmarkDataTemplate        = "parachain/templates/benchmarking-fixtures.mustache"
-	pathToInboundBenchmarkDataTemplate = "parachain/templates/inbound-fixtures.mustache"
-	pathToBeaconTestFixtureFiles       = "parachain/pallets/ethereum-client/tests/fixtures"
+	pathToBeaconBenchmarkData    = "parachain/pallets/ethereum-client/src/benchmarking/fixtures.rs"
+	pathToBenchmarkDataTemplate  = "parachain/templates/benchmarking-fixtures.mustache"
+	pathToBeaconTestFixtureFiles = "parachain/pallets/ethereum-client/tests/fixtures"
 )
 
 // Only print the hex encoded call as output of this command
@@ -210,7 +210,12 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		event, err := getEthereumEvent(ctx, gatewayContract, channelID)
+		nonce, err := cmd.Flags().GetUint32("nonce")
+		if err != nil {
+			return err
+		}
+
+		event, err := getEthereumEvent(ctx, gatewayContract, channelID, nonce)
 		if err != nil {
 			return err
 		}
@@ -351,6 +356,13 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		// writing inbound queue fixtures
+		testCase, _ := cmd.Flags().GetString("test_case")
+		if err != nil {
+			return err
+		}
+		pathToInboundBenchmarkDataTemplate := fmt.Sprintf("parachain/templates/%s.mustache", testCase)
+		pathToInboundQueueFixtureData := fmt.Sprintf("parachain/pallets/inbound-queue/fixtures/src/%s.rs", testCase)
+
 		rendered, err = mustache.RenderFile(pathToInboundBenchmarkDataTemplate, data)
 		if err != nil {
 			return fmt.Errorf("render inbound queue benchmark fixture: %w", err)
@@ -497,7 +509,7 @@ func generateInboundTestFixture(ctx context.Context, beaconEndpoint string) erro
 	return nil
 }
 
-func getEthereumEvent(ctx context.Context, gatewayContract *contracts.Gateway, channelID executionConf.ChannelID) (*contracts.GatewayOutboundMessageAccepted, error) {
+func getEthereumEvent(ctx context.Context, gatewayContract *contracts.Gateway, channelID executionConf.ChannelID, nonce uint32) (*contracts.GatewayOutboundMessageAccepted, error) {
 	maxBlockNumber := uint64(10000)
 
 	opts := bind.FilterOpts{
@@ -525,7 +537,7 @@ func getEthereumEvent(ctx context.Context, gatewayContract *contracts.Gateway, c
 				}
 				break
 			}
-			if iter.Event.Nonce >= 1 {
+			if iter.Event.Nonce >= uint64(nonce) {
 				event = iter.Event
 				iter.Close()
 				break
