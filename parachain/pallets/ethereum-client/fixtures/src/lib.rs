@@ -6,8 +6,8 @@
 
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-    types::deneb, updates::AncestryProof, BeaconHeader, ExecutionHeaderUpdate,
-    NextSyncCommitteeUpdate, SyncAggregate, SyncCommittee, VersionedExecutionPayloadHeader,
+	types::deneb, updates::AncestryProof, BeaconHeader, ExecutionHeaderUpdate,
+	NextSyncCommitteeUpdate, SyncAggregate, SyncCommittee, VersionedExecutionPayloadHeader,
 };
 use sp_core::U256;
 use sp_std::{boxed::Box, vec};
@@ -18,7 +18,7 @@ type CheckpointUpdate = snowbridge_beacon_primitives::CheckpointUpdate<SC_SIZE>;
 type Update = snowbridge_beacon_primitives::Update<SC_SIZE, SC_BITS_SIZE>;
 
 pub fn make_checkpoint() -> Box<CheckpointUpdate> {
-    Box::new(CheckpointUpdate {
+	Box::new(CheckpointUpdate {
         header: BeaconHeader {
             slot: 2496,
             proposer_index: 2,
@@ -563,7 +563,7 @@ pub fn make_checkpoint() -> Box<CheckpointUpdate> {
 }
 
 pub fn make_sync_committee_update() -> Box<Update> {
-    Box::new(Update {
+	Box::new(Update {
         attested_header: BeaconHeader {
             slot: 129,
             proposer_index: 5,
@@ -1129,7 +1129,7 @@ pub fn make_sync_committee_update() -> Box<Update> {
 }
 
 pub fn make_finalized_header_update() -> Box<Update> {
-    Box::new(Update {
+	Box::new(Update {
         attested_header: BeaconHeader {
             slot: 2566,
             proposer_index: 6,
@@ -1170,7 +1170,7 @@ pub fn make_finalized_header_update() -> Box<Update> {
 }
 
 pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
-    Box::new(ExecutionHeaderUpdate {
+	Box::new(ExecutionHeaderUpdate {
         header: BeaconHeader {
             slot: 215,
             proposer_index: 2,
