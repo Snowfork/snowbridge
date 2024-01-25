@@ -115,7 +115,10 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
-		exportJson, err := cmd.Flags().GetBool("export-json")
+		exportJson, err := cmd.Flags().GetBool("export_json")
+		if err != nil {
+			return err
+		}
 		if exportJson {
 			initialSync := checkPointScale.ToJSON()
 			err = writeJSONToFile(initialSync, "dump-initial-checkpoint.json")
@@ -139,15 +142,18 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		ctx := context.Background()
 
-		endpoint, _ := cmd.Flags().GetString("url")
+		endpoint, err := cmd.Flags().GetString("url")
+		if err != nil {
+			return err
+		}
 
 		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
-		if err := viper.ReadInConfig(); err != nil {
+		if err = viper.ReadInConfig(); err != nil {
 			return err
 		}
 
 		var conf beaconConf.Config
-		err := viper.Unmarshal(&conf)
+		err = viper.Unmarshal(&conf)
 		if err != nil {
 			return err
 		}
@@ -157,7 +163,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 
 		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
 
-		if err := viper.ReadInConfig(); err != nil {
+		if err = viper.ReadInConfig(); err != nil {
 			return err
 		}
 
@@ -186,7 +192,10 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
 		initialSync := initialSyncScale.ToJSON()
-		writeJSONToFile(initialSync, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "initial-checkpoint.json"))
+		err = writeJSONToFile(initialSync, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "initial-checkpoint.json"))
+		if err != nil {
+			return err
+		}
 		initialSyncHeaderSlot := initialSync.Header.Slot
 		initialSyncPeriod := s.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
 		initialEpoch := s.ComputeEpochAtSlot(initialSyncHeaderSlot)
@@ -201,7 +210,10 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
 		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
-		writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update.json"))
+		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update.json"))
+		if err != nil {
+			return err
+		}
 		log.Info("created sync committee update file")
 
 		// get inbound message data
@@ -500,7 +512,10 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get header update: %w", err)
 		}
 		headerUpdate := headerUpdateScale.ToJSON()
-		writeJSONToFile(headerUpdate, "tmp/snowbridge/execution-header-update.json")
+		err = writeJSONToFile(headerUpdate, "tmp/snowbridge/execution-header-update.json")
+		if err != nil {
+			return err
+		}
 		log.Info("created execution update file")
 
 		return nil
