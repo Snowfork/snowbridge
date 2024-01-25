@@ -2,15 +2,21 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 
 use codec::Encode;
-use frame_support::{assert_err, assert_ok, traits::fungible::Mutate};
+use frame_support::{
+	assert_err, assert_ok,
+	traits::{fungible::Mutate, OnFinalize, OnInitialize},
+};
+use frame_system::pallet_prelude::BlockNumberFor;
+use parachains_common::AccountId;
 pub use parachains_runtimes_test_utils::test_cases::change_storage_constant_by_governance_works;
 use parachains_runtimes_test_utils::{
 	AccountIdOf, BalanceOf, CollatorSessionKeys, ExtBuilder, ValidatorIdOf, XcmReceivedFrom,
 };
+use snowbridge_core::{ChannelId, ParaId};
 use snowbridge_pallet_ethereum_client_fixtures::*;
-use sp_core::H160;
+use sp_core::{H160, U256};
 use sp_keyring::AccountKeyring::*;
-use sp_runtime::{AccountId32, SaturatedConversion};
+use sp_runtime::{traits::Header, AccountId32, SaturatedConversion};
 use xcm::{
 	latest::prelude::*,
 	v3::Error::{self, Barrier},
@@ -100,7 +106,7 @@ where
 	)
 }
 
-pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
+pub fn send_transfer_token_message_success<Runtime, XcmConfig, AllPalletsWithoutSystem>(
 	collator_session_key: CollatorSessionKeys<Runtime>,
 	runtime_para_id: u32,
 	assethub_parachain_id: u32,
@@ -117,11 +123,15 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 		+ pallet_xcm::Config
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
+		+ pallet_message_queue::Config
 		+ cumulus_pallet_parachain_system::Config
 		+ snowbridge_pallet_outbound_queue::Config
 		+ snowbridge_pallet_system::Config,
 	XcmConfig: xcm_executor::Config,
+	AllPalletsWithoutSystem:
+		OnInitialize<BlockNumberFor<Runtime>> + OnFinalize<BlockNumberFor<Runtime>>,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
+	<Runtime as frame_system::Config>::AccountId: From<sp_runtime::AccountId32>,
 {
 	ExtBuilder::<Runtime>::default()
 		.with_collators(collator_session_key.collators())
@@ -156,6 +166,29 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 				e,
 				snowbridge_pallet_outbound_queue::Event::MessageQueued { .. }
 			)));
+
+			let block_number = RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::block_number();
+			let next_block_number = block_number.saturating_add(U256::from(1));
+
+			let included_head = RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::run_to_block(
+				next_block_number.as_u32(),
+				AccountId::from(Alice).into(),
+			);
+
+			let origin: ParaId = (assethub_parachain_id as u32).into();
+			let channel_id: ChannelId = origin.into();
+
+			let nonce = snowbridge_pallet_outbound_queue::Nonce::<Runtime>::try_get(channel_id);
+			assert_ok!(nonce);
+			assert_eq!(nonce.unwrap(), 1);
+
+			let digest = included_head.digest();
+
+			//let digest = frame_system::Pallet::<Runtime>::digest();
+			let digest_items = digest.logs();
+			assert!(digest_items.len() == 1 && digest_items[0].as_other().is_some());
+
+			//assert_eq!(Messages::<Test>::decode_len(), Some(4));
 		});
 }
 
