@@ -64,7 +64,7 @@ async fn send_token() {
 		.send_token(
 			weth.address(),
 			ASSET_HUB_PARA_ID,
-			i_gateway::MultiAddress { kind: 1, data: FERDIE.into() },
+			i_gateway::MultiAddress { kind: 1, data: BOB.into() },
 			destination_fee,
 			amount,
 		)
@@ -105,7 +105,7 @@ async fn send_token() {
 			AccountKey20 { network: None, key: WETH_CONTRACT.into() },
 		),
 	};
-	let expected_owner: AccountId32 = FERDIE.into();
+	let expected_owner: AccountId32 = BOB.into();
 
 	let mut issued_event_found = false;
 	while let Some(Ok(block)) = blocks.next().await {
