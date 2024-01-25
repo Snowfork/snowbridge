@@ -5353,6 +5353,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
+ "parity-scale-codec",
  "snowbridge-beacon-primitives",
  "snowbridge-core",
  "sp-core",
