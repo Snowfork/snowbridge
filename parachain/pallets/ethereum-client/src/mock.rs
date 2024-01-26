@@ -7,8 +7,6 @@ use hex_literal::hex;
 use pallet_timestamp;
 use primitives::{CompactExecutionHeader, Fork, ForkVersions};
 use snowbridge_core::inbound::{Log, Proof};
-use sp_core::H256;
-use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
 use std::{fs::File, path::PathBuf};
 type Block = frame_system::mocking::MockBlock<Test>;
 use sp_runtime::BuildStorage;
