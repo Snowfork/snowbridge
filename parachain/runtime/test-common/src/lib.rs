@@ -168,7 +168,24 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig, AllPalletsWithout
 			)));
 
 			let block_number = RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::block_number();
+
+			// finish current block
+			<pallet_message_queue::Pallet<Runtime>>::on_finalize(block_number.as_u32().into());
+			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_finalize(block_number.as_u32().into());
+			<frame_system::Pallet<Runtime>>::on_finalize(block_number.as_u32().into());
+
 			let next_block_number = block_number.saturating_add(U256::from(1));
+
+			// start next block
+			<frame_system::Pallet<Runtime>>::set_block_number(next_block_number.as_u32().into());
+			<frame_system::Pallet<Runtime>>::on_initialize(next_block_number.as_u32().into());
+			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_initialize(next_block_number.as_u32().into());
+			<pallet_message_queue::Pallet<Runtime>>::on_initialize(next_block_number.as_u32().into());
+
+			// finish next block
+			<pallet_message_queue::Pallet<Runtime>>::on_finalize(next_block_number.as_u32().into());
+			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_finalize(next_block_number.as_u32().into());
+			<frame_system::Pallet<Runtime>>::on_finalize(next_block_number.as_u32().into());
 
 			let included_head = RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::run_to_block(
 				next_block_number.as_u32(),
