@@ -5,7 +5,7 @@ import { BeefyClient, BeefyClient__factory, IGateway, IGateway__factory, IERC20_
 import { MultiAddressStruct } from '@snowbridge/contract-types/src/IGateway'
 import { decodeAddress, } from '@polkadot/keyring'
 import { hexToU8a, isHex, u8aToHex } from '@polkadot/util'
-import { tap, take, takeWhile, lastValueFrom, map as rxmap } from 'rxjs'
+import { filter, tap, take, takeWhile, lastValueFrom, map as rxmap } from 'rxjs'
 
 interface Config {
     ethereum: {
@@ -357,7 +357,7 @@ export const doSendToken = async (context: Context, signer: Signer, plan: SendTo
     }
 }
 
-export const trackSendToken = async (context: Context, result: SendTokenResult, beaconUpdateTimeout = 10, nonceUpdateTimeout = 5) => {
+export const trackSendToken = async (context: Context, result: SendTokenResult, beaconUpdateTimeout = 10, scanBlocks = 100) => {
     if (result.failure || !result.success) {
         throw new Error('Plan failed')
     }
@@ -380,20 +380,17 @@ export const trackSendToken = async (context: Context, result: SendTokenResult, 
     console.log('Beacon client caught up.')
 
     // Wait for nonce
-    let outboundNonce = Number(result.success.nonce)
-    let nonceUpdates = context.polkadot.api.bridgeHub.rx.query.ethereumInboundQueue.nonce(result.success.channelId)
-    let lastNonceUpdate = await lastValueFrom(
-        nonceUpdates.pipe(
-            rxmap(nonce => nonce.toPrimitive() as number),
-            take(nonceUpdateTimeout),
-            takeWhile(nonce => outboundNonce > nonce),
-            tap(nonce => console.log('Inbound queue %d nonces behind.', outboundNonce - nonce)),
+    let bridgeHubEvents = context.polkadot.api.bridgeHub.rx.query.system.events()
+    let lastEvent = await lastValueFrom(
+        bridgeHubEvents.pipe(
+            take(scanBlocks),
+            rxmap(events => events.toPrimitive() as any),
+            filter(events => {
+                return events.some((x: any) => context.polkadot.api.bridgeHub.events.ethereumInboundQueue.MessageReceived.is(x))
+            }),
+            //tap(events => console.log('Event', events)),
         ),
-        { defaultValue: outboundNonce }
+        { defaultValue: [] as any }
     )
-    console.log((await context.polkadot.api.bridgeHub.query.system.number()).toPrimitive())
-    if (outboundNonce < lastNonceUpdate) {
-        throw new Error('Timeout waiting for message to be delivered to the inbound queue.')
-    }
-    console.log('Inbound queue caught up.')
+    console.log("last event: ", lastEvent)
 }
