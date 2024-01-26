@@ -7,7 +7,6 @@ use frame_support::{
 	traits::{fungible::Mutate, OnFinalize, OnInitialize},
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-use parachains_common::AccountId;
 pub use parachains_runtimes_test_utils::test_cases::change_storage_constant_by_governance_works;
 use parachains_runtimes_test_utils::{
 	AccountIdOf, BalanceOf, CollatorSessionKeys, ExtBuilder, ValidatorIdOf, XcmReceivedFrom,
@@ -131,7 +130,7 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig, AllPalletsWithout
 	AllPalletsWithoutSystem:
 		OnInitialize<BlockNumberFor<Runtime>> + OnFinalize<BlockNumberFor<Runtime>>,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
-	<Runtime as frame_system::Config>::AccountId: From<sp_runtime::AccountId32>,
+	<Runtime as frame_system::Config>::AccountId: From<sp_runtime::AccountId32> + AsRef<[u8]>,
 {
 	ExtBuilder::<Runtime>::default()
 		.with_collators(collator_session_key.collators())
@@ -171,7 +170,9 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig, AllPalletsWithout
 
 			// finish current block
 			<pallet_message_queue::Pallet<Runtime>>::on_finalize(block_number.as_u32().into());
-			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_finalize(block_number.as_u32().into());
+			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_finalize(
+				block_number.as_u32().into(),
+			);
 			<frame_system::Pallet<Runtime>>::on_finalize(block_number.as_u32().into());
 
 			let next_block_number = block_number.saturating_add(U256::from(1));
@@ -179,18 +180,19 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig, AllPalletsWithout
 			// start next block
 			<frame_system::Pallet<Runtime>>::set_block_number(next_block_number.as_u32().into());
 			<frame_system::Pallet<Runtime>>::on_initialize(next_block_number.as_u32().into());
-			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_initialize(next_block_number.as_u32().into());
-			<pallet_message_queue::Pallet<Runtime>>::on_initialize(next_block_number.as_u32().into());
+			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_initialize(
+				next_block_number.as_u32().into(),
+			);
+			<pallet_message_queue::Pallet<Runtime>>::on_initialize(
+				next_block_number.as_u32().into(),
+			);
 
 			// finish next block
 			<pallet_message_queue::Pallet<Runtime>>::on_finalize(next_block_number.as_u32().into());
-			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_finalize(next_block_number.as_u32().into());
-			<frame_system::Pallet<Runtime>>::on_finalize(next_block_number.as_u32().into());
-
-			let included_head = RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::run_to_block(
-				next_block_number.as_u32(),
-				AccountId::from(Alice).into(),
+			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_finalize(
+				next_block_number.as_u32().into(),
 			);
+			let included_head = <frame_system::Pallet<Runtime>>::finalize();
 
 			let origin: ParaId = (assethub_parachain_id as u32).into();
 			let channel_id: ChannelId = origin.into();
