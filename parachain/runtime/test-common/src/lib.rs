@@ -13,9 +13,9 @@ use parachains_runtimes_test_utils::{
 };
 use snowbridge_core::{ChannelId, ParaId};
 use snowbridge_pallet_ethereum_client_fixtures::*;
-use sp_core::{H160, U256};
+use sp_core::H160;
 use sp_keyring::AccountKeyring::*;
-use sp_runtime::{traits::Header, AccountId32, SaturatedConversion};
+use sp_runtime::{traits::Header, AccountId32, SaturatedConversion, Saturating};
 use xcm::{
 	latest::prelude::*,
 	v3::Error::{self, Barrier},
@@ -105,7 +105,7 @@ where
 	)
 }
 
-pub fn send_transfer_token_message_success<Runtime, XcmConfig, AllPalletsWithoutSystem>(
+pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 	collator_session_key: CollatorSessionKeys<Runtime>,
 	runtime_para_id: u32,
 	assethub_parachain_id: u32,
@@ -127,8 +127,6 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig, AllPalletsWithout
 		+ snowbridge_pallet_outbound_queue::Config
 		+ snowbridge_pallet_system::Config,
 	XcmConfig: xcm_executor::Config,
-	AllPalletsWithoutSystem:
-		OnInitialize<BlockNumberFor<Runtime>> + OnFinalize<BlockNumberFor<Runtime>>,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
 	<Runtime as frame_system::Config>::AccountId: From<sp_runtime::AccountId32> + AsRef<[u8]>,
 {
@@ -166,32 +164,24 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig, AllPalletsWithout
 				snowbridge_pallet_outbound_queue::Event::MessageQueued { .. }
 			)));
 
-			let block_number = RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::block_number();
+			let block_number = <frame_system::Pallet<Runtime>>::block_number();
+			let next_block_number = <frame_system::Pallet<Runtime>>::block_number()
+				.saturating_add(BlockNumberFor::<Runtime>::from(1u32));
 
 			// finish current block
-			<pallet_message_queue::Pallet<Runtime>>::on_finalize(block_number.as_u32().into());
-			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_finalize(
-				block_number.as_u32().into(),
-			);
-			<frame_system::Pallet<Runtime>>::on_finalize(block_number.as_u32().into());
-
-			let next_block_number = block_number.saturating_add(U256::from(1));
+			<pallet_message_queue::Pallet<Runtime>>::on_finalize(block_number);
+			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_finalize(block_number);
+			<frame_system::Pallet<Runtime>>::on_finalize(block_number);
 
 			// start next block
-			<frame_system::Pallet<Runtime>>::set_block_number(next_block_number.as_u32().into());
-			<frame_system::Pallet<Runtime>>::on_initialize(next_block_number.as_u32().into());
-			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_initialize(
-				next_block_number.as_u32().into(),
-			);
-			<pallet_message_queue::Pallet<Runtime>>::on_initialize(
-				next_block_number.as_u32().into(),
-			);
+			<frame_system::Pallet<Runtime>>::set_block_number(next_block_number);
+			<frame_system::Pallet<Runtime>>::on_initialize(next_block_number);
+			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_initialize(next_block_number);
+			<pallet_message_queue::Pallet<Runtime>>::on_initialize(next_block_number);
 
 			// finish next block
-			<pallet_message_queue::Pallet<Runtime>>::on_finalize(next_block_number.as_u32().into());
-			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_finalize(
-				next_block_number.as_u32().into(),
-			);
+			<pallet_message_queue::Pallet<Runtime>>::on_finalize(next_block_number);
+			<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::on_finalize(next_block_number);
 			let included_head = <frame_system::Pallet<Runtime>>::finalize();
 
 			let origin: ParaId = (assethub_parachain_id as u32).into();
@@ -206,8 +196,6 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig, AllPalletsWithout
 			//let digest = frame_system::Pallet::<Runtime>::digest();
 			let digest_items = digest.logs();
 			assert!(digest_items.len() == 1 && digest_items[0].as_other().is_some());
-
-			//assert_eq!(Messages::<Test>::decode_len(), Some(4));
 		});
 }
 
