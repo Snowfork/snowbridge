@@ -7,7 +7,6 @@ use frame_support::{
 	traits::{fungible::Mutate, OnFinalize, OnInitialize},
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-use parachains_common::AccountId;
 pub use parachains_runtimes_test_utils::test_cases::change_storage_constant_by_governance_works;
 use parachains_runtimes_test_utils::{
 	AccountIdOf, BalanceOf, CollatorSessionKeys, ExtBuilder, ValidatorIdOf, XcmReceivedFrom,
@@ -126,7 +125,8 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig, AllPalletsWithout
 		+ pallet_message_queue::Config
 		+ cumulus_pallet_parachain_system::Config
 		+ snowbridge_pallet_outbound_queue::Config
-		+ snowbridge_pallet_system::Config,
+		+ snowbridge_pallet_system::Config
+		+ pallet_timestamp::Config,
 	XcmConfig: xcm_executor::Config,
 	AllPalletsWithoutSystem:
 		OnInitialize<BlockNumberFor<Runtime>> + OnFinalize<BlockNumberFor<Runtime>>,
@@ -170,10 +170,10 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig, AllPalletsWithout
 			let block_number = RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::block_number();
 			let next_block_number = block_number.saturating_add(U256::from(1));
 
-			let included_head = RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::run_to_block(
-				next_block_number.as_u32(),
-				AccountId::from(Alice).into(),
-			);
+			let included_head =
+				RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::run_to_block_with_finalize(
+					next_block_number.as_u32(),
+				);
 
 			let origin: ParaId = (assethub_parachain_id as u32).into();
 			let channel_id: ChannelId = origin.into();
@@ -186,7 +186,9 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig, AllPalletsWithout
 
 			//let digest = frame_system::Pallet::<Runtime>::digest();
 			let digest_items = digest.logs();
-			assert!(digest_items.len() == 1 && digest_items[0].as_other().is_some());
+			assert!(
+				digest_items.len() > 1 && digest_items[digest_items.len() - 1].as_other().is_some()
+			);
 
 			//assert_eq!(Messages::<Test>::decode_len(), Some(4));
 		});
@@ -206,7 +208,8 @@ pub fn send_unpaid_transfer_token_message<Runtime, XcmConfig>(
 		+ parachain_info::Config
 		+ pallet_collator_selection::Config
 		+ cumulus_pallet_parachain_system::Config
-		+ snowbridge_pallet_outbound_queue::Config,
+		+ snowbridge_pallet_outbound_queue::Config
+		+ pallet_timestamp::Config,
 	XcmConfig: xcm_executor::Config,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
 {
@@ -294,7 +297,8 @@ pub fn send_transfer_token_message_failure<Runtime, XcmConfig>(
 		+ pallet_collator_selection::Config
 		+ cumulus_pallet_parachain_system::Config
 		+ snowbridge_pallet_outbound_queue::Config
-		+ snowbridge_pallet_system::Config,
+		+ snowbridge_pallet_system::Config
+		+ pallet_timestamp::Config,
 	XcmConfig: xcm_executor::Config,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
 {
@@ -342,7 +346,8 @@ pub fn ethereum_extrinsic<Runtime>(
 		+ cumulus_pallet_parachain_system::Config
 		+ snowbridge_pallet_outbound_queue::Config
 		+ snowbridge_pallet_system::Config
-		+ snowbridge_pallet_ethereum_client::Config,
+		+ snowbridge_pallet_ethereum_client::Config
+		+ pallet_timestamp::Config,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
 	<Runtime as pallet_utility::Config>::RuntimeCall:
 		From<snowbridge_pallet_ethereum_client::Call<Runtime>>,
@@ -423,7 +428,8 @@ pub fn ethereum_to_polkadot_message_extrinsics_work<Runtime>(
 		+ cumulus_pallet_parachain_system::Config
 		+ snowbridge_pallet_outbound_queue::Config
 		+ snowbridge_pallet_system::Config
-		+ snowbridge_pallet_ethereum_client::Config,
+		+ snowbridge_pallet_ethereum_client::Config
+		+ pallet_timestamp::Config,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
 	<Runtime as pallet_utility::Config>::RuntimeCall:
 		From<snowbridge_pallet_ethereum_client::Call<Runtime>>,
