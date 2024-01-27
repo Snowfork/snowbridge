@@ -22,7 +22,7 @@ use snowbridge_smoketest::{
 					junctions::Junctions,
 					multiasset::{AssetId, Fungibility, MultiAsset, MultiAssets},
 				},
-				VersionedMultiAssets, VersionedMultiLocation,
+				VersionedAssets, VersionedLocation,
 			},
 		},
 		{self},
@@ -58,7 +58,7 @@ async fn transfer_token() {
 	let signer: PairSigner<AssetHubConfig, _> = PairSigner::new(keypair);
 
 	let amount: u128 = 1_000_000_000;
-	let assets = VersionedMultiAssets::V3(MultiAssets(vec![MultiAsset {
+	let assets = VersionedAssets::V3(MultiAssets(vec![MultiAsset {
 		id: AssetId::Concrete(MultiLocation {
 			parents: 2,
 			interior: Junctions::X2(
@@ -69,14 +69,14 @@ async fn transfer_token() {
 		fun: Fungibility::Fungible(amount),
 	}]));
 
-	let destination = VersionedMultiLocation::V3(MultiLocation {
+	let destination = VersionedLocation::V3(MultiLocation {
 		parents: 2,
 		interior: Junctions::X1(Junction::GlobalConsensus(NetworkId::Ethereum {
 			chain_id: ETHEREUM_CHAIN_ID,
 		})),
 	});
 
-	let beneficiary = VersionedMultiLocation::V3(MultiLocation {
+	let beneficiary = VersionedLocation::V3(MultiLocation {
 		parents: 0,
 		interior: Junctions::X1(Junction::AccountKey20 {
 			network: None,
