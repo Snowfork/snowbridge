@@ -28,7 +28,6 @@ use snowbridge_smoketest::{
 		{self},
 	},
 };
-use sp_core::{sr25519::Pair, Pair as PairT};
 use std::{sync::Arc, time::Duration};
 use subxt::{tx::PairSigner, OnlineClient};
 
@@ -53,9 +52,7 @@ async fn transfer_token() {
 	let assethub: OnlineClient<AssetHubConfig> =
 		OnlineClient::from_url(ASSET_HUB_WS_URL).await.unwrap();
 
-	let keypair: Pair = Pair::from_string("//Ferdie", None).expect("cannot create keypair");
-
-	let signer: PairSigner<AssetHubConfig, _> = PairSigner::new(keypair);
+	let signer: PairSigner<AssetHubConfig, _> = PairSigner::new((*BOB).clone());
 
 	let amount: u128 = 1_000_000_000;
 	let assets = VersionedAssets::V3(MultiAssets(vec![MultiAsset {

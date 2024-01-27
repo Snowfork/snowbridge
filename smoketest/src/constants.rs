@@ -1,5 +1,6 @@
 use hex_literal::hex;
 use lazy_static::lazy_static;
+use sp_core::{sr25519::Pair, Pair as PairT};
 use std::{env, string::ToString};
 
 // Todo: load all configs from env in consistent with set-env.sh
@@ -42,13 +43,16 @@ pub const SNOWBRIDGE_SOVEREIGN: [u8; 32] =
 pub const PENPAL_SOVEREIGN: [u8; 32] =
 	hex!("7369626cd0070000000000000000000000000000000000000000000000000000");
 
-// SS58: DE14BzQ1bDXWPKeLoAqdLAm1GpyAWaWF1knF74cEZeomTBM
-pub const FERDIE: [u8; 32] =
-	hex!("1cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c");
-
-pub const BOB: [u8; 32] = hex!("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48");
-
 lazy_static! {
+	// SS58: 5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL
+	pub static ref FERDIE: Pair = Pair::from_string("//Ferdie", None)
+		.expect("cannot create keypair");
+	pub static ref FERDIE_PUBLIC: [u8; 32] = (*FERDIE).public().into();
+	// SS58: 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
+	pub static ref BOB: Pair = Pair::from_string("//Bob", None)
+		.expect("cannot create keypair");
+	pub static ref BOB_PUBLIC: [u8; 32] = (*BOB).public().into();
+
 	pub static ref REGISTER_TOKEN_FEE: u64 = env::var("REGISTER_TOKEN_FEE")
 		.unwrap_or("200000000000000000".to_string())
 		.parse()
