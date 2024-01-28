@@ -46,7 +46,7 @@ async fn register_token() {
 		.unwrap();
 
 	println!(
-		"receipt transaction hash: {:#?}, receipt block number: {:#?}",
+		"receipt transaction hash: {:#?}, transaction block: {:#?}",
 		hex::encode(receipt.transaction_hash),
 		receipt.block_number
 	);

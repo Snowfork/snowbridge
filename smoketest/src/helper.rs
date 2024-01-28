@@ -4,7 +4,7 @@ use crate::{
 	parachains::{
 		bridgehub::{self, api::runtime_types::snowbridge_core::outbound::v1::OperatingMode},
 		penpal::{
-			api::runtime_types as penpalTypes,
+			api::{runtime_types as penpalTypes, runtime_types::xcm::VersionedLocation},
 			{self},
 		},
 		relaychain,
@@ -43,7 +43,7 @@ use penpalTypes::{
 	staging_xcm::v3::multilocation::MultiLocation,
 	xcm::{
 		v3::{junction::Junction, junctions::Junctions},
-		VersionedLocation, VersionedXcm,
+		VersionedXcm,
 	},
 };
 use sp_core::{sr25519::Pair, Pair as PairT, H160};
