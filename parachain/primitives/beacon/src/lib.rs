@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub mod ark_bls;
 pub mod bits;
 pub mod bls;
 pub mod config;
@@ -22,6 +23,10 @@ pub use types::{
 };
 pub use updates::{CheckpointUpdate, ExecutionHeaderUpdate, NextSyncCommitteeUpdate, Update};
 
+pub use ark_bls::{
+	fast_aggregate_verify as ark_fast_aggregate_verify, ArkPublicKeyPrepared, ArkScaleProjective,
+	ArkSyncCommitteePrepared,
+};
 pub use bits::decompress_sync_committee_bits;
 pub use bls::{
 	fast_aggregate_verify, prepare_aggregate_pubkey, prepare_aggregate_pubkey_from_absent,

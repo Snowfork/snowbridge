@@ -1,34 +1,25 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{
-	decompress_sync_committee_bits, Config, CurrentSyncCommittee, Pallet as EthereumBeaconClient,
-	Update, ValidatorsRoot, Vec,
+	decompress_sync_committee_bits, types::ArkSyncCommitteePrepared, Config, CurrentSyncCommittee,
+	Pallet as EthereumBeaconClient, Update, ValidatorsRoot, Vec,
 };
-use primitives::PublicKeyPrepared;
+use codec::Decode;
+use primitives::ArkPublicKeyPrepared;
 use sp_core::H256;
 
 pub fn participant_pubkeys<T: Config>(
 	update: &Update,
-) -> Result<Vec<PublicKeyPrepared>, &'static str> {
+) -> Result<Vec<ArkPublicKeyPrepared>, &'static str> {
 	let sync_committee_bits =
 		decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
-	let current_sync_committee = <CurrentSyncCommittee<T>>::get();
+	let current_sync_committee_raw = <CurrentSyncCommittee<T>>::get();
+	let current_sync_committee =
+		ArkSyncCommitteePrepared::decode(&mut &current_sync_committee_raw[..]).unwrap();
 	let pubkeys = EthereumBeaconClient::<T>::find_pubkeys(
 		&sync_committee_bits,
 		(*current_sync_committee.pubkeys).as_ref(),
 		true,
-	);
-	Ok(pubkeys)
-}
-
-pub fn absent_pubkeys<T: Config>(update: &Update) -> Result<Vec<PublicKeyPrepared>, &'static str> {
-	let sync_committee_bits =
-		decompress_sync_committee_bits(update.sync_aggregate.sync_committee_bits);
-	let current_sync_committee = <CurrentSyncCommittee<T>>::get();
-	let pubkeys = EthereumBeaconClient::<T>::find_pubkeys(
-		&sync_committee_bits,
-		(*current_sync_committee.pubkeys).as_ref(),
-		false,
 	);
 	Ok(pubkeys)
 }

@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{
 	functions::compute_period, pallet::ExecutionHeaders, sync_committee_sum, verify_merkle_branch,
-	BeaconHeader, CompactBeaconState, Error, ExecutionHeaderBuffer, FinalizedBeaconState,
-	LatestExecutionState, LatestFinalizedBlockRoot, NextSyncCommittee, SyncCommitteePrepared,
+	ArkSyncCommitteePrepared, BeaconHeader, CompactBeaconState, Error, ExecutionHeaderBuffer,
+	FinalizedBeaconState, LatestExecutionState, LatestFinalizedBlockRoot, NextSyncCommittee,
 };
 
 use crate::mock::{
@@ -305,7 +305,7 @@ fn find_absent_keys() {
 		1, 1,
 	];
 	let update = load_sync_committee_update_fixture();
-	let sync_committee_prepared: SyncCommitteePrepared =
+	let sync_committee_prepared: ArkSyncCommitteePrepared =
 		(&update.next_sync_committee_update.unwrap().next_sync_committee)
 			.try_into()
 			.unwrap();
@@ -317,8 +317,8 @@ fn find_absent_keys() {
 			false,
 		);
 		assert_eq!(pubkeys.len(), 2);
-		assert_eq!(pubkeys[0], sync_committee_prepared.pubkeys[0]);
-		assert_eq!(pubkeys[1], sync_committee_prepared.pubkeys[7]);
+		assert_eq!(pubkeys[0].0, sync_committee_prepared.pubkeys[0].0);
+		assert_eq!(pubkeys[1].0, sync_committee_prepared.pubkeys[7].0);
 	});
 }
 
@@ -329,7 +329,7 @@ fn find_present_keys() {
 		1, 0,
 	];
 	let update = load_sync_committee_update_fixture();
-	let sync_committee_prepared: SyncCommitteePrepared =
+	let sync_committee_prepared: ArkSyncCommitteePrepared =
 		(&update.next_sync_committee_update.unwrap().next_sync_committee)
 			.try_into()
 			.unwrap();
@@ -341,10 +341,10 @@ fn find_present_keys() {
 			true,
 		);
 		assert_eq!(pubkeys.len(), 4);
-		assert_eq!(pubkeys[0], sync_committee_prepared.pubkeys[1]);
-		assert_eq!(pubkeys[1], sync_committee_prepared.pubkeys[8]);
-		assert_eq!(pubkeys[2], sync_committee_prepared.pubkeys[26]);
-		assert_eq!(pubkeys[3], sync_committee_prepared.pubkeys[30]);
+		assert_eq!(pubkeys[0].0, sync_committee_prepared.pubkeys[1].0);
+		assert_eq!(pubkeys[1].0, sync_committee_prepared.pubkeys[8].0);
+		assert_eq!(pubkeys[2].0, sync_committee_prepared.pubkeys[26].0);
+		assert_eq!(pubkeys[3].0, sync_committee_prepared.pubkeys[30].0);
 	});
 }
 

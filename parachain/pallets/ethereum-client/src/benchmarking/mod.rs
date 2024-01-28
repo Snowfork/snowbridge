@@ -9,10 +9,7 @@ use frame_system::RawOrigin;
 
 use snowbridge_pallet_ethereum_client_fixtures::*;
 
-use primitives::{
-	fast_aggregate_verify, prepare_aggregate_pubkey, prepare_aggregate_signature,
-	verify_merkle_branch,
-};
+use primitives::{ark_fast_aggregate_verify, verify_merkle_branch};
 use util::*;
 
 #[benchmarks]
@@ -84,38 +81,18 @@ mod benchmarks {
 	}
 
 	#[benchmark(extra)]
-	fn bls_fast_aggregate_verify_pre_aggregated() -> Result<(), BenchmarkError> {
-		EthereumBeaconClient::<T>::process_checkpoint_update(&make_checkpoint())?;
-		let update = make_sync_committee_update();
-		let participant_pubkeys = participant_pubkeys::<T>(&update)?;
-		let signing_root = signing_root::<T>(&update)?;
-		let agg_sig =
-			prepare_aggregate_signature(&update.sync_aggregate.sync_committee_signature).unwrap();
-		let agg_pub_key = prepare_aggregate_pubkey(&participant_pubkeys).unwrap();
-
-		#[block]
-		{
-			agg_sig.fast_aggregate_verify_pre_aggregated(signing_root.as_bytes(), &agg_pub_key);
-		}
-
-		Ok(())
-	}
-
-	#[benchmark(extra)]
 	fn bls_fast_aggregate_verify() -> Result<(), BenchmarkError> {
 		EthereumBeaconClient::<T>::process_checkpoint_update(&make_checkpoint())?;
 		let update = make_sync_committee_update();
-		let current_sync_committee = <CurrentSyncCommittee<T>>::get();
-		let absent_pubkeys = absent_pubkeys::<T>(&update)?;
+		let pub_keys = participant_pubkeys::<T>(&update).unwrap();
 		let signing_root = signing_root::<T>(&update)?;
 
 		#[block]
 		{
-			fast_aggregate_verify(
-				&current_sync_committee.aggregate_pubkey,
-				&absent_pubkeys,
-				signing_root,
-				&update.sync_aggregate.sync_committee_signature,
+			ark_fast_aggregate_verify(
+				pub_keys,
+				signing_root.0.to_vec(),
+				update.sync_aggregate.sync_committee_signature.0.to_vec(),
 			)
 			.unwrap();
 		}

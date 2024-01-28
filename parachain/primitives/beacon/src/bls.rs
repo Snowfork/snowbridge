@@ -18,6 +18,7 @@ pub enum BlsError {
 	InvalidPublicKey,
 	InvalidAggregatePublicKeys,
 	SignatureVerificationFailed,
+	HashToCurveFailed,
 }
 
 /// fast_aggregate_verify optimized with aggregate key subtracting absent ones.

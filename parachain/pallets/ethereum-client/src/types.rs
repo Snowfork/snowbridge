@@ -14,6 +14,8 @@ pub type SyncAggregate = primitives::SyncAggregate<SC_SIZE, SC_BITS_SIZE>;
 pub type CheckpointUpdate = primitives::CheckpointUpdate<SC_SIZE>;
 pub type Update = primitives::Update<SC_SIZE, SC_BITS_SIZE>;
 pub type NextSyncCommitteeUpdate = primitives::NextSyncCommitteeUpdate<SC_SIZE>;
+pub type ArkSyncCommitteePrepared = primitives::ArkSyncCommitteePrepared<SC_SIZE>;
+pub type ArkPublicKeyPrepared = primitives::ArkPublicKeyPrepared;
 
 pub use primitives::ExecutionHeaderUpdate;
 
