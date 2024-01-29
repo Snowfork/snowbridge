@@ -39,9 +39,9 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use primitives::{
-	ark_fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, ArkScaleProjective,
-	BeaconHeader, BlsError, CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState,
-	ForkData, ForkVersion, ForkVersions, SigningData,
+	ark_fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, ArkPublicKeyPrepared,
+	ArkScaleProjective, BeaconHeader, BlsError, CompactBeaconState, CompactExecutionHeader,
+	ExecutionHeaderState, ForkData, ForkVersion, ForkVersions, SigningData,
 };
 use snowbridge_core::{BasicOperatingMode, RingBufferMap};
 use sp_core::H256;
@@ -52,8 +52,8 @@ use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
 };
 use types::{
-	ArkPublicKeyPrepared, ArkSyncCommitteePrepared, CheckpointUpdate, ExecutionHeaderBuffer,
-	ExecutionHeaderUpdate, FinalizedBeaconStateBuffer, Update,
+	ArkSyncCommitteePrepared, CheckpointUpdate, ExecutionHeaderBuffer, ExecutionHeaderUpdate,
+	FinalizedBeaconStateBuffer, Update,
 };
 
 pub use pallet::*;

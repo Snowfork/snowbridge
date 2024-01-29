@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{
-	decompress_sync_committee_bits, types::ArkSyncCommitteePrepared, Config, CurrentSyncCommittee,
-	Pallet as EthereumBeaconClient, Update, ValidatorsRoot, Vec,
+	decompress_sync_committee_bits, types::ArkSyncCommitteePrepared, ArkPublicKeyPrepared, Config,
+	CurrentSyncCommittee, Pallet as EthereumBeaconClient, Update, ValidatorsRoot, Vec,
 };
 use codec::Decode;
-use primitives::ArkPublicKeyPrepared;
 use sp_core::H256;
 
 pub fn participant_pubkeys<T: Config>(

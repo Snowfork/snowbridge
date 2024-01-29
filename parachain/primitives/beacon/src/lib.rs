@@ -24,8 +24,8 @@ pub use types::{
 pub use updates::{CheckpointUpdate, ExecutionHeaderUpdate, NextSyncCommitteeUpdate, Update};
 
 pub use ark_bls::{
-	fast_aggregate_verify as ark_fast_aggregate_verify, ArkPublicKeyPrepared, ArkScaleProjective,
-	ArkSyncCommitteePrepared,
+	fast_aggregate_verify as ark_fast_aggregate_verify, ArkScaleProjective,
+	PublicKeyPrepared as ArkPublicKeyPrepared, SyncCommitteePrepared as ArkSyncCommitteePrepared,
 };
 pub use bits::decompress_sync_committee_bits;
 pub use bls::{

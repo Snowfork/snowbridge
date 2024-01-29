@@ -26,7 +26,7 @@ use sp_std::prelude::Vec;
 /// Domain Separation Tag for signatures on G2
 pub const DST_G2: &[u8] = b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
 
-pub type ArkPublicKeyPrepared = ArkScaleProjective<G1Projective>;
+pub type PublicKeyPrepared = ArkScaleProjective<G1Projective>;
 
 #[derive(Clone, Debug)]
 pub struct Signature(G2Projective);
@@ -65,7 +65,7 @@ impl PublicKey {
 		Ok(Self(p.into()))
 	}
 
-	pub fn encode_from_bytes(bytes: &[u8]) -> Result<ArkPublicKeyPrepared, SerializationError> {
+	pub fn encode_from_bytes(bytes: &[u8]) -> Result<PublicKeyPrepared, SerializationError> {
 		let pubkey = PublicKey::from_bytes(bytes)?;
 		Ok(ArkScaleProjective::from(pubkey.0))
 	}
@@ -83,34 +83,34 @@ impl PublicKey {
 	}
 }
 
-pub fn prepare_ark_pubkeys(
+pub fn prepare_pubkeys(
 	pubkeys: &[crate::PublicKey],
-) -> Result<Vec<ArkPublicKeyPrepared>, SerializationError> {
+) -> Result<Vec<PublicKeyPrepared>, SerializationError> {
 	pubkeys
 		.iter()
 		// Deserialize one public key from compressed bytes
 		.map(|pk| PublicKey::encode_from_bytes(pk.0.as_ref()))
-		.collect::<Result<Vec<ArkPublicKeyPrepared>, SerializationError>>()
+		.collect::<Result<Vec<PublicKeyPrepared>, SerializationError>>()
 }
 
 #[derive(Encode, Decode)]
-pub struct ArkSyncCommitteePrepared<const COMMITTEE_SIZE: usize> {
+pub struct SyncCommitteePrepared<const COMMITTEE_SIZE: usize> {
 	pub root: H256,
-	pub pubkeys: Box<[ArkPublicKeyPrepared; COMMITTEE_SIZE]>,
-	pub aggregate_pubkey: ArkPublicKeyPrepared,
+	pub pubkeys: Box<[PublicKeyPrepared; COMMITTEE_SIZE]>,
+	pub aggregate_pubkey: PublicKeyPrepared,
 }
 
 impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
-	for ArkSyncCommitteePrepared<COMMITTEE_SIZE>
+	for SyncCommitteePrepared<COMMITTEE_SIZE>
 {
 	type Error = SerializationError;
 
 	fn try_from(sync_committee: &SyncCommittee<COMMITTEE_SIZE>) -> Result<Self, Self::Error> {
 		let aggregate_pubkey =
 			PublicKey::encode_from_bytes(sync_committee.aggregate_pubkey.0.as_ref())?;
-		let g1_pubkeys = prepare_ark_pubkeys(&sync_committee.pubkeys)?;
+		let g1_pubkeys = prepare_pubkeys(&sync_committee.pubkeys)?;
 		let sync_committee_root = sync_committee.hash_tree_root().expect("checked statically; qed");
-		Ok(ArkSyncCommitteePrepared::<COMMITTEE_SIZE> {
+		Ok(SyncCommitteePrepared::<COMMITTEE_SIZE> {
 			pubkeys: g1_pubkeys.try_into().map_err(|_| ()).expect("checked statically; qed"),
 			aggregate_pubkey,
 			root: sync_committee_root,
@@ -128,7 +128,7 @@ pub fn hash_to_curve_g2(message: &[u8]) -> Result<G2Projective, HashToCurveError
 }
 
 pub fn fast_aggregate_verify(
-	pub_keys: Vec<ArkPublicKeyPrepared>,
+	pub_keys: Vec<PublicKeyPrepared>,
 	message: Vec<u8>,
 	signature: Vec<u8>,
 ) -> Result<bool, BlsError> {
