@@ -5,7 +5,7 @@
       "spec": {
         "slotsInEpoch": 32,
         "epochsPerSyncCommitteePeriod": 256,
-        "denebForkedEpoch": 0
+        "denebForkedEpoch": null
       }
     }
   },
