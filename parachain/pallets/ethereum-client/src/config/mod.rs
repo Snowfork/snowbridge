@@ -36,7 +36,7 @@ pub const MAX_EXTRA_DATA_BYTES: usize = 32;
 pub const MAX_LOGS_BLOOM_SIZE: usize = 256;
 pub const MAX_FEE_RECIPIENT_SIZE: usize = 20;
 
-/// Sanity value to constain the max size of a merkle branch proof.
+/// Sanity value to constrain the max size of a merkle branch proof.
 pub const MAX_BRANCH_PROOF_SIZE: usize = 20;
 
 /// DomainType('0x07000000')
