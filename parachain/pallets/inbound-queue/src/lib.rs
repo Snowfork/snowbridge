@@ -245,7 +245,7 @@ pub mod pallet {
 			ensure!(T::GatewayAddress::get() == envelope.gateway, Error::<T>::InvalidGateway);
 
 			// Retrieve the registered channel for this message
-			let channel: Channel =
+			let channel =
 				T::ChannelLookup::lookup(envelope.channel_id).ok_or(Error::<T>::InvalidChannel)?;
 
 			// Verify message nonce
@@ -263,7 +263,9 @@ pub mod pallet {
 
 			// Reward relayer from the sovereign account of the destination parachain
 			// Expected to fail if sovereign account has no funds
-			Self::refund_relayer(channel.para_id, who, message.encode().len() as u32)?;
+			let sovereign_account = sibling_sovereign_account::<T>(channel.para_id);
+			let delivery_cost = Self::calculate_delivery_cost(message.encode().len() as u32);
+			T::Token::transfer(&sovereign_account, &who, delivery_cost, Preservation::Preserve)?;
 
 			// Decode message into XCM
 			let (xcm, fee) =
@@ -356,17 +358,6 @@ pub mod pallet {
 				);
 				TokenError::FundsUnavailable
 			})?;
-			Ok(())
-		}
-
-		pub fn refund_relayer(
-			para_id: ParaId,
-			who: T::AccountId,
-			message_len: u32,
-		) -> DispatchResult {
-			let sovereign_account = sibling_sovereign_account::<T>(para_id);
-			let delivery_cost = Self::calculate_delivery_cost(message_len);
-			T::Token::transfer(&sovereign_account, &who, delivery_cost, Preservation::Preserve)?;
 			Ok(())
 		}
 	}
