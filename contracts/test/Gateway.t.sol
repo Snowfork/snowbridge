@@ -93,13 +93,8 @@ contract GatewayTest is Test {
 
     function setUp() public {
         AgentExecutor executor = new AgentExecutor();
-        gatewayLogic = new GatewayMock(
-            address(0),
-            address(executor),
-            bridgeHubParaID,
-            bridgeHubAgentID,
-            foreignTokenDecimals
-        );
+        gatewayLogic =
+            new GatewayMock(address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals);
         Gateway.Config memory config = Gateway.Config({
             mode: OperatingMode.Normal,
             deliveryCost: outboundFee,
@@ -110,10 +105,7 @@ contract GatewayTest is Test {
             assetHubReserveTransferFee: sendTokenFee,
             exchangeRate: exchangeRate
         });
-        gateway = new GatewayProxy(
-            address(gatewayLogic),
-            abi.encode(config)
-        );
+        gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
         GatewayMock(address(gateway)).setCommitmentsAreVerified(true);
 
         SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
@@ -176,7 +168,6 @@ contract GatewayTest is Test {
     /**
      * Message Verification
      */
-
     function testSubmitHappyPath() public {
         deal(assetHubAgent, 50 ether);
 
@@ -344,7 +335,6 @@ contract GatewayTest is Test {
     /**
      * Handlers
      */
-
     function testAgentExecution() public {
         token.transfer(address(assetHubAgent), 200);
 
@@ -562,7 +552,6 @@ contract GatewayTest is Test {
     /**
      * Assets
      */
-
     function testRegisterToken() public {
         vm.expectEmit(false, false, false, true);
         emit IGateway.TokenRegistrationSent(address(token));
@@ -679,7 +668,6 @@ contract GatewayTest is Test {
     /**
      * Operating Modes
      */
-
     function testDisableOutboundMessaging() public {
         // Let gateway lock up to 1 tokens
         token.approve(address(gateway), 1);

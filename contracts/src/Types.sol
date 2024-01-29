@@ -87,7 +87,9 @@ enum Command {
     SetPricingParameters
 }
 
-enum AgentExecuteCommand {TransferToken}
+enum AgentExecuteCommand {
+    TransferToken
+}
 
 /// @dev Application-level costs for a message
 struct Costs {

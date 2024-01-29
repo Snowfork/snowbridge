@@ -29,7 +29,6 @@ pragma solidity 0.8.23;
  * above table counter XX is at logical index 22. It will convert to a physical index of 1 in the array and
  * then to bit-index 96 to 111 of uint256[1].
  */
-
 using {get, set} for Uint16Array global;
 
 error IndexOutOfBounds();
