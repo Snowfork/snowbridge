@@ -96,7 +96,7 @@ config_relayer() {
     fi
     jq \
         --arg beacon_endpoint_http $beacon_endpoint_http \
-        --arg deneb_forked_epoch $deneb_forked_epoch \
+        --argjson deneb_forked_epoch $deneb_forked_epoch \
         '
       .source.beacon.endpoint = $beacon_endpoint_http
     | .source.beacon.spec.denebForkedEpoch = $deneb_forked_epoch
