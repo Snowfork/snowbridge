@@ -22,7 +22,7 @@ use crate::{
 					Instruction as RelaychainInstruction, WeightLimit as RelaychainWeightLimit,
 					Xcm as RelaychainXcm,
 				},
-				VersionedMultiLocation as RelaychainVersionedMultiLocation,
+				VersionedLocation as RelaychainVersionedLocation,
 				VersionedXcm as RelaychainVersionedXcm,
 			},
 		},
@@ -289,7 +289,7 @@ pub async fn governance_bridgehub_call_from_relay_chain(
 	let weight = 180000000000;
 	let proof_size = 900000;
 
-	let dest = Box::new(RelaychainVersionedMultiLocation::V3(RelaychainMultiLocation {
+	let dest = Box::new(RelaychainVersionedLocation::V3(RelaychainMultiLocation {
 		parents: 0,
 		interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(BRIDGE_HUB_PARA_ID)),
 	}));

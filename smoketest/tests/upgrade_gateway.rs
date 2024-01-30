@@ -29,7 +29,7 @@ use snowbridge_smoketest::{
 				double_encoded::DoubleEncoded,
 				v2::OriginKind,
 				v3::{junction::Junction, junctions::Junctions, Instruction, WeightLimit, Xcm},
-				VersionedMultiLocation, VersionedXcm,
+				VersionedLocation, VersionedXcm,
 			},
 		},
 	},
@@ -93,7 +93,7 @@ async fn upgrade_gateway() {
 	let weight = 3000000000;
 	let proof_size = 18000;
 
-	let dest = Box::new(VersionedMultiLocation::V3(MultiLocation {
+	let dest = Box::new(VersionedLocation::V3(MultiLocation {
 		parents: 0,
 		interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
 	}));
