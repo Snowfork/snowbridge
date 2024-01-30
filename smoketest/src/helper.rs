@@ -46,41 +46,44 @@ use penpalTypes::{
 		VersionedXcm,
 	},
 };
-use sp_core::{sr25519::Pair, Pair as PairT, H160};
+use sp_core::H160;
 use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
 	blocks::ExtrinsicEvents,
 	events::StaticEvent,
 	tx::{PairSigner, TxPayload},
-	Config, OnlineClient, PolkadotConfig, SubstrateConfig,
+	Config, OnlineClient, PolkadotConfig,
+	config::DefaultExtrinsicParams,
 };
+use subxt::ext::sp_core::{Pair as PairT};
+use subxt::ext::sp_core::sr25519::Pair as Pair;
 
 /// Custom config that works with Penpal
 pub enum PenpalConfig {}
 
 impl Config for PenpalConfig {
-	type Index = <PolkadotConfig as Config>::Index;
 	type Hash = <PolkadotConfig as Config>::Hash;
 	type AccountId = <PolkadotConfig as Config>::AccountId;
 	type Address = <PolkadotConfig as Config>::Address;
+	type AssetId = <PolkadotConfig as Config>::AssetId;
 	type Signature = <PolkadotConfig as Config>::Signature;
 	type Hasher = <PolkadotConfig as Config>::Hasher;
 	type Header = <PolkadotConfig as Config>::Header;
-	type ExtrinsicParams = <SubstrateConfig as Config>::ExtrinsicParams;
+	type ExtrinsicParams = DefaultExtrinsicParams<PenpalConfig>;
 }
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
 
 impl Config for AssetHubConfig {
-	type Index = <PolkadotConfig as Config>::Index;
 	type Hash = <PolkadotConfig as Config>::Hash;
 	type AccountId = <PolkadotConfig as Config>::AccountId;
 	type Address = <PolkadotConfig as Config>::Address;
+	type AssetId = <PolkadotConfig as Config>::AssetId;
 	type Signature = <PolkadotConfig as Config>::Signature;
 	type Hasher = <PolkadotConfig as Config>::Hasher;
 	type Header = <PolkadotConfig as Config>::Header;
-	type ExtrinsicParams = <SubstrateConfig as Config>::ExtrinsicParams;
+	type ExtrinsicParams = DefaultExtrinsicParams<AssetHubConfig>;
 }
 
 pub struct TestClients {
@@ -194,7 +197,7 @@ pub async fn send_sudo_xcm_transact(
 		RuntimeCall::PolkadotXcm(Call::send { dest, message }),
 	);
 
-	let owner: Pair = Pair::from_string("//Alice", None).expect("cannot create keypair");
+	let owner = Pair::from_string("//Alice", None).expect("cannot create keypair");
 
 	let signer: PairSigner<PenpalConfig, _> = PairSigner::new(owner);
 
@@ -282,7 +285,7 @@ pub async fn governance_bridgehub_call_from_relay_chain(
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let test_clients = initial_clients().await.expect("initialize clients");
 
-	let sudo: Pair = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
+	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 
 	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
 

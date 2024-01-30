@@ -1,6 +1,6 @@
 use hex_literal::hex;
 use lazy_static::lazy_static;
-use sp_core::{sr25519::Pair, Pair as PairT};
+use subxt::ext::sp_core::{Pair as PairT, sr25519::Pair as Pair};
 use std::{env, string::ToString};
 
 // Todo: load all configs from env in consistent with set-env.sh
