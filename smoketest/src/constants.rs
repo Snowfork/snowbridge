@@ -1,7 +1,7 @@
 use hex_literal::hex;
 use lazy_static::lazy_static;
-use subxt::ext::sp_core::{Pair as PairT, sr25519::Pair as Pair};
 use std::{env, string::ToString};
+use subxt::ext::sp_core::{sr25519::Pair, Pair as PairT};
 
 // Todo: load all configs from env in consistent with set-env.sh
 pub const ASSET_HUB_PARA_ID: u32 = 1000;

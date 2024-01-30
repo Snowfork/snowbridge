@@ -50,13 +50,12 @@ use sp_core::H160;
 use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
 	blocks::ExtrinsicEvents,
+	config::DefaultExtrinsicParams,
 	events::StaticEvent,
+	ext::sp_core::{sr25519::Pair, Pair as PairT},
 	tx::{PairSigner, TxPayload},
 	Config, OnlineClient, PolkadotConfig,
-	config::DefaultExtrinsicParams,
 };
-use subxt::ext::sp_core::{Pair as PairT};
-use subxt::ext::sp_core::sr25519::Pair as Pair;
 
 /// Custom config that works with Penpal
 pub enum PenpalConfig {}
