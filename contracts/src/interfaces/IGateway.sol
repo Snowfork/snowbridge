@@ -68,8 +68,8 @@ interface IGateway {
 
     /// @dev Emitted once the funds are locked and an outbound message is successfully queued.
     event TokenSent(
-        address indexed sender,
         address indexed token,
+        address indexed sender,
         ParaID indexed destinationChain,
         MultiAddress destinationAddress,
         uint128 amount

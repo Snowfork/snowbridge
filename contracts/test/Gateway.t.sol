@@ -595,7 +595,7 @@ contract GatewayTest is Test {
         fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
 
         vm.expectEmit(true, true, false, true);
-        emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress32, 1);
+        emit IGateway.TokenSent(address(token), address(this), destPara, recipientAddress32, 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
@@ -618,7 +618,7 @@ contract GatewayTest is Test {
         fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
 
         vm.expectEmit(true, true, false, true);
-        emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress32, 1);
+        emit IGateway.TokenSent(address(token), address(this), destPara, recipientAddress32, 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
@@ -641,7 +641,7 @@ contract GatewayTest is Test {
         fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
 
         vm.expectEmit(true, true, false, true);
-        emit IGateway.TokenSent(address(this), address(token), destPara, recipientAddress20, 1);
+        emit IGateway.TokenSent(address(token), address(this), destPara, recipientAddress20, 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
