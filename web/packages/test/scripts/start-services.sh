@@ -24,10 +24,6 @@ echo "Starting ethereum nodes"
 if [ "$eth_network" == "localhost" ]; then
   source scripts/deploy-ethereum.sh
   deploy_ethereum
-else
-  source scripts/start-goerli.sh
-  # deploy beacon node locally for fast response time or retrieving beacon state from remote could be very slow
-  deploy_goerli
 fi
 
 # 3. start polkadot
