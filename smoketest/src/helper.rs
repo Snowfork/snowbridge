@@ -54,8 +54,20 @@ use subxt::{
 	events::StaticEvent,
 	ext::sp_core::{sr25519::Pair, Pair as PairT},
 	tx::{PairSigner, TxPayload},
-	Config, OnlineClient, PolkadotConfig,
+	Config, OnlineClient, PolkadotConfig, SubstrateConfig
 };
+use subxt::config::SubstrateExtrinsicParams;
+
+#[subxt::subxt(
+	runtime_metadata_path = "src/parachains/assethub.scale",
+	derive_for_type(
+		path = "staging_xcm::v3::multilocation::MultiLocation",
+		derive = "Clone",
+		recursive
+	)
+)]
+pub mod runtime {}
+use runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation as AssetHubMultiLocation;
 
 /// Custom config that works with Penpal
 pub enum PenpalConfig {}
@@ -78,11 +90,13 @@ impl Config for AssetHubConfig {
 	type Hash = <PolkadotConfig as Config>::Hash;
 	type AccountId = <PolkadotConfig as Config>::AccountId;
 	type Address = <PolkadotConfig as Config>::Address;
-	type AssetId = <PolkadotConfig as Config>::AssetId;
 	type Signature = <PolkadotConfig as Config>::Signature;
 	type Hasher = <PolkadotConfig as Config>::Hasher;
 	type Header = <PolkadotConfig as Config>::Header;
-	type ExtrinsicParams = DefaultExtrinsicParams<AssetHubConfig>;
+	type ExtrinsicParams = SubstrateExtrinsicParams<AssetHubConfig>;
+	// Here we use the MultiLocation from the metadata as a part of the config:
+	// The `ChargeAssetTxPayment` signed extension that is part of the ExtrinsicParams above, now uses the type:
+	type AssetId = AssetHubMultiLocation;
 }
 
 pub struct TestClients {

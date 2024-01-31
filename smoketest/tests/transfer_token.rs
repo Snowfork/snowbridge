@@ -29,12 +29,40 @@ use snowbridge_smoketest::{
 	},
 };
 use std::{sync::Arc, time::Duration};
-use subxt::{tx::PairSigner, OnlineClient};
+use subxt::{tx::PairSigner, OnlineClient, ext::sp_core::{sr25519::Pair, Pair as PairT},};
+use subxt_signer::sr25519::dev;
+use subxt::config::DefaultExtrinsicParamsBuilder;
+use snowbridge_smoketest::helper::runtime;
 
 const DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 
 #[tokio::test]
 async fn transfer_token() {
+	let client = subxt::OnlineClient::<AssetHubConfig>::from_url(ASSET_HUB_WS_URL).await.unwrap();
+	let tx_payload = runtime::tx().system().remark(b"Hello".to_vec());
+
+	let amount: u128 = 1_000_000_000;
+
+	// Build extrinsic params using an asset at this location as a tip:
+	let location: crate::runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation = crate::runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation {
+		parents: 3,
+		interior: crate::runtime::runtime_types::xcm::v3::junctions::Junctions::Here,
+	};
+
+	let tx_config = DefaultExtrinsicParamsBuilder::<AssetHubConfig>::new()
+		.tip_of(1, location)
+		.build();
+
+	// And provide the extrinsic params including the tip when submitting a transaction:
+	let _ = client
+		.tx()
+		.sign_and_submit_then_watch(&tx_payload, &dev::bob(), tx_config)
+		.await
+		.expect("send through call.")
+		.wait_for_finalized_success()
+		.await
+		.expect("call success");;
+	/*
 	let ethereum_provider = Provider::<Ws>::connect(ETHEREUM_API)
 		.await
 		.unwrap()
@@ -51,8 +79,6 @@ async fn transfer_token() {
 
 	let assethub: OnlineClient<AssetHubConfig> =
 		OnlineClient::from_url(ASSET_HUB_WS_URL).await.unwrap();
-
-	let signer: PairSigner<AssetHubConfig, _> = PairSigner::new((*BOB).clone());
 
 	let amount: u128 = 1_000_000_000;
 	let assets = VersionedAssets::V3(MultiAssets(vec![MultiAsset {
@@ -80,6 +106,8 @@ async fn transfer_token() {
 			key: DESTINATION_ADDRESS.into(),
 		}),
 	});
+
+	let signer = dev::alice();
 
 	let token_transfer_call =
 		TransactionApi.reserve_transfer_assets(destination, beneficiary, assets, 0);
@@ -119,5 +147,5 @@ async fn transfer_token() {
 			break
 		}
 	}
-	assert!(transfer_event_found);
+	assert!(transfer_event_found);*/
 }

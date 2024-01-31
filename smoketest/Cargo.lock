@@ -4496,6 +4496,7 @@ dependencies = [
  "sp-core 16.0.0",
  "staging-xcm",
  "subxt",
+ "subxt-signer",
  "tokio",
 ]
 
@@ -5265,6 +5266,27 @@ dependencies = [
  "scale-info",
  "sp-core-hashing 15.0.0",
  "thiserror",
+]
+
+[[package]]
+name = "subxt-signer"
+version = "0.34.0"
+source = "git+https://github.com/paritytech/subxt.git?tag=v0.34.0#0ea9c7ede6e8312bf3de0da06124361e5c2120c5"
+dependencies = [
+ "bip39",
+ "hex",
+ "hmac 0.12.1",
+ "parity-scale-codec",
+ "pbkdf2 0.12.2",
+ "regex",
+ "schnorrkel 0.11.4",
+ "secp256k1 0.28.1",
+ "secrecy",
+ "sha2 0.10.8",
+ "sp-core-hashing 15.0.0",
+ "subxt",
+ "thiserror",
+ "zeroize",
 ]
 
 [[package]]

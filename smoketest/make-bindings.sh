@@ -25,3 +25,5 @@ subxt codegen --url ws://localhost:11144 > src/parachains/bridgehub.rs
 subxt codegen --url ws://localhost:12144 > src/parachains/assethub.rs
 subxt codegen --url ws://localhost:13144 > src/parachains/penpal.rs
 subxt codegen --url ws://localhost:9944  > src/parachains/relaychain.rs
+subxt metadata -f bytes --url ws://localhost:12144 > src/parachains/assethub.scale
+subxt metadata -f bytes --url ws://localhost:9944 > src/parachains/relaychain.scale

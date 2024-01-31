@@ -13,6 +13,7 @@ hex = "0.4.3"
 hex-literal = "0.4.1"
 serde = { version = "1.0", features = ["derive"] }
 subxt = { git = "https://github.com/paritytech/subxt.git", tag = "v0.34.0", features = ["substrate-compat"] }
+subxt-signer = { git = "https://github.com/paritytech/subxt.git", tag = "v0.34.0" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", default-features = false, features = ["abigen", "ws"] }
 sp-core = "16.0.0"
 lazy_static = "1.4.0"
