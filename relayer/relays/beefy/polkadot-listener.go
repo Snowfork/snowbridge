@@ -113,11 +113,6 @@ func (li *PolkadotListener) scanCommitments(
 				Proof:            result.MMRProof,
 			}
 
-			if !result.MandatoryCommitment {
-				logEntry.Info("Skipped due to not mandatory commitment.")
-				continue
-			}
-
 			if validatorSetID == currentValidatorSet+1 && validatorSetID == nextValidatorSetID-1 {
 				task.IsHandover = true
 				select {

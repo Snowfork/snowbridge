@@ -78,12 +78,12 @@ func scanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64,
 }
 
 type ScanCommitmentsResult struct {
-	SignedCommitment    types.SignedCommitment
-	BlockNumber         uint64
-	BlockHash           types.Hash
-	Depth               uint64
-	MandatoryCommitment bool
-	Error               error
+	SignedCommitment types.SignedCommitment
+	BlockNumber      uint64
+	BlockHash        types.Hash
+	Depth            uint64
+	IsMandatory      bool
+	Error            error
 }
 
 func ScanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64) (<-chan ScanCommitmentsResult, error) {
@@ -131,7 +131,7 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 				return
 			}
 
-			mandatoryCommitment := false
+			isMandatory := false
 			for _, digest := range block.Block.Header.Digest {
 				if !digest.IsConsensus {
 					continue
@@ -141,7 +141,7 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 				// which signifies the the change of session authorities.
 				// https://github.com/paritytech/polkadot-sdk/blob/6a168ad57ad13ea0896f7684120f4fa15bfef474/substrate/primitives/consensus/beefy/src/lib.rs#L254C2-L254C19
 				if decodeEngineId(uint32(consensus.ConsensusEngineID)) == "BEEF" && consensus.Bytes[0] == 0x01 {
-					mandatoryCommitment = true
+					isMandatory = true
 					break
 				}
 			}
@@ -173,7 +173,7 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 			select {
 			case <-ctx.Done():
 				return
-			case out <- ScanCommitmentsResult{BlockNumber: result.BlockNumber, BlockHash: result.BlockHash, SignedCommitment: *commitment, Depth: result.Depth, MandatoryCommitment: mandatoryCommitment}:
+			case out <- ScanCommitmentsResult{BlockNumber: result.BlockNumber, BlockHash: result.BlockHash, SignedCommitment: *commitment, Depth: result.Depth, IsMandatory: isMandatory}:
 			}
 		}
 	}
@@ -249,7 +249,7 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 			select {
 			case <-ctx.Done():
 				return
-			case out <- ScanSafeCommitmentsResult{result.SignedCommitment, proof, blockHash, result.Depth, result.MandatoryCommitment, nil}:
+			case out <- ScanSafeCommitmentsResult{result.SignedCommitment, proof, blockHash, result.Depth, result.IsMandatory, nil}:
 			}
 
 		}
