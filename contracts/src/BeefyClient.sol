@@ -253,7 +253,7 @@ contract BeefyClient {
             signatureUsageCount = currentValidatorSet.usageCounters.get(proof.index);
             currentValidatorSet.usageCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
             vset = currentValidatorSet;
-        } else if (commitment.validatorSetID == nextValidatorSet.id) {
+        } else if (commitment.validatorSetID >= nextValidatorSet.id) {
             signatureUsageCount = nextValidatorSet.usageCounters.get(proof.index);
             nextValidatorSet.usageCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
             vset = nextValidatorSet;
