@@ -180,12 +180,12 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 }
 
 type ScanSafeCommitmentsResult struct {
-	SignedCommitment    types.SignedCommitment
-	MMRProof            merkle.SimplifiedMMRProof
-	BlockHash           types.Hash
-	Depth               uint64
-	MandatoryCommitment bool
-	Error               error
+	SignedCommitment types.SignedCommitment
+	MMRProof         merkle.SimplifiedMMRProof
+	BlockHash        types.Hash
+	Depth            uint64
+	IsMandatory      bool
+	Error            error
 }
 
 func ScanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64) (<-chan ScanSafeCommitmentsResult, error) {

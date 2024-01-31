@@ -99,7 +99,7 @@ func (li *PolkadotListener) scanCommitments(
 				},
 				"validatorSetID":       currentValidatorSet,
 				"IsHandover":           validatorSetID == currentValidatorSet+1,
-				"Mandatory":            result.MandatoryCommitment,
+				"IsMandatory":          result.IsMandatory,
 				"lastSyncedBeefyBlock": lastSyncedBeefyBlock,
 			})
 
