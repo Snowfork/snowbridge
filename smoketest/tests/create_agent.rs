@@ -4,6 +4,8 @@ use snowbridge_smoketest::{
 	xcm::construct_xcm_message_with_fee,
 };
 
+// create_agent extrinsic is disabled
+#[ignore]
 #[tokio::test]
 async fn create_agent() {
 	let test_clients = initial_clients().await.expect("initialize clients");
