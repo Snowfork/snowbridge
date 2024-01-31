@@ -2,6 +2,7 @@ package beefy
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"time"
 
@@ -131,12 +132,17 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 			}
 
 			mandatoryCommitment := false
-			for _, it := range block.Block.Header.Digest {
-				if it.IsConsensus {
-					consensus := it.AsConsensus
-					if consensus.ConsensusEngineID == types.ConsensusEngineID(types.U32(0x46454542)) && consensus.Bytes[0] == 0x01 {
-						mandatoryCommitment = true
-					}
+			for _, digest := range block.Block.Header.Digest {
+				if !digest.IsConsensus {
+					continue
+				}
+				consensus := digest.AsConsensus
+				// Mandatory commitments contain a BEEF digest of type ConsensusLog::AuthoritiesChange (0x01)
+				// which signifies the the change of session authorities.
+				// https://github.com/paritytech/polkadot-sdk/blob/6a168ad57ad13ea0896f7684120f4fa15bfef474/substrate/primitives/consensus/beefy/src/lib.rs#L254C2-L254C19
+				if decodeEngineId(uint32(consensus.ConsensusEngineID)) == "BEEF" && consensus.Bytes[0] == 0x01 {
+					mandatoryCommitment = true
+					break
 				}
 			}
 
@@ -304,4 +310,10 @@ func verifyProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, proof merkle.Sim
 	}
 
 	return actualRoot == expectedRoot, nil
+}
+
+func decodeEngineId(engineId uint32) string {
+	idAsBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(idAsBytes, engineId)
+	return string(idAsBytes)
 }
