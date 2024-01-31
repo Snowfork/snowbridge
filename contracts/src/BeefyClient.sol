@@ -345,7 +345,7 @@ contract BeefyClient {
 
         bool is_next_session = false;
         ValidatorSetState storage vset;
-        if (commitment.validatorSetID == nextValidatorSet.id) {
+        if (commitment.validatorSetID > currentValidatorSet.id) {
             is_next_session = true;
             vset = nextValidatorSet;
         } else if (commitment.validatorSetID == currentValidatorSet.id) {
@@ -359,7 +359,7 @@ contract BeefyClient {
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         if (is_next_session) {
-            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
                 revert InvalidMMRLeaf();
             }
             bool leafIsValid =
