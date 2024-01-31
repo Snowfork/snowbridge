@@ -13,6 +13,7 @@ ignore:
   - "parachain/pallets/ethereum-beacon-client/src/benchmarking"
   - "parachain/pallets/ethereum-beacon-client/src/weights.rs"
   - "contracts/src/DeployScript.sol"
+  - "parachain/pallets/inbound-queue/fixtures"
 flags:
   solidity:
     paths:
