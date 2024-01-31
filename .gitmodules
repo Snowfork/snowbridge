@@ -19,3 +19,6 @@
 [submodule "lodestar"]
 	path = lodestar
 	url = https://github.com/Snowfork/lodestar
+[submodule "parachain-orml-template"]
+	path = parachain-orml-template
+	url = https://github.com/Snowfork/parachain-orml-template
