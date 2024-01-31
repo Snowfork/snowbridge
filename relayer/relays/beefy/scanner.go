@@ -13,11 +13,10 @@ import (
 )
 
 type ScanBlocksResult struct {
-	BlockNumber              uint64
-	BlockHash                types.Hash
-	Depth                    uint64
-	HasAuthorityChangeDigest bool
-	Error                    error
+	BlockNumber uint64
+	BlockHash   types.Hash
+	Depth       uint64
+	Error       error
 }
 
 func ScanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64) (chan ScanBlocksResult, error) {
@@ -51,16 +50,6 @@ func scanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64,
 			return
 		}
 
-		hasAuthorityChangeDigest := false
-		for _, it := range finalizedHeader.Digest {
-			if it.IsConsensus {
-				consensus := it.AsConsensus
-				if consensus.ConsensusEngineID == types.ConsensusEngineID(types.U32(0x46454542)) && consensus.Bytes[0] == 0x01 {
-					hasAuthorityChangeDigest = true
-				}
-			}
-		}
-
 		finalizedBlockNumber := uint64(finalizedHeader.Number)
 		if current > finalizedBlockNumber {
 			select {
@@ -80,7 +69,7 @@ func scanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64,
 		select {
 		case <-ctx.Done():
 			return
-		case out <- ScanBlocksResult{BlockNumber: current, BlockHash: blockHash, Depth: finalizedBlockNumber - current, HasAuthorityChangeDigest: hasAuthorityChangeDigest}:
+		case out <- ScanBlocksResult{BlockNumber: current, BlockHash: blockHash, Depth: finalizedBlockNumber - current}:
 		}
 
 		current++
@@ -141,6 +130,16 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 				return
 			}
 
+			mandatoryCommitment := false
+			for _, it := range block.Block.Header.Digest {
+				if it.IsConsensus {
+					consensus := it.AsConsensus
+					if consensus.ConsensusEngineID == types.ConsensusEngineID(types.U32(0x46454542)) && consensus.Bytes[0] == 0x01 {
+						mandatoryCommitment = true
+					}
+				}
+			}
+
 			var commitment *types.SignedCommitment
 			for j := range block.Justifications {
 				sc := types.OptionalSignedCommitment{}
@@ -168,7 +167,7 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 			select {
 			case <-ctx.Done():
 				return
-			case out <- ScanCommitmentsResult{BlockNumber: result.BlockNumber, BlockHash: result.BlockHash, SignedCommitment: *commitment, Depth: result.Depth, MandatoryCommitment: result.HasAuthorityChangeDigest}:
+			case out <- ScanCommitmentsResult{BlockNumber: result.BlockNumber, BlockHash: result.BlockHash, SignedCommitment: *commitment, Depth: result.Depth, MandatoryCommitment: mandatoryCommitment}:
 			}
 		}
 	}
