@@ -11,7 +11,6 @@ library Bitfield {
      * @dev Constants used to efficiently calculate the hamming weight of a bitfield. See
      * https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation for an explanation of those constants.
      */
-
     uint256 internal constant M1 = 0x5555555555555555555555555555555555555555555555555555555555555555;
     uint256 internal constant M2 = 0x3333333333333333333333333333333333333333333333333333333333333333;
     uint256 internal constant M4 = 0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f;

@@ -223,7 +223,6 @@ contract Gateway is IGateway, IInitializable {
     /**
      * Getters
      */
-
     function operatingMode() external view returns (OperatingMode) {
         return CoreStorage.layout().mode;
     }
@@ -396,7 +395,6 @@ contract Gateway is IGateway, IInitializable {
     /**
      * Assets
      */
-
     function isTokenRegistered(address token) external view returns (bool) {
         return Assets.isTokenRegistered(token);
     }

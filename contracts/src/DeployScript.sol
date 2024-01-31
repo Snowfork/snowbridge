@@ -61,11 +61,7 @@ contract DeployScript is Script {
 
         AgentExecutor executor = new AgentExecutor();
         Gateway gatewayLogic = new Gateway(
-            address(beefyClient),
-            address(executor),
-            bridgeHubParaID,
-            bridgeHubAgentID,
-            foreignTokenDecimals
+            address(beefyClient), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals
         );
 
         bool rejectOutboundMessages = vm.envBool("REJECT_OUTBOUND_MESSAGES");
