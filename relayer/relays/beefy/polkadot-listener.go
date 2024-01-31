@@ -99,6 +99,7 @@ func (li *PolkadotListener) scanCommitments(
 				},
 				"validatorSetID":       currentValidatorSet,
 				"IsHandover":           validatorSetID == currentValidatorSet+1,
+				"Mandatory":            result.MandatoryCommitment,
 				"lastSyncedBeefyBlock": lastSyncedBeefyBlock,
 			})
 
@@ -110,6 +111,11 @@ func (li *PolkadotListener) scanCommitments(
 				Validators:       validators,
 				SignedCommitment: result.SignedCommitment,
 				Proof:            result.MMRProof,
+			}
+
+			if !result.MandatoryCommitment {
+				logEntry.Info("Skipped due to not mandatory commitment.")
+				continue
 			}
 
 			if validatorSetID == currentValidatorSet+1 && validatorSetID == nextValidatorSetID-1 {

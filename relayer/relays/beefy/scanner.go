@@ -13,10 +13,11 @@ import (
 )
 
 type ScanBlocksResult struct {
-	BlockNumber uint64
-	BlockHash   types.Hash
-	Depth       uint64
-	Error       error
+	BlockNumber              uint64
+	BlockHash                types.Hash
+	Depth                    uint64
+	HasAuthorityChangeDigest bool
+	Error                    error
 }
 
 func ScanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64) (chan ScanBlocksResult, error) {
@@ -50,6 +51,16 @@ func scanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64,
 			return
 		}
 
+		hasAuthorityChangeDigest := false
+		for _, it := range finalizedHeader.Digest {
+			if it.IsConsensus {
+				consensus := it.AsConsensus
+				if consensus.ConsensusEngineID == types.ConsensusEngineID(types.U32(0x46454542)) && consensus.Bytes[0] == 0x01 {
+					hasAuthorityChangeDigest = true
+				}
+			}
+		}
+
 		finalizedBlockNumber := uint64(finalizedHeader.Number)
 		if current > finalizedBlockNumber {
 			select {
@@ -69,7 +80,7 @@ func scanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64,
 		select {
 		case <-ctx.Done():
 			return
-		case out <- ScanBlocksResult{BlockNumber: current, BlockHash: blockHash, Depth: finalizedBlockNumber - current}:
+		case out <- ScanBlocksResult{BlockNumber: current, BlockHash: blockHash, Depth: finalizedBlockNumber - current, HasAuthorityChangeDigest: hasAuthorityChangeDigest}:
 		}
 
 		current++
@@ -77,11 +88,12 @@ func scanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64,
 }
 
 type ScanCommitmentsResult struct {
-	SignedCommitment types.SignedCommitment
-	BlockNumber      uint64
-	BlockHash        types.Hash
-	Depth            uint64
-	Error            error
+	SignedCommitment    types.SignedCommitment
+	BlockNumber         uint64
+	BlockHash           types.Hash
+	Depth               uint64
+	MandatoryCommitment bool
+	Error               error
 }
 
 func ScanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64) (<-chan ScanCommitmentsResult, error) {
@@ -156,18 +168,19 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 			select {
 			case <-ctx.Done():
 				return
-			case out <- ScanCommitmentsResult{BlockNumber: result.BlockNumber, BlockHash: result.BlockHash, SignedCommitment: *commitment, Depth: result.Depth}:
+			case out <- ScanCommitmentsResult{BlockNumber: result.BlockNumber, BlockHash: result.BlockHash, SignedCommitment: *commitment, Depth: result.Depth, MandatoryCommitment: result.HasAuthorityChangeDigest}:
 			}
 		}
 	}
 }
 
 type ScanSafeCommitmentsResult struct {
-	SignedCommitment types.SignedCommitment
-	MMRProof         merkle.SimplifiedMMRProof
-	BlockHash        types.Hash
-	Depth            uint64
-	Error            error
+	SignedCommitment    types.SignedCommitment
+	MMRProof            merkle.SimplifiedMMRProof
+	BlockHash           types.Hash
+	Depth               uint64
+	MandatoryCommitment bool
+	Error               error
 }
 
 func ScanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64) (<-chan ScanSafeCommitmentsResult, error) {
@@ -231,7 +244,7 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 			select {
 			case <-ctx.Done():
 				return
-			case out <- ScanSafeCommitmentsResult{result.SignedCommitment, proof, blockHash, result.Depth, nil}:
+			case out <- ScanSafeCommitmentsResult{result.SignedCommitment, proof, blockHash, result.Depth, result.MandatoryCommitment, nil}:
 			}
 
 		}
