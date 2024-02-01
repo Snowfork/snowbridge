@@ -50,7 +50,7 @@ async fn transfer_token() {
 	};
 
 	let tx_config = DefaultExtrinsicParamsBuilder::<AssetHubConfig>::new()
-		.tip_of(1, location)
+		.tip_of(20, location)
 		.build();
 
 	// And provide the extrinsic params including the tip when submitting a transaction:

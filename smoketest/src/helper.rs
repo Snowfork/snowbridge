@@ -59,7 +59,7 @@ use subxt::{
 use subxt::config::SubstrateExtrinsicParams;
 
 #[subxt::subxt(
-	runtime_metadata_path = "src/parachains/assethub.scale",
+	runtime_metadata_path = "src/parachains/relaychain.scale",
 	derive_for_type(
 		path = "staging_xcm::v3::multilocation::MultiLocation",
 		derive = "Clone",
