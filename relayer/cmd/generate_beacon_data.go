@@ -85,11 +85,11 @@ type InboundMessageTest struct {
 }
 
 const (
-	pathToBeaconBenchmarkData         = "parachain/pallets/ethereum-client/src/benchmarking/fixtures.rs"
-	pathToBenchmarkDataTemplate       = "parachain/templates/benchmarking-fixtures.mustache"
-	pathToBeaconTestFixtureFiles      = "parachain/pallets/ethereum-client/tests/fixtures"
-	pathToInboundQueueFixtureTemplate = "parachain/templates/%s.mustache"
-	pathToInboundQueueFixtureData     = "parachain/pallets/inbound-queue/fixtures/src/%s.rs"
+	pathToBeaconBenchmarkData         = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/src/benchmarking/fixtures.rs"
+	pathToBenchmarkDataTemplate       = "polkadot-sdk/bridges/snowbridge/templates/benchmarking-fixtures.mustache"
+	pathToBeaconTestFixtureFiles      = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/tests/fixtures"
+	pathToInboundQueueFixtureTemplate = "polkadot-sdk/bridges/snowbridge/templates/%s.mustache"
+	pathToInboundQueueFixtureData     = "polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures/src/%s.rs"
 )
 
 // Only print the hex encoded call as output of this command

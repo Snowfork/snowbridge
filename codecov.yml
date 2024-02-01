@@ -10,8 +10,10 @@ ignore:
   - "contracts/src/ScaleCodec.sol"
   - "contracts/src/SubstrateTypes.sol"
   - "parachain/tools"
-  - "parachain/pallets/ethereum-beacon-client/src/benchmarking"
-  - "parachain/pallets/ethereum-beacon-client/src/weights.rs"
+  - "polkadot-sdk/bridges/snowbridge/pallets/ethereum-beacon-client/src/benchmarking"
+  - "polkadot-sdk/bridges/snowbridge/pallets/ethereum-beacon-client/src/weights.rs"
+  - "polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures"
+  - "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures"
   - "contracts/src/DeployScript.sol"
 flags:
   solidity:
@@ -20,5 +22,5 @@ flags:
     carryforward: true
   rust:
     paths:
-      - parachain
+      - polkadot-sdk/bridges/snowbridge
     carryforward: true
