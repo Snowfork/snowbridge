@@ -51,7 +51,6 @@ jobs:
       - name: setup rust toolchain
         run: rustup show
       - name: run coverage test
-        working-directory: polkadot-sdk
         run: >
           cargo install cargo-tarpaulin@0.27.0 &&
           cargo tarpaulin
