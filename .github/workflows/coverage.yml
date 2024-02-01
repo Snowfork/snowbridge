@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          repository: 'https://github.com/snowfork/polkadot-sdk'
+          repository: 'snowfork/polkadot-sdk'
           ref: ${{ github.head_ref }}
       - uses: arduino/setup-protoc@v2
         with:
