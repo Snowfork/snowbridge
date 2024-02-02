@@ -14,6 +14,7 @@ ignore:
   - "polkadot-sdk/bridges/snowbridge/pallets/ethereum-beacon-client/src/weights.rs"
   - "polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures"
   - "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures"
+  - "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fuzz"
   - "contracts/src/DeployScript.sol"
 flags:
   solidity:
