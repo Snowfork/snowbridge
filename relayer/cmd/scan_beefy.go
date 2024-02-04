@@ -62,7 +62,11 @@ func ScanBeefyFn(cmd *cobra.Command, _ []string) error {
 		"validator-set-id":   validatorSetID,
 	}).Info("Connected to relaychain.")
 
-	commitments, err := polkadotListener.Start(ctx, eg, beefyBlock, validatorSetID)
+	var currentState beefy.BeefyState
+	currentState.CurrentValidatorSetId = validatorSetID
+	currentState.LatestBeefyBlock = beefyBlock
+
+	commitments, err := polkadotListener.Start(ctx, eg, currentState)
 	if err != nil {
 		logrus.WithError(err).Fatalf("could not start")
 	}
