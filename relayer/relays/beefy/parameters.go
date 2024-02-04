@@ -245,3 +245,11 @@ func proofToLog(proof contracts.BeefyClientValidatorProof) logrus.Fields {
 		"Proof":   hexProof,
 	}
 }
+
+type BeefyState struct {
+	LatestBeefyBlock        uint64
+	CurrentValidatorSetId   uint64
+	CurrentValidatorSetRoot [32]byte
+	NextValidatorSetId      uint64
+	NextValidatorSetRoot    [32]byte
+}
