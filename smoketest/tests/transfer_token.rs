@@ -91,7 +91,7 @@ async fn transfer_token() {
 		.await
 		.expect("call success");
 
-	let wait_for_blocks = 50;
+	let wait_for_blocks = 500;
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
 
 	let mut transfer_event_found = false;
