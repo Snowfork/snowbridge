@@ -54,20 +54,8 @@ use subxt::{
 	events::StaticEvent,
 	ext::sp_core::{sr25519::Pair, Pair as PairT},
 	tx::{PairSigner, TxPayload},
-	Config, OnlineClient, PolkadotConfig, SubstrateConfig
+	Config, OnlineClient, PolkadotConfig,
 };
-use subxt::config::SubstrateExtrinsicParams;
-
-#[subxt::subxt(
-	runtime_metadata_path = "src/parachains/relaychain.scale",
-	derive_for_type(
-		path = "staging_xcm::v3::multilocation::MultiLocation",
-		derive = "Clone",
-		recursive
-	)
-)]
-pub mod runtime {}
-use runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation as AssetHubMultiLocation;
 
 /// Custom config that works with Penpal
 pub enum PenpalConfig {}
@@ -93,10 +81,8 @@ impl Config for AssetHubConfig {
 	type Signature = <PolkadotConfig as Config>::Signature;
 	type Hasher = <PolkadotConfig as Config>::Hasher;
 	type Header = <PolkadotConfig as Config>::Header;
-	type ExtrinsicParams = SubstrateExtrinsicParams<AssetHubConfig>;
-	// Here we use the MultiLocation from the metadata as a part of the config:
-	// The `ChargeAssetTxPayment` signed extension that is part of the ExtrinsicParams above, now uses the type:
-	type AssetId = AssetHubMultiLocation;
+	type ExtrinsicParams = DefaultExtrinsicParams<AssetHubConfig>;
+	type AssetId = <PolkadotConfig as Config>::AssetId;
 }
 
 pub struct TestClients {
