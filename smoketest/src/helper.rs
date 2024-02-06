@@ -86,7 +86,7 @@ impl Config for AssetHubConfig {
 }
 
 pub struct TestClients {
-	pub asset_hub_client: Box<OnlineClient<PolkadotConfig>>,
+	pub asset_hub_client: Box<OnlineClient<AssetHubConfig>>,
 	pub bridge_hub_client: Box<OnlineClient<PolkadotConfig>>,
 	pub penpal_client: Box<OnlineClient<PenpalConfig>>,
 	pub relaychain_client: Box<OnlineClient<PolkadotConfig>>,
@@ -99,7 +99,7 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
 		.await
 		.expect("can not connect to bridgehub");
 
-	let asset_hub_client: OnlineClient<PolkadotConfig> = OnlineClient::from_url(ASSET_HUB_WS_URL)
+	let asset_hub_client: OnlineClient<AssetHubConfig> = OnlineClient::from_url(ASSET_HUB_WS_URL)
 		.await
 		.expect("can not connect to bridgehub");
 
