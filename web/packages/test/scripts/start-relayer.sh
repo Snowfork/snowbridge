@@ -11,7 +11,6 @@ config_relayer() {
         --arg eth_gas_limit $eth_gas_limit \
         '
       .sink.contracts.BeefyClient = $k1
-    | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     ' \
