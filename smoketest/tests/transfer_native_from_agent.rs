@@ -38,8 +38,7 @@ async fn transfer_native_from_agent() {
 		)
 		.await
 		.expect("construct inner call."),
-	)
-	.await;
+	);
 
 	let result = send_sudo_xcm_transact(&test_clients.penpal_client, message)
 		.await
