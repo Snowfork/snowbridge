@@ -11,9 +11,9 @@ forge bind --module --overwrite \
     --root ../contracts
 
 # Install subxt
-cargo install subxt-cli \
-    --git https://github.com/Snowfork/subxt.git \
-    --branch snowbridge
+command -v subxt || cargo install subxt-cli \
+    --git https://github.com/paritytech/subxt.git \
+    --tag v0.27.1
 
 if ! lsof -Pi :11144 -sTCP:LISTEN -t >/dev/null; then
     echo "substrate nodes not running, please start with the e2e setup and rerun this script"
