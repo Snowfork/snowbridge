@@ -41,7 +41,7 @@ pub fn construct_xcm_message(encoded_call: Vec<u8>) -> Box<VersionedXcm> {
 }
 
 // WithdrawAsset is not allowed in bridgehub but keep it here
-pub async fn construct_xcm_message_with_fee(encoded_call: Vec<u8>) -> Box<VersionedXcm> {
+pub fn construct_xcm_message_with_fee(encoded_call: Vec<u8>) -> Box<VersionedXcm> {
 	let buy_execution_fee = MultiAsset {
 		id: Concrete(MultiLocation { parents: 1, interior: Junctions::Here }),
 		fun: Fungible(BRIDGE_HUB_FEE_REQUIRED),

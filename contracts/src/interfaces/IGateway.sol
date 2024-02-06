@@ -41,7 +41,6 @@ interface IGateway {
     /**
      * Getters
      */
-
     function operatingMode() external view returns (OperatingMode);
     function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode);
     function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);

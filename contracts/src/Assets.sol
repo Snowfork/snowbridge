@@ -132,7 +132,7 @@ library Assets {
                 revert Unsupported();
             }
         }
-        emit IGateway.TokenSent(sender, token, destinationChain, destinationAddress, amount);
+        emit IGateway.TokenSent(token, sender, destinationChain, destinationAddress, amount);
     }
 
     function registerTokenCosts() external view returns (Costs memory costs) {

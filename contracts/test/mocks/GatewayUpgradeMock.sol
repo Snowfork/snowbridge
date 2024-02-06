@@ -12,7 +12,6 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
     /**
      * Getters
      */
-
     function operatingMode() external pure returns (OperatingMode) {
         return OperatingMode.Normal;
     }

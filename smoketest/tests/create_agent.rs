@@ -12,7 +12,7 @@ async fn create_agent() {
 		.await
 		.expect("construct inner call.");
 
-	let message = construct_xcm_message_with_fee(encoded_call).await;
+	let message = construct_xcm_message_with_fee(encoded_call);
 
 	let result = send_sudo_xcm_transact(&test_clients.penpal_client, message)
 		.await

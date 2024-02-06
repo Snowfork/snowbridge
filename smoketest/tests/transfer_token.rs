@@ -22,15 +22,15 @@ use snowbridge_smoketest::{
 					junctions::Junctions,
 					multiasset::{AssetId, Fungibility, MultiAsset, MultiAssets},
 				},
-				VersionedMultiAssets, VersionedMultiLocation,
+				VersionedAssets, VersionedLocation,
 			},
 		},
 		{self},
 	},
 };
-use sp_core::{sr25519::Pair, Pair as PairT};
 use std::{sync::Arc, time::Duration};
-use subxt::{tx::PairSigner, OnlineClient};
+use subxt::OnlineClient;
+use subxt_signer::sr25519::dev;
 
 const DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 
@@ -53,12 +53,8 @@ async fn transfer_token() {
 	let assethub: OnlineClient<AssetHubConfig> =
 		OnlineClient::from_url(ASSET_HUB_WS_URL).await.unwrap();
 
-	let keypair: Pair = Pair::from_string("//Ferdie", None).expect("cannot create keypair");
-
-	let signer: PairSigner<AssetHubConfig, _> = PairSigner::new(keypair);
-
 	let amount: u128 = 1_000_000_000;
-	let assets = VersionedMultiAssets::V3(MultiAssets(vec![MultiAsset {
+	let assets = VersionedAssets::V3(MultiAssets(vec![MultiAsset {
 		id: AssetId::Concrete(MultiLocation {
 			parents: 2,
 			interior: Junctions::X2(
@@ -69,14 +65,14 @@ async fn transfer_token() {
 		fun: Fungibility::Fungible(amount),
 	}]));
 
-	let destination = VersionedMultiLocation::V3(MultiLocation {
+	let destination = VersionedLocation::V3(MultiLocation {
 		parents: 2,
 		interior: Junctions::X1(Junction::GlobalConsensus(NetworkId::Ethereum {
 			chain_id: ETHEREUM_CHAIN_ID,
 		})),
 	});
 
-	let beneficiary = VersionedMultiLocation::V3(MultiLocation {
+	let beneficiary = VersionedLocation::V3(MultiLocation {
 		parents: 0,
 		interior: Junctions::X1(Junction::AccountKey20 {
 			network: None,
@@ -84,24 +80,18 @@ async fn transfer_token() {
 		}),
 	});
 
+	let signer = dev::bob();
+
 	let token_transfer_call =
 		TransactionApi.reserve_transfer_assets(destination, beneficiary, assets, 0);
 
-	let result = assethub
+	let _ = assethub
 		.tx()
 		.sign_and_submit_then_watch_default(&token_transfer_call, &signer)
 		.await
-		.expect("send through call.")
-		.wait_for_finalized_success()
-		.await
 		.expect("call success");
 
-	println!(
-		"reserve_transfer_assets call issued at assethub block hash {:?}",
-		result.block_hash()
-	);
-
-	let wait_for_blocks = 50;
+	let wait_for_blocks = 500;
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
 
 	let mut transfer_event_found = false;

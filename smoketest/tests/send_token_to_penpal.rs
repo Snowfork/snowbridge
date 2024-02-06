@@ -24,7 +24,7 @@ use snowbridge_smoketest::{
 		penpal::{self, api::foreign_assets::events::Issued as PenpalIssued},
 	},
 };
-use sp_core::{sr25519::Pair, Encode, Pair as PairT};
+use sp_core::Encode;
 use subxt::{
 	tx::PairSigner,
 	utils::{AccountId32, MultiAddress},
@@ -74,7 +74,7 @@ async fn send_token_to_penpal() {
 		.send_token(
 			weth.address(),
 			PENPAL_PARA_ID,
-			i_gateway::MultiAddress { kind: 1, data: FERDIE.into() },
+			i_gateway::MultiAddress { kind: 1, data: (*FERDIE_PUBLIC).into() },
 			4_000_000_000,
 			amount,
 		)
@@ -133,7 +133,7 @@ async fn send_token_to_penpal() {
 		.expect("block subscription")
 		.take(wait_for_blocks);
 
-	let penpal_expected_owner: AccountId32 = FERDIE.into();
+	let penpal_expected_owner: AccountId32 = (*FERDIE_PUBLIC).into();
 
 	issued_event_found = false;
 	while let Some(Ok(block)) = penpal_blocks.next().await {
@@ -191,8 +191,7 @@ async fn ensure_penpal_asset_exists(penpal_client: &mut OnlineClient<PenpalConfi
 
 	println!("creating WETH on penpal.");
 	let admin = MultiAddress::Id(ASSET_HUB_SOVEREIGN.into());
-	let keypair: Pair = Pair::from_string("//Ferdie", None).expect("cannot create keypair");
-	let signer: PairSigner<PenpalConfig, _> = PairSigner::new(keypair);
+	let signer: PairSigner<PenpalConfig, _> = PairSigner::new((*FERDIE).clone());
 
 	let create_asset_call = penpal::api::tx().foreign_assets().create(penpal_asset_id, admin, 1);
 	penpal_client
