@@ -103,6 +103,11 @@ func (li *PolkadotListener) scanCommitments(
 				"lastSyncedBeefyBlock": lastSyncedBeefyBlock,
 			})
 
+			if li.config.DiscardNonMandatoryCommitments && !result.IsMandatory {
+				logEntry.Info("Discarded due to not being a mandatory commitment.")
+				continue
+			}
+
 			validators, err := li.queryBeefyAuthorities(result.BlockHash)
 			if err != nil {
 				return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
