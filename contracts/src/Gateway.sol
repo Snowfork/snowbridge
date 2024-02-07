@@ -17,7 +17,9 @@ import {
     Command,
     MultiAddress,
     Ticket,
-    Costs
+    Costs,
+    TransactMessage,
+    OriginKind
 } from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
@@ -27,6 +29,7 @@ import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {Call} from "./utils/Call.sol";
 import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
+import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 import {
     UpgradeParams,
@@ -86,6 +89,7 @@ contract Gateway is IGateway, IInitializable {
     error InvalidAgentExecutionPayload();
     error InvalidCodeHash();
     error InvalidConstructorParams();
+    error InvalidTransact();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -616,5 +620,32 @@ contract Gateway is IGateway, IInitializable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+    }
+
+    /// @inheritdoc IGateway
+    function transact(ParaID destinationChain, TransactMessage calldata message) external payable {
+        Ticket memory ticket;
+        Costs memory costs;
+        address sender;
+        bytes1 originKind;
+        // Mapping originKind to https://github.com/Snowfork/polkadot-sdk/blob/348a1a010481002e41594ed75e5d78b7c2dbed92/polkadot/xcm/src/v2/mod.rs#L86
+        // only support originKind as SovereignAccount or Xcm for now
+        // for Xcm the sender will be the agent of the channel which to construct `DescendOrigin` on BH
+        if (message.originKind == OriginKind.SovereignAccount) {
+            sender = msg.sender;
+            originKind = 0x01;
+        } else if (message.originKind == OriginKind.Xcm) {
+            Channel storage channel = _ensureChannel(destinationChain.into());
+            sender = channel.agent;
+            originKind = 0x03;
+            costs.foreign = message.fee;
+        } else {
+            revert InvalidTransact();
+        }
+        bytes memory payload = SubstrateTypes.Transact(sender, originKind, message);
+        ticket.dest = destinationChain;
+        ticket.costs = costs;
+        ticket.payload = payload;
+        _submitOutbound(ticket);
     }
 }

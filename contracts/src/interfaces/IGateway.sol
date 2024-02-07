@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.23;
 
-import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress} from "../Types.sol";
+import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress, TransactMessage} from "../Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
@@ -105,4 +105,7 @@ interface IGateway {
         uint128 destinationFee,
         uint128 amount
     ) external payable;
+
+    /// @dev Call transact in destinationChain
+    function transact(ParaID destinationChain, TransactMessage calldata message) external payable;
 }

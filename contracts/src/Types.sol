@@ -109,3 +109,20 @@ struct TokenInfo {
     bool isRegistered;
     bytes31 __padding;
 }
+
+struct Weight {
+    uint64 refTime;
+    uint64 proofSize;
+}
+
+enum OriginKind {
+    SovereignAccount,
+    Xcm
+}
+
+struct TransactMessage {
+    OriginKind originKind;
+    uint128 fee;
+    Weight weightAtMost;
+    bytes call;
+}

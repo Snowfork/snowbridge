@@ -2,7 +2,16 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.23;
 
-import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress} from "../../src/Types.sol";
+import {
+    Channel,
+    InboundMessage,
+    OperatingMode,
+    ParaID,
+    Command,
+    ChannelID,
+    MultiAddress,
+    TransactMessage
+} from "../../src/Types.sol";
 import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 import {Verification} from "../../src/Verification.sol";
@@ -61,4 +70,6 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
     function pricingParameters() external pure returns (UD60x18, uint128) {
         return (convert(0), uint128(0));
     }
+
+    function transact(ParaID destinationChain, TransactMessage calldata message) external payable {}
 }
