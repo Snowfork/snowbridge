@@ -6,9 +6,17 @@ Snowbridge is a trustless bridge between Polkadot and Ethereum. For documentatio
 
 ## Components
 
+The Snowbridge project lives in two repositories:
+
+- [Snowfork/polkadot-sdk](https://github.com/Snowfork/polkadot-sdk): The Snowbridge parachain and pallets live in
+  a fork of the polkadot-sdk. Changes are eventually contributed back to
+  [paritytech/polkadot-sdk](https://github.com/paritytech/polkadot-sdk)
+- [Snowfork/snowbridge](https://github.com/Snowfork/snowbridge): The rest of the Snowbridge components, like contracts,
+  off-chain relayer, end-to-end tests and test-net setup code.
+
 ### Parachain
 
-Polkadot parachain and our pallets. See [parachain/README.md](https://github.com/Snowfork/snowbridge/blob/main/parachain/README.md).
+Polkadot parachain and our pallets. See [https://github.com/Snowfork/polkadot-sdk](https://github.com/Snowfork/polkadot-sdk/blob/snowbridge/bridges/snowbridge/README.md).
 
 ### Contracts
 
@@ -83,7 +91,7 @@ direnv allow
 
 ### Upgrading the Rust toolchain
 
-Sometimes we would like to upgrade rust toolchain. First update `parachain/rust-toolchain.toml` as required and then
+Sometimes we would like to upgrade rust toolchain. First update `polkadot-sdk/rust-toolchain.toml` as required and then
 update `flake.lock` running
 ```sh
 nix flake lock --update-input rust-overlay
