@@ -56,6 +56,21 @@ pub enum Command {
 		/// XCM execution fee on AssetHub
 		fee: u128,
 	},
+	/// call arbitrary transact on dest chain
+	Transact {
+		/// The address of the sender
+		sender: H160,
+		/// OriginKind
+		origin_kind: OriginKind,
+		/// XCM execution fee on dest chain
+		fee: u128,
+		/// The ref_time part of weight_at_most
+		weight_ref_time: u64,
+		/// The proof_size part of weight_at_most
+		weight_proof_size: u64,
+		/// The payload of the transact
+		payload: Vec<u8>,
+	},
 }
 
 /// Destination for bridged tokens
@@ -146,6 +161,19 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 				Ok(Self::convert_register_token(chain_id, token, fee)),
 			V1(MessageV1 { chain_id, command: SendToken { token, destination, amount, fee } }) =>
 				Ok(Self::convert_send_token(chain_id, token, destination, amount, fee)),
+			V1(MessageV1 {
+				chain_id,
+				command:
+					Transact { sender, origin_kind, fee, weight_ref_time, weight_proof_size, payload },
+			}) => Ok(Self::convert_transact(
+				chain_id,
+				sender,
+				origin_kind,
+				fee,
+				weight_ref_time,
+				weight_proof_size,
+				payload,
+			)),
 		}
 	}
 }
@@ -288,6 +316,36 @@ where
 			2,
 			[GlobalConsensus(network), AccountKey20 { network: None, key: token.into() }],
 		)
+	}
+
+	fn convert_transact(
+		chain_id: u64,
+		sender: H160,
+		origin_kind: OriginKind,
+		fee: u128,
+		weight_ref_time: u64,
+		weight_proof_size: u64,
+		payload: Vec<u8>,
+	) -> (Xcm<()>, Balance) {
+		let xcm_fee: Asset = (Location::parent(), fee).into();
+
+		let xcm: Xcm<()> = vec![
+			// Change origin to the bridge.
+			UniversalOrigin(GlobalConsensus(Ethereum { chain_id })),
+			// DescendOrigin to the sender.
+			DescendOrigin(AccountKey20 { network: None, key: sender.into() }.into()),
+			// Pay for execution.
+			BuyExecution { fees: xcm_fee, weight_limit: Unlimited },
+			// Transact on dest chain.
+			Transact {
+				origin_kind,
+				require_weight_at_most: Weight::from_parts(weight_ref_time, weight_proof_size),
+				call: payload.into(),
+			},
+		]
+		.into();
+
+		(xcm, fee.into())
 	}
 }
 
