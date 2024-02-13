@@ -21,8 +21,7 @@ use snowbridge_smoketest::{
 		},
 	},
 };
-use sp_core::Encode;
-use subxt::utils::AccountId32;
+use subxt::{ext::codec::Encode, utils::AccountId32};
 
 #[tokio::test]
 async fn send_token() {

@@ -34,8 +34,8 @@ use snowbridge_smoketest::{
 		},
 	},
 };
-use sp_core::{sr25519::Pair, Pair as PairT};
 use subxt::{
+	ext::sp_core::{sr25519::Pair, Pair as PairT},
 	tx::{PairSigner, TxPayload},
 	OnlineClient, PolkadotConfig,
 };
