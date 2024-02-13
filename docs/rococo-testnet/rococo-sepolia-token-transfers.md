@@ -6,7 +6,7 @@ description: Using Snowbridge to transfer tokens in a testnet.
 
 ## Sending ERC20 tokens from Ethereum to Polkadot
 
-### Sending tokens
+### Sending tokens to Asset Hub
 
 Snowbridge has initially only activated support for the sending of ERC20 tokens to Polkadot. To send Ether to Polkadot you can use [WETH](https://sepolia.etherscan.io/address/0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14) (Wrapped ETH). To register your own ERC20 tokens see [Registering Tokens](rococo-sepolia-token-transfers.md#registering-tokens).
 
@@ -61,14 +61,17 @@ To send [WETH](https://sepolia.etherscan.io/address/0xfFf9976782d46CC05630D1f6eB
 
 #### 4. Checking the Required Fee
 
-Get a quote for the fee required to send a token. Navigate to the Contract tab, click Read as Proxy.
+Get a quote for the fee required to send a token.
 
-1. Expand `quoteRegisterTokenFee` and input the token address.
-2. The destination address is `1000` for Asset Hub.
-3. The `destinationFee` is always 0 for transfers to Asset Hub.
-4. Click query, the fee is returned in the unit `Wei`.
+Gateway Contract Address: [0x5b4909ce6ca82d2ce23bd46738953c7959e710cd](https://sepolia.etherscan.io/address/0x5b4909ce6ca82d2ce23bd46738953c7959e710cd)
 
-<figure><img src="../.gitbook/assets/query_fees.png" alt=""><figcaption></figcaption></figure>
+1. Navigate to the Contract tab, click Read as Proxy.
+2. Expand `quoteSendTokenFee` and input the token address.
+3. The destination address is `1000` for Asset Hub.
+4. The `destinationFee` is always 0 for transfers to Asset Hub.
+5. Click query, the fee is returned in the unit `Wei`.
+
+<figure><img src="../.gitbook/assets/send_token_fee.png" alt=""><figcaption></figcaption></figure>
 
 #### 5. Send WETH to Polkadot
 
@@ -117,6 +120,68 @@ The transfer process takes about ±30 minutes to get to the other side of the br
 7. When the transfer is complete the amount will appear in the storage query.
 
 <figure><img src="../.gitbook/assets/query_successful_transfer_result.png" alt=""><figcaption></figcaption></figure>
+
+### Sending Tokens to a User-specified Destination Parachain
+
+Snowbridge supports sending tokens to a user-specified destination parachain. When specifying a destination chain the funds are transfered to Asset Hub and then a reserve transfer is done from Asset Hub to the destination parachain.
+
+#### 1. Destination Parachain Requirements
+
+1. An HRMP channel needs to exist between Asset Hub and the parachain.
+2. The parachain chain needs to support XCM v3.
+3. The parachain must support the relaychain native currency(`ROC`) as payment for XCM execution.
+4. The parachain must have a funded sovereign account on Asset Hub with an existential deposit of `0.000033333333` ROC.
+5. The parachain needs to be configured to allow assets from AssetHub to be used as reserve assets. See [Penpal XCM config](https://github.com/paritytech/polkadot-sdk/blob/2fe3145ab9bd26ceb5a26baf2a64105b0035a5a6/cumulus/parachains/runtimes/testing/penpal/src/xcm\_config.rs#L319).
+6. The asset being transferred needs to be registered with the destination parachain. This is dependent on the chain itself.
+   1. ORML based parachains require the asset to be registered in `asset-registry` pallet before transfer. Example runtime config:
+      1. [Snowbridge ORML Template](https://github.com/Snowfork/parachain-orml-template/blob/2cac336b000ac869bcc95a1326d4279fc47f6daa/runtime/src/lib.rs#L497-L541).
+   2. `pallet-assets` - An instance of the `pallet-assets` can be added to store foreign assets. The asset needs to be created with `create` extrinsic before transfer. Examples runtime config:
+      1. [Penpal Asset Transactor](https://github.com/paritytech/polkadot-sdk/blob/2fe3145ab9bd26ceb5a26baf2a64105b0035a5a6/cumulus/parachains/runtimes/testing/penpal/src/xcm\_config.rs#L150).
+      2. [Penpal Foreign Assets Pallet](https://github.com/paritytech/polkadot-sdk/blob/2fe3145ab9bd26ceb5a26baf2a64105b0035a5a6/cumulus/parachains/runtimes/testing/penpal/src/lib.rs#L471-L493).
+   3. &#x20;`pallet-balances` - A currency adapter can be added to convert a MultiLocation from an Ethereum Asset to the local parachain currency. Examples runtime config:
+      1. [Trappist Parachain Currency Adapter](https://github.com/paritytech/trappist/blob/2ed4e954eb5840365c15d200d915205e71e93525/runtime/trappist/src/xcm\_config.rs#L119-L130).
+
+#### 2. Before Performing the Transfer
+
+Most of the steps will be the same as the pre-transfer steps are the same as [sending tokens to Asset Hub](rococo-sepolia-token-transfers.md#sending-tokens-to-asset-hub).
+
+1. The token needs to be [registered on Asset Hub](rococo-sepolia-token-transfers.md#registering-tokens).
+2. You will need to [deposit ETH to get WETH](rococo-sepolia-token-transfers.md#id-1.-deposit-eth).
+3. The Snowbridge Gateway will need to be an[ approved spender](rococo-sepolia-token-transfers.md#id-2.-approve-snowbridge-as-a-spender-for-your-weth).
+4. The `beneficiary` account must have at least an existential deposit of a sufficient asset on the destination chain to exist and receive tokens. The sufficient asset and existential deposit depend on the destination chain. See the [Asset Hub example](rococo-sepolia-token-transfers.md#id-3.-creation-of-an-account-on-asset-hub).
+
+#### 3. Checking the Required Fee
+
+Get a quote for the fee required to send a token.
+
+Gateway Contract Address: [0x5b4909ce6ca82d2ce23bd46738953c7959e710cd](https://sepolia.etherscan.io/address/0x5b4909ce6ca82d2ce23bd46738953c7959e710cd)
+
+1. Navigate to the Contract tab, click Read as Proxy.
+2. Expand `quoteSendTokenFee` and input the token address.
+3. The `destinationChain` that the token is going to be sent to. In this example it is destination parachain `2005`.
+4. The `destinationFee` is the fee used by the destination chain to pay for XCM execution. This amount in in the unit of the relaychain native currency. Here we use `1,000,000 ROC CENTS` . (`1 MircroROC`)
+5. Click query, the fee is returned in the unit `Wei`.
+
+<figure><img src="../.gitbook/assets/send_token_fee_with_destination.png" alt=""><figcaption></figcaption></figure>
+
+#### 4. Sending the token
+
+You can now send the token just like [sending to Asset Hub](rococo-sepolia-token-transfers.md#sending-tokens-to-asset-hub) with the following changes.
+
+1. Add the fee [returned from quote](rococo-sepolia-token-transfers.md#id-3.-checking-the-destination-required-fee). In this example it is `0,000000500025` Ether.
+2. Set the `destinationChain` to 2005.
+3. Supply the `destinationFee` that was [provided to the quote](rococo-sepolia-token-transfers.md#id-3.-checking-the-required-fee). Here we use `1,000,000 ROC CENTS` . (`1 MircroROC`)
+
+<figure><img src="../.gitbook/assets/send_token_to_destination.png" alt=""><figcaption></figcaption></figure>
+
+### Sending tokens to Parachains which support 20-byte Addresses (EVM based chains)
+
+If the destination chain supports 20 byte addresses they can be provided using the following parameters:
+
+1. Set the address `kind` to `2` for 20 byte address.
+2. Set the address `data` to the 20 byte address.
+
+<figure><img src="../.gitbook/assets/send_token_20byte_address.png" alt=""><figcaption></figcaption></figure>
 
 ### Registering Tokens
 
