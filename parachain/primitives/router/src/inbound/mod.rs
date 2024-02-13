@@ -330,18 +330,21 @@ where
 		let xcm_fee: Asset = (Location::parent(), fee).into();
 
 		let xcm: Xcm<()> = vec![
+			// Teleport required fees.
+			ReceiveTeleportedAsset(xcm_fee.clone().into()),
+			// Pay for execution.
+			BuyExecution { fees: xcm_fee.clone(), weight_limit: Unlimited },
 			// Change origin to the bridge.
 			UniversalOrigin(GlobalConsensus(Ethereum { chain_id })),
 			// DescendOrigin to the sender.
 			DescendOrigin(AccountKey20 { network: None, key: sender.into() }.into()),
-			// Pay for execution.
-			BuyExecution { fees: xcm_fee, weight_limit: Unlimited },
 			// Transact on dest chain.
 			Transact {
 				origin_kind,
 				require_weight_at_most: Weight::from_parts(weight_ref_time, weight_proof_size),
 				call: payload.into(),
 			},
+			ExpectTransactStatus(MaybeErrorCode::Success),
 		]
 		.into();
 
