@@ -843,21 +843,19 @@ contract GatewayTest is Test {
     /**
      * Transact
      */
-    function testTransactFromSovereignOrigin() public {
+    function testTransactFromXcmOrigin() public {
         TransactMessage memory message = TransactMessage(OriginKind.Xcm, 1, Weight(1, 1), bytes("0x1"));
-        address agentAddress = IGateway(address(gateway)).agentOf(penpalAgentID);
-        bytes memory payload = SubstrateTypes.Transact(agentAddress, 0x03, message);
-        console.log(agentAddress);
+        bytes memory payload = SubstrateTypes.Transact(account1, 0x03, message.fee, message.weightAtMost, message.call);
         console.logBytes(payload);
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(penpalParaID.into(), 1, messageID, payload);
+        hoax(address(account1));
         IGateway(address(gateway)).transact{value: 1 ether}(penpalParaID, message);
     }
 
     function testTransactFromSignedOrigin() public {
         TransactMessage memory message = TransactMessage(OriginKind.SovereignAccount, 1, Weight(1, 1), bytes("0x1"));
-        bytes memory payload = SubstrateTypes.Transact(account1, 0x01, message);
-        console.log(account1);
+        bytes memory payload = SubstrateTypes.Transact(account1, 0x01, message.fee, message.weightAtMost, message.call);
         console.logBytes(payload);
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(penpalParaID.into(), 1, messageID, payload);

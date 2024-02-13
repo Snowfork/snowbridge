@@ -115,9 +115,21 @@ struct Weight {
     uint64 proofSize;
 }
 
+/// @dev OriginKind from https://github.com/Snowfork/polkadot-sdk/blob/348a1a010481002e41594ed75e5d78b7c2dbed92/polkadot/xcm/src/v2/mod.rs#L86
 enum OriginKind {
     SovereignAccount,
     Xcm
+}
+
+using {encode} for OriginKind global;
+
+function encode(OriginKind kind) pure returns (bytes1 result) {
+    if (kind == OriginKind.SovereignAccount) {
+        result = 0x01;
+    } else if (kind == OriginKind.Xcm) {
+        result = 0x03;
+    }
+    return result;
 }
 
 struct TransactMessage {

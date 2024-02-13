@@ -3,7 +3,7 @@
 pragma solidity 0.8.23;
 
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
-import {ParaID, TransactMessage, OriginKind} from "./Types.sol";
+import {ParaID, TransactMessage, Weight, OriginKind} from "./Types.sol";
 
 /**
  * @title SCALE encoders for common Substrate types
@@ -135,7 +135,7 @@ library SubstrateTypes {
     }
 
     // Arbitrary transact
-    function Transact(address sender, bytes1 originKind, TransactMessage memory message)
+    function Transact(address sender, bytes1 originKind, uint128 fee, Weight memory weight, bytes memory call)
         internal
         view
         returns (bytes memory)
@@ -146,11 +146,11 @@ library SubstrateTypes {
             bytes1(0x02),
             SubstrateTypes.H160(sender),
             originKind,
-            ScaleCodec.encodeU128(message.fee),
-            ScaleCodec.encodeU64(message.weightAtMost.refTime),
-            ScaleCodec.encodeU64(message.weightAtMost.proofSize),
-            ScaleCodec.checkedEncodeCompactU32(message.call.length),
-            message.call
+            ScaleCodec.encodeU128(fee),
+            ScaleCodec.encodeU64(weight.refTime),
+            ScaleCodec.encodeU64(weight.proofSize),
+            ScaleCodec.checkedEncodeCompactU32(call.length),
+            call
         );
     }
 }

@@ -626,23 +626,10 @@ contract Gateway is IGateway, IInitializable {
     function transact(ParaID destinationChain, TransactMessage calldata message) external payable {
         Ticket memory ticket;
         Costs memory costs;
-        address sender;
-        bytes1 originKind;
-        // Mapping originKind to https://github.com/Snowfork/polkadot-sdk/blob/348a1a010481002e41594ed75e5d78b7c2dbed92/polkadot/xcm/src/v2/mod.rs#L86
-        // only support originKind as SovereignAccount or Xcm for now
-        // for Xcm the sender will be the agent of the channel which to construct `DescendOrigin` on BH
-        if (message.originKind == OriginKind.SovereignAccount) {
-            sender = msg.sender;
-            originKind = 0x01;
-        } else if (message.originKind == OriginKind.Xcm) {
-            Channel storage channel = _ensureChannel(destinationChain.into());
-            sender = channel.agent;
-            originKind = 0x03;
-            costs.foreign = message.fee;
-        } else {
-            revert InvalidTransact();
-        }
-        bytes memory payload = SubstrateTypes.Transact(sender, originKind, message);
+        costs.foreign = message.fee;
+        bytes memory payload = SubstrateTypes.Transact(
+            msg.sender, message.originKind.encode(), message.fee, message.weightAtMost, message.call
+        );
         ticket.dest = destinationChain;
         ticket.costs = costs;
         ticket.payload = payload;
