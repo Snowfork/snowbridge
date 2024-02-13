@@ -44,7 +44,6 @@ const monitor = async () => {
     const result = await doSendToken(context, signer, plan)
     console.log('Execute:', result)
     await trackSendToken(context, result);
-    await trackSendToken(context, result);
     // Get execution block and message id
     // Watch bridgehub beacon client until block is included, emit included in light client
     // Watch bridgehub nonce update for channel and message id and dispatched xcm

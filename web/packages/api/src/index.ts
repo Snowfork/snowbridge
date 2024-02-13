@@ -120,8 +120,6 @@ export const bridgeStatusInfo = async (context: Context) => {
     return {
         polkadotToEthereum: {
             operatingMode: {
-                beacon: beaconOperatingMode as OperatingMode,
-                inbound: inboundOperatingMode as OperatingMode,
                 outbound: outboundOperatingMode as OperatingMode,
             },
             latestPolkadotBlockOnEthereum: latestBeefyBlock,
@@ -131,6 +129,8 @@ export const bridgeStatusInfo = async (context: Context) => {
         },
         ethereumToPolkadot: {
             operatingMode: {
+                beacon: beaconOperatingMode as OperatingMode,
+                inbound: inboundOperatingMode as OperatingMode,
                 outbound: ethereumOperatingMode == 0n ? 'Normal' : 'Halted' as OperatingMode,
             },
             latestEthereumBlockOnPolkadot: latestBeaconState.blockNumber,
@@ -179,9 +179,10 @@ export type SendTokenPlan = {
         bridgeOperational: boolean,
         channelOperational: boolean,
         destinationAccountExists: boolean,
-        existentialDeposit: number,
+        existentialDeposit: bigint,
         foreignAssetExists: boolean,
         hasToken: boolean,
+        tokenIsRegistered: boolean,
         tokenBalance: bigint,
         tokenSpendApproved: boolean,
         tokenSpendAllowance: bigint,
@@ -222,9 +223,13 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
             ]
         }
     })).toPrimitive() as { status: 'Live' }
-    const foreignAssetExists = asset.status == 'Live'
+    const foreignAssetExists = asset !== null && asset.status == 'Live'
 
-    const fee = await context.ethereum.contracts.gateway.quoteSendTokenFee(token, assetHub, destinationFee)
+    const tokenIsRegistered = await context.ethereum.contracts.gateway.isTokenRegistered(token)
+    let fee = BigInt(0);
+    if(tokenIsRegistered) {
+        fee = await context.ethereum.contracts.gateway.quoteSendTokenFee(token, assetHub, destinationFee)
+    }
     const abi = ethers.AbiCoder.defaultAbiCoder()
 
     const destinationBytes32 = u8aToHex(isHex(destination)
@@ -236,15 +241,15 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
         data: abi.encode(['bytes32'], [destinationBytes32]),
     }
     // Destination account exists.
-    const existentialDeposit = context.polkadot.api.assetHub.consts.balances.existentialDeposit.toPrimitive() as number
+    const existentialDeposit = BigInt(context.polkadot.api.assetHub.consts.balances.existentialDeposit.toPrimitive() as number)
     const account = (await context.polkadot.api.assetHub.query.system.account(destinationBytes32)).toPrimitive() as { data: { free: string } }
     const destinationAccountExists = BigInt(account.data.free) > existentialDeposit
 
-    const lightClientLatencyTooHigh = bridgeStatus.ethereumToPolkadot.latencySeconds > (60 * 60 * 3)
+    const lightClientLatencyTooHigh = bridgeStatus.ethereumToPolkadot.latencySeconds > (60 * 60 * 3) // 3 Hours
     const canSend = bridgeStatus.ethereumToPolkadot.operatingMode.outbound == 'Normal'
         && channelStatus.ethereumToPolkadot.operatingMode.outbound == 'Normal'
         && destinationAccountExists && foreignAssetExists && !lightClientLatencyTooHigh
-        && tokenSpendApproved && hasToken
+        && tokenSpendApproved && hasToken && tokenIsRegistered
 
     if (canSend) {
         return {
@@ -265,11 +270,12 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
     } else {
         return {
             failure: {
-                bridgeOperational: bridgeStatus.ethereumToPolkadot.operatingMode.outbound === 'Normal',
+                bridgeOperational: bridgeStatus.ethereumToPolkadot.operatingMode.outbound === 'Normal' && bridgeStatus.ethereumToPolkadot.operatingMode.beacon === 'Normal',
                 channelOperational: channelStatus.ethereumToPolkadot.operatingMode.outbound === 'Normal',
                 destinationAccountExists: destinationAccountExists,
                 existentialDeposit: existentialDeposit,
                 foreignAssetExists: foreignAssetExists,
+                tokenIsRegistered: tokenIsRegistered,
                 hasToken: hasToken,
                 tokenBalance: tokenBalance,
                 tokenSpendApproved: tokenSpendApproved,
@@ -377,20 +383,20 @@ export const trackSendToken = async (context: Context, result: SendTokenResult, 
     if (ethereumBlockNumber < lastBeaconUpdate.blockNumber) {
         throw new Error('Timeout waiting for light client to include block')
     }
-    console.log('Beacon client caught up.')
+    //console.log('Beacon client caught up.')
 
-    // Wait for nonce
-    let bridgeHubEvents = context.polkadot.api.bridgeHub.rx.query.system.events()
-    let lastEvent = await lastValueFrom(
-        bridgeHubEvents.pipe(
-            take(scanBlocks),
-            rxmap(events => events.toPrimitive() as any),
-            filter(events => {
-                return events.some((x: any) => context.polkadot.api.bridgeHub.events.ethereumInboundQueue.MessageReceived.is(x))
-            }),
-            //tap(events => console.log('Event', events)),
-        ),
-        { defaultValue: [] as any }
-    )
-    console.log("last event: ", lastEvent)
+    //// Wait for nonce
+    //let bridgeHubEvents = context.polkadot.api.bridgeHub.rx.query.system.events()
+    //let lastEvent = await lastValueFrom(
+    //    bridgeHubEvents.pipe(
+    //        take(scanBlocks),
+    //        rxmap(events => events.toPrimitive() as any),
+    //        filter(events => {
+    //            return events.some((x: any) => context.polkadot.api.bridgeHub.events.ethereumInboundQueue.MessageReceived.is(x))
+    //        }),
+    //        //tap(events => console.log('Event', events)),
+    //    ),
+    //    { defaultValue: [] as any }
+    //)
+    //console.log("last event: ", lastEvent)
 }
