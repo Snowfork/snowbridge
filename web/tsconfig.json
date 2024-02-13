@@ -1,10 +1,13 @@
 {
   "references": [
     {
-      "path": "packages/contracts"
+      "path": "packages/contract-types"
     },
     {
       "path": "packages/api"
+    },
+    {
+      "path": "packages/ui"
     }
   ]
 }

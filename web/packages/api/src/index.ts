@@ -383,7 +383,7 @@ export const trackSendToken = async (context: Context, result: SendTokenResult, 
     if (ethereumBlockNumber < lastBeaconUpdate.blockNumber) {
         throw new Error('Timeout waiting for light client to include block')
     }
-    //console.log('Beacon client caught up.')
+    console.log('Beacon client caught up.')
 
     //// Wait for nonce
     //let bridgeHubEvents = context.polkadot.api.bridgeHub.rx.query.system.events()
