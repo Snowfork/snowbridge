@@ -25,6 +25,8 @@ if [ "$eth_network" == "localhost" ]; then
   source scripts/deploy-ethereum.sh
   deploy_ethereum
 fi
+
+tail "$output_dir/lodestar.log"
 #
 ## 3. start polkadot
 #echo "Starting polkadot nodes"
@@ -67,3 +69,5 @@ fi
 #echo "Took $minutes minutes $seconds seconds"
 #
 #wait
+
+return 0
