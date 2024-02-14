@@ -396,6 +396,9 @@ importers:
       '@types/react-dom':
         specifier: ^18.2.19
         version: 18.2.19
+      ethers:
+        specifier: ^6.9.0
+        version: 6.9.0
       react:
         specifier: ^18.2.0
         version: 18.2.0

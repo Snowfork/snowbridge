@@ -191,14 +191,14 @@ export type SendTokenPlan = {
     }
 }
 
-export const planSendToken = async (context: Context, source: ethers.Addressable, destination: string, token: string, amount: bigint): Promise<SendTokenPlan> => {
+export const planSendToken = async (context: Context, source: ethers.Addressable, destination: string, tokenAddress: string, amount: bigint): Promise<SendTokenPlan> => {
     // TODO: Allow destinations that are not assethub and check existence of destination
     const assetHub = 1000
     // TODO: Allow destination fee
     const destinationFee = BigInt(0)
 
     const sourceAddress = await source.getAddress()
-    const tokenContract = IERC20__factory.connect(token, context.ethereum.api)
+    const tokenContract = IERC20__factory.connect(tokenAddress, context.ethereum.api)
     const tokenBalance = await tokenContract.balanceOf(sourceAddress)
     const hasToken = tokenBalance >= amount
 
@@ -219,16 +219,16 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
         interior: {
             X2: [
                 { GlobalConsensus: { Ethereum: { chain_id: ethereumChainId } } },
-                { AccountKey20: { key: token } },
+                { AccountKey20: { key: tokenAddress } },
             ]
         }
     })).toPrimitive() as { status: 'Live' }
     const foreignAssetExists = asset !== null && asset.status == 'Live'
 
-    const tokenIsRegistered = await context.ethereum.contracts.gateway.isTokenRegistered(token)
+    const tokenIsRegistered = await context.ethereum.contracts.gateway.isTokenRegistered(tokenAddress)
     let fee = BigInt(0);
     if(tokenIsRegistered) {
-        fee = await context.ethereum.contracts.gateway.quoteSendTokenFee(token, assetHub, destinationFee)
+        fee = await context.ethereum.contracts.gateway.quoteSendTokenFee(tokenAddress, assetHub, destinationFee)
     }
     const abi = ethers.AbiCoder.defaultAbiCoder()
 
@@ -256,7 +256,7 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
             success: {
                 fee: fee,
                 sourceAddress: sourceAddress,
-                token: token,
+                token: tokenAddress,
                 destinationChain: assetHub,
                 destinationAddress: destinationBytes32,
                 destinationMultiAddress: destinationAddress,
