@@ -3,9 +3,10 @@ import { ApiPromise, WsProvider } from '@polkadot/api'
 import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethers'
 import { BeefyClient, BeefyClient__factory, IGateway, IGateway__factory, IERC20__factory } from '@snowbridge/contract-types'
 import { MultiAddressStruct } from '@snowbridge/contract-types/src/IGateway'
-import { decodeAddress, } from '@polkadot/keyring'
+import { decodeAddress } from '@polkadot/keyring'
 import { hexToU8a, isHex, u8aToHex } from '@polkadot/util'
-import { filter, tap, take, takeWhile, lastValueFrom, map as rxmap } from 'rxjs'
+import { filter, tap, take, takeWhile, lastValueFrom, map as rxmap, firstValueFrom } from 'rxjs'
+import { Codec } from '@polkadot/types/types'
 
 interface Config {
     ethereum: {
@@ -131,7 +132,7 @@ export const bridgeStatusInfo = async (context: Context) => {
             operatingMode: {
                 beacon: beaconOperatingMode as OperatingMode,
                 inbound: inboundOperatingMode as OperatingMode,
-                outbound: ethereumOperatingMode == 0n ? 'Normal' : 'Halted' as OperatingMode,
+                outbound: ethereumOperatingMode === 0n ? 'Normal' : 'Halted' as OperatingMode,
             },
             latestEthereumBlockOnPolkadot: latestBeaconState.blockNumber,
             latestEthereumBlock: latestEthereumBlock,
@@ -149,7 +150,7 @@ export const channelStatusInfo = async (context: Context, channelId: string) => 
     return {
         ethereumToPolkadot: {
             operatingMode: {
-                outbound: operatingMode == 0n ? 'Normal' : 'Halted' as OperatingMode
+                outbound: operatingMode === 0n ? 'Normal' : 'Halted' as OperatingMode
             },
             outbound: Number(outbound_nonce_eth),
             inbound: inbound_nonce_sub,
@@ -213,7 +214,6 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
     }
     const hasToken = tokenBalance >= amount
 
-
     // Check bridge status.
     const bridgeStatus = await bridgeStatusInfo(context)
 
@@ -232,11 +232,11 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
             ]
         }
     })).toPrimitive() as { status: 'Live' }
-    const foreignAssetExists = asset !== null && asset.status == 'Live'
+    const foreignAssetExists = asset !== null && asset.status === 'Live'
 
     const tokenIsRegistered = await context.ethereum.contracts.gateway.isTokenRegistered(tokenAddress)
-    let fee = BigInt(0);
-    if(tokenIsRegistered) {
+    let fee = BigInt(0)
+    if (tokenIsRegistered) {
         fee = await context.ethereum.contracts.gateway.quoteSendTokenFee(tokenAddress, assetHub, destinationFee)
     }
     const abi = ethers.AbiCoder.defaultAbiCoder()
@@ -255,9 +255,9 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
     const destinationAccountExists = BigInt(account.data.free) > existentialDeposit
 
     const lightClientLatencyIsAcceptable = bridgeStatus.ethereumToPolkadot.latencySeconds < (60 * 60 * 3) // 3 Hours
-    const canSend = bridgeStatus.ethereumToPolkadot.operatingMode.outbound == 'Normal'
-        && channelStatus.ethereumToPolkadot.operatingMode.outbound == 'Normal'
-        && destinationAccountExists && foreignAssetExists && !lightClientLatencyIsAcceptable
+    const canSend = bridgeStatus.ethereumToPolkadot.operatingMode.outbound === 'Normal'
+        && channelStatus.ethereumToPolkadot.operatingMode.outbound === 'Normal'
+        && destinationAccountExists && foreignAssetExists && lightClientLatencyIsAcceptable
         && tokenSpendApproved && hasToken && tokenIsRegistered
 
     if (canSend) {
@@ -305,9 +305,16 @@ export type SendTokenResult = {
             transactionHash: string,
             events: LogDescription[],
         },
+        bridgeHubEvents?: Codec,
+        assetHubEvents?: Codec,
+        lastBeaconUpdate?: {
+            createdAtHash?: `0x${string}`;
+            blockNumber: number;
+        },
         channelId: string,
         nonce: bigint,
         messageId: string,
+        plan: SendTokenPlan,
     }
     failure?: {
         receipt: ContractTransactionReceipt
@@ -321,7 +328,6 @@ export const doSendToken = async (context: Context, signer: Signer, plan: SendTo
     if (plan.success.sourceAddress !== await signer.getAddress()) {
         throw new Error('Invalid signer')
     }
-
     const contract = IGateway__factory.connect(context.config.appContracts.gateway, signer)
     const response = await contract.sendToken(
         plan.success.token,
@@ -355,7 +361,7 @@ export const doSendToken = async (context: Context, signer: Signer, plan: SendTo
             events.push(event)
         }
     })
-    const messageAccepted = events.find(log => log.name == 'OutboundMessageAccepted')
+    const messageAccepted = events.find(log => log.name === 'OutboundMessageAccepted')
 
     return {
         success: {
@@ -368,7 +374,7 @@ export const doSendToken = async (context: Context, signer: Signer, plan: SendTo
             channelId: messageAccepted?.args[0],
             nonce: messageAccepted?.args[1],
             messageId: messageAccepted?.args[2],
-            ...plan.success,
+            plan: plan,
         }
     }
 }
@@ -383,31 +389,92 @@ export async function* trackSendToken(context: Context, result: SendTokenResult,
     let beaconUpdates = context.polkadot.api.bridgeHub.rx.query.ethereumBeaconClient.latestExecutionState()
     let lastBeaconUpdate = await lastValueFrom(
         beaconUpdates.pipe(
-            rxmap(beaconUpdate => beaconUpdate.toPrimitive() as { blockNumber: number }),
+            rxmap(beaconUpdate => {
+                const update = beaconUpdate.toPrimitive() as { blockNumber: number }
+                return { createdAtHash: beaconUpdate.createdAtHash?.toHex(), blockNumber: update.blockNumber}
+            }),
             take(beaconUpdateTimeout),
-            takeWhile(beaconUpdate => ethereumBlockNumber > beaconUpdate.blockNumber),
-            tap(beaconUpdate => console.log('Beacon client %d blocks behind.', ethereumBlockNumber - beaconUpdate.blockNumber)),
+            takeWhile(({blockNumber}) => ethereumBlockNumber > blockNumber),
+            tap(({createdAtHash, blockNumber}) => console.log(`Bridge Hub block ${createdAtHash}: Beacon client ${ethereumBlockNumber - blockNumber} blocks behind.`)),
         ),
-        { defaultValue: { blockNumber: ethereumBlockNumber } }
+        { defaultValue: undefined }
     )
-    if (ethereumBlockNumber < lastBeaconUpdate.blockNumber) {
+
+    if (lastBeaconUpdate === undefined) {
         throw new Error('Timeout waiting for light client to include block')
     }
-    yield 'Included by light client.';
-    yield 'Transfer complete.'
+    result.success.lastBeaconUpdate = lastBeaconUpdate
+    yield `Included by light client in Bridge Hub block ${lastBeaconUpdate.createdAtHash}. Waiting for message delivery to Bridge Hub.`
 
-    //// Wait for nonce
-    //let bridgeHubEvents = context.polkadot.api.bridgeHub.rx.query.system.events()
-    //let lastEvent = await lastValueFrom(
-    //    bridgeHubEvents.pipe(
-    //        take(scanBlocks),
-    //        rxmap(events => events.toPrimitive() as any),
-    //        filter(events => {
-    //            return events.some((x: any) => context.polkadot.api.bridgeHub.events.ethereumInboundQueue.MessageReceived.is(x))
-    //        }),
-    //        //tap(events => console.log('Event', events)),
-    //    ),
-    //    { defaultValue: [] as any }
-    //)
-    //console.log("last event: ", lastEvent)
+    // Wait for nonce
+    let bridgeHubEvents = await firstValueFrom(
+        context.polkadot.api.bridgeHub.rx.query.system.events().pipe(
+            take(scanBlocks),
+            tap((events) => console.log(`Waiting for Bridge Hub inbound message block ${events.createdAtHash?.toHex()}.`)),
+            filter(events => {
+                let events_iter: any = events
+                for (const event of events_iter) {
+                    let eventData = (event.event.toHuman() as any).data
+                    if (context.polkadot.api.bridgeHub.events.ethereumInboundQueue.MessageReceived.is(event.event)
+                        && eventData.nonce === result.success?.nonce.toString()
+                        && eventData.messageId.toLowerCase() === result.success?.messageId.toLowerCase()
+                        && eventData.channelId.toLowerCase() === result.success?.channelId.toLowerCase()) {
+
+                        return true
+                    }
+                }
+                return false
+            }),
+        ),
+        { defaultValue: undefined }
+    )
+    console.log(bridgeHubEvents?.toHuman())
+    if(bridgeHubEvents === undefined) {
+        throw Error('Timeout while waiting for Bridge Hub delivery.')
+    }
+    result.success.bridgeHubEvents = bridgeHubEvents
+
+    // TODO: Expect extrinsic success 
+    yield `Message delivered to Bridge Hub block ${bridgeHubEvents?.createdAtHash?.toHex()}. Waiting for message delivery to Asset Hub.`
+
+    let assetHubEvents = await firstValueFrom(
+        context.polkadot.api.assetHub.rx.query.system.events().pipe(
+            take(scanBlocks),
+            tap((events) => console.log(`Waiting for Asset Hub inbound message block ${events.createdAtHash?.toHex()}.`)),
+            filter(events => {
+                let foundMessageQueue = false
+                let foundAssetsIssued = false
+                let events_iter: any = events
+                for (const event of events_iter) {
+                    let eventData = (event.event.toPrimitive() as any).data
+                    if (context.polkadot.api.assetHub.events.messageQueue.Processed.is(event.event)
+                        && eventData[0].toLowerCase() === result.success?.messageId.toLowerCase()
+                        // TODO: Check bridgehub para id.
+                        && eventData[1]?.sibling === 1013) {
+
+                        foundMessageQueue = true
+                    }
+                    if (context.polkadot.api.assetHub.events.foreignAssets.Issued.is(event.event)
+                        && eventData[2].toString() === result.success?.plan.success?.amount.toString()
+                        && u8aToHex(decodeAddress(eventData[1])).toLowerCase() === result.success?.plan.success?.destinationAddress.toLowerCase()
+                        && eventData[0]?.parents === 2
+                        && eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() === result.success?.plan.success?.ethereumChainId.toString()
+                        && eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() === result.success?.plan.success?.token.toLowerCase()) {
+
+                        foundAssetsIssued = true
+                    }
+                }
+                return foundMessageQueue && foundAssetsIssued
+            }),
+        ),
+        { defaultValue: undefined }
+    )
+
+    console.log(assetHubEvents?.toHuman())
+    if(assetHubEvents === undefined) {
+        throw Error('Timeout while waiting for Asset Hub delivery.')
+    }
+    // TODO: Expect extrinsic success
+    result.success.assetHubEvents = assetHubEvents
+    yield 'Transfer complete.'
 }

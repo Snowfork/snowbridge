@@ -47,10 +47,6 @@ const monitor = async () => {
     for await (const update of trackSendToken(context, result)) {
         console.log(update)
     }
-    // Get execution block and message id
-    // Watch bridgehub beacon client until block is included, emit included in light client
-    // Watch bridgehub nonce update for channel and message id and dispatched xcm
-    // Watch assethub for messagequeue processed and foreign assets issued to owner with amount.
 }
 
 

@@ -98,7 +98,8 @@ function MyForm() {
     e.preventDefault();
     if(walletInfo.isConnected && !walletInfo.hasError && walletInfo.context !== undefined && walletInfo.signer !== undefined) {
       setErrors([])
-      setStatusUpdates([])
+      statusUpdates = []
+      setStatusUpdates(statusUpdates)
       setTransferInfo({...transferInfo, result: undefined, transferInProgress: false})
 
       const plan = await planSendToken(walletInfo.context, 
@@ -130,7 +131,8 @@ function MyForm() {
           setErrors(['Transaction failed ' + result.failure.receipt])
         } else {
           setTransferInfo({...transferInfo, result, transferInProgress: true})
-          statusUpdates.push('Transaction submitted ' + result.success?.ethereum.transactionHash)
+          statusUpdates[0] = `Transaction submitted ${result.success?.ethereum.transactionHash}.`
+            + `Waiting for block ${result.success?.ethereum.blockNumber.toString()} to be included by the light client.`
           setStatusUpdates(statusUpdates)
           for await (const update of trackSendToken(walletInfo.context, result)) {
             statusUpdates.push(update)
@@ -177,10 +179,11 @@ function MyForm() {
             value={transferInfo.amount.toString()}
             onChange={handleChange}/>
           <button disabled={transferInfo.transferInProgress} type='submit'>Send</button>
-          <ul style={{color: 'red', gridColumn: 'span 2'}}>
+          <p hidden={transferInfo.result === undefined}>{transferInfo.result?.success?.ethereum.transactionHash}</p>
+          <ul hidden={errors.length === 0} style={{color: 'red', gridColumn: 'span 2'}}>
             {errors.map(error => (<li>{error}</li>))}
           </ul>
-          <ul style={{color: 'green', gridColumn: 'span 2'}}>
+          <ul hidden={statusUpdates.length === 0} style={{color: 'green', gridColumn: 'span 2'}}>
             {statusUpdates.map(update => (<li>{update}</li>))}
           </ul>
         </form>
