@@ -12,4 +12,4 @@ chronic typos .
 (cd relayer && chronic gofmt -l .)
 
 # check format of rust
-(cd parachain && chronic cargo +$RUST_NIGHTLY_VERSION fmt --check)
+(cd polkadot-sdk/bridges/snowbridge && chronic cargo +$RUST_NIGHTLY_VERSION fmt --check)

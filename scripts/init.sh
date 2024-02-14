@@ -2,6 +2,18 @@
 
 set -e
 
+echo "Checkout polkadot-sdk Snowfork fork"
+pushd ..
+if [ ! -d "polkadot-sdk" ]; then
+  git clone https://github.com/Snowfork/polkadot-sdk.git
+fi
+pushd  polkadot-sdk
+git checkout snowbridge
+popd
+popd
+
+ln -sf ../polkadot-sdk polkadot-sdk
+
 echo "Setting up submodules"
 git submodule update --init --recursive || true
 

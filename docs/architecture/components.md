@@ -49,7 +49,7 @@ More concretely, they have a number of purposes in the bridge design:
 
 * When an ethereum user wishes to transfer ERC20 tokens over the bridge to the AssetHub parachain, the tokens are actually deposited into the agent instance corresponding to AssetHub.
 * When a Polkadot parachain sends a general-purpose message to a Solidity contract, on the Ethereum side, the message will be dispatched to the destination contract from the Agent instance corresponding to the origin parachain.
-* Offchain message relayers are incentivized by a fees & rewards system.
+* Off-chain message relayers are incentivized by a fees & rewards system.
   * Users wanting to send outbound messages to Polkadot need to pay fees into the agent contract corresponding to the destination parachain
   * Relayers submitting messages to the Gateway are rewarded from the agent contract corresponding to the origin parachain.
 
