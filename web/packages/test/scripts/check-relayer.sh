@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eu
+set -eux
 
 url="http://localhost:8080/health"
 echo "checking start-services and relayer state"
