@@ -4,6 +4,9 @@ set -eu
 source scripts/set-env.sh
 
 zombienet_launch() {
+    echo "zombienet_launch"
+    pwd
+    ls
     npx zombienet spawn config/launch-config.toml --provider=native --dir="$zombienet_data_dir" 2>&1 &
     scripts/wait-for-it.sh -t 120 127.0.0.1:13144
 }
