@@ -13,6 +13,8 @@ start_geth() {
             .config.CancunTime = $timestamp
             ' \
             config/genesis.json >$output_dir/genesis.json
+
+        geth version
         geth init --datadir "$ethereum_data_dir" "$output_dir/genesis.json"
         geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key0.prv
         geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key1.prv
