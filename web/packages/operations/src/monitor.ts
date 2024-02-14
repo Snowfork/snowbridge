@@ -1,6 +1,7 @@
 
 import { channelStatusInfo, contextFactory, bridgeStatusInfo, planSendToken, doSendToken, trackSendToken } from '@snowbridge/api'
 import { Wallet, ethers } from 'ethers'
+import { update } from 'lodash'
 
 const ETHEREUM_WS_API = 'ws://127.0.0.1:8546'
 const RELAY_CHAIN_WS_URL = 'ws://127.0.0.1:9944'
@@ -43,7 +44,9 @@ const monitor = async () => {
     console.log('Plan:', plan)
     const result = await doSendToken(context, signer, plan)
     console.log('Execute:', result)
-    await trackSendToken(context, result);
+    for await (const update of trackSendToken(context, result)) {
+        console.log(update)
+    }
     // Get execution block and message id
     // Watch bridgehub beacon client until block is included, emit included in light client
     // Watch bridgehub nonce update for channel and message id and dispatched xcm

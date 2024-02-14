@@ -181,12 +181,13 @@ export type SendTokenPlan = {
         destinationAccountExists: boolean,
         existentialDeposit: bigint,
         foreignAssetExists: boolean,
+        tokenIsValidERC20: boolean,
         hasToken: boolean,
         tokenIsRegistered: boolean,
         tokenBalance: bigint,
         tokenSpendApproved: boolean,
         tokenSpendAllowance: bigint,
-        lightClientLatencyTooHigh: boolean,
+        lightClientLatencyIsAcceptable: boolean,
         lightClientLatencySeconds: number,
     }
 }
@@ -199,11 +200,19 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
 
     const sourceAddress = await source.getAddress()
     const tokenContract = IERC20__factory.connect(tokenAddress, context.ethereum.api)
-    const tokenBalance = await tokenContract.balanceOf(sourceAddress)
+    let tokenBalance = BigInt(0)
+    let allowance = BigInt(0)
+    let tokenSpendApproved = false
+    let tokenIsValidERC20 = true
+    try {
+        tokenBalance = await tokenContract.balanceOf(sourceAddress)
+        allowance = await tokenContract.allowance(await source.getAddress(), await context.ethereum.contracts.gateway.getAddress())
+        tokenSpendApproved = allowance >= amount
+    } catch {
+        tokenIsValidERC20 = false
+    }
     const hasToken = tokenBalance >= amount
 
-    const allowance = await tokenContract.allowance(await source.getAddress(), await context.ethereum.contracts.gateway.getAddress())
-    const tokenSpendApproved = allowance >= amount
 
     // Check bridge status.
     const bridgeStatus = await bridgeStatusInfo(context)
@@ -245,10 +254,10 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
     const account = (await context.polkadot.api.assetHub.query.system.account(destinationBytes32)).toPrimitive() as { data: { free: string } }
     const destinationAccountExists = BigInt(account.data.free) > existentialDeposit
 
-    const lightClientLatencyTooHigh = bridgeStatus.ethereumToPolkadot.latencySeconds > (60 * 60 * 3) // 3 Hours
+    const lightClientLatencyIsAcceptable = bridgeStatus.ethereumToPolkadot.latencySeconds < (60 * 60 * 3) // 3 Hours
     const canSend = bridgeStatus.ethereumToPolkadot.operatingMode.outbound == 'Normal'
         && channelStatus.ethereumToPolkadot.operatingMode.outbound == 'Normal'
-        && destinationAccountExists && foreignAssetExists && !lightClientLatencyTooHigh
+        && destinationAccountExists && foreignAssetExists && !lightClientLatencyIsAcceptable
         && tokenSpendApproved && hasToken && tokenIsRegistered
 
     if (canSend) {
@@ -276,11 +285,12 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
                 existentialDeposit: existentialDeposit,
                 foreignAssetExists: foreignAssetExists,
                 tokenIsRegistered: tokenIsRegistered,
+                tokenIsValidERC20: tokenIsValidERC20,
                 hasToken: hasToken,
                 tokenBalance: tokenBalance,
                 tokenSpendApproved: tokenSpendApproved,
                 tokenSpendAllowance: allowance,
-                lightClientLatencyTooHigh: lightClientLatencyTooHigh,
+                lightClientLatencyIsAcceptable: lightClientLatencyIsAcceptable,
                 lightClientLatencySeconds: bridgeStatus.ethereumToPolkadot.latencySeconds,
             }
         }
@@ -363,7 +373,7 @@ export const doSendToken = async (context: Context, signer: Signer, plan: SendTo
     }
 }
 
-export const trackSendToken = async (context: Context, result: SendTokenResult, beaconUpdateTimeout = 10, scanBlocks = 100) => {
+export async function* trackSendToken(context: Context, result: SendTokenResult, beaconUpdateTimeout = 10, scanBlocks = 100): AsyncGenerator<string> {
     if (result.failure || !result.success) {
         throw new Error('Plan failed')
     }
@@ -383,7 +393,8 @@ export const trackSendToken = async (context: Context, result: SendTokenResult, 
     if (ethereumBlockNumber < lastBeaconUpdate.blockNumber) {
         throw new Error('Timeout waiting for light client to include block')
     }
-    console.log('Beacon client caught up.')
+    yield 'Included by light client.';
+    yield 'Transfer complete.'
 
     //// Wait for nonce
     //let bridgeHubEvents = context.polkadot.api.bridgeHub.rx.query.system.events()

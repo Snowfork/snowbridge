@@ -32,16 +32,24 @@ type WalletInfo = {
   context?: Context,
 }
 
+type TransferInfo = {
+    tokenAddress: string,
+    beneficiary: string,
+    amount: bigint,
+}
+
 function MyForm() {
   let [walletInfo, setWalletInfo] = useState<WalletInfo>({
     isConnected: false,
     hasError: false,
   })
-  let [transferInfo, setTransferInfo] = useState({
+  let [transferInfo, setTransferInfo] = useState<TransferInfo>({
     tokenAddress: '',
     beneficiary: '',
     amount: BigInt(0),
   })
+  let [errors, setErrors] = useState<string[]>([]);
+  let [statusUpdates, setStatusUpdates] = useState<string[]>([]);
 
   const walletConnect = async () => {
     if (window.ethereum === undefined || window.ethereum === null) {
@@ -67,7 +75,7 @@ function MyForm() {
       })
       const c = await context.ethereum.api.getNetwork();
       if (c.chainId === network.chainId) {
-        setWalletInfo({ isConnected: true, hasError: false, signer, provider, network })
+        setWalletInfo({ isConnected: true, hasError: false, signer, provider, network, context })
       } else {
         let error = `Connected chainId is '${network.chainId.toString()}'. Bridged chainId is '${c.chainId.toString()}'.`
         setWalletInfo({ isConnected: true, hasError: true, signer, provider, network, error })
@@ -85,15 +93,43 @@ function MyForm() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if(walletInfo.isConnected && !walletInfo.hasError && walletInfo.context && walletInfo.signer) {
-      const result = await planSendToken(walletInfo.context, 
+    console.log(walletInfo.context !== undefined, walletInfo.signer !== undefined)
+    if(walletInfo.isConnected && !walletInfo.hasError && walletInfo.context !== undefined && walletInfo.signer !== undefined) {
+      setErrors([])
+      setStatusUpdates([])
+
+      const plan = await planSendToken(walletInfo.context, 
         walletInfo.signer,
         transferInfo.beneficiary,
         transferInfo.tokenAddress,
         transferInfo.amount
       );
+      if(plan.failure) {
+        let errors: string[] = []
+        if (!plan.failure.bridgeOperational) errors.push('Bridge halted.')
+        if (!plan.failure.channelOperational) errors.push('Channel to destination halted.')
+        if (!plan.failure.destinationAccountExists) errors.push(`'${transferInfo.beneficiary}' does not exist on destination.`)
+        if (!plan.failure.tokenIsValidERC20) errors.push(`Token '${transferInfo.tokenAddress}' not a valid ERC20 token.`)
+        if (!plan.failure.tokenIsRegistered) errors.push(`Token '${transferInfo.tokenAddress}' not registered with the Snowbridge gateway.`)
+        if (!plan.failure.foreignAssetExists) errors.push(`Token '${transferInfo.tokenAddress}' not registered on Asset Hub.`)
+        if (!plan.failure.hasToken) errors.push(`Source address '${await walletInfo.signer?.getAddress()}' does not own token '${transferInfo.tokenAddress}'.`)
+        if (!plan.failure.tokenSpendApproved) errors.push(`Source address '${await walletInfo.signer?.getAddress()}' has not allowed Snowbridge gateway '${config.GATEWAY_CONTRACT}' to spend token '${transferInfo.tokenAddress}'.`)
+        if (!plan.failure.lightClientLatencyIsAcceptable) errors.push('Light client is too far behind.')
+        setErrors(errors)
+        return;
+      }
+      try {
+        const result = await doSendToken(walletInfo.context, walletInfo.signer, plan)
+        for await (const update of trackSendToken(walletInfo.context, result)) {
+          setStatusUpdates([update, ...statusUpdates])
+        }
+      } catch(error: any) {
+        setErrors(error.message)
+        return;
+      }
+    } else {
+      setErrors(['Wallet not connected.'])
     }
-    console.log('submit')
   }
 
   if (walletInfo.hasError) {
@@ -127,6 +163,12 @@ function MyForm() {
             value={transferInfo.amount.toString()}
             onChange={handleChange}/>
           <button type='submit'>Send</button>
+          <ul style={{color: 'red', gridColumn: 'span 2'}}>
+            {errors.map(error => (<li>{error}</li>))}
+          </ul>
+          <ul style={{color: 'green', gridColumn: 'span 2'}}>
+            {statusUpdates.map(update => (<li>{update}</li>))}
+          </ul>
         </form>
       </div>
     )
