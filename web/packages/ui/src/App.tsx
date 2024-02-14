@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, useState } from 'react';
 import './App.css';
 import { BrowserProvider, JsonRpcSigner, Network, ethers } from 'ethers';
-import { contextFactory, planSendToken, doSendToken, trackSendToken, Context } from '@snowbridge/api'
+import { contextFactory, planSendToken, doSendToken, trackSendToken, Context, SendTokenResult } from '@snowbridge/api'
 
 let config = {
   ETHEREUM_WS_API: 'ws://127.0.0.1:8546',
@@ -36,6 +36,8 @@ type TransferInfo = {
     tokenAddress: string,
     beneficiary: string,
     amount: bigint,
+    transferInProgress: boolean,
+    result?: SendTokenResult,
 }
 
 function MyForm() {
@@ -47,6 +49,7 @@ function MyForm() {
     tokenAddress: '',
     beneficiary: '',
     amount: BigInt(0),
+    transferInProgress: false,
   })
   let [errors, setErrors] = useState<string[]>([]);
   let [statusUpdates, setStatusUpdates] = useState<string[]>([]);
@@ -93,10 +96,10 @@ function MyForm() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    console.log(walletInfo.context !== undefined, walletInfo.signer !== undefined)
     if(walletInfo.isConnected && !walletInfo.hasError && walletInfo.context !== undefined && walletInfo.signer !== undefined) {
       setErrors([])
       setStatusUpdates([])
+      setTransferInfo({...transferInfo, result: undefined, transferInProgress: false})
 
       const plan = await planSendToken(walletInfo.context, 
         walletInfo.signer,
@@ -119,14 +122,25 @@ function MyForm() {
         return;
       }
       try {
+        setTransferInfo({...transferInfo, result: undefined, transferInProgress: true})
+        statusUpdates.push('Submitting...')
+        setStatusUpdates(statusUpdates)
         const result = await doSendToken(walletInfo.context, walletInfo.signer, plan)
-        for await (const update of trackSendToken(walletInfo.context, result)) {
-          setStatusUpdates([update, ...statusUpdates])
+        if(result.failure) {
+          setErrors(['Transaction failed ' + result.failure.receipt])
+        } else {
+          setTransferInfo({...transferInfo, result, transferInProgress: true})
+          statusUpdates.push('Transaction submitted ' + result.success?.ethereum.transactionHash)
+          setStatusUpdates(statusUpdates)
+          for await (const update of trackSendToken(walletInfo.context, result)) {
+            statusUpdates.push(update)
+            setStatusUpdates(statusUpdates)
+          }
         }
       } catch(error: any) {
-        setErrors(error.message)
-        return;
+        setErrors([error.message])
       }
+      setTransferInfo({...transferInfo, transferInProgress: false})
     } else {
       setErrors(['Wallet not connected.'])
     }
@@ -148,7 +162,7 @@ function MyForm() {
             name='tokenAddress'
             value={transferInfo.tokenAddress}
             onChange={handleChange}/>
-          <label>beneficiary:</label>
+          <label>Beneficiary:</label>
           <input type='text'
             placeholder='SS58 or Raw Address'
             required
@@ -162,7 +176,7 @@ function MyForm() {
             name='amount'
             value={transferInfo.amount.toString()}
             onChange={handleChange}/>
-          <button type='submit'>Send</button>
+          <button disabled={transferInfo.transferInProgress} type='submit'>Send</button>
           <ul style={{color: 'red', gridColumn: 'span 2'}}>
             {errors.map(error => (<li>{error}</li>))}
           </ul>
