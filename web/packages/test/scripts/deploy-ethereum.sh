@@ -73,8 +73,8 @@ start_lodestar() {
             --eth1=true \
             --rest.namespace="*" \
             --jwt-secret $config_dir/jwtsecret \
-            --chain.archiveStateEpochFrequency 1 \
-            >"$output_dir/lodestar.log" 2>&1 &
+            --chain.archiveStateEpochFrequency 1
+            # >"$output_dir/lodestar.log" 2>&1 &
         popd
     fi
 }
