@@ -4,7 +4,10 @@ set -eu
 source scripts/set-env.sh
 
 build_binaries() {
+    echo "ROOT DIR $root_dir"
     pushd $root_dir/polkadot-sdk
+    pwd
+    ls
 
     local features=''
     if [ "$eth_network" == "localhost" ]; then
