@@ -25,6 +25,10 @@ build_binaries() {
 
     mkdir -p "$output_bin_dir"
 
+    echo "target/release:"
+    (cd target/release && ls)
+    echo "$output_bin_dir:"
+    (cd $output_bin_dir && ls)
 
     cp target/release/polkadot $output_bin_dir/polkadot
     cp target/release/polkadot-execute-worker $output_bin_dir/polkadot-execute-worker
