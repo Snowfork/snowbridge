@@ -8,7 +8,7 @@ build_binaries() {
     echo "files root dir:"
     ls
     echo "PUSH DIR:"
-    pushd $root_dir/polkadot-sdk
+    cd $root_dir/polkadot-sdk
     pwd
     echo "files push dir:"
     ls
