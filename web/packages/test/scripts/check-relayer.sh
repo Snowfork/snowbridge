@@ -12,7 +12,7 @@ while true; do
   fi
 
   # Use curl to get the HTTP status code
-  status_code=$(curl -o /dev/null -s -w "%{http_code}\n" "$url")
+  status_code=$(curl -o /dev/null -s -w "%{http_code}\n" "$url" || echo "000")
 
   # Check if the status code is 200
   if [ "$status_code" -eq 200 ]; then
