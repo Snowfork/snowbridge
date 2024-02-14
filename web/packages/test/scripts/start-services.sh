@@ -27,47 +27,47 @@ if [ "$eth_network" == "localhost" ]; then
 fi
 
 cat "$output_dir/lodestar.log"
-#
-## 3. start polkadot
-#echo "Starting polkadot nodes"
-#source scripts/deploy-polkadot.sh
-#deploy_polkadot
-#
-## 4. generate beefy checkpoint
-#echo "Generate beefy checkpoint"
-#source scripts/generate-beefy-checkpoint.sh
-#generate_beefy_checkpoint
-#
-## 5. deploy contracts
-#echo "Deploying ethereum contracts"
-#source scripts/deploy-contracts.sh
-#deploy_contracts
-#
-## 6. config bridgehub
-#echo "Config bridgehub"
-#source scripts/configure-bridgehub.sh
-#configure_bridgehub
-#
-## 7. config assethub
-#echo "Config assethub"
-#source scripts/configure-assethub.sh
-#configure_assethub
-#
-#if [ "$skip_relayer" == "false" ]; then
-#  # 8. start relayer
-#  echo "Starting relayers"
-#  source scripts/start-relayer.sh
-#  deploy_relayer
-#fi
-#
-#echo "Testnet has been initialized"
-#
-#end=$(date +%s)
-#runtime=$((end - start))
-#minutes=$(((runtime % 3600) / 60))
-#seconds=$(((runtime % 3600) % 60))
-#echo "Took $minutes minutes $seconds seconds"
-#
-#wait
+
+# 3. start polkadot
+echo "Starting polkadot nodes"
+source scripts/deploy-polkadot.sh
+deploy_polkadot
+
+# 4. generate beefy checkpoint
+echo "Generate beefy checkpoint"
+source scripts/generate-beefy-checkpoint.sh
+generate_beefy_checkpoint
+
+# 5. deploy contracts
+echo "Deploying ethereum contracts"
+source scripts/deploy-contracts.sh
+deploy_contracts
+
+# 6. config bridgehub
+echo "Config bridgehub"
+source scripts/configure-bridgehub.sh
+configure_bridgehub
+
+# 7. config assethub
+echo "Config assethub"
+source scripts/configure-assethub.sh
+configure_assethub
+
+if [ "$skip_relayer" == "false" ]; then
+  # 8. start relayer
+  echo "Starting relayers"
+  source scripts/start-relayer.sh
+  deploy_relayer
+fi
+
+echo "Testnet has been initialized"
+
+end=$(date +%s)
+runtime=$((end - start))
+minutes=$(((runtime % 3600) / 60))
+seconds=$(((runtime % 3600) % 60))
+echo "Took $minutes minutes $seconds seconds"
+
+wait
 
 
