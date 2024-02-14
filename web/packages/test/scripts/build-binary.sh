@@ -5,8 +5,12 @@ source scripts/set-env.sh
 
 build_binaries() {
     echo "ROOT DIR $root_dir"
+    echo "files root dir:"
+    ls
+    echo "PUSH DIR:"
     pushd $root_dir/polkadot-sdk
     pwd
+    echo "files push dir:"
     ls
 
     local features=''
