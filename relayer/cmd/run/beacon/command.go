@@ -2,7 +2,9 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -40,6 +42,14 @@ func Command() *cobra.Command {
 }
 
 func run(_ *cobra.Command, _ []string) error {
+	http.HandleFunc("/health", healthCheckHandler)
+
+	fmt.Println("Starting server on port 8080...")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		fmt.Printf("Error starting server: %s\n", err)
+		return err
+	}
+
 	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
 	logrus.SetLevel(logrus.DebugLevel)
 
@@ -101,4 +111,8 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
+}
+
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
