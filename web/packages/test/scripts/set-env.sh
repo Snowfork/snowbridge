@@ -62,6 +62,8 @@ reset_ethereum="${RESET_ETHEREUM:-true}"
 ## Important accounts
 
 # Useful tool to get these account values: https://www.shawntabrizi.com/substrate-js-utilities/
+# Account for bridgehub (Sibling parachain 1013 in testnet)
+bridgehub_sovereign_account="${BRIDGEHUB_SOVEREIGN_ACCOUNT:-0x7369626cf5030000000000000000000000000000000000000000000000000000}"
 # Account for assethub (Sibling parachain 1000 5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV in testnet)
 assethub_sovereign_account="${ASSETHUB_SOVEREIGN_ACCOUNT:-0x7369626ce8030000000000000000000000000000000000000000000000000000}"
 # Account for penpal (Sibling parachain 2000 5Eg2fntJ27qsari4FGrGhrMqKFDRnkNSR6UshkZYBGXmSuC8 in testnet)
