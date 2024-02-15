@@ -98,9 +98,9 @@ install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
     build_lodestar
-    #build_binaries
-    #build_contracts
-    #build_relayer
+    build_binaries
+    build_contracts
+    build_relayer
 }
 
 if [ -z "${from_start_services:-}" ]; then
