@@ -74,14 +74,19 @@ set_slot_time() {
     else
         sed -i "s/SECONDS_PER_SLOT: .*/SECONDS_PER_SLOT: $new_value,/g" $preset_mainnet_config_file
     fi
+    cat $preset_mainnet_config_file
 }
 
 build_lodestar() {
+    echo "Building lodestar."
     if [ "$rebuild_lodestar" == "true" ]; then
+        echo "Rebuilding lodestar."
         pushd $root_dir/lodestar
         if [ "$eth_fast_mode" == "true" ]; then
+            echo "Setting fast mode."
             set_slot_time 1
         else
+            echo "Not setting fast mode."
             set_slot_time 12
         fi
         yarn install && yarn run build
