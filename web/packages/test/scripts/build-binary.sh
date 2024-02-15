@@ -74,7 +74,7 @@ set_slot_time() {
     else
         sed -i "s/SECONDS_PER_SLOT: .*/SECONDS_PER_SLOT: $new_value,/g" $preset_mainnet_config_file
     fi
-    cat $preset_mainnet_config_file
+    cat "$preset_mainnet_config_file"
 }
 
 build_lodestar() {
