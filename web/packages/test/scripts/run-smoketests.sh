@@ -5,7 +5,7 @@ source scripts/set-env.sh
 
 pushd $root_dir/smoketest
 
-./make-bindings
+./make-bindings.sh
 echo "run register token test"
 cargo test --test register_token --release -- --nocapture
 echo "run register send test"
