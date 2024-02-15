@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -eu
 
-url="http://localhost:8080/health"
+url="http://localhost:8080/beacon/health"
 echo "checking start-services and relayer state"
 while true; do
   # Check if start-services.sh is still running

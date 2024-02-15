@@ -63,7 +63,7 @@
                     delve
 
                     # parachain
-                    clang
+                    pkgs.llvmPackages_11.clang
                     gcc
                     libiconv
                     protobuf
@@ -96,14 +96,6 @@
 
                     cowsay "Development Environment Ready"
                 '';
-            };
-
-            # Adding a dummy defaultPackage to satisfy the requirement
-            defaultPackage = {
-                x86_64-linux = hello; # `hello` is just a placeholder, replace it with any package you actually want to be the default
-                aarch64-linux = hello;
-                x86_64-darwin = hello;
-                aarch64-darwin = hello;
             };
         }
     );

@@ -42,14 +42,6 @@ func Command() *cobra.Command {
 }
 
 func run(_ *cobra.Command, _ []string) error {
-	http.HandleFunc("/health", healthCheckHandler)
-
-	fmt.Println("Starting server on port 8080...")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		fmt.Printf("Error starting server: %s\n", err)
-		return err
-	}
-
 	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
 	logrus.SetLevel(logrus.DebugLevel)
 
@@ -81,6 +73,10 @@ func run(_ *cobra.Command, _ []string) error {
 
 	eg, ctx := errgroup.WithContext(ctx)
 
+	eg.Go(func() error {
+		return startHttpServer(ctx)
+	})
+
 	// Ensure clean termination upon SIGINT, SIGTERM
 	eg.Go(func() error {
 		notify := make(chan os.Signal, 1)
@@ -108,6 +104,26 @@ func run(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		logrus.WithError(err).Fatal("Unhandled error")
 		return err
+	}
+
+	return nil
+}
+
+func startHttpServer(ctx context.Context) error {
+	srv := &http.Server{Addr: ":8080", Handler: nil}
+
+	http.HandleFunc("/beacon/health", healthCheckHandler)
+
+	go func() {
+		<-ctx.Done()
+		if err := srv.Shutdown(context.Background()); err != nil {
+			logrus.WithError(err).Error("beacon health check endpoint shutting down")
+		}
+	}()
+
+	logrus.Info("starting health check HTTP server on port 8080")
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		return fmt.Errorf("http server could not be started: %v", err)
 	}
 
 	return nil
