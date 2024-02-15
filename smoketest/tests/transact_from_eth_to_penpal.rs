@@ -1,4 +1,4 @@
-use ethers::{core::types::Address, types::Bytes};
+use ethers::{core::types::Address, prelude::U256, types::Bytes};
 use futures::StreamExt;
 use hex_literal::hex;
 use snowbridge_smoketest::{
@@ -24,11 +24,10 @@ async fn transact_from_eth_to_penpal() {
 		//system.remark
 		call: Bytes::from(hex!("00071468656c6c6f").to_vec()),
 	};
-	let fee = gateway.quote_register_token_fee().call().await.unwrap();
 
 	let receipt = gateway
 		.transact(PENPAL_PARA_ID, message)
-		.value(fee)
+		.value::<U256>(100_000_000_000_000_000_u128.into())
 		.send()
 		.await
 		.unwrap()

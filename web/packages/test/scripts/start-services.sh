@@ -51,8 +51,13 @@ echo "Config assethub"
 source scripts/configure-assethub.sh
 configure_assethub
 
+# 8. config penpal
+echo "Config penpal"
+source scripts/configure-penpal.sh
+configure_penpal
+
 if [ "$skip_relayer" == "false" ]; then
-  # 8. start relayer
+  # 9. start relayer
   echo "Starting relayers"
   source scripts/start-relayer.sh
   deploy_relayer
