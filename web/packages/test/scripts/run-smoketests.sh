@@ -3,7 +3,7 @@ set -eu
 
 source scripts/set-env.sh
 
-pushd $root_dir/smoketests
+pushd $root_dir/smoketest
 
 ./make-bindings
 echo "run register token test"

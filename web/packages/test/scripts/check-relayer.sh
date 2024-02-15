@@ -11,8 +11,10 @@ while true; do
     exit 1 # Exit with an error condition
   fi
 
-  # Use curl to get the HTTP status code
-  status_code=$(curl -o /dev/null -s -w "%{http_code}\n" "$url" || echo 000)
+  # Use curl to get the HTTP status code, trimming any trailing newlines
+  status_code=$(curl -o /dev/null -s -w "%{http_code}" "$url" || echo -n 000)
+  # Remove any trailing newlines or whitespace
+  status_code=$(echo -n "$status_code" | tr -d '\n')
 
   # Check if the status code is 200
   if [ "$status_code" -eq 200 ]; then
