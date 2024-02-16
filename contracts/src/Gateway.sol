@@ -624,6 +624,9 @@ contract Gateway is IGateway, IInitializable {
 
     /// @inheritdoc IGateway
     function transact(ParaID destinationChain, TransactMessage calldata message) external payable {
+        if (message.validate() == false) {
+            revert InvalidTransact();
+        }
         Ticket memory ticket;
         Costs memory costs;
         costs.foreign = message.fee;
