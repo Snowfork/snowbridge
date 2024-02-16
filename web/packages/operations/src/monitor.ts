@@ -40,7 +40,7 @@ const monitor = async () => {
     console.log('Secondary Governance Channel:', secondary_gov)
 
     const signer = new Wallet('0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342', context.ethereum.api)
-    const plan = await planSendToken(context, signer, '5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL', WETH_CONTRACT, BigInt(1000))
+    const plan = await planSendToken(context, signer, '5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL', WETH_CONTRACT, 2000, BigInt(1000), BigInt(4_000_000_000))
     console.log('Plan:', plan)
     const result = await doSendToken(context, signer, plan)
     console.log('Execute:', result)

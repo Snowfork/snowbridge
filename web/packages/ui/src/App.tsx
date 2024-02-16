@@ -33,11 +33,11 @@ type WalletInfo = {
 }
 
 type TransferInfo = {
-    tokenAddress: string,
-    beneficiary: string,
-    amount: bigint,
-    transferInProgress: boolean,
-    result?: SendTokenResult,
+  tokenAddress: string,
+  beneficiary: string,
+  amount: bigint,
+  transferInProgress: boolean,
+  result?: SendTokenResult,
 }
 
 function MyForm() {
@@ -96,41 +96,41 @@ function MyForm() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if(walletInfo.isConnected && !walletInfo.hasError && walletInfo.context !== undefined && walletInfo.signer !== undefined) {
+    if (walletInfo.isConnected && !walletInfo.hasError && walletInfo.context !== undefined && walletInfo.signer !== undefined) {
       setErrors([])
       statusUpdates = []
       setStatusUpdates(statusUpdates)
-      setTransferInfo({...transferInfo, result: undefined, transferInProgress: false})
+      setTransferInfo({ ...transferInfo, result: undefined, transferInProgress: false })
 
-      const plan = await planSendToken(walletInfo.context, 
-        walletInfo.signer,
-        transferInfo.beneficiary,
-        transferInfo.tokenAddress,
-        transferInfo.amount
-      );
-      if(plan.failure) {
-        let errors: string[] = []
-        if (!plan.failure.bridgeOperational) errors.push('Bridge halted.')
-        if (!plan.failure.channelOperational) errors.push('Channel to destination halted.')
-        if (!plan.failure.destinationAccountExists) errors.push(`'${transferInfo.beneficiary}' does not exist on destination.`)
-        if (!plan.failure.tokenIsValidERC20) errors.push(`Token '${transferInfo.tokenAddress}' not a valid ERC20 token.`)
-        if (!plan.failure.tokenIsRegistered) errors.push(`Token '${transferInfo.tokenAddress}' not registered with the Snowbridge gateway.`)
-        if (!plan.failure.foreignAssetExists) errors.push(`Token '${transferInfo.tokenAddress}' not registered on Asset Hub.`)
-        if (!plan.failure.hasToken) errors.push(`Source address '${await walletInfo.signer?.getAddress()}' does not own token '${transferInfo.tokenAddress}'.`)
-        if (!plan.failure.tokenSpendApproved) errors.push(`Source address '${await walletInfo.signer?.getAddress()}' has not allowed Snowbridge gateway '${config.GATEWAY_CONTRACT}' to spend token '${transferInfo.tokenAddress}'.`)
-        if (!plan.failure.lightClientLatencyIsAcceptable) errors.push('Light client is too far behind.')
-        setErrors(errors)
-        return;
-      }
       try {
-        setTransferInfo({...transferInfo, result: undefined, transferInProgress: true})
+        const plan = await planSendToken(walletInfo.context,
+          walletInfo.signer,
+          transferInfo.beneficiary,
+          transferInfo.tokenAddress,
+          transferInfo.amount
+        );
+        if (plan.failure) {
+          let errors: string[] = []
+          if (!plan.failure.bridgeOperational) errors.push('Bridge halted.')
+          if (!plan.failure.channelOperational) errors.push('Channel to destination halted.')
+          if (!plan.failure.beneficiaryAccountExists) errors.push(`'${transferInfo.beneficiary}' does not exist on destination.`)
+          if (!plan.failure.tokenIsValidERC20) errors.push(`Token '${transferInfo.tokenAddress}' not a valid ERC20 token.`)
+          if (!plan.failure.tokenIsRegistered) errors.push(`Token '${transferInfo.tokenAddress}' not registered with the Snowbridge gateway.`)
+          if (!plan.failure.foreignAssetExists) errors.push(`Token '${transferInfo.tokenAddress}' not registered on Asset Hub.`)
+          if (!plan.failure.hasToken) errors.push(`Source address '${await walletInfo.signer?.getAddress()}' does not own token '${transferInfo.tokenAddress}'.`)
+          if (!plan.failure.tokenSpendApproved) errors.push(`Source address '${await walletInfo.signer?.getAddress()}' has not allowed Snowbridge gateway '${config.GATEWAY_CONTRACT}' to spend token '${transferInfo.tokenAddress}'.`)
+          if (!plan.failure.lightClientLatencyIsAcceptable) errors.push('Light client is too far behind.')
+          setErrors(errors)
+          return;
+        }
+        setTransferInfo({ ...transferInfo, result: undefined, transferInProgress: true })
         statusUpdates.push('Submitting...')
         setStatusUpdates(statusUpdates)
         const result = await doSendToken(walletInfo.context, walletInfo.signer, plan)
-        if(result.failure) {
+        if (result.failure) {
           setErrors(['Transaction failed ' + result.failure.receipt])
         } else {
-          setTransferInfo({...transferInfo, result, transferInProgress: true})
+          setTransferInfo({ ...transferInfo, result, transferInProgress: true })
           statusUpdates[0] = `Transaction submitted ${result.success?.ethereum.transactionHash}.`
             + `Waiting for block ${result.success?.ethereum.blockNumber.toString()} to be included by the light client.`
           setStatusUpdates(statusUpdates)
@@ -139,10 +139,10 @@ function MyForm() {
             setStatusUpdates(statusUpdates)
           }
         }
-      } catch(error: any) {
+      } catch (error: any) {
         setErrors([error.message])
       }
-      setTransferInfo({...transferInfo, transferInProgress: false})
+      setTransferInfo({ ...transferInfo, transferInProgress: false })
     } else {
       setErrors(['Wallet not connected.'])
     }
@@ -163,27 +163,27 @@ function MyForm() {
             required
             name='tokenAddress'
             value={transferInfo.tokenAddress}
-            onChange={handleChange}/>
+            onChange={handleChange} />
           <label>Beneficiary:</label>
           <input type='text'
             placeholder='SS58 or Raw Address'
             required
             name='beneficiary'
             value={transferInfo.beneficiary}
-            onChange={handleChange}/>
+            onChange={handleChange} />
           <label>Amount:</label>
           <input type='number'
             placeholder='0'
             required
             name='amount'
             value={transferInfo.amount.toString()}
-            onChange={handleChange}/>
+            onChange={handleChange} />
           <button disabled={transferInfo.transferInProgress} type='submit'>Send</button>
-          <p hidden={transferInfo.result === undefined}>{transferInfo.result?.success?.ethereum.transactionHash}</p>
-          <ul hidden={errors.length === 0} style={{color: 'red', gridColumn: 'span 2'}}>
+          <p hidden={transferInfo.result === undefined} style={{ gridColumn: 'span 2' }}>TxHash: {transferInfo.result?.success?.ethereum.transactionHash}</p>
+          <ul hidden={errors.length === 0} style={{ color: 'red', gridColumn: 'span 2' }}>
             {errors.map(error => (<li>{error}</li>))}
           </ul>
-          <ul hidden={statusUpdates.length === 0} style={{color: 'green', gridColumn: 'span 2'}}>
+          <ul hidden={statusUpdates.length === 0} style={{ color: 'green', gridColumn: 'span 2' }}>
             {statusUpdates.map(update => (<li>{update}</li>))}
           </ul>
         </form>
@@ -203,8 +203,8 @@ function App() {
       <h1>Snowbridge</h1>
       <p>Transfer asset from Ethereum to Asset Hub</p>
       <MyForm />
-      <div style={{textAlign:'right'}}>
-          <sub>Snowfork 2024 - {process.env.NODE_ENV} build</sub>
+      <div style={{ textAlign: 'right' }}>
+        <sub>Snowfork 2024 - {process.env.NODE_ENV} build</sub>
       </div>
     </div>
   );

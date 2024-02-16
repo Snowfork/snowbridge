@@ -4,9 +4,10 @@ import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethe
 import { BeefyClient, BeefyClient__factory, IGateway, IGateway__factory, IERC20__factory } from '@snowbridge/contract-types'
 import { MultiAddressStruct } from '@snowbridge/contract-types/src/IGateway'
 import { decodeAddress } from '@polkadot/keyring'
-import { hexToU8a, isHex, u8aToHex } from '@polkadot/util'
+import { bnToU8a, isHex, stringToU8a, u8aToHex } from '@polkadot/util'
 import { filter, tap, take, takeWhile, lastValueFrom, map as rxmap, firstValueFrom } from 'rxjs'
 import { Codec } from '@polkadot/types/types'
+import { BlockHash } from '@polkadot/types/interfaces'
 
 interface Config {
     ethereum: {
@@ -164,22 +165,32 @@ export const channelStatusInfo = async (context: Context, channelId: string) => 
 
 export type SendTokenPlan = {
     success?: {
+        //bridgeHubParaId: number,
+        //assetHubParaId: number,
         ethereumChainId: bigint,
         fee: bigint,
         sourceAddress: string,
         estimatedDeliverySeconds: number,
         estimatedDeliveryBlocks: number,
-        destinationChain: number,
-        destinationAddress: string,
-        destinationMultiAddress: MultiAddressStruct,
+        destinationParaId: number,
+        beneficiaryAddress: string,
+        beneficiaryMultiAddress: MultiAddressStruct,
         destinationFee: bigint,
         token: string,
         amount: bigint,
+        assetHub: {
+            plannedAtHash: BlockHash,
+            paraId: number,
+        },
+        bridgeHub: {
+            plannedAtHash: BlockHash,
+            paraId: number,
+        },
     },
     failure?: {
         bridgeOperational: boolean,
         channelOperational: boolean,
-        destinationAccountExists: boolean,
+        beneficiaryAccountExists: boolean,
         existentialDeposit: bigint,
         foreignAssetExists: boolean,
         tokenIsValidERC20: boolean,
@@ -190,39 +201,50 @@ export type SendTokenPlan = {
         tokenSpendAllowance: bigint,
         lightClientLatencyIsAcceptable: boolean,
         lightClientLatencySeconds: number,
+        destinationChainExists: boolean,
+        hrmpChannelSetup: boolean,
     }
 }
 
-export const planSendToken = async (context: Context, source: ethers.Addressable, destination: string, tokenAddress: string, amount: bigint): Promise<SendTokenPlan> => {
-    // TODO: Allow destinations that are not assethub and check existence of destination
-    const assetHub = 1000
-    // TODO: Allow destination fee
-    const destinationFee = BigInt(0)
+export const planSendToken = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint): Promise<SendTokenPlan> => {
+    // TODO: Convert parachain to channel id
+    const ASSET_HUB_CHANNEL_ID = '0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539'
 
-    const sourceAddress = await source.getAddress()
+    const [sourceAddress, gatewayAddress] = await Promise.all([
+        source.getAddress(),
+        context.ethereum.contracts.gateway.getAddress()
+    ])
     const tokenContract = IERC20__factory.connect(tokenAddress, context.ethereum.api)
     let tokenBalance = BigInt(0)
     let allowance = BigInt(0)
     let tokenSpendApproved = false
     let tokenIsValidERC20 = true
     try {
-        tokenBalance = await tokenContract.balanceOf(sourceAddress)
-        allowance = await tokenContract.allowance(await source.getAddress(), await context.ethereum.contracts.gateway.getAddress())
+        const [tokenBalance_, allowance_] = await Promise.all([
+            tokenContract.balanceOf(sourceAddress),
+            tokenContract.allowance(sourceAddress, gatewayAddress),
+        ])
+        allowance = allowance_;
+        tokenBalance = tokenBalance_;
         tokenSpendApproved = allowance >= amount
     } catch {
         tokenIsValidERC20 = false
     }
     const hasToken = tokenBalance >= amount
 
-    // Check bridge status.
-    const bridgeStatus = await bridgeStatusInfo(context)
-
-    //TODO: Convert parachain to channel id
-    const ASSET_HUB_CHANNEL_ID = '0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539'
-    const channelStatus = await channelStatusInfo(context, ASSET_HUB_CHANNEL_ID)
+    const [channelStatus, bridgeStatus, ethereumNetwork, tokenIsRegistered] = await Promise.all([
+        channelStatusInfo(context, ASSET_HUB_CHANNEL_ID),
+        bridgeStatusInfo(context),
+        context.ethereum.api.getNetwork(),
+        context.ethereum.contracts.gateway.isTokenRegistered(tokenAddress)
+    ])
+    let fee = BigInt(0)
+    if (tokenIsRegistered) {
+        fee = await context.ethereum.contracts.gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
+    }
 
     // Asset exists
-    const ethereumChainId = (await context.ethereum.api.getNetwork()).chainId
+    const ethereumChainId = ethereumNetwork.chainId
     const asset = (await context.polkadot.api.assetHub.query.foreignAssets.asset({
         parents: 2,
         interior: {
@@ -234,31 +256,68 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
     })).toPrimitive() as { status: 'Live' }
     const foreignAssetExists = asset !== null && asset.status === 'Live'
 
-    const tokenIsRegistered = await context.ethereum.contracts.gateway.isTokenRegistered(tokenAddress)
-    let fee = BigInt(0)
-    if (tokenIsRegistered) {
-        fee = await context.ethereum.contracts.gateway.quoteSendTokenFee(tokenAddress, assetHub, destinationFee)
-    }
     const abi = ethers.AbiCoder.defaultAbiCoder()
 
-    const destinationBytes32 = u8aToHex(isHex(destination)
-        ? hexToU8a(destination)
-        : decodeAddress(destination))
-
-    const destinationAddress: MultiAddressStruct = {
-        kind: 1,
-        data: abi.encode(['bytes32'], [destinationBytes32]),
+    let beneficiaryAddress: MultiAddressStruct;
+    let beneficiaryHex: string;
+    if (isHex(beneficiary)) {
+        beneficiaryHex = beneficiary
+        if (beneficiary.length === 42) {
+            // 20 byte address
+            beneficiaryAddress = {
+                kind: 2,
+                data: abi.encode(['bytes20'], [beneficiaryHex]),
+            }
+        } else if (beneficiary.length === 66) {
+            // 32 byte address
+            beneficiaryAddress = {
+                kind: 1,
+                data: abi.encode(['bytes32'], [beneficiaryHex]),
+            }
+        } else {
+            throw new Error('Unknown Beneficiary address format.')
+        }
+    } else {
+        // SS58 address
+        beneficiaryHex = u8aToHex(decodeAddress(beneficiary))
+        beneficiaryAddress = {
+            kind: 1,
+            data: abi.encode(['bytes32'], [beneficiaryHex]),
+        }
     }
+
+    const [assetHubHead, assetHubParaId, bridgeHubHead, bridgeHubParaId] = await Promise.all([
+        context.polkadot.api.assetHub.rpc.chain.getFinalizedHead(),
+        context.polkadot.api.assetHub.query.parachainInfo.parachainId(),
+        context.polkadot.api.bridgeHub.rpc.chain.getFinalizedHead(),
+        context.polkadot.api.bridgeHub.query.parachainInfo.parachainId(),
+    ])
+
     // Destination account exists.
+    const assetHub = assetHubParaId.toPrimitive() as number;
+    let beneficiaryAccountExists = true
+    let destinationChainExists = true
+    let hrmpChannelSetup = true
     const existentialDeposit = BigInt(context.polkadot.api.assetHub.consts.balances.existentialDeposit.toPrimitive() as number)
-    const account = (await context.polkadot.api.assetHub.query.system.account(destinationBytes32)).toPrimitive() as { data: { free: string } }
-    const destinationAccountExists = BigInt(account.data.free) > existentialDeposit
+    if (destinationParaId === assetHub) {
+        if (destinationFee !== 0n) throw new Error('Asset Hub does not require a destination fee.')
+        if (beneficiaryAddress.kind !== 1) throw new Error('Asset Hub only supports 32 byte addresses.')
+        const account = (await context.polkadot.api.assetHub.query.system.account(beneficiaryHex)).toPrimitive() as { data: { free: string } }
+        beneficiaryAccountExists = BigInt(account.data.free) > existentialDeposit
+    } else {
+        const [destinationHead, hrmpChannel] = await Promise.all([
+            context.polkadot.api.relaychain.query.paras.heads(destinationParaId),
+            context.polkadot.api.relaychain.query.hrmp.hrmpChannels({ sender: assetHub, recipient: destinationParaId }),
+        ])
+        destinationChainExists = destinationHead.toPrimitive() !== null
+        hrmpChannelSetup = hrmpChannel.toPrimitive() !== null
+    }
 
     const lightClientLatencyIsAcceptable = bridgeStatus.ethereumToPolkadot.latencySeconds < (60 * 60 * 3) // 3 Hours
     const canSend = bridgeStatus.ethereumToPolkadot.operatingMode.outbound === 'Normal'
         && channelStatus.ethereumToPolkadot.operatingMode.outbound === 'Normal'
-        && destinationAccountExists && foreignAssetExists && lightClientLatencyIsAcceptable
-        && tokenSpendApproved && hasToken && tokenIsRegistered
+        && beneficiaryAccountExists && foreignAssetExists && lightClientLatencyIsAcceptable
+        && tokenSpendApproved && hasToken && tokenIsRegistered && destinationChainExists && hrmpChannelSetup
 
     if (canSend) {
         return {
@@ -266,14 +325,22 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
                 fee: fee,
                 sourceAddress: sourceAddress,
                 token: tokenAddress,
-                destinationChain: assetHub,
-                destinationAddress: destinationBytes32,
-                destinationMultiAddress: destinationAddress,
+                destinationParaId: destinationParaId,
+                beneficiaryAddress: beneficiaryHex,
+                beneficiaryMultiAddress: beneficiaryAddress,
                 destinationFee: destinationFee,
                 ethereumChainId: ethereumChainId,
                 amount: amount,
                 estimatedDeliverySeconds: bridgeStatus.ethereumToPolkadot.latencySeconds * 2,
                 estimatedDeliveryBlocks: bridgeStatus.ethereumToPolkadot.blockLatency * 2,
+                assetHub: {
+                    plannedAtHash: assetHubHead,
+                    paraId: assetHub,
+                },
+                bridgeHub: {
+                    plannedAtHash: bridgeHubHead,
+                    paraId: bridgeHubParaId.toPrimitive() as number,
+                },
             }
         }
     } else {
@@ -281,7 +348,7 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
             failure: {
                 bridgeOperational: bridgeStatus.ethereumToPolkadot.operatingMode.outbound === 'Normal' && bridgeStatus.ethereumToPolkadot.operatingMode.beacon === 'Normal',
                 channelOperational: channelStatus.ethereumToPolkadot.operatingMode.outbound === 'Normal',
-                destinationAccountExists: destinationAccountExists,
+                beneficiaryAccountExists: beneficiaryAccountExists,
                 existentialDeposit: existentialDeposit,
                 foreignAssetExists: foreignAssetExists,
                 tokenIsRegistered: tokenIsRegistered,
@@ -292,6 +359,8 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
                 tokenSpendAllowance: allowance,
                 lightClientLatencyIsAcceptable: lightClientLatencyIsAcceptable,
                 lightClientLatencySeconds: bridgeStatus.ethereumToPolkadot.latencySeconds,
+                destinationChainExists: destinationChainExists,
+                hrmpChannelSetup: hrmpChannelSetup,
             }
         }
     }
@@ -305,11 +374,17 @@ export type SendTokenResult = {
             transactionHash: string,
             events: LogDescription[],
         },
-        bridgeHubEvents?: Codec,
-        assetHubEvents?: Codec,
-        lastBeaconUpdate?: {
-            createdAtHash?: `0x${string}`;
-            blockNumber: number;
+        bridgeHub: {
+            submittedAtHash: BlockHash,
+            beaconUpdate?: {
+                createdAtHash?: `0x${string}`,
+                blockNumber: number,
+            },
+            events?: Codec,
+        }
+        assetHub: {
+            submittedAtHash: BlockHash,
+            events?: Codec,
         },
         channelId: string,
         nonce: bigint,
@@ -328,11 +403,18 @@ export const doSendToken = async (context: Context, signer: Signer, plan: SendTo
     if (plan.success.sourceAddress !== await signer.getAddress()) {
         throw new Error('Invalid signer')
     }
+
+    // Get current heads to make tracking easier.
+    const [assetHubHead, bridgeHubHead] = await Promise.all([
+        context.polkadot.api.assetHub.rpc.chain.getFinalizedHead(),
+        context.polkadot.api.bridgeHub.rpc.chain.getFinalizedHead(),
+    ])
+
     const contract = IGateway__factory.connect(context.config.appContracts.gateway, signer)
     const response = await contract.sendToken(
         plan.success.token,
-        plan.success.destinationChain,
-        plan.success.destinationMultiAddress,
+        plan.success.destinationParaId,
+        plan.success.beneficiaryMultiAddress,
         plan.success.destinationFee,
         plan.success.amount,
         {
@@ -371,6 +453,12 @@ export const doSendToken = async (context: Context, signer: Signer, plan: SendTo
                 transactionHash: receipt.hash,
                 events: events,
             },
+            assetHub: {
+                submittedAtHash: assetHubHead
+            },
+            bridgeHub: {
+                submittedAtHash: bridgeHubHead
+            },
             channelId: messageAccepted?.args[0],
             nonce: messageAccepted?.args[1],
             messageId: messageAccepted?.args[2],
@@ -379,102 +467,122 @@ export const doSendToken = async (context: Context, signer: Signer, plan: SendTo
     }
 }
 
-export async function* trackSendToken(context: Context, result: SendTokenResult, beaconUpdateTimeout = 10, scanBlocks = 100): AsyncGenerator<string> {
-    if (result.failure || !result.success) {
-        throw new Error('Plan failed')
+export async function* trackSendToken(context: Context, result: SendTokenResult, beaconUpdateTimeout = 10, scanBlocks = 200): AsyncGenerator<string> {
+    if (result.failure || !result.success || !result.success.plan.success) {
+        throw new Error('Send failed')
     }
 
-    // Wait for light client
-    let ethereumBlockNumber = result.success.ethereum.blockNumber
-    let beaconUpdates = context.polkadot.api.bridgeHub.rx.query.ethereumBeaconClient.latestExecutionState()
-    let lastBeaconUpdate = await lastValueFrom(
-        beaconUpdates.pipe(
-            rxmap(beaconUpdate => {
-                const update = beaconUpdate.toPrimitive() as { blockNumber: number }
-                return { createdAtHash: beaconUpdate.createdAtHash?.toHex(), blockNumber: update.blockNumber}
-            }),
-            take(beaconUpdateTimeout),
-            takeWhile(({blockNumber}) => ethereumBlockNumber > blockNumber),
-            tap(({createdAtHash, blockNumber}) => console.log(`Bridge Hub block ${createdAtHash}: Beacon client ${ethereumBlockNumber - blockNumber} blocks behind.`)),
-        ),
-        { defaultValue: undefined }
-    )
+    if (result.success.bridgeHub.beaconUpdate === undefined) {
+        // Wait for light client
+        const ethereumBlockNumber = result.success.ethereum.blockNumber
+        const lastBeaconUpdate = await lastValueFrom(
+            context.polkadot.api.bridgeHub.rx.query.ethereumBeaconClient.latestExecutionState().pipe(
+                rxmap(beaconUpdate => {
+                    const update = beaconUpdate.toPrimitive() as { blockNumber: number }
+                    return { createdAtHash: beaconUpdate.createdAtHash?.toHex(), blockNumber: update.blockNumber }
+                }),
+                take(beaconUpdateTimeout),
+                takeWhile(({ blockNumber }) => ethereumBlockNumber > blockNumber),
+                tap(({ createdAtHash, blockNumber }) => console.log(`Bridge Hub block ${createdAtHash}: Beacon client ${ethereumBlockNumber - blockNumber} blocks behind.`)),
+            ),
+            { defaultValue: undefined }
+        )
 
-    if (lastBeaconUpdate === undefined) {
-        throw new Error('Timeout waiting for light client to include block')
+        if (lastBeaconUpdate === undefined) {
+            throw new Error('Timeout waiting for light client to include block')
+        }
+        result.success.bridgeHub.beaconUpdate = lastBeaconUpdate
     }
-    result.success.lastBeaconUpdate = lastBeaconUpdate
-    yield `Included by light client in Bridge Hub block ${lastBeaconUpdate.createdAtHash}. Waiting for message delivery to Bridge Hub.`
+    yield `Included by light client in Bridge Hub block ${result.success.bridgeHub.beaconUpdate?.createdAtHash}. Waiting for message delivery to Bridge Hub.`
 
-    // Wait for nonce
-    let bridgeHubEvents = await firstValueFrom(
-        context.polkadot.api.bridgeHub.rx.query.system.events().pipe(
-            take(scanBlocks),
-            tap((events) => console.log(`Waiting for Bridge Hub inbound message block ${events.createdAtHash?.toHex()}.`)),
-            filter(events => {
-                let events_iter: any = events
-                for (const event of events_iter) {
-                    let eventData = (event.event.toHuman() as any).data
-                    if (context.polkadot.api.bridgeHub.events.ethereumInboundQueue.MessageReceived.is(event.event)
-                        && eventData.nonce === result.success?.nonce.toString()
-                        && eventData.messageId.toLowerCase() === result.success?.messageId.toLowerCase()
-                        && eventData.channelId.toLowerCase() === result.success?.channelId.toLowerCase()) {
+    if (result.success.bridgeHub.events === undefined) {
+        // Wait for nonce
+        const receivedEvents = await firstValueFrom(
+            context.polkadot.api.bridgeHub.rx.query.system.events().pipe(
+                take(scanBlocks),
+                tap((events) => console.log(`Waiting for Bridge Hub inbound message block ${events.createdAtHash?.toHex()}.`)),
+                filter(events => {
+                    let events_iter: any = events
+                    for (const event of events_iter) {
+                        let eventData = (event.event.toHuman() as any).data
+                        if (context.polkadot.api.bridgeHub.events.ethereumInboundQueue.MessageReceived.is(event.event)
+                            && eventData.nonce === result.success?.nonce.toString()
+                            && eventData.messageId.toLowerCase() === result.success?.messageId.toLowerCase()
+                            && eventData.channelId.toLowerCase() === result.success?.channelId.toLowerCase()) {
 
-                        return true
+                            return true
+                        }
                     }
-                }
-                return false
-            }),
-        ),
-        { defaultValue: undefined }
-    )
-    console.log(bridgeHubEvents?.toHuman())
-    if(bridgeHubEvents === undefined) {
-        throw Error('Timeout while waiting for Bridge Hub delivery.')
+                    return false
+                }),
+            ),
+            { defaultValue: undefined }
+        )
+        console.log(receivedEvents?.toHuman())
+        if (receivedEvents === undefined) {
+            throw Error('Timeout while waiting for Bridge Hub delivery.')
+        }
+        result.success.bridgeHub.events = receivedEvents
     }
-    result.success.bridgeHubEvents = bridgeHubEvents
 
     // TODO: Expect extrinsic success 
-    yield `Message delivered to Bridge Hub block ${bridgeHubEvents?.createdAtHash?.toHex()}. Waiting for message delivery to Asset Hub.`
+    yield `Message delivered to Bridge Hub block ${result.success.bridgeHub.events?.createdAtHash?.toHex()}. Waiting for message delivery to Asset Hub.`
 
-    let assetHubEvents = await firstValueFrom(
-        context.polkadot.api.assetHub.rx.query.system.events().pipe(
-            take(scanBlocks),
-            tap((events) => console.log(`Waiting for Asset Hub inbound message block ${events.createdAtHash?.toHex()}.`)),
-            filter(events => {
-                let foundMessageQueue = false
-                let foundAssetsIssued = false
-                let events_iter: any = events
-                for (const event of events_iter) {
-                    let eventData = (event.event.toPrimitive() as any).data
-                    if (context.polkadot.api.assetHub.events.messageQueue.Processed.is(event.event)
-                        && eventData[0].toLowerCase() === result.success?.messageId.toLowerCase()
-                        // TODO: Check bridgehub para id.
-                        && eventData[1]?.sibling === 1013) {
+    if (result.success.assetHub.events === undefined) {
+        let issuedTo = result.success.plan.success.beneficiaryAddress
+        if(result.success.plan.success.assetHub.paraId !== result.success.plan.success.destinationParaId) {
+            issuedTo = paraIdToSovereignAccount("sibl", result.success.plan.success.destinationParaId)
+        } 
+        let receivedEvents = await firstValueFrom(
+            context.polkadot.api.assetHub.rx.query.system.events().pipe(
+                take(scanBlocks),
+                tap((events) => console.log(`Waiting for Asset Hub inbound message block ${events.createdAtHash?.toHex()}.`)),
+                filter(events => {
+                    let foundMessageQueue = false
+                    let foundAssetsIssued = false
+                    let events_iter: any = events
+                    for (const event of events_iter) {
+                        let eventData = (event.event.toPrimitive() as any).data
+                        if (context.polkadot.api.assetHub.events.messageQueue.Processed.is(event.event)
+                            && eventData[0].toLowerCase() === result.success?.messageId.toLowerCase()
+                            && eventData[1]?.sibling === result.success?.plan.success?.bridgeHub.paraId) {
 
-                        foundMessageQueue = true
+                            foundMessageQueue = true
+                        }
+                        if (context.polkadot.api.assetHub.events.foreignAssets.Issued.is(event.event)
+                            && eventData[2].toString() === result.success?.plan.success?.amount.toString()
+                            && u8aToHex(decodeAddress(eventData[1])).toLowerCase() === issuedTo.toLowerCase()
+                            && eventData[0]?.parents === 2
+                            && eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() === result.success?.plan.success?.ethereumChainId.toString()
+                            && eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() === result.success?.plan.success?.token.toLowerCase()) {
+
+                            foundAssetsIssued = true
+                        }
                     }
-                    if (context.polkadot.api.assetHub.events.foreignAssets.Issued.is(event.event)
-                        && eventData[2].toString() === result.success?.plan.success?.amount.toString()
-                        && u8aToHex(decodeAddress(eventData[1])).toLowerCase() === result.success?.plan.success?.destinationAddress.toLowerCase()
-                        && eventData[0]?.parents === 2
-                        && eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() === result.success?.plan.success?.ethereumChainId.toString()
-                        && eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() === result.success?.plan.success?.token.toLowerCase()) {
+                    return foundMessageQueue && foundAssetsIssued
+                }),
+            ),
+            { defaultValue: undefined }
+        )
 
-                        foundAssetsIssued = true
-                    }
-                }
-                return foundMessageQueue && foundAssetsIssued
-            }),
-        ),
-        { defaultValue: undefined }
-    )
-
-    console.log(assetHubEvents?.toHuman())
-    if(assetHubEvents === undefined) {
-        throw Error('Timeout while waiting for Asset Hub delivery.')
+        console.log(receivedEvents?.toHuman())
+        if (receivedEvents === undefined) {
+            throw Error('Timeout while waiting for Asset Hub delivery.')
+        }
+        // TODO: Expect extrinsic success
+        result.success.assetHub.events = receivedEvents
     }
-    // TODO: Expect extrinsic success
-    result.success.assetHubEvents = assetHubEvents
-    yield 'Transfer complete.'
+    yield `Message delivered to Asset Hub block ${result.success.assetHub.events?.createdAtHash?.toHex()}. Transfer complete.`
+}
+
+export const paraIdToSovereignAccount = (type: 'para' | 'sibl', paraId: number): string => {
+    let typeEncoded = stringToU8a(type);
+    let paraIdEncoded = bnToU8a(paraId);
+    let zeroPadding = new Uint8Array(32 - typeEncoded.length - paraIdEncoded.length).fill(0);
+    let address = new Uint8Array([...typeEncoded, ...paraIdEncoded, ...zeroPadding]);
+    return u8aToHex(address)
+}
+
+export const paraIdToChannelId = (paraId: number) => {
+    const s = "sibl";
 }
