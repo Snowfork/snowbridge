@@ -10,6 +10,7 @@ let config = {
   BRIDGE_HUB_WS_URL: 'ws://127.0.0.1:11144',
   GATEWAY_CONTRACT: '0xEDa338E4dC46038493b885327842fD3E301CaB39',
   BEEFY_CONTRACT: '0x992B9df075935E522EC7950F37eC8557e86f6fdb',
+  ASSET_HUB_PARAID: 1000,
 }
 if (process.env.NODE_ENV === 'production') {
   config = {
@@ -19,6 +20,7 @@ if (process.env.NODE_ENV === 'production') {
     BRIDGE_HUB_WS_URL: 'wss://rococo-bridge-hub-rpc.polkadot.io',
     GATEWAY_CONTRACT: '0x5b4909ce6ca82d2ce23bd46738953c7959e710cd',
     BEEFY_CONTRACT: '0x27e5e17ac995d3d720c311e1e9560e28f5855fb1',
+    ASSET_HUB_PARAID: 1000,
   }
 }
 
@@ -37,8 +39,11 @@ type TransferInfo = {
   beneficiary: string,
   amount: bigint,
   transferInProgress: boolean,
+  destinationChain: number,
+  destinationFee: bigint
   result?: SendTokenResult,
 }
+
 
 function MyForm() {
   let [walletInfo, setWalletInfo] = useState<WalletInfo>({
@@ -50,6 +55,8 @@ function MyForm() {
     beneficiary: '',
     amount: BigInt(0),
     transferInProgress: false,
+    destinationFee: BigInt(0),
+    destinationChain: config.ASSET_HUB_PARAID
   })
   let [errors, setErrors] = useState<string[]>([]);
   let [statusUpdates, setStatusUpdates] = useState<string[]>([]);
@@ -107,7 +114,9 @@ function MyForm() {
           walletInfo.signer,
           transferInfo.beneficiary,
           transferInfo.tokenAddress,
-          transferInfo.amount
+          transferInfo.destinationChain,
+          transferInfo.amount,
+          transferInfo.destinationFee
         );
         if (plan.failure) {
           let errors: string[] = []
@@ -177,6 +186,21 @@ function MyForm() {
             required
             name='amount'
             value={transferInfo.amount.toString()}
+            onChange={handleChange} />
+          <label>Destination Parachain:</label>
+          <input type='number'
+            placeholder='1000'
+            required
+            name='destinationChain'
+            value={transferInfo.destinationChain.toString()}
+            onChange={handleChange} />
+          <label>Destination Fee:</label>
+          <input
+            type='number'
+            placeholder='0'
+            required
+            name='destinationFee'
+            value={transferInfo.destinationFee.toString()}
             onChange={handleChange} />
           <button disabled={transferInfo.transferInProgress} type='submit'>Send</button>
           <p hidden={transferInfo.result === undefined} style={{ gridColumn: 'span 2' }}>TxHash: {transferInfo.result?.success?.ethereum.transactionHash}</p>
