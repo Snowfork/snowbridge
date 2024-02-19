@@ -12,7 +12,7 @@ export const paraIdToSovereignAccount = (type: 'para' | 'sibl', paraId: number):
 
 export const paraIdToChannelId = (paraId: number): string => {
     const typeEncoded = stringToU8a('para')
-    const paraIdEncoded = bnToU8a(paraId, {bitLength: 32, isLe:false})
+    const paraIdEncoded = bnToU8a(paraId, { bitLength: 32, isLe: false })
     const joined = new Uint8Array([...typeEncoded, ...paraIdEncoded])
     const channelId = keccak256AsU8a(joined)
     return u8aToHex(channelId)
