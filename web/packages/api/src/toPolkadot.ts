@@ -10,7 +10,7 @@ import { Context } from './index'
 import { channelStatusInfo, bridgeStatusInfo } from './status'
 import { paraIdToSovereignAccount } from './utils'
 
-export type SendTokenPlan = {
+export type SendValidationResult = {
     success?: {
         ethereumChainId: bigint,
         fee: bigint,
@@ -51,7 +51,7 @@ export type SendTokenPlan = {
     }
 }
 
-export const planSendToken = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint): Promise<SendTokenPlan> => {
+export const validateSend = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint): Promise<SendValidationResult> => {
     // TODO: Convert parachain to channel id
     const ASSET_HUB_CHANNEL_ID = '0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539'
 
@@ -211,7 +211,7 @@ export const planSendToken = async (context: Context, source: ethers.Addressable
     }
 }
 
-export type SendTokenResult = {
+export type SendResult = {
     success?: {
         ethereum: {
             blockNumber: number,
@@ -234,14 +234,14 @@ export type SendTokenResult = {
         channelId: string,
         nonce: bigint,
         messageId: string,
-        plan: SendTokenPlan,
+        plan: SendValidationResult,
     }
     failure?: {
         receipt: ContractTransactionReceipt
     }
 }
 
-export const doSendToken = async (context: Context, signer: Signer, plan: SendTokenPlan, confirmations = 1): Promise<SendTokenResult> => {
+export const send = async (context: Context, signer: Signer, plan: SendValidationResult, confirmations = 1): Promise<SendResult> => {
     if (plan.failure || !plan.success) {
         throw new Error('Plan failed')
     }
@@ -312,7 +312,7 @@ export const doSendToken = async (context: Context, signer: Signer, plan: SendTo
     }
 }
 
-export async function* trackSendToken(context: Context, result: SendTokenResult, beaconUpdateTimeout = 10, scanBlocks = 200): AsyncGenerator<string> {
+export async function* trackSendProgress(context: Context, result: SendResult, beaconUpdateTimeout = 10, scanBlocks = 200): AsyncGenerator<string> {
     if (result.failure || !result.success || !result.success.plan.success) {
         throw new Error('Send failed')
     }

@@ -41,7 +41,7 @@ type TransferInfo = {
   transferInProgress: boolean,
   destinationChain: number,
   destinationFee: bigint
-  result?: toPolkadot.SendTokenResult,
+  result?: toPolkadot.SendResult,
 }
 
 
@@ -110,7 +110,7 @@ function MyForm() {
       setTransferInfo({ ...transferInfo, result: undefined, transferInProgress: false })
 
       try {
-        const plan = await toPolkadot.planSendToken(walletInfo.context,
+        const plan = await toPolkadot.validateSend(walletInfo.context,
           walletInfo.signer,
           transferInfo.beneficiary,
           transferInfo.tokenAddress,
@@ -135,7 +135,7 @@ function MyForm() {
         setTransferInfo({ ...transferInfo, result: undefined, transferInProgress: true })
         statusUpdates.push('Submitting...')
         setStatusUpdates(statusUpdates)
-        const result = await toPolkadot.doSendToken(walletInfo.context, walletInfo.signer, plan)
+        const result = await toPolkadot.send(walletInfo.context, walletInfo.signer, plan)
         if (result.failure) {
           setErrors(['Transaction failed ' + result.failure.receipt])
         } else {
@@ -143,7 +143,7 @@ function MyForm() {
           statusUpdates[0] = `Transaction submitted ${result.success?.ethereum.transactionHash}.`
             + `Waiting for block ${result.success?.ethereum.blockNumber.toString()} to be included by the light client.`
           setStatusUpdates(statusUpdates)
-          for await (const update of toPolkadot.trackSendToken(walletInfo.context, result)) {
+          for await (const update of toPolkadot.trackSendProgress(walletInfo.context, result)) {
             statusUpdates.push(update)
             setStatusUpdates(statusUpdates)
           }
