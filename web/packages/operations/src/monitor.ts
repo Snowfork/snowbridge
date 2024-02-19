@@ -1,7 +1,6 @@
 
-import { channelStatusInfo, contextFactory, bridgeStatusInfo, planSendToken, doSendToken, trackSendToken } from '@snowbridge/api'
-import { Wallet, ethers } from 'ethers'
-import { update } from 'lodash'
+import { channelStatusInfo, contextFactory, bridgeStatusInfo, toPolkadot } from '@snowbridge/api'
+import { Wallet } from 'ethers'
 
 const ETHEREUM_WS_API = 'ws://127.0.0.1:8546'
 const RELAY_CHAIN_WS_URL = 'ws://127.0.0.1:9944'
@@ -40,11 +39,11 @@ const monitor = async () => {
     console.log('Secondary Governance Channel:', secondary_gov)
 
     const signer = new Wallet('0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342', context.ethereum.api)
-    const plan = await planSendToken(context, signer, '5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL', WETH_CONTRACT, 2000, BigInt(1000), BigInt(4_000_000_000))
+    const plan = await toPolkadot.planSendToken(context, signer, '5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL', WETH_CONTRACT, 2000, BigInt(1000), BigInt(4_000_000_000))
     console.log('Plan:', plan)
-    const result = await doSendToken(context, signer, plan)
+    const result = await toPolkadot.doSendToken(context, signer, plan)
     console.log('Execute:', result)
-    for await (const update of trackSendToken(context, result)) {
+    for await (const update of toPolkadot.trackSendToken(context, result)) {
         console.log(update)
     }
 }
