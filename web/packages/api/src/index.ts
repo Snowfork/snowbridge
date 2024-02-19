@@ -2,7 +2,6 @@
 import { ApiPromise, WsProvider } from '@polkadot/api'
 import { ethers } from 'ethers'
 import { BeefyClient, BeefyClient__factory, IGateway, IGateway__factory } from '@snowbridge/contract-types'
-import { bnToU8a, stringToU8a, u8aToHex } from '@polkadot/util'
 
 interface Config {
     ethereum: {
