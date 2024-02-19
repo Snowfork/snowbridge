@@ -18,8 +18,8 @@ import {
     MultiAddress,
     Ticket,
     Costs,
-    TransactMessage,
-    OriginKind
+    OriginKind,
+    Weight
 } from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
@@ -623,16 +623,20 @@ contract Gateway is IGateway, IInitializable {
     }
 
     /// @inheritdoc IGateway
-    function transact(ParaID destinationChain, TransactMessage calldata message) external payable {
-        if (message.validate() == false) {
+    function transact(
+        ParaID destinationChain,
+        OriginKind originKind,
+        uint128 fee,
+        Weight calldata weightAtMost,
+        bytes calldata call
+    ) external payable {
+        if (call.length == 0 || fee == 0 || weightAtMost.refTime == 0 || weightAtMost.proofSize == 0) {
             revert InvalidTransact();
         }
         Ticket memory ticket;
         Costs memory costs;
-        costs.foreign = message.fee;
-        bytes memory payload = SubstrateTypes.Transact(
-            msg.sender, message.originKind.encode(), message.fee, message.weightAtMost, message.call
-        );
+        costs.foreign = fee;
+        bytes memory payload = SubstrateTypes.Transact(msg.sender, originKind.encode(), fee, weightAtMost, call);
         ticket.dest = destinationChain;
         ticket.costs = costs;
         ticket.payload = payload;

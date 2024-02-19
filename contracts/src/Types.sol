@@ -131,22 +131,3 @@ function encode(OriginKind kind) pure returns (bytes1 result) {
     }
     return result;
 }
-
-using {validate} for TransactMessage global;
-
-struct TransactMessage {
-    OriginKind originKind;
-    uint128 fee;
-    Weight weightAtMost;
-    bytes call;
-}
-
-function validate(TransactMessage calldata message) pure returns (bool) {
-    if (
-        message.call.length == 0 || message.fee == 0 || message.weightAtMost.refTime == 0
-            || message.weightAtMost.proofSize == 0
-    ) {
-        return false;
-    }
-    return true;
-}

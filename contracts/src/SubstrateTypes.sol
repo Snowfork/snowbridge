@@ -3,7 +3,7 @@
 pragma solidity 0.8.23;
 
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
-import {ParaID, TransactMessage, Weight, OriginKind} from "./Types.sol";
+import {ParaID, Weight, OriginKind} from "./Types.sol";
 
 /**
  * @title SCALE encoders for common Substrate types

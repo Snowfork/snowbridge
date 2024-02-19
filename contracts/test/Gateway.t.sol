@@ -43,7 +43,6 @@ import {
     Command,
     multiAddressFromBytes32,
     multiAddressFromBytes20,
-    TransactMessage,
     Weight,
     OriginKind
 } from "../src/Types.sol";
@@ -844,22 +843,22 @@ contract GatewayTest is Test {
      * Transact
      */
     function testTransactFromXcmOrigin() public {
-        TransactMessage memory message = TransactMessage(OriginKind.Xcm, 1, Weight(1, 1), bytes("0x1"));
-        bytes memory payload = SubstrateTypes.Transact(account1, 0x03, message.fee, message.weightAtMost, message.call);
+        bytes memory payload = SubstrateTypes.Transact(account1, 0x03, 1, Weight(1, 1), bytes("0x1"));
         console.logBytes(payload);
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(penpalParaID.into(), 1, messageID, payload);
         hoax(address(account1));
-        IGateway(address(gateway)).transact{value: 1 ether}(penpalParaID, message);
+        IGateway(address(gateway)).transact{value: 1 ether}(penpalParaID, OriginKind.Xcm, 1, Weight(1, 1), bytes("0x1"));
     }
 
     function testTransactFromSignedOrigin() public {
-        TransactMessage memory message = TransactMessage(OriginKind.SovereignAccount, 1, Weight(1, 1), bytes("0x1"));
-        bytes memory payload = SubstrateTypes.Transact(account1, 0x01, message.fee, message.weightAtMost, message.call);
+        bytes memory payload = SubstrateTypes.Transact(account1, 0x01, 1, Weight(1, 1), bytes("0x1"));
         console.logBytes(payload);
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(penpalParaID.into(), 1, messageID, payload);
         hoax(address(account1));
-        IGateway(address(gateway)).transact{value: 1 ether}(penpalParaID, message);
+        IGateway(address(gateway)).transact{value: 1 ether}(
+            penpalParaID, OriginKind.SovereignAccount, 1, Weight(1, 1), bytes("0x1")
+        );
     }
 }

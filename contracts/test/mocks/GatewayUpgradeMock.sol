@@ -10,7 +10,8 @@ import {
     Command,
     ChannelID,
     MultiAddress,
-    TransactMessage
+    OriginKind,
+    Weight
 } from "../../src/Types.sol";
 import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
@@ -71,5 +72,11 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         return (convert(0), uint128(0));
     }
 
-    function transact(ParaID destinationChain, TransactMessage calldata message) external payable {}
+    function transact(
+        ParaID destinationChain,
+        OriginKind originKind,
+        uint128 fee,
+        Weight calldata weightAtMost,
+        bytes calldata call
+    ) external payable {}
 }
