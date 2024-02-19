@@ -6,7 +6,9 @@ import { BlockHash } from '@polkadot/types/interfaces'
 import { isHex, u8aToHex } from '@polkadot/util'
 import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethers'
 import { IGateway__factory, IERC20__factory } from '@snowbridge/contract-types'
-import { Context, channelStatusInfo, bridgeStatusInfo, paraIdToSovereignAccount } from './index'
+import { Context } from './index'
+import { channelStatusInfo, bridgeStatusInfo } from './status'
+import { paraIdToSovereignAccount } from './utils'
 
 export type SendTokenPlan = {
     success?: {

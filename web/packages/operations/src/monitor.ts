@@ -1,5 +1,5 @@
 
-import { channelStatusInfo, contextFactory, bridgeStatusInfo, toPolkadot } from '@snowbridge/api'
+import { contextFactory, toPolkadot, status } from '@snowbridge/api'
 import { Wallet } from 'ethers'
 
 const ETHEREUM_WS_API = 'ws://127.0.0.1:8546'
@@ -29,14 +29,14 @@ const monitor = async () => {
         },
     })
 
-    const status = await bridgeStatusInfo(context)
-    console.log('Bridge Status:', status)
-    const assethub = await channelStatusInfo(context, ASSET_HUB_CHANNEL_ID)
+    const bridegStatus = await status.bridgeStatusInfo(context)
+    console.log('Bridge Status:', bridegStatus)
+    const assethub = await status.channelStatusInfo(context, ASSET_HUB_CHANNEL_ID)
     console.log('Asset Hub Channel:', assethub)
-    const primary_gov = await channelStatusInfo(context, PRIMARY_GOVERNANCE_CHANNEL_ID)
-    console.log('Primary Governance Channel:', primary_gov)
-    const secondary_gov = await channelStatusInfo(context, SECONDARY_GOVERNANCE_CHANNEL_ID)
-    console.log('Secondary Governance Channel:', secondary_gov)
+    const primaryGov = await status.channelStatusInfo(context, PRIMARY_GOVERNANCE_CHANNEL_ID)
+    console.log('Primary Governance Channel:', primaryGov)
+    const secondaryGov = await status.channelStatusInfo(context, SECONDARY_GOVERNANCE_CHANNEL_ID)
+    console.log('Secondary Governance Channel:', secondaryGov)
 
     const signer = new Wallet('0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342', context.ethereum.api)
     const plan = await toPolkadot.planSendToken(context, signer, '5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL', WETH_CONTRACT, 2000, BigInt(1000), BigInt(4_000_000_000))
