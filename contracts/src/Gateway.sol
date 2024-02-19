@@ -635,11 +635,16 @@ contract Gateway is IGateway, IInitializable {
         }
         Ticket memory ticket;
         Costs memory costs;
-        costs.foreign = fee;
         bytes memory payload = SubstrateTypes.Transact(msg.sender, originKind.encode(), fee, weightAtMost, call);
         ticket.dest = destinationChain;
         ticket.costs = costs;
         ticket.payload = payload;
         _submitOutbound(ticket);
+    }
+
+    /// @inheritdoc IGateway
+    function quoteTransactFee() external view returns (uint256) {
+        PricingStorage.Layout storage pricing = PricingStorage.layout();
+        return _convertToNative(pricing.exchangeRate, pricing.deliveryCost);
     }
 }

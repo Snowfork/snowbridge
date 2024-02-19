@@ -79,4 +79,8 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         Weight calldata weightAtMost,
         bytes calldata call
     ) external payable {}
+
+    function quoteTransactFee() external pure returns (uint256) {
+        return 1;
+    }
 }

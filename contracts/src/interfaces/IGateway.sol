@@ -114,4 +114,7 @@ interface IGateway {
         Weight calldata weightAtMost,
         bytes calldata call
     ) external payable;
+
+    /// @dev Quote a fee in Ether for transact
+    function quoteTransactFee() external view returns (uint256);
 }
