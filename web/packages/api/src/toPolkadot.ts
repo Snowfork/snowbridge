@@ -8,7 +8,7 @@ import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethe
 import { IGateway__factory, IERC20__factory } from '@snowbridge/contract-types'
 import { Context } from './index'
 import { channelStatusInfo, bridgeStatusInfo } from './status'
-import { paraIdToSovereignAccount } from './utils'
+import { paraIdToSovereignAccount, paraIdToChannelId } from './utils'
 
 export type SendValidationResult = {
     success?: {
@@ -52,9 +52,6 @@ export type SendValidationResult = {
 }
 
 export const validateSend = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint): Promise<SendValidationResult> => {
-    // TODO: Convert parachain to channel id
-    const ASSET_HUB_CHANNEL_ID = '0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539'
-
     const [sourceAddress, gatewayAddress] = await Promise.all([
         source.getAddress(),
         context.ethereum.contracts.gateway.getAddress()
@@ -77,8 +74,20 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
     }
     const hasToken = tokenBalance >= amount
 
+    const [assetHubHead, assetHubParaId, bridgeHubHead, bridgeHubParaId] = await Promise.all([
+        context.polkadot.api.assetHub.rpc.chain.getFinalizedHead(),
+        context.polkadot.api.assetHub.query.parachainInfo.parachainId(),
+        context.polkadot.api.bridgeHub.rpc.chain.getFinalizedHead(),
+        context.polkadot.api.bridgeHub.query.parachainInfo.parachainId(),
+    ])
+
+    // Destination account exists.
+    const assetHub = assetHubParaId.toPrimitive() as number;
+    const assetHubChannelId = paraIdToChannelId(assetHub)
+    console.log('AAAAAAA', assetHubChannelId)
+
     const [channelStatus, bridgeStatus, ethereumNetwork, tokenIsRegistered] = await Promise.all([
-        channelStatusInfo(context, ASSET_HUB_CHANNEL_ID),
+        channelStatusInfo(context, assetHubChannelId),
         bridgeStatusInfo(context),
         context.ethereum.api.getNetwork(),
         context.ethereum.contracts.gateway.isTokenRegistered(tokenAddress)
@@ -131,15 +140,6 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
         }
     }
 
-    const [assetHubHead, assetHubParaId, bridgeHubHead, bridgeHubParaId] = await Promise.all([
-        context.polkadot.api.assetHub.rpc.chain.getFinalizedHead(),
-        context.polkadot.api.assetHub.query.parachainInfo.parachainId(),
-        context.polkadot.api.bridgeHub.rpc.chain.getFinalizedHead(),
-        context.polkadot.api.bridgeHub.query.parachainInfo.parachainId(),
-    ])
-
-    // Destination account exists.
-    const assetHub = assetHubParaId.toPrimitive() as number;
     let beneficiaryAccountExists = true
     let destinationChainExists = true
     let hrmpChannelSetup = true
@@ -158,9 +158,10 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
         hrmpChannelSetup = hrmpChannel.toPrimitive() !== null
     }
 
-    const lightClientLatencyIsAcceptable = bridgeStatus.ethereumToPolkadot.latencySeconds < (60 * 60 * 3) // 3 Hours
-    const canSend = bridgeStatus.ethereumToPolkadot.operatingMode.outbound === 'Normal'
-        && channelStatus.ethereumToPolkadot.operatingMode.outbound === 'Normal'
+    // TODO: Make acceptable latency configurable.
+    const lightClientLatencyIsAcceptable = bridgeStatus.toPolkadot.latencySeconds < (60 * 60 * 3) // 3 Hours
+    const canSend = bridgeStatus.toPolkadot.operatingMode.outbound === 'Normal'
+        && channelStatus.toPolkadot.operatingMode.outbound === 'Normal'
         && beneficiaryAccountExists && foreignAssetExists && lightClientLatencyIsAcceptable
         && tokenSpendApproved && hasToken && tokenIsRegistered && destinationChainExists && hrmpChannelSetup
 
@@ -176,8 +177,8 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
                 destinationFee: destinationFee,
                 ethereumChainId: ethereumChainId,
                 amount: amount,
-                estimatedDeliverySeconds: bridgeStatus.ethereumToPolkadot.latencySeconds * 2,
-                estimatedDeliveryBlocks: bridgeStatus.ethereumToPolkadot.blockLatency * 2,
+                estimatedDeliverySeconds: bridgeStatus.toPolkadot.latencySeconds * 2,
+                estimatedDeliveryBlocks: bridgeStatus.toPolkadot.blockLatency * 2,
                 assetHub: {
                     plannedAtHash: assetHubHead,
                     paraId: assetHub,
@@ -191,8 +192,8 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
     } else {
         return {
             failure: {
-                bridgeOperational: bridgeStatus.ethereumToPolkadot.operatingMode.outbound === 'Normal' && bridgeStatus.ethereumToPolkadot.operatingMode.beacon === 'Normal',
-                channelOperational: channelStatus.ethereumToPolkadot.operatingMode.outbound === 'Normal',
+                bridgeOperational: bridgeStatus.toPolkadot.operatingMode.outbound === 'Normal' && bridgeStatus.toPolkadot.operatingMode.beacon === 'Normal',
+                channelOperational: channelStatus.toPolkadot.operatingMode.outbound === 'Normal',
                 beneficiaryAccountExists: beneficiaryAccountExists,
                 existentialDeposit: existentialDeposit,
                 foreignAssetExists: foreignAssetExists,
@@ -203,7 +204,7 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
                 tokenSpendApproved: tokenSpendApproved,
                 tokenSpendAllowance: allowance,
                 lightClientLatencyIsAcceptable: lightClientLatencyIsAcceptable,
-                lightClientLatencySeconds: bridgeStatus.ethereumToPolkadot.latencySeconds,
+                lightClientLatencySeconds: bridgeStatus.toPolkadot.latencySeconds,
                 destinationChainExists: destinationChainExists,
                 hrmpChannelSetup: hrmpChannelSetup,
             }

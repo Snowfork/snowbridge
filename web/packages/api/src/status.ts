@@ -23,7 +23,7 @@ export const bridgeStatusInfo = async (context: Context) => {
     const outboundOperatingMode = (await context.polkadot.api.bridgeHub.query.ethereumOutboundQueue.operatingMode()).toPrimitive()
 
     return {
-        polkadotToEthereum: {
+        toEthereum: {
             operatingMode: {
                 outbound: outboundOperatingMode as OperatingMode,
             },
@@ -32,7 +32,7 @@ export const bridgeStatusInfo = async (context: Context) => {
             blockLatency: beefyBlockLatency,
             latencySeconds: beefyLatencySeconds,
         },
-        ethereumToPolkadot: {
+        toPolkadot: {
             operatingMode: {
                 beacon: beaconOperatingMode as OperatingMode,
                 inbound: inboundOperatingMode as OperatingMode,
@@ -52,16 +52,16 @@ export const channelStatusInfo = async (context: Context, channelId: string) => 
     const inbound_nonce_sub = (await context.polkadot.api.bridgeHub.query.ethereumInboundQueue.nonce(channelId)).toPrimitive() as number
     const outbound_nonce_sub = (await context.polkadot.api.bridgeHub.query.ethereumOutboundQueue.nonce(channelId)).toPrimitive() as number
     return {
-        ethereumToPolkadot: {
+        toEthereum: {
+            outbound: outbound_nonce_sub,
+            inbound: Number(inbound_nonce_eth),
+        },
+        toPolkadot: {
             operatingMode: {
                 outbound: operatingMode === 0n ? 'Normal' : 'Halted' as OperatingMode
             },
             outbound: Number(outbound_nonce_eth),
             inbound: inbound_nonce_sub,
-        },
-        polkadotToEthereum: {
-            outbound: outbound_nonce_sub,
-            inbound: Number(inbound_nonce_eth),
         },
     }
 }
