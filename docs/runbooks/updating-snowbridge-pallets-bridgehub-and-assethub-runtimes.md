@@ -87,8 +87,8 @@ Configuration items to periodically configure for Snowbridge:
 
 These items would require a referenda item to be created on OpenGov.
 
-TBH Items:
+TBC Items:
 
-* Which wallet will be used to create the referenda? Snowfork team members personal wallets?
+* Which wallet will be used to create the referenda?
 * Exact steps to create referenda (e.g. extrinsic, renferenda on Polkassembly)
-* Where is the voting and enactment periods set?
+* Confirm where voting and enactment periods are set?
