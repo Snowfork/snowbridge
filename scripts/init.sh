@@ -49,3 +49,4 @@ file /tmp/geth.tar.gz
 mkdir -p $GOPATH/bin
 tar -xvf /tmp/geth.tar.gz -C $GOPATH
 cp $GOPATH/$geth_package/geth $GOPATH/bin
+geth version
