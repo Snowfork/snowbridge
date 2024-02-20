@@ -1,9 +1,6 @@
 # Snowbridge
-*[![codecov](https://codecov.io/gh/Snowfork/snowbridge/branch/main/graph/badge.svg?token=9hvgSws4rN)](https://codecov.io/gh/Snowfork/snowbridge)
+[![codecov](https://codecov.io/gh/Snowfork/snowbridge/branch/main/graph/badge.svg?token=9hvgSws4rN)](https://codecov.io/gh/Snowfork/snowbridge)
 ![GitHub](https://img.shields.io/github/license/Snowfork/snowbridge)
-
-\*Coverage for Solidity contracts only. Parachain coverage can be viewed at
-[snowfork/polkadot-sdk](https://github.com/Snowfork/polkadot-sdk/tree/snowbridge/bridges/snowbridge).
 
 Snowbridge is a trustless bridge between Polkadot and Ethereum. For documentation, visit https://docs.snowbridge.network.
 
