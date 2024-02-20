@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -eux
 
 echo "Checkout polkadot-sdk Snowfork fork"
 pushd ..
@@ -40,7 +40,8 @@ echo "Download geth to replace the nix version"
 OS=$(uname -s | tr A-Z a-z)
 MACHINE_TYPE=$(uname -m | tr A-Z a-z)
 geth_package=geth-$OS-$MACHINE_TYPE-1.13.11-8f7eb9cc
-curl https://gethstore.blob.core.windows.net/builds/$geth_package.tar.gz -o /tmp/geth.tar.gz
+curl https://gethstore.blob.core.windows.net/builds/$geth_package.tar.gz -o /tmp/geth.tar.gz || { echo 'Download failed'; exit 1; }
+file /tmp/geth.tar.gz
 mkdir -p $GOPATH/bin
 tar -xvf /tmp/geth.tar.gz -C $GOPATH
 cp $GOPATH/$geth_package/geth $GOPATH/bin
