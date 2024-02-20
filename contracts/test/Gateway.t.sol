@@ -851,13 +851,26 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).transact{value: 1 ether}(penpalParaID, OriginKind.Xcm, 1, Weight(1, 1), bytes("0x1"));
     }
 
-    function testTransactFromSignedOrigin() public {
+    function testTransactFromSovereignAccount() public {
         bytes memory payload = SubstrateTypes.Transact(account1, 0x01, 1, Weight(1, 1), bytes("0x1"));
         console.logBytes(payload);
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(penpalParaID.into(), 1, messageID, payload);
         hoax(address(account1));
         IGateway(address(gateway)).transact{value: 1 ether}(
+            penpalParaID, OriginKind.SovereignAccount, 1, Weight(1, 1), bytes("0x1")
+        );
+    }
+
+    function testTransactFromSovereignAccountWithFee() public {
+        bytes memory payload = SubstrateTypes.Transact(account1, 0x01, 1, Weight(1, 1), bytes("0x1"));
+        console.logBytes(payload);
+        uint256 fee = IGateway(address(gateway)).quoteTransactFee();
+        assertEq(fee, 2500000000000000);
+        vm.expectEmit(true, false, false, true);
+        emit IGateway.OutboundMessageAccepted(penpalParaID.into(), 1, messageID, payload);
+        hoax(address(account1));
+        IGateway(address(gateway)).transact{value: fee}(
             penpalParaID, OriginKind.SovereignAccount, 1, Weight(1, 1), bytes("0x1")
         );
     }
