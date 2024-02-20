@@ -53,7 +53,7 @@
                     gotools
                     gopls
                     go-outline
-                    gopls
+                    gocode
                     gopkgs
                     gocode-gomod
                     godef
@@ -64,7 +64,6 @@
 
                     # parachain
                     clang
-                    libcxx
                     gcc
                     libiconv
                     protobuf
@@ -89,11 +88,11 @@
                     export RUSTUP_HOME=$PWD/.rustup
                     export RUST_NIGHTLY_VERSION=nightly-2023-05-23
                     export PATH=$CARGO_HOME/bin:$PATH
-                    export PATH=${libcxx}/bin:$PATH
 
                     eval "$(direnv hook bash)"
 
                     # LIBCLANG_PATH points rocksdb to a clang.so on Linux
+                    export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
 
                     cowsay "Development Environment Ready"
                 '';
