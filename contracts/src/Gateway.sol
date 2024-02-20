@@ -626,16 +626,17 @@ contract Gateway is IGateway, IInitializable {
     function transact(
         ParaID destinationChain,
         OriginKind originKind,
-        uint128 fee,
+        uint128 destinationFee,
         Weight calldata weightAtMost,
         bytes calldata call
     ) external payable {
-        if (call.length == 0 || fee == 0 || weightAtMost.refTime == 0 || weightAtMost.proofSize == 0) {
+        if (call.length == 0 || destinationFee == 0 || weightAtMost.refTime == 0 || weightAtMost.proofSize == 0) {
             revert InvalidTransact();
         }
         Ticket memory ticket;
         Costs memory costs;
-        bytes memory payload = SubstrateTypes.Transact(msg.sender, originKind.encode(), fee, weightAtMost, call);
+        bytes memory payload =
+            SubstrateTypes.Transact(msg.sender, originKind.encode(), destinationFee, weightAtMost, call);
         ticket.dest = destinationChain;
         ticket.costs = costs;
         ticket.payload = payload;

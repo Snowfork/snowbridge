@@ -110,7 +110,7 @@ interface IGateway {
     function transact(
         ParaID destinationChain,
         OriginKind originKind,
-        uint128 fee,
+        uint128 destinationFee,
         Weight calldata weightAtMost,
         bytes calldata call
     ) external payable;
