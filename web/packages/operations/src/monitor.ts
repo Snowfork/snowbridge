@@ -37,15 +37,6 @@ const monitor = async () => {
     console.log('Primary Governance Channel:', primaryGov)
     const secondaryGov = await status.channelStatusInfo(context, SECONDARY_GOVERNANCE_CHANNEL_ID)
     console.log('Secondary Governance Channel:', secondaryGov)
-
-    const signer = new Wallet('0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342', context.ethereum.api)
-    const plan = await toPolkadot.validateSend(context, signer, '5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL', WETH_CONTRACT, 2000, BigInt(1000), BigInt(4_000_000_000))
-    console.log('Plan:', plan)
-    const result = await toPolkadot.send(context, signer, plan)
-    console.log('Execute:', result)
-    for await (const update of toPolkadot.trackSendProgress(context, result)) {
-        console.log(update)
-    }
 }
 
 
