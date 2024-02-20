@@ -48,6 +48,7 @@ import {
 import {WETH9} from "canonical-weth/WETH9.sol";
 import "./mocks/GatewayUpgradeMock.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {HelloWorld} from "./mocks/HelloWorld.sol";
 
 contract GatewayTest is Test {
     ParaID public bridgeHubParaID = ParaID.wrap(1001);
@@ -90,6 +91,8 @@ contract GatewayTest is Test {
 
     // ETH/DOT exchange rate
     UD60x18 public exchangeRate = ud60x18(0.0025e18);
+
+    event SaidHello(string indexed message);
 
     function setUp() public {
         AgentExecutor executor = new AgentExecutor();
@@ -824,5 +827,22 @@ contract GatewayTest is Test {
         );
         fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         assertEq(fee, 10000000000000000);
+    }
+
+    function testAgentExecutionTransact() public {
+        HelloWorld helloWorld = new HelloWorld();
+
+        bytes memory payload = abi.encodeWithSignature("sayHello(string)", "Clara");
+
+        AgentExecuteParams memory params = AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(helloWorld), payload, 100000))
+        });
+
+        // Expect the HelloWorld contract to emit `SaidHello`
+        vm.expectEmit(true, false, false, false);
+        emit SaidHello("Hello there, Clara");
+
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
 }
