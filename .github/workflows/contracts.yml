@@ -8,9 +8,9 @@ on:
     branches:
       - main
   pull_request:
-  #  paths:
-  #    - "contracts/**"
-  #    - "!contracts/**/README.md"
+    paths:
+      - "contracts/**"
+      - "!contracts/**/README.md"
 
 jobs:
   build:
