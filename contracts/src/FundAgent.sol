@@ -32,12 +32,15 @@ contract FundAgent is Script {
 
         bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
         bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
+        bytes32 penpalAgentID = vm.envBytes32("PENPAL_AGENT_ID");
 
         address bridgeHubAgent = IGateway(gatewayAddress).agentOf(bridgeHubAgentID);
         address assetHubAgent = IGateway(gatewayAddress).agentOf(assetHubAgentID);
+        address penpalAgent = IGateway(gatewayAddress).agentOf(penpalAgentID);
 
         payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);
+        payable(penpalAgent).safeNativeTransfer(initialDeposit);
 
         vm.stopBroadcast();
     }
