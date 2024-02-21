@@ -84,7 +84,6 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
     // Destination account exists.
     const assetHub = assetHubParaId.toPrimitive() as number;
     const assetHubChannelId = paraIdToChannelId(assetHub)
-    console.log('AAAAAAA', assetHubChannelId)
 
     const [channelStatus, bridgeStatus, ethereumNetwork, tokenIsRegistered] = await Promise.all([
         channelStatusInfo(context, assetHubChannelId),
