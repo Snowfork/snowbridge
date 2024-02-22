@@ -630,16 +630,9 @@ contract Gateway is IGateway, IInitializable {
         Weight calldata weightAtMost,
         bytes calldata call
     ) external payable {
-        if (call.length < 2 || destinationFee == 0 || weightAtMost.refTime == 0 || weightAtMost.proofSize == 0) {
-            revert InvalidTransact();
-        }
-        Ticket memory ticket;
-        Costs memory costs;
         bytes memory payload =
             SubstrateTypes.Transact(msg.sender, originKind.encode(), destinationFee, weightAtMost, call);
-        ticket.dest = destinationChain;
-        ticket.costs = costs;
-        ticket.payload = payload;
+        Ticket memory ticket = Ticket({dest: destinationChain, costs: Costs({native: 0, foreign: 0}), payload: payload});
         _submitOutbound(ticket);
     }
 
