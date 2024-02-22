@@ -845,4 +845,21 @@ contract GatewayTest is Test {
 
         GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
+
+    function testAgentExecutionTransactFail() public {
+        HelloWorld helloWorld = new HelloWorld();
+
+        bytes memory payload = abi.encodeWithSignature("revertUnauthorized()");
+
+        AgentExecuteParams memory params = AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(helloWorld), payload, 100000))
+        });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(Gateway.AgentExecutionFailed.selector, abi.encodeWithSignature("Unauthorized()"))
+        );
+
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
+    }
 }
