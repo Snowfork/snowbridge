@@ -107,7 +107,7 @@ interface IGateway {
     ) external payable;
 
     /// @dev Call transact in destinationChain
-    function transact(
+    function sendCall(
         ParaID destinationChain,
         OriginKind originKind,
         uint128 destinationFee,
@@ -116,5 +116,5 @@ interface IGateway {
     ) external payable;
 
     /// @dev Quote a fee in Ether for transact
-    function quoteTransactFee() external view returns (uint256);
+    function quoteSendCallFee() external view returns (uint256);
 }

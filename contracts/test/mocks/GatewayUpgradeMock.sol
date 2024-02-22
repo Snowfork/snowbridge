@@ -72,7 +72,7 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         return (convert(0), uint128(0));
     }
 
-    function transact(
+    function sendCall(
         ParaID destinationChain,
         OriginKind originKind,
         uint128 destinationFee,
@@ -80,7 +80,7 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         bytes calldata call
     ) external payable {}
 
-    function quoteTransactFee() external pure returns (uint256) {
+    function quoteSendCallFee() external pure returns (uint256) {
         return 1;
     }
 }

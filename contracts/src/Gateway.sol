@@ -623,7 +623,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     /// @inheritdoc IGateway
-    function transact(
+    function sendCall(
         ParaID destinationChain,
         OriginKind originKind,
         uint128 destinationFee,
@@ -637,7 +637,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     /// @inheritdoc IGateway
-    function quoteTransactFee() external view returns (uint256) {
+    function quoteSendCallFee() external view returns (uint256) {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
         return _convertToNative(pricing.exchangeRate, pricing.deliveryCost);
     }

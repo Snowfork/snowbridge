@@ -848,7 +848,7 @@ contract GatewayTest is Test {
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(penpalParaID.into(), 1, messageID, payload);
         hoax(address(account1));
-        IGateway(address(gateway)).transact{value: 1 ether}(penpalParaID, OriginKind.Xcm, 1, Weight(1, 1), bytes("0x1"));
+        IGateway(address(gateway)).sendCall{value: 1 ether}(penpalParaID, OriginKind.Xcm, 1, Weight(1, 1), bytes("0x1"));
     }
 
     function testTransactFromSovereignAccount() public {
@@ -857,7 +857,7 @@ contract GatewayTest is Test {
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(penpalParaID.into(), 1, messageID, payload);
         hoax(address(account1));
-        IGateway(address(gateway)).transact{value: 1 ether}(
+        IGateway(address(gateway)).sendCall{value: 1 ether}(
             penpalParaID, OriginKind.SovereignAccount, 1, Weight(1, 1), bytes("0x1")
         );
     }
@@ -865,12 +865,12 @@ contract GatewayTest is Test {
     function testTransactFromSovereignAccountWithFee() public {
         bytes memory payload = SubstrateTypes.Transact(account1, 0x01, 1, Weight(1, 1), bytes("0x1"));
         console.logBytes(payload);
-        uint256 fee = IGateway(address(gateway)).quoteTransactFee();
+        uint256 fee = IGateway(address(gateway)).quoteSendCallFee();
         assertEq(fee, 2500000000000000);
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(penpalParaID.into(), 1, messageID, payload);
         hoax(address(account1));
-        IGateway(address(gateway)).transact{value: fee}(
+        IGateway(address(gateway)).sendCall{value: fee}(
             penpalParaID, OriginKind.SovereignAccount, 1, Weight(1, 1), bytes("0x1")
         );
     }
