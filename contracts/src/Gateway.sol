@@ -251,10 +251,6 @@ contract Gateway is IGateway, IInitializable {
         return ERC1967.load();
     }
 
-    function beefyClient() external view returns (address) {
-        return BEEFY_CLIENT;
-    }
-
     /**
      * Handlers
      */

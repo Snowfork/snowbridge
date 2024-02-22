@@ -75,7 +75,7 @@ export const assetStatusInfo = async (context: Context, tokenAddress: string, ow
     ])
 
     const ethereumChainId = ethereumNetwork.chainId
-    const foreignAsset = (await context.polkadot.api.assetHub.query.foreignAssets.asset({
+    const multiLocation = context.polkadot.api.assetHub.createType('StagingXcmV3MultiLocation', {
         parents: 2,
         interior: {
             X2: [
@@ -83,7 +83,8 @@ export const assetStatusInfo = async (context: Context, tokenAddress: string, ow
                 { AccountKey20: { key: tokenAddress } },
             ]
         }
-    })).toPrimitive() as { status: 'Live' }
+    })
+    const foreignAsset = (await context.polkadot.api.assetHub.query.foreignAssets.asset(multiLocation)).toPrimitive() as { status: 'Live' }
 
     const tokenContract = IERC20__factory.connect(tokenAddress, context.ethereum.api)
     let ownerBalance = BigInt(0)
@@ -96,13 +97,14 @@ export const assetStatusInfo = async (context: Context, tokenAddress: string, ow
             tokenContract.allowance(owner, gatewayAddress),
         ])
         ownerBalance = tokenBalance_;
-        tokenGatewayAllowance = tokenGatewayAllowance;
+        tokenGatewayAllowance = tokenGatewayAllowance_;
     } catch {
         tokenIsValidERC20 = false
     }
 
     return {
         ethereumChainId,
+        multiLocation,
         tokenIsValidERC20,
         tokenContract,
         isTokenRegistered,
