@@ -7,8 +7,8 @@ import { isHex, u8aToHex } from '@polkadot/util'
 import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethers'
 import { IGateway__factory, IERC20__factory } from '@snowbridge/contract-types'
 import { Context } from './index'
-import { channelStatusInfo, bridgeStatusInfo } from './status'
-import { paraIdToSovereignAccount, paraIdToChannelId } from './utils'
+import { channelStatusInfo, bridgeStatusInfo, assetStatusInfo } from './status'
+import { paraIdToSovereignAccount, paraIdToChannelId, beneficiaryMultiAddress } from './utils'
 
 export type SendValidationResult = {
     success?: {
@@ -52,27 +52,20 @@ export type SendValidationResult = {
 }
 
 export const validateSend = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint): Promise<SendValidationResult> => {
-    const [sourceAddress, gatewayAddress] = await Promise.all([
-        source.getAddress(),
-        context.ethereum.contracts.gateway.getAddress()
-    ])
-    const tokenContract = IERC20__factory.connect(tokenAddress, context.ethereum.api)
-    let tokenBalance = BigInt(0)
-    let allowance = BigInt(0)
-    let tokenSpendApproved = false
-    let tokenIsValidERC20 = true
-    try {
-        const [tokenBalance_, allowance_] = await Promise.all([
-            tokenContract.balanceOf(sourceAddress),
-            tokenContract.allowance(sourceAddress, gatewayAddress),
-        ])
-        allowance = allowance_;
-        tokenBalance = tokenBalance_;
-        tokenSpendApproved = allowance >= amount
-    } catch {
-        tokenIsValidERC20 = false
+    const sourceAddress = await source.getAddress()
+
+    // Asset checks
+    const assetInfo = await assetStatusInfo(context, tokenAddress, sourceAddress)
+    const tokenSpendApproved = assetInfo.tokenGatewayAllowance >= amount
+    const hasToken = assetInfo.ownerBalance >= amount
+    const tokenIsRegistered = assetInfo.isTokenRegistered
+    const ethereumChainId = assetInfo.ethereumChainId
+    const foreignAssetExists = assetInfo.foreignAsset !== null && assetInfo.foreignAsset.status === 'Live'
+
+    let fee = BigInt(0)
+    if (tokenIsRegistered) {
+        fee = await context.ethereum.contracts.gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
     }
-    const hasToken = tokenBalance >= amount
 
     const [assetHubHead, assetHubParaId, bridgeHubHead, bridgeHubParaId] = await Promise.all([
         context.polkadot.api.assetHub.rpc.chain.getFinalizedHead(),
@@ -81,63 +74,14 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
         context.polkadot.api.bridgeHub.query.parachainInfo.parachainId(),
     ])
 
-    // Destination account exists.
     const assetHub = assetHubParaId.toPrimitive() as number;
     const assetHubChannelId = paraIdToChannelId(assetHub)
-
-    const [channelStatus, bridgeStatus, ethereumNetwork, tokenIsRegistered] = await Promise.all([
+    const [channelStatus, bridgeStatus ] = await Promise.all([
         channelStatusInfo(context, assetHubChannelId),
         bridgeStatusInfo(context),
-        context.ethereum.api.getNetwork(),
-        context.ethereum.contracts.gateway.isTokenRegistered(tokenAddress)
     ])
-    let fee = BigInt(0)
-    if (tokenIsRegistered) {
-        fee = await context.ethereum.contracts.gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
-    }
 
-    // Asset exists
-    const ethereumChainId = ethereumNetwork.chainId
-    const asset = (await context.polkadot.api.assetHub.query.foreignAssets.asset({
-        parents: 2,
-        interior: {
-            X2: [
-                { GlobalConsensus: { Ethereum: { chain_id: ethereumChainId } } },
-                { AccountKey20: { key: tokenAddress } },
-            ]
-        }
-    })).toPrimitive() as { status: 'Live' }
-    const foreignAssetExists = asset !== null && asset.status === 'Live'
-
-    const abi = ethers.AbiCoder.defaultAbiCoder()
-
-    let beneficiaryAddress: MultiAddressStruct;
-    let beneficiaryHex: string;
-    if (isHex(beneficiary)) {
-        beneficiaryHex = beneficiary
-        if (beneficiary.length === 42) {
-            // 20 byte address
-            beneficiaryAddress = {
-                kind: 2,
-                data: abi.encode(['bytes20'], [beneficiaryHex]),
-            }
-        } else if (beneficiary.length === 66) {
-            // 32 byte address
-            beneficiaryAddress = {
-                kind: 1,
-                data: abi.encode(['bytes32'], [beneficiaryHex]),
-            }
-        } else {
-            throw new Error('Unknown Beneficiary address format.')
-        }
-    } else {
-        // SS58 address
-        beneficiaryHex = u8aToHex(decodeAddress(beneficiary))
-        beneficiaryAddress = {
-            kind: 1,
-            data: abi.encode(['bytes32'], [beneficiaryHex]),
-        }
-    }
+    let { address: beneficiaryAddress, hexAddress: beneficiaryHex } = beneficiaryMultiAddress(beneficiary)
 
     let beneficiaryAccountExists = true
     let destinationChainExists = true
@@ -191,19 +135,26 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
     } else {
         return {
             failure: {
+                // Bridge Status
                 bridgeOperational: bridgeStatus.toPolkadot.operatingMode.outbound === 'Normal' && bridgeStatus.toPolkadot.operatingMode.beacon === 'Normal',
                 channelOperational: channelStatus.toPolkadot.operatingMode.outbound === 'Normal',
-                beneficiaryAccountExists: beneficiaryAccountExists,
-                existentialDeposit: existentialDeposit,
-                foreignAssetExists: foreignAssetExists,
-                tokenIsRegistered: tokenIsRegistered,
-                tokenIsValidERC20: tokenIsValidERC20,
-                hasToken: hasToken,
-                tokenBalance: tokenBalance,
-                tokenSpendApproved: tokenSpendApproved,
-                tokenSpendAllowance: allowance,
                 lightClientLatencyIsAcceptable: lightClientLatencyIsAcceptable,
                 lightClientLatencySeconds: bridgeStatus.toPolkadot.latencySeconds,
+
+                // Assets
+                foreignAssetExists: foreignAssetExists,
+                tokenIsRegistered: tokenIsRegistered,
+                tokenIsValidERC20: assetInfo.tokenIsValidERC20,
+                hasToken: hasToken,
+                tokenBalance: assetInfo.ownerBalance,
+                tokenSpendApproved: tokenSpendApproved,
+                tokenSpendAllowance: assetInfo.tokenGatewayAllowance,
+
+                // Beneficiary
+                beneficiaryAccountExists: beneficiaryAccountExists,
+                existentialDeposit: existentialDeposit,
+
+                // Destination chain
                 destinationChainExists: destinationChainExists,
                 hrmpChannelSetup: hrmpChannelSetup,
             }
