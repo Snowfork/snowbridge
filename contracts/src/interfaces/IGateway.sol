@@ -47,7 +47,6 @@ interface IGateway {
     function agentOf(bytes32 agentID) external view returns (address);
     function pricingParameters() external view returns (UD60x18, uint128);
     function implementation() external view returns (address);
-    function beefyClient() external view returns (address);
 
     /**
      * Messaging

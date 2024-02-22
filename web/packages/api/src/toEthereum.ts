@@ -13,10 +13,11 @@ export type SendValidationFailure = {
     tokenIsValidERC20: boolean,
     tokenIsRegistered: boolean,
     foreignAssetExists: boolean,
+    hasAsset: boolean
 }
 export type SendValidationResult = SendValidationSuccess | SendValidationFailure
 
-export const validateSend = async (context: Context, sourceAccount: string, tokenAddress: string): Promise<SendValidationResult> => {
+export const validateSend = async (context: Context, source: string, beneficiary: string, tokenAddress: string, amount: bigint): Promise<SendValidationResult> => {
 
     const [assetHubHead, assetHubParaId, bridgeHubHead, bridgeHubParaId] = await Promise.all([
         context.polkadot.api.assetHub.rpc.chain.getFinalizedHead(),
@@ -37,22 +38,28 @@ export const validateSend = async (context: Context, sourceAccount: string, toke
     const bridgeOperational = bridgeStatus.toPolkadot.operatingMode.outbound === 'Normal' && bridgeStatus.toPolkadot.operatingMode.beacon === 'Normal'
     const channelOperational = channelStatus.toPolkadot.operatingMode.outbound === 'Normal'
     const lightClientLatencyIsAcceptable = bridgeStatus.toEthereum.latencySeconds < (60 * 60 * 3) // 3 Hours
-    
+
     // Asset checks
     const assetInfo = await assetStatusInfo(context, tokenAddress)
     const tokenIsRegistered = assetInfo.isTokenRegistered
     const tokenIsValidERC20 = assetInfo.isTokenRegistered
     const foreignAssetExists = assetInfo.foreignAsset !== null && assetInfo.foreignAsset.status === 'Live'
 
-    // TODO: user has asset
-    let balance = await context.polkadot.api.assetHub.query.foreignAssets.account()
+    let balance = 0n
+    if (foreignAssetExists) {
+        let account = (await context.polkadot.api.assetHub.query.foreignAssets.account(assetInfo.multiLocation)).toPrimitive() as any
+        if (account !== null) {
+            balance = BigInt(account.balance)
+        }
+    }
+    const hasAsset = balance >= amount;
     // TODO: user has fees
 
     // Success
     // TODO: Display fees
 
-    const canSend = bridgeOperational && channelOperational && lightClientLatencyIsAcceptable 
-        && tokenIsRegistered && foreignAssetExists && tokenIsValidERC20
+    const canSend = bridgeOperational && channelOperational && lightClientLatencyIsAcceptable
+        && tokenIsRegistered && foreignAssetExists && tokenIsValidERC20 && hasAsset
 
     if (canSend) {
         return {
@@ -67,6 +74,7 @@ export const validateSend = async (context: Context, sourceAccount: string, toke
             tokenIsValidERC20,
             tokenIsRegistered,
             foreignAssetExists,
+            hasAsset,
         }
     }
 }

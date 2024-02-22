@@ -3,9 +3,9 @@ import { decodeAddress } from '@polkadot/keyring'
 import { filter, tap, take, takeWhile, lastValueFrom, map as rxmap, firstValueFrom } from 'rxjs'
 import { Codec } from '@polkadot/types/types'
 import { BlockHash } from '@polkadot/types/interfaces'
-import { isHex, u8aToHex } from '@polkadot/util'
+import { u8aToHex } from '@polkadot/util'
 import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethers'
-import { IGateway__factory, IERC20__factory } from '@snowbridge/contract-types'
+import { IGateway__factory } from '@snowbridge/contract-types'
 import { Context } from './index'
 import { channelStatusInfo, bridgeStatusInfo, assetStatusInfo } from './status'
 import { paraIdToSovereignAccount, paraIdToChannelId, beneficiaryMultiAddress } from './utils'
@@ -76,7 +76,7 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
 
     const assetHub = assetHubParaId.toPrimitive() as number;
     const assetHubChannelId = paraIdToChannelId(assetHub)
-    const [channelStatus, bridgeStatus ] = await Promise.all([
+    const [channelStatus, bridgeStatus] = await Promise.all([
         channelStatusInfo(context, assetHubChannelId),
         bridgeStatusInfo(context),
     ])
