@@ -72,12 +72,12 @@ penpal_sovereign_account="${PENPAL_SOVEREIGN_ACCOUNT:-0x7369626cd007000000000000
 beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cded69dce4a65f027ed3362357605b1687986a}"
 # Execution relay account (//ExecutionRelay 5CFNWKMFPsw5Cs2Teo6Pvg7rWyjKiFfqPZs8U4MZXzMYFwXL in testnet)
 execution_relayer_pub_key="${EXECUTION_RELAYER_PUB_KEY:-0x08228efd065c58a043da95c8bf177659fc587643e71e7ed1534666177730196f}"
+# Sovereign account for msg.sender in penpal (Ethereum address:0x90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe)
+sender_sovereign_account="ee99e7e8ac49f08251154c033f827541f4fb8a5b1fc4d6d9b1ab72c103bd3023"
 
 # Config for deploying contracts
-
 ## Deployment key
 export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
-
 ## BeefyClient
 # For max safety delay should be MAX_SEED_LOOKAHEAD=4 epochs=4*8*6=192s
 # but for rococo-local each session is only 20 slots=120s
