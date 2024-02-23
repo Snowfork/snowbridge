@@ -147,8 +147,8 @@ library SubstrateTypes {
             SubstrateTypes.H160(sender),
             originKind,
             ScaleCodec.encodeU128(fee),
-            ScaleCodec.encodeU64(weight.refTime),
-            ScaleCodec.encodeU64(weight.proofSize),
+            ScaleCodec.encodeCompactU64(weight.refTime),
+            ScaleCodec.encodeCompactU64(weight.proofSize),
             ScaleCodec.checkedEncodeCompactU32(call.length),
             call
         );

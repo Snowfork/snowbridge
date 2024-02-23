@@ -3,7 +3,7 @@ use futures::StreamExt;
 use hex_literal::hex;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{gateway_upgrade_mock::TransactMessage, i_gateway, shared_types::Weight},
+	contracts::{i_gateway, shared_types::Weight},
 	helper::{initial_clients, print_event_log_for_unit_tests},
 	parachains::penpal::api::system::events::Remarked,
 };
@@ -17,16 +17,14 @@ async fn transact_from_eth_to_penpal() {
 	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
 	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
 
-	let message = TransactMessage {
-		origin_kind: 0,
-		fee: 40_000_000_000,
-		weight_at_most: Weight { ref_time: 40_000_000, proof_size: 8_000 },
-		//system.remark
-		call: Bytes::from(hex!("00071468656c6c6f").to_vec()),
-	};
-
 	let receipt = gateway
-		.transact(PENPAL_PARA_ID, message)
+		.send_call(
+			PENPAL_PARA_ID,
+			0,
+			40_000_000_000,
+			Weight { ref_time: 40_000_000, proof_size: 8_000 },
+			Bytes::from(hex!("00071468656c6c6f").to_vec()),
+		)
 		.value::<U256>(100_000_000_000_000_000_u128.into())
 		.send()
 		.await

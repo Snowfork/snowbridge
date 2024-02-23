@@ -47,4 +47,16 @@ contract ScaleCodecTest is Test {
         vm.expectRevert(ScaleCodec.UnsupportedCompactEncoding.selector);
         ScaleCodec.checkedEncodeCompactU32(uint256(type(uint32).max) + 1);
     }
+
+    function testEncodeCompactU64() public {
+        assertEq(ScaleCodec.encodeCompactU64(0), hex"00");
+        assertEq(ScaleCodec.encodeCompactU64(63), hex"fc");
+        assertEq(ScaleCodec.encodeCompactU64(64), hex"0101");
+        assertEq(ScaleCodec.encodeCompactU64(16383), hex"fdff");
+        assertEq(ScaleCodec.encodeCompactU64(16384), hex"02000100");
+        assertEq(ScaleCodec.encodeCompactU64(1073741823), hex"feffffff");
+        assertEq(ScaleCodec.encodeCompactU64(1073741824), hex"0300000040");
+        assertEq(ScaleCodec.encodeCompactU64(type(uint32).max), hex"03ffffffff");
+        assertEq(ScaleCodec.encodeCompactU64(type(uint64).max), hex"13ffffffffffffffff");
+    }
 }
