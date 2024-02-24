@@ -1,0 +1,30 @@
+[package]
+name = "snowbridge-control"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+futures = "0.3.30"
+tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread", "time"] }
+codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false }
+scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
+hex-literal = { version = "0.4.1" }
+
+clap = { version = "4.5.1", features = ["derive"] }
+
+#xcm = { package = "staging-xcm", path = "../../../../polkadot/xcm" }
+#bridge-hub-rococo-runtime = { path = "../../../../cumulus/parachains/runtimes/bridge-hubs/bridge-hub-rococo/" }
+#frame-system = { path = "../../../../substrate/frame/system" }
+#snowbridge-pallet-system = { path = "../../pallets/system"}
+#snowbridge-core = { path = "../../primitives/core"}
+hex = "0.4.3"
+subxt = { version = "0.34.0", features = ["substrate-compat"] }
+toml = "0.8.10"
+serde = { version = "1.0.197", features = ["derive"] }
+
+[features]
+rococo = []
+kusama = []
+polkadot = []

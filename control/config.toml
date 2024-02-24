@@ -1,0 +1,12 @@
+[networks]
+[networks.rococo]
+relay_api = "wss://rococo-rpc.polkadot.io"
+bridge_hub_api = "wss://rococo-bridge-hub-rpc.polkadot.io"
+
+[networks.kusama]
+relay_api = "wss://rpc.dotters.network/kusama"
+bridge_hub_api = "wss://kusama-bridge-hub-rpc.polkadot.io"
+
+[networks.polkadot]
+relay_api = "wss://polkadot-rpc.dwellir.com"
+bridge_hub_api = "wss://polkadot-bridge-hub-rpc.polkadot.io"
