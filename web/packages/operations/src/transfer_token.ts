@@ -1,5 +1,6 @@
 
 import { contextFactory, toEthereum, toPolkadot } from '@snowbridge/api'
+import { Keyring } from '@polkadot/keyring'
 import { Wallet } from 'ethers'
 
 const ETHEREUM_WS_API = 'ws://127.0.0.1:8546'
@@ -25,10 +26,13 @@ const monitor = async () => {
             beefy: BEEFY_CONTRACT,
         },
     })
+    const polkadot_keyring = new Keyring({ type: 'sr25519' });
 
     const ETHEREUM_ACCOUNT = new Wallet('0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342', context.ethereum.api)
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
-    const POLKADOT_ACCOUNT_PUBLIC = '5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL'
+    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri('//Ferdie');
+    const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
+    console.log(POLKADOT_ACCOUNT_PUBLIC)
 
     const amount = 1000n
 
@@ -56,8 +60,9 @@ const monitor = async () => {
     }
     // To Ethereum
     {
-        const plan = await toEthereum.validateSend(context, POLKADOT_ACCOUNT_PUBLIC, ETHEREUM_ACCOUNT_PUBLIC, WETH_CONTRACT, amount);
+        const plan = await toEthereum.validateSend(context, POLKADOT_ACCOUNT, ETHEREUM_ACCOUNT_PUBLIC, WETH_CONTRACT, amount);
         console.log('Plan:', plan)
+        const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan);
     }
 
 }
