@@ -10,10 +10,12 @@ export const bridgeStatusInfo = async (context: Context) => {
     const latestBeaconState = (await context.polkadot.api.bridgeHub.query.ethereumBeaconClient.latestExecutionState()).toPrimitive() as { blockNumber: number }
     const latestEthereumBlock = await context.ethereum.api.getBlockNumber()
 
+    // TODO: Make configurable
     const polkadotBlockTimeInSeconds = 6
     const beefyBlockLatency = latestPolkadotBlock - latestBeefyBlock
     const beefyLatencySeconds = beefyBlockLatency * polkadotBlockTimeInSeconds
 
+    // TODO: Make configurable
     const ethereumBlockTimeInSeconds = 12
     const beaconBlockLatency = latestEthereumBlock - latestBeaconState.blockNumber
     const beaconLatencySeconds = beaconBlockLatency * ethereumBlockTimeInSeconds

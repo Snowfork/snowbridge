@@ -32,7 +32,18 @@ const monitor = async () => {
 
     const amount = 1000n
 
-    // To Polkadot
+    // To Polkadot (Asset Hub)
+    {
+        const signer = new Wallet('0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342', context.ethereum.api)
+        const plan = await toPolkadot.validateSend(context, ETHEREUM_ACCOUNT, POLKADOT_ACCOUNT_PUBLIC, WETH_CONTRACT, 1000, amount, BigInt(0))
+        console.log('Plan:', plan)
+        const result = await toPolkadot.send(context, signer, plan)
+        console.log('Execute:', result)
+        for await (const update of toPolkadot.trackSendProgress(context, result)) {
+            console.log(update)
+        }
+    }
+    // To Polkadot (Penpal)
     {
         const signer = new Wallet('0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342', context.ethereum.api)
         const plan = await toPolkadot.validateSend(context, ETHEREUM_ACCOUNT, POLKADOT_ACCOUNT_PUBLIC, WETH_CONTRACT, 2000, amount, BigInt(4_000_000_000))

@@ -129,6 +129,7 @@ function MyForm() {
           if (!plan.failure.hasToken) errors.push(`Source address '${await walletInfo.signer?.getAddress()}' does not own token '${transferInfo.tokenAddress}'.`)
           if (!plan.failure.tokenSpendApproved) errors.push(`Source address '${await walletInfo.signer?.getAddress()}' has not allowed Snowbridge gateway '${config.GATEWAY_CONTRACT}' to spend token '${transferInfo.tokenAddress}'.`)
           if (!plan.failure.lightClientLatencyIsAcceptable) errors.push('Light client is too far behind.')
+          if (!plan.failure.canPayFee) errors.push('Cannot pay fee.')
           setErrors(errors)
           return;
         }
