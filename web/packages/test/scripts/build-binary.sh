@@ -15,20 +15,15 @@ build_binaries() {
     check_local_changes "substrate"
 
     # Check that all 3 binaries are available and no changes made in the polkadot and substrate dirs
-    #if [[ ! -e "target/release/polkadot" || ! -e "target/release/polkadot-execute-worker" || ! -e "target/release/polkadot-prepare-worker" || "$changes_detected" -eq 1 ]]; then
+    if [[ ! -e "target/release/polkadot" || ! -e "target/release/polkadot-execute-worker" || ! -e "target/release/polkadot-prepare-worker" || "$changes_detected" -eq 1 ]]; then
         echo "Building polkadot binary, due to changes detected in polkadot or substrate, or binaries not found"
         # Increase session length to 2 mins
         ROCOCO_EPOCH_DURATION=20 cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker
-    #else
-    #    echo "No changes detected in polkadot or substrate and binaries are available, not rebuilding relaychain binaries."
-    #fi
+    else
+        echo "No changes detected in polkadot or substrate and binaries are available, not rebuilding relaychain binaries."
+    fi
 
     mkdir -p "$output_bin_dir"
-
-    echo "target/release:"
-    (cd target/release && ls)
-    echo "$output_bin_dir:"
-    (cd $output_bin_dir && ls)
 
     cp target/release/polkadot $output_bin_dir/polkadot
     cp target/release/polkadot-execute-worker $output_bin_dir/polkadot-execute-worker
@@ -77,15 +72,11 @@ set_slot_time() {
 }
 
 build_lodestar() {
-    echo "Building lodestar."
     if [ "$rebuild_lodestar" == "true" ]; then
-        echo "Rebuilding lodestar."
         pushd $root_dir/lodestar
         if [ "$eth_fast_mode" == "true" ]; then
-            echo "Setting fast mode."
             set_slot_time 1
         else
-            echo "Not setting fast mode."
             set_slot_time 12
         fi
         yarn install && yarn run build

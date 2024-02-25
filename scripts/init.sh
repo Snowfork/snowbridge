@@ -45,7 +45,6 @@ fi
 
 geth_package=geth-$OS-$MACHINE_TYPE-1.13.11-8f7eb9cc
 curl https://gethstore.blob.core.windows.net/builds/$geth_package.tar.gz -o /tmp/geth.tar.gz || { echo 'Download failed'; exit 1; }
-file /tmp/geth.tar.gz
 mkdir -p $GOPATH/bin
 tar -xvf /tmp/geth.tar.gz -C $GOPATH
 cp $GOPATH/$geth_package/geth $GOPATH/bin
