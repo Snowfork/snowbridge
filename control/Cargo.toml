@@ -14,17 +14,14 @@ hex-literal = { version = "0.4.1" }
 
 clap = { version = "4.5.1", features = ["derive"] }
 
-#xcm = { package = "staging-xcm", path = "../../../../polkadot/xcm" }
-#bridge-hub-rococo-runtime = { path = "../../../../cumulus/parachains/runtimes/bridge-hubs/bridge-hub-rococo/" }
-#frame-system = { path = "../../../../substrate/frame/system" }
-#snowbridge-pallet-system = { path = "../../pallets/system"}
-#snowbridge-core = { path = "../../primitives/core"}
 hex = "0.4.3"
 subxt = { version = "0.34.0", features = ["substrate-compat"] }
-toml = "0.8.10"
 serde = { version = "1.0.197", features = ["derive"] }
+sp-arithmetic = "24.0.0"
+alloy-primitives = "0.6.3"
 
 [features]
+default = ["rococo"]
 rococo = []
 kusama = []
 polkadot = []
