@@ -1,5 +1,6 @@
+import { Registry } from "@polkadot/types/types";
 import { bnToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util";
-import { decodeAddress, keccak256AsU8a } from "@polkadot/util-crypto";
+import { blake2AsU8a, decodeAddress, keccak256AsU8a } from "@polkadot/util-crypto";
 import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway";
 import { ethers } from "ethers";
 
@@ -9,6 +10,13 @@ export const paraIdToSovereignAccount = (type: 'para' | 'sibl', paraId: number):
     const zeroPadding = new Uint8Array(32 - typeEncoded.length - paraIdEncoded.length).fill(0)
     const address = new Uint8Array([...typeEncoded, ...paraIdEncoded, ...zeroPadding])
     return u8aToHex(address)
+}
+export const paraIdToAgentId = (register: Registry, paraId: number): string => {
+    const typeEncoded = stringToU8a('SiblingChain')
+    const paraIdEncoded = register.createType('Compact<u32>', paraId).toU8a()
+    const joined = new Uint8Array([...typeEncoded, ...paraIdEncoded])
+    const agentId = blake2AsU8a(joined, 256)
+    return u8aToHex(agentId)
 }
 
 export const paraIdToChannelId = (paraId: number): string => {
