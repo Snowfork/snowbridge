@@ -63,6 +63,10 @@ const monitor = async () => {
         const plan = await toEthereum.validateSend(context, POLKADOT_ACCOUNT, ETHEREUM_ACCOUNT_PUBLIC, WETH_CONTRACT, amount);
         console.log('Plan:', plan)
         const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan);
+        console.log('Execute:', result)
+        for await (const update of toEthereum.trackSendProgress(context, result)) {
+            console.log(update)
+        }
     }
 
 }

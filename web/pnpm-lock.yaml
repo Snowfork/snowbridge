@@ -110,14 +110,23 @@ importers:
         specifier: ^5.4.7
         version: 5.7.0
       '@polkadot/api':
-        specifier: ^10.10.1
+        specifier: ^10.11.1
         version: 10.12.1
+      '@polkadot/keyring':
+        specifier: ^12.6.1
+        version: 12.6.2(@polkadot/util-crypto@12.6.2)(@polkadot/util@12.6.2)
       '@polkadot/types':
-        specifier: ^10.10.1
+        specifier: ^10.11.1
         version: 10.12.1
       '@polkadot/types-codec':
-        specifier: ^10.9.1
+        specifier: ^10.11.1
         version: 10.12.1
+      '@polkadot/util':
+        specifier: ^12.6.1
+        version: 12.6.2
+      '@polkadot/util-crypto':
+        specifier: ^12.6.1
+        version: 12.6.2(@polkadot/util@12.6.2)
       '@snowbridge/api':
         specifier: workspace:*
         version: link:../api
