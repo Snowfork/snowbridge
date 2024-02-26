@@ -12,7 +12,7 @@ use alloy_primitives::{Address, Bytes, FixedBytes};
 #[command(name = "snowbridge-control", version, about, long_about = None)]
 struct Cli {
     /// Output format of preimage
-    #[arg(value_enum, default_value_t=Format::Hex)]
+    #[arg(long, value_enum, default_value_t=Format::Hex)]
     format: Format,
 
     #[command(subcommand)]
@@ -43,11 +43,11 @@ pub enum Command {
         initializer: bool,
 
         /// ABI-encoded params to pass to initializer
-        #[arg(long, value_name = "BYTES", value_parser=parse_hex_bytes)]
+        #[arg(long, requires = "initializer", value_name = "BYTES", value_parser=parse_hex_bytes)]
         initializer_params: Option<Bytes>,
 
         /// Maximum gas required by the initializer
-        #[arg(long, value_name = "GAS")]
+        #[arg(long, requires = "initializer", value_name = "GAS")]
         initializer_gas: Option<u64>,
     }
 }
