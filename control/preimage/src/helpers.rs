@@ -35,29 +35,18 @@ pub fn increase_weight(ref_time: &mut u64, proof_size: &mut u64) {
     *proof_size = y.try_into().expect("overflow");
 }
 
-// Base weight costs for Transact and ExpectTransactStatus
-const TRANSACT_INSTR_WEIGHT: u64 = 10_000_000;
-const EXPECT_STATUS_WEIGHT: u64 = 10_000_000;
-
 pub async fn wrap_calls(context: &Context, calls: Vec<BridgeHubRuntimeCall>) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
-    let mut total_ref_time: u64 = 0;
-    let mut total_proof_size: u64 = 0;
     let mut accum: Vec<(u64, u64, Vec<u8>)> = vec![];
 
     for call in calls.iter() {
         let (mut ref_time, mut proof_size) = query_weight(&context.api, call.clone()).await?;
         increase_weight(&mut ref_time, &mut proof_size);
-        total_ref_time += ref_time + TRANSACT_INSTR_WEIGHT + EXPECT_STATUS_WEIGHT;
-        total_proof_size += proof_size;
         accum.push((ref_time, proof_size, call.encode()));
     }
 
     let mut instructions: Vec<Instruction> = vec![
         UnpaidExecution {
-            weight_limit: WeightLimit::Limited(Weight {
-                ref_time: total_ref_time,
-                proof_size: total_proof_size,
-            }),
+            weight_limit: WeightLimit::Unlimited,
             check_origin: None,
         },
     ];
