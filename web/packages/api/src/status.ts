@@ -3,22 +3,21 @@ import { Context } from './index'
 
 export type OperatingMode = 'Normal' | 'Halted'
 
-export const bridgeStatusInfo = async (context: Context) => {
+export const bridgeStatusInfo = async (context: Context, options = {
+    polkadotBlockTimeInSeconds: 6,
+    ethereumBlockTimeInSeconds: 12,
+}) => {
     const latestBeefyBlock = Number(await context.ethereum.contracts.beefyClient.latestBeefyBlock())
     const latestPolkadotBlock = (await context.polkadot.api.relaychain.query.system.number()).toPrimitive() as number
 
     const latestBeaconState = (await context.polkadot.api.bridgeHub.query.ethereumBeaconClient.latestExecutionState()).toPrimitive() as { blockNumber: number }
     const latestEthereumBlock = await context.ethereum.api.getBlockNumber()
 
-    // TODO: Make configurable
-    const polkadotBlockTimeInSeconds = 6
     const beefyBlockLatency = latestPolkadotBlock - latestBeefyBlock
-    const beefyLatencySeconds = beefyBlockLatency * polkadotBlockTimeInSeconds
+    const beefyLatencySeconds = beefyBlockLatency * options.polkadotBlockTimeInSeconds
 
-    // TODO: Make configurable
-    const ethereumBlockTimeInSeconds = 12
     const beaconBlockLatency = latestEthereumBlock - latestBeaconState.blockNumber
-    const beaconLatencySeconds = beaconBlockLatency * ethereumBlockTimeInSeconds
+    const beaconLatencySeconds = beaconBlockLatency * options.ethereumBlockTimeInSeconds
 
     const ethereumOperatingMode = await context.ethereum.contracts.gateway.operatingMode()
     const beaconOperatingMode = (await context.polkadot.api.bridgeHub.query.ethereumBeaconClient.operatingMode()).toPrimitive()

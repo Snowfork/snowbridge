@@ -52,7 +52,9 @@ export type SendValidationResult = {
     }
 }
 
-export const validateSend = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint): Promise<SendValidationResult> => {
+export const validateSend = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint, options={
+    acceptableLatencyInSeconds: 10800 /* 3 Hours */
+}): Promise<SendValidationResult> => {
     const sourceAddress = await source.getAddress()
 
     // Asset checks
@@ -107,7 +109,7 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
     }
 
     // TODO: Make acceptable latency configurable.
-    const lightClientLatencyIsAcceptable = bridgeStatus.toPolkadot.latencySeconds < (60 * 60 * 3) // 3 Hours
+    const lightClientLatencyIsAcceptable = bridgeStatus.toPolkadot.latencySeconds < options.acceptableLatencyInSeconds
     const bridgeOperational = bridgeStatus.toPolkadot.operatingMode.outbound === 'Normal' && bridgeStatus.toPolkadot.operatingMode.beacon === 'Normal' 
     const channelOperational = channelStatus.toPolkadot.operatingMode.outbound === 'Normal'
     const canSend = bridgeOperational && channelOperational && canPayFee
