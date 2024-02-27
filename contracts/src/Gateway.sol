@@ -86,6 +86,7 @@ contract Gateway is IGateway, IInitializable {
     error InvalidAgentExecutionPayload();
     error InvalidCodeHash();
     error InvalidConstructorParams();
+    error AlreadyInitialized();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -578,47 +579,48 @@ contract Gateway is IGateway, IInitializable {
             revert Unauthorized();
         }
 
+        Config memory config = abi.decode(data, (Config));
+
         CoreStorage.Layout storage core = CoreStorage.layout();
 
-        // Check if initialized and run initialization once.
-        if (core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID].agent == address(0)) {
-            Config memory config = abi.decode(data, (Config));
-
-            core.mode = config.mode;
-
-            // Initialize agent for BridgeHub
-            address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
-            core.agents[BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
-
-            // Initialize channel for primary governance track
-            core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] =
-                Channel({mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0});
-
-            // Initialize channel for secondary governance track
-            core.channels[SECONDARY_GOVERNANCE_CHANNEL_ID] =
-                Channel({mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0});
-
-            // Initialize agent for for AssetHub
-            address assetHubAgent = address(new Agent(config.assetHubAgentID));
-            core.agents[config.assetHubAgentID] = assetHubAgent;
-
-            // Initialize channel for AssetHub
-            core.channels[config.assetHubParaID.into()] =
-                Channel({mode: OperatingMode.Normal, agent: assetHubAgent, inboundNonce: 0, outboundNonce: 0});
-
-            // Initialize pricing storage
-            PricingStorage.Layout storage pricing = PricingStorage.layout();
-            pricing.exchangeRate = config.exchangeRate;
-            pricing.deliveryCost = config.deliveryCost;
-
-            // Initialize assets storage
-            AssetsStorage.Layout storage assets = AssetsStorage.layout();
-
-            assets.assetHubParaID = config.assetHubParaID;
-            assets.assetHubAgent = assetHubAgent;
-            assets.registerTokenFee = config.registerTokenFee;
-            assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
-            assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+        if (core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID].agent != address(0)) {
+            revert AlreadyInitialized();
         }
+
+        core.mode = config.mode;
+
+        // Initialize agent for BridgeHub
+        address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
+        core.agents[BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
+
+        // Initialize channel for primary governance track
+        core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] =
+            Channel({mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0});
+
+        // Initialize channel for secondary governance track
+        core.channels[SECONDARY_GOVERNANCE_CHANNEL_ID] =
+            Channel({mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0});
+
+        // Initialize agent for for AssetHub
+        address assetHubAgent = address(new Agent(config.assetHubAgentID));
+        core.agents[config.assetHubAgentID] = assetHubAgent;
+
+        // Initialize channel for AssetHub
+        core.channels[config.assetHubParaID.into()] =
+            Channel({mode: OperatingMode.Normal, agent: assetHubAgent, inboundNonce: 0, outboundNonce: 0});
+
+        // Initialize pricing storage
+        PricingStorage.Layout storage pricing = PricingStorage.layout();
+        pricing.exchangeRate = config.exchangeRate;
+        pricing.deliveryCost = config.deliveryCost;
+
+        // Initialize assets storage
+        AssetsStorage.Layout storage assets = AssetsStorage.layout();
+
+        assets.assetHubParaID = config.assetHubParaID;
+        assets.assetHubAgent = assetHubAgent;
+        assets.registerTokenFee = config.registerTokenFee;
+        assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
+        assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
     }
 }
