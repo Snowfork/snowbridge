@@ -45,8 +45,6 @@ export const validateSend = async (context: Context, source: IKeyringPair, benef
     defaultFee: 2_750_872_500_000n,
     acceptableLatencyInSeconds: 10800 /* 3 Hours */
 }): Promise<SendValidationResult> => {
-
-    console.log(paraIdToAgentId(context.polkadot.api.assetHub.registry,1000))
     const [assetHubHead, assetHubParaId, bridgeHubHead, bridgeHubParaId] = await Promise.all([
         context.polkadot.api.assetHub.rpc.chain.getFinalizedHead(),
         context.polkadot.api.assetHub.query.parachainInfo.parachainId(),
