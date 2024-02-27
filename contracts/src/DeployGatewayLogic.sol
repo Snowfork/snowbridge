@@ -8,7 +8,7 @@ import {ParaID} from "./Types.sol";
 import {Script} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
-contract DeployGateway is Script {
+contract DeployGatewayLogic is Script {
     using stdJson for string;
 
     function setUp() public {}
