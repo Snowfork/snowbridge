@@ -342,16 +342,16 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
 
     yield `Included in BEEFY Light client block ${result.success.ethereum.beefyBlockNumber}. Waiting for message to be delivered.`
     {
-        let tokenContract = IERC20__factory.connect(result.success.plan.success.tokenAddress, context.ethereum.api)
-        const Transfer = tokenContract.getEvent("Transfer")
-        await new Promise<void>((resolve) => {
-            tokenContract.on(Transfer, (from, to, value) => {
-                if (value === result.success?.plan.success?.amount
-                    && to.toLowerCase() === result.success?.plan.success.beneficiary.toLowerCase()
-                ){//&& from.toLowerCase() === result.success.) {
-                    resolve()
+        const InboundMessageDispatched = context.ethereum.contracts.gateway.getEvent("InboundMessageDispatched")
+        await new Promise<boolean>((resolve) => {
+            context.ethereum.contracts.gateway.on(InboundMessageDispatched,
+                (channelID: string, nonce: bigint, messageID: string, success: boolean) => {
+                    if (messageID.toLowerCase() === result.success?.messageId)
+                        //TODO && nonce === result.success?.nonce
+                        //TODO && channelId == result.success.channelId) {
+                        resolve(success)
                 }
-            })
+            )
         })
         context.polkadot.api.assetHub.registry.createType
         result.success.ethereum.transferBlockNumber = await context.ethereum.api.getBlockNumber()
