@@ -806,6 +806,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bridge-hub-rococo-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "subxt",
+]
+
+[[package]]
 name = "bs58"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3125,6 +3135,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rococo-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "subxt",
+]
+
+[[package]]
 name = "ruint"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3925,15 +3945,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-control"
+name = "snowbridge-preimage"
 version = "0.1.0"
 dependencies = [
  "alloy-primitives",
+ "bridge-hub-rococo-runtime",
  "clap",
  "futures",
  "hex",
  "hex-literal",
  "parity-scale-codec",
+ "rococo-runtime",
  "scale-info",
  "serde",
  "sp-arithmetic 24.0.0",

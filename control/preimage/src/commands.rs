@@ -4,14 +4,13 @@ use crate::helpers::wrap_calls;
 use alloy_primitives::{Address, Bytes, FixedBytes};
 use subxt::utils::{H160, H256};
 
-use crate::runtime::{
-    bridge_hub::runtime_types::{
-        snowbridge_core::outbound::v1::{Initializer, OperatingMode},
-        bridge_hub_rococo_runtime::RuntimeCall as BridgeHubRuntimeCall,
-        snowbridge_pallet_system,
-    },
-    relay::runtime_types::polkadot_runtime::RuntimeCall as RelayRuntimeCall,
+use crate::bridge_hub_runtime::runtime_types::{
+    snowbridge_core::outbound::v1::{Initializer, OperatingMode},
+    bridge_hub_rococo_runtime::RuntimeCall as BridgeHubRuntimeCall,
+    snowbridge_pallet_system,
 };
+
+use crate::relay_runtime::runtime_types::polkadot_runtime::RuntimeCall as RelayRuntimeCall;
 
 pub async fn gateway_operating_mode(context: &Context, mode: GatewayOperatingModeArg) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
     let mode = match mode {

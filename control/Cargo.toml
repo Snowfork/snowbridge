@@ -1,27 +1,7 @@
-[package]
-name = "snowbridge-control"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-futures = "0.3.30"
-tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread", "time"] }
-codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false }
-scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
-hex-literal = { version = "0.4.1" }
-
-clap = { version = "4.5.1", features = ["derive"] }
-
-hex = "0.4.3"
-subxt = { version = "0.34.0", features = ["substrate-compat"] }
-serde = { version = "1.0.197", features = ["derive"] }
-sp-arithmetic = "24.0.0"
-alloy-primitives = "0.6.3"
-
-[features]
-default = ["rococo"]
-rococo = []
-kusama = []
-polkadot = []
+[workspace]
+resolver = "2"
+members = [
+    "runtimes/rococo",
+    "runtimes/bridge-hub-rococo",
+    "preimage",
+]

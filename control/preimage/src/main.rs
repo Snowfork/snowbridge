@@ -1,4 +1,5 @@
-mod runtime;
+mod bridge_hub_runtime;
+mod relay_runtime;
 mod commands;
 mod helpers;
 
@@ -84,48 +85,38 @@ pub enum GatewayOperatingModeArg {
 }
 
 struct StaticConfig<'a> {
-    relay_api: &'a str,
-    bridge_hub_api: &'a str,
+    api: &'a str,
 }
 
 struct Context {
-    relay_api: Box<OnlineClient<PolkadotConfig>>,
-    bridge_hub_api: Box<OnlineClient<PolkadotConfig>>,
+    api: Box<OnlineClient<PolkadotConfig>>,
 }
 
 #[cfg(feature = "rococo")]
 static CONFIG: StaticConfig<'static> = StaticConfig {
-    relay_api: "wss://rococo-rpc.polkadot.io",
-    bridge_hub_api: "wss://rococo-bridge-hub-rpc.polkadot.io",
+    api: "wss://rococo-bridge-hub-rpc.polkadot.io",
 };
 
 #[cfg(feature = "kusama")]
 static CONFIG: StaticConfig<'static> = StaticConfig {
-    relay_api: "wss://kusama-rpc.dwellir.com",
-    bridge_hub_api: "wss://kusama-bridge-hub-rpc.polkadot.io",
+    api: "wss://kusama-bridge-hub-rpc.polkadot.io",
 };
 
 #[cfg(feature = "polkadot")]
 static CONFIG: StaticConfig<'static> = StaticConfig {
-    relay_api: "wss://polkadot-rpc.dwellir.com",
-    bridge_hub_api: "wss://polkadot-bridge-hub-rpc.polkadot.io",
+    api: "wss://polkadot-bridge-hub-rpc.polkadot.io",
 };
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
-	let bridge_hub_api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(CONFIG.bridge_hub_api)
+	let api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(CONFIG.api)
 		.await
 		.expect("can not connect to bridgehub");
 
-    let relay_api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(CONFIG.relay_api)
-        .await
-        .expect("can not connect to relaychain");
-
     let context = Context {
-        relay_api: Box::new(relay_api),
-        bridge_hub_api: Box::new(bridge_hub_api)
+        api: Box::new(api)
     };
 
     let call = match &cli.command {
