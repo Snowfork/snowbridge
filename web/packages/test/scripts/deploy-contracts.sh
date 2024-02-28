@@ -3,8 +3,9 @@ set -eu
 
 source scripts/set-env.sh
 
-deploy_contracts()
-{
+deploy_command() {
+    local deploy_script=$1
+    
     pushd "$contract_dir"
     if [ "$eth_network" != "localhost" ]; then
         forge script \
@@ -13,15 +14,31 @@ deploy_contracts()
             --verify \
             --etherscan-api-key $etherscan_api_key \
             -vvv \
-            src/DeployScript.sol:DeployScript
+            $deploy_script
     else
         forge script \
             --rpc-url $eth_endpoint_http \
             --broadcast \
             -vvv \
-            src/DeployScript.sol:DeployScript
+            $deploy_script
     fi
     popd
+}
+
+deploy_gateway_logic()
+{
+    deploy_command src/DeployGatewayLogic.sol:DeployGatewayLogic
+
+    pushd "$test_helpers_dir"
+    pnpm generateContracts "$output_dir/contracts.json"
+    popd
+
+    echo "Exported contract artifacts: $output_dir/contracts.json"
+}
+
+deploy_contracts()
+{
+    deploy_command src/DeployScript.sol:DeployScript
 
     pushd "$test_helpers_dir"
     pnpm generateContracts "$output_dir/contracts.json"
