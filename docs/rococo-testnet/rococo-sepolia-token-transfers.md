@@ -14,7 +14,7 @@ Snowbridge has initially only activated support for the sending of ERC20 tokens 
 
 If you already have [WETH](https://sepolia.etherscan.io/address/0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14) you can skip this step. If not go to the [WETH](https://sepolia.etherscan.io/address/0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14) contract and make a deposit.
 
-Weth Contract Address: [0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14](https://sepolia.etherscan.io/address/0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14)
+WETH Contract Address: [0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14](https://sepolia.etherscan.io/address/0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14)
 
 1. Click on the Contracts tab.
 2. Click on the Write Contract tab.
@@ -28,11 +28,11 @@ Weth Contract Address: [0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14](https://sepo
 
 Snowbridge needs to be an approved spender for you to send tokens to Polkadot.
 
-Gateway Contract Address: [0x5b4909ce6ca82d2ce23bd46738953c7959e710cd](https://sepolia.etherscan.io/address/0x5b4909ce6ca82d2ce23bd46738953c7959e710cd)
+WETH Contract Address: [0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14](https://sepolia.etherscan.io/address/0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14)
 
 Navigate to the Contract tab, click on Write Contract, and connect your wallet.
 
-1. Enter Snowbridge’s Gateway contract as the `guy` (spender) parameter.
+1. Enter Snowbridge’s Gateway contract as the `guy` (spender) parameter. Gateway Contract Address: [0x5b4909ce6ca82d2ce23bd46738953c7959e710cd](https://sepolia.etherscan.io/address/0x5b4909ce6ca82d2ce23bd46738953c7959e710cd)
 2. Enter the amount that Snowbridge can spend as the `wad` parameter. In this example, we have used 5 Gwei (5000000000 Wei).
 
 <figure><img src="../.gitbook/assets/approve_weth.png" alt=""><figcaption></figcaption></figure>

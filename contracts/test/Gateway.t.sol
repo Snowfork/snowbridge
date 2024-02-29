@@ -498,6 +498,65 @@ contract GatewayTest is Test {
         assertEq(GatewayV2(address(gateway)).getValue(), 42);
     }
 
+    function testUgradeInitializerRunsOnlyOnce() public {
+        // Upgrade to this current logic contract
+        AgentExecutor executor = new AgentExecutor();
+        GatewayMock currentLogic =
+            new GatewayMock(address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals);
+
+        Gateway.Config memory config = Gateway.Config({
+            mode: OperatingMode.Normal,
+            deliveryCost: outboundFee,
+            registerTokenFee: registerTokenFee,
+            assetHubParaID: assetHubParaID,
+            assetHubAgentID: assetHubAgentID,
+            assetHubCreateAssetFee: createTokenFee,
+            assetHubReserveTransferFee: sendTokenFee,
+            exchangeRate: exchangeRate
+        });
+
+        UpgradeParams memory params = UpgradeParams({
+            impl: address(currentLogic),
+            implCodeHash: address(currentLogic).codehash,
+            initParams: abi.encode(config)
+        });
+
+        vm.expectRevert(Gateway.AlreadyInitialized.selector);
+        // Expect the gateway to emit `Upgraded`
+        GatewayMock(address(gateway)).upgradePublic(abi.encode(params));
+    }
+
+    function testUpgradeSkipsInitializerIfNoneProvided() public {
+        bytes32 agentID = keccak256("123");
+
+        testSetPricingParameters();
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        assertEq(fee, 10000000000000000);
+
+        testCreateAgent();
+        assertNotEq(GatewayMock(address(gateway)).agentOf(agentID), address(0));
+
+        // Upgrade to this current logic contract
+        AgentExecutor executor = new AgentExecutor();
+        GatewayMock currentLogic =
+            new GatewayMock(address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals);
+
+        bytes memory initParams; // empty
+        UpgradeParams memory params = UpgradeParams({
+            impl: address(currentLogic),
+            implCodeHash: address(currentLogic).codehash,
+            initParams: initParams
+        });
+
+        // Expect the gateway to emit `Upgraded`
+        GatewayMock(address(gateway)).upgradePublic(abi.encode(params));
+
+        // Verify that storage was not overwritten
+        fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        assertEq(fee, 10000000000000000);
+        assertNotEq(GatewayMock(address(gateway)).agentOf(agentID), address(0));
+    }
+
     function testUpgradeGatewayMock() public {
         GatewayUpgradeMock newLogic = new GatewayUpgradeMock();
         uint256 d0 = 99;
