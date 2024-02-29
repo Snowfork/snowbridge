@@ -20,6 +20,9 @@ interface IGateway {
     // Emitted when an agent has been created for a consensus system on Polkadot
     event AgentCreated(bytes32 agentID, address agent);
 
+    // Emitted when an agent dispatch a safe call
+    event AgentExecuted(bytes32 agentID);
+
     // Emitted when a channel has been created
     event ChannelCreated(ChannelID indexed channelID);
 
@@ -34,6 +37,9 @@ interface IGateway {
 
     // Emitted when pricing params updated
     event PricingParametersChanged();
+
+    // Emitted when safe call filter updated
+    event SafeCallFilterChanged();
 
     // Emitted when funds are withdrawn from an agent
     event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);

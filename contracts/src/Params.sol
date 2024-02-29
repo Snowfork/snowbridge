@@ -80,3 +80,11 @@ struct SetPricingParametersParams {
     /// @dev The cost of delivering messages to BridgeHub in DOT
     uint128 deliveryCost;
 }
+
+// Payload for SetSafeCalls
+struct SetSafeCallsParams {
+    /// @dev The target contract
+    address target;
+    /// @dev The selector of the function
+    bytes4[] selectors;
+}

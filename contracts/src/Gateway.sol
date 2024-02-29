@@ -17,7 +17,8 @@ import {
     Command,
     MultiAddress,
     Ticket,
-    Costs
+    Costs,
+    AgentExecuteCommand
 } from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
@@ -37,7 +38,8 @@ import {
     SetOperatingModeParams,
     TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
-    SetPricingParametersParams
+    SetPricingParametersParams,
+    SetSafeCallsParams
 } from "./Params.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
@@ -45,10 +47,13 @@ import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {SafeCallFilterStorage} from "./storage/SafeCallFilterStorage.sol";
+import {BytesLib} from "./utils/BytesLib.sol";
 
 contract Gateway is IGateway, IInitializable {
     using Address for address;
     using SafeNativeTransfer for address payable;
+    using BytesLib for bytes;
 
     address internal immutable AGENT_EXECUTOR;
 
@@ -86,6 +91,7 @@ contract Gateway is IGateway, IInitializable {
     error InvalidAgentExecutionPayload();
     error InvalidCodeHash();
     error InvalidConstructorParams();
+    error NoPermission();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -264,12 +270,24 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidAgentExecutionPayload();
         }
 
+        (AgentExecuteCommand command, bytes memory commandParams) =
+            abi.decode(params.payload, (AgentExecuteCommand, bytes));
+        if (command == AgentExecuteCommand.Transact) {
+            (address target, bytes memory payload,) = abi.decode(commandParams, (address, bytes, uint64));
+            SafeCallFilterStorage.Layout storage $ = SafeCallFilterStorage.layout();
+            bytes4 selector = bytes4(payload.slice(0, 4));
+            if ($.safeCalls[target][selector] != true) {
+                revert NoPermission();
+            }
+        }
+
         bytes memory call = abi.encodeCall(AgentExecutor.execute, params.payload);
 
         (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
         if (!success) {
             revert AgentExecutionFailed(returndata);
         }
+        emit AgentExecuted(params.agentID);
     }
 
     /// @dev Create an agent for a consensus system on Polkadot
@@ -390,6 +408,16 @@ contract Gateway is IGateway, IInitializable {
         pricing.exchangeRate = params.exchangeRate;
         pricing.deliveryCost = params.deliveryCost;
         emit PricingParametersChanged();
+    }
+
+    // @dev Set safe calls of the gateway
+    function setSafeCalls(bytes calldata data) external onlySelf {
+        SafeCallFilterStorage.Layout storage filter = SafeCallFilterStorage.layout();
+        SetSafeCallsParams memory params = abi.decode(data, (SetSafeCallsParams));
+        for (uint256 i = 0; i < params.selectors.length; i++) {
+            filter.safeCalls[params.target][params.selectors[i]] = true;
+        }
+        emit SafeCallFilterChanged();
     }
 
     /**

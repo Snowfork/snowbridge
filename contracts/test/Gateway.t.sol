@@ -32,7 +32,8 @@ import {
     SetOperatingModeParams,
     TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
-    SetPricingParametersParams
+    SetPricingParametersParams,
+    SetSafeCallsParams
 } from "../src/Params.sol";
 
 import {
@@ -92,6 +93,8 @@ contract GatewayTest is Test {
     // ETH/DOT exchange rate
     UD60x18 public exchangeRate = ud60x18(0.0025e18);
 
+    HelloWorld helloWorld;
+
     event SaidHello(string indexed message);
 
     function setUp() public {
@@ -113,6 +116,15 @@ contract GatewayTest is Test {
 
         SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
         GatewayMock(address(gateway)).setOperatingModePublic(abi.encode(params));
+
+        helloWorld = new HelloWorld();
+        bytes4[] memory selectors = new bytes4[](3);
+        selectors[0] = bytes4(keccak256(bytes("sayHello(string)")));
+        selectors[1] = bytes4(keccak256(bytes("revertUnauthorized()")));
+        selectors[2] = bytes4(keccak256(bytes("retBomb()")));
+        GatewayMock(address(gateway)).setSafeCallsPublic(
+            abi.encode(SetSafeCallsParams({target: address(helloWorld), selectors: selectors}))
+        );
 
         bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
         assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
@@ -830,8 +842,6 @@ contract GatewayTest is Test {
     }
 
     function testAgentExecutionTransact() public {
-        HelloWorld helloWorld = new HelloWorld();
-
         bytes memory payload = abi.encodeWithSignature("sayHello(string)", "Clara");
 
         AgentExecuteParams memory params = AgentExecuteParams({
@@ -846,9 +856,20 @@ contract GatewayTest is Test {
         GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
 
-    function testAgentExecutionTransactFail() public {
-        HelloWorld helloWorld = new HelloWorld();
+    function testAgentExecutionTransactNoPermission() public {
+        bytes memory payload = abi.encodeWithSignature("sayHello2(string)", "Ron");
 
+        AgentExecuteParams memory params = AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(helloWorld), payload, 100000))
+        });
+
+        vm.expectRevert(Gateway.NoPermission.selector);
+
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
+    }
+
+    function testAgentExecutionTransactFail() public {
         bytes memory payload = abi.encodeWithSignature("revertUnauthorized()");
 
         AgentExecuteParams memory params = AgentExecuteParams({
@@ -859,6 +880,21 @@ contract GatewayTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(Gateway.AgentExecutionFailed.selector, abi.encodeWithSignature("Unauthorized()"))
         );
+
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
+    }
+
+    function testAgentExecutionTransactRetBomb() public {
+        bytes memory payload = abi.encodeWithSignature("retBomb()");
+
+        AgentExecuteParams memory params = AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(helloWorld), payload, 30000000))
+        });
+
+        // Expect Gateway contract to emit `AgentExecuted`
+        vm.expectEmit(true, false, false, false);
+        emit IGateway.AgentExecuted(assetHubAgentID);
 
         GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
