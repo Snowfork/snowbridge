@@ -5,8 +5,6 @@ import { BN, u8aToHex } from "@polkadot/util"
 import { Codec, IKeyringPair } from "@polkadot/types/types"
 import { EventRecord } from "@polkadot/types/interfaces"
 import { filter, firstValueFrom, take, tap } from "rxjs"
-import { IERC20__factory } from "@snowbridge/contract-types"
-import { paraIdToAgentId } from "./utils"
 
 export type SendValidationResult = {
     success?: {
