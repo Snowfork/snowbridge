@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = [
+    "runtimes/rococo",
+    "runtimes/bridge-hub-rococo",
+    "preimage",
+]
