@@ -37,3 +37,6 @@
 ## Runbooks
 
 * [Updating Snowbridge Pallets, BridgeHub & AssetHub Runtimes](runbooks/updating-snowbridge-pallets-bridgehub-and-assethub-runtimes.md)
+* [Initialize Ethereum light client with Forced Checkpoint](runbooks/initialize-ethereum-light-client-with-forced-checkpoint.md)
+* [Initial Deployment of Gateway Contracts](runbooks/initial-deployment-of-gateway-contracts.md)
+* [Halt Bridge in Case of Emergency](runbooks/halt-bridge-in-case-of-emergency.md)
