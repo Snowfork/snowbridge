@@ -884,4 +884,21 @@ contract GatewayTest is Test {
         fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         assertEq(fee, 10000000000000000);
     }
+
+    function testSendTokenToForeignDestWithInvalidFee() public {
+        // Let gateway lock up to 1 tokens
+        token.approve(address(gateway), 1);
+
+        // Multilocation for recipient
+        ParaID destPara = ParaID.wrap(2043);
+
+        // register token first
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        IGateway(address(gateway)).registerToken{value: fee}(address(token));
+
+        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 0);
+
+        vm.expectRevert(Assets.InvalidDestFee.selector);
+        IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, 0, 1);
+    }
 }
