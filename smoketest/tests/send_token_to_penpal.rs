@@ -90,7 +90,7 @@ async fn send_token_to_penpal() {
 
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
-	let wait_for_blocks = 50;
+	let wait_for_blocks = 100;
 	let mut assethub_blocks = assethub_client
 		.blocks()
 		.subscribe_finalized()

@@ -27,7 +27,8 @@ fund_accounts() {
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $assethub_sovereign_account
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $penpal_sovereign_account
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $beacon_relayer_pub_key
-    transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $execution_relayer_pub_key
+    transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $execution_relayer_assethub_pub_key
+    transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $execution_relayer_penpal_pub_key
 }
 
 open_hrmp_channel() {

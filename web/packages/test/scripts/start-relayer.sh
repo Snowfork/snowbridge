@@ -150,7 +150,7 @@ start_relayer() {
             echo "Starting parachain-relay (primary governance) at $(date)"
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay-bridge-hub-01.json" \
-                --ethereum.private-key $parachain_relay_eth_key \
+                --ethereum.private-key $parachain_relay_primary_gov_eth_key \
                 >>"$output_dir"/parachain-relay-bridge-hub-01.log 2>&1 || true
             sleep 20
         done
@@ -163,7 +163,7 @@ start_relayer() {
             echo "Starting parachain-relay (secondary governance) at $(date)"
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay-bridge-hub-02.json" \
-                --ethereum.private-key $parachain_relay_eth_key \
+                --ethereum.private-key $parachain_relay_secondary_gov_eth_key \
                 >>"$output_dir"/parachain-relay-bridge-hub-02.log 2>&1 || true
             sleep 20
         done
@@ -176,7 +176,7 @@ start_relayer() {
             echo "Starting parachain relay (asset-hub) at $(date)"
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay-asset-hub.json" \
-                --ethereum.private-key $parachain_relay_eth_key \
+                --ethereum.private-key $parachain_relay_assethub_eth_key \
                 >>"$output_dir"/parachain-relay-asset-hub.log 2>&1 || true
             sleep 20
         done
@@ -189,7 +189,7 @@ start_relayer() {
             echo "Starting parachain-relay (penpal) at $(date)"
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay-penpal.json" \
-                --ethereum.private-key $parachain_relay_eth_key \
+                --ethereum.private-key $parachain_relay_penpal_eth_key \
                 >>"$output_dir"/parachain-relay-penpal.log 2>&1 || true
             sleep 20
         done
@@ -215,7 +215,7 @@ start_relayer() {
             echo "Starting execution relay (asset-hub) at $(date)"
             "${relay_bin}" run execution \
                 --config $output_dir/execution-relay-asset-hub.json \
-                --substrate.private-key "//ExecutionRelay" \
+                --substrate.private-key "//ExecutionRelayAssetHub" \
                 >>"$output_dir"/execution-relay-asset-hub.log 2>&1 || true
             sleep 20
         done
@@ -228,7 +228,7 @@ start_relayer() {
             echo "Starting execution relay (penpal) at $(date)"
             "${relay_bin}" run execution \
                 --config $output_dir/execution-relay-penpal.json \
-                --substrate.private-key "//ExecutionRelay" \
+                --substrate.private-key "//ExecutionRelayPenpal" \
                 >>"$output_dir"/execution-relay-penpal.log 2>&1 || true
             sleep 20
         done
