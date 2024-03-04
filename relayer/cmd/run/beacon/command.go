@@ -2,9 +2,7 @@ package beacon
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -73,10 +71,6 @@ func run(_ *cobra.Command, _ []string) error {
 
 	eg, ctx := errgroup.WithContext(ctx)
 
-	eg.Go(func() error {
-		return startHttpServer(ctx)
-	})
-
 	// Ensure clean termination upon SIGINT, SIGTERM
 	eg.Go(func() error {
 		notify := make(chan os.Signal, 1)
@@ -107,28 +101,4 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
-}
-
-func startHttpServer(ctx context.Context) error {
-	srv := &http.Server{Addr: ":8080", Handler: nil}
-
-	http.HandleFunc("/beacon/health", healthCheckHandler)
-
-	go func() {
-		<-ctx.Done()
-		if err := srv.Shutdown(context.Background()); err != nil {
-			logrus.WithError(err).Error("beacon health check endpoint shutting down")
-		}
-	}()
-
-	logrus.Info("starting health check HTTP server on port 8080")
-	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		return fmt.Errorf("http server could not be started: %v", err)
-	}
-
-	return nil
-}
-
-func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
 }

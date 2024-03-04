@@ -38,10 +38,7 @@ echo "Installing web packages"
 
 echo "Download geth to replace the nix version"
 OS=$(uname -s | tr A-Z a-z)
-MACHINE_TYPE=$(uname -m | tr A-Z a-z)
-if [ "$OS" == "linux" ]; then
-  MACHINE_TYPE="amd64"
-fi
+MACHINE_TYPE=$(uname -m | tr A-Z a-z | sed 's/x86_64/amd64/')
 
 geth_package=geth-$OS-$MACHINE_TYPE-1.13.11-8f7eb9cc
 curl https://gethstore.blob.core.windows.net/builds/$geth_package.tar.gz -o /tmp/geth.tar.gz || { echo 'Download failed'; exit 1; }
