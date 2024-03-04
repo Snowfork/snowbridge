@@ -77,16 +77,22 @@ set_gateway() {
     send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$transact_call"
 }
 
-configure_bridgehub() {
+config_xcm_version() {
+    local call="0x1f04020109079edaa80203000000"
+    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+}
+
+configure_substrate() {
     set_gateway
     fund_accounts
     wait_beacon_chain_ready
     config_beacon_checkpoint
     open_hrmp_channels
+    config_xcm_version
 }
 
 if [ -z "${from_start_services:-}" ]; then
     echo "config beacon checkpoint only!"
-    configure_bridgehub
+    configure_substrate
     wait
 fi
