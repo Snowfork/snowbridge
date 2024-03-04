@@ -21,6 +21,7 @@ echo "Setting up git hooks"
 git config --local core.hooksPath hooks/
 
 echo "Installing Rust nightly toolchain"
+env | grep $RUST_NIGHTLY_VERSION
 rustup default stable
 rustup target add wasm32-unknown-unknown
 rustup install --profile minimal $RUST_NIGHTLY_VERSION
