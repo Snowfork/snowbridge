@@ -898,7 +898,7 @@ contract GatewayTest is Test {
 
         fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 0);
 
-        vm.expectRevert(Assets.InvalidDestFee.selector);
+        vm.expectRevert(Assets.InvalidDestinationFee.selector);
         IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, 0, 1);
     }
 }
