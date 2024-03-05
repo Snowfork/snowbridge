@@ -23,6 +23,8 @@ build_binaries() {
         echo "No changes detected in polkadot or substrate and binaries are available, not rebuilding relaychain binaries."
     fi
 
+    mkdir -p "$output_bin_dir"
+
     cp target/release/polkadot $output_bin_dir/polkadot
     cp target/release/polkadot-execute-worker $output_bin_dir/polkadot-execute-worker
     cp target/release/polkadot-prepare-worker $output_bin_dir/polkadot-prepare-worker
