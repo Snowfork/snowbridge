@@ -23,6 +23,7 @@ library Assets {
     error InvalidDestination();
     error TokenNotRegistered();
     error Unsupported();
+    error InvalidDestinationFee();
 
     function isTokenRegistered(address token) external view returns (bool) {
         return AssetsStorage.layout().tokenRegistry[token].isRegistered;
@@ -106,6 +107,9 @@ library Assets {
                 revert Unsupported();
             }
         } else {
+            if (destinationChainFee == 0) {
+                revert InvalidDestinationFee();
+            }
             // The funds will be minted into sovereign account of the destination parachain on AssetHub,
             // and then reserve-transferred to the receiver's account on the destination parachain.
             if (destinationAddress.isAddress32()) {
