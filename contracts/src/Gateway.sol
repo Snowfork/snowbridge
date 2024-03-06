@@ -53,7 +53,7 @@ contract Gateway is IGateway, IInitializable {
     address internal immutable AGENT_EXECUTOR;
 
     // Verification state
-    address internal immutable BEEFY_CLIENT;
+    address public immutable BEEFY_CLIENT;
 
     // BridgeHub
     ParaID internal immutable BRIDGE_HUB_PARA_ID;
