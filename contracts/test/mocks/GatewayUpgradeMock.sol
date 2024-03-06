@@ -11,7 +11,8 @@ import {
     ChannelID,
     MultiAddress,
     OriginKind,
-    Weight
+    Weight,
+    TransactFeeMode
 } from "../../src/Types.sol";
 import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
@@ -75,12 +76,13 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
     function sendCall(
         ParaID destinationChain,
         OriginKind originKind,
+        TransactFeeMode feeMode,
         uint128 destinationFee,
         Weight calldata weightAtMost,
         bytes calldata call
     ) external payable {}
 
-    function quoteSendCallFee() external pure returns (uint256) {
+    function quoteSendCallFee(TransactFeeMode, uint128) external pure returns (uint256) {
         return 1;
     }
 }

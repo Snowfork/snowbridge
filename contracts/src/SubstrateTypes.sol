@@ -135,17 +135,21 @@ library SubstrateTypes {
     }
 
     // Arbitrary transact
-    function Transact(address sender, bytes1 originKind, uint128 fee, Weight memory weight, bytes memory call)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function Transact(
+        address sender,
+        bytes1 originKind,
+        bytes1 feeMode,
+        uint128 fee,
+        Weight memory weight,
+        bytes memory call
+    ) internal view returns (bytes memory) {
         return bytes.concat(
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x02),
             SubstrateTypes.H160(sender),
             originKind,
+            feeMode,
             ScaleCodec.encodeU128(fee),
             ScaleCodec.encodeCompactU64(weight.refTime),
             ScaleCodec.encodeCompactU64(weight.proofSize),

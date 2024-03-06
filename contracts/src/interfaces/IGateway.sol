@@ -2,7 +2,16 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.23;
 
-import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress, OriginKind, Weight} from "../Types.sol";
+import {
+    OperatingMode,
+    InboundMessage,
+    ParaID,
+    ChannelID,
+    MultiAddress,
+    OriginKind,
+    Weight,
+    TransactFeeMode
+} from "../Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
@@ -110,11 +119,12 @@ interface IGateway {
     function sendCall(
         ParaID destinationChain,
         OriginKind originKind,
+        TransactFeeMode feeMode,
         uint128 destinationFee,
         Weight calldata weightAtMost,
         bytes calldata call
     ) external payable;
 
     /// @dev Quote a fee in Ether for transact
-    function quoteSendCallFee() external view returns (uint256);
+    function quoteSendCallFee(TransactFeeMode feeMode, uint128 destinationFee) external view returns (uint256);
 }
