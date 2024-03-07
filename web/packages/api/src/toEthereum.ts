@@ -287,12 +287,13 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
     scanBlocks: 200
 }): AsyncGenerator<string> {
     const { polkadot: { api: { relaychain, bridgeHub } }, ethereum, ethereum: { contracts: { beefyClient, gateway } } } = context
+    const { success } = result
 
-    if (result.failure || !result.success || !result.success.plan.success) {
+    if (result.failure || !success || !success.plan.success) {
         throw new Error('Send failed')
     }
 
-    if (result.success.bridgeHub.events === undefined) {
+    if (success.bridgeHub.events === undefined) {
         // Wait for nonce
         let nonce: bigint | undefined = undefined
         let extrinsicSuccess = false
@@ -308,13 +309,13 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
                         let eventData = (event.event.toPrimitive() as any).data
 
                         if (bridgeHub.events.messageQueue.Processed.is(event.event)
-                            && eventData[1]?.sibling === result.success?.plan.success?.assetHub.paraId) {
+                            && eventData[1]?.sibling === success?.plan.success?.assetHub.paraId) {
 
                             foundMessageQueue = true
                             extrinsicSuccess = eventData[3]
                         }
                         if (bridgeHub.events.ethereumOutboundQueue.MessageAccepted.is(event.event)
-                            && eventData[0].toLowerCase() === result.success?.messageId?.toLowerCase()) {
+                            && eventData[0].toLowerCase() === success?.messageId?.toLowerCase()) {
 
                             foundMessageAccepted = true
                             nonce = BigInt(eventData[1])
@@ -329,17 +330,17 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
         if (receivedEvents === undefined) {
             throw Error('Timeout while waiting for Bridge Hub delivery.')
         }
-        result.success.bridgeHub.events = receivedEvents
-        result.success.bridgeHub.nonce = nonce
-        result.success.bridgeHub.extrinsicSuccess = extrinsicSuccess
+        success.bridgeHub.events = receivedEvents
+        success.bridgeHub.nonce = nonce
+        success.bridgeHub.extrinsicSuccess = extrinsicSuccess
     }
-    if (result.success.bridgeHub.extrinsicSuccess) {
-        yield `Message delivered to Bridge Hub block ${result.success.bridgeHub.events?.createdAtHash?.toHex()}. Waiting for BEEFY client.`
+    if (success.bridgeHub.extrinsicSuccess) {
+        yield `Message delivered to Bridge Hub block ${success.bridgeHub.events?.createdAtHash?.toHex()}. Waiting for BEEFY client.`
     } else {
         throw new Error('Message processing failed on Bridge Hub.')
     }
 
-    if (result.success.ethereum.beefyBlockNumber === undefined) {
+    if (success.ethereum.beefyBlockNumber === undefined) {
         const polkadotBlock = (await relaychain.rpc.chain.getHeader()).number.toBigInt()
         const latestBeefyBlock = await beefyClient.latestBeefyBlock()
         console.log(`BEEFY client ${polkadotBlock - latestBeefyBlock} blocks behind.`)
@@ -355,28 +356,28 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
             }
             beefyClient.on(NewMMRRootEvent, listener);
         })
-        result.success.ethereum.beefyBlockNumber = await ethereum.api.getBlockNumber()
+        success.ethereum.beefyBlockNumber = await ethereum.api.getBlockNumber()
     }
 
-    yield `Included in BEEFY Light client block ${result.success.ethereum.beefyBlockNumber}. Waiting for message to be delivered.`
+    yield `Included in BEEFY Light client block ${success.ethereum.beefyBlockNumber}. Waiting for message to be delivered.`
     {
         const InboundMessageDispatched = gateway.getEvent("InboundMessageDispatched")
-        result.success.ethereum.messageDispatchSuccess = await new Promise<boolean>((resolve) => {
-            const listener = (channelId: string, nonce: bigint, messageId: string, success: boolean) => {
-                if (messageId.toLowerCase() === result.success?.messageId?.toLowerCase()
-                    && nonce === result.success?.bridgeHub.nonce
-                    && channelId.toLowerCase() == paraIdToChannelId(result.success.plan.success?.assetHub.paraId ?? 1000).toLowerCase()) {
+        success.ethereum.messageDispatchSuccess = await new Promise<boolean>((resolve) => {
+            const listener = (channelId: string, nonce: bigint, messageId: string, dispatchSuccess: boolean) => {
+                if (messageId.toLowerCase() === success.messageId?.toLowerCase()
+                    && nonce === success.bridgeHub.nonce
+                    && channelId.toLowerCase() == paraIdToChannelId(success.plan.success?.assetHub.paraId ?? 1000).toLowerCase()) {
 
-                    resolve(success)
+                    resolve(dispatchSuccess)
                     gateway.removeListener(InboundMessageDispatched, listener)
                 }
             }
             gateway.on(InboundMessageDispatched, listener)
         })
-        result.success.ethereum.transferBlockNumber = await ethereum.api.getBlockNumber()
+        success.ethereum.transferBlockNumber = await ethereum.api.getBlockNumber()
     }
-    if (result.success.ethereum.messageDispatchSuccess) {
-        yield `Transfer complete in Ethereum block ${result.success.ethereum.transferBlockNumber}.`
+    if (success.ethereum.messageDispatchSuccess) {
+        yield `Transfer complete in Ethereum block ${success.ethereum.transferBlockNumber}.`
     } else {
         throw Error("Message was not dispatched on successfully from Gateway.")
     }
