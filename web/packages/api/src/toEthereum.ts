@@ -315,7 +315,7 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
                             nonce = BigInt(eventData[1])
                         }
                     }
-                    return foundMessageQueue && (extrinsicSuccess && foundMessageAccepted || !extrinsicSuccess)
+                    return foundMessageQueue && ((foundMessageAccepted && extrinsicSuccess) || !extrinsicSuccess)
                 }),
             ),
             { defaultValue: undefined }
