@@ -6,6 +6,7 @@ import { Wallet } from 'ethers'
 const ETHEREUM_WS_API = 'ws://127.0.0.1:8546'
 const RELAY_CHAIN_WS_URL = 'ws://127.0.0.1:9944'
 const ASSET_HUB_WS_URL = 'ws://127.0.0.1:12144'
+const PENPAL_WS_URL = 'ws://127.0.0.1:13144'
 const BRIDGE_HUB_WS_URL = 'ws://127.0.0.1:11144'
 const GATEWAY_CONTRACT = '0xEDa338E4dC46038493b885327842fD3E301CaB39'
 const BEEFY_CONTRACT = '0x992B9df075935E522EC7950F37eC8557e86f6fdb'
@@ -19,6 +20,7 @@ const monitor = async () => {
                 bridgeHub: BRIDGE_HUB_WS_URL,
                 assetHub: ASSET_HUB_WS_URL,
                 relaychain: RELAY_CHAIN_WS_URL,
+                parachains: [PENPAL_WS_URL]
             },
         },
         appContracts: {
