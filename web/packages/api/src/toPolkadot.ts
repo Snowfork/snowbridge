@@ -108,7 +108,6 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
         hrmpChannelSetup = hrmpChannel.toPrimitive() !== null
     }
 
-    // TODO: Make acceptable latency configurable.
     const lightClientLatencyIsAcceptable = bridgeStatus.toPolkadot.latencySeconds < options.acceptableLatencyInSeconds
     const bridgeOperational = bridgeStatus.toPolkadot.operatingMode.outbound === 'Normal' && bridgeStatus.toPolkadot.operatingMode.beacon === 'Normal' 
     const channelOperational = channelStatus.toPolkadot.operatingMode.outbound === 'Normal'
