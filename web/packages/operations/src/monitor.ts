@@ -12,6 +12,17 @@ let config = {
     GATEWAY_CONTRACT: '0xEDa338E4dC46038493b885327842fD3E301CaB39',
     BEEFY_CONTRACT: '0x992B9df075935E522EC7950F37eC8557e86f6fdb',
     ASSET_HUB_PARAID: 1000,
+    BRIDGE_HUB_PARAID: 1013,
+    RELAYERS: [
+        { name: 'beacon', account: '', type: 'substrate' },
+        { name: 'beefy', account: '', type: 'ethereum' },
+        { name: 'parachain-primary-gov', account: '', type: 'ethereum' },
+        { name: 'parachain-secondary-gov', account: '', type: 'ethereum' },
+        { name: 'execution-assethub', account: '', type: 'substrate' },
+        { name: 'parachain-assethub', account: '', type: 'ethereum' },
+        { name: 'execution-penpal', account: '', type: 'substrate' },
+        { name: 'parachain-penpal', account: '', type: 'ethereum' },
+    ],
 }
 if (process.env.NODE_ENV === 'production') {
     config = {
@@ -22,6 +33,15 @@ if (process.env.NODE_ENV === 'production') {
         GATEWAY_CONTRACT: '0x5b4909ce6ca82d2ce23bd46738953c7959e710cd',
         BEEFY_CONTRACT: '0x27e5e17ac995d3d720c311e1e9560e28f5855fb1',
         ASSET_HUB_PARAID: 1000,
+        BRIDGE_HUB_PARAID: 1013,
+        RELAYERS: [
+            { name: 'beacon', account: '5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c', type: 'substrate' },
+            { name: 'beefy', account: '5CFNWKMFPsw5Cs2Teo6Pvg7rWyjKiFfqPZs8U4MZXzMYFwXL', type: 'ethereum' },
+            { name: 'parachain-primary-gov', account: '', type: 'ethereum' },
+            { name: 'parachain-secondary-gov', account: '', type: 'ethereum' },
+            { name: 'execution-assethub', account: '', type: 'substrate' },
+            { name: 'parachain-assethub', account: '', type: 'ethereum' },
+        ],
     }
 }
 
