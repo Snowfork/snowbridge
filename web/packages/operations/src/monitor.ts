@@ -23,7 +23,7 @@ let config = {
         { name: 'execution-assethub', account: '5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV', type: 'substrate' },
         { name: 'parachain-assethub', account: '0x8b66D5499F52D6F1857084A61743dFCB9a712859', type: 'ethereum' },
         { name: 'execution-penpal', account: '5HgmfVcc8xBUcReNJsUaJMhFWGkdYpEw4RiCX4SeZPdKXR6H', type: 'substrate' },
-        { name: 'parachain-penpal', account: '0xd1D1711BD05afF26a40B20EEDAc0846aA7dBAB45', type: 'ethereum' },
+        { name: 'parachain-penpal', account: '0x01F6749035e02205768f97e6f1d394Fb6769EC20', type: 'ethereum' },
     ],
 }
 if (process.env.NODE_ENV === 'production') {

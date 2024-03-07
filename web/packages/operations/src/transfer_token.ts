@@ -66,9 +66,7 @@ const monitor = async () => {
             console.log(update)
         }
     }
-
 }
-
 
 monitor()
     .then(() => process.exit(0))
