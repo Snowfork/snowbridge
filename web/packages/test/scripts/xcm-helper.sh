@@ -61,6 +61,8 @@ send_governance_transact_from_relaychain() {
         --ws "${relaychain_ws_url?}" \
         --seed "${relaychain_sudo_seed?}" \
         --sudo \
+        --noWait \
+        --nonce -1 \
         tx.xcmPallet.send \
             "${dest}" \
             "${message}"
@@ -112,6 +114,8 @@ transfer_balance() {
     npx polkadot-js-api \
         --ws "${runtime_para_endpoint}" \
         --seed "${seed?}" \
+        --noWait \
+        --nonce -1 \
         tx.xcmPallet.teleportAssets \
             "${dest}" \
             "${beneficiary}" \

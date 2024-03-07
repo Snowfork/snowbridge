@@ -14,8 +14,6 @@ start_geth() {
             ' \
             config/genesis.json >$output_dir/genesis.json
         geth init --datadir "$ethereum_data_dir" "$output_dir/genesis.json"
-        geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key0.prv
-        geth account import --datadir "$ethereum_data_dir" --password /dev/null config/dev-example-key1.prv
         geth --vmdebug --datadir "$ethereum_data_dir" --networkid 11155111 \
             --http --http.api debug,personal,eth,net,web3,txpool,engine,miner --ws --ws.api debug,eth,net,web3 \
             --rpc.allow-unprotected-txs --mine \
@@ -25,7 +23,6 @@ start_geth() {
             --http.corsdomain '*' \
             --allow-insecure-unlock \
             --authrpc.jwtsecret config/jwtsecret \
-            --unlock 0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD,0x89b4AB1eF20763630df9743ACF155865600daFF2 \
             --password /dev/null \
             --rpc.gascap 0 \
             --ws.origins "*" \
