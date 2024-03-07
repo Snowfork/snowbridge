@@ -380,3 +380,27 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
     }
     yield `Message delivered to Asset Hub block ${result.success.assetHub.events?.createdAtHash?.toHex()}. Transfer complete.`
 }
+
+// TODO: Register
+//export type RegisterValidationResult = {
+//    success?: {}
+//    failure?: {}
+//}
+//
+//export const validateRegister = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint, options={
+//    acceptableLatencyInSeconds: 10800 /* 3 Hours */
+//}): Promise<RegisterValidationResult> => {
+//    return {}
+//}
+//
+//export const register = async (context: Context, signer: Signer, plan: RegisterValidationResult, confirmations = 1): Promise<RegisterResult> => {
+//    if (plan.failure || !plan.success) {
+//        throw new Error('Plan failed')
+//    }
+//    if (plan.success.sourceAddress !== await signer.getAddress()) {
+//        throw new Error('Invalid signer')
+//    }
+//}
+//
+//export async function* trackRegisterProgress(context: Context, result: RegisterResult, beaconUpdateTimeout = 10, scanBlocks = 200): AsyncGenerator<string> {
+//}

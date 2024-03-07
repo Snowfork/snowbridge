@@ -139,11 +139,14 @@ export type SendResult = {
         bridgeHub: {
             submittedAtHash: string
             events?: Codec
+            extrinsicSuccess?: boolean
+            nonce?: bigint
         }
         ethereum: {
             submittedAtHash: string
             beefyBlockNumber?: number
             transferBlockNumber?: number
+            callSuccessful?: boolean
         },
     },
     failure?: {
@@ -285,6 +288,8 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
 
     if (result.success.bridgeHub.events === undefined) {
         // Wait for nonce
+        let nonce = undefined
+        let extrinsicSuccess = false
         const receivedEvents = await firstValueFrom(
             context.polkadot.api.bridgeHub.rx.query.system.events().pipe(
                 take(options.scanBlocks),
@@ -298,17 +303,18 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
 
                         if (context.polkadot.api.bridgeHub.events.messageQueue.Processed.is(event.event)
                             && eventData[1]?.sibling === result.success?.plan.success?.assetHub.paraId) {
-                            console.log(eventData)
+
                             foundMessageQueue = true
+                            extrinsicSuccess = eventData[3]
                         }
                         if (context.polkadot.api.bridgeHub.events.ethereumOutboundQueue.MessageAccepted.is(event.event)
                             && eventData[0].toLowerCase() === result.success?.messageId?.toLowerCase()) {
 
-                            console.log(eventData)
                             foundMessageAccepted = true
+                            nonce = eventData[1]
                         }
                     }
-                    return foundMessageQueue && foundMessageAccepted
+                    return (foundMessageQueue && extrinsicSuccess && foundMessageAccepted) || (foundMessageQueue && !extrinsicSuccess)
                 }),
             ),
             { defaultValue: undefined }
@@ -318,22 +324,26 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
             throw Error('Timeout while waiting for Bridge Hub delivery.')
         }
         result.success.bridgeHub.events = receivedEvents
+        result.success.bridgeHub.nonce = nonce
+        result.success.bridgeHub.extrinsicSuccess = extrinsicSuccess
     }
     yield `Message delivered to Bridge Hub block ${result.success.bridgeHub.events?.createdAtHash?.toHex()}. Waiting for BEEFY client.`
 
     if (result.success.ethereum.beefyBlockNumber === undefined) {
         const polkadotBlock = (await context.polkadot.api.relaychain.rpc.chain.getHeader()).number.toBigInt()
-        let latestBeefyBlock = await context.ethereum.contracts.beefyClient.latestBeefyBlock()
+        const latestBeefyBlock = await context.ethereum.contracts.beefyClient.latestBeefyBlock()
         console.log(`BEEFY client  ${polkadotBlock - latestBeefyBlock} blocks behind.`)
         const NewMMRRootEvent = context.ethereum.contracts.beefyClient.getEvent("NewMMRRoot")
         await new Promise<void>((resolve) => {
-            context.ethereum.contracts.beefyClient.on(NewMMRRootEvent, (_, beefyBlock) => {
-                if (latestBeefyBlock >= polkadotBlock) {
+            const listener = (mmrRoot: string, beefyBlock: bigint) => {
+                if (beefyBlock >= polkadotBlock) {
                     resolve()
+                    context.ethereum.contracts.beefyClient.removeListener(NewMMRRootEvent, listener)
+                } else {
+                    console.log(`BEEFY client ${polkadotBlock - beefyBlock} blocks behind.`)
                 }
-                latestBeefyBlock = beefyBlock
-                console.log(`BEEFY client  ${polkadotBlock - latestBeefyBlock} blocks behind.`)
-            });
+            }
+            context.ethereum.contracts.beefyClient.on(NewMMRRootEvent, listener);
         })
         result.success.ethereum.beefyBlockNumber = await context.ethereum.api.getBlockNumber()
     }
@@ -341,17 +351,18 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
     yield `Included in BEEFY Light client block ${result.success.ethereum.beefyBlockNumber}. Waiting for message to be delivered.`
     {
         const InboundMessageDispatched = context.ethereum.contracts.gateway.getEvent("InboundMessageDispatched")
-        await new Promise<boolean>((resolve) => {
-            context.ethereum.contracts.gateway.on(InboundMessageDispatched,
-                (channelID: string, nonce: bigint, messageID: string, success: boolean) => {
-                    if (messageID.toLowerCase() === result.success?.messageId)
-                        //TODO && nonce === result.success?.nonce
-                        //TODO && channelId == result.success.channelId) {
-                        resolve(success)
+        result.success.ethereum.callSuccessful = await new Promise<boolean>((resolve) => {
+            const listener = (channelId: string, nonce: bigint, messageID: string, success: boolean) => {
+                if (messageID.toLowerCase() === result.success?.messageId
+                    && nonce === result.success?.bridgeHub.nonce
+                    && channelId.toLowerCase() == result.success?.messageId.toLowerCase()) {
+
+                    resolve(success)
+                    context.ethereum.contracts.gateway.removeListener(InboundMessageDispatched, listener)
                 }
-            )
+            }
+            context.ethereum.contracts.gateway.on(InboundMessageDispatched, listener)
         })
-        context.polkadot.api.assetHub.registry.createType
         result.success.ethereum.transferBlockNumber = await context.ethereum.api.getBlockNumber()
     }
     yield `Transfer complete in Ethereum block ${result.success.ethereum.transferBlockNumber}.`
