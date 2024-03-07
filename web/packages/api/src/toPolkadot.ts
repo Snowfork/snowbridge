@@ -187,10 +187,13 @@ export type SendResult = {
                 blockNumber: number,
             },
             events?: Codec,
+            extrinsicSuccess?: boolean
+            extrinsicNumber?: number
         }
         assetHub: {
             submittedAtHash: string,
             events?: Codec,
+            extrinsicSuccess?: boolean,
         },
         channelId: string,
         nonce: bigint,
@@ -303,12 +306,15 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
 
     if (result.success.bridgeHub.events === undefined) {
         // Wait for nonce
+        let extrinsicNumber: number | undefined = undefined
+        let extrinsicSuccess = false
         const receivedEvents = await firstValueFrom(
             context.polkadot.api.bridgeHub.rx.query.system.events().pipe(
                 take(scanBlocks),
                 tap((events) => console.log(`Waiting for Bridge Hub inbound message block ${events.createdAtHash?.toHex()}.`)),
                 filter(events => {
                     let events_iter: any = events
+                    let messageReceivedFound = false
                     for (const event of events_iter) {
                         let eventData = (event.event.toHuman() as any).data
                         if (context.polkadot.api.bridgeHub.events.ethereumInboundQueue.MessageReceived.is(event.event)
@@ -316,10 +322,15 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
                             && eventData.messageId.toLowerCase() === result.success?.messageId.toLowerCase()
                             && eventData.channelId.toLowerCase() === result.success?.channelId.toLowerCase()) {
 
-                            return true
+                            messageReceivedFound = true
+                            extrinsicNumber = event.phase.toPrimitive().applyExtrinsic
+                        }
+
+                        if (context.polkadot.api.bridgeHub.events.system.ExtrinsicSuccess.is(event.event) && event.phase.toPrimitive().applyExtrinsic == extrinsicNumber) {
+                            extrinsicSuccess = true
                         }
                     }
-                    return false
+                    return messageReceivedFound
                 }),
             ),
             { defaultValue: undefined }
@@ -328,17 +339,23 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
         if (receivedEvents === undefined) {
             throw Error('Timeout while waiting for Bridge Hub delivery.')
         }
+        result.success.bridgeHub.extrinsicSuccess = extrinsicSuccess
+        result.success.bridgeHub.extrinsicNumber = extrinsicNumber
         result.success.bridgeHub.events = receivedEvents
     }
 
-    // TODO: Expect extrinsic success 
-    yield `Message delivered to Bridge Hub block ${result.success.bridgeHub.events?.createdAtHash?.toHex()}. Waiting for message delivery to Asset Hub.`
+    if(result.success.bridgeHub.extrinsicSuccess) {
+        yield `Message delivered to Bridge Hub block ${result.success.bridgeHub.events?.createdAtHash?.toHex()}. Waiting for message delivery to Asset Hub.`
+    } else {
+        throw new Error('Message processing failed on Bridge Hub.')
+    }
 
     if (result.success.assetHub.events === undefined) {
         let issuedTo = result.success.plan.success.beneficiaryAddress
         if (result.success.plan.success.assetHub.paraId !== result.success.plan.success.destinationParaId) {
             issuedTo = paraIdToSovereignAccount("sibl", result.success.plan.success.destinationParaId)
         }
+        let extrinsicSuccess = false
         let receivedEvents = await firstValueFrom(
             context.polkadot.api.assetHub.rx.query.system.events().pipe(
                 take(scanBlocks),
@@ -354,6 +371,7 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
                             && eventData[1]?.sibling === result.success?.plan.success?.bridgeHub.paraId) {
 
                             foundMessageQueue = true
+                            extrinsicSuccess = eventData[3]
                         }
                         if (context.polkadot.api.assetHub.events.foreignAssets.Issued.is(event.event)
                             && eventData[2].toString() === result.success?.plan.success?.amount.toString()
@@ -365,7 +383,7 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
                             foundAssetsIssued = true
                         }
                     }
-                    return foundMessageQueue && foundAssetsIssued
+                    return foundMessageQueue && ((extrinsicSuccess && foundAssetsIssued) || !extrinsicSuccess)
                 }),
             ),
             { defaultValue: undefined }
@@ -375,10 +393,14 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
         if (receivedEvents === undefined) {
             throw Error('Timeout while waiting for Asset Hub delivery.')
         }
-        // TODO: Expect extrinsic success
         result.success.assetHub.events = receivedEvents
+        result.success.assetHub.extrinsicSuccess = extrinsicSuccess
     }
-    yield `Message delivered to Asset Hub block ${result.success.assetHub.events?.createdAtHash?.toHex()}. Transfer complete.`
+    if(result.success.assetHub.extrinsicSuccess) {
+        yield `Message delivered to Asset Hub block ${result.success.assetHub.events?.createdAtHash?.toHex()}. Transfer complete.`
+    } else {
+        throw new Error('Message processing failed on Asset Hub.')
+    }
 }
 
 // TODO: Register
