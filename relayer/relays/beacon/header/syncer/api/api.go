@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
@@ -398,11 +399,16 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 }
 
 func (b *BeaconClient) DownloadBeaconState(stateIdOrSlot string) ([]byte, error) {
+	log.WithField("slot", stateIdOrSlot).Info("fetching beacon data")
 	data, err := b.DownloadBeaconStateByEndpoint(stateIdOrSlot, b.endpoint)
-	if err == nil {
+	if err != nil {
+		log.WithField("slot", stateIdOrSlot).Info("falling back to another beacon state endpoint")
 		data, err = b.DownloadBeaconStateByEndpoint(stateIdOrSlot, b.fallbackEndpoint)
+		if err == nil {
+			log.WithField("slot", stateIdOrSlot).Info("successfully used fallback node")
+		}
 	}
-	return data, nil
+	return data, err
 }
 
 func (b *BeaconClient) DownloadBeaconStateByEndpoint(stateIdOrSlot, endpoint string) ([]byte, error) {
