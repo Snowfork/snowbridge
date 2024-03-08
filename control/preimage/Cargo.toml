@@ -19,9 +19,12 @@ subxt = { version = "0.34.0", features = ["substrate-compat"] }
 serde = { version = "1.0.197", features = ["derive"] }
 sp-arithmetic = "24.0.0"
 alloy-primitives = "0.6.3"
+snowbridge-beacon-primitives = "0.2.0"
 
 rococo-runtime = { path = "../runtimes/rococo", optional = true }
 bridge-hub-rococo-runtime = { path = "../runtimes/bridge-hub-rococo", optional = true }
+serde_json = "1.0.114"
+
 
 [features]
 default = ["rococo"]

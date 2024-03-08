@@ -3,14 +3,15 @@ mod relay_runtime;
 mod commands;
 mod helpers;
 
+use crate::helpers::wrap_calls;
 use codec::Encode;
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum, Args};
 use subxt::{OnlineClient, PolkadotConfig};
-use std::io::Write;
-use alloy_primitives::{Address, Bytes, FixedBytes};
+use std::{fs::File, path::PathBuf, io::{Read, Write}};
+use alloy_primitives::{Address, Bytes, FixedBytes, U256, U128};
 
 #[derive(Debug, Parser)]
-#[command(name = "snowbridge-control", version, about, long_about = None)]
+#[command(name = "snowbridge-preimage", version, about, long_about = None)]
 struct Cli {
     /// Output format of preimage
     #[arg(long, value_enum, default_value_t=Format::Hex)]
@@ -22,12 +23,14 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// Change the gateway operating mode
-    GatewayOperatingMode {
-        /// Operating mode
-        #[arg(value_enum)]
-        mode: GatewayOperatingModeArg,
+    Initialize {
+        #[command(flatten)]
+        gateway_operating_mode: GatewayOperatingModeArgs,
+        #[command(flatten)]
+        pricing_parameters: PricingParametersArgs,
     },
+    /// Change the gateway operating mode
+    GatewayOperatingMode(GatewayOperatingModeArgs),
     /// Upgrade the Gateway contract
     Upgrade {
 
@@ -50,7 +53,53 @@ pub enum Command {
         /// Maximum gas required by the initializer
         #[arg(long, requires = "initializer", value_name = "GAS")]
         initializer_gas: Option<u64>,
-    }
+    },
+    /// Set pricing parameters
+    #[command(verbatim_doc_comment)]
+    PricingParameters(PricingParametersArgs),
+    ForceCheckpoint(ForceCheckpointArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct GatewayOperatingModeArgs {
+    /// Operating mode
+    #[arg(long, value_enum)]
+    gateway_operating_mode: GatewayOperatingModeEnum,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, ValueEnum)]
+pub enum GatewayOperatingModeEnum {
+    Normal,
+    RejectingOutboundMessages,
+}
+
+#[derive(Debug, Args)]
+pub struct ForceCheckpointArgs {
+    #[arg(long, value_name = "FILE")]
+    pub checkpoint: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub struct PricingParametersArgs {
+    /// Numerator for ETH/DOT Exchange rate
+    ///
+    /// For example, if the exchange rate is 1/400 (exchange 1 ETH for 400 DOT), then NUMERATOR should be 1.
+    #[arg(long, value_name = "UINT")]
+    pub exchange_rate_numerator: u64,
+    /// Denominator for ETH/DOT Exchange rate
+    ///
+    /// For example, if the exchange rate is 1/400 (exchange 1 ETH for 400 DOT), then DENOMINATOR should be 400.
+    #[arg(long, value_name = "UINT")]
+    pub exchange_rate_denominator: u64,
+    /// Ether fee per unit of gas
+    #[arg(long, value_name = "GWEI")]
+    pub fee_per_gas: u64,
+    /// Relayer reward for delivering messages to Polkadot
+    #[arg(long, value_name = "PLANCK")]
+    pub local_reward: U128,
+    /// Relayer reward for delivering messages to Ethereum
+    #[arg(long, value_name = "WEI")]
+    pub remote_reward: U256,
 }
 
 fn parse_eth_address(v: &str) -> Result<Address, String> {
@@ -78,12 +127,6 @@ pub enum Format {
     Binary,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, ValueEnum)]
-pub enum GatewayOperatingModeArg {
-    Normal,
-    RejectingOutboundMessages,
-}
-
 struct StaticConfig<'a> {
     api: &'a str,
 }
@@ -108,7 +151,13 @@ static CONFIG: StaticConfig<'static> = StaticConfig {
 };
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() {
+    if let Err(err) = run().await {
+        eprintln!("{err}");
+    }
+}
+
+async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
 	let api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(CONFIG.api)
@@ -120,8 +169,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let call = match &cli.command {
-        Command::GatewayOperatingMode { mode } => {
-            commands::gateway_operating_mode(&context, *mode).await?
+        Command::ForceCheckpoint(ForceCheckpointArgs { checkpoint }) => {
+            let mut file = File::open(checkpoint).expect("File not found");
+            let mut data = String::new();
+            file.read_to_string(&mut data).expect("Failed to read the file");
+
+            let checkpoint: snowbridge_beacon_primitives::CheckpointUpdate<512> = serde_json::from_str(&data).unwrap();
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other, "foo")));
+        },
+        Command::Initialize {
+            gateway_operating_mode: GatewayOperatingModeArgs { gateway_operating_mode },
+            pricing_parameters: PricingParametersArgs { exchange_rate_numerator, exchange_rate_denominator, fee_per_gas, local_reward, remote_reward },
+        } => {
+            let call1 = commands::gateway_operating_mode(*gateway_operating_mode);
+            let call2 = commands::pricing_parameters(*exchange_rate_numerator, *exchange_rate_denominator, *fee_per_gas, *local_reward, *remote_reward);
+            wrap_calls(&context, vec![call1, call2]).await?
+        },
+        Command::GatewayOperatingMode(GatewayOperatingModeArgs { gateway_operating_mode }) => {
+            let call = commands::gateway_operating_mode(*gateway_operating_mode);
+            wrap_calls(&context, vec![call]).await?
         },
         Command::Upgrade { logic_address, logic_code_hash, initializer, initializer_params, initializer_gas} => {
             let initializer = if *initializer {
@@ -129,12 +196,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 None
             };
-            commands::upgrade(
-                &context,
+            let call = commands::upgrade(
                 *logic_address,
                 *logic_code_hash,
                 initializer
-            ).await?
+            );
+            wrap_calls(&context, vec![call]).await?
+        },
+        Command::PricingParameters(PricingParametersArgs { exchange_rate_numerator, exchange_rate_denominator, fee_per_gas, local_reward, remote_reward }) => {
+            let call = commands::pricing_parameters(*exchange_rate_numerator, *exchange_rate_denominator, *fee_per_gas, *local_reward, *remote_reward);
+            wrap_calls(&context, vec![call]).await?
         }
     };
 
