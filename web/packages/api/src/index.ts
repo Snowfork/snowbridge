@@ -102,12 +102,27 @@ export const addParachainConnection = async (context: Context, url: string): Pro
     const api = await ApiPromise.create({
         provider: new WsProvider(url)
     })
-    const paraId = (await context.polkadot.api.assetHub.query.parachainInfo.parachainId()).toPrimitive() as number
+    const paraId = (await api.query.parachainInfo.parachainId()).toPrimitive() as number
     if (paraId in context.polkadot.api.parachains) {
         throw new Error(`${paraId} already added.`)
     }
     context.polkadot.api.parachains[paraId] = api
     console.log(`${url} added with parachain id: ${paraId}`)
+}
+
+export const destroyContext = async (context: Context): Promise<void> => {
+    // clean up etheruem
+    await context.ethereum.contracts.beefyClient.removeAllListeners()
+    await context.ethereum.contracts.gateway.removeAllListeners()
+    await context.ethereum.api.destroy()
+    // clean up polkadot
+    await context.polkadot.api.relaychain.disconnect()
+    await context.polkadot.api.bridgeHub.disconnect()
+    await context.polkadot.api.assetHub.disconnect()
+    
+    for (const paraId of Object.keys(context.polkadot.api.parachains)) {
+        await context.polkadot.api.parachains[Number(paraId)].disconnect()
+    }
 }
 
 export * as toPolkadot from './toPolkadot'

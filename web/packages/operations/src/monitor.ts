@@ -1,6 +1,6 @@
 
 import { u8aToHex } from '@polkadot/util'
-import { contextFactory, status, utils } from '@snowbridge/api'
+import { contextFactory, destroyContext, status, utils } from '@snowbridge/api'
 import { blake2AsU8a } from "@polkadot/util-crypto";
 
 const PRIMARY_GOVERNANCE_CHANNEL_ID = '0x0000000000000000000000000000000000000000000000000000000000000001'
@@ -101,6 +101,8 @@ const monitor = async () => {
         }
         console.log('\t', balance, ':', relayer.type, 'balance ->', relayer.name)
     }
+
+    await destroyContext(context)
 }
 
 

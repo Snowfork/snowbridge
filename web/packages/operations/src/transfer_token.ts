@@ -1,5 +1,5 @@
 
-import { contextFactory, toEthereum, toPolkadot } from '@snowbridge/api'
+import { contextFactory, destroyContext, toEthereum, toPolkadot } from '@snowbridge/api'
 import { Keyring } from '@polkadot/keyring'
 import { Wallet } from 'ethers'
 
@@ -34,7 +34,6 @@ const monitor = async () => {
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri('//Ferdie');
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
-    console.log(POLKADOT_ACCOUNT_PUBLIC)
 
     const amount = 1000n
 
@@ -47,6 +46,7 @@ const monitor = async () => {
         for await (const update of toPolkadot.trackSendProgress(context, result)) {
             console.log(update)
         }
+        console.log(result)
     }
     // To Polkadot (Penpal)
     {
@@ -57,6 +57,7 @@ const monitor = async () => {
         for await (const update of toPolkadot.trackSendProgress(context, result)) {
             console.log(update)
         }
+        console.log(result)
     }
     // To Ethereum
     {
@@ -67,7 +68,10 @@ const monitor = async () => {
         for await (const update of toEthereum.trackSendProgress(context, result)) {
             console.log(update)
         }
+        console.log(result)
     }
+
+    await destroyContext(context)
 }
 
 monitor()
