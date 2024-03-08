@@ -225,7 +225,7 @@ export type SendResult = {
 }
 
 export const send = async (context: Context, signer: Signer, plan: SendValidationResult, confirmations = 1): Promise<SendResult> => {
-    const { ethereum: { contracts: { gateway } }, polkadot: { api: { assetHub, bridgeHub } } } = context
+    const { polkadot: { api: { assetHub, bridgeHub } } } = context
     const { success } = plan
 
     if (plan.failure || !success) {
@@ -441,10 +441,11 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
     } else {
         throw new Error('Message processing failed on Asset Hub.')
     }
+
     if (success.plan.success.assetHub.paraId !== success.plan.success.destinationParaId
         && success.plan.success.destinationParaId in parachains
-        && success.destinationParachain?.events === undefined
-        && success.destinationParachain !== undefined) {
+        && success.destinationParachain !== undefined
+        && success.destinationParachain.events === undefined) {
 
         yield `Waiting for delivery to destination parachain ${success.plan.success.destinationParaId}`
         const destParaApi = parachains[success.plan.success.destinationParaId]
@@ -462,8 +463,9 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
                     for (const event of events_iter) {
                         let eventData = (event.event.toPrimitive() as any).data
                         if (destParaApi.events.messageQueue.Processed.is(event.event)
-                            && eventData[0].toLowerCase() === success?.messageId.toLowerCase()
-                            && eventData[1]?.sibling === success?.plan.success?.bridgeHub.paraId) {
+                            // TODO: Use SetTopic to forward the message id to the destination chain.
+                            //&& eventData[0].toLowerCase() === success?.messageId.toLowerCase()
+                            && eventData[1]?.sibling === success?.plan.success?.assetHub.paraId) {
 
                             foundMessageQueue = true
                             extrinsicSuccess = eventData[3]
@@ -490,6 +492,11 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
         }
         success.destinationParachain.events = receivedEvents
         success.destinationParachain.extrinsicSuccess = extrinsicSuccess
+    }
+    if (success.destinationParachain?.extrinsicSuccess) {
+        yield `Message delivered to parachain ${success.plan.success.destinationParaId} at block ${success.destinationParachain?.events?.createdAtHash?.toHex()}.`
+    } else {
+        throw new Error(`Message delivered failed on parachain ${success.plan.success.destinationParaId}.`)
     }
 
     yield 'Transfer complete.'
