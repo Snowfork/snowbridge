@@ -838,6 +838,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "snowbridge-beacon-primitives",
  "subxt",
 ]
 

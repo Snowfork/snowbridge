@@ -1,6 +1,8 @@
 use crate::GatewayOperatingModeEnum;
 
 use alloy_primitives::{Address, Bytes, FixedBytes, U128, U256};
+use bridge_hub_rococo_runtime::runtime_types::snowbridge_pallet_ethereum_client;
+use snowbridge_beacon_primitives::CheckpointUpdate;
 use sp_arithmetic::{FixedPointNumber, FixedU128};
 use subxt::utils::{H160, H256};
 
@@ -147,5 +149,13 @@ pub fn pricing_parameters(
 
     BridgeHubRuntimeCall::EthereumSystem(
         snowbridge_pallet_system::pallet::Call::set_pricing_parameters { params },
+    )
+}
+
+pub fn force_checkpoint(checkpoint: CheckpointUpdate<512>) -> BridgeHubRuntimeCall {
+    BridgeHubRuntimeCall::EthereumBeaconClient(
+        snowbridge_pallet_ethereum_client::pallet::Call::force_checkpoint {
+            update: Box::new(subxt::utils::Static(checkpoint)),
+        },
     )
 }

@@ -173,10 +173,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let mut file = File::open(checkpoint).expect("File not found");
             let mut data = String::new();
             file.read_to_string(&mut data).expect("Failed to read the file");
-
             let checkpoint: snowbridge_beacon_primitives::CheckpointUpdate<512> = serde_json::from_str(&data).unwrap();
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other, "foo")));
+            let call = commands::force_checkpoint(checkpoint);
+            wrap_calls(&context, vec![call]).await?
         },
         Command::Initialize {
             gateway_operating_mode: GatewayOperatingModeArgs { gateway_operating_mode },
