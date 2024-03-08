@@ -28,15 +28,17 @@ var (
 )
 
 type BeaconClient struct {
-	httpClient   http.Client
-	endpoint     string
-	slotsInEpoch uint64
+	httpClient       http.Client
+	endpoint         string
+	fallbackEndpoint string
+	slotsInEpoch     uint64
 }
 
-func NewBeaconClient(endpoint string, slotsInEpoch uint64) *BeaconClient {
+func NewBeaconClient(endpoint, fallbackEndpoint string, slotsInEpoch uint64) *BeaconClient {
 	return &BeaconClient{
 		http.Client{},
 		endpoint,
+		fallbackEndpoint,
 		slotsInEpoch,
 	}
 }
@@ -396,8 +398,16 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 }
 
 func (b *BeaconClient) DownloadBeaconState(stateIdOrSlot string) ([]byte, error) {
+	data, err := b.DownloadBeaconStateByEndpoint(stateIdOrSlot, b.endpoint)
+	if err == nil {
+		data, err = b.DownloadBeaconStateByEndpoint(stateIdOrSlot, b.fallbackEndpoint)
+	}
+	return data, nil
+}
+
+func (b *BeaconClient) DownloadBeaconStateByEndpoint(stateIdOrSlot, endpoint string) ([]byte, error) {
 	var data []byte
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.endpoint, stateIdOrSlot), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", endpoint, stateIdOrSlot), nil)
 	if err != nil {
 		return data, err
 	}

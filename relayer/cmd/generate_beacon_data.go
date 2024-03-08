@@ -38,6 +38,7 @@ func generateBeaconDataCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
+	cmd.Flags().String("fallback-url", "http://127.0.0.1:3500", "Fallback Beacon URL")
 	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	cmd.Flags().String("test_case", "register_token", "Inbound test case")
@@ -53,6 +54,7 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
+	cmd.Flags().String("fallback-url", "http://127.0.0.1:3500", "Fallback Beacon URL")
 	cmd.Flags().Bool("export_json", false, "Export Json")
 
 	return cmd
@@ -67,6 +69,7 @@ func generateExecutionUpdateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
+	cmd.Flags().String("fallback-url", "http://127.0.0.1:3500", "Fallback Beacon URL")
 	cmd.Flags().Uint32("slot", 1, "slot number")
 	return cmd
 }
@@ -96,6 +99,11 @@ const (
 func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		endpoint, err := cmd.Flags().GetString("url")
+		if err != nil {
+			return err
+		}
+
+		fallbackEndpoint, _ := cmd.Flags().GetString("fallback-url")
 
 		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
 
@@ -109,7 +117,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		s := syncer.New(endpoint, conf.Source.Beacon.Spec)
+		s := syncer.New(endpoint, fallbackEndpoint, conf.Source.Beacon.Spec)
 
 		checkPointScale, err := s.GetCheckpoint()
 		if err != nil {
@@ -147,6 +155,8 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
+		fallbackEndpoint, _ := cmd.Flags().GetString("fallback-url")
+
 		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
 		if err = viper.ReadInConfig(); err != nil {
 			return err
@@ -159,7 +169,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
-		s := syncer.New(endpoint, conf.Source.Beacon.Spec)
+		s := syncer.New(endpoint, fallbackEndpoint, conf.Source.Beacon.Spec)
 
 		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
 
@@ -490,6 +500,7 @@ func writeBenchmarkDataFile(path string, fileContents string) error {
 func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		endpoint, _ := cmd.Flags().GetString("url")
+		fallbackEndpoint, _ := cmd.Flags().GetString("fallback-url")
 		beaconSlot, _ := cmd.Flags().GetUint32("slot")
 
 		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
@@ -505,7 +516,7 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
 
 		// generate executionUpdate
-		s := syncer.New(endpoint, specSettings)
+		s := syncer.New(endpoint, fallbackEndpoint, specSettings)
 		blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(beaconSlot))
 		if err != nil {
 			return fmt.Errorf("fetch block: %w", err)

@@ -20,8 +20,9 @@ type SourceConfig struct {
 }
 
 type BeaconConfig struct {
-	Endpoint string       `mapstructure:"endpoint"`
-	Spec     SpecSettings `mapstructure:"spec"`
+	Endpoint         string       `mapstructure:"endpoint"`
+	FallbackEndpoint string       `mapstructure:"endpoint"`
+	Spec             SpecSettings `mapstructure:"spec"`
 }
 
 type SinkConfig struct {

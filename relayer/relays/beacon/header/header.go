@@ -29,11 +29,11 @@ type Header struct {
 	syncer *syncer.Syncer
 }
 
-func New(writer *parachain.ParachainWriter, beaconEndpoint string, setting config.SpecSettings) Header {
+func New(writer *parachain.ParachainWriter, beaconEndpoint string, fallbackEndpoint string, setting config.SpecSettings) Header {
 	return Header{
 		cache:  cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
 		writer: writer,
-		syncer: syncer.New(beaconEndpoint, setting),
+		syncer: syncer.New(beaconEndpoint, fallbackEndpoint, setting),
 	}
 }
 

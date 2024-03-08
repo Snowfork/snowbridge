@@ -33,9 +33,9 @@ type Syncer struct {
 	setting config.SpecSettings
 }
 
-func New(endpoint string, setting config.SpecSettings) *Syncer {
+func New(endpoint, fallbackEndpoint string, setting config.SpecSettings) *Syncer {
 	return &Syncer{
-		Client:  *api.NewBeaconClient(endpoint, setting.SlotsInEpoch),
+		Client:  *api.NewBeaconClient(endpoint, fallbackEndpoint, setting.SlotsInEpoch),
 		setting: setting,
 	}
 }

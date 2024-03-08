@@ -50,6 +50,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	headers := header.New(
 		writer,
 		r.config.Source.Beacon.Endpoint,
+		r.config.Source.Beacon.FallbackEndpoint,
 		specSettings,
 	)
 
