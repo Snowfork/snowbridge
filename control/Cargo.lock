@@ -418,6 +418,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96d30a06541fbafbc7f82ed10c06164cfbd2c401138f6addd8404629c4b16711"
 
 [[package]]
+name = "asset-hub-rococo-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic 24.0.0",
+ "subxt",
+]
+
+[[package]]
 name = "async-channel"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -812,6 +823,8 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "snowbridge-beacon-primitives",
+ "sp-arithmetic 24.0.0",
  "subxt",
 ]
 
@@ -3949,6 +3962,7 @@ name = "snowbridge-preimage"
 version = "0.1.0"
 dependencies = [
  "alloy-primitives",
+ "asset-hub-rococo-runtime",
  "bridge-hub-rococo-runtime",
  "clap",
  "futures",
@@ -3959,6 +3973,7 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-arithmetic 24.0.0",
+ "sp-crypto-hashing",
  "subxt",
  "tokio",
 ]
