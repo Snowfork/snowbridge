@@ -379,14 +379,12 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
         success.bridgeHub.extrinsicSuccess = extrinsicSuccess
         success.bridgeHub.extrinsicNumber = extrinsicNumber
         success.bridgeHub.events = receivedEvents
+        if (!success.bridgeHub.extrinsicSuccess) {
+            throw new Error('Message processing failed on Bridge Hub.')
+        }
     }
 
-    if (success.bridgeHub.extrinsicSuccess) {
-        yield `Message delivered to Bridge Hub block ${success.bridgeHub.events?.createdAtHash?.toHex()}.`
-    } else {
-        throw new Error('Message processing failed on Bridge Hub.')
-    }
-
+    yield `Message delivered to Bridge Hub block ${success.bridgeHub.events?.createdAtHash?.toHex()}.`
 
     if (success.assetHub.events === undefined) {
         yield 'Waiting for message delivery to Asset Hub.'
@@ -435,68 +433,67 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
         }
         success.assetHub.events = receivedEvents
         success.assetHub.extrinsicSuccess = extrinsicSuccess
-    }
-    if (success.assetHub.extrinsicSuccess) {
-        yield `Message delivered to Asset Hub block ${success.assetHub.events?.createdAtHash?.toHex()}.`
-    } else {
-        throw new Error('Message processing failed on Asset Hub.')
-    }
-
-    if (success.plan.success.assetHub.paraId !== success.plan.success.destinationParaId
-        && success.plan.success.destinationParaId in parachains
-        && success.destinationParachain !== undefined
-        && success.destinationParachain.events === undefined) {
-
-        yield `Waiting for delivery to destination parachain ${success.plan.success.destinationParaId}`
-        const destParaApi = parachains[success.plan.success.destinationParaId]
-
-        let issuedTo = success.plan?.success.beneficiaryAddress
-        let extrinsicSuccess = false
-        let receivedEvents = await firstValueFrom(
-            destParaApi.rx.query.system.events().pipe(
-                take(scanBlocks),
-                tap((events) => console.log(`Waiting for Parachain ${success.plan.success?.destinationParaId} xcm message block ${events.createdAtHash?.toHex()}.`)),
-                filter(events => {
-                    let foundMessageQueue = false
-                    let foundAssetsIssued = false
-                    let events_iter: any = events
-                    for (const event of events_iter) {
-                        let eventData = (event.event.toPrimitive() as any).data
-                        if (destParaApi.events.messageQueue.Processed.is(event.event)
-                            // TODO: Use SetTopic to forward the message id to the destination chain.
-                            //&& eventData[0].toLowerCase() === success?.messageId.toLowerCase()
-                            && eventData[1]?.sibling === success?.plan.success?.assetHub.paraId) {
-
-                            foundMessageQueue = true
-                            extrinsicSuccess = eventData[3]
-                        }
-                        if (destParaApi.events.foreignAssets.Issued.is(event.event)
-                            && eventData[2].toString() === success?.plan.success?.amount.toString()
-                            && u8aToHex(decodeAddress(eventData[1])).toLowerCase() === issuedTo.toLowerCase()
-                            && eventData[0]?.parents === 2
-                            && eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() === success?.plan.success?.ethereumChainId.toString()
-                            && eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() === success?.plan.success?.token.toLowerCase()) {
-
-                            foundAssetsIssued = true
-                        }
-                    }
-                    return foundMessageQueue && ((extrinsicSuccess && foundAssetsIssued) || !extrinsicSuccess)
-                }),
-            ),
-            { defaultValue: undefined }
-        )
-
-        console.log(receivedEvents?.toHuman())
-        if (receivedEvents === undefined) {
-            throw Error('Timeout while waiting for Asset Hub delivery.')
+        if (!success.assetHub.extrinsicSuccess) {
+            throw new Error('Message processing failed on Asset Hub.')
         }
-        success.destinationParachain.events = receivedEvents
-        success.destinationParachain.extrinsicSuccess = extrinsicSuccess
     }
-    if (success.destinationParachain?.extrinsicSuccess) {
+    yield `Message delivered to Asset Hub block ${success.assetHub.events?.createdAtHash?.toHex()}.`
+
+    if (success.destinationParachain !== undefined) {
+        if (success.plan.success.assetHub.paraId !== success.plan.success.destinationParaId
+            && success.plan.success.destinationParaId in parachains
+            && success.destinationParachain.events === undefined) {
+
+            yield `Waiting for delivery to destination parachain ${success.plan.success.destinationParaId}`
+            const destParaApi = parachains[success.plan.success.destinationParaId]
+
+            let issuedTo = success.plan?.success.beneficiaryAddress
+            let extrinsicSuccess = false
+            let receivedEvents = await firstValueFrom(
+                destParaApi.rx.query.system.events().pipe(
+                    take(scanBlocks),
+                    tap((events) => console.log(`Waiting for Parachain ${success.plan.success?.destinationParaId} xcm message block ${events.createdAtHash?.toHex()}.`)),
+                    filter(events => {
+                        let foundMessageQueue = false
+                        let foundAssetsIssued = false
+                        let events_iter: any = events
+                        for (const event of events_iter) {
+                            let eventData = (event.event.toPrimitive() as any).data
+                            if (destParaApi.events.messageQueue.Processed.is(event.event)
+                                // TODO: Use SetTopic to forward the message id to the destination chain.
+                                //&& eventData[0].toLowerCase() === success?.messageId.toLowerCase()
+                                && eventData[1]?.sibling === success?.plan.success?.assetHub.paraId) {
+
+                                foundMessageQueue = true
+                                extrinsicSuccess = eventData[3]
+                            }
+                            if (destParaApi.events.foreignAssets.Issued.is(event.event)
+                                && eventData[2].toString() === success?.plan.success?.amount.toString()
+                                && u8aToHex(decodeAddress(eventData[1])).toLowerCase() === issuedTo.toLowerCase()
+                                && eventData[0]?.parents === 2
+                                && eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() === success?.plan.success?.ethereumChainId.toString()
+                                && eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() === success?.plan.success?.token.toLowerCase()) {
+
+                                foundAssetsIssued = true
+                            }
+                        }
+                        return foundMessageQueue && ((extrinsicSuccess && foundAssetsIssued) || !extrinsicSuccess)
+                    }),
+                ),
+                { defaultValue: undefined }
+            )
+
+            console.log(receivedEvents?.toHuman())
+            if (receivedEvents === undefined) {
+                throw Error('Timeout while waiting for Asset Hub delivery.')
+            }
+            success.destinationParachain.events = receivedEvents
+            success.destinationParachain.extrinsicSuccess = extrinsicSuccess
+            if (!success.destinationParachain?.extrinsicSuccess) {
+                throw new Error(`Message delivered failed on parachain ${success.plan.success.destinationParaId}.`)
+            }
+        }
         yield `Message delivered to parachain ${success.plan.success.destinationParaId} at block ${success.destinationParachain?.events?.createdAtHash?.toHex()}.`
-    } else {
-        throw new Error(`Message delivered failed on parachain ${success.plan.success.destinationParaId}.`)
     }
 
     yield 'Transfer complete.'
