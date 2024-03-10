@@ -1,10 +1,16 @@
+use crate::constants::*;
 use crate::GatewayOperatingModeEnum;
+use crate::Context;
 
-use alloy_primitives::{Address, Bytes, FixedBytes, U128, U256};
+use alloy_primitives::{Address, Bytes, FixedBytes, U128, U256, utils::format_units};
 use bridge_hub_rococo_runtime::runtime_types::snowbridge_pallet_ethereum_client;
 use snowbridge_beacon_primitives::CheckpointUpdate;
-use sp_arithmetic::{FixedPointNumber, FixedU128};
-use subxt::utils::{H160, H256};
+use sp_arithmetic::FixedU128;
+use sp_crypto_hashing::twox_128;
+use subxt::utils::{Static, H160, H256};
+use codec::Encode;
+
+use crate::asset_hub_runtime::runtime_types::asset_hub_rococo_runtime::RuntimeCall as AssetHubRuntimeCall;
 
 use crate::bridge_hub_runtime::runtime_types::{
     bridge_hub_rococo_runtime::RuntimeCall as BridgeHubRuntimeCall,
@@ -13,6 +19,7 @@ use crate::bridge_hub_runtime::runtime_types::{
         pricing::{PricingParameters, Rewards},
     },
     snowbridge_pallet_system,
+    sp_weights::weight_v2::Weight,
 };
 
 pub fn gateway_operating_mode(mode: GatewayOperatingModeEnum) -> BridgeHubRuntimeCall {
@@ -42,99 +49,83 @@ pub fn upgrade(
     })
 }
 
-#[cfg(feature = "rococo")]
-const POLKADOT_DECIMALS: u128 = 1_000_000_000_000;
-
-#[cfg(feature = "kusama")]
-const POLKADOT_DECIMALS: u128 = 1_000_000_000_000;
-
-#[cfg(feature = "polkadot")]
-const POLKADOT_DECIMALS: u128 = 10_000_000_000;
-
-const ETHER_DECIMALS: u128 = 1_000_000_000_000_000_000;
-
-const GWEI_DECIMALS: u128 = 1_000_000_000;
-
-#[cfg(feature = "rococo")]
-const POLKADOT_SYMBOL: &str = "ROC";
-
-#[cfg(feature = "kusama")]
-const POLKADOT_SYMBOL: &str = "KSM";
-
-#[cfg(feature = "polkadot")]
-const POLKADOT_SYMBOL: &str = "DOT";
-
-fn format_rational(fixed: FixedU128) -> String {
-    let inner = fixed.into_inner();
-    let integral = {
-        let int = inner / FixedU128::accuracy();
-        let signum_for_zero = if int == 0 && fixed.is_negative() {
-            "-"
-        } else {
-            ""
-        };
-        format!("{}{}", signum_for_zero, int)
-    };
-    let precision = (FixedU128::accuracy() as f64).log10() as usize;
-    let fractional = format!(
-        "{:0>weight$}",
-        ((inner % FixedU128::accuracy()) as i128).abs(),
-        weight = precision
-    );
-
-    format!("{}.{}", integral, fractional)
-}
-
-pub fn pricing_parameters(
+pub async fn pricing_parameters(
+    context: &Context,
     exchange_rate_numerator: u64,
     exchange_rate_denominator: u64,
     fee_per_gas: u64,
     local_reward: U128,
     remote_reward: U256,
-) -> BridgeHubRuntimeCall {
-    eprintln!("Pricing Parameters:");
+) -> Result<(BridgeHubRuntimeCall, AssetHubRuntimeCall), Box<dyn std::error::Error>> {
+
+    // Calculate total outbound fee in BridgeHub
+    let runtime_api_call = crate::bridge_hub_runtime::apis()
+        .transaction_payment_call_api().query_weight_to_fee(Weight {
+            ref_time: PROCESS_MESSAGE_WEIGHT.0 + COMMIT_SINGLE_MESSAGE_WEIGHT.0,
+            proof_size: PROCESS_MESSAGE_WEIGHT.1 + COMMIT_SINGLE_MESSAGE_WEIGHT.1,
+        });
+
+    let local_fee = context.api
+        .runtime_api()
+        .at_latest()
+        .await?
+        .call(runtime_api_call)
+        .await?;
+
+        println!("local_fee: {}", local_fee);
+
+    let remote_fee = crate::fees::calculate_remote_fee(
+        FixedU128::from_rational(
+            exchange_rate_numerator.into(),
+            exchange_rate_denominator.into(),
+        ),
+        fee_per_gas as u128 * GWEI_UNIT,
+        remote_reward.to::<u128>()
+    );
+
+    println!("remote: {}", remote_fee);
+    let total_outbound_fee = local_fee.saturating_add(remote_fee);
+
+    // Adjust outbound fee up by 10% as a buffer
+    let total_outbound_fee_adjusted = total_outbound_fee.saturating_add(total_outbound_fee / 10);
+
+    eprintln!("BridgeHub:");
     eprintln!(
         "  ExchangeRate: {} ETH/{}",
-        format_rational(FixedU128::from_rational(
-            exchange_rate_numerator.into(),
-            exchange_rate_denominator.into()
-        )),
+        exchange_rate_numerator as f64 / exchange_rate_denominator as f64,
         POLKADOT_SYMBOL
     );
     eprintln!(
         "  FeePerGas: {} GWEI",
-        format_rational(FixedU128::from_rational(
-            fee_per_gas as u128 * GWEI_DECIMALS,
-            GWEI_DECIMALS
-        ))
+        format_units(U256::from(fee_per_gas as u128 * GWEI_UNIT), "gwei").unwrap(),
     );
     eprintln!(
-        "  LocalReward: {} {}",
-        format_rational(FixedU128::from_rational(
-            local_reward.to::<u128>(),
-            POLKADOT_DECIMALS
-        )),
-        POLKADOT_SYMBOL
+        "  LocalReward: {} {} [{} PLANCK]",
+        format_units(U256::from(local_reward), POLKADOT_DECIMALS).unwrap(),
+        POLKADOT_SYMBOL,
+        local_reward,
     );
     eprintln!(
-        "  RemoteReward: {} ETH",
-        format_rational(FixedU128::from_rational(
-            remote_reward.to::<u128>(),
-            ETHER_DECIMALS
-        ))
+        "  RemoteReward: {} ETH [{} WEI]",
+        format_units(remote_reward, "eth").unwrap(),
+        remote_reward
+    );
+    eprintln!("AssetHub:");
+    eprintln!(
+        "  BaseFee: {} {}, [{} PLANCK]",
+        format_units(U256::from(total_outbound_fee_adjusted), POLKADOT_DECIMALS).unwrap(),
+        POLKADOT_SYMBOL,
+        total_outbound_fee_adjusted
     );
 
+    // BridgeHub parameters
     let params: PricingParameters<u128> = PricingParameters {
-        exchange_rate:
-            bridge_hub_rococo_runtime::runtime_types::sp_arithmetic::fixed_point::FixedU128(
-                FixedU128::from_rational(
-                    exchange_rate_numerator.into(),
-                    exchange_rate_denominator.into(),
-                )
-                .into_inner(),
-            ),
+        exchange_rate: Static(FixedU128::from_rational(
+            exchange_rate_numerator.into(),
+            exchange_rate_denominator.into(),
+        )),
         fee_per_gas: bridge_hub_rococo_runtime::runtime_types::primitive_types::U256(
-            U256::from(GWEI_DECIMALS)
+            U256::from(GWEI_UNIT)
                 .checked_mul(U256::from(fee_per_gas))
                 .unwrap()
                 .into_limbs(),
@@ -147,15 +138,26 @@ pub fn pricing_parameters(
         },
     };
 
-    BridgeHubRuntimeCall::EthereumSystem(
-        snowbridge_pallet_system::pallet::Call::set_pricing_parameters { params },
-    )
+    // AssetHub parameters
+    let asset_hub_outbound_fee_storage_key: Vec<u8> = twox_128(b":BridgeHubEthereumBaseFee:").to_vec();
+    let asset_hub_outbound_fee_encoded: Vec<u8> = total_outbound_fee_adjusted.encode();
+
+    Ok((
+        BridgeHubRuntimeCall::EthereumSystem(
+            snowbridge_pallet_system::pallet::Call::set_pricing_parameters { params },
+        ),
+        AssetHubRuntimeCall::System(
+            crate::asset_hub_runtime::runtime_types::frame_system::pallet::Call::set_storage {
+                items: vec![(asset_hub_outbound_fee_storage_key, asset_hub_outbound_fee_encoded)],
+            },
+        ),
+    ))
 }
 
 pub fn force_checkpoint(checkpoint: CheckpointUpdate<512>) -> BridgeHubRuntimeCall {
     BridgeHubRuntimeCall::EthereumBeaconClient(
         snowbridge_pallet_ethereum_client::pallet::Call::force_checkpoint {
-            update: Box::new(subxt::utils::Static(checkpoint)),
+            update: Box::new(Static(checkpoint)),
         },
     )
 }

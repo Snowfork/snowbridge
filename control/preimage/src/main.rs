@@ -1,11 +1,15 @@
 mod bridge_hub_runtime;
+mod asset_hub_runtime;
 mod relay_runtime;
 mod commands;
 mod helpers;
+mod constants;
+mod fees;
 
 use crate::helpers::wrap_calls;
 use codec::Encode;
 use clap::{Parser, Subcommand, ValueEnum, Args};
+use helpers::{wrap_calls_asset_hub, utility_batch};
 use subxt::{OnlineClient, PolkadotConfig};
 use std::{fs::File, path::PathBuf, io::{Read, Write}};
 use alloy_primitives::{Address, Bytes, FixedBytes, U256, U128};
@@ -55,7 +59,6 @@ pub enum Command {
         initializer_gas: Option<u64>,
     },
     /// Set pricing parameters
-    #[command(verbatim_doc_comment)]
     PricingParameters(PricingParametersArgs),
     ForceCheckpoint(ForceCheckpointArgs),
 }
@@ -75,6 +78,7 @@ pub enum GatewayOperatingModeEnum {
 
 #[derive(Debug, Args)]
 pub struct ForceCheckpointArgs {
+    /// Path to JSON file containing checkpoint
     #[arg(long, value_name = "FILE")]
     pub checkpoint: PathBuf,
 }
@@ -129,25 +133,30 @@ pub enum Format {
 
 struct StaticConfig<'a> {
     api: &'a str,
+    asset_hub_api: &'a str,
 }
 
 struct Context {
     api: Box<OnlineClient<PolkadotConfig>>,
+    asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
 }
 
 #[cfg(feature = "rococo")]
 static CONFIG: StaticConfig<'static> = StaticConfig {
     api: "wss://rococo-bridge-hub-rpc.polkadot.io",
+    asset_hub_api: "wss://rococo-asset-hub-rpc.polkadot.io",
 };
 
 #[cfg(feature = "kusama")]
 static CONFIG: StaticConfig<'static> = StaticConfig {
     api: "wss://kusama-bridge-hub-rpc.polkadot.io",
+    asset_hub_api: "wss://kusama-asset-hub-rpc.polkadot.io",
 };
 
 #[cfg(feature = "polkadot")]
 static CONFIG: StaticConfig<'static> = StaticConfig {
     api: "wss://polkadot-bridge-hub-rpc.polkadot.io",
+    asset_hub_api: "wss://polkadot-asset-hub-rpc.polkadot.io",
 };
 
 #[tokio::main]
@@ -164,8 +173,14 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 		.await
 		.expect("can not connect to bridgehub");
 
+    let asset_hub_api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(CONFIG.asset_hub_api)
+    .await
+    .expect("can not connect to assethub");
+
+
     let context = Context {
-        api: Box::new(api)
+        api: Box::new(api),
+        asset_hub_api: Box::new(asset_hub_api)
     };
 
     let call = match &cli.command {
@@ -182,8 +197,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             pricing_parameters: PricingParametersArgs { exchange_rate_numerator, exchange_rate_denominator, fee_per_gas, local_reward, remote_reward },
         } => {
             let call1 = commands::gateway_operating_mode(*gateway_operating_mode);
-            let call2 = commands::pricing_parameters(*exchange_rate_numerator, *exchange_rate_denominator, *fee_per_gas, *local_reward, *remote_reward);
-            wrap_calls(&context, vec![call1, call2]).await?
+            let calls2 = commands::pricing_parameters(&context, *exchange_rate_numerator, *exchange_rate_denominator, *fee_per_gas, *local_reward, *remote_reward).await?;
+            wrap_calls(&context, vec![call1, calls2.0]).await?
         },
         Command::GatewayOperatingMode(GatewayOperatingModeArgs { gateway_operating_mode }) => {
             let call = commands::gateway_operating_mode(*gateway_operating_mode);
@@ -203,8 +218,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             wrap_calls(&context, vec![call]).await?
         },
         Command::PricingParameters(PricingParametersArgs { exchange_rate_numerator, exchange_rate_denominator, fee_per_gas, local_reward, remote_reward }) => {
-            let call = commands::pricing_parameters(*exchange_rate_numerator, *exchange_rate_denominator, *fee_per_gas, *local_reward, *remote_reward);
-            wrap_calls(&context, vec![call]).await?
+            let calls = commands::pricing_parameters(&context, *exchange_rate_numerator, *exchange_rate_denominator, *fee_per_gas, *local_reward, *remote_reward).await?;
+            let call1 = wrap_calls(&context, vec![calls.0]).await?;
+            let call2 = wrap_calls_asset_hub(&context, vec![calls.1]).await?;
+            let call = utility_batch(vec![call1, call2]);
+            call
         }
     };
 
