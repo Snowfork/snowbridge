@@ -360,14 +360,11 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 			}
 			// Find Checkpoint on Chain from history finality
 			if checkpointSlot < lastFinalizedHeaderState.BeaconSlot {
-				diff := lastFinalizedHeaderState.BeaconSlot - h.syncer.SyncPeriodLength() - slot
-				if diff > 0 {
-					historyState, err := h.writer.FindCheckPointBackward(slot)
-					if err != nil {
-						return checkpoint, fmt.Errorf("get history finalized header for the checkpoint: %w", err)
-					}
-					checkpointSlot = historyState.BeaconSlot
+				historyState, err := h.writer.FindCheckPointBackward(slot)
+				if err != nil {
+					return checkpoint, fmt.Errorf("get history finalized header for the checkpoint: %w", err)
 				}
+				checkpointSlot = historyState.BeaconSlot
 			} else {
 				checkpointSlot = lastFinalizedHeaderState.BeaconSlot
 			}
