@@ -26,5 +26,17 @@
 
 ## Other
 
-* [Bridges Workshop](other/bridge-workshop.md)
 * [Quick Start Guide](other/quick-start-guide.md)
+* [Processes for keeping track of dependency changes](other/processes-for-keeping-track-of-dependency-changes.md)
+* [Bridges Workshop](other/bridge-workshop.md)
+
+## Rococo Testnet
+
+* [Rococo-Sepolia Token Transfers](rococo-testnet/rococo-sepolia-token-transfers.md)
+
+## Runbooks
+
+* [Updating Snowbridge Pallets, BridgeHub & AssetHub Runtimes](runbooks/updating-snowbridge-pallets-bridgehub-and-assethub-runtimes.md)
+* [Initialize Ethereum light client with Forced Checkpoint](runbooks/initialize-ethereum-light-client-with-forced-checkpoint.md)
+* [Initial Deployment of Gateway Contracts](runbooks/initial-deployment-of-gateway-contracts.md)
+* [Halt Bridge in Case of Emergency](runbooks/halt-bridge-in-case-of-emergency.md)

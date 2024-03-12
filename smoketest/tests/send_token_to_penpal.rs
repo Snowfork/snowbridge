@@ -24,8 +24,8 @@ use snowbridge_smoketest::{
 		penpal::{self, api::foreign_assets::events::Issued as PenpalIssued},
 	},
 };
-use sp_core::Encode;
 use subxt::{
+	ext::codec::Encode,
 	tx::PairSigner,
 	utils::{AccountId32, MultiAddress},
 	OnlineClient,
@@ -90,7 +90,7 @@ async fn send_token_to_penpal() {
 
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
-	let wait_for_blocks = 50;
+	let wait_for_blocks = 100;
 	let mut assethub_blocks = assethub_client
 		.blocks()
 		.subscribe_finalized()
@@ -177,7 +177,7 @@ async fn ensure_penpal_asset_exists(penpal_client: &mut OnlineClient<PenpalConfi
 	let penpal_asset_address = penpal::api::storage().foreign_assets().asset(&penpal_asset_id);
 	let result = penpal_client
 		.storage()
-		.at(None)
+		.at_latest()
 		.await
 		.unwrap()
 		.fetch(&penpal_asset_address)

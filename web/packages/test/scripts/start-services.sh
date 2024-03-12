@@ -41,18 +41,13 @@ echo "Deploying ethereum contracts"
 source scripts/deploy-contracts.sh
 deploy_contracts
 
-# 6. config bridgehub
-echo "Config bridgehub"
-source scripts/configure-bridgehub.sh
-configure_bridgehub
-
-# 7. config assethub
-echo "Config assethub"
-source scripts/configure-assethub.sh
-configure_assethub
+# 6. config substrate
+echo "Config Substrate"
+source scripts/configure-substrate.sh
+configure_substrate
 
 if [ "$skip_relayer" == "false" ]; then
-  # 8. start relayer
+  # 7. start relayer
   echo "Starting relayers"
   source scripts/start-relayer.sh
   deploy_relayer

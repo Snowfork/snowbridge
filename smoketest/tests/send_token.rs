@@ -21,8 +21,7 @@ use snowbridge_smoketest::{
 		},
 	},
 };
-use sp_core::Encode;
-use subxt::utils::AccountId32;
+use subxt::{ext::codec::Encode, utils::AccountId32};
 
 #[tokio::test]
 async fn send_token() {
@@ -90,7 +89,7 @@ async fn send_token() {
 
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
-	let wait_for_blocks = 50;
+	let wait_for_blocks = 100;
 	let mut blocks = assethub
 		.blocks()
 		.subscribe_finalized()

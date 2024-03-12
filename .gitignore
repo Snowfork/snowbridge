@@ -31,3 +31,4 @@ contracts/beefy-state.json
 go/
 gocache/
 go.work*
+control/target/

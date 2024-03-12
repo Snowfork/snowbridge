@@ -46,13 +46,12 @@ use penpalTypes::{
 		VersionedXcm,
 	},
 };
-use sp_core::H160;
 use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
 	blocks::ExtrinsicEvents,
 	config::DefaultExtrinsicParams,
 	events::StaticEvent,
-	ext::sp_core::{sr25519::Pair, Pair as PairT},
+	ext::sp_core::{sr25519::Pair, Pair as PairT, H160},
 	tx::{PairSigner, TxPayload},
 	Config, OnlineClient, PolkadotConfig,
 };
