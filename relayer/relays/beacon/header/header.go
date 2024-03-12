@@ -346,6 +346,7 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 }
 
 func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
+	var checkpoint cache.Proof
 	checkpoint, err := h.cache.GetClosestCheckpoint(slot)
 
 	switch {
@@ -353,25 +354,39 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 		checkpointSlot := checkpoint.Slot
 		if checkpointSlot == 0 {
 			checkpointSlot = h.syncer.CalculateNextCheckpointSlot(slot)
+			lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
+			if err != nil {
+				return checkpoint, fmt.Errorf("get last finalized header for the checkpoint: %w", err)
+			}
+			// Find Checkpoint on Chain from history finality
+			if checkpointSlot < lastFinalizedHeaderState.BeaconSlot {
+				historyState, err := h.writer.FindCheckPointBackward(slot)
+				if err != nil {
+					return checkpoint, fmt.Errorf("get history finalized header for the checkpoint: %w", err)
+				}
+				checkpointSlot = historyState.BeaconSlot
+			} else {
+				checkpointSlot = lastFinalizedHeaderState.BeaconSlot
+			}
 			log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot}).Info("checkpoint slot not available, try with slot in next sync period instead")
 		}
 		err := h.populateFinalizedCheckpoint(checkpointSlot)
 		if err != nil {
-			return cache.Proof{}, fmt.Errorf("populate closest checkpoint: %w", err)
+			return checkpoint, fmt.Errorf("populate closest checkpoint: %w", err)
 		}
 
 		log.Info("populated finalized checkpoint")
 
 		checkpoint, err = h.cache.GetClosestCheckpoint(slot)
 		if err != nil {
-			return cache.Proof{}, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
+			return checkpoint, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
 		}
 
 		log.WithFields(log.Fields{"slot": slot, "checkpoint": checkpoint}).Info("checkpoint after populating finalized header")
 
 		return checkpoint, nil
 	case err != nil:
-		return cache.Proof{}, fmt.Errorf("get closest checkpoint: %w", err)
+		return checkpoint, fmt.Errorf("get closest checkpoint: %w", err)
 	}
 
 	return checkpoint, nil

@@ -385,3 +385,70 @@ func (wr *ParachainWriter) getNumberFromParachain(pallet, storage string) (uint6
 
 	return uint64(number), nil
 }
+
+func (wr *ParachainWriter) GetLastFinalizedStateIndex() (types.U32, error) {
+	var index types.U32
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "FinalizedBeaconStateIndex", nil, nil)
+	if err != nil {
+		return index, fmt.Errorf("create storage key for FinalizedBeaconStateIndex: %w", err)
+	}
+
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &index)
+	if err != nil {
+		return index, fmt.Errorf("get storage for FinalizedBeaconStateIndex (err): %w", err)
+	}
+
+	return index, nil
+}
+
+func (wr *ParachainWriter) GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error) {
+	var beaconRoot types.H256
+	encodedIndex, err := types.EncodeToBytes(types.NewU32(index))
+	if err != nil {
+		return beaconRoot, fmt.Errorf("get finalized beacon root encode index error: %w", err)
+	}
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "FinalizedBeaconStateMapping", encodedIndex, nil)
+	if err != nil {
+		return beaconRoot, fmt.Errorf("create storage key for FinalizedBeaconStateMapping: %w", err)
+	}
+
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &beaconRoot)
+	if err != nil {
+		return beaconRoot, fmt.Errorf("get storage for FinalizedBeaconStateMapping (err): %w", err)
+	}
+
+	return beaconRoot, nil
+}
+
+func (wr *ParachainWriter) FindCheckPointBackward(slot uint64) (state.FinalizedHeader, error) {
+	var beaconState state.FinalizedHeader
+	lastIndex, err := wr.GetLastFinalizedStateIndex()
+	if err != nil {
+		return beaconState, fmt.Errorf("GetLastFinalizedStateIndex error: %w", err)
+	}
+	startIndex := uint32(lastIndex)
+	endIndex := uint32(0)
+	if lastIndex > 256 {
+		endIndex = endIndex - 256
+	}
+	for index := startIndex; index >= endIndex; index-- {
+		beaconRoot, err := wr.GetFinalizedBeaconRootByIndex(index)
+		if err != nil {
+			return beaconState, fmt.Errorf("GetFinalizedBeaconRootByIndex %d, error: %w", index, err)
+		}
+		beaconState, err = wr.GetFinalizedHeaderStateByBlockRoot(beaconRoot)
+		if err != nil {
+			return beaconState, fmt.Errorf("GetFinalizedHeaderStateByBlockRoot %s, error: %w", beaconRoot.Hex(), err)
+		}
+		if beaconState.BeaconSlot < slot {
+			break
+		}
+		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+8192 {
+			break
+		}
+	}
+	if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+8192 {
+		return beaconState, nil
+	}
+	return beaconState, fmt.Errorf("Can't find checkpoint on chain for slot %d", slot)
+}
