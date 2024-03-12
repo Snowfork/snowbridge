@@ -275,6 +275,7 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 }
 
 func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
+	var checkpoint cache.Proof
 	checkpoint, err := h.cache.GetClosestCheckpoint(slot)
 
 	switch {
@@ -285,30 +286,37 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 			checkpointSlot = h.syncer.CalculateNextCheckpointSlot(slot)
 			lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 			if err != nil {
-				return cache.Proof{}, fmt.Errorf("fetch parachain last finalized header state: %w", err)
+				return checkpoint, fmt.Errorf("get last finalized header for the checkpoint: %w", err)
 			}
-			if checkpointSlot > lastFinalizedHeaderState.BeaconSlot {
-				log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot}).Info("checkpoint slot should not be in the future, switch to the last finalized")
+			if checkpointSlot < lastFinalizedHeaderState.BeaconSlot {
+				log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot, "lastFinalizedSlot": lastFinalizedHeaderState.BeaconSlot}).Info("fetch checkpoint on chain backward from history")
+				historyState, err := h.writer.FindCheckPointBackward(slot)
+				if err != nil {
+					return checkpoint, fmt.Errorf("get history finalized header for the checkpoint: %w", err)
+				}
+				checkpointSlot = historyState.BeaconSlot
+			} else {
+				log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot, "lastFinalizedSlot": lastFinalizedHeaderState.BeaconSlot}).Info("calculated checkpoint slot should not be in the future, switch to the last finalized")
 				checkpointSlot = lastFinalizedHeaderState.BeaconSlot
 			}
 		}
 		err := h.populateFinalizedCheckpoint(checkpointSlot)
 		if err != nil {
-			return cache.Proof{}, fmt.Errorf("populate closest checkpoint: %w", err)
+			return checkpoint, fmt.Errorf("populate closest checkpoint: %w", err)
 		}
 
 		log.Info("populated finalized checkpoint")
 
 		checkpoint, err = h.cache.GetClosestCheckpoint(slot)
 		if err != nil {
-			return cache.Proof{}, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
+			return checkpoint, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
 		}
 
 		log.WithFields(log.Fields{"slot": slot, "checkpoint": checkpoint}).Info("checkpoint after populating finalized header")
 
 		return checkpoint, nil
 	case err != nil:
-		return cache.Proof{}, fmt.Errorf("get closest checkpoint: %w", err)
+		return checkpoint, fmt.Errorf("get closest checkpoint: %w", err)
 	}
 
 	return checkpoint, nil
