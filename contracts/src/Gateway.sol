@@ -86,7 +86,6 @@ contract Gateway is IGateway, IInitializable {
     error InvalidAgentExecutionPayload();
     error InvalidCodeHash();
     error InvalidConstructorParams();
-    error AlreadyInitialized();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -582,11 +581,6 @@ contract Gateway is IGateway, IInitializable {
         Config memory config = abi.decode(data, (Config));
 
         CoreStorage.Layout storage core = CoreStorage.layout();
-
-        if (core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID].agent != address(0)) {
-            revert AlreadyInitialized();
-        }
-
         core.mode = config.mode;
 
         // Initialize agent for BridgeHub
