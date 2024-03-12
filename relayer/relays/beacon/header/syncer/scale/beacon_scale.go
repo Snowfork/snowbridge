@@ -41,25 +41,25 @@ type UpdatePayload struct {
 	FinalityBranch          []types.H256
 	BlockRootsRoot          types.H256
 	BlockRootsBranch        []types.H256
-	ExecutionHeader         OptionExecutionHeader
-	ExecutionBranch         OptionExecutionBranch
+	ExecutionHeader         OptionalExecutionHeader
+	ExecutionBranch         OptionalExecutionBranch
 }
 
-type OptionExecutionHeader struct {
+type OptionalExecutionHeader struct {
 	HasValue bool
 	Value    VersionedExecutionPayloadHeader
 }
 
-func (o OptionExecutionHeader) Encode(encoder scale.Encoder) error {
+func (o OptionalExecutionHeader) Encode(encoder scale.Encoder) error {
 	return encoder.EncodeOption(o.HasValue, o.Value)
 }
 
-type OptionExecutionBranch struct {
+type OptionalExecutionBranch struct {
 	HasValue bool
 	Value    []types.H256
 }
 
-func (o OptionExecutionBranch) Encode(encoder scale.Encoder) error {
+func (o OptionalExecutionBranch) Encode(encoder scale.Encoder) error {
 	return encoder.EncodeOption(o.HasValue, o.Value)
 }
 

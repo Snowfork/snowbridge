@@ -149,11 +149,11 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error)
 			FinalityBranch:   util.ProofBranchToScale(committeeUpdate.FinalityBranch),
 			BlockRootsRoot:   blockRootsProof.Leaf,
 			BlockRootsBranch: blockRootsProof.Proof,
-			ExecutionHeader: scale.OptionExecutionHeader{
+			ExecutionHeader: scale.OptionalExecutionHeader{
 				HasValue: true,
 				Value:    executionPayloadHeader,
 			},
-			ExecutionBranch: scale.OptionExecutionBranch{
+			ExecutionBranch: scale.OptionalExecutionBranch{
 				HasValue: true,
 				Value:    executionBranch,
 			},
@@ -277,11 +277,11 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		FinalityBranch:   util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
 		BlockRootsRoot:   blockRootsProof.Leaf,
 		BlockRootsBranch: blockRootsProof.Proof,
-		ExecutionHeader: scale.OptionExecutionHeader{
+		ExecutionHeader: scale.OptionalExecutionHeader{
 			HasValue: true,
 			Value:    executionPayloadHeader,
 		},
-		ExecutionBranch: scale.OptionExecutionBranch{
+		ExecutionBranch: scale.OptionalExecutionBranch{
 			HasValue: true,
 			Value:    executionBranch,
 		},
