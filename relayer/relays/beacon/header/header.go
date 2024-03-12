@@ -338,10 +338,6 @@ func (h *Header) SyncExecutionHeader(ctx context.Context, blockRoot common.Hash)
 	if err != nil {
 		return fmt.Errorf("get header update by slot with ancestry proof: %w", err)
 	}
-	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdate)
-	if err != nil {
-		return fmt.Errorf("submit_execution_header: %w", err)
-	}
 	var blockHash types.H256
 	if headerUpdate.ExecutionHeader.Deneb != nil {
 		blockHash = headerUpdate.ExecutionHeader.Deneb.BlockHash
@@ -351,6 +347,18 @@ func (h *Header) SyncExecutionHeader(ctx context.Context, blockRoot common.Hash)
 		return fmt.Errorf("invalid blockHash in headerUpdate")
 	}
 	compactExecutionHeaderState, err := h.writer.GetCompactExecutionHeaderStateByBlockHash(blockHash)
+	if err != nil {
+		return fmt.Errorf("get compactExecutionHeaderState by blockHash: %w", err)
+	}
+	if compactExecutionHeaderState.BlockNumber != 0 {
+		log.WithFields(log.Fields{"blockRoot": blockRoot.Hex(), "blockHash": blockHash.Hex(), "blockNumber": compactExecutionHeaderState.BlockNumber}).Info("ExecutionHeaderState already exist")
+		return nil
+	}
+	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdate)
+	if err != nil {
+		return fmt.Errorf("submit_execution_header: %w", err)
+	}
+	compactExecutionHeaderState, err = h.writer.GetCompactExecutionHeaderStateByBlockHash(blockHash)
 	if err != nil {
 		return fmt.Errorf("get compactExecutionHeaderState by blockHash: %w", err)
 	}
