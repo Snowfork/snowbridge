@@ -363,7 +363,7 @@ func (h *Header) SyncExecutionHeader(ctx context.Context, blockRoot common.Hash)
 		return fmt.Errorf("get compactExecutionHeaderState by blockHash: %w", err)
 	}
 	if compactExecutionHeaderState.BlockNumber == 0 {
-		return fmt.Errorf("invalid compactExecutionHeaderState")
+		return fmt.Errorf("execution header did not sync successfully")
 	}
 	return nil
 }
