@@ -91,45 +91,37 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(12 * time.Second):
+		case <-time.After(6 * time.Second):
 			log.WithFields(log.Fields{
 				"channelId": r.config.Source.ChannelID,
 			}).Info("Polling Nonces")
-
-			executionHeaderState, err := writer.GetLastExecutionHeaderState()
-			if err != nil {
-				return err
-			}
 
 			paraNonce, err := r.fetchLatestParachainNonce()
 			if err != nil {
 				return err
 			}
 
-			if executionHeaderState.BlockNumber == 0 {
-				log.WithFields(log.Fields{
-					"channelId": r.config.Source.ChannelID,
-				}).Info("Beacon execution state syncing not started, waiting...")
-				continue
-			}
-
-			ethNonce, err := r.fetchEthereumNonce(ctx, executionHeaderState.BlockNumber)
+			ethNonce, err := r.fetchEthereumNonce(ctx)
 			if err != nil {
 				return err
 			}
 
 			log.WithFields(log.Fields{
-				"ethBlockNumber": executionHeaderState.BlockNumber,
-				"channelId":      types.H256(r.config.Source.ChannelID).Hex(),
-				"paraNonce":      paraNonce,
-				"ethNonce":       ethNonce,
+				"channelId": types.H256(r.config.Source.ChannelID).Hex(),
+				"paraNonce": paraNonce,
+				"ethNonce":  ethNonce,
 			}).Info("Polled Nonces")
 
 			if paraNonce == ethNonce {
 				continue
 			}
 
-			events, err := r.findEvents(ctx, executionHeaderState.BlockNumber, paraNonce+1)
+			blockNumber, err := ethconn.Client().BlockNumber(ctx)
+			if err != nil {
+				return fmt.Errorf("get last block number: %w", err)
+			}
+
+			events, err := r.findEvents(ctx, blockNumber, paraNonce+1)
 			if err != nil {
 				return fmt.Errorf("find events: %w", err)
 			}
@@ -163,6 +155,10 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 				// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
 				err = beaconHeader.SyncExecutionHeader(ctx, *blockHeader.ParentBeaconRoot)
+				if err == header.ErrBeaconHeaderNotFinalized {
+					logger.Warn("beacon header not finalized, just skipped")
+					continue
+				}
 				if err != nil {
 					return fmt.Errorf("sync beacon header: %w", err)
 				}
@@ -208,11 +204,9 @@ func (r *Relay) fetchLatestParachainNonce() (uint64, error) {
 	return paraNonce, nil
 }
 
-func (r *Relay) fetchEthereumNonce(ctx context.Context, blockNumber uint64) (uint64, error) {
+func (r *Relay) fetchEthereumNonce(ctx context.Context) (uint64, error) {
 	opts := bind.CallOpts{
-		Pending:     false,
-		BlockNumber: new(big.Int).SetUint64(blockNumber),
-		Context:     ctx,
+		Context: ctx,
 	}
 	_, ethOutboundNonce, err := r.gatewayContract.ChannelNoncesOf(&opts, r.config.Source.ChannelID)
 	if err != nil {

@@ -23,6 +23,7 @@ var ErrFinalizedHeaderNotImported = errors.New("finalized header not imported")
 var ErrSyncCommitteeNotImported = errors.New("sync committee not imported")
 var ErrSyncCommitteeLatency = errors.New("sync committee latency found")
 var ErrExecutionHeaderNotImported = errors.New("execution header not imported")
+var ErrBeaconHeaderNotFinalized = errors.New("beacon header not finalized")
 
 type Header struct {
 	cache  *cache.BeaconCache
@@ -44,22 +45,15 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 		return fmt.Errorf("fetch parachain last finalized header state: %w", err)
 	}
 	latestSyncedPeriod := h.syncer.ComputeSyncPeriodAtSlot(lastFinalizedHeaderState.BeaconSlot)
-	executionHeaderState, err := h.writer.GetLastExecutionHeaderState()
-	if err != nil {
-		return fmt.Errorf("fetch last execution hash: %w", err)
-	}
 
 	log.WithFields(log.Fields{
 		"last_finalized_hash":   lastFinalizedHeaderState.BeaconBlockRoot,
 		"last_finalized_slot":   lastFinalizedHeaderState.BeaconSlot,
 		"last_finalized_period": latestSyncedPeriod,
-		"last_execution_hash":   executionHeaderState.BeaconBlockRoot,
-		"last_execution_slot":   executionHeaderState.BeaconSlot,
 	}).Info("set cache: Current state")
 	h.cache.SetLastSyncedFinalizedState(lastFinalizedHeaderState.BeaconBlockRoot, lastFinalizedHeaderState.BeaconSlot)
 	h.cache.SetInitialCheckpointSlot(lastFinalizedHeaderState.InitialCheckpointSlot)
 	h.cache.AddCheckPointSlots([]uint64{lastFinalizedHeaderState.BeaconSlot})
-	h.cache.SetLastSyncedExecutionSlot(executionHeaderState.BeaconSlot)
 
 	log.Info("starting to sync finalized headers")
 
@@ -288,6 +282,9 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 			if err != nil {
 				return checkpoint, fmt.Errorf("get last finalized header for the checkpoint: %w", err)
 			}
+			if slot > lastFinalizedHeaderState.BeaconSlot {
+				return checkpoint, ErrBeaconHeaderNotFinalized
+			}
 			if checkpointSlot < lastFinalizedHeaderState.BeaconSlot {
 				log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot, "lastFinalizedSlot": lastFinalizedHeaderState.BeaconSlot}).Info("fetch checkpoint on chain backward from history")
 				historyState, err := h.writer.FindCheckPointBackward(slot)
@@ -342,6 +339,13 @@ func (h *Header) SyncExecutionHeader(ctx context.Context, blockRoot common.Hash)
 	header, err := h.syncer.Client.GetHeader(blockRoot)
 	if err != nil {
 		return fmt.Errorf("get beacon header by blockRoot: %w", err)
+	}
+	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
+	if err != nil {
+		return fmt.Errorf("fetch last finalized header state: %w", err)
+	}
+	if header.Slot > lastFinalizedHeaderState.BeaconSlot {
+		return ErrBeaconHeaderNotFinalized
 	}
 	headerUpdate, err := h.getHeaderUpdateBySlot(header.Slot)
 	if err != nil {

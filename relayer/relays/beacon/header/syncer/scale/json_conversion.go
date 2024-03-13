@@ -24,15 +24,6 @@ func (p UpdatePayload) ToJSON() json.Update {
 			NextSyncCommitteeBranch: util.ScaleBranchToString(p.NextSyncCommitteeUpdate.Value.NextSyncCommitteeBranch),
 		}
 	}
-	var executionHeader json.VersionedExecutionPayloadHeader
-	if p.ExecutionHeader.HasValue {
-		executionHeader = p.ExecutionHeader.Value.ToJSON()
-	}
-
-	var executionBranch []string
-	if p.ExecutionBranch.HasValue {
-		executionBranch = util.ScaleBranchToString(p.ExecutionBranch.Value)
-	}
 
 	return json.Update{
 		AttestedHeader:          p.AttestedHeader.ToJSON(),
@@ -43,8 +34,6 @@ func (p UpdatePayload) ToJSON() json.Update {
 		FinalityBranch:          util.ScaleBranchToString(p.FinalityBranch),
 		BlockRootsRoot:          p.BlockRootsRoot.Hex(),
 		BlockRootsBranch:        util.ScaleBranchToString(p.BlockRootsBranch),
-		ExecutionHeader:         &executionHeader,
-		ExecutionBranch:         &executionBranch,
 	}
 }
 

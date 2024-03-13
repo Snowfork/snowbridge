@@ -266,31 +266,6 @@ func (wr *ParachainWriter) GetLastBasicChannelNonceByAddress(address common.Addr
 	return uint64(nonce), nil
 }
 
-func (wr *ParachainWriter) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "LatestExecutionState", nil, nil)
-	if err != nil {
-		return state.ExecutionHeader{}, fmt.Errorf("create storage key for LatestExecutionHeaderState: %w", err)
-	}
-
-	var storageState struct {
-		BeaconBlockRoot types.H256
-		BeaconSlot      types.U64
-		BlockHash       types.H256
-		BlockNumber     types.U64
-	}
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &storageState)
-	if err != nil {
-		return state.ExecutionHeader{}, fmt.Errorf("get storage for LatestExecutionHeaderState (err): %w", err)
-	}
-
-	return state.ExecutionHeader{
-		BeaconBlockRoot: common.Hash(storageState.BeaconBlockRoot),
-		BeaconSlot:      uint64(storageState.BeaconSlot),
-		BlockHash:       common.Hash(storageState.BlockHash),
-		BlockNumber:     uint64(storageState.BlockNumber),
-	}, nil
-}
-
 func (wr *ParachainWriter) GetLastFinalizedHeaderState() (state.FinalizedHeader, error) {
 	finalizedState, err := wr.GetFinalizedStateByStorageKey("LatestFinalizedBlockRoot")
 	if err != nil {
