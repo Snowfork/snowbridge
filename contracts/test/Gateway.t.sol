@@ -50,6 +50,9 @@ import "./mocks/GatewayUpgradeMock.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
 contract GatewayTest is Test {
+    // Emitted when token minted
+    event TokenMinted(bytes32 indexed tokenID, address token, address recipient, uint256 amount);
+
     ParaID public bridgeHubParaID = ParaID.wrap(1001);
     bytes32 public bridgeHubAgentID = keccak256("1001");
     address public bridgeHubAgent;
@@ -900,5 +903,31 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Assets.InvalidDestinationFee.selector);
         IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, 0, 1);
+    }
+
+    function testAgentRegisterToken() public {
+        AgentExecuteParams memory params = AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(AgentExecuteCommand.RegisterToken, abi.encode(bytes32(uint256(1)), "DOT", "DOT", 10))
+        });
+
+        vm.expectEmit(true, true, false, false);
+        emit IGateway.TokenRegistered(bytes32(uint256(1)), assetHubAgentID, address(0));
+
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
+    }
+
+    function testAgentMintToken() public {
+        testAgentRegisterToken();
+
+        AgentExecuteParams memory params = AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(AgentExecuteCommand.MintToken, abi.encode(bytes32(uint256(1)), account1, 1000))
+        });
+
+        vm.expectEmit(true, true, false, false);
+        emit TokenMinted(bytes32(uint256(1)), address(0), account1, 1000);
+
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
 }

@@ -6,6 +6,7 @@ import {TokenInfo, ParaID} from "../Types.sol";
 
 library AssetsStorage {
     struct Layout {
+        // Token registry by token address
         mapping(address token => TokenInfo) tokenRegistry;
         address assetHubAgent;
         ParaID assetHubParaID;
@@ -15,6 +16,8 @@ library AssetsStorage {
         uint128 assetHubReserveTransferFee;
         // Extra fee for registering a token, to discourage spamming (Ether)
         uint256 registerTokenFee;
+        // Token registry by tokenID
+        mapping(bytes32 tokenID => TokenInfo) tokenRegistryByID;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets");

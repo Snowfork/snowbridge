@@ -88,7 +88,9 @@ enum Command {
 }
 
 enum AgentExecuteCommand {
-    TransferToken
+    TransferToken,
+    RegisterToken,
+    MintToken
 }
 
 /// @dev Application-level costs for a message
@@ -107,5 +109,7 @@ struct Ticket {
 
 struct TokenInfo {
     bool isRegistered;
-    bytes31 __padding;
+    bytes32 tokenID;
+    bytes32 agentID;
+    address token;
 }

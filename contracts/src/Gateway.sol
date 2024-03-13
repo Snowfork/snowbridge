@@ -17,7 +17,8 @@ import {
     Command,
     MultiAddress,
     Ticket,
-    Costs
+    Costs,
+    TokenInfo
 } from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
@@ -87,10 +88,21 @@ contract Gateway is IGateway, IInitializable {
     error InvalidCodeHash();
     error InvalidConstructorParams();
     error AlreadyInitialized();
+    error TokenAlreadyRegistered();
+    error TokenNotRegistered();
 
     // handler functions are privileged
     modifier onlySelf() {
         if (msg.sender != address(this)) {
+            revert Unauthorized();
+        }
+        _;
+    }
+
+    // handler functions are privileged from agent only
+    modifier onlyAgent(bytes32 agentID) {
+        bytes32 _agentID = _ensureAgentAddress(msg.sender);
+        if (_agentID != agentID) {
             revert Unauthorized();
         }
         _;
@@ -265,7 +277,7 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidAgentExecutionPayload();
         }
 
-        bytes memory call = abi.encodeCall(AgentExecutor.execute, params.payload);
+        bytes memory call = abi.encodeCall(AgentExecutor.execute, (address(this), params.agentID, params.payload));
 
         (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
         if (!success) {
@@ -432,6 +444,27 @@ contract Gateway is IGateway, IInitializable {
         );
     }
 
+    // @dev Register a new fungible Polkadot token for an agent
+    function registerTokenByID(bytes32 tokenID, address token, bytes32 agentID) external onlyAgent(agentID) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if ($.tokenRegistryByID[tokenID].isRegistered == true) {
+            revert TokenAlreadyRegistered();
+        }
+        TokenInfo memory info = TokenInfo({isRegistered: true, tokenID: tokenID, agentID: agentID, token: token});
+        $.tokenRegistry[token] = info;
+        $.tokenRegistryByID[tokenID] = info;
+        emit TokenRegistered(tokenID, agentID, token);
+    }
+
+    // @dev Get token address by tokenID
+    function getTokenAddress(bytes32 tokenID) external view returns (address) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if ($.tokenRegistryByID[tokenID].isRegistered == false) {
+            revert TokenNotRegistered();
+        }
+        return $.tokenRegistryByID[tokenID].token;
+    }
+
     /**
      * Internal functions
      */
@@ -533,6 +566,14 @@ contract Gateway is IGateway, IInitializable {
         }
     }
 
+    /// @dev Ensure that the specified address is an valid agent
+    function _ensureAgentAddress(address agent) internal view returns (bytes32 agentID) {
+        agentID = CoreStorage.layout().agentAddresses[agent];
+        if (agentID == bytes32(0)) {
+            revert AgentDoesNotExist();
+        }
+    }
+
     /// @dev Invoke some code within an agent
     function _invokeOnAgent(address agent, bytes memory data) internal returns (bytes memory) {
         (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(AGENT_EXECUTOR, data));
@@ -592,6 +633,7 @@ contract Gateway is IGateway, IInitializable {
         // Initialize agent for BridgeHub
         address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
         core.agents[BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
+        core.agentAddresses[bridgeHubAgent] = BRIDGE_HUB_AGENT_ID;
 
         // Initialize channel for primary governance track
         core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] =
@@ -604,6 +646,7 @@ contract Gateway is IGateway, IInitializable {
         // Initialize agent for for AssetHub
         address assetHubAgent = address(new Agent(config.assetHubAgentID));
         core.agents[config.assetHubAgentID] = assetHubAgent;
+        core.agentAddresses[assetHubAgent] = config.assetHubAgentID;
 
         // Initialize channel for AssetHub
         core.channels[config.assetHubParaID.into()] =
