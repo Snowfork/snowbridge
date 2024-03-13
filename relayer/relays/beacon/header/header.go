@@ -24,16 +24,20 @@ var ErrSyncCommitteeLatency = errors.New("sync committee latency found")
 var ErrExecutionHeaderNotImported = errors.New("execution header not imported")
 
 type Header struct {
-	cache  *cache.BeaconCache
-	writer *parachain.ParachainWriter
-	syncer *syncer.Syncer
+	cache                        *cache.BeaconCache
+	writer                       *parachain.ParachainWriter
+	syncer                       *syncer.Syncer
+	slotsInEpoch                 uint64
+	epochsPerSyncCommitteePeriod uint64
 }
 
 func New(writer *parachain.ParachainWriter, beaconEndpoint string, setting config.SpecSettings) Header {
 	return Header{
-		cache:  cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
-		writer: writer,
-		syncer: syncer.New(beaconEndpoint, setting),
+		cache:                        cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
+		writer:                       writer,
+		syncer:                       syncer.New(beaconEndpoint, setting),
+		slotsInEpoch:                 setting.SlotsInEpoch,
+		epochsPerSyncCommitteePeriod: setting.EpochsPerSyncCommitteePeriod,
 	}
 }
 
@@ -116,6 +120,21 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		}
 	}
 
+	// If the gap between the last two finalized headers is more than the sync committee period, sync an interim
+	// finalized header
+	validGapSlot := h.cache.Finalized.LastSyncedSlot + (h.slotsInEpoch * h.epochsPerSyncCommitteePeriod)
+	if validGapSlot < uint64(update.Payload.FinalizedHeader.Slot) {
+		err, finalizedUpdate := h.syncer.GetFinalizedUpdateAtAttestedSlot(validGapSlot)
+		if err != nil {
+			return fmt.Errorf("fetch finalized update at slot: %w", err)
+		}
+
+		err = h.updateFinalizedHeaderOnchain(ctx, finalizedUpdate)
+		if err != nil {
+			return fmt.Errorf("update interim finalized header on-chain: %w", err)
+		}
+	}
+
 	log.WithFields(log.Fields{
 		"finalized_header_slot": update.Payload.FinalizedHeader.Slot,
 		"period":                period,
@@ -163,7 +182,13 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 		}
 	}
 
-	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.submit", update.Payload)
+	return h.updateFinalizedHeaderOnchain(ctx, update)
+}
+
+// Write the provided finalized header update (possibly containing a sync committee) on-chain and check if it was
+// imported successfully. Update the cache if it has and add the finalized header to the checkpoint cache.
+func (h *Header) updateFinalizedHeaderOnchain(ctx context.Context, update scale.Update) error {
+	err := h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.submit", update.Payload)
 	if err != nil {
 		return fmt.Errorf("write to parachain: %w", err)
 	}
@@ -279,10 +304,11 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 }
 
 func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSyncedPeriod, currentSyncPeriod uint64) error {
-	// sync for the next period
+	// Sync the next period's committee.
 	periodsToSync := []uint64{latestSyncedPeriod + 1}
 
-	// For initialPeriod special handling here to sync it again for nextSyncCommittee which is not included in InitCheckpoint
+	// Special handling here for the initial checkpoint to sync the next sync committee which is not included in initial
+	// checkpoint.
 	if h.isInitialSyncPeriod() {
 		periodsToSync = append([]uint64{latestSyncedPeriod}, periodsToSync...)
 	}
@@ -327,7 +353,7 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 	// Always check slot finalized on chain before populating checkpoint
 	onChainFinalizedHeader, err := h.writer.GetFinalizedHeaderStateByBlockRoot(blockRoot)
 	if err != nil {
-		return err
+		return fmt.Errorf("get finalized header state by block root: %w", err)
 	}
 	if onChainFinalizedHeader.BeaconSlot != slot {
 		return fmt.Errorf("on chain finalized header inconsistent at slot %d", slot)
@@ -357,7 +383,12 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 		}
 		err := h.populateFinalizedCheckpoint(checkpointSlot)
 		if err != nil {
-			return cache.Proof{}, fmt.Errorf("populate closest checkpoint: %w", err)
+			// 4513792 finalized slot
+			attestedHeaderSlot := checkpointSlot + (32 * 2.5)
+			finalizedUpdate := h.syncer.GetFinalizedUpdateAtAttestedSlot(attestedHeaderSlot)
+			if err != nil {
+				return cache.Proof{}, fmt.Errorf("get finalized update at slotr: %w", err)
+			}
 		}
 
 		log.Info("populated finalized checkpoint")

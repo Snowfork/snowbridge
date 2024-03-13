@@ -19,8 +19,9 @@ import (
 )
 
 const (
-	BlockRootGeneralizedIndex        = 37
-	ExecutionPayloadGeneralizedIndex = 25
+	BlockRootGeneralizedIndex           = 37
+	FinalizedCheckpointGeneralizedIndex = 105
+	ExecutionPayloadGeneralizedIndex    = 25
 )
 
 var (
@@ -159,7 +160,7 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 	var beaconState state.BeaconState
 	var blockRootsContainer state.BlockRootsContainer
 
-	data, err := s.Client.DownloadBeaconState(strconv.FormatUint(slot, 10))
+	data, err := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
 	if err != nil {
 		return blockRootProof, fmt.Errorf("download beacon state failed: %w", err)
 	}
@@ -366,7 +367,7 @@ func (s *Syncer) GetNextHeaderUpdateBySlotWithCheckpoint(slot uint64, checkpoint
 
 func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
 	var update scale.HeaderUpdatePayload
-	blockResponse, err := s.Client.GetBeaconBlockResponse(blockRoot)
+	blockResponse, err := s.Client.GetBeaconBlock(blockRoot)
 	if err != nil {
 		return update, fmt.Errorf("fetch block: %w", err)
 	}
@@ -444,6 +445,121 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 		},
 		ExecutionHeader: versionedExecutionPayloadHeader,
 		ExecutionBranch: executionHeaderBranch,
+	}, nil
+}
+
+func (s *Syncer) getBeaconStateAtSlot(slot uint64) (state.BeaconState, error) {
+	var beaconState state.BeaconState
+	beaconData, err := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
+	if err != nil {
+		return beaconState, fmt.Errorf("fetch beacon state: %w", err)
+	}
+
+	isDeneb := s.DenebForked(slot)
+
+	if isDeneb {
+		beaconState = &state.BeaconStateDenebMainnet{}
+	} else {
+		beaconState = &state.BeaconStateCapellaMainnet{}
+	}
+
+	err = beaconState.UnmarshalSSZ(beaconData)
+	if err != nil {
+		return beaconState, fmt.Errorf("unmarshal beacon state: %w", err)
+	}
+
+	return beaconState, nil
+}
+
+func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(attestedSlot uint64) (scale.Update, error) {
+	var update scale.Update
+
+	// Get the beacon data first since it is mostly likely to fail
+	beaconState, err := s.getBeaconStateAtSlot(attestedSlot)
+	if err != nil {
+		return update, fmt.Errorf("fetch beacon state: %w", err)
+	}
+
+	finalizedCheckpoint := beaconState.GetFinalizedCheckpoint()
+
+	// Get the finalized header at the given slot state
+	finalizedHeader, err := s.Client.GetHeader(common.BytesToHash(finalizedCheckpoint.Root))
+	if err != nil {
+		return update, fmt.Errorf("fetch block: %w", err)
+	}
+
+	// Finalized header proof
+	stateTree, err := beaconState.GetTree()
+	if err != nil {
+		return update, fmt.Errorf("get state tree: %w", err)
+	}
+	_ = stateTree.Hash() // necessary to populate the proof tree values
+	finalizedHeaderProof, err := stateTree.Prove(FinalizedCheckpointGeneralizedIndex)
+	if err != nil {
+		return update, fmt.Errorf("get finalized header proof: %w", err)
+	}
+
+	blockRootsProof, err := s.GetBlockRoots(finalizedHeader.Slot)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("fetch block roots: %w", err)
+	}
+
+	// Get the header at the slot
+	header, err := s.Client.GetHeaderBySlot(attestedSlot)
+	if err != nil {
+		return update, fmt.Errorf("fetch block: %w", err)
+	}
+
+	// Get the next block for the sync aggregate
+	nextHeader, err := s.FindBeaconHeaderWithBlockIncluded(attestedSlot + 1)
+	if err != nil {
+		return update, fmt.Errorf("fetch block: %w", err)
+	}
+
+	nextBlock, err := s.Client.GetBeaconBlockBySlot(nextHeader.Slot)
+	if err != nil {
+		return update, fmt.Errorf("fetch block: %w", err)
+	}
+
+	nextBlockSlot, err := util.ToUint64(nextBlock.Data.Message.Slot)
+	if err != nil {
+		return update, fmt.Errorf("parse next block slot: %w", err)
+	}
+
+	scaleHeader, err := header.ToScale()
+	if err != nil {
+		return update, fmt.Errorf("convert header to scale: %w", err)
+	}
+
+	scaleFinalizedHeader, err := finalizedHeader.ToScale()
+	if err != nil {
+		return update, fmt.Errorf("convert finalized header to scale: %w", err)
+	}
+
+	syncAggregate := nextBlock.Data.Message.Body.SyncAggregate
+
+	scaleSyncAggregate, err := syncAggregate.ToScale()
+	if err != nil {
+		return update, fmt.Errorf("convert sync aggregate to scale: %w", err)
+	}
+
+	payload := scale.UpdatePayload{
+		AttestedHeader: scaleHeader,
+		SyncAggregate:  scaleSyncAggregate,
+		SignatureSlot:  types.U64(nextBlockSlot),
+		NextSyncCommitteeUpdate: scale.OptionNextSyncCommitteeUpdatePayload{
+			HasValue: false,
+		},
+		FinalizedHeader:  scaleFinalizedHeader,
+		FinalityBranch:   util.BytesBranchToScale(finalizedHeaderProof.Hashes),
+		BlockRootsRoot:   blockRootsProof.Leaf,
+		BlockRootsBranch: blockRootsProof.Proof,
+	}
+
+	return scale.Update{
+		Payload:                  payload,
+		FinalizedHeaderBlockRoot: common.BytesToHash(finalizedCheckpoint.Root),
+		BlockRootsTree:           blockRootsProof.Tree,
 	}, nil
 }
 

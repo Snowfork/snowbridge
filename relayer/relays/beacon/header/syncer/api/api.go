@@ -395,7 +395,7 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 	return response, nil
 }
 
-func (b *BeaconClient) DownloadBeaconState(stateIdOrSlot string) ([]byte, error) {
+func (b *BeaconClient) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 	var data []byte
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.endpoint, stateIdOrSlot), nil)
 	if err != nil {
@@ -422,7 +422,7 @@ func (b *BeaconClient) DownloadBeaconState(stateIdOrSlot string) ([]byte, error)
 	return data, nil
 }
 
-func (b *BeaconClient) GetBeaconBlockResponse(blockID common.Hash) (BeaconBlockResponse, error) {
+func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse, error) {
 	var beaconBlockResponse BeaconBlockResponse
 
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint, blockID), nil)
