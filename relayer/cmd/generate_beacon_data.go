@@ -53,7 +53,7 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
-	cmd.Flags().Bool("export_json", false, "Export Json")
+	cmd.Flags().Bool("export-json", false, "Export Json")
 
 	return cmd
 }
@@ -115,9 +115,9 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
-		exportJson, err := cmd.Flags().GetBool("export_json")
+		exportJson, err := cmd.Flags().GetBool("export-json")
 		if err != nil {
-			return err
+			return fmt.Errorf("get export-json flag: %w", err)
 		}
 		if exportJson {
 			initialSync := checkPointScale.ToJSON()
@@ -282,7 +282,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			BlockRootsTree:     finalizedUpdateAfterMessage.BlockRootsTree,
 			Slot:               uint64(finalizedUpdateAfterMessage.Payload.FinalizedHeader.Slot),
 		}
-		headerUpdateScale, err := s.GetNextHeaderUpdateBySlotWithCheckpoint(beaconBlockSlot, &checkPoint)
+		headerUpdateScale, err := s.GetHeaderUpdateBySlotWithCheckpoint(beaconBlockSlot, &checkPoint)
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
