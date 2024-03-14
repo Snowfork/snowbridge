@@ -50,7 +50,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint, specSettings.SlotsInEpoch)
+	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint, r.config.Source.Beacon.FallbackEndpoint, specSettings.SlotsInEpoch)
 	headers := header.New(
 		writer,
 		beaconAPI,

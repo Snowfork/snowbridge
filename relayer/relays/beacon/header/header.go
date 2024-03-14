@@ -388,12 +388,12 @@ func (h *Header) populateClosestCheckpoint(ctx context.Context, slot uint64) (ca
 			// attested header should be about 2 epochs later, so that the finalized header for the attested header is
 			// correct
 			attestedHeaderSlot := checkpointSlot + (h.slotsInEpoch * 2)
-			lastFinalizedState, err := h.writer.GetLastFinalizedHeaderState()
+			lastFinalizedState, err := h.syncer.GetFinalizedUpdate()
 			if err != nil {
 				return proof, fmt.Errorf("get last finalized state: %w", err)
 			}
 
-			onChainLastSlot := lastFinalizedState.BeaconSlot
+			onChainLastSlot := uint64(lastFinalizedState.Payload.FinalizedHeader.Slot)
 			if attestedHeaderSlot > onChainLastSlot {
 				attestedHeaderSlot = onChainLastSlot
 			}

@@ -75,6 +75,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		parachainEndpoint, _ := cmd.Flags().GetString("parachain-endpoint")
 		privateKeyFile, _ := cmd.Flags().GetString("private-key-file")
 		lodestarEndpoint, _ := cmd.Flags().GetString("lodestar-endpoint")
+		fallbackEndpoint, _ := cmd.Flags().GetString("fallback-endpoint")
 		beaconHeader, _ := cmd.Flags().GetString("beacon-header")
 		finalizedHeader, _ := cmd.Flags().GetString("finalized-header")
 
@@ -109,7 +110,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 
 		log.WithField("hash", beaconHeader).Info("will be syncing execution header for beacon hash")
 
-		client := api.NewBeaconClient(lodestarEndpoint, specSettings.SlotsInEpoch)
+		client := api.NewBeaconClient(lodestarEndpoint, fallbackEndpoint, specSettings.SlotsInEpoch)
 		syncer := syncer.New(client, specSettings)
 
 		beaconHeaderHash := common.HexToHash(finalizedHeader)

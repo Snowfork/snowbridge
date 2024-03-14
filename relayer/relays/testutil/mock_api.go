@@ -7,6 +7,8 @@ import (
 )
 
 type MockAPI struct {
+	LatestFinalisedUpdateResponse     api.LatestFinalisedUpdateResponse
+	SyncCommitteePeriodUpdateResponse api.SyncCommitteePeriodUpdateResponse
 }
 
 func (m *MockAPI) GetBootstrap(blockRoot common.Hash) (api.BootstrapResponse, error) {
