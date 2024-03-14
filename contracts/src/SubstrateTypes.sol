@@ -156,8 +156,7 @@ library SubstrateTypes {
             bytes1(0x02),
             SubstrateTypes.H160(token),
             SubstrateTypes.H160(sender),
-            bytes1(0x00),
-            recipient,
+            encodeRecipientOnAssetHub(recipient),
             ScaleCodec.encodeU128(amount),
             ScaleCodec.encodeU128(feeAmount),
             ScaleCodec.encodeU128(xcmFee)
@@ -181,9 +180,7 @@ library SubstrateTypes {
             bytes1(0x02),
             SubstrateTypes.H160(token),
             SubstrateTypes.H160(sender),
-            bytes1(0x01),
-            ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
-            recipient,
+            encodeRecipientToAddress32OnForeignChain(paraID, recipient),
             ScaleCodec.encodeU128(destinationXcmFee),
             ScaleCodec.encodeU128(amount),
             ScaleCodec.encodeU128(feeAmount),
@@ -208,13 +205,31 @@ library SubstrateTypes {
             bytes1(0x02),
             SubstrateTypes.H160(token),
             SubstrateTypes.H160(sender),
-            bytes1(0x02),
-            ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
-            recipient,
+            encodeRecipientToAddress20OnForeignChain(paraID, recipient),
             ScaleCodec.encodeU128(destinationXcmFee),
             ScaleCodec.encodeU128(amount),
             ScaleCodec.encodeU128(xcmFee),
             ScaleCodec.encodeU128(feeAmount)
         );
+    }
+
+    function encodeRecipientOnAssetHub(bytes32 recipient) internal pure returns (bytes memory) {
+        return bytes.concat(bytes1(0x00), recipient);
+    }
+
+    function encodeRecipientToAddress32OnForeignChain(ParaID paraID, bytes32 recipient)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return bytes.concat(bytes1(0x01), ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))), recipient);
+    }
+
+    function encodeRecipientToAddress20OnForeignChain(ParaID paraID, bytes20 recipient)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return bytes.concat(bytes1(0x02), ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))), recipient);
     }
 }
