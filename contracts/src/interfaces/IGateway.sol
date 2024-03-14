@@ -75,6 +75,16 @@ interface IGateway {
         uint128 amount
     );
 
+    /// @dev Emitted once request to claim token and an outbound message is successfully queued.
+    event TokenClaimed(
+        address indexed token,
+        address indexed sender,
+        ParaID indexed destinationChain,
+        MultiAddress destinationAddress,
+        uint128 amount,
+        uint128 feeAmount
+    );
+
     /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
     event TokenRegistrationSent(address token);
 

@@ -100,7 +100,7 @@ library Assets {
             if (destinationAddress.isAddress32()) {
                 // The receiver has a 32-byte account ID
                 ticket.payload = SubstrateTypes.SendTokenToAssetHubAddress32(
-                    token, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
+                    token, sender, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
                 );
             } else {
                 // AssetHub does not support 20-byte account IDs
@@ -116,6 +116,7 @@ library Assets {
                 // The receiver has a 32-byte account ID
                 ticket.payload = SubstrateTypes.SendTokenToAddress32(
                     token,
+                    sender,
                     destinationChain,
                     destinationAddress.asAddress32(),
                     $.assetHubReserveTransferFee,
@@ -126,6 +127,7 @@ library Assets {
                 // The receiver has a 20-byte account ID
                 ticket.payload = SubstrateTypes.SendTokenToAddress20(
                     token,
+                    sender,
                     destinationChain,
                     destinationAddress.asAddress20(),
                     $.assetHubReserveTransferFee,
@@ -137,6 +139,74 @@ library Assets {
             }
         }
         emit IGateway.TokenSent(token, sender, destinationChain, destinationAddress, amount);
+    }
+
+    function claimToken(
+        address token,
+        address sender,
+        ParaID destinationChain,
+        MultiAddress calldata destinationAddress,
+        uint128 destinationChainFee,
+        uint128 amount,
+        uint128 feeAmount
+    ) external returns (Ticket memory ticket) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+
+        TokenInfo storage info = $.tokenRegistry[token];
+        if (!info.isRegistered) {
+            revert TokenNotRegistered();
+        }
+
+        ticket.dest = $.assetHubParaID;
+        ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee);
+
+        // Construct a message payload
+        if (destinationChain == $.assetHubParaID) {
+            // The funds will be minted into the receiver's account on AssetHub
+            if (destinationAddress.isAddress32()) {
+                // The receiver has a 32-byte account ID
+                ticket.payload = SubstrateTypes.ClaimTokenToAssetHubAddress32(
+                    token, sender, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount, feeAmount
+                );
+            } else {
+                // AssetHub does not support 20-byte account IDs
+                revert Unsupported();
+            }
+        } else {
+            if (destinationChainFee == 0) {
+                revert InvalidDestinationFee();
+            }
+            // The funds will be minted into sovereign account of the destination parachain on AssetHub,
+            // and then reserve-transferred to the receiver's account on the destination parachain.
+            if (destinationAddress.isAddress32()) {
+                // The receiver has a 32-byte account ID
+                ticket.payload = SubstrateTypes.ClaimTokenToAddress32(
+                    token,
+                    sender,
+                    destinationChain,
+                    destinationAddress.asAddress32(),
+                    $.assetHubReserveTransferFee,
+                    destinationChainFee,
+                    amount,
+                    feeAmount
+                );
+            } else if (destinationAddress.isAddress20()) {
+                // The receiver has a 20-byte account ID
+                ticket.payload = SubstrateTypes.ClaimTokenToAddress20(
+                    token,
+                    sender,
+                    destinationChain,
+                    destinationAddress.asAddress20(),
+                    $.assetHubReserveTransferFee,
+                    destinationChainFee,
+                    amount,
+                    feeAmount
+                );
+            } else {
+                revert Unsupported();
+            }
+        }
+        emit IGateway.TokenClaimed(token, sender, destinationChain, destinationAddress, amount, feeAmount);
     }
 
     function registerTokenCosts() external view returns (Costs memory costs) {

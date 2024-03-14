@@ -71,16 +71,19 @@ library SubstrateTypes {
      * `NativeTokensMessage::Mint`
      */
     // destination is AccountID32 address on AssetHub
-    function SendTokenToAssetHubAddress32(address token, bytes32 recipient, uint128 xcmFee, uint128 amount)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function SendTokenToAssetHubAddress32(
+        address token,
+        address sender,
+        bytes32 recipient,
+        uint128 xcmFee,
+        uint128 amount
+    ) internal view returns (bytes memory) {
         return bytes.concat(
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x01),
             SubstrateTypes.H160(token),
+            SubstrateTypes.H160(sender),
             bytes1(0x00),
             recipient,
             ScaleCodec.encodeU128(amount),
@@ -91,6 +94,7 @@ library SubstrateTypes {
     // destination is AccountID32 address
     function SendTokenToAddress32(
         address token,
+        address sender,
         ParaID paraID,
         bytes32 recipient,
         uint128 xcmFee,
@@ -102,6 +106,7 @@ library SubstrateTypes {
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x01),
             SubstrateTypes.H160(token),
+            SubstrateTypes.H160(sender),
             bytes1(0x01),
             ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
             recipient,
@@ -114,6 +119,7 @@ library SubstrateTypes {
     // destination is AccountID20 address
     function SendTokenToAddress20(
         address token,
+        address sender,
         ParaID paraID,
         bytes20 recipient,
         uint128 xcmFee,
@@ -125,12 +131,90 @@ library SubstrateTypes {
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x01),
             SubstrateTypes.H160(token),
+            SubstrateTypes.H160(sender),
             bytes1(0x02),
             ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
             recipient,
             ScaleCodec.encodeU128(destinationXcmFee),
             ScaleCodec.encodeU128(amount),
             ScaleCodec.encodeU128(xcmFee)
+        );
+    }
+
+    // destination is AccountID32 address on AssetHub
+    function ClaimTokenToAssetHubAddress32(
+        address token,
+        address sender,
+        bytes32 recipient,
+        uint128 xcmFee,
+        uint128 amount,
+        uint128 feeAmount
+    ) internal view returns (bytes memory) {
+        return bytes.concat(
+            bytes1(0x00),
+            ScaleCodec.encodeU64(uint64(block.chainid)),
+            bytes1(0x02),
+            SubstrateTypes.H160(token),
+            SubstrateTypes.H160(sender),
+            bytes1(0x00),
+            recipient,
+            ScaleCodec.encodeU128(amount),
+            ScaleCodec.encodeU128(feeAmount),
+            ScaleCodec.encodeU128(xcmFee)
+        );
+    }
+
+    // destination is AccountID32 address
+    function ClaimTokenToAddress32(
+        address token,
+        address sender,
+        ParaID paraID,
+        bytes32 recipient,
+        uint128 xcmFee,
+        uint128 destinationXcmFee,
+        uint128 amount,
+        uint128 feeAmount
+    ) internal view returns (bytes memory) {
+        return bytes.concat(
+            bytes1(0x00),
+            ScaleCodec.encodeU64(uint64(block.chainid)),
+            bytes1(0x02),
+            SubstrateTypes.H160(token),
+            SubstrateTypes.H160(sender),
+            bytes1(0x01),
+            ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
+            recipient,
+            ScaleCodec.encodeU128(destinationXcmFee),
+            ScaleCodec.encodeU128(amount),
+            ScaleCodec.encodeU128(feeAmount),
+            ScaleCodec.encodeU128(xcmFee)
+        );
+    }
+
+    // destination is AccountID20 address
+    function ClaimTokenToAddress20(
+        address token,
+        address sender,
+        ParaID paraID,
+        bytes20 recipient,
+        uint128 xcmFee,
+        uint128 destinationXcmFee,
+        uint128 amount,
+        uint128 feeAmount
+    ) internal view returns (bytes memory) {
+        return bytes.concat(
+            bytes1(0x00),
+            ScaleCodec.encodeU64(uint64(block.chainid)),
+            bytes1(0x02),
+            SubstrateTypes.H160(token),
+            SubstrateTypes.H160(sender),
+            bytes1(0x02),
+            ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
+            recipient,
+            ScaleCodec.encodeU128(destinationXcmFee),
+            ScaleCodec.encodeU128(amount),
+            ScaleCodec.encodeU128(xcmFee),
+            ScaleCodec.encodeU128(feeAmount)
         );
     }
 }

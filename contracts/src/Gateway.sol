@@ -432,6 +432,22 @@ contract Gateway is IGateway, IInitializable {
         );
     }
 
+    // Claim ERC20 tokens trapped on destination chain
+    function claimToken(
+        address token,
+        ParaID destinationChain,
+        MultiAddress calldata destinationAddress,
+        uint128 destinationFee,
+        uint128 amount,
+        uint128 feeAmount
+    ) external payable {
+        _submitOutbound(
+            Assets.claimToken(
+                token, msg.sender, destinationChain, destinationAddress, destinationFee, amount, feeAmount
+            )
+        );
+    }
+
     /**
      * Internal functions
      */
