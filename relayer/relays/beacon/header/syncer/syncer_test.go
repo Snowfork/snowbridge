@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -46,7 +48,7 @@ func TestCalculateNextCheckpointSlot(t *testing.T) {
 }
 
 func newTestRunner() *Syncer {
-	return New(TestUrl, config.SpecSettings{
+	return New(api.NewBeaconClient(TestUrl, 32), config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,

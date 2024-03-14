@@ -5,14 +5,27 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
+
+	"github.com/ethereum/go-ethereum/common"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
+
+type ChainWriter interface {
+	BatchCall(ctx context.Context, extrinsic string, calls []interface{}) error
+	WriteToParachainAndRateLimit(ctx context.Context, extrinsicName string, payload ...interface{}) error
+	WriteToParachainAndWatch(ctx context.Context, extrinsicName string, payload ...interface{}) error
+	GetLastFinalizedHeaderState() (state.FinalizedHeader, error)
+	GetFinalizedStateByStorageKey(key string) (scale.BeaconState, error)
+	GetLastExecutionHeaderState() (state.ExecutionHeader, error)
+	GetLastBasicChannelBlockNumber() (uint64, error)
+	GetLastBasicChannelNonceByAddress(address common.Address) (uint64, error)
+	GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state.FinalizedHeader, error)
+}
 
 type ParachainWriter struct {
 	conn                 *Connection
@@ -131,105 +144,6 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 			return nil
 		}
 	}
-}
-
-func (wr *ParachainWriter) writeToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) (*author.ExtrinsicStatusSubscription, error) {
-	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
-	if err != nil {
-		return nil, err
-	}
-
-	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(*extI)
-	if err != nil {
-		return nil, err
-	}
-
-	return sub, nil
-}
-
-func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "System", "Account", wr.conn.Keypair().PublicKey, nil)
-	if err != nil {
-		return 0, err
-	}
-
-	var accountInfo types.AccountInfo
-	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &accountInfo)
-	if err != nil {
-		return 0, err
-	}
-	if !ok {
-		return 0, fmt.Errorf("no account info found for %s", wr.conn.Keypair().URI)
-	}
-
-	return uint32(accountInfo.Nonce), nil
-}
-
-func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName string, payload ...interface{}) (*types.Extrinsic, error) {
-	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
-	if err != nil {
-		return nil, err
-	}
-
-	c, err := types.NewCall(meta, extrinsicName, payload...)
-	if err != nil {
-		return nil, err
-	}
-
-	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
-	if err != nil {
-		return nil, err
-	}
-
-	latestBlock, err := wr.conn.API().RPC.Chain.GetBlock(latestHash)
-	if err != nil {
-		return nil, err
-	}
-
-	ext := types.NewExtrinsic(c)
-	era := NewMortalEra(uint64(latestBlock.Block.Header.Number))
-
-	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
-	if err != nil {
-		return nil, err
-	}
-
-	rv, err := wr.conn.API().RPC.State.GetRuntimeVersionLatest()
-	if err != nil {
-		return nil, err
-	}
-
-	o := types.SignatureOptions{
-		BlockHash:          latestHash,
-		Era:                era,
-		GenesisHash:        genesisHash,
-		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce)),
-		SpecVersion:        rv.SpecVersion,
-		Tip:                types.NewUCompactFromUInt(0),
-		TransactionVersion: rv.TransactionVersion,
-	}
-
-	extI := ext
-
-	err = extI.Sign(*wr.conn.Keypair(), o)
-	if err != nil {
-		return nil, err
-	}
-
-	return &extI, nil
-}
-
-func (wr *ParachainWriter) prepCall(extrinsicName string, payload ...interface{}) (*types.Call, error) {
-	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
-	if err != nil {
-		return nil, err
-	}
-
-	c, err := types.NewCall(meta, extrinsicName, payload...)
-	if err != nil {
-		return nil, err
-	}
-	return &c, nil
 }
 
 func (wr *ParachainWriter) GetLastBasicChannelBlockNumber() (uint64, error) {
@@ -354,6 +268,105 @@ func (wr *ParachainWriter) GetFinalizedHeaderStateByBlockRoot(blockRoot types.H2
 		BeaconSlot:      uint64(compactBeaconState.Slot.Int64()),
 		BeaconBlockRoot: common.Hash(blockRoot),
 	}, nil
+}
+
+func (wr *ParachainWriter) writeToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) (*author.ExtrinsicStatusSubscription, error) {
+	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
+	if err != nil {
+		return nil, err
+	}
+
+	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(*extI)
+	if err != nil {
+		return nil, err
+	}
+
+	return sub, nil
+}
+
+func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "System", "Account", wr.conn.Keypair().PublicKey, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	var accountInfo types.AccountInfo
+	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &accountInfo)
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		return 0, fmt.Errorf("no account info found for %s", wr.conn.Keypair().URI)
+	}
+
+	return uint32(accountInfo.Nonce), nil
+}
+
+func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName string, payload ...interface{}) (*types.Extrinsic, error) {
+	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := types.NewCall(meta, extrinsicName, payload...)
+	if err != nil {
+		return nil, err
+	}
+
+	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
+	if err != nil {
+		return nil, err
+	}
+
+	latestBlock, err := wr.conn.API().RPC.Chain.GetBlock(latestHash)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := types.NewExtrinsic(c)
+	era := NewMortalEra(uint64(latestBlock.Block.Header.Number))
+
+	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
+	if err != nil {
+		return nil, err
+	}
+
+	rv, err := wr.conn.API().RPC.State.GetRuntimeVersionLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	o := types.SignatureOptions{
+		BlockHash:          latestHash,
+		Era:                era,
+		GenesisHash:        genesisHash,
+		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce)),
+		SpecVersion:        rv.SpecVersion,
+		Tip:                types.NewUCompactFromUInt(0),
+		TransactionVersion: rv.TransactionVersion,
+	}
+
+	extI := ext
+
+	err = extI.Sign(*wr.conn.Keypair(), o)
+	if err != nil {
+		return nil, err
+	}
+
+	return &extI, nil
+}
+
+func (wr *ParachainWriter) prepCall(extrinsicName string, payload ...interface{}) (*types.Call, error) {
+	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := types.NewCall(meta, extrinsicName, payload...)
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
 }
 
 func (wr *ParachainWriter) getHashFromParachain(pallet, storage string) (common.Hash, error) {

@@ -109,7 +109,8 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		s := syncer.New(endpoint, conf.Source.Beacon.Spec)
+		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
+		s := syncer.New(client, conf.Source.Beacon.Spec)
 
 		checkPointScale, err := s.GetCheckpoint()
 		if err != nil {
@@ -159,7 +160,8 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
-		s := syncer.New(endpoint, conf.Source.Beacon.Spec)
+		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
+		s := syncer.New(client, conf.Source.Beacon.Spec)
 
 		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
 
@@ -505,7 +507,8 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
 
 		// generate executionUpdate
-		s := syncer.New(endpoint, specSettings)
+		client := api.NewBeaconClient(endpoint, specSettings.SlotsInEpoch)
+		s := syncer.New(client, specSettings)
 		blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(beaconSlot))
 		if err != nil {
 			return fmt.Errorf("fetch block: %w", err)

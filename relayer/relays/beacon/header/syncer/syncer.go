@@ -5,10 +5,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ethereum/go-ethereum/common"
-	ssz "github.com/ferranbt/fastssz"
-	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -16,6 +12,11 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
+
+	"github.com/ethereum/go-ethereum/common"
+	ssz "github.com/ferranbt/fastssz"
+	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -30,13 +31,13 @@ var (
 )
 
 type Syncer struct {
-	Client  api.BeaconClient
+	Client  api.BeaconAPI
 	setting config.SpecSettings
 }
 
-func New(endpoint string, setting config.SpecSettings) *Syncer {
+func New(client api.BeaconAPI, setting config.SpecSettings) *Syncer {
 	return &Syncer{
-		Client:  *api.NewBeaconClient(endpoint, setting.SlotsInEpoch),
+		Client:  client,
 		setting: setting,
 	}
 }
@@ -162,7 +163,7 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 
 	data, err := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
 	if err != nil {
-		return blockRootProof, fmt.Errorf("download beacon state failed: %w", err)
+		return blockRootProof, fmt.Errorf("download beacon state (at slot %d) failed: %w", slot, err)
 	}
 	isDeneb := s.DenebForked(slot)
 
@@ -507,7 +508,7 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(attestedSlot uint64) (scale.Up
 	// Get the header at the slot
 	header, err := s.Client.GetHeaderBySlot(attestedSlot)
 	if err != nil {
-		return update, fmt.Errorf("fetch block: %w", err)
+		return update, fmt.Errorf("fetch header at slot: %w", err)
 	}
 
 	// Get the next block for the sync aggregate
