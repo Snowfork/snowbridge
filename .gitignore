@@ -33,3 +33,5 @@ states/
 
 go/
 gocache/
+go.work*
+control/target/
