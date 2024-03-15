@@ -11,7 +11,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
@@ -335,50 +334,24 @@ func (h *Header) getHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, 
 	return h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
 }
 
-func (h *Header) SyncExecutionHeader(ctx context.Context, blockRoot common.Hash) error {
+func (h *Header) FetchExecutionHeaderUpdate(blockRoot common.Hash) (scale.HeaderUpdatePayload, error) {
+	var headerUpdate scale.HeaderUpdatePayload
 	header, err := h.syncer.Client.GetHeader(blockRoot)
 	if err != nil {
-		return fmt.Errorf("get beacon header by blockRoot: %w", err)
+		return headerUpdate, fmt.Errorf("get beacon header by blockRoot: %w", err)
 	}
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
-		return fmt.Errorf("fetch last finalized header state: %w", err)
+		return headerUpdate, fmt.Errorf("fetch last finalized header state: %w", err)
 	}
 	if header.Slot > lastFinalizedHeaderState.BeaconSlot {
-		return ErrBeaconHeaderNotFinalized
+		return headerUpdate, ErrBeaconHeaderNotFinalized
 	}
-	headerUpdate, err := h.getHeaderUpdateBySlot(header.Slot)
+	headerUpdate, err = h.getHeaderUpdateBySlot(header.Slot)
 	if err != nil {
-		return fmt.Errorf("get header update by slot with ancestry proof: %w", err)
+		return headerUpdate, fmt.Errorf("get header update by slot with ancestry proof: %w", err)
 	}
-	var blockHash types.H256
-	if headerUpdate.ExecutionHeader.Deneb != nil {
-		blockHash = headerUpdate.ExecutionHeader.Deneb.BlockHash
-	} else if headerUpdate.ExecutionHeader.Capella != nil {
-		blockHash = headerUpdate.ExecutionHeader.Capella.BlockHash
-	} else {
-		return fmt.Errorf("invalid blockHash in headerUpdate")
-	}
-	compactExecutionHeaderState, err := h.writer.GetCompactExecutionHeaderStateByBlockHash(blockHash)
-	if err != nil {
-		return fmt.Errorf("get compactExecutionHeaderState by blockHash: %w", err)
-	}
-	if compactExecutionHeaderState.BlockNumber != 0 {
-		log.WithFields(log.Fields{"blockRoot": blockRoot.Hex(), "blockHash": blockHash.Hex(), "blockNumber": compactExecutionHeaderState.BlockNumber}).Info("ExecutionHeaderState already exist")
-		return nil
-	}
-	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdate)
-	if err != nil {
-		return fmt.Errorf("submit_execution_header: %w", err)
-	}
-	compactExecutionHeaderState, err = h.writer.GetCompactExecutionHeaderStateByBlockHash(blockHash)
-	if err != nil {
-		return fmt.Errorf("get compactExecutionHeaderState by blockHash: %w", err)
-	}
-	if compactExecutionHeaderState.BlockNumber == 0 {
-		return fmt.Errorf("execution header did not sync successfully")
-	}
-	return nil
+	return headerUpdate, nil
 }
 
 func (h *Header) isInitialSyncPeriod() bool {

@@ -361,27 +361,6 @@ func (wr *ParachainWriter) getNumberFromParachain(pallet, storage string) (uint6
 	return uint64(number), nil
 }
 
-func (wr *ParachainWriter) GetCompactExecutionHeaderStateByBlockHash(blockHash types.H256) (state.CompactExecutionHeaderState, error) {
-	var headerState state.CompactExecutionHeaderState
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "ExecutionHeaders", blockHash[:], nil)
-	if err != nil {
-		return headerState, fmt.Errorf("create storage key for ExecutionHeaders: %w", err)
-	}
-
-	var compactExecutionHeader scale.CompactExecutionHeader
-	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &compactExecutionHeader)
-	if err != nil {
-		return headerState, fmt.Errorf("get storage for ExecutionHeaders (err): %w", err)
-	}
-	headerState = state.CompactExecutionHeaderState{
-		ParentHash:   common.Hash(compactExecutionHeader.ParentHash),
-		BlockNumber:  uint64(compactExecutionHeader.BlockNumber.Int64()),
-		StateRoot:    common.Hash(compactExecutionHeader.StateRoot),
-		ReceiptsRoot: common.Hash(compactExecutionHeader.ReceiptsRoot),
-	}
-	return headerState, nil
-}
-
 func (wr *ParachainWriter) GetLastFinalizedStateIndex() (types.U32, error) {
 	var index types.U32
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "FinalizedBeaconStateIndex", nil, nil)
