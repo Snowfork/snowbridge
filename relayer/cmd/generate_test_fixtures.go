@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"os"
 
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -38,13 +39,17 @@ func generateFixtures(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("url flag not set")
 	}
 
+	store := store.New("./", 100)
+	store.Connect()
+	defer store.Close()
+
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
 	}
 	client := api.NewBeaconClient(endpoint, settings.SlotsInEpoch)
-	syncer := syncer.New(client, settings)
+	syncer := syncer.New(client, settings, &store)
 
 	finalizedCheckpoint, err := client.GetLatestFinalizedUpdate()
 	if err != nil {

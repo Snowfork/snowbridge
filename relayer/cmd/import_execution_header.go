@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"github.com/spf13/viper"
 	"io/ioutil"
 	"strings"
@@ -109,8 +110,12 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 
 		log.WithField("hash", beaconHeader).Info("will be syncing execution header for beacon hash")
 
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		store.Connect()
+		defer store.Close()
+
 		client := api.NewBeaconClient(lodestarEndpoint, specSettings.SlotsInEpoch)
-		syncer := syncer.New(client, specSettings)
+		syncer := syncer.New(client, specSettings, &store)
 
 		beaconHeaderHash := common.HexToHash(finalizedHeader)
 

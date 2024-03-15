@@ -6,6 +6,10 @@
         "slotsInEpoch": 32,
         "epochsPerSyncCommitteePeriod": 256,
         "denebForkedEpoch": 0
+      },
+      "datastore": {
+        "location": "/tmp/snowbridge/beaconstore",
+        "maxEntries": 100
       }
     }
   },

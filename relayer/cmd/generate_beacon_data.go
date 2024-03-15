@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"os"
 	"strconv"
 	"time"
@@ -113,8 +114,12 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		store.Connect()
+		defer store.Close()
+
 		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
-		s := syncer.New(client, conf.Source.Beacon.Spec)
+		s := syncer.New(client, conf.Source.Beacon.Spec, &store)
 
 		checkPointScale, err := s.GetCheckpoint()
 		if err != nil {
@@ -163,9 +168,13 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		store.Connect()
+		defer store.Close()
+
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
 		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
-		s := syncer.New(client, conf.Source.Beacon.Spec)
+		s := syncer.New(client, conf.Source.Beacon.Spec, &store)
 
 		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
 
@@ -510,9 +519,13 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 		specSettings := conf.Source.Beacon.Spec
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
 
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		store.Connect()
+		defer store.Close()
+
 		// generate executionUpdate
 		client := api.NewBeaconClient(endpoint, specSettings.SlotsInEpoch)
-		s := syncer.New(client, specSettings)
+		s := syncer.New(client, specSettings, &store)
 		blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(beaconSlot))
 		if err != nil {
 			return fmt.Errorf("fetch block: %w", err)

@@ -19,9 +19,15 @@ type SourceConfig struct {
 	Beacon BeaconConfig `mapstructure:"beacon"`
 }
 
+type DataStore struct {
+	Location   string `mapstructure:"location"`
+	MaxEntries uint64 `mapstructure:"maxEntries"`
+}
+
 type BeaconConfig struct {
-	Endpoint string       `mapstructure:"endpoint"`
-	Spec     SpecSettings `mapstructure:"spec"`
+	Endpoint  string       `mapstructure:"endpoint"`
+	Spec      SpecSettings `mapstructure:"spec"`
+	DataStore DataStore    `mapstructure:"datastore"`
 }
 
 type SinkConfig struct {

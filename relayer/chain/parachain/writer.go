@@ -21,10 +21,13 @@ type ChainWriter interface {
 	WriteToParachainAndWatch(ctx context.Context, extrinsicName string, payload ...interface{}) error
 	GetLastFinalizedHeaderState() (state.FinalizedHeader, error)
 	GetFinalizedStateByStorageKey(key string) (scale.BeaconState, error)
-	GetLastExecutionHeaderState() (state.ExecutionHeader, error)
 	GetLastBasicChannelBlockNumber() (uint64, error)
 	GetLastBasicChannelNonceByAddress(address common.Address) (uint64, error)
 	GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state.FinalizedHeader, error)
+	FindClosestCheckPoint(slot uint64) (state.FinalizedHeader, error)
+	GetCompactExecutionHeaderStateByBlockHash(blockHash types.H256) (state.CompactExecutionHeaderState, error)
+	GetLastFinalizedStateIndex() (types.U32, error)
+	GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error)
 }
 
 type ParachainWriter struct {
@@ -429,7 +432,7 @@ func (wr *ParachainWriter) GetFinalizedBeaconRootByIndex(index uint32) (types.H2
 	return beaconRoot, nil
 }
 
-func (wr *ParachainWriter) FindCheckPointBackward(slot uint64) (state.FinalizedHeader, error) {
+func (wr *ParachainWriter) FindClosestCheckPoint(slot uint64) (state.FinalizedHeader, error) {
 	var beaconState state.FinalizedHeader
 	lastIndex, err := wr.GetLastFinalizedStateIndex()
 	if err != nil {

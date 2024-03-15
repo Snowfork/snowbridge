@@ -67,7 +67,7 @@ func TestGetFinalizedUpdateAtSlot(t *testing.T) {
 	lodestarUpdateJSON := lodestarUpdate.Payload.ToJSON()
 
 	// Manually construct the finalized update for the same block
-	manualUpdate, err := syncer.GetFinalizedUpdateAtAttestedSlot(uint64(lodestarUpdate.Payload.AttestedHeader.Slot))
+	manualUpdate, err := syncer.GetFinalizedUpdateAtSlot(uint64(lodestarUpdate.Payload.AttestedHeader.Slot))
 	require.NoError(t, err)
 	manualUpdateJSON := manualUpdate.Payload.ToJSON()
 

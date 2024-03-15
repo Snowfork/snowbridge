@@ -29,10 +29,6 @@ func (m *MockWriter) GetLastFinalizedHeaderState() (state.FinalizedHeader, error
 	return m.LastFinalizedState, nil
 }
 
-func (m *MockWriter) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
-	return state.ExecutionHeader{}, nil
-}
-
 func (m *MockWriter) GetFinalizedStateByStorageKey(key string) (scale.BeaconState, error) {
 	return scale.BeaconState{}, nil
 }
@@ -46,5 +42,9 @@ func (m *MockWriter) GetLastBasicChannelNonceByAddress(address common.Address) (
 
 }
 func (m *MockWriter) GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state.FinalizedHeader, error) {
+	return state.FinalizedHeader{}, nil
+}
+
+func (m *MockWriter) FindCheckPointBackward(slot uint64) (state.FinalizedHeader, error) {
 	return state.FinalizedHeader{}, nil
 }
