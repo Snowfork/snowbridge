@@ -2,7 +2,6 @@
   "source": {
     "beacon": {
       "endpoint": "http://127.0.0.1:9596",
-      "fallbackEndpoint": "http://127.0.0.1:3500",
       "spec": {
         "slotsInEpoch": 32,
         "epochsPerSyncCommitteePeriod": 256,

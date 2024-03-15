@@ -362,7 +362,7 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 
 	blockRootsProof, err := h.syncer.GetBlockRoots(slot)
 	if err != nil && !errors.Is(err, syncer.ErrBeaconStateAvailableYet) {
-		return fmt.Errorf("fetch block roots: %w", err)
+		return fmt.Errorf("fetch block roots for slot %d: %w", slot, err)
 	}
 
 	log.Info("populating checkpoint")

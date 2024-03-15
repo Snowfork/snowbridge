@@ -7,6 +7,7 @@ require (
 	github.com/ethereum/go-ethereum v1.13.10
 	github.com/ferranbt/fastssz v0.1.3
 	github.com/magefile/mage v1.15.0
+	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20231109131025-3ece5b994f03

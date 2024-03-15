@@ -33,6 +33,7 @@ func init() {
 	rootCmd.AddCommand(generateBeaconCheckpointCmd())
 	rootCmd.AddCommand(generateExecutionUpdateCmd())
 	rootCmd.AddCommand(generateTestFixtures())
+	rootCmd.AddCommand(storeBeaconState())
 }
 
 func Execute() {

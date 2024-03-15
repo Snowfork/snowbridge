@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"strconv"
@@ -43,17 +42,15 @@ type BeaconAPI interface {
 }
 
 type BeaconClient struct {
-	httpClient       http.Client
-	endpoint         string
-	fallbackEndpoint string
-	slotsInEpoch     uint64
+	httpClient   http.Client
+	endpoint     string
+	slotsInEpoch uint64
 }
 
-func NewBeaconClient(endpoint, fallbackEndpoint string, slotsInEpoch uint64) *BeaconClient {
+func NewBeaconClient(endpoint string, slotsInEpoch uint64) *BeaconClient {
 	return &BeaconClient{
 		http.Client{},
 		endpoint,
-		fallbackEndpoint,
 		slotsInEpoch,
 	}
 }
@@ -443,21 +440,8 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 }
 
 func (b *BeaconClient) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
-	log.WithField("slot", stateIdOrSlot).Info("fetching beacon data")
-	data, err := b.GetBeaconStateByEndpoint(stateIdOrSlot, b.endpoint)
-	if err != nil {
-		log.WithField("slot", stateIdOrSlot).Info("falling back to another beacon state endpoint")
-		data, err = b.GetBeaconStateByEndpoint(stateIdOrSlot, b.fallbackEndpoint)
-		if err == nil {
-			log.WithField("slot", stateIdOrSlot).Info("successfully used fallback node")
-		}
-	}
-	return data, err
-}
-
-func (b *BeaconClient) GetBeaconStateByEndpoint(stateIdOrSlot, endpoint string) ([]byte, error) {
 	var data []byte
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", endpoint, stateIdOrSlot), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.endpoint, stateIdOrSlot), nil)
 	if err != nil {
 		return data, err
 	}

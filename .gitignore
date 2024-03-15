@@ -28,5 +28,8 @@ parachain/build_rs_cov.profraw
 compiler_config.json
 contracts/beefy-state.json
 
+# beacon states generate by relayer
+states/
+
 go/
 gocache/

@@ -3,12 +3,12 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/relays/util"
 	"os"
 
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 
 	"github.com/spf13/cobra"
 )
@@ -29,12 +29,6 @@ func generateTestFixtures() *cobra.Command {
 		return nil
 	}
 
-	cmd.Flags().String("fallback-url", "", "fallback URL to use to download the beacon state")
-	err = cmd.MarkFlagRequired("url")
-	if err != nil {
-		return nil
-	}
-
 	return cmd
 }
 
@@ -43,17 +37,13 @@ func generateFixtures(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("url flag not set")
 	}
-	fallbackEndpoint, err := cmd.Flags().GetString("fallback-url")
-	if err != nil {
-		return fmt.Errorf("fallback url flag not set")
-	}
 
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
 	}
-	client := api.NewBeaconClient(endpoint, fallbackEndpoint, settings.SlotsInEpoch)
+	client := api.NewBeaconClient(endpoint, settings.SlotsInEpoch)
 	syncer := syncer.New(client, settings)
 
 	finalizedCheckpoint, err := client.GetLatestFinalizedUpdate()
@@ -81,6 +71,32 @@ func generateFixtures(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	attestedHeaderSlot, err := util.ToUint64(syncCommitteeUpdate.Data.AttestedHeader.Beacon.Slot)
+	if err != nil {
+		return err
+	}
+	checkpointSlot := syncer.CalculateNextCheckpointSlot(attestedHeaderSlot)
+
+	headerAtSlot, err := client.GetHeaderBySlot(checkpointSlot)
+	if err != nil {
+		return err
+	}
+
+	err = writeFixtureJSONToFile(headerAtSlot, fmt.Sprintf("header_at_slot_%d.json", checkpointSlot))
+	if err != nil {
+		return err
+	}
+
+	beaconState, err := client.GetBeaconState(syncCommitteeUpdate.Data.FinalizedHeader.Beacon.Slot)
+	if err != nil {
+		return err
+	}
+
+	err = writeToFile(fmt.Sprintf("beacon_state_%s.ssz", syncCommitteeUpdate.Data.FinalizedHeader.Beacon.Slot), beaconState)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -89,7 +105,12 @@ func writeFixtureJSONToFile(object interface{}, filename string) error {
 	if err != nil {
 		return fmt.Errorf("cannot marshall finalized checkpoint")
 	}
-	err = os.WriteFile(FixturesDir+filename, jsonObj, 0644)
+
+	return writeToFile(filename, jsonObj)
+}
+
+func writeToFile(filename string, data []byte) error {
+	err := os.WriteFile(FixturesDir+filename, data, 0644)
 	if err != nil {
 		return fmt.Errorf("cannot write to file: %w", err)
 	}

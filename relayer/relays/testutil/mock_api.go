@@ -1,14 +1,14 @@
 package testutil
 
 import (
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 )
 
 type MockAPI struct {
 	LatestFinalisedUpdateResponse     api.LatestFinalisedUpdateResponse
 	SyncCommitteePeriodUpdateResponse api.SyncCommitteePeriodUpdateResponse
+	HeaderAtSlot                      api.BeaconHeader
 }
 
 func (m *MockAPI) GetBootstrap(blockRoot common.Hash) (api.BootstrapResponse, error) {
@@ -24,7 +24,7 @@ func (m *MockAPI) GetFinalizedCheckpoint() (api.FinalizedCheckpoint, error) {
 }
 
 func (m *MockAPI) GetHeaderBySlot(slot uint64) (api.BeaconHeader, error) {
-	return api.BeaconHeader{}, nil
+	return m.HeaderAtSlot, nil
 }
 
 func (m *MockAPI) GetHeader(blockRoot common.Hash) (api.BeaconHeader, error) {
@@ -48,7 +48,7 @@ func (m *MockAPI) GetSyncCommitteePeriodUpdate(from uint64) (api.SyncCommitteePe
 }
 
 func (m *MockAPI) GetLatestFinalizedUpdate() (api.LatestFinalisedUpdateResponse, error) {
-	return api.LatestFinalisedUpdateResponse{}, nil
+	return m.LatestFinalisedUpdateResponse, nil
 }
 
 func (m *MockAPI) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
