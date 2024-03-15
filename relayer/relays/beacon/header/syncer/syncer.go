@@ -317,17 +317,7 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 	}, nil
 }
 
-func (s *Syncer) HasFinalizedHeaderChanged(lastFinalizedBlockRoot common.Hash) (bool, error) {
-	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
-	if err != nil {
-		return false, fmt.Errorf("fetch finalized update: %w", err)
-	}
-
-	finalizedHeader, err := finalizedUpdate.Data.FinalizedHeader.Beacon.ToScale()
-	if err != nil {
-		return false, fmt.Errorf("convert finalized header to scale: %w", err)
-	}
-
+func (s *Syncer) HasFinalizedHeaderChanged(finalizedHeader scale.BeaconHeader, lastFinalizedBlockRoot common.Hash) (bool, error) {
 	blockRoot, err := finalizedHeader.ToSSZ().HashTreeRoot()
 	if err != nil {
 		return false, fmt.Errorf("beacon header hash tree root: %w", err)
@@ -502,17 +492,55 @@ func (s *Syncer) unmarshalBeaconState(slot uint64, data []byte) (state.BeaconSta
 	return beaconState, nil
 }
 
-func (s *Syncer) GetFinalizedUpdateAtSlot(finalizedSlot uint64, originalSlot uint64) (scale.Update, error) {
+// Sanity check the finalized and attested header are at 32 boundary blocks so we can download the beacon state
+func (s *Syncer) findAttestedAndFinalizedHeadersAtBoundary(initialSlot, lowestSlot uint64) (uint64, error) {
+	var headers []uint64
+	slot := initialSlot
+
+	for {
+		if len(headers) == 2 {
+			break
+		}
+
+		header, err := s.Client.GetHeaderBySlot(slot)
+		if err != nil {
+			slot -= s.setting.SlotsInEpoch
+			if lowestSlot > slot {
+				return 0, fmt.Errorf("unable to find valid slot")
+			}
+
+			continue
+		}
+
+		finalizedSlot := header.Slot - (s.setting.SlotsInEpoch * 2)
+		finalizedHeader, err := s.Client.GetHeaderBySlot(finalizedSlot)
+		if err != nil {
+			slot -= s.setting.SlotsInEpoch
+
+			continue
+		}
+
+		headers = append(headers, header.Slot)
+		headers = append(headers, finalizedHeader.Slot)
+	}
+
+	log.WithField("headers_found", headers).Info("found boundary headers")
+	return headers[0], nil
+}
+
+func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(attestedSlot uint64, lastSyncedFinalizedSlot uint64) (scale.Update, error) {
 	var update scale.Update
 
-	// The finalized header is too epochs behind the attested header.
-	attestedSlot := finalizedSlot + (s.setting.SlotsInEpoch * 2)
+	attestedSlot, err := s.findAttestedAndFinalizedHeadersAtBoundary(attestedSlot, lastSyncedFinalizedSlot)
+	if err != nil {
+		return update, fmt.Errorf("cannot find blocks at boundaries: %w", err)
+	}
 
 	// Try getting beacon data from the API first
 	data, err := s.getBeaconDataFromClient(attestedSlot)
 	if err != nil {
 		// If it fails, using the beacon store and look for a relevant finalized update
-		data, err = s.getBeaconDataFromStore(originalSlot)
+		data, err = s.getBeaconDataFromStore(lastSyncedFinalizedSlot)
 		if err != nil {
 			return update, fmt.Errorf("fetch beacon data from api and data store failure: %w", err)
 		}
