@@ -24,7 +24,6 @@ type ChainWriter interface {
 	GetLastBasicChannelBlockNumber() (uint64, error)
 	GetLastBasicChannelNonceByAddress(address common.Address) (uint64, error)
 	GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state.FinalizedHeader, error)
-	FindClosestCheckPoint(slot uint64) (state.FinalizedHeader, error)
 	GetCompactExecutionHeaderStateByBlockHash(blockHash types.H256) (state.CompactExecutionHeaderState, error)
 	GetLastFinalizedStateIndex() (types.U32, error)
 	GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error)
@@ -430,37 +429,4 @@ func (wr *ParachainWriter) GetFinalizedBeaconRootByIndex(index uint32) (types.H2
 	}
 
 	return beaconRoot, nil
-}
-
-func (wr *ParachainWriter) FindClosestCheckPoint(slot uint64) (state.FinalizedHeader, error) {
-	var beaconState state.FinalizedHeader
-	lastIndex, err := wr.GetLastFinalizedStateIndex()
-	if err != nil {
-		return beaconState, fmt.Errorf("GetLastFinalizedStateIndex error: %w", err)
-	}
-	startIndex := uint32(lastIndex)
-	endIndex := uint32(0)
-	if lastIndex > 256 {
-		endIndex = endIndex - 256
-	}
-	for index := startIndex; index >= endIndex; index-- {
-		beaconRoot, err := wr.GetFinalizedBeaconRootByIndex(index)
-		if err != nil {
-			return beaconState, fmt.Errorf("GetFinalizedBeaconRootByIndex %d, error: %w", index, err)
-		}
-		beaconState, err = wr.GetFinalizedHeaderStateByBlockRoot(beaconRoot)
-		if err != nil {
-			return beaconState, fmt.Errorf("GetFinalizedHeaderStateByBlockRoot %s, error: %w", beaconRoot.Hex(), err)
-		}
-		if beaconState.BeaconSlot < slot {
-			break
-		}
-		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+8192 {
-			break
-		}
-	}
-	if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+8192 {
-		return beaconState, nil
-	}
-	return beaconState, fmt.Errorf("Can't find checkpoint on chain for slot %d", slot)
 }

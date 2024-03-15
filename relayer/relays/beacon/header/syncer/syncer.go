@@ -34,15 +34,22 @@ var (
 type Syncer struct {
 	Client  api.BeaconAPI
 	setting config.SpecSettings
-	store   *store.Store
+	store   store.BeaconStore
 }
 
-func New(client api.BeaconAPI, setting config.SpecSettings, store *store.Store) *Syncer {
+func New(client api.BeaconAPI, setting config.SpecSettings, store store.BeaconStore) *Syncer {
 	return &Syncer{
 		Client:  client,
 		setting: setting,
 		store:   store,
 	}
+}
+
+type finalizedUpdateContainer struct {
+	AttestedState       state.BeaconState
+	FinalizedState      state.BeaconState
+	FinalizedHeader     api.BeaconHeader
+	FinalizedCheckPoint state.Checkpoint
 }
 
 func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
@@ -368,33 +375,6 @@ func (s *Syncer) FindBeaconHeaderWithBlockIncluded(slot uint64) (state.BeaconBlo
 		BodyRoot:      header.BodyRoot.Bytes(),
 	}
 
-	computedRoot, err := beaconHeader.HashTreeRoot()
-	if err != nil {
-		return state.BeaconBlockHeader{}, err
-	}
-
-	blockRoot, err := s.Client.GetBeaconBlockRoot(header.Slot)
-	if err != nil {
-		return state.BeaconBlockHeader{}, fmt.Errorf("fetch block: %w", err)
-	}
-
-	computedRootHash := common.BytesToHash(computedRoot[:])
-
-	if blockRoot != computedRootHash {
-		log.WithFields(log.Fields{
-			"computedRoot": computedRootHash,
-			"blockRoot":    blockRoot,
-			"slot":         slot,
-		}).Error("block root calculated not match")
-		return state.BeaconBlockHeader{}, fmt.Errorf("block root calculated not match")
-	}
-
-	log.WithFields(log.Fields{
-		"computedRoot": computedRootHash,
-		"blockRoot":    blockRoot,
-		"slot":         slot,
-	}).Info("beacon header with block included found")
-
 	return beaconHeader, nil
 }
 
@@ -495,6 +475,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 
 func (s *Syncer) getBeaconStateAtSlot(slot uint64) (state.BeaconState, error) {
 	var beaconState state.BeaconState
+	log.WithField("slot", slot).Info("downloading state at slot")
 	beaconData, err := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
 	if err != nil {
 		return beaconState, fmt.Errorf("fetch beacon state: %w", err)
@@ -524,10 +505,11 @@ func (s *Syncer) unmarshalBeaconState(slot uint64, data []byte) (state.BeaconSta
 func (s *Syncer) GetFinalizedUpdateAtSlot(finalizedSlot uint64, originalSlot uint64) (scale.Update, error) {
 	var update scale.Update
 
+	// The finalized header is too epochs behind the attested header.
 	attestedSlot := finalizedSlot + (s.setting.SlotsInEpoch * 2)
 
 	// Try getting beacon data from the API first
-	data, err := s.getBeaconDataFromAPI(attestedSlot)
+	data, err := s.getBeaconDataFromClient(attestedSlot)
 	if err != nil {
 		// If it fails, using the beacon store and look for a relevant finalized update
 		data, err = s.getBeaconDataFromStore(originalSlot)
@@ -645,7 +627,8 @@ func (s *Syncer) getExecutionHeaderBranch(block state.BeaconBlock) ([]types.H256
 	return util.BytesBranchToScale(proof.Hashes), nil
 }
 
-func (s *Syncer) getBeaconDataFromAPI(attestedSlot uint64) (finalizedUpdateContainer, error) {
+// Get the attested and finalized beacon states from the Beacon API.
+func (s *Syncer) getBeaconDataFromClient(attestedSlot uint64) (finalizedUpdateContainer, error) {
 	var response finalizedUpdateContainer
 	var err error
 
@@ -657,6 +640,7 @@ func (s *Syncer) getBeaconDataFromAPI(attestedSlot uint64) (finalizedUpdateConta
 
 	response.FinalizedCheckPoint = *response.AttestedState.GetFinalizedCheckpoint()
 
+	log.WithField("ROOT", common.BytesToHash(response.FinalizedCheckPoint.Root)).Info("root is")
 	// Get the finalized header at the given slot state
 	response.FinalizedHeader, err = s.Client.GetHeader(common.BytesToHash(response.FinalizedCheckPoint.Root))
 	if err != nil {
@@ -671,6 +655,8 @@ func (s *Syncer) getBeaconDataFromAPI(attestedSlot uint64) (finalizedUpdateConta
 	return response, nil
 }
 
+// Get the best, latest finalized and attested beacon states including the slot provided in the finalized state block
+// roots, from the Beacon store.
 func (s *Syncer) getBeaconDataFromStore(originalSlot uint64) (finalizedUpdateContainer, error) {
 	var response finalizedUpdateContainer
 	var err error
@@ -697,11 +683,4 @@ func (s *Syncer) getBeaconDataFromStore(originalSlot uint64) (finalizedUpdateCon
 	}
 
 	return response, nil
-}
-
-type finalizedUpdateContainer struct {
-	AttestedState       state.BeaconState
-	FinalizedState      state.BeaconState
-	FinalizedHeader     api.BeaconHeader
-	FinalizedCheckPoint state.Checkpoint
 }

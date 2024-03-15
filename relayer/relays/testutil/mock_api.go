@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 )
@@ -8,7 +9,9 @@ import (
 type MockAPI struct {
 	LatestFinalisedUpdateResponse     api.LatestFinalisedUpdateResponse
 	SyncCommitteePeriodUpdateResponse api.SyncCommitteePeriodUpdateResponse
-	HeaderAtSlot                      api.BeaconHeader
+	HeadersAtSlot                     map[uint64]api.BeaconHeader
+	BlocksAtSlot                      map[uint64]api.BeaconBlockResponse
+	Header                            api.BeaconHeader
 }
 
 func (m *MockAPI) GetBootstrap(blockRoot common.Hash) (api.BootstrapResponse, error) {
@@ -24,15 +27,15 @@ func (m *MockAPI) GetFinalizedCheckpoint() (api.FinalizedCheckpoint, error) {
 }
 
 func (m *MockAPI) GetHeaderBySlot(slot uint64) (api.BeaconHeader, error) {
-	return m.HeaderAtSlot, nil
+	return m.HeadersAtSlot[slot], nil
 }
 
 func (m *MockAPI) GetHeader(blockRoot common.Hash) (api.BeaconHeader, error) {
-	return api.BeaconHeader{}, nil
+	return m.Header, nil
 }
 
 func (m *MockAPI) GetBeaconBlockBySlot(slot uint64) (api.BeaconBlockResponse, error) {
-	return api.BeaconBlockResponse{}, nil
+	return m.BlocksAtSlot[slot], nil
 }
 
 func (m *MockAPI) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
@@ -52,5 +55,19 @@ func (m *MockAPI) GetLatestFinalizedUpdate() (api.LatestFinalisedUpdateResponse,
 }
 
 func (m *MockAPI) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
+	if stateIdOrSlot == "4563008" {
+		data, err := LoadFile("4563008.ssz")
+		if err != nil {
+			return []byte{}, fmt.Errorf("error reading file: %w", err)
+		}
+		return data, nil
+	}
+	if stateIdOrSlot == "4562944" {
+		data, err := LoadFile("4562944.ssz")
+		if err != nil {
+			return []byte{}, fmt.Errorf("error reading file: %w", err)
+		}
+		return data, nil
+	}
 	return []byte{}, nil
 }

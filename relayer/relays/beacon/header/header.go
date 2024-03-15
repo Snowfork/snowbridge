@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"time"
 
@@ -31,12 +32,12 @@ type Header struct {
 	cache                        *cache.BeaconCache
 	writer                       parachain.ChainWriter
 	syncer                       *syncer.Syncer
-	store                        *store.Store
+	store                        store.BeaconStore
 	slotsInEpoch                 uint64
 	epochsPerSyncCommitteePeriod uint64
 }
 
-func New(writer parachain.ChainWriter, client api.BeaconAPI, setting config.SpecSettings, store *store.Store) Header {
+func New(writer parachain.ChainWriter, client api.BeaconAPI, setting config.SpecSettings, store store.BeaconStore) Header {
 	return Header{
 		cache:                        cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
 		writer:                       writer,
@@ -298,6 +299,9 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 	return nil
 }
 
+// Find the closest finalized checkpoint for a given slot. If a checkpoint cannot be found in the local cache, look
+// for a checkpoint that can be used on-chain. If there is no checkpoint that can be used on-chain, download
+// a checkpoint from the beacon node and sync it on-chain, and then use it as the checkpoint for the slot.
 func (h *Header) populateClosestCheckpoint(ctx context.Context, slot uint64) (cache.Proof, error) {
 	var checkpoint cache.Proof
 	checkpoint, err := h.cache.GetClosestCheckpoint(slot)
@@ -306,51 +310,21 @@ func (h *Header) populateClosestCheckpoint(ctx context.Context, slot uint64) (ca
 	case errors.Is(cache.FinalizedCheckPointNotAvailable, err) || errors.Is(cache.FinalizedCheckPointNotPopulated, err):
 		checkpointSlot := checkpoint.Slot
 		if checkpointSlot == 0 {
-			log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot}).Info("checkpoint slot not available, try with slot in next sync period instead")
-			checkpointSlot = h.syncer.CalculateNextCheckpointSlot(slot)
-			lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
+			checkpointSlot, err = h.populateCheckPointCacheWithDataFromChain(slot, checkpointSlot)
 			if err != nil {
-				return checkpoint, fmt.Errorf("get last finalized header for the checkpoint: %w", err)
-			}
-			if slot > lastFinalizedHeaderState.BeaconSlot {
-				return checkpoint, ErrBeaconHeaderNotFinalized
-			}
-			if checkpointSlot < lastFinalizedHeaderState.BeaconSlot {
-				log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot, "lastFinalizedSlot": lastFinalizedHeaderState.BeaconSlot}).Info("fetch checkpoint on chain backward from history")
-				historyState, err := h.writer.FindClosestCheckPoint(slot)
+				// If we couldn't find a finalized header on-chain, download one and populated the local cache and
+				// sync it on-chain
+				finalizedUpdate, err := h.syncer.GetFinalizedUpdateAtSlot(checkpointSlot, slot)
 				if err != nil {
-					return checkpoint, fmt.Errorf("get history finalized header for the checkpoint: %w", err)
+					return checkpoint, fmt.Errorf("get interim checkpoint to update chain (checkpoint slot %d, original slot: %d): %w", checkpointSlot, slot, err)
 				}
-				checkpointSlot = historyState.BeaconSlot
-			} else {
-				log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot, "lastFinalizedSlot": lastFinalizedHeaderState.BeaconSlot}).Info("calculated checkpoint slot should not be in the future, switch to the last finalized")
-				checkpointSlot = lastFinalizedHeaderState.BeaconSlot
+
+				err = h.updateFinalizedHeaderOnchain(ctx, finalizedUpdate)
+				if err != nil {
+					return checkpoint, fmt.Errorf("update interim finalized header on-chain: %w", err)
+				}
 			}
 		}
-		err := h.populateFinalizedCheckpoint(checkpointSlot)
-		if err != nil {
-			finalizedUpdate, err := h.syncer.GetFinalizedUpdateAtSlot(checkpointSlot, slot)
-			if err != nil {
-				return checkpoint, fmt.Errorf("get finalized update at finalized slot %d: %w", slot, err)
-			}
-
-			err = h.updateFinalizedHeaderOnchain(ctx, finalizedUpdate)
-			if err != nil {
-				return checkpoint, fmt.Errorf("update finalized header on-chain: %w", err)
-			}
-
-			finalizedSlot := uint64(finalizedUpdate.Payload.FinalizedHeader.Slot)
-			// This might be a problem, because if the finalized header is older than the expected checkpoint slot,
-			// the execution header to be proved might be after the finalized header synced
-			if finalizedSlot < slot {
-				return checkpoint, fmt.Errorf("finalized header (slot %d) synced is before the expected checkpoint (slot %d) to be proved: %w", finalizedSlot, slot, err)
-			}
-
-			// update the slot, incase the finalized header was a different finalized header than expected
-			finalizedSlot = slot
-		}
-
-		log.Info("populated finalized checkpoint")
 
 		checkpoint, err = h.cache.GetClosestCheckpoint(slot)
 		if err != nil {
@@ -365,6 +339,40 @@ func (h *Header) populateClosestCheckpoint(ctx context.Context, slot uint64) (ca
 	}
 
 	return checkpoint, nil
+}
+
+func (h *Header) populateCheckPointCacheWithDataFromChain(slot, checkpointSlot uint64) (uint64, error) {
+	log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot}).Info("checkpoint slot not available, try with slot in next sync period instead")
+
+	checkpointSlot = h.syncer.CalculateNextCheckpointSlot(slot)
+
+	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
+	if err != nil {
+		return checkpointSlot, fmt.Errorf("get last finalized header for the checkpoint: %w", err)
+	}
+
+	if slot > lastFinalizedHeaderState.BeaconSlot {
+		return checkpointSlot, ErrBeaconHeaderNotFinalized
+	}
+
+	if checkpointSlot < lastFinalizedHeaderState.BeaconSlot {
+		historicState, err := h.findClosestCheckPoint(slot)
+		if err != nil {
+			return checkpointSlot, fmt.Errorf("get history finalized header for the checkpoint: %w", err)
+		}
+		checkpointSlot = historicState.BeaconSlot
+	} else {
+		// Setting the checkpoint slot to what is the latest finalized header on-chain, since the checkpoint should
+		// not be after the latest finalized header on-chain
+		checkpointSlot = lastFinalizedHeaderState.BeaconSlot
+	}
+
+	err = h.populateFinalizedCheckpoint(checkpointSlot)
+	if err != nil {
+		return checkpointSlot, fmt.Errorf("populated local cache with finalized header found on-chain: %w", err)
+	}
+
+	return checkpointSlot, nil
 }
 
 func (h *Header) getHeaderUpdateBySlot(ctx context.Context, slot uint64) (scale.HeaderUpdatePayload, error) {
@@ -393,6 +401,7 @@ func (h *Header) SyncExecutionHeader(ctx context.Context, blockRoot common.Hash)
 	if err != nil {
 		return fmt.Errorf("fetch last finalized header state: %w", err)
 	}
+
 	if header.Slot > lastFinalizedHeaderState.BeaconSlot {
 		return ErrBeaconHeaderNotFinalized
 	}
@@ -400,6 +409,7 @@ func (h *Header) SyncExecutionHeader(ctx context.Context, blockRoot common.Hash)
 	if err != nil {
 		return fmt.Errorf("get header update by slot with ancestry proof: %w", err)
 	}
+
 	var blockHash types.H256
 	if headerUpdate.ExecutionHeader.Deneb != nil {
 		blockHash = headerUpdate.ExecutionHeader.Deneb.BlockHash
@@ -408,6 +418,7 @@ func (h *Header) SyncExecutionHeader(ctx context.Context, blockRoot common.Hash)
 	} else {
 		return fmt.Errorf("invalid blockHash in headerUpdate")
 	}
+
 	compactExecutionHeaderState, err := h.writer.GetCompactExecutionHeaderStateByBlockHash(blockHash)
 	if err != nil {
 		return fmt.Errorf("get compactExecutionHeaderState by blockHash: %w", err)
@@ -434,4 +445,41 @@ func (h *Header) isInitialSyncPeriod() bool {
 	initialPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.InitialCheckpointSlot)
 	lastFinalizedPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
 	return initialPeriod == lastFinalizedPeriod
+}
+
+func (h *Header) findClosestCheckPoint(slot uint64) (state.FinalizedHeader, error) {
+	var beaconState state.FinalizedHeader
+	lastIndex, err := h.writer.GetLastFinalizedStateIndex()
+	if err != nil {
+		return beaconState, fmt.Errorf("GetLastFinalizedStateIndex error: %w", err)
+	}
+	startIndex := uint64(lastIndex)
+	endIndex := uint64(0)
+	if uint64(lastIndex) > h.epochsPerSyncCommitteePeriod {
+		endIndex = endIndex - h.epochsPerSyncCommitteePeriod
+	}
+
+	syncCommitteePeriod := h.slotsInEpoch * h.epochsPerSyncCommitteePeriod
+
+	for index := startIndex; index >= endIndex; index-- {
+		beaconRoot, err := h.writer.GetFinalizedBeaconRootByIndex(uint32(index))
+		if err != nil {
+			return beaconState, fmt.Errorf("GetFinalizedBeaconRootByIndex %d, error: %w", index, err)
+		}
+		beaconState, err = h.writer.GetFinalizedHeaderStateByBlockRoot(beaconRoot)
+		if err != nil {
+			return beaconState, fmt.Errorf("GetFinalizedHeaderStateByBlockRoot %s, error: %w", beaconRoot.Hex(), err)
+		}
+		if beaconState.BeaconSlot < slot {
+			break
+		}
+		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod {
+			break
+		}
+	}
+	if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod {
+		return beaconState, nil
+	}
+
+	return beaconState, fmt.Errorf("no checkpoint on chain for slot %d", slot)
 }

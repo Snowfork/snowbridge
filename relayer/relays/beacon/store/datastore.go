@@ -11,6 +11,13 @@ import (
 const BeaconStateDir = "states"
 const BeaconStateFilename = "beacon_state_%d.ssz"
 
+type BeaconStore interface {
+	Connect() error
+	Close()
+	StoreUpdate(attestedSlot, finalizedSlot, attestedSyncPeriod, finalizedSyncPeriod uint64) error
+	FindBeaconStateWithinSyncPeriodRange(baseSlot, slotRange uint64) (StoredBeaconData, error)
+}
+
 type BeaconState struct {
 	ID                     uint64
 	AttestedSlot           uint64
