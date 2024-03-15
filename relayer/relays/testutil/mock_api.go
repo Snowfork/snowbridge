@@ -9,7 +9,7 @@ import (
 type MockAPI struct {
 	LatestFinalisedUpdateResponse     api.LatestFinalisedUpdateResponse
 	SyncCommitteePeriodUpdateResponse api.SyncCommitteePeriodUpdateResponse
-	HeadersAtSlot                     map[uint64]api.BeaconHeader
+	HeadersBySlot                     map[uint64]api.BeaconHeader
 	BlocksAtSlot                      map[uint64]api.BeaconBlockResponse
 	Header                            api.BeaconHeader
 }
@@ -27,7 +27,11 @@ func (m *MockAPI) GetFinalizedCheckpoint() (api.FinalizedCheckpoint, error) {
 }
 
 func (m *MockAPI) GetHeaderBySlot(slot uint64) (api.BeaconHeader, error) {
-	return m.HeadersAtSlot[slot], nil
+	value, ok := m.HeadersBySlot[slot]
+	if !ok {
+		return api.BeaconHeader{}, api.ErrNotFound
+	}
+	return value, nil
 }
 
 func (m *MockAPI) GetHeader(blockRoot common.Hash) (api.BeaconHeader, error) {
@@ -35,7 +39,11 @@ func (m *MockAPI) GetHeader(blockRoot common.Hash) (api.BeaconHeader, error) {
 }
 
 func (m *MockAPI) GetBeaconBlockBySlot(slot uint64) (api.BeaconBlockResponse, error) {
-	return m.BlocksAtSlot[slot], nil
+	value, ok := m.BlocksAtSlot[slot]
+	if !ok {
+		return api.BeaconBlockResponse{}, api.ErrNotFound
+	}
+	return value, nil
 }
 
 func (m *MockAPI) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
