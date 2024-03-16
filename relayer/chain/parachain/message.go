@@ -9,6 +9,7 @@ import (
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
@@ -20,15 +21,15 @@ type EventLog struct {
 }
 
 type Message struct {
-	EventLog        EventLog
-	Proof           Proof
-	ExecutionUpdate scale.HeaderUpdatePayload
+	EventLog EventLog
+	Proof    Proof
 }
 
 type Proof struct {
-	BlockHash types.H256
-	TxIndex   types.U32
-	Data      *ProofData
+	BlockHash      types.H256
+	TxIndex        types.U32
+	ReceiptProof   *ProofData
+	ExecutionProof scale.HeaderUpdatePayload
 }
 
 type ProofData struct {
@@ -38,7 +39,7 @@ type ProofData struct {
 
 type MessageJSON struct {
 	EventLog EventLogJSON `json:"event_log"`
-	Proof    ProofJSON
+	Proof    ProofJSON    `json:"proof"`
 }
 
 type EventLogJSON struct {
@@ -48,9 +49,10 @@ type EventLogJSON struct {
 }
 
 type ProofJSON struct {
-	BlockHash string         `json:"block_hash"`
-	TxIndex   uint32         `json:"tx_index"`
-	Data      *ProofDataJSON `json:"data"`
+	BlockHash      string            `json:"block_hash"`
+	TxIndex        uint32            `json:"tx_index"`
+	ReceiptProof   *ProofDataJSON    `json:"receipt_proof"`
+	ExecutionProof json.HeaderUpdate `json:"execution_proof"`
 }
 
 type ProofDataJSON struct {
@@ -87,10 +89,11 @@ func (m Message) ToJSON() MessageJSON {
 		Proof: ProofJSON{
 			BlockHash: m.Proof.BlockHash.Hex(),
 			TxIndex:   uint32(m.Proof.TxIndex),
-			Data: &ProofDataJSON{
-				Keys:   util.ScaleBytesToArrayHexArray(m.Proof.Data.Keys),
-				Values: util.ScaleBytesToArrayHexArray(m.Proof.Data.Values),
+			ReceiptProof: &ProofDataJSON{
+				Keys:   util.ScaleBytesToArrayHexArray(m.Proof.ReceiptProof.Keys),
+				Values: util.ScaleBytesToArrayHexArray(m.Proof.ReceiptProof.Values),
 			},
+			ExecutionProof: m.Proof.ExecutionProof.ToJSON(),
 		},
 	}
 }
@@ -108,7 +111,8 @@ func (e *EventLogJSON) RemoveLeadingZeroHashes() {
 
 func (p *ProofJSON) RemoveLeadingZeroHashes() {
 	p.BlockHash = removeLeadingZeroHash(p.BlockHash)
-	p.Data.RemoveLeadingZeroHashes()
+	p.ReceiptProof.RemoveLeadingZeroHashes()
+	p.ExecutionProof.RemoveLeadingZeroHashes()
 }
 
 func (p *ProofDataJSON) RemoveLeadingZeroHashes() {

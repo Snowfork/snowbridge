@@ -334,7 +334,7 @@ func (h *Header) getHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, 
 	return h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
 }
 
-func (h *Header) FetchExecutionHeaderUpdate(blockRoot common.Hash) (scale.HeaderUpdatePayload, error) {
+func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.HeaderUpdatePayload, error) {
 	var headerUpdate scale.HeaderUpdatePayload
 	header, err := h.syncer.Client.GetHeader(blockRoot)
 	if err != nil {

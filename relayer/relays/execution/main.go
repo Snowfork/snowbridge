@@ -154,7 +154,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				}
 
 				// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
-				executionHeaderUpdate, err := beaconHeader.FetchExecutionHeaderUpdate(*blockHeader.ParentBeaconRoot)
+				executionProof, err := beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot)
 				if err == header.ErrBeaconHeaderNotFinalized {
 					logger.Warn("beacon header not finalized, just skipped")
 					continue
@@ -162,7 +162,12 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				if err != nil {
 					return fmt.Errorf("fetch execution header update: %w", err)
 				}
-				inboundMsg.ExecutionUpdate = executionHeaderUpdate
+				inboundMsg.Proof.ExecutionProof = executionProof
+
+				logger.WithFields(logrus.Fields{
+					"EventLog": inboundMsg.EventLog,
+					"Proof":    inboundMsg.Proof,
+				}).Debug("Generated message from Ethereum log")
 
 				err = writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
 				if err != nil {

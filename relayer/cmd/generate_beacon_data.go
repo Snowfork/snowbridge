@@ -41,6 +41,7 @@ func generateBeaconDataCmd() *cobra.Command {
 	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	cmd.Flags().String("test_case", "register_token", "Inbound test case")
+	cmd.Flags().Bool("inbound_fixtures_only", false, "Inbound test fixtures only")
 	return cmd
 }
 
@@ -76,20 +77,22 @@ type Data struct {
 	SyncCommitteeUpdate   beaconjson.Update
 	FinalizedHeaderUpdate beaconjson.Update
 	HeaderUpdate          beaconjson.HeaderUpdate
-	InboundMessageTest    InboundMessageTest
+	InboundMessage        parachain.MessageJSON
 }
 
-type InboundMessageTest struct {
-	ExecutionHeader beaconjson.CompactExecutionHeader `json:"execution_header"`
-	Message         parachain.MessageJSON             `json:"message"`
+type InboundFixture struct {
+	FinalizedHeaderUpdate beaconjson.Update     `json:"update"`
+	Message               parachain.MessageJSON `json:"message"`
 }
 
 const (
-	pathToBeaconBenchmarkData         = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/src/benchmarking/fixtures.rs"
-	pathToBenchmarkDataTemplate       = "polkadot-sdk/bridges/snowbridge/templates/benchmarking-fixtures.mustache"
-	pathToBeaconTestFixtureFiles      = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/tests/fixtures"
-	pathToInboundQueueFixtureTemplate = "polkadot-sdk/bridges/snowbridge/templates/%s.mustache"
-	pathToInboundQueueFixtureData     = "polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures/src/%s.rs"
+	pathToBeaconBenchmarkData                 = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/src/benchmarking/fixtures.rs"
+	pathToBenchmarkDataTemplate               = "polkadot-sdk/bridges/snowbridge/templates/benchmarking-fixtures.mustache"
+	pathToBeaconTestFixtureFiles              = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/tests/fixtures"
+	pathToInboundQueueFixtureTemplate         = "polkadot-sdk/bridges/snowbridge/templates/inbound-fixtures.mustache"
+	pathToInboundQueueFixtureData             = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures/src/lib.rs"
+	pathToInboundQueueFixtureTestCaseTemplate = "polkadot-sdk/bridges/snowbridge/templates/%s.mustache"
+	pathToInboundQueueFixtureTestCaseData     = "polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures/src/%s.rs"
 )
 
 // Only print the hex encoded call as output of this command
@@ -147,7 +150,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
+		viper.SetConfigFile("/tmp/snowbridge/beacon-relay.json")
 		if err = viper.ReadInConfig(); err != nil {
 			return err
 		}
@@ -186,23 +189,23 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
+		inboundFixturesOnly, err := cmd.Flags().GetBool("inbound_fixtures_only")
+
 		// generate InitialUpdate
 		initialSyncScale, err := s.GetCheckpoint()
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
 		initialSync := initialSyncScale.ToJSON()
-		err = writeJSONToFile(initialSync, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "initial-checkpoint.json"))
-		if err != nil {
-			return err
+		if !inboundFixturesOnly {
+			err = writeJSONToFile(initialSync, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "initial-checkpoint.json"))
+			if err != nil {
+				return err
+			}
 		}
 		initialSyncHeaderSlot := initialSync.Header.Slot
 		initialSyncPeriod := s.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
 		initialEpoch := s.ComputeEpochAtSlot(initialSyncHeaderSlot)
-		log.WithFields(log.Fields{
-			"epoch":  initialEpoch,
-			"period": initialSyncPeriod,
-		}).Info("created initial sync file")
 
 		// generate SyncCommitteeUpdate for filling the missing NextSyncCommittee in initial checkpoint
 		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod)
@@ -210,30 +213,33 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
 		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
-		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update.json"))
-		if err != nil {
-			return err
+		if !inboundFixturesOnly {
+			log.WithFields(log.Fields{
+				"epoch":  initialEpoch,
+				"period": initialSyncPeriod,
+			}).Info("created initial sync file")
+			err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update.json"))
+			if err != nil {
+				return err
+			}
+			log.Info("created sync committee update file")
 		}
-		log.Info("created sync committee update file")
 
-		// get inbound message data
+		// -----get inbound message data start--------
 		channelID := executionConfig.Source.ChannelID
 		address := common.HexToAddress(executionConfig.Source.Contracts.Gateway)
 		gatewayContract, err := contracts.NewGateway(address, ethconn.Client())
 		if err != nil {
 			return err
 		}
-
 		nonce, err := cmd.Flags().GetUint32("nonce")
 		if err != nil {
 			return err
 		}
-
 		event, err := getEthereumEvent(ctx, gatewayContract, channelID, nonce)
 		if err != nil {
 			return err
 		}
-
 		receiptTrie, err := headerCache.GetReceiptTrie(ctx, event.Raw.BlockHash)
 		if err != nil {
 			return err
@@ -267,8 +273,6 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		messageJSON := inboundMessage.ToJSON()
-
 		if blockNumber == messageBlockNumber {
 			log.WithFields(log.Fields{
 				"slot":        beaconBlock.Data.Message.Slot,
@@ -286,33 +290,26 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get header update: %w", err)
 		}
+		inboundMessage.Proof.ExecutionProof = headerUpdateScale
 		headerUpdate := headerUpdateScale.ToJSON()
 
 		log.WithField("blockNumber", blockNumber).Info("found beacon block by slot")
 
-		err = writeJSONToFile(headerUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "execution-header-update.json"))
-		if err != nil {
-			return err
-		}
-		log.Info("created execution update file")
+		messageJSON := inboundMessage.ToJSON()
 
-		compactBeaconHeader := beaconjson.CompactExecutionHeader{
-			ParentHash:   headerUpdate.ExecutionHeader.Deneb.ParentHash,
-			StateRoot:    headerUpdate.ExecutionHeader.Deneb.StateRoot,
-			ReceiptsRoot: headerUpdate.ExecutionHeader.Deneb.ReceiptsRoot,
-			BlockNumber:  headerUpdate.ExecutionHeader.Deneb.BlockNumber,
+		if !inboundFixturesOnly {
+			err = writeJSONToFile(headerUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "execution-proof.json"))
+			if err != nil {
+				return err
+			}
+			log.Info("created execution update file")
+			err = writeJSONToFile(messageJSON, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "inbound-message.json"))
+			if err != nil {
+				return err
+			}
+			log.Info("created inbound message file")
 		}
-
-		inboundMessageTest := InboundMessageTest{
-			ExecutionHeader: compactBeaconHeader,
-			Message:         messageJSON,
-		}
-
-		err = writeJSONToFile(inboundMessageTest, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "inbound-message.json"))
-		if err != nil {
-			return err
-		}
-		log.Info("created inbound message file")
+		// ------get inbound message data end--------
 
 		finalizedUpdate := finalizedUpdateAfterMessage.Payload.ToJSON()
 		if finalizedUpdate.AttestedHeader.Slot <= initialSyncHeaderSlot {
@@ -326,76 +323,82 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		if initialSyncPeriod != finalizedPeriod {
 			return fmt.Errorf("initialSyncPeriod should be consistent with finalizedUpdatePeriod")
 		}
-		err = writeJSONToFile(finalizedUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "finalized-header-update.json"))
-		if err != nil {
-			return err
+		if !inboundFixturesOnly {
+			err = writeJSONToFile(finalizedUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "finalized-header-update.json"))
+			if err != nil {
+				return err
+			}
+			log.WithFields(log.Fields{
+				"epoch":  finalizedEpoch,
+				"period": finalizedPeriod,
+			}).Info("created finalized header update file")
 		}
-		log.WithFields(log.Fields{
-			"epoch":  finalizedEpoch,
-			"period": finalizedPeriod,
-		}).Info("created finalized header update file")
 
-		// Generate benchmark fixture
-		log.Info("now updating benchmarking data files")
-
+		// Generate benchmark fixture and inbound fixture
 		// Rust file hexes require the 0x of hashes to be removed
 		initialSync.RemoveLeadingZeroHashes()
 		syncCommitteeUpdate.RemoveLeadingZeroHashes()
 		finalizedUpdate.RemoveLeadingZeroHashes()
 		headerUpdate.RemoveLeadingZeroHashes()
 
-		log.WithFields(log.Fields{
-			"location": pathToBeaconTestFixtureFiles,
-			"template": pathToBenchmarkDataTemplate,
-		}).Info("rendering file using mustache")
-
-		inboundMessageTest.Message.RemoveLeadingZeroHashes()
-		inboundMessageTest.ExecutionHeader.RemoveLeadingZeroHashes()
+		messageJSON.RemoveLeadingZeroHashes()
 
 		data := Data{
 			CheckpointUpdate:      initialSync,
 			SyncCommitteeUpdate:   syncCommitteeUpdate,
 			FinalizedHeaderUpdate: finalizedUpdate,
 			HeaderUpdate:          headerUpdate,
-			InboundMessageTest:    inboundMessageTest,
+			InboundMessage:        messageJSON,
 		}
 
-		// writing beacon fixtures
-		rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
-		if err != nil {
-			return fmt.Errorf("render beacon benchmark fixture: %w", err)
+		if !inboundFixturesOnly {
+			// writing beacon benchmark fixtures
+			log.Info("now updating benchmarking data files")
+			log.WithFields(log.Fields{
+				"location": pathToBeaconTestFixtureFiles,
+				"template": pathToBenchmarkDataTemplate,
+			}).Info("rendering file using mustache")
+
+			rendered, err := mustache.RenderFile(pathToBenchmarkDataTemplate, data)
+			if err != nil {
+				return fmt.Errorf("render beacon benchmark fixture: %w", err)
+			}
+			log.WithFields(log.Fields{
+				"location": pathToBeaconBenchmarkData,
+			}).Info("writing result file")
+			err = writeBenchmarkDataFile(fmt.Sprintf("%s", pathToBeaconBenchmarkData), rendered)
+			if err != nil {
+				return err
+			}
+			// writing beacon inbound fixtures
+			rendered, err = mustache.RenderFile(pathToInboundQueueFixtureTemplate, data)
+			if err != nil {
+				return fmt.Errorf("render inbound queue benchmark fixture: %w", err)
+			}
+			log.WithFields(log.Fields{
+				"location": pathToInboundQueueFixtureData,
+			}).Info("writing result file")
+			err = writeBenchmarkDataFile(fmt.Sprintf("%s", pathToInboundQueueFixtureData), rendered)
+			if err != nil {
+				return err
+			}
 		}
 
-		log.WithFields(log.Fields{
-			"location": pathToBeaconBenchmarkData,
-		}).Info("writing result file")
-
-		err = writeBenchmarkDataFile(fmt.Sprintf("%s", pathToBeaconBenchmarkData), rendered)
-		if err != nil {
-			return err
-		}
-
-		// writing inbound queue fixtures
+		// writing inbound fixture by test case
 		testCase, err := cmd.Flags().GetString("test_case")
 		if err != nil {
 			return err
 		}
-		if testCase != "register_token" && testCase != "send_token" {
+		if testCase != "register_token" && testCase != "send_token" && testCase != "send_token_to_penpal" {
 			return fmt.Errorf("invalid test case: %s", testCase)
 		}
-		pathToInboundQueueFixtureTemplate := fmt.Sprintf(pathToInboundQueueFixtureTemplate, testCase)
-		pathToInboundQueueFixtureData := fmt.Sprintf(pathToInboundQueueFixtureData, testCase)
-
-		rendered, err = mustache.RenderFile(pathToInboundQueueFixtureTemplate, data)
+		pathToInboundQueueFixtureTestCaseTemplate := fmt.Sprintf(pathToInboundQueueFixtureTestCaseTemplate, testCase)
+		pathToInboundQueueFixtureTestCaseData := fmt.Sprintf(pathToInboundQueueFixtureTestCaseData, testCase)
+		rendered, err := mustache.RenderFile(pathToInboundQueueFixtureTestCaseTemplate, data)
 		if err != nil {
 			return fmt.Errorf("render inbound queue benchmark fixture: %w", err)
 		}
-
-		log.WithFields(log.Fields{
-			"location": pathToInboundQueueFixtureData,
-		}).Info("writing result file")
-
-		err = writeBenchmarkDataFile(fmt.Sprintf("%s", pathToInboundQueueFixtureData), rendered)
+		err = writeBenchmarkDataFile(fmt.Sprintf("%s", pathToInboundQueueFixtureTestCaseData), rendered)
 		if err != nil {
 			return err
 		}
