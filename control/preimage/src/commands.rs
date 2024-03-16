@@ -1,8 +1,9 @@
 use crate::constants::*;
 use crate::GatewayOperatingModeEnum;
 use crate::Context;
+use crate::PricingParametersArgs;
 
-use alloy_primitives::{Address, Bytes, FixedBytes, U128, U256, utils::format_units};
+use alloy_primitives::{Address, Bytes, FixedBytes, U256, utils::format_units};
 use bridge_hub_rococo_runtime::runtime_types::snowbridge_pallet_ethereum_client;
 use snowbridge_beacon_primitives::CheckpointUpdate;
 use sp_arithmetic::FixedU128;
@@ -51,11 +52,7 @@ pub fn upgrade(
 
 pub async fn pricing_parameters(
     context: &Context,
-    exchange_rate_numerator: u64,
-    exchange_rate_denominator: u64,
-    fee_per_gas: u64,
-    local_reward: U128,
-    remote_reward: U256,
+    params: &PricingParametersArgs,
 ) -> Result<(BridgeHubRuntimeCall, AssetHubRuntimeCall), Box<dyn std::error::Error>> {
 
     // Calculate total outbound fee in BridgeHub
@@ -72,18 +69,15 @@ pub async fn pricing_parameters(
         .call(runtime_api_call)
         .await?;
 
-        println!("local_fee: {}", local_fee);
-
     let remote_fee = crate::fees::calculate_remote_fee(
         FixedU128::from_rational(
-            exchange_rate_numerator.into(),
-            exchange_rate_denominator.into(),
+            params.exchange_rate_numerator.into(),
+            params.exchange_rate_denominator.into(),
         ),
-        fee_per_gas as u128 * GWEI_UNIT,
-        remote_reward.to::<u128>()
+        params.fee_per_gas,
+        params.remote_reward,
     );
 
-    println!("remote: {}", remote_fee);
     let total_outbound_fee = local_fee.saturating_add(remote_fee);
 
     // Adjust outbound fee up by 10% as a buffer
@@ -92,23 +86,23 @@ pub async fn pricing_parameters(
     eprintln!("BridgeHub:");
     eprintln!(
         "  ExchangeRate: {} ETH/{}",
-        exchange_rate_numerator as f64 / exchange_rate_denominator as f64,
+        params.exchange_rate_numerator as f64 / params.exchange_rate_denominator as f64,
         POLKADOT_SYMBOL
     );
     eprintln!(
         "  FeePerGas: {} GWEI",
-        format_units(U256::from(fee_per_gas as u128 * GWEI_UNIT), "gwei").unwrap(),
+        format_units(params.fee_per_gas, "gwei").unwrap(),
     );
     eprintln!(
         "  LocalReward: {} {} [{} PLANCK]",
-        format_units(U256::from(local_reward), POLKADOT_DECIMALS).unwrap(),
+        format_units(U256::from(params.local_reward), POLKADOT_DECIMALS).unwrap(),
         POLKADOT_SYMBOL,
-        local_reward,
+        params.local_reward,
     );
     eprintln!(
         "  RemoteReward: {} ETH [{} WEI]",
-        format_units(remote_reward, "eth").unwrap(),
-        remote_reward
+        format_units(params.remote_reward, "eth").unwrap(),
+        params.remote_reward
     );
     eprintln!("AssetHub:");
     eprintln!(
@@ -121,19 +115,19 @@ pub async fn pricing_parameters(
     // BridgeHub parameters
     let params: PricingParameters<u128> = PricingParameters {
         exchange_rate: Static(FixedU128::from_rational(
-            exchange_rate_numerator.into(),
-            exchange_rate_denominator.into(),
+            params.exchange_rate_numerator.into(),
+            params.exchange_rate_denominator.into(),
         )),
         fee_per_gas: bridge_hub_rococo_runtime::runtime_types::primitive_types::U256(
             U256::from(GWEI_UNIT)
-                .checked_mul(U256::from(fee_per_gas))
+                .checked_mul(U256::from(params.fee_per_gas))
                 .unwrap()
                 .into_limbs(),
         ),
         rewards: Rewards {
-            local: local_reward.to::<u128>(),
+            local: params.local_reward.to::<u128>(),
             remote: bridge_hub_rococo_runtime::runtime_types::primitive_types::U256(
-                remote_reward.into_limbs(),
+                params.remote_reward.into_limbs(),
             ),
         },
     };

@@ -1,18 +1,19 @@
 use crate::constants::*;
-use sp_arithmetic::traits::CheckedDiv;
-use sp_arithmetic::FixedU128;
+use alloy_primitives::U256;
+use sp_arithmetic::{traits::CheckedDiv, FixedU128};
 
 /// Calculate total fee in native currency to cover all costs of delivering a message to the
 /// remote destination.
 pub fn calculate_remote_fee(
     exchange_rate: FixedU128,
-    fee_per_gas: u128,
-    remote_reward: u128,
+    fee_per_gas: U256,
+    remote_reward: U256,
 ) -> u128 {
     // Remote fee in ether
     let fee = fee_per_gas
-        .saturating_mul(TOKEN_TRANSFER_GAS_USED_AT_MOST.into())
-        .saturating_add(remote_reward);
+        .saturating_mul(U256::from(TOKEN_TRANSFER_GAS_USED_AT_MOST))
+        .saturating_add(remote_reward)
+        .to::<u128>();
 
     // convert to local currency
     let fee = FixedU128::from_inner(fee)

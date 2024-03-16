@@ -9,10 +9,11 @@ mod fees;
 use crate::helpers::wrap_calls;
 use codec::Encode;
 use clap::{Parser, Subcommand, ValueEnum, Args};
+use constants::{POLKADOT_DECIMALS, POLKADOT_SYMBOL};
 use helpers::{wrap_calls_asset_hub, utility_batch};
 use subxt::{OnlineClient, PolkadotConfig};
 use std::{fs::File, path::PathBuf, io::{Read, Write}};
-use alloy_primitives::{Address, Bytes, FixedBytes, U256, U128};
+use alloy_primitives::{Address, Bytes, FixedBytes, U256, U128, utils::parse_units};
 
 #[derive(Debug, Parser)]
 #[command(name = "snowbridge-preimage", version, about, long_about = None)]
@@ -96,13 +97,13 @@ pub struct PricingParametersArgs {
     #[arg(long, value_name = "UINT")]
     pub exchange_rate_denominator: u64,
     /// Ether fee per unit of gas
-    #[arg(long, value_name = "GWEI")]
-    pub fee_per_gas: u64,
+    #[arg(long, value_name = "GWEI", value_parser = parse_units_gwei)]
+    pub fee_per_gas: U256,
     /// Relayer reward for delivering messages to Polkadot
-    #[arg(long, value_name = "PLANCK")]
+    #[arg(long, value_name = POLKADOT_SYMBOL, value_parser = parse_units_polkadot)]
     pub local_reward: U128,
     /// Relayer reward for delivering messages to Ethereum
-    #[arg(long, value_name = "WEI")]
+    #[arg(long, value_name = "ETHER", value_parser = parse_units_eth)]
     pub remote_reward: U256,
 }
 
@@ -124,6 +125,21 @@ fn parse_hex_bytes(v: &str) -> Result<Bytes, String> {
     })
 }
 
+fn parse_units_polkadot(v: &str) -> Result<u128, String> {
+    let amount = parse_units(v, POLKADOT_DECIMALS).map_err(|e| format!("{e}"))?;
+    let amount: U256 = amount.into();
+    Ok(amount.to::<u128>())
+}
+
+fn parse_units_gwei(v: &str) -> Result<U256, String> {
+    let amount = parse_units(v, "gwei").map_err(|e| format!("{e}"))?;
+    Ok(amount.into())
+}
+
+fn parse_units_eth(v: &str) -> Result<U256, String> {
+    let amount = parse_units(v, "ether").map_err(|e| format!("{e}"))?;
+    Ok(amount.into())
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, ValueEnum)]
 pub enum Format {
@@ -194,10 +210,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         },
         Command::Initialize {
             gateway_operating_mode: GatewayOperatingModeArgs { gateway_operating_mode },
-            pricing_parameters: PricingParametersArgs { exchange_rate_numerator, exchange_rate_denominator, fee_per_gas, local_reward, remote_reward },
+            pricing_parameters: foo,
         } => {
             let call1 = commands::gateway_operating_mode(*gateway_operating_mode);
-            let calls2 = commands::pricing_parameters(&context, *exchange_rate_numerator, *exchange_rate_denominator, *fee_per_gas, *local_reward, *remote_reward).await?;
+            let calls2 = commands::pricing_parameters(&context, foo).await?;
             wrap_calls(&context, vec![call1, calls2.0]).await?
         },
         Command::GatewayOperatingMode(GatewayOperatingModeArgs { gateway_operating_mode }) => {
@@ -217,8 +233,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             );
             wrap_calls(&context, vec![call]).await?
         },
-        Command::PricingParameters(PricingParametersArgs { exchange_rate_numerator, exchange_rate_denominator, fee_per_gas, local_reward, remote_reward }) => {
-            let calls = commands::pricing_parameters(&context, *exchange_rate_numerator, *exchange_rate_denominator, *fee_per_gas, *local_reward, *remote_reward).await?;
+        Command::PricingParameters(args) => {
+            let calls = commands::pricing_parameters(&context, args).await?;
             let call1 = wrap_calls(&context, vec![calls.0]).await?;
             let call2 = wrap_calls_asset_hub(&context, vec![calls.1]).await?;
             let call = utility_batch(vec![call1, call2]);
