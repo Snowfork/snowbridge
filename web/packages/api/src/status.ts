@@ -97,8 +97,8 @@ export const assetStatusInfo = async (context: Context, tokenAddress: string, ow
             tokenContract.balanceOf(owner),
             tokenContract.allowance(owner, gatewayAddress),
         ])
-        ownerBalance = tokenBalance_;
-        tokenGatewayAllowance = tokenGatewayAllowance_;
+        ownerBalance = tokenBalance_
+        tokenGatewayAllowance = tokenGatewayAllowance_
     } catch {
         tokenIsValidERC20 = false
     }

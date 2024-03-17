@@ -1,7 +1,7 @@
 
 import { u8aToHex } from '@polkadot/util'
 import { contextFactory, destroyContext, status, utils } from '@snowbridge/api'
-import { blake2AsU8a } from "@polkadot/util-crypto";
+import { blake2AsU8a } from "@polkadot/util-crypto"
 
 const PRIMARY_GOVERNANCE_CHANNEL_ID = '0x0000000000000000000000000000000000000000000000000000000000000001'
 const SECONDARY_GOVERNANCE_CHANNEL_ID = '0x0000000000000000000000000000000000000000000000000000000000000002'
@@ -76,9 +76,9 @@ const monitor = async () => {
     console.log('Asset Hub Sovereign balance on bridgehub:', assetHubSovereign)
 
     let assetHubAgentBalance = (await context.ethereum.api.getBalance(
-       await context.ethereum.contracts.gateway.agentOf(
-           utils.paraIdToAgentId(context.polkadot.api.bridgeHub.registry, config.ASSET_HUB_PARAID)
-       )
+        await context.ethereum.contracts.gateway.agentOf(
+            utils.paraIdToAgentId(context.polkadot.api.bridgeHub.registry, config.ASSET_HUB_PARAID)
+        )
     ))
     console.log('Asset Hub Agent balance:', assetHubAgentBalance)
 
@@ -89,15 +89,15 @@ const monitor = async () => {
     console.log('Bridge Hub Agent balance:', bridgeHubAgentBalance)
 
     console.log('Relayers:')
-    for(const relayer of config.RELAYERS) {
-        let balance = 0n;
-        switch(relayer.type) {
+    for (const relayer of config.RELAYERS) {
+        let balance = 0n
+        switch (relayer.type) {
             case "ethereum":
-                balance = await context.ethereum.api.getBalance(relayer.account);
-                break;
+                balance = await context.ethereum.api.getBalance(relayer.account)
+                break
             case "substrate":
-                balance = BigInt(((await context.polkadot.api.bridgeHub.query.system.account(relayer.account)).toPrimitive() as any).data.free);
-                break;
+                balance = BigInt(((await context.polkadot.api.bridgeHub.query.system.account(relayer.account)).toPrimitive() as any).data.free)
+                break
         }
         console.log('\t', balance, ':', relayer.type, 'balance ->', relayer.name)
     }

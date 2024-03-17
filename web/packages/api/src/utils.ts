@@ -1,8 +1,8 @@
-import { Registry } from "@polkadot/types/types";
-import { bnToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util";
-import { blake2AsU8a, decodeAddress, keccak256AsU8a } from "@polkadot/util-crypto";
-import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway";
-import { ethers } from "ethers";
+import { Registry } from "@polkadot/types/types"
+import { bnToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
+import { blake2AsU8a, decodeAddress, keccak256AsU8a } from "@polkadot/util-crypto"
+import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway"
+import { ethers } from "ethers"
 
 export const paraIdToSovereignAccount = (type: 'para' | 'sibl', paraId: number): string => {
     const typeEncoded = stringToU8a(type)
@@ -31,8 +31,8 @@ export const paraIdToChannelId = (paraId: number): string => {
 export const beneficiaryMultiAddress = (beneficiary: string) => {
     const abi = ethers.AbiCoder.defaultAbiCoder()
 
-    let address: MultiAddressStruct;
-    let hexAddress: string;
+    let address: MultiAddressStruct
+    let hexAddress: string
     if (isHex(beneficiary)) {
         hexAddress = beneficiary
         if (beneficiary.length === 42) {
