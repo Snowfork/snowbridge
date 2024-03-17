@@ -8,6 +8,7 @@ import { IGateway__factory } from '@snowbridge/contract-types'
 import { Context } from './index'
 import { channelStatusInfo, bridgeStatusInfo, assetStatusInfo } from './status'
 import { paraIdToSovereignAccount, paraIdToChannelId, beneficiaryMultiAddress } from './utils'
+import { waitForMessageQueuePallet } from './query'
 
 export type SendValidationResult = {
     success?: {
@@ -86,7 +87,7 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
         bridgeHub.query.parachainInfo.parachainId(),
     ])
 
-    const assetHubParaId = assetHubParaIdCodec.toPrimitive() as number;
+    const assetHubParaId = assetHubParaIdCodec.toPrimitive() as number
     const assetHubChannelId = paraIdToChannelId(assetHubParaId)
     const [channelStatus, bridgeStatus] = await Promise.all([
         channelStatusInfo(context, assetHubChannelId),
@@ -307,7 +308,9 @@ export const send = async (context: Context, signer: Signer, plan: SendValidatio
     }
 }
 
-export async function* trackSendProgress(context: Context, result: SendResult, beaconUpdateTimeout = 10, scanBlocks = 200): AsyncGenerator<string> {
+export async function* trackSendProgress(context: Context, result: SendResult, options = {
+    beaconUpdateTimeout: 10, scanBlocks: 200
+}): AsyncGenerator<string> {
     const { polkadot: { api: { assetHub, bridgeHub, parachains } } } = context
     const { success } = result
 
@@ -325,7 +328,7 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
                     const update = beaconUpdate.toPrimitive() as { blockNumber: number }
                     return { createdAtHash: beaconUpdate.createdAtHash?.toHex(), blockNumber: update.blockNumber }
                 }),
-                take(beaconUpdateTimeout),
+                take(options.beaconUpdateTimeout),
                 takeWhile(({ blockNumber }) => ethereumBlockNumber > blockNumber),
                 tap(({ createdAtHash, blockNumber }) => console.log(`Bridge Hub block ${createdAtHash}: Beacon client ${ethereumBlockNumber - blockNumber} blocks behind.`)),
             ),
@@ -347,7 +350,7 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
         let extrinsicSuccess = false
         const receivedEvents = await firstValueFrom(
             bridgeHub.rx.query.system.events().pipe(
-                take(scanBlocks),
+                take(options.scanBlocks),
                 tap((events) => console.log(`Waiting for Bridge Hub inbound message block ${events.createdAtHash?.toHex()}.`)),
                 filter(events => {
                     let events_iter: any = events
@@ -389,48 +392,29 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
     if (success.assetHub.events === undefined) {
         yield 'Waiting for message delivery to Asset Hub.'
 
-        let issuedTo = success.plan?.success.beneficiaryAddress
-        if (success.plan.success.assetHub.paraId !== success.plan.success.destinationParaId) {
-            issuedTo = paraIdToSovereignAccount("sibl", success.plan.success.destinationParaId)
-        }
-        let extrinsicSuccess = false
-        let receivedEvents = await firstValueFrom(
-            assetHub.rx.query.system.events().pipe(
-                take(scanBlocks),
-                tap((events) => console.log(`Waiting for Asset Hub inbound message block ${events.createdAtHash?.toHex()}.`)),
-                filter(events => {
-                    let foundMessageQueue = false
-                    let foundAssetsIssued = false
-                    let events_iter: any = events
-                    for (const event of events_iter) {
-                        let eventData = (event.event.toPrimitive() as any).data
-                        if (assetHub.events.messageQueue.Processed.is(event.event)
-                            && eventData[0].toLowerCase() === success?.messageId.toLowerCase()
-                            && eventData[1]?.sibling === success?.plan.success?.bridgeHub.paraId) {
+        const issuedTo = (success.plan.success.assetHub.paraId !== success.plan.success.destinationParaId)
+            ? paraIdToSovereignAccount("sibl", success.plan.success.destinationParaId)
+            : success.plan?.success.beneficiaryAddress
 
-                            foundMessageQueue = true
-                            extrinsicSuccess = eventData[3]
-                        }
-                        if (assetHub.events.foreignAssets.Issued.is(event.event)
-                            && eventData[2].toString() === success?.plan.success?.amount.toString()
-                            && u8aToHex(decodeAddress(eventData[1])).toLowerCase() === issuedTo.toLowerCase()
-                            && eventData[0]?.parents === 2
-                            && eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() === success?.plan.success?.ethereumChainId.toString()
-                            && eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() === success?.plan.success?.token.toLowerCase()) {
-
-                            foundAssetsIssued = true
-                        }
-                    }
-                    return foundMessageQueue && ((extrinsicSuccess && foundAssetsIssued) || !extrinsicSuccess)
-                }),
-            ),
-            { defaultValue: undefined }
+        const { allEvents: receivedEvents, extrinsicSuccess } = await waitForMessageQueuePallet(
+            assetHub,
+            success.messageId,
+            success.plan.success.bridgeHub.paraId,
+            eventRow => {
+                let event = eventRow as any
+                let eventData = (event.event.toPrimitive() as any).data
+                return assetHub.events.foreignAssets.Issued.is(event.event)
+                    && eventData[2].toString() === success?.plan.success?.amount.toString()
+                    && u8aToHex(decodeAddress(eventData[1])).toLowerCase() === issuedTo.toLowerCase()
+                    && eventData[0]?.parents === 2
+                    && eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() === success?.plan.success?.ethereumChainId.toString()
+                    && eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() === success?.plan.success?.token.toLowerCase()
+            },
+            {
+                scanBlocks: options.scanBlocks
+            }
         )
 
-        console.log(receivedEvents?.toHuman())
-        if (receivedEvents === undefined) {
-            throw Error('Timeout while waiting for Asset Hub delivery.')
-        }
         success.assetHub.events = receivedEvents
         success.assetHub.extrinsicSuccess = extrinsicSuccess
         if (!success.assetHub.extrinsicSuccess) {
@@ -445,48 +429,28 @@ export async function* trackSendProgress(context: Context, result: SendResult, b
             && success.destinationParachain.events === undefined) {
 
             yield `Waiting for delivery to destination parachain ${success.plan.success.destinationParaId}`
+
             const destParaApi = parachains[success.plan.success.destinationParaId]
+            const issuedTo = success.plan?.success.beneficiaryAddress
 
-            let issuedTo = success.plan?.success.beneficiaryAddress
-            let extrinsicSuccess = false
-            let receivedEvents = await firstValueFrom(
-                destParaApi.rx.query.system.events().pipe(
-                    take(scanBlocks),
-                    tap((events) => console.log(`Waiting for Parachain ${success.plan.success?.destinationParaId} xcm message block ${events.createdAtHash?.toHex()}.`)),
-                    filter(events => {
-                        let foundMessageQueue = false
-                        let foundAssetsIssued = false
-                        let events_iter: any = events
-                        for (const event of events_iter) {
-                            let eventData = (event.event.toPrimitive() as any).data
-                            if (destParaApi.events.messageQueue.Processed.is(event.event)
-                                // TODO: Use SetTopic to forward the message id to the destination chain.
-                                //&& eventData[0].toLowerCase() === success?.messageId.toLowerCase()
-                                && eventData[1]?.sibling === success?.plan.success?.assetHub.paraId) {
-
-                                foundMessageQueue = true
-                                extrinsicSuccess = eventData[3]
-                            }
-                            if (destParaApi.events.foreignAssets.Issued.is(event.event)
-                                && eventData[2].toString() === success?.plan.success?.amount.toString()
-                                && u8aToHex(decodeAddress(eventData[1])).toLowerCase() === issuedTo.toLowerCase()
-                                && eventData[0]?.parents === 2
-                                && eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() === success?.plan.success?.ethereumChainId.toString()
-                                && eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() === success?.plan.success?.token.toLowerCase()) {
-
-                                foundAssetsIssued = true
-                            }
-                        }
-                        return foundMessageQueue && ((extrinsicSuccess && foundAssetsIssued) || !extrinsicSuccess)
-                    }),
-                ),
-                { defaultValue: undefined }
+            const { allEvents: receivedEvents, extrinsicSuccess, } = await waitForMessageQueuePallet(
+                destParaApi,
+                undefined,
+                success.plan.success.assetHub.paraId,
+                eventRow => {
+                    let event = eventRow as any
+                    let eventData = (event.event.toPrimitive() as any).data
+                    return destParaApi.events.foreignAssets.Issued.is(event.event)
+                        && eventData[2].toString() === success?.plan.success?.amount.toString()
+                        && u8aToHex(decodeAddress(eventData[1])).toLowerCase() === issuedTo.toLowerCase()
+                        && eventData[0]?.parents === 2
+                        && eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() === success?.plan.success?.ethereumChainId.toString()
+                        && eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() === success?.plan.success?.token.toLowerCase()
+                },
+                {
+                    scanBlocks: options.scanBlocks
+                }
             )
-
-            console.log(receivedEvents?.toHuman())
-            if (receivedEvents === undefined) {
-                throw Error('Timeout while waiting for Asset Hub delivery.')
-            }
             success.destinationParachain.events = receivedEvents
             success.destinationParachain.extrinsicSuccess = extrinsicSuccess
             if (!success.destinationParachain?.extrinsicSuccess) {

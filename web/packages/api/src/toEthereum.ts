@@ -6,6 +6,7 @@ import { BN, u8aToHex } from "@polkadot/util"
 import { Codec, IKeyringPair } from "@polkadot/types/types"
 import { EventRecord } from "@polkadot/types/interfaces"
 import { filter, firstValueFrom, take, tap } from "rxjs"
+import { waitForMessageQueuePallet } from "./query"
 
 export type SendValidationResult = {
     success?: {
@@ -15,6 +16,10 @@ export type SendValidationResult = {
             paraId: number
         }
         bridgeHub: {
+            validatedAt: string
+            paraId: number
+        },
+        sourceParachain?: {
             validatedAt: string
             paraId: number
         }
@@ -37,14 +42,17 @@ export type SendValidationResult = {
         assetBalance: bigint
         canPayFee: boolean
         dotBalance: bigint
+        parachainKnownToContext: boolean
+        parachainHasPalletXcm: boolean
+        hrmpChannelSetup: boolean
     }
 }
 
-export const validateSend = async (context: Context, source: IKeyringPair, beneficiary: string, tokenAddress: string, amount: bigint, options = {
+export const validateSend = async (context: Context, signer: IKeyringPair, sourceParachainId: number, beneficiary: string, tokenAddress: string, amount: bigint, options = {
     defaultFee: 2_750_872_500_000n,
     acceptableLatencyInSeconds: 10800 /* 3 Hours */
 }): Promise<SendValidationResult> => {
-    const { ethereum, ethereum: { contracts: { gateway } }, polkadot: { api: { assetHub, bridgeHub } } } = context
+    const { ethereum, ethereum: { contracts: { gateway } }, polkadot: { api: { assetHub, bridgeHub, relaychain, parachains } } } = context
 
     const [assetHubHead, assetHubParaId, bridgeHubHead, bridgeHubParaId] = await Promise.all([
         assetHub.rpc.chain.getFinalizedHead(),
@@ -52,6 +60,25 @@ export const validateSend = async (context: Context, source: IKeyringPair, benef
         bridgeHub.rpc.chain.getFinalizedHead(),
         bridgeHub.query.parachainInfo.parachainId(),
     ])
+    let assetHubParaIdDecoded = assetHubParaId.toPrimitive() as number
+
+    let parachainHasPalletXcm = true
+    let hrmpChannelSetup = true
+    let sourceParachain = undefined
+    let parachainKnownToContext = true
+    if (parachainKnownToContext && sourceParachainId != assetHubParaIdDecoded) {
+        parachainKnownToContext = sourceParachainId in parachains
+        parachainHasPalletXcm = parachains[sourceParachainId].tx.polkadotXcm.transferAssets !== undefined
+        let [hrmpChannel, sourceParachainHead] = await Promise.all([
+            relaychain.query.hrmp.hrmpChannels({ sender: sourceParachainId, recipient: assetHubParaIdDecoded }),
+            relaychain.rpc.chain.getFinalizedHead(),
+        ])
+        hrmpChannelSetup = hrmpChannel.toPrimitive() !== null
+        sourceParachain = {
+            paraId: sourceParachainId,
+            validatedAt: u8aToHex(sourceParachainHead),
+        }
+    }
 
     const [bridgeStatus] = await Promise.all([
         bridgeStatusInfo(context),
@@ -69,7 +96,7 @@ export const validateSend = async (context: Context, source: IKeyringPair, benef
 
     let assetBalance = 0n
     if (foreignAssetExists) {
-        let account = (await assetHub.query.foreignAssets.account(assetInfo.multiLocation, source.address)).toPrimitive() as any
+        let account = (await assetHub.query.foreignAssets.account(assetInfo.multiLocation, signer.address)).toPrimitive() as any
         if (account !== null) {
             assetBalance = BigInt(account.balance)
         }
@@ -79,30 +106,32 @@ export const validateSend = async (context: Context, source: IKeyringPair, benef
     const feeStorageKey = xxhashAsHex(':BridgeHubEthereumBaseFee:', 128, true)
     const [feeStorageItem, account] = await Promise.all([
         assetHub.rpc.state.getStorage(feeStorageKey),
-        assetHub.query.system.account(source.address),
+        assetHub.query.system.account(signer.address),
     ])
-    let leFee = new BN((feeStorageItem as Codec).toHex().replace('0x', ''), "hex", "le");
+    let leFee = new BN((feeStorageItem as Codec).toHex().replace('0x', ''), "hex", "le")
     const fee = leFee.eqn(0) ? options.defaultFee : BigInt(leFee.toString())
     const dotBalance = BigInt((account.toPrimitive() as any).data.free)
     const canPayFee = fee < dotBalance
 
-    const canSend = bridgeOperational && lightClientLatencyIsAcceptable
-        && tokenIsRegistered && foreignAssetExists && tokenIsValidERC20 && hasAsset && canPayFee
+    const canSend = bridgeOperational && lightClientLatencyIsAcceptable && tokenIsRegistered
+        && foreignAssetExists && tokenIsValidERC20 && hasAsset && canPayFee && parachainKnownToContext
+        && parachainHasPalletXcm && hrmpChannelSetup
 
     if (canSend) {
         return {
             success: {
                 ethereumChainId: assetInfo.ethereumChainId,
                 assetHub: {
-                    paraId: assetHubParaId.toPrimitive() as number,
+                    paraId: assetHubParaIdDecoded,
                     validatedAt: u8aToHex(assetHubHead),
                 },
                 bridgeHub: {
                     paraId: bridgeHubParaId.toPrimitive() as number,
                     validatedAt: u8aToHex(bridgeHubHead),
                 },
+                sourceParachain,
                 feeInDOT: fee,
-                sourceAddress: source.address,
+                sourceAddress: signer.address,
                 beneficiary,
                 amount,
                 multiLocation: assetInfo.multiLocation,
@@ -123,6 +152,9 @@ export const validateSend = async (context: Context, source: IKeyringPair, benef
                 assetBalance,
                 canPayFee,
                 dotBalance,
+                parachainKnownToContext,
+                parachainHasPalletXcm,
+                hrmpChannelSetup
             }
         }
     }
@@ -132,6 +164,11 @@ export type SendResult = {
     success?: {
         plan: SendValidationResult
         messageId?: string
+        sourceParachain?: {
+            txHash: string
+            txIndex: number
+            blockNumber: number
+        }
         assetHub: {
             events: EventRecord[]
             txHash: string
@@ -153,45 +190,76 @@ export type SendResult = {
         },
     },
     failure?: {
-        txHash: string
-        txIndex: number
-        blockHash: string
-        blockNumber: number
+        sourceParachain?: {
+            blockNumber: number
+            txIndex: number
+            txHash: string
+            success: boolean
+            events: EventRecord[]
+            dispatchError?: any
+            messageId?: string
+        }
+        assetHubReceiveError?: { foundEvent?: Codec, allEvents: Codec }
+        assetHub?: {
+            blockHash: string
+            blockNumber: number
+            txIndex: number
+            txHash: string
+            success: boolean
+            events: EventRecord[]
+            dispatchError?: any
+            messageId?: string
+        }
         plan: SendValidationResult
         dispatchError?: any
     }
 }
 
 export const send = async (context: Context, signer: IKeyringPair, plan: SendValidationResult, options = {
-    xcm_version: 3
+    xcmVersion: 3,
+    sourceParachainFee: 10_000_000_000n,
+    scanBlocks: 100,
 }): Promise<SendResult> => {
-    const { polkadot: { api: { assetHub, bridgeHub } }, ethereum } = context
-    if (plan.success) {
-        const [bridgeHubHead, ethereumHead] = await Promise.all([
-            bridgeHub.rpc.chain.getFinalizedHead(),
-            ethereum.api.getBlock('finalized'),
-        ])
+    const { polkadot: { api: { assetHub, bridgeHub, parachains } }, ethereum } = context
+    if (!plan.success) {
+        throw Error("plan failed")
+    }
 
-        const assets: { [key: string]: any } = {}
-        const versionKey = `V${options.xcm_version}`
-        assets[versionKey] = [{
-            id: { Concrete: plan.success.multiLocation },
-            fun: { Fungible: plan.success.amount }
-        }]
-        const destination: { [key: string]: any } = {}
-        destination[versionKey] = {
-            parents: 2,
-            interior: { X1: { GlobalConsensus: { Ethereum: { chain_id: plan.success.ethereumChainId } } } }
-        }
-        const beneficiary: { [key: string]: any } = {}
-        beneficiary[versionKey] = {
+    const versionKey = `V${options.xcmVersion}`
+    const fee_asset = 0
+    const weight = "Unlimited"
+    const transferAsset = {
+        id: { Concrete: plan.success.multiLocation },
+        fun: { Fungible: plan.success.amount }
+    }
+
+    let pResult = undefined
+    if (plan.success.sourceParachain) {
+        // TODO: Support orml xtokens
+        let parachainApi = parachains[plan.success.sourceParachain.paraId]
+        const dotLocation = parachainApi.createType('StagingXcmV3MultiLocation', {
+            parents: 1,
+            interior: "Here",
+        })
+        const pDestination: { [key: string]: any } = {}
+        pDestination[versionKey] = parachainApi.createType('StagingXcmV3MultiLocation', {
+            parents: 1,
+            interior: { X1: { Parachain: plan.success.assetHub.paraId } },
+        })
+        const pAssets: { [key: string]: any } = {}
+        pAssets[versionKey] = [
+            {
+                id: { Concrete: dotLocation },
+                fun: { Fungible: options.sourceParachainFee },
+            },
+            transferAsset,
+        ]
+        const pBeneficiary: { [key: string]: any } = {}
+        pBeneficiary[versionKey] = {
             parents: 0,
-            interior: { X1: { AccountKey20: { key: plan.success.beneficiary } } }
+            interior: { X1: { AccountId32: { key: plan.success.sourceAddress } } }
         }
-        const fee_asset = 0
-        const weight = "Unlimited"
-
-        let result = await new Promise<{
+        pResult = await new Promise<{
             blockNumber: number
             txIndex: number
             txHash: string
@@ -200,85 +268,171 @@ export const send = async (context: Context, signer: IKeyringPair, plan: SendVal
             dispatchError?: any
             messageId?: string
         }>((resolve, reject) => {
-            assetHub.tx.polkadotXcm.transferAssets(
-                destination,
-                beneficiary,
-                assets,
+            parachainApi.tx.polkadotXcm.transferAssets(
+                pDestination,
+                pBeneficiary,
+                pAssets,
                 fee_asset,
                 weight
-            )
-                .signAndSend(signer, (c) => {
-                    if (c.isError) {
-                        reject(c.internalError || c.dispatchError)
+            ).signAndSend(signer, (c) => {
+                if (c.isError) {
+                    reject(c.internalError || c.dispatchError)
+                }
+                if (c.isCompleted) {
+                    const result = {
+                        txHash: u8aToHex(c.txHash),
+                        txIndex: c.txIndex || 0,
+                        blockNumber: Number((c as any).blockNumber),
+                        events: c.events
                     }
-                    if (c.isCompleted) {
-                        const result = {
-                            txHash: u8aToHex(c.txHash),
-                            txIndex: c.txIndex || 0,
-                            blockNumber: Number((c as any).blockNumber),
-                            events: c.events
+                    for (const e of c.events) {
+                        if (assetHub.events.system.ExtrinsicFailed.is(e.event)) {
+                            resolve({
+                                ...result,
+                                success: false,
+                                dispatchError: (e.event.data.toHuman(true) as any)?.dispatchError
+                            })
                         }
-                        for (const e of c.events) {
-                            if (assetHub.events.system.ExtrinsicFailed.is(e.event)) {
-                                resolve({
-                                    ...result,
-                                    success: false,
-                                    dispatchError: (e.event.data.toHuman(true) as any)?.dispatchError
-                                })
-                            }
 
-                            if (assetHub.events.polkadotXcm.Sent.is(e.event)) {
-                                resolve({
-                                    ...result,
-                                    success: true,
-                                    messageId: (e.event.data.toHuman(true) as any)?.messageId
-                                })
-                            }
+                        if (assetHub.events.polkadotXcm.Sent.is(e.event)) {
+                            resolve({
+                                ...result,
+                                success: true,
+                                messageId: (e.event.data.toHuman(true) as any)?.messageId
+                            })
                         }
+                    }
+                    resolve({
+                        ...result,
+                        success: false,
+                    })
+                }
+            })
+        })
+
+        if (!pResult.success) {
+            return {
+                failure: {
+                    sourceParachain: pResult,
+                    plan,
+                }
+            }
+        }
+
+        const { extrinsicSuccess, allEvents, foundEvent } = await waitForMessageQueuePallet(assetHub, pResult.messageId, plan.success.sourceParachain.paraId,
+            _ => true,
+            options,
+        )
+        if (!extrinsicSuccess) {
+            return {
+                failure: {
+                    sourceParachain: pResult,
+                    assetHubReceiveError: { foundEvent, allEvents },
+                    plan,
+                }
+            }
+        }
+    }
+
+    const [bridgeHubHead, ethereumHead] = await Promise.all([
+        bridgeHub.rpc.chain.getFinalizedHead(),
+        ethereum.api.getBlock('finalized'),
+    ])
+
+    const assets: { [key: string]: any } = {}
+    assets[versionKey] = [transferAsset]
+    const destination: { [key: string]: any } = {}
+    destination[versionKey] = {
+        parents: 2,
+        interior: { X1: { GlobalConsensus: { Ethereum: { chain_id: plan.success.ethereumChainId } } } }
+    }
+    const beneficiary: { [key: string]: any } = {}
+    beneficiary[versionKey] = {
+        parents: 0,
+        interior: { X1: { AccountKey20: { key: plan.success.beneficiary } } }
+    }
+
+    let result = await new Promise<{
+        blockNumber: number
+        txIndex: number
+        txHash: string
+        success: boolean
+        events: EventRecord[]
+        dispatchError?: any
+        messageId?: string
+    }>((resolve, reject) => {
+        assetHub.tx.polkadotXcm.transferAssets(
+            destination,
+            beneficiary,
+            assets,
+            fee_asset,
+            weight
+        ).signAndSend(signer, (c) => {
+            if (c.isError) {
+                reject(c.internalError || c.dispatchError)
+            }
+            if (c.isCompleted) {
+                const result = {
+                    txHash: u8aToHex(c.txHash),
+                    txIndex: c.txIndex || 0,
+                    blockNumber: Number((c as any).blockNumber),
+                    events: c.events
+                }
+                for (const e of c.events) {
+                    if (assetHub.events.system.ExtrinsicFailed.is(e.event)) {
                         resolve({
                             ...result,
                             success: false,
+                            dispatchError: (e.event.data.toHuman(true) as any)?.dispatchError
                         })
                     }
-                })
-        });
 
-        const blockHash = u8aToHex(await assetHub.rpc.chain.getBlockHash(result.blockNumber))
-        if (result.success) {
-            return {
-                success: {
-                    messageId: result.messageId,
-                    plan,
-                    assetHub: {
-                        txHash: result.txHash,
-                        txIndex: result.txIndex,
-                        blockNumber: result.blockNumber,
-                        blockHash,
-                        events: result.events,
-                    },
-                    bridgeHub: {
-                        submittedAtHash: u8aToHex(bridgeHubHead)
-                    },
-                    ethereum: {
-                        submittedAtHash: ethereumHead?.hash || `block:${ethereumHead?.number}`
+                    if (assetHub.events.polkadotXcm.Sent.is(e.event)) {
+                        resolve({
+                            ...result,
+                            success: true,
+                            messageId: (e.event.data.toHuman(true) as any)?.messageId
+                        })
                     }
                 }
-            };
-        } else {
-            return {
-                failure: {
+                resolve({
+                    ...result,
+                    success: false,
+                })
+            }
+        })
+    })
+
+    const blockHash = u8aToHex(await assetHub.rpc.chain.getBlockHash(result.blockNumber))
+    if (result.success) {
+        return {
+            success: {
+                messageId: result.messageId,
+                plan,
+                sourceParachain: pResult,
+                assetHub: {
                     txHash: result.txHash,
                     txIndex: result.txIndex,
-                    blockHash,
                     blockNumber: result.blockNumber,
-                    dispatchError: result.dispatchError,
-                    plan,
+                    blockHash,
+                    events: result.events,
+                },
+                bridgeHub: {
+                    submittedAtHash: u8aToHex(bridgeHubHead)
+                },
+                ethereum: {
+                    submittedAtHash: ethereumHead?.hash || `block:${ethereumHead?.number}`
                 }
-            };
+            }
         }
-    }
-    else {
-        throw Error("plan failed")
+    } else {
+        return {
+            failure: {
+                sourceParachain: pResult,
+                assetHub: { ...result, blockHash },
+                plan,
+            }
+        }
     }
 }
 
@@ -296,37 +450,24 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
     if (success.bridgeHub.events === undefined) {
         // Wait for nonce
         let nonce: bigint | undefined = undefined
-        let extrinsicSuccess = false
-        const receivedEvents = await firstValueFrom(
-            bridgeHub.rx.query.system.events().pipe(
-                take(options.scanBlocks),
-                tap((events) => console.log(`Waiting for Bridge Hub xcm message block ${events.createdAtHash?.toHex()}.`)),
-                filter(events => {
-                    let events_iter: any = events
-                    let foundMessageQueue = false
-                    let foundMessageAccepted = false
-                    for (const event of events_iter) {
-                        let eventData = (event.event.toPrimitive() as any).data
+        let { extrinsicSuccess, allEvents: receivedEvents } = await waitForMessageQueuePallet(
+            bridgeHub,
+            undefined,
+            success.plan.success.assetHub.paraId,
+            eventRow => {
+                let event = eventRow as any
+                let eventData = (event.event.toPrimitive() as any).data
+                if (bridgeHub.events.ethereumOutboundQueue.MessageAccepted.is(event.event)
+                    && eventData[0].toLowerCase() === success?.messageId?.toLowerCase()) {
 
-                        if (bridgeHub.events.messageQueue.Processed.is(event.event)
-                            && eventData[1]?.sibling === success?.plan.success?.assetHub.paraId) {
-
-                            foundMessageQueue = true
-                            extrinsicSuccess = eventData[3]
-                        }
-                        if (bridgeHub.events.ethereumOutboundQueue.MessageAccepted.is(event.event)
-                            && eventData[0].toLowerCase() === success?.messageId?.toLowerCase()) {
-
-                            foundMessageAccepted = true
-                            nonce = BigInt(eventData[1])
-                        }
-                    }
-                    return foundMessageQueue && ((foundMessageAccepted && extrinsicSuccess) || !extrinsicSuccess)
-                }),
-            ),
-            { defaultValue: undefined }
+                    nonce = BigInt(eventData[1])
+                    return true
+                }
+                return false
+            },
+            options
         )
-        console.log(receivedEvents?.toHuman())
+
         if (receivedEvents === undefined) {
             throw Error('Timeout while waiting for Bridge Hub delivery.')
         }
@@ -354,7 +495,7 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
                     console.log(`BEEFY client ${polkadotBlock - beefyBlock} blocks behind.`)
                 }
             }
-            beefyClient.on(NewMMRRootEvent, listener);
+            beefyClient.on(NewMMRRootEvent, listener)
         })
         success.ethereum.beefyBlockNumber = await ethereum.api.getBlockNumber()
     }

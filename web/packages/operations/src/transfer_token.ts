@@ -28,16 +28,16 @@ const monitor = async () => {
             beefy: BEEFY_CONTRACT,
         },
     })
-    const polkadot_keyring = new Keyring({ type: 'sr25519' });
+    const polkadot_keyring = new Keyring({ type: 'sr25519' })
 
     const ETHEREUM_ACCOUNT = new Wallet('0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342', context.ethereum.api)
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
-    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri('//Ferdie');
+    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri('//Ferdie')
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
-    const amount = 1000n
+    const amount = 10n
 
-    // To Polkadot (Asset Hub)
+    console.log('# Ethereum to Asset Hub')
     {
         const plan = await toPolkadot.validateSend(context, ETHEREUM_ACCOUNT, POLKADOT_ACCOUNT_PUBLIC, WETH_CONTRACT, 1000, amount, BigInt(0))
         console.log('Plan:', plan)
@@ -48,7 +48,20 @@ const monitor = async () => {
         }
         console.log(result)
     }
-    // To Polkadot (Penpal)
+
+    console.log('# Asset Hub to Ethereum')
+    {
+        const plan = await toEthereum.validateSend(context, POLKADOT_ACCOUNT, 1000, ETHEREUM_ACCOUNT_PUBLIC, WETH_CONTRACT, amount)
+        console.log('Plan:', plan)
+        const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
+        console.log('Execute:', result)
+        for await (const update of toEthereum.trackSendProgress(context, result)) {
+            console.log(update)
+        }
+        console.log(result)
+    }
+
+    console.log('# Ethereum to Penpal')
     {
         const plan = await toPolkadot.validateSend(context, ETHEREUM_ACCOUNT, POLKADOT_ACCOUNT_PUBLIC, WETH_CONTRACT, 2000, amount, BigInt(4_000_000_000))
         console.log('Plan:', plan)
@@ -59,11 +72,12 @@ const monitor = async () => {
         }
         console.log(result)
     }
-    // To Ethereum
+
+    console.log('# Penpal to Ethereum')
     {
-        const plan = await toEthereum.validateSend(context, POLKADOT_ACCOUNT, ETHEREUM_ACCOUNT_PUBLIC, WETH_CONTRACT, 1n);
+        const plan = await toEthereum.validateSend(context, POLKADOT_ACCOUNT, 2000, ETHEREUM_ACCOUNT_PUBLIC, WETH_CONTRACT, amount)
         console.log('Plan:', plan)
-        const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan);
+        const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
         console.log('Execute:', result)
         for await (const update of toEthereum.trackSendProgress(context, result)) {
             console.log(update)
@@ -77,6 +91,6 @@ const monitor = async () => {
 monitor()
     .then(() => process.exit(0))
     .catch((error) => {
-        console.error(error)
+        console.error('Error:', error)
         process.exit(1)
     })
