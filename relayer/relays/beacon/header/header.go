@@ -122,16 +122,11 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 
 	// If the gap between the last two finalized headers is more than the sync committee period, sync an interim
 	// finalized header
-	validGapSlot := h.cache.Finalized.LastSyncedSlot + (h.slotsInEpoch * h.epochsPerSyncCommitteePeriod)
-	if validGapSlot < uint64(update.Payload.FinalizedHeader.Slot) {
-		finalizedUpdate, err := h.syncer.GetFinalizedUpdateAtAttestedSlot(validGapSlot, h.cache.Finalized.LastSyncedSlot)
+	maxLatency := h.cache.Finalized.LastSyncedSlot + (h.slotsInEpoch * h.epochsPerSyncCommitteePeriod)
+	if maxLatency < uint64(update.Payload.FinalizedHeader.Slot) {
+		err = h.syncInterimFinalizedUpdate(ctx, h.cache.Finalized.LastSyncedSlot)
 		if err != nil {
-			return fmt.Errorf("fetch finalized update at slot: %w", err)
-		}
-
-		err = h.updateFinalizedHeaderOnchain(ctx, finalizedUpdate)
-		if err != nil {
-			return fmt.Errorf("update interim finalized header on-chain: %w", err)
+			return fmt.Errorf("sync interim finalized header update: %w", err)
 		}
 	}
 
@@ -228,16 +223,6 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 
 	if !hasChanged {
 		return ErrFinalizedHeaderUnchanged
-	}
-
-	// If the latest finalized header is more than a sync committee apart from the current finalized header, sync an
-	// interim header
-	maxLatency := uint64(finalizedHeader.Slot) + (h.slotsInEpoch * h.epochsPerSyncCommitteePeriod)
-	if maxLatency < h.cache.Finalized.LastSyncedSlot {
-		err := h.syncInterimFinalizedUpdate(ctx, h.cache.Finalized.LastSyncedSlot)
-		if err != nil {
-			return err
-		}
 	}
 
 	err = h.SyncFinalizedHeader(ctx)
