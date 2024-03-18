@@ -309,7 +309,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			}
 			log.Info("created inbound message file")
 		}
-		// ------get inbound message data end--------
+		// get inbound message data end
 
 		finalizedUpdate := finalizedUpdateAfterMessage.Payload.ToJSON()
 		if finalizedUpdate.AttestedHeader.Slot <= initialSyncHeaderSlot {
