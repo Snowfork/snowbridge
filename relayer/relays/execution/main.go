@@ -160,7 +160,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 					continue
 				}
 				if err != nil {
-					return fmt.Errorf("fetch execution header update: %w", err)
+					return fmt.Errorf("fetch execution header proof: %w", err)
 				}
 				inboundMsg.Proof.ExecutionProof = executionProof
 
