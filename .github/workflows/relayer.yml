@@ -19,31 +19,33 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Set up Go
+      - name: setup go
         uses: actions/checkout@v4
         with:
           go-version: '^1.20.1'
 
-      - name: Check Go version
+      - name: check go version
         run: go version
 
-      - name: Install dependencies
+      - name: install dependencies
         working-directory: relayer
         run: go mod download
 
-      - name: Install Mage
+      - name: install mage + sszgen
         working-directory: relayer
-        run: go install github.com/magefile/mage@latest
+        run: |
+          go install github.com/magefile/mage@latest
+          github.com/ferranbt/fastssz/sszgen@v0.1.3
 
-      - name: Add GOPATH/bin to PATH
+      - name: Add gopath to bin
         run: echo "$HOME/go/bin" >> $GITHUB_PATH
 
-      - name: Run Mage Build Task
+      - name: build
         working-directory: relayer
         run: mage build
         env:
           GO111MODULE: on
 
-      - name: Run tests
+      - name: test
         working-directory: relayer
         run: go test -v ./...
