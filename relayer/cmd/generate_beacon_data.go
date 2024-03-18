@@ -225,7 +225,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			log.Info("created sync committee update file")
 		}
 
-		// -----get inbound message data start--------
+		// get inbound message data start
 		channelID := executionConfig.Source.ChannelID
 		address := common.HexToAddress(executionConfig.Source.Contracts.Gateway)
 		gatewayContract, err := contracts.NewGateway(address, ethconn.Client())
