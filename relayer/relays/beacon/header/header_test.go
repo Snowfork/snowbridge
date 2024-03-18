@@ -21,12 +21,9 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
 	}
-
 	client := testutil.MockAPI{}
-
-	store := testutil.MockStore{}
-
-	syncer := syncer.New(&client, settings, &store)
+	beaconStore := testutil.MockStore{}
+	beaconSyncer := syncer.New(&client, settings, &beaconStore)
 
 	headerAtSlot4571072, err := testutil.GetHeaderAtSlot(4571072)
 	require.NoError(t, err)
@@ -34,20 +31,17 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 	require.NoError(t, err)
 	headerAtSlot4571137, err := testutil.GetHeaderAtSlot(4571137)
 	require.NoError(t, err)
+	blockAtSlot4571137, err := testutil.GetBlockAtSlot(4571137)
+	require.NoError(t, err)
 
 	client.HeadersBySlot = map[uint64]api.BeaconHeader{
 		4571072: headerAtSlot4571072,
 		4571136: headerAtSlot4571136,
 		4571137: headerAtSlot4571137,
 	}
-
 	client.Header = map[common.Hash]api.BeaconHeader{
 		common.HexToHash("0x5119c1f71943a3eea34ddc48c7fe399d4b66f939350036431847ed0913448749"): headerAtSlot4571072,
 	}
-
-	blockAtSlot4571137, err := testutil.GetBlockAtSlot(4571137)
-	require.NoError(t, err)
-
 	client.BlocksAtSlot = map[uint64]api.BeaconBlockResponse{
 		4571137: blockAtSlot4571137,
 	}
@@ -56,7 +50,6 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 		4571072: true,
 		4571136: true,
 	}
-
 	client.BeaconStates = beaconStates
 
 	h := Header{
@@ -69,7 +62,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 				InitialCheckpointSlot: 0,
 			},
 		},
-		syncer:                       syncer,
+		syncer:                       beaconSyncer,
 		slotsInEpoch:                 settings.SlotsInEpoch,
 		epochsPerSyncCommitteePeriod: settings.EpochsPerSyncCommitteePeriod,
 	}
@@ -85,12 +78,9 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
 	}
-
 	client := testutil.MockAPI{}
-
 	beaconStore := testutil.MockStore{}
-
-	syncer := syncer.New(&client, settings, &beaconStore)
+	beaconSyncer := syncer.New(&client, settings, &beaconStore)
 
 	headerAtSlot4571072, err := testutil.GetHeaderAtSlot(4571072)
 	require.NoError(t, err)
@@ -98,30 +88,25 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 	require.NoError(t, err)
 	headerAtSlot4571137, err := testutil.GetHeaderAtSlot(4571137)
 	require.NoError(t, err)
+	blockAtSlot4571137, err := testutil.GetBlockAtSlot(4571137)
+	require.NoError(t, err)
 
 	client.HeadersBySlot = map[uint64]api.BeaconHeader{
 		4571072: headerAtSlot4571072,
 		4571136: headerAtSlot4571136,
 		4571137: headerAtSlot4571137,
 	}
-
 	client.Header = map[common.Hash]api.BeaconHeader{
 		common.HexToHash("0x5119c1f71943a3eea34ddc48c7fe399d4b66f939350036431847ed0913448749"): headerAtSlot4571072,
 	}
-
-	blockAtSlot4571137, err := testutil.GetBlockAtSlot(4571137)
-	require.NoError(t, err)
-
 	client.BlocksAtSlot = map[uint64]api.BeaconBlockResponse{
 		4571137: blockAtSlot4571137,
 	}
 
 	attestedState, err := testutil.LoadFile("4571136.ssz")
 	require.NoError(t, err)
-
 	finalizedState, err := testutil.LoadFile("4571072.ssz")
 	require.NoError(t, err)
-
 	// Return the beacon state from the stpore
 	beaconStore.BeaconStateData = store.StoredBeaconData{
 		AttestedSlot:         4571136,
@@ -140,7 +125,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 				InitialCheckpointSlot: 0,
 			},
 		},
-		syncer:                       syncer,
+		syncer:                       beaconSyncer,
 		slotsInEpoch:                 settings.SlotsInEpoch,
 		epochsPerSyncCommitteePeriod: settings.EpochsPerSyncCommitteePeriod,
 	}
@@ -158,12 +143,9 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
 	}
-
 	client := testutil.MockAPI{}
-
 	beaconStore := testutil.MockStore{}
-
-	syncer := syncer.New(&client, settings, &beaconStore)
+	beaconSyncer := syncer.New(&client, settings, &beaconStore)
 
 	headerAtSlot4570752, err := testutil.GetHeaderAtSlot(4570752)
 	require.NoError(t, err)
@@ -171,30 +153,25 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 	require.NoError(t, err)
 	headerAtSlot4570818, err := testutil.GetHeaderAtSlot(4570818)
 	require.NoError(t, err)
+	blockAtSlot4570818, err := testutil.GetBlockAtSlot(4570818)
+	require.NoError(t, err)
 
 	client.HeadersBySlot = map[uint64]api.BeaconHeader{
 		4570752: headerAtSlot4570752,
 		4570816: headerAtSlot4570816,
 		4570818: headerAtSlot4570818,
 	}
-
 	client.Header = map[common.Hash]api.BeaconHeader{
 		common.HexToHash("0x968a372336b4e08a6bbd25e9f31b336d322ede1e5c70763f61d2241ad3d66d36"): headerAtSlot4570752,
 	}
-
-	blockAtSlot4570818, err := testutil.GetBlockAtSlot(4570818)
-	require.NoError(t, err)
-
 	client.BlocksAtSlot = map[uint64]api.BeaconBlockResponse{
 		4570818: blockAtSlot4570818,
 	}
 
 	attestedState, err := testutil.LoadFile("4570816.ssz")
 	require.NoError(t, err)
-
 	finalizedState, err := testutil.LoadFile("4570752.ssz")
 	require.NoError(t, err)
-
 	// Return the beacon state from the store
 	beaconStore.BeaconStateData = store.StoredBeaconData{
 		AttestedSlot:         4570816,
@@ -213,7 +190,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 				InitialCheckpointSlot: 0,
 			},
 		},
-		syncer:                       syncer,
+		syncer:                       beaconSyncer,
 		slotsInEpoch:                 settings.SlotsInEpoch,
 		epochsPerSyncCommitteePeriod: settings.EpochsPerSyncCommitteePeriod,
 	}
@@ -233,10 +210,8 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 	}
 
 	client := testutil.MockAPI{}
-
 	beaconStore := testutil.MockStore{}
-
-	syncer := syncer.New(&client, settings, &beaconStore)
+	beaconSyncer := syncer.New(&client, settings, &beaconStore)
 
 	headerAtSlot4571072, err := testutil.GetHeaderAtSlot(4571072)
 	require.NoError(t, err)
@@ -261,7 +236,7 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 				InitialCheckpointSlot: 0,
 			},
 		},
-		syncer:                       syncer,
+		syncer:                       beaconSyncer,
 		slotsInEpoch:                 settings.SlotsInEpoch,
 		epochsPerSyncCommitteePeriod: settings.EpochsPerSyncCommitteePeriod,
 	}
@@ -279,10 +254,8 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 	}
 
 	client := testutil.MockAPI{}
-
 	beaconStore := testutil.MockStore{}
-
-	syncer := syncer.New(&client, settings, &beaconStore)
+	beaconSyncer := syncer.New(&client, settings, &beaconStore)
 
 	headerAtSlot4571072, err := testutil.GetHeaderAtSlot(4571072)
 	require.NoError(t, err)
@@ -302,7 +275,7 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 				InitialCheckpointSlot: 0,
 			},
 		},
-		syncer:                       syncer,
+		syncer:                       beaconSyncer,
 		slotsInEpoch:                 settings.SlotsInEpoch,
 		epochsPerSyncCommitteePeriod: settings.EpochsPerSyncCommitteePeriod,
 	}
