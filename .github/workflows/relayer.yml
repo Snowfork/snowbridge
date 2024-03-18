@@ -35,6 +35,9 @@ jobs:
         working-directory: relayer
         run: go install github.com/magefile/mage@latest
 
+      - name: Add GOPATH/bin to PATH
+        run: echo "$HOME/go/bin" >> $GITHUB_PATH
+
       - name: Run Mage Build Task
         working-directory: relayer
         run: mage build
