@@ -11,7 +11,7 @@ type MockAPI struct {
 	SyncCommitteePeriodUpdateResponse api.SyncCommitteePeriodUpdateResponse
 	HeadersBySlot                     map[uint64]api.BeaconHeader
 	BlocksAtSlot                      map[uint64]api.BeaconBlockResponse
-	Header                            api.BeaconHeader
+	Header                            map[common.Hash]api.BeaconHeader
 }
 
 func (m *MockAPI) GetBootstrap(blockRoot common.Hash) (api.BootstrapResponse, error) {
@@ -35,7 +35,7 @@ func (m *MockAPI) GetHeaderBySlot(slot uint64) (api.BeaconHeader, error) {
 }
 
 func (m *MockAPI) GetHeader(blockRoot common.Hash) (api.BeaconHeader, error) {
-	return m.Header, nil
+	return m.Header[blockRoot], nil
 }
 
 func (m *MockAPI) GetBeaconBlockBySlot(slot uint64) (api.BeaconBlockResponse, error) {
@@ -63,19 +63,9 @@ func (m *MockAPI) GetLatestFinalizedUpdate() (api.LatestFinalisedUpdateResponse,
 }
 
 func (m *MockAPI) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
-	if stateIdOrSlot == "4563008" {
-		data, err := LoadFile("4563008.ssz")
-		if err != nil {
-			return []byte{}, fmt.Errorf("error reading file: %w", err)
-		}
-		return data, nil
+	data, err := LoadFile(stateIdOrSlot + ".ssz")
+	if err != nil {
+		return []byte{}, fmt.Errorf("error reading file: %w", err)
 	}
-	if stateIdOrSlot == "4562944" {
-		data, err := LoadFile("4562944.ssz")
-		if err != nil {
-			return []byte{}, fmt.Errorf("error reading file: %w", err)
-		}
-		return data, nil
-	}
-	return []byte{}, nil
+	return data, nil
 }

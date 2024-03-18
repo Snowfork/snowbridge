@@ -675,6 +675,8 @@ func (s *Syncer) getBeaconDataFromClient(attestedSlot uint64) (finalizedUpdateCo
 		return response, fmt.Errorf("fetch header: %w", err)
 	}
 
+	log.WithField("SLOT", response.FinalizedHeader.Slot).Info("slot is is")
+
 	response.FinalizedState, err = s.getBeaconStateAtSlot(response.FinalizedHeader.Slot)
 	if err != nil {
 		return response, fmt.Errorf("fetch attested header beacon state at slot %d: %w", attestedSlot, err)

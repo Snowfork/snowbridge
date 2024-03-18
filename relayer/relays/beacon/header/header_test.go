@@ -2,7 +2,6 @@ package header
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -15,51 +14,46 @@ import (
 )
 
 // Verifies that the closest checkpoint is populated successfully if it is not populated in the first place.
-func TestPopulateClosestCheckpoint(t *testing.T) {
+func TestSyncInterimFinalizedUpdate(t *testing.T) {
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
 	}
 
-	var finalizedHeader api.BeaconHeader
-
-	data, err := testutil.LoadFile("header_4562944.json")
-	require.NoError(t, err)
-
-	err = json.Unmarshal(data, &finalizedHeader)
-	require.NoError(t, err)
-
-	client := testutil.MockAPI{
-		Header: finalizedHeader,
-	}
+	client := testutil.MockAPI{}
 
 	store := testutil.MockStore{}
 
 	syncer := syncer.New(&client, settings, &store)
 
-	headerAtSlot4563008, err := testutil.GetHeaderAtSlot(4563008)
+	headerAtSlot4571072, err := testutil.GetHeaderAtSlot(4571072)
 	require.NoError(t, err)
-	headerAtSlot4563009, err := testutil.GetHeaderAtSlot(4563009)
+	headerAtSlot4571136, err := testutil.GetHeaderAtSlot(4571136)
 	require.NoError(t, err)
-	blockAtSlot4563009, err := testutil.GetBlockAtSlot(4563009)
-	require.NoError(t, err)
+
+	//blockAtSlot4563009, err := testutil.GetBlockAtSlot(4563009)
+	//require.NoError(t, err)
 
 	client.HeadersBySlot = map[uint64]api.BeaconHeader{
-		4563008: headerAtSlot4563008,
-		4563009: headerAtSlot4563009,
+		4571072: headerAtSlot4571072,
+		4571136: headerAtSlot4571136,
 	}
 
-	client.BlocksAtSlot = map[uint64]api.BeaconBlockResponse{
-		4563009: blockAtSlot4563009,
+	client.Header = map[common.Hash]api.BeaconHeader{
+		common.HexToHash("0x5119c1f71943a3eea34ddc48c7fe399d4b66f939350036431847ed0913448749"): headerAtSlot4571072,
 	}
+
+	/*client.BlocksAtSlot = map[uint64]api.BeaconBlockResponse{
+		4563009: blockAtSlot4563009,
+	}*/
 
 	h := Header{
 		cache: cache.New(settings.SlotsInEpoch, settings.EpochsPerSyncCommitteePeriod),
 		writer: &testutil.MockWriter{
 			LastFinalizedState: state.FinalizedHeader{
 				BeaconBlockRoot:       common.Hash{},
-				BeaconSlot:            4565856,
+				BeaconSlot:            4562496,
 				InitialCheckpointRoot: common.Hash{},
 				InitialCheckpointSlot: 0,
 			},
@@ -69,7 +63,8 @@ func TestPopulateClosestCheckpoint(t *testing.T) {
 		epochsPerSyncCommitteePeriod: settings.EpochsPerSyncCommitteePeriod,
 	}
 
+	//4571072
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
-	err = h.syncInterimFinalizedUpdate(context.Background(), 4557600)
+	err = h.syncInterimFinalizedUpdate(context.Background(), 4570722)
 	require.NoError(t, err)
 }
