@@ -169,24 +169,24 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 	require.NoError(t, err)
 	headerAtSlot4570816, err := testutil.GetHeaderAtSlot(4570816)
 	require.NoError(t, err)
-	headerAtSlot4570817, err := testutil.GetHeaderAtSlot(4570817)
+	headerAtSlot4570818, err := testutil.GetHeaderAtSlot(4570818)
 	require.NoError(t, err)
 
 	client.HeadersBySlot = map[uint64]api.BeaconHeader{
 		4570752: headerAtSlot4570752,
 		4570816: headerAtSlot4570816,
-		4570817: headerAtSlot4570817,
+		4570818: headerAtSlot4570818,
 	}
 
 	client.Header = map[common.Hash]api.BeaconHeader{
 		common.HexToHash("0x968a372336b4e08a6bbd25e9f31b336d322ede1e5c70763f61d2241ad3d66d36"): headerAtSlot4570752,
 	}
 
-	blockAtSlot4570819, err := testutil.GetBlockAtSlot(4570819)
+	blockAtSlot4570818, err := testutil.GetBlockAtSlot(4570818)
 	require.NoError(t, err)
 
 	client.BlocksAtSlot = map[uint64]api.BeaconBlockResponse{
-		4571137: blockAtSlot4570819,
+		4570818: blockAtSlot4570818,
 	}
 
 	attestedState, err := testutil.LoadFile("4570816.ssz")
