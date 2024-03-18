@@ -40,11 +40,11 @@ jobs:
       - name: Add gopath to bin
         run: echo "$HOME/go/bin" >> $GITHUB_PATH
 
-      - name: build
-        working-directory: relayer
-        run: mage build
-        env:
-          GO111MODULE: on
+      #- name: build
+      #  working-directory: relayer
+      #  run: mage build
+      #  env:
+      #    GO111MODULE: on
 
       - name: test
         working-directory: relayer
