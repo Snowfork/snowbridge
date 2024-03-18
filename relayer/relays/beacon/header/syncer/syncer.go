@@ -46,6 +46,7 @@ func New(client api.BeaconAPI, setting config.SpecSettings, store store.BeaconSt
 }
 
 type finalizedUpdateContainer struct {
+	AttestedSlot        uint64
 	AttestedState       state.BeaconState
 	FinalizedState      state.BeaconState
 	FinalizedHeader     api.BeaconHeader
@@ -544,6 +545,9 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(attestedSlot uint64, lastSynce
 		if err != nil {
 			return update, fmt.Errorf("fetch beacon data from api and data store failure: %w", err)
 		}
+
+		// The datastore may not have found the attested slot we wanted, but provided another valid one
+		attestedSlot = data.AttestedSlot
 	}
 
 	// Finalized header proof
@@ -660,6 +664,7 @@ func (s *Syncer) getBeaconDataFromClient(attestedSlot uint64) (finalizedUpdateCo
 	var response finalizedUpdateContainer
 	var err error
 
+	response.AttestedSlot = attestedSlot
 	// Get the beacon data first since it is mostly likely to fail
 	response.AttestedState, err = s.getBeaconStateAtSlot(attestedSlot)
 	if err != nil {
@@ -668,14 +673,11 @@ func (s *Syncer) getBeaconDataFromClient(attestedSlot uint64) (finalizedUpdateCo
 
 	response.FinalizedCheckPoint = *response.AttestedState.GetFinalizedCheckpoint()
 
-	log.WithField("ROOT", common.BytesToHash(response.FinalizedCheckPoint.Root)).Info("root is")
 	// Get the finalized header at the given slot state
 	response.FinalizedHeader, err = s.Client.GetHeader(common.BytesToHash(response.FinalizedCheckPoint.Root))
 	if err != nil {
 		return response, fmt.Errorf("fetch header: %w", err)
 	}
-
-	log.WithField("SLOT", response.FinalizedHeader.Slot).Info("slot is is")
 
 	response.FinalizedState, err = s.getBeaconStateAtSlot(response.FinalizedHeader.Slot)
 	if err != nil {
@@ -691,11 +693,13 @@ func (s *Syncer) getBeaconDataFromStore(originalSlot uint64) (finalizedUpdateCon
 	var response finalizedUpdateContainer
 	var err error
 
-	data, err := s.store.FindBeaconStateWithinSyncPeriodRange(originalSlot, s.setting.SlotsInEpoch*s.setting.EpochsPerSyncCommitteePeriod)
+	checkpointSlot := s.CalculateNextCheckpointSlot(originalSlot)
+	data, err := s.store.FindBeaconStateWithinSyncPeriodRange(originalSlot, checkpointSlot)
 	if err != nil {
 		return finalizedUpdateContainer{}, err
 	}
 
+	response.AttestedSlot = data.AttestedSlot
 	response.AttestedState, err = s.unmarshalBeaconState(data.AttestedSlot, data.AttestedBeaconState)
 	if err != nil {
 		return finalizedUpdateContainer{}, err

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
 type MockAPI struct {
@@ -12,6 +13,7 @@ type MockAPI struct {
 	HeadersBySlot                     map[uint64]api.BeaconHeader
 	BlocksAtSlot                      map[uint64]api.BeaconBlockResponse
 	Header                            map[common.Hash]api.BeaconHeader
+	BeaconStates                      map[uint64]bool
 }
 
 func (m *MockAPI) GetBootstrap(blockRoot common.Hash) (api.BootstrapResponse, error) {
@@ -63,9 +65,19 @@ func (m *MockAPI) GetLatestFinalizedUpdate() (api.LatestFinalisedUpdateResponse,
 }
 
 func (m *MockAPI) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
+	slot, err := util.ToUint64(stateIdOrSlot)
+	if err != nil {
+		return nil, fmt.Errorf("invalid beacon state slot: %w", err)
+	}
+
+	_, ok := m.BeaconStates[slot]
+	if !ok {
+		return nil, api.ErrNotFound
+	}
+
 	data, err := LoadFile(stateIdOrSlot + ".ssz")
 	if err != nil {
-		return []byte{}, fmt.Errorf("error reading file: %w", err)
+		return nil, fmt.Errorf("error reading file: %w", err)
 	}
 	return data, nil
 }

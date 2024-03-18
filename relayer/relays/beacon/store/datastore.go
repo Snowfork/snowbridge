@@ -92,18 +92,17 @@ func (s *Store) StoreUpdate(attestedSlot, finalizedSlot, attestedSyncPeriod, fin
 
 	return nil
 }
-func (s *Store) FindBeaconStateWithinSyncPeriodRange(baseSlot, slotRange uint64) (StoredBeaconData, error) {
-	upperLimit := baseSlot + slotRange
 
+// Find the latest finalized header within the same sync committee.
+func (s *Store) FindBeaconStateWithinSyncPeriodRange(baseSlot, checkPointSlot uint64) (StoredBeaconData, error) {
 	var data StoredBeaconData
 
-	// SQL query to find the largest finalized slot within the range
-	query := `SELECT attested_slot, MAX(finalized_slot), attested_state_filename, finalized_state_filename FROM beacon_state WHERE finalized_slot >= ? AND finalized_slot <= ?`
+	query := `SELECT MAX(attested_slot), finalized_slot, attested_state_filename, finalized_state_filename FROM beacon_state WHERE attested_slot >= ? AND attested_slot <= ?`
 	var attestedSlot uint64
 	var finalizedSlot uint64
 	var attestedStateFilename string
 	var finalizedStateFilename string
-	err := s.db.QueryRow(query, baseSlot, upperLimit).Scan(&attestedSlot, &finalizedSlot, &attestedStateFilename, &finalizedStateFilename)
+	err := s.db.QueryRow(query, baseSlot, checkPointSlot).Scan(&attestedSlot, &finalizedSlot, &attestedStateFilename, &finalizedStateFilename)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// No finalized slots found within the range

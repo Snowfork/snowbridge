@@ -1,8 +1,11 @@
 package testutil
 
-import "github.com/snowfork/snowbridge/relayer/relays/beacon/store"
+import (
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
+)
 
 type MockStore struct {
+	BeaconStateData store.StoredBeaconData
 }
 
 func (m *MockStore) Connect() error {
@@ -18,5 +21,5 @@ func (m *MockStore) StoreUpdate(attestedSlot, finalizedSlot, attestedSyncPeriod,
 }
 
 func (m *MockStore) FindBeaconStateWithinSyncPeriodRange(baseSlot, slotRange uint64) (store.StoredBeaconData, error) {
-	return store.StoredBeaconData{}, nil
+	return m.BeaconStateData, nil
 }

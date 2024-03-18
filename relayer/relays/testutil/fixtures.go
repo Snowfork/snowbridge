@@ -41,10 +41,10 @@ func GetFinalizedUpdate() (api.LatestFinalisedUpdateResponse, error) {
 	return update, nil
 }
 
-func GetHeaderAtSlot(checkpointSlot uint64) (api.BeaconHeader, error) {
+func GetHeaderAtSlot(slot uint64) (api.BeaconHeader, error) {
 	var update api.BeaconHeader
 
-	data, err := LoadFile(fmt.Sprintf("header_at_slot_%d.json", checkpointSlot))
+	data, err := LoadFile(fmt.Sprintf("header_at_slot_%d.json", slot))
 	if err != nil {
 		return update, fmt.Errorf("error reading file: %w", err)
 	}
