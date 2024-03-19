@@ -139,6 +139,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 					"blockHash":   ev.Raw.BlockHash.Hex(),
 					"blockNumber": ev.Raw.BlockNumber,
 					"txHash":      ev.Raw.TxHash.Hex(),
+					"txIndex":     ev.Raw.TxIndex,
 					"channelID":   types.H256(ev.ChannelID).Hex(),
 				})
 

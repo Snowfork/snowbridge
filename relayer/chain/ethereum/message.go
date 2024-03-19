@@ -44,8 +44,6 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*paracha
 			Data:    event.Data,
 		},
 		Proof: parachain.Proof{
-			BlockHash:    types.NewH256(event.BlockHash.Bytes()),
-			TxIndex:      types.NewU32(uint32(event.TxIndex)),
 			ReceiptProof: proof,
 		},
 	}

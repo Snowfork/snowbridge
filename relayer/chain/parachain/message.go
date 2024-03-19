@@ -26,8 +26,6 @@ type Message struct {
 }
 
 type Proof struct {
-	BlockHash      types.H256
-	TxIndex        types.U32
 	ReceiptProof   *ProofData
 	ExecutionProof scale.HeaderUpdatePayload
 }
@@ -49,8 +47,6 @@ type EventLogJSON struct {
 }
 
 type ProofJSON struct {
-	BlockHash      string            `json:"block_hash"`
-	TxIndex        uint32            `json:"tx_index"`
 	ReceiptProof   *ProofDataJSON    `json:"receipt_proof"`
 	ExecutionProof json.HeaderUpdate `json:"execution_proof"`
 }
@@ -87,8 +83,6 @@ func (m Message) ToJSON() MessageJSON {
 			Data:    m.EventLog.Data.Hex(),
 		},
 		Proof: ProofJSON{
-			BlockHash: m.Proof.BlockHash.Hex(),
-			TxIndex:   uint32(m.Proof.TxIndex),
 			ReceiptProof: &ProofDataJSON{
 				Keys:   util.ScaleBytesToArrayHexArray(m.Proof.ReceiptProof.Keys),
 				Values: util.ScaleBytesToArrayHexArray(m.Proof.ReceiptProof.Values),
@@ -110,7 +104,6 @@ func (e *EventLogJSON) RemoveLeadingZeroHashes() {
 }
 
 func (p *ProofJSON) RemoveLeadingZeroHashes() {
-	p.BlockHash = removeLeadingZeroHash(p.BlockHash)
 	p.ReceiptProof.RemoveLeadingZeroHashes()
 	p.ExecutionProof.RemoveLeadingZeroHashes()
 }
