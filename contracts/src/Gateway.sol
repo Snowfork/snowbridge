@@ -286,6 +286,7 @@ contract Gateway is IGateway, IInitializable {
 
         address payable agent = payable(new Agent(params.agentID));
         $.agents[params.agentID] = agent;
+        $.agentAddresses[agent] = params.agentID;
 
         emit AgentCreated(params.agentID, agent);
     }
@@ -592,6 +593,7 @@ contract Gateway is IGateway, IInitializable {
         // Initialize agent for BridgeHub
         address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
         core.agents[BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
+        core.agentAddresses[bridgeHubAgent] = BRIDGE_HUB_AGENT_ID;
 
         // Initialize channel for primary governance track
         core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] =
@@ -604,6 +606,7 @@ contract Gateway is IGateway, IInitializable {
         // Initialize agent for for AssetHub
         address assetHubAgent = address(new Agent(config.assetHubAgentID));
         core.agents[config.assetHubAgentID] = assetHubAgent;
+        core.agentAddresses[assetHubAgent] = config.assetHubAgentID;
 
         // Initialize channel for AssetHub
         core.channels[config.assetHubParaID.into()] =
