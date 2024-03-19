@@ -5,11 +5,12 @@ package ethereum
 
 import (
 	"fmt"
+	"math/big"
+
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	types "github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"math/big"
 )
 
 type HeaderID struct {

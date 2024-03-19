@@ -32,14 +32,16 @@ type SyncAggregate struct {
 }
 
 type Update struct {
-	AttestedHeader          BeaconHeader             `json:"attested_header"`
-	SyncAggregate           SyncAggregate            `json:"sync_aggregate"`
-	SignatureSlot           uint64                   `json:"signature_slot"`
-	NextSyncCommitteeUpdate *NextSyncCommitteeUpdate `json:"next_sync_committee_update"`
-	FinalizedHeader         BeaconHeader             `json:"finalized_header"`
-	FinalityBranch          []string                 `json:"finality_branch"`
-	BlockRootsRoot          string                   `json:"block_roots_root"`
-	BlockRootsBranch        []string                 `json:"block_roots_branch"`
+	AttestedHeader          BeaconHeader                     `json:"attested_header"`
+	SyncAggregate           SyncAggregate                    `json:"sync_aggregate"`
+	SignatureSlot           uint64                           `json:"signature_slot"`
+	NextSyncCommitteeUpdate *NextSyncCommitteeUpdate         `json:"next_sync_committee_update"`
+	FinalizedHeader         BeaconHeader                     `json:"finalized_header"`
+	FinalityBranch          []string                         `json:"finality_branch"`
+	BlockRootsRoot          string                           `json:"block_roots_root"`
+	BlockRootsBranch        []string                         `json:"block_roots_branch"`
+	ExecutionHeader         *VersionedExecutionPayloadHeader `json:"execution_header"`
+	ExecutionBranch         *[]string                        `json:"execution_branch"`
 }
 
 type NextSyncCommitteeUpdate struct {
@@ -81,30 +83,22 @@ type SignedHeader struct {
 	Signature string       `json:"signature"`
 }
 
-type Block struct {
-	Slot          uint64    `json:"slot"`
-	ProposerIndex uint64    `json:"proposer_index"`
-	ParentRoot    string    `json:"parent_root"`
-	StateRoot     string    `json:"state_root"`
-	Body          BlockBody `json:"body"`
-}
-
 type ExecutionPayloadHeaderCapella struct {
-	ParentHash      string `json:"parent_hash"`
-	FeeRecipient    string `json:"fee_recipient"`
-	StateRoot       string `json:"state_root"`
-	ReceiptsRoot    string `json:"receipts_root"`
-	LogsBloom       string `json:"logs_bloom"`
-	PrevRandao      string `json:"prev_randao"`
-	BlockNumber     uint64 `json:"block_number"`
-	GasLimit        uint64 `json:"gas_limit"`
-	GasUsed         uint64 `json:"gas_used"`
-	Timestamp       uint64 `json:"timestamp"`
-	ExtraData       string `json:"extra_data"`
-	BaseFeePerGas   uint64 `json:"base_fee_per_gas"`
-	BlockHash       string `json:"block_hash"`
-	TransactionRoot string `json:"transactions_root"`
-	WithdrawalsRoot string `json:"withdrawals_root"`
+	ParentHash       string `json:"parent_hash"`
+	FeeRecipient     string `json:"fee_recipient"`
+	StateRoot        string `json:"state_root"`
+	ReceiptsRoot     string `json:"receipts_root"`
+	LogsBloom        string `json:"logs_bloom"`
+	PrevRandao       string `json:"prev_randao"`
+	BlockNumber      uint64 `json:"block_number"`
+	GasLimit         uint64 `json:"gas_limit"`
+	GasUsed          uint64 `json:"gas_used"`
+	Timestamp        uint64 `json:"timestamp"`
+	ExtraData        string `json:"extra_data"`
+	BaseFeePerGas    uint64 `json:"base_fee_per_gas"`
+	BlockHash        string `json:"block_hash"`
+	TransactionsRoot string `json:"transactions_root"`
+	WithdrawalsRoot  string `json:"withdrawals_root"`
 }
 
 type CompactExecutionHeader struct {
@@ -235,34 +229,6 @@ func (d *Deposit) RemoveLeadingZeroHashes() {
 	d.Data.WithdrawalCredentials = removeLeadingZeroHash(d.Data.WithdrawalCredentials)
 }
 
-func (b *Block) RemoveLeadingZeroHashes() {
-	b.ParentRoot = removeLeadingZeroHash(b.ParentRoot)
-	b.StateRoot = removeLeadingZeroHash(b.StateRoot)
-	b.Body.RandaoReveal = removeLeadingZeroHash(b.Body.RandaoReveal)
-	b.Body.Eth1Data.DepositRoot = removeLeadingZeroHash(b.Body.Eth1Data.DepositRoot)
-	b.Body.Eth1Data.BlockHash = removeLeadingZeroHash(b.Body.Eth1Data.BlockHash)
-	b.Body.Graffiti = removeLeadingZeroHash(b.Body.Graffiti)
-
-	for i := range b.Body.ProposerSlashings {
-		b.Body.ProposerSlashings[i].RemoveLeadingZeroHashes()
-	}
-
-	for i := range b.Body.AttesterSlashings {
-		b.Body.AttesterSlashings[i].RemoveLeadingZeroHashes()
-	}
-
-	for i := range b.Body.Attestations {
-		b.Body.Attestations[i].RemoveLeadingZeroHashes()
-	}
-
-	for i := range b.Body.Deposits {
-		b.Body.Deposits[i].RemoveLeadingZeroHashes()
-	}
-
-	b.Body.SyncAggregate.RemoveLeadingZeroHashes()
-	b.Body.ExecutionPayload.RemoveLeadingZeroHashes()
-}
-
 func (e *ExecutionPayloadHeaderCapella) RemoveLeadingZeroHashes() {
 	e.ParentHash = removeLeadingZeroHash(e.ParentHash)
 	e.FeeRecipient = removeLeadingZeroHash(e.FeeRecipient)
@@ -272,7 +238,7 @@ func (e *ExecutionPayloadHeaderCapella) RemoveLeadingZeroHashes() {
 	e.PrevRandao = removeLeadingZeroHash(e.PrevRandao)
 	e.ExtraData = removeLeadingZeroHash(e.ExtraData)
 	e.BlockHash = removeLeadingZeroHash(e.BlockHash)
-	e.TransactionRoot = removeLeadingZeroHash(e.TransactionRoot)
+	e.TransactionsRoot = removeLeadingZeroHash(e.TransactionsRoot)
 	e.WithdrawalsRoot = removeLeadingZeroHash(e.WithdrawalsRoot)
 }
 

@@ -67,14 +67,6 @@ func (b *BeaconCache) SetLastSyncedFinalizedState(finalizedHeaderRoot common.Has
 	}
 }
 
-func (b *BeaconCache) SetLastSyncedExecutionSlot(slot uint64) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	if slot > b.LastSyncedExecutionSlot {
-		b.LastSyncedExecutionSlot = slot
-	}
-}
-
 func (b *BeaconCache) SetInitialCheckpointSlot(slot uint64) {
 	b.mu.Lock()
 	defer b.mu.Unlock()

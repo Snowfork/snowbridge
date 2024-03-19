@@ -318,3 +318,10 @@ func (v VersionedExecutionPayloadHeader) Encode(encoder scale.Encoder) error {
 	}
 	return err
 }
+
+type CompactExecutionHeader struct {
+	ParentHash   types.H256
+	BlockNumber  types.UCompact
+	StateRoot    types.H256
+	ReceiptsRoot types.H256
+}
