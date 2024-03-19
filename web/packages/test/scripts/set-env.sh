@@ -47,11 +47,11 @@ assethub_ws_url="${ASSET_HUB_WS_URL:-ws://127.0.0.1:12144}"
 assethub_seed="${ASSET_HUB_SEED:-//Alice}"
 export ASSET_HUB_PARAID="${ASSET_HUB_PARAID:-1000}"
 export ASSET_HUB_AGENT_ID="${ASSET_HUB_AGENT_ID:-0x81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79}"
-
 export ASSET_HUB_CHANNEL_ID="0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539"
 export PENPAL_CHANNEL_ID="0xa69fbbae90bb6096d59b1930bbcfc8a3ef23959d226b1861deb7ad8fb06c6fa3"
 export PRIMARY_GOVERNANCE_CHANNEL_ID="0x0000000000000000000000000000000000000000000000000000000000000001"
 export SECONDARY_GOVERNANCE_CHANNEL_ID="0x0000000000000000000000000000000000000000000000000000000000000002"
+export PENPAL_PARAID="${PENPAL_PARAID:-2000}"
 
 # Token decimal of the relaychain(KSM|ROC:12,DOT:10)
 export FOREIGN_TOKEN_DECIMALS=12
@@ -65,6 +65,8 @@ reset_ethereum="${RESET_ETHEREUM:-true}"
 ## Important accounts
 
 # Useful tool to get these account values: https://www.shawntabrizi.com/substrate-js-utilities/
+# Account for bridgehub (Sibling parachain 1013 in testnet)
+bridgehub_sovereign_account="${BRIDGEHUB_SOVEREIGN_ACCOUNT:-0x7369626cf5030000000000000000000000000000000000000000000000000000}"
 # Account for assethub (Sibling parachain 1000 5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV in testnet)
 assethub_sovereign_account="${ASSETHUB_SOVEREIGN_ACCOUNT:-0x7369626ce8030000000000000000000000000000000000000000000000000000}"
 # Account for penpal (Sibling parachain 2000 5Eg2fntJ27qsari4FGrGhrMqKFDRnkNSR6UshkZYBGXmSuC8 in testnet)
@@ -75,12 +77,12 @@ beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cd
 execution_relayer_assethub_pub_key="${EXECUTION_RELAYER_ASSETHUB_PUB_KEY:-0x34284f0c1920694dd2e798e94e378307980d0f52d556009fc451c08bd65a8b4a}"
 # Execution relay account (//ExecutionRelayPenpal 5HgmfVcc8xBUcReNJsUaJMhFWGkdYpEw4RiCX4SeZPdKXR6H in testnet)
 execution_relayer_penpal_pub_key="${EXECUTION_RELAYER_PENPAL_PUB_KEY:-0xf8aed1861e571ef861cf34fe9587a211465aa380787e0102c2e89dfb0b666d3b}"
+# Sovereign account for msg.sender in penpal (Ethereum address:0x90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe)
+sender_sovereign_account="ee99e7e8ac49f08251154c033f827541f4fb8a5b1fc4d6d9b1ab72c103bd3023"
 
 # Config for deploying contracts
-
 ## Deployment key
 export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
-
 ## BeefyClient
 # For max safety delay should be MAX_SEED_LOOKAHEAD=4 epochs=4*8*6=192s
 # but for rococo-local each session is only 20 slots=120s

@@ -114,4 +114,18 @@ library Math {
             return a - b;
         }
     }
+
+    /**
+     * @dev Return the count of leading zeros of the uint64 value
+     */
+    function leadingZeros(uint64 val) internal pure returns (uint8) {
+        unchecked {
+            uint8 num = 0;
+            while (val > 0) {
+                val = val >> 1;
+                num++;
+            }
+            return 64 - num;
+        }
+    }
 }

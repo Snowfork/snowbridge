@@ -17,7 +17,9 @@ import {
     Command,
     MultiAddress,
     Ticket,
-    Costs
+    Costs,
+    OriginKind,
+    Weight
 } from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
@@ -27,6 +29,7 @@ import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {Call} from "./utils/Call.sol";
 import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
+import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 import {
     UpgradeParams,
@@ -622,5 +625,31 @@ contract Gateway is IGateway, IInitializable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+    }
+
+    // Calculate cost for transact
+    function _calculateTransactCost(uint128 destinationFee) internal pure returns (Costs memory costs) {
+        return Costs({native: 0, foreign: destinationFee});
+    }
+
+    /// @inheritdoc IGateway
+    function sendCall(
+        ParaID destinationChain,
+        OriginKind originKind,
+        uint128 destinationFee,
+        Weight calldata weightAtMost,
+        bytes calldata call
+    ) external payable {
+        bytes memory payload =
+            SubstrateTypes.Transact(msg.sender, originKind.encode(), destinationFee, weightAtMost, call);
+        Costs memory costs = _calculateTransactCost(destinationFee);
+        Ticket memory ticket = Ticket({dest: destinationChain, costs: costs, payload: payload});
+        _submitOutbound(ticket);
+    }
+
+    /// @inheritdoc IGateway
+    function quoteSendCallFee(uint128 destinationFee) external view returns (uint256) {
+        Costs memory costs = _calculateTransactCost(destinationFee);
+        return _calculateFee(costs);
     }
 }

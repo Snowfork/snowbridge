@@ -42,7 +42,9 @@ import {
     ParaID,
     Command,
     multiAddressFromBytes32,
-    multiAddressFromBytes20
+    multiAddressFromBytes20,
+    Weight,
+    OriginKind
 } from "../src/Types.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
@@ -50,13 +52,16 @@ import "./mocks/GatewayUpgradeMock.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
 contract GatewayTest is Test {
-    ParaID public bridgeHubParaID = ParaID.wrap(1001);
-    bytes32 public bridgeHubAgentID = keccak256("1001");
+    ParaID public bridgeHubParaID = ParaID.wrap(1013);
+    bytes32 public bridgeHubAgentID = keccak256("1013");
     address public bridgeHubAgent;
 
-    ParaID public assetHubParaID = ParaID.wrap(1002);
-    bytes32 public assetHubAgentID = keccak256("1002");
+    ParaID public assetHubParaID = ParaID.wrap(1000);
+    bytes32 public assetHubAgentID = keccak256("1000");
     address public assetHubAgent;
+
+    ParaID public penpalParaID = ParaID.wrap(2000);
+    bytes32 public penpalAgentID = keccak256("2000");
 
     address public relayer;
 
@@ -113,6 +118,14 @@ contract GatewayTest is Test {
 
         bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
         assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
+
+        // Initialize agent/channel for Penpal
+        GatewayMock(address(gateway)).createAgentPublic(abi.encode(CreateAgentParams({agentID: penpalAgentID})));
+        GatewayMock(address(gateway)).createChannelPublic(
+            abi.encode(
+                CreateChannelParams({channelID: penpalParaID.into(), agentID: penpalAgentID, mode: OperatingMode.Normal})
+            )
+        );
 
         // fund the message relayer account
         relayer = makeAddr("relayer");
@@ -900,5 +913,46 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Assets.InvalidDestinationFee.selector);
         IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, 0, 1);
+    }
+
+    /**
+     * Transact
+     */
+    function testTransactFromXcmOrigin() public {
+        bytes memory payload = SubstrateTypes.Transact(account1, 0x03, 1, Weight(1, 1), bytes("0x1"));
+        console.logBytes(payload);
+        vm.expectEmit(true, false, false, true);
+        emit IGateway.OutboundMessageAccepted(penpalParaID.into(), 1, messageID, payload);
+        hoax(address(account1));
+        IGateway(address(gateway)).sendCall{value: 1 ether}(penpalParaID, OriginKind.Xcm, 1, Weight(1, 1), bytes("0x1"));
+    }
+
+    function testTransactFromSovereignAccount() public {
+        bytes memory payload = SubstrateTypes.Transact(account1, 0x01, 1, Weight(1, 1), bytes("0x1"));
+        console.logBytes(payload);
+        vm.expectEmit(true, false, false, true);
+        emit IGateway.OutboundMessageAccepted(penpalParaID.into(), 1, messageID, payload);
+        hoax(address(account1));
+        IGateway(address(gateway)).sendCall{value: 1 ether}(
+            penpalParaID, OriginKind.SovereignAccount, 1, Weight(1, 1), bytes("0x1")
+        );
+    }
+
+    function testTransactFromSovereignAccountWithFee() public {
+        bytes memory payload = SubstrateTypes.Transact(account1, 0x01, 1, Weight(1, 1), bytes("0x1"));
+        console.logBytes(payload);
+        uint256 fee = IGateway(address(gateway)).quoteSendCallFee(1);
+        assertEq(fee, 2500000000250000);
+        vm.expectEmit(true, false, false, true);
+        emit IGateway.OutboundMessageAccepted(penpalParaID.into(), 1, messageID, payload);
+        hoax(address(account1));
+        IGateway(address(gateway)).sendCall{value: fee}(
+            penpalParaID, OriginKind.SovereignAccount, 1, Weight(1, 1), bytes("0x1")
+        );
+    }
+
+    function testQuoteSendCallFee() public {
+        uint256 fee = IGateway(address(gateway)).quoteSendCallFee(1);
+        assertEq(fee, 2500000000250000);
     }
 }

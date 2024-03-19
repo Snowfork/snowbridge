@@ -41,6 +41,7 @@ func generateBeaconDataCmd() *cobra.Command {
 	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	cmd.Flags().String("test_case", "register_token", "Inbound test case")
+	cmd.Flags().String("execution_relay_config", "/tmp/snowbridge/execution-relay-asset-hub.json", "Config file for execution relayer")
 	return cmd
 }
 
@@ -161,7 +162,12 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
 		s := syncer.New(endpoint, conf.Source.Beacon.Spec)
 
-		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
+		executionRelayConfig, err := cmd.Flags().GetString("execution_relay_config")
+		if err != nil {
+			return err
+		}
+
+		viper.SetConfigFile(executionRelayConfig)
 
 		if err = viper.ReadInConfig(); err != nil {
 			return err
@@ -380,7 +386,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		if testCase != "register_token" && testCase != "send_token" {
+		if testCase != "register_token" && testCase != "send_token" && testCase != "send_call_to_penpal" && testCase != "send_call_to_penpal" {
 			return fmt.Errorf("invalid test case: %s", testCase)
 		}
 		pathToInboundQueueFixtureTemplate := fmt.Sprintf(pathToInboundQueueFixtureTemplate, testCase)
