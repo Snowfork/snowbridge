@@ -277,7 +277,7 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidAgentExecutionPayload();
         }
 
-        bytes memory call = abi.encodeCall(AgentExecutor.execute, (address(this), params.agentID, params.payload));
+        bytes memory call = abi.encodeCall(AgentExecutor.execute, (params.agentID, params.payload));
 
         (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
         if (!success) {
