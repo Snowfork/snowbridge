@@ -131,22 +131,3 @@ function encode(OriginKind kind) pure returns (bytes1 result) {
     }
     return result;
 }
-
-/// @dev FeeMode
-enum TransactFeeMode {
-    /// @dev Transact Fee paid full on Ethereum side upfront
-    OnEthereum,
-    /// @dev Transact Fee paid on destination chain by prefunded sender
-    OnSubstrate
-}
-
-using {encodeFeeMode} for TransactFeeMode global;
-
-function encodeFeeMode(TransactFeeMode kind) pure returns (bytes1 result) {
-    if (kind == TransactFeeMode.OnEthereum) {
-        result = 0x00;
-    } else if (kind == TransactFeeMode.OnSubstrate) {
-        result = 0x01;
-    }
-    return result;
-}

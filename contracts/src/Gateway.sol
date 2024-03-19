@@ -19,8 +19,7 @@ import {
     Ticket,
     Costs,
     OriginKind,
-    Weight,
-    TransactFeeMode
+    Weight
 } from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
@@ -629,39 +628,28 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // Calculate cost for transact
-    function _calculateTransactCost(TransactFeeMode feeMode, uint128 destinationFee)
-        internal
-        pure
-        returns (Costs memory costs)
-    {
-        if (feeMode == TransactFeeMode.OnEthereum) {
-            costs = Costs({native: 0, foreign: destinationFee});
-        } else if (feeMode == TransactFeeMode.OnSubstrate) {
-            costs = Costs({native: 0, foreign: 0});
-        }
-        return costs;
+    function _calculateTransactCost(uint128 destinationFee) internal pure returns (Costs memory costs) {
+        return Costs({native: 0, foreign: destinationFee});
     }
 
     /// @inheritdoc IGateway
     function sendCall(
         ParaID destinationChain,
         OriginKind originKind,
-        TransactFeeMode feeMode,
         uint128 destinationFee,
         Weight calldata weightAtMost,
         bytes calldata call
     ) external payable {
-        bytes memory payload = SubstrateTypes.Transact(
-            msg.sender, originKind.encode(), feeMode.encodeFeeMode(), destinationFee, weightAtMost, call
-        );
-        Costs memory costs = _calculateTransactCost(feeMode, destinationFee);
+        bytes memory payload =
+            SubstrateTypes.Transact(msg.sender, originKind.encode(), destinationFee, weightAtMost, call);
+        Costs memory costs = _calculateTransactCost(destinationFee);
         Ticket memory ticket = Ticket({dest: destinationChain, costs: costs, payload: payload});
         _submitOutbound(ticket);
     }
 
     /// @inheritdoc IGateway
-    function quoteSendCallFee(TransactFeeMode feeMode, uint128 destinationFee) external view returns (uint256) {
-        Costs memory costs = _calculateTransactCost(feeMode, destinationFee);
+    function quoteSendCallFee(uint128 destinationFee) external view returns (uint256) {
+        Costs memory costs = _calculateTransactCost(destinationFee);
         return _calculateFee(costs);
     }
 }
