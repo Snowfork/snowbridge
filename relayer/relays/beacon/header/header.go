@@ -329,7 +329,7 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 	case errors.Is(cache.FinalizedCheckPointNotAvailable, err) || errors.Is(cache.FinalizedCheckPointNotPopulated, err):
 		checkpointSlot := checkpoint.Slot
 		if checkpointSlot == 0 {
-			checkpointSlot, err = h.populateCheckPointCacheWithDataFromChain(slot, checkpointSlot)
+			checkpointSlot, err = h.populateCheckPointCacheWithDataFromChain(slot)
 			if err != nil {
 				// There should always be a checkpoint onchain with the range of the sync committee period slots
 				return checkpoint, fmt.Errorf("find checkpoint on-chain: %w", err)
@@ -351,10 +351,8 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 	return checkpoint, nil
 }
 
-func (h *Header) populateCheckPointCacheWithDataFromChain(slot, checkpointSlot uint64) (uint64, error) {
-	log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot}).Info("checkpoint slot not available, try with slot in next sync period instead")
-
-	checkpointSlot = h.syncer.CalculateNextCheckpointSlot(slot)
+func (h *Header) populateCheckPointCacheWithDataFromChain(slot uint64) (uint64, error) {
+	checkpointSlot := h.syncer.CalculateNextCheckpointSlot(slot)
 
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
