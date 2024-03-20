@@ -65,7 +65,7 @@ func TestMessage_Proof(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	proofNodes := TestProof(*msg.Proof.Data)
+	proofNodes := TestProof(*msg.Proof.ReceiptProof)
 	provenReceipt, err := gethTrie.VerifyProof(block.ReceiptHash(), key, &proofNodes)
 	assert.Nil(t, err)
 	assert.Equal(t, provenReceipt, receipt5Encoded)

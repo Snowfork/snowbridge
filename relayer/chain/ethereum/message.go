@@ -9,11 +9,8 @@ import (
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	etrie "github.com/ethereum/go-ethereum/trie"
-	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*parachain.Message, error) {
@@ -47,18 +44,9 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*paracha
 			Data:    event.Data,
 		},
 		Proof: parachain.Proof{
-			BlockHash: types.NewH256(event.BlockHash.Bytes()),
-			TxIndex:   types.NewU32(uint32(event.TxIndex)),
-			Data:      proof,
+			ReceiptProof: proof,
 		},
 	}
-
-	log.WithFields(logrus.Fields{
-		"EventLog":    m.EventLog,
-		"Proof":       m.Proof,
-		"txHash":      event.TxHash.Hex(),
-		"BlockNumber": event.BlockNumber,
-	}).Debug("Generated message from Ethereum log")
 
 	return &m, nil
 }

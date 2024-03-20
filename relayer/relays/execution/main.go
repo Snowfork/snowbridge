@@ -139,6 +139,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 					"blockHash":   ev.Raw.BlockHash.Hex(),
 					"blockNumber": ev.Raw.BlockNumber,
 					"txHash":      ev.Raw.TxHash.Hex(),
+					"txIndex":     ev.Raw.TxIndex,
 					"channelID":   types.H256(ev.ChannelID).Hex(),
 				})
 
@@ -154,14 +155,20 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				}
 
 				// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
-				err = beaconHeader.SyncExecutionHeader(ctx, *blockHeader.ParentBeaconRoot)
+				executionProof, err := beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot)
 				if err == header.ErrBeaconHeaderNotFinalized {
 					logger.Warn("beacon header not finalized, just skipped")
 					continue
 				}
 				if err != nil {
-					return fmt.Errorf("sync beacon header: %w", err)
+					return fmt.Errorf("fetch execution header proof: %w", err)
 				}
+				inboundMsg.Proof.ExecutionProof = executionProof
+
+				logger.WithFields(logrus.Fields{
+					"EventLog": inboundMsg.EventLog,
+					"Proof":    inboundMsg.Proof,
+				}).Debug("Generated message from Ethereum log")
 
 				err = writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
 				if err != nil {
