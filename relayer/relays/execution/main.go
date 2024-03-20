@@ -16,6 +16,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -25,6 +26,7 @@ type Relay struct {
 	paraconn        *parachain.Connection
 	ethconn         *ethereum.Connection
 	gatewayContract *contracts.Gateway
+	beaconHeader    *header.Header
 }
 
 func NewRelay(
@@ -78,49 +80,48 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	r.gatewayContract = contract
 
+	beaconHeader := header.New(
+		writer,
+		r.config.Source.Beacon.Endpoint,
+		r.config.Source.Beacon.Spec,
+	)
+	r.beaconHeader = &beaconHeader
+
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(12 * time.Second):
+		case <-time.After(6 * time.Second):
 			log.WithFields(log.Fields{
 				"channelId": r.config.Source.ChannelID,
 			}).Info("Polling Nonces")
-
-			executionHeaderState, err := writer.GetLastExecutionHeaderState()
-			if err != nil {
-				return err
-			}
 
 			paraNonce, err := r.fetchLatestParachainNonce()
 			if err != nil {
 				return err
 			}
 
-			if executionHeaderState.BlockNumber == 0 {
-				log.WithFields(log.Fields{
-					"channelId": r.config.Source.ChannelID,
-				}).Info("Beacon execution state syncing not started, waiting...")
-				continue
-			}
-
-			ethNonce, err := r.fetchEthereumNonce(ctx, executionHeaderState.BlockNumber)
+			ethNonce, err := r.fetchEthereumNonce(ctx)
 			if err != nil {
 				return err
 			}
 
 			log.WithFields(log.Fields{
-				"ethBlockNumber": executionHeaderState.BlockNumber,
-				"channelId":      types.H256(r.config.Source.ChannelID).Hex(),
-				"paraNonce":      paraNonce,
-				"ethNonce":       ethNonce,
+				"channelId": types.H256(r.config.Source.ChannelID).Hex(),
+				"paraNonce": paraNonce,
+				"ethNonce":  ethNonce,
 			}).Info("Polled Nonces")
 
 			if paraNonce == ethNonce {
 				continue
 			}
 
-			events, err := r.findEvents(ctx, executionHeaderState.BlockNumber, paraNonce+1)
+			blockNumber, err := ethconn.Client().BlockNumber(ctx)
+			if err != nil {
+				return fmt.Errorf("get last block number: %w", err)
+			}
+
+			events, err := r.findEvents(ctx, blockNumber, paraNonce+1)
 			if err != nil {
 				return fmt.Errorf("find events: %w", err)
 			}
@@ -138,6 +139,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 					"blockHash":   ev.Raw.BlockHash.Hex(),
 					"blockNumber": ev.Raw.BlockNumber,
 					"txHash":      ev.Raw.TxHash.Hex(),
+					"txIndex":     ev.Raw.TxIndex,
 					"channelID":   types.H256(ev.ChannelID).Hex(),
 				})
 
@@ -145,6 +147,28 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 					logger.Warn("inbound message outdated, just skipped")
 					continue
 				}
+				nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
+
+				blockHeader, err := ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
+				if err != nil {
+					return fmt.Errorf("get block header: %w", err)
+				}
+
+				// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
+				executionProof, err := beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot)
+				if err == header.ErrBeaconHeaderNotFinalized {
+					logger.Warn("beacon header not finalized, just skipped")
+					continue
+				}
+				if err != nil {
+					return fmt.Errorf("fetch execution header proof: %w", err)
+				}
+				inboundMsg.Proof.ExecutionProof = executionProof
+
+				logger.WithFields(logrus.Fields{
+					"EventLog": inboundMsg.EventLog,
+					"Proof":    inboundMsg.Proof,
+				}).Debug("Generated message from Ethereum log")
 
 				err = writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
 				if err != nil {
@@ -187,11 +211,9 @@ func (r *Relay) fetchLatestParachainNonce() (uint64, error) {
 	return paraNonce, nil
 }
 
-func (r *Relay) fetchEthereumNonce(ctx context.Context, blockNumber uint64) (uint64, error) {
+func (r *Relay) fetchEthereumNonce(ctx context.Context) (uint64, error) {
 	opts := bind.CallOpts{
-		Pending:     false,
-		BlockNumber: new(big.Int).SetUint64(blockNumber),
-		Context:     ctx,
+		Context: ctx,
 	}
 	_, ethOutboundNonce, err := r.gatewayContract.ChannelNoncesOf(&opts, r.config.Source.ChannelID)
 	if err != nil {

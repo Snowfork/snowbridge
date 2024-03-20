@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 
@@ -22,6 +22,7 @@ var ErrFinalizedHeaderNotImported = errors.New("finalized header not imported")
 var ErrSyncCommitteeNotImported = errors.New("sync committee not imported")
 var ErrSyncCommitteeLatency = errors.New("sync committee latency found")
 var ErrExecutionHeaderNotImported = errors.New("execution header not imported")
+var ErrBeaconHeaderNotFinalized = errors.New("beacon header not finalized")
 
 type Header struct {
 	cache  *cache.BeaconCache
@@ -43,22 +44,15 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 		return fmt.Errorf("fetch parachain last finalized header state: %w", err)
 	}
 	latestSyncedPeriod := h.syncer.ComputeSyncPeriodAtSlot(lastFinalizedHeaderState.BeaconSlot)
-	executionHeaderState, err := h.writer.GetLastExecutionHeaderState()
-	if err != nil {
-		return fmt.Errorf("fetch last execution hash: %w", err)
-	}
 
 	log.WithFields(log.Fields{
 		"last_finalized_hash":   lastFinalizedHeaderState.BeaconBlockRoot,
 		"last_finalized_slot":   lastFinalizedHeaderState.BeaconSlot,
 		"last_finalized_period": latestSyncedPeriod,
-		"last_execution_hash":   executionHeaderState.BeaconBlockRoot,
-		"last_execution_slot":   executionHeaderState.BeaconSlot,
 	}).Info("set cache: Current state")
 	h.cache.SetLastSyncedFinalizedState(lastFinalizedHeaderState.BeaconBlockRoot, lastFinalizedHeaderState.BeaconSlot)
 	h.cache.SetInitialCheckpointSlot(lastFinalizedHeaderState.InitialCheckpointSlot)
 	h.cache.AddCheckPointSlots([]uint64{lastFinalizedHeaderState.BeaconSlot})
-	h.cache.SetLastSyncedExecutionSlot(executionHeaderState.BeaconSlot)
 
 	log.Info("starting to sync finalized headers")
 
@@ -186,11 +180,6 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 }
 
 func (h *Header) SyncHeaders(ctx context.Context) error {
-	err := h.SyncExecutionHeaders(ctx)
-	if err != nil {
-		return err
-	}
-
 	hasChanged, err := h.syncer.HasFinalizedHeaderChanged(h.cache.Finalized.LastSyncedHash)
 	if err != nil {
 		return err
@@ -208,79 +197,12 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 	return nil
 }
 
-func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
-	fromSlot := h.cache.LastSyncedExecutionSlot
-	// SyncExecutionHeaders at least from initial checkpoint
-	if fromSlot <= h.cache.InitialCheckpointSlot {
-		fromSlot = h.cache.InitialCheckpointSlot
-	}
-	toSlot := h.cache.Finalized.LastSyncedSlot
-	if fromSlot >= toSlot {
-		log.WithFields(log.Fields{
-			"fromSlot": fromSlot,
-			"toSlot":   toSlot,
-		}).Info("execution headers sync up to date with last finalized header")
-		return nil
-	}
-	log.WithFields(log.Fields{
-		"fromSlot":   fromSlot,
-		"fromEpoch":  h.syncer.ComputeEpochAtSlot(fromSlot),
-		"toSlot":     toSlot,
-		"toEpoch":    h.syncer.ComputeEpochAtSlot(toSlot),
-		"totalSlots": toSlot - fromSlot,
-	}).Info("starting to back-fill headers")
-
-	var headersToSync []scale.HeaderUpdatePayload
-
-	// start syncing at next block after last synced block
-	currentSlot := fromSlot
-	headerUpdate, err := h.getNextHeaderUpdateBySlot(currentSlot)
-	if err != nil {
-		return fmt.Errorf("get next header update by slot with ancestry proof: %w", err)
-	}
-	currentSlot = uint64(headerUpdate.Header.Slot)
-
-	for currentSlot <= toSlot {
-		log.WithFields(log.Fields{
-			"currentSlot": currentSlot,
-		}).Info("fetching next header at slot")
-
-		var nextHeaderUpdate scale.HeaderUpdatePayload
-		if currentSlot >= toSlot {
-			// Just construct an empty update so to break the loop
-			nextHeaderUpdate = scale.HeaderUpdatePayload{Header: scale.BeaconHeader{Slot: types.U64(toSlot + 1)}}
-		} else {
-			// To get the sync witness for the current synced header. This header
-			// will be used as the next update.
-			nextHeaderUpdate, err = h.getNextHeaderUpdateBySlot(currentSlot)
-			if err != nil {
-				return fmt.Errorf("get next header update by slot with ancestry proof: %w", err)
-			}
-		}
-
-		headersToSync = append(headersToSync, headerUpdate)
-		// last slot to be synced, sync headers
-		if currentSlot >= toSlot {
-			err = h.batchSyncHeaders(ctx, headersToSync)
-			if err != nil {
-				return fmt.Errorf("batch sync headers failed: %w", err)
-			}
-		}
-		headerUpdate = nextHeaderUpdate
-		currentSlot = uint64(headerUpdate.Header.Slot)
-	}
-	// waiting for all batch calls to be executed on chain
-	err = h.waitingForBatchCallFinished(toSlot)
-	if err != nil {
-		return err
-	}
-	h.cache.SetLastSyncedExecutionSlot(toSlot)
-	return nil
-}
-
 func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSyncedPeriod, currentSyncPeriod uint64) error {
-	// sync for the next period
-	periodsToSync := []uint64{latestSyncedPeriod + 1}
+	// sync for all missing periods
+	periodsToSync := []uint64{}
+	for i := latestSyncedPeriod + 1; i <= currentSyncPeriod; i++ {
+		periodsToSync = append(periodsToSync, i)
+	}
 
 	// For initialPeriod special handling here to sync it again for nextSyncCommittee which is not included in InitCheckpoint
 	if h.isInitialSyncPeriod() {
@@ -346,39 +268,57 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 }
 
 func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
+	var checkpoint cache.Proof
 	checkpoint, err := h.cache.GetClosestCheckpoint(slot)
 
 	switch {
 	case errors.Is(cache.FinalizedCheckPointNotAvailable, err) || errors.Is(cache.FinalizedCheckPointNotPopulated, err):
 		checkpointSlot := checkpoint.Slot
 		if checkpointSlot == 0 {
-			checkpointSlot = h.syncer.CalculateNextCheckpointSlot(slot)
 			log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot}).Info("checkpoint slot not available, try with slot in next sync period instead")
+			checkpointSlot = h.syncer.CalculateNextCheckpointSlot(slot)
+			lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
+			if err != nil {
+				return checkpoint, fmt.Errorf("get last finalized header for the checkpoint: %w", err)
+			}
+			if slot > lastFinalizedHeaderState.BeaconSlot {
+				return checkpoint, ErrBeaconHeaderNotFinalized
+			}
+			if checkpointSlot < lastFinalizedHeaderState.BeaconSlot {
+				log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot, "lastFinalizedSlot": lastFinalizedHeaderState.BeaconSlot}).Info("fetch checkpoint on chain backward from history")
+				historyState, err := h.writer.FindCheckPointBackward(slot)
+				if err != nil {
+					return checkpoint, fmt.Errorf("get history finalized header for the checkpoint: %w", err)
+				}
+				checkpointSlot = historyState.BeaconSlot
+			} else {
+				log.WithFields(log.Fields{"calculatedCheckpointSlot": checkpointSlot, "lastFinalizedSlot": lastFinalizedHeaderState.BeaconSlot}).Info("calculated checkpoint slot should not be in the future, switch to the last finalized")
+				checkpointSlot = lastFinalizedHeaderState.BeaconSlot
+			}
 		}
 		err := h.populateFinalizedCheckpoint(checkpointSlot)
 		if err != nil {
-			return cache.Proof{}, fmt.Errorf("populate closest checkpoint: %w", err)
+			return checkpoint, fmt.Errorf("populate closest checkpoint: %w", err)
 		}
 
 		log.Info("populated finalized checkpoint")
 
 		checkpoint, err = h.cache.GetClosestCheckpoint(slot)
 		if err != nil {
-			return cache.Proof{}, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
+			return checkpoint, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
 		}
 
 		log.WithFields(log.Fields{"slot": slot, "checkpoint": checkpoint}).Info("checkpoint after populating finalized header")
 
 		return checkpoint, nil
 	case err != nil:
-		return cache.Proof{}, fmt.Errorf("get closest checkpoint: %w", err)
+		return checkpoint, fmt.Errorf("get closest checkpoint: %w", err)
 	}
 
 	return checkpoint, nil
 }
 
-func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, error) {
-	slot = slot + 1
+func (h *Header) getHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, error) {
 	header, err := h.syncer.FindBeaconHeaderWithBlockIncluded(slot)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("get next beacon header with block included: %w", err)
@@ -394,41 +334,28 @@ func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePaylo
 	return h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
 }
 
-func (h *Header) batchSyncHeaders(ctx context.Context, headerUpdates []scale.HeaderUpdatePayload) error {
-	headerUpdatesInf := make([]interface{}, len(headerUpdates))
-	for i, v := range headerUpdates {
-		headerUpdatesInf[i] = v
-	}
-	err := h.writer.BatchCall(ctx, "EthereumBeaconClient.submit_execution_header", headerUpdatesInf)
+func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.HeaderUpdatePayload, error) {
+	var headerUpdate scale.HeaderUpdatePayload
+	header, err := h.syncer.Client.GetHeader(blockRoot)
 	if err != nil {
-		return err
+		return headerUpdate, fmt.Errorf("get beacon header by blockRoot: %w", err)
 	}
-	return nil
+	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
+	if err != nil {
+		return headerUpdate, fmt.Errorf("fetch last finalized header state: %w", err)
+	}
+	if header.Slot > lastFinalizedHeaderState.BeaconSlot {
+		return headerUpdate, ErrBeaconHeaderNotFinalized
+	}
+	headerUpdate, err = h.getHeaderUpdateBySlot(header.Slot)
+	if err != nil {
+		return headerUpdate, fmt.Errorf("get header update by slot with ancestry proof: %w", err)
+	}
+	return headerUpdate, nil
 }
 
 func (h *Header) isInitialSyncPeriod() bool {
 	initialPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.InitialCheckpointSlot)
 	lastFinalizedPeriod := h.syncer.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
 	return initialPeriod == lastFinalizedPeriod
-}
-
-func (h *Header) waitingForBatchCallFinished(toSlot uint64) error {
-	batchCallFinished := false
-	cnt := 0
-	for cnt <= 12 {
-		executionHeaderState, err := h.writer.GetLastExecutionHeaderState()
-		if err != nil {
-			return fmt.Errorf("fetch last execution hash: %w", err)
-		}
-		if executionHeaderState.BeaconSlot == toSlot {
-			batchCallFinished = true
-			break
-		}
-		time.Sleep(6 * time.Second)
-		cnt++
-	}
-	if !batchCallFinished {
-		return ErrExecutionHeaderNotImported
-	}
-	return nil
 }

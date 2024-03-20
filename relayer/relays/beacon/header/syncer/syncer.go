@@ -71,6 +71,10 @@ func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("convert sync committee to scale: %w", err)
 	}
 
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("get sync committee: %w", err)
+	}
+
 	return scale.BeaconCheckpoint{
 		Header:                     header,
 		CurrentSyncCommittee:       syncCommittee,
@@ -352,7 +356,7 @@ func (s *Syncer) FindBeaconHeaderWithBlockIncluded(slot uint64) (state.BeaconBlo
 	return beaconHeader, nil
 }
 
-func (s *Syncer) GetNextHeaderUpdateBySlotWithCheckpoint(slot uint64, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
+func (s *Syncer) GetHeaderUpdateBySlotWithCheckpoint(slot uint64, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
 	header, err := s.FindBeaconHeaderWithBlockIncluded(slot)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("get next beacon header with block included: %w", err)

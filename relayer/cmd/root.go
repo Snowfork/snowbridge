@@ -29,9 +29,10 @@ func init() {
 	rootCmd.AddCommand(basicChannelLeafProofCmd())
 	rootCmd.AddCommand(parachainHeadProofCmd())
 	rootCmd.AddCommand(importExecutionHeaderCmd())
-	rootCmd.AddCommand(generateBeaconDataCmd())
+	rootCmd.AddCommand(generateBeaconFixtureCmd())
 	rootCmd.AddCommand(generateBeaconCheckpointCmd())
 	rootCmd.AddCommand(generateExecutionUpdateCmd())
+	rootCmd.AddCommand(generateInboundFixtureCmd())
 }
 
 func Execute() {
