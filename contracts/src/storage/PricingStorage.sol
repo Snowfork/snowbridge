@@ -10,6 +10,8 @@ library PricingStorage {
         UD60x18 exchangeRate;
         /// @dev The cost of delivering messages to BridgeHub in DOT
         uint128 deliveryCost;
+        /// @dev Fee multiplier
+        UD60x18 multiplier;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.pricing");
