@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -387,7 +386,6 @@ func (h *Header) populateCheckPointCacheWithDataFromChain(slot, checkpointSlot u
 }
 
 func (h *Header) getHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, error) {
-	slot = slot + 1
 	header, err := h.syncer.FindBeaconHeaderWithBlockIncluded(slot)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("get next beacon header with block included: %w", err)
