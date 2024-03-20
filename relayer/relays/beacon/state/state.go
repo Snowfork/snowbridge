@@ -17,10 +17,3 @@ type FinalizedHeader struct {
 	InitialCheckpointRoot common.Hash
 	InitialCheckpointSlot uint64
 }
-
-type CompactExecutionHeaderState struct {
-	ParentHash   common.Hash
-	BlockNumber  uint64
-	StateRoot    common.Hash
-	ReceiptsRoot common.Hash
-}
