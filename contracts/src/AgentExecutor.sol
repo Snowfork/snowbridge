@@ -9,6 +9,7 @@ import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {ERC20} from "./ERC20.sol";
 import {Gateway} from "./Gateway.sol";
+import {Assets} from "./Assets.sol";
 
 /// @title Code which will run within an `Agent` using `delegatecall`.
 /// @dev This is a singleton contract, meaning that all agents will execute the same code.
@@ -22,14 +23,17 @@ contract AgentExecutor {
     /// @dev Execute a message which originated from the Polkadot side of the bridge. In other terms,
     /// the `data` parameter is constructed by the BridgeHub parachain.
     ///
-    function execute(AgentExecuteCommand command, bytes memory params) external returns (bytes memory) {
+    function execute(bytes32 agentID, AgentExecuteCommand command, bytes memory params)
+        external
+        returns (bytes memory)
+    {
         if (command == AgentExecuteCommand.TransferToken) {
             (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
             _transferToken(token, recipient, amount);
         } else if (command == AgentExecuteCommand.RegisterToken) {
             (bytes32 tokenID, string memory name, string memory symbol, uint8 decimals) =
                 abi.decode(params, (bytes32, string, string, uint8));
-            return _registerToken(tokenID, name, symbol, decimals);
+            return _registerToken(agentID, tokenID, name, symbol, decimals);
         } else if (command == AgentExecuteCommand.MintToken) {
             (bytes32 tokenID, address recipient, uint256 amount) = abi.decode(params, (bytes32, address, uint256));
             _mintToken(tokenID, recipient, amount);
@@ -50,17 +54,18 @@ contract AgentExecutor {
     }
 
     /// @dev Register native asset from polkadto as ERC20 `token`.
-    function _registerToken(bytes32 tokenID, string memory name, string memory symbol, uint8 decimals)
+    function _registerToken(bytes32 agentID, bytes32 tokenID, string memory name, string memory symbol, uint8 decimals)
         internal
         returns (bytes memory)
     {
         IERC20 token = new ERC20(name, symbol, decimals);
+        Assets.registerTokenByID(tokenID, address(token), agentID);
         return abi.encode(tokenID, address(token));
     }
 
     /// @dev Mint ERC20 token to `recipient`.
     function _mintToken(bytes32 tokenID, address recipient, uint256 amount) internal {
-        address token = Gateway(msg.sender).getTokenAddress(tokenID);
+        address token = Assets.getTokenAddress(tokenID);
         ERC20(token).mint(recipient, amount);
         emit TokenMinted(tokenID, token, recipient, amount);
     }

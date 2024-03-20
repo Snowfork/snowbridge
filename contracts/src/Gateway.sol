@@ -29,8 +29,6 @@ import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {Call} from "./utils/Call.sol";
 import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
-import {IERC20} from "./interfaces/IERC20.sol";
-import {ERC20} from "./ERC20.sol";
 
 import {
     UpgradeParams,
@@ -91,8 +89,6 @@ contract Gateway is IGateway, IInitializable {
     error InvalidCodeHash();
     error InvalidConstructorParams();
     error AlreadyInitialized();
-    error TokenAlreadyRegistered();
-    error TokenNotRegistered();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -282,7 +278,7 @@ contract Gateway is IGateway, IInitializable {
 
         (AgentExecuteCommand command, bytes memory payload) = abi.decode(params.payload, (AgentExecuteCommand, bytes));
 
-        bytes memory call = abi.encodeCall(AgentExecutor.execute, (command, payload));
+        bytes memory call = abi.encodeCall(AgentExecutor.execute, (params.agentID, command, payload));
 
         (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
         if (!success) {
@@ -292,7 +288,7 @@ contract Gateway is IGateway, IInitializable {
         if (command == AgentExecuteCommand.RegisterToken) {
             (bytes memory result) = abi.decode(returndata, (bytes));
             (bytes32 tokenID, address token) = abi.decode(result, (bytes32, address));
-            return registerTokenByID(tokenID, token, params.agentID);
+            Assets.registerTokenByID(tokenID, token, params.agentID);
         }
     }
 
@@ -453,27 +449,6 @@ contract Gateway is IGateway, IInitializable {
         _submitOutbound(
             Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
         );
-    }
-
-    // @dev Register a new fungible Polkadot token for an agent
-    function registerTokenByID(bytes32 tokenID, address token, bytes32 agentID) internal {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        if ($.tokenRegistryByID[tokenID].isRegistered == true) {
-            revert TokenAlreadyRegistered();
-        }
-        TokenInfo memory info = TokenInfo({isRegistered: true, tokenID: tokenID, agentID: agentID, token: token});
-        $.tokenRegistry[token] = info;
-        $.tokenRegistryByID[tokenID] = info;
-        emit TokenRegistered(tokenID, agentID, token);
-    }
-
-    // @dev Get token address by tokenID
-    function getTokenAddress(bytes32 tokenID) external view returns (address) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        if ($.tokenRegistryByID[tokenID].isRegistered == false) {
-            revert TokenNotRegistered();
-        }
-        return $.tokenRegistryByID[tokenID].token;
     }
 
     /**

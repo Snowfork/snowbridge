@@ -24,6 +24,7 @@ library Assets {
     error TokenNotRegistered();
     error Unsupported();
     error InvalidDestinationFee();
+    error TokenAlreadyRegistered();
 
     function isTokenRegistered(address token) external view returns (bool) {
         return AssetsStorage.layout().tokenRegistry[token].isRegistered;
@@ -173,5 +174,26 @@ library Assets {
         ticket.payload = SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee);
 
         emit IGateway.TokenRegistrationSent(token);
+    }
+
+    // @dev Register a new fungible Polkadot token for an agent
+    function registerTokenByID(bytes32 tokenID, address token, bytes32 agentID) internal {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if ($.tokenRegistryByID[tokenID].isRegistered == true) {
+            revert TokenAlreadyRegistered();
+        }
+        TokenInfo memory info = TokenInfo({isRegistered: true, tokenID: tokenID, agentID: agentID, token: token});
+        $.tokenRegistry[token] = info;
+        $.tokenRegistryByID[tokenID] = info;
+        emit IGateway.TokenRegistered(tokenID, agentID, token);
+    }
+
+    // @dev Get token address by tokenID
+    function getTokenAddress(bytes32 tokenID) internal view returns (address) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if ($.tokenRegistryByID[tokenID].isRegistered == false) {
+            revert TokenNotRegistered();
+        }
+        return $.tokenRegistryByID[tokenID].token;
     }
 }
