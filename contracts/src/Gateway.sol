@@ -18,7 +18,8 @@ import {
     MultiAddress,
     Ticket,
     Costs,
-    TokenInfo
+    TokenInfo,
+    AgentExecuteCommand
 } from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
@@ -28,6 +29,8 @@ import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {Call} from "./utils/Call.sol";
 import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
+import {IERC20} from "./interfaces/IERC20.sol";
+import {ERC20} from "./ERC20.sol";
 
 import {
     UpgradeParams,
@@ -277,11 +280,19 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidAgentExecutionPayload();
         }
 
-        bytes memory call = abi.encodeCall(AgentExecutor.execute, (params.agentID, params.payload));
+        (AgentExecuteCommand command, bytes memory payload) = abi.decode(params.payload, (AgentExecuteCommand, bytes));
+
+        bytes memory call = abi.encodeCall(AgentExecutor.execute, (command, payload));
 
         (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
         if (!success) {
             revert AgentExecutionFailed(returndata);
+        }
+
+        if (command == AgentExecuteCommand.RegisterToken) {
+            (bytes memory result) = abi.decode(returndata, (bytes));
+            (bytes32 tokenID, address token) = abi.decode(result, (bytes32, address));
+            return registerTokenByID(tokenID, token, params.agentID);
         }
     }
 
@@ -445,7 +456,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // @dev Register a new fungible Polkadot token for an agent
-    function registerTokenByID(bytes32 tokenID, address token, bytes32 agentID) external onlyAgent(agentID) {
+    function registerTokenByID(bytes32 tokenID, address token, bytes32 agentID) internal {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenRegistryByID[tokenID].isRegistered == true) {
             revert TokenAlreadyRegistered();
