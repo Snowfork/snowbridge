@@ -366,7 +366,7 @@ func (h *Header) populateCheckPointCacheWithDataFromChain(slot, checkpointSlot u
 	}
 
 	if checkpointSlot < lastFinalizedHeaderState.BeaconSlot {
-		historicState, err := h.findClosestCheckPoint(slot)
+		historicState, err := h.findLatestCheckPoint(slot)
 		if err != nil {
 			return 0, fmt.Errorf("get history finalized header for the checkpoint: %w", err)
 		}
@@ -428,7 +428,7 @@ func (h *Header) isInitialSyncPeriod() bool {
 	return initialPeriod == lastFinalizedPeriod
 }
 
-func (h *Header) findClosestCheckPoint(slot uint64) (state.FinalizedHeader, error) {
+func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error) {
 	var beaconState state.FinalizedHeader
 	lastIndex, err := h.writer.GetLastFinalizedStateIndex()
 	if err != nil {
