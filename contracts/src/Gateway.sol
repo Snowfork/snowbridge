@@ -50,10 +50,10 @@ contract Gateway is IGateway, IInitializable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
-    address internal immutable AGENT_EXECUTOR;
+    address public immutable AGENT_EXECUTOR;
 
     // Verification state
-    address internal immutable BEEFY_CLIENT;
+    address public immutable BEEFY_CLIENT;
 
     // BridgeHub
     ParaID internal immutable BRIDGE_HUB_PARA_ID;
@@ -70,6 +70,10 @@ contract Gateway is IGateway, IInitializable {
     uint256 DISPATCH_OVERHEAD_GAS = 10_000;
 
     uint8 internal immutable FOREIGN_TOKEN_DECIMALS;
+
+    // AssetHub
+    ParaID internal ASSET_HUB_PARA_ID;
+    bytes32 internal ASSET_HUB_AGENT_ID;
 
     error InvalidProof();
     error InvalidNonce();
@@ -574,7 +578,7 @@ contract Gateway is IGateway, IInitializable {
 
     /// @dev Initialize storage in the gateway
     /// NOTE: This is not externally accessible as this function selector is overshadowed in the proxy
-    function initialize(bytes calldata data) external {
+    function initialize(bytes calldata data) external virtual {
         // Prevent initialization of storage in implementation contract
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();
@@ -603,7 +607,9 @@ contract Gateway is IGateway, IInitializable {
         core.channels[SECONDARY_GOVERNANCE_CHANNEL_ID] =
             Channel({mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0});
 
-        // Initialize agent for for AssetHub
+        // Initialize agent for AssetHub
+        ASSET_HUB_PARA_ID = config.assetHubParaID;
+        ASSET_HUB_AGENT_ID = config.assetHubAgentID;
         address assetHubAgent = address(new Agent(config.assetHubAgentID));
         core.agents[config.assetHubAgentID] = assetHubAgent;
         core.agentAddresses[assetHubAgent] = config.assetHubAgentID;

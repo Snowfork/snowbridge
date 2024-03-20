@@ -48,6 +48,7 @@ import {
 import {WETH9} from "canonical-weth/WETH9.sol";
 import "./mocks/GatewayUpgradeMock.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {GatewayWithAgentAddressToID} from "../src/upgrade/AgentAddressToID.sol";
 
 contract GatewayTest is Test {
     ParaID public bridgeHubParaID = ParaID.wrap(1001);
@@ -900,5 +901,22 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Assets.InvalidDestinationFee.selector);
         IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, 0, 1);
+    }
+
+    function testUpgradeAgentAddressToIDMapping() public {
+        console.logAddress(bridgeHubAgent);
+        AgentExecutor executor = new AgentExecutor();
+        GatewayWithAgentAddressToID newLogic = new GatewayWithAgentAddressToID(
+            address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals
+        );
+        bytes memory initParams = abi.encode(assetHubParaID, assetHubAgentID);
+
+        UpgradeParams memory params =
+            UpgradeParams({impl: address(newLogic), implCodeHash: address(newLogic).codehash, initParams: initParams});
+
+        vm.expectEmit(true, false, false, true);
+        emit GatewayWithAgentAddressToID.Upgraded();
+
+        GatewayMock(address(gateway)).upgradePublic(abi.encode(params));
     }
 }
