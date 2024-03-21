@@ -485,7 +485,7 @@ contract GatewayTest is Test {
         assertEq(GatewayV2(address(gateway)).getValue(), 42);
     }
 
-    function testUgradeInitializerRunsOnlyOnce() public {
+    function testUpgradeInitializerRunsOnlyOnce() public {
         // Upgrade to this current logic contract
         AgentExecutor executor = new AgentExecutor();
         GatewayMock currentLogic =

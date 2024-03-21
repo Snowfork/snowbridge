@@ -579,19 +579,19 @@ contract Gateway is IGateway, IInitializable {
 
     /// @dev Initialize storage in the gateway
     /// NOTE: This is not externally accessible as this function selector is overshadowed in the proxy
-    function initialize(bytes calldata data) external {
+    function initialize(bytes calldata data) external virtual {
         // Prevent initialization of storage in implementation contract
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();
         }
-
-        Config memory config = abi.decode(data, (Config));
 
         CoreStorage.Layout storage core = CoreStorage.layout();
 
         if (core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID].agent != address(0)) {
             revert AlreadyInitialized();
         }
+
+        Config memory config = abi.decode(data, (Config));
 
         core.mode = config.mode;
 
