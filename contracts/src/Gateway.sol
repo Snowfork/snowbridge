@@ -409,6 +409,7 @@ contract Gateway is IGateway, IInitializable {
         SetPricingParametersParams memory params = abi.decode(data, (SetPricingParametersParams));
         pricing.exchangeRate = params.exchangeRate;
         pricing.deliveryCost = params.deliveryCost;
+        pricing.multiplier = params.multiplier;
         emit PricingParametersChanged();
     }
 
@@ -481,19 +482,22 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // Convert foreign currency to native currency (ROC/KSM/DOT -> ETH)
-    function _convertToNative(UD60x18 exchangeRate, uint256 amount) internal view returns (uint256) {
-        UD60x18 amountFP = convert(amount);
+    function _convertToNative(UD60x18 exchangeRate, UD60x18 multiplier, UD60x18 amount)
+        internal
+        view
+        returns (uint256)
+    {
         UD60x18 ethDecimals = convert(1e18);
         UD60x18 foreignDecimals = convert(10).pow(convert(uint256(FOREIGN_TOKEN_DECIMALS)));
-        UD60x18 nativeAmountFP = amountFP.mul(exchangeRate).div(foreignDecimals).mul(ethDecimals);
-        uint256 nativeAmount = convert(nativeAmountFP);
-        return nativeAmount;
+        UD60x18 nativeAmount = multiplier.mul(amount).mul(exchangeRate).div(foreignDecimals).mul(ethDecimals);
+        return convert(nativeAmount);
     }
 
     // Calculate the fee for accepting an outbound message
     function _calculateFee(Costs memory costs) internal view returns (uint256) {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
-        return costs.native + _convertToNative(pricing.exchangeRate, pricing.deliveryCost + costs.foreign);
+        UD60x18 amount = convert(pricing.deliveryCost + costs.foreign);
+        return costs.native + _convertToNative(pricing.exchangeRate, pricing.multiplier, amount);
     }
 
     // Submit an outbound message to Polkadot, after taking fees
@@ -596,23 +600,25 @@ contract Gateway is IGateway, IInitializable {
         uint128 assetHubReserveTransferFee;
         /// @dev extra fee to discourage spamming
         uint256 registerTokenFee;
+        /// @dev Fee multiplier
+        UD60x18 multiplier;
     }
 
     /// @dev Initialize storage in the gateway
     /// NOTE: This is not externally accessible as this function selector is overshadowed in the proxy
-    function initialize(bytes calldata data) external {
+    function initialize(bytes calldata data) external virtual {
         // Prevent initialization of storage in implementation contract
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();
         }
-
-        Config memory config = abi.decode(data, (Config));
 
         CoreStorage.Layout storage core = CoreStorage.layout();
 
         if (core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID].agent != address(0)) {
             revert AlreadyInitialized();
         }
+
+        Config memory config = abi.decode(data, (Config));
 
         core.mode = config.mode;
 
@@ -642,6 +648,7 @@ contract Gateway is IGateway, IInitializable {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
         pricing.exchangeRate = config.exchangeRate;
         pricing.deliveryCost = config.deliveryCost;
+        pricing.multiplier = config.multiplier;
 
         // Initialize assets storage
         AssetsStorage.Layout storage assets = AssetsStorage.layout();

@@ -9,11 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cbroglie/mustache"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	log "github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/cmd/run/execution"
@@ -24,7 +19,14 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	executionConf "github.com/snowfork/snowbridge/relayer/relays/execution"
+
+	"github.com/cbroglie/mustache"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	log "github.com/sirupsen/logrus"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -110,6 +112,9 @@ const (
 func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		endpoint, err := cmd.Flags().GetString("url")
+		if err != nil {
+			return err
+		}
 
 		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
 
@@ -123,7 +128,12 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		s := syncer.New(endpoint, conf.Source.Beacon.Spec)
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		store.Connect()
+		defer store.Close()
+
+		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
+		s := syncer.New(client, conf.Source.Beacon.Spec, &store)
 
 		checkPointScale, err := s.GetCheckpoint()
 		if err != nil {
@@ -172,8 +182,13 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		store.Connect()
+		defer store.Close()
+
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
-		s := syncer.New(endpoint, conf.Source.Beacon.Spec)
+		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
+		s := syncer.New(client, conf.Source.Beacon.Spec, &store)
 
 		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
 
@@ -468,8 +483,13 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 		specSettings := conf.Source.Beacon.Spec
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
 
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		store.Connect()
+		defer store.Close()
+
 		// generate executionUpdate
-		s := syncer.New(endpoint, specSettings)
+		client := api.NewBeaconClient(endpoint, specSettings.SlotsInEpoch)
+		s := syncer.New(client, specSettings, &store)
 		blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(beaconSlot))
 		if err != nil {
 			return fmt.Errorf("fetch block: %w", err)
@@ -647,8 +667,13 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		store.Connect()
+		defer store.Close()
+
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
-		s := syncer.New(endpoint, conf.Source.Beacon.Spec)
+		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
+		s := syncer.New(client, conf.Source.Beacon.Spec, &store)
 
 		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
 

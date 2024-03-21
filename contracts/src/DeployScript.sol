@@ -80,7 +80,8 @@ contract DeployScript is Script {
             assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: uint128(vm.envUint("CREATE_ASSET_FEE")),
             assetHubReserveTransferFee: uint128(vm.envUint("RESERVE_TRANSFER_FEE")),
-            exchangeRate: ud60x18(vm.envUint("EXCHANGE_RATE"))
+            exchangeRate: ud60x18(vm.envUint("EXCHANGE_RATE")),
+            multiplier: ud60x18(vm.envUint("FEE_MULTIPLIER"))
         });
 
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));

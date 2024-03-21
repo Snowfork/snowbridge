@@ -163,6 +163,7 @@ type BeaconState interface {
 	GetLatestBlockHeader() *BeaconBlockHeader
 	GetBlockRoots() [][]byte
 	GetTree() (*ssz.Node, error)
+	GetFinalizedCheckpoint() *Checkpoint
 }
 
 type SyncAggregate interface {
@@ -288,6 +289,14 @@ func (b *BeaconBlockCapellaMainnet) GetBlockBodyTree() (*ssz.Node, error) {
 	return b.Body.GetTree()
 }
 
+func (b *BeaconBlockCapellaMainnet) ExecutionPayloadCapella() *ExecutionPayloadCapella {
+	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockCapellaMainnet) ExecutionPayloadDeneb() *ExecutionPayloadDeneb {
+	return nil
+}
+
 func (b *BeaconStateCapellaMainnet) GetSlot() uint64 {
 	return b.Slot
 }
@@ -304,10 +313,6 @@ func (b *BeaconStateCapellaMainnet) SetBlockRoots(blockRoots [][]byte) {
 	b.BlockRoots = blockRoots
 }
 
-func (b *BeaconBlockCapellaMainnet) ExecutionPayloadCapella() *ExecutionPayloadCapella {
-	return b.Body.ExecutionPayload
-}
-
-func (b *BeaconBlockCapellaMainnet) ExecutionPayloadDeneb() *ExecutionPayloadDeneb {
-	return nil
+func (b *BeaconStateCapellaMainnet) GetFinalizedCheckpoint() *Checkpoint {
+	return b.FinalizedCheckpoint
 }
