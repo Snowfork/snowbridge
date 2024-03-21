@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"strings"
 
@@ -13,10 +11,12 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 )
 

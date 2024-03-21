@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"os"
 	"strconv"
 	"time"
@@ -20,6 +19,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	executionConf "github.com/snowfork/snowbridge/relayer/relays/execution"
 
 	"github.com/cbroglie/mustache"
