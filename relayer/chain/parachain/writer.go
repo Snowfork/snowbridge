@@ -5,14 +5,28 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
+
+	"github.com/ethereum/go-ethereum/common"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
+
+type ChainWriter interface {
+	BatchCall(ctx context.Context, extrinsic string, calls []interface{}) error
+	WriteToParachainAndRateLimit(ctx context.Context, extrinsicName string, payload ...interface{}) error
+	WriteToParachainAndWatch(ctx context.Context, extrinsicName string, payload ...interface{}) error
+	GetLastFinalizedHeaderState() (state.FinalizedHeader, error)
+	GetFinalizedStateByStorageKey(key string) (scale.BeaconState, error)
+	GetLastBasicChannelBlockNumber() (uint64, error)
+	GetLastBasicChannelNonceByAddress(address common.Address) (uint64, error)
+	GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state.FinalizedHeader, error)
+	GetLastFinalizedStateIndex() (types.U32, error)
+	GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error)
+}
 
 type ParachainWriter struct {
 	conn                 *Connection
@@ -131,105 +145,6 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 			return nil
 		}
 	}
-}
-
-func (wr *ParachainWriter) writeToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) (*author.ExtrinsicStatusSubscription, error) {
-	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
-	if err != nil {
-		return nil, err
-	}
-
-	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(*extI)
-	if err != nil {
-		return nil, err
-	}
-
-	return sub, nil
-}
-
-func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
-	key, err := types.CreateStorageKey(wr.conn.Metadata(), "System", "Account", wr.conn.Keypair().PublicKey, nil)
-	if err != nil {
-		return 0, err
-	}
-
-	var accountInfo types.AccountInfo
-	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &accountInfo)
-	if err != nil {
-		return 0, err
-	}
-	if !ok {
-		return 0, fmt.Errorf("no account info found for %s", wr.conn.Keypair().URI)
-	}
-
-	return uint32(accountInfo.Nonce), nil
-}
-
-func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName string, payload ...interface{}) (*types.Extrinsic, error) {
-	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
-	if err != nil {
-		return nil, err
-	}
-
-	c, err := types.NewCall(meta, extrinsicName, payload...)
-	if err != nil {
-		return nil, err
-	}
-
-	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
-	if err != nil {
-		return nil, err
-	}
-
-	latestBlock, err := wr.conn.API().RPC.Chain.GetBlock(latestHash)
-	if err != nil {
-		return nil, err
-	}
-
-	ext := types.NewExtrinsic(c)
-	era := NewMortalEra(uint64(latestBlock.Block.Header.Number))
-
-	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
-	if err != nil {
-		return nil, err
-	}
-
-	rv, err := wr.conn.API().RPC.State.GetRuntimeVersionLatest()
-	if err != nil {
-		return nil, err
-	}
-
-	o := types.SignatureOptions{
-		BlockHash:          latestHash,
-		Era:                era,
-		GenesisHash:        genesisHash,
-		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce)),
-		SpecVersion:        rv.SpecVersion,
-		Tip:                types.NewUCompactFromUInt(0),
-		TransactionVersion: rv.TransactionVersion,
-	}
-
-	extI := ext
-
-	err = extI.Sign(*wr.conn.Keypair(), o)
-	if err != nil {
-		return nil, err
-	}
-
-	return &extI, nil
-}
-
-func (wr *ParachainWriter) prepCall(extrinsicName string, payload ...interface{}) (*types.Call, error) {
-	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
-	if err != nil {
-		return nil, err
-	}
-
-	c, err := types.NewCall(meta, extrinsicName, payload...)
-	if err != nil {
-		return nil, err
-	}
-	return &c, nil
 }
 
 func (wr *ParachainWriter) GetLastBasicChannelBlockNumber() (uint64, error) {
@@ -356,6 +271,105 @@ func (wr *ParachainWriter) GetFinalizedHeaderStateByBlockRoot(blockRoot types.H2
 	}, nil
 }
 
+func (wr *ParachainWriter) writeToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) (*author.ExtrinsicStatusSubscription, error) {
+	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
+	if err != nil {
+		return nil, err
+	}
+
+	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(*extI)
+	if err != nil {
+		return nil, err
+	}
+
+	return sub, nil
+}
+
+func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "System", "Account", wr.conn.Keypair().PublicKey, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	var accountInfo types.AccountInfo
+	ok, err := wr.conn.API().RPC.State.GetStorageLatest(key, &accountInfo)
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		return 0, fmt.Errorf("no account info found for %s", wr.conn.Keypair().URI)
+	}
+
+	return uint32(accountInfo.Nonce), nil
+}
+
+func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName string, payload ...interface{}) (*types.Extrinsic, error) {
+	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := types.NewCall(meta, extrinsicName, payload...)
+	if err != nil {
+		return nil, err
+	}
+
+	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
+	if err != nil {
+		return nil, err
+	}
+
+	latestBlock, err := wr.conn.API().RPC.Chain.GetBlock(latestHash)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := types.NewExtrinsic(c)
+	era := NewMortalEra(uint64(latestBlock.Block.Header.Number))
+
+	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
+	if err != nil {
+		return nil, err
+	}
+
+	rv, err := wr.conn.API().RPC.State.GetRuntimeVersionLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	o := types.SignatureOptions{
+		BlockHash:          latestHash,
+		Era:                era,
+		GenesisHash:        genesisHash,
+		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce)),
+		SpecVersion:        rv.SpecVersion,
+		Tip:                types.NewUCompactFromUInt(0),
+		TransactionVersion: rv.TransactionVersion,
+	}
+
+	extI := ext
+
+	err = extI.Sign(*wr.conn.Keypair(), o)
+	if err != nil {
+		return nil, err
+	}
+
+	return &extI, nil
+}
+
+func (wr *ParachainWriter) prepCall(extrinsicName string, payload ...interface{}) (*types.Call, error) {
+	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := types.NewCall(meta, extrinsicName, payload...)
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
 func (wr *ParachainWriter) getHashFromParachain(pallet, storage string) (common.Hash, error) {
 	key, err := types.CreateStorageKey(wr.conn.Metadata(), pallet, storage, nil, nil)
 	if err != nil {
@@ -384,4 +398,71 @@ func (wr *ParachainWriter) getNumberFromParachain(pallet, storage string) (uint6
 	}
 
 	return uint64(number), nil
+}
+
+func (wr *ParachainWriter) GetLastFinalizedStateIndex() (types.U32, error) {
+	var index types.U32
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "FinalizedBeaconStateIndex", nil, nil)
+	if err != nil {
+		return index, fmt.Errorf("create storage key for FinalizedBeaconStateIndex: %w", err)
+	}
+
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &index)
+	if err != nil {
+		return index, fmt.Errorf("get storage for FinalizedBeaconStateIndex (err): %w", err)
+	}
+
+	return index, nil
+}
+
+func (wr *ParachainWriter) GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error) {
+	var beaconRoot types.H256
+	encodedIndex, err := types.EncodeToBytes(types.NewU32(index))
+	if err != nil {
+		return beaconRoot, fmt.Errorf("get finalized beacon root encode index error: %w", err)
+	}
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "FinalizedBeaconStateMapping", encodedIndex, nil)
+	if err != nil {
+		return beaconRoot, fmt.Errorf("create storage key for FinalizedBeaconStateMapping: %w", err)
+	}
+
+	_, err = wr.conn.API().RPC.State.GetStorageLatest(key, &beaconRoot)
+	if err != nil {
+		return beaconRoot, fmt.Errorf("get storage for FinalizedBeaconStateMapping (err): %w", err)
+	}
+
+	return beaconRoot, nil
+}
+
+func (wr *ParachainWriter) FindCheckPointBackward(slot uint64) (state.FinalizedHeader, error) {
+	var beaconState state.FinalizedHeader
+	lastIndex, err := wr.GetLastFinalizedStateIndex()
+	if err != nil {
+		return beaconState, fmt.Errorf("GetLastFinalizedStateIndex error: %w", err)
+	}
+	startIndex := uint32(lastIndex)
+	endIndex := uint32(0)
+	if lastIndex > 256 {
+		endIndex = endIndex - 256
+	}
+	for index := startIndex; index >= endIndex; index-- {
+		beaconRoot, err := wr.GetFinalizedBeaconRootByIndex(index)
+		if err != nil {
+			return beaconState, fmt.Errorf("GetFinalizedBeaconRootByIndex %d, error: %w", index, err)
+		}
+		beaconState, err = wr.GetFinalizedHeaderStateByBlockRoot(beaconRoot)
+		if err != nil {
+			return beaconState, fmt.Errorf("GetFinalizedHeaderStateByBlockRoot %s, error: %w", beaconRoot.Hex(), err)
+		}
+		if beaconState.BeaconSlot < slot {
+			break
+		}
+		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+8192 {
+			break
+		}
+	}
+	if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+8192 {
+		return beaconState, nil
+	}
+	return beaconState, fmt.Errorf("Can't find checkpoint on chain for slot %d", slot)
 }

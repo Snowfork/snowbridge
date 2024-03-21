@@ -11,6 +11,8 @@ import (
 )
 
 func TestConnect(t *testing.T) {
+	t.Skip("skip testing utility test")
+	
 	conn := relaychain.NewConnection("ws://127.0.0.1:9944/")
 	err := conn.Connect(context.Background())
 	if err != nil {

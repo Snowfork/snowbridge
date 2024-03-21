@@ -2,11 +2,15 @@ package beacon
 
 import (
 	"context"
-	log "github.com/sirupsen/logrus"
+
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
+
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -47,10 +51,16 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
+	store := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries)
+	store.Connect()
+	defer store.Close()
+
+	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint, specSettings.SlotsInEpoch)
 	headers := header.New(
 		writer,
-		r.config.Source.Beacon.Endpoint,
+		beaconAPI,
 		specSettings,
+		&store,
 	)
 
 	return headers.Sync(ctx, eg)

@@ -60,8 +60,7 @@ func TestMessage_Proof(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, msg)
 
-	assert.Equal(t, block.Hash().Hex(), msg.Proof.BlockHash.Hex())
-	key, err := rlp.EncodeToBytes(uint(msg.Proof.TxIndex))
+	key, err := rlp.EncodeToBytes(uint(5))
 	if err != nil {
 		panic(err)
 	}

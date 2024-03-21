@@ -9,11 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cbroglie/mustache"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	log "github.com/sirupsen/logrus"
-	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/cmd/run/execution"
@@ -24,7 +19,14 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	executionConf "github.com/snowfork/snowbridge/relayer/relays/execution"
+
+	"github.com/cbroglie/mustache"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	log "github.com/sirupsen/logrus"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -96,6 +98,9 @@ const (
 func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		endpoint, err := cmd.Flags().GetString("url")
+		if err != nil {
+			return err
+		}
 
 		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
 
@@ -109,7 +114,12 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		s := syncer.New(endpoint, conf.Source.Beacon.Spec)
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		store.Connect()
+		defer store.Close()
+
+		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
+		s := syncer.New(client, conf.Source.Beacon.Spec, &store)
 
 		checkPointScale, err := s.GetCheckpoint()
 		if err != nil {
@@ -158,8 +168,13 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		store.Connect()
+		defer store.Close()
+
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
-		s := syncer.New(endpoint, conf.Source.Beacon.Spec)
+		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
+		s := syncer.New(client, conf.Source.Beacon.Spec, &store)
 
 		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
 
@@ -504,8 +519,13 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 		specSettings := conf.Source.Beacon.Spec
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
 
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		store.Connect()
+		defer store.Close()
+
 		// generate executionUpdate
-		s := syncer.New(endpoint, specSettings)
+		client := api.NewBeaconClient(endpoint, specSettings.SlotsInEpoch)
+		s := syncer.New(client, specSettings, &store)
 		blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(beaconSlot))
 		if err != nil {
 			return fmt.Errorf("fetch block: %w", err)
@@ -661,4 +681,173 @@ func getFinalizedUpdate(s syncer.Syncer, eventBlockNumber uint64) (*scale.Update
 	}
 
 	return &finalizedUpdate, nil
+}
+
+func generateInboundFixture(cmd *cobra.Command, _ []string) error {
+	err := func() error {
+		ctx := context.Background()
+
+		endpoint, err := cmd.Flags().GetString("url")
+		if err != nil {
+			return err
+		}
+
+		viper.SetConfigFile("/tmp/snowbridge/beacon-relay.json")
+		if err = viper.ReadInConfig(); err != nil {
+			return err
+		}
+
+		var conf beaconConf.Config
+		err = viper.Unmarshal(&conf)
+		if err != nil {
+			return err
+		}
+
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		store.Connect()
+		defer store.Close()
+
+		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
+		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
+		s := syncer.New(client, conf.Source.Beacon.Spec, &store)
+
+		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
+
+		if err = viper.ReadInConfig(); err != nil {
+			return err
+		}
+
+		var executionConfig executionConf.Config
+		err = viper.Unmarshal(&executionConfig, viper.DecodeHook(execution.HexHookFunc()))
+		if err != nil {
+			return fmt.Errorf("unable to parse execution relay config: %w", err)
+		}
+
+		ethconn := ethereum.NewConnection(&executionConfig.Source.Ethereum, nil)
+		err = ethconn.Connect(ctx)
+		if err != nil {
+			return err
+		}
+
+		headerCache, err := ethereum.NewHeaderBlockCache(
+			&ethereum.DefaultBlockLoader{Conn: ethconn},
+		)
+		if err != nil {
+			return err
+		}
+
+		// get inbound message data start
+		channelID := executionConfig.Source.ChannelID
+		address := common.HexToAddress(executionConfig.Source.Contracts.Gateway)
+		gatewayContract, err := contracts.NewGateway(address, ethconn.Client())
+		if err != nil {
+			return err
+		}
+		nonce, err := cmd.Flags().GetUint32("nonce")
+		if err != nil {
+			return err
+		}
+		event, err := getEthereumEvent(ctx, gatewayContract, channelID, nonce)
+		if err != nil {
+			return err
+		}
+		receiptTrie, err := headerCache.GetReceiptTrie(ctx, event.Raw.BlockHash)
+		if err != nil {
+			return err
+		}
+		inboundMessage, err := ethereum.MakeMessageFromEvent(&event.Raw, receiptTrie)
+		if err != nil {
+			return err
+		}
+		messageBlockNumber := event.Raw.BlockNumber
+
+		log.WithFields(log.Fields{
+			"message":     inboundMessage,
+			"blockHash":   event.Raw.BlockHash.Hex(),
+			"blockNumber": messageBlockNumber,
+		}).Info("event is at block")
+
+		finalizedUpdateAfterMessage, err := getFinalizedUpdate(*s, messageBlockNumber)
+		if err != nil {
+			return err
+		}
+
+		finalizedHeaderSlot := uint64(finalizedUpdateAfterMessage.Payload.FinalizedHeader.Slot)
+
+		beaconBlock, blockNumber, err := getBeaconBlockContainingExecutionHeader(*s, messageBlockNumber, finalizedHeaderSlot)
+		if err != nil {
+			return fmt.Errorf("get beacon block containing header: %w", err)
+		}
+
+		beaconBlockSlot, err := strconv.ParseUint(beaconBlock.Data.Message.Slot, 10, 64)
+		if err != nil {
+			return err
+		}
+
+		if blockNumber == messageBlockNumber {
+			log.WithFields(log.Fields{
+				"slot":        beaconBlock.Data.Message.Slot,
+				"blockHash":   beaconBlock.Data.Message.Body.ExecutionPayload.BlockHash,
+				"blockNumber": blockNumber,
+			}).WithError(err).Info("found execution header containing event")
+		}
+
+		checkPoint := cache.Proof{
+			FinalizedBlockRoot: finalizedUpdateAfterMessage.FinalizedHeaderBlockRoot,
+			BlockRootsTree:     finalizedUpdateAfterMessage.BlockRootsTree,
+			Slot:               uint64(finalizedUpdateAfterMessage.Payload.FinalizedHeader.Slot),
+		}
+		headerUpdateScale, err := s.GetHeaderUpdateBySlotWithCheckpoint(beaconBlockSlot, &checkPoint)
+		if err != nil {
+			return fmt.Errorf("get header update: %w", err)
+		}
+		inboundMessage.Proof.ExecutionProof = headerUpdateScale
+		headerUpdate := headerUpdateScale.ToJSON()
+
+		log.WithField("blockNumber", blockNumber).Info("found beacon block by slot")
+
+		messageJSON := inboundMessage.ToJSON()
+
+		finalizedUpdate := finalizedUpdateAfterMessage.Payload.ToJSON()
+
+		finalizedUpdate.RemoveLeadingZeroHashes()
+		headerUpdate.RemoveLeadingZeroHashes()
+		messageJSON.RemoveLeadingZeroHashes()
+
+		// writing inbound fixture by test case
+		testCase, err := cmd.Flags().GetString("test_case")
+		if err != nil {
+			return err
+		}
+		if testCase != "register_token" && testCase != "send_token" && testCase != "send_token_to_penpal" {
+			return fmt.Errorf("invalid test case: %s", testCase)
+		}
+
+		data := Data{
+			FinalizedHeaderUpdate: finalizedUpdate,
+			HeaderUpdate:          headerUpdate,
+			InboundMessage:        messageJSON,
+			TestCase:              testCase,
+		}
+
+		rendered, err := mustache.RenderFile(pathToInboundQueueFixtureTestCaseTemplate, data)
+		if err != nil {
+			return fmt.Errorf("render inbound queue benchmark fixture: %w", err)
+		}
+
+		pathToInboundQueueFixtureTestCaseData := fmt.Sprintf(pathToInboundQueueFixtureTestCaseData, testCase)
+		err = writeRawDataFile(fmt.Sprintf("%s", pathToInboundQueueFixtureTestCaseData), rendered)
+		if err != nil {
+			return err
+		}
+
+		log.Info("done")
+
+		return nil
+	}()
+	if err != nil {
+		log.WithError(err).Error("error generating beacon data")
+	}
+
+	return nil
 }
