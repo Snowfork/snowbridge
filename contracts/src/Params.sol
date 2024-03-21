@@ -82,3 +82,11 @@ struct SetPricingParametersParams {
     /// @dev Fee multiplier
     UD60x18 multiplier;
 }
+
+// Payload for SetSafeCalls
+struct SetSafeCallsParams {
+    /// @dev The target contract
+    address target;
+    /// @dev The selector of the function
+    bytes4[] selectors;
+}

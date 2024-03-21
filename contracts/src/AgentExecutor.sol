@@ -7,21 +7,26 @@ import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
+import {Call} from "./utils/Call.sol";
 
 /// @title Code which will run within an `Agent` using `delegatecall`.
 /// @dev This is a singleton contract, meaning that all agents will execute the same code.
 contract AgentExecutor {
     using SafeTokenTransfer for IERC20;
     using SafeNativeTransfer for address payable;
+    using Call for address;
 
     /// @dev Execute a message which originated from the Polkadot side of the bridge. In other terms,
     /// the `data` parameter is constructed by the BridgeHub parachain.
     ///
-    function execute(bytes memory data) external {
-        (AgentExecuteCommand command, bytes memory params) = abi.decode(data, (AgentExecuteCommand, bytes));
+    function execute(AgentExecuteCommand command, bytes memory params) external {
         if (command == AgentExecuteCommand.TransferToken) {
             (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
             _transferToken(token, recipient, amount);
+        }
+        if (command == AgentExecuteCommand.Transact) {
+            (address target, bytes memory payload, uint64 dynamicGas) = abi.decode(params, (address, bytes, uint64));
+            _executeCall(target, payload, dynamicGas);
         }
     }
 
@@ -35,5 +40,11 @@ contract AgentExecutor {
     /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
     function _transferToken(address token, address recipient, uint128 amount) internal {
         IERC20(token).safeTransfer(recipient, amount);
+    }
+
+    /// @dev Call a contract at the given address, with provided bytes as payload.
+    function _executeCall(address target, bytes memory payload, uint64 dynamicGas) internal returns (bytes memory) {
+        (bool success, bytes memory data) = target.excessivelySafeCall(dynamicGas, 0, 256, payload);
+        return Call.verifyResult(success, data);
     }
 }
