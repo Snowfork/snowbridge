@@ -90,6 +90,7 @@ contract GatewayTest is Test {
 
     // ETH/DOT exchange rate
     UD60x18 public exchangeRate = ud60x18(0.0025e18);
+    UD60x18 public multiplier = ud60x18(1e18);
 
     function setUp() public {
         AgentExecutor executor = new AgentExecutor();
@@ -103,7 +104,8 @@ contract GatewayTest is Test {
             assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
-            exchangeRate: exchangeRate
+            exchangeRate: exchangeRate,
+            multiplier: multiplier
         });
         gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
         GatewayMock(address(gateway)).setCommitmentsAreVerified(true);
@@ -483,7 +485,7 @@ contract GatewayTest is Test {
         assertEq(GatewayV2(address(gateway)).getValue(), 42);
     }
 
-    function testUgradeInitializerRunsOnlyOnce() public {
+    function testUpgradeInitializerRunsOnlyOnce() public {
         // Upgrade to this current logic contract
         AgentExecutor executor = new AgentExecutor();
         GatewayMock currentLogic =
@@ -497,7 +499,8 @@ contract GatewayTest is Test {
             assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
-            exchangeRate: exchangeRate
+            exchangeRate: exchangeRate,
+            multiplier: multiplier
         });
 
         UpgradeParams memory params = UpgradeParams({
@@ -516,7 +519,7 @@ contract GatewayTest is Test {
 
         testSetPricingParameters();
         uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
-        assertEq(fee, 10000000000000000);
+        assertEq(fee, 20000000000000001);
 
         testCreateAgent();
         assertNotEq(GatewayMock(address(gateway)).agentOf(agentID), address(0));
@@ -538,7 +541,7 @@ contract GatewayTest is Test {
 
         // Verify that storage was not overwritten
         fee = IGateway(address(gateway)).quoteRegisterTokenFee();
-        assertEq(fee, 10000000000000000);
+        assertEq(fee, 20000000000000001);
         assertNotEq(GatewayMock(address(gateway)).agentOf(agentID), address(0));
     }
 
@@ -875,14 +878,19 @@ contract GatewayTest is Test {
     function testSetPricingParameters() public {
         uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         assertEq(fee, 5000000000000000);
-        // Double the exchangeRate
+        // Double both the exchangeRate and multiplier. Should lead to an 4x fee increase
         GatewayMock(address(gateway)).setPricingParametersPublic(
             abi.encode(
-                SetPricingParametersParams({exchangeRate: exchangeRate.mul(convert(2)), deliveryCost: outboundFee})
+                SetPricingParametersParams({
+                    exchangeRate: exchangeRate.mul(convert(2)),
+                    multiplier: multiplier.mul(convert(2)),
+                    deliveryCost: outboundFee
+                })
             )
         );
+        // Should expect 4x fee increase
         fee = IGateway(address(gateway)).quoteRegisterTokenFee();
-        assertEq(fee, 10000000000000000);
+        assertEq(fee, 20000000000000001);
     }
 
     function testSendTokenToForeignDestWithInvalidFee() public {
