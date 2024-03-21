@@ -24,6 +24,20 @@ var (
 	UnmarshalBodyErrorMessage          = "unmarshal body"
 )
 
+type BeaconAPI interface {
+	GetBootstrap(blockRoot common.Hash) (BootstrapResponse, error)
+	GetGenesis() (Genesis, error)
+	GetFinalizedCheckpoint() (FinalizedCheckpoint, error)
+	GetHeaderBySlot(slot uint64) (BeaconHeader, error)
+	GetHeader(blockRoot common.Hash) (BeaconHeader, error)
+	GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, error)
+	GetBeaconBlockRoot(slot uint64) (common.Hash, error)
+	GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse, error)
+	GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdateResponse, error)
+	GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error)
+	GetBeaconState(stateIdOrSlot string) ([]byte, error)
+}
+
 type BeaconClient struct {
 	httpClient   http.Client
 	endpoint     string
@@ -310,6 +324,36 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	return common.HexToHash(response.Data.Root), nil
 }
 
+func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse, error) {
+	var beaconBlockResponse BeaconBlockResponse
+
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint, blockID), nil)
+	if err != nil {
+		return beaconBlockResponse, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
+	}
+
+	req.Header.Add("Accept", "application/json")
+	res, err := b.httpClient.Do(req)
+	if err != nil {
+		return beaconBlockResponse, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return beaconBlockResponse, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
+	}
+
+	bodyBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return beaconBlockResponse, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
+	}
+
+	err = json.Unmarshal(bodyBytes, &beaconBlockResponse)
+	if err != nil {
+		return beaconBlockResponse, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
+	}
+	return beaconBlockResponse, nil
+}
+
 func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdateResponse, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/updates?start_period=%d&count=1", b.endpoint, from), nil)
 	if err != nil {
@@ -392,7 +436,7 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 	return response, nil
 }
 
-func (b *BeaconClient) DownloadBeaconState(stateIdOrSlot string) ([]byte, error) {
+func (b *BeaconClient) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 	var data []byte
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.endpoint, stateIdOrSlot), nil)
 	if err != nil {
@@ -417,34 +461,4 @@ func (b *BeaconClient) DownloadBeaconState(stateIdOrSlot string) ([]byte, error)
 	buf.ReadFrom(res.Body)
 	data = buf.Bytes()
 	return data, nil
-}
-
-func (b *BeaconClient) GetBeaconBlockResponse(blockID common.Hash) (BeaconBlockResponse, error) {
-	var beaconBlockResponse BeaconBlockResponse
-
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint, blockID), nil)
-	if err != nil {
-		return beaconBlockResponse, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
-	}
-
-	req.Header.Add("Accept", "application/json")
-	res, err := b.httpClient.Do(req)
-	if err != nil {
-		return beaconBlockResponse, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return beaconBlockResponse, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
-	}
-
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return beaconBlockResponse, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
-	}
-
-	err = json.Unmarshal(bodyBytes, &beaconBlockResponse)
-	if err != nil {
-		return beaconBlockResponse, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
-	}
-	return beaconBlockResponse, nil
 }
