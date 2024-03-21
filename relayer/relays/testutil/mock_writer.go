@@ -3,6 +3,7 @@ package testutil
 import (
 	"context"
 	"fmt"
+
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
@@ -12,10 +13,6 @@ import (
 
 type MockWriter struct {
 	LastFinalizedState state.FinalizedHeader
-}
-
-func (m *MockWriter) GetCompactExecutionHeaderStateByBlockHash(blockHash types.H256) (state.CompactExecutionHeaderState, error) {
-	return state.CompactExecutionHeaderState{}, nil
 }
 
 func (m *MockWriter) GetLastFinalizedStateIndex() (types.U32, error) {

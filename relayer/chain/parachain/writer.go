@@ -24,7 +24,6 @@ type ChainWriter interface {
 	GetLastBasicChannelBlockNumber() (uint64, error)
 	GetLastBasicChannelNonceByAddress(address common.Address) (uint64, error)
 	GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state.FinalizedHeader, error)
-	GetCompactExecutionHeaderStateByBlockHash(blockHash types.H256) (state.CompactExecutionHeaderState, error)
 	GetLastFinalizedStateIndex() (types.U32, error)
 	GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error)
 }
