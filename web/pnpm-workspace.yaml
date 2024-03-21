@@ -1,5 +1,7 @@
 packages:
   - "packages/test"
   - "packages/api"
+  - "packages/ui"
   - "packages/contract-types"
   - "packages/test-helpers"
+  - "packages/operations"

@@ -3,7 +3,7 @@
 (2) 0x0a917066d306f09670e47729bfd4384f4afcac98493c65b9733870a434d71f29
 (3) 0xff45ae2a6c4899294e898a171e15de8a4d2557852378364f8684c6a1520ccd7d
 (4) 0x27ae0c7b8d7c698e41b173265490a4c64b4e39ae78599166e003f868f12140fd
-(5) 0xf9d99a8f29860f6c42714013bae3cf5e833966bf11817f7650a351790e502a4 // used for local testing for parachain relay penpal
+(5) 0xf9d99a8f29860f6c42714013bae3cf5e833966bf11817f7650a351790e502a45 // used for local testing for parachain relay penpal
 (6) 0x3646505e08a0f3a61417d91db18f2911b2d17c01563044f3e2f106bf36679a6a // used for local testing for parachain relay asset hub
 (7) 0xe699de86629f0e795b27e26b33c343876f9282c821a62086b21aef0baa7d7ca7 // used for local testing for parachain relay secondary gov
 (8) 0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a // used for local testing for parachain relay primary gov

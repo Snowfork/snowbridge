@@ -1,0 +1,11 @@
+.App {
+  margin: auto;
+  width: 60%;
+  padding: 10px; 
+}
+
+form {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  grid-gap: 1em;
+}
