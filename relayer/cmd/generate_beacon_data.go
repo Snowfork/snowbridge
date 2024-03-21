@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
-
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/cmd/run/execution"
