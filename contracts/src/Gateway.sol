@@ -463,24 +463,22 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // Convert foreign currency to native currency (ROC/KSM/DOT -> ETH)
-    function _convertToNative(UD60x18 exchangeRate, UD60x18 amount) internal view returns (uint256) {
+    function _convertToNative(UD60x18 exchangeRate, UD60x18 multiplier, UD60x18 amount)
+        internal
+        view
+        returns (uint256)
+    {
         UD60x18 ethDecimals = convert(1e18);
         UD60x18 foreignDecimals = convert(10).pow(convert(uint256(FOREIGN_TOKEN_DECIMALS)));
-        UD60x18 nativeAmount = amount.mul(exchangeRate).div(foreignDecimals).mul(ethDecimals);
+        UD60x18 nativeAmount = multiplier.mul(amount).mul(exchangeRate).div(foreignDecimals).mul(ethDecimals);
         return convert(nativeAmount);
     }
 
     // Calculate the fee for accepting an outbound message
     function _calculateFee(Costs memory costs) internal view returns (uint256) {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
-
-        // The exchange rate and amount are both multiplied by `multiplier` to add a safety margin
-        // * `exchangeRate` is subject to real-world fluctuations
-        // * `amount` includes XCM execution fees in Polkadot that are also subject to fluctuations
-        UD60x18 exchangeRate = pricing.multiplier.mul(pricing.exchangeRate);
-        UD60x18 amount = pricing.multiplier.mul(convert(pricing.deliveryCost + costs.foreign));
-
-        return costs.native + _convertToNative(exchangeRate, amount);
+        UD60x18 amount = convert(pricing.deliveryCost + costs.foreign);
+        return costs.native + _convertToNative(pricing.exchangeRate, pricing.multiplier, amount);
     }
 
     // Submit an outbound message to Polkadot, after taking fees
