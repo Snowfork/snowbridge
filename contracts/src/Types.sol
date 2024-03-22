@@ -109,6 +109,7 @@ struct Ticket {
 
 struct TokenInfo {
     bool isRegistered;
+    bool isForeign;
     bytes32 tokenID;
     bytes32 agentID;
     address token;

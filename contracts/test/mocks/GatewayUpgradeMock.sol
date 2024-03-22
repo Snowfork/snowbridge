@@ -7,6 +7,7 @@ import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 import {Verification} from "../../src/Verification.sol";
 import {UD60x18, convert} from "prb/math/src/UD60x18.sol";
+import {TokenInfo} from "../../src/storage/AssetsStorage.sol";
 
 contract GatewayUpgradeMock is IGateway, IInitializable {
     /**
@@ -61,4 +62,18 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
     function pricingParameters() external pure returns (UD60x18, uint128) {
         return (convert(0), uint128(0));
     }
+
+    function getTokenInfo(bytes32) external pure returns (TokenInfo memory) {
+        TokenInfo memory info =
+            TokenInfo({isRegistered: true, isForeign: true, tokenID: 0x0, agentID: 0x0, token: address(0x0)});
+        return info;
+    }
+
+    function transferToken(
+        address token,
+        ParaID destinationChain,
+        MultiAddress calldata destinationAddress,
+        uint128 destinationFee,
+        uint128 amount
+    ) external payable {}
 }

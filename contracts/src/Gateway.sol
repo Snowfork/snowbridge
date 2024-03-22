@@ -452,6 +452,25 @@ contract Gateway is IGateway, IInitializable {
         );
     }
 
+    // Transfer polkadot native tokens back
+    function transferToken(
+        address token,
+        ParaID destinationChain,
+        MultiAddress calldata destinationAddress,
+        uint128 destinationFee,
+        uint128 amount
+    ) external payable {
+        _submitOutbound(
+            Assets.transferToken(
+                AGENT_EXECUTOR, token, msg.sender, destinationChain, destinationAddress, destinationFee, amount
+            )
+        );
+    }
+
+    function getTokenInfo(bytes32 tokenID) external view returns (TokenInfo memory) {
+        return Assets.getTokenInfo(tokenID);
+    }
+
     /**
      * Internal functions
      */

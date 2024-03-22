@@ -133,4 +133,42 @@ library SubstrateTypes {
             ScaleCodec.encodeU128(xcmFee)
         );
     }
+
+    // destination is AccountID32 address
+    function TransferTokenToAddress32(address token, ParaID paraID, bytes32 recipient, uint128 xcmFee, uint128 amount)
+        internal
+        view
+        returns (bytes memory)
+    {
+        return bytes.concat(
+            bytes1(0x00),
+            ScaleCodec.encodeU64(uint64(block.chainid)),
+            bytes1(0x02),
+            SubstrateTypes.H160(token),
+            bytes1(0x01),
+            ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
+            recipient,
+            ScaleCodec.encodeU128(xcmFee),
+            ScaleCodec.encodeU128(amount)
+        );
+    }
+
+    // destination is AccountID20 address
+    function TransferTokenToAddress20(address token, ParaID paraID, bytes20 recipient, uint128 xcmFee, uint128 amount)
+        internal
+        view
+        returns (bytes memory)
+    {
+        return bytes.concat(
+            bytes1(0x00),
+            ScaleCodec.encodeU64(uint64(block.chainid)),
+            bytes1(0x02),
+            SubstrateTypes.H160(token),
+            bytes1(0x02),
+            ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
+            recipient,
+            ScaleCodec.encodeU128(xcmFee),
+            ScaleCodec.encodeU128(amount)
+        );
+    }
 }

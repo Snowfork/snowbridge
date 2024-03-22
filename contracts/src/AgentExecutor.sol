@@ -10,6 +10,7 @@ import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {ERC20} from "./ERC20.sol";
 import {Gateway} from "./Gateway.sol";
 import {Assets} from "./Assets.sol";
+import {TokenInfo} from "./storage/AssetsStorage.sol";
 
 /// @title Code which will run within an `Agent` using `delegatecall`.
 /// @dev This is a singleton contract, meaning that all agents will execute the same code.
@@ -19,6 +20,8 @@ contract AgentExecutor {
 
     // Emitted when token minted
     event TokenMinted(bytes32 indexed tokenID, address token, address recipient, uint256 amount);
+    // Emitted when token burnt
+    event TokenBurnt(bytes32 indexed tokenID, address token, address sender, uint256 amount);
 
     /// @dev Execute a message which originated from the Polkadot side of the bridge. In other terms,
     /// the `data` parameter is constructed by the BridgeHub parachain.
@@ -65,8 +68,16 @@ contract AgentExecutor {
 
     /// @dev Mint ERC20 token to `recipient`.
     function _mintToken(bytes32 tokenID, address recipient, uint256 amount) internal {
-        address token = Assets.getTokenAddress(tokenID);
+        TokenInfo memory info = Assets.getTokenInfo(tokenID);
+        address token = info.token;
         ERC20(token).mint(recipient, amount);
         emit TokenMinted(tokenID, token, recipient, amount);
+    }
+
+    function burnToken(bytes32 tokenID, address sender, uint256 amount) external {
+        TokenInfo memory info = Assets.getTokenInfo(tokenID);
+        address token = info.token;
+        ERC20(token).burn(sender, amount);
+        emit TokenBurnt(tokenID, token, sender, amount);
     }
 }

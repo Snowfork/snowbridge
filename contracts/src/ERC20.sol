@@ -89,10 +89,17 @@ contract ERC20 is IERC20, IERC20Permit {
      *
      * Requirements:
      *
-     * - `to` cannot be the zero address.
+     * - `account` cannot be the zero address.
      */
     function mint(address account, uint256 amount) external virtual onlyOwner {
         _mint(account, amount);
+    }
+
+    /**
+     * @dev Destroys `amount` tokens from the account.
+     */
+    function burn(address account, uint256 amount) external virtual onlyOwner {
+        _burn(account, amount);
     }
 
     /**

@@ -8,9 +8,14 @@ import {IGateway} from "./interfaces/IGateway.sol";
 import {SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
 
 import {AssetsStorage, TokenInfo} from "./storage/AssetsStorage.sol";
+import {CoreStorage} from "./storage/CoreStorage.sol";
+
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 import {ParaID, MultiAddress, Ticket, Costs} from "./Types.sol";
 import {Address} from "./utils/Address.sol";
+import {AgentExecutor} from "./AgentExecutor.sol";
+import {Agent} from "./Agent.sol";
+import {Call} from "./utils/Call.sol";
 
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
 library Assets {
@@ -25,6 +30,7 @@ library Assets {
     error Unsupported();
     error InvalidDestinationFee();
     error TokenAlreadyRegistered();
+    error AgentDoesNotExist();
 
     function isTokenRegistered(address token) external view returns (bool) {
         return AssetsStorage.layout().tokenRegistry[token].isRegistered;
@@ -87,6 +93,9 @@ library Assets {
         TokenInfo storage info = $.tokenRegistry[token];
         if (!info.isRegistered) {
             revert TokenNotRegistered();
+        }
+        if (info.isForeign) {
+            revert InvalidToken();
         }
 
         // Lock the funds into AssetHub's agent contract
@@ -182,18 +191,84 @@ library Assets {
         if ($.tokenRegistryByID[tokenID].isRegistered == true) {
             revert TokenAlreadyRegistered();
         }
-        TokenInfo memory info = TokenInfo({isRegistered: true, tokenID: tokenID, agentID: agentID, token: token});
+        TokenInfo memory info =
+            TokenInfo({isRegistered: true, isForeign: true, tokenID: tokenID, agentID: agentID, token: token});
         $.tokenRegistry[token] = info;
         $.tokenRegistryByID[tokenID] = info;
         emit IGateway.TokenRegistered(tokenID, agentID, token);
     }
 
     // @dev Get token address by tokenID
-    function getTokenAddress(bytes32 tokenID) internal view returns (address) {
+    function getTokenInfo(bytes32 tokenID) internal view returns (TokenInfo memory) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenRegistryByID[tokenID].isRegistered == false) {
             revert TokenNotRegistered();
         }
-        return $.tokenRegistryByID[tokenID].token;
+        return $.tokenRegistryByID[tokenID];
+    }
+
+    // @dev Transfer polkadot native tokens back
+    function transferToken(
+        address executor,
+        address token,
+        address sender,
+        ParaID destinationChain,
+        MultiAddress calldata destinationAddress,
+        uint128 destinationChainFee,
+        uint128 amount
+    ) internal returns (Ticket memory ticket) {
+        AssetsStorage.Layout storage $asset = AssetsStorage.layout();
+
+        TokenInfo storage info = $asset.tokenRegistry[token];
+        if (!info.isRegistered) {
+            revert TokenNotRegistered();
+        }
+        if (!info.isForeign) {
+            revert InvalidToken();
+        }
+
+        CoreStorage.Layout storage $core = CoreStorage.layout();
+
+        address agent = $core.agents[info.agentID];
+        if (agent == address(0)) {
+            revert AgentDoesNotExist();
+        }
+
+        // Polkadot-native token: burn wrapped token
+        _burn(executor, agent, info.tokenID, sender, amount);
+
+        if (destinationChainFee == 0) {
+            revert InvalidDestinationFee();
+        }
+
+        ticket.dest = destinationChain;
+        ticket.costs = _transferTokenCosts(destinationChainFee);
+
+        if (destinationAddress.isAddress32()) {
+            // The receiver has a 32-byte account ID
+            ticket.payload = SubstrateTypes.TransferTokenToAddress32(
+                token, destinationChain, destinationAddress.asAddress32(), destinationChainFee, amount
+            );
+        } else if (destinationAddress.isAddress20()) {
+            // The receiver has a 20-byte account ID
+            ticket.payload = SubstrateTypes.TransferTokenToAddress20(
+                token, destinationChain, destinationAddress.asAddress20(), destinationChainFee, amount
+            );
+        } else {
+            revert Unsupported();
+        }
+
+        emit IGateway.TokenTransfered(token, sender, destinationChain, destinationAddress, amount);
+    }
+
+    function _burn(address agentExecutor, address agent, bytes32 tokenID, address sender, uint256 amount) internal {
+        bytes memory call = abi.encodeCall(AgentExecutor.burnToken, (tokenID, sender, amount));
+        (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(agentExecutor, call));
+        Call.verifyResult(success, returndata);
+    }
+
+    function _transferTokenCosts(uint128 destinationChainFee) internal pure returns (Costs memory costs) {
+        costs.foreign = destinationChainFee;
+        costs.native = 0;
     }
 }

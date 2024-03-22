@@ -22,6 +22,7 @@ import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 import {PricingStorage} from "../src/storage/PricingStorage.sol";
+import {TokenInfo} from "../src/storage/AssetsStorage.sol";
 
 import {
     UpgradeParams,
@@ -95,6 +96,9 @@ contract GatewayTest is Test {
     UD60x18 public exchangeRate = ud60x18(0.0025e18);
     UD60x18 public multiplier = ud60x18(1e18);
 
+    // tokenID for DOT
+    bytes32 public dotTokenID;
+
     function setUp() public {
         AgentExecutor executor = new AgentExecutor();
         gatewayLogic =
@@ -138,6 +142,8 @@ contract GatewayTest is Test {
 
         recipientAddress32 = multiAddressFromBytes32(keccak256("recipient"));
         recipientAddress20 = multiAddressFromBytes20(bytes20(keccak256("recipient")));
+
+        dotTokenID = bytes32(uint256(1));
     }
 
     function makeCreateAgentCommand() public pure returns (Command, bytes memory) {
@@ -913,10 +919,10 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, 0, 1);
     }
 
-    function testAgentRegisterToken() public {
+    function testAgentRegisterDot() public {
         AgentExecuteParams memory params = AgentExecuteParams({
             agentID: assetHubAgentID,
-            payload: abi.encode(AgentExecuteCommand.RegisterToken, abi.encode(bytes32(uint256(1)), "DOT", "DOT", 10))
+            payload: abi.encode(AgentExecuteCommand.RegisterToken, abi.encode(dotTokenID, "DOT", "DOT", 10))
         });
 
         vm.expectEmit(true, true, false, false);
@@ -925,8 +931,8 @@ contract GatewayTest is Test {
         GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
 
-    function testAgentMintToken() public {
-        testAgentRegisterToken();
+    function testAgentMintDot() public {
+        testAgentRegisterDot();
 
         AgentExecuteParams memory params = AgentExecuteParams({
             agentID: assetHubAgentID,
@@ -937,5 +943,27 @@ contract GatewayTest is Test {
         emit TokenMinted(bytes32(uint256(1)), address(0), account1, 1000);
 
         GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
+    }
+
+    function testTransferDotToAssetHub() public {
+        // Register and then mint some DOT to account1
+        testAgentMintDot();
+
+        TokenInfo memory info = IGateway(address(gateway)).getTokenInfo(dotTokenID);
+
+        ParaID destPara = assetHubParaID;
+
+        vm.prank(account1);
+
+        vm.expectEmit(true, true, false, true);
+        emit IGateway.TokenTransfered(address(info.token), account1, destPara, recipientAddress32, 1);
+
+        // Expect the gateway to emit `OutboundMessageAccepted`
+        vm.expectEmit(true, false, false, false);
+        emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
+
+        IGateway(address(gateway)).transferToken{value: 0.1 ether}(
+            address(info.token), destPara, recipientAddress32, 1, 1
+        );
     }
 }
