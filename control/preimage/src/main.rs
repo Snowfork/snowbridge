@@ -4,7 +4,6 @@ mod relay_runtime;
 mod commands;
 mod helpers;
 mod constants;
-mod fees;
 
 use codec::Encode;
 use clap::{Parser, Subcommand, ValueEnum, Args};
@@ -113,6 +112,16 @@ pub struct PricingParametersArgs {
     /// For example, if the exchange rate is 1/400 (exchange 1 ETH for 400 DOT), then DENOMINATOR should be 400.
     #[arg(long, value_name = "UINT")]
     pub exchange_rate_denominator: u64,
+    /// Numerator for Multiplier
+    ///
+    /// For example, if the multiplier is 4/3, then NUMERATOR should be 4.
+    #[arg(long, value_name = "UINT")]
+    pub multiplier_numerator: u64,
+    /// Denominator for Multiplier
+    ///
+    /// For example, if the multiplier is 4/3, then DENOMINATOR should be 3.
+    #[arg(long, value_name = "UINT")]
+    pub multiplier_denominator: u64,
     /// Ether fee per unit of gas
     #[arg(long, value_name = "GWEI", value_parser = parse_units_gwei)]
     pub fee_per_gas: U256,
@@ -173,6 +182,12 @@ struct Context {
     api: Box<OnlineClient<PolkadotConfig>>,
     asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
 }
+
+#[cfg(feature = "rococo-local")]
+static CONFIG: StaticConfig<'static> = StaticConfig {
+    api: "ws://127.0.0.1:11144",
+    asset_hub_api: "ws://127.0.0.1:12144",
+};
 
 #[cfg(feature = "rococo")]
 static CONFIG: StaticConfig<'static> = StaticConfig {

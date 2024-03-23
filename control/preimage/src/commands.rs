@@ -1,3 +1,4 @@
+use crate::helpers::calculate_delivery_fee;
 use crate::{
     constants::*, Context, GatewayOperatingModeEnum,
     UpgradeArgs, PricingParametersArgs, GatewayAddressArgs,
@@ -59,28 +60,33 @@ pub async fn pricing_parameters(
     params: &PricingParametersArgs,
 ) -> Result<(BridgeHubRuntimeCall, AssetHubRuntimeCall), Box<dyn std::error::Error>> {
 
-    // Calculate total outbound fee in BridgeHub
-    let runtime_api_call = crate::bridge_hub_runtime::apis()
-        .transaction_payment_call_api().query_weight_to_fee(Weight {
-            ref_time: PROCESS_MESSAGE_WEIGHT.0 + COMMIT_SINGLE_MESSAGE_WEIGHT.0,
-            proof_size: PROCESS_MESSAGE_WEIGHT.1 + COMMIT_SINGLE_MESSAGE_WEIGHT.1,
-        });
-
-    let local_fee = context.api
-        .runtime_api()
-        .at_latest()
-        .await?
-        .call(runtime_api_call)
-        .await?;
-
-    let remote_fee = crate::fees::calculate_remote_fee(
-        FixedU128::from_rational(
+    // BridgeHub parameters
+    let pricing_params: PricingParameters<u128> = PricingParameters {
+        exchange_rate: Static(FixedU128::from_rational(
             params.exchange_rate_numerator.into(),
             params.exchange_rate_denominator.into(),
+        )),
+        multiplier: Static(FixedU128::from_rational(
+            params.multiplier_numerator.into(),
+            params.multiplier_denominator.into(),
+        )),
+        fee_per_gas: bridge_hub_rococo_runtime::runtime_types::primitive_types::U256(
+            U256::from(GWEI_UNIT)
+                .checked_mul(U256::from(params.fee_per_gas))
+                .unwrap()
+                .into_limbs(),
         ),
-        params.fee_per_gas,
-        params.remote_reward,
-    );
+        rewards: Rewards {
+            local: params.local_reward.to::<u128>(),
+            remote: bridge_hub_rococo_runtime::runtime_types::primitive_types::U256(
+                params.remote_reward.into_limbs(),
+            ),
+        },
+    };
+
+    let outbound_delivery_fee = calculate_delivery_fee(&pricing_params).await?;
+
+    FixedU128::from_str(s);
 
     let total_outbound_fee = local_fee.saturating_add(remote_fee);
 
@@ -116,25 +122,7 @@ pub async fn pricing_parameters(
         total_outbound_fee_adjusted
     );
 
-    // BridgeHub parameters
-    let params: PricingParameters<u128> = PricingParameters {
-        exchange_rate: Static(FixedU128::from_rational(
-            params.exchange_rate_numerator.into(),
-            params.exchange_rate_denominator.into(),
-        )),
-        fee_per_gas: bridge_hub_rococo_runtime::runtime_types::primitive_types::U256(
-            U256::from(GWEI_UNIT)
-                .checked_mul(U256::from(params.fee_per_gas))
-                .unwrap()
-                .into_limbs(),
-        ),
-        rewards: Rewards {
-            local: params.local_reward.to::<u128>(),
-            remote: bridge_hub_rococo_runtime::runtime_types::primitive_types::U256(
-                params.remote_reward.into_limbs(),
-            ),
-        },
-    };
+
 
     // AssetHub parameters
     let asset_hub_outbound_fee_storage_key: Vec<u8> = twox_128(b":BridgeHubEthereumBaseFee:").to_vec();

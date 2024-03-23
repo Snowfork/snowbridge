@@ -1,4 +1,5 @@
-use subxt::{OnlineClient, PolkadotConfig};
+use bridge_hub_rococo_runtime::ethereum_system::storage::types::pricing_parameters::PricingParameters;
+use subxt::{OnlineClient, PolkadotConfig, utils::H160};
 use codec::Encode;
 
 use crate::{asset_hub_runtime, Context};
@@ -23,7 +24,6 @@ use crate::relay_runtime::runtime_types::{
 };
 
 use crate::asset_hub_runtime::runtime_types::asset_hub_rococo_runtime::RuntimeCall as AssetHubRuntimeCall;
-
 
 use sp_arithmetic::helpers_128bit::multiply_by_rational_with_rounding;
 use sp_arithmetic::per_things::Rounding;
@@ -176,4 +176,24 @@ pub fn utility_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
     RelayRuntimeCall::Utility(
         crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::batch { calls }
     )
+}
+
+use bridge_hub_runtime::runtime_types::snowbridge_core::outbound::v1::Command;
+use bridge_hub_runtime::runtime_types::snowbridge_core::outbound::v1::AgentExecuteCommand;
+use bridge_hub_runtime::runtime_types::snowbridge_core::outbound::Fee;
+
+pub async fn calculate_delivery_fee(params: &PricingParameters) -> Result<Fee<u128>, Box<dyn std::error::Error>> {
+    let command = Command::AgentExecute {
+        agent_id: H256::zero(),
+        command: AgentExecuteCommand::TransferToken { token: H160::zero(), recipient: H160::zero(), amount: 0 }
+    };
+    let runtime_api_call = bridge_hub_runtime::apis().outbound_queue_api().calculate_fee(command, Some(parameters));
+    let fee = api
+        .runtime_api()
+        .at_latest()
+        .await?
+        .call(runtime_api_call)
+        .await?;
+
+    Ok(fee)
 }
