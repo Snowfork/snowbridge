@@ -6,13 +6,12 @@ mod helpers;
 mod constants;
 mod fees;
 
-use crate::helpers::wrap_calls;
 use codec::Encode;
 use clap::{Parser, Subcommand, ValueEnum, Args};
 use constants::{POLKADOT_DECIMALS, POLKADOT_SYMBOL};
-use helpers::{wrap_calls_asset_hub, utility_batch};
+use helpers::{send_xcm_bridge_hub, send_xcm_asset_hub, utility_batch};
 use subxt::{OnlineClient, PolkadotConfig};
-use std::{fs::File, path::PathBuf, io::{Read, Write}};
+use std::{path::PathBuf, io::Write};
 use alloy_primitives::{Address, Bytes, FixedBytes, U256, U128, utils::parse_units};
 
 #[derive(Debug, Parser)]
@@ -28,40 +27,51 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    Initialize {
-        #[command(flatten)]
-        gateway_operating_mode: GatewayOperatingModeArgs,
-        #[command(flatten)]
-        pricing_parameters: PricingParametersArgs,
-    },
+    /// Initialize the bridge
+    Initialize(InitializeArgs),
+    /// Upgrade the Gateway contract
+    Upgrade(UpgradeArgs),
     /// Change the gateway operating mode
     GatewayOperatingMode(GatewayOperatingModeArgs),
-    /// Upgrade the Gateway contract
-    Upgrade {
-
-        /// Address of the logic contract
-        #[arg(long, value_name = "ADDRESS", value_parser=parse_eth_address)]
-        logic_address: Address,
-
-        /// Hash of the code in the logic contract
-        #[arg(long, value_name = "HASH", value_parser=parse_hex_bytes32)]
-        logic_code_hash: FixedBytes<32>,
-
-        /// Initialize the logic contract
-        #[arg(long, requires_all=["initializer_params", "initializer_gas"])]
-        initializer: bool,
-
-        /// ABI-encoded params to pass to initializer
-        #[arg(long, requires = "initializer", value_name = "BYTES", value_parser=parse_hex_bytes)]
-        initializer_params: Option<Bytes>,
-
-        /// Maximum gas required by the initializer
-        #[arg(long, requires = "initializer", value_name = "GAS")]
-        initializer_gas: Option<u64>,
-    },
     /// Set pricing parameters
     PricingParameters(PricingParametersArgs),
+    /// Set the checkpoint for the beacon light client
     ForceCheckpoint(ForceCheckpointArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct InitializeArgs {
+    #[command(flatten)]
+    gateway_operating_mode: GatewayOperatingModeArgs,
+    #[command(flatten)]
+    pricing_parameters: PricingParametersArgs,
+    #[command(flatten)]
+    force_checkpoint: ForceCheckpointArgs,
+    #[command(flatten)]
+    gateway_address: GatewayAddressArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct UpgradeArgs {
+    /// Address of the logic contract
+    #[arg(long, value_name = "ADDRESS", value_parser=parse_eth_address)]
+    logic_address: Address,
+
+    /// Hash of the code in the logic contract
+    #[arg(long, value_name = "HASH", value_parser=parse_hex_bytes32)]
+    logic_code_hash: FixedBytes<32>,
+
+    /// Initialize the logic contract
+    #[arg(long, requires_all=["initializer_params", "initializer_gas"])]
+    initializer: bool,
+
+    /// ABI-encoded params to pass to initializer
+    #[arg(long, requires = "initializer", value_name = "BYTES", value_parser=parse_hex_bytes)]
+    initializer_params: Option<Bytes>,
+
+    /// Maximum gas required by the initializer
+    #[arg(long, requires = "initializer", value_name = "GAS")]
+    initializer_gas: Option<u64>,
 }
 
 #[derive(Debug, Args)]
@@ -75,6 +85,13 @@ pub struct GatewayOperatingModeArgs {
 pub enum GatewayOperatingModeEnum {
     Normal,
     RejectingOutboundMessages,
+}
+
+#[derive(Debug, Args)]
+pub struct GatewayAddressArgs {
+    /// Path to JSON file containing checkpoint
+    #[arg(long, value_name = "ADDRESS")]
+    pub gateway_address: Address,
 }
 
 #[derive(Debug, Args)]
@@ -200,45 +217,34 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let call = match &cli.command {
-        Command::ForceCheckpoint(ForceCheckpointArgs { checkpoint }) => {
-            let mut file = File::open(checkpoint).expect("File not found");
-            let mut data = String::new();
-            file.read_to_string(&mut data).expect("Failed to read the file");
-            let checkpoint: snowbridge_beacon_primitives::CheckpointUpdate<512> = serde_json::from_str(&data).unwrap();
-            let call = commands::force_checkpoint(checkpoint);
-            wrap_calls(&context, vec![call]).await?
+        Command::ForceCheckpoint(params) => {
+            let call = commands::force_checkpoint(params);
+            send_xcm_bridge_hub(&context, vec![call]).await?
         },
-        Command::Initialize {
-            gateway_operating_mode: GatewayOperatingModeArgs { gateway_operating_mode },
-            pricing_parameters: foo,
-        } => {
-            let call1 = commands::gateway_operating_mode(*gateway_operating_mode);
-            let calls2 = commands::pricing_parameters(&context, foo).await?;
-            wrap_calls(&context, vec![call1, calls2.0]).await?
+        Command::Initialize(params) => {
+            let (set_pricing_parameters, set_ethereum_fee) = commands::pricing_parameters(&context, &params.pricing_parameters).await?;
+            let call1 = send_xcm_bridge_hub(&context, vec![
+                commands::force_checkpoint(&params.force_checkpoint),
+                commands::gateway_operating_mode(&params.gateway_operating_mode),
+                commands::set_gateway_address(&params.gateway_address),
+                set_pricing_parameters,
+            ]).await?;
+            let call2 = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
+            utility_batch(vec![call1, call2])
         },
-        Command::GatewayOperatingMode(GatewayOperatingModeArgs { gateway_operating_mode }) => {
-            let call = commands::gateway_operating_mode(*gateway_operating_mode);
-            wrap_calls(&context, vec![call]).await?
+        Command::GatewayOperatingMode(params) => {
+            let call = commands::gateway_operating_mode(params);
+            send_xcm_bridge_hub(&context, vec![call]).await?
         },
-        Command::Upgrade { logic_address, logic_code_hash, initializer, initializer_params, initializer_gas} => {
-            let initializer = if *initializer {
-                Some((initializer_params.as_ref().unwrap().clone(), initializer_gas.unwrap()))
-            } else {
-                None
-            };
-            let call = commands::upgrade(
-                *logic_address,
-                *logic_code_hash,
-                initializer
-            );
-            wrap_calls(&context, vec![call]).await?
+        Command::Upgrade(params) => {
+            let call = commands::upgrade(params);
+            send_xcm_bridge_hub(&context, vec![call]).await?
         },
-        Command::PricingParameters(args) => {
-            let calls = commands::pricing_parameters(&context, args).await?;
-            let call1 = wrap_calls(&context, vec![calls.0]).await?;
-            let call2 = wrap_calls_asset_hub(&context, vec![calls.1]).await?;
-            let call = utility_batch(vec![call1, call2]);
-            call
+        Command::PricingParameters(params) => {
+            let (set_pricing_parameters, set_ethereum_fee) = commands::pricing_parameters(&context, params).await?;
+            let call1 = send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
+            let call2 = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
+            utility_batch(vec![call1, call2])
         }
     };
 

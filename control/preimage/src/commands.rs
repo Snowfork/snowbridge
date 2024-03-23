@@ -1,15 +1,17 @@
-use crate::constants::*;
-use crate::GatewayOperatingModeEnum;
-use crate::Context;
-use crate::PricingParametersArgs;
-
-use alloy_primitives::{Address, Bytes, FixedBytes, U256, utils::format_units};
+use crate::{
+    constants::*, Context, GatewayOperatingModeEnum,
+    UpgradeArgs, PricingParametersArgs, GatewayAddressArgs,
+    GatewayOperatingModeArgs, ForceCheckpointArgs
+};
+use alloy_primitives::{U256, utils::format_units};
 use bridge_hub_rococo_runtime::runtime_types::snowbridge_pallet_ethereum_client;
-use snowbridge_beacon_primitives::CheckpointUpdate;
+use std::{fs::File, io::Read};
 use sp_arithmetic::FixedU128;
 use sp_crypto_hashing::twox_128;
-use subxt::utils::{Static, H160, H256};
+use subxt::utils::Static;
 use codec::Encode;
+
+type CheckpointUpdate = snowbridge_beacon_primitives::CheckpointUpdate<512>;
 
 use crate::asset_hub_runtime::runtime_types::asset_hub_rococo_runtime::RuntimeCall as AssetHubRuntimeCall;
 
@@ -23,8 +25,8 @@ use crate::bridge_hub_runtime::runtime_types::{
     sp_weights::weight_v2::Weight,
 };
 
-pub fn gateway_operating_mode(mode: GatewayOperatingModeEnum) -> BridgeHubRuntimeCall {
-    let mode = match mode {
+pub fn gateway_operating_mode(params: &GatewayOperatingModeArgs) -> BridgeHubRuntimeCall {
+    let mode = match params.gateway_operating_mode {
         GatewayOperatingModeEnum::Normal => OperatingMode::Normal,
         GatewayOperatingModeEnum::RejectingOutboundMessages => {
             OperatingMode::RejectingOutboundMessages
@@ -35,14 +37,16 @@ pub fn gateway_operating_mode(mode: GatewayOperatingModeEnum) -> BridgeHubRuntim
     )
 }
 
-pub fn upgrade(
-    logic_address: Address,
-    logic_code_hash: FixedBytes<32>,
-    initializer: Option<(Bytes, u64)>,
-) -> BridgeHubRuntimeCall {
+pub fn upgrade(params: &UpgradeArgs) -> BridgeHubRuntimeCall {
+    let initializer = if params.initializer {
+        Some((params.initializer_params.as_ref().unwrap().clone(), params.initializer_gas.unwrap()))
+    } else {
+        None
+    };
+
     BridgeHubRuntimeCall::EthereumSystem(snowbridge_pallet_system::pallet::Call::upgrade {
-        impl_address: H160::from_slice(logic_address.as_slice()),
-        impl_code_hash: H256::from_slice(logic_code_hash.as_slice()),
+        impl_address: params.logic_address.into_array().into(),
+        impl_code_hash: params.logic_code_hash.0.into(),
         initializer: initializer.map(|(params, gas)| Initializer {
             params: params.into(),
             maximum_required_gas: gas,
@@ -144,14 +148,28 @@ pub async fn pricing_parameters(
             crate::asset_hub_runtime::runtime_types::frame_system::pallet::Call::set_storage {
                 items: vec![(asset_hub_outbound_fee_storage_key, asset_hub_outbound_fee_encoded)],
             },
-        ),
+        )
     ))
 }
 
-pub fn force_checkpoint(checkpoint: CheckpointUpdate<512>) -> BridgeHubRuntimeCall {
+pub fn force_checkpoint(params: &ForceCheckpointArgs) -> BridgeHubRuntimeCall {
+    let mut file = File::open(params.checkpoint.clone()).expect("File not found");
+    let mut data = String::new();
+    file.read_to_string(&mut data).expect("Failed to read the file");
+    let checkpoint: CheckpointUpdate = serde_json::from_str(&data).unwrap();
     BridgeHubRuntimeCall::EthereumBeaconClient(
         snowbridge_pallet_ethereum_client::pallet::Call::force_checkpoint {
             update: Box::new(Static(checkpoint)),
+        },
+    )
+}
+
+pub fn set_gateway_address(params: &GatewayAddressArgs) -> BridgeHubRuntimeCall {
+    let storage_key = sp_crypto_hashing::twox_128(b":EthereumGatewayAddress:").to_vec();
+    let storage_value = params.gateway_address.into_array().encode();
+    BridgeHubRuntimeCall::System(
+        crate::bridge_hub_runtime::runtime_types::frame_system::pallet::Call::set_storage {
+            items: vec![(storage_key, storage_value)],
         },
     )
 }

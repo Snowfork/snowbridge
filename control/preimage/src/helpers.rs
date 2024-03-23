@@ -28,17 +28,17 @@ use crate::asset_hub_runtime::runtime_types::asset_hub_rococo_runtime::RuntimeCa
 use sp_arithmetic::helpers_128bit::multiply_by_rational_with_rounding;
 use sp_arithmetic::per_things::Rounding;
 
-// Increase call weight by 10% as a buffer in case the chain is upgraded with new weights
+// Increase call weight by 25% as a buffer in case the chain is upgraded with new weights
 // while the proposal is still in flight.
 pub fn increase_weight(ref_time: &mut u64, proof_size: &mut u64) {
-    let x = multiply_by_rational_with_rounding(*ref_time as u128, 110, 100, Rounding::Up).expect("overflow");
-    let y = multiply_by_rational_with_rounding(*proof_size as u128, 110, 100, Rounding::Up).expect("overflow");
+    let x = multiply_by_rational_with_rounding(*ref_time as u128, 125, 100, Rounding::Up).expect("overflow");
+    let y = multiply_by_rational_with_rounding(*proof_size as u128, 125, 100, Rounding::Up).expect("overflow");
 
     *ref_time = x.try_into().expect("overflow");
     *proof_size = y.try_into().expect("overflow");
 }
 
-pub async fn wrap_calls(context: &Context, calls: Vec<BridgeHubRuntimeCall>) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
+pub async fn send_xcm_bridge_hub(context: &Context, calls: Vec<BridgeHubRuntimeCall>) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
     let mut accum: Vec<(u64, u64, Vec<u8>)> = vec![];
 
     for call in calls.iter() {
@@ -81,7 +81,7 @@ pub async fn wrap_calls(context: &Context, calls: Vec<BridgeHubRuntimeCall>) -> 
     Ok(call)
 }
 
-pub async fn wrap_calls_asset_hub(context: &Context, calls: Vec<AssetHubRuntimeCall>) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
+pub async fn send_xcm_asset_hub(context: &Context, calls: Vec<AssetHubRuntimeCall>) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
     let mut accum: Vec<(u64, u64, Vec<u8>)> = vec![];
 
     for call in calls.iter() {
