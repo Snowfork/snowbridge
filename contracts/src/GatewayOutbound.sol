@@ -109,8 +109,10 @@ contract GatewayOutbound is IGatewayOutbound {
     // Submit an outbound message to Polkadot, after taking fees
     function _submitOutbound(Ticket memory ticket) internal {
         ChannelID channelID = ticket.dest.into();
-        Channel storage channel = __ensureChannel(channelID);
-
+        Channel storage channel = CoreStorage.layout().channels[channelID];
+        if (channel.agent == address(0)) {
+            revert ChannelNotExist();
+        }
         // Ensure outbound messaging is allowed
         _ensureOutboundMessagingEnabled(channel);
 
@@ -142,14 +144,6 @@ contract GatewayOutbound is IGatewayOutbound {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         if ($.mode != OperatingMode.Normal || ch.mode != OperatingMode.Normal) {
             revert Disabled();
-        }
-    }
-
-    function __ensureChannel(ChannelID channelID) internal view returns (Channel storage ch) {
-        ch = CoreStorage.layout().channels[channelID];
-        // A channel always has an agent specified.
-        if (ch.agent == address(0)) {
-            revert ChannelNotExist();
         }
     }
 }
