@@ -8,14 +8,6 @@ import {UD60x18, convert} from "prb/math/src/UD60x18.sol";
 import {PricingStorage} from "../../storage/PricingStorage.sol";
 
 contract GatewayV2 is Gateway {
-    constructor(
-        address beefyClient,
-        address agentExecutor,
-        ParaID bridgeHubParaID,
-        bytes32 bridgeHubAgentID,
-        uint8 foreignTokenDecimals
-    ) Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals) {}
-
     function initialize(bytes memory data) external override {
         // Prevent initialization of storage in implementation contract
         if (ERC1967.load() == address(0)) {

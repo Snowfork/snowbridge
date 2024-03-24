@@ -2,22 +2,15 @@
 pragma solidity 0.8.23;
 
 import {Gateway} from "../../src/Gateway.sol";
+import {GatewayOutbound} from "../../src/GatewayOutbound.sol";
 import {ParaID, OperatingMode} from "../../src/Types.sol";
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
 import {Verification} from "../../src/Verification.sol";
 
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
-contract GatewayMock is Gateway {
+contract GatewayMock is Gateway, GatewayOutbound {
     bool public commitmentsAreVerified;
-
-    constructor(
-        address beefyClient,
-        address agentExecutor,
-        ParaID bridgeHubParaID,
-        bytes32 bridgeHubHubAgentID,
-        uint8 foreignTokenDecimals
-    ) Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubHubAgentID, foreignTokenDecimals) {}
 
     function agentExecutePublic(bytes calldata params) external {
         this.agentExecute(params);
@@ -51,18 +44,8 @@ contract GatewayMock is Gateway {
         commitmentsAreVerified = value;
     }
 
-    function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
-        internal
-        view
-        override
-        returns (bool)
-    {
-        if (BEEFY_CLIENT != address(0)) {
-            return super._verifyCommitment(commitment, proof);
-        } else {
-            // for unit tests, verification is set with commitmentsAreVerified
-            return commitmentsAreVerified;
-        }
+    function _verifyCommitment(bytes32, Verification.Proof calldata) internal view override returns (bool) {
+        return commitmentsAreVerified;
     }
 
     function setTokenTransferFeesPublic(bytes calldata params) external {

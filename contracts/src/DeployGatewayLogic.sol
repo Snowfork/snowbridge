@@ -17,17 +17,7 @@ contract DeployGatewayLogic is Script {
         uint256 privateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.rememberKey(privateKey);
         vm.startBroadcast(deployer);
-
-        address beefyClient = vm.envAddress("BEEFY_CLIENT_CONTRACT_ADDRESS");
-
-        ParaID bridgeHubParaID = ParaID.wrap(uint32(vm.envUint("BRIDGE_HUB_PARAID")));
-        bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
-
-        uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
-
-        AgentExecutor executor = new AgentExecutor();
-        new Gateway(address(beefyClient), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals);
-
+        new Gateway();
         vm.stopBroadcast();
     }
 }

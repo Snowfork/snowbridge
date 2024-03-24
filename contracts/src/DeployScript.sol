@@ -60,9 +60,7 @@ contract DeployScript is Script {
         uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
 
         AgentExecutor executor = new AgentExecutor();
-        Gateway gatewayLogic = new Gateway(
-            address(beefyClient), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals
-        );
+        Gateway gatewayLogic = new Gateway();
 
         bool rejectOutboundMessages = vm.envBool("REJECT_OUTBOUND_MESSAGES");
         OperatingMode defaultOperatingMode;
@@ -73,6 +71,11 @@ contract DeployScript is Script {
         }
 
         Gateway.Config memory config = Gateway.Config({
+            beefyClient: address(beefyClient),
+            agentExecutor: address(executor),
+            bridgeHubParaID: bridgeHubParaID,
+            bridgeHubAgentID: bridgeHubAgentID,
+            foreignTokenDecimals: foreignTokenDecimals,
             mode: defaultOperatingMode,
             deliveryCost: uint128(vm.envUint("DELIVERY_COST")),
             registerTokenFee: uint128(vm.envUint("REGISTER_TOKEN_FEE")),

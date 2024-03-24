@@ -4,6 +4,7 @@ pragma solidity 0.8.23;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
+import {IGatewayOutbound} from "./interfaces/IGatewayOutbound.sol";
 
 import {SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
 
@@ -146,7 +147,7 @@ library Assets {
                 revert Unsupported();
             }
         }
-        emit IGateway.TokenSent(token, sender, destinationChain, destinationAddress, amount);
+        emit IGatewayOutbound.TokenSent(token, sender, destinationChain, destinationAddress, amount);
     }
 
     function registerTokenCosts() external view returns (Costs memory costs) {
@@ -182,7 +183,7 @@ library Assets {
         ticket.costs = _registerTokenCosts();
         ticket.payload = SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee);
 
-        emit IGateway.TokenRegistrationSent(token);
+        emit IGatewayOutbound.TokenRegistrationSent(token);
     }
 
     // @dev Register a new fungible Polkadot token for an agent
@@ -195,7 +196,6 @@ library Assets {
             TokenInfo({isRegistered: true, isForeign: true, tokenID: tokenID, agentID: agentID, token: token});
         $.tokenRegistry[token] = info;
         $.tokenRegistryByID[tokenID] = info;
-        emit IGateway.TokenRegistered(tokenID, agentID, token);
     }
 
     // @dev Get token address by tokenID
@@ -258,7 +258,7 @@ library Assets {
             revert Unsupported();
         }
 
-        emit IGateway.TokenTransfered(token, sender, destinationChain, destinationAddress, amount);
+        emit IGatewayOutbound.TokenTransfered(token, sender, destinationChain, destinationAddress, amount);
     }
 
     function _burn(address agentExecutor, address agent, bytes32 tokenID, address sender, uint256 amount) internal {

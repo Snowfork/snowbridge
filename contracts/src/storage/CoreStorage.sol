@@ -14,6 +14,17 @@ library CoreStorage {
         mapping(bytes32 agentID => address) agents;
         // Agent addresses
         mapping(address agent => bytes32 agentID) agentAddresses;
+        /// The beefy client
+        address beefyClient;
+        /// The agent executor
+        address agentExecutor;
+        /// The bridgehub ParaID
+        ParaID bridgeHubParaID;
+        bytes4 bridgeHubParaIDEncoded;
+        /// The bridgehub agentID
+        bytes32 bridgeHubAgentID;
+        /// The decimals of relaychain token
+        uint8 foreignTokenDecimals;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.core");

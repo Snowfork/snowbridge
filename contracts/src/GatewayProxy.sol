@@ -10,6 +10,7 @@ contract GatewayProxy is IInitializable {
     error Unauthorized();
     error NativeCurrencyNotAccepted();
 
+    // Todo: construct the diamond for initialize, also need another function for update the diamond
     constructor(address implementation, bytes memory params) {
         // Store the address of the implementation contract
         ERC1967.store(implementation);
@@ -26,6 +27,7 @@ contract GatewayProxy is IInitializable {
     }
 
     fallback() external payable {
+        // Todo: load impl from the diamond
         address implementation = ERC1967.load();
         assembly {
             calldatacopy(0, 0, calldatasize())
