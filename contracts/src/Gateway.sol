@@ -23,7 +23,6 @@ import {
 } from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
-import {ERC1967} from "./utils/ERC1967.sol";
 import {Address} from "./utils/Address.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {Call} from "./utils/Call.sol";
@@ -47,6 +46,7 @@ import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {DiamondStorage} from "./storage/DiamondStorage.sol";
 
 contract Gateway is IGateway, IInitializable {
     using Address for address;
@@ -216,10 +216,6 @@ contract Gateway is IGateway, IInitializable {
         return (pricing.exchangeRate, pricing.deliveryCost);
     }
 
-    function implementation() public view returns (address) {
-        return ERC1967.load();
-    }
-
     /**
      * Handlers
      */
@@ -311,6 +307,11 @@ contract Gateway is IGateway, IInitializable {
     function upgrade(bytes calldata data) external onlySelf {
         UpgradeParams memory params = abi.decode(data, (UpgradeParams));
 
+        // Upgrade diamond
+        if (params.facetCuts.length > 0) {
+            DiamondStorage.diamondCut(params.facetCuts, address(0), new bytes(0));
+        }
+
         // Verify that the implementation is actually a contract
         if (!params.impl.isContract()) {
             revert InvalidCodeHash();
@@ -321,9 +322,6 @@ contract Gateway is IGateway, IInitializable {
         if (params.impl.codehash != params.implCodeHash) {
             revert InvalidCodeHash();
         }
-
-        // Update the proxy with the address of the new implementation
-        ERC1967.store(params.impl);
 
         // Apply the initialization function of the implementation only if params were provided
         if (params.initParams.length > 0) {
@@ -478,7 +476,8 @@ contract Gateway is IGateway, IInitializable {
     /// NOTE: This is not externally accessible as this function selector is overshadowed in the proxy
     function initialize(bytes calldata data) external virtual {
         // Prevent initialization of storage in implementation contract
-        if (ERC1967.load() == address(0)) {
+        DiamondStorage.Layout storage $ = DiamondStorage.layout();
+        if ($.facetAddresses.length == 0) {
             revert Unauthorized();
         }
 

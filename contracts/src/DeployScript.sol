@@ -9,6 +9,7 @@ import {BeefyClient} from "./BeefyClient.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {GatewayProxy} from "./GatewayProxy.sol";
 import {Gateway} from "./Gateway.sol";
+import {GatewayOutbound} from "./GatewayOutbound.sol";
 import {GatewayUpgradeMock} from "../test/mocks/GatewayUpgradeMock.sol";
 import {Agent} from "./Agent.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
@@ -16,6 +17,7 @@ import {ChannelID, ParaID, OperatingMode} from "./Types.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
+import {DiamondStorage} from "./storage/DiamondStorage.sol";
 
 contract DeployScript is Script {
     using SafeNativeTransfer for address payable;
@@ -87,7 +89,74 @@ contract DeployScript is Script {
             multiplier: ud60x18(vm.envUint("FEE_MULTIPLIER"))
         });
 
-        GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
+        // Initialize facet of gatewayLogic
+        bytes4[] memory gatewayLogicSelectors = new bytes4[](15);
+        /// Functions from Gateway
+        //submitV1
+        gatewayLogicSelectors[0] = bytes4(0xdf4ed829);
+        //operatingMode
+        gatewayLogicSelectors[1] = bytes4(0x38004f69);
+        //channelOperatingModeOf
+        gatewayLogicSelectors[2] = bytes4(0x0705f465);
+        //channelNoncesOf
+        gatewayLogicSelectors[3] = bytes4(0x2a6c3229);
+        //agentOf
+        gatewayLogicSelectors[4] = bytes4(0x5e6dae26);
+        //pricingParameters
+        gatewayLogicSelectors[5] = bytes4(0x0b617646);
+        //agentExecute
+        gatewayLogicSelectors[6] = bytes4(0x35ede969);
+        //createAgent
+        gatewayLogicSelectors[7] = bytes4(0xc3b8ec8e);
+        //createChannel
+        gatewayLogicSelectors[8] = bytes4(0x17abcf60);
+        //updateChannel
+        gatewayLogicSelectors[9] = bytes4(0xafce33c4);
+        //upgrade
+        gatewayLogicSelectors[10] = bytes4(0x25394645);
+        //setOperatingMode
+        gatewayLogicSelectors[11] = bytes4(0x8257f3d5);
+        //transferNativeFromAgent
+        gatewayLogicSelectors[12] = bytes4(0x9a870c8b);
+        //setTokenTransferFees
+        gatewayLogicSelectors[13] = bytes4(0x5b2e9c4c);
+        //setPricingParameters
+        gatewayLogicSelectors[14] = bytes4(0x0c86ea46);
+
+        // Initialize facet of gatewayOutboundLogic
+        GatewayOutbound gatewayOutboundLogic = new GatewayOutbound();
+        bytes4[] memory gatewayOutboundLogicSelectors = new bytes4[](7);
+        //isTokenRegistered
+        gatewayOutboundLogicSelectors[0] = bytes4(0x26aa101f);
+        //quoteRegisterTokenFee
+        gatewayOutboundLogicSelectors[1] = bytes4(0x805ce31d);
+        //registerToken
+        gatewayOutboundLogicSelectors[2] = bytes4(0x09824a80);
+        //quoteSendTokenFee
+        gatewayOutboundLogicSelectors[3] = bytes4(0x928bc49d);
+        //sendToken
+        gatewayOutboundLogicSelectors[4] = bytes4(0x52054834);
+        //transferToken
+        gatewayOutboundLogicSelectors[5] = bytes4(0x1382f5eb);
+        //getTokenInfo
+        gatewayOutboundLogicSelectors[6] = bytes4(0x2d8b70a1);
+
+        // Initialize facetCut
+        DiamondStorage.FacetCut memory gatewayLogicFacetCut = DiamondStorage.FacetCut({
+            facetAddress: address(gatewayLogic),
+            action: DiamondStorage.FacetCutAction.Add,
+            functionSelectors: gatewayLogicSelectors
+        });
+        DiamondStorage.FacetCut memory gatewayOutboundLogicFacetCut = DiamondStorage.FacetCut({
+            facetAddress: address(gatewayOutboundLogic),
+            action: DiamondStorage.FacetCutAction.Add,
+            functionSelectors: gatewayOutboundLogicSelectors
+        });
+        DiamondStorage.FacetCut[] memory facetCuts = new DiamondStorage.FacetCut[](2);
+        facetCuts[0] = gatewayLogicFacetCut;
+        facetCuts[1] = gatewayOutboundLogicFacetCut;
+
+        GatewayProxy gateway = new GatewayProxy(facetCuts, address(gatewayLogic), abi.encode(config));
 
         // Deploy WETH for testing
         new WETH9();

@@ -9,11 +9,6 @@ import {PricingStorage} from "../../storage/PricingStorage.sol";
 
 contract GatewayV2 is Gateway {
     function initialize(bytes memory data) external override {
-        // Prevent initialization of storage in implementation contract
-        if (ERC1967.load() == address(0)) {
-            revert Unauthorized();
-        }
-
         PricingStorage.Layout storage pricing = PricingStorage.layout();
 
         if (pricing.multiplier != convert(0)) {

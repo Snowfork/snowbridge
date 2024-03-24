@@ -2,22 +2,21 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.23;
 
-import {ERC1967} from "./utils/ERC1967.sol";
 import {Call} from "./utils/Call.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
+import {DiamondStorage} from "./storage/DiamondStorage.sol";
 
 contract GatewayProxy is IInitializable {
     error Unauthorized();
     error NativeCurrencyNotAccepted();
+    error FacetNotExist();
 
-    // Todo: construct the diamond for initialize, also need another function for update the diamond
-    constructor(address implementation, bytes memory params) {
-        // Store the address of the implementation contract
-        ERC1967.store(implementation);
+    constructor(DiamondStorage.FacetCut[] memory facetCuts, address initializer, bytes memory params) {
+        DiamondStorage.diamondCut(facetCuts, address(0), new bytes(0));
         // Initialize storage by calling the implementation's `initialize(bytes)` function
         // using `delegatecall`.
         (bool success, bytes memory returndata) =
-            implementation.delegatecall(abi.encodeCall(IInitializable.initialize, params));
+            initializer.delegatecall(abi.encodeCall(IInitializable.initialize, params));
         Call.verifyResult(success, returndata);
     }
 
@@ -27,11 +26,14 @@ contract GatewayProxy is IInitializable {
     }
 
     fallback() external payable {
-        // Todo: load impl from the diamond
-        address implementation = ERC1967.load();
+        DiamondStorage.Layout storage $ = DiamondStorage.layout();
+        address facet = $.selectorToFacetAndPosition[msg.sig].facetAddress;
+        if (facet == address(0)) {
+            revert FacetNotExist();
+        }
         assembly {
             calldatacopy(0, 0, calldatasize())
-            let result := delegatecall(gas(), implementation, 0, calldatasize(), 0, 0)
+            let result := delegatecall(gas(), facet, 0, calldatasize(), 0, 0)
             returndatacopy(0, 0, returndatasize())
             switch result
             case 0 { revert(0, returndatasize()) }

@@ -51,6 +51,7 @@ import {
 import {WETH9} from "canonical-weth/WETH9.sol";
 import "./mocks/GatewayUpgradeMock.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {DiamondStorage} from "../src/storage/DiamondStorage.sol";
 
 contract GatewayTest is Test {
     // Emitted when token minted
@@ -120,7 +121,90 @@ contract GatewayTest is Test {
             exchangeRate: exchangeRate,
             multiplier: multiplier
         });
-        gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
+
+        // Initialize facet of gatewayLogic
+        bytes4[] memory gatewayLogicSelectors = new bytes4[](32);
+
+        /// Functions from Gateway
+        //submitV1
+        gatewayLogicSelectors[0] = bytes4(0xdf4ed829);
+        //operatingMode
+        gatewayLogicSelectors[1] = bytes4(0x38004f69);
+        //channelOperatingModeOf
+        gatewayLogicSelectors[2] = bytes4(0x0705f465);
+        //channelNoncesOf
+        gatewayLogicSelectors[3] = bytes4(0x2a6c3229);
+        //agentOf
+        gatewayLogicSelectors[4] = bytes4(0x5e6dae26);
+        //pricingParameters
+        gatewayLogicSelectors[5] = bytes4(0x0b617646);
+        //agentExecute
+        gatewayLogicSelectors[6] = bytes4(0x35ede969);
+        //createAgent
+        gatewayLogicSelectors[7] = bytes4(0xc3b8ec8e);
+        //createChannel
+        gatewayLogicSelectors[8] = bytes4(0x17abcf60);
+        //updateChannel
+        gatewayLogicSelectors[9] = bytes4(0xafce33c4);
+        //upgrade
+        gatewayLogicSelectors[10] = bytes4(0x25394645);
+        //setOperatingMode
+        gatewayLogicSelectors[11] = bytes4(0x8257f3d5);
+        //transferNativeFromAgent
+        gatewayLogicSelectors[12] = bytes4(0x9a870c8b);
+        //setTokenTransferFees
+        gatewayLogicSelectors[13] = bytes4(0x5b2e9c4c);
+        //setPricingParameters
+        gatewayLogicSelectors[14] = bytes4(0x0c86ea46);
+
+        /// Functions from GatewayOutbound
+        //isTokenRegistered
+        gatewayLogicSelectors[15] = bytes4(0x26aa101f);
+        //quoteRegisterTokenFee
+        gatewayLogicSelectors[16] = bytes4(0x805ce31d);
+        //registerToken
+        gatewayLogicSelectors[17] = bytes4(0x09824a80);
+        //quoteSendTokenFee
+        gatewayLogicSelectors[18] = bytes4(0x928bc49d);
+        //sendToken
+        gatewayLogicSelectors[19] = bytes4(0x52054834);
+        //transferToken
+        gatewayLogicSelectors[20] = bytes4(0x1382f5eb);
+        //getTokenInfo
+        gatewayLogicSelectors[21] = bytes4(0x2d8b70a1);
+
+        /// Functions from GatewayMock
+        //agentExecutePublic
+        gatewayLogicSelectors[22] = bytes4(0x0b998355);
+        //createAgentPublic
+        gatewayLogicSelectors[23] = bytes4(0x98807a62);
+        //upgradePublic
+        gatewayLogicSelectors[24] = bytes4(0x50a7fb1f);
+        //createChannelPublic
+        gatewayLogicSelectors[25] = bytes4(0x6c948958);
+        //updateChannelPublic
+        gatewayLogicSelectors[26] = bytes4(0xefa4191c);
+        //setOperatingModePublic
+        gatewayLogicSelectors[27] = bytes4(0x9930e8ab);
+        //transferNativeFromAgentPublic
+        gatewayLogicSelectors[28] = bytes4(0x34d64cdd);
+        //setCommitmentsAreVerified
+        gatewayLogicSelectors[29] = bytes4(0x1500ab89);
+        //setTokenTransferFeesPublic
+        gatewayLogicSelectors[30] = bytes4(0x493cc51a);
+        //setPricingParametersPublic
+        gatewayLogicSelectors[31] = bytes4(0xddd419e0);
+
+        // Initialize facetCut
+        DiamondStorage.FacetCut memory gatewayLogicFacetCut = DiamondStorage.FacetCut({
+            facetAddress: address(gatewayLogic),
+            action: DiamondStorage.FacetCutAction.Add,
+            functionSelectors: gatewayLogicSelectors
+        });
+        DiamondStorage.FacetCut[] memory facetCuts = new DiamondStorage.FacetCut[](1);
+        facetCuts[0] = gatewayLogicFacetCut;
+
+        gateway = new GatewayProxy(facetCuts, address(gatewayLogic), abi.encode(config));
         GatewayMock(address(gateway)).setCommitmentsAreVerified(true);
 
         SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
@@ -486,7 +570,19 @@ contract GatewayTest is Test {
         // Upgrade to this new logic contract
         GatewayV2 newLogic = new GatewayV2();
 
+        bytes4[] memory gatewayLogicV2Selectors = new bytes4[](1);
+        gatewayLogicV2Selectors[0] = bytes4(keccak256(bytes("getValue()")));
+        // Initialize facetCut
+        DiamondStorage.FacetCut memory gatewayLogicFacetCut = DiamondStorage.FacetCut({
+            facetAddress: address(newLogic),
+            action: DiamondStorage.FacetCutAction.Add,
+            functionSelectors: gatewayLogicV2Selectors
+        });
+        DiamondStorage.FacetCut[] memory facetCuts = new DiamondStorage.FacetCut[](1);
+        facetCuts[0] = gatewayLogicFacetCut;
+
         UpgradeParams memory params = UpgradeParams({
+            facetCuts: facetCuts,
             impl: address(newLogic),
             implCodeHash: address(newLogic).codehash,
             initParams: abi.encode(42)
@@ -524,7 +620,10 @@ contract GatewayTest is Test {
             multiplier: multiplier
         });
 
+        DiamondStorage.FacetCut[] memory facetCuts;
+
         UpgradeParams memory params = UpgradeParams({
+            facetCuts: facetCuts,
             impl: address(currentLogic),
             implCodeHash: address(currentLogic).codehash,
             initParams: abi.encode(config)
@@ -549,7 +648,9 @@ contract GatewayTest is Test {
         GatewayMock currentLogic = new GatewayMock();
 
         bytes memory initParams; // empty
+        DiamondStorage.FacetCut[] memory facetCuts;
         UpgradeParams memory params = UpgradeParams({
+            facetCuts: facetCuts,
             impl: address(currentLogic),
             implCodeHash: address(currentLogic).codehash,
             initParams: initParams
@@ -571,8 +672,13 @@ contract GatewayTest is Test {
         bytes memory initParams = abi.encode(d0, d1);
         console.logBytes(initParams);
 
-        UpgradeParams memory params =
-            UpgradeParams({impl: address(newLogic), implCodeHash: address(newLogic).codehash, initParams: initParams});
+        DiamondStorage.FacetCut[] memory facetCuts;
+        UpgradeParams memory params = UpgradeParams({
+            facetCuts: facetCuts,
+            impl: address(newLogic),
+            implCodeHash: address(newLogic).codehash,
+            initParams: initParams
+        });
 
         // Expect the gateway to emit `Initialized`
         vm.expectEmit(true, false, false, true);
@@ -584,7 +690,9 @@ contract GatewayTest is Test {
     function testUpgradeFailOnInitializationFailure() public {
         GatewayV2 newLogic = new GatewayV2();
 
+        DiamondStorage.FacetCut[] memory facetCuts;
         UpgradeParams memory params = UpgradeParams({
+            facetCuts: facetCuts,
             impl: address(newLogic),
             implCodeHash: address(newLogic).codehash,
             initParams: abi.encode(666)
@@ -597,8 +705,13 @@ contract GatewayTest is Test {
     function testUpgradeFailCodeHashMismatch() public {
         GatewayV2 newLogic = new GatewayV2();
 
-        UpgradeParams memory params =
-            UpgradeParams({impl: address(newLogic), implCodeHash: bytes32(0), initParams: abi.encode(42)});
+        DiamondStorage.FacetCut[] memory facetCuts;
+        UpgradeParams memory params = UpgradeParams({
+            facetCuts: facetCuts,
+            impl: address(newLogic),
+            implCodeHash: bytes32(0),
+            initParams: abi.encode(42)
+        });
 
         vm.expectRevert(Gateway.InvalidCodeHash.selector);
         GatewayMock(address(gateway)).upgradePublic(abi.encode(params));
@@ -847,9 +960,6 @@ contract GatewayTest is Test {
 
         address agent = gw.agentOf(assetHubAgentID);
         assertEq(agent, assetHubAgent);
-
-        address implementation = gw.implementation();
-        assertEq(implementation, address(gatewayLogic));
     }
 
     function testCreateAgentWithNotEnoughGas() public {

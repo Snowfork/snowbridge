@@ -4,6 +4,7 @@ pragma solidity 0.8.23;
 
 import {ChannelID, OperatingMode} from "./Types.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
+import {DiamondStorage} from "./storage/DiamondStorage.sol";
 
 // Payload for AgentExecute
 struct AgentExecuteParams {
@@ -37,6 +38,8 @@ struct UpdateChannelParams {
 
 // Payload for Upgrade
 struct UpgradeParams {
+    /// @dev The facetCuts
+    DiamondStorage.FacetCut[] facetCuts;
     /// @dev The address of the implementation contract
     address impl;
     /// @dev the codehash of the new implementation contract.

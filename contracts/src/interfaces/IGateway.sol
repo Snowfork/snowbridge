@@ -47,7 +47,6 @@ interface IGateway {
     function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);
     function agentOf(bytes32 agentID) external view returns (address);
     function pricingParameters() external view returns (UD60x18, uint128);
-    function implementation() external view returns (address);
 
     /**
      * Messaging
