@@ -186,7 +186,7 @@ library Assets {
     }
 
     // @dev Register a new fungible Polkadot token for an agent
-    function registerTokenByID(bytes32 tokenID, address token, bytes32 agentID) internal {
+    function registerTokenByID(bytes32 tokenID, address token, bytes32 agentID) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenRegistryByID[tokenID].isRegistered == true) {
             revert TokenAlreadyRegistered();
@@ -195,11 +195,10 @@ library Assets {
             TokenInfo({isRegistered: true, isForeign: true, tokenID: tokenID, agentID: agentID, token: token});
         $.tokenRegistry[token] = info;
         $.tokenRegistryByID[tokenID] = info;
-        emit IGateway.TokenRegistered(tokenID, agentID, token);
     }
 
     // @dev Get token address by tokenID
-    function getTokenInfo(bytes32 tokenID) internal view returns (TokenInfo memory) {
+    function getTokenInfo(bytes32 tokenID) external view returns (TokenInfo memory) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenRegistryByID[tokenID].isRegistered == false) {
             revert TokenNotRegistered();
@@ -216,7 +215,7 @@ library Assets {
         MultiAddress calldata destinationAddress,
         uint128 destinationChainFee,
         uint128 amount
-    ) internal returns (Ticket memory ticket) {
+    ) external returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $asset = AssetsStorage.layout();
 
         TokenInfo storage info = $asset.tokenRegistry[token];

@@ -926,7 +926,7 @@ contract GatewayTest is Test {
         });
 
         vm.expectEmit(true, true, false, false);
-        emit IGateway.TokenRegistered(bytes32(uint256(1)), assetHubAgentID, address(0));
+        emit IGateway.ForeignTokenRegistered(bytes32(uint256(1)), assetHubAgentID, address(0));
 
         GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }

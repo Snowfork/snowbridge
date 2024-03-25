@@ -98,15 +98,6 @@ contract Gateway is IGateway, IInitializable {
         _;
     }
 
-    // handler functions are privileged from agent only
-    modifier onlyAgent(bytes32 agentID) {
-        bytes32 _agentID = _ensureAgentAddress(msg.sender);
-        if (_agentID != agentID) {
-            revert Unauthorized();
-        }
-        _;
-    }
-
     constructor(
         address beefyClient,
         address agentExecutor,
@@ -289,6 +280,7 @@ contract Gateway is IGateway, IInitializable {
             (bytes memory result) = abi.decode(returndata, (bytes));
             (bytes32 tokenID, address token) = abi.decode(result, (bytes32, address));
             Assets.registerTokenByID(tokenID, token, params.agentID);
+            emit IGateway.ForeignTokenRegistered(tokenID, params.agentID, token);
         }
     }
 
@@ -571,14 +563,6 @@ contract Gateway is IGateway, IInitializable {
     function _ensureAgent(bytes32 agentID) internal view returns (address agent) {
         agent = CoreStorage.layout().agents[agentID];
         if (agent == address(0)) {
-            revert AgentDoesNotExist();
-        }
-    }
-
-    /// @dev Ensure that the specified address is an valid agent
-    function _ensureAgentAddress(address agent) internal view returns (bytes32 agentID) {
-        agentID = CoreStorage.layout().agentAddresses[agent];
-        if (agentID == bytes32(0)) {
             revert AgentDoesNotExist();
         }
     }
