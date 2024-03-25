@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -163,4 +164,17 @@ func ChangeByteOrder(b []byte) []byte {
 	}
 
 	return b
+}
+
+func ByteArrayToPublicKeyArray(pubkeys [][]byte) ([][48]byte, error) {
+	result := [][48]byte{}
+	for _, pubkey := range pubkeys {
+		var tmpPubkey [48]byte
+		if len(pubkey) > 48 {
+			return nil, fmt.Errorf("slice is longer than 48 bytes")
+		}
+		copy(tmpPubkey[:], pubkey)
+		result = append(result, tmpPubkey)
+	}
+	return result, nil
 }

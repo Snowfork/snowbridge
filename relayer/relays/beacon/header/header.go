@@ -234,7 +234,13 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 
 func (h *Header) syncInterimFinalizedUpdate(ctx context.Context, lastSyncedSlot uint64) error {
 	checkpointSlot := h.syncer.CalculateNextCheckpointSlot(lastSyncedSlot)
-	finalizedUpdate, err := h.syncer.GetFinalizedUpdateAtAttestedSlot(checkpointSlot, lastSyncedSlot)
+
+	attestedSlot, err := h.syncer.FindLatestAttestedHeadersAtInterval(checkpointSlot, lastSyncedSlot)
+	if err != nil {
+		return fmt.Errorf("cannot find blocks at boundaries: %w", err)
+	}
+
+	finalizedUpdate, err := h.syncer.GetFinalizedUpdateAtAttestedSlot(attestedSlot, lastSyncedSlot, false)
 	if err != nil {
 		return fmt.Errorf("get interim checkpoint to update chain (checkpoint slot %d, original slot: %d): %w", checkpointSlot, lastSyncedSlot, err)
 	}

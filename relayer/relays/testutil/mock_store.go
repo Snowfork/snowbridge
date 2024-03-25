@@ -20,6 +20,6 @@ func (m *MockStore) StoreUpdate(attestedSlot, finalizedSlot, attestedSyncPeriod,
 	return nil
 }
 
-func (m *MockStore) FindBeaconStateWithinSyncPeriodRange(baseSlot, slotRange uint64) (store.StoredBeaconData, error) {
+func (m *MockStore) FindBeaconStateWithinSyncPeriodRange(slot, boundary uint64, findMax bool) (store.StoredBeaconData, error) {
 	return m.BeaconStateData, nil
 }

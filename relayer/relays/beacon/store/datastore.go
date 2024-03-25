@@ -15,7 +15,7 @@ type BeaconStore interface {
 	Connect() error
 	Close()
 	StoreUpdate(attestedSlot, finalizedSlot, attestedSyncPeriod, finalizedSyncPeriod uint64) error
-	FindBeaconStateWithinSyncPeriodRange(baseSlot, slotRange uint64) (StoredBeaconData, error)
+	FindBeaconStateWithinSyncPeriodRange(baseSlot, slotRange uint64, findMax bool) (StoredBeaconData, error)
 }
 
 type BeaconState struct {
@@ -94,15 +94,20 @@ func (s *Store) StoreUpdate(attestedSlot, finalizedSlot, attestedSyncPeriod, fin
 }
 
 // Find the latest finalized header within the same sync committee.
-func (s *Store) FindBeaconStateWithinSyncPeriodRange(baseSlot, checkPointSlot uint64) (StoredBeaconData, error) {
+func (s *Store) FindBeaconStateWithinSyncPeriodRange(baseSlot, boundarySlot uint64, findMax bool) (StoredBeaconData, error) {
 	var data StoredBeaconData
 
-	query := `SELECT MAX(attested_slot), finalized_slot, attested_state_filename, finalized_state_filename FROM beacon_state WHERE attested_slot >= ? AND attested_slot <= ?`
+	var query string
+	if findMax {
+		query = `SELECT MAX(attested_slot), finalized_slot, attested_state_filename, finalized_state_filename FROM beacon_state WHERE attested_slot >= ? AND attested_slot <= ?`
+	} else {
+		query = `SELECT MIN(attested_slot), finalized_slot, attested_state_filename, finalized_state_filename FROM beacon_state WHERE attested_slot >= ? AND attested_slot <= ?`
+	}
 	var attestedSlot uint64
 	var finalizedSlot uint64
 	var attestedStateFilename string
 	var finalizedStateFilename string
-	err := s.db.QueryRow(query, baseSlot, checkPointSlot).Scan(&attestedSlot, &finalizedSlot, &attestedStateFilename, &finalizedStateFilename)
+	err := s.db.QueryRow(query, baseSlot, boundarySlot).Scan(&attestedSlot, &finalizedSlot, &attestedStateFilename, &finalizedStateFilename)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// No finalized slots found within the range

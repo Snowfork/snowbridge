@@ -35,8 +35,39 @@ func TestGetFinalizedUpdateAtSlot(t *testing.T) {
 	require.NoError(t, err)
 	lodestarUpdateJSON := lodestarUpdate.Payload.ToJSON()
 
+	attestedSlot, err := syncer.FindLatestAttestedHeadersAtInterval(uint64(lodestarUpdate.Payload.AttestedHeader.Slot), 9331)
+	require.NoError(t, err)
+
 	// Manually construct the finalized update for the same block
-	manualUpdate, err := syncer.GetFinalizedUpdateAtAttestedSlot(uint64(lodestarUpdate.Payload.AttestedHeader.Slot), 9331)
+	manualUpdate, err := syncer.GetFinalizedUpdateAtAttestedSlot(attestedSlot, 9331, false)
+	require.NoError(t, err)
+	manualUpdateJSON := manualUpdate.Payload.ToJSON()
+
+	lodestarPayload, err := json.Marshal(lodestarUpdateJSON)
+	require.NoError(t, err)
+	manualPayload, err := json.Marshal(manualUpdateJSON)
+	require.NoError(t, err)
+
+	// The JSON should be same
+	require.JSONEq(t, string(lodestarPayload), string(manualPayload))
+}
+
+// Verifies that the Lodestar provided finalized endpoint matches the manually constructed finalized endpoint
+func TestGetFinalizedUpdateWithSyncCommitteeUpdateAtSlot(t *testing.T) {
+	t.Skip("skip testing utility test")
+
+	syncer := newTestRunner()
+
+	// Get lodestar finalized update
+	lodestarUpdate, err := syncer.GetFinalizedUpdate()
+	require.NoError(t, err)
+	lodestarUpdateJSON := lodestarUpdate.Payload.ToJSON()
+
+	attestedSlot, err := syncer.FindLatestAttestedHeadersAtInterval(uint64(lodestarUpdate.Payload.AttestedHeader.Slot), 9331)
+	require.NoError(t, err)
+
+	// Manually construct the finalized update for the same block
+	manualUpdate, err := syncer.GetFinalizedUpdateAtAttestedSlot(attestedSlot, 9331, true)
 	require.NoError(t, err)
 	manualUpdateJSON := manualUpdate.Payload.ToJSON()
 
@@ -81,7 +112,7 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 		DenebForkEpoch:               0,
 	}, &testutil.MockStore{})
 
-	attested, err := syncer.findAttestedAndFinalizedHeadersAtBoundary(8192, 100)
+	attested, err := syncer.FindLatestAttestedHeadersAtInterval(8192, 100)
 	assert.NoError(t, err)
 	assert.Equal(t, "8064", strconv.FormatUint(attested, 10))
 
@@ -101,7 +132,7 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 		DenebForkEpoch:               0,
 	}, &testutil.MockStore{})
 
-	attested, err = syncer.findAttestedAndFinalizedHeadersAtBoundary(32768, 25076)
+	attested, err = syncer.FindLatestAttestedHeadersAtInterval(32768, 25076)
 	assert.NoError(t, err)
 	assert.Equal(t, "32704", strconv.FormatUint(attested, 10))
 
@@ -121,7 +152,7 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 		DenebForkEpoch:               0,
 	}, &testutil.MockStore{})
 
-	attested, err = syncer.findAttestedAndFinalizedHeadersAtBoundary(32768, 25076)
+	attested, err = syncer.FindLatestAttestedHeadersAtInterval(32768, 25076)
 	assert.NoError(t, err)
 	assert.Equal(t, "32704", strconv.FormatUint(attested, 10))
 
@@ -145,6 +176,6 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 		DenebForkEpoch:               0,
 	}, &testutil.MockStore{})
 
-	attested, err = syncer.findAttestedAndFinalizedHeadersAtBoundary(32768, 32540)
+	attested, err = syncer.FindLatestAttestedHeadersAtInterval(32768, 32540)
 	assert.Error(t, err)
 }
