@@ -161,18 +161,24 @@ contract DeployScript is Script {
         // Deploy WETH for testing
         new WETH9();
 
+        new GatewayUpgradeMock();
+
+        _initialFund(address(gateway));
+
+        vm.stopBroadcast();
+    }
+
+    function _initialFund(address gateway) internal {
         // Fund the sovereign account for the BridgeHub parachain. Used to reward relayers
         // of messages originating from BridgeHub
         uint256 initialDeposit = vm.envUint("BRIDGE_HUB_INITIAL_DEPOSIT");
+        bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
+        bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
 
         address bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
         address assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
 
         payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);
-
-        new GatewayUpgradeMock();
-
-        vm.stopBroadcast();
     }
 }
