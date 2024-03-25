@@ -6,13 +6,7 @@ import {Assets} from "./Assets.sol";
 import {Agent} from "./Agent.sol";
 import {Channel, ChannelID, OperatingMode, ParaID, MultiAddress, Ticket, Costs, TokenInfo} from "./Types.sol";
 import {IGatewayOutbound} from "./interfaces/IGatewayOutbound.sol";
-import {IInitializable} from "./interfaces/IInitializable.sol";
-import {ERC1967} from "./utils/ERC1967.sol";
-import {Address} from "./utils/Address.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
-import {Call} from "./utils/Call.sol";
-import {Math} from "./utils/Math.sol";
-import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {PricingStorage} from "./storage/PricingStorage.sol";
@@ -20,7 +14,6 @@ import {PricingStorage} from "./storage/PricingStorage.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
 contract GatewayOutbound is IGatewayOutbound {
-    using Address for address;
     using SafeNativeTransfer for address payable;
 
     error Disabled();

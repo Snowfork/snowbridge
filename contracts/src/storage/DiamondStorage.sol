@@ -15,11 +15,6 @@ library DiamondStorage {
         bytes4[] functionSelectors;
     }
 
-    struct Facet {
-        address facetAddress;
-        bytes4[] functionSelectors;
-    }
-
     struct FacetAddressAndPosition {
         address facetAddress;
         uint16 functionSelectorPosition; // position in facetFunctionSelectors.functionSelectors array
@@ -187,17 +182,6 @@ library DiamondStorage {
             contractSize := extcodesize(_contract)
         }
         require(contractSize > 0, _errorMessage);
-    }
-
-    function facets() external view returns (Facet[] memory facets_) {
-        Layout storage ds = layout();
-        uint256 numFacets = ds.facetAddresses.length;
-        facets_ = new Facet[](numFacets);
-        for (uint256 i; i < numFacets; i++) {
-            address facetAddress_ = ds.facetAddresses[i];
-            facets_[i].facetAddress = facetAddress_;
-            facets_[i].functionSelectors = ds.facetFunctionSelectors[facetAddress_].functionSelectors;
-        }
     }
 
     /// @notice Gets all the function selectors provided by a facet.
