@@ -68,12 +68,4 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
             TokenInfo({isRegistered: true, isForeign: true, tokenID: 0x0, agentID: 0x0, token: address(0x0)});
         return info;
     }
-
-    function transferToken(
-        address token,
-        ParaID destinationChain,
-        MultiAddress calldata destinationAddress,
-        uint128 destinationFee,
-        uint128 amount
-    ) external payable {}
 }

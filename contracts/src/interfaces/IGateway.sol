@@ -46,10 +46,15 @@ interface IGateway {
      * Getters
      */
     function operatingMode() external view returns (OperatingMode);
+
     function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode);
+
     function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);
+
     function agentOf(bytes32 agentID) external view returns (address);
+
     function pricingParameters() external view returns (UD60x18, uint128);
+
     function implementation() external view returns (address);
 
     /**
@@ -103,15 +108,6 @@ interface IGateway {
 
     /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
     function sendToken(
-        address token,
-        ParaID destinationChain,
-        MultiAddress calldata destinationAddress,
-        uint128 destinationFee,
-        uint128 amount
-    ) external payable;
-
-    /// @dev Transfer polkadot native tokens back
-    function transferToken(
         address token,
         ParaID destinationChain,
         MultiAddress calldata destinationAddress,

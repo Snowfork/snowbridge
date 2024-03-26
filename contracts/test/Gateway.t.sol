@@ -174,6 +174,7 @@ contract GatewayTest is Test {
     }
 
     fallback() external payable {}
+
     receive() external payable {}
 
     /**
@@ -945,7 +946,7 @@ contract GatewayTest is Test {
         GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
 
-    function testTransferDotToAssetHub() public {
+    function testSendRelayTokenToAssetHub() public {
         // Register and then mint some DOT to account1
         testAgentMintDot();
 
@@ -956,15 +957,13 @@ contract GatewayTest is Test {
         vm.prank(account1);
 
         vm.expectEmit(true, true, false, true);
-        emit IGateway.TokenTransfered(address(info.token), account1, destPara, recipientAddress32, 1);
+        emit IGateway.TokenSent(address(info.token), account1, destPara, recipientAddress32, 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
         emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        IGateway(address(gateway)).transferToken{value: 0.1 ether}(
-            address(info.token), destPara, recipientAddress32, 1, 1
-        );
+        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(info.token), destPara, recipientAddress32, 1, 1);
     }
 
     function testParseAgentExecuteCall() public {

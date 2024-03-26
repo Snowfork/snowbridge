@@ -90,14 +90,6 @@ library Assets {
     ) external returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
-        TokenInfo storage info = $.tokenRegistry[token];
-        if (!info.isRegistered) {
-            revert TokenNotRegistered();
-        }
-        if (info.isForeign) {
-            revert InvalidToken();
-        }
-
         // Lock the funds into AssetHub's agent contract
         _transferToAgent($.assetHubAgent, token, sender, amount);
 
@@ -209,23 +201,13 @@ library Assets {
     // @dev Transfer polkadot native tokens back
     function transferToken(
         address executor,
-        address token,
+        TokenInfo memory info,
         address sender,
         ParaID destinationChain,
         MultiAddress calldata destinationAddress,
         uint128 destinationChainFee,
         uint128 amount
     ) external returns (Ticket memory ticket) {
-        AssetsStorage.Layout storage $asset = AssetsStorage.layout();
-
-        TokenInfo storage info = $asset.tokenRegistry[token];
-        if (!info.isRegistered) {
-            revert TokenNotRegistered();
-        }
-        if (!info.isForeign) {
-            revert InvalidToken();
-        }
-
         CoreStorage.Layout storage $core = CoreStorage.layout();
 
         address agent = $core.agents[info.agentID];
@@ -246,18 +228,18 @@ library Assets {
         if (destinationAddress.isAddress32()) {
             // The receiver has a 32-byte account ID
             ticket.payload = SubstrateTypes.TransferTokenToAddress32(
-                token, destinationChain, destinationAddress.asAddress32(), destinationChainFee, amount
+                info.token, destinationChain, destinationAddress.asAddress32(), destinationChainFee, amount
             );
         } else if (destinationAddress.isAddress20()) {
             // The receiver has a 20-byte account ID
             ticket.payload = SubstrateTypes.TransferTokenToAddress20(
-                token, destinationChain, destinationAddress.asAddress20(), destinationChainFee, amount
+                info.token, destinationChain, destinationAddress.asAddress20(), destinationChainFee, amount
             );
         } else {
             revert Unsupported();
         }
 
-        emit IGateway.TokenTransfered(token, sender, destinationChain, destinationAddress, amount);
+        emit IGateway.TokenSent(info.token, sender, destinationChain, destinationAddress, amount);
     }
 
     function _burn(address agentExecutor, address agent, bytes32 tokenID, address sender, uint256 amount) internal {

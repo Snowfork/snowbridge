@@ -89,6 +89,7 @@ contract Gateway is IGateway, IInitializable {
     error InvalidCodeHash();
     error InvalidConstructorParams();
     error AlreadyInitialized();
+    error TokenNotRegistered();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -439,24 +440,23 @@ contract Gateway is IGateway, IInitializable {
         uint128 destinationFee,
         uint128 amount
     ) external payable {
-        _submitOutbound(
-            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
-        );
-    }
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
-    // Transfer polkadot native tokens back
-    function transferToken(
-        address token,
-        ParaID destinationChain,
-        MultiAddress calldata destinationAddress,
-        uint128 destinationFee,
-        uint128 amount
-    ) external payable {
-        _submitOutbound(
-            Assets.transferToken(
-                AGENT_EXECUTOR, token, msg.sender, destinationChain, destinationAddress, destinationFee, amount
-            )
-        );
+        TokenInfo storage info = $.tokenRegistry[token];
+        if (!info.isRegistered) {
+            revert TokenNotRegistered();
+        }
+        if (info.isForeign) {
+            _submitOutbound(
+                Assets.transferToken(
+                    AGENT_EXECUTOR, info, msg.sender, destinationChain, destinationAddress, destinationFee, amount
+                )
+            );
+        } else {
+            _submitOutbound(
+                Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
+            );
+        }
     }
 
     function getTokenInfo(bytes32 tokenID) external view returns (TokenInfo memory) {
