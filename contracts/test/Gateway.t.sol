@@ -54,12 +54,12 @@ contract GatewayTest is Test {
     // Emitted when token minted
     event TokenMinted(bytes32 indexed tokenID, address token, address recipient, uint256 amount);
 
-    ParaID public bridgeHubParaID = ParaID.wrap(1001);
-    bytes32 public bridgeHubAgentID = keccak256("1001");
+    ParaID public bridgeHubParaID = ParaID.wrap(1013);
+    bytes32 public bridgeHubAgentID = 0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314;
     address public bridgeHubAgent;
 
-    ParaID public assetHubParaID = ParaID.wrap(1002);
-    bytes32 public assetHubAgentID = keccak256("1002");
+    ParaID public assetHubParaID = ParaID.wrap(1000);
+    bytes32 public assetHubAgentID = 0x81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79;
     address public assetHubAgent;
 
     address public relayer;
@@ -965,5 +965,30 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).transferToken{value: 0.1 ether}(
             address(info.token), destPara, recipientAddress32, 1, 1
         );
+    }
+
+    function testParseAgentExecuteCall() public {
+        bytes memory data =
+            hex"000000000000000000000000000000000000000000000000000000000000002081c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001600000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001008080778c30c20fa2ebc0ed18d2cbca1f30b027625c7d9d97f5d589721c91aeb6000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000003646f7400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003646f740000000000000000000000000000000000000000000000000000000000";
+
+        AgentExecuteParams memory params = abi.decode(data, (AgentExecuteParams));
+
+        (AgentExecuteCommand command, bytes memory payload) = abi.decode(params.payload, (AgentExecuteCommand, bytes));
+
+        //Register foreign token
+        assertEq(uint256(command), uint256(1));
+
+        (bytes32 tokenID, string memory name, string memory symbol, uint8 decimals) =
+            abi.decode(payload, (bytes32, string, string, uint8));
+        assertEq(tokenID, 0x8080778c30c20fa2ebc0ed18d2cbca1f30b027625c7d9d97f5d589721c91aeb6);
+
+        console.log("name:%s", name);
+        console.log("symbol:%s", symbol);
+        console.log("decimals:%s", decimals);
+
+        vm.expectEmit(true, true, false, false);
+        emit IGateway.ForeignTokenRegistered(tokenID, assetHubAgentID, address(0));
+
+        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
 }
