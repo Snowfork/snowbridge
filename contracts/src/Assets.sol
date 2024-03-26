@@ -228,12 +228,12 @@ library Assets {
         if (destinationAddress.isAddress32()) {
             // The receiver has a 32-byte account ID
             ticket.payload = SubstrateTypes.TransferTokenToAddress32(
-                info.token, destinationChain, destinationAddress.asAddress32(), destinationChainFee, amount
+                info.tokenID, destinationChain, destinationAddress.asAddress32(), destinationChainFee, amount
             );
         } else if (destinationAddress.isAddress20()) {
             // The receiver has a 20-byte account ID
             ticket.payload = SubstrateTypes.TransferTokenToAddress20(
-                info.token, destinationChain, destinationAddress.asAddress20(), destinationChainFee, amount
+                info.tokenID, destinationChain, destinationAddress.asAddress20(), destinationChainFee, amount
             );
         } else {
             revert Unsupported();

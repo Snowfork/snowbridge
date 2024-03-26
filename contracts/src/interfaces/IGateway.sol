@@ -102,9 +102,9 @@ interface IGateway {
     /// 1. Delivery costs to BridgeHub
     /// 2. XCM execution costs on destinationChain
     function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
-    external
-    view
-    returns (uint256);
+        external
+        view
+        returns (uint256);
 
     /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
     function sendToken(

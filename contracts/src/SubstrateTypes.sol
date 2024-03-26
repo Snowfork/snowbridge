@@ -135,7 +135,7 @@ library SubstrateTypes {
     }
 
     // destination is AccountID32 address
-    function TransferTokenToAddress32(address token, ParaID paraID, bytes32 recipient, uint128 xcmFee, uint128 amount)
+    function TransferTokenToAddress32(bytes32 tokenID, ParaID paraID, bytes32 recipient, uint128 xcmFee, uint128 amount)
         internal
         view
         returns (bytes memory)
@@ -144,7 +144,7 @@ library SubstrateTypes {
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x02),
-            SubstrateTypes.H160(token),
+            tokenID,
             bytes1(0x01),
             ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
             recipient,
@@ -154,7 +154,7 @@ library SubstrateTypes {
     }
 
     // destination is AccountID20 address
-    function TransferTokenToAddress20(address token, ParaID paraID, bytes20 recipient, uint128 xcmFee, uint128 amount)
+    function TransferTokenToAddress20(bytes32 tokenID, ParaID paraID, bytes20 recipient, uint128 xcmFee, uint128 amount)
         internal
         view
         returns (bytes memory)
@@ -163,7 +163,7 @@ library SubstrateTypes {
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
             bytes1(0x02),
-            SubstrateTypes.H160(token),
+            tokenID,
             bytes1(0x02),
             ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
             recipient,
