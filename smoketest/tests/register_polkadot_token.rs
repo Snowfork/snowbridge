@@ -18,5 +18,4 @@ async fn register_polkadot_token() {
 	wait_for_bridgehub_event::<RegisterToken>(&test_clients.bridge_hub_client).await;
 
 	wait_for_ethereum_event::<ForeignTokenRegisteredFilter>(&test_clients.ethereum_client).await;
-
 }

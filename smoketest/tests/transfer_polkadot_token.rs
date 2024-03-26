@@ -5,7 +5,6 @@ use ethers::{
 	providers::{Provider, Ws},
 };
 use futures::StreamExt;
-use hex_literal::hex;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{agent_executor, agent_executor::TokenMintedFilter, i_gateway::IGateway},
@@ -28,8 +27,6 @@ use snowbridge_smoketest::{
 use std::{sync::Arc, time::Duration};
 use subxt::OnlineClient;
 use subxt_signer::sr25519::dev;
-
-const DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 
 #[tokio::test]
 async fn transfer_polkadot_token() {
@@ -64,7 +61,7 @@ async fn transfer_polkadot_token() {
 		parents: 0,
 		interior: Junctions::X1(Junction::AccountKey20 {
 			network: None,
-			key: DESTINATION_ADDRESS.into(),
+			key: ETHEREUM_ADDRESS.into(),
 		}),
 	});
 
