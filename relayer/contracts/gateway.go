@@ -100,7 +100,7 @@ type VerificationProof struct {
 
 // GatewayMetaData contains all meta data concerning the Gateway contract.
 var GatewayMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"function\",\"name\":\"agentOf\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"channelNoncesOf\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"internalType\":\"ChannelID\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"channelOperatingModeOf\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"internalType\":\"ChannelID\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"enumOperatingMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getTokenInfo\",\"inputs\":[{\"name\":\"tokenID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"tuple\",\"internalType\":\"structTokenInfo\",\"components\":[{\"name\":\"isRegistered\",\"type\":\"bool\",\"internalType\":\"bool\"},{\"name\":\"isForeign\",\"type\":\"bool\",\"internalType\":\"bool\"},{\"name\":\"tokenID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"agentID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"implementation\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isTokenRegistered\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"operatingMode\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"enumOperatingMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pricingParameters\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"UD60x18\"},{\"name\":\"\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"quoteRegisterTokenFee\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"quoteSendTokenFee\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"internalType\":\"ParaID\"},{\"name\":\"destinationFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"registerToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"sendToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"internalType\":\"ParaID\"},{\"name\":\"destinationAddress\",\"type\":\"tuple\",\"internalType\":\"structMultiAddress\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"enumKind\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"destinationFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"amount\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"submitV1\",\"inputs\":[{\"name\":\"message\",\"type\":\"tuple\",\"internalType\":\"structInboundMessage\",\"components\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"internalType\":\"ChannelID\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"command\",\"type\":\"uint8\",\"internalType\":\"enumCommand\"},{\"name\":\"params\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"maxDispatchGas\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"maxFeePerGas\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"reward\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"id\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"headerProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.Proof\",\"components\":[{\"name\":\"header\",\"type\":\"tuple\",\"internalType\":\"structVerification.ParachainHeader\",\"components\":[{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"number\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"stateRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"digestItems\",\"type\":\"tuple[]\",\"internalType\":\"structVerification.DigestItem[]\",\"components\":[{\"name\":\"kind\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"consensusEngineID\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"headProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.HeadProof\",\"components\":[{\"name\":\"pos\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"width\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]},{\"name\":\"leafPartial\",\"type\":\"tuple\",\"internalType\":\"structVerification.MMRLeafPartial\",\"components\":[{\"name\":\"version\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"parentNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"leafProofOrder\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"transferToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"internalType\":\"ParaID\"},{\"name\":\"destinationAddress\",\"type\":\"tuple\",\"internalType\":\"structMultiAddress\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"enumKind\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"destinationFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"amount\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"event\",\"name\":\"AgentCreated\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"agent\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"AgentFundsWithdrawn\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"recipient\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelCreated\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelUpdated\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ForeignTokenRegistered\",\"inputs\":[{\"name\":\"tokenID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"agentID\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"token\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InboundMessageDispatched\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"messageID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"success\",\"type\":\"bool\",\"indexed\":false,\"internalType\":\"bool\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatingModeChanged\",\"inputs\":[{\"name\":\"mode\",\"type\":\"uint8\",\"indexed\":false,\"internalType\":\"enumOperatingMode\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OutboundMessageAccepted\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"messageID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"payload\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"PricingParametersChanged\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenRegistrationSent\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenSent\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"indexed\":true,\"internalType\":\"ParaID\"},{\"name\":\"destinationAddress\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structMultiAddress\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"enumKind\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"amount\",\"type\":\"uint128\",\"indexed\":false,\"internalType\":\"uint128\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenTransferFeesChanged\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenTransfered\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"indexed\":true,\"internalType\":\"ParaID\"},{\"name\":\"destinationAddress\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structMultiAddress\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"enumKind\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"amount\",\"type\":\"uint128\",\"indexed\":false,\"internalType\":\"uint128\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Upgraded\",\"inputs\":[{\"name\":\"implementation\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false}]",
+	ABI: "[{\"type\":\"function\",\"name\":\"agentOf\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"channelNoncesOf\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"internalType\":\"ChannelID\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"channelOperatingModeOf\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"internalType\":\"ChannelID\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"enumOperatingMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getTokenInfo\",\"inputs\":[{\"name\":\"tokenID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"tuple\",\"internalType\":\"structTokenInfo\",\"components\":[{\"name\":\"isRegistered\",\"type\":\"bool\",\"internalType\":\"bool\"},{\"name\":\"isForeign\",\"type\":\"bool\",\"internalType\":\"bool\"},{\"name\":\"tokenID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"agentID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"implementation\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isTokenRegistered\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"operatingMode\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"enumOperatingMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pricingParameters\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"UD60x18\"},{\"name\":\"\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"quoteRegisterTokenFee\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"quoteSendTokenFee\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"internalType\":\"ParaID\"},{\"name\":\"destinationFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"registerToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"sendToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"internalType\":\"ParaID\"},{\"name\":\"destinationAddress\",\"type\":\"tuple\",\"internalType\":\"structMultiAddress\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"enumKind\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"destinationFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"amount\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"submitV1\",\"inputs\":[{\"name\":\"message\",\"type\":\"tuple\",\"internalType\":\"structInboundMessage\",\"components\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"internalType\":\"ChannelID\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"command\",\"type\":\"uint8\",\"internalType\":\"enumCommand\"},{\"name\":\"params\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"maxDispatchGas\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"maxFeePerGas\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"reward\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"id\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"headerProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.Proof\",\"components\":[{\"name\":\"header\",\"type\":\"tuple\",\"internalType\":\"structVerification.ParachainHeader\",\"components\":[{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"number\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"stateRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"digestItems\",\"type\":\"tuple[]\",\"internalType\":\"structVerification.DigestItem[]\",\"components\":[{\"name\":\"kind\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"consensusEngineID\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"headProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.HeadProof\",\"components\":[{\"name\":\"pos\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"width\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]},{\"name\":\"leafPartial\",\"type\":\"tuple\",\"internalType\":\"structVerification.MMRLeafPartial\",\"components\":[{\"name\":\"version\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"parentNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"leafProofOrder\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"AgentCreated\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"agent\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"AgentFundsWithdrawn\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"recipient\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelCreated\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelUpdated\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ForeignTokenRegistered\",\"inputs\":[{\"name\":\"tokenID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"agentID\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"token\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InboundMessageDispatched\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"messageID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"success\",\"type\":\"bool\",\"indexed\":false,\"internalType\":\"bool\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatingModeChanged\",\"inputs\":[{\"name\":\"mode\",\"type\":\"uint8\",\"indexed\":false,\"internalType\":\"enumOperatingMode\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OutboundMessageAccepted\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"messageID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"payload\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"PricingParametersChanged\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenRegistrationSent\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenSent\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"indexed\":true,\"internalType\":\"ParaID\"},{\"name\":\"destinationAddress\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structMultiAddress\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"enumKind\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"amount\",\"type\":\"uint128\",\"indexed\":false,\"internalType\":\"uint128\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenTransferFeesChanged\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Upgraded\",\"inputs\":[{\"name\":\"implementation\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false}]",
 }
 
 // GatewayABI is the input ABI used to generate the binding from.
@@ -622,27 +622,6 @@ func (_Gateway *GatewaySession) SubmitV1(message InboundMessage, leafProof [][32
 // Solidity: function submitV1((bytes32,uint64,uint8,bytes,uint64,uint256,uint256,bytes32) message, bytes32[] leafProof, ((bytes32,uint256,bytes32,bytes32,(uint256,bytes4,bytes)[]),(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) headerProof) returns()
 func (_Gateway *GatewayTransactorSession) SubmitV1(message InboundMessage, leafProof [][32]byte, headerProof VerificationProof) (*types.Transaction, error) {
 	return _Gateway.Contract.SubmitV1(&_Gateway.TransactOpts, message, leafProof, headerProof)
-}
-
-// TransferToken is a paid mutator transaction binding the contract method 0x1382f5eb.
-//
-// Solidity: function transferToken(address token, uint32 destinationChain, (uint8,bytes) destinationAddress, uint128 destinationFee, uint128 amount) payable returns()
-func (_Gateway *GatewayTransactor) TransferToken(opts *bind.TransactOpts, token common.Address, destinationChain uint32, destinationAddress MultiAddress, destinationFee *big.Int, amount *big.Int) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "transferToken", token, destinationChain, destinationAddress, destinationFee, amount)
-}
-
-// TransferToken is a paid mutator transaction binding the contract method 0x1382f5eb.
-//
-// Solidity: function transferToken(address token, uint32 destinationChain, (uint8,bytes) destinationAddress, uint128 destinationFee, uint128 amount) payable returns()
-func (_Gateway *GatewaySession) TransferToken(token common.Address, destinationChain uint32, destinationAddress MultiAddress, destinationFee *big.Int, amount *big.Int) (*types.Transaction, error) {
-	return _Gateway.Contract.TransferToken(&_Gateway.TransactOpts, token, destinationChain, destinationAddress, destinationFee, amount)
-}
-
-// TransferToken is a paid mutator transaction binding the contract method 0x1382f5eb.
-//
-// Solidity: function transferToken(address token, uint32 destinationChain, (uint8,bytes) destinationAddress, uint128 destinationFee, uint128 amount) payable returns()
-func (_Gateway *GatewayTransactorSession) TransferToken(token common.Address, destinationChain uint32, destinationAddress MultiAddress, destinationFee *big.Int, amount *big.Int) (*types.Transaction, error) {
-	return _Gateway.Contract.TransferToken(&_Gateway.TransactOpts, token, destinationChain, destinationAddress, destinationFee, amount)
 }
 
 // GatewayAgentCreatedIterator is returned from FilterAgentCreated and is used to iterate over the raw logs and unpacked data for AgentCreated events raised by the Gateway contract.
@@ -2374,170 +2353,6 @@ func (_Gateway *GatewayFilterer) WatchTokenTransferFeesChanged(opts *bind.WatchO
 func (_Gateway *GatewayFilterer) ParseTokenTransferFeesChanged(log types.Log) (*GatewayTokenTransferFeesChanged, error) {
 	event := new(GatewayTokenTransferFeesChanged)
 	if err := _Gateway.contract.UnpackLog(event, "TokenTransferFeesChanged", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// GatewayTokenTransferedIterator is returned from FilterTokenTransfered and is used to iterate over the raw logs and unpacked data for TokenTransfered events raised by the Gateway contract.
-type GatewayTokenTransferedIterator struct {
-	Event *GatewayTokenTransfered // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *GatewayTokenTransferedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(GatewayTokenTransfered)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(GatewayTokenTransfered)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *GatewayTokenTransferedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *GatewayTokenTransferedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// GatewayTokenTransfered represents a TokenTransfered event raised by the Gateway contract.
-type GatewayTokenTransfered struct {
-	Token              common.Address
-	Sender             common.Address
-	DestinationChain   uint32
-	DestinationAddress MultiAddress
-	Amount             *big.Int
-	Raw                types.Log // Blockchain specific contextual infos
-}
-
-// FilterTokenTransfered is a free log retrieval operation binding the contract event 0x83c992bcd5b2b18b0cb4ceb131a37c34e5b795f5e00e7058b99a33e9bcf1ee47.
-//
-// Solidity: event TokenTransfered(address indexed token, address indexed sender, uint32 indexed destinationChain, (uint8,bytes) destinationAddress, uint128 amount)
-func (_Gateway *GatewayFilterer) FilterTokenTransfered(opts *bind.FilterOpts, token []common.Address, sender []common.Address, destinationChain []uint32) (*GatewayTokenTransferedIterator, error) {
-
-	var tokenRule []interface{}
-	for _, tokenItem := range token {
-		tokenRule = append(tokenRule, tokenItem)
-	}
-	var senderRule []interface{}
-	for _, senderItem := range sender {
-		senderRule = append(senderRule, senderItem)
-	}
-	var destinationChainRule []interface{}
-	for _, destinationChainItem := range destinationChain {
-		destinationChainRule = append(destinationChainRule, destinationChainItem)
-	}
-
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "TokenTransfered", tokenRule, senderRule, destinationChainRule)
-	if err != nil {
-		return nil, err
-	}
-	return &GatewayTokenTransferedIterator{contract: _Gateway.contract, event: "TokenTransfered", logs: logs, sub: sub}, nil
-}
-
-// WatchTokenTransfered is a free log subscription operation binding the contract event 0x83c992bcd5b2b18b0cb4ceb131a37c34e5b795f5e00e7058b99a33e9bcf1ee47.
-//
-// Solidity: event TokenTransfered(address indexed token, address indexed sender, uint32 indexed destinationChain, (uint8,bytes) destinationAddress, uint128 amount)
-func (_Gateway *GatewayFilterer) WatchTokenTransfered(opts *bind.WatchOpts, sink chan<- *GatewayTokenTransfered, token []common.Address, sender []common.Address, destinationChain []uint32) (event.Subscription, error) {
-
-	var tokenRule []interface{}
-	for _, tokenItem := range token {
-		tokenRule = append(tokenRule, tokenItem)
-	}
-	var senderRule []interface{}
-	for _, senderItem := range sender {
-		senderRule = append(senderRule, senderItem)
-	}
-	var destinationChainRule []interface{}
-	for _, destinationChainItem := range destinationChain {
-		destinationChainRule = append(destinationChainRule, destinationChainItem)
-	}
-
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "TokenTransfered", tokenRule, senderRule, destinationChainRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(GatewayTokenTransfered)
-				if err := _Gateway.contract.UnpackLog(event, "TokenTransfered", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseTokenTransfered is a log parse operation binding the contract event 0x83c992bcd5b2b18b0cb4ceb131a37c34e5b795f5e00e7058b99a33e9bcf1ee47.
-//
-// Solidity: event TokenTransfered(address indexed token, address indexed sender, uint32 indexed destinationChain, (uint8,bytes) destinationAddress, uint128 amount)
-func (_Gateway *GatewayFilterer) ParseTokenTransfered(log types.Log) (*GatewayTokenTransfered, error) {
-	event := new(GatewayTokenTransfered)
-	if err := _Gateway.contract.UnpackLog(event, "TokenTransfered", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

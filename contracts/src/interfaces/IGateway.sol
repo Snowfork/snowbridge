@@ -102,9 +102,9 @@ interface IGateway {
     /// 1. Delivery costs to BridgeHub
     /// 2. XCM execution costs on destinationChain
     function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
-        external
-        view
-        returns (uint256);
+    external
+    view
+    returns (uint256);
 
     /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
     function sendToken(
@@ -117,13 +117,4 @@ interface IGateway {
 
     /// @dev Get tokenInfo by tokenID
     function getTokenInfo(bytes32 tokenID) external view returns (TokenInfo memory);
-
-    /// @dev Emitted once the polkadot native tokens are burnt and an outbound message is successfully queued.
-    event TokenTransfered(
-        address indexed token,
-        address indexed sender,
-        ParaID indexed destinationChain,
-        MultiAddress destinationAddress,
-        uint128 amount
-    );
 }
