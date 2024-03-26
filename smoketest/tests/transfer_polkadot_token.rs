@@ -1,0 +1,109 @@
+use assethub::api::polkadot_xcm::calls::TransactionApi;
+use ethers::{
+	addressbook::Address,
+	prelude::Middleware,
+	providers::{Provider, Ws},
+};
+use futures::StreamExt;
+use hex_literal::hex;
+use snowbridge_smoketest::{
+	constants::*,
+	contracts::{agent_executor, agent_executor::TokenMintedFilter, i_gateway::IGateway},
+	helper::AssetHubConfig,
+	parachains::assethub::{
+		api::runtime_types::{
+			staging_xcm::v3::multilocation::MultiLocation,
+			xcm::{
+				v3::{
+					junction::{Junction, NetworkId},
+					junctions::Junctions,
+					multiasset::{AssetId, Fungibility, MultiAsset, MultiAssets},
+				},
+				VersionedAssets, VersionedLocation,
+			},
+		},
+		{self},
+	},
+};
+use std::{sync::Arc, time::Duration};
+use subxt::OnlineClient;
+use subxt_signer::sr25519::dev;
+
+const DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
+
+#[tokio::test]
+async fn transfer_polkadot_token() {
+	let ethereum_provider = Provider::<Ws>::connect(ETHEREUM_API)
+		.await
+		.unwrap()
+		.interval(Duration::from_millis(10u64));
+
+	let ethereum_client = Arc::new(ethereum_provider);
+
+	let gateway = IGateway::new(GATEWAY_PROXY_CONTRACT, ethereum_client.clone());
+	let _agent_src =
+		gateway.agent_of(ASSET_HUB_AGENT_ID).await.expect("could not get agent address");
+
+	let assethub: OnlineClient<AssetHubConfig> =
+		OnlineClient::from_url(ASSET_HUB_WS_URL).await.unwrap();
+
+	let amount: u128 = 1_000_000_000;
+	let assets = VersionedAssets::V3(MultiAssets(vec![MultiAsset {
+		id: AssetId::Concrete(MultiLocation { parents: 1, interior: Junctions::Here }),
+		fun: Fungibility::Fungible(amount),
+	}]));
+
+	let destination = VersionedLocation::V3(MultiLocation {
+		parents: 2,
+		interior: Junctions::X1(Junction::GlobalConsensus(NetworkId::Ethereum {
+			chain_id: ETHEREUM_CHAIN_ID,
+		})),
+	});
+
+	let beneficiary = VersionedLocation::V3(MultiLocation {
+		parents: 0,
+		interior: Junctions::X1(Junction::AccountKey20 {
+			network: None,
+			key: DESTINATION_ADDRESS.into(),
+		}),
+	});
+
+	let signer = dev::bob();
+
+	let token_transfer_call =
+		TransactionApi.reserve_transfer_assets(destination, beneficiary, assets, 0);
+
+	let _ = assethub
+		.tx()
+		.sign_and_submit_then_watch_default(&token_transfer_call, &signer)
+		.await
+		.expect("call success");
+
+	let agent_executor_addr: Address = AGENT_EXECUTOR_CONTRACT.into();
+	let agent_executor =
+		agent_executor::AgentExecutor::new(agent_executor_addr, ethereum_client.clone());
+
+	let wait_for_blocks = 500;
+	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
+
+	let mut transfer_event_found = false;
+	while let Some(block) = stream.next().await {
+		println!("Polling ethereum block {:?} for transfer event", block.number.unwrap());
+		if let Ok(transfers) = agent_executor
+			.event::<TokenMintedFilter>()
+			.at_block_hash(block.hash.unwrap())
+			.query()
+			.await
+		{
+			for transfer in transfers {
+				println!("Transfer event found at ethereum block {:?}", block.number.unwrap());
+				println!("token id {:?}", transfer.token_id);
+				transfer_event_found = true;
+			}
+		}
+		if transfer_event_found {
+			break
+		}
+	}
+	assert!(transfer_event_found);
+}

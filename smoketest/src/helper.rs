@@ -7,7 +7,8 @@ use crate::{
 			api::{
 				runtime_types,
 				runtime_types::{
-					snowbridge_core::outbound::v1::OperatingMode, xcm::VersionedLocation,
+					snowbridge_core::outbound::v1::OperatingMode,
+					staging_xcm::v4::junction::NetworkId, xcm::VersionedLocation,
 				},
 			},
 		},
@@ -172,7 +173,7 @@ pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Pro
 	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
 	let gateway = i_gateway::IGateway::new(gateway_addr, (*ethereum_client).deref().clone());
 
-	let wait_for_blocks = 300;
+	let wait_for_blocks = 500;
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
 
 	let mut ethereum_event_found = false;
@@ -376,12 +377,12 @@ pub async fn construct_register_relay_token_call(
 	});
 	let asset = VersionedLocation::V4(runtime_types::staging_xcm::v4::location::Location {
 		parents: 1,
-		interior: Junctions::Here,
+		interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Rococo)]),
 	});
 	let metadata = runtime_types::snowbridge_core::AssetRegistrarMetadata {
-		name: "dot".as_bytes().to_vec(),
-		symbol: "dot".as_bytes().to_vec(),
-		decimals: 10,
+		name: "roc".as_bytes().to_vec(),
+		symbol: "roc".as_bytes().to_vec(),
+		decimals: 12,
 	};
 	let call = bridgehub::api::ethereum_system::calls::TransactionApi
 		.force_register_token(location, asset, metadata)

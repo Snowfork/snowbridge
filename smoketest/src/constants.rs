@@ -25,6 +25,7 @@ pub const ETHEREUM_ADDRESS: [u8; 20] = hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3d
 // the order in contracts are deployed in DeployScript.sol.
 pub const GATEWAY_PROXY_CONTRACT: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
 pub const WETH_CONTRACT: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
+pub const AGENT_EXECUTOR_CONTRACT: [u8; 20] = hex!("2ffA5ecdBe006d30397c7636d3e015EEE251369F");
 
 // Agent for bridge hub parachain 1013
 pub const BRIDGE_HUB_AGENT_ID: [u8; 32] =
