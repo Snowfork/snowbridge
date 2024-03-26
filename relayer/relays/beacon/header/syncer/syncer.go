@@ -566,6 +566,24 @@ func (s *Syncer) FindOldestAttestedHeaderAtInterval(initialSlot, highestSlot uin
 	return headers[0], nil
 }
 
+func (s *Syncer) GetLatestPossibleFinalizedUpdate(attestedSlot uint64, boundary uint64) (scale.Update, error) {
+	attestedSlot, err := s.FindLatestAttestedHeadersAtInterval(attestedSlot, boundary)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("cannot find blocks at boundaries: %w", err)
+	}
+
+	return s.GetFinalizedUpdateAtAttestedSlot(attestedSlot, boundary, false)
+}
+
+func (s *Syncer) GetOldestPossibleFinalizedUpdate(attestedSlot uint64, boundary uint64) (scale.Update, error) {
+	attestedSlot, err := s.FindOldestAttestedHeaderAtInterval(attestedSlot, boundary)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("cannot find blocks at boundaries: %w", err)
+	}
+
+	return s.GetFinalizedUpdateAtAttestedSlot(attestedSlot, boundary, true)
+}
+
 func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(attestedSlot uint64, boundary uint64, fetchNextSyncCommittee bool) (scale.Update, error) {
 	var update scale.Update
 

@@ -39,7 +39,7 @@ func TestGetFinalizedUpdateAtSlot(t *testing.T) {
 	require.NoError(t, err)
 
 	// Manually construct the finalized update for the same block
-	manualUpdate, err := syncer.GetFinalizedUpdateAtAttestedSlot(attestedSlot, 9331, false)
+	manualUpdate, err := syncer.GetLatestPossibleFinalizedUpdate(attestedSlot, 9331)
 	require.NoError(t, err)
 	manualUpdateJSON := manualUpdate.Payload.ToJSON()
 
@@ -54,20 +54,20 @@ func TestGetFinalizedUpdateAtSlot(t *testing.T) {
 
 // Verifies that the Lodestar provided finalized endpoint matches the manually constructed finalized endpoint
 func TestGetFinalizedUpdateWithSyncCommitteeUpdateAtSlot(t *testing.T) {
-	t.Skip("skip testing utility test")
+	//t.Skip("skip testing utility test")
 
 	syncer := newTestRunner()
 
+	syncCommitteePeriod := uint64(566)
 	// Get lodestar finalized update
-	lodestarUpdate, err := syncer.GetFinalizedUpdate()
+	lodestarUpdate, err := syncer.GetSyncCommitteePeriodUpdate(syncCommitteePeriod)
 	require.NoError(t, err)
 	lodestarUpdateJSON := lodestarUpdate.Payload.ToJSON()
 
-	attestedSlot, err := syncer.FindLatestAttestedHeadersAtInterval(uint64(lodestarUpdate.Payload.AttestedHeader.Slot), 9331)
-	require.NoError(t, err)
+	boundary := (syncCommitteePeriod + 1) * syncer.setting.SlotsInEpoch * syncer.setting.EpochsPerSyncCommitteePeriod
 
 	// Manually construct the finalized update for the same block
-	manualUpdate, err := syncer.GetFinalizedUpdateAtAttestedSlot(attestedSlot, 9331, true)
+	manualUpdate, err := syncer.GetOldestPossibleFinalizedUpdate(uint64(lodestarUpdate.Payload.AttestedHeader.Slot), boundary)
 	require.NoError(t, err)
 	manualUpdateJSON := manualUpdate.Payload.ToJSON()
 
