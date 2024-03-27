@@ -2,9 +2,21 @@ use crate::{
 	constants::*,
 	contracts::i_gateway,
 	parachains::{
-		bridgehub::{self, api::runtime_types::snowbridge_core::outbound::v1::OperatingMode},
+		bridgehub::{
+			self,
+			api::{
+				runtime_types,
+				runtime_types::{
+					snowbridge_core::outbound::v1::OperatingMode,
+					staging_xcm::v4::junction::NetworkId, xcm::VersionedLocation,
+				},
+			},
+		},
 		penpal::{
-			api::{runtime_types as penpalTypes, runtime_types::xcm::VersionedLocation},
+			api::{
+				runtime_types as penpalTypes,
+				runtime_types::xcm::VersionedLocation as penpalVersionLocation,
+			},
 			{self},
 		},
 		relaychain,
@@ -161,7 +173,7 @@ pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Pro
 	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
 	let gateway = i_gateway::IGateway::new(gateway_addr, (*ethereum_client).deref().clone());
 
-	let wait_for_blocks = 300;
+	let wait_for_blocks = 500;
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
 
 	let mut ethereum_event_found = false;
@@ -185,7 +197,7 @@ pub async fn send_sudo_xcm_transact(
 	penpal_client: &Box<OnlineClient<PenpalConfig>>,
 	message: Box<VersionedXcm>,
 ) -> Result<ExtrinsicEvents<PenpalConfig>, Box<dyn std::error::Error>> {
-	let dest = Box::new(VersionedLocation::V3(MultiLocation {
+	let dest = Box::new(penpalVersionLocation::V3(MultiLocation {
 		parents: 1,
 		interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
 	}));
@@ -352,4 +364,29 @@ pub fn print_event_log_for_unit_tests(log: &Log) {
 	println!("	data: hex!(\"{}\").into(),", hex::encode(&log.data));
 
 	println!("}}")
+}
+
+pub async fn construct_register_relay_token_call(
+	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+	type Junctions = runtime_types::staging_xcm::v4::junctions::Junctions;
+	type Junction = runtime_types::staging_xcm::v4::junction::Junction;
+	let location = VersionedLocation::V4(runtime_types::staging_xcm::v4::location::Location {
+		parents: 1,
+		interior: Junctions::X1([Junction::Parachain(ASSET_HUB_PARA_ID)]),
+	});
+	let asset = VersionedLocation::V4(runtime_types::staging_xcm::v4::location::Location {
+		parents: 1,
+		interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Rococo)]),
+	});
+	let metadata = runtime_types::snowbridge_core::AssetRegistrarMetadata {
+		name: "roc".as_bytes().to_vec(),
+		symbol: "roc".as_bytes().to_vec(),
+		decimals: 12,
+	};
+	let call = bridgehub::api::ethereum_system::calls::TransactionApi
+		.force_register_token(location, asset, metadata)
+		.encode_call_data(&bridge_hub_client.metadata())?;
+
+	Ok(call)
 }

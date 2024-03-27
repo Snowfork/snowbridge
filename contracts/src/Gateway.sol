@@ -17,7 +17,9 @@ import {
     Command,
     MultiAddress,
     Ticket,
-    Costs
+    Costs,
+    TokenInfo,
+    AgentExecuteCommand
 } from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
@@ -87,6 +89,7 @@ contract Gateway is IGateway, IInitializable {
     error InvalidCodeHash();
     error InvalidConstructorParams();
     error AlreadyInitialized();
+    error TokenNotRegistered();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -265,11 +268,20 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidAgentExecutionPayload();
         }
 
-        bytes memory call = abi.encodeCall(AgentExecutor.execute, params.payload);
+        (AgentExecuteCommand command, bytes memory payload) = abi.decode(params.payload, (AgentExecuteCommand, bytes));
+
+        bytes memory call = abi.encodeCall(AgentExecutor.execute, (params.agentID, command, payload));
 
         (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
         if (!success) {
             revert AgentExecutionFailed(returndata);
+        }
+
+        if (command == AgentExecuteCommand.RegisterToken) {
+            (bytes memory result) = abi.decode(returndata, (bytes));
+            (bytes32 tokenID, address token) = abi.decode(result, (bytes32, address));
+            Assets.registerTokenByID(tokenID, token, params.agentID);
+            emit IGateway.ForeignTokenRegistered(tokenID, params.agentID, token);
         }
     }
 
@@ -428,9 +440,27 @@ contract Gateway is IGateway, IInitializable {
         uint128 destinationFee,
         uint128 amount
     ) external payable {
-        _submitOutbound(
-            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
-        );
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+
+        TokenInfo storage info = $.tokenRegistry[token];
+        if (!info.isRegistered) {
+            revert TokenNotRegistered();
+        }
+        if (info.isForeign) {
+            _submitOutbound(
+                Assets.sendForeignToken(
+                    AGENT_EXECUTOR, info, msg.sender, destinationChain, destinationAddress, destinationFee, amount
+                )
+            );
+        } else {
+            _submitOutbound(
+                Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
+            );
+        }
+    }
+
+    function getTokenInfo(bytes32 tokenID) external view returns (TokenInfo memory) {
+        return Assets.getTokenInfo(tokenID);
     }
 
     /**
@@ -598,6 +628,7 @@ contract Gateway is IGateway, IInitializable {
         // Initialize agent for BridgeHub
         address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
         core.agents[BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
+        core.agentAddresses[bridgeHubAgent] = BRIDGE_HUB_AGENT_ID;
 
         // Initialize channel for primary governance track
         core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] =
@@ -610,6 +641,7 @@ contract Gateway is IGateway, IInitializable {
         // Initialize agent for for AssetHub
         address assetHubAgent = address(new Agent(config.assetHubAgentID));
         core.agents[config.assetHubAgentID] = assetHubAgent;
+        core.agentAddresses[assetHubAgent] = config.assetHubAgentID;
 
         // Initialize channel for AssetHub
         core.channels[config.assetHubParaID.into()] =
