@@ -1,13 +1,14 @@
-package testutil
+package mock
 
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
+	"github.com/snowfork/snowbridge/relayer/relays/testutil"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
-type MockAPI struct {
+type API struct {
 	LatestFinalisedUpdateResponse     api.LatestFinalisedUpdateResponse
 	SyncCommitteePeriodUpdateResponse api.SyncCommitteePeriodUpdateResponse
 	HeadersBySlot                     map[uint64]api.BeaconHeader
@@ -16,19 +17,19 @@ type MockAPI struct {
 	BeaconStates                      map[uint64]bool
 }
 
-func (m *MockAPI) GetBootstrap(blockRoot common.Hash) (api.BootstrapResponse, error) {
+func (m *API) GetBootstrap(blockRoot common.Hash) (api.BootstrapResponse, error) {
 	return api.BootstrapResponse{}, nil
 }
 
-func (m *MockAPI) GetGenesis() (api.Genesis, error) {
+func (m *API) GetGenesis() (api.Genesis, error) {
 	return api.Genesis{}, nil
 }
 
-func (m *MockAPI) GetFinalizedCheckpoint() (api.FinalizedCheckpoint, error) {
+func (m *API) GetFinalizedCheckpoint() (api.FinalizedCheckpoint, error) {
 	return api.FinalizedCheckpoint{}, nil
 }
 
-func (m *MockAPI) GetHeaderBySlot(slot uint64) (api.BeaconHeader, error) {
+func (m *API) GetHeaderBySlot(slot uint64) (api.BeaconHeader, error) {
 	value, ok := m.HeadersBySlot[slot]
 	if !ok {
 		return api.BeaconHeader{}, api.ErrNotFound
@@ -36,11 +37,11 @@ func (m *MockAPI) GetHeaderBySlot(slot uint64) (api.BeaconHeader, error) {
 	return value, nil
 }
 
-func (m *MockAPI) GetHeader(blockRoot common.Hash) (api.BeaconHeader, error) {
+func (m *API) GetHeader(blockRoot common.Hash) (api.BeaconHeader, error) {
 	return m.Header[blockRoot], nil
 }
 
-func (m *MockAPI) GetBeaconBlockBySlot(slot uint64) (api.BeaconBlockResponse, error) {
+func (m *API) GetBeaconBlockBySlot(slot uint64) (api.BeaconBlockResponse, error) {
 	value, ok := m.BlocksAtSlot[slot]
 	if !ok {
 		return api.BeaconBlockResponse{}, api.ErrNotFound
@@ -48,23 +49,23 @@ func (m *MockAPI) GetBeaconBlockBySlot(slot uint64) (api.BeaconBlockResponse, er
 	return value, nil
 }
 
-func (m *MockAPI) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
+func (m *API) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	return common.Hash{}, nil
 }
 
-func (m *MockAPI) GetBeaconBlock(blockID common.Hash) (api.BeaconBlockResponse, error) {
+func (m *API) GetBeaconBlock(blockID common.Hash) (api.BeaconBlockResponse, error) {
 	return api.BeaconBlockResponse{}, nil
 }
 
-func (m *MockAPI) GetSyncCommitteePeriodUpdate(from uint64) (api.SyncCommitteePeriodUpdateResponse, error) {
+func (m *API) GetSyncCommitteePeriodUpdate(from uint64) (api.SyncCommitteePeriodUpdateResponse, error) {
 	return api.SyncCommitteePeriodUpdateResponse{}, nil
 }
 
-func (m *MockAPI) GetLatestFinalizedUpdate() (api.LatestFinalisedUpdateResponse, error) {
+func (m *API) GetLatestFinalizedUpdate() (api.LatestFinalisedUpdateResponse, error) {
 	return m.LatestFinalisedUpdateResponse, nil
 }
 
-func (m *MockAPI) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
+func (m *API) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 	slot, err := util.ToUint64(stateIdOrSlot)
 	if err != nil {
 		return nil, fmt.Errorf("invalid beacon state slot: %w", err)
@@ -75,7 +76,7 @@ func (m *MockAPI) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 		return nil, api.ErrNotFound
 	}
 
-	data, err := LoadFile(stateIdOrSlot + ".ssz")
+	data, err := testutil.LoadFile(stateIdOrSlot + ".ssz")
 	if err != nil {
 		return nil, fmt.Errorf("error reading file: %w", err)
 	}

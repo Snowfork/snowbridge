@@ -3,15 +3,15 @@ package syncer
 import (
 	"errors"
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"strconv"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -33,16 +33,16 @@ var (
 )
 
 type Syncer struct {
-	Client  api.BeaconAPI
-	setting config.SpecSettings
-	store   store.BeaconStore
+	Client   api.BeaconAPI
+	store    store.BeaconStore
+	protocol *protocol.Protocol
 }
 
-func New(client api.BeaconAPI, setting config.SpecSettings, store store.BeaconStore) *Syncer {
+func New(client api.BeaconAPI, store store.BeaconStore, protocol *protocol.Protocol) *Syncer {
 	return &Syncer{
-		Client:  client,
-		setting: setting,
-		store:   store,
+		Client:   client,
+		store:    store,
+		protocol: protocol,
 	}
 }
 
@@ -99,7 +99,28 @@ func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 	}, nil
 }
 
-func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error) {
+// GetSyncCommitteePeriodUpdate fetches a sync committee update from the light client API endpoint. If it fails
+// (typically because it cannot download the finalized header beacon state because the slot does not fall on a 32
+// slot interval, due to a missed block), it will construct an update manually from data download from the beacon
+// API, or if that is unavailable, use a stored beacon state.
+func (s *Syncer) GetSyncCommitteePeriodUpdate(period uint64) (scale.Update, error) {
+	update, err := s.GetSyncCommitteePeriodUpdateFromEndpoint(period)
+	if err != nil {
+		log.WithField("period", period).Info("fetch sync committee update period light client endpoint failed, trying manual update")
+		update, err = s.GetFinalizedUpdateWithSyncCommittee(period)
+		if err != nil {
+			log.WithField("period", period).Info("manual update failed too")
+			return update, fmt.Errorf("fetch sync committee update: %w", err)
+		}
+	}
+
+	return update, nil
+}
+
+// GetSyncCommitteePeriodUpdateFromEndpoint fetches a sync committee update from the light client API endpoint. If
+// it cannot download the required beacon state from the API, it will look in the data store if the state is stored.
+// If not, it returns an error.
+func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Update, error) {
 	committeeUpdateContainer, err := s.Client.GetSyncCommitteePeriodUpdate(from)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("fetch sync committee period update: %w", err)
@@ -134,7 +155,16 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error)
 
 	blockRootsProof, err := s.GetBlockRoots(uint64(finalizedHeader.Slot))
 	if err != nil {
-		return scale.Update{}, fmt.Errorf("fetch block roots: %w", err)
+		beaconStateData, err := s.store.GetBeaconStateData(uint64(finalizedHeader.Slot))
+		if err != nil {
+			return scale.Update{}, fmt.Errorf("fetch beacon state for block roots proof: %w", err)
+		}
+		beaconState, err := s.unmarshalBeaconState(uint64(finalizedHeader.Slot), beaconStateData)
+
+		blockRootsProof, err = s.GetBlockRootsFromState(beaconState)
+		if err != nil {
+			return scale.Update{}, fmt.Errorf("fetch block roots: %w", err)
+		}
 	}
 
 	finalizedHeaderBlockRoot, err := finalizedHeader.ToSSZ().HashTreeRoot()
@@ -163,7 +193,7 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(from uint64) (scale.Update, error)
 		BlockRootsTree:           blockRootsProof.Tree,
 	}
 
-	finalizedPeriod := s.ComputeSyncPeriodAtSlot(uint64(finalizedHeader.Slot))
+	finalizedPeriod := s.protocol.ComputeSyncPeriodAtSlot(uint64(finalizedHeader.Slot))
 
 	if finalizedPeriod != from {
 		return syncCommitteePeriodUpdate, ErrCommitteeUpdateHeaderInDifferentSyncPeriod
@@ -181,7 +211,7 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 	if err != nil {
 		return blockRootProof, fmt.Errorf("download beacon state (at slot %d) failed: %w", slot, err)
 	}
-	isDeneb := s.DenebForked(slot)
+	isDeneb := s.protocol.DenebForked(slot)
 
 	blockRootsContainer = &state.BlockRootsContainerMainnet{}
 	if isDeneb {
@@ -334,7 +364,7 @@ func (s *Syncer) FindBeaconHeaderWithBlockIncluded(slot uint64) (state.BeaconBlo
 	err := api.ErrNotFound
 	var header api.BeaconHeader
 	tries := 0
-	maxSlotsMissed := int(s.setting.SlotsInEpoch)
+	maxSlotsMissed := int(s.protocol.Settings.SlotsInEpoch)
 	startSlot := slot
 	for errors.Is(err, api.ErrNotFound) && tries < maxSlotsMissed {
 		// Need to use GetHeaderBySlot instead of GetBeaconBlockRoot here because GetBeaconBlockRoot
@@ -394,7 +424,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 		return update, err
 	}
 
-	sszBlock, err := blockResponse.ToFastSSZ(s.DenebForked(slot))
+	sszBlock, err := blockResponse.ToFastSSZ(s.protocol.DenebForked(slot))
 	if err != nil {
 		return update, err
 	}
@@ -415,7 +445,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 	}
 
 	var versionedExecutionPayloadHeader scale.VersionedExecutionPayloadHeader
-	if s.DenebForked(slot) {
+	if s.protocol.DenebForked(slot) {
 		executionPayloadScale, err := api.DenebExecutionPayloadToScale(sszBlock.ExecutionPayloadDeneb())
 		if err != nil {
 			return scale.HeaderUpdatePayload{}, err
@@ -478,7 +508,7 @@ func (s *Syncer) getBeaconStateAtSlot(slot uint64) (state.BeaconState, error) {
 
 func (s *Syncer) unmarshalBeaconState(slot uint64, data []byte) (state.BeaconState, error) {
 	var beaconState state.BeaconState
-	isDeneb := s.DenebForked(slot)
+	isDeneb := s.protocol.DenebForked(slot)
 
 	if isDeneb {
 		beaconState = &state.BeaconStateDenebMainnet{}
@@ -506,7 +536,7 @@ func (s *Syncer) FindLatestAttestedHeadersAtInterval(initialSlot, lowestSlot uin
 
 		header, err := s.Client.GetHeaderBySlot(slot)
 		if err != nil {
-			slot -= s.setting.SlotsInEpoch
+			slot -= s.protocol.Settings.SlotsInEpoch
 			if lowestSlot > slot {
 				return 0, fmt.Errorf("unable to find valid slot")
 			}
@@ -514,10 +544,10 @@ func (s *Syncer) FindLatestAttestedHeadersAtInterval(initialSlot, lowestSlot uin
 			continue
 		}
 
-		finalizedSlot := header.Slot - (s.setting.SlotsInEpoch * 2)
+		finalizedSlot := header.Slot - (s.protocol.Settings.SlotsInEpoch * 2)
 		finalizedHeader, err := s.Client.GetHeaderBySlot(finalizedSlot)
 		if err != nil {
-			slot -= s.setting.SlotsInEpoch
+			slot -= s.protocol.Settings.SlotsInEpoch
 
 			continue
 		}
@@ -542,7 +572,7 @@ func (s *Syncer) FindOldestAttestedHeaderAtInterval(initialSlot, highestSlot uin
 
 		header, err := s.Client.GetHeaderBySlot(slot)
 		if err != nil {
-			slot += s.setting.SlotsInEpoch
+			slot += s.protocol.Settings.SlotsInEpoch
 			if highestSlot < slot {
 				return 0, fmt.Errorf("unable to find valid slot")
 			}
@@ -550,10 +580,10 @@ func (s *Syncer) FindOldestAttestedHeaderAtInterval(initialSlot, highestSlot uin
 			continue
 		}
 
-		finalizedSlot := header.Slot + (s.setting.SlotsInEpoch * 2)
+		finalizedSlot := header.Slot + (s.protocol.Settings.SlotsInEpoch * 2)
 		finalizedHeader, err := s.Client.GetHeaderBySlot(finalizedSlot)
 		if err != nil {
-			slot += s.setting.SlotsInEpoch
+			slot += s.protocol.Settings.SlotsInEpoch
 
 			continue
 		}
@@ -575,8 +605,11 @@ func (s *Syncer) GetLatestPossibleFinalizedUpdate(attestedSlot uint64, boundary 
 	return s.GetFinalizedUpdateAtAttestedSlot(attestedSlot, boundary, false)
 }
 
-func (s *Syncer) GetOldestPossibleFinalizedUpdate(attestedSlot uint64, boundary uint64) (scale.Update, error) {
-	attestedSlot, err := s.FindOldestAttestedHeaderAtInterval(attestedSlot, boundary)
+func (s *Syncer) GetFinalizedUpdateWithSyncCommittee(syncCommitteePeriod uint64) (scale.Update, error) {
+	slot := (syncCommitteePeriod) * s.protocol.Settings.SlotsInEpoch * s.protocol.Settings.EpochsPerSyncCommitteePeriod
+	boundary := (syncCommitteePeriod + 1) * s.protocol.Settings.SlotsInEpoch * s.protocol.Settings.EpochsPerSyncCommitteePeriod
+
+	attestedSlot, err := s.FindOldestAttestedHeaderAtInterval(slot, boundary)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("cannot find blocks at boundaries: %w", err)
 	}
@@ -591,7 +624,7 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(attestedSlot uint64, boundary 
 	data, err := s.getBeaconDataFromClient(attestedSlot)
 	if err != nil {
 		// If it fails, using the beacon store and look for a relevant finalized update
-		data, err = s.getBeaconDataFromStore(attestedSlot, boundary)
+		data, err = s.getBeaconDataFromStore(attestedSlot, boundary, fetchNextSyncCommittee)
 		if err != nil {
 			return update, fmt.Errorf("fetch beacon data from api and data store failure: %w", err)
 		}
@@ -700,7 +733,7 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(attestedSlot uint64, boundary 
 }
 
 func (s *Syncer) getBlockHeaderAncestryProof(slot int, blockRoot common.Hash, blockRootTree *ssz.Node) ([]types.H256, error) {
-	maxSlotsPerHistoricalRoot := int(s.setting.SlotsInEpoch * s.setting.EpochsPerSyncCommitteePeriod)
+	maxSlotsPerHistoricalRoot := int(s.protocol.Settings.SlotsInEpoch * s.protocol.Settings.EpochsPerSyncCommitteePeriod)
 	indexInArray := slot % maxSlotsPerHistoricalRoot
 	leafIndex := maxSlotsPerHistoricalRoot + indexInArray
 
@@ -763,11 +796,23 @@ func (s *Syncer) getBeaconDataFromClient(attestedSlot uint64) (finalizedUpdateCo
 
 // Get the best, latest finalized and attested beacon states including the slot provided in the finalized state block
 // roots, from the Beacon store.
-func (s *Syncer) getBeaconDataFromStore(slot, boundary uint64) (finalizedUpdateContainer, error) {
+func (s *Syncer) getBeaconDataFromStore(slot, boundary uint64, findMin bool) (finalizedUpdateContainer, error) {
+	response, err := s.getExactMatchFromStore(slot)
+	if err != nil {
+		response, err = s.getBestMatchBeaconDataFromStore(slot, boundary, findMin)
+		if err != nil {
+			return finalizedUpdateContainer{}, fmt.Errorf("unable to find exact slot or best other slot beacon data")
+		}
+	}
+
+	return response, nil
+}
+
+func (s *Syncer) getBestMatchBeaconDataFromStore(slot, boundary uint64, findMin bool) (finalizedUpdateContainer, error) {
 	var response finalizedUpdateContainer
 	var err error
 
-	data, err := s.store.FindBeaconStateWithinSyncPeriodRange(slot, boundary, true)
+	data, err := s.store.FindBeaconStateWithinSyncPeriod(slot, boundary, findMin)
 	if err != nil {
 		return finalizedUpdateContainer{}, err
 	}
@@ -787,6 +832,39 @@ func (s *Syncer) getBeaconDataFromStore(slot, boundary uint64) (finalizedUpdateC
 	response.FinalizedHeader, err = s.Client.GetHeader(common.BytesToHash(response.FinalizedCheckPoint.Root))
 	if err != nil {
 		return response, fmt.Errorf("fetch header: %w", err)
+	}
+
+	return response, nil
+}
+
+func (s *Syncer) getExactMatchFromStore(slot uint64) (finalizedUpdateContainer, error) {
+	var response finalizedUpdateContainer
+	attestedStateData, err := s.store.GetBeaconStateData(slot)
+	if err != nil {
+		return finalizedUpdateContainer{}, err
+	}
+
+	response.AttestedSlot = slot
+	response.AttestedState, err = s.unmarshalBeaconState(slot, attestedStateData)
+	if err != nil {
+		return finalizedUpdateContainer{}, err
+	}
+
+	response.FinalizedCheckPoint = *response.AttestedState.GetFinalizedCheckpoint()
+
+	response.FinalizedHeader, err = s.Client.GetHeader(common.BytesToHash(response.FinalizedCheckPoint.Root))
+	if err != nil {
+		return response, fmt.Errorf("fetch header: %w", err)
+	}
+
+	finalizedStateData, err := s.store.GetBeaconStateData(response.FinalizedHeader.Slot)
+	if err != nil {
+		return finalizedUpdateContainer{}, err
+	}
+
+	response.FinalizedState, err = s.unmarshalBeaconState(response.FinalizedHeader.Slot, finalizedStateData)
+	if err != nil {
+		return finalizedUpdateContainer{}, err
 	}
 
 	return response, nil
