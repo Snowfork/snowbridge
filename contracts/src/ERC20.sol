@@ -33,6 +33,8 @@ contract ERC20 is IERC20, IERC20Permit {
     error InvalidV();
     error InvalidSignature();
     error Unauthorized();
+    error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
+    error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed);
 
     mapping(address => uint256) public override balanceOf;
 
@@ -152,7 +154,12 @@ contract ERC20 is IERC20, IERC20Permit {
         uint256 _allowance = allowance[sender][msg.sender];
 
         if (_allowance != type(uint256).max) {
-            _approve(sender, msg.sender, _allowance - amount);
+            if (_allowance < amount) {
+                revert ERC20InsufficientAllowance(msg.sender, _allowance, amount);
+            }
+            unchecked {
+                _approve(sender, msg.sender, _allowance - amount);
+            }
         }
 
         _transfer(sender, recipient, amount);
@@ -173,7 +180,10 @@ contract ERC20 is IERC20, IERC20Permit {
      * - `spender` cannot be the zero address.
      */
     function increaseAllowance(address spender, uint256 addedValue) external virtual returns (bool) {
-        _approve(msg.sender, spender, allowance[msg.sender][spender] + addedValue);
+        uint256 _allowance = allowance[msg.sender][spender];
+        if (_allowance != type(uint256).max) {
+            _approve(msg.sender, spender, _allowance + addedValue);
+        }
         return true;
     }
 
@@ -192,7 +202,15 @@ contract ERC20 is IERC20, IERC20Permit {
      * `subtractedValue`.
      */
     function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
-        _approve(msg.sender, spender, allowance[msg.sender][spender] - subtractedValue);
+        uint256 _allowance = allowance[msg.sender][spender];
+        if (_allowance != type(uint256).max) {
+            if (_allowance < subtractedValue) {
+                revert ERC20InsufficientAllowance(msg.sender, _allowance, subtractedValue);
+            }
+            unchecked {
+                _approve(msg.sender, spender, _allowance - subtractedValue);
+            }
+        }
         return true;
     }
 
@@ -238,9 +256,7 @@ contract ERC20 is IERC20, IERC20Permit {
     function _transfer(address sender, address recipient, uint256 amount) internal virtual {
         if (sender == address(0) || recipient == address(0)) revert InvalidAccount();
 
-        balanceOf[sender] -= amount;
-        balanceOf[recipient] += amount;
-        emit Transfer(sender, recipient, amount);
+        _update(sender, recipient, amount);
     }
 
     /**
@@ -256,9 +272,7 @@ contract ERC20 is IERC20, IERC20Permit {
     function _mint(address account, uint256 amount) internal virtual {
         if (account == address(0)) revert InvalidAccount();
 
-        totalSupply += amount;
-        balanceOf[account] += amount;
-        emit Transfer(address(0), account, amount);
+        _update(address(0), account, amount);
     }
 
     /**
@@ -275,9 +289,7 @@ contract ERC20 is IERC20, IERC20Permit {
     function _burn(address account, uint256 amount) internal virtual {
         if (account == address(0)) revert InvalidAccount();
 
-        balanceOf[account] -= amount;
-        totalSupply -= amount;
-        emit Transfer(account, address(0), amount);
+        _update(account, address(0), amount);
     }
 
     /**
@@ -298,5 +310,42 @@ contract ERC20 is IERC20, IERC20Permit {
 
         allowance[owner][spender] = amount;
         emit Approval(owner, spender, amount);
+    }
+
+    /**
+     * @dev Transfers a `value` amount of tokens from `from` to `to`, or alternatively mints (or burns) if `from`
+     * (or `to`) is the zero address. All customizations to transfers, mints, and burns should be done by overriding
+     * this function.
+     *
+     * Emits a {Transfer} event.
+     */
+    function _update(address from, address to, uint256 value) internal virtual {
+        if (from == address(0)) {
+            // Overflow check required: The rest of the code assumes that totalSupply never overflows
+            totalSupply += value;
+        } else {
+            uint256 fromBalance = balanceOf[from];
+            if (fromBalance < value) {
+                revert ERC20InsufficientBalance(from, fromBalance, value);
+            }
+            unchecked {
+                // Overflow not possible: value <= fromBalance <= totalSupply.
+                balanceOf[from] = fromBalance - value;
+            }
+        }
+
+        if (to == address(0)) {
+            unchecked {
+                // Overflow not possible: value <= totalSupply or value <= fromBalance <= totalSupply.
+                totalSupply -= value;
+            }
+        } else {
+            unchecked {
+                // Overflow not possible: balance + value is at most totalSupply, which we know fits into a uint256.
+                balanceOf[to] += value;
+            }
+        }
+
+        emit Transfer(from, to, value);
     }
 }
