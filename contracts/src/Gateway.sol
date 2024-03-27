@@ -448,7 +448,7 @@ contract Gateway is IGateway, IInitializable {
         }
         if (info.isForeign) {
             _submitOutbound(
-                Assets.transferToken(
+                Assets.sendForeignToken(
                     AGENT_EXECUTOR, info, msg.sender, destinationChain, destinationAddress, destinationFee, amount
                 )
             );

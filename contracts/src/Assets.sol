@@ -199,7 +199,7 @@ library Assets {
     }
 
     // @dev Transfer polkadot native tokens back
-    function transferToken(
+    function sendForeignToken(
         address executor,
         TokenInfo memory info,
         address sender,
@@ -227,12 +227,12 @@ library Assets {
 
         if (destinationAddress.isAddress32()) {
             // The receiver has a 32-byte account ID
-            ticket.payload = SubstrateTypes.TransferTokenToAddress32(
+            ticket.payload = SubstrateTypes.SendForeignTokenToAddress32(
                 info.tokenID, destinationChain, destinationAddress.asAddress32(), destinationChainFee, amount
             );
         } else if (destinationAddress.isAddress20()) {
             // The receiver has a 20-byte account ID
-            ticket.payload = SubstrateTypes.TransferTokenToAddress20(
+            ticket.payload = SubstrateTypes.SendForeignTokenToAddress20(
                 info.tokenID, destinationChain, destinationAddress.asAddress20(), destinationChainFee, amount
             );
         } else {
