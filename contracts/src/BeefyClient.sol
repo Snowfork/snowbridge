@@ -241,6 +241,8 @@ contract BeefyClient {
         nextValidatorSet.length = _nextValidatorSet.length;
         nextValidatorSet.root = _nextValidatorSet.root;
         nextValidatorSet.usageCounters = createUint16Array(nextValidatorSet.length);
+
+        bootstrapOperator = msg.sender;
     }
 
     /* External Functions */

@@ -752,4 +752,13 @@ contract BeefyClientTest is Test {
             BeefyClient.ValidatorSet(nextId, 0, 0x0)
         );
     }
+
+    function testSetInitialCheckpoint() public {
+        BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(1, 300, root);
+        BeefyClient.ValidatorSet memory nextvset = BeefyClient.ValidatorSet(2, 300, root);
+        beefyClient.setInitialCheckpoint(100, vset, nextvset);
+
+        vm.expectRevert(BeefyClient.Unauthorized.selector);
+        beefyClient.setInitialCheckpoint(100, vset, nextvset);
+    }
 }
