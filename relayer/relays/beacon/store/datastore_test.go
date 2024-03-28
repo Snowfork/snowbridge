@@ -18,7 +18,7 @@ func TestGetBeaconState(t *testing.T) {
 	_ = os.RemoveAll(TestDataStoreFile + BeaconStateDir)
 	_ = os.Remove(TestDataStoreFile + BeaconStoreName)
 
-	store := New(TestDataStoreFile, 100, protocol.New(config.SpecSettings{
+	store := New(TestDataStoreFile, 100, *protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
@@ -62,7 +62,7 @@ func TestPruneOldStates(t *testing.T) {
 	_ = os.RemoveAll(TestDataStoreFile + BeaconStateDir)
 	_ = os.Remove(TestDataStoreFile + BeaconStoreName)
 
-	store := New(TestDataStoreFile, 2, protocol.New(config.SpecSettings{
+	store := New(TestDataStoreFile, 2, *protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
@@ -138,7 +138,7 @@ func TestFindBeaconStateWithinSyncPeriodRange(t *testing.T) {
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
 	})
-	store := New(TestDataStoreFile, 2, p)
+	store := New(TestDataStoreFile, 2, *p)
 	err := store.Connect()
 	require.NoError(t, err)
 	defer func() {
