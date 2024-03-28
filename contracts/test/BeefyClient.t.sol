@@ -166,7 +166,7 @@ contract BeefyClientTest is Test {
         );
     }
 
-    function testSubmit() public returns (BeefyClient.Commitment memory) {
+    function testSubmit1() public returns (BeefyClient.Commitment memory) {
         BeefyClient.Commitment memory commitment = initialize(setId);
 
         assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 0);

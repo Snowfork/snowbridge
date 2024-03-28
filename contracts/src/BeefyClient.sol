@@ -9,6 +9,7 @@ import {Uint16Array, createUint16Array} from "./utils/Uint16Array.sol";
 import {Math} from "./utils/Math.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
+import "forge-std/console.sol";
 
 /**
  * @title BeefyClient
@@ -34,6 +35,13 @@ contract BeefyClient {
      * @param blockNumber the beefy block number of the updated MMR root
      */
     event NewMMRRoot(bytes32 mmrRoot, uint64 blockNumber);
+
+    /**
+     * @dev Emitted when a new ticket has been created
+     * @param relayer The relayer who created the ticket
+     * @param blockNumber the beefy block number of the new candidate MMR root
+     */
+    event NewTicket(address relayer, uint64 blockNumber);
 
     /* Types */
 
@@ -158,6 +166,8 @@ contract BeefyClient {
     /// @dev Pending tickets for commitment submission
     mapping(bytes32 ticketID => Ticket) public tickets;
 
+    address public bootstrapOperator;
+
     /* Constants */
 
     /**
@@ -206,6 +216,7 @@ contract BeefyClient {
     error StaleCommitment();
     error TicketExpired();
     error WaitPeriodNotOver();
+    error Unauthorized();
 
     constructor(
         uint256 _randaoCommitDelay,
@@ -289,6 +300,8 @@ contract BeefyClient {
             prevRandao: 0,
             bitfieldHash: keccak256(abi.encodePacked(bitfield))
         });
+
+        emit NewTicket(msg.sender, commitment.blockNumber);
     }
 
     /**
@@ -426,6 +439,27 @@ contract BeefyClient {
             revert InvalidBitfield();
         }
         return Bitfield.subsample(ticket.prevRandao, bitfield, ticket.numRequiredSignatures, ticket.validatorSetLen);
+    }
+
+    function setInitialCheckpoint(
+        uint64 _initialBeefyBlock,
+        ValidatorSet calldata _initialValidatorSet,
+        ValidatorSet calldata _nextValidatorSet
+    ) external {
+        if (msg.sender != bootstrapOperator) {
+            revert Unauthorized();
+        }
+        delete bootstrapOperator;
+
+        latestBeefyBlock = _initialBeefyBlock;
+        currentValidatorSet.id = _initialValidatorSet.id;
+        currentValidatorSet.length = _initialValidatorSet.length;
+        currentValidatorSet.root = _initialValidatorSet.root;
+        currentValidatorSet.usageCounters = createUint16Array(currentValidatorSet.length);
+        nextValidatorSet.id = _nextValidatorSet.id;
+        nextValidatorSet.length = _nextValidatorSet.length;
+        nextValidatorSet.root = _nextValidatorSet.root;
+        nextValidatorSet.usageCounters = createUint16Array(nextValidatorSet.length);
     }
 
     /* Internal Functions */
