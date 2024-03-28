@@ -39,16 +39,14 @@ type BeaconAPI interface {
 }
 
 type BeaconClient struct {
-	httpClient   http.Client
-	endpoint     string
-	slotsInEpoch uint64
+	httpClient http.Client
+	endpoint   string
 }
 
-func NewBeaconClient(endpoint string, slotsInEpoch uint64) *BeaconClient {
+func NewBeaconClient(endpoint string) *BeaconClient {
 	return &BeaconClient{
 		http.Client{},
 		endpoint,
-		slotsInEpoch,
 	}
 }
 

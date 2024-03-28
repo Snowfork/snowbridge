@@ -2,18 +2,18 @@ package cmd
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"strconv"
 
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 
+	_ "github.com/mattn/go-sqlite3"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func storeBeaconState() *cobra.Command {
@@ -60,11 +60,11 @@ func storeBeaconStateInDB(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	store := store.New(dbStoreLocation, 100)
-
 	specSettings := conf.Source.Beacon.Spec
-	beaconClient := api.NewBeaconClient(url, specSettings.SlotsInEpoch)
-	syncer := syncer.New(beaconClient, specSettings, &store)
+	p := protocol.New(specSettings)
+	store := store.New(dbStoreLocation, 100, *p)
+	beaconClient := api.NewBeaconClient(url)
+	syncer := syncer.New(beaconClient, &store, p)
 
 	err = store.Connect()
 	if err != nil {
@@ -80,8 +80,6 @@ func storeBeaconStateInDB(cmd *cobra.Command, _ []string) error {
 
 	attestedHeaderSlot := uint64(update.Payload.AttestedHeader.Slot)
 	finalizedHeaderSlot := uint64(update.Payload.FinalizedHeader.Slot)
-	attestedSyncPeriod := syncer.ComputeSyncPeriodAtSlot(attestedHeaderSlot)
-	finalizedSyncPeriod := syncer.ComputeSyncPeriodAtSlot(finalizedHeaderSlot)
 
 	attestedBeaconData, err := syncer.Client.GetBeaconState(strconv.FormatUint(attestedHeaderSlot, 10))
 	if err != nil {
@@ -92,19 +90,7 @@ func storeBeaconStateInDB(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("download finalized beacon state at slot %d: %w", finalizedHeaderSlot, err)
 	}
 
-	err = store.WriteStateFile(attestedHeaderSlot, attestedBeaconData)
-	if err != nil {
-		return err
-	}
-	err = store.WriteStateFile(finalizedHeaderSlot, finalizedBeaconData)
-	if err != nil {
-		return err
-	}
-
-	err = store.StoreUpdate(attestedHeaderSlot, finalizedHeaderSlot, attestedSyncPeriod, finalizedSyncPeriod)
-	if err != nil {
-		return fmt.Errorf("store beacon update: %w", err)
-	}
+	err = store.WriteEntry(attestedHeaderSlot, finalizedHeaderSlot, attestedBeaconData, finalizedBeaconData)
 
 	deletedSlots, err := store.PruneOldStates()
 	log.WithField("deletedSlots", deletedSlots).Info("deleted old beacon states")

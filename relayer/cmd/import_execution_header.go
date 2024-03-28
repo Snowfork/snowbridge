@@ -11,6 +11,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -89,8 +90,6 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		specSettings := conf.Source.Beacon.Spec
-
 		keypair, err := getKeyPair(privateKeyFile)
 		if err != nil {
 			return fmt.Errorf("get keypair from file: %w", err)
@@ -110,12 +109,13 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 
 		log.WithField("hash", beaconHeader).Info("will be syncing execution header for beacon hash")
 
-		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		p := protocol.New(conf.Source.Beacon.Spec)
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 		store.Connect()
 		defer store.Close()
 
-		client := api.NewBeaconClient(lodestarEndpoint, specSettings.SlotsInEpoch)
-		syncer := syncer.New(client, specSettings, &store)
+		client := api.NewBeaconClient(lodestarEndpoint)
+		syncer := syncer.New(client, &store, p)
 
 		beaconHeaderHash := common.HexToHash(finalizedHeader)
 

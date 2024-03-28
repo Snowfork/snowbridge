@@ -1,4 +1,4 @@
-package syncer
+package protocol
 
 import (
 	"testing"
@@ -34,11 +34,11 @@ func TestIsStartOfEpoch(t *testing.T) {
 		},
 	}
 
-	syncer := Syncer{}
-	syncer.setting.SlotsInEpoch = 32
+	p := Protocol{}
+	p.Settings.SlotsInEpoch = 32
 
 	for _, tt := range values {
-		result := syncer.IsStartOfEpoch(tt.slot)
+		result := p.IsStartOfEpoch(tt.slot)
 		assert.Equal(t, tt.expected, result, "expected %t but found %t for slot %d", tt.expected, result, tt.slot)
 	}
 }
@@ -66,12 +66,12 @@ func TestCalculateNextCheckpointSlot(t *testing.T) {
 		},
 	}
 
-	syncer := Syncer{}
-	syncer.setting.SlotsInEpoch = 8
-	syncer.setting.EpochsPerSyncCommitteePeriod = 8
+	p := Protocol{}
+	p.Settings.SlotsInEpoch = 8
+	p.Settings.EpochsPerSyncCommitteePeriod = 8
 
 	for _, tt := range values {
-		result := syncer.CalculateNextCheckpointSlot(tt.slot)
+		result := p.CalculateNextCheckpointSlot(tt.slot)
 		assert.Equal(t, tt.expected, result, "expected %t but found %t for slot %d", tt.expected, result, tt.slot)
 	}
 }

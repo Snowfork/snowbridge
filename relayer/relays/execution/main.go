@@ -3,8 +3,6 @@ package execution
 import (
 	"context"
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"math/big"
 	"sort"
 	"time"
@@ -19,6 +17,9 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -82,16 +83,19 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	r.gatewayContract = contract
 
-	store := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries)
+	p := protocol.New(r.config.Source.Beacon.Spec)
+
+	store := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries, *p)
 	store.Connect()
 	defer store.Close()
 
-	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint, r.config.Source.Beacon.Spec.SlotsInEpoch)
+	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint)
 	beaconHeader := header.New(
 		writer,
 		beaconAPI,
 		r.config.Source.Beacon.Spec,
 		&store,
+		p,
 	)
 	r.beaconHeader = &beaconHeader
 
