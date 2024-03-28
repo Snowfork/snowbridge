@@ -22,7 +22,6 @@ import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 import {PricingStorage} from "../src/storage/PricingStorage.sol";
-import {TokenInfo} from "../src/storage/AssetsStorage.sol";
 
 import {
     UpgradeParams,
@@ -950,20 +949,20 @@ contract GatewayTest is Test {
         // Register and then mint some DOT to account1
         testAgentMintDot();
 
-        TokenInfo memory info = IGateway(address(gateway)).getTokenInfo(dotTokenID);
+        address dotToken = GatewayMock(address(gateway)).getTokenAddress(dotTokenID);
 
         ParaID destPara = assetHubParaID;
 
         vm.prank(account1);
 
         vm.expectEmit(true, true, false, true);
-        emit IGateway.TokenSent(address(info.token), account1, destPara, recipientAddress32, 1);
+        emit IGateway.TokenSent(address(dotToken), account1, destPara, recipientAddress32, 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
         emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(info.token), destPara, recipientAddress32, 1, 1);
+        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(dotToken), destPara, recipientAddress32, 1, 1);
     }
 
     function testParseAgentExecuteCall() public {

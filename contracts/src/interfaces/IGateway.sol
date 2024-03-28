@@ -5,7 +5,6 @@ pragma solidity 0.8.23;
 import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress} from "../Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
-import {TokenInfo} from "../storage/AssetsStorage.sol";
 
 interface IGateway {
     /**
@@ -114,7 +113,4 @@ interface IGateway {
         uint128 destinationFee,
         uint128 amount
     ) external payable;
-
-    /// @dev Get tokenInfo by tokenID
-    function getTokenInfo(bytes32 tokenID) external view returns (TokenInfo memory);
 }

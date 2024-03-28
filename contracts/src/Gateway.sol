@@ -90,10 +90,20 @@ contract Gateway is IGateway, IInitializable {
     error InvalidConstructorParams();
     error AlreadyInitialized();
     error TokenNotRegistered();
+    error TokenAlreadyRegistered();
 
     // handler functions are privileged
     modifier onlySelf() {
         if (msg.sender != address(this)) {
+            revert Unauthorized();
+        }
+        _;
+    }
+
+    // handler functions are privileged from agent only
+    modifier onlyAgent(bytes32 agentID) {
+        bytes32 _agentID = _ensureAgentAddress(msg.sender);
+        if (_agentID != agentID) {
             revert Unauthorized();
         }
         _;
@@ -268,20 +278,11 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidAgentExecutionPayload();
         }
 
-        (AgentExecuteCommand command, bytes memory payload) = abi.decode(params.payload, (AgentExecuteCommand, bytes));
-
-        bytes memory call = abi.encodeCall(AgentExecutor.execute, (params.agentID, command, payload));
+        bytes memory call = abi.encodeCall(AgentExecutor.execute, (params.agentID, params.payload));
 
         (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
         if (!success) {
             revert AgentExecutionFailed(returndata);
-        }
-
-        if (command == AgentExecuteCommand.RegisterToken) {
-            (bytes memory result) = abi.decode(returndata, (bytes));
-            (bytes32 tokenID, address token) = abi.decode(result, (bytes32, address));
-            Assets.registerTokenByID(tokenID, token, params.agentID);
-            emit IGateway.ForeignTokenRegistered(tokenID, params.agentID, token);
         }
     }
 
@@ -406,6 +407,28 @@ contract Gateway is IGateway, IInitializable {
         emit PricingParametersChanged();
     }
 
+    // @dev Register a new fungible Polkadot token for an agent
+    function registerForeignToken(bytes32 tokenID, address token, bytes32 agentID) external onlyAgent(agentID) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if ($.tokenRegistryByID[tokenID].isRegistered == true) {
+            revert TokenAlreadyRegistered();
+        }
+        TokenInfo memory info =
+            TokenInfo({isRegistered: true, isForeign: true, tokenID: tokenID, agentID: agentID, token: token});
+        $.tokenRegistry[token] = info;
+        $.tokenRegistryByID[tokenID] = info;
+        emit ForeignTokenRegistered(tokenID, agentID, token);
+    }
+
+    // @dev Get token address by tokenID
+    function getTokenAddress(bytes32 tokenID) external view returns (address) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if ($.tokenRegistryByID[tokenID].isRegistered == false) {
+            revert TokenNotRegistered();
+        }
+        return $.tokenRegistryByID[tokenID].token;
+    }
+
     /**
      * Assets
      */
@@ -457,10 +480,6 @@ contract Gateway is IGateway, IInitializable {
                 Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
             );
         }
-    }
-
-    function getTokenInfo(bytes32 tokenID) external view returns (TokenInfo memory) {
-        return Assets.getTokenInfo(tokenID);
     }
 
     /**
@@ -563,6 +582,14 @@ contract Gateway is IGateway, IInitializable {
     function _ensureAgent(bytes32 agentID) internal view returns (address agent) {
         agent = CoreStorage.layout().agents[agentID];
         if (agent == address(0)) {
+            revert AgentDoesNotExist();
+        }
+    }
+
+    /// @dev Ensure that the specified address is an valid agent
+    function _ensureAgentAddress(address agent) internal view returns (bytes32 agentID) {
+        agentID = CoreStorage.layout().agentAddresses[agent];
+        if (agentID == bytes32(0)) {
             revert AgentDoesNotExist();
         }
     }
