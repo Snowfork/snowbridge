@@ -17,7 +17,7 @@ async fn send_polkadot_token() {
 	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
 	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
 
-	let info = gateway.get_token_info(XCDOT_TOKEN_ID).call().await.unwrap();
+	let token: Address = ERC20_DOT_CONTRACT.into();
 
 	let destination_fee = 400_000_000;
 	let fee: U256 = parse_units("0.01", "ether").unwrap().into();
@@ -26,7 +26,7 @@ async fn send_polkadot_token() {
 
 	let receipt = gateway
 		.send_token(
-			info.token,
+			token,
 			ASSET_HUB_PARA_ID,
 			i_gateway::MultiAddress { kind: 1, data: (*BOB_PUBLIC).into() },
 			destination_fee,

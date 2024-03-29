@@ -7,7 +7,7 @@ use ethers::{
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{agent_executor, agent_executor::TokenMintedFilter, i_gateway::IGateway},
+	contracts::{agent_executor, agent_executor::TokenMintedFilter},
 	helper::AssetHubConfig,
 	parachains::assethub::{
 		api::runtime_types::{
@@ -36,10 +36,6 @@ async fn transfer_polkadot_token() {
 		.interval(Duration::from_millis(10u64));
 
 	let ethereum_client = Arc::new(ethereum_provider);
-
-	let gateway = IGateway::new(GATEWAY_PROXY_CONTRACT, ethereum_client.clone());
-	let _agent_src =
-		gateway.agent_of(ASSET_HUB_AGENT_ID).await.expect("could not get agent address");
 
 	let assethub: OnlineClient<AssetHubConfig> =
 		OnlineClient::from_url(ASSET_HUB_WS_URL).await.unwrap();

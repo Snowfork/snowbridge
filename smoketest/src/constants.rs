@@ -27,7 +27,8 @@ pub const GATEWAY_PROXY_CONTRACT: [u8; 20] = hex!("EDa338E4dC46038493b885327842f
 pub const WETH_CONTRACT: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 pub const AGENT_EXECUTOR_CONTRACT: [u8; 20] = hex!("2ffA5ecdBe006d30397c7636d3e015EEE251369F");
 
-pub const XCDOT_TOKEN_ID: [u8; 32] =
+pub const ERC20_DOT_CONTRACT: [u8; 20] = hex!("97d3fC1832792ae4f1D48fEA3E00dc73A9101bf9");
+pub const ERC20_DOT_TOKEN_ID: [u8; 32] =
 	hex!("83ca7bdddc0205caa1d663fdba16db38a4c702f4dcc07b8589d5ed912610a19d");
 
 // Agent for bridge hub parachain 1013
