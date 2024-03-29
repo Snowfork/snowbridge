@@ -201,7 +201,7 @@ library Assets {
         }
 
         ticket.dest = destinationChain;
-        ticket.costs = _transferTokenCosts(destinationChainFee);
+        ticket.costs = _sendForeignTokenCosts(destinationChainFee);
 
         if (destinationAddress.isAddress32()) {
             // The receiver has a 32-byte account ID
@@ -226,7 +226,7 @@ library Assets {
         Call.verifyResult(success, returndata);
     }
 
-    function _transferTokenCosts(uint128 destinationChainFee) internal pure returns (Costs memory costs) {
+    function _sendForeignTokenCosts(uint128 destinationChainFee) internal pure returns (Costs memory costs) {
         costs.foreign = destinationChainFee;
         costs.native = 0;
     }
