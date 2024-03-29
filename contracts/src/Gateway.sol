@@ -421,7 +421,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // @dev Get token address by tokenID
-    function getTokenAddress(bytes32 tokenID) external view returns (address) {
+    function tokenAddressOf(bytes32 tokenID) external view returns (address) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenRegistryByID[tokenID].isRegistered == false) {
             revert TokenNotRegistered();

@@ -949,7 +949,7 @@ contract GatewayTest is Test {
         // Register and then mint some DOT to account1
         testAgentMintDot();
 
-        address dotToken = GatewayMock(address(gateway)).getTokenAddress(dotTokenID);
+        address dotToken = GatewayMock(address(gateway)).tokenAddressOf(dotTokenID);
 
         ParaID destPara = assetHubParaID;
 

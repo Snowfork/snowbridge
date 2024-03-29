@@ -64,13 +64,13 @@ contract AgentExecutor {
 
     /// @dev Mint ERC20 token to `recipient`.
     function _mintToken(bytes32 tokenID, address recipient, uint256 amount) internal {
-        address token = Gateway(msg.sender).getTokenAddress(tokenID);
+        address token = Gateway(msg.sender).tokenAddressOf(tokenID);
         ERC20(token).mint(recipient, amount);
         emit TokenMinted(tokenID, token, recipient, amount);
     }
 
     function burnToken(bytes32 tokenID, address sender, uint256 amount) external {
-        address token = Gateway(msg.sender).getTokenAddress(tokenID);
+        address token = Gateway(msg.sender).tokenAddressOf(tokenID);
         ERC20(token).burn(sender, amount);
         emit TokenBurnt(tokenID, token, sender, amount);
     }
