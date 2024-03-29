@@ -178,6 +178,7 @@ library Assets {
 
     // @dev Transfer polkadot native tokens back
     function sendForeignToken(
+        address agent,
         address executor,
         TokenInfo storage info,
         address sender,
@@ -186,13 +187,6 @@ library Assets {
         uint128 destinationChainFee,
         uint128 amount
     ) external returns (Ticket memory ticket) {
-        CoreStorage.Layout storage $core = CoreStorage.layout();
-
-        address agent = $core.agents[info.agentID];
-        if (agent == address(0)) {
-            revert AgentDoesNotExist();
-        }
-
         // Polkadot-native token: burn wrapped token
         _burnToken(executor, agent, info.tokenID, sender, amount);
 

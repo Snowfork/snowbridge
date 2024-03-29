@@ -470,9 +470,17 @@ contract Gateway is IGateway, IInitializable {
             revert TokenNotRegistered();
         }
         if (info.isForeign) {
+            address agent = _ensureAgent(info.agentID);
             _submitOutbound(
                 Assets.sendForeignToken(
-                    AGENT_EXECUTOR, info, msg.sender, destinationChain, destinationAddress, destinationFee, amount
+                    agent,
+                    AGENT_EXECUTOR,
+                    info,
+                    msg.sender,
+                    destinationChain,
+                    destinationAddress,
+                    destinationFee,
+                    amount
                 )
             );
         } else {
