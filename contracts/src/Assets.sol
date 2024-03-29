@@ -179,7 +179,7 @@ library Assets {
     // @dev Transfer polkadot native tokens back
     function sendForeignToken(
         address executor,
-        TokenInfo memory info,
+        TokenInfo storage info,
         address sender,
         ParaID destinationChain,
         MultiAddress calldata destinationAddress,
