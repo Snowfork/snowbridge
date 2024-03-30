@@ -166,7 +166,7 @@ contract BeefyClient {
     /// @dev Pending tickets for commitment submission
     mapping(bytes32 ticketID => Ticket) public tickets;
 
-    address public bootstrapOperator;
+    address public forceCheckpointOperator;
 
     /* Constants */
 
@@ -242,7 +242,7 @@ contract BeefyClient {
         nextValidatorSet.root = _nextValidatorSet.root;
         nextValidatorSet.usageCounters = createUint16Array(nextValidatorSet.length);
 
-        bootstrapOperator = msg.sender;
+        forceCheckpointOperator = msg.sender;
     }
 
     /* External Functions */
@@ -443,16 +443,15 @@ contract BeefyClient {
         return Bitfield.subsample(ticket.prevRandao, bitfield, ticket.numRequiredSignatures, ticket.validatorSetLen);
     }
 
-    function setInitialCheckpoint(
+    /// @dev Force-set a new checkpoint. Must be called by a privileged origin
+    function forceCheckpoint(
         uint64 _initialBeefyBlock,
         ValidatorSet calldata _initialValidatorSet,
         ValidatorSet calldata _nextValidatorSet
     ) external {
-        if (msg.sender != bootstrapOperator) {
+        if (msg.sender != forceCheckpointOperator) {
             revert Unauthorized();
         }
-        delete bootstrapOperator;
-
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet.id = _initialValidatorSet.id;
         currentValidatorSet.length = _initialValidatorSet.length;
@@ -462,6 +461,14 @@ contract BeefyClient {
         nextValidatorSet.length = _nextValidatorSet.length;
         nextValidatorSet.root = _nextValidatorSet.root;
         nextValidatorSet.usageCounters = createUint16Array(nextValidatorSet.length);
+
+        // Clear latest MMR Root if present
+        delete latestMMRRoot;
+    }
+
+    /// @dev Renounce all administrative privileges
+    function renounce() external {
+        delete forceCheckpointOperator;
     }
 
     /* Internal Functions */
