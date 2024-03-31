@@ -30,7 +30,7 @@ jobs:
         working-directory: contracts
         run: |
           forge test
-          ls -R contracts/out
+          ls -R out
 
   build-api:
     runs-on: snowbridge-runner
