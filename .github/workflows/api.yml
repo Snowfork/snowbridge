@@ -1,0 +1,71 @@
+name: api
+
+# on:
+#   push:
+#     - "contracts/src/**/*.sol"
+#     - "web/**"
+#     - "!web/packages/test*"
+#   branches:
+#     - main
+
+jobs:
+  build-contracts:
+    runs-on: snowbridge-runner
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 2
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Test
+        working-directory: contracts
+        run: forge test
+
+  build-api:
+    runs-on: snowbridge-runner
+    timeout-minutes: 15
+    needs: build-contracts
+    working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Build Contract Types
+        working-directory: packages/contract-types
+        run: |
+          pnpm install
+          pnpm typechain
+          pnpm build
+
+      - name: Build API
+        working-directory: packages/api
+        run: |
+          pnpm install
+          pnpm typechain
+          pnpm build
+
+      - name: Publish Contract Types
+        working-directory: packages/contract-types
+        run: |
+          
+          pnpm publish
+
+      - name: Publish API
+        working-directory: packages/api
+        run: |
+          pnpm publish
+      
