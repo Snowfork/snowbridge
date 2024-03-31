@@ -1,13 +1,18 @@
 name: api
 
 on:
-  - push:
+  push:
+    paths:
       - "contracts/src/**/*.sol"
       - "web/**"
       - "!web/packages/test*"
     branches:
       - main
-  - pull-request
+  pull_request:
+    paths:
+      - "contracts/src/**/*.sol"
+      - "web/**"
+      - "!web/packages/test*"
 
 jobs:
   build-contracts:
