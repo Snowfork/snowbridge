@@ -29,6 +29,7 @@ jobs:
       - name: Test
         working-directory: contracts
         run: forge test
+        run: ls ../../../contracts
 
   build-api:
     runs-on: snowbridge-runner
@@ -53,6 +54,7 @@ jobs:
         working-directory: web/packages/contract-types
         run: |
           pnpm install
+          ls ../../../contracts
           pnpm typechain
           pnpm build
 
