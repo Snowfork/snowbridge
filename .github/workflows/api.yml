@@ -28,8 +28,9 @@ jobs:
 
       - name: Test
         working-directory: contracts
-        run: forge test
-        run: ls ../../../contracts
+        run: |
+          forge test
+          ls ../../../contracts
 
   build-api:
     runs-on: snowbridge-runner
