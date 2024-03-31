@@ -78,6 +78,9 @@ interface IGateway {
     /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
     event TokenRegistrationSent(address token);
 
+    /// @dev the address of the BEEFY light client used to verify messages.
+    function beefyClient() external view returns (address);
+
     /// @dev Check whether a token is registered
     function isTokenRegistered(address token) external view returns (bool);
 

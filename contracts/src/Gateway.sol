@@ -97,7 +97,7 @@ contract Gateway is IGateway, IInitializable {
     }
 
     constructor(
-        address beefyClient,
+        address beefyLightClient,
         address agentExecutor,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
@@ -107,7 +107,7 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidConstructorParams();
         }
 
-        BEEFY_CLIENT = beefyClient;
+        BEEFY_CLIENT = beefyLightClient;
         AGENT_EXECUTOR = agentExecutor;
         BRIDGE_HUB_PARA_ID_ENCODED = ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
@@ -224,6 +224,10 @@ contract Gateway is IGateway, IInitializable {
     /**
      * Getters
      */
+    function beefyClient() external view returns (address) {
+        return BEEFY_CLIENT;
+    }
+
     function operatingMode() external view returns (OperatingMode) {
         return CoreStorage.layout().mode;
     }
