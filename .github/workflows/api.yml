@@ -1,4 +1,4 @@
-name: api
+name: npm-publish
 
 on:
   push:
@@ -62,17 +62,17 @@ jobs:
           pnpm install
           pnpm run build
 
-      - name: Publish Contract Types
-        working-directory: web/packages/contract-types
-        run: |
-          pnpm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # - name: Publish Contract Types
+          #   working-directory: web/packages/contract-types
+          #   run: |
+          #     pnpm publish
+          #   env:
+          #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish API
-        working-directory: web/packages/api
-        run: |
-          pnpm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # - name: Publish API
+          #   working-directory: web/packages/api
+          #   run: |
+          #     pnpm publish
+          #   env:
+          #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       
