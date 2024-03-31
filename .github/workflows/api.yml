@@ -19,7 +19,8 @@ jobs:
     runs-on: snowbridge-runner
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v1
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
@@ -30,15 +31,6 @@ jobs:
         working-directory: contracts
         run: |
           forge test
-          ls -R out
-
-  build-api:
-    runs-on: snowbridge-runner
-    timeout-minutes: 15
-    needs: build-contracts
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Install Node.js
         uses: actions/setup-node@v4
