@@ -34,7 +34,6 @@ jobs:
     runs-on: snowbridge-runner
     timeout-minutes: 15
     needs: build-contracts
-    working-directory: web
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,27 +50,31 @@ jobs:
           version: 8
 
       - name: Build Contract Types
-        working-directory: packages/contract-types
+        working-directory: web/packages/contract-types
         run: |
           pnpm install
           pnpm typechain
           pnpm build
 
       - name: Build API
-        working-directory: packages/api
+        working-directory: web/packages/api
         run: |
           pnpm install
-          pnpm typechain
           pnpm build
 
-      - name: Publish Contract Types
-        working-directory: packages/contract-types
+      - name: Build UI
+        working-directory: web/packages/ui
         run: |
-          
+          pnpm install
+          pnpm run build
+
+      - name: Publish Contract Types
+        working-directory: web/packages/contract-types
+        run: |
           pnpm publish
 
       - name: Publish API
-        working-directory: packages/api
+        working-directory: web/packages/api
         run: |
           pnpm publish
       
