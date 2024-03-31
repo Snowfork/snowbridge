@@ -15,7 +15,7 @@ on:
       - "!web/packages/test*"
 
 jobs:
-  build-api:
+  publish:
     runs-on: snowbridge-runner
     timeout-minutes: 15
     steps:
