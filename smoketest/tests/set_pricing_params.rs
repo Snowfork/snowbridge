@@ -34,6 +34,7 @@ async fn set_pricing_params() {
 			exchange_rate: FixedU128(*EXCHANGE_RATE),
 			rewards: Rewards { local: *LOCAL_REWARD, remote: U256([*REMOTE_REWARD, 0, 0, 0]) },
 			fee_per_gas: U256([*FEE_PER_GAS, 0, 0, 0]),
+			multiplier: FixedU128(*FEE_MULTIPLIER),
 		})
 		.encode_call_data(&test_clients.bridge_hub_client.metadata())
 		.expect("encoded call");

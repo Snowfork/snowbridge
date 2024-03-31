@@ -69,6 +69,10 @@ lazy_static! {
 		.unwrap_or("2500000000000000".to_string())
 		.parse()
 		.unwrap();
+	pub static ref FEE_MULTIPLIER: u128 = env::var("FEE_MULTIPLIER")
+		.unwrap_or("2500000000000000".to_string())
+		.parse()
+		.unwrap();
 	pub static ref FEE_PER_GAS: u64 =
 		env::var("FEE_PER_GAS").unwrap_or("20000000000".to_string()).parse().unwrap();
 	pub static ref LOCAL_REWARD: u128 =
