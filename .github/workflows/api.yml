@@ -15,7 +15,7 @@ on:
       - "!web/packages/test*"
 
 jobs:
-  build-contracts:
+  build-api:
     runs-on: snowbridge-runner
     timeout-minutes: 15
     steps:
@@ -27,10 +27,10 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Test
+      - name: Build Contracts
         working-directory: contracts
         run: |
-          forge test
+          forge build
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -46,7 +46,6 @@ jobs:
       - name: Build Contract Types
         working-directory: web/packages/contract-types
         run: |
-          ls -R ../../../contracts/out
           pnpm install
           pnpm typechain
           pnpm build
