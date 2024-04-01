@@ -81,6 +81,7 @@ contract GatewayTest is Test {
     uint128 public registerTokenFee = 0;
     uint128 public sendTokenFee = 1e10;
     uint128 public createTokenFee = 1e10;
+    uint128 public maxDestinationFee = 1e10;
 
     MultiAddress public recipientAddress32;
     MultiAddress public recipientAddress20;
@@ -104,6 +105,7 @@ contract GatewayTest is Test {
             assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
+            reserveTransferMaxDestinationFee: maxDestinationFee,
             exchangeRate: exchangeRate,
             multiplier: multiplier
         });
@@ -499,6 +501,7 @@ contract GatewayTest is Test {
             assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
+            reserveTransferMaxDestinationFee: maxDestinationFee,
             exchangeRate: exchangeRate,
             multiplier: multiplier
         });
@@ -858,7 +861,8 @@ contract GatewayTest is Test {
                 SetTokenTransferFeesParams({
                     assetHubCreateAssetFee: createTokenFee * 2,
                     registerTokenFee: registerTokenFee,
-                    assetHubReserveTransferFee: sendTokenFee
+                    assetHubReserveTransferFee: sendTokenFee,
+                    reserveTransferMaxDestinationFee: maxDestinationFee
                 })
             )
         );
@@ -893,7 +897,7 @@ contract GatewayTest is Test {
         assertEq(fee, 20000000000000001);
     }
 
-    function testSendTokenToForeignDestWithInvalidFee() public {
+    function testSendTokenWithZeroFeeToForeignDestWithInvalidFee() public {
         // Let gateway lock up to 1 tokens
         token.approve(address(gateway), 1);
 
@@ -904,9 +908,30 @@ contract GatewayTest is Test {
         uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         IGateway(address(gateway)).registerToken{value: fee}(address(token));
 
+        vm.expectRevert(Assets.InvalidDestinationFee.selector);
         fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 0);
 
         vm.expectRevert(Assets.InvalidDestinationFee.selector);
         IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, 0, 1);
+    }
+
+    function testSendTokenWithLargeFeeToForeignDestWithInvalidFee() public {
+        // Let gateway lock up to 1 tokens
+        token.approve(address(gateway), 1);
+
+        // Multilocation for recipient
+        ParaID destPara = ParaID.wrap(2043);
+
+        // register token first
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        IGateway(address(gateway)).registerToken{value: fee}(address(token));
+
+        uint128 largeFee = 1e11 + 1; // greater than 10 DOT, 10 decimal places
+
+        vm.expectRevert(Assets.InvalidDestinationFee.selector);
+        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, largeFee);
+
+        vm.expectRevert(Assets.InvalidDestinationFee.selector);
+        IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, largeFee, 1);
     }
 }

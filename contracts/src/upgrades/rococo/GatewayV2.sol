@@ -6,6 +6,7 @@ import "../../Gateway.sol";
 
 import {UD60x18, convert} from "prb/math/src/UD60x18.sol";
 import {PricingStorage} from "../../storage/PricingStorage.sol";
+import {AssetsStorage} from "../../storage/AssetsStorage.sol";
 
 contract GatewayV2 is Gateway {
     constructor(
@@ -23,11 +24,15 @@ contract GatewayV2 is Gateway {
         }
 
         PricingStorage.Layout storage pricing = PricingStorage.layout();
+        AssetsStorage.Layout storage assets = AssetsStorage.layout();
 
-        if (pricing.multiplier != convert(0)) {
+        if (pricing.multiplier != convert(0) || assets.reserveTransferMaxDestinationFee != 0) {
             revert AlreadyInitialized();
         }
 
-        pricing.multiplier = abi.decode(data, (UD60x18));
+        (UD60x18 multiplier, uint128 maxDestinationFee) = abi.decode(data, (UD60x18, uint128));
+
+        pricing.multiplier = multiplier;
+        assets.reserveTransferMaxDestinationFee = maxDestinationFee; 
     }
 }
