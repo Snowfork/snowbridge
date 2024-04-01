@@ -380,8 +380,8 @@ contract Gateway is IGateway, IInitializable {
         SetTokenTransferFeesParams memory params = abi.decode(data, (SetTokenTransferFeesParams));
         $.assetHubCreateAssetFee = params.assetHubCreateAssetFee;
         $.assetHubReserveTransferFee = params.assetHubReserveTransferFee;
-        $.reserveTransferMaxDestinationFee = params.reserveTransferMaxDestinationFee;
         $.registerTokenFee = params.registerTokenFee;
+        $.destinationMaxTransferFee = params.destinationMaxTransferFee;
         emit TokenTransferFeesChanged();
     }
 
@@ -573,7 +573,7 @@ contract Gateway is IGateway, IInitializable {
         /// @dev The extra fee charged for sending tokens (DOT)
         uint128 assetHubReserveTransferFee;
         /// @dev The maximum fee that can be sent to a destination parachain to pay for execution (DOT)
-        uint128 reserveTransferMaxDestinationFee;
+        uint128 destinationMaxTransferFee;
         /// @dev extra fee to discourage spamming
         uint256 registerTokenFee;
         /// @dev Fee multiplier
@@ -632,6 +632,6 @@ contract Gateway is IGateway, IInitializable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
-        assets.reserveTransferMaxDestinationFee = config.reserveTransferMaxDestinationFee;
+        assets.destinationMaxTransferFee = config.destinationMaxTransferFee;
     }
 }

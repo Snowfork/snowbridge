@@ -105,7 +105,7 @@ contract GatewayTest is Test {
             assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
-            reserveTransferMaxDestinationFee: maxDestinationFee,
+            destinationMaxTransferFee: maxDestinationFee,
             exchangeRate: exchangeRate,
             multiplier: multiplier
         });
@@ -501,7 +501,7 @@ contract GatewayTest is Test {
             assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
-            reserveTransferMaxDestinationFee: maxDestinationFee,
+            destinationMaxTransferFee: maxDestinationFee,
             exchangeRate: exchangeRate,
             multiplier: multiplier
         });
@@ -862,7 +862,7 @@ contract GatewayTest is Test {
                     assetHubCreateAssetFee: createTokenFee * 2,
                     registerTokenFee: registerTokenFee,
                     assetHubReserveTransferFee: sendTokenFee,
-                    reserveTransferMaxDestinationFee: maxDestinationFee
+                    destinationMaxTransferFee: maxDestinationFee
                 })
             )
         );

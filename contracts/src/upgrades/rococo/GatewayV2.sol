@@ -26,13 +26,13 @@ contract GatewayV2 is Gateway {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
         AssetsStorage.Layout storage assets = AssetsStorage.layout();
 
-        if (pricing.multiplier != convert(0) || assets.reserveTransferMaxDestinationFee != 0) {
+        if (pricing.multiplier != convert(0) || assets.destinationMaxTransferFee != 0) {
             revert AlreadyInitialized();
         }
 
         (UD60x18 multiplier, uint128 maxDestinationFee) = abi.decode(data, (UD60x18, uint128));
 
         pricing.multiplier = multiplier;
-        assets.reserveTransferMaxDestinationFee = maxDestinationFee; 
+        assets.destinationMaxTransferFee = maxDestinationFee;
     }
 }
