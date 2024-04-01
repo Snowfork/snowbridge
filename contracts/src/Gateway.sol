@@ -53,7 +53,7 @@ contract Gateway is IGateway, IInitializable {
     address internal immutable AGENT_EXECUTOR;
 
     // Verification state
-    address public immutable BEEFY_CLIENT;
+    address internal immutable BEEFY_CLIENT;
 
     // BridgeHub
     ParaID internal immutable BRIDGE_HUB_PARA_ID;
@@ -97,8 +97,8 @@ contract Gateway is IGateway, IInitializable {
     }
 
     constructor(
-        address beefyLightClient,
-        address agentExecutor,
+        address beefyClient_,
+        address agentExecutor_,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
         uint8 foreignTokenDecimals
@@ -107,8 +107,8 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidConstructorParams();
         }
 
-        BEEFY_CLIENT = beefyLightClient;
-        AGENT_EXECUTOR = agentExecutor;
+        BEEFY_CLIENT = beefyClient_;
+        AGENT_EXECUTOR = agentExecutor_;
         BRIDGE_HUB_PARA_ID_ENCODED = ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
@@ -226,6 +226,10 @@ contract Gateway is IGateway, IInitializable {
      */
     function beefyClient() external view returns (address) {
         return BEEFY_CLIENT;
+    }
+
+    function agentExecutor() external view returns (address) {
+        return AGENT_EXECUTOR;
     }
 
     function operatingMode() external view returns (OperatingMode) {
