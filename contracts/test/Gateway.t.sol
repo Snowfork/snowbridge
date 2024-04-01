@@ -81,7 +81,7 @@ contract GatewayTest is Test {
     uint128 public registerTokenFee = 0;
     uint128 public sendTokenFee = 1e10;
     uint128 public createTokenFee = 1e10;
-    uint128 public maxDestinationFee = 1e10;
+    uint128 public maxDestinationFee = 1e11;
 
     MultiAddress public recipientAddress32;
     MultiAddress public recipientAddress20;
@@ -861,14 +861,25 @@ contract GatewayTest is Test {
                 SetTokenTransferFeesParams({
                     assetHubCreateAssetFee: createTokenFee * 2,
                     registerTokenFee: registerTokenFee,
-                    assetHubReserveTransferFee: sendTokenFee,
-                    destinationMaxTransferFee: maxDestinationFee
+                    assetHubReserveTransferFee: sendTokenFee * 3,
+                    destinationMaxTransferFee: maxDestinationFee + 1
                 })
             )
         );
         fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         // since deliveryCost not changed, so the total fee increased only by 50%
         assertEq(fee, 7500000000000000);
+        // register token first
+        IGateway(address(gateway)).registerToken{value: fee}(address(token));
+
+        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), assetHubParaID, 0);
+        // Fee should increase
+        assertEq(fee, 10000000000000000);
+
+        ParaID destPara = ParaID.wrap(2043);
+        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1e11 + 1);
+        // Max fee should increase
+        assertEq(fee, 35000000000250003);
     }
 
     bytes32 public expectChannelIDBytes = bytes32(0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539);
