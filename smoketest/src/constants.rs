@@ -65,12 +65,16 @@ lazy_static! {
 		.unwrap_or("20000000000".to_string())
 		.parse()
 		.unwrap();
+	pub static ref RESERVE_TRANSFER_MAX_DESTINATION_FEE: u128 = env::var("RESERVE_TRANSFER_MAX_DESTINATION_FEE")
+		.unwrap_or("10000000000000".to_string())
+		.parse()
+		.unwrap();
 	pub static ref EXCHANGE_RATE: u128 = env::var("EXCHANGE_RATE")
 		.unwrap_or("2500000000000000".to_string())
 		.parse()
 		.unwrap();
 	pub static ref FEE_MULTIPLIER: u128 = env::var("FEE_MULTIPLIER")
-		.unwrap_or("2500000000000000".to_string())
+		.unwrap_or("1000000000000000000".to_string())
 		.parse()
 		.unwrap();
 	pub static ref FEE_PER_GAS: u64 =

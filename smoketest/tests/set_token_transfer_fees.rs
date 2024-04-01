@@ -29,6 +29,7 @@ async fn set_token_transfer_fees() {
 			*CREATE_ASSET_FEE,
 			*RESERVE_TRANSFER_FEE,
 			U256([*REGISTER_TOKEN_FEE, 0, 0, 0]),
+			*RESERVE_TRANSFER_MAX_DESTINATION_FEE,
 		)
 		.encode_call_data(&test_clients.bridge_hub_client.metadata())
 		.expect("encoded call");
