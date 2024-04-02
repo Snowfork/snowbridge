@@ -97,8 +97,8 @@ contract Gateway is IGateway, IInitializable {
     }
 
     constructor(
-        address beefyClient_,
-        address agentExecutor_,
+        address beefyClient,
+        address agentExecutor,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
         uint8 foreignTokenDecimals
@@ -107,8 +107,8 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidConstructorParams();
         }
 
-        BEEFY_CLIENT = beefyClient_;
-        AGENT_EXECUTOR = agentExecutor_;
+        BEEFY_CLIENT = beefyClient;
+        AGENT_EXECUTOR = agentExecutor;
         BRIDGE_HUB_PARA_ID_ENCODED = ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
