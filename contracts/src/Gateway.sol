@@ -50,10 +50,10 @@ contract Gateway is IGateway, IInitializable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
-    address internal immutable AGENT_EXECUTOR;
+    address public immutable AGENT_EXECUTOR;
 
     // Verification state
-    address internal immutable BEEFY_CLIENT;
+    address public immutable BEEFY_CLIENT;
 
     // BridgeHub
     ParaID internal immutable BRIDGE_HUB_PARA_ID;
@@ -224,14 +224,6 @@ contract Gateway is IGateway, IInitializable {
     /**
      * Getters
      */
-    function beefyClient() external view returns (address) {
-        return BEEFY_CLIENT;
-    }
-
-    function agentExecutor() external view returns (address) {
-        return AGENT_EXECUTOR;
-    }
-
     function operatingMode() external view returns (OperatingMode) {
         return CoreStorage.layout().mode;
     }

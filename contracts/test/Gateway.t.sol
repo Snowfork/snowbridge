@@ -910,10 +910,10 @@ contract GatewayTest is Test {
     }
 
     function testGatewayExposesBeefyClient() public {
-        assertEq(IGateway(address(gateway)).beefyClient(), address(0));
+        assertEq(IGateway(address(gateway)).BEEFY_CLIENT(), address(0));
     }
 
     function testGatewayExposesAgentExecutor() public {
-        assertEq(IGateway(address(gateway)).agentExecutor(), address(executor));
+        assertEq(IGateway(address(gateway)).AGENT_EXECUTOR(), address(executor));
     }
 }

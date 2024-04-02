@@ -79,10 +79,10 @@ interface IGateway {
     event TokenRegistrationSent(address token);
 
     /// @dev the address of the BEEFY light client used to verify messages.
-    function beefyClient() external view returns (address);
+    function BEEFY_CLIENT() external returns (address);
 
     // @dev the address of the agent executor implementaiton.
-    function agentExecutor() external view returns (address);
+    function AGENT_EXECUTOR() external returns (address);
 
     /// @dev Check whether a token is registered
     function isTokenRegistered(address token) external view returns (bool);
