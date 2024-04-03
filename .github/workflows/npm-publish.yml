@@ -14,9 +14,6 @@ on:
       - "web/**"
       - "!web/packages/test*"
 
-env:
-  NPM_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
-
 jobs:
   publish:
     runs-on: snowbridge-runner
