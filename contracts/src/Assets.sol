@@ -70,7 +70,7 @@ library Assets {
             costs.foreign = $.assetHubReserveTransferFee + destinationChainFee;
 
             // Destination fee cannot be zero. MultiAssets are not allowed to be zero in xcm v4.
-            if (destinationChainFee < 1 || destinationChainFee > $.destinationMaxTransferFee) {
+            if (destinationChainFee == 0 || destinationChainFee > $.destinationMaxTransferFee) {
                 revert InvalidDestinationFee();
             }
         }
