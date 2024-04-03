@@ -1,7 +1,8 @@
 ---
 description: >-
-  How to upgrade the Ethereum gateway controlling the bridge on the Ethereum
-  side.
+  How to set the Ethereum gateway controlling the bridge on the Ethereum side.
+  This guide is specifically for setting the gateway address when deployed
+  initially, not when the contracts are upgraded.
 ---
 
 # Initial Deployment of Gateway Contracts
