@@ -1,17 +1,17 @@
-mod bridge_hub_runtime;
 mod asset_hub_runtime;
-mod relay_runtime;
+mod bridge_hub_runtime;
 mod commands;
-mod helpers;
 mod constants;
+mod helpers;
+mod relay_runtime;
 
+use alloy_primitives::{utils::parse_units, Address, Bytes, FixedBytes, U128, U256};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
-use clap::{Parser, Subcommand, ValueEnum, Args};
 use constants::{POLKADOT_DECIMALS, POLKADOT_SYMBOL};
-use helpers::{send_xcm_bridge_hub, send_xcm_asset_hub, utility_batch};
+use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_batch};
+use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
-use std::{path::PathBuf, io::Write};
-use alloy_primitives::{Address, Bytes, FixedBytes, U256, U128, utils::parse_units};
 
 #[derive(Debug, Parser)]
 #[command(name = "snowbridge-preimage", version, about, long_about = None)]
@@ -134,21 +134,17 @@ pub struct PricingParametersArgs {
 }
 
 fn parse_eth_address(v: &str) -> Result<Address, String> {
-    Address::parse_checksummed(v, None).map_err(|_| {
-        "invalid ethereum address".to_owned()
-    })
+    Address::parse_checksummed(v, None).map_err(|_| "invalid ethereum address".to_owned())
 }
 
 fn parse_hex_bytes32(v: &str) -> Result<FixedBytes<32>, String> {
-    v.parse::<FixedBytes<32>>().map_err(|_| {
-        "invalid 32-byte hex value".to_owned()
-    })
+    v.parse::<FixedBytes<32>>()
+        .map_err(|_| "invalid 32-byte hex value".to_owned())
 }
 
 fn parse_hex_bytes(v: &str) -> Result<Bytes, String> {
-    v.parse::<Bytes>().map_err(|_| {
-        "invalid hex value".to_owned()
-    })
+    v.parse::<Bytes>()
+        .map_err(|_| "invalid hex value".to_owned())
 }
 
 fn parse_units_polkadot(v: &str) -> Result<u128, String> {
@@ -217,46 +213,52 @@ async fn main() {
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
-	let api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(CONFIG.api)
-		.await
-		.expect("can not connect to bridgehub");
+    let api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(CONFIG.api)
+        .await
+        .expect("can not connect to bridgehub");
 
     let asset_hub_api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(CONFIG.asset_hub_api)
-    .await
-    .expect("can not connect to assethub");
-
+        .await
+        .expect("can not connect to assethub");
 
     let context = Context {
         api: Box::new(api),
-        asset_hub_api: Box::new(asset_hub_api)
+        asset_hub_api: Box::new(asset_hub_api),
     };
 
     let call = match &cli.command {
         Command::ForceCheckpoint(params) => {
             let call = commands::force_checkpoint(params);
             send_xcm_bridge_hub(&context, vec![call]).await?
-        },
+        }
         Command::Initialize(params) => {
-            let (set_pricing_parameters, set_ethereum_fee) = commands::pricing_parameters(&context, &params.pricing_parameters).await?;
-            let call1 = send_xcm_bridge_hub(&context, vec![
-                commands::force_checkpoint(&params.force_checkpoint),
-                commands::gateway_operating_mode(&params.gateway_operating_mode),
-                commands::set_gateway_address(&params.gateway_address),
-                set_pricing_parameters,
-            ]).await?;
-            let call2 = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
+            let (set_pricing_parameters, set_ethereum_fee) =
+                commands::pricing_parameters(&context, &params.pricing_parameters).await?;
+            let call1 = send_xcm_bridge_hub(
+                &context,
+                vec![
+                    commands::force_checkpoint(&params.force_checkpoint),
+                    commands::gateway_operating_mode(&params.gateway_operating_mode),
+                    commands::set_gateway_address(&params.gateway_address),
+                    set_pricing_parameters,
+                ],
+            )
+            .await?;
+            let call2 =
+                send_xcm_asset_hub(&context, vec![force_xcm_version(), set_ethereum_fee]).await?;
             utility_batch(vec![call1, call2])
-        },
+        }
         Command::GatewayOperatingMode(params) => {
             let call = commands::gateway_operating_mode(params);
             send_xcm_bridge_hub(&context, vec![call]).await?
-        },
+        }
         Command::Upgrade(params) => {
             let call = commands::upgrade(params);
             send_xcm_bridge_hub(&context, vec![call]).await?
-        },
+        }
         Command::PricingParameters(params) => {
-            let (set_pricing_parameters, set_ethereum_fee) = commands::pricing_parameters(&context, params).await?;
+            let (set_pricing_parameters, set_ethereum_fee) =
+                commands::pricing_parameters(&context, params).await?;
             let call1 = send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
             let call2 = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
             utility_batch(vec![call1, call2])
@@ -268,9 +270,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     match cli.format {
         Format::Hex => {
             println!("0x{}", hex::encode(preimage));
-        },
+        }
         Format::Binary => {
-            std::io::stdout().write_all(&preimage).expect("write stdout");
+            std::io::stdout()
+                .write_all(&preimage)
+                .expect("write stdout");
         }
     }
 
