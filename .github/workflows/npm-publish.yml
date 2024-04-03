@@ -13,6 +13,8 @@ on:
       - "contracts/src/**/*.sol"
       - "web/**"
       - "!web/packages/test*"
+  release:
+    types: [published]
 
 env:
   NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}

@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/contract-types",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Snowbridge contract type bindings",
   "license": "Apache-2.0",
   "repository": {
