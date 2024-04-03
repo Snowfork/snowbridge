@@ -1,18 +1,6 @@
 name: npm-publish
 
 on:
-  push:
-    paths:
-      - "contracts/src/**/*.sol"
-      - "web/**"
-      - "!web/packages/test*"
-    branches:
-      - main
-  pull_request:
-    paths:
-      - "contracts/src/**/*.sol"
-      - "web/**"
-      - "!web/packages/test*"
   release:
     types: [published]
 
@@ -60,12 +48,6 @@ jobs:
         run: |
           pnpm install
           pnpm build
-
-      - name: Build UI
-        working-directory: web/packages/ui
-        run: |
-          pnpm install
-          pnpm run build
 
       - name: Publish Contract Types
         working-directory: web/packages/contract-types
