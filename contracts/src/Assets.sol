@@ -16,6 +16,7 @@ import {Address} from "./utils/Address.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
 import {Call} from "./utils/Call.sol";
+import {ERC20} from "./ERC20.sol";
 
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
 library Assets {
@@ -30,6 +31,8 @@ library Assets {
     error Unsupported();
     error InvalidDestinationFee();
     error AgentDoesNotExist();
+    error TokenAlreadyRegistered();
+    error TokenMintFailed();
 
     function isTokenRegistered(address token) external view returns (bool) {
         return AssetsStorage.layout().tokenRegistry[token].isRegistered;
@@ -230,5 +233,53 @@ library Assets {
     function _sendForeignTokenCosts(uint128 destinationChainFee) internal pure returns (Costs memory costs) {
         costs.foreign = destinationChainFee;
         costs.native = 0;
+    }
+
+    // @dev Register a new fungible Polkadot token for an agent
+    function registerForeignToken(
+        bytes32 agentID,
+        address agent,
+        bytes32 tokenID,
+        string memory name,
+        string memory symbol,
+        uint8 decimals
+    ) external {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if ($.tokenRegistryByID[tokenID].isRegistered == true) {
+            revert TokenAlreadyRegistered();
+        }
+        ERC20 foreignToken = new ERC20(agent, name, symbol, decimals);
+        address token = address(foreignToken);
+        TokenInfo memory info =
+            TokenInfo({isRegistered: true, isForeign: true, tokenID: tokenID, agentID: agentID, token: token});
+        $.tokenRegistry[token] = info;
+        $.tokenRegistryByID[tokenID] = info;
+        emit IGateway.ForeignTokenRegistered(tokenID, agentID, token);
+    }
+
+    // @dev Mint foreign token from Polkadot
+    function mintForeignToken(address executor, address agent, bytes32 tokenID, address recipient, uint256 amount)
+        external
+    {
+        address token = _tokenAddressOf(tokenID);
+        bytes memory call = abi.encodeCall(AgentExecutor.mintToken, (tokenID, token, recipient, amount));
+        (bool success,) = Agent(payable(agent)).invoke(executor, call);
+        if (!success) {
+            revert TokenMintFailed();
+        }
+    }
+
+    // @dev Get token address by tokenID
+    function tokenAddressOf(bytes32 tokenID) external view returns (address) {
+        return _tokenAddressOf(tokenID);
+    }
+
+    // @dev Get token address by tokenID
+    function _tokenAddressOf(bytes32 tokenID) internal view returns (address) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if ($.tokenRegistryByID[tokenID].isRegistered == false) {
+            revert TokenNotRegistered();
+        }
+        return $.tokenRegistryByID[tokenID].token;
     }
 }

@@ -47,7 +47,6 @@ import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
-import {ERC20} from "./ERC20.sol";
 
 contract Gateway is IGateway, IInitializable {
     using Address for address;
@@ -91,7 +90,6 @@ contract Gateway is IGateway, IInitializable {
     error InvalidConstructorParams();
     error AlreadyInitialized();
     error TokenNotRegistered();
-    error TokenAlreadyRegistered();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -283,9 +281,13 @@ contract Gateway is IGateway, IInitializable {
             abi.decode(params.payload, (AgentExecuteCommand, bytes));
 
         if (command == AgentExecuteCommand.RegisterToken) {
-            _registerForeignToken(params.agentID, agent, commandParams);
+            (bytes32 tokenID, string memory name, string memory symbol, uint8 decimals) =
+                abi.decode(commandParams, (bytes32, string, string, uint8));
+            Assets.registerForeignToken(params.agentID, agent, tokenID, name, symbol, decimals);
         } else if (command == AgentExecuteCommand.MintToken) {
-            _mintForeignToken(agent, commandParams);
+            (bytes32 tokenID, address recipient, uint256 amount) =
+                abi.decode(commandParams, (bytes32, address, uint256));
+            Assets.mintForeignToken(AGENT_EXECUTOR, agent, tokenID, recipient, amount);
         } else {
             bytes memory call = abi.encodeCall(AgentExecutor.execute, (command, commandParams));
             (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
@@ -416,48 +418,6 @@ contract Gateway is IGateway, IInitializable {
         emit PricingParametersChanged();
     }
 
-    // @dev Register a new fungible Polkadot token for an agent
-    function _registerForeignToken(bytes32 agentID, address agent, bytes memory params) internal {
-        (bytes32 tokenID, string memory name, string memory symbol, uint8 decimals) =
-            abi.decode(params, (bytes32, string, string, uint8));
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        if ($.tokenRegistryByID[tokenID].isRegistered == true) {
-            revert TokenAlreadyRegistered();
-        }
-        ERC20 foreignToken = new ERC20(agent, name, symbol, decimals);
-        address token = address(foreignToken);
-        TokenInfo memory info =
-            TokenInfo({isRegistered: true, isForeign: true, tokenID: tokenID, agentID: agentID, token: token});
-        $.tokenRegistry[token] = info;
-        $.tokenRegistryByID[tokenID] = info;
-        emit ForeignTokenRegistered(tokenID, agentID, token);
-    }
-
-    // @dev Mint foreign token from Polkadot
-    function _mintForeignToken(address agent, bytes memory params) internal {
-        (bytes32 tokenID, address recipient, uint256 amount) = abi.decode(params, (bytes32, address, uint256));
-        address token = _tokenAddressOf(tokenID);
-        bytes memory call = abi.encodeCall(AgentExecutor.mintToken, (tokenID, token, recipient, amount));
-        (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
-        if (!success) {
-            revert AgentExecutionFailed(returndata);
-        }
-    }
-
-    // @dev Get token address by tokenID
-    function tokenAddressOf(bytes32 tokenID) external view returns (address) {
-        return _tokenAddressOf(tokenID);
-    }
-
-    // @dev Get token address by tokenID
-    function _tokenAddressOf(bytes32 tokenID) internal view returns (address) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        if ($.tokenRegistryByID[tokenID].isRegistered == false) {
-            revert TokenNotRegistered();
-        }
-        return $.tokenRegistryByID[tokenID].token;
-    }
-
     /**
      * Assets
      */
@@ -517,6 +477,11 @@ contract Gateway is IGateway, IInitializable {
                 Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
             );
         }
+    }
+
+    // @dev Get token address by tokenID
+    function tokenAddressOf(bytes32 tokenID) external view returns (address) {
+        return Assets.tokenAddressOf(tokenID);
     }
 
     /**
