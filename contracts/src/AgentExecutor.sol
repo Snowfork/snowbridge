@@ -16,11 +16,6 @@ contract AgentExecutor {
     using SafeTokenTransfer for IERC20;
     using SafeNativeTransfer for address payable;
 
-    // Emitted when token minted
-    event TokenMinted(bytes32 indexed tokenID, address token, address recipient, uint256 amount);
-    // Emitted when token burnt
-    event TokenBurnt(bytes32 indexed tokenID, address token, address sender, uint256 amount);
-
     /// @dev Transfer ether to `recipient`. Unlike `_transferToken` This logic is not nested within `execute`,
     /// as the gateway needs to control an agent's ether balance directly.
     ///
@@ -34,13 +29,11 @@ contract AgentExecutor {
     }
 
     /// @dev Mint ERC20 token to `recipient`.
-    function mintToken(bytes32 tokenID, address token, address recipient, uint256 amount) external {
+    function mintToken(address token, address recipient, uint256 amount) external {
         ERC20(token).mint(recipient, amount);
-        emit TokenMinted(tokenID, token, recipient, amount);
     }
 
-    function burnToken(bytes32 tokenID, address token, address sender, uint256 amount) external {
+    function burnToken(address token, address sender, uint256 amount) external {
         ERC20(token).burn(sender, amount);
-        emit TokenBurnt(tokenID, token, sender, amount);
     }
 }

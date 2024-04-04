@@ -50,8 +50,8 @@ import "./mocks/GatewayUpgradeMock.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
 contract GatewayTest is Test {
-    // Emitted when token minted
-    event TokenMinted(bytes32 indexed tokenID, address token, address recipient, uint256 amount);
+    // Emitted when token minted/burnt/transfered
+    event Transfer(address indexed from, address indexed to, uint256 value);
 
     ParaID public bridgeHubParaID = ParaID.wrap(1013);
     bytes32 public bridgeHubAgentID = 0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314;
@@ -940,7 +940,7 @@ contract GatewayTest is Test {
         });
 
         vm.expectEmit(true, true, false, false);
-        emit TokenMinted(bytes32(uint256(1)), address(0), account1, 1000);
+        emit Transfer(address(0), account1, 1000);
 
         GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
     }
