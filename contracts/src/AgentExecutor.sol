@@ -49,8 +49,7 @@ contract AgentExecutor {
         emit TokenMinted(tokenID, token, recipient, amount);
     }
 
-    function burnToken(bytes32 tokenID, address sender, uint256 amount) external {
-        address token = Gateway(msg.sender).tokenAddressOf(tokenID);
+    function burnToken(bytes32 tokenID, address token, address sender, uint256 amount) external {
         ERC20(token).burn(sender, amount);
         emit TokenBurnt(tokenID, token, sender, amount);
     }

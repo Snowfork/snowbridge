@@ -188,7 +188,7 @@ library Assets {
         uint128 amount
     ) external returns (Ticket memory ticket) {
         // Polkadot-native token: burn wrapped token
-        _burnToken(executor, agent, info.tokenID, sender, amount);
+        _burnToken(executor, agent, info.tokenID, info.token, sender, amount);
 
         if (destinationChainFee == 0) {
             revert InvalidDestinationFee();
@@ -214,10 +214,15 @@ library Assets {
         emit IGateway.TokenSent(info.token, sender, destinationChain, destinationAddress, amount);
     }
 
-    function _burnToken(address agentExecutor, address agent, bytes32 tokenID, address sender, uint256 amount)
-        internal
-    {
-        bytes memory call = abi.encodeCall(AgentExecutor.burnToken, (tokenID, sender, amount));
+    function _burnToken(
+        address agentExecutor,
+        address agent,
+        bytes32 tokenID,
+        address token,
+        address sender,
+        uint256 amount
+    ) internal {
+        bytes memory call = abi.encodeCall(AgentExecutor.burnToken, (tokenID, token, sender, amount));
         (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(agentExecutor, call));
         Call.verifyResult(success, returndata);
     }
