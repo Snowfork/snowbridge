@@ -63,7 +63,6 @@ contract GatewayTest is Test {
     bytes32[] public proof = [bytes32(0x2f9ee6cfdf244060dc28aa46347c5219e303fc95062dd672b4e406ca5c29764b)];
     bytes public parachainHeaderProof = bytes("validProof");
 
-    AgentExecutor public executor;
     GatewayMock public gatewayLogic;
     GatewayProxy public gateway;
 
@@ -94,7 +93,7 @@ contract GatewayTest is Test {
     UD60x18 public multiplier = ud60x18(1e18);
 
     function setUp() public {
-        executor = new AgentExecutor();
+        AgentExecutor executor = new AgentExecutor();
         gatewayLogic =
             new GatewayMock(address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals);
         Gateway.Config memory config = Gateway.Config({
@@ -488,6 +487,7 @@ contract GatewayTest is Test {
 
     function testUpgradeInitializerRunsOnlyOnce() public {
         // Upgrade to this current logic contract
+        AgentExecutor executor = new AgentExecutor();
         GatewayMock currentLogic =
             new GatewayMock(address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals);
 
@@ -525,6 +525,7 @@ contract GatewayTest is Test {
         assertNotEq(GatewayMock(address(gateway)).agentOf(agentID), address(0));
 
         // Upgrade to this current logic contract
+        AgentExecutor executor = new AgentExecutor();
         GatewayMock currentLogic =
             new GatewayMock(address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals);
 
