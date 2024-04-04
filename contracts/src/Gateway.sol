@@ -47,6 +47,7 @@ import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {ERC20} from "./ERC20.sol";
 
 contract Gateway is IGateway, IInitializable {
     using Address for address;
@@ -278,11 +279,17 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidAgentExecutionPayload();
         }
 
-        bytes memory call = abi.encodeCall(AgentExecutor.execute, (params.agentID, params.payload));
+        (AgentExecuteCommand command, bytes memory commandParams) =
+            abi.decode(params.payload, (AgentExecuteCommand, bytes));
 
-        (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
-        if (!success) {
-            revert AgentExecutionFailed(returndata);
+        if (command == AgentExecuteCommand.RegisterToken) {
+            _registerForeignToken(params.agentID, agent, commandParams);
+        } else {
+            bytes memory call = abi.encodeCall(AgentExecutor.execute, (command, commandParams));
+            (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
+            if (!success) {
+                revert AgentExecutionFailed(returndata);
+            }
         }
     }
 
@@ -408,15 +415,20 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // @dev Register a new fungible Polkadot token for an agent
-    function registerForeignToken(bytes32 tokenID, address token, bytes32 agentID) external onlyAgent(agentID) {
+    function _registerForeignToken(bytes32 agentID, address agent, bytes memory params) internal {
+        (bytes32 tokenID, string memory name, string memory symbol, uint8 decimals) =
+            abi.decode(params, (bytes32, string, string, uint8));
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenRegistryByID[tokenID].isRegistered == true) {
             revert TokenAlreadyRegistered();
         }
+        ERC20 foreignToken = new ERC20(name, symbol, decimals);
+        address token = address(foreignToken);
         TokenInfo memory info =
             TokenInfo({isRegistered: true, isForeign: true, tokenID: tokenID, agentID: agentID, token: token});
         $.tokenRegistry[token] = info;
         $.tokenRegistryByID[tokenID] = info;
+        foreignToken.transferOwnership(agent);
         emit ForeignTokenRegistered(tokenID, agentID, token);
     }
 

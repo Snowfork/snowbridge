@@ -35,6 +35,7 @@ contract ERC20 is IERC20, IERC20Permit {
     error Unauthorized();
     error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
     error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed);
+    error OwnableInvalidOwner(address owner);
 
     mapping(address => uint256) public override balanceOf;
 
@@ -53,7 +54,7 @@ contract ERC20 is IERC20, IERC20Permit {
     bytes32 private constant PERMIT_SIGNATURE_HASH =
         bytes32(0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9);
 
-    address public immutable OWNER;
+    address public OWNER;
     string private constant EIP191_PREFIX_FOR_EIP712_STRUCTURED_DATA = "\x19\x01";
     uint8 public immutable decimals;
 
@@ -81,6 +82,17 @@ contract ERC20 is IERC20, IERC20Permit {
             revert Unauthorized();
         }
         _;
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        if (newOwner == address(0)) {
+            revert OwnableInvalidOwner(address(0));
+        }
+        OWNER = newOwner;
     }
 
     /**
