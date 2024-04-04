@@ -33,6 +33,7 @@ library Assets {
     error AgentDoesNotExist();
     error TokenAlreadyRegistered();
     error TokenMintFailed();
+    error TokenTransferFailed();
 
     function isTokenRegistered(address token) external view returns (bool) {
         return AssetsStorage.layout().tokenRegistry[token].isRegistered;
@@ -266,6 +267,17 @@ library Assets {
         (bool success,) = Agent(payable(agent)).invoke(executor, call);
         if (!success) {
             revert TokenMintFailed();
+        }
+    }
+
+    // @dev Transfer ERC20 to `recipient`
+    function transferToken(address executor, address agent, address token, address recipient, uint128 amount)
+        external
+    {
+        bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
+        (bool success,) = Agent(payable(agent)).invoke(executor, call);
+        if (!success) {
+            revert TokenTransferFailed();
         }
     }
 

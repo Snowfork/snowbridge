@@ -21,16 +21,6 @@ contract AgentExecutor {
     // Emitted when token burnt
     event TokenBurnt(bytes32 indexed tokenID, address token, address sender, uint256 amount);
 
-    /// @dev Execute a message which originated from the Polkadot side of the bridge. In other terms,
-    /// the `data` parameter is constructed by the BridgeHub parachain.
-    ///
-    function execute(AgentExecuteCommand command, bytes memory params) external {
-        if (command == AgentExecuteCommand.TransferToken) {
-            (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
-            _transferToken(token, recipient, amount);
-        }
-    }
-
     /// @dev Transfer ether to `recipient`. Unlike `_transferToken` This logic is not nested within `execute`,
     /// as the gateway needs to control an agent's ether balance directly.
     ///
@@ -39,7 +29,7 @@ contract AgentExecutor {
     }
 
     /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
-    function _transferToken(address token, address recipient, uint128 amount) internal {
+    function transferToken(address token, address recipient, uint128 amount) external {
         IERC20(token).safeTransfer(recipient, amount);
     }
 

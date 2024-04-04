@@ -288,12 +288,9 @@ contract Gateway is IGateway, IInitializable {
             (bytes32 tokenID, address recipient, uint256 amount) =
                 abi.decode(commandParams, (bytes32, address, uint256));
             Assets.mintForeignToken(AGENT_EXECUTOR, agent, tokenID, recipient, amount);
-        } else {
-            bytes memory call = abi.encodeCall(AgentExecutor.execute, (command, commandParams));
-            (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
-            if (!success) {
-                revert AgentExecutionFailed(returndata);
-            }
+        } else if (command == AgentExecuteCommand.TransferToken) {
+            (address token, address recipient, uint128 amount) = abi.decode(commandParams, (address, address, uint128));
+            Assets.transferToken(AGENT_EXECUTOR, agent, token, recipient, amount);
         }
     }
 
