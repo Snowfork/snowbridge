@@ -1,6 +1,11 @@
 package protocol
 
-import "github.com/snowfork/snowbridge/relayer/relays/beacon/config"
+import (
+	"encoding/hex"
+	"strings"
+
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
+)
 
 type Protocol struct {
 	Settings config.SpecSettings
@@ -39,4 +44,29 @@ func (p *Protocol) DenebForked(slot uint64) bool {
 
 func (p *Protocol) SyncPeriodLength() uint64 {
 	return p.Settings.SlotsInEpoch * p.Settings.EpochsPerSyncCommitteePeriod
+}
+
+func (p *Protocol) SyncCommitteeSuperMajority(syncCommitteeHex string) (bool, error) {
+	bytes, err := hex.DecodeString(strings.Replace(syncCommitteeHex, "0x", "", 1))
+	if err != nil {
+		return false, err
+	}
+
+	var bits []int
+
+	// Convert each byte to bits
+	for _, b := range bytes {
+		for i := 7; i >= 0; i-- {
+			bit := (b >> i) & 1
+			bits = append(bits, int(bit))
+		}
+	}
+	sum := 0
+	for _, bit := range bits {
+		sum += bit
+	}
+	if sum*3 < int(p.Settings.SyncCommitteeSize)*2 {
+		return false, nil
+	}
+	return true, nil
 }

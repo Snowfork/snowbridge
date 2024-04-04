@@ -17,6 +17,10 @@ type API struct {
 	BeaconStates                      map[uint64]bool
 }
 
+func (m *API) GetHeaderAtHead() (api.BeaconHeader, error) {
+	return api.BeaconHeader{}, nil
+}
+
 func (m *API) GetBootstrap(blockRoot common.Hash) (api.BootstrapResponse, error) {
 	return api.BootstrapResponse{}, nil
 }
@@ -37,7 +41,7 @@ func (m *API) GetHeaderBySlot(slot uint64) (api.BeaconHeader, error) {
 	return value, nil
 }
 
-func (m *API) GetHeader(blockRoot common.Hash) (api.BeaconHeader, error) {
+func (m *API) GetHeaderByBlockRoot(blockRoot common.Hash) (api.BeaconHeader, error) {
 	return m.Header[blockRoot], nil
 }
 
@@ -58,7 +62,7 @@ func (m *API) GetBeaconBlock(blockID common.Hash) (api.BeaconBlockResponse, erro
 }
 
 func (m *API) GetSyncCommitteePeriodUpdate(from uint64) (api.SyncCommitteePeriodUpdateResponse, error) {
-	return api.SyncCommitteePeriodUpdateResponse{}, nil
+	return m.SyncCommitteePeriodUpdateResponse, nil
 }
 
 func (m *API) GetLatestFinalizedUpdate() (api.LatestFinalisedUpdateResponse, error) {

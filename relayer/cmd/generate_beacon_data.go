@@ -234,7 +234,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		initialEpoch := p.ComputeEpochAtSlot(initialSyncHeaderSlot)
 
 		// generate SyncCommitteeUpdate for filling the missing NextSyncCommittee in initial checkpoint
-		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod)
+		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod, 0)
 		if err != nil {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
@@ -402,7 +402,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 					log.Info("created next finalized header update file")
 
 					// generate nextSyncCommitteeUpdate
-					nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod + 1)
+					nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod+1, 0)
 					if err != nil {
 						return fmt.Errorf("get sync committee update: %w", err)
 					}

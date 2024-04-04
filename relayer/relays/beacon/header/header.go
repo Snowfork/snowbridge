@@ -60,6 +60,15 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 	h.cache.SetInitialCheckpointSlot(lastFinalizedHeaderState.InitialCheckpointSlot)
 	h.cache.AddCheckPointSlots([]uint64{lastFinalizedHeaderState.BeaconSlot})
 
+	// Special handling here for the initial checkpoint to sync the next sync committee which is not included in initial
+	// checkpoint.
+	if h.isInitialSyncPeriod() {
+		err = h.SyncCommitteePeriodUpdate(ctx, latestSyncedPeriod)
+		if err != nil {
+			return fmt.Errorf("sync next committee for initial sync period: %w", err)
+		}
+	}
+
 	log.Info("starting to sync finalized headers")
 
 	ticker := time.NewTicker(time.Second * 10)
@@ -101,7 +110,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) error {
-	update, err := h.syncer.GetSyncCommitteePeriodUpdate(period)
+	update, err := h.syncer.GetSyncCommitteePeriodUpdate(period, h.cache.Finalized.LastSyncedSlot)
 	switch {
 	case errors.Is(err, syncer.ErrCommitteeUpdateHeaderInDifferentSyncPeriod):
 		{
@@ -251,12 +260,6 @@ func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSync
 		periodsToSync = append(periodsToSync, i)
 	}
 
-	// Special handling here for the initial checkpoint to sync the next sync committee which is not included in initial
-	// checkpoint.
-	if h.isInitialSyncPeriod() {
-		periodsToSync = append([]uint64{latestSyncedPeriod}, periodsToSync...)
-	}
-
 	log.WithFields(log.Fields{
 		"periods": periodsToSync,
 	}).Info("sync committee periods to be synced")
@@ -398,7 +401,7 @@ func (h *Header) getHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, 
 
 func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.HeaderUpdatePayload, error) {
 	var headerUpdate scale.HeaderUpdatePayload
-	header, err := h.syncer.Client.GetHeader(blockRoot)
+	header, err := h.syncer.Client.GetHeaderByBlockRoot(blockRoot)
 	if err != nil {
 		return headerUpdate, fmt.Errorf("get beacon header by blockRoot: %w", err)
 	}

@@ -9,10 +9,10 @@ import (
 	"runtime"
 )
 
-func GetSyncCommitteeUpdate() (api.SyncCommitteePeriodUpdateResponse, error) {
+func GetSyncCommitteeUpdate(period uint64) (api.SyncCommitteePeriodUpdateResponse, error) {
 	var update api.SyncCommitteePeriodUpdateResponse
 
-	data, err := LoadFile("older_sync_committee_update.json")
+	data, err := LoadFile(fmt.Sprintf("sync_committee_update_%d.json", period))
 	if err != nil {
 		return update, fmt.Errorf("error reading file: %w", err)
 	}
@@ -82,5 +82,4 @@ func LoadFile(filename string) ([]byte, error) {
 	}
 
 	return jsonData, nil
-
 }
