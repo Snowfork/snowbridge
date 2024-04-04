@@ -39,7 +39,8 @@ import {
     SetOperatingModeParams,
     TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
-    SetPricingParametersParams
+    SetPricingParametersParams,
+    RegisterForeignTokenParams
 } from "./Params.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
@@ -214,6 +215,11 @@ contract Gateway is IGateway, IInitializable {
             catch {
                 success = false;
             }
+        } else if (message.command == Command.RegisterForeignToken) {
+            try Gateway(this).registerForeignToken{gas: maxDispatchGas}(message.params) {}
+            catch {
+                success = false;
+            }
         }
 
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
@@ -280,11 +286,7 @@ contract Gateway is IGateway, IInitializable {
         (AgentExecuteCommand command, bytes memory commandParams) =
             abi.decode(params.payload, (AgentExecuteCommand, bytes));
 
-        if (command == AgentExecuteCommand.RegisterToken) {
-            (bytes32 tokenID, string memory name, string memory symbol, uint8 decimals) =
-                abi.decode(commandParams, (bytes32, string, string, uint8));
-            Assets.registerForeignToken(params.agentID, agent, tokenID, name, symbol, decimals);
-        } else if (command == AgentExecuteCommand.MintToken) {
+        if (command == AgentExecuteCommand.MintToken) {
             (bytes32 tokenID, address recipient, uint256 amount) =
                 abi.decode(commandParams, (bytes32, address, uint256));
             Assets.mintForeignToken(AGENT_EXECUTOR, agent, tokenID, recipient, amount);
@@ -418,6 +420,13 @@ contract Gateway is IGateway, IInitializable {
     /**
      * Assets
      */
+    // @dev Register a new fungible Polkadot token for an agent
+    function registerForeignToken(bytes calldata data) external onlySelf {
+        RegisterForeignTokenParams memory params = abi.decode(data, (RegisterForeignTokenParams));
+        address agent = _ensureAgent(params.agentID);
+        Assets.registerForeignToken(params.agentID, agent, params.tokenID, params.name, params.symbol, params.decimals);
+    }
+
     function isTokenRegistered(address token) external view returns (bool) {
         return Assets.isTokenRegistered(token);
     }

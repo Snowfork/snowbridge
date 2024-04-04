@@ -72,6 +72,10 @@ contract GatewayMock is Gateway {
     function setPricingParametersPublic(bytes calldata params) external {
         this.setPricingParameters(params);
     }
+
+    function registerForeignTokenPublic(bytes calldata params) external {
+        this.registerForeignToken(params);
+    }
 }
 
 library AdditionalStorage {

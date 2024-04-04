@@ -84,12 +84,12 @@ enum Command {
     SetOperatingMode,
     TransferNativeFromAgent,
     SetTokenTransferFees,
-    SetPricingParameters
+    SetPricingParameters,
+    RegisterForeignToken
 }
 
 enum AgentExecuteCommand {
     TransferToken,
-    RegisterToken,
     MintToken
 }
 
