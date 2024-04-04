@@ -284,6 +284,8 @@ contract Gateway is IGateway, IInitializable {
 
         if (command == AgentExecuteCommand.RegisterToken) {
             _registerForeignToken(params.agentID, agent, commandParams);
+        } else if (command == AgentExecuteCommand.MintToken) {
+            _mintForeignToken(agent, commandParams);
         } else {
             bytes memory call = abi.encodeCall(AgentExecutor.execute, (command, commandParams));
             (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
@@ -432,8 +434,24 @@ contract Gateway is IGateway, IInitializable {
         emit ForeignTokenRegistered(tokenID, agentID, token);
     }
 
+    // @dev Mint foreign token from Polkadot
+    function _mintForeignToken(address agent, bytes memory params) internal {
+        (bytes32 tokenID, address recipient, uint256 amount) = abi.decode(params, (bytes32, address, uint256));
+        address token = _tokenAddressOf(tokenID);
+        bytes memory call = abi.encodeCall(AgentExecutor.mintToken, (tokenID, token, recipient, amount));
+        (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
+        if (!success) {
+            revert AgentExecutionFailed(returndata);
+        }
+    }
+
     // @dev Get token address by tokenID
     function tokenAddressOf(bytes32 tokenID) external view returns (address) {
+        return _tokenAddressOf(tokenID);
+    }
+
+    // @dev Get token address by tokenID
+    function _tokenAddressOf(bytes32 tokenID) internal view returns (address) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenRegistryByID[tokenID].isRegistered == false) {
             revert TokenNotRegistered();
