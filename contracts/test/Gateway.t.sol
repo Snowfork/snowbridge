@@ -908,12 +908,4 @@ contract GatewayTest is Test {
         vm.expectRevert(Assets.InvalidDestinationFee.selector);
         IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, 0, 1);
     }
-
-    function testGatewayExposesBeefyClient() public {
-        assertEq(IGateway(address(gateway)).BEEFY_CLIENT(), address(0));
-    }
-
-    function testGatewayExposesAgentExecutor() public {
-        assertEq(IGateway(address(gateway)).AGENT_EXECUTOR(), address(executor));
-    }
 }

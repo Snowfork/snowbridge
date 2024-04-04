@@ -32,14 +32,6 @@ contract GatewayUpgradeMock is IGateway, IInitializable {
         return address(0);
     }
 
-    function BEEFY_CLIENT() external pure returns (address) {
-        return address(0);
-    }
-
-    function AGENT_EXECUTOR() external pure returns (address) {
-        return address(0);
-    }
-
     function isTokenRegistered(address) external pure returns (bool) {
         return true;
     }
