@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
-	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
@@ -16,7 +16,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 
-	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -212,6 +211,11 @@ func (h *Header) updateFinalizedHeaderOnchain(ctx context.Context, update scale.
 }
 
 func (h *Header) SyncHeaders(ctx context.Context) error {
+	err := h.SyncExecutionHeaders(ctx)
+	if err != nil {
+		return err
+	}
+
 	finalizedUpdate, err := h.syncer.Client.GetLatestFinalizedUpdate()
 	if err != nil {
 		return fmt.Errorf("fetch finalized update: %w", err)
