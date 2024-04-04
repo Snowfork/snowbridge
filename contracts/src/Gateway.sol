@@ -424,13 +424,12 @@ contract Gateway is IGateway, IInitializable {
         if ($.tokenRegistryByID[tokenID].isRegistered == true) {
             revert TokenAlreadyRegistered();
         }
-        ERC20 foreignToken = new ERC20(name, symbol, decimals);
+        ERC20 foreignToken = new ERC20(agent, name, symbol, decimals);
         address token = address(foreignToken);
         TokenInfo memory info =
             TokenInfo({isRegistered: true, isForeign: true, tokenID: tokenID, agentID: agentID, token: token});
         $.tokenRegistry[token] = info;
         $.tokenRegistryByID[tokenID] = info;
-        foreignToken.transferOwnership(agent);
         emit ForeignTokenRegistered(tokenID, agentID, token);
     }
 

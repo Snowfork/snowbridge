@@ -54,7 +54,7 @@ contract ERC20 is IERC20, IERC20Permit {
     bytes32 private constant PERMIT_SIGNATURE_HASH =
         bytes32(0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9);
 
-    address public OWNER;
+    address public immutable OWNER;
     string private constant EIP191_PREFIX_FOR_EIP712_STRUCTURED_DATA = "\x19\x01";
     uint8 public immutable decimals;
 
@@ -64,8 +64,8 @@ contract ERC20 is IERC20, IERC20Permit {
     /**
      * @dev Sets the values for {name}, {symbol}, and {decimals}.
      */
-    constructor(string memory name_, string memory symbol_, uint8 decimals_) {
-        OWNER = msg.sender;
+    constructor(address _owner, string memory name_, string memory symbol_, uint8 decimals_) {
+        OWNER = _owner;
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 DOMAIN_TYPE_SIGNATURE_HASH, keccak256(bytes(name_)), keccak256(bytes("1")), block.chainid, address(this)
@@ -82,17 +82,6 @@ contract ERC20 is IERC20, IERC20Permit {
             revert Unauthorized();
         }
         _;
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(address newOwner) public virtual onlyOwner {
-        if (newOwner == address(0)) {
-            revert OwnableInvalidOwner(address(0));
-        }
-        OWNER = newOwner;
     }
 
     /**
