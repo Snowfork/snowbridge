@@ -26,6 +26,7 @@ type ChainWriter interface {
 	GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state.FinalizedHeader, error)
 	GetLastFinalizedStateIndex() (types.U32, error)
 	GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error)
+	GetLastExecutionHeaderState() (state.ExecutionHeader, error)
 }
 
 type ParachainWriter struct {

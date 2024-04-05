@@ -25,6 +25,7 @@ var ErrFinalizedHeaderNotImported = errors.New("finalized header not imported")
 var ErrSyncCommitteeNotImported = errors.New("sync committee not imported")
 var ErrSyncCommitteeLatency = errors.New("sync committee latency found")
 var ErrExecutionHeaderNotImported = errors.New("execution header not imported")
+var ErrBeaconHeaderNotFinalized = errors.New("beacon header not finalized")
 
 type Header struct {
 	cache                        *cache.BeaconCache
@@ -426,6 +427,23 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 	}
 
 	return checkpoint, nil
+}
+
+func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, error) {
+	slot = slot + 1
+	header, err := h.syncer.FindBeaconHeaderWithBlockIncluded(slot)
+	if err != nil {
+		return scale.HeaderUpdatePayload{}, fmt.Errorf("get next beacon header with block included: %w", err)
+	}
+	checkpoint, err := h.populateClosestCheckpoint(header.Slot)
+	if err != nil {
+		return scale.HeaderUpdatePayload{}, fmt.Errorf("populate closest checkpoint: %w", err)
+	}
+	blockRoot, err := header.HashTreeRoot()
+	if err != nil {
+		return scale.HeaderUpdatePayload{}, fmt.Errorf("header hash tree root: %w", err)
+	}
+	return h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
 }
 
 func (h *Header) populateCheckPointCacheWithDataFromChain(slot uint64) (uint64, error) {
