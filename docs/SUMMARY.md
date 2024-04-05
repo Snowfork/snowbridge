@@ -41,3 +41,4 @@
 * [Initial Deployment of Gateway Contracts](runbooks/initial-deployment-of-gateway-contracts.md)
 * [Halt Bridge in Case of Emergency](runbooks/halt-bridge-in-case-of-emergency.md)
 * [Contract Upgrades](runbooks/contract-upgrades.md)
+* [Run Relayers](runbooks/run-relayers.md)
