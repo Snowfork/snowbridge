@@ -6,7 +6,7 @@ mkdir -p src/contracts
 
 # Generate Rust bindings for contracts
 forge bind --module --overwrite \
-    --select 'IGateway|WETH9|GatewayUpgradeMock|AgentExecutor' \
+    --select 'IGateway|WETH9|GatewayUpgradeMock|ERC20' \
     --bindings-path src/contracts \
     --root ../contracts
 

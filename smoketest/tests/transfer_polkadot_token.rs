@@ -7,7 +7,7 @@ use ethers::{
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{agent_executor, agent_executor::TokenMintedFilter},
+	contracts::{erc20, erc20::TransferFilter},
 	helper::AssetHubConfig,
 	parachains::assethub::{
 		api::runtime_types::{
@@ -72,9 +72,8 @@ async fn transfer_polkadot_token() {
 		.await
 		.expect("call success");
 
-	let agent_executor_addr: Address = AGENT_EXECUTOR_CONTRACT.into();
-	let agent_executor =
-		agent_executor::AgentExecutor::new(agent_executor_addr, ethereum_client.clone());
+	let erc20_dot_address: Address = ERC20_DOT_CONTRACT.into();
+	let erc20_dot = erc20::ERC20::new(erc20_dot_address, ethereum_client.clone());
 
 	let wait_for_blocks = 500;
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
@@ -82,15 +81,17 @@ async fn transfer_polkadot_token() {
 	let mut transfer_event_found = false;
 	while let Some(block) = stream.next().await {
 		println!("Polling ethereum block {:?} for transfer event", block.number.unwrap());
-		if let Ok(transfers) = agent_executor
-			.event::<TokenMintedFilter>()
+		if let Ok(transfers) = erc20_dot
+			.event::<TransferFilter>()
 			.at_block_hash(block.hash.unwrap())
 			.query()
 			.await
 		{
 			for transfer in transfers {
 				println!("Transfer event found at ethereum block {:?}", block.number.unwrap());
-				println!("token id {:?}", transfer.token_id);
+				println!("from {:?}", transfer.from);
+				println!("to {:?}", transfer.to);
+				assert_eq!(transfer.value, amount.into());
 				transfer_event_found = true;
 			}
 		}
