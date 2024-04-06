@@ -50,26 +50,24 @@ contract Gateway is IGateway, IInitializable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
-    address internal immutable AGENT_EXECUTOR;
+    address public immutable AGENT_EXECUTOR;
 
     // Verification state
-    address internal immutable BEEFY_CLIENT;
+    address public immutable BEEFY_CLIENT;
 
     // BridgeHub
-    ParaID internal immutable BRIDGE_HUB_PARA_ID;
-    bytes4 internal immutable BRIDGE_HUB_PARA_ID_ENCODED;
-    bytes32 internal immutable BRIDGE_HUB_AGENT_ID;
+    ParaID public immutable BRIDGE_HUB_PARA_ID;
+    bytes4 public immutable BRIDGE_HUB_PARA_ID_ENCODED;
+    bytes32 public immutable BRIDGE_HUB_AGENT_ID;
 
     // ChannelIDs
-    ChannelID internal constant PRIMARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(1)));
-    ChannelID internal constant SECONDARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(2)));
+    ChannelID public constant PRIMARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(1)));
+    ChannelID public constant SECONDARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(2)));
 
-    // Gas used for:
-    // 1. Mapping a command id to an implementation function
-    // 2. Calling implementation function
-    uint256 DISPATCH_OVERHEAD_GAS = 10_000;
+    // Gas overhead for dispatching a command
+    uint256 internal DISPATCH_BUFFER_GAS = 20_000;
 
-    uint8 internal immutable FOREIGN_TOKEN_DECIMALS;
+    uint8 public immutable FOREIGN_TOKEN_DECIMALS;
 
     error InvalidProof();
     error InvalidNonce();
@@ -147,10 +145,15 @@ contract Gateway is IGateway, IInitializable {
             revert InvalidProof();
         }
 
-        // Make sure relayers provide enough gas so that inner message dispatch
-        // does not run out of gas.
+        // Ensure that relayers provide enough gas so that the inner message dispatch
+        // does not run out of gas. This prevents malicious relayers from
+        // failing the inner dispatch.
+        //
+        // Note that the message dispatch actually is only forwarded
+        // `maxDispatchGas * 63/64` due to EIP-150 rule. However, our gateway
+        // on the sending chain (BridgeHub) factors that in when computing `maxDispatchGas`.
         uint256 maxDispatchGas = message.maxDispatchGas;
-        if (gasleft() < maxDispatchGas + DISPATCH_OVERHEAD_GAS) {
+        if (gasleft() < maxDispatchGas + DISPATCH_BUFFER_GAS) {
             revert NotEnoughGas();
         }
 
@@ -205,7 +208,8 @@ contract Gateway is IGateway, IInitializable {
         }
 
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
-        // that could drain funds unnecessarily. During these spikes, relayers should back off.
+        // that could drain sovereign funds unnecessarily. During these spikes, relayers
+        // should back off until such time as they find the transaction profitable again .
         uint256 gasUsed = _transactionBaseGas() + (startGas - gasleft());
         uint256 refund = gasUsed * Math.min(tx.gasprice, message.maxFeePerGas);
 
@@ -213,7 +217,7 @@ contract Gateway is IGateway, IInitializable {
         // in the channel agent, then reduce the total amount
         uint256 amount = Math.min(refund + message.reward, address(channel.agent).balance);
 
-        // Do the payment if there funds available in the agent
+        // Do the payment only if there funds available in the agent
         if (amount > _dustThreshold()) {
             _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
         }
@@ -437,16 +441,16 @@ contract Gateway is IGateway, IInitializable {
      * Internal functions
      */
 
-    // Best-effort attempt at estimating the base gas use of `submitInbound` transaction, outside the block of
-    // code that is metered.
+    // Best-effort attempt at estimating the base gas use of `submitInbound` transaction,
+    // outside the block of code that is metered.
     // This includes:
     // * Cost paid for every transaction: 21000 gas
     // * Cost of calldata: Zero byte = 4 gas, Non-zero byte = 16 gas
     // * Cost of code inside submitInitial that is not metered: 14_698
     //
-    // The major cost of calldata are the merkle proofs, which should dominate anything else (including the message payload)
-    // Since the merkle proofs are hashes, they are much more likely to be composed of more non-zero bytes than zero bytes.
-    //
+    // The major component of the cost of calldata are the included merkle proofs, which
+    // should dominate anything else. Since the merkle proofs are cryptographic hashes,
+    // they are much more likely to be composed of more non-zero bytes than zero bytes.
     // Reference: Ethereum Yellow Paper
     function _transactionBaseGas() internal pure returns (uint256) {
         return 21_000 + 14_698 + (msg.data.length * 16);
