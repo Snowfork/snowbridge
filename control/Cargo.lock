@@ -432,6 +432,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96d30a06541fbafbc7f82ed10c06164cfbd2c401138f6addd8404629c4b16711"
 
 [[package]]
+name = "asset-hub-polkadot-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic 24.0.0",
+ "subxt 0.35.1",
+]
+
+[[package]]
 name = "asset-hub-rococo-runtime"
 version = "0.1.0"
 dependencies = [
@@ -856,6 +867,18 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+]
+
+[[package]]
+name = "bridge-hub-polkadot-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "snowbridge-beacon-primitives",
+ "sp-arithmetic 24.0.0",
+ "subxt 0.35.1",
 ]
 
 [[package]]
@@ -3271,6 +3294,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "626dec3cac7cc0e1577a2ec3fc496277ec2baa084bebad95bb6fdbfae235f84c"
 
 [[package]]
+name = "polkadot-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "subxt 0.34.0",
+]
+
+[[package]]
 name = "polkavm-common"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4683,13 +4716,16 @@ name = "snowbridge-preimage"
 version = "0.1.0"
 dependencies = [
  "alloy-primitives",
+ "asset-hub-polkadot-runtime",
  "asset-hub-rococo-runtime",
+ "bridge-hub-polkadot-runtime",
  "bridge-hub-rococo-runtime",
  "clap",
  "futures",
  "hex",
  "hex-literal",
  "parity-scale-codec",
+ "polkadot-runtime",
  "rococo-runtime",
  "scale-info",
  "serde",

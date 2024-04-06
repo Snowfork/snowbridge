@@ -27,6 +27,10 @@ rococo-runtime = { path = "../runtimes/rococo", optional = true }
 bridge-hub-rococo-runtime = { path = "../runtimes/bridge-hub-rococo", optional = true }
 asset-hub-rococo-runtime = { path = "../runtimes/asset-hub-rococo", optional = true }
 
+polkadot-runtime = { path = "../runtimes/polkadot", optional = true }
+bridge-hub-polkadot-runtime = { path = "../runtimes/bridge-hub-polkadot", optional = true }
+asset-hub-polkadot-runtime = { path = "../runtimes/asset-hub-polkadot", optional = true }
+
 serde_json = "1.0.114"
 sp-crypto-hashing = "0.1.0"
 
@@ -39,4 +43,8 @@ rococo = [
     "bridge-hub-rococo-runtime",
 ]
 kusama = []
-polkadot = []
+polkadot = [
+    "polkadot-runtime",
+    "asset-hub-polkadot-runtime",
+    "bridge-hub-polkadot-runtime",
+]
