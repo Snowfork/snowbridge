@@ -65,11 +65,6 @@ library Assets {
         if ($.assetHubParaID == destinationChain) {
             costs.foreign = $.assetHubReserveTransferFee;
         } else {
-            // Destination fee cannot be zero. MultiAssets are not allowed to be zero in xcm v4.
-            if (destinationChainFee == 0) {
-                revert InvalidDestinationFee();
-            }
-
             // If the final destination chain is not AssetHub, then the fee needs to additionally
             // include the cost of executing an XCM on the final destination parachain.
             costs.foreign = $.assetHubReserveTransferFee + destinationChainFee;
@@ -112,6 +107,9 @@ library Assets {
                 revert Unsupported();
             }
         } else {
+            if (destinationChainFee == 0) {
+                revert InvalidDestinationFee();
+            }
             // The funds will be minted into sovereign account of the destination parachain on AssetHub,
             // and then reserve-transferred to the receiver's account on the destination parachain.
             if (destinationAddress.isAddress32()) {

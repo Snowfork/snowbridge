@@ -922,8 +922,6 @@ contract GatewayTest is Test {
         // register token first
         uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         IGateway(address(gateway)).registerToken{value: fee}(address(token));
-
-        vm.expectRevert(Assets.InvalidDestinationFee.selector);
         fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 0);
 
         vm.expectRevert(Assets.InvalidDestinationFee.selector);
