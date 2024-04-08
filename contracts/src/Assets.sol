@@ -191,12 +191,11 @@ library Assets {
         uint128 destinationChainFee,
         uint128 amount
     ) external returns (Ticket memory ticket) {
-        // Polkadot-native token: burn wrapped token
-        _burnToken(executor, agent, info.token, sender, amount);
-
         if (destinationChainFee == 0) {
             revert InvalidDestinationFee();
         }
+        // Polkadot-native token: burn wrapped token
+        _burnToken(executor, agent, info.token, sender, amount);
 
         ticket.dest = destinationChain;
         ticket.costs = _sendForeignTokenCosts(destinationChainFee);
