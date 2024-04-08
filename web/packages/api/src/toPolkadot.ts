@@ -1,14 +1,14 @@
-import { MultiAddressStruct } from '@snowbridge/contract-types/src/IGateway'
 import { decodeAddress } from '@polkadot/keyring'
-import { filter, tap, take, takeWhile, lastValueFrom, map as rxmap, firstValueFrom } from 'rxjs'
 import { Codec } from '@polkadot/types/types'
 import { u8aToHex } from '@polkadot/util'
-import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethers'
 import { IGateway__factory } from '@snowbridge/contract-types'
+import { MultiAddressStruct } from '@snowbridge/contract-types/src/IGateway'
+import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethers'
+import { filter, firstValueFrom, lastValueFrom, map as rxmap, take, takeWhile, tap } from 'rxjs'
 import { Context } from './index'
-import { channelStatusInfo, bridgeStatusInfo, assetStatusInfo } from './status'
-import { paraIdToSovereignAccount, paraIdToChannelId, beneficiaryMultiAddress } from './utils'
 import { waitForMessageQueuePallet } from './query'
+import { assetStatusInfo, bridgeStatusInfo, channelStatusInfo } from './status'
+import { beneficiaryMultiAddress, paraIdToChannelId, paraIdToSovereignAccount } from './utils'
 
 export type SendValidationResult = {
     success?: {
@@ -57,7 +57,7 @@ export type SendValidationResult = {
 }
 
 export const validateSend = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint, options = {
-    acceptableLatencyInSeconds: 10800 /* 3 Hours */
+    acceptableLatencyInSeconds: 28800 /* 3 Hours */
 }): Promise<SendValidationResult> => {
     const { ethereum, ethereum: { contracts: { gateway } }, polkadot: { api: { assetHub, bridgeHub, relaychain } } } = context
 
@@ -462,27 +462,3 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
 
     yield 'Transfer complete.'
 }
-
-// TODO: Register
-//export type RegisterValidationResult = {
-//    success?: {}
-//    failure?: {}
-//}
-//
-//export const validateRegister = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint, options={
-//    acceptableLatencyInSeconds: 10800 /* 3 Hours */
-//}): Promise<RegisterValidationResult> => {
-//    return {}
-//}
-//
-//export const register = async (context: Context, signer: Signer, plan: RegisterValidationResult, confirmations = 1): Promise<RegisterResult> => {
-//    if (plan.failure || !plan.success) {
-//        throw new Error('Plan failed')
-//    }
-//    if (plan.success.sourceAddress !== await signer.getAddress()) {
-//        throw new Error('Invalid signer')
-//    }
-//}
-//
-//export async function* trackRegisterProgress(context: Context, result: RegisterResult, beaconUpdateTimeout = 10, scanBlocks = 200): AsyncGenerator<string> {
-//}

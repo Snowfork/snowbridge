@@ -1,12 +1,20 @@
-import { xxhashAsHex } from "@polkadot/util-crypto"
+import { decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
 import { Context } from "./index"
-import { assetStatusInfo, bridgeStatusInfo } from "./status"
+import { assetStatusInfo , bridgeStatusInfo} from "./status"
 import { paraIdToChannelId } from "./utils"
 import { BN, u8aToHex } from "@polkadot/util"
-import { Codec, IKeyringPair } from "@polkadot/types/types"
+import { Codec, IKeyringPair, Signer } from "@polkadot/types/types"
 import { EventRecord } from "@polkadot/types/interfaces"
-import { filter, firstValueFrom, take, tap } from "rxjs"
 import { waitForMessageQueuePallet } from "./query"
+
+export interface WalletSigner {
+    address: string
+    signer: Signer
+}
+export type WalletOrKeypair = WalletSigner | IKeyringPair
+function isWallet(walletOrKeypair: WalletSigner | IKeyringPair): walletOrKeypair is WalletSigner {
+    return (walletOrKeypair as WalletSigner).signer !== undefined
+}
 
 export type SendValidationResult = {
     success?: {
@@ -24,6 +32,7 @@ export type SendValidationResult = {
             paraId: number
         }
         sourceAddress: string
+        sourceAddressRaw: string
         beneficiary: string
         feeInDOT: bigint
         amount: bigint
@@ -48,9 +57,9 @@ export type SendValidationResult = {
     }
 }
 
-export const validateSend = async (context: Context, signer: IKeyringPair, sourceParachainId: number, beneficiary: string, tokenAddress: string, amount: bigint, options = {
+export const validateSend = async (context: Context, signer: WalletOrKeypair, sourceParachainId: number, beneficiary: string, tokenAddress: string, amount: bigint, options = {
     defaultFee: 2_750_872_500_000n,
-    acceptableLatencyInSeconds: 10800 /* 3 Hours */
+    acceptableLatencyInSeconds: 28800 /* 8 Hours */
 }): Promise<SendValidationResult> => {
     const { ethereum, ethereum: { contracts: { gateway } }, polkadot: { api: { assetHub, bridgeHub, relaychain, parachains } } } = context
 
@@ -62,10 +71,18 @@ export const validateSend = async (context: Context, signer: IKeyringPair, sourc
     ])
     let assetHubParaIdDecoded = assetHubParaId.toPrimitive() as number
 
+    // Asset checks
+    const assetInfo = await assetStatusInfo(context, tokenAddress)
+    const tokenIsRegistered = assetInfo.isTokenRegistered
+    const tokenIsValidERC20 = assetInfo.isTokenRegistered
+    const foreignAssetExists = assetInfo.foreignAsset !== null && assetInfo.foreignAsset.status === 'Live'
+
     let parachainHasPalletXcm = true
     let hrmpChannelSetup = true
     let sourceParachain = undefined
     let parachainKnownToContext = true
+    let assetBalance = 0n
+    let hasAsset = false
     if (parachainKnownToContext && sourceParachainId != assetHubParaIdDecoded) {
         parachainKnownToContext = sourceParachainId in parachains
         parachainHasPalletXcm = parachains[sourceParachainId].tx.polkadotXcm.transferAssets !== undefined
@@ -78,6 +95,22 @@ export const validateSend = async (context: Context, signer: IKeyringPair, sourc
             paraId: sourceParachainId,
             validatedAt: u8aToHex(sourceParachainHead),
         }
+        if (foreignAssetExists) {
+            let account = (await parachains[sourceParachainId].query.foreignAssets.account(assetInfo.multiLocation, signer.address)).toPrimitive() as any
+            if (account !== null) {
+                assetBalance = BigInt(account.balance)
+            }
+            hasAsset = assetBalance >= amount
+        }
+    }
+    else {
+        if (foreignAssetExists) {
+            let account = (await assetHub.query.foreignAssets.account(assetInfo.multiLocation, signer.address)).toPrimitive() as any
+            if (account !== null) {
+                assetBalance = BigInt(account.balance)
+            }
+            hasAsset = assetBalance >= amount
+        }
     }
 
     const [bridgeStatus] = await Promise.all([
@@ -88,20 +121,6 @@ export const validateSend = async (context: Context, signer: IKeyringPair, sourc
     const bridgeOperational = bridgeStatus.toEthereum.operatingMode.outbound === 'Normal'
     const lightClientLatencyIsAcceptable = bridgeStatus.toEthereum.latencySeconds < options.acceptableLatencyInSeconds
 
-    // Asset checks
-    const assetInfo = await assetStatusInfo(context, tokenAddress)
-    const tokenIsRegistered = assetInfo.isTokenRegistered
-    const tokenIsValidERC20 = assetInfo.isTokenRegistered
-    const foreignAssetExists = assetInfo.foreignAsset !== null && assetInfo.foreignAsset.status === 'Live'
-
-    let assetBalance = 0n
-    if (foreignAssetExists) {
-        let account = (await assetHub.query.foreignAssets.account(assetInfo.multiLocation, signer.address)).toPrimitive() as any
-        if (account !== null) {
-            assetBalance = BigInt(account.balance)
-        }
-    }
-    const hasAsset = assetBalance >= amount
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
     const feeStorageKey = xxhashAsHex(':BridgeHubEthereumBaseFee:', 128, true)
     const [feeStorageItem, account] = await Promise.all([
@@ -132,6 +151,7 @@ export const validateSend = async (context: Context, signer: IKeyringPair, sourc
                 sourceParachain,
                 feeInDOT: fee,
                 sourceAddress: signer.address,
+                sourceAddressRaw: u8aToHex(decodeAddress(signer.address)),
                 beneficiary,
                 amount,
                 multiLocation: assetInfo.multiLocation,
@@ -215,7 +235,7 @@ export type SendResult = {
     }
 }
 
-export const send = async (context: Context, signer: IKeyringPair, plan: SendValidationResult, options = {
+export const send = async (context: Context, signer: WalletOrKeypair, plan: SendValidationResult, options = {
     xcmVersion: 3,
     sourceParachainFee: 10_000_000_000n,
     scanBlocks: 100,
@@ -223,6 +243,18 @@ export const send = async (context: Context, signer: IKeyringPair, plan: SendVal
     const { polkadot: { api: { assetHub, bridgeHub, parachains } }, ethereum } = context
     if (!plan.success) {
         throw Error("plan failed")
+    }
+    if (plan.success.sourceAddress !== signer.address) {
+        throw Error("Signers do not match.")
+    }
+
+    let addressOrPair: string | IKeyringPair
+    let walletSigner: Signer | undefined = undefined
+    if (isWallet(signer)) {
+        addressOrPair = signer.address
+        walletSigner = signer.signer
+    } else {
+        addressOrPair = signer
     }
 
     const versionKey = `V${options.xcmVersion}`
@@ -257,7 +289,7 @@ export const send = async (context: Context, signer: IKeyringPair, plan: SendVal
         const pBeneficiary: { [key: string]: any } = {}
         pBeneficiary[versionKey] = {
             parents: 0,
-            interior: { X1: { AccountId32: { key: plan.success.sourceAddress } } }
+            interior: { X1: { AccountId32: { id: plan.success.sourceAddressRaw } } }
         }
         pResult = await new Promise<{
             blockNumber: number
@@ -274,7 +306,7 @@ export const send = async (context: Context, signer: IKeyringPair, plan: SendVal
                 pAssets,
                 fee_asset,
                 weight
-            ).signAndSend(signer, (c) => {
+            ).signAndSend(addressOrPair, { signer: walletSigner }, (c) => {
                 if (c.isError) {
                     reject(c.internalError || c.dispatchError)
                 }
@@ -367,7 +399,7 @@ export const send = async (context: Context, signer: IKeyringPair, plan: SendVal
             assets,
             fee_asset,
             weight
-        ).signAndSend(signer, (c) => {
+        ).signAndSend(addressOrPair, { signer: walletSigner }, (c) => {
             if (c.isError) {
                 reject(c.internalError || c.dispatchError)
             }

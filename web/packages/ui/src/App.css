@@ -1,11 +1,79 @@
 .App {
   margin: auto;
   width: 60%;
-  padding: 10px; 
+  padding: 1%; 
+}
+
+ul.inline-list {
+  display: flex;
+  padding-inline-start: 0%;
+  padding: 1%
+}
+ul.inline-list li {
+  list-style: none;
+  margin-right: 1%;
+  padding: 1%;
+  border: 1px solid grey;
+  border-radius: 5px;
+}
+ul.inline-list li:hover {
+  background-color: azure;
+}
+ul.inline-list a {
+  text-decoration: none;
+}
+ul.inline-list a.selected {
+  text-decoration: underline;
 }
 
 form {
   display: grid;
   grid-template-columns: 1fr 2fr;
   grid-gap: 1em;
+}
+
+div.transaction {
+  border: 1px solid grey;
+  border-radius: 5px;
+  padding: 1%;
+  margin: 1%;
+}
+
+div.panel {
+  border: 1px solid grey;
+  border-radius: 5px;
+  padding: 1%;
+  margin-bottom: 1%;
+}
+
+div.accountData {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 2fr 1fr; 
+}
+div.accountData p {
+  padding: 1%;
+  margin: auto 0px auto 0px;
+  display: inline-block;
+}
+
+div.statusGeneral {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr; 
+}
+div.statusGeneral p {
+  margin: 1% 0px auto 0px;
+}
+
+div.channelData {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; 
+}
+div.channelData h4 {
+  margin: 1% 0px auto 0px;
+}
+div.channelData p {
+  margin: 1% 0px auto 0px;
 }

@@ -1,237 +1,129 @@
-import { ChangeEvent, FormEvent, useState } from 'react';
 import './App.css';
-import { BrowserProvider, JsonRpcSigner, Network, ethers } from 'ethers';
-import { contextFactory, toPolkadot, Context } from '@snowbridge/api'
+import { getConfig } from './Config';
+import { BridgeStatus, EthWalletInfo, SubWalletInfo, TransactionHistoryItem, TransactionHistoryStore } from './components/Common';
+import { Status } from './components/Status';
+import { TransactionHistory } from './components/TransactionHistory';
+import { TransferToEthereum } from './components/TransferToEthereum';
+import { TransferToPolkadot } from './components/TransferToPolkadot';
 
-let config = {
-  ETHEREUM_WS_API: 'ws://127.0.0.1:8546',
-  RELAY_CHAIN_WS_URL: 'ws://127.0.0.1:9944',
-  ASSET_HUB_WS_URL: 'ws://127.0.0.1:12144',
-  BRIDGE_HUB_WS_URL: 'ws://127.0.0.1:11144',
-  GATEWAY_CONTRACT: '0xEDa338E4dC46038493b885327842fD3E301CaB39',
-  BEEFY_CONTRACT: '0x992B9df075935E522EC7950F37eC8557e86f6fdb',
-  ASSET_HUB_PARAID: 1000,
-}
-if (process.env.NODE_ENV === 'production') {
-  config = {
-    ETHEREUM_WS_API: `wss://sepolia.infura.io/ws/v3/${process.env.REACT_APP_INFURA_KEY}`,
-    RELAY_CHAIN_WS_URL: 'wss://rococo-rpc.polkadot.io',
-    ASSET_HUB_WS_URL: 'wss://rococo-asset-hub-rpc.polkadot.io',
-    BRIDGE_HUB_WS_URL: 'wss://rococo-bridge-hub-rpc.polkadot.io',
-    GATEWAY_CONTRACT: '0x5b4909ce6ca82d2ce23bd46738953c7959e710cd',
-    BEEFY_CONTRACT: '0x27e5e17ac995d3d720c311e1e9560e28f5855fb1',
-    ASSET_HUB_PARAID: 1000,
-  }
-}
+import { Context, contextFactory } from '@snowbridge/api';
+import { useEffect, useState } from 'react';
+import { BrowserRouter, HashRouter, NavLink, Redirect, Route, Switch } from "react-router-dom";
 
-type WalletInfo = {
-  isConnected: boolean,
-  hasError: boolean,
-  error?: string,
-  signer?: JsonRpcSigner,
-  provider?: BrowserProvider,
-  network?: Network,
-  context?: Context,
-}
+const config = getConfig()
 
-type TransferInfo = {
-  tokenAddress: string,
-  beneficiary: string,
-  amount: bigint,
-  transferInProgress: boolean,
-  destinationChain: number,
-  destinationFee: bigint
-  result?: toPolkadot.SendResult,
-}
-
-
-function MyForm() {
-  let [walletInfo, setWalletInfo] = useState<WalletInfo>({
-    isConnected: false,
-    hasError: false,
+const connectContext = async (): Promise<Context> => {
+  const context = await contextFactory({
+    ethereum: { url: config.ETHEREUM_WS_API },
+    polkadot: {
+      url: {
+        bridgeHub: config.BRIDGE_HUB_WS_URL,
+        assetHub: config.ASSET_HUB_WS_URL,
+        relaychain: config.RELAY_CHAIN_WS_URL,
+      },
+    },
+    appContracts: {
+      gateway: config.GATEWAY_CONTRACT,
+      beefy: config.BEEFY_CONTRACT,
+    },
   })
-  let [transferInfo, setTransferInfo] = useState<TransferInfo>({
-    tokenAddress: '',
-    beneficiary: '',
-    amount: BigInt(0),
-    transferInProgress: false,
-    destinationFee: BigInt(0),
-    destinationChain: config.ASSET_HUB_PARAID
-  })
-  let [errors, setErrors] = useState<string[]>([]);
-  let [statusUpdates, setStatusUpdates] = useState<string[]>([]);
-
-  const walletConnect = async () => {
-    if (window.ethereum === undefined || window.ethereum === null) {
-      console.log("MetaMask not installed; using read-only defaults")
-      setWalletInfo({ isConnected: false, hasError: true, error: 'No wallet found.' })
-    } else {
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const network = await provider?.getNetwork()
-      const signer = await provider.getSigner();
-      const context = await contextFactory({
-        ethereum: { url: config.ETHEREUM_WS_API },
-        polkadot: {
-          url: {
-            bridgeHub: config.BRIDGE_HUB_WS_URL,
-            assetHub: config.ASSET_HUB_WS_URL,
-            relaychain: config.RELAY_CHAIN_WS_URL,
-          },
-        },
-        appContracts: {
-          gateway: config.GATEWAY_CONTRACT,
-          beefy: config.BEEFY_CONTRACT,
-        },
-      })
-      const c = await context.ethereum.api.getNetwork();
-      if (c.chainId === network.chainId) {
-        setWalletInfo({ isConnected: true, hasError: false, signer, provider, network, context })
-      } else {
-        let error = `Connected chainId is '${network.chainId.toString()}'. Bridged chainId is '${c.chainId.toString()}'.`
-        setWalletInfo({ isConnected: true, hasError: true, signer, provider, network, error })
-      }
-    }
-  }
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setTransferInfo({
-      ...transferInfo,
-      [name]: value
-    });
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (walletInfo.isConnected && !walletInfo.hasError && walletInfo.context !== undefined && walletInfo.signer !== undefined) {
-      setErrors([])
-      statusUpdates = []
-      setStatusUpdates(statusUpdates)
-      setTransferInfo({ ...transferInfo, result: undefined, transferInProgress: false })
-
-      try {
-        const plan = await toPolkadot.validateSend(walletInfo.context,
-          walletInfo.signer,
-          transferInfo.beneficiary,
-          transferInfo.tokenAddress,
-          transferInfo.destinationChain,
-          transferInfo.amount,
-          transferInfo.destinationFee
-        );
-        if (plan.failure) {
-          let errors: string[] = []
-          if (!plan.failure.bridgeOperational) errors.push('Bridge halted.')
-          if (!plan.failure.channelOperational) errors.push('Channel to destination halted.')
-          if (!plan.failure.beneficiaryAccountExists) errors.push(`'${transferInfo.beneficiary}' does not exist on destination.`)
-          if (!plan.failure.tokenIsValidERC20) errors.push(`Token '${transferInfo.tokenAddress}' not a valid ERC20 token.`)
-          if (!plan.failure.tokenIsRegistered) errors.push(`Token '${transferInfo.tokenAddress}' not registered with the Snowbridge gateway.`)
-          if (!plan.failure.foreignAssetExists) errors.push(`Token '${transferInfo.tokenAddress}' not registered on Asset Hub.`)
-          if (!plan.failure.hasToken) errors.push(`Source address '${await walletInfo.signer?.getAddress()}' does not own token '${transferInfo.tokenAddress}'.`)
-          if (!plan.failure.tokenSpendApproved) errors.push(`Source address '${await walletInfo.signer?.getAddress()}' has not allowed Snowbridge gateway '${config.GATEWAY_CONTRACT}' to spend token '${transferInfo.tokenAddress}'.`)
-          if (!plan.failure.lightClientLatencyIsAcceptable) errors.push('Light client is too far behind.')
-          if (!plan.failure.canPayFee) errors.push('Cannot pay fee.')
-          setErrors(errors)
-          return;
-        }
-        setTransferInfo({ ...transferInfo, result: undefined, transferInProgress: true })
-        statusUpdates.push('Submitting...')
-        setStatusUpdates(statusUpdates)
-        const result = await toPolkadot.send(walletInfo.context, walletInfo.signer, plan)
-        if (result.failure) {
-          setErrors(['Transaction failed ' + result.failure.receipt])
-        } else {
-          setTransferInfo({ ...transferInfo, result, transferInProgress: true })
-          statusUpdates[0] = `Transaction submitted ${result.success?.ethereum.transactionHash}.`
-            + `Waiting for block ${result.success?.ethereum.blockNumber.toString()} to be included by the light client.`
-          setStatusUpdates(statusUpdates)
-          for await (const update of toPolkadot.trackSendProgress(walletInfo.context, result)) {
-            statusUpdates.push(update)
-            setStatusUpdates(statusUpdates)
-          }
-        }
-      } catch (error: any) {
-        setErrors([error.message])
-      }
-      setTransferInfo({ ...transferInfo, transferInProgress: false })
-    } else {
-      setErrors(['Wallet not connected.'])
-    }
-  }
-
-  if (walletInfo.hasError) {
-    return (<p style={{ color: 'red' }}>Error: {walletInfo.error || 'Unknown'}</p>)
-  }
-  else if (walletInfo.isConnected) {
-    return (
-      <div>
-        Connected to <span>{walletInfo.network?.name}</span> network(<span>{walletInfo.network?.chainId.toString()}</span>) with address:
-        <pre>{walletInfo.signer?.address}</pre>
-        <form onSubmit={handleSubmit}>
-          <label>Token Address:</label>
-          <input type='text'
-            placeholder='0x0000000000000000000000000000000000000000'
-            required
-            name='tokenAddress'
-            value={transferInfo.tokenAddress}
-            onChange={handleChange} />
-          <label>Beneficiary:</label>
-          <input type='text'
-            placeholder='SS58 or Raw Address'
-            required
-            name='beneficiary'
-            value={transferInfo.beneficiary}
-            onChange={handleChange} />
-          <label>Amount:</label>
-          <input type='number'
-            placeholder='0'
-            required
-            name='amount'
-            value={transferInfo.amount.toString()}
-            onChange={handleChange} />
-          <label>Destination Parachain:</label>
-          <input type='number'
-            placeholder='1000'
-            required
-            name='destinationChain'
-            value={transferInfo.destinationChain.toString()}
-            onChange={handleChange} />
-          <label>Destination Fee:</label>
-          <input
-            type='number'
-            placeholder='0'
-            required
-            name='destinationFee'
-            value={transferInfo.destinationFee.toString()}
-            onChange={handleChange} />
-          <button disabled={transferInfo.transferInProgress} type='submit'>Send</button>
-          <p hidden={transferInfo.result === undefined} style={{ gridColumn: 'span 2' }}>TxHash: {transferInfo.result?.success?.ethereum.transactionHash}</p>
-          <ul hidden={errors.length === 0} style={{ color: 'red', gridColumn: 'span 2' }}>
-            {errors.map(error => (<li>{error}</li>))}
-          </ul>
-          <ul hidden={statusUpdates.length === 0} style={{ color: 'green', gridColumn: 'span 2' }}>
-            {statusUpdates.map(update => (<li>{update}</li>))}
-          </ul>
-        </form>
-      </div>
-    )
-  }
-  else {
-    return (
-      <button onClick={walletConnect}>Connect Wallet</button>
-    )
-  }
+  return context
 }
 
 function App() {
-  return (
-    <div className='App'>
-      <h1>Snowbridge</h1>
-      <p>Transfer asset from Ethereum to Asset Hub</p>
-      <MyForm />
-      <div style={{ textAlign: 'right' }}>
-        <sub>Snowfork 2024 - {process.env.NODE_ENV} build</sub>
+  const [context, setContext] = useState<Context>();
+  const [error, setError] = useState<string>();
+  const [ethWalletInfo, setEthWalletInfo] = useState<EthWalletInfo>({
+    isConnected: false,
+    hasError: false,
+  })
+  const [subWalletInfo, setSubWalletInfo] = useState<SubWalletInfo>({
+    isConnected: false,
+    hasError: false,
+  })
+  const [history, setHistory] = useState<TransactionHistoryStore>({
+    items: []
+  })
+  const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus>()
+  const [updateTimerSeconds, setUpdateTimerSeconds] = useState<Date>(new Date())
+
+  let connectionInProgress = false;
+  const startConnect = async () => {
+    if (context !== undefined || connectionInProgress) return;
+    connectionInProgress = true;
+    try {
+      const c = await connectContext()
+      connectionInProgress = false
+      setContext(c)
+    }
+    catch (error) {
+      connectionInProgress = false
+      console.error(error);
+      if (error instanceof Error) {
+        setError(`${error.name}: ${error.message}`)
+      }
+    }
+  }
+
+  useEffect(() => { startConnect() })
+
+  const snowbridgeHistoryKey = "snowbirdge-transaction-history"
+  useEffect(() => {
+    const transactionHistory = localStorage.getItem(snowbridgeHistoryKey)
+    if (transactionHistory !== null) {
+      setHistory(JSON.parse(transactionHistory) as TransactionHistoryStore);
+    }
+  }, [])
+  const addTransactionHistory = (item: TransactionHistoryItem) => {
+    history.items.push(item)
+    localStorage.setItem(snowbridgeHistoryKey, JSON.stringify(history, (_, v) => typeof v === 'bigint' ? v.toString() : v))
+    setHistory(history)
+  }
+
+  if (error !== undefined) {
+    return (
+      <div className='App'>
+        <h1>Snowbridge</h1>
+        <p>{error}</p>
       </div>
-    </div>
+    )
+  }
+
+  return (
+    <HashRouter>
+      <div className='App'>
+        <h1>Snowbridge</h1>
+        <ul className='inline-list'>
+          <li key="status"><NavLink to="status" activeClassName="selected">Status</NavLink></li>
+          <li key="toPolkadot"><NavLink to="toPolkadot" activeClassName="selected">Transfer to Polkadot</NavLink></li>
+          <li key="toEthereum"><NavLink to="toEthereum" activeClassName="selected">Transfer to Ethereum</NavLink></li>
+          <li key="history"><NavLink to="history" activeClassName="selected">History</NavLink></li>
+        </ul>
+
+        <Switch>
+          <Route exact path="/status">
+            <Status config={config} context={context} diagnostic={false} bridgeStatus={bridgeStatus} setBridgeStatus={setBridgeStatus} updateDate={updateTimerSeconds} setUpdateDate={setUpdateTimerSeconds} />
+          </Route>
+          <Route exact path="/diagnostic">
+            <Status config={config} context={context} diagnostic={true} bridgeStatus={bridgeStatus} setBridgeStatus={setBridgeStatus} updateDate={updateTimerSeconds} setUpdateDate={setUpdateTimerSeconds} />
+          </Route>
+          <Route exact path="/toPolkadot">
+            <TransferToPolkadot config={config} context={context} wallet={ethWalletInfo} setWallet={setEthWalletInfo} addTransaction={addTransactionHistory} />
+          </Route>
+          <Route exact path="/toEthereum">
+            <TransferToEthereum config={config} context={context} wallet={subWalletInfo} setWallet={setSubWalletInfo} addTransaction={addTransactionHistory} />
+          </Route>
+          <Route exact path="/history">
+            <TransactionHistory config={config} context={context} history={history} setHistory={setHistory} />
+          </Route>
+          <Redirect from='*' to="status" />
+        </Switch>
+
+        <div style={{ textAlign: 'right' }}>
+          <sub>Snowfork 2024 - {process.env.REACT_APP_NODE_ENV}</sub>
+        </div>
+      </div>
+    </HashRouter>
   );
 }
 
