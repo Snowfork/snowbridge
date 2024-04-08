@@ -877,7 +877,7 @@ contract GatewayTest is Test {
         assertEq(fee, 10000000000000000);
 
         ParaID destPara = ParaID.wrap(2043);
-        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1e11 + 1);
+        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, maxDestinationFee + 1);
         // Max fee should increase
         assertEq(fee, 35000000000250003);
     }

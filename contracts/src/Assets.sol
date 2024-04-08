@@ -65,14 +65,14 @@ library Assets {
         if ($.assetHubParaID == destinationChain) {
             costs.foreign = $.assetHubReserveTransferFee;
         } else {
-            // If the final destination chain is not AssetHub, then the fee needs to additionally
-            // include the cost of executing an XCM on the final destination parachain.
-            costs.foreign = $.assetHubReserveTransferFee + destinationChainFee;
-
             // Destination fee cannot be zero. MultiAssets are not allowed to be zero in xcm v4.
             if (destinationChainFee == 0 || destinationChainFee > $.destinationMaxTransferFee) {
                 revert InvalidDestinationFee();
             }
+
+            // If the final destination chain is not AssetHub, then the fee needs to additionally
+            // include the cost of executing an XCM on the final destination parachain.
+            costs.foreign = $.assetHubReserveTransferFee + destinationChainFee;
         }
         // We don't charge any extra fees beyond delivery costs
         costs.native = 0;
