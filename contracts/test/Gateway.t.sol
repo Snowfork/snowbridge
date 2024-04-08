@@ -861,25 +861,13 @@ contract GatewayTest is Test {
                 SetTokenTransferFeesParams({
                     assetHubCreateAssetFee: createTokenFee * 2,
                     registerTokenFee: registerTokenFee,
-                    assetHubReserveTransferFee: sendTokenFee * 3,
-                    destinationMaxTransferFee: maxDestinationFee + 1
+                    assetHubReserveTransferFee: sendTokenFee * 3
                 })
             )
         );
         fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         // since deliveryCost not changed, so the total fee increased only by 50%
         assertEq(fee, 7500000000000000);
-        // register token first
-        IGateway(address(gateway)).registerToken{value: fee}(address(token));
-
-        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), assetHubParaID, 0);
-        // Fee should increase
-        assertEq(fee, 10000000000000000);
-
-        ParaID destPara = ParaID.wrap(2043);
-        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, maxDestinationFee + 1);
-        // Max fee should increase
-        assertEq(fee, 35000000000250003);
     }
 
     bytes32 public expectChannelIDBytes = bytes32(0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539);
@@ -937,7 +925,7 @@ contract GatewayTest is Test {
         uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         IGateway(address(gateway)).registerToken{value: fee}(address(token));
 
-        uint128 largeFee = 1e11 + 1; // greater than 10 DOT, 10 decimal places
+        uint128 largeFee = maxDestinationFee + 1; // greater than 10 DOT, 10 decimal places
 
         vm.expectRevert(Assets.InvalidDestinationFee.selector);
         fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, largeFee);

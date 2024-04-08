@@ -71,8 +71,6 @@ struct SetTokenTransferFeesParams {
     uint128 assetHubReserveTransferFee;
     /// @dev extra fee to register an asset and discourage spamming (Ether)
     uint256 registerTokenFee;
-    /// @dev The maximum fee (DOT) that can be sent to a destination parachain during a reserve transfer
-    uint128 destinationMaxTransferFee;
 }
 
 // Payload for SetPricingParameters

@@ -381,7 +381,6 @@ contract Gateway is IGateway, IInitializable {
         $.assetHubCreateAssetFee = params.assetHubCreateAssetFee;
         $.assetHubReserveTransferFee = params.assetHubReserveTransferFee;
         $.registerTokenFee = params.registerTokenFee;
-        $.destinationMaxTransferFee = params.destinationMaxTransferFee;
         emit TokenTransferFeesChanged();
     }
 
@@ -632,6 +631,5 @@ contract Gateway is IGateway, IInitializable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
-        assets.destinationMaxTransferFee = config.destinationMaxTransferFee;
     }
 }
