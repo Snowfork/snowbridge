@@ -460,17 +460,17 @@ contract Gateway is IGateway, IInitializable {
     ) external payable {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
-        TokenInfo storage info = $.tokenRegistry[token];
-        if (!info.isRegistered) {
+        TokenInfo storage tokenInfo = $.tokenRegistry[token];
+        if (!tokenInfo.isRegistered) {
             revert TokenNotRegistered();
         }
-        if (info.isForeign) {
-            address agent = _ensureAgent(info.agentID);
+        if (tokenInfo.isForeign) {
+            address agent = _ensureAgent(tokenInfo.agentID);
             _submitOutbound(
                 Assets.sendForeignToken(
                     agent,
                     AGENT_EXECUTOR,
-                    info,
+                    tokenInfo,
                     msg.sender,
                     destinationChain,
                     destinationAddress,
