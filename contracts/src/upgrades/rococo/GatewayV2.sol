@@ -9,12 +9,13 @@ import {PricingStorage} from "../../storage/PricingStorage.sol";
 
 contract GatewayV2 is Gateway {
     constructor(
+        address recoveryOperator,
         address beefyClient,
         address agentExecutor,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
         uint8 foreignTokenDecimals
-    ) Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals) {}
+    ) Gateway(recoveryOperator, beefyClient, agentExecutor, bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals) {}
 
     function initialize(bytes memory data) external override {
         // Prevent initialization of storage in implementation contract

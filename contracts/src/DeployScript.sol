@@ -59,9 +59,11 @@ contract DeployScript is Script {
 
         uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
 
+        address recoveryOperator = vm.envOr("RECOVERY_OPERATOR", address(0));
+
         AgentExecutor executor = new AgentExecutor();
         Gateway gatewayLogic = new Gateway(
-            address(beefyClient), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals
+            recoveryOperator, address(beefyClient), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals
         );
 
         bool rejectOutboundMessages = vm.envBool("REJECT_OUTBOUND_MESSAGES");

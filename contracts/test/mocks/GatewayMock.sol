@@ -12,12 +12,13 @@ contract GatewayMock is Gateway {
     bool public commitmentsAreVerified;
 
     constructor(
+        address recoveryOperator,
         address beefyClient,
         address agentExecutor,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubHubAgentID,
         uint8 foreignTokenDecimals
-    ) Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubHubAgentID, foreignTokenDecimals) {}
+    ) Gateway(recoveryOperator, beefyClient, agentExecutor, bridgeHubParaID, bridgeHubHubAgentID, foreignTokenDecimals) {}
 
     function agentExecutePublic(bytes calldata params) external {
         this.agentExecute(params);
