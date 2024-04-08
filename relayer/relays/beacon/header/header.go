@@ -405,25 +405,22 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 
 	switch {
 	case errors.Is(cache.FinalizedCheckPointNotAvailable, err) || errors.Is(cache.FinalizedCheckPointNotPopulated, err):
-		checkpointSlot := checkpoint.Slot
-		if checkpointSlot == 0 {
-			checkpointSlot, err = h.populateCheckPointCacheWithDataFromChain(slot)
-			if err != nil {
-				// There should always be a checkpoint onchain with the range of the sync committee period slots
-				return checkpoint, fmt.Errorf("find checkpoint on-chain: %w", err)
-			}
+		err = h.populateCheckPointCacheWithDataFromChain(slot)
+		if err != nil {
+			// There should always be a checkpoint onchain with the range of the sync committee period slots
+			return checkpoint, fmt.Errorf("find checkpoint on-chain for slot %d: %w", slot, err)
 		}
 
 		checkpoint, err = h.cache.GetClosestCheckpoint(slot)
 		if err != nil {
-			return cache.Proof{}, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
+			return checkpoint, fmt.Errorf("get closest checkpoint after populating finalized header: %w", err)
 		}
 
 		log.WithFields(log.Fields{"slot": slot, "checkpoint": checkpoint}).Info("checkpoint after populating finalized header")
 
 		return checkpoint, nil
 	case err != nil:
-		return cache.Proof{}, fmt.Errorf("get closest checkpoint: %w", err)
+		return checkpoint, fmt.Errorf("get closest checkpoint: %w", err)
 	}
 
 	return checkpoint, nil
@@ -431,37 +428,25 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 
 func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, error) {
 	slot = slot + 1
-	header, err := h.syncer.FindBeaconHeaderWithBlockIncluded(slot)
-	if err != nil {
-		return scale.HeaderUpdatePayload{}, fmt.Errorf("get next beacon header with block included: %w", err)
-	}
-	checkpoint, err := h.populateClosestCheckpoint(header.Slot)
-	if err != nil {
-		return scale.HeaderUpdatePayload{}, fmt.Errorf("populate closest checkpoint: %w", err)
-	}
-	blockRoot, err := header.HashTreeRoot()
-	if err != nil {
-		return scale.HeaderUpdatePayload{}, fmt.Errorf("header hash tree root: %w", err)
-	}
-	return h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
+	return h.getHeaderUpdateBySlot(slot)
 }
 
-func (h *Header) populateCheckPointCacheWithDataFromChain(slot uint64) (uint64, error) {
+func (h *Header) populateCheckPointCacheWithDataFromChain(slot uint64) error {
 	checkpointSlot := h.syncer.CalculateNextCheckpointSlot(slot)
 
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
-		return 0, fmt.Errorf("get last finalized header for the checkpoint: %w", err)
+		return fmt.Errorf("get last finalized header for the checkpoint: %w", err)
 	}
 
 	if slot > lastFinalizedHeaderState.BeaconSlot {
-		return 0, ErrBeaconHeaderNotFinalized
+		return ErrBeaconHeaderNotFinalized
 	}
 
 	if checkpointSlot < lastFinalizedHeaderState.BeaconSlot {
 		historicState, err := h.findLatestCheckPoint(slot)
 		if err != nil {
-			return 0, fmt.Errorf("get history finalized header for the checkpoint: %w", err)
+			return fmt.Errorf("get history finalized header for the checkpoint: %w", err)
 		}
 		checkpointSlot = historicState.BeaconSlot
 	} else {
@@ -472,10 +457,10 @@ func (h *Header) populateCheckPointCacheWithDataFromChain(slot uint64) (uint64, 
 
 	err = h.populateFinalizedCheckpoint(checkpointSlot)
 	if err != nil {
-		return 0, fmt.Errorf("populated local cache with finalized header found on-chain: %w", err)
+		return fmt.Errorf("populated local cache with finalized header found on-chain: %w", err)
 	}
 
-	return 0, nil
+	return nil
 }
 
 func (h *Header) getHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, error) {
