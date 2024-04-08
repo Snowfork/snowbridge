@@ -81,7 +81,7 @@ contract GatewayTest is Test {
     uint128 public registerTokenFee = 0;
     uint128 public sendTokenFee = 1e10;
     uint128 public createTokenFee = 1e10;
-    uint128 public maxDestinationFee = 1e11;
+    uint128 public destinationMaxTransferFee = 1e11;
 
     MultiAddress public recipientAddress32;
     MultiAddress public recipientAddress20;
@@ -95,8 +95,14 @@ contract GatewayTest is Test {
 
     function setUp() public {
         AgentExecutor executor = new AgentExecutor();
-        gatewayLogic =
-            new GatewayMock(address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals);
+        gatewayLogic = new GatewayMock(
+            address(0),
+            address(executor),
+            bridgeHubParaID,
+            bridgeHubAgentID,
+            foreignTokenDecimals,
+            destinationMaxTransferFee
+        );
         Gateway.Config memory config = Gateway.Config({
             mode: OperatingMode.Normal,
             deliveryCost: outboundFee,
@@ -105,7 +111,6 @@ contract GatewayTest is Test {
             assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
-            destinationMaxTransferFee: maxDestinationFee,
             exchangeRate: exchangeRate,
             multiplier: multiplier
         });
@@ -490,8 +495,14 @@ contract GatewayTest is Test {
     function testUpgradeInitializerRunsOnlyOnce() public {
         // Upgrade to this current logic contract
         AgentExecutor executor = new AgentExecutor();
-        GatewayMock currentLogic =
-            new GatewayMock(address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals);
+        GatewayMock currentLogic = new GatewayMock(
+            address(0),
+            address(executor),
+            bridgeHubParaID,
+            bridgeHubAgentID,
+            foreignTokenDecimals,
+            destinationMaxTransferFee
+        );
 
         Gateway.Config memory config = Gateway.Config({
             mode: OperatingMode.Normal,
@@ -501,7 +512,6 @@ contract GatewayTest is Test {
             assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
-            destinationMaxTransferFee: maxDestinationFee,
             exchangeRate: exchangeRate,
             multiplier: multiplier
         });
@@ -529,8 +539,14 @@ contract GatewayTest is Test {
 
         // Upgrade to this current logic contract
         AgentExecutor executor = new AgentExecutor();
-        GatewayMock currentLogic =
-            new GatewayMock(address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals);
+        GatewayMock currentLogic = new GatewayMock(
+            address(0),
+            address(executor),
+            bridgeHubParaID,
+            bridgeHubAgentID,
+            foreignTokenDecimals,
+            destinationMaxTransferFee
+        );
 
         bytes memory initParams; // empty
         UpgradeParams memory params = UpgradeParams({
@@ -925,7 +941,7 @@ contract GatewayTest is Test {
         uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         IGateway(address(gateway)).registerToken{value: fee}(address(token));
 
-        uint128 largeFee = maxDestinationFee + 1; // greater than 10 DOT, 10 decimal places
+        uint128 largeFee = destinationMaxTransferFee + 1; // greater than 10 DOT, 10 decimal places
 
         vm.expectRevert(Assets.InvalidDestinationFee.selector);
         fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, largeFee);

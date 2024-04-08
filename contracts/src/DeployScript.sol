@@ -58,10 +58,16 @@ contract DeployScript is Script {
         bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
 
         uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
+        uint128 destinationMaxTransferFee = uint128(vm.envUint("RESERVE_TRANSFER_MAX_DESTINATION_FEE"));
 
         AgentExecutor executor = new AgentExecutor();
         Gateway gatewayLogic = new Gateway(
-            address(beefyClient), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals
+            address(beefyClient),
+            address(executor),
+            bridgeHubParaID,
+            bridgeHubAgentID,
+            foreignTokenDecimals,
+            destinationMaxTransferFee
         );
 
         bool rejectOutboundMessages = vm.envBool("REJECT_OUTBOUND_MESSAGES");
@@ -80,7 +86,6 @@ contract DeployScript is Script {
             assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: uint128(vm.envUint("CREATE_ASSET_FEE")),
             assetHubReserveTransferFee: uint128(vm.envUint("RESERVE_TRANSFER_FEE")),
-            destinationMaxTransferFee: uint128(vm.envUint("RESERVE_TRANSFER_MAX_DESTINATION_FEE")),
             exchangeRate: ud60x18(vm.envUint("EXCHANGE_RATE")),
             multiplier: ud60x18(vm.envUint("FEE_MULTIPLIER"))
         });

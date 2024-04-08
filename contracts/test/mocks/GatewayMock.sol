@@ -16,8 +16,18 @@ contract GatewayMock is Gateway {
         address agentExecutor,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubHubAgentID,
-        uint8 foreignTokenDecimals
-    ) Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubHubAgentID, foreignTokenDecimals) {}
+        uint8 foreignTokenDecimals,
+        uint128 destinationMaxTransferFee
+    )
+        Gateway(
+            beefyClient,
+            agentExecutor,
+            bridgeHubParaID,
+            bridgeHubHubAgentID,
+            foreignTokenDecimals,
+            destinationMaxTransferFee
+        )
+    {}
 
     function agentExecutePublic(bytes calldata params) external {
         this.agentExecute(params);

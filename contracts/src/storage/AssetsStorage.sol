@@ -15,8 +15,6 @@ library AssetsStorage {
         uint128 assetHubReserveTransferFee;
         // Extra fee for registering a token, to discourage spamming (Ether)
         uint256 registerTokenFee;
-        /// The maximum fee that can be sent to a destination chain during a reserve transfer (DOT)
-        uint128 destinationMaxTransferFee;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets");

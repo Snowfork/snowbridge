@@ -42,21 +42,22 @@ library Assets {
         IERC20(token).safeTransferFrom(sender, agent, amount);
     }
 
-    function sendTokenCosts(address token, ParaID destinationChain, uint128 destinationChainFee)
-        external
-        view
-        returns (Costs memory costs)
-    {
+    function sendTokenCosts(
+        address token,
+        ParaID destinationChain,
+        uint128 destinationChainFee,
+        uint128 maxDestinationChainFee
+    ) external view returns (Costs memory costs) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
         if (!info.isRegistered) {
             revert TokenNotRegistered();
         }
 
-        return _sendTokenCosts(destinationChain, destinationChainFee);
+        return _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
     }
 
-    function _sendTokenCosts(ParaID destinationChain, uint128 destinationChainFee)
+    function _sendTokenCosts(ParaID destinationChain, uint128 destinationChainFee, uint128 maxDestinationChainFee)
         internal
         view
         returns (Costs memory costs)
@@ -66,7 +67,7 @@ library Assets {
             costs.foreign = $.assetHubReserveTransferFee;
         } else {
             // Destination fee cannot be zero. MultiAssets are not allowed to be zero in xcm v4.
-            if (destinationChainFee == 0 || destinationChainFee > $.destinationMaxTransferFee) {
+            if (destinationChainFee == 0 || destinationChainFee > maxDestinationChainFee) {
                 revert InvalidDestinationFee();
             }
 
@@ -84,7 +85,8 @@ library Assets {
         ParaID destinationChain,
         MultiAddress calldata destinationAddress,
         uint128 destinationChainFee,
-        uint128 amount
+        uint128 amount,
+        uint128 maxDestinationChainFee
     ) external returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
@@ -97,7 +99,7 @@ library Assets {
         _transferToAgent($.assetHubAgent, token, sender, amount);
 
         ticket.dest = $.assetHubParaID;
-        ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee);
+        ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
 
         // Construct a message payload
         if (destinationChain == $.assetHubParaID) {

@@ -69,6 +69,9 @@ contract Gateway is IGateway, IInitializable {
     // 2. Calling implementation function
     uint256 DISPATCH_OVERHEAD_GAS = 10_000;
 
+    // The maximum fee that can be sent to a destination parachain to pay for execution (DOT)
+    uint128 internal immutable MAX_DESTINATION_TRANSFER_FEE;
+
     uint8 internal immutable FOREIGN_TOKEN_DECIMALS;
 
     error InvalidProof();
@@ -101,7 +104,8 @@ contract Gateway is IGateway, IInitializable {
         address agentExecutor,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
-        uint8 foreignTokenDecimals
+        uint8 foreignTokenDecimals,
+        uint128 destinationMaxTransferFee
     ) {
         if (bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0) {
             revert InvalidConstructorParams();
@@ -113,6 +117,7 @@ contract Gateway is IGateway, IInitializable {
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
         FOREIGN_TOKEN_DECIMALS = foreignTokenDecimals;
+        MAX_DESTINATION_TRANSFER_FEE = destinationMaxTransferFee;
     }
 
     /// @dev Submit a message from Polkadot for verification and dispatch
@@ -417,7 +422,8 @@ contract Gateway is IGateway, IInitializable {
         view
         returns (uint256)
     {
-        return _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee));
+        return
+            _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee, MAX_DESTINATION_TRANSFER_FEE));
     }
 
     // Transfer ERC20 tokens to a Polkadot parachain
@@ -429,7 +435,15 @@ contract Gateway is IGateway, IInitializable {
         uint128 amount
     ) external payable {
         _submitOutbound(
-            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
+            Assets.sendToken(
+                token,
+                msg.sender,
+                destinationChain,
+                destinationAddress,
+                destinationFee,
+                amount,
+                MAX_DESTINATION_TRANSFER_FEE
+            )
         );
     }
 
@@ -571,8 +585,6 @@ contract Gateway is IGateway, IInitializable {
         uint128 assetHubCreateAssetFee;
         /// @dev The extra fee charged for sending tokens (DOT)
         uint128 assetHubReserveTransferFee;
-        /// @dev The maximum fee that can be sent to a destination parachain to pay for execution (DOT)
-        uint128 destinationMaxTransferFee;
         /// @dev extra fee to discourage spamming
         uint256 registerTokenFee;
         /// @dev Fee multiplier

@@ -24,9 +24,17 @@ contract DeployGatewayLogic is Script {
         bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
 
         uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
+        uint128 destinationMaxTransferFee = uint128(vm.envUint("RESERVE_TRANSFER_MAX_DESTINATION_FEE"));
 
         AgentExecutor executor = new AgentExecutor();
-        new Gateway(address(beefyClient), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals);
+        new Gateway(
+            address(beefyClient),
+            address(executor),
+            bridgeHubParaID,
+            bridgeHubAgentID,
+            foreignTokenDecimals,
+            destinationMaxTransferFee
+        );
 
         vm.stopBroadcast();
     }
