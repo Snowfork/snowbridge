@@ -52,10 +52,10 @@ jobs:
       - name: Publish Contract Types
         working-directory: web/packages/contract-types
         run: |
-          pnpm publish
+          pnpm publish --no-git-checks --access public
 
       - name: Publish API
         working-directory: web/packages/api
         run: |
-          pnpm publish
+          pnpm publish --no-git-checks --access public
       
