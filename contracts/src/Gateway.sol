@@ -422,8 +422,7 @@ contract Gateway is IGateway, IInitializable {
         view
         returns (uint256)
     {
-        return
-            _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee, MAX_DESTINATION_TRANSFER_FEE));
+        return _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee));
     }
 
     // Transfer ERC20 tokens to a Polkadot parachain
@@ -434,16 +433,12 @@ contract Gateway is IGateway, IInitializable {
         uint128 destinationFee,
         uint128 amount
     ) external payable {
+        if (destinationFee > MAX_DESTINATION_TRANSFER_FEE) {
+            revert Assets.InvalidDestinationFee();
+        }
+
         _submitOutbound(
-            Assets.sendToken(
-                token,
-                msg.sender,
-                destinationChain,
-                destinationAddress,
-                destinationFee,
-                amount,
-                MAX_DESTINATION_TRANSFER_FEE
-            )
+            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
         );
     }
 
