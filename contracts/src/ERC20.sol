@@ -6,6 +6,7 @@ pragma solidity 0.8.23;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IERC20Permit} from "./interfaces/IERC20Permit.sol";
+import {ERC20Lib} from "./ERC20Lib.sol";
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -28,34 +29,14 @@ import {IERC20Permit} from "./interfaces/IERC20Permit.sol";
  * allowances. See {IERC20-approve}.
  */
 contract ERC20 is IERC20, IERC20Permit {
-    error PermitExpired();
-    error InvalidS();
-    error InvalidV();
-    error InvalidSignature();
+    using ERC20Lib for ERC20Lib.TokenStorage;
+
     error Unauthorized();
-    error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
-    error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed);
-    error OwnableInvalidOwner(address owner);
 
-    mapping(address => uint256) public override balanceOf;
-
-    mapping(address => mapping(address => uint256)) public override allowance;
-
-    mapping(address => uint256) public nonces;
-
-    bytes32 public immutable DOMAIN_SEPARATOR;
-    uint256 public override totalSupply;
-
-    // keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')
-    bytes32 private constant DOMAIN_TYPE_SIGNATURE_HASH =
-        bytes32(0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f);
-
-    // keccak256('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)')
-    bytes32 private constant PERMIT_SIGNATURE_HASH =
-        bytes32(0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9);
+    ERC20Lib.TokenStorage token;
 
     address public immutable OWNER;
-    string private constant EIP191_PREFIX_FOR_EIP712_STRUCTURED_DATA = "\x19\x01";
+
     uint8 public immutable decimals;
 
     string public name;
@@ -66,15 +47,10 @@ contract ERC20 is IERC20, IERC20Permit {
      */
     constructor(address _owner, string memory name_, string memory symbol_, uint8 decimals_) {
         OWNER = _owner;
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                DOMAIN_TYPE_SIGNATURE_HASH, keccak256(bytes(name_)), keccak256(bytes("1")), block.chainid, address(this)
-            )
-        );
-
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
+        token.init(name_);
     }
 
     modifier onlyOwner() {
@@ -95,14 +71,14 @@ contract ERC20 is IERC20, IERC20Permit {
      * - `account` cannot be the zero address.
      */
     function mint(address account, uint256 amount) external virtual onlyOwner {
-        _mint(account, amount);
+        token.mint(account, amount);
     }
 
     /**
      * @dev Destroys `amount` tokens from the account.
      */
     function burn(address account, uint256 amount) external virtual onlyOwner {
-        _burn(account, amount);
+        token.burn(account, amount);
     }
 
     /**
@@ -114,8 +90,7 @@ contract ERC20 is IERC20, IERC20Permit {
      * - the caller must have a balance of at least `amount`.
      */
     function transfer(address recipient, uint256 amount) external virtual override returns (bool) {
-        _transfer(msg.sender, recipient, amount);
-        return true;
+        return token.transfer(msg.sender, recipient, amount);
     }
 
     /**
@@ -134,8 +109,7 @@ contract ERC20 is IERC20, IERC20Permit {
      * - `spender` cannot be the zero address.
      */
     function approve(address spender, uint256 amount) external virtual override returns (bool) {
-        _approve(msg.sender, spender, amount);
-        return true;
+        return token.approve(msg.sender, spender, amount);
     }
 
     /**
@@ -152,20 +126,7 @@ contract ERC20 is IERC20, IERC20Permit {
      * `amount`.
      */
     function transferFrom(address sender, address recipient, uint256 amount) external virtual override returns (bool) {
-        uint256 _allowance = allowance[sender][msg.sender];
-
-        if (_allowance != type(uint256).max) {
-            if (_allowance < amount) {
-                revert ERC20InsufficientAllowance(msg.sender, _allowance, amount);
-            }
-            unchecked {
-                _approve(sender, msg.sender, _allowance - amount);
-            }
-        }
-
-        _transfer(sender, recipient, amount);
-
-        return true;
+        return token.transferFrom(sender, recipient, amount);
     }
 
     /**
@@ -181,11 +142,7 @@ contract ERC20 is IERC20, IERC20Permit {
      * - `spender` cannot be the zero address.
      */
     function increaseAllowance(address spender, uint256 addedValue) external virtual returns (bool) {
-        uint256 _allowance = allowance[msg.sender][spender];
-        if (_allowance != type(uint256).max) {
-            _approve(msg.sender, spender, _allowance + addedValue);
-        }
-        return true;
+        return token.increaseAllowance(spender, addedValue);
     }
 
     /**
@@ -203,150 +160,32 @@ contract ERC20 is IERC20, IERC20Permit {
      * `subtractedValue`.
      */
     function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
-        uint256 _allowance = allowance[msg.sender][spender];
-        if (_allowance != type(uint256).max) {
-            if (_allowance < subtractedValue) {
-                revert ERC20InsufficientAllowance(msg.sender, _allowance, subtractedValue);
-            }
-            unchecked {
-                _approve(msg.sender, spender, _allowance - subtractedValue);
-            }
-        }
-        return true;
+        return token.decreaseAllowance(spender, subtractedValue);
     }
 
     function permit(address issuer, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external
     {
-        if (block.timestamp > deadline) revert PermitExpired();
-
-        if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) revert InvalidS();
-
-        if (v != 27 && v != 28) revert InvalidV();
-
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                EIP191_PREFIX_FOR_EIP712_STRUCTURED_DATA,
-                DOMAIN_SEPARATOR,
-                keccak256(abi.encode(PERMIT_SIGNATURE_HASH, issuer, spender, value, nonces[issuer]++, deadline))
-            )
-        );
-
-        address recoveredAddress = ecrecover(digest, v, r, s);
-
-        if (recoveredAddress != issuer) revert InvalidSignature();
-
-        // _approve will revert if issuer is address(0x0)
-        _approve(issuer, spender, value);
+        token.permit(issuer, spender, value, deadline, v, r, s);
     }
 
-    /**
-     * @dev Moves tokens `amount` from `sender` to `recipient`.
-     *
-     * This is internal function is equivalent to {transfer}, and can be used to
-     * e.g. implement automatic token fees, slashing mechanisms, etc.
-     *
-     * Emits a {Transfer} event.
-     *
-     * Requirements:
-     *
-     * - `sender` cannot be the zero address.
-     * - `recipient` cannot be the zero address.
-     * - `sender` must have a balance of at least `amount`.
-     */
-    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
-        if (sender == address(0) || recipient == address(0)) revert InvalidAccount();
-
-        _update(sender, recipient, amount);
+    function balanceOf(address account) external view returns (uint256) {
+        return token.balancesOf(account);
     }
 
-    /**
-     * @dev Creates `amount` tokens and assigns them to `account`, increasing
-     * the total supply.
-     *
-     * Emits a {Transfer} event with `from` set to the zero address.
-     *
-     * Requirements:
-     *
-     * - `to` cannot be the zero address.
-     */
-    function _mint(address account, uint256 amount) internal virtual {
-        if (account == address(0)) revert InvalidAccount();
-
-        _update(address(0), account, amount);
+    function nonces(address account) external view returns (uint256) {
+        return token.noncesOf(account);
     }
 
-    /**
-     * @dev Destroys `amount` tokens from `account`, reducing the
-     * total supply.
-     *
-     * Emits a {Transfer} event with `to` set to the zero address.
-     *
-     * Requirements:
-     *
-     * - `account` cannot be the zero address.
-     * - `account` must have at least `amount` tokens.
-     */
-    function _burn(address account, uint256 amount) internal virtual {
-        if (account == address(0)) revert InvalidAccount();
-
-        _update(account, address(0), amount);
+    function totalSupply() external view returns (uint256) {
+        return token.totalSupplyOf();
     }
 
-    /**
-     * @dev Sets `amount` as the allowance of `spender` over the `owner` s tokens.
-     *
-     * This internal function is equivalent to `approve`, and can be used to
-     * e.g. set automatic allowances for certain subsystems, etc.
-     *
-     * Emits an {Approval} event.
-     *
-     * Requirements:
-     *
-     * - `owner` cannot be the zero address.
-     * - `spender` cannot be the zero address.
-     */
-    function _approve(address owner, address spender, uint256 amount) internal virtual {
-        if (owner == address(0) || spender == address(0)) revert InvalidAccount();
-
-        allowance[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
+    function allowance(address owner, address spender) external view returns (uint256) {
+        return token.allowanceOf(owner, spender);
     }
 
-    /**
-     * @dev Transfers a `value` amount of tokens from `from` to `to`, or alternatively mints (or burns) if `from`
-     * (or `to`) is the zero address. All customizations to transfers, mints, and burns should be done by overriding
-     * this function.
-     *
-     * Emits a {Transfer} event.
-     */
-    function _update(address from, address to, uint256 value) internal virtual {
-        if (from == address(0)) {
-            // Overflow check required: The rest of the code assumes that totalSupply never overflows
-            totalSupply += value;
-        } else {
-            uint256 fromBalance = balanceOf[from];
-            if (fromBalance < value) {
-                revert ERC20InsufficientBalance(from, fromBalance, value);
-            }
-            unchecked {
-                // Overflow not possible: value <= fromBalance <= totalSupply.
-                balanceOf[from] = fromBalance - value;
-            }
-        }
-
-        if (to == address(0)) {
-            unchecked {
-                // Overflow not possible: value <= totalSupply or value <= fromBalance <= totalSupply.
-                totalSupply -= value;
-            }
-        } else {
-            unchecked {
-                // Overflow not possible: balance + value is at most totalSupply, which we know fits into a uint256.
-                balanceOf[to] += value;
-            }
-        }
-
-        emit Transfer(from, to, value);
+    function DOMAIN_SEPARATOR() external view returns (bytes32) {
+        return token.domainSeparatorOf();
     }
 }
