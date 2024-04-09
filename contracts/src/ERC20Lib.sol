@@ -35,15 +35,6 @@ library ERC20Lib {
         bytes32 domainSeparator;
     }
 
-    bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets.foreign");
-
-    function layout() internal pure returns (TokenStorage storage $) {
-        bytes32 slot = SLOT;
-        assembly {
-            $.slot := slot
-        }
-    }
-
     function init(TokenStorage storage self, string memory name_) internal {
         self.domainSeparator = keccak256(
             abi.encode(
