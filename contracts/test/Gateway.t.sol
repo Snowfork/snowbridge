@@ -49,6 +49,7 @@ import {
 import {WETH9} from "canonical-weth/WETH9.sol";
 import "./mocks/GatewayUpgradeMock.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {ERC20} from "../src/ERC20.sol";
 
 contract GatewayTest is Test {
     // Emitted when token minted/burnt/transfered
@@ -938,15 +939,23 @@ contract GatewayTest is Test {
     function testAgentMintDot() public {
         testAgentRegisterDot();
 
+        uint256 amount = 1000;
+
         AgentExecuteParams memory params = AgentExecuteParams({
             agentID: assetHubAgentID,
-            payload: abi.encode(AgentExecuteCommand.MintToken, abi.encode(bytes32(uint256(1)), account1, 1000))
+            payload: abi.encode(AgentExecuteCommand.MintToken, abi.encode(bytes32(uint256(1)), account1, amount))
         });
 
         vm.expectEmit(true, true, false, false);
         emit Transfer(address(0), account1, 1000);
 
         GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
+
+        address dotToken = GatewayMock(address(gateway)).tokenAddressOf(dotTokenID);
+
+        uint256 balance = ERC20(dotToken).balanceOf(account1);
+
+        assertEq(balance, amount);
     }
 
     function testSendRelayTokenToAssetHub() public {
