@@ -354,7 +354,7 @@ func (h *Header) getNextHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePaylo
 }
 
 func (h *Header) populateCheckPointCacheWithDataFromChain(slot uint64) error {
-	checkpointSlot := h.syncer.CalculateNextCheckpointSlot(slot)
+	checkpointSlot := h.protocol.CalculateNextCheckpointSlot(slot)
 
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
