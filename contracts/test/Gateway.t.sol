@@ -22,6 +22,7 @@ import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 import {PricingStorage} from "../src/storage/PricingStorage.sol";
+import {ERC20Lib} from "../src/ERC20Lib.sol";
 
 import {
     UpgradeParams,
@@ -907,7 +908,7 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, 0, 1);
     }
 
-    function testAgentRegisterDot() public {
+    function testAgentRegisterToken() public {
         RegisterForeignTokenParams memory params = RegisterForeignTokenParams({
             agentID: assetHubAgentID,
             tokenID: dotTokenID,
@@ -922,8 +923,40 @@ contract GatewayTest is Test {
         GatewayMock(address(gateway)).registerForeignTokenPublic(abi.encode(params));
     }
 
-    function testAgentMintDot() public {
-        testAgentRegisterDot();
+    function testAgentRegisterTokenWithAgentIDNotExistWillFail() public {
+        testAgentRegisterToken();
+
+        RegisterForeignTokenParams memory params = RegisterForeignTokenParams({
+            agentID: bytes32(0),
+            tokenID: dotTokenID,
+            name: "DOT",
+            symbol: "DOT",
+            decimals: 10
+        });
+
+        vm.expectRevert(Gateway.AgentDoesNotExist.selector);
+
+        GatewayMock(address(gateway)).registerForeignTokenPublic(abi.encode(params));
+    }
+
+    function testAgentRegisterSameTokenAgainWillFail() public {
+        testAgentRegisterToken();
+
+        RegisterForeignTokenParams memory params = RegisterForeignTokenParams({
+            agentID: assetHubAgentID,
+            tokenID: dotTokenID,
+            name: "DOT",
+            symbol: "DOT",
+            decimals: 10
+        });
+
+        vm.expectRevert(Assets.TokenAlreadyRegistered.selector);
+
+        GatewayMock(address(gateway)).registerForeignTokenPublic(abi.encode(params));
+    }
+
+    function testAgentMintToken() public {
+        testAgentRegisterToken();
 
         uint256 amount = 1000;
 
@@ -946,9 +979,22 @@ contract GatewayTest is Test {
         assertEq(balance, amount);
     }
 
+    function testAgentMintNotRegisteredTokenWillFail() public {
+        MintForeignTokenParams memory params = MintForeignTokenParams({
+            agentID: assetHubAgentID,
+            tokenID: bytes32(uint256(1)),
+            recipient: account1,
+            amount: 1000
+        });
+
+        vm.expectRevert(Assets.TokenNotRegistered.selector);
+
+        GatewayMock(address(gateway)).mintForeignTokenPublic(abi.encode(params));
+    }
+
     function testSendRelayTokenToAssetHub() public {
         // Register and then mint some DOT to account1
-        testAgentMintDot();
+        testAgentMintToken();
 
         address dotToken = GatewayMock(address(gateway)).tokenAddressOf(dotTokenID);
 
@@ -962,6 +1008,28 @@ contract GatewayTest is Test {
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
         emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
+
+        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(dotToken), destPara, recipientAddress32, 1, 1);
+    }
+
+    function testSendNotRegisteredTokenWillFail() public {
+        ParaID destPara = assetHubParaID;
+
+        vm.expectRevert(Assets.TokenNotRegistered.selector);
+
+        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(0x0), destPara, recipientAddress32, 1, 1);
+    }
+
+    function testSendTokenFromNotMintedAccountWillFail() public {
+        testAgentRegisterToken();
+
+        address dotToken = GatewayMock(address(gateway)).tokenAddressOf(dotTokenID);
+
+        ParaID destPara = assetHubParaID;
+
+        vm.prank(account1);
+
+        vm.expectRevert(abi.encodeWithSelector(ERC20Lib.ERC20InsufficientBalance.selector, account1, 0, 1));
 
         IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(dotToken), destPara, recipientAddress32, 1, 1);
     }
