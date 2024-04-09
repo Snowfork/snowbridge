@@ -619,13 +619,6 @@ func (s *Syncer) GetLatestPossibleFinalizedUpdate(attestedSlot uint64, boundary 
 func (s *Syncer) GetFinalizedUpdateWithSyncCommittee(syncCommitteePeriod, lastFinalizedSlot uint64) (scale.Update, error) {
 	slot := (syncCommitteePeriod) * s.protocol.Settings.SlotsInEpoch * s.protocol.Settings.EpochsPerSyncCommitteePeriod
 
-	// If the latest finalized slot is equal or larger than the slot to be synced, the finalized header
-	// won't be imported and so it should be a newer header. 3 epochs further, because the finalized header is
-	// 2 epochs behind the attested header, and we need 1 epoch newer at least
-	if lastFinalizedSlot >= slot {
-		slot += s.protocol.Settings.SlotsInEpoch * 3
-	}
-
 	boundary := (syncCommitteePeriod + 1) * s.protocol.Settings.SlotsInEpoch * s.protocol.Settings.EpochsPerSyncCommitteePeriod
 
 	attestedSlot, err := s.FindOldestAttestedHeaderAtInterval(slot, boundary)
