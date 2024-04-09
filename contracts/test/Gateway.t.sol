@@ -26,18 +26,18 @@ import {PricingStorage} from "../src/storage/PricingStorage.sol";
 import {
     UpgradeParams,
     CreateAgentParams,
-    AgentExecuteParams,
     CreateChannelParams,
     UpdateChannelParams,
     SetOperatingModeParams,
     TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
     SetPricingParametersParams,
-    RegisterForeignTokenParams
+    RegisterForeignTokenParams,
+    TransferTokenParams,
+    MintForeignTokenParams
 } from "../src/Params.sol";
 
 import {
-    AgentExecuteCommand,
     InboundMessage,
     OperatingMode,
     ParaID,
@@ -351,30 +351,19 @@ contract GatewayTest is Test {
     function testAgentExecution() public {
         token.transfer(address(assetHubAgent), 200);
 
-        AgentExecuteParams memory params = AgentExecuteParams({
-            agentID: assetHubAgentID,
-            payload: abi.encode(AgentExecuteCommand.TransferToken, abi.encode(address(token), address(account2), 10))
-        });
+        TransferTokenParams memory params =
+            TransferTokenParams({agentID: assetHubAgentID, token: address(token), recipient: account2, amount: 10});
 
         bytes memory encodedParams = abi.encode(params);
-        GatewayMock(address(gateway)).agentExecutePublic(encodedParams);
+        GatewayMock(address(gateway)).transferTokenPublic(encodedParams);
     }
 
     function testAgentExecutionBadOrigin() public {
-        AgentExecuteParams memory params = AgentExecuteParams({
-            agentID: bytes32(0),
-            payload: abi.encode(keccak256("transferNativeToken"), abi.encode(address(token), address(this), 1))
-        });
+        TransferNativeFromAgentParams memory params =
+            TransferNativeFromAgentParams({agentID: bytes32(0), recipient: address(this), amount: 1});
 
         vm.expectRevert(Gateway.AgentDoesNotExist.selector);
-        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
-    }
-
-    function testAgentExecutionBadPayload() public {
-        AgentExecuteParams memory params = AgentExecuteParams({agentID: assetHubAgentID, payload: ""});
-
-        vm.expectRevert(Gateway.InvalidAgentExecutionPayload.selector);
-        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
+        GatewayMock(address(gateway)).transferNativeFromAgentPublic(abi.encode(params));
     }
 
     function testCreateAgent() public {
@@ -798,9 +787,6 @@ contract GatewayTest is Test {
     // Handler functions should not be externally callable
     function testHandlersNotExternallyCallable() public {
         vm.expectRevert(Gateway.Unauthorized.selector);
-        Gateway(address(gateway)).agentExecute("");
-
-        vm.expectRevert(Gateway.Unauthorized.selector);
         Gateway(address(gateway)).createAgent("");
 
         vm.expectRevert(Gateway.Unauthorized.selector);
@@ -941,15 +927,17 @@ contract GatewayTest is Test {
 
         uint256 amount = 1000;
 
-        AgentExecuteParams memory params = AgentExecuteParams({
+        MintForeignTokenParams memory params = MintForeignTokenParams({
             agentID: assetHubAgentID,
-            payload: abi.encode(AgentExecuteCommand.MintToken, abi.encode(bytes32(uint256(1)), account1, amount))
+            tokenID: bytes32(uint256(1)),
+            recipient: account1,
+            amount: amount
         });
 
         vm.expectEmit(true, true, false, false);
         emit Transfer(address(0), account1, 1000);
 
-        GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));
+        GatewayMock(address(gateway)).mintForeignTokenPublic(abi.encode(params));
 
         address dotToken = GatewayMock(address(gateway)).tokenAddressOf(dotTokenID);
 

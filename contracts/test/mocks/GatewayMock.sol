@@ -19,10 +19,6 @@ contract GatewayMock is Gateway {
         uint8 foreignTokenDecimals
     ) Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubHubAgentID, foreignTokenDecimals) {}
 
-    function agentExecutePublic(bytes calldata params) external {
-        this.agentExecute(params);
-    }
-
     function createAgentPublic(bytes calldata params) external {
         this.createAgent(params);
     }
@@ -75,6 +71,14 @@ contract GatewayMock is Gateway {
 
     function registerForeignTokenPublic(bytes calldata params) external {
         this.registerForeignToken(params);
+    }
+
+    function mintForeignTokenPublic(bytes calldata params) external {
+        this.mintForeignToken(params);
+    }
+
+    function transferTokenPublic(bytes calldata params) external {
+        this.transferToken(params);
     }
 }
 

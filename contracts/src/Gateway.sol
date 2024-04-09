@@ -18,8 +18,7 @@ import {
     MultiAddress,
     Ticket,
     Costs,
-    TokenInfo,
-    AgentExecuteCommand
+    TokenInfo
 } from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
@@ -33,14 +32,15 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {
     UpgradeParams,
     CreateAgentParams,
-    AgentExecuteParams,
     CreateChannelParams,
     UpdateChannelParams,
     SetOperatingModeParams,
     TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
     SetPricingParametersParams,
-    RegisterForeignTokenParams
+    RegisterForeignTokenParams,
+    MintForeignTokenParams,
+    TransferTokenParams
 } from "./Params.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
@@ -85,7 +85,6 @@ contract Gateway is IGateway, IInitializable {
     error ChannelAlreadyCreated();
     error ChannelDoesNotExist();
     error InvalidChannelUpdate();
-    error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
     error InvalidCodeHash();
     error InvalidConstructorParams();
@@ -170,8 +169,8 @@ contract Gateway is IGateway, IInitializable {
         bool success = true;
 
         // Dispatch message to a handler
-        if (message.command == Command.AgentExecute) {
-            try Gateway(this).agentExecute{gas: maxDispatchGas}(message.params) {}
+        if (message.command == Command.TransferToken) {
+            try Gateway(this).transferToken{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
@@ -217,6 +216,11 @@ contract Gateway is IGateway, IInitializable {
             }
         } else if (message.command == Command.RegisterForeignToken) {
             try Gateway(this).registerForeignToken{gas: maxDispatchGas}(message.params) {}
+            catch {
+                success = false;
+            }
+        } else if (message.command == Command.MintForeignToken) {
+            try Gateway(this).mintForeignToken{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
@@ -272,29 +276,6 @@ contract Gateway is IGateway, IInitializable {
     /**
      * Handlers
      */
-
-    // Execute code within an agent
-    function agentExecute(bytes calldata data) external onlySelf {
-        AgentExecuteParams memory params = abi.decode(data, (AgentExecuteParams));
-
-        address agent = _ensureAgent(params.agentID);
-
-        if (params.payload.length == 0) {
-            revert InvalidAgentExecutionPayload();
-        }
-
-        (AgentExecuteCommand command, bytes memory commandParams) =
-            abi.decode(params.payload, (AgentExecuteCommand, bytes));
-
-        if (command == AgentExecuteCommand.MintToken) {
-            (bytes32 tokenID, address recipient, uint256 amount) =
-                abi.decode(commandParams, (bytes32, address, uint256));
-            Assets.mintForeignToken(AGENT_EXECUTOR, agent, tokenID, recipient, amount);
-        } else if (command == AgentExecuteCommand.TransferToken) {
-            (address token, address recipient, uint128 amount) = abi.decode(commandParams, (address, address, uint128));
-            Assets.transferToken(AGENT_EXECUTOR, agent, token, recipient, amount);
-        }
-    }
 
     /// @dev Create an agent for a consensus system on Polkadot
     function createAgent(bytes calldata data) external onlySelf {
@@ -425,6 +406,20 @@ contract Gateway is IGateway, IInitializable {
         RegisterForeignTokenParams memory params = abi.decode(data, (RegisterForeignTokenParams));
         address agent = _ensureAgent(params.agentID);
         Assets.registerForeignToken(params.agentID, agent, params.tokenID, params.name, params.symbol, params.decimals);
+    }
+
+    // @dev Mint foreign token from polkadot
+    function mintForeignToken(bytes calldata data) external onlySelf {
+        MintForeignTokenParams memory params = abi.decode(data, (MintForeignTokenParams));
+        address agent = _ensureAgent(params.agentID);
+        Assets.mintForeignToken(AGENT_EXECUTOR, agent, params.tokenID, params.recipient, params.amount);
+    }
+
+    // @dev Transfer Ethereum native token back from polkadot
+    function transferToken(bytes calldata data) external onlySelf {
+        TransferTokenParams memory params = abi.decode(data, (TransferTokenParams));
+        address agent = _ensureAgent(params.agentID);
+        Assets.transferToken(AGENT_EXECUTOR, agent, params.token, params.recipient, params.amount);
     }
 
     function isTokenRegistered(address token) external view returns (bool) {

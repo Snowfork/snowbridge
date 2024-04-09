@@ -5,12 +5,6 @@ pragma solidity 0.8.23;
 import {ChannelID, OperatingMode} from "./Types.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
-// Payload for AgentExecute
-struct AgentExecuteParams {
-    bytes32 agentID;
-    bytes payload;
-}
-
 // Payload for CreateAgent
 struct CreateAgentParams {
     /// @dev The agent ID of the consensus system
@@ -95,4 +89,28 @@ struct RegisterForeignTokenParams {
     string symbol;
     /// @dev The decimal of the token
     uint8 decimals;
+}
+
+// Payload for MintForeignToken
+struct MintForeignTokenParams {
+    /// @dev The agent ID of the consensus system
+    bytes32 agentID;
+    /// @dev The token ID
+    bytes32 tokenID;
+    /// @dev The address of the recipient
+    address recipient;
+    /// @dev The amount to mint with
+    uint256 amount;
+}
+
+// Payload for TransferToken
+struct TransferTokenParams {
+    /// @dev The agent ID of the consensus system
+    bytes32 agentID;
+    /// @dev The token address
+    address token;
+    /// @dev The address of the recipient
+    address recipient;
+    /// @dev The amount to mint with
+    uint128 amount;
 }
