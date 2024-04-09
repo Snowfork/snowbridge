@@ -1,0 +1,61 @@
+name: npm-publish
+
+on:
+  release:
+    types: [published]
+
+env:
+  NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+
+jobs:
+  publish:
+    runs-on: snowbridge-runner
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Build Contracts
+        working-directory: contracts
+        run: |
+          forge build
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Build Contract Types
+        working-directory: web/packages/contract-types
+        run: |
+          pnpm install
+          pnpm typechain
+          pnpm build
+
+      - name: Build API
+        working-directory: web/packages/api
+        run: |
+          pnpm install
+          pnpm build
+
+      - name: Publish Contract Types
+        working-directory: web/packages/contract-types
+        run: |
+          pnpm publish
+
+      - name: Publish API
+        working-directory: web/packages/api
+        run: |
+          pnpm publish
+      
