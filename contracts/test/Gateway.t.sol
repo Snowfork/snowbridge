@@ -912,7 +912,7 @@ contract GatewayTest is Test {
         assertEq(fee, 20000000000000001);
     }
 
-    function testSendTokenWithZeroFeeToForeignDestWithInvalidFee() public {
+    function testSendTokenWithZeroInvalidFeeToForeignDest() public {
         // Let gateway lock up to 1 tokens
         token.approve(address(gateway), 1);
 
@@ -928,7 +928,7 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, 0, 1);
     }
 
-    function testSendTokenWithLargeFeeToForeignDestWithInvalidFee() public {
+    function testSendTokenWithLargeInvalidFeeoForeignDest() public {
         // Let gateway lock up to 1 tokens
         token.approve(address(gateway), 1);
 
