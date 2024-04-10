@@ -224,15 +224,15 @@ export const Status = (props: StatusProps): JSX.Element => {
 
     return (<div>
         <h2>Bridge Status</h2>
-        <h3>To Polkadot</h3>
-        <div className='panel statusGeneral' style={toPolkadotStyle}>
-            <p>Operating Mode</p><p>{toPolkadotOperatingMode}</p>
-            <p>BEEFY client latency (time):</p><p>{formatTime(bridgeStatus?.statusInfo.toEthereum.latencySeconds)}</p>
-        </div>
         <h3>To Ethereum</h3>
         <div className='panel statusGeneral' style={toEthereumStyle}>
             <p>Operating Mode</p><p>{toEthereumOperatingMode}</p>
-            <p>Beacon client latency (time):</p><p>{formatTime(bridgeStatus?.statusInfo.toPolkadot.latencySeconds)}</p>
+            <p>Beacon client latency (time):</p><p>{formatTime(bridgeStatus?.statusInfo.toEthereum.latencySeconds)}</p>
+        </div>
+        <h3>To Polkadot</h3>
+        <div className='panel statusGeneral' style={toPolkadotStyle}>
+            <p>Operating Mode</p><p>{toPolkadotOperatingMode}</p>
+            <p>BEEFY client latency (time):</p><p>{formatTime(bridgeStatus?.statusInfo.toPolkadot.latencySeconds)}</p>
         </div>
         {extra}
         <p>Refreshing in {formatTime((updateDate.getTime() - timeNow.getTime())/1000)} seconds.</p>
