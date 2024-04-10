@@ -1,19 +1,13 @@
-use bridge_hub_rococo_runtime::ethereum_system::storage::types::pricing_parameters::PricingParameters;
+use bridge_hub_runtime::ethereum_system::storage::types::pricing_parameters::PricingParameters;
 use codec::Encode;
 use subxt::{utils::H160, utils::H256, OnlineClient, PolkadotConfig};
 
-use crate::{
-    asset_hub_runtime::{self, runtime_types::xcm as asset_hub_xcm},
-    Context,
-};
+use crate::Context;
 
-use crate::bridge_hub_runtime::{
-    self, runtime_types::bridge_hub_rococo_runtime::RuntimeCall as BridgeHubRuntimeCall,
-};
+use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 
 use crate::relay_runtime::runtime_types::{
     pallet_xcm,
-    polkadot_runtime::RuntimeCall as RelayRuntimeCall,
     sp_weights::weight_v2::Weight,
     staging_xcm::v3::multilocation::MultiLocation,
     xcm::{
@@ -25,11 +19,12 @@ use crate::relay_runtime::runtime_types::{
             Instruction::{self, *},
             MaybeErrorCode, WeightLimit, Xcm,
         },
-        VersionedMultiLocation, VersionedXcm,
+        VersionedLocation, VersionedXcm,
     },
 };
+use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 
-use crate::asset_hub_runtime::runtime_types::asset_hub_rococo_runtime::RuntimeCall as AssetHubRuntimeCall;
+use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
 
 use sp_arithmetic::helpers_128bit::multiply_by_rational_with_rounding;
 use sp_arithmetic::per_things::Rounding;
@@ -81,7 +76,7 @@ pub async fn send_xcm_bridge_hub(
     let para_id = query_para_id(&context.api).await?;
 
     let call = RelayRuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
-        dest: Box::new(VersionedMultiLocation::V3(MultiLocation {
+        dest: Box::new(VersionedLocation::V3(MultiLocation {
             parents: 0,
             interior: Junctions::X1(Junction::Parachain(para_id)),
         })),
@@ -126,7 +121,7 @@ pub async fn send_xcm_asset_hub(
     let para_id = query_para_id_asset_hub(&context.asset_hub_api).await?;
 
     let call = RelayRuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
-        dest: Box::new(VersionedMultiLocation::V3(MultiLocation {
+        dest: Box::new(VersionedLocation::V3(MultiLocation {
             parents: 0,
             interior: Junctions::X1(Junction::Parachain(para_id)),
         })),
@@ -156,7 +151,7 @@ pub async fn query_weight_asset_hub(
     api: &OnlineClient<PolkadotConfig>,
     call: AssetHubRuntimeCall,
 ) -> Result<(u64, u64), Box<dyn std::error::Error>> {
-    let runtime_api_call = asset_hub_runtime::apis()
+    let runtime_api_call = crate::asset_hub_runtime::apis()
         .transaction_payment_call_api()
         .query_call_info(call, 0);
     let call_info = api
@@ -188,7 +183,9 @@ pub async fn query_para_id(
 pub async fn query_para_id_asset_hub(
     api: &OnlineClient<PolkadotConfig>,
 ) -> Result<u32, Box<dyn std::error::Error>> {
-    let storage_query = asset_hub_runtime::storage().parachain_info().parachain_id();
+    let storage_query = crate::asset_hub_runtime::storage()
+        .parachain_info()
+        .parachain_id();
     let asset_hub_para_id = api
         .storage()
         .at_latest()
@@ -207,7 +204,7 @@ pub fn utility_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
 }
 
 pub fn force_xcm_version() -> AssetHubRuntimeCall {
-    use asset_hub_runtime::runtime_types::staging_xcm::v4::{
+    use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
         junction::Junction::GlobalConsensus, junction::NetworkId, junctions::Junctions::X1,
         location::Location,
     };
@@ -217,7 +214,7 @@ pub fn force_xcm_version() -> AssetHubRuntimeCall {
     });
 
     AssetHubRuntimeCall::PolkadotXcm(
-        asset_hub_runtime::runtime_types::pallet_xcm::pallet::Call::force_xcm_version {
+        crate::asset_hub_runtime::runtime_types::pallet_xcm::pallet::Call::force_xcm_version {
             location,
             version: 4,
         },
@@ -242,7 +239,7 @@ pub async fn calculate_delivery_fee(
     };
     let runtime_api_call = bridge_hub_runtime::apis()
         .outbound_queue_api()
-        .calculate_fee(command, Some(*params));
+        .calculate_fee(command, Some(params.clone()));
     let fee = api
         .runtime_api()
         .at_latest()

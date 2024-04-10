@@ -1,10 +1,10 @@
+use crate::bridge_hub_runtime::runtime_types::snowbridge_pallet_ethereum_client;
 use crate::helpers::calculate_delivery_fee;
 use crate::{
     constants::*, Context, ForceCheckpointArgs, GatewayAddressArgs, GatewayOperatingModeArgs,
     GatewayOperatingModeEnum, PricingParametersArgs, UpgradeArgs,
 };
 use alloy_primitives::{utils::format_units, U256};
-use bridge_hub_rococo_runtime::runtime_types::snowbridge_pallet_ethereum_client;
 use codec::Encode;
 use sp_arithmetic::FixedU128;
 use sp_crypto_hashing::twox_128;
@@ -13,16 +13,16 @@ use subxt::utils::Static;
 
 type CheckpointUpdate = snowbridge_beacon_primitives::CheckpointUpdate<512>;
 
-use crate::asset_hub_runtime::runtime_types::asset_hub_rococo_runtime::RuntimeCall as AssetHubRuntimeCall;
+use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
 
 use crate::bridge_hub_runtime::runtime_types::{
-    bridge_hub_rococo_runtime::RuntimeCall as BridgeHubRuntimeCall,
     snowbridge_core::{
         outbound::v1::{Initializer, OperatingMode},
         pricing::{PricingParameters, Rewards},
     },
     snowbridge_pallet_system,
 };
+use crate::bridge_hub_runtime::RuntimeCall as BridgeHubRuntimeCall;
 
 pub fn gateway_operating_mode(params: &GatewayOperatingModeArgs) -> BridgeHubRuntimeCall {
     let mode = match params.gateway_operating_mode {
@@ -70,7 +70,7 @@ pub async fn pricing_parameters(
             params.multiplier_numerator.into(),
             params.multiplier_denominator.into(),
         )),
-        fee_per_gas: bridge_hub_rococo_runtime::runtime_types::primitive_types::U256(
+        fee_per_gas: crate::bridge_hub_runtime::runtime_types::primitive_types::U256(
             U256::from(GWEI_UNIT)
                 .checked_mul(U256::from(params.fee_per_gas))
                 .unwrap()
@@ -78,13 +78,13 @@ pub async fn pricing_parameters(
         ),
         rewards: Rewards {
             local: params.local_reward.to::<u128>(),
-            remote: bridge_hub_rococo_runtime::runtime_types::primitive_types::U256(
+            remote: crate::bridge_hub_runtime::runtime_types::primitive_types::U256(
                 params.remote_reward.into_limbs(),
             ),
         },
     };
 
-    let outbound_delivery_fee = calculate_delivery_fee(&pricing_params).await?;
+    let outbound_delivery_fee = calculate_delivery_fee(&context.api, &pricing_params).await?;
 
     let total_outbound_fee = outbound_delivery_fee.local + outbound_delivery_fee.remote;
 

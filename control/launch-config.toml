@@ -4,7 +4,7 @@ provider = "native"
 timeout = 600
 
 [relaychain]
-default_command = "{{BINDIR}}/polkadot"
+default_command = "./polkadot"
 default_args = [
     "--enable-offchain-indexing=true",
     "--pruning",
@@ -12,7 +12,7 @@ default_args = [
     "--disable-worker-version-check",
     "--state-cache-size=0",
 ]
-chain_spec_command = "{{BINDIR}}/chain-spec-generator polkadot-local"
+chain_spec_command = "./chain-spec-generator polkadot-local"
 
 [[relaychain.nodes]]
 name = "alice"
@@ -37,23 +37,23 @@ validator = true
 ## AssetHub
 [[parachains]]
 id = 1000
-chain_spec_command = "{{BINDIR}}/chain-spec-generator asset-hub-polkadot-local"
+chain_spec_command = "./chain-spec-generator asset-hub-polkadot-local"
 cumulus_based = true
 
 [[parachains.collators]]
 name = "assethub01"
-command = "{{BINDIR}}/polkadot-parachain"
+command = "./polkadot-parachain"
 args = ["--no-hardware-benchmarks"]
 
 [[parachains.collators]]
 name = "assethub02"
-command = "{{BINDIR}}/polkadot-parachain"
+command = "./polkadot-parachain"
 args = ["--no-hardware-benchmarks"]
 
 ## Bridge Hub
 [[parachains]]
 id = 1002
-chain_spec_command = "{{BINDIR}}/chain-spec-generator bridge-hub-polkadot-local"
+chain_spec_command = "./chain-spec-generator bridge-hub-polkadot-local"
 cumulus_based = true
 
 [[parachains.collators]]
@@ -64,7 +64,7 @@ args = [
     "--no-hardware-benchmarks",
 ]
 name = "bridgehub01"
-command = "{{BINDIR}}/polkadot-parachain"
+command = "./polkadot-parachain"
 
 [[parachains.collators]]
 args = [
@@ -74,4 +74,4 @@ args = [
     "--no-hardware-benchmarks",
 ]
 name = "bridgehub02"
-command = "{{BINDIR}}/polkadot-parachain"
+command = "./polkadot-parachain"

@@ -10,7 +10,8 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
 use constants::{POLKADOT_DECIMALS, POLKADOT_SYMBOL};
 use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_batch};
-use std::{io::Write, path::PathBuf};
+use hex_literal::hex;
+use std::{io::Write, path::PathBuf, process::exit};
 use subxt::{OnlineClient, PolkadotConfig};
 
 #[derive(Debug, Parser)]
@@ -36,6 +37,7 @@ pub enum Command {
     PricingParameters(PricingParametersArgs),
     /// Set the checkpoint for the beacon light client
     ForceCheckpoint(ForceCheckpointArgs),
+    Foo,
 }
 
 #[derive(Debug, Args)]
@@ -210,6 +212,8 @@ async fn main() {
     }
 }
 
+use std::{fs::File, io::Read};
+
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
@@ -262,6 +266,15 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let call1 = send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
             let call2 = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
             utility_batch(vec![call1, call2])
+        }
+        Command::Foo => {
+            let mut file = File::open("preimage-upgrade-1.2.0.bin").expect("File not found");
+            let mut buf: Vec<u8> = Vec::new();
+            file.read_to_end(&mut buf).expect("Failed to read the file");
+
+            let f = buf.encode();
+            println!("{}", hex::encode(f));
+            exit(0);
         }
     };
 
