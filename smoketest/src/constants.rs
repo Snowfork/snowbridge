@@ -23,13 +23,13 @@ pub const ETHEREUM_ADDRESS: [u8; 20] = hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3d
 
 // The deployment addresses of the following contracts are stable in our E2E env, unless we modify
 // the order in contracts are deployed in DeployScript.sol.
-pub const GATEWAY_PROXY_CONTRACT: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
-pub const WETH_CONTRACT: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
-pub const AGENT_EXECUTOR_CONTRACT: [u8; 20] = hex!("2ffA5ecdBe006d30397c7636d3e015EEE251369F");
+pub const GATEWAY_PROXY_CONTRACT: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
+pub const WETH_CONTRACT: [u8; 20] = hex!("774667629726ec1FaBEbCEc0D9139bD1C8f72a23");
+pub const AGENT_EXECUTOR_CONTRACT: [u8; 20] = hex!("Fc97A6197dc90bef6bbEFD672742Ed75E9768553");
 
-pub const ERC20_DOT_CONTRACT: [u8; 20] = hex!("B501F2C3051dC8919FAFf398326a705B1f33402A");
+pub const ERC20_DOT_CONTRACT: [u8; 20] = hex!("B8C39CbCe8106c8415472e3AAe88Eb694Cc70B57");
 pub const ERC20_DOT_TOKEN_ID: [u8; 32] =
-	hex!("83ca7bdddc0205caa1d663fdba16db38a4c702f4dcc07b8589d5ed912610a19d");
+	hex!("fb3d635c7cb573d1b9e9bff4a64ab4f25190d29b6fd8db94c605a218a23fa9ad");
 
 // Agent for bridge hub parachain 1013
 pub const BRIDGE_HUB_AGENT_ID: [u8; 32] =
