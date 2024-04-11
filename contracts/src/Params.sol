@@ -5,6 +5,12 @@ pragma solidity 0.8.23;
 import {ChannelID, OperatingMode} from "./Types.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
+// Payload for AgentExecute
+struct AgentExecuteParams {
+    bytes32 agentID;
+    bytes payload;
+}
+
 // Payload for CreateAgent
 struct CreateAgentParams {
     /// @dev The agent ID of the consensus system

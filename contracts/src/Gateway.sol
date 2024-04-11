@@ -18,7 +18,8 @@ import {
     MultiAddress,
     Ticket,
     Costs,
-    TokenInfo
+    TokenInfo,
+    AgentExecuteCommand
 } from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
@@ -30,6 +31,7 @@ import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
 import {
+    AgentExecuteParams,
     UpgradeParams,
     CreateAgentParams,
     CreateChannelParams,
@@ -85,6 +87,7 @@ contract Gateway is IGateway, IInitializable {
     error ChannelAlreadyCreated();
     error ChannelDoesNotExist();
     error InvalidChannelUpdate();
+    error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
     error InvalidCodeHash();
     error InvalidConstructorParams();
@@ -169,8 +172,8 @@ contract Gateway is IGateway, IInitializable {
         bool success = true;
 
         // Dispatch message to a handler
-        if (message.command == Command.TransferToken) {
-            try Gateway(this).transferToken{gas: maxDispatchGas}(message.params) {}
+        if (message.command == Command.AgentExecute) {
+            try Gateway(this).agentExecute{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
@@ -211,6 +214,11 @@ contract Gateway is IGateway, IInitializable {
             }
         } else if (message.command == Command.SetPricingParameters) {
             try Gateway(this).setPricingParameters{gas: maxDispatchGas}(message.params) {}
+            catch {
+                success = false;
+            }
+        } else if (message.command == Command.TransferToken) {
+            try Gateway(this).transferToken{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
@@ -276,6 +284,24 @@ contract Gateway is IGateway, IInitializable {
     /**
      * Handlers
      */
+
+    // Execute code within an agent
+    function agentExecute(bytes calldata data) external onlySelf {
+        AgentExecuteParams memory params = abi.decode(data, (AgentExecuteParams));
+
+        address agent = _ensureAgent(params.agentID);
+
+        if (params.payload.length == 0) {
+            revert InvalidAgentExecutionPayload();
+        }
+
+        bytes memory call = abi.encodeCall(AgentExecutor.execute, params.payload);
+
+        (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
+        if (!success) {
+            revert AgentExecutionFailed(returndata);
+        }
+    }
 
     /// @dev Create an agent for a consensus system on Polkadot
     function createAgent(bytes calldata data) external onlySelf {

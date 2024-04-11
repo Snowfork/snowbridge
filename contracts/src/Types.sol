@@ -76,7 +76,7 @@ enum OperatingMode {
 
 /// @dev Messages from Polkadot take the form of these commands.
 enum Command {
-    TransferToken,
+    AgentExecute,
     Upgrade,
     CreateAgent,
     CreateChannel,
@@ -85,8 +85,14 @@ enum Command {
     TransferNativeFromAgent,
     SetTokenTransferFees,
     SetPricingParameters,
+    TransferToken,
     RegisterForeignToken,
     MintForeignToken
+}
+
+enum AgentExecuteCommand {
+    TransferToken,
+    MintToken
 }
 
 /// @dev Application-level costs for a message

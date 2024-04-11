@@ -27,6 +27,7 @@ import {ERC20Lib} from "../src/ERC20Lib.sol";
 import {
     UpgradeParams,
     CreateAgentParams,
+    AgentExecuteParams,
     CreateChannelParams,
     UpdateChannelParams,
     SetOperatingModeParams,
@@ -39,6 +40,7 @@ import {
 } from "../src/Params.sol";
 
 import {
+    AgentExecuteCommand,
     InboundMessage,
     OperatingMode,
     ParaID,
@@ -1032,5 +1034,17 @@ contract GatewayTest is Test {
         vm.expectRevert(abi.encodeWithSelector(ERC20Lib.ERC20InsufficientBalance.selector, account1, 0, 1));
 
         IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(dotToken), destPara, recipientAddress32, 1, 1);
+    }
+
+    function testLegacyAgentExecutionForCompatibility() public {
+        token.transfer(address(assetHubAgent), 200);
+
+        AgentExecuteParams memory params = AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(AgentExecuteCommand.TransferToken, abi.encode(address(token), address(account2), 10))
+        });
+
+        bytes memory encodedParams = abi.encode(params);
+        GatewayMock(address(gateway)).agentExecutePublic(encodedParams);
     }
 }
