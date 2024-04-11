@@ -77,8 +77,6 @@ beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cd
 execution_relayer_assethub_pub_key="${EXECUTION_RELAYER_ASSETHUB_PUB_KEY:-0x34284f0c1920694dd2e798e94e378307980d0f52d556009fc451c08bd65a8b4a}"
 # Execution relay account (//ExecutionRelayPenpal 5HgmfVcc8xBUcReNJsUaJMhFWGkdYpEw4RiCX4SeZPdKXR6H in testnet)
 execution_relayer_penpal_pub_key="${EXECUTION_RELAYER_PENPAL_PUB_KEY:-0xf8aed1861e571ef861cf34fe9587a211465aa380787e0102c2e89dfb0b666d3b}"
-# Sovereign account for msg.sender in penpal (Ethereum address:0x90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe)
-sender_sovereign_account="ee99e7e8ac49f08251154c033f827541f4fb8a5b1fc4d6d9b1ab72c103bd3023"
 
 # Config for deploying contracts
 ## Deployment key
