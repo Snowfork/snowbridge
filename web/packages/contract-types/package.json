@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/contract-types",
-  "version": "1.0.0",
+  "version": "0.1.2",
   "description": "Snowbridge contract type bindings",
   "license": "Apache-2.0",
   "repository": {
@@ -12,7 +12,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "typechain": "typechain --target ethers-v5 '../../../contracts/out/?(IGateway.sol)/!(*.abi).json' --out-dir src"
+    "typechain": "typechain --target ethers-v6 '../../../contracts/out/?(IERC20.sol|IGateway.sol|BeefyClient.sol)/!(*.abi).json' --out-dir src"
   },
   "devDependencies": {
     "@types/node": "^18.13.0",

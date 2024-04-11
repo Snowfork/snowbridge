@@ -1,0 +1,39 @@
+name: relayer
+
+on:
+  push:
+    paths:
+      - "relayer/**"
+    branches:
+      - main
+  pull_request:
+    paths:
+      - "relayer/**"
+
+jobs:
+  build:
+    runs-on: snowbridge-runner
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 2
+
+      - name: setup go
+        uses: actions/checkout@v4
+        with:
+          go-version: '^1.20.1'
+
+      - name: check go version
+        run: go version
+
+      - name: install dependencies
+        working-directory: relayer
+        run: go mod download
+
+      - name: Add gopath to bin
+        run: echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: test
+        working-directory: relayer
+        run: go test -v ./...

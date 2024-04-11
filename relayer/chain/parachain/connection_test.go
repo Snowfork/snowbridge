@@ -12,6 +12,8 @@ import (
 )
 
 func TestConnect(t *testing.T) {
+	t.Skip("skip testing utility test")
+
 	conn := parachain.NewConnection("ws://127.0.0.1:11144/", sr25519.Alice().AsKeyringPair())
 	err := conn.Connect(context.Background())
 	if err != nil {
