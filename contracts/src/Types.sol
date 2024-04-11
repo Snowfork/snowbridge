@@ -91,8 +91,7 @@ enum Command {
 }
 
 enum AgentExecuteCommand {
-    TransferToken,
-    MintToken
+    TransferToken
 }
 
 /// @dev Application-level costs for a message
