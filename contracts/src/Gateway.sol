@@ -90,6 +90,7 @@ contract Gateway is IGateway, IInitializable {
     error InvalidCodeHash();
     error InvalidConstructorParams();
     error AlreadyInitialized();
+    error InvalidTransact();
 
     // handler functions are privileged
     modifier onlySelf() {
@@ -647,6 +648,9 @@ contract Gateway is IGateway, IInitializable {
         Weight calldata weightAtMost,
         bytes calldata call
     ) external payable {
+        if (call.length == 0 || destinationFee == 0 || weightAtMost.refTime == 0 || weightAtMost.proofSize == 0) {
+            revert InvalidTransact();
+        }
         bytes memory payload =
             SubstrateTypes.Transact(msg.sender, originKind.encode(), destinationFee, weightAtMost, call);
         Costs memory costs = _calculateTransactCost(destinationFee);
