@@ -61,6 +61,8 @@ async fn send_token_to_penpal() {
 		.unwrap();
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
+	// Sending to an account non-existent so the destination_fee here should cover the ED on penpal
+	// https://github.com/Snowfork/polkadot-sdk/blob/68ab248801fdadef7ef4923c21d6b9d55a5f15b4/cumulus/parachains/runtimes/testing/penpal/src/lib.rs#L265
 	let destination_fee = 40_000_000_000;
 	let fee = gateway
 		.quote_send_token_fee(weth.address(), PENPAL_PARA_ID, destination_fee)

@@ -83,7 +83,6 @@ func generateInboundFixtureCmd() *cobra.Command {
 	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	cmd.Flags().String("test_case", "register_token", "Inbound test case")
-	cmd.Flags().String("execution_relay_config", "/tmp/snowbridge/execution-relay-asset-hub.json", "Config file of execution relayer")
 	return cmd
 }
 
@@ -676,11 +675,7 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
 		s := syncer.New(client, conf.Source.Beacon.Spec, &store)
 
-		executionRelayConfig, err := cmd.Flags().GetString("execution_relay_config")
-		if err != nil {
-			return err
-		}
-		viper.SetConfigFile(executionRelayConfig)
+		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
 
 		if err = viper.ReadInConfig(); err != nil {
 			return err
