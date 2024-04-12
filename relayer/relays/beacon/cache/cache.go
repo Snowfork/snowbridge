@@ -79,10 +79,11 @@ func (b *BeaconCache) AddCheckPoint(finalizedHeaderRoot common.Hash, blockRootsT
 	length := len(b.Finalized.Checkpoints.Slots)
 
 	// check previous slot and overwrite proof
-	if length > 2 && b.Finalized.Checkpoints.Slots[length-1] - b.Finalized.Checkpoints.Slots[length-2] < 8192 {
-		b.addSlot(slot, true)
+	if length > 2 && b.Finalized.Checkpoints.Slots[length-1]-b.Finalized.Checkpoints.Slots[length-2] < 8192 {
+		overwrittenSlot := b.overwriteSlot(slot)
+		delete(b.Finalized.Checkpoints.Proofs, overwrittenSlot)
 	} else {
-		b.addSlot(slot, false)
+		b.addSlot(slot)
 	}
 
 	b.Finalized.Checkpoints.Proofs[slot] = Proof{
@@ -96,7 +97,7 @@ func (b *BeaconCache) AddCheckPoint(finalizedHeaderRoot common.Hash, blockRootsT
 
 func (b *BeaconCache) AddCheckPointSlots(slots []uint64) {
 	for _, slot := range slots {
-		b.addSlot(slot, false)
+		b.addSlot(slot)
 	}
 }
 
@@ -136,7 +137,7 @@ func (b *BeaconCache) pruneOldCheckpoints() {
 	b.Finalized.Checkpoints.Slots = slotsToKeep
 }
 
-func (b *BeaconCache) addSlot(slot uint64, overwrite bool) {
+func (b *BeaconCache) addSlot(slot uint64) {
 	addedAlready := false
 	for _, i := range b.Finalized.Checkpoints.Slots {
 		if i == slot {
@@ -145,14 +146,28 @@ func (b *BeaconCache) addSlot(slot uint64, overwrite bool) {
 		}
 	}
 	if !addedAlready {
-		if overwrite {
-			b.Finalized.Checkpoints.Slots[len(b.Finalized.Checkpoints.Slots)-1] = slot
-		} else {
-			b.Finalized.Checkpoints.Slots = append(b.Finalized.Checkpoints.Slots, slot)
-		}
-
+		b.Finalized.Checkpoints.Slots = append(b.Finalized.Checkpoints.Slots, slot)
 	}
 	sort.Slice(b.Finalized.Checkpoints.Slots, func(i, j int) bool { return b.Finalized.Checkpoints.Slots[i] < b.Finalized.Checkpoints.Slots[j] })
+}
+
+func (b *BeaconCache) overwriteSlot(slot uint64) uint64 {
+	addedAlready := false
+	for _, i := range b.Finalized.Checkpoints.Slots {
+		if i == slot {
+			addedAlready = true
+			break
+		}
+	}
+	var overwrittenSlot = uint64(0)
+	if !addedAlready {
+		lastIndex := len(b.Finalized.Checkpoints.Slots) - 1
+		overwrittenSlot = b.Finalized.Checkpoints.Slots[lastIndex]
+		b.Finalized.Checkpoints.Slots[lastIndex] = slot
+	}
+	sort.Slice(b.Finalized.Checkpoints.Slots, func(i, j int) bool { return b.Finalized.Checkpoints.Slots[i] < b.Finalized.Checkpoints.Slots[j] })
+
+	return overwrittenSlot
 }
 
 func (b *BeaconCache) calculateClosestCheckpointSlot(slot uint64) (uint64, error) {
