@@ -76,7 +76,15 @@ func (b *BeaconCache) SetInitialCheckpointSlot(slot uint64) {
 }
 
 func (b *BeaconCache) AddCheckPoint(finalizedHeaderRoot common.Hash, blockRootsTree *ssz.Node, slot uint64) {
-	b.addSlot(slot)
+	length := len(b.Finalized.Checkpoints.Slots)
+
+	// check previous slot and overwrite proof
+	if length > 2 && b.Finalized.Checkpoints.Slots[length-1] - b.Finalized.Checkpoints.Slots[length-2] < 8192 {
+		b.addSlot(slot, true)
+	} else {
+		b.addSlot(slot, false)
+	}
+
 	b.Finalized.Checkpoints.Proofs[slot] = Proof{
 		FinalizedBlockRoot: finalizedHeaderRoot,
 		BlockRootsTree:     blockRootsTree,
@@ -88,7 +96,7 @@ func (b *BeaconCache) AddCheckPoint(finalizedHeaderRoot common.Hash, blockRootsT
 
 func (b *BeaconCache) AddCheckPointSlots(slots []uint64) {
 	for _, slot := range slots {
-		b.addSlot(slot)
+		b.addSlot(slot, false)
 	}
 }
 
@@ -128,7 +136,7 @@ func (b *BeaconCache) pruneOldCheckpoints() {
 	b.Finalized.Checkpoints.Slots = slotsToKeep
 }
 
-func (b *BeaconCache) addSlot(slot uint64) {
+func (b *BeaconCache) addSlot(slot uint64, overwrite bool) {
 	addedAlready := false
 	for _, i := range b.Finalized.Checkpoints.Slots {
 		if i == slot {
@@ -137,7 +145,12 @@ func (b *BeaconCache) addSlot(slot uint64) {
 		}
 	}
 	if !addedAlready {
-		b.Finalized.Checkpoints.Slots = append(b.Finalized.Checkpoints.Slots, slot)
+		if overwrite {
+			b.Finalized.Checkpoints.Slots[len(b.Finalized.Checkpoints.Slots)-1] = slot
+		} else {
+			b.Finalized.Checkpoints.Slots = append(b.Finalized.Checkpoints.Slots, slot)
+		}
+
 	}
 	sort.Slice(b.Finalized.Checkpoints.Slots, func(i, j int) bool { return b.Finalized.Checkpoints.Slots[i] < b.Finalized.Checkpoints.Slots[j] })
 }
