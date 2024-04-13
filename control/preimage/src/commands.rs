@@ -71,10 +71,7 @@ pub async fn pricing_parameters(
             params.multiplier_denominator.into(),
         )),
         fee_per_gas: crate::bridge_hub_runtime::runtime_types::primitive_types::U256(
-            U256::from(GWEI_UNIT)
-                .checked_mul(U256::from(params.fee_per_gas))
-                .unwrap()
-                .into_limbs(),
+            params.fee_per_gas.into_limbs(),
         ),
         rewards: Rewards {
             local: params.local_reward.to::<u128>(),

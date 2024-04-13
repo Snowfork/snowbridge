@@ -10,7 +10,6 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
 use constants::{POLKADOT_DECIMALS, POLKADOT_SYMBOL};
 use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_batch};
-use hex_literal::hex;
 use std::{io::Write, path::PathBuf, process::exit};
 use subxt::{OnlineClient, PolkadotConfig};
 
@@ -37,7 +36,6 @@ pub enum Command {
     PricingParameters(PricingParametersArgs),
     /// Set the checkpoint for the beacon light client
     ForceCheckpoint(ForceCheckpointArgs),
-    Foo,
 }
 
 #[derive(Debug, Args)]
@@ -149,10 +147,11 @@ fn parse_hex_bytes(v: &str) -> Result<Bytes, String> {
         .map_err(|_| "invalid hex value".to_owned())
 }
 
-fn parse_units_polkadot(v: &str) -> Result<u128, String> {
+fn parse_units_polkadot(v: &str) -> Result<U128, String> {
     let amount = parse_units(v, POLKADOT_DECIMALS).map_err(|e| format!("{e}"))?;
     let amount: U256 = amount.into();
-    Ok(amount.to::<u128>())
+    let amount: U128 = amount.to::<U128>();
+    Ok(amount)
 }
 
 fn parse_units_gwei(v: &str) -> Result<U256, String> {
@@ -201,8 +200,10 @@ static CONFIG: StaticConfig<'static> = StaticConfig {
 
 #[cfg(feature = "polkadot")]
 static CONFIG: StaticConfig<'static> = StaticConfig {
-    api: "wss://polkadot-bridge-hub-rpc.polkadot.io",
-    asset_hub_api: "wss://polkadot-asset-hub-rpc.polkadot.io",
+    //    api: "wss://polkadot-bridge-hub-rpc.polkadot.io",
+    //    asset_hub_api: "wss://polkadot-asset-hub-rpc.polkadot.io",
+    api: "ws://localhost:8001",
+    asset_hub_api: "ws://localhost:8000",
 };
 
 #[tokio::main]
@@ -211,8 +212,6 @@ async fn main() {
         eprintln!("{err}");
     }
 }
-
-use std::{fs::File, io::Read};
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
@@ -267,18 +266,19 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let call2 = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
             utility_batch(vec![call1, call2])
         }
-        Command::Foo => {
-            let mut file = File::open("preimage-upgrade-1.2.0.bin").expect("File not found");
-            let mut buf: Vec<u8> = Vec::new();
-            file.read_to_end(&mut buf).expect("Failed to read the file");
-
-            let f = buf.encode();
-            println!("{}", hex::encode(f));
-            exit(0);
-        }
     };
 
     let preimage = call.encode();
+
+    use sp_crypto_hashing::blake2_256;
+    use std::fs::File;
+
+    let preimage_hash = blake2_256(&preimage);
+    eprintln!("PreImage Hash: 0x{}", hex::encode(preimage_hash));
+    eprintln!("PreImage Size: {}", preimage.len());
+
+    let mut file = File::create("preimage-with-length-prefix.hex")?;
+    file.write_all(hex::encode(preimage.encode()).as_ref())?;
 
     match cli.format {
         Format::Hex => {

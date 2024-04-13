@@ -19,3 +19,9 @@ pub const POLKADOT_SYMBOL: &str = "KSM";
 
 #[cfg(feature = "polkadot")]
 pub const POLKADOT_SYMBOL: &str = "DOT";
+
+#[cfg(feature = "polkadot")]
+pub const ASSET_HUB_ID: u32 = 1000;
+
+#[cfg(feature = "polkadot")]
+pub const BRIDGE_HUB_ID: u32 = 1002;

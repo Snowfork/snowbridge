@@ -2,6 +2,7 @@ use bridge_hub_runtime::ethereum_system::storage::types::pricing_parameters::Pri
 use codec::Encode;
 use subxt::{utils::H160, utils::H256, OnlineClient, PolkadotConfig};
 
+use crate::constants::{ASSET_HUB_ID, BRIDGE_HUB_ID};
 use crate::Context;
 
 use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
@@ -73,12 +74,10 @@ pub async fn send_xcm_bridge_hub(
         ]);
     }
 
-    let para_id = query_para_id(&context.api).await?;
-
     let call = RelayRuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
         dest: Box::new(VersionedLocation::V3(MultiLocation {
             parents: 0,
-            interior: Junctions::X1(Junction::Parachain(para_id)),
+            interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_ID)),
         })),
         message: Box::new(VersionedXcm::V3(Xcm(instructions))),
     });
@@ -118,12 +117,10 @@ pub async fn send_xcm_asset_hub(
         ]);
     }
 
-    let para_id = query_para_id_asset_hub(&context.asset_hub_api).await?;
-
     let call = RelayRuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
         dest: Box::new(VersionedLocation::V3(MultiLocation {
             parents: 0,
-            interior: Junctions::X1(Junction::Parachain(para_id)),
+            interior: Junctions::X1(Junction::Parachain(ASSET_HUB_ID)),
         })),
         message: Box::new(VersionedXcm::V3(Xcm(instructions))),
     });
@@ -161,40 +158,6 @@ pub async fn query_weight_asset_hub(
         .call(runtime_api_call)
         .await?;
     Ok((call_info.weight.ref_time, call_info.weight.proof_size))
-}
-
-pub async fn query_para_id(
-    api: &OnlineClient<PolkadotConfig>,
-) -> Result<u32, Box<dyn std::error::Error>> {
-    let storage_query = bridge_hub_runtime::storage()
-        .parachain_info()
-        .parachain_id();
-    let bridge_hub_para_id = api
-        .storage()
-        .at_latest()
-        .await?
-        .fetch(&storage_query)
-        .await?
-        .expect("parachain id not set");
-
-    Ok(bridge_hub_para_id.0)
-}
-
-pub async fn query_para_id_asset_hub(
-    api: &OnlineClient<PolkadotConfig>,
-) -> Result<u32, Box<dyn std::error::Error>> {
-    let storage_query = crate::asset_hub_runtime::storage()
-        .parachain_info()
-        .parachain_id();
-    let asset_hub_para_id = api
-        .storage()
-        .at_latest()
-        .await?
-        .fetch(&storage_query)
-        .await?
-        .expect("parachain id not set");
-
-    Ok(asset_hub_para_id.0)
 }
 
 pub fn utility_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
