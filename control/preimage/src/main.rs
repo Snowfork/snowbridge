@@ -7,7 +7,7 @@ mod helpers;
 mod relay_runtime;
 
 use alloy_primitives::{utils::parse_units, Address, Bytes, FixedBytes, U128, U256};
-use chopsticks::make_chopsticks_script;
+use chopsticks::generate_chopsticks_script;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
 use constants::{POLKADOT_DECIMALS, POLKADOT_SYMBOL};
@@ -271,7 +271,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let preimage = call.encode();
 
-    make_chopsticks_script(&preimage, "chopsticks-execute-upgrade.js".into());
+    generate_chopsticks_script(&preimage, "chopsticks-execute-upgrade.js".into())?;
 
     match cli.format {
         Format::Hex => {

@@ -1,71 +1,58 @@
 use codec::Encode;
 use handlebars::Handlebars;
+use serde::Serialize;
 use sp_crypto_hashing::blake2_256;
-use std::collections::BTreeMap;
 use std::io::prelude::*;
 use std::{fs::File, path::PathBuf};
 
-static TEMPLATE: &str = r#"
-    const number = (await api.rpc.chain.getHeader()).number.toNumber()
+#[derive(Clone, Serialize, Debug)]
+struct TemplateData {
+    preimage: Preimage,
+}
 
-    await api.rpc('dev_setStorage', {
-        Preimage: {
-            PreimageFor: [
-                [
-                [[{{PREIMAGE_HASH}}, {{PREIMAGE_SIZE}}]],
-                {{PREIMAGE}}
-                ]
-            ],
-            StatusFor: [
-                [
-                [{{PREIMAGE_HASH}}],
-                {
-                    Requested: {
-                        count: 1,
-                        len: {{PREIMAGE_SIZE}},
-                    },
-                },
-                ],
-            ],
-        },
-        Scheduler: {
-            Agenda: [
-                [
-                [number + 1],
-                [
-                    {
-                        call: {
-                            Lookup: {
-                                hash: {{PREIMAGE_HASH}},
-                                len: {{PREIMAGE_SIZE}},
-                            },
-                        },
-                        origin: {
-                            system: 'Root',
-                        },
-                    },
-                ],
-                ],
-            ],
-        },
-    })
+impl TemplateData {
+    fn new(preimage: &[u8]) -> Self {
+        TemplateData {
+            preimage: preimage.into(),
+        }
+    }
+}
 
-    await api.rpc('dev_newBlock', { count: 1 })
-"#;
+#[derive(Clone, Serialize, Debug)]
+struct Preimage {
+    hash: String,
+    bytes: String,
+    size: String,
+}
 
-pub fn make_chopsticks_script(preimage: &[u8], output_path: PathBuf) {
-    let preimage_hash = format!("\"0x{}\"", hex::encode(blake2_256(preimage)));
-    let preimage_size = format!("{}", preimage.len());
-    let preimage_hex = format!("\"0x{}\"", hex::encode(preimage.to_owned().encode()));
+impl From<&[u8]> for Preimage {
+    fn from(data: &[u8]) -> Self {
+        Preimage {
+            hash: as_hex_literal(&blake2_256(data)),
+            size: format!("{}", data.len()),
+            bytes: as_hex_literal(&data.to_owned().encode()),
+        }
+    }
+}
 
-    let mut substitutions = BTreeMap::new();
-    substitutions.insert("PREIMAGE_HASH".to_string(), preimage_hash);
-    substitutions.insert("PREIMAGE_SIZE".to_string(), preimage_size);
-    substitutions.insert("PREIMAGE_HEX".to_string(), preimage_hex);
+fn as_hex_literal(s: &[u8]) -> String {
+    format!("\"0x{}\"", hex::encode(s))
+}
 
-    let output = Handlebars::new()
-        .render_template(TEMPLATE, &substitutions)
-        .expect("render");
-    let mut file = File::create(output_path).expect("create");
-    file.write_all(output.as_bytes()).expect("write");
+pub fn generate_chopsticks_script(
+    preimage: &[u8],
+    output_path: PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut registry = Handlebars::new();
+
+    // Disable HTML escaping
+    registry.register_escape_fn(|s| -> String { s.to_string() });
+
+    let template = include_str!("../templates/chopsticks-execute-upgrade.js.template");
+    let data = TemplateData::new(preimage);
+    let output = registry.render_template(template, &data)?;
+    let mut file = File::create(output_path)?;
+    file.write_all(output.as_bytes())?;
+
+    Ok(())
 }

@@ -1,0 +1,45 @@
+const number = (await api.rpc.chain.getHeader()).number.toNumber()
+
+await api.rpc('dev_setStorage', {
+    Preimage: {
+        PreimageFor: [
+            [
+            [[{{preimage.hash}}, {{preimage.size}}]],
+            {{preimage.bytes}}
+            ]
+        ],
+        StatusFor: [
+            [
+            [{{{preimage.hash}}}],
+            {
+                Requested: {
+                    count: 1,
+                    len: {{preimage.size}},
+                },
+            },
+            ],
+        ],
+    },
+    Scheduler: {
+        Agenda: [
+            [
+            [number + 1],
+            [
+                {
+                    call: {
+                        Lookup: {
+                            hash: {{preimage.hash}},
+                            len: {{preimage.size}},
+                        },
+                    },
+                    origin: {
+                        system: 'Root',
+                    },
+                },
+            ],
+            ],
+        ],
+    },
+})
+
+await api.rpc('dev_newBlock', { count: 1 })
