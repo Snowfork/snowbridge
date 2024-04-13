@@ -1,27 +1,21 @@
 #[cfg(feature = "rococo")]
-pub const POLKADOT_DECIMALS: u8 = 12;
-
-#[cfg(feature = "kusama")]
-pub const POLKADOT_DECIMALS: u8 = 12;
-
-#[cfg(feature = "polkadot")]
-pub const POLKADOT_DECIMALS: u8 = 10;
-
-pub const ETHER_DECIMALS: u8 = 18;
-
-pub const GWEI_UNIT: u128 = 1_000_000_000;
+mod rococo {
+    pub const POLKADOT_SYMBOL: &str = "ROC";
+    pub const POLKADOT_DECIMALS: u8 = 12;
+    pub const ASSET_HUB_ID: u32 = 1000;
+    pub const BRIDGE_HUB_ID: u32 = 1002;
+}
 
 #[cfg(feature = "rococo")]
-pub const POLKADOT_SYMBOL: &str = "ROC";
-
-#[cfg(feature = "kusama")]
-pub const POLKADOT_SYMBOL: &str = "KSM";
+pub use rococo::*;
 
 #[cfg(feature = "polkadot")]
-pub const POLKADOT_SYMBOL: &str = "DOT";
+mod polkadot {
+    pub const POLKADOT_SYMBOL: &str = "DOT";
+    pub const POLKADOT_DECIMALS: u8 = 10;
+    pub const ASSET_HUB_ID: u32 = 1000;
+    pub const BRIDGE_HUB_ID: u32 = 1002;
+}
 
 #[cfg(feature = "polkadot")]
-pub const ASSET_HUB_ID: u32 = 1000;
-
-#[cfg(feature = "polkadot")]
-pub const BRIDGE_HUB_ID: u32 = 1002;
+pub use polkadot::*;

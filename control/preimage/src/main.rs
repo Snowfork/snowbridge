@@ -1,16 +1,18 @@
 mod asset_hub_runtime;
 mod bridge_hub_runtime;
+mod chopsticks;
 mod commands;
 mod constants;
 mod helpers;
 mod relay_runtime;
 
 use alloy_primitives::{utils::parse_units, Address, Bytes, FixedBytes, U128, U256};
+use chopsticks::make_chopsticks_script;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
 use constants::{POLKADOT_DECIMALS, POLKADOT_SYMBOL};
-use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_batch};
-use std::{io::Write, path::PathBuf, process::exit};
+use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_force_batch};
+use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
 
 #[derive(Debug, Parser)]
@@ -240,16 +242,15 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let call1 = send_xcm_bridge_hub(
                 &context,
                 vec![
-                    commands::force_checkpoint(&params.force_checkpoint),
-                    commands::gateway_operating_mode(&params.gateway_operating_mode),
                     commands::set_gateway_address(&params.gateway_address),
                     set_pricing_parameters,
+                    commands::force_checkpoint(&params.force_checkpoint),
                 ],
             )
             .await?;
             let call2 =
                 send_xcm_asset_hub(&context, vec![force_xcm_version(), set_ethereum_fee]).await?;
-            utility_batch(vec![call1, call2])
+            utility_force_batch(vec![call1, call2])
         }
         Command::GatewayOperatingMode(params) => {
             let call = commands::gateway_operating_mode(params);
@@ -264,30 +265,20 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 commands::pricing_parameters(&context, params).await?;
             let call1 = send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
             let call2 = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
-            utility_batch(vec![call1, call2])
+            utility_force_batch(vec![call1, call2])
         }
     };
 
     let preimage = call.encode();
 
-    use sp_crypto_hashing::blake2_256;
-    use std::fs::File;
-
-    let preimage_hash = blake2_256(&preimage);
-    eprintln!("PreImage Hash: 0x{}", hex::encode(preimage_hash));
-    eprintln!("PreImage Size: {}", preimage.len());
-
-    let mut file = File::create("preimage-with-length-prefix.hex")?;
-    file.write_all(hex::encode(preimage.encode()).as_ref())?;
+    make_chopsticks_script(&preimage, "chopsticks-execute-upgrade.js".into());
 
     match cli.format {
         Format::Hex => {
             println!("0x{}", hex::encode(preimage));
         }
         Format::Binary => {
-            std::io::stdout()
-                .write_all(&preimage)
-                .expect("write stdout");
+            std::io::stdout().write_all(&preimage).expect("write");
         }
     }
 

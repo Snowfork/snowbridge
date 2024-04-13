@@ -30,16 +30,22 @@ use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
 use sp_arithmetic::helpers_128bit::multiply_by_rational_with_rounding;
 use sp_arithmetic::per_things::Rounding;
 
+const MAX_REF_TIME: u128 = 500_000_000_000 - 1;
+const MAX_PROOF_SIZE: u128 = 3 * 1024 * 1024 - 1;
+
 // Increase call weight by 25% as a buffer in case the chain is upgraded with new weights
 // while the proposal is still in flight.
 pub fn increase_weight(ref_time: &mut u64, proof_size: &mut u64) {
-    let x = multiply_by_rational_with_rounding(*ref_time as u128, 125, 100, Rounding::Up)
-        .expect("overflow");
-    let y = multiply_by_rational_with_rounding(*proof_size as u128, 125, 100, Rounding::Up)
-        .expect("overflow");
+    let _ref_time = multiply_by_rational_with_rounding(*ref_time as u128, 125, 100, Rounding::Up)
+        .expect("overflow")
+        .min(MAX_REF_TIME);
+    let _proof_size =
+        multiply_by_rational_with_rounding(*proof_size as u128, 125, 100, Rounding::Up)
+            .expect("overflow")
+            .min(MAX_PROOF_SIZE);
 
-    *ref_time = x.try_into().expect("overflow");
-    *proof_size = y.try_into().expect("overflow");
+    *ref_time = _ref_time.try_into().expect("overflow");
+    *proof_size = _proof_size.try_into().expect("overflow");
 }
 
 pub async fn send_xcm_bridge_hub(
@@ -160,9 +166,9 @@ pub async fn query_weight_asset_hub(
     Ok((call_info.weight.ref_time, call_info.weight.proof_size))
 }
 
-pub fn utility_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
+pub fn utility_force_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
     RelayRuntimeCall::Utility(
-        crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::batch { calls },
+        crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::force_batch { calls },
     )
 }
 
