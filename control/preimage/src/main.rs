@@ -10,7 +10,7 @@ use alloy_primitives::{utils::parse_units, Address, Bytes, FixedBytes, U128, U25
 use chopsticks::generate_chopsticks_script;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
-use constants::{POLKADOT_DECIMALS, POLKADOT_SYMBOL};
+use constants::{ASSET_HUB_API, BRIDGE_HUB_API, POLKADOT_DECIMALS, POLKADOT_SYMBOL};
 use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_force_batch};
 use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
@@ -21,6 +21,9 @@ struct Cli {
     /// Output format of preimage
     #[arg(long, value_enum, default_value_t=Format::Hex)]
     format: Format,
+
+    #[command(flatten)]
+    api_endpoints: ApiEndpoints,
 
     #[command(subcommand)]
     command: Command,
@@ -135,6 +138,15 @@ pub struct PricingParametersArgs {
     pub remote_reward: U256,
 }
 
+#[derive(Debug, Args)]
+pub struct ApiEndpoints {
+    #[arg(long, value_name = "URL")]
+    bridge_hub_api: Option<String>,
+
+    #[arg(long, value_name = "URL")]
+    asset_hub_api: Option<String>,
+}
+
 fn parse_eth_address(v: &str) -> Result<Address, String> {
     Address::parse_checksummed(v, None).map_err(|_| "invalid ethereum address".to_owned())
 }
@@ -172,41 +184,10 @@ pub enum Format {
     Binary,
 }
 
-struct StaticConfig<'a> {
-    api: &'a str,
-    asset_hub_api: &'a str,
-}
-
 struct Context {
-    api: Box<OnlineClient<PolkadotConfig>>,
+    bridge_hub_api: Box<OnlineClient<PolkadotConfig>>,
     asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
 }
-
-#[cfg(feature = "rococo-local")]
-static CONFIG: StaticConfig<'static> = StaticConfig {
-    api: "ws://127.0.0.1:11144",
-    asset_hub_api: "ws://127.0.0.1:12144",
-};
-
-#[cfg(feature = "rococo")]
-static CONFIG: StaticConfig<'static> = StaticConfig {
-    api: "wss://rococo-bridge-hub-rpc.polkadot.io",
-    asset_hub_api: "wss://rococo-asset-hub-rpc.polkadot.io",
-};
-
-#[cfg(feature = "kusama")]
-static CONFIG: StaticConfig<'static> = StaticConfig {
-    api: "wss://kusama-bridge-hub-rpc.polkadot.io",
-    asset_hub_api: "wss://kusama-asset-hub-rpc.polkadot.io",
-};
-
-#[cfg(feature = "polkadot")]
-static CONFIG: StaticConfig<'static> = StaticConfig {
-    //    api: "wss://polkadot-bridge-hub-rpc.polkadot.io",
-    //    asset_hub_api: "wss://polkadot-asset-hub-rpc.polkadot.io",
-    api: "ws://localhost:8001",
-    asset_hub_api: "ws://localhost:8000",
-};
 
 #[tokio::main]
 async fn main() {
@@ -218,16 +199,22 @@ async fn main() {
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
-    let api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(CONFIG.api)
-        .await
-        .expect("can not connect to bridgehub");
+    let bridge_hub_api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(
+        cli.api_endpoints
+            .bridge_hub_api
+            .unwrap_or(BRIDGE_HUB_API.to_owned()),
+    )
+    .await?;
 
-    let asset_hub_api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(CONFIG.asset_hub_api)
-        .await
-        .expect("can not connect to assethub");
+    let asset_hub_api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(
+        cli.api_endpoints
+            .asset_hub_api
+            .unwrap_or(ASSET_HUB_API.to_owned()),
+    )
+    .await?;
 
     let context = Context {
-        api: Box::new(api),
+        bridge_hub_api: Box::new(bridge_hub_api),
         asset_hub_api: Box::new(asset_hub_api),
     };
 
@@ -278,7 +265,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             println!("0x{}", hex::encode(preimage));
         }
         Format::Binary => {
-            std::io::stdout().write_all(&preimage).expect("write");
+            std::io::stdout().write_all(&preimage)?;
         }
     }
 

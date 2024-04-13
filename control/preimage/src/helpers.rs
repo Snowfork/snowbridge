@@ -56,7 +56,7 @@ pub async fn send_xcm_bridge_hub(
 
     for call in calls.iter() {
         let (mut ref_time, mut proof_size) =
-            query_weight_bridge_hub(&context.api, call.clone()).await?;
+            query_weight_bridge_hub(&context.bridge_hub_api, call.clone()).await?;
         increase_weight(&mut ref_time, &mut proof_size);
         accum.push((ref_time, proof_size, call.encode()));
     }

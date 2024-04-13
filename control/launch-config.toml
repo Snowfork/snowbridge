@@ -18,6 +18,7 @@ chain_spec_path = "./polkadot-local.json"
 [[relaychain.nodes]]
 name = "alice"
 args = ["--alice"]
+ws_port = 8000
 validator = true
 
 [[relaychain.nodes]]
@@ -46,6 +47,7 @@ chain = "asset-hub-polkadot-local"
 name = "assethub01"
 command = "./polkadot-parachain"
 args = ["--no-hardware-benchmarks"]
+ws_port = 8001
 
 ## Bridge Hub
 [[parachains]]
@@ -62,3 +64,4 @@ args = [
 ]
 name = "bridgehub01"
 command = "./polkadot-parachain"
+ws_port = 8002

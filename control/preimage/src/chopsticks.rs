@@ -36,7 +36,7 @@ impl From<&[u8]> for Preimage {
 }
 
 fn as_hex_literal(s: &[u8]) -> String {
-    format!("\"0x{}\"", hex::encode(s))
+    format!("0x{}", hex::encode(s))
 }
 
 pub fn generate_chopsticks_script(
@@ -48,7 +48,7 @@ pub fn generate_chopsticks_script(
     // Disable HTML escaping
     registry.register_escape_fn(|s| -> String { s.to_string() });
 
-    let template = include_str!("../templates/chopsticks-execute-upgrade.js.template");
+    let template = include_str!("../templates/chopsticks-execute-upgrade.js.hbs");
     let data = TemplateData::new(preimage);
     let output = registry.render_template(template, &data)?;
     let mut file = File::create(output_path)?;

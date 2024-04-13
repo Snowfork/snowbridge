@@ -81,7 +81,8 @@ pub async fn pricing_parameters(
         },
     };
 
-    let outbound_delivery_fee = calculate_delivery_fee(&context.api, &pricing_params).await?;
+    let outbound_delivery_fee =
+        calculate_delivery_fee(&context.bridge_hub_api, &pricing_params).await?;
 
     let total_outbound_fee = outbound_delivery_fee.local + outbound_delivery_fee.remote;
 
