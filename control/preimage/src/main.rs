@@ -88,7 +88,7 @@ pub enum GatewayOperatingModeEnum {
 
 #[derive(Debug, Args)]
 pub struct GatewayAddressArgs {
-    /// Path to JSON file containing checkpoint
+    /// Address of the contract on Ethereum
     #[arg(long, value_name = "ADDRESS")]
     pub gateway_address: Address,
 }
