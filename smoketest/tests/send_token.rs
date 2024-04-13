@@ -57,13 +57,15 @@ async fn send_token() {
 		.await
 		.unwrap();
 
+	println!("beneficiary: {:#?}", hex::encode::<Vec<u8>>((*NOEXIST_PUBLIC).into()));
+
 	// Lock tokens into vault
 	let amount: u128 = U256::from(value).low_u128();
 	let receipt = gateway
 		.send_token(
 			weth.address(),
 			ASSET_HUB_PARA_ID,
-			i_gateway::MultiAddress { kind: 1, data: (*BOB_PUBLIC).into() },
+			i_gateway::MultiAddress { kind: 1, data: (*NOEXIST_PUBLIC).into() },
 			destination_fee,
 			amount,
 		)
@@ -104,7 +106,7 @@ async fn send_token() {
 			AccountKey20 { network: None, key: WETH_CONTRACT.into() },
 		),
 	};
-	let expected_owner: AccountId32 = (*BOB_PUBLIC).into();
+	let expected_owner: AccountId32 = (*NOEXIST_PUBLIC).into();
 
 	let mut issued_event_found = false;
 	while let Some(Ok(block)) = blocks.next().await {

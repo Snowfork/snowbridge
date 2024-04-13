@@ -91,7 +91,7 @@ config_penpal() {
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
 
     # foreignAssets::force_create(WETH)
-    local call=0x3301020209079edaa802030087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d0004
+    local call=0x3301020209079edaa802030087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d0104
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
 }
 
