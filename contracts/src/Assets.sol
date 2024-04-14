@@ -93,11 +93,11 @@ library Assets {
         // favourable exchange rate. For example supplying Ether
         // and gaining a more valuable amount of DOT on the destination chain.
         //
-        // For safety, `maxDestinationChainFee` should be less valuable
-        // than the gas cost to send tokens.
-        //
         // Also prevents users from mistakenly sending more fees than would be required
         // which has negative effects like draining AssetHub's sovereign account.
+        //
+        // For safety, `maxDestinationChainFee` should be less valuable
+        // than the gas cost to send tokens.
         if (destinationChainFee > maxDestinationChainFee) {
             revert InvalidDestinationFee();
         }
