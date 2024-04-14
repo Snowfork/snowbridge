@@ -57,10 +57,16 @@ contract DeployScript is Script {
         bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
 
         uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
+        uint128 maxDestinationFee = uint128(vm.envUint("RESERVE_TRANSFER_MAX_DESTINATION_FEE"));
 
         AgentExecutor executor = new AgentExecutor();
         Gateway gatewayLogic = new Gateway(
-            address(beefyClient), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals
+            address(beefyClient),
+            address(executor),
+            bridgeHubParaID,
+            bridgeHubAgentID,
+            foreignTokenDecimals,
+            maxDestinationFee
         );
 
         bool rejectOutboundMessages = vm.envBool("REJECT_OUTBOUND_MESSAGES");

@@ -71,6 +71,13 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     // 2. Calling implementation function
     uint256 DISPATCH_OVERHEAD_GAS = 10_000;
 
+    // The maximum fee that can be sent to a destination parachain to pay for execution (DOT).
+    // Has two functions:
+    // * Reduces the ability of users to perform arbitrage using a favourable exchange rate
+    // * Prevents users from mistakenly providing too much fees, which would drain AssetHub's
+    //   sovereign account here on Ethereum.
+    uint128 internal immutable MAX_DESTINATION_FEE;
+
     uint8 internal immutable FOREIGN_TOKEN_DECIMALS;
 
     error InvalidProof();
@@ -101,7 +108,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         address agentExecutor,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
-        uint8 foreignTokenDecimals
+        uint8 foreignTokenDecimals,
+        uint128 maxDestinationFee
     ) {
         if (bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0) {
             revert InvalidConstructorParams();
@@ -113,6 +121,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
         FOREIGN_TOKEN_DECIMALS = foreignTokenDecimals;
+        MAX_DESTINATION_FEE = maxDestinationFee;
     }
 
     /// @dev Submit a message from Polkadot for verification and dispatch
@@ -395,7 +404,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         view
         returns (uint256)
     {
-        return _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee));
+        return _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee, MAX_DESTINATION_FEE));
     }
 
     // Transfer ERC20 tokens to a Polkadot parachain
@@ -407,7 +416,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint128 amount
     ) external payable {
         _submitOutbound(
-            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
+            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount)
         );
     }
 
