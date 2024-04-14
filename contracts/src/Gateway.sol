@@ -404,7 +404,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         view
         returns (uint256)
     {
-        return _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee));
+        return _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee, MAX_DESTINATION_FEE));
     }
 
     // Transfer ERC20 tokens to a Polkadot parachain

@@ -42,7 +42,7 @@ library Assets {
         IERC20(token).safeTransferFrom(sender, agent, amount);
     }
 
-    function sendTokenCosts(address token, ParaID destinationChain, uint128 destinationChainFee)
+    function sendTokenCosts(address token, ParaID destinationChain, uint128 destinationChainFee, uint128 maxDestinationChainFee)
         external
         view
         returns (Costs memory costs)
@@ -53,10 +53,10 @@ library Assets {
             revert TokenNotRegistered();
         }
 
-        return _sendTokenCosts(destinationChain, destinationChainFee);
+        return _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
     }
 
-    function _sendTokenCosts(ParaID destinationChain, uint128 destinationChainFee)
+    function _sendTokenCosts(ParaID destinationChain, uint128 destinationChainFee, uint128 maxDestinationChainFee)
         internal
         view
         returns (Costs memory costs)
@@ -65,6 +65,19 @@ library Assets {
         if ($.assetHubParaID == destinationChain) {
             costs.foreign = $.assetHubReserveTransferFee;
         } else {
+            // Reduce the ability for users to perform arbitrage by exploiting a
+            // favourable exchange rate. For example supplying Ether
+            // and gaining a more valuable amount of DOT on the destination chain.
+            //
+            // Also prevents users from mistakenly sending more fees than would be required
+            // which has negative effects like draining AssetHub's sovereign account.
+            //
+            // For safety, `maxDestinationChainFee` should be less valuable
+            // than the gas cost to send tokens.
+            if (destinationChainFee > maxDestinationChainFee) {
+                revert InvalidDestinationFee();
+            }
+
             // If the final destination chain is not AssetHub, then the fee needs to additionally
             // include the cost of executing an XCM on the final destination parachain.
             costs.foreign = $.assetHubReserveTransferFee + destinationChainFee;
@@ -89,24 +102,11 @@ library Assets {
             revert TokenNotRegistered();
         }
 
-        // Reduce the ability for users to perform arbitrage by exploiting a
-        // favourable exchange rate. For example supplying Ether
-        // and gaining a more valuable amount of DOT on the destination chain.
-        //
-        // Also prevents users from mistakenly sending more fees than would be required
-        // which has negative effects like draining AssetHub's sovereign account.
-        //
-        // For safety, `maxDestinationChainFee` should be less valuable
-        // than the gas cost to send tokens.
-        if (destinationChainFee > maxDestinationChainFee) {
-            revert InvalidDestinationFee();
-        }
-
         // Lock the funds into AssetHub's agent contract
         _transferToAgent($.assetHubAgent, token, sender, amount);
 
         ticket.dest = $.assetHubParaID;
-        ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee);
+        ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
 
         // Construct a message payload
         if (destinationChain == $.assetHubParaID) {

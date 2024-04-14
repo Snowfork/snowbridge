@@ -853,10 +853,10 @@ contract GatewayTest is Test {
         uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         IGateway(address(gateway)).registerToken{value: fee}(address(token));
 
-        uint128 largeFee = maxDestinationFee + 1; // greater than 10 DOT, 10 decimal places
-        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, largeFee);
+        vm.expectRevert(Assets.InvalidDestinationFee.selector);
+        IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, maxDestinationFee + 1);
 
         vm.expectRevert(Assets.InvalidDestinationFee.selector);
-        IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, largeFee, 1);
+        IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, maxDestinationFee + 1, 1);
     }
 }
