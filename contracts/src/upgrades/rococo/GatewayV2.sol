@@ -9,6 +9,7 @@ import {PricingStorage} from "../../storage/PricingStorage.sol";
 
 contract GatewayV2 is Gateway {
     constructor(
+        address recoveryOperator,
         address beefyClient,
         address agentExecutor,
         ParaID bridgeHubParaID,
@@ -23,10 +24,6 @@ contract GatewayV2 is Gateway {
         }
 
         PricingStorage.Layout storage pricing = PricingStorage.layout();
-
-        if (pricing.multiplier != convert(0)) {
-            revert AlreadyInitialized();
-        }
 
         pricing.multiplier = abi.decode(data, (UD60x18));
     }

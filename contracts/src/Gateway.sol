@@ -19,8 +19,10 @@ import {
     Ticket,
     Costs
 } from "./Types.sol";
+import {Upgrade} from "./Upgrade.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
+import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
 import {Address} from "./utils/Address.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
@@ -46,7 +48,7 @@ import {AssetsStorage} from "./storage/AssetsStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
-contract Gateway is IGateway, IInitializable {
+contract Gateway is IGateway, IInitializable, IUpgradable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
@@ -84,11 +86,9 @@ contract Gateway is IGateway, IInitializable {
     error InvalidChannelUpdate();
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
-    error InvalidCodeHash();
     error InvalidConstructorParams();
-    error AlreadyInitialized();
 
-    // handler functions are privileged
+    // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
         if (msg.sender != address(this)) {
             revert Unauthorized();
@@ -331,29 +331,7 @@ contract Gateway is IGateway, IInitializable {
     /// @dev Perform an upgrade of the gateway
     function upgrade(bytes calldata data) external onlySelf {
         UpgradeParams memory params = abi.decode(data, (UpgradeParams));
-
-        // Verify that the implementation is actually a contract
-        if (!params.impl.isContract()) {
-            revert InvalidCodeHash();
-        }
-
-        // As a sanity check, ensure that the codehash of implementation contract
-        // matches the codehash in the upgrade proposal
-        if (params.impl.codehash != params.implCodeHash) {
-            revert InvalidCodeHash();
-        }
-
-        // Update the proxy with the address of the new implementation
-        ERC1967.store(params.impl);
-
-        // Apply the initialization function of the implementation only if params were provided
-        if (params.initParams.length > 0) {
-            (bool success, bytes memory returndata) =
-                params.impl.delegatecall(abi.encodeCall(IInitializable.initialize, params.initParams));
-            Call.verifyResult(success, returndata);
-        }
-
-        emit Upgraded(params.impl);
+        Upgrade.upgrade(params.impl, params.implCodeHash, params.initParams);
     }
 
     // @dev Set the operating mode of the gateway
@@ -586,10 +564,6 @@ contract Gateway is IGateway, IInitializable {
         }
 
         CoreStorage.Layout storage core = CoreStorage.layout();
-
-        if (core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID].agent != address(0)) {
-            revert AlreadyInitialized();
-        }
 
         Config memory config = abi.decode(data, (Config));
 

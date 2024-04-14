@@ -26,7 +26,7 @@ contract DeployGatewayLogic is Script {
         uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
 
         AgentExecutor executor = new AgentExecutor();
-        new Gateway(address(beefyClient), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals);
+        new Gateway(beefyClient, address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals);
 
         vm.stopBroadcast();
     }
