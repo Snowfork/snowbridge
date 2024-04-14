@@ -3,6 +3,7 @@ import { contextFactory, destroyContext, toEthereum, toPolkadot } from '@snowbri
 import { Keyring } from '@polkadot/keyring'
 import { Wallet } from 'ethers'
 
+const BEACON_HTTP_API = 'http://127.0.0.1:9596'
 const ETHEREUM_WS_API = 'ws://127.0.0.1:8546'
 const RELAY_CHAIN_WS_URL = 'ws://127.0.0.1:9944'
 const ASSET_HUB_WS_URL = 'ws://127.0.0.1:12144'
@@ -14,7 +15,7 @@ const WETH_CONTRACT = '0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d'
 
 const monitor = async () => {
     const context = await contextFactory({
-        ethereum: { url: ETHEREUM_WS_API },
+        ethereum: { execution_url: ETHEREUM_WS_API, beacon_url: BEACON_HTTP_API },
         polkadot: {
             url: {
                 bridgeHub: BRIDGE_HUB_WS_URL,

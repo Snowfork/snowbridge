@@ -1,5 +1,6 @@
 import { IERC20__factory } from '@snowbridge/contract-types'
 import { Context } from './index'
+import { fetchBeaconSlot } from './utils'
 
 export type OperatingMode = 'Normal' | 'Halted'
 export type BridgeStatusInfo = {
@@ -45,13 +46,19 @@ export const bridgeStatusInfo = async (context: Context, options = {
     const latestBeefyBlock = Number(await context.ethereum.contracts.beefyClient.latestBeefyBlock())
     const latestPolkadotBlock = (await context.polkadot.api.relaychain.query.system.number()).toPrimitive() as number
 
-    const latestBeaconState = (await context.polkadot.api.bridgeHub.query.ethereumBeaconClient.latestExecutionState()).toPrimitive() as { blockNumber: number }
     const latestEthereumBlock = await context.ethereum.api.getBlockNumber()
+    const latestBeaconBlockRoot = (await context.polkadot.api.bridgeHub.query.ethereumBeaconClient.latestFinalizedBlockRoot()).toHex()
+    let latestBeaconSlot = await fetchBeaconSlot(context.config.ethereum.beacon_url, latestBeaconBlockRoot)
+    let latestBeaconExecutionBlock = latestBeaconSlot.data.message.body.execution_payload?.block_number
+    while (latestBeaconExecutionBlock === undefined) {
+        latestBeaconSlot = await fetchBeaconSlot(context.config.ethereum.beacon_url, latestBeaconSlot.data.message.slot - 1)
+        latestBeaconExecutionBlock = latestBeaconSlot.data.message.body.execution_payload?.block_number
+    }
 
     const beefyBlockLatency = latestPolkadotBlock - latestBeefyBlock
     const beefyLatencySeconds = beefyBlockLatency * options.polkadotBlockTimeInSeconds
 
-    const beaconBlockLatency = latestEthereumBlock - latestBeaconState.blockNumber
+    const beaconBlockLatency = latestEthereumBlock - Number(latestBeaconExecutionBlock)
     const beaconLatencySeconds = beaconBlockLatency * options.ethereumBlockTimeInSeconds
 
     const ethereumOperatingMode = await context.ethereum.contracts.gateway.operatingMode()
@@ -75,7 +82,7 @@ export const bridgeStatusInfo = async (context: Context, options = {
                 inbound: inboundOperatingMode as OperatingMode,
                 outbound: ethereumOperatingMode === 0n ? 'Normal' : 'Halted' as OperatingMode,
             },
-            latestEthereumBlockOnPolkadot: latestBeaconState.blockNumber,
+            latestEthereumBlockOnPolkadot: Number(latestBeaconExecutionBlock),
             latestEthereumBlock: latestEthereumBlock,
             blockLatency: beaconBlockLatency,
             latencySeconds: beaconLatencySeconds,

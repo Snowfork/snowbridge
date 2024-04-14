@@ -187,6 +187,7 @@ export type SendResult = {
         sourceParachain?: {
             txHash: string
             txIndex: number
+            blockHash: string
             blockNumber: number
         }
         assetHub: {
@@ -293,6 +294,7 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
         }
         pResult = await new Promise<{
             blockNumber: number
+            blockHash: string
             txIndex: number
             txHash: string
             success: boolean
@@ -311,10 +313,12 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
                     reject(c.internalError || c.dispatchError)
                 }
                 if (c.isCompleted) {
+                console.log('BBB', c)
                     const result = {
                         txHash: u8aToHex(c.txHash),
                         txIndex: c.txIndex || 0,
                         blockNumber: Number((c as any).blockNumber),
+                        blockHash: u8aToHex((c as any).blockHash),
                         events: c.events
                     }
                     for (const e of c.events) {
@@ -386,6 +390,7 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
 
     let result = await new Promise<{
         blockNumber: number
+        blockHash: string
         txIndex: number
         txHash: string
         success: boolean
@@ -404,10 +409,12 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
                 reject(c.internalError || c.dispatchError)
             }
             if (c.isCompleted) {
+                console.log('AAA', c)
                 const result = {
                     txHash: u8aToHex(c.txHash),
                     txIndex: c.txIndex || 0,
                     blockNumber: Number((c as any).blockNumber),
+                    blockHash: u8aToHex((c as any).blockHash),
                     events: c.events
                 }
                 for (const e of c.events) {

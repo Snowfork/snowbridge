@@ -8,7 +8,7 @@ import { AccountInfo, AppProps, BridgeStatus } from "./Common"
 const PRIMARY_GOVERNANCE_CHANNEL_ID = '0x0000000000000000000000000000000000000000000000000000000000000001'
 const SECONDARY_GOVERNANCE_CHANNEL_ID = '0x0000000000000000000000000000000000000000000000000000000000000002'
 const REFRESH_INTERVAL = 300;
-const REFRESH_CHECK = 10;
+const REFRESH_CHECK = 20;
 const ACCEPTABLE_BRIDGE_LATENCY = 28800 /* 8 hours */
 
 interface StatusProps extends AppProps {
@@ -227,12 +227,12 @@ export const Status = (props: StatusProps): JSX.Element => {
         <h3>To Ethereum</h3>
         <div className='panel statusGeneral' style={toEthereumStyle}>
             <p>Operating Mode</p><p>{toEthereumOperatingMode}</p>
-            <p>Beacon client latency (time):</p><p>{formatTime(bridgeStatus?.statusInfo.toEthereum.latencySeconds)}</p>
+            <p>BEEFY client latency (time):</p><p>{formatTime(bridgeStatus?.statusInfo.toEthereum.latencySeconds)}</p>
         </div>
         <h3>To Polkadot</h3>
         <div className='panel statusGeneral' style={toPolkadotStyle}>
             <p>Operating Mode</p><p>{toPolkadotOperatingMode}</p>
-            <p>BEEFY client latency (time):</p><p>{formatTime(bridgeStatus?.statusInfo.toPolkadot.latencySeconds)}</p>
+            <p>Beacon client latency (time):</p><p>{formatTime(bridgeStatus?.statusInfo.toPolkadot.latencySeconds)}</p>
         </div>
         {extra}
         <p>Refreshing in {formatTime((updateDate.getTime() - timeNow.getTime())/1000)} seconds.</p>

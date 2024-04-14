@@ -1,5 +1,6 @@
 
 export type Config = {
+    BEACON_HTTP_API: string
     ETHEREUM_WS_API: string
     RELAY_CHAIN_WS_URL: string
     ASSET_HUB_WS_URL: string
@@ -14,7 +15,8 @@ export type Config = {
 export const getConfig = (): Config => {
     if (process.env.REACT_APP_NODE_ENV === 'rococo_sepolia') {
         return {
-            ETHEREUM_WS_API: `wss://sepolia.infura.io/ws/v3/${process.env.REACT_APP_INFURA_KEY}`,
+            BEACON_HTTP_API: 'https://lodestar-sepolia.chainsafe.io',
+            ETHEREUM_WS_API: `https://sepolia.infura.io/v3/${process.env.REACT_APP_INFURA_KEY}`,
             RELAY_CHAIN_WS_URL: 'wss://rococo-rpc.polkadot.io',
             ASSET_HUB_WS_URL: 'wss://rococo-asset-hub-rpc.polkadot.io',
             BRIDGE_HUB_WS_URL: 'wss://rococo-bridge-hub-rpc.polkadot.io',
@@ -33,6 +35,7 @@ export const getConfig = (): Config => {
         }
     }
     return {
+        BEACON_HTTP_API: 'http://127.0.0.1:9596',
         ETHEREUM_WS_API: 'ws://127.0.0.1:8546',
         RELAY_CHAIN_WS_URL: 'ws://127.0.0.1:9944',
         ASSET_HUB_WS_URL: 'ws://127.0.0.1:12144',

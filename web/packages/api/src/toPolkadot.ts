@@ -4,11 +4,11 @@ import { u8aToHex } from '@polkadot/util'
 import { IGateway__factory } from '@snowbridge/contract-types'
 import { MultiAddressStruct } from '@snowbridge/contract-types/src/IGateway'
 import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethers'
-import { filter, firstValueFrom, lastValueFrom, map as rxmap, take, takeWhile, tap } from 'rxjs'
+import { concatMap, filter, firstValueFrom, lastValueFrom, take, takeWhile, tap } from 'rxjs'
 import { Context } from './index'
 import { waitForMessageQueuePallet } from './query'
 import { assetStatusInfo, bridgeStatusInfo, channelStatusInfo } from './status'
-import { beneficiaryMultiAddress, paraIdToChannelId, paraIdToSovereignAccount } from './utils'
+import { beneficiaryMultiAddress, fetchBeaconSlot, paraIdToChannelId, paraIdToSovereignAccount } from './utils'
 
 export type SendValidationResult = {
     success?: {
@@ -199,7 +199,7 @@ export type SendResult = {
             submittedAtHash: string,
             beaconUpdate?: {
                 createdAtHash?: `0x${string}`,
-                blockNumber: number,
+                beaconBlockRoot: `0x${string}`,
             },
             events?: Codec,
             extrinsicSuccess?: boolean
@@ -323,14 +323,19 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
         // Wait for light client
         const ethereumBlockNumber = success.ethereum.blockNumber
         const lastBeaconUpdate = await lastValueFrom(
-            bridgeHub.rx.query.ethereumBeaconClient.latestExecutionState().pipe(
-                rxmap(beaconUpdate => {
-                    const update = beaconUpdate.toPrimitive() as { blockNumber: number }
-                    return { createdAtHash: beaconUpdate.createdAtHash?.toHex(), blockNumber: update.blockNumber }
+            bridgeHub.rx.query.ethereumBeaconClient.latestFinalizedBlockRoot().pipe(
+                concatMap(async finalizedBlockRoot => {
+                    const beaconBlockRoot = finalizedBlockRoot.toHex()
+                    const slot = await fetchBeaconSlot(context.config.ethereum.beacon_url, beaconBlockRoot)
+                    const blockNumber = slot.data.message.body.execution_payload?.block_number
+                    const blockHash = slot.data.message.body.execution_payload?.block_hash
+
+                    return { createdAtHash: finalizedBlockRoot.createdAtHash?.toHex(), blockNumber, blockHash, beaconBlockRoot }
                 }),
+                filter(({ blockHash }) => blockHash !== undefined),
                 take(options.beaconUpdateTimeout),
-                takeWhile(({ blockNumber }) => ethereumBlockNumber > blockNumber),
-                tap(({ createdAtHash, blockNumber }) => console.log(`Bridge Hub block ${createdAtHash}: Beacon client ${ethereumBlockNumber - blockNumber} blocks behind.`)),
+                takeWhile(({ blockNumber }) => ethereumBlockNumber > Number(blockNumber)),
+                tap(({ createdAtHash, blockNumber }) => console.log(`Bridge Hub block ${createdAtHash}: Beacon client ${ethereumBlockNumber - Number(blockNumber)} blocks behind.`)),
             ),
             { defaultValue: undefined }
         )
