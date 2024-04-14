@@ -15,7 +15,7 @@ contract GatewayV2 is Gateway {
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
         uint8 foreignTokenDecimals
-    ) Gateway(recoveryOperator, beefyClient, agentExecutor, bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals) {}
+    ) Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals) {}
 
     function initialize(bytes memory data) external override {
         // Prevent initialization of storage in implementation contract
@@ -24,10 +24,6 @@ contract GatewayV2 is Gateway {
         }
 
         PricingStorage.Layout storage pricing = PricingStorage.layout();
-
-        if (pricing.multiplier != convert(0)) {
-            revert AlreadyInitialized();
-        }
 
         pricing.multiplier = abi.decode(data, (UD60x18));
     }

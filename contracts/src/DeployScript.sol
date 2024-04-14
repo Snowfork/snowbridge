@@ -9,7 +9,6 @@ import {BeefyClient} from "./BeefyClient.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {GatewayProxy} from "./GatewayProxy.sol";
 import {Gateway} from "./Gateway.sol";
-import {GatewayUpgradeMock} from "../test/mocks/GatewayUpgradeMock.sol";
 import {Agent} from "./Agent.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {ChannelID, ParaID, OperatingMode} from "./Types.sol";
@@ -59,11 +58,9 @@ contract DeployScript is Script {
 
         uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
 
-        address recoveryOperator = vm.envOr("RECOVERY_OPERATOR", address(0));
-
         AgentExecutor executor = new AgentExecutor();
         Gateway gatewayLogic = new Gateway(
-            recoveryOperator, address(beefyClient), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals
+            address(beefyClient), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals
         );
 
         bool rejectOutboundMessages = vm.envBool("REJECT_OUTBOUND_MESSAGES");
@@ -100,8 +97,6 @@ contract DeployScript is Script {
 
         payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);
-
-        new GatewayUpgradeMock();
 
         vm.stopBroadcast();
     }

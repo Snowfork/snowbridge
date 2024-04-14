@@ -19,16 +19,16 @@ import {
     Ticket,
     Costs
 } from "./Types.sol";
+import {Upgrade} from "./Upgrade.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
-import {IRecovery} from "./interfaces/IRecovery.sol";
+import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
 import {Address} from "./utils/Address.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {Call} from "./utils/Call.sol";
 import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
-import {TrustedOperator} from "./TrustedOperator.sol";
 
 import {
     UpgradeParams,
@@ -48,7 +48,7 @@ import {AssetsStorage} from "./storage/AssetsStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
-contract Gateway is IGateway, IInitializable, IRecovery {
+contract Gateway is IGateway, IInitializable, IUpgradable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
@@ -86,9 +86,7 @@ contract Gateway is IGateway, IInitializable, IRecovery {
     error InvalidChannelUpdate();
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
-    error InvalidCodeHash();
     error InvalidConstructorParams();
-    error AlreadyInitialized();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
@@ -98,16 +96,7 @@ contract Gateway is IGateway, IInitializable, IRecovery {
         _;
     }
 
-    // Recovery operations can only be performed by the trusted operator
-    modifier onlyRecoveryOperator() {
-        if (msg.sender != TrustedOperator.operator()) {
-            revert Unauthorized();
-        }
-        _;
-    }
-
     constructor(
-        address _recoveryOperator,
         address beefyClient,
         address agentExecutor,
         ParaID bridgeHubParaID,
@@ -124,8 +113,6 @@ contract Gateway is IGateway, IInitializable, IRecovery {
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
         FOREIGN_TOKEN_DECIMALS = foreignTokenDecimals;
-
-        TrustedOperator.setOperator(_recoveryOperator);
     }
 
     /// @dev Submit a message from Polkadot for verification and dispatch
@@ -344,7 +331,7 @@ contract Gateway is IGateway, IInitializable, IRecovery {
     /// @dev Perform an upgrade of the gateway
     function upgrade(bytes calldata data) external onlySelf {
         UpgradeParams memory params = abi.decode(data, (UpgradeParams));
-        _upgrade(params.impl, params.implCodeHash, params.initParams);
+        Upgrade.upgrade(params.impl, params.implCodeHash, params.initParams);
     }
 
     // @dev Set the operating mode of the gateway
@@ -568,29 +555,6 @@ contract Gateway is IGateway, IInitializable, IRecovery {
         UD60x18 multiplier;
     }
 
-    function _upgrade(address impl, bytes32 implCodeHash, bytes memory initializerParams) internal {
-        // Verify that the implementation is actually a contract
-        if (!impl.isContract()) {
-            revert InvalidCodeHash();
-        }
-
-        // As a sanity check, ensure that the codehash of implementation contract
-        // matches the codehash in the upgrade proposal
-        if (impl.codehash != implCodeHash) {
-            revert InvalidCodeHash();
-        }
-
-        // Update the proxy with the address of the new implementation
-        ERC1967.store(impl);
-
-        // Call the initializer
-        (bool success, bytes memory returndata) =
-            impl.delegatecall(abi.encodeCall(IInitializable.initialize, initializerParams));
-        Call.verifyResult(success, returndata);
-
-        emit Upgraded(impl);
-    }
-
     /// @dev Initialize storage in the gateway
     /// NOTE: This is not externally accessible as this function selector is overshadowed in the proxy
     function initialize(bytes calldata data) external virtual {
@@ -600,10 +564,6 @@ contract Gateway is IGateway, IInitializable, IRecovery {
         }
 
         CoreStorage.Layout storage core = CoreStorage.layout();
-
-        if (core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID].agent != address(0)) {
-            revert AlreadyInitialized();
-        }
 
         Config memory config = abi.decode(data, (Config));
 
@@ -644,35 +604,4 @@ contract Gateway is IGateway, IInitializable, IRecovery {
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
     }
-
-
-    /**
-     * Recovery
-     *
-     * A mechanism that allows the Gateway and supporting contracts to be upgraded by
-     * a trusted operator, until the ability to do has been relinquished.
-     *
-     * Rationale: The BEEFY protocol is going to be activated on Polkadot right before
-     * our bridge is activated, with very little time in between. While BEEFY has been tested
-     * extensively on testnets, there is still a small chance it could break on the production
-     * Polkadot network.
-     *
-     * The intention is for this ability is to be relinquished after two to three weeks
-     * of operation. The bridge should be considered *centralized* until then.
-     */
-
-    function recover(address impl, bytes32 implCodeHash, bytes calldata initializerParams) external onlyRecoveryOperator {
-        _upgrade(impl, implCodeHash, initializerParams);
-        emit IRecovery.Recovered(impl, keccak256(initializerParams));
-    }
-
-    function renounce() external onlyRecoveryOperator {
-        TrustedOperator.renounce();
-        emit IRecovery.Renounced();
-    }
-
-    function recoveryOperator() external view returns (address) {
-        return TrustedOperator.operator();
-    }
-
 }
