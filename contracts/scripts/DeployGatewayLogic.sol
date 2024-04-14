@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.23;
 
-import {AgentExecutor} from "./AgentExecutor.sol";
-import {Gateway} from "./Gateway.sol";
-import {ParaID} from "./Types.sol";
+import {AgentExecutor} from "../src/AgentExecutor.sol";
+import {Gateway} from "../src//Gateway.sol";
+import {ParaID} from "../src//Types.sol";
 import {Script} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
