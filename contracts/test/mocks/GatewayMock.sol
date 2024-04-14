@@ -17,7 +17,7 @@ contract GatewayMock is Gateway {
         ParaID bridgeHubParaID,
         bytes32 bridgeHubHubAgentID,
         uint8 foreignTokenDecimals,
-        uint128 destinationMaxTransferFee
+        uint128 maxDestinationFee
     )
         Gateway(
             beefyClient,
@@ -25,7 +25,7 @@ contract GatewayMock is Gateway {
             bridgeHubParaID,
             bridgeHubHubAgentID,
             foreignTokenDecimals,
-            destinationMaxTransferFee
+            maxDestinationFee
         )
     {}
 
