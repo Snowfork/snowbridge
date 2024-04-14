@@ -27,6 +27,7 @@ contract DeployGatewayLogic is Script {
         uint128 destinationMaxTransferFee = uint128(vm.envUint("RESERVE_TRANSFER_MAX_DESTINATION_FEE"));
 
         AgentExecutor executor = new AgentExecutor();
+
         new Gateway(
             address(beefyClient),
             address(executor),

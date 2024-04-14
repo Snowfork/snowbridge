@@ -19,8 +19,10 @@ import {
     Ticket,
     Costs
 } from "./Types.sol";
+import {Upgrade} from "./Upgrade.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
+import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
 import {Address} from "./utils/Address.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
@@ -46,7 +48,7 @@ import {AssetsStorage} from "./storage/AssetsStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
-contract Gateway is IGateway, IInitializable {
+contract Gateway is IGateway, IInitializable, IUpgradable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
@@ -69,8 +71,12 @@ contract Gateway is IGateway, IInitializable {
     // 2. Calling implementation function
     uint256 DISPATCH_OVERHEAD_GAS = 10_000;
 
-    // The maximum fee that can be sent to a destination parachain to pay for execution (DOT)
-    uint128 internal immutable MAX_DESTINATION_TRANSFER_FEE;
+    // The maximum fee that can be sent to a destination parachain to pay for execution (DOT).
+    // Has two functions:
+    // * Reduces the ability of users to perform arbitrage using a favourable exchange rate
+    // * Prevents users from mistakenly providing too much fees, which would drain AssetHub's
+    //   sovereign account here on Ethereum.
+    uint128 internal immutable MAX_DESTINATION_FEE;
 
     uint8 internal immutable FOREIGN_TOKEN_DECIMALS;
 
@@ -87,11 +93,9 @@ contract Gateway is IGateway, IInitializable {
     error InvalidChannelUpdate();
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
-    error InvalidCodeHash();
     error InvalidConstructorParams();
-    error AlreadyInitialized();
 
-    // handler functions are privileged
+    // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
         if (msg.sender != address(this)) {
             revert Unauthorized();
@@ -105,7 +109,7 @@ contract Gateway is IGateway, IInitializable {
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
         uint8 foreignTokenDecimals,
-        uint128 destinationMaxTransferFee
+        uint128 maxDestinationFee
     ) {
         if (bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0) {
             revert InvalidConstructorParams();
@@ -117,7 +121,7 @@ contract Gateway is IGateway, IInitializable {
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
         FOREIGN_TOKEN_DECIMALS = foreignTokenDecimals;
-        MAX_DESTINATION_TRANSFER_FEE = destinationMaxTransferFee;
+        MAX_DESTINATION_FEE = maxDestinationFee;
     }
 
     /// @dev Submit a message from Polkadot for verification and dispatch
@@ -336,29 +340,7 @@ contract Gateway is IGateway, IInitializable {
     /// @dev Perform an upgrade of the gateway
     function upgrade(bytes calldata data) external onlySelf {
         UpgradeParams memory params = abi.decode(data, (UpgradeParams));
-
-        // Verify that the implementation is actually a contract
-        if (!params.impl.isContract()) {
-            revert InvalidCodeHash();
-        }
-
-        // As a sanity check, ensure that the codehash of implementation contract
-        // matches the codehash in the upgrade proposal
-        if (params.impl.codehash != params.implCodeHash) {
-            revert InvalidCodeHash();
-        }
-
-        // Update the proxy with the address of the new implementation
-        ERC1967.store(params.impl);
-
-        // Apply the initialization function of the implementation only if params were provided
-        if (params.initParams.length > 0) {
-            (bool success, bytes memory returndata) =
-                params.impl.delegatecall(abi.encodeCall(IInitializable.initialize, params.initParams));
-            Call.verifyResult(success, returndata);
-        }
-
-        emit Upgraded(params.impl);
+        Upgrade.upgrade(params.impl, params.implCodeHash, params.initParams);
     }
 
     // @dev Set the operating mode of the gateway
@@ -433,12 +415,8 @@ contract Gateway is IGateway, IInitializable {
         uint128 destinationFee,
         uint128 amount
     ) external payable {
-        if (destinationFee > MAX_DESTINATION_TRANSFER_FEE) {
-            revert Assets.InvalidDestinationFee();
-        }
-
         _submitOutbound(
-            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
+            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount)
         );
     }
 
@@ -595,10 +573,6 @@ contract Gateway is IGateway, IInitializable {
         }
 
         CoreStorage.Layout storage core = CoreStorage.layout();
-
-        if (core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID].agent != address(0)) {
-            revert AlreadyInitialized();
-        }
 
         Config memory config = abi.decode(data, (Config));
 

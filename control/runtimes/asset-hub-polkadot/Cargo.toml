@@ -1,5 +1,5 @@
 [package]
-name = "bridge-hub-rococo-runtime"
+name = "asset-hub-polkadot-runtime"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,5 +10,4 @@ scale-info = { version = "2.9.0", default-features = false, features = [
 ] }
 serde = { version = "1.0.197", features = ["derive"] }
 subxt = { version = "0.35.1", features = ["substrate-compat"] }
-snowbridge-beacon-primitives = "0.2.0"
 sp-arithmetic = "24.0.0"

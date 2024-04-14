@@ -9,7 +9,6 @@ import {BeefyClient} from "./BeefyClient.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {GatewayProxy} from "./GatewayProxy.sol";
 import {Gateway} from "./Gateway.sol";
-import {GatewayUpgradeMock} from "../test/mocks/GatewayUpgradeMock.sol";
 import {Agent} from "./Agent.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {ChannelID, ParaID, OperatingMode} from "./Types.sol";
@@ -104,8 +103,6 @@ contract DeployScript is Script {
 
         payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);
-
-        new GatewayUpgradeMock();
 
         vm.stopBroadcast();
     }

@@ -99,8 +99,10 @@ library AdditionalStorage {
     }
 }
 
+import {IInitializable} from "../../src/interfaces/IInitializable.sol";
+
 // Used to test upgrades.
-contract GatewayV2 {
+contract GatewayV2 is IInitializable  {
     // Reinitialize gateway with some additional storage fields
     function initialize(bytes memory params) external {
         AdditionalStorage.Layout storage $ = AdditionalStorage.layout();

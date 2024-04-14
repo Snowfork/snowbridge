@@ -1,5 +1,5 @@
 [package]
-name = "bridge-hub-rococo-runtime"
+name = "bridge-hub-polkadot-runtime"
 version = "0.1.0"
 edition = "2021"
 

@@ -79,6 +79,7 @@ library Assets {
         ParaID destinationChain,
         MultiAddress calldata destinationAddress,
         uint128 destinationChainFee,
+        uint128 maxDestinationChainFee,
         uint128 amount
     ) external returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
@@ -86,6 +87,19 @@ library Assets {
         TokenInfo storage info = $.tokenRegistry[token];
         if (!info.isRegistered) {
             revert TokenNotRegistered();
+        }
+
+        // Reduce the ability for users to perform arbitrage by exploiting a
+        // favourable exchange rate. For example supplying Ether
+        // and gaining a more valuable amount of DOT on the destination chain.
+        //
+        // For safety, `maxDestinationChainFee` should be less valuable
+        // than the gas cost to send tokens.
+        //
+        // Also prevents users from mistakenly sending more fees than would be required
+        // which has negative effects like draining AssetHub's sovereign account.
+        if (destinationChainFee > maxDestinationChainFee) {
+            revert InvalidDestinationFee();
         }
 
         // Lock the funds into AssetHub's agent contract
