@@ -159,7 +159,7 @@ Gateway Contract Address: [0x5b4909ce6ca82d2ce23bd46738953c7959e710cd](https://s
 1. Navigate to the Contract tab, click Read as Proxy.
 2. Expand `quoteSendTokenFee` and input the token address.
 3. The `destinationChain` that the token is going to be sent to. In this example it is destination parachain `2005`.
-4. The `destinationFee` is the fee used by the destination chain to pay for XCM execution. This amount in in the unit of the relaychain native currency. Here we use `1,000,000 ROC CENTS` . (`1 MircroROC`)
+4. The `destinationFee` is the fee used by the destination chain to pay for XCM execution. This amount in the unit of the relaychain native currency. Here we use `1,000,000 ROC CENTS` . (`1 MircroROC`)
 5. Click query, the fee is returned in the unit `Wei`.
 
 <figure><img src="../.gitbook/assets/send_token_fee_with_destination.png" alt=""><figcaption></figcaption></figure>
