@@ -3,8 +3,11 @@
 pragma solidity 0.8.23;
 
 interface IUpgradable {
+    // The new implementation address is a not a contract
     error InvalidContract();
+    // The supplied codehash does not match the new implementation codehash
     error InvalidCodeHash();
 
+    // The implementation contract was upgraded
     event Upgraded(address indexed implementation);
 }
