@@ -908,7 +908,9 @@ contract GatewayTest is Test {
         });
 
         vm.expectRevert(
-            abi.encodeWithSelector(Gateway.AgentExecutionFailed.selector, abi.encodeWithSignature("Unauthorized()"))
+            abi.encodeWithSelector(
+                Gateway.AgentExecutionFailed.selector, abi.encodeWithSelector(AgentExecutor.CallExternalFailed.selector)
+            )
         );
 
         GatewayMock(address(gateway)).agentExecutePublic(abi.encode(params));

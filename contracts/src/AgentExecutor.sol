@@ -16,6 +16,8 @@ contract AgentExecutor {
     using SafeNativeTransfer for address payable;
     using Call for address;
 
+    error CallExternalFailed();
+
     /// @dev Execute a message which originated from the Polkadot side of the bridge. In other terms,
     /// the `data` parameter is constructed by the BridgeHub parachain.
     ///
@@ -43,8 +45,10 @@ contract AgentExecutor {
     }
 
     /// @dev Call a contract at the given address, with provided bytes as payload.
-    function _executeCall(address target, bytes memory payload, uint64 dynamicGas) internal returns (bytes memory) {
-        (bool success, bytes memory data) = target.excessivelySafeCall(dynamicGas, 0, 256, payload);
-        return Call.verifyResult(success, data);
+    function _executeCall(address target, bytes memory payload, uint64 dynamicGas) internal {
+        bool success = target.safeCall(dynamicGas, 0, payload);
+        if (!success) {
+            revert CallExternalFailed();
+        }
     }
 }
