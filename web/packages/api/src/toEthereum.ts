@@ -1,6 +1,6 @@
 import { decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
 import { Context } from "./index"
-import { assetStatusInfo , bridgeStatusInfo} from "./status"
+import { assetStatusInfo, bridgeStatusInfo } from "./status"
 import { paraIdToChannelId } from "./utils"
 import { BN, u8aToHex } from "@polkadot/util"
 import { Codec, IKeyringPair, Signer } from "@polkadot/types/types"
@@ -302,48 +302,53 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
             dispatchError?: any
             messageId?: string
         }>((resolve, reject) => {
-            parachainApi.tx.polkadotXcm.transferAssets(
-                pDestination,
-                pBeneficiary,
-                pAssets,
-                fee_asset,
-                weight
-            ).signAndSend(addressOrPair, { signer: walletSigner }, (c) => {
-                if (c.isError) {
-                    reject(c.internalError || c.dispatchError)
-                }
-                if (c.isCompleted) {
-                console.log('BBB', c)
-                    const result = {
-                        txHash: u8aToHex(c.txHash),
-                        txIndex: c.txIndex || 0,
-                        blockNumber: Number((c as any).blockNumber),
-                        blockHash: u8aToHex((c as any).blockHash),
-                        events: c.events
+            try {
+                parachainApi.tx.polkadotXcm.transferAssets(
+                    pDestination,
+                    pBeneficiary,
+                    pAssets,
+                    fee_asset,
+                    weight
+                ).signAndSend(addressOrPair, { signer: walletSigner }, (c) => {
+                    console.log('BBB', c)
+                    if (c.isError) {
+                        reject(c.internalError || c.dispatchError)
                     }
-                    for (const e of c.events) {
-                        if (assetHub.events.system.ExtrinsicFailed.is(e.event)) {
-                            resolve({
-                                ...result,
-                                success: false,
-                                dispatchError: (e.event.data.toHuman(true) as any)?.dispatchError
-                            })
+                    if (c.isCompleted) {
+                        const result = {
+                            txHash: u8aToHex(c.txHash),
+                            txIndex: c.txIndex || 0,
+                            blockNumber: Number((c as any).blockNumber),
+                            blockHash: u8aToHex((c as any).blockHash),
+                            events: c.events
                         }
+                        for (const e of c.events) {
+                            if (assetHub.events.system.ExtrinsicFailed.is(e.event)) {
+                                resolve({
+                                    ...result,
+                                    success: false,
+                                    dispatchError: (e.event.data.toHuman(true) as any)?.dispatchError
+                                })
+                            }
 
-                        if (assetHub.events.polkadotXcm.Sent.is(e.event)) {
-                            resolve({
-                                ...result,
-                                success: true,
-                                messageId: (e.event.data.toHuman(true) as any)?.messageId
-                            })
+                            if (assetHub.events.polkadotXcm.Sent.is(e.event)) {
+                                resolve({
+                                    ...result,
+                                    success: true,
+                                    messageId: (e.event.data.toHuman(true) as any)?.messageId
+                                })
+                            }
                         }
+                        resolve({
+                            ...result,
+                            success: false,
+                        })
                     }
-                    resolve({
-                        ...result,
-                        success: false,
-                    })
-                }
-            })
+                })
+            }
+            catch (e) {
+                reject(e)
+            }
         })
 
         if (!pResult.success) {
@@ -398,48 +403,54 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
         dispatchError?: any
         messageId?: string
     }>((resolve, reject) => {
-        assetHub.tx.polkadotXcm.transferAssets(
-            destination,
-            beneficiary,
-            assets,
-            fee_asset,
-            weight
-        ).signAndSend(addressOrPair, { signer: walletSigner }, (c) => {
-            if (c.isError) {
-                reject(c.internalError || c.dispatchError)
-            }
-            if (c.isCompleted) {
+        try {
+            assetHub.tx.polkadotXcm.transferAssets(
+                destination,
+                beneficiary,
+                assets,
+                fee_asset,
+                weight
+            ).signAndSend(addressOrPair, { signer: walletSigner }, (c) => {
                 console.log('AAA', c)
-                const result = {
-                    txHash: u8aToHex(c.txHash),
-                    txIndex: c.txIndex || 0,
-                    blockNumber: Number((c as any).blockNumber),
-                    blockHash: u8aToHex((c as any).blockHash),
-                    events: c.events
+                if (c.isError) {
+                    reject(c.internalError || c.dispatchError)
                 }
-                for (const e of c.events) {
-                    if (assetHub.events.system.ExtrinsicFailed.is(e.event)) {
-                        resolve({
-                            ...result,
-                            success: false,
-                            dispatchError: (e.event.data.toHuman(true) as any)?.dispatchError
-                        })
+                if (c.isCompleted) {
+                    const result = {
+                        txHash: u8aToHex(c.txHash),
+                        txIndex: c.txIndex || 0,
+                        blockNumber: Number((c as any).blockNumber),
+                        blockHash: u8aToHex((c as any).blockHash),
+                        events: c.events
                     }
+                    for (const e of c.events) {
+                        if (assetHub.events.system.ExtrinsicFailed.is(e.event)) {
+                            resolve({
+                                ...result,
+                                success: false,
+                                dispatchError: (e.event.data.toHuman(true) as any)?.dispatchError
+                            })
+                        }
 
-                    if (assetHub.events.polkadotXcm.Sent.is(e.event)) {
-                        resolve({
-                            ...result,
-                            success: true,
-                            messageId: (e.event.data.toHuman(true) as any)?.messageId
-                        })
+                        if (assetHub.events.polkadotXcm.Sent.is(e.event)) {
+                            resolve({
+                                ...result,
+                                success: true,
+                                messageId: (e.event.data.toHuman(true) as any)?.messageId
+                            })
+                        }
                     }
+                    resolve({
+                        ...result,
+                        success: false,
+                    })
                 }
-                resolve({
-                    ...result,
-                    success: false,
-                })
-            }
-        })
+            })
+
+        }
+        catch (e) {
+            reject(e)
+        }
     })
 
     const blockHash = u8aToHex(await assetHub.rpc.chain.getBlockHash(result.blockNumber))
