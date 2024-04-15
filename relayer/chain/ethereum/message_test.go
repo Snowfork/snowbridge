@@ -60,12 +60,11 @@ func TestMessage_Proof(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, msg)
 
-	assert.Equal(t, block.Hash().Hex(), msg.Proof.BlockHash.Hex())
-	key, err := rlp.EncodeToBytes(uint(msg.Proof.TxIndex))
+	key, err := rlp.EncodeToBytes(uint(5))
 	if err != nil {
 		panic(err)
 	}
-	proofNodes := TestProof(*msg.Proof.Data)
+	proofNodes := TestProof(*msg.Proof.ReceiptProof)
 	provenReceipt, err := gethTrie.VerifyProof(block.ReceiptHash(), key, &proofNodes)
 	assert.Nil(t, err)
 	assert.Equal(t, provenReceipt, receipt5Encoded)

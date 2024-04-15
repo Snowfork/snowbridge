@@ -20,8 +20,10 @@ import {
     Costs,
     AgentExecuteCommand
 } from "./Types.sol";
+import {Upgrade} from "./Upgrade.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
+import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
 import {Address} from "./utils/Address.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
@@ -50,15 +52,15 @@ import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 import {SafeCallFilterStorage} from "./storage/SafeCallFilterStorage.sol";
 import {BytesLib} from "./utils/BytesLib.sol";
 
-contract Gateway is IGateway, IInitializable {
+contract Gateway is IGateway, IInitializable, IUpgradable {
     using Address for address;
     using SafeNativeTransfer for address payable;
     using BytesLib for bytes;
 
-    address internal immutable AGENT_EXECUTOR;
+    address public immutable AGENT_EXECUTOR;
 
     // Verification state
-    address internal immutable BEEFY_CLIENT;
+    address public immutable BEEFY_CLIENT;
 
     // BridgeHub
     ParaID internal immutable BRIDGE_HUB_PARA_ID;
@@ -73,6 +75,13 @@ contract Gateway is IGateway, IInitializable {
     // 1. Mapping a command id to an implementation function
     // 2. Calling implementation function
     uint256 DISPATCH_OVERHEAD_GAS = 10_000;
+
+    // The maximum fee that can be sent to a destination parachain to pay for execution (DOT).
+    // Has two functions:
+    // * Reduces the ability of users to perform arbitrage using a favourable exchange rate
+    // * Prevents users from mistakenly providing too much fees, which would drain AssetHub's
+    //   sovereign account here on Ethereum.
+    uint128 internal immutable MAX_DESTINATION_FEE;
 
     uint8 internal immutable FOREIGN_TOKEN_DECIMALS;
 
@@ -89,12 +98,10 @@ contract Gateway is IGateway, IInitializable {
     error InvalidChannelUpdate();
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
-    error InvalidCodeHash();
     error InvalidConstructorParams();
-    error AlreadyInitialized();
     error NoPermission();
 
-    // handler functions are privileged
+    // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
         if (msg.sender != address(this)) {
             revert Unauthorized();
@@ -107,7 +114,8 @@ contract Gateway is IGateway, IInitializable {
         address agentExecutor,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
-        uint8 foreignTokenDecimals
+        uint8 foreignTokenDecimals,
+        uint128 maxDestinationFee
     ) {
         if (bridgeHubParaID == ParaID.wrap(0) || bridgeHubAgentID == 0) {
             revert InvalidConstructorParams();
@@ -119,6 +127,7 @@ contract Gateway is IGateway, IInitializable {
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
         FOREIGN_TOKEN_DECIMALS = foreignTokenDecimals;
+        MAX_DESTINATION_FEE = maxDestinationFee;
     }
 
     /// @dev Submit a message from Polkadot for verification and dispatch
@@ -349,29 +358,7 @@ contract Gateway is IGateway, IInitializable {
     /// @dev Perform an upgrade of the gateway
     function upgrade(bytes calldata data) external onlySelf {
         UpgradeParams memory params = abi.decode(data, (UpgradeParams));
-
-        // Verify that the implementation is actually a contract
-        if (!params.impl.isContract()) {
-            revert InvalidCodeHash();
-        }
-
-        // As a sanity check, ensure that the codehash of implementation contract
-        // matches the codehash in the upgrade proposal
-        if (params.impl.codehash != params.implCodeHash) {
-            revert InvalidCodeHash();
-        }
-
-        // Update the proxy with the address of the new implementation
-        ERC1967.store(params.impl);
-
-        // Apply the initialization function of the implementation only if params were provided
-        if (params.initParams.length > 0) {
-            (bool success, bytes memory returndata) =
-                params.impl.delegatecall(abi.encodeCall(IInitializable.initialize, params.initParams));
-            Call.verifyResult(success, returndata);
-        }
-
-        emit Upgraded(params.impl);
+        Upgrade.upgrade(params.impl, params.implCodeHash, params.initParams);
     }
 
     // @dev Set the operating mode of the gateway
@@ -408,6 +395,7 @@ contract Gateway is IGateway, IInitializable {
         SetPricingParametersParams memory params = abi.decode(data, (SetPricingParametersParams));
         pricing.exchangeRate = params.exchangeRate;
         pricing.deliveryCost = params.deliveryCost;
+        pricing.multiplier = params.multiplier;
         emit PricingParametersChanged();
     }
 
@@ -444,7 +432,7 @@ contract Gateway is IGateway, IInitializable {
         view
         returns (uint256)
     {
-        return _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee));
+        return _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee, MAX_DESTINATION_FEE));
     }
 
     // Transfer ERC20 tokens to a Polkadot parachain
@@ -456,7 +444,9 @@ contract Gateway is IGateway, IInitializable {
         uint128 amount
     ) external payable {
         _submitOutbound(
-            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, amount)
+            Assets.sendToken(
+                token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
+            )
         );
     }
 
@@ -490,19 +480,22 @@ contract Gateway is IGateway, IInitializable {
     }
 
     // Convert foreign currency to native currency (ROC/KSM/DOT -> ETH)
-    function _convertToNative(UD60x18 exchangeRate, uint256 amount) internal view returns (uint256) {
-        UD60x18 amountFP = convert(amount);
+    function _convertToNative(UD60x18 exchangeRate, UD60x18 multiplier, UD60x18 amount)
+        internal
+        view
+        returns (uint256)
+    {
         UD60x18 ethDecimals = convert(1e18);
         UD60x18 foreignDecimals = convert(10).pow(convert(uint256(FOREIGN_TOKEN_DECIMALS)));
-        UD60x18 nativeAmountFP = amountFP.mul(exchangeRate).div(foreignDecimals).mul(ethDecimals);
-        uint256 nativeAmount = convert(nativeAmountFP);
-        return nativeAmount;
+        UD60x18 nativeAmount = multiplier.mul(amount).mul(exchangeRate).div(foreignDecimals).mul(ethDecimals);
+        return convert(nativeAmount);
     }
 
     // Calculate the fee for accepting an outbound message
     function _calculateFee(Costs memory costs) internal view returns (uint256) {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
-        return costs.native + _convertToNative(pricing.exchangeRate, pricing.deliveryCost + costs.foreign);
+        UD60x18 amount = convert(pricing.deliveryCost + costs.foreign);
+        return costs.native + _convertToNative(pricing.exchangeRate, pricing.multiplier, amount);
     }
 
     // Submit an outbound message to Polkadot, after taking fees
@@ -597,23 +590,21 @@ contract Gateway is IGateway, IInitializable {
         uint128 assetHubReserveTransferFee;
         /// @dev extra fee to discourage spamming
         uint256 registerTokenFee;
+        /// @dev Fee multiplier
+        UD60x18 multiplier;
     }
 
     /// @dev Initialize storage in the gateway
     /// NOTE: This is not externally accessible as this function selector is overshadowed in the proxy
-    function initialize(bytes calldata data) external {
+    function initialize(bytes calldata data) external virtual {
         // Prevent initialization of storage in implementation contract
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();
         }
 
-        Config memory config = abi.decode(data, (Config));
-
         CoreStorage.Layout storage core = CoreStorage.layout();
 
-        if (core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID].agent != address(0)) {
-            revert AlreadyInitialized();
-        }
+        Config memory config = abi.decode(data, (Config));
 
         core.mode = config.mode;
 
@@ -641,6 +632,7 @@ contract Gateway is IGateway, IInitializable {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
         pricing.exchangeRate = config.exchangeRate;
         pricing.deliveryCost = config.deliveryCost;
+        pricing.multiplier = config.multiplier;
 
         // Initialize assets storage
         AssetsStorage.Layout storage assets = AssetsStorage.layout();

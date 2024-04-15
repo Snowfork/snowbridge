@@ -29,9 +29,6 @@ interface IGateway {
     // Emitted when a channel has been updated
     event ChannelUpdated(ChannelID indexed channelID);
 
-    // Emitted when the gateway is upgraded
-    event Upgraded(address indexed implementation);
-
     // Emitted when the operating mode is changed
     event OperatingModeChanged(OperatingMode mode);
 

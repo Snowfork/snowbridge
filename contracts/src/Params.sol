@@ -79,6 +79,8 @@ struct SetPricingParametersParams {
     UD60x18 exchangeRate;
     /// @dev The cost of delivering messages to BridgeHub in DOT
     uint128 deliveryCost;
+    /// @dev Fee multiplier
+    UD60x18 multiplier;
 }
 
 // Payload for SetSafeCalls

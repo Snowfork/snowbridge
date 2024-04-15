@@ -106,6 +106,14 @@ func (b *BeaconBlockDenebMainnet) GetBlockBodyTree() (*ssz.Node, error) {
 	return b.Body.GetTree()
 }
 
+func (b *BeaconBlockDenebMainnet) ExecutionPayloadCapella() *ExecutionPayloadCapella {
+	return nil
+}
+
+func (b *BeaconBlockDenebMainnet) ExecutionPayloadDeneb() *ExecutionPayloadDeneb {
+	return b.Body.ExecutionPayload
+}
+
 func (b *BeaconStateDenebMainnet) GetSlot() uint64 {
 	return b.Slot
 }
@@ -122,10 +130,6 @@ func (b *BeaconStateDenebMainnet) SetBlockRoots(blockRoots [][]byte) {
 	b.BlockRoots = blockRoots
 }
 
-func (b *BeaconBlockDenebMainnet) ExecutionPayloadCapella() *ExecutionPayloadCapella {
-	return nil
-}
-
-func (b *BeaconBlockDenebMainnet) ExecutionPayloadDeneb() *ExecutionPayloadDeneb {
-	return b.Body.ExecutionPayload
+func (b *BeaconStateDenebMainnet) GetFinalizedCheckpoint() *Checkpoint {
+	return b.FinalizedCheckpoint
 }

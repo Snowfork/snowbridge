@@ -22,7 +22,10 @@ eth_fast_mode="${ETH_FAST_MODE:-true}"
 etherscan_api_key="${ETHERSCAN_API_KEY:-}"
 rebuild_lodestar="${REBUILD_LODESTAR:-true}"
 
-parachain_relay_eth_key="${PARACHAIN_RELAY_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
+parachain_relay_primary_gov_eth_key="${PARACHAIN_RELAY_PRIMARY_GOV_ETH_KEY:-0x8013383de6e5a891e7754ae1ef5a21e7661f1fe67cd47ca8ebf4acd6de66879a}"
+parachain_relay_secondary_gov_eth_key="${PARACHAIN_RELAY_SECONDARY_GOV_ETH_KEY:-0xe699de86629f0e795b27e26b33c343876f9282c821a62086b21aef0baa7d7ca7}"
+parachain_relay_assethub_eth_key="${PARACHAIN_RELAY_ASSETHUB_ETH_KEY:-0x3646505e08a0f3a61417d91db18f2911b2d17c01563044f3e2f106bf36679a6a}"
+parachain_relay_penpal_eth_key="${PARACHAIN_RELAY_PENPAL_ETH_KEY:-0xf9d99a8f29860f6c42714013bae3cf5e833966bf11817f7650a351790e502a45}"
 beefy_relay_eth_key="${BEEFY_RELAY_ETH_KEY:-0x935b65c833ced92c43ef9de6bff30703d941bd92a2637cb00cfad389f5862109}"
 
 # Parachain accounts for which the relayer will relay messages over the basic channel.
@@ -70,8 +73,10 @@ assethub_sovereign_account="${ASSETHUB_SOVEREIGN_ACCOUNT:-0x7369626ce80300000000
 penpal_sovereign_account="${PENPAL_SOVEREIGN_ACCOUNT:-0x7369626cd0070000000000000000000000000000000000000000000000000000}"
 # Beacon relay account (//BeaconRelay 5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c in testnet)
 beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cded69dce4a65f027ed3362357605b1687986a}"
-# Execution relay account (//ExecutionRelay 5CFNWKMFPsw5Cs2Teo6Pvg7rWyjKiFfqPZs8U4MZXzMYFwXL in testnet)
-execution_relayer_pub_key="${EXECUTION_RELAYER_PUB_KEY:-0x08228efd065c58a043da95c8bf177659fc587643e71e7ed1534666177730196f}"
+# Execution relay account (//ExecutionRelayAssetHub 5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV in testnet)
+execution_relayer_assethub_pub_key="${EXECUTION_RELAYER_ASSETHUB_PUB_KEY:-0x34284f0c1920694dd2e798e94e378307980d0f52d556009fc451c08bd65a8b4a}"
+# Execution relay account (//ExecutionRelayPenpal 5HgmfVcc8xBUcReNJsUaJMhFWGkdYpEw4RiCX4SeZPdKXR6H in testnet)
+execution_relayer_penpal_pub_key="${EXECUTION_RELAYER_PENPAL_PUB_KEY:-0xf8aed1861e571ef861cf34fe9587a211465aa380787e0102c2e89dfb0b666d3b}"
 
 # Config for deploying contracts
 
@@ -91,12 +96,14 @@ export REJECT_OUTBOUND_MESSAGES="${REJECT_OUTBOUND_MESSAGES:-false}"
 
 ## Fee
 export REGISTER_TOKEN_FEE="${REGISTER_TOKEN_FEE:-200000000000000000}"
-export DELIVERY_COST="${DELIVERY_COST:-10000000000}"
 export CREATE_ASSET_FEE="${CREATE_ASSET_FEE:-10000000000}"
 export RESERVE_TRANSFER_FEE="${RESERVE_TRANSFER_FEE:-10000000000}"
+export RESERVE_TRANSFER_MAX_DESTINATION_FEE="${RESERVE_TRANSFER_MAX_DESTINATION_FEE:-10000000000000}"
 
-## Price
+## Pricing Parameters
 export EXCHANGE_RATE="${EXCHANGE_RATE:-2500000000000000}"
+export DELIVERY_COST="${DELIVERY_COST:-10000000000}"
+export FEE_MULTIPLIER="${FEE_MULTIPLIER:-1000000000000000000}"
 export FEE_PER_GAS="${FEE_PER_GAS:-20000000000}"
 
 ## Reward

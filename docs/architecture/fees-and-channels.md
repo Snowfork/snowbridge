@@ -2,7 +2,7 @@
 
 Bridge messages flow across the bridge through logical _channels_. Each parachain that wishes to directly send or receive messages is allocated its own dedicated channel, and has some influence over the operation of its channel.
 
-This design ensures the the following:
+This design ensures the following:
 
 * Parachain governance assumes the responsibility of [rebalancing](fees-and-channels.md#rebalancing)
 * The potential for custom fee/reward models on a per-channel basis
@@ -27,7 +27,7 @@ As a prerequisite, the parachain must already have an agent instantiated on Ethe
 
 The net result is that:
 
-* On Ethereum, the agent contract of the origin parachain is _credited_ with fees that cover the cost of delivery to the the destination parachain.
+* On Ethereum, the agent contract of the origin parachain is _credited_ with fees that cover the cost of delivery to the destination parachain.
 * On BridgeHub, sovereign account of the origin parachain is _debited_ with the costs incurred for delivery.
 
 ### Parachain -> BridgeHub -> Ethereum
