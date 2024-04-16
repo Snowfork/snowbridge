@@ -9,7 +9,7 @@ ignore:
   - "contracts/src/utils"
   - "contracts/src/ScaleCodec.sol"
   - "contracts/src/SubstrateTypes.sol"
-  - "contracts/src/DeployScript.sol"
+  - "contracts/scripts"
 flags:
   solidity:
     paths:
