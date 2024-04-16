@@ -102,7 +102,6 @@ configure_substrate() {
     config_beacon_checkpoint
     open_hrmp_channels
     config_xcm_version
-    config_penpal
 }
 
 if [ -z "${from_start_services:-}" ]; then

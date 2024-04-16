@@ -61,9 +61,7 @@ async fn send_token_to_penpal() {
 		.unwrap();
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
-	// Sending to an account non-existent so the destination_fee here should cover the ED on penpal
-	// https://github.com/Snowfork/polkadot-sdk/blob/68ab248801fdadef7ef4923c21d6b9d55a5f15b4/cumulus/parachains/runtimes/testing/penpal/src/lib.rs#L265
-	let destination_fee = 40_000_000_000;
+	let destination_fee = 4_000_000_000;
 	let fee = gateway
 		.quote_send_token_fee(weth.address(), PENPAL_PARA_ID, destination_fee)
 		.call()
@@ -76,8 +74,8 @@ async fn send_token_to_penpal() {
 		.send_token(
 			weth.address(),
 			PENPAL_PARA_ID,
-			i_gateway::MultiAddress { kind: 1, data: (*NOEXIST_PUBLIC).into() },
-			destination_fee,
+			i_gateway::MultiAddress { kind: 1, data: (*FERDIE_PUBLIC).into() },
+			4_000_000_000,
 			amount,
 		)
 		.value(fee)
@@ -88,11 +86,7 @@ async fn send_token_to_penpal() {
 		.unwrap()
 		.unwrap();
 
-	println!(
-		"receipt transaction hash: {:#?}, transaction block: {:#?}",
-		hex::encode(receipt.transaction_hash),
-		receipt.block_number
-	);
+	println!("receipt: {:#?}", receipt);
 
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
@@ -139,7 +133,7 @@ async fn send_token_to_penpal() {
 		.expect("block subscription")
 		.take(wait_for_blocks);
 
-	let penpal_expected_owner: AccountId32 = (*NOEXIST_PUBLIC).into();
+	let penpal_expected_owner: AccountId32 = (*FERDIE_PUBLIC).into();
 
 	issued_event_found = false;
 	while let Some(Ok(block)) = penpal_blocks.next().await {
