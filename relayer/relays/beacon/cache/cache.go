@@ -79,7 +79,7 @@ func (b *BeaconCache) AddCheckPoint(finalizedHeaderRoot common.Hash, blockRootsT
 	length := len(b.Finalized.Checkpoints.Slots)
 
 	// check previous slot and overwrite proof
-	if length > 2 && b.Finalized.Checkpoints.Slots[length-1]-b.Finalized.Checkpoints.Slots[length-2] < 8192 {
+	if length >= 2 && slot-b.Finalized.Checkpoints.Slots[length-2] < 8192 {
 		overwrittenSlot := b.overwriteSlot(slot)
 		log.WithFields(log.Fields{
 			"slot":            slot,
