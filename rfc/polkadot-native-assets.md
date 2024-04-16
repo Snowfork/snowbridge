@@ -61,7 +61,7 @@ instructions: [
 
 So the top-level `WithdrawAsset` will withdraw relay token from sovereign account of AssetHub as fee to pay for the execution cost on both BridgeHub and Ethereum.
 
-What we really care about is the internal xcm in `ExportMessage` with [the convert logic in outbound-router](https://github.com/Snowfork/polkadot-sdk/blob/5a4f3af6932cfcbae98435cb16f98a2ee8db4812/bridges/snowbridge/primitives/router/src/outbound/mod.rs#L222) it will be converted into a simple `Command` which will be relayed and finally executed on Ethereum.
+What we really care about is the internal xcm in `ExportMessage` with [the convert logic in outbound-router](https://github.com/Snowfork/polkadot-sdk/blob/5a4f3af6932cfcbae98435cb16f98a2ee8db4812/bridges/snowbridge/primitives/router/src/outbound/mod.rs#L318) it will be converted into a simple `Command` which will be relayed and finally executed on Ethereum.
 
 On Ethereum side based on the `Command` the Agent will [mint foreign token to the recipient](https://github.com/Snowfork/snowbridge/blob/07545cf7e8f0321e4ab89d7f5eb52bc85ab3d4c1/contracts/src/Assets.sol#L269) to finish the whole flow.
 
