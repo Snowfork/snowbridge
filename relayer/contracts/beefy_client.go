@@ -78,7 +78,7 @@ type Uint16Array struct {
 
 // BeefyClientMetaData contains all meta data concerning the BeefyClient contract.
 var BeefyClientMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"_randaoCommitDelay\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_randaoCommitExpiration\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_minNumRequiredSignatures\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_initialBeefyBlock\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"_initialValidatorSet\",\"type\":\"tuple\",\"internalType\":\"structBeefyClient.ValidatorSet\",\"components\":[{\"name\":\"id\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"length\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"root\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"_nextValidatorSet\",\"type\":\"tuple\",\"internalType\":\"structBeefyClient.ValidatorSet\",\"components\":[{\"name\":\"id\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"length\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"root\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"MMR_ROOT_ID\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes2\",\"internalType\":\"bytes2\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"commitPrevRandao\",\"inputs\":[{\"name\":\"commitmentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"createFinalBitfield\",\"inputs\":[{\"name\":\"commitmentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"bitfield\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"createInitialBitfield\",\"inputs\":[{\"name\":\"bitsToSet\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"length\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"currentValidatorSet\",\"inputs\":[],\"outputs\":[{\"name\":\"id\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"length\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"root\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"usageCounters\",\"type\":\"tuple\",\"internalType\":\"structUint16Array\",\"components\":[{\"name\":\"data\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"length\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"latestBeefyBlock\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"latestMMRRoot\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"minNumRequiredSignatures\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"nextValidatorSet\",\"inputs\":[],\"outputs\":[{\"name\":\"id\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"length\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"root\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"usageCounters\",\"type\":\"tuple\",\"internalType\":\"structUint16Array\",\"components\":[{\"name\":\"data\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"length\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"randaoCommitDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"randaoCommitExpiration\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"submitFinal\",\"inputs\":[{\"name\":\"commitment\",\"type\":\"tuple\",\"internalType\":\"structBeefyClient.Commitment\",\"components\":[{\"name\":\"blockNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"validatorSetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"payload\",\"type\":\"tuple[]\",\"internalType\":\"structBeefyClient.PayloadItem[]\",\"components\":[{\"name\":\"payloadID\",\"type\":\"bytes2\",\"internalType\":\"bytes2\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"bitfield\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"proofs\",\"type\":\"tuple[]\",\"internalType\":\"structBeefyClient.ValidatorProof[]\",\"components\":[{\"name\":\"v\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"r\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"s\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"index\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]},{\"name\":\"leaf\",\"type\":\"tuple\",\"internalType\":\"structBeefyClient.MMRLeaf\",\"components\":[{\"name\":\"version\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"parentNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"leafProofOrder\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"submitInitial\",\"inputs\":[{\"name\":\"commitment\",\"type\":\"tuple\",\"internalType\":\"structBeefyClient.Commitment\",\"components\":[{\"name\":\"blockNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"validatorSetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"payload\",\"type\":\"tuple[]\",\"internalType\":\"structBeefyClient.PayloadItem[]\",\"components\":[{\"name\":\"payloadID\",\"type\":\"bytes2\",\"internalType\":\"bytes2\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"bitfield\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"proof\",\"type\":\"tuple\",\"internalType\":\"structBeefyClient.ValidatorProof\",\"components\":[{\"name\":\"v\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"r\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"s\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"index\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"tickets\",\"inputs\":[{\"name\":\"ticketID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"blockNumber\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"validatorSetLen\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"numRequiredSignatures\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"prevRandao\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bitfieldHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"verifyMMRLeafProof\",\"inputs\":[{\"name\":\"leafHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"proofOrder\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"event\",\"name\":\"NewMMRRoot\",\"inputs\":[{\"name\":\"mmrRoot\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"blockNumber\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"CommitmentNotRelevant\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"IndexOutOfBounds\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidBitfield\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidBitfieldLength\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidCommitment\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidMMRLeaf\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidMMRLeafProof\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidMMRRootLength\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidSignature\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidTicket\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidValidatorProof\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidValidatorProofLength\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotEnoughClaims\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"PrevRandaoAlreadyCaptured\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"PrevRandaoNotCaptured\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProofSizeExceeded\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"StaleCommitment\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TicketExpired\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"UnsupportedCompactEncoding\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"WaitPeriodNotOver\",\"inputs\":[]}]",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"_randaoCommitDelay\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_randaoCommitExpiration\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_minNumRequiredSignatures\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_initialBeefyBlock\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"_initialValidatorSet\",\"type\":\"tuple\",\"internalType\":\"structBeefyClient.ValidatorSet\",\"components\":[{\"name\":\"id\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"length\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"root\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"_nextValidatorSet\",\"type\":\"tuple\",\"internalType\":\"structBeefyClient.ValidatorSet\",\"components\":[{\"name\":\"id\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"length\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"root\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"MMR_ROOT_ID\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes2\",\"internalType\":\"bytes2\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"commitPrevRandao\",\"inputs\":[{\"name\":\"commitmentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"createFinalBitfield\",\"inputs\":[{\"name\":\"commitmentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"bitfield\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"createInitialBitfield\",\"inputs\":[{\"name\":\"bitsToSet\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"length\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"currentValidatorSet\",\"inputs\":[],\"outputs\":[{\"name\":\"id\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"length\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"root\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"usageCounters\",\"type\":\"tuple\",\"internalType\":\"structUint16Array\",\"components\":[{\"name\":\"data\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"length\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"latestBeefyBlock\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"latestMMRRoot\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"minNumRequiredSignatures\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"nextValidatorSet\",\"inputs\":[],\"outputs\":[{\"name\":\"id\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"length\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"root\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"usageCounters\",\"type\":\"tuple\",\"internalType\":\"structUint16Array\",\"components\":[{\"name\":\"data\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"length\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"randaoCommitDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"randaoCommitExpiration\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"submitFinal\",\"inputs\":[{\"name\":\"commitment\",\"type\":\"tuple\",\"internalType\":\"structBeefyClient.Commitment\",\"components\":[{\"name\":\"blockNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"validatorSetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"payload\",\"type\":\"tuple[]\",\"internalType\":\"structBeefyClient.PayloadItem[]\",\"components\":[{\"name\":\"payloadID\",\"type\":\"bytes2\",\"internalType\":\"bytes2\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"bitfield\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"proofs\",\"type\":\"tuple[]\",\"internalType\":\"structBeefyClient.ValidatorProof[]\",\"components\":[{\"name\":\"v\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"r\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"s\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"index\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]},{\"name\":\"leaf\",\"type\":\"tuple\",\"internalType\":\"structBeefyClient.MMRLeaf\",\"components\":[{\"name\":\"version\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"parentNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"leafProofOrder\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"submitInitial\",\"inputs\":[{\"name\":\"commitment\",\"type\":\"tuple\",\"internalType\":\"structBeefyClient.Commitment\",\"components\":[{\"name\":\"blockNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"validatorSetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"payload\",\"type\":\"tuple[]\",\"internalType\":\"structBeefyClient.PayloadItem[]\",\"components\":[{\"name\":\"payloadID\",\"type\":\"bytes2\",\"internalType\":\"bytes2\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"bitfield\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"proof\",\"type\":\"tuple\",\"internalType\":\"structBeefyClient.ValidatorProof\",\"components\":[{\"name\":\"v\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"r\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"s\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"index\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"tickets\",\"inputs\":[{\"name\":\"ticketID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"blockNumber\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"validatorSetLen\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"numRequiredSignatures\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"prevRandao\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bitfieldHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"verifyMMRLeafProof\",\"inputs\":[{\"name\":\"leafHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"proofOrder\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"event\",\"name\":\"NewMMRRoot\",\"inputs\":[{\"name\":\"mmrRoot\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"blockNumber\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"NewTicket\",\"inputs\":[{\"name\":\"relayer\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"blockNumber\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"CommitmentNotRelevant\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"IndexOutOfBounds\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidBitfield\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidBitfieldLength\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidCommitment\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidMMRLeaf\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidMMRLeafProof\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidMMRRootLength\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidSignature\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidTicket\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidValidatorProof\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidValidatorProofLength\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotEnoughClaims\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"PrevRandaoAlreadyCaptured\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"PrevRandaoNotCaptured\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProofSizeExceeded\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"StaleCommitment\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TicketExpired\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"UnsupportedCompactEncoding\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"WaitPeriodNotOver\",\"inputs\":[]}]",
 }
 
 // BeefyClientABI is the input ABI used to generate the binding from.
@@ -868,6 +868,141 @@ func (_BeefyClient *BeefyClientFilterer) WatchNewMMRRoot(opts *bind.WatchOpts, s
 func (_BeefyClient *BeefyClientFilterer) ParseNewMMRRoot(log types.Log) (*BeefyClientNewMMRRoot, error) {
 	event := new(BeefyClientNewMMRRoot)
 	if err := _BeefyClient.contract.UnpackLog(event, "NewMMRRoot", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BeefyClientNewTicketIterator is returned from FilterNewTicket and is used to iterate over the raw logs and unpacked data for NewTicket events raised by the BeefyClient contract.
+type BeefyClientNewTicketIterator struct {
+	Event *BeefyClientNewTicket // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BeefyClientNewTicketIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BeefyClientNewTicket)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BeefyClientNewTicket)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BeefyClientNewTicketIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BeefyClientNewTicketIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BeefyClientNewTicket represents a NewTicket event raised by the BeefyClient contract.
+type BeefyClientNewTicket struct {
+	Relayer     common.Address
+	BlockNumber uint64
+	Raw         types.Log // Blockchain specific contextual infos
+}
+
+// FilterNewTicket is a free log retrieval operation binding the contract event 0xbee983fc706c692efb9b0240bddc5666c010a53af55ed5fb42d226e7e4293869.
+//
+// Solidity: event NewTicket(address relayer, uint64 blockNumber)
+func (_BeefyClient *BeefyClientFilterer) FilterNewTicket(opts *bind.FilterOpts) (*BeefyClientNewTicketIterator, error) {
+
+	logs, sub, err := _BeefyClient.contract.FilterLogs(opts, "NewTicket")
+	if err != nil {
+		return nil, err
+	}
+	return &BeefyClientNewTicketIterator{contract: _BeefyClient.contract, event: "NewTicket", logs: logs, sub: sub}, nil
+}
+
+// WatchNewTicket is a free log subscription operation binding the contract event 0xbee983fc706c692efb9b0240bddc5666c010a53af55ed5fb42d226e7e4293869.
+//
+// Solidity: event NewTicket(address relayer, uint64 blockNumber)
+func (_BeefyClient *BeefyClientFilterer) WatchNewTicket(opts *bind.WatchOpts, sink chan<- *BeefyClientNewTicket) (event.Subscription, error) {
+
+	logs, sub, err := _BeefyClient.contract.WatchLogs(opts, "NewTicket")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BeefyClientNewTicket)
+				if err := _BeefyClient.contract.UnpackLog(event, "NewTicket", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseNewTicket is a log parse operation binding the contract event 0xbee983fc706c692efb9b0240bddc5666c010a53af55ed5fb42d226e7e4293869.
+//
+// Solidity: event NewTicket(address relayer, uint64 blockNumber)
+func (_BeefyClient *BeefyClientFilterer) ParseNewTicket(log types.Log) (*BeefyClientNewTicket, error) {
+	event := new(BeefyClientNewTicket)
+	if err := _BeefyClient.contract.UnpackLog(event, "NewTicket", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

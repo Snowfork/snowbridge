@@ -35,6 +35,13 @@ contract BeefyClient {
      */
     event NewMMRRoot(bytes32 mmrRoot, uint64 blockNumber);
 
+    /**
+     * @dev Emitted when a new ticket has been created
+     * @param relayer The relayer who created the ticket
+     * @param blockNumber the parent block number of the candidate MMR root
+     */
+    event NewTicket(address relayer, uint64 blockNumber);
+
     /* Types */
 
     /**
@@ -289,6 +296,8 @@ contract BeefyClient {
             prevRandao: 0,
             bitfieldHash: keccak256(abi.encodePacked(bitfield))
         });
+
+        emit NewTicket(msg.sender, commitment.blockNumber);
     }
 
     /**

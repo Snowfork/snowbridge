@@ -19,4 +19,5 @@ rococo-local.json
 .pnp.*
 ethereum-goerli
 testdata
+beacon-state
 .env

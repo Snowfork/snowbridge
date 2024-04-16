@@ -9,7 +9,7 @@ fund_agent() {
         --rpc-url $eth_endpoint_http \
         --broadcast \
         -vvv \
-        src/FundAgent.sol:FundAgent
+        scripts/FundAgent.sol:FundAgent
     popd
 
     echo "Fund agent success!"

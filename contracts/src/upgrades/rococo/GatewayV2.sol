@@ -9,12 +9,23 @@ import {PricingStorage} from "../../storage/PricingStorage.sol";
 
 contract GatewayV2 is Gateway {
     constructor(
+        address recoveryOperator,
         address beefyClient,
         address agentExecutor,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
-        uint8 foreignTokenDecimals
-    ) Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals) {}
+        uint8 foreignTokenDecimals,
+        uint128 destinationMaxTransferFee
+    )
+        Gateway(
+            beefyClient,
+            agentExecutor,
+            bridgeHubParaID,
+            bridgeHubAgentID,
+            foreignTokenDecimals,
+            destinationMaxTransferFee
+        )
+    {}
 
     function initialize(bytes memory data) external override {
         // Prevent initialization of storage in implementation contract
@@ -23,10 +34,6 @@ contract GatewayV2 is Gateway {
         }
 
         PricingStorage.Layout storage pricing = PricingStorage.layout();
-
-        if (pricing.multiplier != convert(0)) {
-            revert AlreadyInitialized();
-        }
 
         pricing.multiplier = abi.decode(data, (UD60x18));
     }
