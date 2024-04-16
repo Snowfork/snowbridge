@@ -185,6 +185,7 @@ export type SendResult = {
         plan: SendValidationResult
         messageId?: string
         sourceParachain?: {
+            events: EventRecord[]
             txHash: string
             txIndex: number
             blockHash: string
@@ -310,7 +311,6 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
                     fee_asset,
                     weight
                 ).signAndSend(addressOrPair, { signer: walletSigner }, (c) => {
-                    console.log('BBB', c)
                     if (c.isError) {
                         reject(c.internalError || c.dispatchError)
                     }
@@ -319,11 +319,11 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
                             txHash: u8aToHex(c.txHash),
                             txIndex: c.txIndex || 0,
                             blockNumber: Number((c as any).blockNumber),
-                            blockHash: u8aToHex((c as any).blockHash),
+                            blockHash: "",
                             events: c.events
                         }
                         for (const e of c.events) {
-                            if (assetHub.events.system.ExtrinsicFailed.is(e.event)) {
+                            if (parachainApi.events.system.ExtrinsicFailed.is(e.event)) {
                                 resolve({
                                     ...result,
                                     success: false,
@@ -331,7 +331,7 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
                                 })
                             }
 
-                            if (assetHub.events.polkadotXcm.Sent.is(e.event)) {
+                            if (parachainApi.events.polkadotXcm.Sent.is(e.event)) {
                                 resolve({
                                     ...result,
                                     success: true,
@@ -351,6 +351,7 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
             }
         })
 
+        pResult.blockHash = u8aToHex(await parachainApi.rpc.chain.getBlockHash(pResult.blockNumber))
         if (!pResult.success) {
             return {
                 failure: {
@@ -395,7 +396,6 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
 
     let result = await new Promise<{
         blockNumber: number
-        blockHash: string
         txIndex: number
         txHash: string
         success: boolean
@@ -411,7 +411,6 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
                 fee_asset,
                 weight
             ).signAndSend(addressOrPair, { signer: walletSigner }, (c) => {
-                console.log('AAA', c)
                 if (c.isError) {
                     reject(c.internalError || c.dispatchError)
                 }
@@ -420,7 +419,6 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
                         txHash: u8aToHex(c.txHash),
                         txIndex: c.txIndex || 0,
                         blockNumber: Number((c as any).blockNumber),
-                        blockHash: u8aToHex((c as any).blockHash),
                         events: c.events
                     }
                     for (const e of c.events) {

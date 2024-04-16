@@ -1,6 +1,34 @@
 import { ApiPromise } from '@polkadot/api'
+import { BlockHash } from '@polkadot/types/interfaces'
 import { Codec } from '@polkadot/types/types'
 import { filter, firstValueFrom, take } from 'rxjs'
+
+export const scanSubstrateEvents = async (
+    parachain: ApiPromise,
+    start: bigint,
+    scanBlocks: bigint,
+    filter: (blockNumber: bigint, blockHash: BlockHash, event: Codec) => Promise<boolean>): Promise<{
+        found: boolean
+        lastScannedBlock: bigint
+        events?: Codec
+    }> => {
+
+    const finalized = (await parachain.rpc.chain.getHeader(await parachain.rpc.chain.getFinalizedHead())).number.toBigInt()
+    const stopScan = start + scanBlocks
+    const end = finalized < stopScan ? finalized : stopScan
+
+    for (let blockNumber = start; blockNumber <= end; ++blockNumber) {
+        const blockHash = await parachain.rpc.chain.getBlockHash(blockNumber)
+        const events = await (await parachain.at(blockHash)).query.system.events()
+        for (const event of events as any) {
+            if (await filter(blockNumber, blockHash, event)) {
+                return { found: true, lastScannedBlock: blockNumber, events: events }
+            }
+        }
+    }
+
+    return { found: false, lastScannedBlock: end }
+}
 
 export const waitForMessageQueuePallet = async (
     parachain: ApiPromise,
