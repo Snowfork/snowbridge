@@ -13,8 +13,18 @@ contract GatewayWithAssetStorageV2 is Gateway {
         address agentExecutor,
         ParaID bridgeHubParaID,
         bytes32 bridgeHubAgentID,
-        uint8 foreignTokenDecimals
-    ) Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals) {}
+        uint8 foreignTokenDecimals,
+        uint128 destinationMaxTransferFee
+    )
+        Gateway(
+            beefyClient,
+            agentExecutor,
+            bridgeHubParaID,
+            bridgeHubAgentID,
+            foreignTokenDecimals,
+            destinationMaxTransferFee
+        )
+    {}
 
     function initialize(bytes memory data) external override {
         // Prevent initialization of storage in implementation contract

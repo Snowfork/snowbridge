@@ -3,5 +3,9 @@ resolver = "2"
 members = [
     "runtimes/rococo",
     "runtimes/bridge-hub-rococo",
+    "runtimes/asset-hub-rococo",
+    "runtimes/polkadot",
+    "runtimes/bridge-hub-polkadot",
+    "runtimes/asset-hub-polkadot",
     "preimage",
 ]

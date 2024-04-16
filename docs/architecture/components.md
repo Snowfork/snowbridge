@@ -10,7 +10,7 @@ This [pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets
 
 1. Verifying that message[^1] that was included in the finalized Ethereum execution chain as tracked by our ethereum light client.
 2. Converting the message to an [XCM](https://wiki.polkadot.network/docs/learn-xcm) script.
-3. Sending the the XCM script to the destination parachain.
+3. Sending the XCM script to the destination parachain.
 
 ### OutboundQueue
 
