@@ -5,6 +5,7 @@ import {Gateway} from "../../src/Gateway.sol";
 import {ParaID, OperatingMode} from "../../src/Types.sol";
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
 import {Verification} from "../../src/Verification.sol";
+import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
@@ -98,8 +99,6 @@ library AdditionalStorage {
         }
     }
 }
-
-import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 
 // Used to test upgrades.
 contract GatewayV2 is IInitializable  {

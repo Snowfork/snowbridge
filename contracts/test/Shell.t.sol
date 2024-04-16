@@ -45,4 +45,14 @@ contract ShellTest is Test {
         vm.expectRevert();
         IShell(address(gateway)).upgrade(newLogic, newLogic.codehash, initParams);
     }
+
+    function testOnlyOperatorCanUpgradeShell() public {
+        address newLogic = address(new GatewayV2());
+        bytes memory initParams = abi.encode(42);
+
+        address user = makeAddr("user");
+        hoax(user, 1 ether);
+        vm.expectRevert(IShell.Unauthorized.selector);
+        IShell(address(gateway)).upgrade(newLogic, newLogic.codehash, initParams);
+    }
 }
