@@ -11,8 +11,8 @@ use hex_literal::hex;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{
-		gateway_v2,
 		i_upgradable::{self, UpgradedFilter},
+		mock_gateway_v2,
 	},
 	parachains::{
 		bridgehub::{
@@ -53,8 +53,10 @@ async fn upgrade_gateway() {
 	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
 	let gateway = i_upgradable::IUpgradable::new(gateway_addr, ethereum_client.clone());
 
-	let new_impl =
-		gateway_v2::MockGatewayV2::new(Address::from(GATEWAY_V2_ADDRESS), ethereum_client.clone());
+	let new_impl = mock_gateway_v2::MockGatewayV2::new(
+		Address::from(GATEWAY_V2_ADDRESS),
+		ethereum_client.clone(),
+	);
 	let new_impl_code = ethereum_client.get_code(new_impl.address(), None).await.unwrap();
 	let new_impl_code_hash = keccak256(new_impl_code);
 	let new_impl_initializer_params = ethers::abi::encode(&[Token::Uint(42.into())]);
