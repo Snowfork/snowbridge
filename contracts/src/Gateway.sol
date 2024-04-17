@@ -622,8 +622,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     }
 
     // Calculate cost for transact
-    function _calculateTransactCost(uint128 destinationFee) internal pure returns (Costs memory costs) {
-        return Costs({native: 0, foreign: destinationFee});
+    function _calculateTransactCost(uint128) internal pure returns (Costs memory costs) {
+        return Costs({native: 0, foreign: 0});
     }
 
     /// @inheritdoc IGateway
