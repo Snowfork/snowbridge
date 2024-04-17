@@ -22,14 +22,14 @@ contract Shell is IShell, IUpgradable, IInitializable {
         Upgrade.upgrade(impl, implCodeHash, initializerParams);
     }
 
-    function initialize(bytes memory params) external {
+    function initialize(bytes memory) external view {
         // Prevent initialization of storage in implementation contract
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();
         }
     }
 
-    function operator() external returns (address) {
+    function operator() external view returns (address) {
         return OPERATOR;
     }
 }
