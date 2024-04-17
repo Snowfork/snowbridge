@@ -13,7 +13,7 @@ import {Gateway} from "../src/Gateway.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Shell} from "../src/Shell.sol";
 import {Upgrade} from "../src/Upgrade.sol";
-import {GatewayMock, GatewayV2} from "./mocks/GatewayMock.sol";
+import {MockGatewayV2} from "./mocks/MockGatewayV2.sol";
 
 contract ShellTest is Test {
     GatewayProxy public gateway;
@@ -26,7 +26,7 @@ contract ShellTest is Test {
 
     function testUpgradeShell() public {
         // Upgrade to this new logic contract
-        address newLogic = address(new GatewayV2());
+        address newLogic = address(new MockGatewayV2());
         bytes memory initParams = abi.encode(42);
 
         // Expect the gateway to emit `Upgrade.Upgraded`
@@ -39,7 +39,7 @@ contract ShellTest is Test {
         // Verify that the upgrade occured
 
         // Execute code only available in the new impl
-        assertEq(GatewayV2(address(gateway)).getValue(), 42);
+        assertEq(MockGatewayV2(address(gateway)).getValue(), 42);
 
         // Should no longer be able to upgrade via trusted operator
         vm.expectRevert();
@@ -47,7 +47,7 @@ contract ShellTest is Test {
     }
 
     function testOnlyOperatorCanUpgradeShell() public {
-        address newLogic = address(new GatewayV2());
+        address newLogic = address(new MockGatewayV2());
         bytes memory initParams = abi.encode(42);
 
         address user = makeAddr("user");
