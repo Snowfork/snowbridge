@@ -4,20 +4,20 @@ pragma solidity 0.8.23;
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
-import {BeefyClient} from "./BeefyClient.sol";
+import {BeefyClient} from "../src/BeefyClient.sol";
 
-import {IGateway} from "./interfaces/IGateway.sol";
-import {GatewayProxy} from "./GatewayProxy.sol";
-import {Gateway} from "./Gateway.sol";
-import {GatewayUpgradeMock} from "../test/mocks/GatewayUpgradeMock.sol";
-import {Agent} from "./Agent.sol";
-import {AgentExecutor} from "./AgentExecutor.sol";
-import {ChannelID, ParaID, OperatingMode} from "./Types.sol";
-import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
+import {IGateway} from "../src/interfaces/IGateway.sol";
+import {GatewayProxy} from "../src/GatewayProxy.sol";
+import {Gateway} from "../src/Gateway.sol";
+import {MockGatewayV2} from "../test/mocks/MockGatewayV2.sol";
+import {Agent} from "../src/Agent.sol";
+import {AgentExecutor} from "../src/AgentExecutor.sol";
+import {ChannelID, ParaID, OperatingMode} from "../src/Types.sol";
+import {SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
 
-contract DeployScript is Script {
+contract DeployLocal is Script {
     using SafeNativeTransfer for address payable;
     using stdJson for string;
 
@@ -58,10 +58,16 @@ contract DeployScript is Script {
         bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
 
         uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
+        uint128 maxDestinationFee = uint128(vm.envUint("RESERVE_TRANSFER_MAX_DESTINATION_FEE"));
 
         AgentExecutor executor = new AgentExecutor();
         Gateway gatewayLogic = new Gateway(
-            address(beefyClient), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals
+            address(beefyClient),
+            address(executor),
+            bridgeHubParaID,
+            bridgeHubAgentID,
+            foreignTokenDecimals,
+            maxDestinationFee
         );
 
         bool rejectOutboundMessages = vm.envBool("REJECT_OUTBOUND_MESSAGES");
@@ -99,7 +105,8 @@ contract DeployScript is Script {
         payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);
 
-        new GatewayUpgradeMock();
+        // Deploy MockGatewayV2 for testing
+        new MockGatewayV2();
 
         vm.stopBroadcast();
     }

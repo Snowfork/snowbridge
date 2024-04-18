@@ -26,6 +26,7 @@ fund_accounts() {
     echo "Funding substrate accounts"
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $assethub_sovereign_account
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $penpal_sovereign_account
+    transfer_balance $relaychain_ws_url "//Charlie" 1000 1000000000000000 $penpal_sovereign_account
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $beacon_relayer_pub_key
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $execution_relayer_assethub_pub_key
     transfer_balance $relaychain_ws_url "//Charlie" 1013 1000000000000000 $execution_relayer_penpal_pub_key
@@ -80,7 +81,7 @@ set_gateway() {
 }
 
 config_xcm_version() {
-    local call="0x1f04020109079edaa80203000000"
+    local call="0x1f04020109079edaa80204000000"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 

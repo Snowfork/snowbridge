@@ -4,16 +4,15 @@ pragma solidity 0.8.23;
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
-import {BeefyClient} from "./BeefyClient.sol";
+import {BeefyClient} from "../src/BeefyClient.sol";
 
-import {IGateway} from "./interfaces/IGateway.sol";
-import {GatewayProxy} from "./GatewayProxy.sol";
-import {Gateway} from "./Gateway.sol";
-import {GatewayUpgradeMock} from "../test/mocks/GatewayUpgradeMock.sol";
-import {Agent} from "./Agent.sol";
-import {AgentExecutor} from "./AgentExecutor.sol";
-import {ParaID} from "./Types.sol";
-import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
+import {IGateway} from "../src/interfaces/IGateway.sol";
+import {GatewayProxy} from "../src/GatewayProxy.sol";
+import {Gateway} from "../src/Gateway.sol";
+import {Agent} from "../src/Agent.sol";
+import {AgentExecutor} from "../src/AgentExecutor.sol";
+import {ParaID} from "../src/Types.sol";
+import {SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
 contract FundAgent is Script {

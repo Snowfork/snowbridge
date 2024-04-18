@@ -6,14 +6,14 @@ mkdir -p src/contracts
 
 # Generate Rust bindings for contracts
 forge bind --module --overwrite \
-    --select 'IGateway|WETH9|GatewayUpgradeMock' \
+    --select 'IGateway|IUpgradable|WETH9|MockGatewayV2' \
     --bindings-path src/contracts \
     --root ../contracts
 
 # Install subxt
 command -v subxt || cargo install subxt-cli \
     --git https://github.com/paritytech/subxt.git \
-    --tag v0.33.0
+    --tag v0.35.3
 
 if ! lsof -Pi :11144 -sTCP:LISTEN -t >/dev/null; then
     echo "substrate nodes not running, please start with the e2e setup and rerun this script"

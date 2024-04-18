@@ -141,7 +141,7 @@ func (t *Tree) MerklePath(preLeaf []byte) []*Node {
 		remainder := levelLen % 2
 		nextIndex := index / 2
 
-		// if index is the the last item in an odd length level promote
+		// if index is the last item in an odd length level promote
 		if index == levelLen-1 && remainder != 0 {
 			index = nextIndex
 			continue

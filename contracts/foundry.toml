@@ -4,11 +4,10 @@ optimizer = true
 optimizer_runs = 20_000
 via_ir = true
 test = 'test'
+script = 'scripts'
 fs_permissions = [{ access = "read-write", path = "test/data"}, { access = "read", path = "./"}]
 
 ignored_error_codes = [
-    # DeployScript.sol is never deployed
+    # DeployLocal.sol is never deployed
     5574
 ]
-
-# no_match_test = "testRegenerateBitField"

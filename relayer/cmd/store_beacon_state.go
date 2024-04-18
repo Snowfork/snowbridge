@@ -24,14 +24,8 @@ func storeBeaconState() *cobra.Command {
 		RunE:  storeBeaconStateInDB,
 	}
 
-	cmd.Flags().String("url", "", "URL to generate test fixtures from")
-	err := cmd.MarkFlagRequired("url")
-	if err != nil {
-		return nil
-	}
-
-	cmd.Flags().String("db-store-location", "", "where the database store file should be stored")
-	err = cmd.MarkFlagRequired("db-store-location")
+	cmd.Flags().String("config", "", "path to the beacon config file to use")
+	err := cmd.MarkFlagRequired("config")
 	if err != nil {
 		return nil
 	}
@@ -40,17 +34,12 @@ func storeBeaconState() *cobra.Command {
 }
 
 func storeBeaconStateInDB(cmd *cobra.Command, _ []string) error {
-	dbStoreLocation, err := cmd.Flags().GetString("db-store-location")
+	configFile, err := cmd.Flags().GetString("config")
 	if err != nil {
 		return err
 	}
 
-	url, err := cmd.Flags().GetString("url")
-	if err != nil {
-		return err
-	}
-
-	viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
+	viper.SetConfigFile(configFile)
 	if err := viper.ReadInConfig(); err != nil {
 		return err
 	}
@@ -60,10 +49,9 @@ func storeBeaconStateInDB(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	specSettings := conf.Source.Beacon.Spec
-	p := protocol.New(specSettings)
-	store := store.New(dbStoreLocation, 100, *p)
-	beaconClient := api.NewBeaconClient(url)
+	p := protocol.New(conf.Source.Beacon.Spec)
+	store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
+	beaconClient := api.NewBeaconClient(conf.Source.Beacon.Endpoint)
 	syncer := syncer.New(beaconClient, &store, p)
 
 	err = store.Connect()
