@@ -29,51 +29,57 @@ type SyncCommitteePeriodUpdateResponse struct {
 	} `json:"data"`
 }
 
+type BeaconBlockResponseData struct {
+	Message BeaconBlockResponseMessage `json:"message"`
+}
+
+type BeaconBlockResponseMessage struct {
+	Slot          string                  `json:"slot"`
+	ProposerIndex string                  `json:"proposer_index"`
+	ParentRoot    string                  `json:"parent_root"`
+	StateRoot     string                  `json:"state_root"`
+	Body          BeaconBlockResponseBody `json:"body"`
+}
+
+type BeaconBlockResponseBody struct {
+	RandaoReveal string `json:"randao_reveal"`
+	Eth1Data     struct {
+		DepositRoot  string `json:"deposit_root"`
+		DepositCount string `json:"deposit_count"`
+		BlockHash    string `json:"block_hash"`
+	} `json:"eth1_data"`
+	Graffiti          string                        `json:"graffiti"`
+	ProposerSlashings []ProposerSlashingResponse    `json:"proposer_slashings"`
+	AttesterSlashings []AttesterSlashingResponse    `json:"attester_slashings"`
+	Attestations      []AttestationResponse         `json:"attestations"`
+	Deposits          []DepositResponse             `json:"deposits"`
+	VoluntaryExits    []SignedVoluntaryExitResponse `json:"voluntary_exits"`
+	SyncAggregate     SyncAggregateResponse         `json:"sync_aggregate"`
+	ExecutionPayload  struct {
+		ParentHash    string               `json:"parent_hash"`
+		FeeRecipient  string               `json:"fee_recipient"`
+		StateRoot     string               `json:"state_root"`
+		ReceiptsRoot  string               `json:"receipts_root"`
+		LogsBloom     string               `json:"logs_bloom"`
+		PrevRandao    string               `json:"prev_randao"`
+		BlockNumber   string               `json:"block_number"`
+		GasLimit      string               `json:"gas_limit"`
+		GasUsed       string               `json:"gas_used"`
+		Timestamp     string               `json:"timestamp"`
+		ExtraData     string               `json:"extra_data"`
+		BaseFeePerGas string               `json:"base_fee_per_gas"`
+		BlockHash     string               `json:"block_hash"`
+		Transactions  []string             `json:"transactions"`
+		Withdrawals   []WithdrawalResponse `json:"withdrawals"`
+		BlobGasUsed   string               `json:"blob_gas_used,omitempty"`
+		ExcessBlobGas string               `json:"excess_blob_gas,omitempty"`
+	} `json:"execution_payload"`
+	BlsToExecutionChanges []SignedBLSToExecutionChangeResponse `json:"bls_to_execution_changes"`
+	BlobKzgCommitments    []string                             `json:"blob_kzg_commitments"`
+}
+
 type BeaconBlockResponse struct {
-	Data struct {
-		Message struct {
-			Slot          string `json:"slot"`
-			ProposerIndex string `json:"proposer_index"`
-			ParentRoot    string `json:"parent_root"`
-			StateRoot     string `json:"state_root"`
-			Body          struct {
-				RandaoReveal string `json:"randao_reveal"`
-				Eth1Data     struct {
-					DepositRoot  string `json:"deposit_root"`
-					DepositCount string `json:"deposit_count"`
-					BlockHash    string `json:"block_hash"`
-				} `json:"eth1_data"`
-				Graffiti          string                        `json:"graffiti"`
-				ProposerSlashings []ProposerSlashingResponse    `json:"proposer_slashings"`
-				AttesterSlashings []AttesterSlashingResponse    `json:"attester_slashings"`
-				Attestations      []AttestationResponse         `json:"attestations"`
-				Deposits          []DepositResponse             `json:"deposits"`
-				VoluntaryExits    []SignedVoluntaryExitResponse `json:"voluntary_exits"`
-				SyncAggregate     SyncAggregateResponse         `json:"sync_aggregate"`
-				ExecutionPayload  struct {
-					ParentHash    string               `json:"parent_hash"`
-					FeeRecipient  string               `json:"fee_recipient"`
-					StateRoot     string               `json:"state_root"`
-					ReceiptsRoot  string               `json:"receipts_root"`
-					LogsBloom     string               `json:"logs_bloom"`
-					PrevRandao    string               `json:"prev_randao"`
-					BlockNumber   string               `json:"block_number"`
-					GasLimit      string               `json:"gas_limit"`
-					GasUsed       string               `json:"gas_used"`
-					Timestamp     string               `json:"timestamp"`
-					ExtraData     string               `json:"extra_data"`
-					BaseFeePerGas string               `json:"base_fee_per_gas"`
-					BlockHash     string               `json:"block_hash"`
-					Transactions  []string             `json:"transactions"`
-					Withdrawals   []WithdrawalResponse `json:"withdrawals"`
-					BlobGasUsed   string               `json:"blob_gas_used,omitempty"`
-					ExcessBlobGas string               `json:"excess_blob_gas,omitempty"`
-				} `json:"execution_payload"`
-				BlsToExecutionChanges []SignedBLSToExecutionChangeResponse `json:"bls_to_execution_changes"`
-				BlobKzgCommitments    []string                             `json:"blob_kzg_commitments"`
-			} `json:"body"`
-		} `json:"message"`
-	} `json:"data"`
+	Data BeaconBlockResponseData `json:"data"`
 }
 
 type BootstrapResponse struct {

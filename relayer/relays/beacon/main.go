@@ -8,6 +8,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 
 	log "github.com/sirupsen/logrus"
@@ -46,21 +47,27 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		r.config.Sink.Parachain.MaxBatchCallSize,
 	)
 
+	p := protocol.New(specSettings)
+
 	err = writer.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
 
-	store := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries)
-	store.Connect()
-	defer store.Close()
+	s := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries, *p)
+	err = s.Connect()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
 
-	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint, specSettings.SlotsInEpoch)
+	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint)
 	headers := header.New(
 		writer,
 		beaconAPI,
 		specSettings,
-		&store,
+		&s,
+		p,
 	)
 
 	return headers.Sync(ctx, eg)
