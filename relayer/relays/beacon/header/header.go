@@ -265,9 +265,9 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 	}
 	log.WithFields(log.Fields{
 		"fromSlot":   fromSlot,
-		"fromEpoch":  h.syncer.ComputeEpochAtSlot(fromSlot),
+		"fromEpoch":  h.protocol.ComputeEpochAtSlot(fromSlot),
 		"toSlot":     toSlot,
-		"toEpoch":    h.syncer.ComputeEpochAtSlot(toSlot),
+		"toEpoch":    h.protocol.ComputeEpochAtSlot(toSlot),
 		"totalSlots": toSlot - fromSlot,
 	}).Info("starting to back-fill headers")
 
