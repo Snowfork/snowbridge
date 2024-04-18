@@ -15,6 +15,10 @@ type MockWriter struct {
 	LastFinalizedState state.FinalizedHeader
 }
 
+func (m *MockWriter) GetSecondLastFinalizedSlot() (types.U32, error) {
+	return 0, nil
+}
+
 func (m *MockWriter) GetLastFinalizedStateIndex() (types.U32, error) {
 	return 0, nil
 }

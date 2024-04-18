@@ -7,7 +7,7 @@ import (
 )
 
 func TestCalculateClosestCheckpointSlot(t *testing.T) {
-	b := New(8, 8)
+	b := New(32, 256)
 
 	b.AddCheckPoint(common.HexToHash("0xfa767e1fb1280799fd406bd7905d3bef62d498211183548f9ebb7a1d16edce4c"), nil, 16)
 	b.AddCheckPoint(common.HexToHash("0xe5509a901249bcb4800b644ebb3c666074848ea02d0e85427fff29fe2ec354ec"), nil, 64)
@@ -20,17 +20,17 @@ func TestCalculateClosestCheckpointSlot(t *testing.T) {
 }
 
 func TestCalculateClosestCheckpointSlot_WithoutCheckpointIncludingSlot(t *testing.T) {
-	b := New(8, 8)
+	b := New(32, 256)
 
-	b.AddCheckPoint(common.HexToHash("0xe5509a901249bcb4800b644ebb3c666074848ea02d0e85427fff29fe2ec354ec"), nil, 72)
-	b.AddCheckPoint(common.HexToHash("0xecdf3404d4909e5ef6315566ae0cca2c20bf2e6ec6c18f4d26fc7913d9eaa592"), nil, 144)
+	b.AddCheckPoint(common.HexToHash("0xe5509a901249bcb4800b644ebb3c666074848ea02d0e85427fff29fe2ec354ec"), nil, 8250)
+	b.AddCheckPoint(common.HexToHash("0xecdf3404d4909e5ef6315566ae0cca2c20bf2e6ec6c18f4d26fc7913d9eaa592"), nil, 8500)
 
-	_, err := b.calculateClosestCheckpointSlot(2)
+	_, err := b.calculateClosestCheckpointSlot(32)
 	require.Error(t, err)
 }
 
 func TestCalculateClosestCheckpointSlot_WithoutCheckpointIncludingSlotTooLarge(t *testing.T) {
-	b := New(8, 8)
+	b := New(32, 256)
 
 	b.AddCheckPoint(common.HexToHash("0xe5509a901249bcb4800b644ebb3c666074848ea02d0e85427fff29fe2ec354ec"), nil, 72)
 	b.AddCheckPoint(common.HexToHash("0xecdf3404d4909e5ef6315566ae0cca2c20bf2e6ec6c18f4d26fc7913d9eaa592"), nil, 144)
@@ -40,7 +40,7 @@ func TestCalculateClosestCheckpointSlot_WithoutCheckpointIncludingSlotTooLarge(t
 }
 
 func TestCalculateClosestCheckpointSlot_WithCheckpointMatchingSlot(t *testing.T) {
-	b := New(8, 8)
+	b := New(32, 256)
 
 	b.AddCheckPoint(common.HexToHash("0xe5509a901249bcb4800b644ebb3c666074848ea02d0e85427fff29fe2ec354ec"), nil, 72)
 	b.AddCheckPoint(common.HexToHash("0xecdf3404d4909e5ef6315566ae0cca2c20bf2e6ec6c18f4d26fc7913d9eaa592"), nil, 144)
@@ -51,7 +51,7 @@ func TestCalculateClosestCheckpointSlot_WithCheckpointMatchingSlot(t *testing.T)
 }
 
 func TestCalculateClosestCheckpointSlot_WithMoreThanOneCheckpoint(t *testing.T) {
-	b := New(8, 8)
+	b := New(32, 256)
 
 	b.AddCheckPoint(common.HexToHash("0xe5509a901249bcb4800b644ebb3c666074848ea02d0e85427fff29fe2ec354ec"), nil, 32)
 	b.AddCheckPoint(common.HexToHash("0xecdf3404d4909e5ef6315566ae0cca2c20bf2e6ec6c18f4d26fc7913d9eaa592"), nil, 16)
@@ -62,7 +62,7 @@ func TestCalculateClosestCheckpointSlot_WithMoreThanOneCheckpoint(t *testing.T) 
 }
 
 func TestAddSlot(t *testing.T) {
-	b := BeaconCache{}
+	b := New(32, 256)
 
 	b.addSlot(5)
 	require.Equal(t, []uint64{5}, b.Finalized.Checkpoints.Slots)
@@ -78,7 +78,7 @@ func TestAddSlot(t *testing.T) {
 }
 
 func TestAddCheckpointOverwritesCorrectFinalizedCheckpoints(t *testing.T) {
-	b := New(8, 8)
+	b := New(32, 256)
 
 	b.AddCheckPoint(common.HexToHash("0xe5509a901249bcb4800b644ebb3c666074848ea02d0e85427fff29fe2ec354ec"), nil, 16)
 	require.Equal(t, []uint64{16}, b.Finalized.Checkpoints.Slots)
@@ -103,7 +103,7 @@ func TestAddCheckpointOverwritesCorrectFinalizedCheckpoints(t *testing.T) {
 }
 
 func TestOverwriteSlot(t *testing.T) {
-	b := BeaconCache{}
+	b := New(32, 256)
 
 	b.addSlot(5)
 	require.Equal(t, []uint64{5}, b.Finalized.Checkpoints.Slots)
@@ -124,17 +124,18 @@ func TestOverwriteSlot(t *testing.T) {
 }
 
 func TestAddPruneOldCheckpoints(t *testing.T) {
-	b := New(8, 8)
+	b := New(32, 256)
+	slotsPerHistoricalPeriod := 8192
 
 	for i := 1; i <= FinalizedCheckpointsLimit+20; i++ {
-		b.AddCheckPoint(common.HexToHash("0xe5509a901249bcb4800b644ebb3c666074848ea02d0e85427fff29fe2ec354ec"), nil, uint64(i))
+		b.AddCheckPoint(common.HexToHash("0xe5509a901249bcb4800b644ebb3c666074848ea02d0e85427fff29fe2ec354ec"), nil, uint64(i*slotsPerHistoricalPeriod))
 	}
 
 	require.Equal(t, FinalizedCheckpointsLimit, len(b.Finalized.Checkpoints.Slots))
 
 	for _, checkpoint := range b.Finalized.Checkpoints.Proofs {
 		// check that each slot is within the expected range
-		require.Greater(t, checkpoint.Slot, uint64(20))
-		require.LessOrEqual(t, checkpoint.Slot, uint64(FinalizedCheckpointsLimit+20))
+		require.Greater(t, checkpoint.Slot, uint64(20*slotsPerHistoricalPeriod))
+		require.LessOrEqual(t, checkpoint.Slot, uint64((FinalizedCheckpointsLimit+20)*slotsPerHistoricalPeriod))
 	}
 }
