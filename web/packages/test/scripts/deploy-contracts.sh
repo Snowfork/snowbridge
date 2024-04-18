@@ -5,7 +5,7 @@ source scripts/set-env.sh
 
 deploy_command() {
     local deploy_script=$1
-    
+
     pushd "$contract_dir"
     if [ "$eth_network" != "localhost" ]; then
         forge script \
@@ -27,7 +27,7 @@ deploy_command() {
 
 deploy_gateway_logic()
 {
-    deploy_command src/DeployGatewayLogic.sol:DeployGatewayLogic
+    deploy_command scripts/DeployGatewayLogic.sol:DeployGatewayLogic
 
     pushd "$test_helpers_dir"
     pnpm generateContracts "$output_dir/contracts.json"
@@ -38,7 +38,7 @@ deploy_gateway_logic()
 
 deploy_contracts()
 {
-    deploy_command src/DeployScript.sol:DeployScript
+    deploy_command scripts/DeployLocal.sol:DeployLocal
 
     pushd "$test_helpers_dir"
     pnpm generateContracts "$output_dir/contracts.json"

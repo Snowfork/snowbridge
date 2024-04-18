@@ -81,7 +81,7 @@ set_gateway() {
 }
 
 config_xcm_version() {
-    local call="0x1f04020109079edaa80203000000"
+    local call="0x1f04020109079edaa80204000000"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 
