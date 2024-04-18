@@ -61,7 +61,10 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 	}).Info("set cache: Current state")
 	h.cache.SetLastSyncedFinalizedState(lastFinalizedHeaderState.BeaconBlockRoot, lastFinalizedHeaderState.BeaconSlot)
 	h.cache.SetInitialCheckpointSlot(lastFinalizedHeaderState.InitialCheckpointSlot)
-	h.cache.AddCheckPointSlots([]uint64{lastFinalizedHeaderState.BeaconSlot})
+	err = h.populateSecondLastCheckpointInCache(lastFinalizedHeaderState.BeaconSlot)
+	if err != nil {
+		return fmt.Errorf("populate second last checkpoint in cache: %w", err)
+	}
 
 	log.Info("starting to sync finalized headers")
 
@@ -461,4 +464,15 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 	}
 
 	return beaconState, fmt.Errorf("no checkpoint on chain for slot %d", slot)
+}
+
+// populateSecondLastCheckpointInCache populates the second last finalized header in beacon storage, since the
+// latest header keeps overridden until the header gap is around 8192 header apart.
+func (h *Header) populateSecondLastCheckpointInCache(lastFinalizedSlot uint64) error {
+	secondLastSlot, err := h.writer.GetSecondLastFinalizedSlot()
+	if err != nil {
+		return h.populateFinalizedCheckpoint(lastFinalizedSlot)
+	} else {
+		return h.populateFinalizedCheckpoint(uint64(secondLastSlot))
+	}
 }

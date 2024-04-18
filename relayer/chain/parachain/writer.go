@@ -26,6 +26,7 @@ type ChainWriter interface {
 	GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state.FinalizedHeader, error)
 	GetLastFinalizedStateIndex() (types.U32, error)
 	GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error)
+	GetSecondLastFinalizedSlot() (types.U32, error)
 }
 
 type ParachainWriter struct {
@@ -407,4 +408,27 @@ func (wr *ParachainWriter) GetFinalizedBeaconRootByIndex(index uint32) (types.H2
 	}
 
 	return beaconRoot, nil
+}
+
+func (wr *ParachainWriter) GetSecondLastFinalizedSlot() (types.U32, error) {
+	lastIndex, err := wr.GetLastFinalizedStateIndex()
+	if err != nil {
+		return 0, err
+	}
+
+	if lastIndex < 2 {
+		return 0, fmt.Errorf("finalized header state only has 1 state")
+	}
+
+	secondLastBlockRoot, err := wr.GetFinalizedBeaconRootByIndex(uint32(lastIndex) - 1)
+	if err != nil {
+		return 0, err
+	}
+
+	secondLastState, err := wr.GetFinalizedHeaderStateByBlockRoot(secondLastBlockRoot)
+	if err != nil {
+		return 0, err
+	}
+
+	return types.U32(secondLastState.BeaconSlot), nil
 }
