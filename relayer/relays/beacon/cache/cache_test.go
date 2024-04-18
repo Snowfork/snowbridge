@@ -15,7 +15,8 @@ func TestCalculateClosestCheckpointSlot(t *testing.T) {
 
 	slot, err := b.calculateClosestCheckpointSlot(17)
 	require.NoError(t, err)
-	require.Equal(t, uint64(64), slot)
+	// 128 because 64 would be overwritten
+	require.Equal(t, uint64(128), slot)
 }
 
 func TestCalculateClosestCheckpointSlot_WithoutCheckpointIncludingSlot(t *testing.T) {
