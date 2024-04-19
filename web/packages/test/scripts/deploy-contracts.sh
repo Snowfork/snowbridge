@@ -38,7 +38,7 @@ deploy_gateway_logic()
 
 deploy_contracts()
 {
-    deploy_command scripts/DeployScript.sol:DeployScript
+    deploy_command scripts/DeployLocal.sol:DeployLocal
 
     pushd "$test_helpers_dir"
     pnpm generateContracts "$output_dir/contracts.json"

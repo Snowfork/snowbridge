@@ -29,7 +29,8 @@ type BeaconAPI interface {
 	GetGenesis() (Genesis, error)
 	GetFinalizedCheckpoint() (FinalizedCheckpoint, error)
 	GetHeaderBySlot(slot uint64) (BeaconHeader, error)
-	GetHeader(blockRoot common.Hash) (BeaconHeader, error)
+	GetHeaderAtHead() (BeaconHeader, error)
+	GetHeaderByBlockRoot(blockRoot common.Hash) (BeaconHeader, error)
 	GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, error)
 	GetBeaconBlockRoot(slot uint64) (common.Hash, error)
 	GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse, error)
@@ -39,16 +40,14 @@ type BeaconAPI interface {
 }
 
 type BeaconClient struct {
-	httpClient   http.Client
-	endpoint     string
-	slotsInEpoch uint64
+	httpClient http.Client
+	endpoint   string
 }
 
-func NewBeaconClient(endpoint string, slotsInEpoch uint64) *BeaconClient {
+func NewBeaconClient(endpoint string) *BeaconClient {
 	return &BeaconClient{
 		http.Client{},
 		endpoint,
-		slotsInEpoch,
 	}
 }
 
@@ -153,58 +152,19 @@ func (b *BeaconClient) GetFinalizedCheckpoint() (FinalizedCheckpoint, error) {
 }
 
 func (b *BeaconClient) GetHeaderBySlot(slot uint64) (BeaconHeader, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/headers/%d", b.endpoint, slot), nil)
-	if err != nil {
-		return BeaconHeader{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
-	}
-
-	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
-	if err != nil {
-		return BeaconHeader{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		if res.StatusCode == 404 {
-			return BeaconHeader{}, ErrNotFound
-		}
-
-		return BeaconHeader{}, fmt.Errorf("%s: %d", HTTPStatusNotOKErrorMessage, res.StatusCode)
-	}
-
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return BeaconHeader{}, fmt.Errorf("%s: %w", ReadResponseBodyErrorMessage, err)
-	}
-
-	var response BeaconHeaderResponse
-
-	err = json.Unmarshal(bodyBytes, &response)
-	if err != nil {
-		return BeaconHeader{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
-	}
-
-	slotFromResponse, err := strconv.ParseUint(response.Data.Header.Message.Slot, 10, 64)
-	if err != nil {
-		return BeaconHeader{}, fmt.Errorf("parse slot as int: %w", err)
-	}
-
-	proposerIndex, err := strconv.ParseUint(response.Data.Header.Message.ProposerIndex, 10, 64)
-	if err != nil {
-		return BeaconHeader{}, fmt.Errorf("parse proposerIndex as int: %w", err)
-	}
-
-	return BeaconHeader{
-		Slot:          slotFromResponse,
-		ProposerIndex: proposerIndex,
-		ParentRoot:    common.HexToHash(response.Data.Header.Message.ParentRoot),
-		StateRoot:     common.HexToHash(response.Data.Header.Message.StateRoot),
-		BodyRoot:      common.HexToHash(response.Data.Header.Message.BodyRoot),
-	}, nil
+	return b.GetHeader(fmt.Sprintf("%d", slot))
 }
 
-func (b *BeaconClient) GetHeader(blockRoot common.Hash) (BeaconHeader, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/headers/%s", b.endpoint, blockRoot), nil)
+func (b *BeaconClient) GetHeaderAtHead() (BeaconHeader, error) {
+	return b.GetHeader("head")
+}
+
+func (b *BeaconClient) GetHeaderByBlockRoot(blockRoot common.Hash) (BeaconHeader, error) {
+	return b.GetHeader(blockRoot.Hex())
+}
+
+func (b *BeaconClient) GetHeader(qualifier string) (BeaconHeader, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/headers/%s", b.endpoint, qualifier), nil)
 	if err != nil {
 		return BeaconHeader{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
