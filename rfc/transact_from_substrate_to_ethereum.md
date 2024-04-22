@@ -53,3 +53,15 @@ What we really care about is the internal xcm in `ExportMessage` with [the conve
 There is a E2E test [transact_from_penpal_to_ethereum](https://github.com/Snowfork/polkadot-sdk/blob/55377cd94b5ef543f1dca2cfd8bcfdd90998dcd4/cumulus/parachains/integration-tests/emulated/tests/bridges/bridge-hub-rococo/src/tests/snowbridge.rs#L566) for demonstration.
 
 On Ethereum side based on the `AgentExecuteCommand` the Agent will [execute the call](https://github.com/Snowfork/snowbridge/blob/0a8dc1e425d495a1bfa217cea6dde520260519ec/contracts/src/AgentExecutor.sol#L48) to finish the whole flow.
+
+## Fee flow
+
+- User represents a user who kicks off an extrinsic on the parachain.
+- Parachain represents the source parachain, its sovereign or its agent depending on context.
+
+Sequence|Where|Who|What
+-|-|-|-
+1|Parachain|User|pays(DOT, Native) to node to execute custom extrinsic; pays (DOT) to Treasury for both delivery cost on BH and execution cost on Ethereum as part of custom extrinsic.
+2|Bridge Hub|Parachain|pays(DOT) to Treasury Account for delivery(local fee), check Remote fee passed as expected.
+3|Gateway|Relayer|pays(ETH) to validate and execute message.
+4|Gateway|Parachain Agent|pays(ETH) to relayer for delivery(reward+refund) and execution.
