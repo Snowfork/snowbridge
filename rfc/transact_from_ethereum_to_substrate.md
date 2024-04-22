@@ -47,12 +47,17 @@ Check the xcm log on penpal we can see that the transact(System::remark_with_eve
 2024-04-17T02:59:27.224847Z TRACE xcm::execute: result: Ok(())
 ```
 
-### Fee Flow
+## Fee Flow
 
+- dApp is represents `msg.sender` or its sovereign depending on context.
+- Parachain represents the target parachain, its sovereign or its agent depending on context.
 
-| Ethereum  | Bridgehub  | Penpal   
-|----------|:-------------:|------:  
-|Charge from end user to the agent of penpal with fee in Ether | Refund the relayer from sovereign of penpal in DOT | `BuyExecution` with fee paid by a pre-funded sovereign account of the Ethereum user who initiated the bridging operation. With `destination_fee` in native token
+Sequence|Where|Who|What
+-|-|-|-
+1|Gateway|dApp|pays(ETH, converted to DOT here) Parachain Agent for delivery costs only (no execution cost)
+2|Bridge Hub|Relayer|pays(DOT) node for execution
+3|Bridge Hub|Parachain Sovereign|pays(DOT) Relayer for delivery (refund+reward)
+4|Parachain|dApp|pays(DOT, Native) for execution only.
 
 ## Testing, Security, and Privacy
 
