@@ -11,12 +11,24 @@ Basically it works as follows:
 
 First on Ethereum to call the transact via [sendCall](https://github.com/Snowfork/snowbridge/blob/bdf4c716c3863ad7c2a83ee870c8c399919c4e26/contracts/src/Gateway.sol#L630), the value of parameter `call` is just the scale-encoded extrinsic on substrate.
 
-Then on BridgeHub with [the convert logic in inbound-router](https://github.com/Snowfork/polkadot-sdk/blob/cd7a64a1ca5b8e1ea6339125c0c966065ada8e70/bridges/snowbridge/primitives/router/src/inbound/mod.rs#L337) the payload will be converted into a xcm which will be sent to the destination chain.
-
-Worth to note that the [BurnAsset](https://github.com/Snowfork/polkadot-sdk/blob/cd7a64a1ca5b8e1ea6339125c0c966065ada8e70/bridges/snowbridge/primitives/router/src/inbound/mod.rs#L353) in the xcm will do nothing on destination chain, included here only for the destination chain to implement a [custom Barrier](https://github.com/Snowfork/polkadot-sdk/blob/cd7a64a1ca5b8e1ea6339125c0c966065ada8e70/cumulus/parachains/runtimes/testing/penpal/src/xcm_config.rs#L227) which inspect the fee as expected(i.e. can cover the transact cost to avoid spamming).
+Then on BridgeHub with [the convert logic in inbound-router](https://github.com/Snowfork/polkadot-sdk/blob/1cab94c80aefdf3497d69828a22ac15bd27dbb95/bridges/snowbridge/primitives/router/src/inbound/mod.rs#L341) the payload will be converted into a [xcm](https://github.com/Snowfork/polkadot-sdk/blob/1cab94c80aefdf3497d69828a22ac15bd27dbb95/bridges/snowbridge/primitives/router/src/inbound/mod.rs#L359-L370) which will be sent to the destination chain.
 
 
-There is a E2E test [transact_from_ethereum_to_penpal_success](https://github.com/Snowfork/polkadot-sdk/blob/cd7a64a1ca5b8e1ea6339125c0c966065ada8e70/cumulus/parachains/integration-tests/emulated/tests/bridges/bridge-hub-rococo/src/tests/snowbridge.rs#L568) 
+There is a E2E test [transact_from_ethereum_to_penpal_success](https://github.com/Snowfork/polkadot-sdk/blob/cd7a64a1ca5b8e1ea6339125c0c966065ada8e70/cumulus/parachains/integration-tests/emulated/tests/bridges/bridge-hub-rococo/src/tests/snowbridge.rs#L568)
+
+The xcm forwarded to destination chain is:
+
+```
+instructions: [
+    DescendOrigin(X1([PalletInstance(80)])), 
+    UniversalOrigin(GlobalConsensus(Ethereum { chain_id: 11155111 })), 
+    DescendOrigin(X1([AccountKey20 { network: None, key: [238, 145, 112, 171, 251, 249, 66, 26, 214, 221, 7, 246, 189, 236, 157, 137, 242, 181, 129, 224] }])), 
+    WithdrawAsset(Assets([Asset { id: AssetId(Location { parents: 0, interior: Here }), fun: Fungible(40000000000) }])), 
+    BuyExecution { fees: Asset { id: AssetId(Location { parents: 0, interior: Here }), fun: Fungible(40000000000) }, weight_limit: Unlimited }, 
+    Transact { origin_kind: SovereignAccount, require_weight_at_most: Weight { ref_time: 40000000, proof_size: 8000 }, call: "0x00071468656c6c6f" }
+]
+```
+
 
 Check the xcm log on penpal we can see that the transact(System::remark_with_event) is executed as expected.
 
@@ -35,6 +47,13 @@ Check the xcm log on penpal we can see that the transact(System::remark_with_eve
 2024-04-17T02:59:27.224847Z TRACE xcm::execute: result: Ok(())
 ```
 
+### Fee Flow
+
+
+| Ethereum  | Bridgehub  | Penpal   
+|----------|:-------------:|------:  
+|Charge from end user to the agent of penpal with fee in Ether | Refund the relayer from sovereign of penpal in DOT | `BuyExecution` with fee paid by a pre-funded sovereign account of the Ethereum user who initiated the bridging operation. With `destination_fee` in native token
+
 ## Testing, Security, and Privacy
 
 There is some other E2E tests
@@ -42,6 +61,4 @@ There is some other E2E tests
 - [transact_from_ethereum_to_penpal_insufficient_weight](https://github.com/Snowfork/polkadot-sdk/blob/cd7a64a1ca5b8e1ea6339125c0c966065ada8e70/cumulus/parachains/integration-tests/emulated/tests/bridges/bridge-hub-rococo/src/tests/snowbridge.rs#L624)
 
 - [transact_from_ethereum_to_penpal_insufficient_fee](https://github.com/Snowfork/polkadot-sdk/blob/cd7a64a1ca5b8e1ea6339125c0c966065ada8e70/cumulus/parachains/integration-tests/emulated/tests/bridges/bridge-hub-rococo/src/tests/snowbridge.rs#L665C4-L665C53)
-
-which demonstrates the [custom Barrier](https://github.com/Snowfork/polkadot-sdk/blob/cd7a64a1ca5b8e1ea6339125c0c966065ada8e70/cumulus/parachains/runtimes/testing/penpal/src/xcm_config.rs#L227) on penpal can check the fee to cover the transact cost.
 
