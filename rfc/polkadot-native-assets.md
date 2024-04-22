@@ -63,9 +63,15 @@ On Ethereum side based on the `Command` the Agent will [mint foreign token to th
 
 #### Fee flow
 
-| Penpal  | Bridgehub  | Ethereum   
-|----------|:-------------:|------:  
-|`reserve_transfer_assets` will charge `EthereumBaseFee` from end user in DOT to cover both the execution cost on BH and Ethereum. |`BuyExecution` with fee paid by the sovereign account of penpal in DOT | Agent refund the relayer in Ether
+- User represents a user who kicks off an extrinsic on the parachain.
+- Parachain represents the source parachain, its sovereign or its agent depending on context.
+
+Sequence|Where|Who|What
+-|-|-|-
+1|Penpal|User| For `reserve_transfer_assets` pays(DOT, Native) to node to execute custom extrinsic; pays (DOT) to Treasury for both delivery cost on BH and execution cost on Ethereum(i.e. `EthereumBaseFee`).
+2|Bridge Hub|Parachain|Pays(DOT) to Treasury Account for delivery(local fee), pays(DOT) to Parachain sovereign for delivery(remote fee), essentially a refund. Remote fee converted to ETH here.
+3|Gateway|Relayer|pays(ETH) to validate and execute message.
+4|Gateway|Parachain Agent|pays(ETH) to relayer for delivery(reward+refund) and execution.
 
 
 ### 3. Send Polkadot-native assets back from Ethereum to Substrate via [sendToken](https://github.com/Snowfork/snowbridge/blob/07545cf7e8f0321e4ab89d7f5eb52bc85ab3d4c1/contracts/src/Gateway.sol#L463)
@@ -116,7 +122,13 @@ Check the xcm executed on Penpal it shows that the native token has been withdra
 
 #### Fee Flow
 
+- dApp is represents `msg.sender` or its sovereign depending on context.
+- Parachain represents the target parachain, its sovereign or its agent depending on context.
+- Ethereum Sovereign represents `Location{parent:2,interior:[GlobalConsensus(Ethereum)]}`
 
-| Ethereum  | Bridgehub  | Penpal   
-|----------|:-------------:|------:  
-|Charge from end user to the agent of penpal with fee in Ether | Refund the relayer from sovereign of penpal in DOT | `BuyExecution` with fee paid by a pre-funded sovereign account of Ethereum with `destination_fee` in native token
+Sequence|Where|Who|What
+-|-|-|-
+1|Gateway|dApp|pays(ETH, converted to DOT here) Parachain Agent for both delivery cost on BH and  execution cost on destination(DOT,Native).
+2|Bridge Hub|Relayer|pays(DOT) node for execution
+3|Bridge Hub|Parachain Sovereign|pays(DOT) Relayer for delivery (refund+reward)
+4|Parachain|Ethereum Sovereign|pays(DOT, Native) for execution only.
