@@ -1,11 +1,11 @@
+import { EventRecord } from "@polkadot/types/interfaces"
+import { Codec, IKeyringPair, Signer } from "@polkadot/types/types"
+import { BN, u8aToHex } from "@polkadot/util"
 import { decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
 import { Context } from "./index"
+import { scanSubstrateEvents, waitForMessageQueuePallet } from "./query"
 import { assetStatusInfo, bridgeStatusInfo } from "./status"
 import { paraIdToChannelId } from "./utils"
-import { BN, u8aToHex } from "@polkadot/util"
-import { Codec, IKeyringPair, Signer } from "@polkadot/types/types"
-import { EventRecord } from "@polkadot/types/interfaces"
-import { waitForMessageQueuePallet } from "./query"
 
 export interface WalletSigner {
     address: string
@@ -20,16 +20,19 @@ export type SendValidationResult = {
     success?: {
         ethereumChainId: bigint
         assetHub: {
-            validatedAt: string
+            validatedAtHash: `0x${string}`
             paraId: number
         }
         bridgeHub: {
-            validatedAt: string
+            validatedAtHash: `0x${string}`
             paraId: number
         },
         sourceParachain?: {
-            validatedAt: string
+            validatedAtHash: `0x${string}`
             paraId: number
+        }
+        relayChain: {
+            validatedAtHash: `0x${string}`
         }
         sourceAddress: string
         sourceAddressRaw: string
@@ -63,11 +66,12 @@ export const validateSend = async (context: Context, signer: WalletOrKeypair, so
 }): Promise<SendValidationResult> => {
     const { ethereum, ethereum: { contracts: { gateway } }, polkadot: { api: { assetHub, bridgeHub, relaychain, parachains } } } = context
 
-    const [assetHubHead, assetHubParaId, bridgeHubHead, bridgeHubParaId] = await Promise.all([
+    const [assetHubHead, assetHubParaId, bridgeHubHead, bridgeHubParaId, relaychainHead] = await Promise.all([
         assetHub.rpc.chain.getFinalizedHead(),
         assetHub.query.parachainInfo.parachainId(),
         bridgeHub.rpc.chain.getFinalizedHead(),
         bridgeHub.query.parachainInfo.parachainId(),
+        relaychain.rpc.chain.getFinalizedHead(),
     ])
     let assetHubParaIdDecoded = assetHubParaId.toPrimitive() as number
 
@@ -93,7 +97,7 @@ export const validateSend = async (context: Context, signer: WalletOrKeypair, so
         hrmpChannelSetup = hrmpChannel.toPrimitive() !== null
         sourceParachain = {
             paraId: sourceParachainId,
-            validatedAt: u8aToHex(sourceParachainHead),
+            validatedAtHash: u8aToHex(sourceParachainHead),
         }
         if (foreignAssetExists) {
             let account = (await parachains[sourceParachainId].query.foreignAssets.account(assetInfo.multiLocation, signer.address)).toPrimitive() as any
@@ -142,11 +146,14 @@ export const validateSend = async (context: Context, signer: WalletOrKeypair, so
                 ethereumChainId: assetInfo.ethereumChainId,
                 assetHub: {
                     paraId: assetHubParaIdDecoded,
-                    validatedAt: u8aToHex(assetHubHead),
+                    validatedAtHash: u8aToHex(assetHubHead),
                 },
                 bridgeHub: {
                     paraId: bridgeHubParaId.toPrimitive() as number,
-                    validatedAt: u8aToHex(bridgeHubHead),
+                    validatedAtHash: u8aToHex(bridgeHubHead),
+                },
+                relayChain: {
+                    validatedAtHash: u8aToHex(relaychainHead)
                 },
                 sourceParachain,
                 feeInDOT: fee,
@@ -191,6 +198,9 @@ export type SendResult = {
             blockHash: string
             blockNumber: number
         }
+        relayChain: {
+            submittedAtHash: `0x${string}`
+        }
         assetHub: {
             events: EventRecord[]
             txHash: string
@@ -203,13 +213,21 @@ export type SendResult = {
             events?: Codec
             extrinsicSuccess?: boolean
             nonce?: bigint
+            messageAcceptedAtHash?: `0x${string}`
         }
         ethereum: {
             submittedAtHash: string
             beefyBlockNumber?: number
+            beefyBlockHash?: string
             transferBlockNumber?: number
+            transferBlockHash?: string
             messageDispatchSuccess?: boolean
         },
+        polling?: {
+            bridgeHubMessageQueueProcessed: bigint
+            ethereumBeefyClient: bigint
+            ethereumMessageDispatched: bigint
+        }
     },
     failure?: {
         sourceParachain?: {
@@ -242,7 +260,7 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
     sourceParachainFee: 10_000_000_000n,
     scanBlocks: 100,
 }): Promise<SendResult> => {
-    const { polkadot: { api: { assetHub, bridgeHub, parachains } }, ethereum } = context
+    const { polkadot: { api: { assetHub, bridgeHub, parachains, relaychain } }, ethereum } = context
     if (!plan.success) {
         throw Error("plan failed")
     }
@@ -314,7 +332,7 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
                     if (c.isError) {
                         reject(c.internalError || c.dispatchError)
                     }
-                    if (c.isCompleted) {
+                    if (c.isFinalized) {
                         const result = {
                             txHash: u8aToHex(c.txHash),
                             txIndex: c.txIndex || 0,
@@ -335,7 +353,7 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
                                 resolve({
                                     ...result,
                                     success: true,
-                                    messageId: (e.event.data.toHuman(true) as any)?.messageId
+                                    messageId: (e.event.data.toPrimitive() as any)[3]
                                 })
                             }
                         }
@@ -376,9 +394,10 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
         }
     }
 
-    const [bridgeHubHead, ethereumHead] = await Promise.all([
+    const [bridgeHubHead, ethereumHead, relaychainHead] = await Promise.all([
         bridgeHub.rpc.chain.getFinalizedHead(),
         ethereum.api.getBlock('finalized'),
+        relaychain.rpc.chain.getFinalizedHead(),
     ])
 
     const assets: { [key: string]: any } = {}
@@ -414,7 +433,7 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
                 if (c.isError) {
                     reject(c.internalError || c.dispatchError)
                 }
-                if (c.isCompleted) {
+                if (c.isFinalized) {
                     const result = {
                         txHash: u8aToHex(c.txHash),
                         txIndex: c.txIndex || 0,
@@ -434,7 +453,7 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
                             resolve({
                                 ...result,
                                 success: true,
-                                messageId: (e.event.data.toHuman(true) as any)?.messageId
+                                messageId: (e.event.data.toPrimitive() as any)[3]
                             })
                         }
                     }
@@ -465,6 +484,9 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
                     blockHash,
                     events: result.events,
                 },
+                relayChain: {
+                    submittedAtHash: u8aToHex(relaychainHead)
+                },
                 bridgeHub: {
                     submittedAtHash: u8aToHex(bridgeHubHead)
                 },
@@ -482,6 +504,103 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
             }
         }
     }
+}
+
+export const trackSendProgressPolling = async (context: Context, result: SendResult, options = {
+    beaconUpdateTimeout: 10, scanBlocks: 600n
+}): Promise<{ status: "success" | "pending", result: SendResult }> => {
+    const { polkadot: { api: { relaychain, bridgeHub } }, ethereum, ethereum: { contracts: { beefyClient, gateway } } } = context
+    const { success } = result
+
+    if (result.failure || !success || !success.plan.success) {
+        throw new Error('Send failed')
+    }
+
+    if (success.polling === undefined) {
+        let a =
+            success.polling = {
+                bridgeHubMessageQueueProcessed: (await bridgeHub.rpc.chain.getHeader(success.bridgeHub.submittedAtHash)).number.toBigInt() + 1n,
+                ethereumBeefyClient: BigInt((await ethereum.api.getBlock(success.ethereum.submittedAtHash))?.number ?? 0n) + 1n,
+                ethereumMessageDispatched: BigInt((await ethereum.api.getBlock(success.ethereum.submittedAtHash))?.number ?? 0n) + 1n,
+            }
+    }
+
+    if (success.bridgeHub.events === undefined) {
+        console.log("Waiting for message to be accepted by Bridge Hub.")
+        let { found, lastScannedBlock, events } = await scanSubstrateEvents(bridgeHub, success.polling.bridgeHubMessageQueueProcessed, options.scanBlocks, async (n, blockHash, ev) => {
+            const event = ev as any
+            let eventData = event.event.toPrimitive().data
+            if (bridgeHub.events.ethereumOutboundQueue.MessageAccepted.is(event.event)
+                && eventData[0].toLowerCase() === success?.messageId?.toLowerCase()) {
+
+                success.bridgeHub.nonce = BigInt(eventData[1])
+                success.bridgeHub.extrinsicSuccess = true
+                success.bridgeHub.messageAcceptedAtHash = blockHash.toHex()
+                return true
+            }
+            return false
+        })
+        success.polling.bridgeHubMessageQueueProcessed = lastScannedBlock + 1n
+        if (!found) { return { status: "pending", result } }
+        console.log(`Message accepted on Bridge Hub block ${success.bridgeHub.messageAcceptedAtHash}.`)
+        success.bridgeHub.events = events
+    }
+
+    if (success.ethereum.beefyBlockNumber === undefined && success.bridgeHub.extrinsicSuccess === true) {
+        // Estimate the relaychain block
+        const blockGap = (success.polling?.bridgeHubMessageQueueProcessed ?? 0n) - ((await bridgeHub.rpc.chain.getHeader(success.bridgeHub.submittedAtHash)).number.toBigInt() + 1n)
+        const relaychainSubmittedBlock = (await relaychain.rpc.chain.getHeader(success.relayChain.submittedAtHash)).number.toBigInt() + blockGap
+        console.log("Waiting for message to be included by BEEFY light client.")
+        const NewMMRRootEvent = beefyClient.getEvent("NewMMRRoot")
+
+        const from = success.polling.ethereumBeefyClient
+        let to = BigInt(await ethereum.api.getBlockNumber() ?? 0)
+        if (from - to > options.scanBlocks) { to = from + options.scanBlocks }
+        if (from > to) { return { status: "pending", result } }
+
+        const events = await beefyClient.queryFilter(NewMMRRootEvent, Number(from.toString()), Number(to.toString()))
+        for (const { blockHash, blockNumber, args } of events) {
+            const relayChainBlock = args.blockNumber
+            if (relayChainBlock >= relaychainSubmittedBlock) {
+                success.ethereum.beefyBlockNumber = blockNumber
+                success.ethereum.beefyBlockHash = blockHash
+                console.log(`Included in BEEFY Light client block ${success.ethereum.beefyBlockHash}. Waiting for message to be delivered.`)
+                break;
+            } else {
+                console.log(`BEEFY client ${relaychainSubmittedBlock - relayChainBlock} blocks behind.`)
+            }
+        }
+        success.polling.ethereumBeefyClient = to + 1n
+        if (success.ethereum.beefyBlockNumber === undefined) { return { status: "pending", result } }
+    }
+
+    if (success.ethereum.transferBlockNumber === undefined && success.bridgeHub.extrinsicSuccess === true) {
+        console.log("Waiting for message to be dispatched to Gateway.")
+        const InboundMessageDispatched = gateway.getEvent("InboundMessageDispatched")
+
+        const from = success.polling.ethereumMessageDispatched
+        let to = BigInt(await ethereum.api.getBlockNumber() ?? 0)
+        if (from - to > options.scanBlocks) { to = from + options.scanBlocks }
+        if (from > to) { return { status: "pending", result } }
+
+        const events = await gateway.queryFilter(InboundMessageDispatched, Number(from.toString()), Number(to.toString()))
+        for (const { blockHash, blockNumber, args } of events) {
+            let { messageID, nonce, channelID, success: dispatchSuccess } = args
+            if (messageID.toLowerCase() === success.messageId?.toLowerCase()
+                && nonce === success.bridgeHub.nonce
+                && channelID.toLowerCase() == paraIdToChannelId(success.plan.success?.assetHub.paraId ?? 1000).toLowerCase()) {
+
+                success.ethereum.transferBlockNumber = blockNumber
+                success.ethereum.transferBlockHash = blockHash
+                success.ethereum.messageDispatchSuccess = dispatchSuccess
+                break
+            }
+        }
+        success.polling.ethereumMessageDispatched = to + 1n
+        if (success.ethereum.transferBlockNumber === undefined) { return { status: "pending", result } }
+    }
+
+    return { status: "success", result }
 }
 
 export async function* trackSendProgress(context: Context, result: SendResult, options = {

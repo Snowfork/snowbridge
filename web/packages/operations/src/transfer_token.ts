@@ -38,16 +38,20 @@ const monitor = async () => {
 
     const amount = 10n
 
+    const POLL_INTERVAL_MS = 10_000
+
     console.log('# Ethereum to Asset Hub')
     {
         const plan = await toPolkadot.validateSend(context, ETHEREUM_ACCOUNT, POLKADOT_ACCOUNT_PUBLIC, WETH_CONTRACT, 1000, amount, BigInt(0))
         console.log('Plan:', plan)
-        const result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
+        let result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
         console.log('Execute:', result)
-        for await (const update of toPolkadot.trackSendProgress(context, result)) {
-            console.log(update)
+        while (true) {
+            const { status } = (await toPolkadot.trackSendProgressPolling(context, result))
+            if (status !== "pending") { break }
+            await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
         }
-        console.log(result)
+        console.log('Complete:', result)
     }
 
     console.log('# Asset Hub to Ethereum')
@@ -56,22 +60,26 @@ const monitor = async () => {
         console.log('Plan:', plan)
         const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
         console.log('Execute:', result)
-        for await (const update of toEthereum.trackSendProgress(context, result)) {
-            console.log(update)
+        while (true) {
+            const { status } = (await toEthereum.trackSendProgressPolling(context, result))
+            if (status !== "pending") { break }
+            await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
         }
-        console.log(result)
+        console.log('Complete:', result)
     }
 
     console.log('# Ethereum to Penpal')
     {
         const plan = await toPolkadot.validateSend(context, ETHEREUM_ACCOUNT, POLKADOT_ACCOUNT_PUBLIC, WETH_CONTRACT, 2000, amount, BigInt(4_000_000_000))
         console.log('Plan:', plan)
-        const result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
+        let result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
         console.log('Execute:', result)
-        for await (const update of toPolkadot.trackSendProgress(context, result)) {
-            console.log(update)
+        while (true) {
+            const { status } = (await toPolkadot.trackSendProgressPolling(context, result))
+            if (status !== "pending") { break }
+            await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
         }
-        console.log(result)
+        console.log('Complete:', result)
     }
 
     console.log('# Penpal to Ethereum')
@@ -80,10 +88,12 @@ const monitor = async () => {
         console.log('Plan:', plan)
         const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
         console.log('Execute:', result)
-        for await (const update of toEthereum.trackSendProgress(context, result)) {
-            console.log(update)
+        while (true) {
+            const { status } = (await toEthereum.trackSendProgressPolling(context, result))
+            if (status !== "pending") { break }
+            await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
         }
-        console.log(result)
+        console.log('Complete:', result)
     }
 
     await destroyContext(context)
