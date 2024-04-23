@@ -116,9 +116,10 @@ transfer_balance() {
         --seed "${seed?}" \
         --noWait \
         --nonce -1 \
-        tx.xcmPallet.teleportAssets \
+        tx.xcmPallet.transferAssets \
             "${dest}" \
             "${beneficiary}" \
             "${assets}" \
-            "${asset_fee_item}"
+            "${asset_fee_item}" \
+            "Unlimited"
 }
