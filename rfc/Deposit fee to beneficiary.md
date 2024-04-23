@@ -15,11 +15,28 @@ This RFC proposes a change to make the remaining DOT trapped in pallet-xcm on As
 ## Explanation
 
 Currently the xcm only [deposit asset to the beneficiary](https://github.com/Snowfork/polkadot-sdk/blob/3f495e56ed01f24a29d341d8928c19cc2fd8f17e/bridges/snowbridge/primitives/router/src/inbound/mod.rs#L292-L293) and
-will change to ```DepositAsset { assets: Wild(All), beneficiary }``` which includes both the asset and fees.
+will change to ```DepositAsset { assets: Wild(AllCounted(2)), beneficiary }``` which includes both the asset and fees.
+
+So the xcm instructions forwarded as follows:
+
+```
+origin: Location { parents: 1, interior: X1([Parachain(1013)]) }, 
+instructions: [ 
+    ReceiveTeleportedAsset( Assets([Asset { id: AssetId(Location { parents: 1, interior: Here }), fun: Fungible(10000000000) }]) ), 
+    BuyExecution { fees: Asset { id: AssetId(Location { parents: 1, interior: Here }), fun: Fungible(10000000000) }, weight_limit: Unlimited }, 
+    DescendOrigin(X1([PalletInstance(80)])),
+    UniversalOrigin(GlobalConsensus(Ethereum { chain_id: 11155111 })),
+    ReserveAssetDeposited(Assets([Asset { id: AssetId(Location { parents: 2, interior: X2([GlobalConsensus(Ethereum { chain_id: 11155111 }), AccountKey20 { network: None, key: [135, 209, 247, 253, 254, 231, 246, 81, 250, 188, 139, 252, 182, 224, 134, 194, 120, 183, 122, 125] }]) }), fun: Fungible(1000000000000000000) }])), 
+    ClearOrigin, 
+    DepositAsset { assets: Wild(AllCounted(2)), beneficiary: Location { parents: 0, interior: X1([AccountId32 { network: None, id: [40, 72, 212, 220, 228, 167, 56, 124, 15, 56, 249, 50, 168, 47, 27, 78, 215, 131, 99, 62, 18, 255, 115, 240, 65, 108, 201, 130, 181, 216, 41, 48] }]) } } 
+]
+```
 
 ## Drawbacks
 
-This now places a burden on the destination parachain to store excess DOT in one of their pallets, if it is not configured to than the deposit will fail and assets will be trapped. It should be fine for AssetHub because relay token(i.e. DOT) is configured as a fungible asset as https://github.com/Snowfork/polkadot-sdk/blob/3f495e56ed01f24a29d341d8928c19cc2fd8f17e/cumulus/parachains/runtimes/assets/asset-hub-rococo/src/xcm_config.rs#L119 but may not be true for other parachains as usually no Parachain treats the system asset as the local currency.
+This now places a burden on the destination parachain to store excess DOT in one of their pallets, if it is not configured then the deposit will fail and assets will be trapped. 
+
+It should be fine for AssetHub because relay token(i.e. DOT) is configured as a [fungible asset](https://github.com/Snowfork/polkadot-sdk/blob/3f495e56ed01f24a29d341d8928c19cc2fd8f17e/cumulus/parachains/runtimes/assets/asset-hub-rococo/src/xcm_config.rs#L119) but may not be true for other parachains. Usually no Parachain treats the system asset as the local currency.
 
 So we applies this change only on asset hub and not do this on the destination chain portion.
 
