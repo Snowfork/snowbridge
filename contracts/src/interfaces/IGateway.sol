@@ -102,4 +102,7 @@ interface IGateway {
         uint128 destinationFee,
         uint128 amount
     ) external payable;
+
+    /// @dev Register an Nft token and create a wrapped derivative on AssetHub in the `ForeignUniques` pallet.
+    function registerNftToken(address token) external payable;
 }

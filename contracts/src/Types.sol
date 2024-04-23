@@ -107,5 +107,6 @@ struct Ticket {
 
 struct TokenInfo {
     bool isRegistered;
-    bytes31 __padding;
+    bool isNft;
+    bytes30 __padding;
 }

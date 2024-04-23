@@ -42,11 +42,12 @@ library Assets {
         IERC20(token).safeTransferFrom(sender, agent, amount);
     }
 
-    function sendTokenCosts(address token, ParaID destinationChain, uint128 destinationChainFee, uint128 maxDestinationChainFee)
-        external
-        view
-        returns (Costs memory costs)
-    {
+    function sendTokenCosts(
+        address token,
+        ParaID destinationChain,
+        uint128 destinationChainFee,
+        uint128 maxDestinationChainFee
+    ) external view returns (Costs memory costs) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
         if (!info.isRegistered) {
@@ -185,6 +186,26 @@ library Assets {
         ticket.dest = $.assetHubParaID;
         ticket.costs = _registerTokenCosts();
         ticket.payload = SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee);
+
+        emit IGateway.TokenRegistrationSent(token);
+    }
+
+    /// @dev Registers a nft token
+    /// @param token The Nft token address.
+    function registerNftToken(address token) external returns (Ticket memory ticket) {
+        if (!token.isContract()) {
+            revert InvalidToken();
+        }
+
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+
+        TokenInfo storage info = $.tokenRegistry[token];
+        info.isRegistered = true;
+        info.isNft = true;
+
+        ticket.dest = $.assetHubParaID;
+        ticket.costs = _registerTokenCosts();
+        ticket.payload = SubstrateTypes.RegisterNftToken(token, $.assetHubCreateAssetFee);
 
         emit IGateway.TokenRegistrationSent(token);
     }

@@ -44,7 +44,7 @@ import {
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {PricingStorage} from "./storage/PricingStorage.sol";
-import {AssetsStorage} from "./storage/AssetsStorage.sol";
+import {AssetsStorage, TokenInfo} from "./storage/AssetsStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
@@ -416,7 +416,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint128 amount
     ) external payable {
         _submitOutbound(
-            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount)
+            Assets.sendToken(
+                token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
+            )
         );
     }
 
@@ -612,5 +614,14 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+    }
+
+    // Register an Ethereum-native token in the gateway and on AssetHub
+    function registerNftToken(address token) external payable {
+        _submitOutbound(Assets.registerNftToken(token));
+    }
+
+    function tokenInfo(address token) external view returns (TokenInfo memory) {
+        return AssetsStorage.layout().tokenRegistry[token];
     }
 }
