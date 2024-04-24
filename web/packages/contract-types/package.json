@@ -15,13 +15,13 @@
     "typechain": "typechain --target ethers-v6 '../../../contracts/out/?(IERC20.sol|IGateway.sol|BeefyClient.sol)/!(*.abi).json' --out-dir src"
   },
   "devDependencies": {
-    "@types/node": "^18.13.0",
-    "ts-node": "^10.9.1",
-    "typechain": "^8.3.2",
     "@typechain/ethers-v6": "^0.5.1",
-    "typescript": "^5.1.6"
+    "@types/node": "^18.19.31",
+    "ts-node": "^10.9.2",
+    "typechain": "^8.3.2",
+    "typescript": "^5.4.5"
   },
   "dependencies": {
-    "ethers": "^6.9.0"
+    "ethers": "^6.11.1"
   }
 }

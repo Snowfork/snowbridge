@@ -1,11 +1,12 @@
 // import '@polkadot/api-augment/polkadot'
 import { ApiPromise, WsProvider } from '@polkadot/api'
-import { ethers } from 'ethers'
+import { AbstractProvider, ethers } from 'ethers'
 import { BeefyClient, BeefyClient__factory, IGateway, IGateway__factory } from '@snowbridge/contract-types'
 
 interface Config {
     ethereum: {
-        url: string
+        execution_url: string
+        beacon_url: string
     }
     polkadot: {
         url: {
@@ -39,10 +40,10 @@ export class Context {
 }
 
 class EthereumContext {
-    api: ethers.WebSocketProvider
+    api: ethers.AbstractProvider
     contracts: AppContracts
 
-    constructor(api: ethers.WebSocketProvider, contracts: AppContracts) {
+    constructor(api: ethers.AbstractProvider, contracts: AppContracts) {
         this.api = api
         this.contracts = contracts
     }
@@ -67,7 +68,12 @@ class PolkadotContext {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const contextFactory = async (config: Config): Promise<Context> => {
-    const ethApi = new ethers.WebSocketProvider(config.ethereum.url)
+    let ethApi: AbstractProvider;
+    if(config.ethereum.execution_url.startsWith("http")) {
+        ethApi = new ethers.JsonRpcProvider(config.ethereum.execution_url)
+    } else {
+        ethApi = new ethers.WebSocketProvider(config.ethereum.execution_url)
+    }
     const relaychainApi = await ApiPromise.create({
         provider: new WsProvider(config.polkadot.url.relaychain),
     })

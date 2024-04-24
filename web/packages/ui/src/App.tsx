@@ -8,13 +8,13 @@ import { TransferToPolkadot } from './components/TransferToPolkadot';
 
 import { Context, contextFactory } from '@snowbridge/api';
 import { useEffect, useState } from 'react';
-import { BrowserRouter, HashRouter, NavLink, Redirect, Route, Switch } from "react-router-dom";
+import { HashRouter, NavLink, Redirect, Route, Switch } from "react-router-dom";
 
 const config = getConfig()
 
 const connectContext = async (): Promise<Context> => {
   const context = await contextFactory({
-    ethereum: { url: config.ETHEREUM_WS_API },
+    ethereum: { execution_url: config.ETHEREUM_WS_API, beacon_url: config.BEACON_HTTP_API },
     polkadot: {
       url: {
         bridgeHub: config.BRIDGE_HUB_WS_URL,
@@ -65,7 +65,7 @@ function App() {
     }
   }
 
-  useEffect(() => { startConnect() })
+  useEffect(() => { startConnect() }, [])
 
   const snowbridgeHistoryKey = "snowbirdge-transaction-history"
   useEffect(() => {

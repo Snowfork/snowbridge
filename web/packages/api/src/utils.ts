@@ -60,3 +60,28 @@ export const beneficiaryMultiAddress = (beneficiary: string) => {
     }
     return { address, hexAddress }
 }
+
+export const fetchBeaconSlot = async (beaconUrl: string, blockId: `0x${string}` | number): Promise<{
+    data: {
+        message: {
+            slot: number
+            body: {
+                execution_payload?: {
+                    block_number: `${number}`
+                    block_hash: `0x${string}`
+                }
+            }
+        }
+    }
+}> => {
+    let url = beaconUrl.trim()
+    if (!url.endsWith('/')) {
+        url += '/'
+    }
+    url += `eth/v2/beacon/blocks/${blockId}`
+    let response = await fetch(url)
+    if (!response.ok) {
+        throw new Error(response.statusText)
+    }
+    return await response.json()
+}

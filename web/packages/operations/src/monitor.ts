@@ -7,6 +7,7 @@ const PRIMARY_GOVERNANCE_CHANNEL_ID = '0x000000000000000000000000000000000000000
 const SECONDARY_GOVERNANCE_CHANNEL_ID = '0x0000000000000000000000000000000000000000000000000000000000000002'
 
 let config = {
+    BEACON_HTTP_API: 'http://127.0.0.1:9596',
     ETHEREUM_WS_API: 'ws://127.0.0.1:8546',
     RELAY_CHAIN_WS_URL: 'ws://127.0.0.1:9944',
     ASSET_HUB_WS_URL: 'ws://127.0.0.1:12144',
@@ -28,6 +29,7 @@ let config = {
 }
 if (process.env.NODE_ENV === 'production') {
     config = {
+        BEACON_HTTP_API: 'https://lodestar-sepolia.chainsafe.io',
         ETHEREUM_WS_API: `wss://sepolia.infura.io/ws/v3/${process.env.REACT_APP_INFURA_KEY}`,
         RELAY_CHAIN_WS_URL: 'wss://rococo-rpc.polkadot.io',
         ASSET_HUB_WS_URL: 'wss://rococo-asset-hub-rpc.polkadot.io',
@@ -49,7 +51,7 @@ if (process.env.NODE_ENV === 'production') {
 
 const monitor = async () => {
     const context = await contextFactory({
-        ethereum: { url: config.ETHEREUM_WS_API },
+        ethereum: { execution_url: config.ETHEREUM_WS_API, beacon_url: config.BEACON_HTTP_API },
         polkadot: {
             url: {
                 bridgeHub: config.BRIDGE_HUB_WS_URL,

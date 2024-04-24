@@ -4,11 +4,11 @@ import { u8aToHex } from '@polkadot/util'
 import { IGateway__factory } from '@snowbridge/contract-types'
 import { MultiAddressStruct } from '@snowbridge/contract-types/src/IGateway'
 import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethers'
-import { filter, firstValueFrom, lastValueFrom, map as rxmap, take, takeWhile, tap } from 'rxjs'
+import { concatMap, filter, firstValueFrom, lastValueFrom, take, takeWhile, tap } from 'rxjs'
 import { Context } from './index'
-import { waitForMessageQueuePallet } from './query'
+import { scanSubstrateEvents, waitForMessageQueuePallet } from './query'
 import { assetStatusInfo, bridgeStatusInfo, channelStatusInfo } from './status'
-import { beneficiaryMultiAddress, paraIdToChannelId, paraIdToSovereignAccount } from './utils'
+import { beneficiaryMultiAddress, fetchBeaconSlot, paraIdToChannelId, paraIdToSovereignAccount } from './utils'
 
 export type SendValidationResult = {
     success?: {
@@ -198,27 +198,38 @@ export type SendResult = {
         bridgeHub: {
             submittedAtHash: string,
             beaconUpdate?: {
-                createdAtHash?: `0x${string}`,
-                blockNumber: number,
+                createdAtHash?: `0x${string}`
+                beaconBlockRoot: `0x${string}`
+                blockNumber: `${number}` | undefined
+                blockHash: `0x${string}` | undefined
             },
             events?: Codec,
             extrinsicSuccess?: boolean
             extrinsicNumber?: number
+            messageReceivedBlockHash?: `0x${string}`
         }
         assetHub: {
             submittedAtHash: string,
             events?: Codec,
             extrinsicSuccess?: boolean,
+            messageQueueProcessedAt?: `0x${string}`
         },
         destinationParachain?: {
             submittedAtHash: string,
             events?: Codec,
             extrinsicSuccess?: boolean,
+            messageQueueProcessedAt?: `0x${string}`
         },
         channelId: string,
         nonce: bigint,
         messageId: string,
         plan: SendValidationResult,
+        polling?: {
+            bridgeHubBeaconBlock: bigint
+            bridgeHubMessageReceived: bigint
+            assetHubMessageProcessed: bigint
+            destinationMessageProcessed: bigint | undefined
+        }
     }
     failure?: {
         receipt: ContractTransactionReceipt
@@ -308,6 +319,157 @@ export const send = async (context: Context, signer: Signer, plan: SendValidatio
     }
 }
 
+export const trackSendProgressPolling = async (context: Context, result: SendResult, options = {
+    beaconUpdateTimeout: 10, scanBlocks: 600n
+}): Promise<{ status: "success" | "pending", result: SendResult }> => {
+    const { polkadot: { api: { assetHub, bridgeHub, parachains } } } = context
+    const { success } = result
+
+    if (result.failure || !success || !success.plan.success) {
+        throw new Error('Send failed')
+    }
+
+    if (success.polling === undefined) {
+        let destinationMessageProcessed: bigint | undefined = undefined
+        if (success.destinationParachain !== undefined && success.plan.success.destinationParaId in parachains) {
+            destinationMessageProcessed = (await parachains[success.plan.success.destinationParaId].rpc.chain.getHeader(success.destinationParachain.submittedAtHash)).number.toBigInt() + 1n
+        }
+        success.polling = {
+            bridgeHubBeaconBlock: (await bridgeHub.rpc.chain.getHeader(success.bridgeHub.submittedAtHash)).number.toBigInt() + 1n,
+            bridgeHubMessageReceived: (await bridgeHub.rpc.chain.getHeader(success.bridgeHub.submittedAtHash)).number.toBigInt() + 1n,
+            assetHubMessageProcessed: (await assetHub.rpc.chain.getHeader(success.assetHub.submittedAtHash)).number.toBigInt() + 1n,
+            destinationMessageProcessed: destinationMessageProcessed,
+        }
+    }
+
+    let beaconUpdate = success.bridgeHub.beaconUpdate
+    if (success.bridgeHub.beaconUpdate === undefined) {
+        const ethereumBlockNumber = success.ethereum.blockNumber
+        console.log(`Waiting for ethereum block ${ethereumBlockNumber} to be included by light client.`)
+        let { found, lastScannedBlock } = await scanSubstrateEvents(bridgeHub, success.polling.bridgeHubBeaconBlock, options.scanBlocks, async (n, blockHash, ev) => {
+            const event = ev as any
+            if (bridgeHub.events.ethereumBeaconClient.BeaconHeaderImported.is(event.event)) {
+                const [beaconBlockRoot] = (event.event.toPrimitive() as any).data
+                const slot = await fetchBeaconSlot(context.config.ethereum.beacon_url, beaconBlockRoot)
+                const ethBlockNumber = slot.data.message.body.execution_payload?.block_number
+                const ethBlockHash = slot.data.message.body.execution_payload?.block_hash
+                if (ethBlockNumber !== undefined && ethBlockHash !== undefined && ethereumBlockNumber <= Number(ethBlockNumber)) {
+                    beaconUpdate = { createdAtHash: blockHash.toHex(), blockNumber: ethBlockNumber, blockHash: ethBlockHash, beaconBlockRoot }
+                    return true;
+                }
+
+                console.log(`Bridge Hub block ${blockHash.toHex()}: Beacon client ${ethereumBlockNumber - Number(ethBlockNumber)} blocks behind.`)
+            }
+            return false;
+        })
+        success.polling.bridgeHubBeaconBlock = lastScannedBlock + 1n
+        if (!found) { return { status: "pending", result } }
+        success.bridgeHub.beaconUpdate = beaconUpdate
+        console.log(`Included by light client in Bridge Hub block ${beaconUpdate?.createdAtHash}.`)
+    }
+
+    if (success.bridgeHub.events === undefined) {
+        console.log(`Waiting for messageId ${success.messageId} to be recieved on Bridge Hub.`)
+        let messageQueueFound = false
+        let { found, lastScannedBlock, events } = await scanSubstrateEvents(bridgeHub, success.polling.bridgeHubMessageReceived, options.scanBlocks, async (n, blockHash, ev) => {
+            const event = ev as any
+            const data = event.event.toPrimitive().data
+
+            if (bridgeHub.events.ethereumInboundQueue.MessageReceived.is(event.event)
+                && data[1].toString() === success?.nonce.toString()
+                && data[2].toLowerCase() === success?.messageId.toLowerCase()
+                && data[0].toLowerCase() === success?.channelId.toLowerCase()) {
+
+                messageQueueFound = true
+                success.bridgeHub.messageReceivedBlockHash = blockHash.toHex()
+                success.bridgeHub.extrinsicNumber = event.phase.toPrimitive().applyExtrinsic
+            }
+
+            if (messageQueueFound && bridgeHub.events.system.ExtrinsicSuccess.is(event.event) && event.phase.toPrimitive().applyExtrinsic == success.bridgeHub.extrinsicNumber && success.bridgeHub.messageReceivedBlockHash === blockHash.toHex()) {
+                success.bridgeHub.extrinsicSuccess = true
+                return true
+            }
+            if (messageQueueFound && bridgeHub.events.system.ExtrinsicFailed.is(event.event) && event.phase.toPrimitive().applyExtrinsic == success.bridgeHub.extrinsicNumber && success.bridgeHub.messageReceivedBlockHash === blockHash.toHex()) {
+                success.bridgeHub.extrinsicSuccess = false
+                return true
+            }
+            return false
+        });
+        success.polling.bridgeHubMessageReceived = lastScannedBlock + 1n
+        if (!found) { return { status: "pending", result } }
+        console.log(`Message received on Bridge Hub block ${success.bridgeHub.messageReceivedBlockHash}.`)
+        success.bridgeHub.events = events
+    }
+
+    if (success.assetHub.events === undefined && success.bridgeHub.extrinsicSuccess === true) {
+        const issuedTo = (success.plan.success.assetHub.paraId !== success.plan.success.destinationParaId)
+            ? paraIdToSovereignAccount("sibl", success.plan.success.destinationParaId)
+            : success.plan?.success.beneficiaryAddress
+        console.log(`Waiting for messageId ${success.messageId} to be recieved on Asset Hub.`)
+        let transferBlockHash = ""
+        let { found, lastScannedBlock, events } = await scanSubstrateEvents(assetHub, success.polling.assetHubMessageProcessed, options.scanBlocks, async (n, blockHash, ev) => {
+            const event = ev as any
+            let eventData = event.event.toPrimitive().data
+
+            if (assetHub.events.foreignAssets.Issued.is(event.event)
+                && eventData[2].toString() === success?.plan.success?.amount.toString()
+                && u8aToHex(decodeAddress(eventData[1])).toLowerCase() === issuedTo.toLowerCase()
+                && eventData[0]?.parents === 2
+                && eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() === success?.plan.success?.ethereumChainId.toString()
+                && eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() === success?.plan.success?.token.toLowerCase()) {
+                    transferBlockHash = blockHash.toHex()
+            }
+
+            if (assetHub.events.messageQueue.Processed.is(event.event)
+                && (eventData[0].toLowerCase() === success.messageId.toLowerCase())
+                && eventData[1]?.sibling === success.plan.success?.bridgeHub.paraId) {
+
+                success.assetHub.extrinsicSuccess = eventData[3]
+                success.assetHub.messageQueueProcessedAt = blockHash.toHex()
+                return transferBlockHash === success.assetHub.messageQueueProcessedAt
+            }
+            return false
+        })
+        success.polling.assetHubMessageProcessed = lastScannedBlock + 1n
+        if (!found) { return { status: "pending", result } }
+        console.log(`Message received on Asset Hub block ${success.assetHub.messageQueueProcessedAt}.`)
+        success.assetHub.events = events
+    }
+
+    if (success.destinationParachain !== undefined
+        && success.plan.success.assetHub.paraId !== success.plan.success.destinationParaId
+        && success.plan.success.destinationParaId in parachains
+        && success.polling.destinationMessageProcessed !== undefined
+        && success.destinationParachain.events === undefined
+        && success.assetHub.extrinsicSuccess === true) {
+
+        const destParaApi = parachains[success.plan.success.destinationParaId]
+        let extrinsicSuccess = false
+        let messageQueueProcessedAt
+        console.log(`Waiting for messageId ${success.messageId} to be recieved on Parachain ${success.plan.success.destinationParaId}.`)
+        let { found, lastScannedBlock, events } = await scanSubstrateEvents(destParaApi, success.polling.destinationMessageProcessed, options.scanBlocks, async (n, blockHash, ev) => {
+            const event = ev as any
+            let eventData = event.event.toPrimitive().data
+            if (destParaApi.events.messageQueue.Processed.is(event.event)
+                && (eventData[0].toLowerCase() === success.messageId.toLowerCase())
+                && eventData[1]?.sibling === success.plan.success?.assetHub.paraId) {
+                extrinsicSuccess = eventData[3]
+                messageQueueProcessedAt = blockHash.toHex()
+                return true
+            }
+            return false
+        })
+        success.polling.destinationMessageProcessed = lastScannedBlock + 1n
+        if (!found) { return { status: "pending", result } }
+        success.destinationParachain.extrinsicSuccess = extrinsicSuccess
+        success.destinationParachain.messageQueueProcessedAt = messageQueueProcessedAt
+        console.log(`Message received on Destination Parachain block ${success.assetHub.messageQueueProcessedAt}.`)
+        success.destinationParachain.events = events
+    }
+
+    return { status: "success", result };
+}
+
 export async function* trackSendProgress(context: Context, result: SendResult, options = {
     beaconUpdateTimeout: 10, scanBlocks: 200
 }): AsyncGenerator<string> {
@@ -323,14 +485,19 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
         // Wait for light client
         const ethereumBlockNumber = success.ethereum.blockNumber
         const lastBeaconUpdate = await lastValueFrom(
-            bridgeHub.rx.query.ethereumBeaconClient.latestExecutionState().pipe(
-                rxmap(beaconUpdate => {
-                    const update = beaconUpdate.toPrimitive() as { blockNumber: number }
-                    return { createdAtHash: beaconUpdate.createdAtHash?.toHex(), blockNumber: update.blockNumber }
+            bridgeHub.rx.query.ethereumBeaconClient.latestFinalizedBlockRoot().pipe(
+                concatMap(async finalizedBlockRoot => {
+                    const beaconBlockRoot = finalizedBlockRoot.toHex()
+                    const slot = await fetchBeaconSlot(context.config.ethereum.beacon_url, beaconBlockRoot)
+                    const blockNumber = slot.data.message.body.execution_payload?.block_number
+                    const blockHash = slot.data.message.body.execution_payload?.block_hash
+
+                    return { createdAtHash: finalizedBlockRoot.createdAtHash?.toHex(), blockNumber, blockHash, beaconBlockRoot }
                 }),
+                filter(({ blockHash }) => blockHash !== undefined),
                 take(options.beaconUpdateTimeout),
-                takeWhile(({ blockNumber }) => ethereumBlockNumber > blockNumber),
-                tap(({ createdAtHash, blockNumber }) => console.log(`Bridge Hub block ${createdAtHash}: Beacon client ${ethereumBlockNumber - blockNumber} blocks behind.`)),
+                takeWhile(({ blockNumber }) => ethereumBlockNumber > Number(blockNumber)),
+                tap(({ createdAtHash, blockNumber }) => console.log(`Bridge Hub block ${createdAtHash}: Beacon client ${ethereumBlockNumber - Number(blockNumber)} blocks behind.`)),
             ),
             { defaultValue: undefined }
         )
@@ -435,7 +602,7 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
 
             const { allEvents: receivedEvents, extrinsicSuccess, } = await waitForMessageQueuePallet(
                 destParaApi,
-                undefined,
+                success.messageId,
                 success.plan.success.assetHub.paraId,
                 eventRow => {
                     let event = eventRow as any
