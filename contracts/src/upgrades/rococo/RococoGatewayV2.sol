@@ -7,7 +7,7 @@ import "../../Gateway.sol";
 import {UD60x18, convert} from "prb/math/src/UD60x18.sol";
 import {PricingStorage} from "../../storage/PricingStorage.sol";
 
-contract GatewayV2 is Gateway {
+contract RococoGatewayV2 is Gateway {
     constructor(
         address recoveryOperator,
         address beefyClient,

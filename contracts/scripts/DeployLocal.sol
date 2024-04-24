@@ -9,6 +9,7 @@ import {BeefyClient} from "../src/BeefyClient.sol";
 import {IGateway} from "../src/interfaces/IGateway.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Gateway} from "../src/Gateway.sol";
+import {MockGatewayV2} from "../test/mocks/MockGatewayV2.sol";
 import {Agent} from "../src/Agent.sol";
 import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {ChannelID, ParaID, OperatingMode} from "../src/Types.sol";
@@ -17,7 +18,7 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
 import {HelloWorld} from "../test/mocks/HelloWorld.sol";
 
-contract DeployScript is Script {
+contract DeployLocal is Script {
     using SafeNativeTransfer for address payable;
     using stdJson for string;
 
@@ -105,7 +106,10 @@ contract DeployScript is Script {
         payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);
 
+        // Deploy HelloWorld for testing transact
         new HelloWorld();
+        // Deploy MockGatewayV2 for testing
+        new MockGatewayV2();
 
         vm.stopBroadcast();
     }

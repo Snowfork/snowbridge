@@ -3,10 +3,10 @@ package header
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/mock"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"github.com/snowfork/snowbridge/relayer/relays/testutil"
@@ -21,9 +21,9 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
 	}
-	client := testutil.MockAPI{}
-	beaconStore := testutil.MockStore{}
-	beaconSyncer := syncer.New(&client, settings, &beaconStore)
+	p := protocol.New(settings)
+	client := mock.API{}
+	beaconStore := mock.Store{}
 
 	headerAtSlot4571072, err := testutil.GetHeaderAtSlot(4571072)
 	require.NoError(t, err)
@@ -52,9 +52,8 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 	}
 	client.BeaconStates = beaconStates
 
-	h := Header{
-		cache: cache.New(settings.SlotsInEpoch, settings.EpochsPerSyncCommitteePeriod),
-		writer: &testutil.MockWriter{
+	h := New(
+		&mock.Writer{
 			LastFinalizedState: state.FinalizedHeader{
 				BeaconBlockRoot:       common.Hash{},
 				BeaconSlot:            4562496,
@@ -62,10 +61,11 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 				InitialCheckpointSlot: 0,
 			},
 		},
-		syncer:                       beaconSyncer,
-		slotsInEpoch:                 settings.SlotsInEpoch,
-		epochsPerSyncCommitteePeriod: settings.EpochsPerSyncCommitteePeriod,
-	}
+		&client,
+		settings,
+		&beaconStore,
+		p,
+	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
 	err = h.syncInterimFinalizedUpdate(context.Background(), 4570722)
@@ -78,9 +78,9 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
 	}
-	client := testutil.MockAPI{}
-	beaconStore := testutil.MockStore{}
-	beaconSyncer := syncer.New(&client, settings, &beaconStore)
+	p := protocol.New(settings)
+	client := mock.API{}
+	beaconStore := mock.Store{}
 
 	headerAtSlot4571072, err := testutil.GetHeaderAtSlot(4571072)
 	require.NoError(t, err)
@@ -108,16 +108,15 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 	finalizedState, err := testutil.LoadFile("4571072.ssz")
 	require.NoError(t, err)
 	// Return the beacon state from the stpore
-	beaconStore.BeaconStateData = store.StoredBeaconData{
+	beaconStore.StoredBeaconStateData = store.StoredBeaconData{
 		AttestedSlot:         4571136,
 		FinalizedSlot:        4571072,
 		AttestedBeaconState:  attestedState,
 		FinalizedBeaconState: finalizedState,
 	}
 
-	h := Header{
-		cache: cache.New(settings.SlotsInEpoch, settings.EpochsPerSyncCommitteePeriod),
-		writer: &testutil.MockWriter{
+	h := New(
+		&mock.Writer{
 			LastFinalizedState: state.FinalizedHeader{
 				BeaconBlockRoot:       common.Hash{},
 				BeaconSlot:            4562496,
@@ -125,10 +124,11 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 				InitialCheckpointSlot: 0,
 			},
 		},
-		syncer:                       beaconSyncer,
-		slotsInEpoch:                 settings.SlotsInEpoch,
-		epochsPerSyncCommitteePeriod: settings.EpochsPerSyncCommitteePeriod,
-	}
+		&client,
+		settings,
+		&beaconStore,
+		p,
+	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
 	err = h.syncInterimFinalizedUpdate(context.Background(), 4570722)
@@ -143,9 +143,9 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
 	}
-	client := testutil.MockAPI{}
-	beaconStore := testutil.MockStore{}
-	beaconSyncer := syncer.New(&client, settings, &beaconStore)
+	p := protocol.New(settings)
+	client := mock.API{}
+	beaconStore := mock.Store{}
 
 	headerAtSlot4570752, err := testutil.GetHeaderAtSlot(4570752)
 	require.NoError(t, err)
@@ -173,16 +173,15 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 	finalizedState, err := testutil.LoadFile("4570752.ssz")
 	require.NoError(t, err)
 	// Return the beacon state from the store
-	beaconStore.BeaconStateData = store.StoredBeaconData{
+	beaconStore.StoredBeaconStateData = store.StoredBeaconData{
 		AttestedSlot:         4570816,
 		FinalizedSlot:        4570752,
 		AttestedBeaconState:  attestedState,
 		FinalizedBeaconState: finalizedState,
 	}
 
-	h := Header{
-		cache: cache.New(settings.SlotsInEpoch, settings.EpochsPerSyncCommitteePeriod),
-		writer: &testutil.MockWriter{
+	h := New(
+		&mock.Writer{
 			LastFinalizedState: state.FinalizedHeader{
 				BeaconBlockRoot:       common.Hash{},
 				BeaconSlot:            4562496,
@@ -190,10 +189,11 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 				InitialCheckpointSlot: 0,
 			},
 		},
-		syncer:                       beaconSyncer,
-		slotsInEpoch:                 settings.SlotsInEpoch,
-		epochsPerSyncCommitteePeriod: settings.EpochsPerSyncCommitteePeriod,
-	}
+		&client,
+		settings,
+		&beaconStore,
+		p,
+	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
 	err = h.syncInterimFinalizedUpdate(context.Background(), 4570722)
@@ -208,10 +208,9 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
 	}
-
-	client := testutil.MockAPI{}
-	beaconStore := testutil.MockStore{}
-	beaconSyncer := syncer.New(&client, settings, &beaconStore)
+	p := protocol.New(settings)
+	client := mock.API{}
+	beaconStore := mock.Store{}
 
 	headerAtSlot4571072, err := testutil.GetHeaderAtSlot(4571072)
 	require.NoError(t, err)
@@ -226,9 +225,8 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 		4571137: headerAtSlot4571137,
 	}
 
-	h := Header{
-		cache: cache.New(settings.SlotsInEpoch, settings.EpochsPerSyncCommitteePeriod),
-		writer: &testutil.MockWriter{
+	h := New(
+		&mock.Writer{
 			LastFinalizedState: state.FinalizedHeader{
 				BeaconBlockRoot:       common.Hash{},
 				BeaconSlot:            4562496,
@@ -236,10 +234,11 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 				InitialCheckpointSlot: 0,
 			},
 		},
-		syncer:                       beaconSyncer,
-		slotsInEpoch:                 settings.SlotsInEpoch,
-		epochsPerSyncCommitteePeriod: settings.EpochsPerSyncCommitteePeriod,
-	}
+		&client,
+		settings,
+		&beaconStore,
+		p,
+	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
 	err = h.syncInterimFinalizedUpdate(context.Background(), 4570722)
@@ -252,10 +251,9 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
 	}
-
-	client := testutil.MockAPI{}
-	beaconStore := testutil.MockStore{}
-	beaconSyncer := syncer.New(&client, settings, &beaconStore)
+	p := protocol.New(settings)
+	client := mock.API{}
+	beaconStore := mock.Store{}
 
 	headerAtSlot4571072, err := testutil.GetHeaderAtSlot(4571072)
 	require.NoError(t, err)
@@ -265,9 +263,8 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 		4571072: headerAtSlot4571072,
 	}
 
-	h := Header{
-		cache: cache.New(settings.SlotsInEpoch, settings.EpochsPerSyncCommitteePeriod),
-		writer: &testutil.MockWriter{
+	h := New(
+		&mock.Writer{
 			LastFinalizedState: state.FinalizedHeader{
 				BeaconBlockRoot:       common.Hash{},
 				BeaconSlot:            4562496,
@@ -275,10 +272,11 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 				InitialCheckpointSlot: 0,
 			},
 		},
-		syncer:                       beaconSyncer,
-		slotsInEpoch:                 settings.SlotsInEpoch,
-		epochsPerSyncCommitteePeriod: settings.EpochsPerSyncCommitteePeriod,
-	}
+		&client,
+		settings,
+		&beaconStore,
+		p,
+	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
 	err = h.syncInterimFinalizedUpdate(context.Background(), 4570722)

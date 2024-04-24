@@ -19,6 +19,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	executionConf "github.com/snowfork/snowbridge/relayer/relays/execution"
 
@@ -128,12 +129,13 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		p := protocol.New(conf.Source.Beacon.Spec)
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 		store.Connect()
 		defer store.Close()
 
-		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
-		s := syncer.New(client, conf.Source.Beacon.Spec, &store)
+		client := api.NewBeaconClient(endpoint)
+		s := syncer.New(client, &store, p)
 
 		checkPointScale, err := s.GetCheckpoint()
 		if err != nil {
@@ -182,13 +184,15 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		p := protocol.New(conf.Source.Beacon.Spec)
+
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 		store.Connect()
 		defer store.Close()
 
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
-		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
-		s := syncer.New(client, conf.Source.Beacon.Spec, &store)
+		client := api.NewBeaconClient(endpoint)
+		s := syncer.New(client, &store, p)
 
 		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
 
@@ -226,11 +230,11 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 		initialSyncHeaderSlot := initialSync.Header.Slot
-		initialSyncPeriod := s.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
-		initialEpoch := s.ComputeEpochAtSlot(initialSyncHeaderSlot)
+		initialSyncPeriod := p.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
+		initialEpoch := p.ComputeEpochAtSlot(initialSyncHeaderSlot)
 
 		// generate SyncCommitteeUpdate for filling the missing NextSyncCommittee in initial checkpoint
-		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod)
+		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod, 0)
 		if err != nil {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
@@ -333,11 +337,11 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		if finalizedUpdate.AttestedHeader.Slot <= initialSyncHeaderSlot {
 			return fmt.Errorf("AttestedHeader slot should be greater than initialSyncHeaderSlot")
 		}
-		finalizedEpoch := s.ComputeEpochAtSlot(finalizedUpdate.AttestedHeader.Slot)
+		finalizedEpoch := p.ComputeEpochAtSlot(finalizedUpdate.AttestedHeader.Slot)
 		if finalizedEpoch <= initialEpoch {
 			return fmt.Errorf("epoch in FinalizedUpdate should be greater than initialEpoch")
 		}
-		finalizedPeriod := s.ComputeSyncPeriodAtSlot(finalizedUpdate.FinalizedHeader.Slot)
+		finalizedPeriod := p.ComputeSyncPeriodAtSlot(finalizedUpdate.FinalizedHeader.Slot)
 		if initialSyncPeriod != finalizedPeriod {
 			return fmt.Errorf("initialSyncPeriod should be consistent with finalizedUpdatePeriod")
 		}
@@ -389,7 +393,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 					return fmt.Errorf("get next finalized header update: %w", err)
 				}
 				nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
-				nextFinalizedUpdatePeriod := s.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
+				nextFinalizedUpdatePeriod := p.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
 				if initialSyncPeriod+1 == nextFinalizedUpdatePeriod {
 					err := writeJSONToFile(nextFinalizedUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "next-finalized-header-update.json"))
 					if err != nil {
@@ -398,7 +402,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 					log.Info("created next finalized header update file")
 
 					// generate nextSyncCommitteeUpdate
-					nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod + 1)
+					nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod+1, 0)
 					if err != nil {
 						return fmt.Errorf("get sync committee update: %w", err)
 					}
@@ -480,16 +484,17 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		specSettings := conf.Source.Beacon.Spec
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
 
-		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		p := protocol.New(conf.Source.Beacon.Spec)
+
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 		store.Connect()
 		defer store.Close()
 
 		// generate executionUpdate
-		client := api.NewBeaconClient(endpoint, specSettings.SlotsInEpoch)
-		s := syncer.New(client, specSettings, &store)
+		client := api.NewBeaconClient(endpoint)
+		s := syncer.New(client, &store, p)
 		blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(beaconSlot))
 		if err != nil {
 			return fmt.Errorf("fetch block: %w", err)
@@ -667,13 +672,15 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries)
+		p := protocol.New(conf.Source.Beacon.Spec)
+
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 		store.Connect()
 		defer store.Close()
 
 		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
-		client := api.NewBeaconClient(endpoint, conf.Source.Beacon.Spec.SlotsInEpoch)
-		s := syncer.New(client, conf.Source.Beacon.Spec, &store)
+		client := api.NewBeaconClient(endpoint)
+		s := syncer.New(client, &store, p)
 
 		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
 
