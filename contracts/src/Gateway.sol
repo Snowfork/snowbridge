@@ -622,7 +622,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     }
 
     // Calculate cost for transact
-    function _calculateTransactCost(uint128) internal pure returns (Costs memory costs) {
+    function _calculateTransactCost() internal pure returns (Costs memory costs) {
         return Costs({native: 0, foreign: 0});
     }
 
@@ -639,14 +639,14 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         }
         bytes memory payload =
             SubstrateTypes.Transact(msg.sender, originKind.encode(), destinationFee, weightAtMost, call);
-        Costs memory costs = _calculateTransactCost(destinationFee);
+        Costs memory costs = _calculateTransactCost();
         Ticket memory ticket = Ticket({dest: destinationChain, costs: costs, payload: payload});
         _submitOutbound(ticket);
     }
 
     /// @inheritdoc IGateway
     function quoteSendCallFee(uint128 destinationFee) external view returns (uint256) {
-        Costs memory costs = _calculateTransactCost(destinationFee);
+        Costs memory costs = _calculateTransactCost();
         return _calculateFee(costs);
     }
 }
