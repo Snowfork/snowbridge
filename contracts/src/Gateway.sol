@@ -281,8 +281,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             abi.decode(params.payload, (AgentExecuteCommand, bytes));
         if (command == AgentExecuteCommand.Transact) {
             (address target,,) = abi.decode(commandParams, (address, bytes, uint64));
-            //Todo: Add registered ERC20 to the blacklist
-            if (target == address(this) || target == agent || target == AGENT_EXECUTOR) {
+            // blacklist to check with
+            if (
+                target == address(this) || target == agent || target == AGENT_EXECUTOR
+                    || Assets.isTokenRegistered(target)
+            ) {
                 revert NoPermission();
             }
         }

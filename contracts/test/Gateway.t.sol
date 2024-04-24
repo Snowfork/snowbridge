@@ -52,6 +52,7 @@ import {
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 import {HelloWorld} from "./mocks/HelloWorld.sol";
+import {IERC20} from "../src/interfaces/IERC20.sol";
 
 contract GatewayTest is Test {
     ParaID public bridgeHubParaID = ParaID.wrap(1001);
@@ -100,16 +101,12 @@ contract GatewayTest is Test {
     HelloWorld helloWorld;
 
     event SaidHello(string indexed message);
+    event Transfer(address indexed src, address indexed dst, uint256 wad);
 
     function setUp() public {
         AgentExecutor executor = new AgentExecutor();
         gatewayLogic = new MockGateway(
-            address(0),
-            address(executor),
-            bridgeHubParaID,
-            bridgeHubAgentID,
-            foreignTokenDecimals,
-            maxDestinationFee
+            address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals, maxDestinationFee
         );
         Gateway.Config memory config = Gateway.Config({
             mode: OperatingMode.Normal,
@@ -927,5 +924,28 @@ contract GatewayTest is Test {
         emit IGateway.AgentExecuted(assetHubAgentID);
 
         MockGateway(address(gateway)).agentExecutePublic(abi.encode(params));
+    }
+
+    function testAgentExecutionTransactToTransferERC20() public {
+        testRegisterToken();
+
+        token.transfer(address(assetHubAgent), 200);
+
+        uint256 balanceBefore = IERC20(address(token)).balanceOf(account1);
+
+        uint256 amount = 50;
+        bytes memory payload = abi.encodeCall(IERC20.transfer, (account1, amount));
+
+        AgentExecuteParams memory params = AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(token), payload, 100000))
+        });
+
+        vm.expectRevert(Gateway.NoPermission.selector);
+
+        MockGateway(address(gateway)).agentExecutePublic(abi.encode(params));
+
+        uint256 balanceAfter = IERC20(address(token)).balanceOf(account1);
+        assertEq(balanceBefore, balanceAfter);
     }
 }
