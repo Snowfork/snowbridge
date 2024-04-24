@@ -28,7 +28,7 @@ async fn transact_from_penpal_to_ethereum() {
 	let contract_abi: Abi = hello_world.abi().clone();
 	let function = contract_abi.function("sayHello").unwrap();
 	let encoded_data =
-		function.encode_input(&[Token::String("Hello, Clara!".to_string())]).unwrap();
+		function.encode_input(&[Token::String("Hello!".to_string())]).unwrap();
 
 	println!("data is {}", hex::encode(encoded_data.clone()));
 
