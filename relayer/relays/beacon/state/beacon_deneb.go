@@ -133,3 +133,7 @@ func (b *BeaconStateDenebMainnet) SetBlockRoots(blockRoots [][]byte) {
 func (b *BeaconStateDenebMainnet) GetFinalizedCheckpoint() *Checkpoint {
 	return b.FinalizedCheckpoint
 }
+
+func (b *BeaconStateDenebMainnet) GetSyncSyncCommittee() *SyncCommittee {
+	return b.NextSyncCommittee
+}

@@ -11,8 +11,8 @@ use hex_literal::hex;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{
-		gateway_upgrade_mock::{self, InitializedFilter},
-		i_gateway::{self, UpgradedFilter},
+		i_upgradable::{self, UpgradedFilter},
+		mock_gateway_v2,
 	},
 	parachains::{
 		bridgehub::{
@@ -40,7 +40,7 @@ use subxt::{
 	OnlineClient, PolkadotConfig,
 };
 
-const GATETWAY_UPGRADE_MOCK_CONTRACT: [u8; 20] = hex!("f8f7758fbcefd546eaeff7de24aff666b6228e73");
+const GATEWAY_V2_ADDRESS: [u8; 20] = hex!("f8f7758fbcefd546eaeff7de24aff666b6228e73");
 
 #[tokio::test]
 async fn upgrade_gateway() {
@@ -48,15 +48,18 @@ async fn upgrade_gateway() {
 		.await
 		.unwrap()
 		.interval(Duration::from_millis(10u64));
-
 	let ethereum_client = Arc::new(ethereum_provider);
 
 	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
-	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
+	let gateway = i_upgradable::IUpgradable::new(gateway_addr, ethereum_client.clone());
 
-	let mock_gateway_addr: Address = GATETWAY_UPGRADE_MOCK_CONTRACT.into();
-	let mock_gateway =
-		gateway_upgrade_mock::GatewayUpgradeMock::new(mock_gateway_addr, ethereum_client.clone());
+	let new_impl = mock_gateway_v2::MockGatewayV2::new(
+		Address::from(GATEWAY_V2_ADDRESS),
+		ethereum_client.clone(),
+	);
+	let new_impl_code = ethereum_client.get_code(new_impl.address(), None).await.unwrap();
+	let new_impl_code_hash = keccak256(new_impl_code);
+	let new_impl_initializer_params = ethers::abi::encode(&[Token::Uint(42.into())]);
 
 	let relaychain: OnlineClient<PolkadotConfig> =
 		OnlineClient::from_url(RELAY_CHAIN_WS_URL).await.unwrap();
@@ -69,23 +72,15 @@ async fn upgrade_gateway() {
 
 	let ethereum_system_api = bridgehub::api::ethereum_system::calls::TransactionApi;
 
-	let d_0 = 99;
-	let d_1 = 66;
-	let params = ethers::abi::encode(&[Token::Uint(d_0.into()), Token::Uint(d_1.into())]);
-
-	let code = ethereum_client
-		.get_code(NameOrAddress::Address(GATETWAY_UPGRADE_MOCK_CONTRACT.into()), None)
-		.await
-		.unwrap();
-
-	let gateway_upgrade_mock_code_hash = keccak256(code);
-
 	// The upgrade call
 	let upgrade_call = ethereum_system_api
 		.upgrade(
-			GATETWAY_UPGRADE_MOCK_CONTRACT.into(),
-			gateway_upgrade_mock_code_hash.into(),
-			Some(Initializer { params, maximum_required_gas: 100_000 }),
+			new_impl.address(),
+			new_impl_code_hash.into(),
+			Some(Initializer {
+				params: new_impl_initializer_params,
+				maximum_required_gas: 100_000,
+			}),
 		)
 		.encode_call_data(&bridgehub.metadata())
 		.expect("encoded call");
@@ -138,7 +133,7 @@ async fn upgrade_gateway() {
 			upgrade_event_found = true;
 		}
 		if upgrade_event_found {
-			break
+			break;
 		}
 	}
 	assert!(upgrade_event_found);
@@ -147,7 +142,6 @@ async fn upgrade_gateway() {
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
 
 	let mut upgrade_event_found = false;
-	let mut initialize_event_found = false;
 	while let Some(block) = stream.next().await {
 		println!("Polling ethereum block {:?} for upgraded event", block.number.unwrap());
 		if let Ok(upgrades) = gateway
@@ -160,29 +154,10 @@ async fn upgrade_gateway() {
 				println!("Upgrade event found at ethereum block {:?}", block.number.unwrap());
 				upgrade_event_found = true;
 			}
-			if upgrade_event_found {
-				if let Ok(initializes) = mock_gateway
-					.event::<InitializedFilter>()
-					.at_block_hash(block.hash.unwrap())
-					.query()
-					.await
-				{
-					for initialize in initializes {
-						println!(
-							"Initialize event found at ethereum block {:?}",
-							block.number.unwrap()
-						);
-						assert_eq!(initialize.d_0, d_0.into());
-						assert_eq!(initialize.d_1, d_1.into());
-						initialize_event_found = true;
-					}
-				}
-			}
 		}
 		if upgrade_event_found {
-			break
+			break;
 		}
 	}
 	assert!(upgrade_event_found);
-	assert!(initialize_event_found);
 }
