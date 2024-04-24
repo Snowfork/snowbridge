@@ -49,13 +49,10 @@ import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
-import {SafeCallFilterStorage} from "./storage/SafeCallFilterStorage.sol";
-import {BytesLib} from "./utils/BytesLib.sol";
 
 contract Gateway is IGateway, IInitializable, IUpgradable {
     using Address for address;
     using SafeNativeTransfer for address payable;
-    using BytesLib for bytes;
 
     address public immutable AGENT_EXECUTOR;
 
@@ -283,10 +280,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         (AgentExecuteCommand command, bytes memory commandParams) =
             abi.decode(params.payload, (AgentExecuteCommand, bytes));
         if (command == AgentExecuteCommand.Transact) {
-            (address target, bytes memory payload,) = abi.decode(commandParams, (address, bytes, uint64));
-            SafeCallFilterStorage.Layout storage $ = SafeCallFilterStorage.layout();
-            bytes4 selector = bytes4(payload.slice(0, 4));
-            if ($.safeCalls[target][selector] != true) {
+            (address target,,) = abi.decode(commandParams, (address, bytes, uint64));
+            //Todo: Add registered ERC20 to the blacklist
+            if (target == address(this) || target == agent || target == AGENT_EXECUTOR) {
                 revert NoPermission();
             }
         }
@@ -397,16 +393,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         pricing.deliveryCost = params.deliveryCost;
         pricing.multiplier = params.multiplier;
         emit PricingParametersChanged();
-    }
-
-    // @dev Set safe calls of the gateway
-    function setSafeCalls(bytes calldata data) external onlySelf {
-        SafeCallFilterStorage.Layout storage filter = SafeCallFilterStorage.layout();
-        SetSafeCallsParams memory params = abi.decode(data, (SetSafeCallsParams));
-        for (uint256 i = 0; i < params.selectors.length; i++) {
-            filter.safeCalls[params.target][params.selectors[i]] = true;
-        }
-        emit SafeCallFilterChanged();
     }
 
     /**

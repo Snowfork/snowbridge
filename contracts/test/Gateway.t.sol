@@ -124,13 +124,6 @@ contract GatewayTest is Test {
         GatewayMock(address(gateway)).setOperatingModePublic(abi.encode(params));
 
         helloWorld = new HelloWorld();
-        bytes4[] memory selectors = new bytes4[](3);
-        selectors[0] = bytes4(keccak256(bytes("sayHello(string)")));
-        selectors[1] = bytes4(keccak256(bytes("revertUnauthorized()")));
-        selectors[2] = bytes4(keccak256(bytes("retBomb()")));
-        GatewayMock(address(gateway)).setSafeCallsPublic(
-            abi.encode(SetSafeCallsParams({target: address(helloWorld), selectors: selectors}))
-        );
 
         bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
         assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
@@ -887,11 +880,11 @@ contract GatewayTest is Test {
     }
 
     function testAgentExecutionTransactNoPermission() public {
-        bytes memory payload = abi.encodeWithSignature("sayHello2(string)", "Ron");
+        bytes memory payload = abi.encodeWithSignature("invoke(address,bytes)");
 
         AgentExecuteParams memory params = AgentExecuteParams({
             agentID: assetHubAgentID,
-            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(helloWorld), payload, 100000))
+            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(assetHubAgent), payload, 100000))
         });
 
         vm.expectRevert(Gateway.NoPermission.selector);

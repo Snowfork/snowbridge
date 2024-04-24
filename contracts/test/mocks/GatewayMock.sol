@@ -75,10 +75,6 @@ contract GatewayMock is Gateway {
     function setPricingParametersPublic(bytes calldata params) external {
         this.setPricingParameters(params);
     }
-
-    function setSafeCallsPublic(bytes calldata params) external {
-        this.setSafeCalls(params);
-    }
 }
 
 library AdditionalStorage {
