@@ -41,7 +41,7 @@ import {
     TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
     SetPricingParametersParams,
-    SetSafeCallsParams
+    TransactCallParams
 } from "./Params.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
@@ -96,7 +96,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
-    error NoPermission();
+    error AgentTransactCallFailed();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
@@ -214,6 +214,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             catch {
                 success = false;
             }
+        } else if (message.command == Command.Transact) {
+            try Gateway(this).transact{gas: maxDispatchGas}(message.params) {}
+            catch {
+                success = false;
+            }
         }
 
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
@@ -277,26 +282,12 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             revert InvalidAgentExecutionPayload();
         }
 
-        (AgentExecuteCommand command, bytes memory commandParams) =
-            abi.decode(params.payload, (AgentExecuteCommand, bytes));
-        if (command == AgentExecuteCommand.Transact) {
-            (address target,,) = abi.decode(commandParams, (address, bytes, uint64));
-            // blacklist to check with
-            if (
-                target == address(this) || target == agent || target == AGENT_EXECUTOR
-                    || Assets.isTokenRegistered(target)
-            ) {
-                revert NoPermission();
-            }
-        }
-
-        bytes memory call = abi.encodeCall(AgentExecutor.execute, (command, commandParams));
+        bytes memory call = abi.encodeCall(AgentExecutor.execute, params.payload);
 
         (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
         if (!success) {
             revert AgentExecutionFailed(returndata);
         }
-        emit AgentExecuted(params.agentID);
     }
 
     /// @dev Create an agent for a consensus system on Polkadot
@@ -396,6 +387,20 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         pricing.deliveryCost = params.deliveryCost;
         pricing.multiplier = params.multiplier;
         emit PricingParametersChanged();
+    }
+
+    // @dev Transact
+    function transact(bytes calldata data) external onlySelf {
+        TransactCallParams memory params = abi.decode(data, (TransactCallParams));
+        address agent = _ensureAgent(params.agentID);
+        bytes memory call =
+            abi.encodeCall(AgentExecutor.executeCall, (params.target, params.payload, params.dynamicGas));
+        (, bytes memory result) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
+        (bool success) = abi.decode(result, (bool));
+        if (!success) {
+            revert AgentTransactCallFailed();
+        }
+        emit TransactExecuted(params.agentID, params.target, params.payload);
     }
 
     /**

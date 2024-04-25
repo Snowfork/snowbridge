@@ -11,10 +11,6 @@ contract HelloWorld {
         emit SaidHello(fullMessage);
     }
 
-    function sayHello2(string memory _text) public {
-        this.sayHello(_text);
-    }
-
     function revertUnauthorized() public pure {
         revert Unauthorized();
     }

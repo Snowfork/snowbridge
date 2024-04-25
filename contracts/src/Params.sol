@@ -83,10 +83,14 @@ struct SetPricingParametersParams {
     UD60x18 multiplier;
 }
 
-// Payload for SetSafeCalls
-struct SetSafeCallsParams {
+// Payload for TransactCall
+struct TransactCallParams {
+    /// @dev The agent ID of the consensus system
+    bytes32 agentID;
     /// @dev The target contract
     address target;
-    /// @dev The selector of the function
-    bytes4[] selectors;
+    /// @dev Payload of the call
+    bytes payload;
+    /// @dev Max gas cost of the call
+    uint64 dynamicGas;
 }

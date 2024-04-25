@@ -84,12 +84,12 @@ enum Command {
     SetOperatingMode,
     TransferNativeFromAgent,
     SetTokenTransferFees,
-    SetPricingParameters
+    SetPricingParameters,
+    Transact
 }
 
 enum AgentExecuteCommand {
-    TransferToken,
-    Transact
+    TransferToken
 }
 
 /// @dev Application-level costs for a message

@@ -16,19 +16,14 @@ contract AgentExecutor {
     using SafeNativeTransfer for address payable;
     using Call for address;
 
-    error CallExternalFailed();
-
     /// @dev Execute a message which originated from the Polkadot side of the bridge. In other terms,
     /// the `data` parameter is constructed by the BridgeHub parachain.
     ///
-    function execute(AgentExecuteCommand command, bytes memory params) external {
+    function execute(bytes memory data) external {
+        (AgentExecuteCommand command, bytes memory params) = abi.decode(data, (AgentExecuteCommand, bytes));
         if (command == AgentExecuteCommand.TransferToken) {
             (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
             _transferToken(token, recipient, amount);
-        }
-        if (command == AgentExecuteCommand.Transact) {
-            (address target, bytes memory payload, uint64 dynamicGas) = abi.decode(params, (address, bytes, uint64));
-            _executeCall(target, payload, dynamicGas);
         }
     }
 
@@ -45,10 +40,7 @@ contract AgentExecutor {
     }
 
     /// @dev Call a contract at the given address, with provided bytes as payload.
-    function _executeCall(address target, bytes memory payload, uint64 dynamicGas) internal {
-        bool success = target.safeCall(dynamicGas, 0, payload);
-        if (!success) {
-            revert CallExternalFailed();
-        }
+    function executeCall(address target, bytes memory payload, uint64 dynamicGas) external returns (bool) {
+        return target.safeCall(dynamicGas, 0, payload);
     }
 }

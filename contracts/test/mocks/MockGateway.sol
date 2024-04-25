@@ -76,4 +76,8 @@ contract MockGateway is Gateway {
     function setPricingParametersPublic(bytes calldata params) external {
         this.setPricingParameters(params);
     }
+
+    function transactPublic(bytes calldata params) external {
+        this.transact(params);
+    }
 }

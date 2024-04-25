@@ -36,7 +36,7 @@ import {
     TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
     SetPricingParametersParams,
-    SetSafeCallsParams
+    TransactCallParams
 } from "../src/Params.sol";
 
 import {
@@ -866,67 +866,54 @@ contract GatewayTest is Test {
         );
     }
 
-    function testAgentExecutionTransact() public {
-        bytes memory payload = abi.encodeWithSignature("sayHello(string)", "Clara");
+    function testAgentExecutionTransactSuccess() public {
+        bytes memory payload = abi.encodeWithSignature("sayHello(string)", "World");
 
-        AgentExecuteParams memory params = AgentExecuteParams({
+        TransactCallParams memory params = TransactCallParams({
             agentID: assetHubAgentID,
-            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(helloWorld), payload, 100000))
+            target: address(helloWorld),
+            payload: payload,
+            dynamicGas: 100000
         });
 
         // Expect the HelloWorld contract to emit `SaidHello`
         vm.expectEmit(true, false, false, false);
-        emit SaidHello("Hello there, Clara");
+        emit SaidHello("Hello there, World");
 
-        MockGateway(address(gateway)).agentExecutePublic(abi.encode(params));
-    }
-
-    function testAgentExecutionTransactNoPermission() public {
-        bytes memory payload = abi.encodeWithSignature("invoke(address,bytes)");
-
-        AgentExecuteParams memory params = AgentExecuteParams({
-            agentID: assetHubAgentID,
-            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(assetHubAgent), payload, 100000))
-        });
-
-        vm.expectRevert(Gateway.NoPermission.selector);
-
-        MockGateway(address(gateway)).agentExecutePublic(abi.encode(params));
+        MockGateway(address(gateway)).transactPublic(abi.encode(params));
     }
 
     function testAgentExecutionTransactFail() public {
         bytes memory payload = abi.encodeWithSignature("revertUnauthorized()");
 
-        AgentExecuteParams memory params = AgentExecuteParams({
+        TransactCallParams memory params = TransactCallParams({
             agentID: assetHubAgentID,
-            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(helloWorld), payload, 100000))
+            target: address(helloWorld),
+            payload: payload,
+            dynamicGas: 100000
         });
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Gateway.AgentExecutionFailed.selector, abi.encodeWithSelector(AgentExecutor.CallExternalFailed.selector)
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Gateway.AgentTransactCallFailed.selector));
 
-        MockGateway(address(gateway)).agentExecutePublic(abi.encode(params));
+        MockGateway(address(gateway)).transactPublic(abi.encode(params));
     }
 
     function testAgentExecutionTransactRetBomb() public {
         bytes memory payload = abi.encodeWithSignature("retBomb()");
 
-        AgentExecuteParams memory params = AgentExecuteParams({
+        TransactCallParams memory params = TransactCallParams({
             agentID: assetHubAgentID,
-            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(helloWorld), payload, 30000000))
+            target: address(helloWorld),
+            payload: payload,
+            dynamicGas: 100000
         });
 
-        // Expect Gateway contract to emit `AgentExecuted`
-        vm.expectEmit(true, false, false, false);
-        emit IGateway.AgentExecuted(assetHubAgentID);
+        vm.expectRevert(abi.encodeWithSelector(Gateway.AgentTransactCallFailed.selector));
 
-        MockGateway(address(gateway)).agentExecutePublic(abi.encode(params));
+        MockGateway(address(gateway)).transactPublic(abi.encode(params));
     }
 
-    function testAgentExecutionTransactToTransferERC20() public {
+    function testAgentTransferERC20WithTransactShouldBeAllowed() public {
         testRegisterToken();
 
         token.transfer(address(assetHubAgent), 200);
@@ -936,16 +923,12 @@ contract GatewayTest is Test {
         uint256 amount = 50;
         bytes memory payload = abi.encodeCall(IERC20.transfer, (account1, amount));
 
-        AgentExecuteParams memory params = AgentExecuteParams({
-            agentID: assetHubAgentID,
-            payload: abi.encode(AgentExecuteCommand.Transact, abi.encode(address(token), payload, 100000))
-        });
+        TransactCallParams memory params =
+            TransactCallParams({agentID: assetHubAgentID, target: address(token), payload: payload, dynamicGas: 100000});
 
-        vm.expectRevert(Gateway.NoPermission.selector);
-
-        MockGateway(address(gateway)).agentExecutePublic(abi.encode(params));
+        MockGateway(address(gateway)).transactPublic(abi.encode(params));
 
         uint256 balanceAfter = IERC20(address(token)).balanceOf(account1);
-        assertEq(balanceBefore, balanceAfter);
+        assertEq(balanceBefore + amount, balanceAfter);
     }
 }
