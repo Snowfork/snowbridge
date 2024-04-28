@@ -11,3 +11,6 @@ ignored_error_codes = [
     # DeployLocal.sol is never deployed
     5574
 ]
+
+# [etherscan]
+# mainnet = { key = "${ETHERSCAN_API_KEY}" }
