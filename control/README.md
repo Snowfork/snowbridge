@@ -5,7 +5,7 @@ Tools for generating governance proposals
 ## Example: Generate bridge activation preimage
 
 ```shell
-snowbridge-preimage
+cargo run --bin snowbridge-preimage -- \
   --bridge-hub-api ws://localhost:8001 \
   --asset-hub-api ws://localhost:8000 \
   initialize \

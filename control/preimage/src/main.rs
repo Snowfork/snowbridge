@@ -12,6 +12,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
 use constants::{ASSET_HUB_API, BRIDGE_HUB_API, POLKADOT_DECIMALS, POLKADOT_SYMBOL};
 use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_force_batch};
+use sp_crypto_hashing::blake2_256;
 use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
 
@@ -231,6 +232,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 vec![
                     commands::set_gateway_address(&params.gateway_address),
                     set_pricing_parameters,
+                    commands::gateway_operating_mode(&params.gateway_operating_mode),
                     commands::force_checkpoint(&params.force_checkpoint),
                 ],
             )
@@ -259,6 +261,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let preimage = call.encode();
 
     generate_chopsticks_script(&preimage, "chopsticks-execute-upgrade.js".into())?;
+
+    eprintln!("Preimage Hash: 0x{}", hex::encode(blake2_256(&preimage)));
+    eprintln!("Preimage Size: {}", preimage.len());
 
     match cli.format {
         Format::Hex => {
