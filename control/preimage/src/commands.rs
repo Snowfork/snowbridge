@@ -123,6 +123,11 @@ pub async fn pricing_parameters(
         twox_128(b":BridgeHubEthereumBaseFee:").to_vec();
     let asset_hub_outbound_fee_encoded: Vec<u8> = total_outbound_fee_adjusted.encode();
 
+    eprintln!(
+        "Storage key for 'BridgeHubEthereumBaseFee': 0x{}",
+        hex::encode(&asset_hub_outbound_fee_storage_key)
+    );
+
     Ok((
         BridgeHubRuntimeCall::EthereumSystem(
             snowbridge_pallet_system::pallet::Call::set_pricing_parameters {

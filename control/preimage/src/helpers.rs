@@ -33,10 +33,10 @@ use sp_arithmetic::per_things::Rounding;
 const MAX_REF_TIME: u128 = 500_000_000_000 - 1;
 const MAX_PROOF_SIZE: u128 = 3 * 1024 * 1024 - 1;
 
-// Increase call weight by 25% as a buffer in case the chain is upgraded with new weights
+// Increase call weight by 50% as a buffer in case the chain is upgraded with new weights
 // while the proposal is still in flight.
 pub fn increase_weight(ref_time: &mut u64, proof_size: &mut u64) {
-    let _ref_time = multiply_by_rational_with_rounding(*ref_time as u128, 125, 100, Rounding::Up)
+    let _ref_time = multiply_by_rational_with_rounding(*ref_time as u128, 3, 2, Rounding::Up)
         .expect("overflow")
         .min(MAX_REF_TIME);
     let _proof_size =
