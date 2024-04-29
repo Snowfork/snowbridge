@@ -52,8 +52,9 @@ import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 import {MockNft} from "./mocks/MockNft.sol";
 import {TokenInfo} from "../src/Types.sol";
+import {IERC721Receiver} from "openzeppelin/token/ERC721/IERC721Receiver.sol";
 
-contract GatewayTest is Test {
+contract GatewayTest is Test, IERC721Receiver {
     ParaID public bridgeHubParaID = ParaID.wrap(1001);
     bytes32 public bridgeHubAgentID = keccak256("1001");
     address public bridgeHubAgent;
@@ -175,6 +176,10 @@ contract GatewayTest is Test {
 
     fallback() external payable {}
     receive() external payable {}
+
+    function onERC721Received(address, address, uint256, bytes memory) public virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
 
     /**
      * Message Verification
@@ -872,5 +877,26 @@ contract GatewayTest is Test {
 
         TokenInfo memory info = MockGateway(address(gateway)).tokenInfo(address(nftToken));
         assertEq(info.isNft, true);
+    }
+
+    function testSendNftTokenToAssetHub() public {
+        // Mint token(id:0) and approve gateway to use
+        uint128 tokenId = 0;
+        nftToken.mint(address(this));
+        nftToken.approve(address(gateway), uint256(tokenId));
+
+        // register token first
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        IGateway(address(gateway)).registerNftToken{value: fee}(address(nftToken));
+
+        // Expect the gateway to emit `TokenSent` & `OutboundMessageAccepted`
+        ParaID destPara = assetHubParaID;
+        fee = IGateway(address(gateway)).quoteSendTokenFee(address(nftToken), destPara, 1);
+        vm.expectEmit(true, true, false, true);
+        emit IGateway.TokenSent(address(nftToken), address(this), destPara, recipientAddress32, tokenId);
+        vm.expectEmit(true, false, false, false);
+        emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
+
+        IGateway(address(gateway)).sendNftToken{value: fee}(address(nftToken), tokenId, recipientAddress32);
     }
 }

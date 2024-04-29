@@ -616,12 +616,17 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
     }
 
-    // Register an Ethereum-native token in the gateway and on AssetHub
+    // Register an Ethereum-native nft token on AssetHub
     function registerNftToken(address token) external payable {
         _submitOutbound(Assets.registerNftToken(token));
     }
 
     function tokenInfo(address token) external view returns (TokenInfo memory) {
         return AssetsStorage.layout().tokenRegistry[token];
+    }
+
+    // Send an Ethereum-native token to AssetHub
+    function sendNftToken(address token, uint128 tokenId, MultiAddress calldata destinationAddress) external payable {
+        _submitOutbound(Assets.sendNftToken(token, tokenId, msg.sender, destinationAddress));
     }
 }

@@ -105,4 +105,7 @@ interface IGateway {
 
     /// @dev Register an Nft token and create a wrapped derivative on AssetHub in the `ForeignUniques` pallet.
     function registerNftToken(address token) external payable;
+
+    /// @dev Send Nft tokens to parachain `destinationChain` and deposit into account `destinationAddress`
+    function sendNftToken(address token, uint128 tokenId, MultiAddress calldata destinationAddress) external payable;
 }

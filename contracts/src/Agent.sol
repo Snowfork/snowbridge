@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.23;
 
+import {IERC721Receiver} from "openzeppelin/token/ERC721/IERC721Receiver.sol";
+
 /// @title An agent contract that acts on behalf of a consensus system on Polkadot
 /// @dev Instances of this contract act as an agents for arbitrary consensus systems on Polkadot. These consensus systems
 /// can include toplevel parachains as as well as nested consensus systems within a parachain.
-contract Agent {
+contract Agent is IERC721Receiver {
     error Unauthorized();
 
     /// @dev The unique ID for this agent, derived from the MultiLocation of the corresponding consensus system on Polkadot
@@ -31,5 +33,9 @@ contract Agent {
             revert Unauthorized();
         }
         return executor.delegatecall(data);
+    }
+
+    function onERC721Received(address, address, uint256, bytes memory) public virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }
