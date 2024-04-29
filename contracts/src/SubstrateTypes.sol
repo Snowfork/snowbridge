@@ -133,4 +133,40 @@ library SubstrateTypes {
             ScaleCodec.encodeU128(xcmFee)
         );
     }
+
+    /**
+     * @dev SCALE-encodes `router_primitives::inbound::VersionedMessage` containing payload
+     * `RegisterNftToken::Create`
+     */
+    // solhint-disable-next-line func-name-mixedcase
+    function RegisterNftToken(address token, uint128 fee) internal view returns (bytes memory) {
+        return bytes.concat(
+            bytes1(0x00),
+            ScaleCodec.encodeU64(uint64(block.chainid)),
+            bytes1(0x02),
+            SubstrateTypes.H160(token),
+            ScaleCodec.encodeU128(fee)
+        );
+    }
+
+    /**
+     * @dev SCALE-encodes `router_primitives::inbound::VersionedMessage` containing payload
+     * `NftTokensMessage::Mint`
+     */
+    // destination is AccountID32 address on AssetHub
+    function SendNftTokenToAssetHubAddress32(address token, bytes32 recipient, uint128 tokenId, uint128 fee)
+        internal
+        view
+        returns (bytes memory)
+    {
+        return bytes.concat(
+            bytes1(0x00),
+            ScaleCodec.encodeU64(uint64(block.chainid)),
+            bytes1(0x03),
+            SubstrateTypes.H160(token),
+            ScaleCodec.encodeU128(tokenId),
+            recipient,
+            ScaleCodec.encodeU128(fee)
+        );
+    }
 }

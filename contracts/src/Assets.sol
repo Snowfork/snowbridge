@@ -12,6 +12,8 @@ import {SubstrateTypes} from "./SubstrateTypes.sol";
 import {ParaID, MultiAddress, Ticket, Costs} from "./Types.sol";
 import {Address} from "./utils/Address.sol";
 
+import {IERC721} from "openzeppelin/token/ERC721/IERC721.sol";
+
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
 library Assets {
     using Address for address;
@@ -42,11 +44,12 @@ library Assets {
         IERC20(token).safeTransferFrom(sender, agent, amount);
     }
 
-    function sendTokenCosts(address token, ParaID destinationChain, uint128 destinationChainFee, uint128 maxDestinationChainFee)
-        external
-        view
-        returns (Costs memory costs)
-    {
+    function sendTokenCosts(
+        address token,
+        ParaID destinationChain,
+        uint128 destinationChainFee,
+        uint128 maxDestinationChainFee
+    ) external view returns (Costs memory costs) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
         if (!info.isRegistered) {
@@ -187,5 +190,63 @@ library Assets {
         ticket.payload = SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee);
 
         emit IGateway.TokenRegistrationSent(token);
+    }
+
+    /// @dev Registers a nft token
+    /// @param token The Nft token address.
+    function registerNftToken(address token) external returns (Ticket memory ticket) {
+        if (!token.isContract()) {
+            revert InvalidToken();
+        }
+
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+
+        TokenInfo storage info = $.tokenRegistry[token];
+        info.isRegistered = true;
+        info.isNft = true;
+
+        ticket.dest = $.assetHubParaID;
+        ticket.costs = _registerTokenCosts();
+        ticket.payload = SubstrateTypes.RegisterNftToken(token, $.assetHubCreateAssetFee);
+
+        emit IGateway.TokenRegistrationSent(token);
+    }
+
+    function sendNftToken(address token, uint128 tokenId, address sender, MultiAddress calldata destinationAddress)
+        external
+        returns (Ticket memory ticket)
+    {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+
+        TokenInfo storage info = $.tokenRegistry[token];
+        if (!info.isRegistered) {
+            revert TokenNotRegistered();
+        }
+
+        // Lock the funds into AssetHub's agent contract
+        _transferNftToAgent($.assetHubAgent, token, sender, tokenId);
+
+        ticket.dest = $.assetHubParaID;
+        ticket.costs = _sendNftTokenCosts();
+
+        ticket.payload = SubstrateTypes.SendNftTokenToAssetHubAddress32(
+            token, destinationAddress.asAddress32(), tokenId, $.assetHubReserveTransferFee
+        );
+        emit IGateway.TokenSent(token, sender, $.assetHubParaID, destinationAddress, tokenId);
+    }
+
+    /// @dev transfer Nft token from the sender to the specified agent
+    function _transferNftToAgent(address agent, address token, address sender, uint256 tokenId) internal {
+        if (!token.isContract()) {
+            revert InvalidToken();
+        }
+
+        IERC721(token).safeTransferFrom(sender, agent, tokenId);
+    }
+
+    function _sendNftTokenCosts() internal view returns (Costs memory costs) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        costs.foreign = $.assetHubReserveTransferFee;
+        costs.native = 0;
     }
 }

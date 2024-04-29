@@ -23,7 +23,6 @@ import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 import {MultiAddress} from "../src/MultiAddress.sol";
 import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress} from "../src/Types.sol";
 
-
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 import {PricingStorage} from "../src/storage/PricingStorage.sol";
 
@@ -51,8 +50,11 @@ import {
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {MockNft} from "./mocks/MockNft.sol";
+import {TokenInfo} from "../src/Types.sol";
+import {IERC721Receiver} from "openzeppelin/token/ERC721/IERC721Receiver.sol";
 
-contract GatewayTest is Test {
+contract GatewayTest is Test, IERC721Receiver {
     ParaID public bridgeHubParaID = ParaID.wrap(1001);
     bytes32 public bridgeHubAgentID = keccak256("1001");
     address public bridgeHubAgent;
@@ -70,6 +72,7 @@ contract GatewayTest is Test {
     GatewayProxy public gateway;
 
     WETH9 public token;
+    MockNft public nftToken;
 
     address public account1;
     address public account2;
@@ -99,12 +102,7 @@ contract GatewayTest is Test {
     function setUp() public {
         AgentExecutor executor = new AgentExecutor();
         gatewayLogic = new MockGateway(
-            address(0),
-            address(executor),
-            bridgeHubParaID,
-            bridgeHubAgentID,
-            foreignTokenDecimals,
-            maxDestinationFee
+            address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals, maxDestinationFee
         );
         Gateway.Config memory config = Gateway.Config({
             mode: OperatingMode.Normal,
@@ -145,6 +143,8 @@ contract GatewayTest is Test {
 
         recipientAddress32 = multiAddressFromBytes32(keccak256("recipient"));
         recipientAddress20 = multiAddressFromBytes20(bytes20(keccak256("recipient")));
+
+        nftToken = new MockNft();
     }
 
     function makeCreateAgentCommand() public pure returns (Command, bytes memory) {
@@ -176,6 +176,10 @@ contract GatewayTest is Test {
 
     fallback() external payable {}
     receive() external payable {}
+
+    function onERC721Received(address, address, uint256, bytes memory) public virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
 
     /**
      * Message Verification
@@ -857,6 +861,60 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, maxDestinationFee + 1);
 
         vm.expectRevert(Assets.InvalidDestinationFee.selector);
-        IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, maxDestinationFee + 1, 1);
+        IGateway(address(gateway)).sendToken{value: fee}(
+            address(token), destPara, recipientAddress32, maxDestinationFee + 1, 1
+        );
+    }
+
+    function testRegisterNftToken() public {
+        vm.expectEmit(false, false, false, true);
+        emit IGateway.TokenRegistrationSent(address(nftToken));
+
+        vm.expectEmit(true, false, false, false);
+        emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
+
+        IGateway(address(gateway)).registerNftToken{value: 2 ether}(address(nftToken));
+
+        TokenInfo memory info = MockGateway(address(gateway)).tokenInfo(address(nftToken));
+        assertEq(info.isNft, true);
+    }
+
+    function testSendNftTokenToAssetHub() public {
+        // Mint token(id:0) and approve gateway to use
+        uint128 tokenId = 0;
+        nftToken.mint(address(this));
+        nftToken.approve(address(gateway), uint256(tokenId));
+
+        // register token first
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        IGateway(address(gateway)).registerNftToken{value: fee}(address(nftToken));
+
+        // Expect the gateway to emit `TokenSent` & `OutboundMessageAccepted`
+        ParaID destPara = assetHubParaID;
+        fee = IGateway(address(gateway)).quoteSendTokenFee(address(nftToken), destPara, 1);
+        vm.expectEmit(true, true, false, true);
+        emit IGateway.TokenSent(address(nftToken), address(this), destPara, recipientAddress32, tokenId);
+        vm.expectEmit(true, false, false, false);
+        emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
+
+        IGateway(address(gateway)).sendNftToken{value: fee}(address(nftToken), tokenId, recipientAddress32);
+    }
+
+    function testAgentTransferNft() public {
+        testSendNftTokenToAssetHub();
+        uint128 tokenId = 0;
+
+        AgentExecuteParams memory params = AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(
+                AgentExecuteCommand.TransferNftToken, abi.encode(address(nftToken), address(account1), tokenId)
+                )
+        });
+
+        bytes memory encodedParams = abi.encode(params);
+        MockGateway(address(gateway)).agentExecutePublic(encodedParams);
+        // assert token transfer to account1
+        address owner = nftToken.ownerOf(tokenId);
+        assertEq(owner, account1);
     }
 }

@@ -7,6 +7,7 @@ import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
+import {IERC721} from "openzeppelin/token/ERC721/IERC721.sol";
 
 /// @title Code which will run within an `Agent` using `delegatecall`.
 /// @dev This is a singleton contract, meaning that all agents will execute the same code.
@@ -22,6 +23,9 @@ contract AgentExecutor {
         if (command == AgentExecuteCommand.TransferToken) {
             (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
             _transferToken(token, recipient, amount);
+        } else if (command == AgentExecuteCommand.TransferNftToken) {
+            (address token, address recipient, uint128 tokenId) = abi.decode(params, (address, address, uint128));
+            _transferNftToken(token, recipient, tokenId);
         }
     }
 
@@ -35,5 +39,10 @@ contract AgentExecutor {
     /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
     function _transferToken(address token, address recipient, uint128 amount) internal {
         IERC20(token).safeTransfer(recipient, amount);
+    }
+
+    /// @dev Transfer Nft to `recipient`. Only callable via `execute`.
+    function _transferNftToken(address token, address recipient, uint128 tokenId) internal {
+        IERC721(token).safeTransferFrom(address(this), recipient, uint256(tokenId));
     }
 }
