@@ -899,4 +899,22 @@ contract GatewayTest is Test, IERC721Receiver {
 
         IGateway(address(gateway)).sendNftToken{value: fee}(address(nftToken), tokenId, recipientAddress32);
     }
+
+    function testAgentTransferNft() public {
+        testSendNftTokenToAssetHub();
+        uint128 tokenId = 0;
+
+        AgentExecuteParams memory params = AgentExecuteParams({
+            agentID: assetHubAgentID,
+            payload: abi.encode(
+                AgentExecuteCommand.TransferNftToken, abi.encode(address(nftToken), address(account1), tokenId)
+                )
+        });
+
+        bytes memory encodedParams = abi.encode(params);
+        MockGateway(address(gateway)).agentExecutePublic(encodedParams);
+        // assert token transfer to account1
+        address owner = nftToken.ownerOf(tokenId);
+        assertEq(owner, account1);
+    }
 }
