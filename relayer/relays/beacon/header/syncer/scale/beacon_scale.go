@@ -41,6 +41,8 @@ type UpdatePayload struct {
 	FinalityBranch          []types.H256
 	BlockRootsRoot          types.H256
 	BlockRootsBranch        []types.H256
+	ExecutionHeader         VersionedExecutionPayloadHeader
+	ExecutionHeaderBranch   []types.H256
 }
 
 type OptionNextSyncCommitteeUpdatePayload struct {

@@ -328,6 +328,21 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		return scale.Update{}, fmt.Errorf("parse signature slot as int: %w", err)
 	}
 
+	var versionedExecutionPayloadHeader scale.VersionedExecutionPayloadHeader
+	if s.protocol.DenebForked(uint64(finalizedHeader.Slot)) {
+		executionPayloadScale, err := api.DenebJsonExecutionPayloadHeaderToScale(finalizedUpdate.Data.FinalizedHeader.ExecutionHeader)
+		if err != nil {
+			return scale.Update{}, err
+		}
+		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
+	} else {
+		executionPayloadScale, err := api.CapellaJsonExecutionPayloadHeaderToScale(finalizedUpdate.Data.FinalizedHeader.ExecutionHeader)
+		if err != nil {
+			return scale.Update{}, err
+		}
+		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Capella: &executionPayloadScale}
+	}
+
 	updatePayload := scale.UpdatePayload{
 		AttestedHeader: attestedHeader,
 		SyncAggregate:  syncAggregate,
@@ -335,10 +350,12 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		NextSyncCommitteeUpdate: scale.OptionNextSyncCommitteeUpdatePayload{
 			HasValue: false,
 		},
-		FinalizedHeader:  finalizedHeader,
-		FinalityBranch:   util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
-		BlockRootsRoot:   blockRootsProof.Leaf,
-		BlockRootsBranch: blockRootsProof.Proof,
+		FinalizedHeader:       finalizedHeader,
+		FinalityBranch:        util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
+		BlockRootsRoot:        blockRootsProof.Leaf,
+		BlockRootsBranch:      blockRootsProof.Proof,
+		ExecutionHeader:       versionedExecutionPayloadHeader,
+		ExecutionHeaderBranch: util.ProofBranchToScale(finalizedUpdate.Data.FinalizedHeader.ExecutionBranch),
 	}
 
 	return scale.Update{

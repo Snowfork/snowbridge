@@ -170,6 +170,26 @@ type HeaderResponse struct {
 	BodyRoot      string `json:"body_root"`
 }
 
+type ExecutionHeaderResponse struct {
+	ParentHash       string `json:"parent_hash"`
+	FeeRecipient     string `json:"fee_recipient"`
+	StateRoot        string `json:"state_root"`
+	ReceiptsRoot     string `json:"receipts_root"`
+	LogsBloom        string `json:"logs_bloom"`
+	PrevRandao       string `json:"prev_randao"`
+	BlockNumber      string `json:"block_number"`
+	GasLimit         string `json:"gas_limit"`
+	GasUsed          string `json:"gas_used"`
+	Timestamp        string `json:"timestamp"`
+	ExtraData        string `json:"extra_data"`
+	BaseFeePerGas    string `json:"base_fee_per_gas"`
+	BlockHash        string `json:"block_hash"`
+	TransactionsRoot string `json:"transactions_root"`
+	WithdrawalsRoot  string `json:"withdrawals_root"`
+	BlobGasUsed      string `json:"blob_gas_used,omitempty"`
+	ExcessBlobGas    string `json:"excess_blob_gas,omitempty"`
+}
+
 type SyncCommitteeResponse struct {
 	Pubkeys         []string `json:"pubkeys"`
 	AggregatePubkey string   `json:"aggregate_pubkey"`
@@ -271,7 +291,9 @@ type LatestFinalisedUpdateResponse struct {
 			Beacon HeaderResponse `json:"beacon"`
 		} `json:"attested_header"`
 		FinalizedHeader struct {
-			Beacon HeaderResponse `json:"beacon"`
+			Beacon          HeaderResponse          `json:"beacon"`
+			ExecutionHeader ExecutionHeaderResponse `json:"execution"`
+			ExecutionBranch []string                `json:"execution_branch"`
 		} `json:"finalized_header"`
 		FinalityBranch []string              `json:"finality_branch"`
 		SyncAggregate  SyncAggregateResponse `json:"sync_aggregate"`
@@ -1046,7 +1068,7 @@ func CapellaExecutionPayloadToScale(e *state.ExecutionPayloadCapella) (scale.Exe
 	}, nil
 }
 
-func CapellaJsonExecutionPayloadHeaderToScale(e *beaconjson.FullExecutionPayloadHeaderJson) (scale.ExecutionPayloadHeaderCapella, error) {
+func CapellaJsonExecutionPayloadHeaderToScale(e ExecutionHeaderResponse) (scale.ExecutionPayloadHeaderCapella, error) {
 	var executionPayloadHeader scale.ExecutionPayloadHeaderCapella
 	var baseFeePerGas big.Int
 	baseFeePerGasU64, err := util.ToUint64(e.BaseFeePerGas)
