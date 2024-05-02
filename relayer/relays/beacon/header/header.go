@@ -436,11 +436,9 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 	}
 	startIndex := uint64(lastIndex)
 	endIndex := uint64(0)
-	if uint64(lastIndex) > h.protocol.Settings.EpochsPerSyncCommitteePeriod {
-		endIndex = endIndex - h.protocol.Settings.EpochsPerSyncCommitteePeriod
-	}
 
 	syncCommitteePeriod := h.protocol.Settings.SlotsInEpoch * h.protocol.Settings.EpochsPerSyncCommitteePeriod
+	slotPeriodIndex := slot / syncCommitteePeriod
 
 	for index := startIndex; index >= endIndex; index-- {
 		beaconRoot, err := h.writer.GetFinalizedBeaconRootByIndex(uint32(index))
@@ -451,10 +449,12 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 		if err != nil {
 			return beaconState, fmt.Errorf("GetFinalizedHeaderStateByBlockRoot %s, error: %w", beaconRoot.Hex(), err)
 		}
+		statePeriodIndex := beaconState.BeaconSlot / syncCommitteePeriod
 		if beaconState.BeaconSlot < slot {
 			break
 		}
-		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod {
+		// Found the beaconState
+		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod && slotPeriodIndex == statePeriodIndex {
 			break
 		}
 	}
