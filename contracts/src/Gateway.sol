@@ -418,7 +418,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         if (!success) {
             revert AgentTransactCallFailed();
         }
-        emit TransactExecuted(params.agentID, params.target, params.payload);
+        emit TransactExecuted(params.agentID, params.target, keccak256(params.payload));
 
         uint256 gasUsed = gasLeftBefore - gasleft();
         return (agent, gasUsed);
