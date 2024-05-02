@@ -21,7 +21,9 @@ type SyncCommitteePeriodUpdateResponse struct {
 		NextSyncCommittee       SyncCommitteeResponse `json:"next_sync_committee"`
 		NextSyncCommitteeBranch []string              `json:"next_sync_committee_branch"`
 		FinalizedHeader         struct {
-			Beacon HeaderResponse `json:"beacon"`
+			Beacon          HeaderResponse          `json:"beacon"`
+			ExecutionHeader ExecutionHeaderResponse `json:"execution"`
+			ExecutionBranch []string                `json:"execution_branch"`
 		} `json:"finalized_header"`
 		FinalityBranch []string              `json:"finality_branch"`
 		SyncAggregate  SyncAggregateResponse `json:"sync_aggregate"`
@@ -48,34 +50,36 @@ type BeaconBlockResponseBody struct {
 		DepositCount string `json:"deposit_count"`
 		BlockHash    string `json:"block_hash"`
 	} `json:"eth1_data"`
-	Graffiti          string                        `json:"graffiti"`
-	ProposerSlashings []ProposerSlashingResponse    `json:"proposer_slashings"`
-	AttesterSlashings []AttesterSlashingResponse    `json:"attester_slashings"`
-	Attestations      []AttestationResponse         `json:"attestations"`
-	Deposits          []DepositResponse             `json:"deposits"`
-	VoluntaryExits    []SignedVoluntaryExitResponse `json:"voluntary_exits"`
-	SyncAggregate     SyncAggregateResponse         `json:"sync_aggregate"`
-	ExecutionPayload  struct {
-		ParentHash    string               `json:"parent_hash"`
-		FeeRecipient  string               `json:"fee_recipient"`
-		StateRoot     string               `json:"state_root"`
-		ReceiptsRoot  string               `json:"receipts_root"`
-		LogsBloom     string               `json:"logs_bloom"`
-		PrevRandao    string               `json:"prev_randao"`
-		BlockNumber   string               `json:"block_number"`
-		GasLimit      string               `json:"gas_limit"`
-		GasUsed       string               `json:"gas_used"`
-		Timestamp     string               `json:"timestamp"`
-		ExtraData     string               `json:"extra_data"`
-		BaseFeePerGas string               `json:"base_fee_per_gas"`
-		BlockHash     string               `json:"block_hash"`
-		Transactions  []string             `json:"transactions"`
-		Withdrawals   []WithdrawalResponse `json:"withdrawals"`
-		BlobGasUsed   string               `json:"blob_gas_used,omitempty"`
-		ExcessBlobGas string               `json:"excess_blob_gas,omitempty"`
-	} `json:"execution_payload"`
+	Graffiti              string                               `json:"graffiti"`
+	ProposerSlashings     []ProposerSlashingResponse           `json:"proposer_slashings"`
+	AttesterSlashings     []AttesterSlashingResponse           `json:"attester_slashings"`
+	Attestations          []AttestationResponse                `json:"attestations"`
+	Deposits              []DepositResponse                    `json:"deposits"`
+	VoluntaryExits        []SignedVoluntaryExitResponse        `json:"voluntary_exits"`
+	SyncAggregate         SyncAggregateResponse                `json:"sync_aggregate"`
+	ExecutionPayload      ExecutionPayload                     `json:"execution_payload"`
 	BlsToExecutionChanges []SignedBLSToExecutionChangeResponse `json:"bls_to_execution_changes"`
 	BlobKzgCommitments    []string                             `json:"blob_kzg_commitments"`
+}
+
+type ExecutionPayload struct {
+	ParentHash    string               `json:"parent_hash"`
+	FeeRecipient  string               `json:"fee_recipient"`
+	StateRoot     string               `json:"state_root"`
+	ReceiptsRoot  string               `json:"receipts_root"`
+	LogsBloom     string               `json:"logs_bloom"`
+	PrevRandao    string               `json:"prev_randao"`
+	BlockNumber   string               `json:"block_number"`
+	GasLimit      string               `json:"gas_limit"`
+	GasUsed       string               `json:"gas_used"`
+	Timestamp     string               `json:"timestamp"`
+	ExtraData     string               `json:"extra_data"`
+	BaseFeePerGas string               `json:"base_fee_per_gas"`
+	BlockHash     string               `json:"block_hash"`
+	Transactions  []string             `json:"transactions"`
+	Withdrawals   []WithdrawalResponse `json:"withdrawals"`
+	BlobGasUsed   string               `json:"blob_gas_used,omitempty"`
+	ExcessBlobGas string               `json:"excess_blob_gas,omitempty"`
 }
 
 type BeaconBlockResponse struct {
@@ -1108,5 +1112,80 @@ func CapellaJsonExecutionPayloadHeaderToScale(e ExecutionHeaderResponse) (scale.
 		BlockHash:        types.NewH256(common.HexToHash(e.ParentHash).Bytes()),
 		TransactionsRoot: types.NewH256(common.HexToHash(e.TransactionsRoot).Bytes()),
 		WithdrawalsRoot:  types.NewH256(common.HexToHash(e.WithdrawalsRoot).Bytes()),
+	}, nil
+}
+
+func (e ExecutionPayload) ToExecutionHeaderResponse() (ExecutionHeaderResponse, error) {
+	var payloadHeader ExecutionHeaderResponse
+
+	transactionsBytes := [][]byte{}
+	for _, transaction := range e.Transactions {
+		hexString, err := util.HexStringToByteArray(transaction)
+		if err != nil {
+			return payloadHeader, err
+		}
+		transactionsBytes = append(transactionsBytes, hexString)
+	}
+	transactionsContainer := state.TransactionsRootContainer{}
+	transactionsContainer.Transactions = transactionsBytes
+	transactionsRoot, err := transactionsContainer.HashTreeRoot()
+	if err != nil {
+		return payloadHeader, err
+	}
+
+	withdrawals := []*state.Withdrawal{}
+	for _, withdrawal := range e.Withdrawals {
+		index, err := util.ToUint64(withdrawal.Index)
+		if err != nil {
+			return payloadHeader, err
+		}
+
+		validatorIndex, err := util.ToUint64(withdrawal.ValidatorIndex)
+		if err != nil {
+			return payloadHeader, err
+		}
+
+		amount, err := util.ToUint64(withdrawal.Amount)
+		if err != nil {
+			return payloadHeader, err
+		}
+
+		address, err := util.HexStringTo20Bytes(withdrawal.Address)
+		if err != nil {
+			return payloadHeader, err
+		}
+
+		withdrawals = append(withdrawals, &state.Withdrawal{
+			Index:          index,
+			ValidatorIndex: validatorIndex,
+			Address:        address,
+			Amount:         amount,
+		})
+	}
+	withdrawalContainer := state.WithdrawalsRootContainerMainnet{}
+	withdrawalContainer.Withdrawals = withdrawals
+	withdrawalRoot, err := withdrawalContainer.HashTreeRoot()
+	if err != nil {
+		return payloadHeader, err
+	}
+
+	return ExecutionHeaderResponse{
+		ParentHash:       e.ParentHash,
+		FeeRecipient:     e.FeeRecipient,
+		StateRoot:        e.StateRoot,
+		ReceiptsRoot:     e.ReceiptsRoot,
+		LogsBloom:        e.LogsBloom,
+		PrevRandao:       e.PrevRandao,
+		BlockNumber:      e.BlockNumber,
+		GasLimit:         e.GasLimit,
+		GasUsed:          e.GasUsed,
+		Timestamp:        e.Timestamp,
+		ExtraData:        e.ExtraData,
+		BaseFeePerGas:    e.BaseFeePerGas,
+		BlockHash:        e.BlockHash,
+		TransactionsRoot: common.BytesToHash(transactionsRoot[:]).String(),
+		WithdrawalsRoot:  common.BytesToHash(withdrawalRoot[:]).String(),
+		BlobGasUsed:      e.BlobGasUsed,
+		ExcessBlobGas:    e.ExcessBlobGas,
 	}, nil
 }

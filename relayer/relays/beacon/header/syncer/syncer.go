@@ -171,6 +171,11 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 		return scale.Update{}, fmt.Errorf("beacon header hash tree root: %w", err)
 	}
 
+	versionedExecutionPayloadHeader, err := s.getVersionedScaleExecutionHeader(uint64(finalizedHeader.Slot), committeeUpdate.FinalizedHeader.ExecutionHeader)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("get versioned scale execution header: %w", err)
+	}
+
 	syncCommitteePeriodUpdate := scale.Update{
 		Payload: scale.UpdatePayload{
 			AttestedHeader: attestedHeader,
@@ -183,10 +188,12 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 					NextSyncCommitteeBranch: util.ProofBranchToScale(committeeUpdate.NextSyncCommitteeBranch),
 				},
 			},
-			FinalizedHeader:  finalizedHeader,
-			FinalityBranch:   util.ProofBranchToScale(committeeUpdate.FinalityBranch),
-			BlockRootsRoot:   blockRootsProof.Leaf,
-			BlockRootsBranch: blockRootsProof.Proof,
+			FinalizedHeader:       finalizedHeader,
+			FinalityBranch:        util.ProofBranchToScale(committeeUpdate.FinalityBranch),
+			BlockRootsRoot:        blockRootsProof.Leaf,
+			BlockRootsBranch:      blockRootsProof.Proof,
+			ExecutionHeader:       versionedExecutionPayloadHeader,
+			ExecutionHeaderBranch: util.ProofBranchToScale(committeeUpdate.FinalizedHeader.ExecutionBranch),
 		},
 		FinalizedHeaderBlockRoot: finalizedHeaderBlockRoot,
 		BlockRootsTree:           blockRootsProof.Tree,
@@ -328,19 +335,9 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		return scale.Update{}, fmt.Errorf("parse signature slot as int: %w", err)
 	}
 
-	var versionedExecutionPayloadHeader scale.VersionedExecutionPayloadHeader
-	if s.protocol.DenebForked(uint64(finalizedHeader.Slot)) {
-		executionPayloadScale, err := api.DenebJsonExecutionPayloadHeaderToScale(finalizedUpdate.Data.FinalizedHeader.ExecutionHeader)
-		if err != nil {
-			return scale.Update{}, err
-		}
-		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
-	} else {
-		executionPayloadScale, err := api.CapellaJsonExecutionPayloadHeaderToScale(finalizedUpdate.Data.FinalizedHeader.ExecutionHeader)
-		if err != nil {
-			return scale.Update{}, err
-		}
-		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Capella: &executionPayloadScale}
+	versionedExecutionPayloadHeader, err := s.getVersionedScaleExecutionHeader(uint64(finalizedHeader.Slot), finalizedUpdate.Data.FinalizedHeader.ExecutionHeader)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("get versioned scale execution header: %w", err)
 	}
 
 	updatePayload := scale.UpdatePayload{
@@ -673,6 +670,17 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(attestedSlot uint64, boundary 
 		return update, fmt.Errorf("get finalized header proof: %w", err)
 	}
 
+	// Execution header proof
+	finalizedStateTree, err := data.FinalizedState.GetTree()
+	if err != nil {
+		return update, fmt.Errorf("get finalized state tree: %w", err)
+	}
+	_ = finalizedStateTree.Hash() // necessary to populate the proof tree values
+	executionHeaderProof, err := stateTree.Prove(ExecutionPayloadGeneralizedIndex)
+	if err != nil {
+		return update, fmt.Errorf("get execution header proof: %w", err)
+	}
+
 	var nextSyncCommitteeScale scale.OptionNextSyncCommitteeUpdatePayload
 	if fetchNextSyncCommittee {
 		nextSyncCommitteeProof, err := stateTree.Prove(NextSyncCommitteeGeneralizedIndex)
@@ -743,6 +751,21 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(attestedSlot uint64, boundary 
 		return update, fmt.Errorf("convert sync aggregate to scale: %w", err)
 	}
 
+	finalizedBlock, err := s.Client.GetBeaconBlockBySlot(data.FinalizedHeader.Slot)
+	if err != nil {
+		return update, fmt.Errorf("get finalized beacon block: %w", err)
+	}
+
+	executionHeaderResponse, err := finalizedBlock.Data.Message.Body.ExecutionPayload.ToExecutionHeaderResponse()
+	if err != nil {
+		return update, fmt.Errorf("get execution header response: %w", err)
+	}
+
+	versionedExecutionPayloadHeader, err := s.getVersionedScaleExecutionHeader(data.FinalizedHeader.Slot, executionHeaderResponse)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("get versioned scale execution header: %w", err)
+	}
+
 	payload := scale.UpdatePayload{
 		AttestedHeader:          scaleHeader,
 		SyncAggregate:           scaleSyncAggregate,
@@ -752,6 +775,8 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(attestedSlot uint64, boundary 
 		FinalityBranch:          util.BytesBranchToScale(finalizedHeaderProof.Hashes),
 		BlockRootsRoot:          blockRootsProof.Leaf,
 		BlockRootsBranch:        blockRootsProof.Proof,
+		ExecutionHeader:         versionedExecutionPayloadHeader,
+		ExecutionHeaderBranch:   util.BytesBranchToScale(executionHeaderProof.Hashes),
 	}
 
 	return scale.Update{
@@ -897,4 +922,20 @@ func (s *Syncer) getExactMatchFromStore(slot uint64) (finalizedUpdateContainer, 
 	}
 
 	return response, nil
+}
+
+func (s *Syncer) getVersionedScaleExecutionHeader(slot uint64, executionHeader api.ExecutionHeaderResponse) (scale.VersionedExecutionPayloadHeader, error) {
+	if s.protocol.DenebForked(slot) {
+		executionPayloadScale, err := api.DenebJsonExecutionPayloadHeaderToScale(executionHeader)
+		if err != nil {
+			return scale.VersionedExecutionPayloadHeader{}, err
+		}
+		return scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}, nil
+	} else {
+		executionPayloadScale, err := api.CapellaJsonExecutionPayloadHeaderToScale(executionHeader)
+		if err != nil {
+			return scale.VersionedExecutionPayloadHeader{}, err
+		}
+		return scale.VersionedExecutionPayloadHeader{Capella: &executionPayloadScale}, nil
+	}
 }
