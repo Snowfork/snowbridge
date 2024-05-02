@@ -873,7 +873,7 @@ contract GatewayTest is Test {
             agentID: assetHubAgentID,
             target: address(helloWorld),
             payload: payload,
-            dynamicGas: 100000
+            maxDispatchGas: 100000
         });
 
         // Expect the HelloWorld contract to emit `SaidHello`
@@ -890,7 +890,7 @@ contract GatewayTest is Test {
             agentID: assetHubAgentID,
             target: address(helloWorld),
             payload: payload,
-            dynamicGas: 100000
+            maxDispatchGas: 100000
         });
 
         vm.expectRevert(abi.encodeWithSelector(Gateway.AgentTransactCallFailed.selector));
@@ -905,7 +905,7 @@ contract GatewayTest is Test {
             agentID: assetHubAgentID,
             target: address(helloWorld),
             payload: payload,
-            dynamicGas: 100000
+            maxDispatchGas: 100000
         });
 
         vm.expectRevert(abi.encodeWithSelector(Gateway.AgentTransactCallFailed.selector));
@@ -923,8 +923,12 @@ contract GatewayTest is Test {
         uint256 amount = 50;
         bytes memory payload = abi.encodeCall(IERC20.transfer, (account1, amount));
 
-        TransactCallParams memory params =
-            TransactCallParams({agentID: assetHubAgentID, target: address(token), payload: payload, dynamicGas: 100000});
+        TransactCallParams memory params = TransactCallParams({
+            agentID: assetHubAgentID,
+            target: address(token),
+            payload: payload,
+            maxDispatchGas: 100000
+        });
 
         MockGateway(address(gateway)).transactPublic(abi.encode(params));
 

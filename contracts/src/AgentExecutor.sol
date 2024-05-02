@@ -40,7 +40,8 @@ contract AgentExecutor {
     }
 
     /// @dev Call a contract at the given address, with provided bytes as payload.
-    function executeCall(address target, bytes memory payload, uint64 dynamicGas) external returns (bool) {
-        return target.safeCall(dynamicGas, 0, payload);
+    /// The safeCall here performs a low level call without copying any returndata for the return bomb attack
+    function executeCall(address target, bytes memory payload, uint64 maxDispatchGas) external returns (bool) {
+        return target.safeCall(maxDispatchGas, 0, payload);
     }
 }

@@ -92,5 +92,5 @@ struct TransactCallParams {
     /// @dev Payload of the call
     bytes payload;
     /// @dev Max gas cost of the call
-    uint64 dynamicGas;
+    uint64 maxDispatchGas;
 }

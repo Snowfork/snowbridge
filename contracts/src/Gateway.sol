@@ -412,7 +412,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         TransactCallParams memory params = abi.decode(data, (TransactCallParams));
         address agent = _ensureAgent(params.agentID);
         bytes memory call =
-            abi.encodeCall(AgentExecutor.executeCall, (params.target, params.payload, params.dynamicGas));
+            abi.encodeCall(AgentExecutor.executeCall, (params.target, params.payload, params.maxDispatchGas));
         (, bytes memory result) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
         (bool success) = abi.decode(result, (bool));
         if (!success) {
