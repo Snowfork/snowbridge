@@ -188,12 +188,12 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 					NextSyncCommitteeBranch: util.ProofBranchToScale(committeeUpdate.NextSyncCommitteeBranch),
 				},
 			},
-			FinalizedHeader:       finalizedHeader,
-			FinalityBranch:        util.ProofBranchToScale(committeeUpdate.FinalityBranch),
-			BlockRootsRoot:        blockRootsProof.Leaf,
-			BlockRootsBranch:      blockRootsProof.Proof,
-			ExecutionHeader:       versionedExecutionPayloadHeader,
-			ExecutionHeaderBranch: util.ProofBranchToScale(committeeUpdate.FinalizedHeader.ExecutionBranch),
+			FinalizedHeader:  finalizedHeader,
+			FinalityBranch:   util.ProofBranchToScale(committeeUpdate.FinalityBranch),
+			BlockRootsRoot:   blockRootsProof.Leaf,
+			BlockRootsBranch: blockRootsProof.Proof,
+			ExecutionHeader:  versionedExecutionPayloadHeader,
+			ExecutionBranch:  util.ProofBranchToScale(committeeUpdate.FinalizedHeader.ExecutionBranch),
 		},
 		FinalizedHeaderBlockRoot: finalizedHeaderBlockRoot,
 		BlockRootsTree:           blockRootsProof.Tree,
@@ -347,12 +347,12 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		NextSyncCommitteeUpdate: scale.OptionNextSyncCommitteeUpdatePayload{
 			HasValue: false,
 		},
-		FinalizedHeader:       finalizedHeader,
-		FinalityBranch:        util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
-		BlockRootsRoot:        blockRootsProof.Leaf,
-		BlockRootsBranch:      blockRootsProof.Proof,
-		ExecutionHeader:       versionedExecutionPayloadHeader,
-		ExecutionHeaderBranch: util.ProofBranchToScale(finalizedUpdate.Data.FinalizedHeader.ExecutionBranch),
+		FinalizedHeader:  finalizedHeader,
+		FinalityBranch:   util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
+		BlockRootsRoot:   blockRootsProof.Leaf,
+		BlockRootsBranch: blockRootsProof.Proof,
+		ExecutionHeader:  versionedExecutionPayloadHeader,
+		ExecutionBranch:  util.ProofBranchToScale(finalizedUpdate.Data.FinalizedHeader.ExecutionBranch),
 	}
 
 	return scale.Update{
@@ -776,7 +776,7 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(attestedSlot uint64, boundary 
 		BlockRootsRoot:          blockRootsProof.Leaf,
 		BlockRootsBranch:        blockRootsProof.Proof,
 		ExecutionHeader:         versionedExecutionPayloadHeader,
-		ExecutionHeaderBranch:   util.BytesBranchToScale(executionHeaderProof.Hashes),
+		ExecutionBranch:         util.BytesBranchToScale(executionHeaderProof.Hashes),
 	}
 
 	return scale.Update{
