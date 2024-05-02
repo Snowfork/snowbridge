@@ -168,6 +168,10 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         bool success = true;
 
+        uint256 gasUsed;
+        uint256 gasUsedForTransact;
+        address agentForTransact;
+
         // Dispatch message to a handler
         if (message.command == Command.AgentExecute) {
             try Gateway(this).agentExecute{gas: maxDispatchGas}(message.params) {}
@@ -215,15 +219,27 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
                 success = false;
             }
         } else if (message.command == Command.Transact) {
-            try Gateway(this).transact{gas: maxDispatchGas}(message.params) {}
-            catch {
+            try Gateway(this).transact{gas: maxDispatchGas}(message.params) returns (address _agent, uint256 _gasUsed) {
+                gasUsedForTransact = _gasUsed;
+                agentForTransact = _agent;
+            } catch {
                 success = false;
             }
         }
 
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
         // that could drain funds unnecessarily. During these spikes, relayers should back off.
-        uint256 gasUsed = _transactionBaseGas() + (startGas - gasleft());
+        gasUsed = _transactionBaseGas() + (startGas - gasleft());
+        if (message.command == Command.Transact) {
+            // User agent pays for the transact dispatch
+            uint256 transact_fee = Math.min(gasUsedForTransact * tx.gasprice, address(agentForTransact).balance);
+            if (transact_fee > _dustThreshold()) {
+                _transferNativeFromAgent(agentForTransact, payable(msg.sender), transact_fee);
+            }
+            // gas used for the channel agent should not include the cost for transact
+            gasUsed = gasUsed - gasUsedForTransact;
+        }
+
         uint256 refund = gasUsed * Math.min(tx.gasprice, message.maxFeePerGas);
 
         // Add the reward to the refund amount. If the sum is more than the funds available
@@ -390,7 +406,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     }
 
     // @dev Transact
-    function transact(bytes calldata data) external onlySelf {
+    function transact(bytes calldata data) external onlySelf returns (address, uint256) {
+        uint256 gasLeftBefore = gasleft();
+
         TransactCallParams memory params = abi.decode(data, (TransactCallParams));
         address agent = _ensureAgent(params.agentID);
         bytes memory call =
@@ -401,6 +419,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             revert AgentTransactCallFailed();
         }
         emit TransactExecuted(params.agentID, params.target, params.payload);
+
+        uint256 gasUsed = gasLeftBefore - gasleft();
+        return (agent, gasUsed);
     }
 
     /**
