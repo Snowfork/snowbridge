@@ -26,14 +26,14 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@polkadot/api": "^10.12.6",
+    "@polkadot/api": "^11.0.2",
     "@polkadot/keyring": "^12.6.2",
-    "@polkadot/types": "^10.12.6",
+    "@polkadot/types": "^11.0.2",
     "@polkadot/util": "^12.6.2",
     "@polkadot/util-crypto": "^12.6.2",
     "@snowbridge/contract-types": "workspace:*",
     "@typechain/ethers-v6": "^0.5.1",
-    "ethers": "^6.11.1",
+    "ethers": "^6.12.1",
     "rxjs": "^7.8.1"
   }
 }
