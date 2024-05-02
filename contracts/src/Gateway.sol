@@ -168,7 +168,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         bool success = true;
 
-        uint256 gasUsed;
         uint256 gasUsedForTransact;
         address agentForTransact;
 
@@ -227,29 +226,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             }
         }
 
-        // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
-        // that could drain funds unnecessarily. During these spikes, relayers should back off.
-        gasUsed = _transactionBaseGas() + (startGas - gasleft());
-        if (message.command == Command.Transact) {
-            // User agent pays for the transact dispatch
-            uint256 transact_fee = Math.min(gasUsedForTransact * tx.gasprice, address(agentForTransact).balance);
-            if (transact_fee > _dustThreshold()) {
-                _transferNativeFromAgent(agentForTransact, payable(msg.sender), transact_fee);
-            }
-            // gas used for the channel agent should not include the cost for transact
-            gasUsed = gasUsed - gasUsedForTransact;
-        }
-
-        uint256 refund = gasUsed * Math.min(tx.gasprice, message.maxFeePerGas);
-
-        // Add the reward to the refund amount. If the sum is more than the funds available
-        // in the channel agent, then reduce the total amount
-        uint256 amount = Math.min(refund + message.reward, address(channel.agent).balance);
-
-        // Do the payment if there funds available in the agent
-        if (amount > _dustThreshold()) {
-            _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
-        }
+        // Refund relayer
+        _refundRelayer(message, startGas, address(channel.agent), agentForTransact, gasUsedForTransact);
 
         emit IGateway.InboundMessageDispatched(message.channelID, message.nonce, message.id, success);
     }
@@ -584,6 +562,39 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     /// @dev Define the dust threshold as the minimum cost to transfer ether between accounts
     function _dustThreshold() internal view returns (uint256) {
         return 21000 * tx.gasprice;
+    }
+
+    /// @dev Refund relayer from both channel agent and transact agent
+    function _refundRelayer(
+        InboundMessage calldata message,
+        uint256 startGas,
+        address agent,
+        address agentForTransact,
+        uint256 gasUsedForTransact
+    ) internal {
+        // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
+        // that could drain funds unnecessarily. During these spikes, relayers should back off.
+        uint256 gasUsed = _transactionBaseGas() + (startGas - gasleft());
+        if (message.command == Command.Transact) {
+            // User agent pays for the transact dispatch
+            uint256 transactFee = Math.min(gasUsedForTransact * tx.gasprice, address(agentForTransact).balance);
+            if (transactFee > _dustThreshold()) {
+                _transferNativeFromAgent(agentForTransact, payable(msg.sender), transactFee);
+            }
+            // gas used for the channel agent should not include the cost for transact
+            gasUsed = gasUsed - gasUsedForTransact;
+        }
+
+        uint256 refund = gasUsed * Math.min(tx.gasprice, message.maxFeePerGas);
+
+        // Add the reward to the refund amount. If the sum is more than the funds available
+        // in the channel agent, then reduce the total amount
+        uint256 amount = Math.min(refund + message.reward, agent.balance);
+
+        // Do the payment if there funds available in the agent
+        if (amount > _dustThreshold()) {
+            _transferNativeFromAgent(agent, payable(msg.sender), amount);
+        }
     }
 
     /**
