@@ -1,7 +1,7 @@
 
 type Config = {
   BEACON_HTTP_API: string
-  ETHEREUM_WS_API: string
+  ETHEREUM_WS_API: (secret: string) => string
   RELAY_CHAIN_WS_URL: string
   ASSET_HUB_WS_URL: string
   BRIDGE_HUB_WS_URL: string
@@ -18,8 +18,11 @@ type Config = {
 type SourceType = 'substrate' | 'ethereum'
 type Relayer = { name: string, account: string, type: SourceType }
 type TransferSource = {
+  id: string
   name: string
   type: SourceType
+  destinationIds: string[]
+  paraId?: number
 }
 
 type SnowbridgeEnvironment = {
@@ -36,20 +39,28 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       "WETH": '0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d',
     },
     sources: [{
+      id: 'ethereum',
       name: 'Ethereum',
       type: 'ethereum',
+      destinationIds: ['assethub', 'penpal']
     },
     {
+      id: 'assethub',
       name: 'Asset Hub',
       type: 'substrate',
+      destinationIds: ['ethereum'],
+      paraId: 1000
     },
     {
+      id: 'penpal',
       name: 'Penpal',
       type: 'substrate',
+      destinationIds: ['ethereum'],
+      paraId: 2000
     }],
     config: {
       BEACON_HTTP_API: 'http://127.0.0.1:9596',
-      ETHEREUM_WS_API: 'ws://127.0.0.1:8546',
+      ETHEREUM_WS_API: (_) => 'ws://127.0.0.1:8546',
       RELAY_CHAIN_WS_URL: 'ws://127.0.0.1:9944',
       ASSET_HUB_WS_URL: 'ws://127.0.0.1:12144',
       BRIDGE_HUB_WS_URL: 'ws://127.0.0.1:11144',
@@ -81,20 +92,28 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       "MUSE2": '0xc9f05326311bc2a55426761bec20057685fb80f7',
     },
     sources: [{
+      id: 'ethereum',
       name: 'Ethereum',
       type: 'ethereum',
+      destinationIds: ['assethub', 'muse']
     },
     {
+      id: 'assethub',
       name: 'Asset Hub',
       type: 'substrate',
+      destinationIds: ['ethereum'],
+      paraId: 1000
     },
     {
-      name: 'Penpal',
+      id: 'muse',
+      name: 'Muse',
       type: 'substrate',
+      destinationIds: [],
+      paraId: 3369
     }],
     config: {
       BEACON_HTTP_API: 'https://lodestar-sepolia.chainsafe.io',
-      ETHEREUM_WS_API: `https://sepolia.infura.io/v3`,
+      ETHEREUM_WS_API: (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`,
       RELAY_CHAIN_WS_URL: 'wss://rococo-rpc.polkadot.io',
       ASSET_HUB_WS_URL: 'wss://rococo-asset-hub-rpc.polkadot.io',
       BRIDGE_HUB_WS_URL: 'wss://rococo-bridge-hub-rpc.polkadot.io',

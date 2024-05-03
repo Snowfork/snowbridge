@@ -1,7 +1,7 @@
 
 import { u8aToHex } from '@polkadot/util'
-import { contextFactory, destroyContext, status, utils, environment } from '@snowbridge/api'
 import { blake2AsU8a } from "@polkadot/util-crypto"
+import { contextFactory, destroyContext, environment, status, utils } from '@snowbridge/api'
 
 const monitor = async () => {
     let env = 'local_e2e'
@@ -12,14 +12,11 @@ const monitor = async () => {
     if (snwobridgeEnv === undefined) { throw Error(`Unknown environment '${env}'`) }
 
     const { config } = snwobridgeEnv
-    let ETHEREUM_WS_API = config.ETHEREUM_WS_API
 
-    if (env !== 'local_e2e' && process.env.REACT_APP_INFURA_KEY !== undefined) {
-        ETHEREUM_WS_API = ETHEREUM_WS_API += '/'+ process.env.REACT_APP_INFURA_KEY
-    }
+    const infuraKey = process.env.REACT_APP_INFURA_KEY || ''
 
     const context = await contextFactory({
-        ethereum: { execution_url: ETHEREUM_WS_API, beacon_url: config.BEACON_HTTP_API },
+        ethereum: { execution_url: config.ETHEREUM_WS_API(infuraKey), beacon_url: config.BEACON_HTTP_API },
         polkadot: {
             url: {
                 bridgeHub: config.BRIDGE_HUB_WS_URL,
