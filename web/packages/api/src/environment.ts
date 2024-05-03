@@ -1,5 +1,5 @@
 
-type Config = {
+export type Config = {
   BEACON_HTTP_API: string
   ETHEREUM_WS_API: (secret: string) => string
   RELAY_CHAIN_WS_URL: string
@@ -15,9 +15,9 @@ type Config = {
   PARACHAINS: string[]
 }
 
-type SourceType = 'substrate' | 'ethereum'
-type Relayer = { name: string, account: string, type: SourceType }
-type TransferSource = {
+export type SourceType = 'substrate' | 'ethereum'
+export type Relayer = { name: string, account: string, type: SourceType }
+export type TransferSource = {
   id: string
   name: string
   type: SourceType
@@ -25,7 +25,7 @@ type TransferSource = {
   paraId?: number
 }
 
-type SnowbridgeEnvironment = {
+export type SnowbridgeEnvironment = {
   config: Config
   name: string
   sources: TransferSource[]
