@@ -557,7 +557,17 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Ensure outbound messaging is allowed
         _ensureOutboundMessagingEnabled(channel);
 
-        uint256 fee = _calculateFee(ticket.costs);
+        uint256 fee;
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if (ticket.dest == $.assetHubParaID) {
+            fee = _calculateFee(ticket.costs);
+        } else {
+            // The assumption here is that no matter what the fee token is, usually the xcm execution cost on substrate chain is very tiny
+            // as demonstrated in https://www.notion.so/snowfork/Gateway-Parameters-0cf913d089374027a86721883306ee61
+            // the DELIVERY_COST on BH and TRANSFER_TOKEN_FEE are all no more than 0.1 DOT so the total cost as 0.2 DOT equals 0.00048 ETH.
+            // Consider a 5x buffer a hard code 0.002 ETH should be pretty enough to cover both costs
+            fee = 2000000000000000;
+        }
 
         // Ensure the user has enough funds for this message to be accepted
         if (msg.value < fee) {
