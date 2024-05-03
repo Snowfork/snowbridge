@@ -17,7 +17,9 @@ import {
     Command,
     MultiAddress,
     Ticket,
-    Costs
+    Costs,
+    TokenInfo,
+    AgentExecuteCommand
 } from "./Types.sol";
 import {Upgrade} from "./Upgrade.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
@@ -31,15 +33,18 @@ import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
 import {
+    AgentExecuteParams,
     UpgradeParams,
     CreateAgentParams,
-    AgentExecuteParams,
     CreateChannelParams,
     UpdateChannelParams,
     SetOperatingModeParams,
     TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
-    SetPricingParametersParams
+    SetPricingParametersParams,
+    RegisterForeignTokenParams,
+    MintForeignTokenParams,
+    TransferTokenParams
 } from "./Params.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
@@ -94,10 +99,21 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
+    error AlreadyInitialized();
+    error TokenNotRegistered();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
         if (msg.sender != address(this)) {
+            revert Unauthorized();
+        }
+        _;
+    }
+
+    // handler functions are privileged from agent only
+    modifier onlyAgent(bytes32 agentID) {
+        bytes32 _agentID = _ensureAgentAddress(msg.sender);
+        if (_agentID != agentID) {
             revert Unauthorized();
         }
         _;
@@ -208,6 +224,21 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             }
         } else if (message.command == Command.SetPricingParameters) {
             try Gateway(this).setPricingParameters{gas: maxDispatchGas}(message.params) {}
+            catch {
+                success = false;
+            }
+        } else if (message.command == Command.TransferToken) {
+            try Gateway(this).transferToken{gas: maxDispatchGas}(message.params) {}
+            catch {
+                success = false;
+            }
+        } else if (message.command == Command.RegisterForeignToken) {
+            try Gateway(this).registerForeignToken{gas: maxDispatchGas}(message.params) {}
+            catch {
+                success = false;
+            }
+        } else if (message.command == Command.MintForeignToken) {
+            try Gateway(this).mintForeignToken{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
@@ -384,6 +415,27 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     /**
      * Assets
      */
+    // @dev Register a new fungible Polkadot token for an agent
+    function registerForeignToken(bytes calldata data) external onlySelf {
+        RegisterForeignTokenParams memory params = abi.decode(data, (RegisterForeignTokenParams));
+        address agent = _ensureAgent(params.agentID);
+        Assets.registerForeignToken(params.agentID, agent, params.tokenID, params.name, params.symbol, params.decimals);
+    }
+
+    // @dev Mint foreign token from polkadot
+    function mintForeignToken(bytes calldata data) external onlySelf {
+        MintForeignTokenParams memory params = abi.decode(data, (MintForeignTokenParams));
+        address agent = _ensureAgent(params.agentID);
+        Assets.mintForeignToken(AGENT_EXECUTOR, agent, params.tokenID, params.recipient, params.amount);
+    }
+
+    // @dev Transfer Ethereum native token back from polkadot
+    function transferToken(bytes calldata data) external onlySelf {
+        TransferTokenParams memory params = abi.decode(data, (TransferTokenParams));
+        address agent = _ensureAgent(params.agentID);
+        Assets.transferToken(AGENT_EXECUTOR, agent, params.token, params.recipient, params.amount);
+    }
+
     function isTokenRegistered(address token) external view returns (bool) {
         return Assets.isTokenRegistered(token);
     }
@@ -415,9 +467,38 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint128 destinationFee,
         uint128 amount
     ) external payable {
-        _submitOutbound(
-            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount)
-        );
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+
+        TokenInfo storage tokenInfo = $.tokenRegistry[token];
+        if (!tokenInfo.isRegistered) {
+            revert TokenNotRegistered();
+        }
+        if (tokenInfo.isForeign) {
+            address agent = _ensureAgent(tokenInfo.agentID);
+            _submitOutbound(
+                Assets.sendForeignToken(
+                    agent,
+                    AGENT_EXECUTOR,
+                    tokenInfo,
+                    msg.sender,
+                    destinationChain,
+                    destinationAddress,
+                    destinationFee,
+                    amount
+                )
+            );
+        } else {
+            _submitOutbound(
+                Assets.sendToken(
+                    token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
+                )
+            );
+        }
+    }
+
+    // @dev Get token address by tokenID
+    function tokenAddressOf(bytes32 tokenID) external view returns (address) {
+        return Assets.tokenAddressOf(tokenID);
     }
 
     /**
@@ -476,7 +557,17 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Ensure outbound messaging is allowed
         _ensureOutboundMessagingEnabled(channel);
 
-        uint256 fee = _calculateFee(ticket.costs);
+        uint256 fee;
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if (ticket.dest == $.assetHubParaID) {
+            fee = _calculateFee(ticket.costs);
+        } else {
+            // The assumption here is that no matter what the fee token is, usually the xcm execution cost on substrate chain is very tiny
+            // as demonstrated in https://www.notion.so/snowfork/Gateway-Parameters-0cf913d089374027a86721883306ee61
+            // the DELIVERY_COST on BH and TRANSFER_TOKEN_FEE are all no more than 0.1 DOT so the total cost as 0.2 DOT equals 0.00048 ETH.
+            // Consider a 5x buffer a hard code 0.002 ETH should be pretty enough to cover both costs
+            fee = 2000000000000000;
+        }
 
         // Ensure the user has enough funds for this message to be accepted
         if (msg.value < fee) {
@@ -520,6 +611,14 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     function _ensureAgent(bytes32 agentID) internal view returns (address agent) {
         agent = CoreStorage.layout().agents[agentID];
         if (agent == address(0)) {
+            revert AgentDoesNotExist();
+        }
+    }
+
+    /// @dev Ensure that the specified address is an valid agent
+    function _ensureAgentAddress(address agent) internal view returns (bytes32 agentID) {
+        agentID = CoreStorage.layout().agentAddresses[agent];
+        if (agentID == bytes32(0)) {
             revert AgentDoesNotExist();
         }
     }
@@ -581,6 +680,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Initialize agent for BridgeHub
         address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
         core.agents[BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
+        core.agentAddresses[bridgeHubAgent] = BRIDGE_HUB_AGENT_ID;
 
         // Initialize channel for primary governance track
         core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] =
@@ -593,6 +693,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Initialize agent for for AssetHub
         address assetHubAgent = address(new Agent(config.assetHubAgentID));
         core.agents[config.assetHubAgentID] = assetHubAgent;
+        core.agentAddresses[assetHubAgent] = config.assetHubAgentID;
 
         // Initialize channel for AssetHub
         core.channels[config.assetHubParaID.into()] =

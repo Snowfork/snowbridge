@@ -84,7 +84,10 @@ enum Command {
     SetOperatingMode,
     TransferNativeFromAgent,
     SetTokenTransferFees,
-    SetPricingParameters
+    SetPricingParameters,
+    TransferToken,
+    RegisterForeignToken,
+    MintForeignToken
 }
 
 enum AgentExecuteCommand {
@@ -107,5 +110,8 @@ struct Ticket {
 
 struct TokenInfo {
     bool isRegistered;
-    bytes31 __padding;
+    bool isForeign;
+    bytes32 tokenID;
+    bytes32 agentID;
+    address token;
 }
