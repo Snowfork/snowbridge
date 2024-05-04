@@ -23,6 +23,7 @@ export type TransferSource = {
   type: SourceType
   destinationIds: string[]
   paraId?: number
+  has20ByteAccounts: boolean
 }
 
 export type SnowbridgeEnvironment = {
@@ -42,21 +43,24 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       id: 'ethereum',
       name: 'Ethereum',
       type: 'ethereum',
-      destinationIds: ['assethub', 'penpal']
+      destinationIds: ['assethub', 'penpal'],
+      has20ByteAccounts: true
     },
     {
       id: 'assethub',
       name: 'Asset Hub',
       type: 'substrate',
       destinationIds: ['ethereum'],
-      paraId: 1000
+      paraId: 1000,
+      has20ByteAccounts: false
     },
     {
       id: 'penpal',
       name: 'Penpal',
       type: 'substrate',
-      destinationIds: ['ethereum'],
-      paraId: 2000
+      destinationIds: [],
+      paraId: 2000,
+      has20ByteAccounts: false
     }],
     config: {
       BEACON_HTTP_API: 'http://127.0.0.1:9596',
@@ -95,21 +99,24 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       id: 'ethereum',
       name: 'Ethereum',
       type: 'ethereum',
-      destinationIds: ['assethub', 'muse']
+      destinationIds: ['assethub', 'muse'],
+      has20ByteAccounts: true
     },
     {
       id: 'assethub',
       name: 'Asset Hub',
       type: 'substrate',
       destinationIds: ['ethereum'],
-      paraId: 1000
+      paraId: 1000,
+      has20ByteAccounts: false
     },
     {
       id: 'muse',
       name: 'Muse',
       type: 'substrate',
       destinationIds: [],
-      paraId: 3369
+      paraId: 3369,
+      has20ByteAccounts: true
     }],
     config: {
       BEACON_HTTP_API: 'https://lodestar-sepolia.chainsafe.io',
