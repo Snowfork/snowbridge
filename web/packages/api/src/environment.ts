@@ -17,13 +17,13 @@ export type Config = {
 
 export type SourceType = 'substrate' | 'ethereum'
 export type Relayer = { name: string, account: string, type: SourceType }
+export type ParachainInfo = { paraId: number, destinationFeeDOT: bigint, has20ByteAccounts: boolean }
 export type TransferLocation = {
   id: string
   name: string
   type: SourceType
   destinationIds: string[]
-  paraId?: number
-  has20ByteAccounts: boolean
+  paraInfo?: ParachainInfo
   erc20tokensReceivable: { [name: string]: string }
 }
 
@@ -41,7 +41,6 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       name: 'Ethereum',
       type: 'ethereum',
       destinationIds: ['assethub', 'penpal'],
-      has20ByteAccounts: true,
       erc20tokensReceivable: {
         "WETH": '0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d',
       },
@@ -51,8 +50,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       name: 'Asset Hub',
       type: 'substrate',
       destinationIds: ['ethereum'],
-      paraId: 1000,
-      has20ByteAccounts: false,
+      paraInfo: {
+        paraId: 1000,
+        destinationFeeDOT: 0n,
+        has20ByteAccounts: false,
+      },
       erc20tokensReceivable: {
         "WETH": '0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d',
       },
@@ -62,8 +64,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       name: 'Penpal',
       type: 'substrate',
       destinationIds: ["ethereum"],
-      paraId: 2000,
-      has20ByteAccounts: false,
+      paraInfo: {
+        paraId: 2000,
+        destinationFeeDOT: 4_000_000_000n,
+        has20ByteAccounts: false,
+      },
       erc20tokensReceivable: {
         "WETH": '0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d',
       },
@@ -100,7 +105,6 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       name: 'Ethereum',
       type: 'ethereum',
       destinationIds: ['assethub', 'muse'],
-      has20ByteAccounts: true,
       erc20tokensReceivable: {
         "WETH": '0xfff9976782d46cc05630d1f6ebab18b2324d6b14',
         "vETH": '0xc3d088842dcf02c13699f936bb83dfbbc6f721ab',
@@ -113,8 +117,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       name: 'Asset Hub',
       type: 'substrate',
       destinationIds: ['ethereum'],
-      paraId: 1000,
-      has20ByteAccounts: false,
+      paraInfo: {
+        paraId: 1000,
+        destinationFeeDOT: 0n,
+        has20ByteAccounts: false,
+      },
       erc20tokensReceivable: {
         "WETH": '0xfff9976782d46cc05630d1f6ebab18b2324d6b14',
         "vETH": '0xc3d088842dcf02c13699f936bb83dfbbc6f721ab',
@@ -127,8 +134,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       name: 'Muse',
       type: 'substrate',
       destinationIds: [],
-      paraId: 3369,
-      has20ByteAccounts: true,
+      paraInfo: {
+        paraId: 3369,
+        destinationFeeDOT: 4_000_000_000n,
+        has20ByteAccounts: true,
+      },
       erc20tokensReceivable: {
         "MUSE1": '0xb34a6924a02100ba6ef12af1c798285e8f7a16ee',
         "MUSE2": '0xc9f05326311bc2a55426761bec20057685fb80f7',
