@@ -895,7 +895,7 @@ contract GatewayTest is Test {
     function testTransactFromSovereignAccountWithFee() public {
         bytes memory payload = SubstrateTypes.Transact(account1, 0x01, 1, Weight(1, 1), bytes("0x1"));
         console.logBytes(payload);
-        uint256 fee = IGateway(address(gateway)).quoteSendCallFee(1);
+        uint256 fee = IGateway(address(gateway)).quoteSendCallFee();
         assertEq(fee, 2500000000000000);
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(penpalParaID.into(), 1, messageID, payload);
@@ -906,7 +906,7 @@ contract GatewayTest is Test {
     }
 
     function testQuoteSendCallFee() public {
-        uint256 fee = IGateway(address(gateway)).quoteSendCallFee(1);
+        uint256 fee = IGateway(address(gateway)).quoteSendCallFee();
         assertEq(fee, 2500000000000000);
     }
 }

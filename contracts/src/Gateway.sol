@@ -645,7 +645,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     }
 
     /// @inheritdoc IGateway
-    function quoteSendCallFee(uint128 destinationFee) external view returns (uint256) {
+    function quoteSendCallFee() external view returns (uint256) {
         Costs memory costs = _calculateTransactCost();
         return _calculateFee(costs);
     }

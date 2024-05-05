@@ -113,5 +113,5 @@ interface IGateway {
     ) external payable;
 
     /// @dev Quote a fee in Ether for transact
-    function quoteSendCallFee(uint128 destinationFee) external view returns (uint256);
+    function quoteSendCallFee() external view returns (uint256);
 }
