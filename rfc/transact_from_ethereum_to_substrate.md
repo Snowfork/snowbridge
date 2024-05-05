@@ -4,7 +4,7 @@
 ## Summary
 
 This RFC proposes the feature to call transact from Ethereum to Substrate through our bridge, including two PRs separately.
- 
+
 - https://github.com/Snowfork/snowbridge/pull/1141 for solidity 
 - https://github.com/Snowfork/polkadot-sdk/pull/114 for substrate. 
 
@@ -33,6 +33,8 @@ instructions: [
     Transact { origin_kind: SovereignAccount, require_weight_at_most: Weight { ref_time: 40000000, proof_size: 8000 }, call: "0x00071468656c6c6f" }
 ]
 ```
+
+Worth to note that it’s a pre-funded account which represents sovereign of msg.sender to pay fo the execution cost on destination chain.
 
 ## Fee Flow
 
