@@ -56,6 +56,11 @@ export type SendValidationResult = {
     }
 }
 
+export const getSendFee = async (context: Context, tokenAddress: string, destinationParaId: number, destinationFee: bigint): Promise<bigint> => {
+    const { ethereum: { contracts: { gateway } } } = context
+    return await gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
+}
+
 export const validateSend = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint, options = {
     acceptableLatencyInSeconds: 28800 /* 3 Hours */
 }): Promise<SendValidationResult> => {
@@ -76,7 +81,7 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
     let canPayFee = false
     if (tokenIsRegistered) {
         ethereumBalance = await ethereum.api.getBalance(sourceAddress)
-        fee = await gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
+        fee = await getSendFee(context, tokenAddress, destinationParaId, destinationFee)
         canPayFee = fee < ethereumBalance
     }
 

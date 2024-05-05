@@ -60,6 +60,17 @@ export type SendValidationResult = {
     }
 }
 
+export const getSendFee = async (context: Context, options = {
+    defaultFee: 2_750_872_500_000n,
+}) => {
+    const { polkadot: { api: { assetHub } } } = context
+    // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
+    const feeStorageKey = xxhashAsHex(':BridgeHubEthereumBaseFee:', 128, true)
+    const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
+    let leFee = new BN((feeStorageItem as Codec).toHex().replace('0x', ''), "hex", "le")
+    return leFee.eqn(0) ? options.defaultFee : BigInt(leFee.toString())
+}
+
 export const validateSend = async (context: Context, signer: WalletOrKeypair, sourceParachainId: number, beneficiary: string, tokenAddress: string, amount: bigint, options = {
     defaultFee: 2_750_872_500_000n,
     acceptableLatencyInSeconds: 28800 /* 8 Hours */
@@ -125,14 +136,10 @@ export const validateSend = async (context: Context, signer: WalletOrKeypair, so
     const bridgeOperational = bridgeStatus.toEthereum.operatingMode.outbound === 'Normal'
     const lightClientLatencyIsAcceptable = bridgeStatus.toEthereum.latencySeconds < options.acceptableLatencyInSeconds
 
-    // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
-    const feeStorageKey = xxhashAsHex(':BridgeHubEthereumBaseFee:', 128, true)
-    const [feeStorageItem, account] = await Promise.all([
-        assetHub.rpc.state.getStorage(feeStorageKey),
+    const [account, fee] = await Promise.all([
         assetHub.query.system.account(signer.address),
+        getSendFee(context, options)
     ])
-    let leFee = new BN((feeStorageItem as Codec).toHex().replace('0x', ''), "hex", "le")
-    const fee = leFee.eqn(0) ? options.defaultFee : BigInt(leFee.toString())
     const dotBalance = BigInt((account.toPrimitive() as any).data.free)
     const canPayFee = fee < dotBalance
 
