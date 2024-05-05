@@ -17,7 +17,9 @@ import {
     Command,
     MultiAddress,
     Ticket,
-    Costs
+    Costs,
+    OriginKind,
+    Weight
 } from "./Types.sol";
 import {Upgrade} from "./Upgrade.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
@@ -29,6 +31,7 @@ import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {Call} from "./utils/Call.sol";
 import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
+import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 import {
     UpgradeParams,
@@ -94,6 +97,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
+    error AlreadyInitialized();
+    error InvalidTransact();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
@@ -416,7 +421,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint128 amount
     ) external payable {
         _submitOutbound(
-            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount)
+            Assets.sendToken(
+                token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
+            )
         );
     }
 
@@ -612,5 +619,34 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+    }
+
+    // Calculate cost for transact
+    function _calculateTransactCost() internal pure returns (Costs memory costs) {
+        return Costs({native: 0, foreign: 0});
+    }
+
+    /// @inheritdoc IGateway
+    function sendCall(
+        ParaID destinationChain,
+        OriginKind originKind,
+        uint128 destinationFee,
+        Weight calldata weightAtMost,
+        bytes calldata call
+    ) external payable {
+        if (call.length == 0 || destinationFee == 0 || weightAtMost.refTime == 0 || weightAtMost.proofSize == 0) {
+            revert InvalidTransact();
+        }
+        bytes memory payload =
+            SubstrateTypes.Transact(msg.sender, originKind.encode(), destinationFee, weightAtMost, call);
+        Costs memory costs = _calculateTransactCost();
+        Ticket memory ticket = Ticket({dest: destinationChain, costs: costs, payload: payload});
+        _submitOutbound(ticket);
+    }
+
+    /// @inheritdoc IGateway
+    function quoteSendCallFee() external view returns (uint256) {
+        Costs memory costs = _calculateTransactCost();
+        return _calculateFee(costs);
     }
 }

@@ -42,11 +42,12 @@ library Assets {
         IERC20(token).safeTransferFrom(sender, agent, amount);
     }
 
-    function sendTokenCosts(address token, ParaID destinationChain, uint128 destinationChainFee, uint128 maxDestinationChainFee)
-        external
-        view
-        returns (Costs memory costs)
-    {
+    function sendTokenCosts(
+        address token,
+        ParaID destinationChain,
+        uint128 destinationChainFee,
+        uint128 maxDestinationChainFee
+    ) external view returns (Costs memory costs) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
         if (!info.isRegistered) {

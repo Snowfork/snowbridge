@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.23;
 
+import {Math} from "./Math.sol";
+
 library ScaleCodec {
+    using Math for uint64;
+
     error UnsupportedCompactEncoding();
 
     uint256 internal constant MAX_COMPACT_ENCODABLE_UINT = 2 ** 30 - 1;
@@ -125,5 +129,21 @@ library ScaleCodec {
             revert UnsupportedCompactEncoding();
         }
         return encodeCompactU32(uint32(value));
+    }
+
+    // Supports compact encoding of integers in [0, uint64.MAX]
+    function encodeCompactU64(uint64 value) internal pure returns (bytes memory) {
+        if (value <= 2 ** 30 - 1) {
+            return encodeCompactU32(uint32(value));
+        } else {
+            uint8 countOfZeros = value.leadingZeros();
+            uint8 bytesNeeded = 8 - countOfZeros / 8;
+            bytes memory result = abi.encodePacked(3 + ((bytesNeeded - 4) << 2));
+            for (uint8 i = 0; i < bytesNeeded; i++) {
+                result = bytes.concat(result, abi.encodePacked(uint8(value)));
+                value >>= 8;
+            }
+            return result;
+        }
     }
 }

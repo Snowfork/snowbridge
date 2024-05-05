@@ -20,14 +20,7 @@ contract MockGateway is Gateway {
         uint8 foreignTokenDecimals,
         uint128 maxDestinationFee
     )
-        Gateway(
-            beefyClient,
-            agentExecutor,
-            bridgeHubParaID,
-            bridgeHubHubAgentID,
-            foreignTokenDecimals,
-            maxDestinationFee
-        )
+        Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubHubAgentID, foreignTokenDecimals, maxDestinationFee)
     {}
 
     function agentExecutePublic(bytes calldata params) external {
