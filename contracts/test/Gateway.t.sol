@@ -23,7 +23,6 @@ import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 import {MultiAddress} from "../src/MultiAddress.sol";
 import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress} from "../src/Types.sol";
 
-
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 import {PricingStorage} from "../src/storage/PricingStorage.sol";
 
@@ -36,7 +35,8 @@ import {
     SetOperatingModeParams,
     TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
-    SetPricingParametersParams
+    SetPricingParametersParams,
+    TransactCallParams
 } from "../src/Params.sol";
 
 import {
@@ -51,6 +51,8 @@ import {
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {HelloWorld} from "./mocks/HelloWorld.sol";
+import {IERC20} from "../src/interfaces/IERC20.sol";
 
 contract GatewayTest is Test {
     ParaID public bridgeHubParaID = ParaID.wrap(1001);
@@ -96,15 +98,15 @@ contract GatewayTest is Test {
     UD60x18 public exchangeRate = ud60x18(0.0025e18);
     UD60x18 public multiplier = ud60x18(1e18);
 
+    HelloWorld helloWorld;
+
+    event SaidHello(string indexed message);
+    event Transfer(address indexed src, address indexed dst, uint256 wad);
+
     function setUp() public {
         AgentExecutor executor = new AgentExecutor();
         gatewayLogic = new MockGateway(
-            address(0),
-            address(executor),
-            bridgeHubParaID,
-            bridgeHubAgentID,
-            foreignTokenDecimals,
-            maxDestinationFee
+            address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals, maxDestinationFee
         );
         Gateway.Config memory config = Gateway.Config({
             mode: OperatingMode.Normal,
@@ -122,6 +124,8 @@ contract GatewayTest is Test {
 
         SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
         MockGateway(address(gateway)).setOperatingModePublic(abi.encode(params));
+
+        helloWorld = new HelloWorld();
 
         bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
         assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
@@ -857,6 +861,78 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, maxDestinationFee + 1);
 
         vm.expectRevert(Assets.InvalidDestinationFee.selector);
-        IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, maxDestinationFee + 1, 1);
+        IGateway(address(gateway)).sendToken{value: fee}(
+            address(token), destPara, recipientAddress32, maxDestinationFee + 1, 1
+        );
+    }
+
+    function testAgentExecutionTransactSuccess() public {
+        bytes memory payload = abi.encodeWithSignature("sayHello(string)", "World");
+
+        TransactCallParams memory params = TransactCallParams({
+            agentID: assetHubAgentID,
+            target: address(helloWorld),
+            payload: payload,
+            maxDispatchGas: 100000
+        });
+
+        // Expect the HelloWorld contract to emit `SaidHello`
+        vm.expectEmit(true, false, false, false);
+        emit SaidHello("Hello there, World");
+
+        MockGateway(address(gateway)).transactPublic(abi.encode(params));
+    }
+
+    function testAgentExecutionTransactFail() public {
+        bytes memory payload = abi.encodeWithSignature("revertUnauthorized()");
+
+        TransactCallParams memory params = TransactCallParams({
+            agentID: assetHubAgentID,
+            target: address(helloWorld),
+            payload: payload,
+            maxDispatchGas: 100000
+        });
+
+        vm.expectRevert(abi.encodeWithSelector(Gateway.AgentTransactCallFailed.selector));
+
+        MockGateway(address(gateway)).transactPublic(abi.encode(params));
+    }
+
+    function testAgentExecutionTransactRetBomb() public {
+        bytes memory payload = abi.encodeWithSignature("retBomb()");
+
+        TransactCallParams memory params = TransactCallParams({
+            agentID: assetHubAgentID,
+            target: address(helloWorld),
+            payload: payload,
+            maxDispatchGas: 100000
+        });
+
+        vm.expectRevert(abi.encodeWithSelector(Gateway.AgentTransactCallFailed.selector));
+
+        MockGateway(address(gateway)).transactPublic(abi.encode(params));
+    }
+
+    function testAgentTransferERC20WithTransactShouldBeAllowed() public {
+        testRegisterToken();
+
+        token.transfer(address(assetHubAgent), 200);
+
+        uint256 balanceBefore = IERC20(address(token)).balanceOf(account1);
+
+        uint256 amount = 50;
+        bytes memory payload = abi.encodeCall(IERC20.transfer, (account1, amount));
+
+        TransactCallParams memory params = TransactCallParams({
+            agentID: assetHubAgentID,
+            target: address(token),
+            payload: payload,
+            maxDispatchGas: 100000
+        });
+
+        MockGateway(address(gateway)).transactPublic(abi.encode(params));
+
+        uint256 balanceAfter = IERC20(address(token)).balanceOf(account1);
+        assertEq(balanceBefore + amount, balanceAfter);
     }
 }

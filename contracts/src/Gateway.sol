@@ -17,7 +17,8 @@ import {
     Command,
     MultiAddress,
     Ticket,
-    Costs
+    Costs,
+    AgentExecuteCommand
 } from "./Types.sol";
 import {Upgrade} from "./Upgrade.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
@@ -39,7 +40,8 @@ import {
     SetOperatingModeParams,
     TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
-    SetPricingParametersParams
+    SetPricingParametersParams,
+    TransactCallParams
 } from "./Params.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
@@ -94,6 +96,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
+    error AgentTransactCallFailed();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
@@ -165,6 +168,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         bool success = true;
 
+        uint256 gasUsedForTransact;
+        address agentForTransact;
+
         // Dispatch message to a handler
         if (message.command == Command.AgentExecute) {
             try Gateway(this).agentExecute{gas: maxDispatchGas}(message.params) {}
@@ -211,21 +217,17 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             catch {
                 success = false;
             }
+        } else if (message.command == Command.Transact) {
+            try Gateway(this).transact{gas: maxDispatchGas}(message.params) returns (address _agent, uint256 _gasUsed) {
+                gasUsedForTransact = _gasUsed;
+                agentForTransact = _agent;
+            } catch {
+                success = false;
+            }
         }
 
-        // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
-        // that could drain funds unnecessarily. During these spikes, relayers should back off.
-        uint256 gasUsed = _transactionBaseGas() + (startGas - gasleft());
-        uint256 refund = gasUsed * Math.min(tx.gasprice, message.maxFeePerGas);
-
-        // Add the reward to the refund amount. If the sum is more than the funds available
-        // in the channel agent, then reduce the total amount
-        uint256 amount = Math.min(refund + message.reward, address(channel.agent).balance);
-
-        // Do the payment if there funds available in the agent
-        if (amount > _dustThreshold()) {
-            _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
-        }
+        // Refund relayer
+        _refundRelayer(message, startGas, address(channel.agent), agentForTransact, gasUsedForTransact);
 
         emit IGateway.InboundMessageDispatched(message.channelID, message.nonce, message.id, success);
     }
@@ -381,6 +383,25 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         emit PricingParametersChanged();
     }
 
+    // @dev Transact
+    function transact(bytes calldata data) external onlySelf returns (address, uint256) {
+        uint256 gasLeftBefore = gasleft();
+
+        TransactCallParams memory params = abi.decode(data, (TransactCallParams));
+        address agent = _ensureAgent(params.agentID);
+        bytes memory call =
+            abi.encodeCall(AgentExecutor.executeCall, (params.target, params.payload, params.maxDispatchGas));
+        (, bytes memory result) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
+        (bool success) = abi.decode(result, (bool));
+        if (!success) {
+            revert AgentTransactCallFailed();
+        }
+        emit Transacted(params.agentID, params.target, keccak256(params.payload));
+
+        uint256 gasUsed = gasLeftBefore - gasleft();
+        return (agent, gasUsed);
+    }
+
     /**
      * Assets
      */
@@ -416,7 +437,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint128 amount
     ) external payable {
         _submitOutbound(
-            Assets.sendToken(token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount)
+            Assets.sendToken(
+                token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
+            )
         );
     }
 
@@ -539,6 +562,39 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     /// @dev Define the dust threshold as the minimum cost to transfer ether between accounts
     function _dustThreshold() internal view returns (uint256) {
         return 21000 * tx.gasprice;
+    }
+
+    /// @dev Refund relayer from both channel agent and transact agent
+    function _refundRelayer(
+        InboundMessage calldata message,
+        uint256 startGas,
+        address agent,
+        address agentForTransact,
+        uint256 gasUsedForTransact
+    ) internal {
+        // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
+        // that could drain funds unnecessarily. During these spikes, relayers should back off.
+        uint256 gasUsed = _transactionBaseGas() + (startGas - gasleft());
+        if (message.command == Command.Transact) {
+            // User agent pays for the transact dispatch
+            uint256 transactFee = Math.min(gasUsedForTransact * tx.gasprice, address(agentForTransact).balance);
+            if (transactFee > _dustThreshold()) {
+                _transferNativeFromAgent(agentForTransact, payable(msg.sender), transactFee);
+            }
+            // gas used for the channel agent should not include the cost for transact
+            gasUsed = gasUsed - gasUsedForTransact;
+        }
+
+        uint256 refund = gasUsed * Math.min(tx.gasprice, message.maxFeePerGas);
+
+        // Add the reward to the refund amount. If the sum is more than the funds available
+        // in the channel agent, then reduce the total amount
+        uint256 amount = Math.min(refund + message.reward, agent.balance);
+
+        // Do the payment if there funds available in the agent
+        if (amount > _dustThreshold()) {
+            _transferNativeFromAgent(agent, payable(msg.sender), amount);
+        }
     }
 
     /**

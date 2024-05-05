@@ -82,3 +82,15 @@ struct SetPricingParametersParams {
     /// @dev Fee multiplier
     UD60x18 multiplier;
 }
+
+// Payload for TransactCall
+struct TransactCallParams {
+    /// @dev The agent ID of the consensus system
+    bytes32 agentID;
+    /// @dev The target contract
+    address target;
+    /// @dev Payload of the call
+    bytes payload;
+    /// @dev Max gas cost of the call
+    uint64 maxDispatchGas;
+}

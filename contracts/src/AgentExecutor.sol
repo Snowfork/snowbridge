@@ -7,12 +7,14 @@ import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
+import {Call} from "./utils/Call.sol";
 
 /// @title Code which will run within an `Agent` using `delegatecall`.
 /// @dev This is a singleton contract, meaning that all agents will execute the same code.
 contract AgentExecutor {
     using SafeTokenTransfer for IERC20;
     using SafeNativeTransfer for address payable;
+    using Call for address;
 
     /// @dev Execute a message which originated from the Polkadot side of the bridge. In other terms,
     /// the `data` parameter is constructed by the BridgeHub parachain.
@@ -35,5 +37,11 @@ contract AgentExecutor {
     /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
     function _transferToken(address token, address recipient, uint128 amount) internal {
         IERC20(token).safeTransfer(recipient, amount);
+    }
+
+    /// @dev Call a contract at the given address, with provided bytes as payload.
+    /// The safeCall here performs a low level call without copying any returndata for the return bomb attack
+    function executeCall(address target, bytes memory payload, uint64 maxDispatchGas) external returns (bool) {
+        return target.safeCall(maxDispatchGas, 0, payload);
     }
 }

@@ -16,6 +16,7 @@ import {ChannelID, ParaID, OperatingMode} from "../src/Types.sol";
 import {SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
+import {HelloWorld} from "../test/mocks/HelloWorld.sol";
 
 contract DeployLocal is Script {
     using SafeNativeTransfer for address payable;
@@ -105,6 +106,8 @@ contract DeployLocal is Script {
         payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);
 
+        // Deploy HelloWorld for testing transact
+        new HelloWorld();
         // Deploy MockGatewayV2 for testing
         new MockGatewayV2();
 
