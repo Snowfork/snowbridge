@@ -17,34 +17,34 @@ export type Config = {
 
 export type SourceType = 'substrate' | 'ethereum'
 export type Relayer = { name: string, account: string, type: SourceType }
-export type TransferSource = {
+export type TransferLocation = {
   id: string
   name: string
   type: SourceType
   destinationIds: string[]
   paraId?: number
   has20ByteAccounts: boolean
+  erc20tokensReceivable: { [name: string]: string }
 }
 
 export type SnowbridgeEnvironment = {
   config: Config
   name: string
-  sources: TransferSource[]
-  erc20tokens: { [name: string]: string }
+  locations: TransferLocation[]
 }
 
 export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
   'local_e2e': {
     name: 'local_e2e',
-    erc20tokens: {
-      "WETH": '0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d',
-    },
-    sources: [{
+    locations: [{
       id: 'ethereum',
       name: 'Ethereum',
       type: 'ethereum',
       destinationIds: ['assethub', 'penpal'],
-      has20ByteAccounts: true
+      has20ByteAccounts: true,
+      erc20tokensReceivable: {
+        "WETH": '0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d',
+      },
     },
     {
       id: 'assethub',
@@ -52,15 +52,21 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       type: 'substrate',
       destinationIds: ['ethereum'],
       paraId: 1000,
-      has20ByteAccounts: false
+      has20ByteAccounts: false,
+      erc20tokensReceivable: {
+        "WETH": '0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d',
+      },
     },
     {
       id: 'penpal',
       name: 'Penpal',
       type: 'substrate',
-      destinationIds: [],
+      destinationIds: ["ethereum"],
       paraId: 2000,
-      has20ByteAccounts: false
+      has20ByteAccounts: false,
+      erc20tokensReceivable: {
+        "WETH": '0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d',
+      },
     }],
     config: {
       BEACON_HTTP_API: 'http://127.0.0.1:9596',
@@ -89,18 +95,18 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
   },
   'rococo_sepolia': {
     name: 'rococo_sepolia',
-    erc20tokens: {
-      "WETH": '0xfff9976782d46cc05630d1f6ebab18b2324d6b14',
-      "vETH": '0xc3d088842dcf02c13699f936bb83dfbbc6f721ab',
-      "MUSE1": '0xb34a6924a02100ba6ef12af1c798285e8f7a16ee',
-      "MUSE2": '0xc9f05326311bc2a55426761bec20057685fb80f7',
-    },
-    sources: [{
+    locations: [{
       id: 'ethereum',
       name: 'Ethereum',
       type: 'ethereum',
       destinationIds: ['assethub', 'muse'],
-      has20ByteAccounts: true
+      has20ByteAccounts: true,
+      erc20tokensReceivable: {
+        "WETH": '0xfff9976782d46cc05630d1f6ebab18b2324d6b14',
+        "vETH": '0xc3d088842dcf02c13699f936bb83dfbbc6f721ab',
+        "MUSE1": '0xb34a6924a02100ba6ef12af1c798285e8f7a16ee',
+        "MUSE2": '0xc9f05326311bc2a55426761bec20057685fb80f7',
+      },
     },
     {
       id: 'assethub',
@@ -108,7 +114,13 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       type: 'substrate',
       destinationIds: ['ethereum'],
       paraId: 1000,
-      has20ByteAccounts: false
+      has20ByteAccounts: false,
+      erc20tokensReceivable: {
+        "WETH": '0xfff9976782d46cc05630d1f6ebab18b2324d6b14',
+        "vETH": '0xc3d088842dcf02c13699f936bb83dfbbc6f721ab',
+        "MUSE1": '0xb34a6924a02100ba6ef12af1c798285e8f7a16ee',
+        "MUSE2": '0xc9f05326311bc2a55426761bec20057685fb80f7',
+      },
     },
     {
       id: 'muse',
@@ -116,7 +128,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       type: 'substrate',
       destinationIds: [],
       paraId: 3369,
-      has20ByteAccounts: true
+      has20ByteAccounts: true,
+      erc20tokensReceivable: {
+        "MUSE1": '0xb34a6924a02100ba6ef12af1c798285e8f7a16ee',
+        "MUSE2": '0xc9f05326311bc2a55426761bec20057685fb80f7',
+      },
     }],
     config: {
       BEACON_HTTP_API: 'https://lodestar-sepolia.chainsafe.io',
