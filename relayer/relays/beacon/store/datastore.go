@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
@@ -59,8 +60,12 @@ func New(location string, maxEntries uint64, protocol protocol.Protocol) Store {
 }
 
 func (s *Store) Connect() error {
-	var err error
-	s.db, err = sql.Open("sqlite3", s.location+BeaconStoreName)
+	err := os.MkdirAll(s.location, 0755)
+	if err != nil {
+		return fmt.Errorf("create datastore directories: %w", err)
+	}
+
+	s.db, err = sql.Open("sqlite3", fmt.Sprintf("%s%c%s", s.location, filepath.Separator, BeaconStoreName))
 	if err != nil {
 		return err
 	}
@@ -70,7 +75,7 @@ func (s *Store) Connect() error {
 		return err
 	}
 
-	err = createBeaconStateDir(s.location + BeaconStateDir)
+	err = createBeaconStateDir(fmt.Sprintf("%s%c%s", s.location, filepath.Separator, BeaconStateDir))
 	if err != nil {
 		return err
 	}
@@ -169,8 +174,51 @@ func (s *Store) WriteEntry(attestedSlot, finalizedSlot uint64, attestedStateData
 	return s.storeUpdate(attestedSlot, finalizedSlot, attestedSyncPeriod, finalizedSyncPeriod)
 }
 
+func (s *Store) ListBeaconStates() ([]BeaconState, error) {
+	var response []BeaconState
+
+	query := `SELECT id, attested_slot, finalized_slot, attested_sync_period, finalized_sync_period, attested_state_filename, finalized_state_filename FROM beacon_state ORDER BY attested_slot`
+
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return response, fmt.Errorf("no match found")
+	}
+	defer rows.Close()
+
+	var id uint64
+	var attestedSlot uint64
+	var finalizedSlot uint64
+	var attestedSyncPeriod uint64
+	var finalizedSyncPeriod uint64
+	var attestedStateFilename string
+	var finalizedStateFilename string
+	for rows.Next() {
+		err := rows.Scan(&id, &attestedSlot, &finalizedSlot, &attestedSyncPeriod, &finalizedSyncPeriod, &attestedStateFilename, &finalizedStateFilename)
+		if err != nil {
+			return response, fmt.Errorf("scan error")
+		}
+
+		response = append(response, BeaconState{
+			ID:                     id,
+			AttestedSlot:           attestedSlot,
+			FinalizedSlot:          finalizedSlot,
+			AttestedSyncPeriod:     attestedSyncPeriod,
+			FinalizedSyncPeriod:    finalizedSyncPeriod,
+			AttestedStateFilename:  attestedStateFilename,
+			FinalizedStateFilename: finalizedStateFilename,
+		})
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return response, fmt.Errorf("row error")
+	}
+
+	return response, nil
+}
+
 func (s *Store) DeleteStateFile(filename string) error {
-	err := os.Remove(s.location + BeaconStateDir + "/" + filename)
+	err := os.Remove(s.stateFileLocation(filename))
 	if err != nil {
 		return fmt.Errorf("remove file: %w", err)
 	}
@@ -179,12 +227,21 @@ func (s *Store) DeleteStateFile(filename string) error {
 }
 
 func (s *Store) ReadStateFile(filename string) ([]byte, error) {
-	data, err := os.ReadFile(s.location + BeaconStateDir + "/" + filename)
+	data, err := os.ReadFile(s.stateFileLocation(filename))
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
 
 	return data, nil
+}
+
+func (s *Store) StateFileExists(filename string) bool {
+	_, err := os.Stat(s.stateFileLocation(filename))
+	if err != nil {
+		return false
+	}
+
+	return true
 }
 
 func (s *Store) PruneOldStates() ([]uint64, error) {
@@ -269,7 +326,7 @@ func (s *Store) createTable() error {
 }
 
 func (s *Store) writeStateFile(slot uint64, data []byte) error {
-	err := os.WriteFile(s.location+BeaconStateDir+"/"+fmt.Sprintf(BeaconStateFilename, slot), data, 0644)
+	err := os.WriteFile(s.stateFileLocation(fmt.Sprintf(BeaconStateFilename, slot)), data, 0644)
 	if err != nil {
 		return fmt.Errorf("write to file: %w", err)
 	}
@@ -294,4 +351,7 @@ func (s *Store) storeUpdate(attestedSlot, finalizedSlot, attestedSyncPeriod, fin
 	}
 
 	return nil
+}
+func (s *Store) stateFileLocation(filename string) string {
+	return fmt.Sprintf("%s%c%s%c%s", s.location, filepath.Separator, BeaconStateDir, filepath.Separator, filename)
 }

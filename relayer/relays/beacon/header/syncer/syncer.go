@@ -158,7 +158,7 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 		if err != nil {
 			return scale.Update{}, fmt.Errorf("fetch beacon state for block roots proof: %w", err)
 		}
-		beaconState, err := s.unmarshalBeaconState(uint64(finalizedHeader.Slot), beaconStateData)
+		beaconState, err := s.UnmarshalBeaconState(uint64(finalizedHeader.Slot), beaconStateData)
 
 		blockRootsProof, err = s.GetBlockRootsFromState(beaconState)
 		if err != nil {
@@ -502,10 +502,10 @@ func (s *Syncer) getBeaconStateAtSlot(slot uint64) (state.BeaconState, error) {
 		return beaconState, fmt.Errorf("fetch beacon state: %w", err)
 	}
 
-	return s.unmarshalBeaconState(slot, beaconData)
+	return s.UnmarshalBeaconState(slot, beaconData)
 }
 
-func (s *Syncer) unmarshalBeaconState(slot uint64, data []byte) (state.BeaconState, error) {
+func (s *Syncer) UnmarshalBeaconState(slot uint64, data []byte) (state.BeaconState, error) {
 	var beaconState state.BeaconState
 	isDeneb := s.protocol.DenebForked(slot)
 
@@ -830,11 +830,11 @@ func (s *Syncer) getBestMatchBeaconDataFromStore(slot, boundary uint64, findMin 
 	}
 
 	response.AttestedSlot = data.AttestedSlot
-	response.AttestedState, err = s.unmarshalBeaconState(data.AttestedSlot, data.AttestedBeaconState)
+	response.AttestedState, err = s.UnmarshalBeaconState(data.AttestedSlot, data.AttestedBeaconState)
 	if err != nil {
 		return finalizedUpdateContainer{}, err
 	}
-	response.FinalizedState, err = s.unmarshalBeaconState(data.FinalizedSlot, data.FinalizedBeaconState)
+	response.FinalizedState, err = s.UnmarshalBeaconState(data.FinalizedSlot, data.FinalizedBeaconState)
 	if err != nil {
 		return finalizedUpdateContainer{}, err
 	}
@@ -857,7 +857,7 @@ func (s *Syncer) getExactMatchFromStore(slot uint64) (finalizedUpdateContainer, 
 	}
 
 	response.AttestedSlot = slot
-	response.AttestedState, err = s.unmarshalBeaconState(slot, attestedStateData)
+	response.AttestedState, err = s.UnmarshalBeaconState(slot, attestedStateData)
 	if err != nil {
 		return finalizedUpdateContainer{}, err
 	}
@@ -874,7 +874,7 @@ func (s *Syncer) getExactMatchFromStore(slot uint64) (finalizedUpdateContainer, 
 		return finalizedUpdateContainer{}, err
 	}
 
-	response.FinalizedState, err = s.unmarshalBeaconState(response.FinalizedHeader.Slot, finalizedStateData)
+	response.FinalizedState, err = s.UnmarshalBeaconState(response.FinalizedHeader.Slot, finalizedStateData)
 	if err != nil {
 		return finalizedUpdateContainer{}, err
 	}
