@@ -17,7 +17,7 @@ export type Config = {
 
 export type SourceType = 'substrate' | 'ethereum'
 export type Relayer = { name: string, account: string, type: SourceType }
-export type ParachainInfo = { paraId: number, destinationFeeDOT: bigint, has20ByteAccounts: boolean }
+export type ParachainInfo = { paraId: number, destinationFeeDOT: bigint, has20ByteAccounts: boolean, decimals: number }
 export type TransferLocation = {
   id: string
   name: string
@@ -54,6 +54,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         paraId: 1000,
         destinationFeeDOT: 0n,
         has20ByteAccounts: false,
+        decimals: 12,
       },
       erc20tokensReceivable: {
         "WETH": '0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d',
@@ -68,6 +69,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         paraId: 2000,
         destinationFeeDOT: 4_000_000_000n,
         has20ByteAccounts: false,
+        decimals: 12,
       },
       erc20tokensReceivable: {
         "WETH": '0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d',
@@ -121,6 +123,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         paraId: 1000,
         destinationFeeDOT: 0n,
         has20ByteAccounts: false,
+        decimals: 12,
       },
       erc20tokensReceivable: {
         "WETH": '0xfff9976782d46cc05630d1f6ebab18b2324d6b14',
@@ -138,6 +141,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         paraId: 3369,
         destinationFeeDOT: 4_000_000_000n,
         has20ByteAccounts: true,
+        decimals: 12,
       },
       erc20tokensReceivable: {
         "MUSE1": '0xb34a6924a02100ba6ef12af1c798285e8f7a16ee',
