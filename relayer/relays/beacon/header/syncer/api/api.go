@@ -43,14 +43,16 @@ type BeaconAPI interface {
 }
 
 type BeaconClient struct {
-	httpClient http.Client
-	endpoint   string
+	httpClient    http.Client
+	endpoint      string
+	stateEndpoint string
 }
 
-func NewBeaconClient(endpoint string) *BeaconClient {
+func NewBeaconClient(endpoint, stateEndpoint string) *BeaconClient {
 	return &BeaconClient{
 		http.Client{},
 		endpoint,
+		stateEndpoint,
 	}
 }
 
@@ -401,7 +403,7 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 
 func (b *BeaconClient) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 	var data []byte
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.endpoint, stateIdOrSlot), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.stateEndpoint, stateIdOrSlot), nil)
 	if err != nil {
 		return data, err
 	}
