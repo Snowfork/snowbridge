@@ -14,7 +14,7 @@ import (
 func listBeaconStateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list-beacon-states",
-		Short: "Import the provided execution header.",
+		Short: "List the beacon states in the beacon store.",
 		Args:  cobra.ExactArgs(0),
 		RunE:  listBeaconState,
 	}
