@@ -40,7 +40,7 @@ func generateBeaconFixtureCmd() *cobra.Command {
 		RunE:  generateBeaconTestFixture,
 	}
 
-	cmd.Flags().String("config", "", "Path to the beacon relay config")
+	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
 	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	return cmd
@@ -54,7 +54,7 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 		RunE:  generateBeaconCheckpoint,
 	}
 
-	cmd.Flags().String("config", "", "Path to the beacon relay config")
+	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
 	cmd.Flags().Bool("export-json", false, "Export Json")
 
 	return cmd
@@ -68,7 +68,7 @@ func generateExecutionUpdateCmd() *cobra.Command {
 		RunE:  generateExecutionUpdate,
 	}
 
-	cmd.Flags().String("config", "", "Path to the beacon relay config")
+	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
 	cmd.Flags().Uint32("slot", 1, "slot number")
 	return cmd
 }
@@ -81,8 +81,8 @@ func generateInboundFixtureCmd() *cobra.Command {
 		RunE:  generateInboundFixture,
 	}
 
-	cmd.Flags().String("beacon-config", "", "Path to the beacon relay config")
-	cmd.Flags().String("execution-config", "", "Path to the beacon relay config")
+	cmd.Flags().String("beacon-config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
+	cmd.Flags().String("execution-config", "/tmp/snowbridge/execution-relay-asset-hub.json", "Path to the beacon relay config")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	cmd.Flags().String("test_case", "register_token", "Inbound test case")
 	return cmd
