@@ -36,10 +36,10 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 
-	err := paraconn.Connect(ctx)
-	if err != nil {
-		return err
-	}
+	//err := paraconn.Connect(ctx)
+	//if err != nil {
+	//	return err
+	//}
 
 	writer := parachain.NewParachainWriter(
 		paraconn,
@@ -49,17 +49,17 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	p := protocol.New(specSettings)
 
-	err = writer.Start(ctx, eg)
-	if err != nil {
-		return err
-	}
+	//err = writer.Start(ctx, eg)
+	//if err != nil {
+	//	return err
+	//}
 
 	s := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries, *p)
-	err = s.Connect()
+	err := s.Connect()
 	if err != nil {
 		return err
 	}
-	defer s.Close()
+	//defer s.Close()
 
 	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint, r.config.Source.Beacon.StateEndpoint)
 	headers := header.New(
