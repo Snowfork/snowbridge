@@ -85,10 +85,6 @@ func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("convert sync committee to scale: %w", err)
 	}
 
-	if err != nil {
-		return scale.BeaconCheckpoint{}, fmt.Errorf("get sync committee: %w", err)
-	}
-
 	return scale.BeaconCheckpoint{
 		Header:                     header,
 		CurrentSyncCommittee:       syncCommittee,
@@ -154,16 +150,7 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 
 	blockRootsProof, err := s.GetBlockRoots(uint64(finalizedHeader.Slot))
 	if err != nil {
-		beaconStateData, err := s.store.GetBeaconStateData(uint64(finalizedHeader.Slot))
-		if err != nil {
-			return scale.Update{}, fmt.Errorf("fetch beacon state for block roots proof: %w", err)
-		}
-		beaconState, err := s.UnmarshalBeaconState(uint64(finalizedHeader.Slot), beaconStateData)
-
-		blockRootsProof, err = s.GetBlockRootsFromState(beaconState)
-		if err != nil {
-			return scale.Update{}, fmt.Errorf("fetch block roots: %w", err)
-		}
+		return scale.Update{}, fmt.Errorf("fetch block roots proof: %w", err)
 	}
 
 	finalizedHeaderBlockRoot, err := finalizedHeader.ToSSZ().HashTreeRoot()
@@ -206,9 +193,9 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 	var beaconState state.BeaconState
 	var blockRootsContainer state.BlockRootsContainer
 
-	data, err := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
+	data, err := s.getBeaconState(slot)
 	if err != nil {
-		return blockRootProof, fmt.Errorf("download beacon state (at slot %d) failed: %w", slot, err)
+		return blockRootProof, fmt.Errorf("fetch beacon state: %w", err)
 	}
 	isDeneb := s.protocol.DenebForked(slot)
 
@@ -497,7 +484,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 func (s *Syncer) getBeaconStateAtSlot(slot uint64) (state.BeaconState, error) {
 	var beaconState state.BeaconState
 	log.WithField("slot", slot).Info("downloading state at slot")
-	beaconData, err := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
+	beaconData, err := s.getBeaconState(slot)
 	if err != nil {
 		return beaconState, fmt.Errorf("fetch beacon state: %w", err)
 	}
@@ -880,4 +867,17 @@ func (s *Syncer) getExactMatchFromStore(slot uint64) (finalizedUpdateContainer, 
 	}
 
 	return response, nil
+}
+func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {
+	data, err := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
+	if err != nil {
+		log.WithFields(log.Fields{"slot": slot, "err": err}).Warn("unable to download ssz state from api, trying store")
+		data, err = s.store.GetBeaconStateData(slot)
+		log.WithFields(log.Fields{"slot": slot, "err": err}).Warn("error after store is")
+		if err != nil {
+			return nil, fmt.Errorf("fetch beacon state from store: %w", err)
+		}
+		log.WithField("slot", slot).Info("found state in store")
+	}
+	return data, nil
 }
