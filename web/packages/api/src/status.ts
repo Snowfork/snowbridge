@@ -132,7 +132,7 @@ export const assetStatusInfo = async (context: Context, tokenAddress: string, ow
     const tokenContract = IERC20__factory.connect(tokenAddress, context.ethereum.api)
     let ownerBalance = BigInt(0)
     let tokenGatewayAllowance = BigInt(0)
-    let tokenIsValidERC20 = true
+    let isValidERC20 = true
     try {
         const owner = ownerAddress || "0x0000000000000000000000000000000000000000"
         const [tokenBalance_, tokenGatewayAllowance_] = await Promise.all([
@@ -142,13 +142,13 @@ export const assetStatusInfo = async (context: Context, tokenAddress: string, ow
         ownerBalance = tokenBalance_
         tokenGatewayAllowance = tokenGatewayAllowance_
     } catch {
-        tokenIsValidERC20 = false
+        isValidERC20 = false
     }
 
     return {
         ethereumChainId,
         multiLocation,
-        tokenIsValidERC20,
+        isValidERC20,
         tokenContract,
         isTokenRegistered,
         tokenGatewayAllowance,

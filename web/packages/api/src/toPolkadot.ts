@@ -98,7 +98,7 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
 
     if (!foreignAssetExists) errors.push({ code: SendValidationCode.ForeignAssetMissing, message: "Foreign asset is not registered on Asset Hub."})
     if (!assetInfo.isTokenRegistered) errors.push({ code: SendValidationCode.ERC20NotRegistered, message: "ERC20 token is not registered with the Snowbridge Gateway."})
-    if (!assetInfo.tokenIsValidERC20) errors.push({ code: SendValidationCode.ERC20InvalidToken, message: "Token address is not a valid ERC20 token."})
+    if (!assetInfo.isValidERC20) errors.push({ code: SendValidationCode.ERC20InvalidToken, message: "Token address is not a valid ERC20 token."})
     if (!hasToken) errors.push({ code: SendValidationCode.InsufficientToken, message: "ERC20 token balance insufficient for transfer."})
     if (!tokenSpendApproved) errors.push({ code: SendValidationCode.ERC20SpendNotApproved, message: "ERC20 token spend insufficient for transfer."})
 
