@@ -310,7 +310,7 @@ func (s *Store) createTable() error {
 	sqlStmt := `CREATE TABLE IF NOT EXISTS beacon_state (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		attested_slot INTEGER NOT NULL,
-		finalized_slot INTEGER NOT NULL,
+		finalized_slot INTEGER NOT NULL UNIQUE,
 		attested_sync_period INTEGER NOT NULL,
 		finalized_sync_period INTEGER NOT NULL,
 		attested_state_filename TEXT NOT NULL,
