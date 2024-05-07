@@ -12,7 +12,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "typechain": "typechain --target ethers-v6 '../../../contracts/out/?(IERC20.sol|IERC20Metadata.sol|IGateway.sol|BeefyClient.sol)/!(*.abi).json' --out-dir src"
+    "typechain": "typechain --target ethers-v6 '../../../contracts/out/?(IERC20.sol|IERC20Metadata.sol|IGateway.sol|BeefyClient.sol|WETH9.sol)/!(*.abi).json' --out-dir src"
   },
   "devDependencies": {
     "@typechain/ethers-v6": "^0.5.1",

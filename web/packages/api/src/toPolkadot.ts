@@ -1,7 +1,7 @@
 import { decodeAddress } from '@polkadot/keyring'
 import { Codec } from '@polkadot/types/types'
 import { u8aToHex } from '@polkadot/util'
-import { IGateway__factory } from '@snowbridge/contract-types'
+import { IERC20__factory, IGateway__factory, WETH9__factory } from '@snowbridge/contract-types'
 import { MultiAddressStruct } from '@snowbridge/contract-types/src/IGateway'
 import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethers'
 import { concatMap, filter, firstValueFrom, lastValueFrom, take, takeWhile, tap } from 'rxjs'
@@ -65,6 +65,16 @@ export type SendValidationResult = {
     }
 }
 
+export const approveTokenSpend = async (context: Context, signer: Signer, tokenAddress: string, amount: bigint): Promise<ethers.ContractTransactionResponse> => {
+    const token = IERC20__factory.connect(tokenAddress, signer)
+    return token.approve(context.config.appContracts.gateway, amount)
+}
+
+export const depositWeth = async (context: Context, signer: Signer, tokenAddress: string, amount: bigint): Promise<ethers.ContractTransactionResponse> => {
+    const token = WETH9__factory.connect(tokenAddress, signer)
+    return token.deposit({ value: amount })
+}
+
 export const getSendFee = async (context: Context, tokenAddress: string, destinationParaId: number, destinationFee: bigint): Promise<bigint> => {
     const { ethereum: { contracts: { gateway } } } = context
     return await gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
@@ -90,7 +100,7 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
     if (!assetInfo.isTokenRegistered) errors.push({ code: SendValidationCode.ERC20NotRegistered, message: "ERC20 token is not registered with the Snowbridge Gateway."})
     if (!assetInfo.tokenIsValidERC20) errors.push({ code: SendValidationCode.ERC20InvalidToken, message: "Token address is not a valid ERC20 token."})
     if (!hasToken) errors.push({ code: SendValidationCode.InsufficientToken, message: "ERC20 token balance insufficient for transfer."})
-    if (!tokenSpendApproved) errors.push({ code: SendValidationCode.ERC20SpendNotApproved, message: "ERC20 Token approved spend insufficient for transfer."})
+    if (!tokenSpendApproved) errors.push({ code: SendValidationCode.ERC20SpendNotApproved, message: "ERC20 token spend insufficient for transfer."})
 
     let fee = 0n
     let ethereumBalance = 0n
