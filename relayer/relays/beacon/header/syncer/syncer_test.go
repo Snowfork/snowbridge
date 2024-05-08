@@ -21,7 +21,7 @@ import (
 const TestUrl = "https://lodestar-sepolia.chainsafe.io"
 
 func newTestRunner() *Syncer {
-	return New(api.NewBeaconClient(TestUrl), &mock.Store{}, protocol.New(config.SpecSettings{
+	return New(api.NewBeaconClient(TestUrl, TestUrl), &mock.Store{}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
