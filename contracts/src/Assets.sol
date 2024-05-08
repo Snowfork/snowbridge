@@ -75,6 +75,8 @@ library Assets {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.assetHubParaID == destinationChain) {
             costs.foreign = $.assetHubReserveTransferFee;
+            // We don't charge any extra fees beyond delivery costs
+            costs.native = 0;
         } else {
             // Reduce the ability for users to perform arbitrage by exploiting a
             // favourable exchange rate. For example supplying Ether
@@ -91,10 +93,10 @@ library Assets {
 
             // If the final destination chain is not AssetHub, then the fee needs to additionally
             // include the cost of executing an XCM on the final destination parachain.
-            costs.foreign = $.assetHubReserveTransferFee + destinationChainFee;
+            costs.foreign = $.assetHubReserveTransferFee;
+            // destinationChainFee always in WETH
+            costs.native = destinationChainFee;
         }
-        // We don't charge any extra fees beyond delivery costs
-        costs.native = 0;
     }
 
     function sendToken(
@@ -239,8 +241,9 @@ library Assets {
     }
 
     function _sendForeignTokenCosts(uint128 destinationChainFee) internal pure returns (Costs memory costs) {
-        costs.foreign = destinationChainFee;
-        costs.native = 0;
+        costs.foreign = 0;
+        // destinationChainFee always in WETH
+        costs.native = destinationChainFee;
     }
 
     // @dev Register a new fungible Polkadot token for an agent

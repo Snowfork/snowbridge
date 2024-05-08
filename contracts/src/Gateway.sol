@@ -52,6 +52,7 @@ import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {MultiAddress, multiAddressFromBytes32} from "./MultiAddress.sol";
 
 contract Gateway is IGateway, IInitializable, IUpgradable {
     using Address for address;
@@ -447,7 +448,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
     // Register an Ethereum-native token in the gateway and on AssetHub
     function registerToken(address token) external payable {
-        _submitOutbound(Assets.registerToken(token));
+        _submitOutbound(Assets.registerToken(token), true);
     }
 
     // Total fee for sending a token
@@ -459,7 +460,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee, MAX_DESTINATION_FEE));
     }
 
-    // Transfer ERC20 tokens to a Polkadot parachain
+    // Transfer ERC20 tokens to a Polkadot parachain, with destinationFee always in Ether
     function sendToken(
         address token,
         ParaID destinationChain,
@@ -475,6 +476,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         }
         if (tokenInfo.isForeign) {
             address agent = _ensureAgent(tokenInfo.agentID);
+            // Message 1 to send foreign token to destination chain with WETH as fee asset
             _submitOutbound(
                 Assets.sendForeignToken(
                     agent,
@@ -483,15 +485,35 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
                     msg.sender,
                     destinationChain,
                     destinationAddress,
-                    destinationFee,
+                    // Use 1/2 of the WETH for the native token transfer, the other 1/2 for rebalance.
+                    destinationFee / 2,
                     amount
-                )
+                ),
+                false
+            );
+            // Message 2 to send WETH to the Ethereum sovereign on destination chain for rebalance
+            // Todo: ethereum sovereign account should be a static config. hard-code here only for POC
+            MultiAddress memory ethereumSovereign =
+                multiAddressFromBytes32(0xce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d);
+            _submitOutbound(
+                Assets.sendToken(
+                    //Todo: WETH contract address should be a static config. hard-code here only for POC
+                    0xafc8A7F61B9E656281b9Eff091641CdDAb8bE9ac,
+                    msg.sender,
+                    destinationChain,
+                    ethereumSovereign,
+                    destinationFee / 2,
+                    MAX_DESTINATION_FEE,
+                    destinationFee / 2
+                ),
+                false
             );
         } else {
             _submitOutbound(
                 Assets.sendToken(
                     token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
-                )
+                ),
+                true
             );
         }
     }
@@ -550,25 +572,14 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     }
 
     // Submit an outbound message to Polkadot, after taking fees
-    function _submitOutbound(Ticket memory ticket) internal {
+    function _submitOutbound(Ticket memory ticket, bool reimburse) internal {
         ChannelID channelID = ticket.dest.into();
         Channel storage channel = _ensureChannel(channelID);
 
         // Ensure outbound messaging is allowed
         _ensureOutboundMessagingEnabled(channel);
 
-        uint256 fee;
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        if (ticket.dest == $.assetHubParaID) {
-            fee = _calculateFee(ticket.costs);
-        } else {
-            // The assumption here is that no matter what the fee token is, usually the xcm execution cost on substrate chain is very tiny
-            // as demonstrated in https://www.notion.so/snowfork/Gateway-Parameters-0cf913d089374027a86721883306ee61
-            // the DELIVERY_COST on BH and TRANSFER_TOKEN_FEE are all no more than 0.1 DOT so the total cost as 0.2 DOT equals 0.00048 ETH.
-            // Consider a 5x buffer a hard code 0.002 ETH should be pretty enough to cover both costs
-            fee = 2000000000000000;
-        }
-
+        uint256 fee = _calculateFee(ticket.costs);
         // Ensure the user has enough funds for this message to be accepted
         if (msg.value < fee) {
             revert FeePaymentToLow();
@@ -580,7 +591,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         payable(channel.agent).safeNativeTransfer(fee);
 
         // Reimburse excess fee payment
-        if (msg.value > fee) {
+        if (msg.value > fee && reimburse) {
             payable(msg.sender).safeNativeTransfer(msg.value - fee);
         }
 

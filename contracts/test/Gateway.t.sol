@@ -955,7 +955,8 @@ contract GatewayTest is Test {
 
         ParaID destPara = assetHubParaID;
 
-        vm.prank(account1);
+        vm.startPrank(account1);
+        token.approve(address(gateway), 1);
 
         vm.expectEmit(true, true, false, true);
         emit IGateway.TokenSent(address(dotToken), account1, destPara, recipientAddress32, 1);
@@ -964,7 +965,7 @@ contract GatewayTest is Test {
         vm.expectEmit(true, false, false, false);
         emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
-        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(dotToken), destPara, recipientAddress32, 1, 1);
+        IGateway(address(gateway)).sendToken{value: 1 ether}(address(dotToken), destPara, recipientAddress32, 2, 1);
     }
 
     function testSendNotRegisteredTokenWillFail() public {
@@ -986,7 +987,7 @@ contract GatewayTest is Test {
 
         vm.expectRevert(abi.encodeWithSelector(ERC20Lib.ERC20InsufficientBalance.selector, account1, 0, 1));
 
-        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(dotToken), destPara, recipientAddress32, 1, 1);
+        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(dotToken), destPara, recipientAddress32, 2, 1);
     }
 
     function testLegacyAgentExecutionForCompatibility() public {
