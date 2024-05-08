@@ -1,32 +1,31 @@
 
-import { contextFactory, destroyContext, toEthereum, toPolkadot } from '@snowbridge/api'
+import { contextFactory, destroyContext, toEthereum, toPolkadot, environment } from '@snowbridge/api'
 import { Keyring } from '@polkadot/keyring'
 import { Wallet } from 'ethers'
 
-const BEACON_HTTP_API = 'http://127.0.0.1:9596'
-const ETHEREUM_WS_API = 'ws://127.0.0.1:8546'
-const RELAY_CHAIN_WS_URL = 'ws://127.0.0.1:9944'
-const ASSET_HUB_WS_URL = 'ws://127.0.0.1:12144'
-const PENPAL_WS_URL = 'ws://127.0.0.1:13144'
-const BRIDGE_HUB_WS_URL = 'ws://127.0.0.1:11144'
-const GATEWAY_CONTRACT = '0xEDa338E4dC46038493b885327842fD3E301CaB39'
-const BEEFY_CONTRACT = '0x992B9df075935E522EC7950F37eC8557e86f6fdb'
-const WETH_CONTRACT = '0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d'
-
 const monitor = async () => {
+    let env = 'local_e2e'
+    if (process.env.NODE_ENV !== undefined) {
+        env = process.env.NODE_ENV
+    }
+    const snwobridgeEnv = environment.SNOWBRIDGE_ENV[env]
+    if (snwobridgeEnv === undefined) { throw Error(`Unknown environment '${env}'`) }
+
+    const { config } = snwobridgeEnv
+
     const context = await contextFactory({
-        ethereum: { execution_url: ETHEREUM_WS_API, beacon_url: BEACON_HTTP_API },
+        ethereum: { execution_url: config.ETHEREUM_WS_API(process.env.REACT_APP_INFURA_KEY || ''), beacon_url: config.BEACON_HTTP_API },
         polkadot: {
             url: {
-                bridgeHub: BRIDGE_HUB_WS_URL,
-                assetHub: ASSET_HUB_WS_URL,
-                relaychain: RELAY_CHAIN_WS_URL,
-                parachains: [PENPAL_WS_URL]
+                bridgeHub: config.BRIDGE_HUB_WS_URL,
+                assetHub: config.ASSET_HUB_WS_URL,
+                relaychain: config.RELAY_CHAIN_WS_URL,
+                parachains: config.PARACHAINS
             },
         },
         appContracts: {
-            gateway: GATEWAY_CONTRACT,
-            beefy: BEEFY_CONTRACT,
+            gateway: config.GATEWAY_CONTRACT,
+            beefy: config.BEEFY_CONTRACT,
         },
     })
     const polkadot_keyring = new Keyring({ type: 'sr25519' })
@@ -39,6 +38,7 @@ const monitor = async () => {
     const amount = 10n
 
     const POLL_INTERVAL_MS = 10_000
+    const WETH_CONTRACT = snwobridgeEnv.locations[0].erc20tokensReceivable["WETH"]
 
     console.log('# Ethereum to Asset Hub')
     {
