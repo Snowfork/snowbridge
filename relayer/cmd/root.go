@@ -33,7 +33,9 @@ func init() {
 	rootCmd.AddCommand(generateBeaconCheckpointCmd())
 	rootCmd.AddCommand(generateExecutionUpdateCmd())
 	rootCmd.AddCommand(generateInboundFixtureCmd())
-	rootCmd.AddCommand(storeBeaconState())
+	rootCmd.AddCommand(storeBeaconStateCmd())
+	rootCmd.AddCommand(importBeaconStateCmd())
+	rootCmd.AddCommand(listBeaconStateCmd())
 }
 
 func Execute() {

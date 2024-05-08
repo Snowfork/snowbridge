@@ -16,12 +16,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-func storeBeaconState() *cobra.Command {
+func storeBeaconStateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "store-beacon-state",
-		Short: "Import the provided execution header.",
+		Short: "Download and store the latest finalized beacon states",
 		Args:  cobra.ExactArgs(0),
-		RunE:  storeBeaconStateInDB,
+		RunE:  storeBeaconState,
 	}
 
 	cmd.Flags().String("config", "", "path to the beacon config file to use")
@@ -33,7 +33,7 @@ func storeBeaconState() *cobra.Command {
 	return cmd
 }
 
-func storeBeaconStateInDB(cmd *cobra.Command, _ []string) error {
+func storeBeaconState(cmd *cobra.Command, _ []string) error {
 	configFile, err := cmd.Flags().GetString("config")
 	if err != nil {
 		return err
