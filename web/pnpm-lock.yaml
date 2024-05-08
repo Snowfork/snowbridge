@@ -37,10 +37,10 @@ importers:
         version: link:../contract-types
       '@typechain/ethers-v6':
         specifier: ^0.5.1
-        version: 0.5.1(ethers@6.11.1)(typechain@8.3.2)(typescript@5.4.5)
+        version: 0.5.1(ethers@6.12.1)(typechain@8.3.2)(typescript@5.4.5)
       ethers:
-        specifier: ^6.11.1
-        version: 6.11.1
+        specifier: ^6.12.1
+        version: 6.12.1
       rxjs:
         specifier: ^7.8.1
         version: 7.8.1
@@ -76,12 +76,12 @@ importers:
   packages/contract-types:
     dependencies:
       ethers:
-        specifier: ^6.11.1
-        version: 6.11.1
+        specifier: ^6.12.1
+        version: 6.12.1
     devDependencies:
       '@typechain/ethers-v6':
         specifier: ^0.5.1
-        version: 0.5.1(ethers@6.11.1)(typechain@8.3.2)(typescript@5.4.5)
+        version: 0.5.1(ethers@6.12.1)(typechain@8.3.2)(typescript@5.4.5)
       '@types/node':
         specifier: ^18.19.31
         version: 18.19.31
@@ -152,8 +152,8 @@ importers:
         specifier: ^4.2.0
         version: 4.2.0
       ethers:
-        specifier: ^6.11.1
-        version: 6.11.1
+        specifier: ^6.12.1
+        version: 6.12.1
       keccak:
         specifier: ^3.0.4
         version: 3.0.4
@@ -2041,14 +2041,14 @@ packages:
       typescript: 5.1.6
     dev: false
 
-  /@typechain/ethers-v6@0.5.1(ethers@6.11.1)(typechain@8.3.2)(typescript@5.4.5):
+  /@typechain/ethers-v6@0.5.1(ethers@6.12.1)(typechain@8.3.2)(typescript@5.4.5):
     resolution: {integrity: sha512-F+GklO8jBWlsaVV+9oHaPh5NJdd6rAKN4tklGfInX1Q7h0xPgVLP39Jl3eCulPB5qexI71ZFHwbljx4ZXNfouA==}
     peerDependencies:
       ethers: 6.x
       typechain: ^8.3.2
       typescript: '>=4.7.0'
     dependencies:
-      ethers: 6.11.1
+      ethers: 6.12.1
       lodash: 4.17.21
       ts-essentials: 7.0.3(typescript@5.4.5)
       typechain: 8.3.2(typescript@5.4.5)
@@ -3070,7 +3070,7 @@ packages:
       normalize-path: 3.0.0
       readdirp: 3.5.0
     optionalDependencies:
-      fsevents: 2.3.2
+      fsevents: 2.3.3
     dev: true
 
   /chokidar@3.5.3:
@@ -3085,7 +3085,7 @@ packages:
       normalize-path: 3.0.0
       readdirp: 3.6.0
     optionalDependencies:
-      fsevents: 2.3.2
+      fsevents: 2.3.3
     dev: true
 
   /cipher-base@1.0.4:
@@ -3786,8 +3786,8 @@ packages:
       - bufferutil
       - utf-8-validate
 
-  /ethers@6.11.1:
-    resolution: {integrity: sha512-mxTAE6wqJQAbp5QAe/+o+rXOID7Nw91OZXvgpjDa1r4fAbq2Nu314oEZSbjoRLacuCzs7kUC3clEvkCQowffGg==}
+  /ethers@6.12.1:
+    resolution: {integrity: sha512-j6wcVoZf06nqEcBbDWkKg8Fp895SS96dSnTCjiXT+8vt2o02raTn4Lo9ERUuIVU5bAjoPYeA+7ytQFexFmLuVw==}
     engines: {node: '>=14.0.0'}
     dependencies:
       '@adraffy/ens-normalize': 1.10.1
@@ -4149,8 +4149,8 @@ packages:
     dev: true
     optional: true
 
-  /fsevents@2.3.2:
-    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+  /fsevents@2.3.3:
+    resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
     requiresBuild: true
@@ -4757,7 +4757,7 @@ packages:
   /jsonfile@3.0.1:
     resolution: {integrity: sha512-oBko6ZHlubVB5mRFkur5vgYR1UyqX+S6Y/oCfLhqNdcc2fYFlDpIoNc7AfKS1KOGcnNAkvsr0grLck9ANM815w==}
     optionalDependencies:
-      graceful-fs: 4.2.11
+      graceful-fs: 4.2.10
     dev: true
 
   /jsonfile@4.0.0:

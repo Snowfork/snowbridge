@@ -12,14 +12,9 @@ const monitor = async () => {
     if (snwobridgeEnv === undefined) { throw Error(`Unknown environment '${env}'`) }
 
     const { config } = snwobridgeEnv
-    let ETHEREUM_WS_API = config.ETHEREUM_WS_API
-
-    if (env !== 'local_e2e' && process.env.REACT_APP_INFURA_KEY !== undefined) {
-        ETHEREUM_WS_API = ETHEREUM_WS_API += '/'+ process.env.REACT_APP_INFURA_KEY
-    }
 
     const context = await contextFactory({
-        ethereum: { execution_url: ETHEREUM_WS_API, beacon_url: config.BEACON_HTTP_API },
+        ethereum: { execution_url: config.ETHEREUM_WS_API(process.env.REACT_APP_INFURA_KEY || ''), beacon_url: config.BEACON_HTTP_API },
         polkadot: {
             url: {
                 bridgeHub: config.BRIDGE_HUB_WS_URL,
@@ -43,7 +38,7 @@ const monitor = async () => {
     const amount = 10n
 
     const POLL_INTERVAL_MS = 10_000
-    const WETH_CONTRACT = snwobridgeEnv.erc20tokens["WETH"]
+    const WETH_CONTRACT = snwobridgeEnv.locations[0].erc20tokensReceivable["WETH"]
 
     console.log('# Ethereum to Asset Hub')
     {
