@@ -8,11 +8,15 @@ import (
 )
 
 type Protocol struct {
-	Settings config.SpecSettings
+	Settings               config.SpecSettings
+	SlotsPerHistoricalRoot uint64
 }
 
 func New(setting config.SpecSettings) *Protocol {
-	return &Protocol{Settings: setting}
+	return &Protocol{
+		Settings:               setting,
+		SlotsPerHistoricalRoot: setting.SlotsInEpoch * setting.EpochsPerSyncCommitteePeriod,
+	}
 }
 
 func (p *Protocol) ComputeSyncPeriodAtSlot(slot uint64) uint64 {
