@@ -1,7 +1,7 @@
 import { decodeAddress } from '@polkadot/keyring'
 import { Codec } from '@polkadot/types/types'
 import { u8aToHex } from '@polkadot/util'
-import { IGateway__factory } from '@snowbridge/contract-types'
+import { IERC20__factory, IGateway__factory, WETH9__factory } from '@snowbridge/contract-types'
 import { MultiAddressStruct } from '@snowbridge/contract-types/src/IGateway'
 import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethers'
 import { concatMap, filter, firstValueFrom, lastValueFrom, take, takeWhile, tap } from 'rxjs'
@@ -9,6 +9,26 @@ import { Context } from './index'
 import { scanSubstrateEvents, waitForMessageQueuePallet } from './query'
 import { assetStatusInfo, bridgeStatusInfo, channelStatusInfo } from './status'
 import { beneficiaryMultiAddress, fetchBeaconSlot, paraIdToChannelId, paraIdToSovereignAccount } from './utils'
+
+export enum SendValidationCode {
+    BridgeNotOperational,
+    ChannelNotOperational,
+    BeneficiaryAccountMissing,
+    ForeignAssetMissing,
+    ERC20InvalidToken,
+    ERC20NotRegistered,
+    InsufficientFee,
+    InsufficientToken,
+    ERC20SpendNotApproved,
+    LightClientLatencyTooHigh,
+    DestinationChainMissing,
+    NoHRMPChannelToDestination,
+}
+
+export type SendValidationError = {
+    code: SendValidationCode
+    message: string
+}
 
 export type SendValidationResult = {
     success?: {
@@ -36,24 +56,28 @@ export type SendValidationResult = {
         },
     },
     failure?: {
-        bridgeOperational: boolean,
-        channelOperational: boolean,
-        beneficiaryAccountExists: boolean,
+        errors: SendValidationError[]
         existentialDeposit: bigint,
-        foreignAssetExists: boolean,
-        tokenIsValidERC20: boolean,
-        canPayFee: boolean,
         ethereumBalance: bigint,
-        hasToken: boolean,
-        tokenIsRegistered: boolean,
         tokenBalance: bigint,
-        tokenSpendApproved: boolean,
         tokenSpendAllowance: bigint,
-        lightClientLatencyIsAcceptable: boolean,
         lightClientLatencySeconds: number,
-        destinationChainExists: boolean,
-        hrmpChannelSetup: boolean,
     }
+}
+
+export const approveTokenSpend = async (context: Context, signer: Signer, tokenAddress: string, amount: bigint): Promise<ethers.ContractTransactionResponse> => {
+    const token = IERC20__factory.connect(tokenAddress, signer)
+    return token.approve(context.config.appContracts.gateway, amount)
+}
+
+export const depositWeth = async (context: Context, signer: Signer, tokenAddress: string, amount: bigint): Promise<ethers.ContractTransactionResponse> => {
+    const token = WETH9__factory.connect(tokenAddress, signer)
+    return token.deposit({ value: amount })
+}
+
+export const getSendFee = async (context: Context, tokenAddress: string, destinationParaId: number, destinationFee: bigint): Promise<bigint> => {
+    const { ethereum: { contracts: { gateway } } } = context
+    return await gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
 }
 
 export const validateSend = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint, options = {
@@ -63,22 +87,30 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
 
     const sourceAddress = await source.getAddress()
 
+    const errors: SendValidationError[] = []
+
     // Asset checks
     const assetInfo = await assetStatusInfo(context, tokenAddress, sourceAddress)
     const tokenSpendApproved = assetInfo.tokenGatewayAllowance >= amount
     const hasToken = assetInfo.ownerBalance >= amount
-    const tokenIsRegistered = assetInfo.isTokenRegistered
     const ethereumChainId = assetInfo.ethereumChainId
     const foreignAssetExists = assetInfo.foreignAsset !== null && assetInfo.foreignAsset.status === 'Live'
+
+    if (!foreignAssetExists) errors.push({ code: SendValidationCode.ForeignAssetMissing, message: "Foreign asset is not registered on Asset Hub."})
+    if (!assetInfo.isTokenRegistered) errors.push({ code: SendValidationCode.ERC20NotRegistered, message: "ERC20 token is not registered with the Snowbridge Gateway."})
+    if (!assetInfo.isValidERC20) errors.push({ code: SendValidationCode.ERC20InvalidToken, message: "Token address is not a valid ERC20 token."})
+    if (!hasToken) errors.push({ code: SendValidationCode.InsufficientToken, message: "ERC20 token balance insufficient for transfer."})
+    if (!tokenSpendApproved) errors.push({ code: SendValidationCode.ERC20SpendNotApproved, message: "ERC20 token spend insufficient for transfer."})
 
     let fee = 0n
     let ethereumBalance = 0n
     let canPayFee = false
-    if (tokenIsRegistered) {
+    if (assetInfo.isTokenRegistered) {
         ethereumBalance = await ethereum.api.getBalance(sourceAddress)
-        fee = await gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
+        fee = await getSendFee(context, tokenAddress, destinationParaId, destinationFee)
         canPayFee = fee < ethereumBalance
     }
+    if (!canPayFee) errors.push({ code: SendValidationCode.InsufficientFee, message: "Insufficient ETH balance to pay fees."})
 
     const [assetHubHead, assetHubParaIdCodec, bridgeHubHead, bridgeHubParaIdCodec] = await Promise.all([
         assetHub.rpc.chain.getFinalizedHead(),
@@ -113,6 +145,9 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
         destinationChainExists = destinationHead.toPrimitive() !== null
         hrmpChannelSetup = hrmpChannel.toPrimitive() !== null
     }
+    if (!destinationChainExists) errors.push({ code: SendValidationCode.DestinationChainMissing, message: "Cannot find a parachain matching the destination parachain id."})
+    if (!beneficiaryAccountExists) errors.push({ code: SendValidationCode.BeneficiaryAccountMissing, message: "Beneficiary does not hold existential deposit on destination."})
+    if (!hrmpChannelSetup) errors.push({ code: SendValidationCode.NoHRMPChannelToDestination, message: "No HRMP channel set up from Asset Hub to destination."})
 
     let destinationParachain = undefined
     if (destinationParaId in context.polkadot.api.parachains) {
@@ -125,11 +160,12 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
     const lightClientLatencyIsAcceptable = bridgeStatus.toPolkadot.latencySeconds < options.acceptableLatencyInSeconds
     const bridgeOperational = bridgeStatus.toPolkadot.operatingMode.outbound === 'Normal' && bridgeStatus.toPolkadot.operatingMode.beacon === 'Normal'
     const channelOperational = channelStatus.toPolkadot.operatingMode.outbound === 'Normal'
-    const canSend = bridgeOperational && channelOperational && canPayFee
-        && beneficiaryAccountExists && foreignAssetExists && lightClientLatencyIsAcceptable
-        && tokenSpendApproved && hasToken && tokenIsRegistered && destinationChainExists && hrmpChannelSetup
 
-    if (canSend) {
+    if (!bridgeOperational) errors.push({ code: SendValidationCode.BridgeNotOperational, message: "Bridge status is not operational."})
+    if (!channelOperational) errors.push({ code: SendValidationCode.ChannelNotOperational, message: "Channel to destination is not operational."})
+    if (!lightClientLatencyIsAcceptable) errors.push({ code: SendValidationCode.LightClientLatencyTooHigh, message: "Light client is too far behind."})
+
+    if (errors.length === 0) {
         return {
             success: {
                 fee: fee,
@@ -157,31 +193,12 @@ export const validateSend = async (context: Context, source: ethers.Addressable,
     } else {
         return {
             failure: {
-                // Bridge Status
-                bridgeOperational: bridgeOperational,
-                channelOperational: channelOperational,
-                lightClientLatencyIsAcceptable: lightClientLatencyIsAcceptable,
+                errors: errors,
                 lightClientLatencySeconds: bridgeStatus.toPolkadot.latencySeconds,
-
                 ethereumBalance,
-                canPayFee,
-
-                // Assets
-                foreignAssetExists: foreignAssetExists,
-                tokenIsRegistered: tokenIsRegistered,
-                tokenIsValidERC20: assetInfo.tokenIsValidERC20,
-                hasToken: hasToken,
                 tokenBalance: assetInfo.ownerBalance,
-                tokenSpendApproved: tokenSpendApproved,
                 tokenSpendAllowance: assetInfo.tokenGatewayAllowance,
-
-                // Beneficiary
-                beneficiaryAccountExists: beneficiaryAccountExists,
                 existentialDeposit: existentialDeposit,
-
-                // Destination chain
-                destinationChainExists: destinationChainExists,
-                hrmpChannelSetup: hrmpChannelSetup,
             }
         }
     }

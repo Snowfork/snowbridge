@@ -11,9 +11,29 @@ export interface WalletSigner {
     address: string
     signer: Signer
 }
+
 export type WalletOrKeypair = WalletSigner | IKeyringPair
+
 function isWallet(walletOrKeypair: WalletSigner | IKeyringPair): walletOrKeypair is WalletSigner {
     return (walletOrKeypair as WalletSigner).signer !== undefined
+}
+
+export enum SendValidationCode {
+    BridgeNotOperational,
+    ForeignAssetMissing,
+    ERC20InvalidToken,
+    ERC20NotRegistered,
+    InsufficientFee,
+    InsufficientAsset,
+    LightClientLatencyTooHigh,
+    ParachainContextMissing,
+    PalletXcmMissing,
+    NoHRMPChannelToAssetHub,
+}
+
+export type SendValidationError = {
+    code: SendValidationCode
+    message: string
 }
 
 export type SendValidationResult = {
@@ -43,21 +63,23 @@ export type SendValidationResult = {
         tokenAddress: string
     }
     failure?: {
-        bridgeOperational: boolean
-        lightClientLatencyIsAcceptable: boolean
+        errors: SendValidationError[]
         lightClientLatencySeconds: number
         lightClientLatencyBlocks: number
-        tokenIsValidERC20: boolean
-        tokenIsRegistered: boolean
-        foreignAssetExists: boolean
-        hasAsset: boolean
         assetBalance: bigint
-        canPayFee: boolean
         dotBalance: bigint
-        parachainKnownToContext: boolean
-        parachainHasPalletXcm: boolean
-        hrmpChannelSetup: boolean
     }
+}
+
+export const getSendFee = async (context: Context, options = {
+    defaultFee: 2_750_872_500_000n,
+}) => {
+    const { polkadot: { api: { assetHub } } } = context
+    // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
+    const feeStorageKey = xxhashAsHex(':BridgeHubEthereumBaseFee:', 128, true)
+    const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
+    let leFee = new BN((feeStorageItem as Codec).toHex().replace('0x', ''), "hex", "le")
+    return leFee.eqn(0) ? options.defaultFee : BigInt(leFee.toString())
 }
 
 export const validateSend = async (context: Context, signer: WalletOrKeypair, sourceParachainId: number, beneficiary: string, tokenAddress: string, amount: bigint, options = {
@@ -65,6 +87,8 @@ export const validateSend = async (context: Context, signer: WalletOrKeypair, so
     acceptableLatencyInSeconds: 28800 /* 8 Hours */
 }): Promise<SendValidationResult> => {
     const { ethereum, ethereum: { contracts: { gateway } }, polkadot: { api: { assetHub, bridgeHub, relaychain, parachains } } } = context
+
+    const errors: SendValidationError[] = []
 
     const [assetHubHead, assetHubParaId, bridgeHubHead, bridgeHubParaId, relaychainHead] = await Promise.all([
         assetHub.rpc.chain.getFinalizedHead(),
@@ -77,9 +101,11 @@ export const validateSend = async (context: Context, signer: WalletOrKeypair, so
 
     // Asset checks
     const assetInfo = await assetStatusInfo(context, tokenAddress)
-    const tokenIsRegistered = assetInfo.isTokenRegistered
-    const tokenIsValidERC20 = assetInfo.isTokenRegistered
     const foreignAssetExists = assetInfo.foreignAsset !== null && assetInfo.foreignAsset.status === 'Live'
+
+    if (!foreignAssetExists) errors.push({ code: SendValidationCode.ForeignAssetMissing, message: "Foreign asset is not registered on Asset Hub."})
+    if (!assetInfo.isTokenRegistered) errors.push({ code: SendValidationCode.ERC20NotRegistered, message: "ERC20 token is not registered with the Snowbridge Gateway."})
+    if (!assetInfo.isValidERC20) errors.push({ code: SendValidationCode.ERC20InvalidToken, message: "Token address is not a valid ERC20 token."})
 
     let parachainHasPalletXcm = true
     let hrmpChannelSetup = true
@@ -116,6 +142,10 @@ export const validateSend = async (context: Context, signer: WalletOrKeypair, so
             hasAsset = assetBalance >= amount
         }
     }
+    if(!parachainKnownToContext) errors.push({ code: SendValidationCode.ParachainContextMissing, message: "The source parachain is missing from context configuration."})
+    if(!parachainHasPalletXcm) errors.push({ code: SendValidationCode.PalletXcmMissing, message: "The source parachain does not have pallet-xcm."})
+    if(!hrmpChannelSetup) errors.push({ code: SendValidationCode.NoHRMPChannelToAssetHub, message: "The source parachain does have an open HRMP channel to Asset Hub."})
+    if (!hasAsset) errors.push({ code: SendValidationCode.InsufficientAsset, message: "Asset balance insufficient for transfer."})
 
     const [bridgeStatus] = await Promise.all([
         bridgeStatusInfo(context),
@@ -125,22 +155,18 @@ export const validateSend = async (context: Context, signer: WalletOrKeypair, so
     const bridgeOperational = bridgeStatus.toEthereum.operatingMode.outbound === 'Normal'
     const lightClientLatencyIsAcceptable = bridgeStatus.toEthereum.latencySeconds < options.acceptableLatencyInSeconds
 
-    // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
-    const feeStorageKey = xxhashAsHex(':BridgeHubEthereumBaseFee:', 128, true)
-    const [feeStorageItem, account] = await Promise.all([
-        assetHub.rpc.state.getStorage(feeStorageKey),
+    if (!bridgeOperational) errors.push({ code: SendValidationCode.BridgeNotOperational, message: "Bridge status is not operational."})
+    if (!lightClientLatencyIsAcceptable) errors.push({ code: SendValidationCode.LightClientLatencyTooHigh, message: "Light client is too far behind."})
+
+    const [account, fee] = await Promise.all([
         assetHub.query.system.account(signer.address),
+        getSendFee(context, options)
     ])
-    let leFee = new BN((feeStorageItem as Codec).toHex().replace('0x', ''), "hex", "le")
-    const fee = leFee.eqn(0) ? options.defaultFee : BigInt(leFee.toString())
     const dotBalance = BigInt((account.toPrimitive() as any).data.free)
     const canPayFee = fee < dotBalance
+    if (!canPayFee) errors.push({ code: SendValidationCode.InsufficientFee, message: "Insufficient DOT balance to pay fees."})
 
-    const canSend = bridgeOperational && lightClientLatencyIsAcceptable && tokenIsRegistered
-        && foreignAssetExists && tokenIsValidERC20 && hasAsset && canPayFee && parachainKnownToContext
-        && parachainHasPalletXcm && hrmpChannelSetup
-
-    if (canSend) {
+    if (errors.length === 0) {
         return {
             success: {
                 ethereumChainId: assetInfo.ethereumChainId,
@@ -168,20 +194,11 @@ export const validateSend = async (context: Context, signer: WalletOrKeypair, so
     } else {
         return {
             failure: {
-                bridgeOperational,
-                lightClientLatencyIsAcceptable,
+                errors: errors,
                 lightClientLatencySeconds: bridgeStatus.toEthereum.latencySeconds,
                 lightClientLatencyBlocks: bridgeStatus.toEthereum.blockLatency,
-                tokenIsValidERC20,
-                tokenIsRegistered,
-                foreignAssetExists,
-                hasAsset,
                 assetBalance,
-                canPayFee,
                 dotBalance,
-                parachainKnownToContext,
-                parachainHasPalletXcm,
-                hrmpChannelSetup
             }
         }
     }
