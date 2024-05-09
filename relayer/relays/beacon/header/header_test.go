@@ -45,8 +45,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 	client.BlocksAtSlot = map[uint64]api.BeaconBlockResponse{
 		4571137: blockAtSlot4571137,
 	}
-	//4570730
-	//4578914
+
 	beaconStates := map[uint64]bool{
 		4571072: true,
 		4571136: true,
