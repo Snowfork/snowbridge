@@ -72,7 +72,7 @@ func importBeaconState(cmd *cobra.Command, _ []string) error {
 
 	p := protocol.New(conf.Source.Beacon.Spec)
 	store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
-	beaconClient := api.NewBeaconClient(conf.Source.Beacon.Endpoint)
+	beaconClient := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
 	syncer := syncer.New(beaconClient, &store, p)
 
 	err = store.Connect()
