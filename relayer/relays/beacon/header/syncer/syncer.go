@@ -516,7 +516,7 @@ func (s *Syncer) FindValidAttestedHeader(minSlot, maxSlot uint64) (uint64, error
 	if minSlot%32 == 0 {
 		slot = minSlot
 	} else {
-		slot = ((slot / s.protocol.Settings.SlotsInEpoch) + 1) * s.protocol.Settings.SlotsInEpoch
+		slot = ((minSlot / s.protocol.Settings.SlotsInEpoch) + 1) * s.protocol.Settings.SlotsInEpoch
 	}
 
 	for {
