@@ -3,7 +3,7 @@ import { Codec } from '@polkadot/types/types'
 import { u8aToHex } from '@polkadot/util'
 import { IERC20__factory, IGateway__factory, WETH9__factory } from '@snowbridge/contract-types'
 import { MultiAddressStruct } from '@snowbridge/contract-types/src/IGateway'
-import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethers'
+import { LogDescription, Signer, TransactionReceipt, ethers, keccak256 } from 'ethers'
 import { concatMap, filter, firstValueFrom, lastValueFrom, take, takeWhile, tap } from 'rxjs'
 import { Context } from './index'
 import { scanSubstrateEvents, waitForMessageQueuePallet } from './query'
@@ -249,7 +249,7 @@ export type SendResult = {
         }
     }
     failure?: {
-        receipt: ContractTransactionReceipt
+        receipt: TransactionReceipt
     }
 }
 
@@ -271,19 +271,39 @@ export const send = async (context: Context, signer: Signer, plan: SendValidatio
     ])
 
     const contract = IGateway__factory.connect(context.config.appContracts.gateway, signer)
-    const response = await contract.sendToken(
+    const fees = await context.ethereum.api.getFeeData()
+    const tx = await contract.sendToken.populateTransaction(
         success.token,
         success.destinationParaId,
         success.beneficiaryMultiAddress,
         success.destinationFee,
         success.amount,
         {
-            value: success.fee
+            value: success.fee,
+            from:  success.sourceAddress,
+            nonce: await context.ethereum.api.getTransactionCount(success.sourceAddress, "pending"),
+            maxFeePerGas: fees.maxFeePerGas,
+            maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+            chainId: success.ethereumChainId
         }
     )
-    let receipt = await response.wait(confirmations)
+    tx.gasLimit = await context.ethereum.api.estimateGas(tx)
+
+    const signedTx = await signer.signTransaction(tx)
+    const txHash = keccak256(signedTx)
+    const response = await context.ethereum.api.provider.broadcastTransaction(signedTx)
+
+    // TODO: await context.ethereum.api.getTransaction(txHash) // Use this to check if the server knows about transaction.
+    // TODO: await context.ethereum.api.getTransactionReceipt(txHash) // Use this to check if the server has mined the transaction.
+
+    // TODO: remove this wait and move everything below this line to trackProgress/Polling methods.
+    let receipt = await response.wait()
+
     if (receipt === null) {
         throw new Error('Error waiting for transaction completion')
+    }
+    if(txHash !== receipt.hash) {
+        throw new Error('tx Hash mismtach')
     }
 
     if (receipt?.status !== 1) {
