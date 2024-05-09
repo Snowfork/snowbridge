@@ -126,7 +126,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
-		exportJson, err := cmd.Flags().GetBool("export_json")
+		exportJson, err := cmd.Flags().GetBool("export-json")
 		if err != nil {
 			return err
 		}
