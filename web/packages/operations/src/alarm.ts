@@ -59,7 +59,8 @@ export const sendAlarm = async (metrics: AllMetrics) => {
     }
 
     if (alarm) {
-        console.log(reasons)
-        await axios.post(SLACK_WEBHOOK_URL, { text: JSON.stringify({ reasons, metrics }, null, 2) })
+        const text = JSON.stringify({ reasons, metrics }, null, 2)
+        console.log(text)
+        await axios.post(SLACK_WEBHOOK_URL, { text })
     }
 }
