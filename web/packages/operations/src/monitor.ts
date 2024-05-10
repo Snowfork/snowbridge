@@ -2,6 +2,7 @@
 import { u8aToHex } from '@polkadot/util'
 import { blake2AsU8a } from "@polkadot/util-crypto"
 import { contextFactory, destroyContext, environment, status, utils } from '@snowbridge/api'
+import { sendAlarm, AllMetrics } from "./alarm"
 
 const monitor = async () => {
     let env = 'local_e2e'
@@ -68,6 +69,18 @@ const monitor = async () => {
         }
         console.log('\t', balance, ':', relayer.type, 'balance ->', relayer.name)
     }
+
+    const allMetrics: AllMetrics = {
+        bridgeStatus: bridegStatus,
+        primaryChannelInfo: primaryGov,
+        assetHubChannelInfo: assethub,
+        assetHubSovereignBalance: assetHubSovereign.toString(),
+        assetHubAgentBalance: assetHubAgentBalance.toString(),
+    }
+
+    await sendAlarm(allMetrics)
+
+    await destroyContext(context)
 
     await destroyContext(context)
 }

@@ -52,7 +52,7 @@ export const bridgeStatusInfo = async (
     options = {
         polkadotBlockTimeInSeconds: 6,
         ethereumBlockTimeInSeconds: 12,
-        previousStateInBlock: 50,
+        previousStateInBlock: 600,
     }
 ): Promise<BridgeStatusInfo> => {
     const latestEthereumBlock = await context.ethereum.api.getBlockNumber()
