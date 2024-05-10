@@ -81,8 +81,6 @@ const monitor = async () => {
     await sendAlarm(allMetrics)
 
     await destroyContext(context)
-
-    await destroyContext(context)
 }
 
 
