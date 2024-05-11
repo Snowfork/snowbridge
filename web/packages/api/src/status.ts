@@ -28,6 +28,7 @@ export type BridgeStatusInfo = {
     }
 }
 export type ChannelStatusInfo = {
+    name?: string
     toEthereum: {
         outbound: number
         inbound: number
@@ -100,7 +101,7 @@ export const bridgeStatusInfo = async (
             blockTag:
                 latestEthereumBlock > options.toEthereumCheckIntervalInBlock
                     ? latestEthereumBlock - options.toEthereumCheckIntervalInBlock
-                    : 0,
+                    : 1,
         })
     )
     const latestBridgeHubBlock = (
@@ -109,7 +110,7 @@ export const bridgeStatusInfo = async (
     const previousBridgeHubBlock = await context.polkadot.api.bridgeHub.query.system.blockHash(
         latestBridgeHubBlock > options.toPolkadotCheckIntervalInBlock
             ? latestBridgeHubBlock - options.toPolkadotCheckIntervalInBlock
-            : 0
+            : 1
     )
     const bridgeHubApiAt = await context.polkadot.api.bridgeHub.at(previousBridgeHubBlock.toU8a())
     const previousBeaconBlockRoot =
@@ -179,7 +180,7 @@ export const channelStatusInfo = async (
             blockTag:
                 latestEthereumBlock > options.toEthereumCheckIntervalInBlock
                     ? latestEthereumBlock - options.toEthereumCheckIntervalInBlock
-                    : 0,
+                    : 1,
         })
     const latestBridgeHubBlock = (
         await context.polkadot.api.bridgeHub.query.system.number()
@@ -187,7 +188,7 @@ export const channelStatusInfo = async (
     const previousBridgeHubBlock = await context.polkadot.api.bridgeHub.query.system.blockHash(
         latestBridgeHubBlock > options.toPolkadotCheckIntervalInBlock
             ? latestBridgeHubBlock - options.toPolkadotCheckIntervalInBlock
-            : 0
+            : 1
     )
     const bridgeHubApiAt = await context.polkadot.api.bridgeHub.at(previousBridgeHubBlock.toU8a())
     const previous_inbound_nonce_sub = (

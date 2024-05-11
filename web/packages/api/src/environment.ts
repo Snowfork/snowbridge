@@ -16,7 +16,7 @@ export type Config = {
 }
 
 export type SourceType = 'substrate' | 'ethereum'
-export type Relayer = { name: string, account: string, type: SourceType }
+export type Relayer = { name: string, account: string, type: SourceType, balance?: bigint }
 export type ParachainInfo = { paraId: number, destinationFeeDOT: bigint, has20ByteAccounts: boolean, decimals: number }
 export type TransferLocation = {
   id: string

@@ -1,66 +1,83 @@
-import { status } from "@snowbridge/api"
+import { status, environment } from "@snowbridge/api"
 import axios from "axios"
 
-const MaxBlockLatency = 1200
-const SLACK_WEBHOOK_URL = process.env["SLACK_WEBHOOK_URL"] || ""
+const SLACK_WEBHOOK_URL = process.env["SLACK_WEBHOOK_URL"]
+
+export const AlarmThreshold = {
+    MaxBlockLatency: 1200,
+    MinBalanceToKeep: 10_000_000_000,
+}
+
+export type Sovereign = { name: string; account: string; balance: bigint }
 
 export type AllMetrics = {
     bridgeStatus: status.BridgeStatusInfo
-    primaryChannelInfo: status.ChannelStatusInfo
-    assetHubChannelInfo: status.ChannelStatusInfo
-    assetHubSovereignBalance: string
-    assetHubAgentBalance: string
+    channels: status.ChannelStatusInfo[]
+    sovereigns: Sovereign[]
+    relayers: environment.Relayer[]
 }
 
 export enum AlarmReason {
-    BeefyStale,
-    BeaconStale,
-    ToEthereumAssetHubChannelStale,
-    ToPolkadotAssetHubChannelStale,
+    BeefyStale = "BeefyStale",
+    BeaconStale = "BeaconStale",
+    ToEthereumChannelStale = "ToEthereumChannelStale",
+    ToPolkadotChannelStale = "ToPolkadotChannelStale",
+    AccountBalanceInsufficient = "AccountBalanceInsufficient",
 }
 
 export const sendAlarm = async (metrics: AllMetrics) => {
     let alarm = false
-    let reasons = []
+    let alarms = []
 
     if (
-        metrics.bridgeStatus.toEthereum.blockLatency > MaxBlockLatency ||
+        metrics.bridgeStatus.toEthereum.blockLatency > AlarmThreshold.MaxBlockLatency ||
         metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum ==
             metrics.bridgeStatus.toEthereum.previousPolkadotBlockOnEthereum
     ) {
         alarm = true
-        reasons.push(AlarmReason.BeefyStale)
+        alarms.push(AlarmReason.BeefyStale)
     }
     if (
-        metrics.bridgeStatus.toPolkadot.blockLatency > MaxBlockLatency ||
+        metrics.bridgeStatus.toPolkadot.blockLatency > AlarmThreshold.MaxBlockLatency ||
         metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot ==
             metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot
     ) {
         alarm = true
-        reasons.push(AlarmReason.BeaconStale)
+        alarms.push(AlarmReason.BeaconStale)
     }
-    if (
-        metrics.assetHubChannelInfo.toEthereum.outbound !=
-            metrics.assetHubChannelInfo.toEthereum.inbound &&
-        metrics.assetHubChannelInfo.toEthereum.inbound ==
-            metrics.assetHubChannelInfo.toEthereum.previousInbound
-    ) {
-        alarm = true
-        reasons.push(AlarmReason.ToEthereumAssetHubChannelStale)
-    }
-    if (
-        metrics.assetHubChannelInfo.toPolkadot.outbound !=
-            metrics.assetHubChannelInfo.toPolkadot.inbound &&
-        metrics.assetHubChannelInfo.toPolkadot.inbound ==
-            metrics.assetHubChannelInfo.toPolkadot.previousInbound
-    ) {
-        alarm = true
-        reasons.push(AlarmReason.ToPolkadotAssetHubChannelStale)
+    for (let channel of metrics.channels) {
+        if (
+            channel.toEthereum.outbound != channel.toEthereum.inbound &&
+            channel.toEthereum.inbound == channel.toEthereum.previousInbound
+        ) {
+            alarm = true
+            alarms.push(AlarmReason.ToEthereumChannelStale)
+        }
+        if (
+            channel.toPolkadot.outbound != channel.toPolkadot.inbound &&
+            channel.toPolkadot.inbound == channel.toPolkadot.previousInbound
+        ) {
+            alarm = true
+            alarms.push(AlarmReason.ToPolkadotChannelStale)
+        }
+        break
     }
 
+    for (let relayer of metrics.relayers) {
+        if (!relayer.balance || relayer.balance < AlarmThreshold.MinBalanceToKeep) {
+            alarm = true
+            alarms.push(AlarmReason.AccountBalanceInsufficient)
+            break
+        }
+    }
+    const text = JSON.stringify(
+        { alarms, metrics },
+        (key, value) => (typeof value === "bigint" ? value.toString() : value),
+        2
+    )
+    console.log(text)
+
     if (alarm) {
-        const text = JSON.stringify({ reasons, metrics }, null, 2)
-        console.log(text)
-        await axios.post(SLACK_WEBHOOK_URL, { text })
+        await axios.post(SLACK_WEBHOOK_URL || "", { text })
     }
 }

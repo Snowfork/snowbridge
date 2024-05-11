@@ -2,7 +2,7 @@
 import { u8aToHex } from '@polkadot/util'
 import { blake2AsU8a } from "@polkadot/util-crypto"
 import { contextFactory, destroyContext, environment, status, utils } from '@snowbridge/api'
-import { sendAlarm, AllMetrics } from "./alarm"
+import { sendAlarm, AllMetrics, Sovereign } from "./alarm"
 
 const monitor = async () => {
     let env = 'local_e2e'
@@ -34,10 +34,13 @@ const monitor = async () => {
     const bridegStatus = await status.bridgeStatusInfo(context)
     console.log('Bridge Status:', bridegStatus)
     const assethub = await status.channelStatusInfo(context, utils.paraIdToChannelId(config.ASSET_HUB_PARAID))
+    assethub.name = "assethub"
     console.log('Asset Hub Channel:', assethub)
     const primaryGov = await status.channelStatusInfo(context, config.PRIMARY_GOVERNANCE_CHANNEL_ID)
+    primaryGov.name = "primary"
     console.log('Primary Governance Channel:', primaryGov)
     const secondaryGov = await status.channelStatusInfo(context, config.SECONDARY_GOVERNANCE_CHANNEL_ID)
+    secondaryGov.name = "secondary"
     console.log('Secondary Governance Channel:', secondaryGov)
 
     let assetHubSovereign = BigInt(((await context.polkadot.api.bridgeHub.query.system.account(utils.paraIdToSovereignAccount("sibl", config.ASSET_HUB_PARAID))).toPrimitive() as any).data.free)
@@ -57,6 +60,7 @@ const monitor = async () => {
     console.log('Bridge Hub Agent balance:', bridgeHubAgentBalance)
 
     console.log('Relayers:')
+    let relayers = [];
     for (const relayer of config.RELAYERS) {
         let balance = 0n
         switch (relayer.type) {
@@ -67,15 +71,24 @@ const monitor = async () => {
                 balance = BigInt(((await context.polkadot.api.bridgeHub.query.system.account(relayer.account)).toPrimitive() as any).data.free)
                 break
         }
+        relayer.balance = balance
         console.log('\t', balance, ':', relayer.type, 'balance ->', relayer.name)
+        relayers.push(relayer)
     }
+
+    const channels = [assethub,primaryGov,secondaryGov];
+
+    let sovereigns:Sovereign[] = [
+        {name:"assethubSov",account:utils.paraIdToSovereignAccount("sibl", config.ASSET_HUB_PARAID),balance:assetHubSovereign},
+        {name:"assethubAgent",account:utils.paraIdToAgentId(context.polkadot.api.bridgeHub.registry, config.ASSET_HUB_PARAID),balance:assetHubAgentBalance},
+        {name:"bridgehubAgent",account:u8aToHex(blake2AsU8a("0x00", 256)),balance:bridgeHubAgentBalance},
+    ]
 
     const allMetrics: AllMetrics = {
         bridgeStatus: bridegStatus,
-        primaryChannelInfo: primaryGov,
-        assetHubChannelInfo: assethub,
-        assetHubSovereignBalance: assetHubSovereign.toString(),
-        assetHubAgentBalance: assetHubAgentBalance.toString(),
+        channels: channels,
+        relayers: relayers,
+        sovereigns,
     }
 
     await sendAlarm(allMetrics)
