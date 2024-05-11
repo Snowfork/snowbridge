@@ -4,7 +4,7 @@ import { blake2AsU8a } from "@polkadot/util-crypto"
 import { contextFactory, destroyContext, environment, status, utils } from '@snowbridge/api'
 import { sendAlarm, AllMetrics, Sovereign } from "./alarm"
 
-const monitor = async () => {
+export const monitor = async (): Promise<AllMetrics> => {
     let env = 'local_e2e'
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
@@ -94,12 +94,8 @@ const monitor = async () => {
     await sendAlarm(allMetrics)
 
     await destroyContext(context)
+
+    return allMetrics
 }
 
 
-monitor()
-    .then(() => process.exit(0))
-    .catch((error) => {
-        console.error(error)
-        process.exit(1)
-    })
