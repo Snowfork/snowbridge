@@ -1,9 +1,7 @@
 import Fastify from "fastify"
 import { monitor } from "./monitor"
 
-const fastify = Fastify({
-    logger: true,
-})
+const fastify = Fastify()
 
 fastify.register(import("@fastify/rate-limit"), {
     global: true,
@@ -11,7 +9,7 @@ fastify.register(import("@fastify/rate-limit"), {
     timeWindow: 5000,
 })
 
-fastify.get("/monitor", async (request: any, reply: any) => {
+fastify.get("/monitor", async (request, reply) => {
     let metrics = await monitor()
     let message = JSON.stringify(
         metrics,
@@ -23,14 +21,13 @@ fastify.get("/monitor", async (request: any, reply: any) => {
 
 fastify.get("/hello", (request, reply) => {
     reply.send({ hello: "world" })
-})
+});
 
-const start = async () => {
+
+(async () => {
     try {
         await fastify.listen({ port: 3000 })
     } catch (err) {
         fastify.log.error(err)
     }
-}
-
-start()
+})()

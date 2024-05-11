@@ -11,8 +11,9 @@
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/*",
-    "monitor": "npx ts-node src/monitor.ts",
-    "start": "npx ts-node src/main.ts"
+    "start": "npx ts-node src/start.ts",
+    "cron": "npx ts-node src/cron.ts",
+    "server": "npx ts-node src/server.ts"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.62.0",
@@ -51,6 +52,8 @@
     "seedrandom": "^3.0.5",
     "axios": "^1.6.8",
     "fastify": "^4.27.0",
-    "@fastify/rate-limit": "^9.1.0"
+    "@fastify/rate-limit": "^9.1.0",
+    "node-cron": "^3.0.3",
+    "@types/node-cron": "^3.0.11"
   }
 }
