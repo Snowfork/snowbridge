@@ -20,7 +20,7 @@ const BeaconStoreName = "beacon-state"
 type BeaconStore interface {
 	Connect() error
 	Close()
-	FindBeaconStateWithinSyncPeriod(slot, boundary uint64, findMin bool) (StoredBeaconData, error)
+	FindBeaconStateWithinRange(slot, boundary uint64) (StoredBeaconData, error)
 	GetBeaconStateData(slot uint64) ([]byte, error)
 	WriteEntry(attestedSlot, finalizedSlot uint64, attestedStateData, finalizedStateData []byte) error
 }
@@ -87,26 +87,18 @@ func (s *Store) Close() {
 	_ = s.db.Close()
 }
 
-// FindBeaconStateWithinSyncPeriod finds an attested and a finalized header pair within the same sync period.
-// bool findMin specifies whether the largest or smallest slot should be found. if findMin = true, the earliest
-// block in the sync committee will be returned, otherwise the largest. This is used for FinalizedUpdates, where
-// the latest block ideally wants to be synced, and for SyncCommitteeUpdates, where the earliest slot with the
-// next sync committee wants to be located.
-func (s *Store) FindBeaconStateWithinSyncPeriod(slot, boundary uint64, findMin bool) (StoredBeaconData, error) {
+// FindBeaconStateWithinRange finds a finalized and attested beacon header pair within the provided range.
+func (s *Store) FindBeaconStateWithinRange(minSlot, maxSlot uint64) (StoredBeaconData, error) {
 	var data StoredBeaconData
 
-	var query string
-	if findMin {
-		query = `SELECT MIN(attested_slot), attested_slot, finalized_slot, attested_state_filename, finalized_state_filename FROM beacon_state WHERE attested_slot >= ? AND attested_slot < ?`
-	} else {
-		query = `SELECT MAX(attested_slot), attested_slot, finalized_slot, attested_state_filename, finalized_state_filename FROM beacon_state WHERE attested_slot >= ? AND attested_slot < ?`
-	}
+	query := `SELECT MIN(attested_slot), attested_slot, finalized_slot, attested_state_filename, finalized_state_filename FROM beacon_state WHERE finalized_slot >= ? AND finalized_slot <= ?`
+
 	var min uint64
 	var attestedSlot uint64
 	var finalizedSlot uint64
 	var attestedStateFilename string
 	var finalizedStateFilename string
-	err := s.db.QueryRow(query, slot, boundary).Scan(&min, &attestedSlot, &finalizedSlot, &attestedStateFilename, &finalizedStateFilename)
+	err := s.db.QueryRow(query, minSlot, maxSlot).Scan(&min, &attestedSlot, &finalizedSlot, &attestedStateFilename, &finalizedStateFilename)
 	if err != nil {
 		return data, fmt.Errorf("no match found")
 	}

@@ -126,12 +126,18 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 
 	// If the gap between the last two finalized headers is more than the sync committee period, sync an interim
 	// finalized header
-	maxLatency := h.cache.Finalized.LastSyncedSlot + (h.protocol.Settings.SlotsInEpoch * h.protocol.Settings.EpochsPerSyncCommitteePeriod)
-	if maxLatency < uint64(update.Payload.FinalizedHeader.Slot) {
-		err = h.syncInterimFinalizedUpdate(ctx, h.cache.Finalized.LastSyncedSlot)
-		if err != nil {
-			return fmt.Errorf("sync interim finalized header update: %w", err)
+	if uint64(update.Payload.FinalizedHeader.Slot) > h.cache.Finalized.LastSyncedSlot {
+		diff := uint64(update.Payload.FinalizedHeader.Slot) - h.cache.Finalized.LastSyncedSlot
+		log.WithFields(log.Fields{"diff": diff, "last_finalized_slot": h.cache.Finalized.LastSyncedSlot, "new_finalized_slot": uint64(update.Payload.FinalizedHeader.Slot)}).Info("checking max latency")
+		if diff > h.protocol.Settings.SlotsInEpoch*h.protocol.Settings.EpochsPerSyncCommitteePeriod {
+			log.Info("syncing an interim update")
+			err = h.syncInterimFinalizedUpdate(ctx, h.cache.Finalized.LastSyncedSlot, uint64(update.Payload.FinalizedHeader.Slot))
+			if err != nil {
+				return fmt.Errorf("sync interim finalized header update: %w", err)
+			}
 		}
+	} else {
+		log.Info("interim update not required")
 	}
 
 	log.WithFields(log.Fields{
@@ -237,13 +243,17 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 	return nil
 }
 
-func (h *Header) syncInterimFinalizedUpdate(ctx context.Context, lastSyncedSlot uint64) error {
-	checkpointSlot := h.protocol.CalculateNextCheckpointSlot(lastSyncedSlot)
+func (h *Header) syncInterimFinalizedUpdate(ctx context.Context, lastSyncedSlot, newCheckpointSlot uint64) error {
+	// Calculate the range that the interim finalized header update may be in
+	minSlot := newCheckpointSlot - h.protocol.SlotsPerHistoricalRoot
+	maxSlot := lastSyncedSlot + h.protocol.SlotsPerHistoricalRoot
 
-	finalizedUpdate, err := h.syncer.GetLatestPossibleFinalizedUpdate(checkpointSlot, lastSyncedSlot)
+	finalizedUpdate, err := h.syncer.GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot, false)
 	if err != nil {
-		return fmt.Errorf("get interim checkpoint to update chain (checkpoint slot %d, original slot: %d): %w", checkpointSlot, lastSyncedSlot, err)
+		return fmt.Errorf("get interim checkpoint to update chain (last synced slot %d, new slot: %d): %w", lastSyncedSlot, newCheckpointSlot, err)
 	}
+
+	log.WithField("slot", finalizedUpdate.Payload.FinalizedHeader.Slot).Info("syncing an interim update to on-chain")
 
 	err = h.updateFinalizedHeaderOnchain(ctx, finalizedUpdate)
 	if err != nil {
