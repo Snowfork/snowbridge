@@ -129,7 +129,7 @@ func TestPruneOldStates(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestFindBeaconStateWithinSyncPeriodRange(t *testing.T) {
+func TestFindBeaconStateWithinRange(t *testing.T) {
 	_ = os.RemoveAll(TestDataStoreFile + BeaconStateDir)
 	_ = os.Remove(TestDataStoreFile + BeaconStoreName)
 
@@ -186,23 +186,23 @@ func TestFindBeaconStateWithinSyncPeriodRange(t *testing.T) {
 	require.NoError(t, err)
 
 	period568Start := uint64(568 * 256 * 32)
-	beaconData, err := store.FindBeaconStateWithinSyncPeriod(4644864, period568Start, true)
+	beaconData, err := store.FindBeaconStateWithinRange(4644864, period568Start)
 	require.NoError(t, err)
 
 	require.Equal(t, pair3AttestedSlot, beaconData.AttestedSlot)
 	require.Equal(t, pair3FinalizedSlot, beaconData.FinalizedSlot)
 
 	period558Start := uint64(558 * 256 * 32)
-	beaconData, err = store.FindBeaconStateWithinSyncPeriod(4570003, period558Start, false)
+	beaconData, err = store.FindBeaconStateWithinRange(4570003, period558Start)
 	require.NoError(t, err)
 
 	require.Equal(t, pair1AttestedSlot, beaconData.AttestedSlot)
 	require.Equal(t, pair1FinalizedSlot, beaconData.FinalizedSlot)
 
 	period559Start := uint64(559 * 256 * 32)
-	beaconData, err = store.FindBeaconStateWithinSyncPeriod(4570800, period559Start, false)
+	beaconData, err = store.FindBeaconStateWithinRange(4570800, period559Start)
 	require.NoError(t, err)
 
-	require.Equal(t, pair2AttestedSlot, beaconData.AttestedSlot)
-	require.Equal(t, pair2FinalizedSlot, beaconData.FinalizedSlot)
+	require.Equal(t, int(pair1AttestedSlot), int(beaconData.AttestedSlot))
+	require.Equal(t, int(pair1FinalizedSlot), int(beaconData.FinalizedSlot))
 }
