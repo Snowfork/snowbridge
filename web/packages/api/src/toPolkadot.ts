@@ -5,9 +5,10 @@ import { IERC20__factory, IGateway__factory, WETH9__factory } from '@snowbridge/
 import { MultiAddressStruct } from '@snowbridge/contract-types/src/IGateway'
 import { LogDescription, Signer, TransactionReceipt, ethers, keccak256 } from 'ethers'
 import { concatMap, filter, firstValueFrom, lastValueFrom, take, takeWhile, tap } from 'rxjs'
+import { assetStatusInfo } from './assets'
 import { Context } from './index'
 import { scanSubstrateEvents, waitForMessageQueuePallet } from './query'
-import { assetStatusInfo, bridgeStatusInfo, channelStatusInfo } from './status'
+import { bridgeStatusInfo, channelStatusInfo } from './status'
 import { beneficiaryMultiAddress, fetchBeaconSlot, paraIdToChannelId, paraIdToSovereignAccount } from './utils'
 
 export enum SendValidationCode {

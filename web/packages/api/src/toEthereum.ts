@@ -2,9 +2,10 @@ import { EventRecord } from "@polkadot/types/interfaces"
 import { Codec, IKeyringPair, Signer } from "@polkadot/types/types"
 import { BN, u8aToHex } from "@polkadot/util"
 import { decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
+import { assetStatusInfo } from "./assets"
 import { Context, utils } from "./index"
 import { scanSubstrateEvents, waitForMessageQueuePallet } from "./query"
-import { assetStatusInfo, bridgeStatusInfo } from "./status"
+import { bridgeStatusInfo } from "./status"
 import { paraIdToChannelId } from "./utils"
 
 export interface WalletSigner {
