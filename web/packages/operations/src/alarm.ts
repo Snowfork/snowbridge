@@ -4,7 +4,7 @@ import axios from "axios"
 const SLACK_WEBHOOK_URL = process.env["SLACK_WEBHOOK_URL"]
 
 export const AlarmThreshold = {
-    MaxBlockLatency: 1200,
+    MaxBlockLatency: 2000,
     MinBalanceToKeep: 10_000_000_000,
 }
 
@@ -30,7 +30,7 @@ export const sendAlarm = async (metrics: AllMetrics) => {
     let alarms = []
 
     if (
-        metrics.bridgeStatus.toEthereum.blockLatency > AlarmThreshold.MaxBlockLatency ||
+        metrics.bridgeStatus.toEthereum.blockLatency > AlarmThreshold.MaxBlockLatency &&
         metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum ==
             metrics.bridgeStatus.toEthereum.previousPolkadotBlockOnEthereum
     ) {
@@ -38,7 +38,7 @@ export const sendAlarm = async (metrics: AllMetrics) => {
         alarms.push(AlarmReason.BeefyStale)
     }
     if (
-        metrics.bridgeStatus.toPolkadot.blockLatency > AlarmThreshold.MaxBlockLatency ||
+        metrics.bridgeStatus.toPolkadot.blockLatency > AlarmThreshold.MaxBlockLatency &&
         metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot ==
             metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot
     ) {
