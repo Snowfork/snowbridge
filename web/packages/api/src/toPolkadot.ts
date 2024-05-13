@@ -273,38 +273,46 @@ export const send = async (context: Context, signer: Signer, plan: SendValidatio
 
     const contract = IGateway__factory.connect(context.config.appContracts.gateway, signer)
     const fees = await context.ethereum.api.getFeeData()
-    const tx = await contract.sendToken.populateTransaction(
+
+
+    const response = await contract.sendToken(
         success.token,
         success.destinationParaId,
         success.beneficiaryMultiAddress,
         success.destinationFee,
         success.amount,
         {
-            value: success.fee,
-            from:  success.sourceAddress,
-            nonce: await context.ethereum.api.getTransactionCount(success.sourceAddress, "pending"),
-            maxFeePerGas: fees.maxFeePerGas,
-            maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
-            chainId: success.ethereumChainId
+            value: success.fee
         }
     )
-    tx.gasLimit = await context.ethereum.api.estimateGas(tx)
+    let receipt = await response.wait(confirmations)
 
-    const signedTx = await signer.signTransaction(tx)
-    const txHash = keccak256(signedTx)
-    const response = await context.ethereum.api.provider.broadcastTransaction(signedTx)
-
+    /// Was a nice idea to sign and send in two steps but metamask does not support this.
+    /// https://github.com/MetaMask/metamask-extension/issues/2506
+    
+    //const response = await contract.sendToken(
+    //    success.token,
+    //    success.destinationParaId,
+    //    success.beneficiaryMultiAddress,
+    //    success.destinationFee,
+    //    success.amount,
+    //    {
+    //        value: success.fee
+    //    }
+    //)
+    //let receipt = await response.wait(confirmations)
+    //const signedTx = await signer.signTransaction(tx)
+    //const txHash = keccak256(signedTx)
+    //const response = await context.ethereum.api.provider.broadcastTransaction(signedTx)
     // TODO: await context.ethereum.api.getTransaction(txHash) // Use this to check if the server knows about transaction.
     // TODO: await context.ethereum.api.getTransactionReceipt(txHash) // Use this to check if the server has mined the transaction.
-
     // TODO: remove this wait and move everything below this line to trackProgress/Polling methods.
-    let receipt = await response.wait(confirmations)
+    //if(txHash !== receipt.hash) {
+    //    throw new Error('tx Hash mismtach')
+    //}
 
     if (receipt === null) {
         throw new Error('Error waiting for transaction completion')
-    }
-    if(txHash !== receipt.hash) {
-        throw new Error('tx Hash mismtach')
     }
 
     if (receipt?.status !== 1) {
