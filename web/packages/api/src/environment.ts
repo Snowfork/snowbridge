@@ -77,7 +77,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
     }],
     config: {
       BEACON_HTTP_API: 'http://127.0.0.1:9596',
-      ETHEREUM_WS_API: (_) => 'ws://127.0.0.1:8546',
+      ETHEREUM_WS_API: () => 'ws://127.0.0.1:8546',
       RELAY_CHAIN_WS_URL: 'ws://127.0.0.1:9944',
       ASSET_HUB_WS_URL: 'ws://127.0.0.1:12144',
       BRIDGE_HUB_WS_URL: 'ws://127.0.0.1:11144',

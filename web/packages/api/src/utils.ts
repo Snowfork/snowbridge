@@ -12,9 +12,9 @@ export const paraIdToSovereignAccount = (type: 'para' | 'sibl', paraId: number):
     return u8aToHex(address)
 }
 
-export const paraIdToAgentId = (register: Registry, paraId: number): string => {
+export const paraIdToAgentId = (registry: Registry, paraId: number): string => {
     const typeEncoded = stringToU8a('SiblingChain')
-    const paraIdEncoded = register.createType('Compact<u32>', paraId).toU8a()
+    const paraIdEncoded = registry.createType('Compact<u32>', paraId).toU8a()
     const joined = new Uint8Array([...typeEncoded, ...paraIdEncoded, 0x00])
     const agentId = blake2AsU8a(joined, 256)
     return u8aToHex(agentId)

@@ -1,8 +1,9 @@
 import { ApiPromise } from "@polkadot/api"
 import { IERC20Metadata__factory, IERC20__factory } from "@snowbridge/contract-types"
 import { Context } from './index'
+import { Codec, Registry } from "@polkadot/types/types"
 
-export const getSubstrateToken = async (api: ApiPromise): Promise<{
+export const parachainNativeToken = async (api: ApiPromise): Promise<{
     tokenSymbol: string
     tokenDecimal: number
     ss58Format: number | null
@@ -18,23 +19,26 @@ export const getSubstrateToken = async (api: ApiPromise): Promise<{
     }
 }
 
+export const erc20TokenToAssetLocation = (registry: Registry, ethChainId: bigint, token: string) => {
+    return registry.createType('StagingXcmV3MultiLocation', {
+        parents: 2,
+        interior: {
+            X2: [
+                { GlobalConsensus: { Ethereum: { chain_id: ethChainId } } },
+                { AccountKey20: { key: token } },
+            ]
+        }
+    })
+}
+
 export const assetStatusInfo = async (context: Context, tokenAddress: string, ownerAddress?: string) => {
-    let [ethereumNetwork, gatewayAddress, isTokenRegistered] = await Promise.all([
+    let [ethereumNetwork, isTokenRegistered] = await Promise.all([
         context.ethereum.api.getNetwork(),
-        context.ethereum.contracts.gateway.getAddress(),
         context.ethereum.contracts.gateway.isTokenRegistered(tokenAddress)
     ])
 
     const ethereumChainId = ethereumNetwork.chainId
-    const multiLocation = context.polkadot.api.assetHub.createType('StagingXcmV3MultiLocation', {
-        parents: 2,
-        interior: {
-            X2: [
-                { GlobalConsensus: { Ethereum: { chain_id: ethereumChainId } } },
-                { AccountKey20: { key: tokenAddress } },
-            ]
-        }
-    })
+    const multiLocation = erc20TokenToAssetLocation(context.polkadot.api.assetHub.registry, ethereumChainId, tokenAddress)
     const foreignAsset = (await context.polkadot.api.assetHub.query.foreignAssets.asset(multiLocation)).toPrimitive() as { status: 'Live' }
 
     const tokenContract = IERC20__factory.connect(tokenAddress, context.ethereum.api)
@@ -42,13 +46,10 @@ export const assetStatusInfo = async (context: Context, tokenAddress: string, ow
     let tokenGatewayAllowance = BigInt(0)
     let isValidERC20 = true
     try {
-        const owner = ownerAddress || "0x0000000000000000000000000000000000000000"
-        const [tokenBalance_, tokenGatewayAllowance_] = await Promise.all([
-            tokenContract.balanceOf(owner),
-            tokenContract.allowance(owner, gatewayAddress),
-        ])
-        ownerBalance = tokenBalance_
-        tokenGatewayAllowance = tokenGatewayAllowance_
+        const erc20balance = await assetErc20Balance(context, tokenAddress, ownerAddress ?? '0x0000000000000000000000000000000000000000')
+        ownerBalance = erc20balance.balance
+        tokenGatewayAllowance = erc20balance.gatewayAllowance
+
     } catch {
         isValidERC20 = false
     }
@@ -66,7 +67,22 @@ export const assetStatusInfo = async (context: Context, tokenAddress: string, ow
     }
 }
 
-export const assetMetadata = async (context: Context, tokenAddress: string) => {
+export const assetErc20Balance = async (context: Context, token: string, owner: string): Promise<{
+    balance: bigint,
+    gatewayAllowance: bigint,
+}> => {
+    const tokenContract = IERC20__factory.connect(token, context.ethereum.api)
+    const gateway = await context.ethereum.contracts.gateway.getAddress()
+    const [balance, gatewayAllowance] = await Promise.all([
+        tokenContract.balanceOf(owner),
+        tokenContract.allowance(owner, gateway),
+    ])
+    return {
+        balance, gatewayAllowance
+    }
+}
+
+export const assetErc20Metadata = async (context: Context, tokenAddress: string) => {
     const tokenMetadata = IERC20Metadata__factory.connect(tokenAddress, context.ethereum.api)
     const [name, symbol, decimal] = await Promise.all([
         tokenMetadata.name(),
@@ -74,4 +90,12 @@ export const assetMetadata = async (context: Context, tokenAddress: string) => {
         tokenMetadata.decimals(),
     ])
     return { name, symbol, decimal }
+}
+
+export const palletAssetsBalance = async (api: ApiPromise, location: Codec, address: string, instance = "assets"): Promise<bigint|null> => {
+    let account = (await api.query[instance].account(location, address)).toPrimitive() as any
+    if (account !== null) {
+        return BigInt(account.balance)
+    }
+    return null
 }

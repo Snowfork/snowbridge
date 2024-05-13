@@ -84,7 +84,7 @@ export const getSendFee = async (context: Context, tokenAddress: string, destina
 export const validateSend = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint, options = {
     acceptableLatencyInSeconds: 28800 /* 3 Hours */
 }): Promise<SendValidationResult> => {
-    const { ethereum, ethereum: { contracts: { gateway } }, polkadot: { api: { assetHub, bridgeHub, relaychain } } } = context
+    const { ethereum, polkadot: { api: { assetHub, bridgeHub, relaychain } } } = context
 
     const sourceAddress = await source.getAddress()
 
@@ -298,7 +298,7 @@ export const send = async (context: Context, signer: Signer, plan: SendValidatio
     // TODO: await context.ethereum.api.getTransactionReceipt(txHash) // Use this to check if the server has mined the transaction.
 
     // TODO: remove this wait and move everything below this line to trackProgress/Polling methods.
-    let receipt = await response.wait()
+    let receipt = await response.wait(confirmations)
 
     if (receipt === null) {
         throw new Error('Error waiting for transaction completion')

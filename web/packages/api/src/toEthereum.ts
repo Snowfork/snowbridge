@@ -2,7 +2,7 @@ import { EventRecord } from "@polkadot/types/interfaces"
 import { Codec, IKeyringPair, Signer } from "@polkadot/types/types"
 import { BN, u8aToHex } from "@polkadot/util"
 import { decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
-import { assetStatusInfo } from "./assets"
+import { assetStatusInfo, palletAssetsBalance } from "./assets"
 import { Context, utils } from "./index"
 import { scanSubstrateEvents, waitForMessageQueuePallet } from "./query"
 import { bridgeStatusInfo } from "./status"
@@ -127,19 +127,13 @@ export const validateSend = async (context: Context, signer: WalletOrKeypair, so
             validatedAtHash: u8aToHex(sourceParachainHead),
         }
         if (foreignAssetExists) {
-            let account = (await parachains[sourceParachainId].query.foreignAssets.account(assetInfo.multiLocation, signer.address)).toPrimitive() as any
-            if (account !== null) {
-                assetBalance = BigInt(account.balance)
-            }
-            hasAsset = assetBalance >= amount
+            assetBalance = (await palletAssetsBalance(parachains[sourceParachainId], assetInfo.multiLocation, tokenAddress, "foreignAssets")) ?? 0n
+            hasAsset = (assetBalance) >= amount
         }
     }
     else {
         if (foreignAssetExists) {
-            let account = (await assetHub.query.foreignAssets.account(assetInfo.multiLocation, signer.address)).toPrimitive() as any
-            if (account !== null) {
-                assetBalance = BigInt(account.balance)
-            }
+            assetBalance = (await palletAssetsBalance(parachains[sourceParachainId], assetInfo.multiLocation, tokenAddress, "foreignAssets")) ?? 0n
             hasAsset = assetBalance >= amount
         }
     }
@@ -403,7 +397,7 @@ export const send = async (context: Context, signer: WalletOrKeypair, plan: Send
         }
 
         const { extrinsicSuccess, allEvents, foundEvent } = await waitForMessageQueuePallet(assetHub, pResult.messageId, plan.success.sourceParachain.paraId,
-            _ => true,
+            () => true,
             options,
         )
         if (!extrinsicSuccess) {
@@ -545,12 +539,11 @@ export const trackSendProgressPolling = async (context: Context, result: SendRes
     }
 
     if (success.polling === undefined) {
-        let a =
-            success.polling = {
-                bridgeHubMessageQueueProcessed: (await bridgeHub.rpc.chain.getHeader(success.bridgeHub.submittedAtHash)).number.toBigInt() + 1n,
-                ethereumBeefyClient: BigInt((await ethereum.api.getBlock(success.ethereum.submittedAtHash))?.number ?? 0n) + 1n,
-                ethereumMessageDispatched: BigInt((await ethereum.api.getBlock(success.ethereum.submittedAtHash))?.number ?? 0n) + 1n,
-            }
+        success.polling = {
+            bridgeHubMessageQueueProcessed: (await bridgeHub.rpc.chain.getHeader(success.bridgeHub.submittedAtHash)).number.toBigInt() + 1n,
+            ethereumBeefyClient: BigInt((await ethereum.api.getBlock(success.ethereum.submittedAtHash))?.number ?? 0n) + 1n,
+            ethereumMessageDispatched: BigInt((await ethereum.api.getBlock(success.ethereum.submittedAtHash))?.number ?? 0n) + 1n,
+        }
     }
 
     if (success.bridgeHub.events === undefined) {

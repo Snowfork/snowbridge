@@ -1,4 +1,3 @@
-import { IERC20Metadata__factory, IERC20__factory } from '@snowbridge/contract-types'
 import { Context } from './index'
 import { fetchBeaconSlot } from './utils'
 
