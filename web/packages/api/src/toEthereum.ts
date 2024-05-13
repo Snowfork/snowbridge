@@ -127,13 +127,13 @@ export const validateSend = async (context: Context, signer: WalletOrKeypair, so
             validatedAtHash: u8aToHex(sourceParachainHead),
         }
         if (foreignAssetExists) {
-            assetBalance = (await palletAssetsBalance(parachains[sourceParachainId], assetInfo.multiLocation, tokenAddress, "foreignAssets")) ?? 0n
+            assetBalance = (await palletAssetsBalance(parachains[sourceParachainId], assetInfo.multiLocation, signer.address, "foreignAssets")) ?? 0n
             hasAsset = (assetBalance) >= amount
         }
     }
     else {
         if (foreignAssetExists) {
-            assetBalance = (await palletAssetsBalance(parachains[sourceParachainId], assetInfo.multiLocation, tokenAddress, "foreignAssets")) ?? 0n
+            assetBalance = (await palletAssetsBalance(assetHub, assetInfo.multiLocation, signer.address, "foreignAssets")) ?? 0n
             hasAsset = assetBalance >= amount
         }
     }

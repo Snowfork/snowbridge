@@ -139,7 +139,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       destinationIds: [],
       paraInfo: {
         paraId: 3369,
-        destinationFeeDOT: 4_000_000_000n,
+        destinationFeeDOT: 4_000_000_000_000n,
         has20ByteAccounts: true,
         decimals: 12,
       },
