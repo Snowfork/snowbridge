@@ -1,7 +1,13 @@
+import "dotenv/config"
 import Fastify from "fastify"
 import { monitor } from "./monitor"
 
-const fastify = Fastify()
+const fastify = Fastify({ logger: true })
+
+fastify.setErrorHandler((error, request, reply) => {
+    fastify.log.error(error)
+    reply.status(500).send({ ok: false })
+})
 
 fastify.register(import("@fastify/rate-limit"), {
     global: true,
@@ -21,13 +27,6 @@ fastify.get("/monitor", async (request, reply) => {
 
 fastify.get("/hello", (request, reply) => {
     reply.send({ hello: "world" })
-});
+})
 
-
-(async () => {
-    try {
-        await fastify.listen({ port: 3000 })
-    } catch (err) {
-        fastify.log.error(err)
-    }
-})()
+fastify.listen({ port: 3000 })

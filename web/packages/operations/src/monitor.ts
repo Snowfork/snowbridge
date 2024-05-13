@@ -2,7 +2,7 @@
 import { u8aToHex } from '@polkadot/util'
 import { blake2AsU8a } from "@polkadot/util-crypto"
 import { contextFactory, destroyContext, environment, status, utils } from '@snowbridge/api'
-import { sendAlarm, AllMetrics, Sovereign } from "./alarm"
+import { sendAlarm, AllMetrics, Sovereign, sendMetrics } from "./alarm"
 
 export const monitor = async (): Promise<AllMetrics> => {
     let env = 'local_e2e'
@@ -90,6 +90,8 @@ export const monitor = async (): Promise<AllMetrics> => {
         relayers: relayers,
         sovereigns,
     }
+
+    await sendMetrics(allMetrics)
 
     await sendAlarm(allMetrics)
 

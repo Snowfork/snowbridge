@@ -54,6 +54,8 @@
     "fastify": "^4.27.0",
     "@fastify/rate-limit": "^9.1.0",
     "node-cron": "^3.0.3",
-    "@types/node-cron": "^3.0.11"
+    "@types/node-cron": "^3.0.11",
+    "@aws-sdk/client-cloudwatch": "^3.574.0",
+    "dotenv": "^16.4.5"
   }
 }
