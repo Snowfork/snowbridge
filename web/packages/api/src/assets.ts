@@ -1,7 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
+import { Codec, Registry } from "@polkadot/types/types"
 import { IERC20Metadata__factory, IERC20__factory } from "@snowbridge/contract-types"
 import { Context } from './index'
-import { Codec, Registry } from "@polkadot/types/types"
 
 export const parachainNativeToken = async (api: ApiPromise): Promise<{
     tokenSymbol: string
@@ -84,15 +84,15 @@ export const assetErc20Balance = async (context: Context, token: string, owner: 
 
 export const assetErc20Metadata = async (context: Context, tokenAddress: string) => {
     const tokenMetadata = IERC20Metadata__factory.connect(tokenAddress, context.ethereum.api)
-    const [name, symbol, decimal] = await Promise.all([
+    const [name, symbol, decimals] = await Promise.all([
         tokenMetadata.name(),
         tokenMetadata.symbol(),
         tokenMetadata.decimals(),
     ])
-    return { name, symbol, decimal }
+    return { name, symbol, decimals }
 }
 
-export const palletAssetsBalance = async (api: ApiPromise, location: Codec, address: string, instance = "assets"): Promise<bigint|null> => {
+export const palletAssetsBalance = async (api: ApiPromise, location: Codec, address: string, instance = "assets"): Promise<bigint | null> => {
     let account = (await api.query[instance].account(location, address)).toPrimitive() as any
     if (account !== null) {
         return BigInt(account.balance)
