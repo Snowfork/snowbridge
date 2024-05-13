@@ -35,29 +35,66 @@ export const sendMetrics = async (metrics: AllMetrics) => {
     // Beefy metrics
     metricData.push({
         MetricName: "BeefyLatency",
+        Dimensions: [
+            {
+                Name: "Direction",
+                Value: "ToEthereum",
+            },
+        ],
         Value: metrics.bridgeStatus.toEthereum.blockLatency,
     })
     metricData.push({
         MetricName: "LatestBeefyBlock",
+        Dimensions: [
+            {
+                Name: "Direction",
+                Value: "ToEthereum",
+            },
+        ],
         Value: metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum,
     })
     metricData.push({
         MetricName: "PreviousBeefyBlock",
+        Dimensions: [
+            {
+                Name: "Direction",
+                Value: "ToEthereum",
+            },
+        ],
         Value: metrics.bridgeStatus.toEthereum.previousPolkadotBlockOnEthereum,
     })
     // Beacon metrics
     metricData.push({
         MetricName: "BeaconLatency",
+        Dimensions: [
+            {
+                Name: "Direction",
+                Value: "ToPolkadot",
+            },
+        ],
         Value: metrics.bridgeStatus.toPolkadot.blockLatency,
     })
     metricData.push({
         MetricName: "LatestBeaconBlock",
+        Dimensions: [
+            {
+                Name: "Direction",
+                Value: "ToPolkadot",
+            },
+        ],
         Value: metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot,
     })
     metricData.push({
         MetricName: "PreviousBeaconBlock",
+        Dimensions: [
+            {
+                Name: "Direction",
+                Value: "ToPolkadot",
+            },
+        ],
         Value: metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot,
     })
+    // Channel metrics
     for (let channel of metrics.channels) {
         metricData.push({
             MetricName: "OutboundNonce",
@@ -65,6 +102,10 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                 {
                     Name: "Direction",
                     Value: "ToEthereum",
+                },
+                {
+                    Name: "Name",
+                    Value: channel.name,
                 },
             ],
             Value: channel.toEthereum.outbound,
@@ -76,6 +117,10 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                     Name: "Direction",
                     Value: "ToEthereum",
                 },
+                {
+                    Name: "Name",
+                    Value: channel.name,
+                },
             ],
             Value: channel.toEthereum.previousOutbound,
         })
@@ -86,6 +131,10 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                     Name: "Direction",
                     Value: "ToEthereum",
                 },
+                {
+                    Name: "Name",
+                    Value: channel.name,
+                },
             ],
             Value: channel.toEthereum.inbound,
         })
@@ -95,6 +144,10 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                 {
                     Name: "Direction",
                     Value: "ToEthereum",
+                },
+                {
+                    Name: "Name",
+                    Value: channel.name,
                 },
             ],
             Value: channel.toEthereum.previousInbound,
@@ -107,6 +160,10 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                     Name: "Direction",
                     Value: "ToPolkadot",
                 },
+                {
+                    Name: "Name",
+                    Value: channel.name,
+                },
             ],
             Value: channel.toPolkadot.outbound,
         })
@@ -116,6 +173,10 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                 {
                     Name: "Direction",
                     Value: "ToPolkadot",
+                },
+                {
+                    Name: "Name",
+                    Value: channel.name,
                 },
             ],
             Value: channel.toPolkadot.previousOutbound,
@@ -127,6 +188,10 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                     Name: "Direction",
                     Value: "ToPolkadot",
                 },
+                {
+                    Name: "Name",
+                    Value: channel.name,
+                },
             ],
             Value: channel.toPolkadot.inbound,
         })
@@ -136,6 +201,10 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                 {
                     Name: "Direction",
                     Value: "ToPolkadot",
+                },
+                {
+                    Name: "Name",
+                    Value: channel.name,
                 },
             ],
             Value: channel.toPolkadot.previousInbound,

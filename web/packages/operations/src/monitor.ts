@@ -34,13 +34,13 @@ export const monitor = async (): Promise<AllMetrics> => {
     const bridegStatus = await status.bridgeStatusInfo(context)
     console.log('Bridge Status:', bridegStatus)
     const assethub = await status.channelStatusInfo(context, utils.paraIdToChannelId(config.ASSET_HUB_PARAID))
-    assethub.name = "assethub"
+    assethub.name = "AssetHub"
     console.log('Asset Hub Channel:', assethub)
     const primaryGov = await status.channelStatusInfo(context, config.PRIMARY_GOVERNANCE_CHANNEL_ID)
-    primaryGov.name = "primary"
+    primaryGov.name = "Primary"
     console.log('Primary Governance Channel:', primaryGov)
     const secondaryGov = await status.channelStatusInfo(context, config.SECONDARY_GOVERNANCE_CHANNEL_ID)
-    secondaryGov.name = "secondary"
+    secondaryGov.name = "Secondary"
     console.log('Secondary Governance Channel:', secondaryGov)
 
     let assetHubSovereign = BigInt(((await context.polkadot.api.bridgeHub.query.system.account(utils.paraIdToSovereignAccount("sibl", config.ASSET_HUB_PARAID))).toPrimitive() as any).data.free)
@@ -79,9 +79,9 @@ export const monitor = async (): Promise<AllMetrics> => {
     const channels = [assethub,primaryGov,secondaryGov];
 
     let sovereigns:Sovereign[] = [
-        {name:"assethubSov",account:utils.paraIdToSovereignAccount("sibl", config.ASSET_HUB_PARAID),balance:assetHubSovereign},
-        {name:"assethubAgent",account:utils.paraIdToAgentId(context.polkadot.api.bridgeHub.registry, config.ASSET_HUB_PARAID),balance:assetHubAgentBalance},
-        {name:"bridgehubAgent",account:u8aToHex(blake2AsU8a("0x00", 256)),balance:bridgeHubAgentBalance},
+        {name:"AssetHub",account:utils.paraIdToSovereignAccount("sibl", config.ASSET_HUB_PARAID),balance:assetHubSovereign},
+        {name:"AssetHubAgent",account:utils.paraIdToAgentId(context.polkadot.api.bridgeHub.registry, config.ASSET_HUB_PARAID),balance:assetHubAgentBalance},
+        {name:"BridgeHubAgent",account:u8aToHex(blake2AsU8a("0x00", 256)),balance:bridgeHubAgentBalance},
     ]
 
     const allMetrics: AllMetrics = {
