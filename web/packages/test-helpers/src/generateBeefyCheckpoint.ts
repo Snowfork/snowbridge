@@ -9,7 +9,7 @@ import { u32, u64 } from "@polkadot/types-codec"
 import { H256 } from "@polkadot/types/interfaces"
 import { Struct } from "@polkadot/types"
 
-interface NextAuthoritySet extends Struct {
+interface AuthoritySet extends Struct {
     id: u64
     len: u32
     keysetCommitment: H256
@@ -47,6 +47,7 @@ async function generateBeefyCheckpoint() {
     const validatorSetId = await api.query.beefy.validatorSetId<ValidatorSetId>()
     const authorities = await api.query.beefy.authorities<BeefyId[]>()
 
+    console.log("validatorSetId:", validatorSetId)
     console.log("authority length is:" + authorities.length)
 
     let addrs = []
@@ -66,22 +67,22 @@ async function generateBeefyCheckpoint() {
 
     console.log("valid authority length is:" + addrs.length)
 
-    const tree = createMerkleTree(addrs)
-
-    let nextAuthorities
+    let currentAuthorities, nextAuthorities
 
     if (process.env.NODE_ENV == "production") {
-        nextAuthorities = await api.query.beefyMmrLeaf.beefyNextAuthorities<NextAuthoritySet>()
+        currentAuthorities = await api.query.beefyMmrLeaf.beefyAuthorities<AuthoritySet>()
+        nextAuthorities = await api.query.beefyMmrLeaf.beefyNextAuthorities<AuthoritySet>()
     } else {
-        nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<NextAuthoritySet>()
+        currentAuthorities = await api.query.mmrLeaf.beefyAuthorities<AuthoritySet>()
+        nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<AuthoritySet>()
     }
 
     const beefyCheckpoint = {
         startBlock: beefyStartBlock,
         current: {
-            id: validatorSetId.toNumber(),
-            root: tree.getHexRoot(),
-            length: addrs.length,
+            id: currentAuthorities.id.toNumber(),
+            root: currentAuthorities.keysetCommitment.toHex(),
+            length: currentAuthorities.len.toNumber(),
         },
         next: {
             id: nextAuthorities.id.toNumber(),
