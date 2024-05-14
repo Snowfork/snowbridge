@@ -318,7 +318,7 @@ export const initializeAlarms = async () => {
     let alarmCommandSharedInput = {
         EvaluationPeriods: 3,
         Namespace: CLOUD_WATCH_NAME_SPACE,
-        Period: 60,
+        Period: 600,
         Threshold: 0,
     }
     cloudWatchAlarms.push(
