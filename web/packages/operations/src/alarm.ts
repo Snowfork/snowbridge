@@ -371,6 +371,7 @@ export const initializeAlarms = async () => {
             ...alarmCommandSharedInput,
         })
     )
+    console.log(cloudWatchAlarms)
     for (let alarm of cloudWatchAlarms) {
         await client.send(alarm)
     }
