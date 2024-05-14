@@ -17,7 +17,7 @@ export type Config = {
 
 export type SourceType = 'substrate' | 'ethereum'
 export type Relayer = { name: string, account: string, type: SourceType }
-export type ParachainInfo = { paraId: number, destinationFeeDOT: bigint, has20ByteAccounts: boolean, decimals: number }
+export type ParachainInfo = { paraId: number, destinationFeeDOT: bigint, has20ByteAccounts: boolean, decimals: number, ss58Format?: number }
 export type TransferLocation = {
   id: string
   name: string
@@ -77,7 +77,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
     }],
     config: {
       BEACON_HTTP_API: 'http://127.0.0.1:9596',
-      ETHEREUM_WS_API: (_) => 'ws://127.0.0.1:8546',
+      ETHEREUM_WS_API: () => 'ws://127.0.0.1:8546',
       RELAY_CHAIN_WS_URL: 'ws://127.0.0.1:9944',
       ASSET_HUB_WS_URL: 'ws://127.0.0.1:12144',
       BRIDGE_HUB_WS_URL: 'ws://127.0.0.1:11144',
@@ -139,7 +139,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       destinationIds: [],
       paraInfo: {
         paraId: 3369,
-        destinationFeeDOT: 4_000_000_000n,
+        destinationFeeDOT: 4_000_000_000_000n,
         has20ByteAccounts: true,
         decimals: 12,
       },
