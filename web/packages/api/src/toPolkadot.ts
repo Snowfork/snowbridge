@@ -588,7 +588,6 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
             ),
             { defaultValue: undefined }
         )
-        console.log(receivedEvents?.toHuman())
         if (receivedEvents === undefined) {
             throw Error('Timeout while waiting for Bridge Hub delivery.')
         }
