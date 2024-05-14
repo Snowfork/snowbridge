@@ -1,6 +1,10 @@
 import { status, environment } from "@snowbridge/api"
 import axios from "axios"
-import { CloudWatchClient, PutMetricDataCommand } from "@aws-sdk/client-cloudwatch"
+import {
+    CloudWatchClient,
+    PutMetricDataCommand,
+    PutMetricAlarmCommand,
+} from "@aws-sdk/client-cloudwatch"
 
 const SLACK_WEBHOOK_URL = process.env["SLACK_WEBHOOK_URL"]
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
@@ -63,6 +67,20 @@ export const sendMetrics = async (metrics: AllMetrics) => {
         ],
         Value: metrics.bridgeStatus.toEthereum.previousPolkadotBlockOnEthereum,
     })
+    metricData.push({
+        MetricName: AlarmReason.BeefyStale.toString(),
+        Dimensions: [
+            {
+                Name: "Direction",
+                Value: "ToEthereum",
+            },
+        ],
+        Value: Number(
+            metrics.bridgeStatus.toEthereum.blockLatency > AlarmThreshold.MaxBlockLatency &&
+                metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum <=
+                    metrics.bridgeStatus.toEthereum.previousPolkadotBlockOnEthereum
+        ),
+    })
     // Beacon metrics
     metricData.push({
         MetricName: "BeaconLatency",
@@ -94,10 +112,25 @@ export const sendMetrics = async (metrics: AllMetrics) => {
         ],
         Value: metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot,
     })
+    metricData.push({
+        MetricName: AlarmReason.BeaconStale.toString(),
+        Dimensions: [
+            {
+                Name: "Direction",
+                Value: "ToPolkadot",
+            },
+        ],
+        Value: Number(
+            metrics.bridgeStatus.toPolkadot.blockLatency > AlarmThreshold.MaxBlockLatency &&
+                metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot <=
+                    metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot
+        ),
+    })
     // Channel metrics
     for (let channel of metrics.channels) {
+        // To Ethereum
         metricData.push({
-            MetricName: "OutboundNonce",
+            MetricName: "ToEthereumOutboundNonce",
             Dimensions: [
                 {
                     Name: "Direction",
@@ -111,7 +144,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             Value: channel.toEthereum.outbound,
         })
         metricData.push({
-            MetricName: "PreviousOutboundNonce",
+            MetricName: "ToEthereumPreviousOutboundNonce",
             Dimensions: [
                 {
                     Name: "Direction",
@@ -125,7 +158,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             Value: channel.toEthereum.previousOutbound,
         })
         metricData.push({
-            MetricName: "InboundNonce",
+            MetricName: "ToEthereumInboundNonce",
             Dimensions: [
                 {
                     Name: "Direction",
@@ -139,7 +172,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             Value: channel.toEthereum.inbound,
         })
         metricData.push({
-            MetricName: "PreviousInboundNonce",
+            MetricName: "ToEthereumPreviousInboundNonce",
             Dimensions: [
                 {
                     Name: "Direction",
@@ -152,9 +185,23 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             ],
             Value: channel.toEthereum.previousInbound,
         })
-
         metricData.push({
-            MetricName: "OutboundNonce",
+            MetricName: AlarmReason.ToEthereumChannelStale.toString(),
+            Dimensions: [
+                {
+                    Name: "Direction",
+                    Value: "ToEthereum",
+                },
+            ],
+            Value: Number(
+                channel.toEthereum.outbound < channel.toEthereum.inbound ||
+                    (channel.toEthereum.outbound > channel.toEthereum.inbound &&
+                        channel.toEthereum.inbound <= channel.toEthereum.previousInbound)
+            ),
+        })
+        // To Polkadot
+        metricData.push({
+            MetricName: "ToPolkadotOutboundNonce",
             Dimensions: [
                 {
                     Name: "Direction",
@@ -168,7 +215,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             Value: channel.toPolkadot.outbound,
         })
         metricData.push({
-            MetricName: "PreviousOutboundNonce",
+            MetricName: "ToPolkadotPreviousOutboundNonce",
             Dimensions: [
                 {
                     Name: "Direction",
@@ -182,7 +229,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             Value: channel.toPolkadot.previousOutbound,
         })
         metricData.push({
-            MetricName: "InboundNonce",
+            MetricName: "ToPolkadotInboundNonce",
             Dimensions: [
                 {
                     Name: "Direction",
@@ -196,7 +243,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             Value: channel.toPolkadot.inbound,
         })
         metricData.push({
-            MetricName: "PreviousInboundNonce",
+            MetricName: "ToPolkadotPreviousInboundNonce",
             Dimensions: [
                 {
                     Name: "Direction",
@@ -208,6 +255,20 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                 },
             ],
             Value: channel.toPolkadot.previousInbound,
+        })
+        metricData.push({
+            MetricName: AlarmReason.ToPolkadotChannelStale.toString(),
+            Dimensions: [
+                {
+                    Name: "Direction",
+                    Value: "ToPolkadot",
+                },
+            ],
+            Value: Number(
+                channel.toPolkadot.outbound < channel.toPolkadot.inbound ||
+                    (channel.toPolkadot.outbound > channel.toPolkadot.inbound &&
+                        channel.toPolkadot.inbound <= channel.toPolkadot.previousInbound)
+            ),
         })
     }
     for (let relayer of metrics.relayers) {
@@ -221,6 +282,10 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             ],
             Value: Number(relayer.balance),
         })
+        metricData.push({
+            MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
+            Value: Number(!relayer.balance || relayer.balance < AlarmThreshold.MinBalanceToKeep),
+        })
     }
     for (let sovereign of metrics.sovereigns) {
         metricData.push({
@@ -233,12 +298,82 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             ],
             Value: Number(sovereign.balance),
         })
+        metricData.push({
+            MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
+            Value: Number(
+                !sovereign.balance || sovereign.balance < AlarmThreshold.MinBalanceToKeep
+            ),
+        })
     }
     const command = new PutMetricDataCommand({
         MetricData: metricData,
         Namespace: CLOUD_WATCH_NAME_SPACE,
     })
     await client.send(command)
+}
+
+export const initializeAlarms = async () => {
+    let client = new CloudWatchClient({})
+    let cloudWatchAlarms = []
+    let alarmCommandSharedInput = {
+        EvaluationPeriods: 3,
+        Namespace: CLOUD_WATCH_NAME_SPACE,
+        Period: 60,
+        Threshold: 0,
+    }
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.BeefyStale.toString(),
+            MetricName: AlarmReason.BeefyStale.toString(),
+            AlarmDescription: AlarmReason.BeefyStale.toString(),
+            Statistic: "Average",
+            ComparisonOperator: "GreaterThanThreshold",
+            ...alarmCommandSharedInput,
+        })
+    )
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.BeaconStale.toString(),
+            MetricName: AlarmReason.BeaconStale.toString(),
+            AlarmDescription: AlarmReason.BeaconStale.toString(),
+            Statistic: "Average",
+            ComparisonOperator: "GreaterThanThreshold",
+            ...alarmCommandSharedInput,
+        })
+    )
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.ToEthereumChannelStale.toString(),
+            MetricName: AlarmReason.ToEthereumChannelStale.toString(),
+            AlarmDescription: AlarmReason.ToEthereumChannelStale.toString(),
+            Statistic: "Average",
+            ComparisonOperator: "GreaterThanThreshold",
+            ...alarmCommandSharedInput,
+        })
+    )
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.ToPolkadotChannelStale.toString(),
+            MetricName: AlarmReason.ToPolkadotChannelStale.toString(),
+            AlarmDescription: AlarmReason.ToPolkadotChannelStale.toString(),
+            Statistic: "Average",
+            ComparisonOperator: "GreaterThanThreshold",
+            ...alarmCommandSharedInput,
+        })
+    )
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.AccountBalanceInsufficient.toString(),
+            MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
+            AlarmDescription: AlarmReason.AccountBalanceInsufficient.toString(),
+            Statistic: "Average",
+            ComparisonOperator: "GreaterThanThreshold",
+            ...alarmCommandSharedInput,
+        })
+    )
+    for (let alarm of cloudWatchAlarms) {
+        await client.send(alarm)
+    }
 }
 
 export const sendAlarm = async (metrics: AllMetrics) => {
