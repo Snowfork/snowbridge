@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -292,35 +291,38 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 			"currentSlot": currentSlot,
 		}).Info("fetching next header at slot")
 
-		var nextHeaderUpdate scale.HeaderUpdatePayload
-		if currentSlot >= toSlot {
-			// Just construct an empty update so to break the loop
-			nextHeaderUpdate = scale.HeaderUpdatePayload{Header: scale.BeaconHeader{Slot: types.U64(toSlot + 1)}}
-		} else {
-			// To get the sync witness for the current synced header. This header
-			// will be used as the next update.
-			nextHeaderUpdate, err = h.getNextHeaderUpdateBySlot(currentSlot)
-			if err != nil {
-				return fmt.Errorf("get next header update by slot with ancestry proof: %w", err)
+		/*
+			var nextHeaderUpdate scale.HeaderUpdatePayload
+			if currentSlot >= toSlot {
+				// Just construct an empty update so to break the loop
+				nextHeaderUpdate = scale.HeaderUpdatePayload{Header: scale.BeaconHeader{Slot: types.U64(toSlot + 1)}}
+			} else {
+				// To get the sync witness for the current synced header. This header
+				// will be used as the next update.
+				nextHeaderUpdate, err = h.getNextHeaderUpdateBySlot(currentSlot)
+				if err != nil {
+					return fmt.Errorf("get next header update by slot with ancestry proof: %w", err)
+				}
 			}
-		}
 
-		headersToSync = append(headersToSync, headerUpdate)
-		// last slot to be synced, sync headers
-		if currentSlot >= toSlot {
-			err = h.batchSyncHeaders(ctx, headersToSync)
-			if err != nil {
-				return fmt.Errorf("batch sync headers failed: %w", err)
+			headersToSync = append(headersToSync, headerUpdate)
+			// last slot to be synced, sync headers
+			if currentSlot >= toSlot {
+				err = h.batchSyncHeaders(ctx, headersToSync)
+				if err != nil {
+					return fmt.Errorf("batch sync headers failed: %w", err)
+				}
 			}
-		}
-		headerUpdate = nextHeaderUpdate
-		currentSlot = uint64(headerUpdate.Header.Slot)
+			headerUpdate = nextHeaderUpdate
+			currentSlot = uint64(headerUpdate.Header.Slot)*/
+		currentSlot++
 	}
 	// waiting for all batch calls to be executed on chain
-	err = h.waitingForBatchCallFinished(toSlot)
-	if err != nil {
-		return err
-	}
+	//err = h.waitingForBatchCallFinished(toSlot)
+	//if err != nil {
+	//	return err
+	//}
+	fmt.Println(headersToSync)
 	h.cache.SetLastSyncedExecutionSlot(toSlot)
 	return nil
 }
