@@ -134,16 +134,17 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 	// finalized header
 	if uint64(update.Payload.FinalizedHeader.Slot) > h.cache.Finalized.LastSyncedSlot {
 		diff := uint64(update.Payload.FinalizedHeader.Slot) - h.cache.Finalized.LastSyncedSlot
-		log.WithFields(log.Fields{"diff": diff, "last_finalized_slot": h.cache.Finalized.LastSyncedSlot, "new_finalized_slot": uint64(update.Payload.FinalizedHeader.Slot)}).Info("checking max latency")
 		if diff > h.protocol.Settings.SlotsInEpoch*h.protocol.Settings.EpochsPerSyncCommitteePeriod {
-			log.Info("syncing an interim update")
+			log.WithFields(log.Fields{
+				"diff":                diff,
+				"last_finalized_slot": h.cache.Finalized.LastSyncedSlot,
+				"new_finalized_slot":  uint64(update.Payload.FinalizedHeader.Slot),
+			}).Info("syncing an interim update")
 			err = h.syncInterimFinalizedUpdate(ctx, h.cache.Finalized.LastSyncedSlot, uint64(update.Payload.FinalizedHeader.Slot))
 			if err != nil {
 				return fmt.Errorf("sync interim finalized header update: %w", err)
 			}
 		}
-	} else {
-		log.Info("interim update not required")
 	}
 
 	log.WithFields(log.Fields{

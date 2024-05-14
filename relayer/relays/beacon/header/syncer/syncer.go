@@ -572,6 +572,37 @@ func (s *Syncer) findValidUpdatePair(slot uint64) (uint64, uint64, error) {
 	return finalizedHeader.Slot, attestedHeader.Slot, nil
 }
 
+func (s *Syncer) ValidatePair(finalizedSlot, attestedSlot uint64, attestedState state.BeaconState) error {
+	finalizedCheckpoint := attestedState.GetFinalizedCheckpoint()
+	finalizedHeader, err := s.Client.GetHeaderByBlockRoot(common.BytesToHash(finalizedCheckpoint.Root))
+	if err != nil {
+		return fmt.Errorf("unable to download finalized header from attested state")
+	}
+
+	if finalizedHeader.Slot != finalizedSlot {
+		return fmt.Errorf("finalized state in attested state does not match provided finalized state, attested state finalized slot: %d, finalized slot provided: %d", finalizedHeader.Slot, finalizedSlot)
+	}
+
+	nextHeader, err := s.FindBeaconHeaderWithBlockIncluded(attestedSlot + 1)
+	if err != nil {
+		return fmt.Errorf("get sync aggregate header: %d err: %w", attestedSlot+1, err)
+	}
+	nextBlock, err := s.Client.GetBeaconBlockBySlot(nextHeader.Slot)
+	if err != nil {
+		return fmt.Errorf("get sync aggregate block: %d err: %w", nextHeader.Slot, err)
+	}
+
+	superMajority, err := s.protocol.SyncCommitteeSuperMajority(nextBlock.Data.Message.Body.SyncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return fmt.Errorf("compute sync committee supermajority: %d err: %w", nextHeader.Slot, err)
+	}
+	if !superMajority {
+		return fmt.Errorf("sync committee at slot not supermajority: %d", nextHeader.Slot)
+	}
+
+	return nil
+}
+
 func (s *Syncer) GetFinalizedUpdateWithSyncCommittee(syncCommitteePeriod uint64) (scale.Update, error) {
 	minSlot := syncCommitteePeriod * s.protocol.SlotsPerHistoricalRoot
 	maxSlot := ((syncCommitteePeriod + 1) * s.protocol.SlotsPerHistoricalRoot) - s.protocol.Settings.SlotsInEpoch // just before the new sync committee boundary
@@ -595,17 +626,31 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 	// Try getting beacon data from the API first
 	data, err := s.getBeaconDataFromClient(attestedSlot)
 	if err != nil {
-		log.WithFields(log.Fields{"minSlot": minSlot, "maxSlot": maxSlot}).Info("attempting to find in beacon store")
 		// If it fails, using the beacon store and look for a relevant finalized update
-		data, err = s.getBestMatchBeaconDataFromStore(minSlot, maxSlot)
-		if err != nil {
-			return update, fmt.Errorf("fetch beacon data from api and data store failure: %w", err)
-		}
+		for {
+			log.WithError(err).WithField("minSlot", minSlot).Warn("loop")
+			if minSlot > maxSlot {
+				return update, fmt.Errorf("find beacon state store options exhausted: %w", err)
+			}
 
-		// The datastore may not have found the attested slot we wanted, but provided another valid one
-		attestedSlot = data.AttestedSlot
+			data, err = s.getBestMatchBeaconDataFromStore(minSlot, maxSlot)
+			if err != nil {
+				return update, fmt.Errorf("fetch beacon data from api and data store failure: %w", err)
+			}
+
+			err = s.ValidatePair(data.FinalizedHeader.Slot, data.AttestedSlot, data.AttestedState)
+			if err != nil {
+				minSlot = data.FinalizedHeader.Slot + 1
+				log.WithError(err).WithField("minSlot", minSlot).Warn("pair retrieved from database invalid")
+				continue
+			}
+
+			// The datastore may not have found the attested slot we wanted, but provided another valid one
+			attestedSlot = data.AttestedSlot
+		}
 	}
 
+	log.WithFields(log.Fields{"finalizedSlot": data.FinalizedHeader.Slot, "attestedSlot": data.AttestedSlot}).Info("found slot pair for finalized update")
 	// Finalized header proof
 	stateTree, err := data.AttestedState.GetTree()
 	if err != nil {
@@ -793,18 +838,20 @@ func (s *Syncer) getBestMatchBeaconDataFromStore(minSlot, maxSlot uint64) (final
 		return response, fmt.Errorf("fetch header: %w", err)
 	}
 
+	if response.FinalizedHeader.Slot != response.FinalizedState.GetSlot() {
+		return response, fmt.Errorf("finalized slot in state does not match attested finalized state: %w", err)
+	}
+
 	return response, nil
 }
 
 func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {
 	data, err := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
 	if err != nil {
-		log.WithFields(log.Fields{"slot": slot, "err": err}).Warn("unable to download ssz state from api, trying store")
 		data, err = s.store.GetBeaconStateData(slot)
 		if err != nil {
 			return nil, fmt.Errorf("fetch beacon state from store: %w", err)
 		}
-		log.WithField("slot", slot).Info("found state in store")
 	}
 	return data, nil
 }
