@@ -3,11 +3,12 @@ import { Codec } from '@polkadot/types/types'
 import { u8aToHex } from '@polkadot/util'
 import { IERC20__factory, IGateway__factory, WETH9__factory } from '@snowbridge/contract-types'
 import { MultiAddressStruct } from '@snowbridge/contract-types/src/IGateway'
-import { ContractTransactionReceipt, LogDescription, Signer, ethers } from 'ethers'
+import { LogDescription, Signer, TransactionReceipt, ethers, keccak256 } from 'ethers'
 import { concatMap, filter, firstValueFrom, lastValueFrom, take, takeWhile, tap } from 'rxjs'
+import { assetStatusInfo } from './assets'
 import { Context } from './index'
 import { scanSubstrateEvents, waitForMessageQueuePallet } from './query'
-import { assetStatusInfo, bridgeStatusInfo, channelStatusInfo } from './status'
+import { bridgeStatusInfo, channelStatusInfo } from './status'
 import { beneficiaryMultiAddress, fetchBeaconSlot, paraIdToChannelId, paraIdToSovereignAccount } from './utils'
 
 export enum SendValidationCode {
@@ -83,7 +84,7 @@ export const getSendFee = async (context: Context, tokenAddress: string, destina
 export const validateSend = async (context: Context, source: ethers.Addressable, beneficiary: string, tokenAddress: string, destinationParaId: number, amount: bigint, destinationFee: bigint, options = {
     acceptableLatencyInSeconds: 28800 /* 3 Hours */
 }): Promise<SendValidationResult> => {
-    const { ethereum, ethereum: { contracts: { gateway } }, polkadot: { api: { assetHub, bridgeHub, relaychain } } } = context
+    const { ethereum, polkadot: { api: { assetHub, bridgeHub, relaychain } } } = context
 
     const sourceAddress = await source.getAddress()
 
@@ -249,7 +250,7 @@ export type SendResult = {
         }
     }
     failure?: {
-        receipt: ContractTransactionReceipt
+        receipt: TransactionReceipt
     }
 }
 
@@ -271,6 +272,9 @@ export const send = async (context: Context, signer: Signer, plan: SendValidatio
     ])
 
     const contract = IGateway__factory.connect(context.config.appContracts.gateway, signer)
+    const fees = await context.ethereum.api.getFeeData()
+
+
     const response = await contract.sendToken(
         success.token,
         success.destinationParaId,
@@ -282,6 +286,31 @@ export const send = async (context: Context, signer: Signer, plan: SendValidatio
         }
     )
     let receipt = await response.wait(confirmations)
+
+    /// Was a nice idea to sign and send in two steps but metamask does not support this.
+    /// https://github.com/MetaMask/metamask-extension/issues/2506
+    
+    //const response = await contract.sendToken(
+    //    success.token,
+    //    success.destinationParaId,
+    //    success.beneficiaryMultiAddress,
+    //    success.destinationFee,
+    //    success.amount,
+    //    {
+    //        value: success.fee
+    //    }
+    //)
+    //let receipt = await response.wait(confirmations)
+    //const signedTx = await signer.signTransaction(tx)
+    //const txHash = keccak256(signedTx)
+    //const response = await context.ethereum.api.provider.broadcastTransaction(signedTx)
+    // TODO: await context.ethereum.api.getTransaction(txHash) // Use this to check if the server knows about transaction.
+    // TODO: await context.ethereum.api.getTransactionReceipt(txHash) // Use this to check if the server has mined the transaction.
+    // TODO: remove this wait and move everything below this line to trackProgress/Polling methods.
+    //if(txHash !== receipt.hash) {
+    //    throw new Error('tx Hash mismtach')
+    //}
+
     if (receipt === null) {
         throw new Error('Error waiting for transaction completion')
     }
@@ -559,7 +588,6 @@ export async function* trackSendProgress(context: Context, result: SendResult, o
             ),
             { defaultValue: undefined }
         )
-        console.log(receivedEvents?.toHuman())
         if (receivedEvents === undefined) {
             throw Error('Timeout while waiting for Bridge Hub delivery.')
         }
