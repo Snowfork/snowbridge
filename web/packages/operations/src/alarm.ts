@@ -104,7 +104,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                     Value: "ToEthereum",
                 },
                 {
-                    Name: "Name",
+                    Name: "ChannelName",
                     Value: channel.name,
                 },
             ],
@@ -118,7 +118,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                     Value: "ToEthereum",
                 },
                 {
-                    Name: "Name",
+                    Name: "ChannelName",
                     Value: channel.name,
                 },
             ],
@@ -132,7 +132,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                     Value: "ToEthereum",
                 },
                 {
-                    Name: "Name",
+                    Name: "ChannelName",
                     Value: channel.name,
                 },
             ],
@@ -146,7 +146,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                     Value: "ToEthereum",
                 },
                 {
-                    Name: "Name",
+                    Name: "ChannelName",
                     Value: channel.name,
                 },
             ],
@@ -161,7 +161,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                     Value: "ToPolkadot",
                 },
                 {
-                    Name: "Name",
+                    Name: "ChannelName",
                     Value: channel.name,
                 },
             ],
@@ -175,7 +175,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                     Value: "ToPolkadot",
                 },
                 {
-                    Name: "Name",
+                    Name: "ChannelName",
                     Value: channel.name,
                 },
             ],
@@ -189,7 +189,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                     Value: "ToPolkadot",
                 },
                 {
-                    Name: "Name",
+                    Name: "ChannelName",
                     Value: channel.name,
                 },
             ],
@@ -203,7 +203,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
                     Value: "ToPolkadot",
                 },
                 {
-                    Name: "Name",
+                    Name: "ChannelName",
                     Value: channel.name,
                 },
             ],
@@ -215,7 +215,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "BalanceOfRelayer",
             Dimensions: [
                 {
-                    Name: "Name",
+                    Name: "RelayerName",
                     Value: relayer.name,
                 },
             ],
@@ -227,7 +227,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "BalanceOfSovereign",
             Dimensions: [
                 {
-                    Name: "Name",
+                    Name: "SovereignName",
                     Value: sovereign.name,
                 },
             ],
