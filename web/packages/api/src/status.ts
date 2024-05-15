@@ -1,5 +1,5 @@
-import { Context } from './index'
-import { fetchBeaconSlot } from './utils'
+import { Context } from "./index"
+import { fetchBeaconSlot } from "./utils"
 
 export type OperatingMode = "Normal" | "Halted"
 export type BridgeStatusInfo = {
