@@ -27,7 +27,7 @@ function dot(uint32 value) pure returns (uint128) {
     return value * (10 ** 10);
 }
 
-contract Stage3 is Script {
+contract UpgradeShell is Script {
     using SafeNativeTransfer for address payable;
     using stdJson for string;
 

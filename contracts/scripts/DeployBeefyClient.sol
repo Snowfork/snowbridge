@@ -18,7 +18,7 @@ import {ChannelID, ParaID, OperatingMode} from "../src/Types.sol";
 import {SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
 import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
 
-contract Stage2 is Script {
+contract DeployBeefyClient is Script {
     using SafeNativeTransfer for address payable;
     using stdJson for string;
 
