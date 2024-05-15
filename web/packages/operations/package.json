@@ -14,7 +14,8 @@
     "initialize": "npx ts-node src/init.ts",
     "start": "npx ts-node src/start.ts",
     "cron": "npx ts-node src/cron.ts",
-    "server": "npx ts-node src/server.ts"
+    "server": "npx ts-node src/server.ts",
+    "format": "prettier . --write"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.62.0",
