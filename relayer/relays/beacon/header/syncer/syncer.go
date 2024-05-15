@@ -628,7 +628,6 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 	if err != nil {
 		// If it fails, using the beacon store and look for a relevant finalized update
 		for {
-			log.WithError(err).WithField("minSlot", minSlot).Warn("loop")
 			if minSlot > maxSlot {
 				return update, fmt.Errorf("find beacon state store options exhausted: %w", err)
 			}
@@ -647,6 +646,7 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 
 			// The datastore may not have found the attested slot we wanted, but provided another valid one
 			attestedSlot = data.AttestedSlot
+			break
 		}
 	}
 
