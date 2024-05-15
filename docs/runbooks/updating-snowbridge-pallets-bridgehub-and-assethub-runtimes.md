@@ -1,8 +1,10 @@
 ---
-description: Processes for making changes to the Snowbridge and BridgeHub pallets
+description: >-
+  Processes for making changes to the Snowbridge pallets and runtimes for
+  BridgeHub and AssetHub
 ---
 
-# Updating Snowbridge Pallets, BridgeHub & AssetHub Runtimes
+# Contributing to Snowbridge
 
 ## Writing New Code
 
@@ -45,7 +47,7 @@ Audit fixes are usually done on a branch, so as not to interfere with other new 
 
 Rococo deployments are done after the polkadot-sdk release. If out-of-cycle deployments need to be done, they can be arranged in [Chain Infrastructure: Rococo DevOps](https://matrix.to/#/!DiRwwDQntOGihlVwNO:parity.io?via=parity.io\&via=web3.foundation\&via=matrix.org).
 
-### Kusama&#x20;
+### Polkadot
 
 #### Runtime Upgrade
 
@@ -65,30 +67,3 @@ Once the referendum receives enough votes, `parachainSystem.enactAuthorizedUpgra
 
 The above steps are handled by Parity devs.
 
-### Polkadot
-
-Polkadot is updated the same way as Kusama.
-
-## Snowbridge Configuration
-
-#### Ad-hoc Configuration Items
-
-Configuration items to periodically configure for Snowbridge:
-
-* **Set gateway:** Set the Ethereum gateway contract address.
-  * call hash: `0xff00630003000100d50f03082f000006020700c817a804824f1200a400040440aed97c7854d601808b98ae43079dafb3505b4909ce6ca82d2ce23bd46738953c7959e710cd`
-  * link to pre-populate on Rococo: [https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Frococo-rpc.polkadot.io#/extrinsics/decode/0xff00630003000100d50f03082f000006020700c817a804824f1200a400040440aed97c7854d601808b98ae43079dafb3505b4909ce6ca82d2ce23bd46738953c7959e710cd](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Frococo-rpc.polkadot.io#/extrinsics/decode/0xff00630003000100d50f03082f000006020700c817a804824f1200a400040440aed97c7854d601808b98ae43079dafb3505b4909ce6ca82d2ce23bd46738953c7959e710cd\))
-* **Reset nonces:** Reset the nonces to 0. Only used if the bridge needs to be reset.
-  * call hash: `0xff00630003000100d50f03082f000006020700c817a804824f1200a50200040821017d7c8b03a2a182824cfe569187a28faa718368a0ace36e2b1b8b6dbd7f8093c0594aa8a9c557dabac173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a05392000000000000000002101851a76c1adff357d59b36327d02cfb7f718368a0ace36e2b1b8b6dbd7f8093c0594aa8a9c557dabac173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539200000000000000000`
-  * link to pre-populate on Rococo: [https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Frococo-rpc.polkadot.io#/extrinsics/decode/0xff00630003000100d50f03082f000006020700c817a804824f1200a50200040821017d7c8b03a2a182824cfe569187a28faa718368a0ace36e2b1b8b6dbd7f8093c0594aa8a9c557dabac173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a05392000000000000000002101851a76c1adff357d59b36327d02cfb7f718368a0ace36e2b1b8b6dbd7f8093c0594aa8a9c557dabac173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539200000000000000000](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Frococo-rpc.polkadot.io#/extrinsics/decode/0xff00630003000100d50f03082f000006020700c817a804824f1200a50200040821017d7c8b03a2a182824cfe569187a28faa718368a0ace36e2b1b8b6dbd7f8093c0594aa8a9c557dabac173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a05392000000000000000002101851a76c1adff357d59b36327d02cfb7f718368a0ace36e2b1b8b6dbd7f8093c0594aa8a9c557dabac173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539200000000000000000\))
-* **Enable Bridge:** Enable the bridge operating mode.
-  * call hash: `0xff00630003000100d50f03082f000006020700c817a804c2d401000c530100`
-  * link to pre-populate on Rococo: [https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Frococo-rpc.polkadot.io#/extrinsics/decode/0xff00630003000100d50f03082f000006020700c817a804c2d401000c530100](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Frococo-rpc.polkadot.io#/extrinsics/decode/0xff00630003000100d50f03082f000006020700c817a804c2d401000c530100\))
-
-These items would require a referenda item to be created on OpenGov.
-
-TBC Items:
-
-* Which wallet will be used to create the referenda?
-* Exact steps to create referenda (e.g. extrinsic, renferenda on Polkassembly)
-* Confirm where voting and enactment periods are set?
