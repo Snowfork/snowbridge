@@ -16,7 +16,7 @@ export type Config = {
 }
 
 export type SourceType = 'substrate' | 'ethereum'
-export type Relayer = { name: string, account: string, type: SourceType }
+export type Relayer = { name: string, account: string, type: SourceType, balance?: bigint }
 export type ParachainInfo = { paraId: number, destinationFeeDOT: bigint, has20ByteAccounts: boolean, decimals: number }
 export type TransferLocation = {
   id: string
@@ -159,6 +159,55 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
       BEEFY_CONTRACT: '0x27e5e17ac995d3d720c311e1e9560e28f5855fb1',
       ASSET_HUB_PARAID: 1000,
       BRIDGE_HUB_PARAID: 1013,
+      PRIMARY_GOVERNANCE_CHANNEL_ID: '0x0000000000000000000000000000000000000000000000000000000000000001',
+      SECONDARY_GOVERNANCE_CHANNEL_ID: '0x0000000000000000000000000000000000000000000000000000000000000002',
+      RELAYERS: [
+        { name: 'beacon', account: '5FyC9GkHhiAYjMtddwVNc2gx8wBjH9gpMKWbQ1QVXmmJtr8M', type: 'substrate' },
+        { name: 'beefy', account: '0xF061685F2B729b89a7A5966B3ab9aee15269e8FE', type: 'ethereum' },
+        { name: 'parachain-primary-gov', account: '0xE3f4e40E0dB2F828e248dB2790958035BaB1a4B5', type: 'ethereum' },
+        { name: 'parachain-secondary-gov', account: '0x71429d3B9d68557C2F49e42e12B9cf7edAADCe3D', type: 'ethereum' },
+        { name: 'execution-assethub', account: '5GeLu5rPcaoZ2RVDbhX8DKJt8NxnKn6DvvjfuhnwTZyYRY59', type: 'substrate' },
+        { name: 'parachain-assethub', account: '0x0b65d43d159f1C40Bad7768fd59667E3104a2ECE', type: 'ethereum' },
+      ],
+    },
+  },
+  'polkadot_mainnet': {
+    name: 'polkadot_mainnet',
+    locations: [{
+      id: 'ethereum',
+      name: 'Ethereum',
+      type: 'ethereum',
+      destinationIds: ['assethub'],
+      erc20tokensReceivable: {
+        "WETH": '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+      },
+    },
+    {
+      id: 'assethub',
+      name: 'Asset Hub',
+      type: 'substrate',
+      destinationIds: ['ethereum'],
+      paraInfo: {
+        paraId: 1000,
+        destinationFeeDOT: 0n,
+        has20ByteAccounts: false,
+        decimals: 10,
+      },
+      erc20tokensReceivable: {
+        "WETH": '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+      },
+    }],
+    config: {
+      BEACON_HTTP_API: 'https://lodestar-mainnet.chainsafe.io',
+      ETHEREUM_WS_API: (key) => `https://mainnet.infura.io/v3/${key}`,
+      RELAY_CHAIN_WS_URL: 'wss://polkadot-rpc.dwellir.com',
+      ASSET_HUB_WS_URL: 'wss://asset-hub-polkadot-rpc.dwellir.com',
+      BRIDGE_HUB_WS_URL: 'wss://polkadot-bridge-hub-rpc.dwellir.com',
+      PARACHAINS: [],
+      GATEWAY_CONTRACT: '0x27ca963c279c93801941e1eb8799c23f407d68e7',
+      BEEFY_CONTRACT: '0x27e5e17ac995d3d720c311e1e9560e28f5855fb1',
+      ASSET_HUB_PARAID: 1000,
+      BRIDGE_HUB_PARAID: 1002,
       PRIMARY_GOVERNANCE_CHANNEL_ID: '0x0000000000000000000000000000000000000000000000000000000000000001',
       SECONDARY_GOVERNANCE_CHANNEL_ID: '0x0000000000000000000000000000000000000000000000000000000000000002',
       RELAYERS: [
