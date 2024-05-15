@@ -20,7 +20,7 @@ export const accounts = [
     {
         privateKey: "0x27ae0c7b8d7c698e41b173265490a4c64b4e39ae78599166e003f868f12140fd",
         balance,
-    }
+    },
 ]
 
 export default {

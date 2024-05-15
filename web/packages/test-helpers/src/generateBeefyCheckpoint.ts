@@ -2,20 +2,17 @@ import { ApiPromise, WsProvider } from "@polkadot/api"
 import { MerkleTree } from "merkletreejs"
 import createKeccakHash from "keccak"
 import { publicKeyConvert } from "secp256k1"
-import type {
-    ValidatorSetId,
-    BeefyId,
-} from "@polkadot/types/interfaces/beefy/types"
+import type { ValidatorSetId, BeefyId } from "@polkadot/types/interfaces/beefy/types"
 import fs from "fs"
 import path from "path"
-import { u32, u64 } from "@polkadot/types-codec";
-import { H256 } from "@polkadot/types/interfaces";
-import { Struct } from "@polkadot/types";
+import { u32, u64 } from "@polkadot/types-codec"
+import { H256 } from "@polkadot/types/interfaces"
+import { Struct } from "@polkadot/types"
 
 interface NextAuthoritySet extends Struct {
-    id: u64;
-    len: u32;
-    keysetCommitment: H256;
+    id: u64
+    len: u32
+    keysetCommitment: H256
 }
 
 async function generateBeefyCheckpoint() {
