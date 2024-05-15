@@ -31,22 +31,17 @@ contract Stage2 is Script {
         uint256 minimumSignatures;
     }
 
-    function readConfig() internal pure returns (Config memory config) { 
+    function readConfig() internal pure returns (Config memory config) {
+        // TODO: When we are ready to commit to checkpoint, run the following to compute the checkpoint
+        //   (cd web/packages/test-helpers; BEEFY_BLOCK=... npx npx ts-node src/generateBeefyCheckpointProd.ts)
+        // Substitute `startBlock`, `current`, `next` below
         config = Config({
             startBlock: 0,
-            current: BeefyClient.ValidatorSet({
-                id: 0,
-                length: 0,
-                root: 0
-            }),
-            next: BeefyClient.ValidatorSet({
-                id: 0,
-                length: 0,
-                root: 0
-            }),
-            randaoCommitDelay: 0,
-            randaoCommitExpiration: 0,
-            minimumSignatures: 0
+            current: BeefyClient.ValidatorSet({id: 0, length: 0, root: 0}),
+            next: BeefyClient.ValidatorSet({id: 0, length: 0, root: 0}),
+            randaoCommitDelay: 128,
+            randaoCommitExpiration: 24,
+            minimumSignatures: 17
         });
     }
 

@@ -18,10 +18,13 @@ import {SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
 
-
-// 1 mDOT = 0.001 DOT
-function mdot(uint32 value) pure returns (uint128) {
+function mDot(uint32 value) pure returns (uint128) {
+    // 1 mDOT = 0.001 DOT
     return value * (10 ** 7);
+}
+
+function dot(uint32 value) pure returns (uint128) {
+    return value * (10 ** 10);
 }
 
 contract Stage3 is Script {
@@ -38,22 +41,22 @@ contract Stage3 is Script {
         Gateway.Config initializerParams;
     }
 
-    function readConfig() internal pure returns (Config memory config) { 
+    function readConfig() internal pure returns (Config memory config) {
         config = Config({
-            gatewayProxy: address(0),
+            gatewayProxy: 0x27ca963C279c93801941e1eB8799c23f407d68e7,
             beefyClient: address(0),
             bridgeHubParaID: ParaID.wrap(1002),
             bridgeHubAgentID: 0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314,
             foreignTokenDecimals: 10,
-            maxDestinationFee: 0,
+            maxDestinationFee: dot(2),
             initializerParams: Gateway.Config({
                 mode: OperatingMode.Normal,
-                deliveryCost: mdot(100), // 0.1 DOT
+                deliveryCost: mDot(100), // 0.1 DOT
                 registerTokenFee: 0.002 ether,
                 assetHubParaID: ParaID.wrap(1000),
                 assetHubAgentID: 0x81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79,
-                assetHubCreateAssetFee: mdot(100), // 0.1 DOT
-                assetHubReserveTransferFee: mdot(100), // 0.1 DOT
+                assetHubCreateAssetFee: mDot(100), // 0.1 DOT
+                assetHubReserveTransferFee: mDot(100), // 0.1 DOT
                 exchangeRate: ud60x18(0.0024e18),
                 multiplier: ud60x18(1.33e18)
             })
