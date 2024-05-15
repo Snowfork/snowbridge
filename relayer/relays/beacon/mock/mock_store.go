@@ -10,6 +10,10 @@ type Store struct {
 	BeaconStateData       map[uint64][]byte
 }
 
+func (m *Store) FindBeaconStateWithinRange(slot, boundary uint64) (store.StoredBeaconData, error) {
+	return m.StoredBeaconStateData, nil
+}
+
 func (m *Store) WriteEntry(attestedSlot, finalizedSlot uint64, attestedStateData, finalizedStateData []byte) error {
 	return nil
 }
@@ -28,8 +32,4 @@ func (m *Store) Connect() error {
 
 func (m *Store) Close() {
 
-}
-
-func (m *Store) FindBeaconStateWithinSyncPeriod(slot, boundary uint64, findMax bool) (store.StoredBeaconData, error) {
-	return m.StoredBeaconStateData, nil
 }

@@ -1,5 +1,5 @@
 import { Registry } from "@polkadot/types/types"
-import { bnToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
+import { bnToU8a, hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
 import { blake2AsU8a, decodeAddress, keccak256AsU8a } from "@polkadot/util-crypto"
 import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway"
 import { ethers } from "ethers"
@@ -12,9 +12,9 @@ export const paraIdToSovereignAccount = (type: 'para' | 'sibl', paraId: number):
     return u8aToHex(address)
 }
 
-export const paraIdToAgentId = (register: Registry, paraId: number): string => {
+export const paraIdToAgentId = (registry: Registry, paraId: number): string => {
     const typeEncoded = stringToU8a('SiblingChain')
-    const paraIdEncoded = register.createType('Compact<u32>', paraId).toU8a()
+    const paraIdEncoded = registry.createType('Compact<u32>', paraId).toU8a()
     const joined = new Uint8Array([...typeEncoded, ...paraIdEncoded, 0x00])
     const agentId = blake2AsU8a(joined, 256)
     return u8aToHex(agentId)
@@ -26,6 +26,16 @@ export const paraIdToChannelId = (paraId: number): string => {
     const joined = new Uint8Array([...typeEncoded, ...paraIdEncoded])
     const channelId = keccak256AsU8a(joined)
     return u8aToHex(channelId)
+}
+
+export const forwardedTopicId = (messageId: string): string => {
+    // From rust code
+    // (b"forward_id_for", original_id).using_encoded(sp_io::hashing::blake2_256)
+    const typeEncoded = stringToU8a('forward_id_for')
+    const paraIdEncoded = hexToU8a(messageId)
+    const joined = new Uint8Array([...typeEncoded, ...paraIdEncoded])
+    const newTopicId = blake2AsU8a(joined, 256)
+    return u8aToHex(newTopicId)
 }
 
 export const beneficiaryMultiAddress = (beneficiary: string) => {

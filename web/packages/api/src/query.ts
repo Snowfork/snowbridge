@@ -32,7 +32,7 @@ export const scanSubstrateEvents = async (
 
 export const waitForMessageQueuePallet = async (
     parachain: ApiPromise,
-    messageId: string | undefined,
+    messageId: string,
     siblingParachain: number,
     eventFilter: (event: Codec) => boolean,
     options = {
@@ -50,8 +50,7 @@ export const waitForMessageQueuePallet = async (
                 for (const event of (events as any)) {
                     let eventData = event.event.toPrimitive().data
                     if (parachain.events.messageQueue.Processed.is(event.event)
-                        // TODO: Use SetTopic to forward the message id to the destination chain and then remove undefined check.
-                        && (messageId === undefined || eventData[0].toLowerCase() === messageId.toLowerCase())
+                        && eventData[0].toLowerCase() === messageId.toLowerCase()
                         && eventData[1]?.sibling === siblingParachain) {
 
                         foundMessageQueue = true

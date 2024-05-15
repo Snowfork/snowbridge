@@ -1,6 +1,6 @@
 
-import { contextFactory, destroyContext, toEthereum, toPolkadot, environment } from '@snowbridge/api'
 import { Keyring } from '@polkadot/keyring'
+import { contextFactory, destroyContext, environment, toEthereum, toPolkadot } from '@snowbridge/api'
 import { Wallet } from 'ethers'
 
 const monitor = async () => {
