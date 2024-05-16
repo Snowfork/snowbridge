@@ -1,4 +1,5 @@
 import { ApiPromise, WsProvider } from "@polkadot/api"
+import { MerkleTree } from "merkletreejs"
 import createKeccakHash from "keccak"
 import { publicKeyConvert } from "secp256k1"
 import type { ValidatorSetId, BeefyId } from "@polkadot/types/interfaces/beefy/types"
@@ -8,7 +9,7 @@ import { u32, u64 } from "@polkadot/types-codec"
 import { H256 } from "@polkadot/types/interfaces"
 import { Struct } from "@polkadot/types"
 
-interface AuthoritySet extends Struct {
+interface NextAuthoritySet extends Struct {
     id: u64
     len: u32
     keysetCommitment: H256
@@ -46,42 +47,23 @@ async function generateBeefyCheckpoint() {
     const validatorSetId = await api.query.beefy.validatorSetId<ValidatorSetId>()
     const authorities = await api.query.beefy.authorities<BeefyId[]>()
 
-    console.log("validatorSetId:", validatorSetId)
-    console.log("authority length is:" + authorities.length)
-
     let addrs = []
-
     for (let i = 0; i < authorities.length; i++) {
-        console.log("index is:" + i + ",authority is:" + authorities[i])
-        try {
-            let publicKey = publicKeyConvert(authorities[i], false).slice(1)
-            let publicKeyHashed = createKeccakHash("keccak256")
-                .update(Buffer.from(publicKey))
-                .digest()
-            addrs.push(publicKeyHashed.slice(12))
-        } catch (err) {
-            console.log(err)
-        }
+        let publicKey = publicKeyConvert(authorities[i], false).slice(1)
+        let publicKeyHashed = createKeccakHash("keccak256").update(Buffer.from(publicKey)).digest()
+        addrs.push(publicKeyHashed.slice(12))
     }
 
-    console.log("valid authority length is:" + addrs.length)
+    const tree = createMerkleTree(addrs)
 
-    let currentAuthorities, nextAuthorities
-
-    if (process.env.NODE_ENV == "production") {
-        currentAuthorities = await api.query.beefyMmrLeaf.beefyAuthorities<AuthoritySet>()
-        nextAuthorities = await api.query.beefyMmrLeaf.beefyNextAuthorities<AuthoritySet>()
-    } else {
-        currentAuthorities = await api.query.mmrLeaf.beefyAuthorities<AuthoritySet>()
-        nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<AuthoritySet>()
-    }
+    const nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<NextAuthoritySet>()
 
     const beefyCheckpoint = {
         startBlock: beefyStartBlock,
         current: {
-            id: currentAuthorities.id.toNumber(),
-            root: currentAuthorities.keysetCommitment.toHex(),
-            length: currentAuthorities.len.toNumber(),
+            id: validatorSetId.toNumber(),
+            root: tree.getHexRoot(),
+            length: addrs.length,
         },
         next: {
             id: nextAuthorities.id.toNumber(),
@@ -94,6 +76,19 @@ async function generateBeefyCheckpoint() {
 
     fs.writeFileSync(BeefyStateFile, JSON.stringify(beefyCheckpoint, null, 2), "utf8")
     console.log("Beefy state writing to dest file: " + BeefyStateFile)
+}
+
+function hasher(data: Buffer): Buffer {
+    return createKeccakHash("keccak256").update(data).digest()
+}
+
+function createMerkleTree(leaves: Buffer[]) {
+    const leafHashes = leaves.map((value) => hasher(value))
+    const tree = new MerkleTree(leafHashes, hasher, {
+        sortLeaves: false,
+        sortPairs: false,
+    })
+    return tree
 }
 
 // We recommend this pattern to be able to use async/await everywhere

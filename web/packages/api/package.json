@@ -12,7 +12,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "format": "prettier . --write"
   },
   "devDependencies": {
     "@types/node": "^18.19.31",
