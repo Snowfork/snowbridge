@@ -164,7 +164,8 @@ type BeaconState interface {
 	GetBlockRoots() [][]byte
 	GetTree() (*ssz.Node, error)
 	GetFinalizedCheckpoint() *Checkpoint
-	GetSyncSyncCommittee() *SyncCommittee
+	GetCurrentSyncCommittee() *SyncCommittee
+	GetNextSyncCommittee() *SyncCommittee
 }
 
 type SyncAggregate interface {
@@ -318,6 +319,9 @@ func (b *BeaconStateCapellaMainnet) GetFinalizedCheckpoint() *Checkpoint {
 	return b.FinalizedCheckpoint
 }
 
-func (b *BeaconStateCapellaMainnet) GetSyncSyncCommittee() *SyncCommittee {
+func (b *BeaconStateCapellaMainnet) GetNextSyncCommittee() *SyncCommittee {
 	return b.NextSyncCommittee
+}
+func (b *BeaconStateCapellaMainnet) GetCurrentSyncCommittee() *SyncCommittee {
+	return b.CurrentSyncCommittee
 }

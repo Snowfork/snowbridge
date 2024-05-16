@@ -118,7 +118,7 @@ func (s *Syncer) GetCheckpointAtSlot(slot uint64) (scale.BeaconCheckpoint, error
 		return scale.BeaconCheckpoint{}, fmt.Errorf("fetch block roots: %w", err)
 	}
 
-	syncCommittee := finalizedState.GetSyncSyncCommittee()
+	syncCommittee := finalizedState.GetNextSyncCommittee()
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("convert sync committee to scale: %w", err)
 	}
@@ -130,7 +130,7 @@ func (s *Syncer) GetCheckpointAtSlot(slot uint64) (scale.BeaconCheckpoint, error
 
 	_ = stateTree.Hash() // necessary to populate the proof tree values
 
-	proof, err := stateTree.Prove(BlockRootGeneralizedIndex)
+	proof, err := stateTree.Prove(CurrentSyncCommitteeGeneralizedIndex)
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get block roof proof: %w", err)
 	}
@@ -723,7 +723,7 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 			return update, fmt.Errorf("get finalized header proof: %w", err)
 		}
 
-		nextSyncCommittee := data.AttestedState.GetSyncSyncCommittee()
+		nextSyncCommittee := data.AttestedState.GetNextSyncCommittee()
 
 		syncCommitteePubKeys, err := util.ByteArrayToPublicKeyArray(nextSyncCommittee.PubKeys)
 		nextSyncCommitteeScale = scale.OptionNextSyncCommitteeUpdatePayload{

@@ -333,7 +333,6 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	h.cache.SetLastSyncedExecutionSlot(toSlot)
 	return nil
 }
 
@@ -532,6 +531,7 @@ func (h *Header) waitingForBatchCallFinished(toSlot uint64) error {
 		if err != nil {
 			return fmt.Errorf("fetch last execution hash: %w", err)
 		}
+		h.cache.SetLastSyncedExecutionSlot(executionHeaderState.BeaconSlot)
 		if executionHeaderState.BeaconSlot == toSlot {
 			batchCallFinished = true
 			break

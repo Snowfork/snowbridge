@@ -56,7 +56,7 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
-	cmd.Flags().Int64("finalized-slot", 0, "Optional finalized slot to create checkpoint at")
+	cmd.Flags().Uint64("finalized-slot", 0, "Optional finalized slot to create checkpoint at")
 	cmd.Flags().Bool("export-json", false, "Export Json")
 
 	return cmd
