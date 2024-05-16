@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsc",
     "lint": "eslint .",
-    "format": "prettier . --write"
+    "format": "prettier src --write"
   },
   "devDependencies": {
     "@types/node": "^18.19.31",

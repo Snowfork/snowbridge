@@ -15,7 +15,7 @@
     "generateContracts": "npx ts-node src/generateContractInfo.ts",
     "generateBeefyValidatorSet": "npx ts-node src/generateBeefyTestFixture.ts GenerateInitialSet",
     "generateBeefyFinalProof": "npx ts-node src/generateBeefyTestFixture.ts GenerateProofs",
-    "format": "prettier . --write"
+    "format": "prettier src --write"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.42.0",
