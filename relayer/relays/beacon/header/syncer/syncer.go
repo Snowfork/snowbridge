@@ -23,10 +23,11 @@ import (
 )
 
 const (
-	BlockRootGeneralizedIndex           = 37
-	FinalizedCheckpointGeneralizedIndex = 105
-	NextSyncCommitteeGeneralizedIndex   = 55
-	ExecutionPayloadGeneralizedIndex    = 25
+	BlockRootGeneralizedIndex            = 37
+	FinalizedCheckpointGeneralizedIndex  = 105
+	CurrentSyncCommitteeGeneralizedIndex = 54
+	NextSyncCommitteeGeneralizedIndex    = 55
+	ExecutionPayloadGeneralizedIndex     = 25
 )
 
 var (
@@ -96,6 +97,59 @@ func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 		ValidatorsRoot:             types.H256(common.HexToHash(response.ValidatorsRoot)),
 		BlockRootsRoot:             types.H256(common.HexToHash(response.BlockRootsRoot)),
 		BlockRootsBranch:           util.ProofBranchToScale(response.BlockRootsRootBranch),
+	}, nil
+}
+
+func (s *Syncer) GetCheckpointAtSlot(slot uint64) (scale.BeaconCheckpoint, error) {
+	checkpoint, err := s.GetFinalizedUpdateAtAttestedSlot(slot, slot, false)
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("get finalized update at slot: %w", err)
+	}
+
+	genesis, err := s.Client.GetGenesis()
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("get genesis: %w", err)
+	}
+
+	finalizedState, err := s.getBeaconStateAtSlot(slot)
+
+	blockRootsProof, err := s.GetBlockRootsFromState(finalizedState)
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("fetch block roots: %w", err)
+	}
+
+	syncCommittee := finalizedState.GetSyncSyncCommittee()
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("convert sync committee to scale: %w", err)
+	}
+
+	stateTree, err := finalizedState.GetTree()
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("get state tree: %w", err)
+	}
+
+	_ = stateTree.Hash() // necessary to populate the proof tree values
+
+	proof, err := stateTree.Prove(BlockRootGeneralizedIndex)
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("get block roof proof: %w", err)
+	}
+
+	pubkeys, err := util.ByteArrayToPublicKeyArray(syncCommittee.PubKeys)
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("bytes to pubkey array: %w", err)
+	}
+
+	return scale.BeaconCheckpoint{
+		Header: checkpoint.Payload.FinalizedHeader,
+		CurrentSyncCommittee: scale.SyncCommittee{
+			Pubkeys:         pubkeys,
+			AggregatePubkey: syncCommittee.AggregatePubKey,
+		},
+		CurrentSyncCommitteeBranch: util.BytesBranchToScale(proof.Hashes),
+		ValidatorsRoot:             types.H256(genesis.ValidatorsRoot),
+		BlockRootsRoot:             blockRootsProof.Leaf,
+		BlockRootsBranch:           blockRootsProof.Proof,
 	}, nil
 }
 
