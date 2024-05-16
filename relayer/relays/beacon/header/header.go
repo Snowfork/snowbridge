@@ -327,14 +327,12 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 		}
 		headerUpdate = nextHeaderUpdate
 		currentSlot = uint64(headerUpdate.Header.Slot)
-		currentSlot++
 	}
 	// waiting for all batch calls to be executed on chain
 	err = h.waitingForBatchCallFinished(toSlot)
 	if err != nil {
 		return err
 	}
-
 	h.cache.SetLastSyncedExecutionSlot(toSlot)
 	return nil
 }
