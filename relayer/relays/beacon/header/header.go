@@ -333,16 +333,19 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("batch sync headers failed: %w", err)
 			}
+
+			// waiting for all batch calls to be executed on chain
+			err = h.waitingForBatchCallFinished(slotsToSync[len(slotsToSync)-1])
+			if err != nil {
+				return err
+			}
+
 			headersToSync = []scale.HeaderUpdatePayload{}
 		}
 		headerUpdate = nextHeaderUpdate
 		currentSlot = uint64(headerUpdate.Header.Slot)
 	}
-	// waiting for all batch calls to be executed on chain
-	err = h.waitingForBatchCallFinished(toSlot)
-	if err != nil {
-		return err
-	}
+
 	return nil
 }
 
