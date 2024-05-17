@@ -118,7 +118,7 @@ func (s *Syncer) GetCheckpointAtSlot(slot uint64) (scale.BeaconCheckpoint, error
 		return scale.BeaconCheckpoint{}, fmt.Errorf("fetch block roots: %w", err)
 	}
 
-	syncCommittee := finalizedState.GetNextSyncCommittee()
+	syncCommittee := finalizedState.GetCurrentSyncCommittee()
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("convert sync committee to scale: %w", err)
 	}

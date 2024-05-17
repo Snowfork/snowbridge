@@ -71,6 +71,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 	// Special handling here for the initial checkpoint to sync the next sync committee which is not included in initial
 	// checkpoint.
 	if h.isInitialSyncPeriod() {
+		log.Info("syncing next sync committee for initial checkpoint")
 		err = h.SyncCommitteePeriodUpdate(ctx, latestSyncedPeriod)
 		if err != nil {
 			return fmt.Errorf("sync next committee for initial sync period: %w", err)
@@ -302,6 +303,7 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 	for currentSlot <= toSlot {
 		log.WithFields(log.Fields{
 			"currentSlot": currentSlot,
+			"remaining":   toSlot - currentSlot,
 		}).Info("fetching next header at slot")
 
 		var nextHeaderUpdate scale.HeaderUpdatePayload
@@ -319,11 +321,19 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 
 		headersToSync = append(headersToSync, headerUpdate)
 		// last slot to be synced, sync headers
-		if currentSlot >= toSlot {
+		if currentSlot%8 == 0 || currentSlot >= toSlot {
+			slotsToSync := []uint64{}
+			for _, h := range headersToSync {
+				slotsToSync = append(slotsToSync, uint64(h.Header.Slot))
+			}
+			log.WithFields(log.Fields{
+				"slotsToSync": slotsToSync,
+			}).Info("syncing batch of headers")
 			err = h.batchSyncHeaders(ctx, headersToSync)
 			if err != nil {
 				return fmt.Errorf("batch sync headers failed: %w", err)
 			}
+			headersToSync = []scale.HeaderUpdatePayload{}
 		}
 		headerUpdate = nextHeaderUpdate
 		currentSlot = uint64(headerUpdate.Header.Slot)
