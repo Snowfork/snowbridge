@@ -5,17 +5,17 @@ import { concatMap, filter, firstValueFrom, take } from "rxjs"
 
 export const scanSubstrateEvents = async (
     parachain: ApiPromise,
-    start: bigint,
-    scanBlocks: bigint,
-    filter: (blockNumber: bigint, blockHash: BlockHash, event: Codec) => Promise<boolean>
+    start: number,
+    scanBlocks: number,
+    filter: (blockNumber: number, blockHash: BlockHash, event: Codec) => Promise<boolean>
 ): Promise<{
     found: boolean
-    lastScannedBlock: bigint
+    lastScannedBlock: number
     events?: Codec
 }> => {
     const finalized = (
         await parachain.rpc.chain.getHeader(await parachain.rpc.chain.getFinalizedHead())
-    ).number.toBigInt()
+    ).number.toNumber()
     const stopScan = start + scanBlocks
     const end = finalized < stopScan ? finalized : stopScan
 
@@ -45,7 +45,8 @@ export const waitForMessageQueuePallet = async (
     let returnEvent = undefined
 
     parachain.rpc.chain.subscribeFinalizedHeads
-    let receivedEvents = await firstValueFrom(parachain.rx.rpc.chain.subscribeFinalizedHeads().pipe(
+    let receivedEvents = await firstValueFrom(
+        parachain.rx.rpc.chain.subscribeFinalizedHeads().pipe(
             take(options.scanBlocks),
             concatMap(async (header) => {
                 const api1 = await parachain.at(header.hash)
@@ -71,7 +72,7 @@ export const waitForMessageQueuePallet = async (
                     }
                 }
                 return foundMessageQueue && ((extrinsicSuccess && foundEvent) || !extrinsicSuccess)
-            }),
+            })
         ),
         { defaultValue: undefined }
     )
