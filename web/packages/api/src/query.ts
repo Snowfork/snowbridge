@@ -1,7 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { BlockHash } from "@polkadot/types/interfaces"
 import { Codec } from "@polkadot/types/types"
-import { concat, concatMap, filter, firstValueFrom, map, switchMap, take } from "rxjs"
+import { concatMap, filter, firstValueFrom, take } from "rxjs"
 
 export const scanSubstrateEvents = async (
     parachain: ApiPromise,
@@ -38,16 +38,17 @@ export const waitForMessageQueuePallet = async (
     siblingParachain: number,
     eventFilter: (event: Codec) => boolean,
     options = {
-        scanBlocks: 10,
+        scanBlocks: 40,
     }
 ): Promise<{ foundEvent?: Codec; allEvents: Codec; extrinsicSuccess: boolean }> => {
     let extrinsicSuccess = false
     let returnEvent = undefined
 
-    let receivedEvents = await firstValueFrom(parachain.rx.rpc.chain.getFinalizedHead().pipe(
+    parachain.rpc.chain.subscribeFinalizedHeads
+    let receivedEvents = await firstValueFrom(parachain.rx.rpc.chain.subscribeFinalizedHeads().pipe(
             take(options.scanBlocks),
-            concatMap(async (hash) => {
-                const api1 = await parachain.at(hash)
+            concatMap(async (header) => {
+                const api1 = await parachain.at(header.hash)
                 return await api1.query.system.events()
             }),
             filter((events) => {
@@ -70,7 +71,7 @@ export const waitForMessageQueuePallet = async (
                     }
                 }
                 return foundMessageQueue && ((extrinsicSuccess && foundEvent) || !extrinsicSuccess)
-            })
+            }),
         ),
         { defaultValue: undefined }
     )
