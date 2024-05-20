@@ -30,18 +30,20 @@ var ErrExecutionHeaderNotImported = errors.New("execution header not imported")
 var ErrBeaconHeaderNotFinalized = errors.New("beacon header not finalized")
 
 type Header struct {
-	cache    *cache.BeaconCache
-	writer   parachain.ChainWriter
-	syncer   *syncer.Syncer
-	protocol *protocol.Protocol
+	cache         *cache.BeaconCache
+	writer        parachain.ChainWriter
+	syncer        *syncer.Syncer
+	protocol      *protocol.Protocol
+	batchCallSize uint64
 }
 
-func New(writer parachain.ChainWriter, client api.BeaconAPI, setting config.SpecSettings, store store.BeaconStore, protocol *protocol.Protocol) Header {
+func New(writer parachain.ChainWriter, client api.BeaconAPI, setting config.SpecSettings, store store.BeaconStore, protocol *protocol.Protocol, batchCallSize uint64) Header {
 	return Header{
-		cache:    cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
-		writer:   writer,
-		syncer:   syncer.New(client, store, protocol),
-		protocol: protocol,
+		cache:         cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
+		writer:        writer,
+		syncer:        syncer.New(client, store, protocol),
+		protocol:      protocol,
+		batchCallSize: batchCallSize,
 	}
 }
 
@@ -321,7 +323,7 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 
 		headersToSync = append(headersToSync, headerUpdate)
 		// last slot to be synced, sync headers
-		if currentSlot%8 == 0 || currentSlot >= toSlot {
+		if currentSlot%h.batchCallSize == 0 || currentSlot >= toSlot {
 			slotsToSync := []uint64{}
 			for _, h := range headersToSync {
 				slotsToSync = append(slotsToSync, uint64(h.Header.Slot))
