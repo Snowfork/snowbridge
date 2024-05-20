@@ -49,7 +49,7 @@ cumulus_based = true
         "--enable-offchain-indexing=true",
         "--pruning=archive",
         "--force-authoring",
-        "-lparachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace,snowbridge-outbound-queue=trace,snowbridge-inbound-queue=trace,runtime=debug,runtime-snowbridge-migration=debug,ethereum_system::migration=debug",
+        "-lparachain=trace,cumulus-collator=trace,aura=trace,xcm=trace,ethereum-beacon-client=trace,snowbridge-outbound-queue=trace,snowbridge-inbound-queue=trace,runtime=debug",
     ]
 
 ## Statemine
