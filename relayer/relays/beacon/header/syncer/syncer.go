@@ -58,6 +58,47 @@ type finalizedUpdateContainer struct {
 }
 
 func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
+	checkpoint, err := s.Client.GetFinalizedCheckpoint()
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("get finalized checkpoint: %w", err)
+	}
+
+	bootstrap, err := s.Client.GetBootstrap(checkpoint.FinalizedBlockRoot)
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("get bootstrap: %w", err)
+	}
+
+	genesis, err := s.Client.GetGenesis()
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("get genesis: %w", err)
+	}
+
+	header, err := bootstrap.Data.Header.Beacon.ToScale()
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("convert header to scale: %w", err)
+	}
+
+	blockRootsProof, err := s.GetBlockRoots(uint64(header.Slot))
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("fetch block roots: %w", err)
+	}
+
+	syncCommittee, err := bootstrap.Data.CurrentSyncCommittee.ToScale()
+	if err != nil {
+		return scale.BeaconCheckpoint{}, fmt.Errorf("convert sync committee to scale: %w", err)
+	}
+
+	return scale.BeaconCheckpoint{
+		Header:                     header,
+		CurrentSyncCommittee:       syncCommittee,
+		CurrentSyncCommitteeBranch: util.ProofBranchToScale(bootstrap.Data.CurrentSyncCommitteeBranch),
+		ValidatorsRoot:             types.H256(genesis.ValidatorsRoot),
+		BlockRootsRoot:             blockRootsProof.Leaf,
+		BlockRootsBranch:           blockRootsProof.Proof,
+	}, nil
+}
+
+func (s *Syncer) GetCheckpointFromFile() (scale.BeaconCheckpoint, error) {
 	type CheckPointResponse struct {
 		Header                     api.BeaconHeader          `json:"header"`
 		CurrentSyncCommittee       api.SyncCommitteeResponse `json:"current_sync_committee"`
