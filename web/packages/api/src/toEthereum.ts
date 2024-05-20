@@ -317,9 +317,9 @@ export type SendResult = {
             messageDispatchSuccess?: boolean
         }
         polling?: {
-            bridgeHubMessageQueueProcessed: bigint
-            ethereumBeefyClient: bigint
-            ethereumMessageDispatched: bigint
+            bridgeHubMessageQueueProcessed: number
+            ethereumBeefyClient: number
+            ethereumMessageDispatched: number
         }
     }
     failure?: {
@@ -619,7 +619,7 @@ export const trackSendProgressPolling = async (
     result: SendResult,
     options = {
         beaconUpdateTimeout: 10,
-        scanBlocks: 600n,
+        scanBlocks: 600,
     }
 ): Promise<{ status: "success" | "pending"; result: SendResult }> => {
     const {
@@ -642,15 +642,11 @@ export const trackSendProgressPolling = async (
             bridgeHubMessageQueueProcessed:
                 (
                     await bridgeHub.rpc.chain.getHeader(success.bridgeHub.submittedAtHash)
-                ).number.toBigInt() + 1n,
+                ).number.toNumber() + 1,
             ethereumBeefyClient:
-                BigInt(
-                    (await ethereum.api.getBlock(success.ethereum.submittedAtHash))?.number ?? 0n
-                ) + 1n,
+                (await ethereum.api.getBlock(success.ethereum.submittedAtHash))?.number ?? 0 + 1,
             ethereumMessageDispatched:
-                BigInt(
-                    (await ethereum.api.getBlock(success.ethereum.submittedAtHash))?.number ?? 0n
-                ) + 1n,
+                (await ethereum.api.getBlock(success.ethereum.submittedAtHash))?.number ?? 0 + 1,
         }
     }
 
@@ -675,7 +671,7 @@ export const trackSendProgressPolling = async (
                 return false
             }
         )
-        success.polling.bridgeHubMessageQueueProcessed = lastScannedBlock + 1n
+        success.polling.bridgeHubMessageQueueProcessed = lastScannedBlock + 1
         if (!found) {
             return { status: "pending", result }
         }
@@ -691,20 +687,20 @@ export const trackSendProgressPolling = async (
     ) {
         // Estimate the relaychain block
         const blockGap =
-            (success.polling?.bridgeHubMessageQueueProcessed ?? 0n) -
+            (success.polling?.bridgeHubMessageQueueProcessed ?? 0) -
             ((
                 await bridgeHub.rpc.chain.getHeader(success.bridgeHub.submittedAtHash)
-            ).number.toBigInt() +
-                1n)
+            ).number.toNumber() +
+                1)
         const relaychainSubmittedBlock =
             (
                 await relaychain.rpc.chain.getHeader(success.relayChain.submittedAtHash)
-            ).number.toBigInt() + blockGap
+            ).number.toNumber() + blockGap
         console.log("Waiting for message to be included by BEEFY light client.")
         const NewMMRRootEvent = beefyClient.getEvent("NewMMRRoot")
 
         const from = success.polling.ethereumBeefyClient
-        let to = BigInt((await ethereum.api.getBlockNumber()) ?? 0)
+        let to = (await ethereum.api.getBlockNumber()) ?? 0
         if (from - to > options.scanBlocks) {
             to = from + options.scanBlocks
         }
@@ -718,7 +714,7 @@ export const trackSendProgressPolling = async (
             Number(to.toString())
         )
         for (const { blockHash, blockNumber, args } of events) {
-            const relayChainBlock = args.blockNumber
+            const relayChainBlock = Number(args.blockNumber.toString())
             if (relayChainBlock >= relaychainSubmittedBlock) {
                 success.ethereum.beefyBlockNumber = blockNumber
                 success.ethereum.beefyBlockHash = blockHash
@@ -732,7 +728,7 @@ export const trackSendProgressPolling = async (
                 )
             }
         }
-        success.polling.ethereumBeefyClient = to + 1n
+        success.polling.ethereumBeefyClient = to + 1
         if (success.ethereum.beefyBlockNumber === undefined) {
             return { status: "pending", result }
         }
@@ -746,7 +742,7 @@ export const trackSendProgressPolling = async (
         const InboundMessageDispatched = gateway.getEvent("InboundMessageDispatched")
 
         const from = success.polling.ethereumMessageDispatched
-        let to = BigInt((await ethereum.api.getBlockNumber()) ?? 0)
+        let to = (await ethereum.api.getBlockNumber()) ?? 0
         if (from - to > options.scanBlocks) {
             to = from + options.scanBlocks
         }
@@ -773,7 +769,7 @@ export const trackSendProgressPolling = async (
                 break
             }
         }
-        success.polling.ethereumMessageDispatched = to + 1n
+        success.polling.ethereumMessageDispatched = to + 1
         if (success.ethereum.transferBlockNumber === undefined) {
             return { status: "pending", result }
         }
