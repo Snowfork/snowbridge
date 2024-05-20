@@ -98,7 +98,7 @@ func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 	}, nil
 }
 
-func (s *Syncer) GetCheckpointFromFile() (scale.BeaconCheckpoint, error) {
+func (s *Syncer) GetCheckpointFromFile(file string) (scale.BeaconCheckpoint, error) {
 	type CheckPointResponse struct {
 		Header                     api.BeaconHeader          `json:"header"`
 		CurrentSyncCommittee       api.SyncCommitteeResponse `json:"current_sync_committee"`
@@ -109,7 +109,7 @@ func (s *Syncer) GetCheckpointFromFile() (scale.BeaconCheckpoint, error) {
 	}
 	var response CheckPointResponse
 
-	byteValue, err := os.ReadFile("/opt/config/initial-checkpoint.json")
+	byteValue, err := os.ReadFile(file)
 	if err != nil {
 		return scale.BeaconCheckpoint{}, err
 	}
@@ -118,8 +118,6 @@ func (s *Syncer) GetCheckpointFromFile() (scale.BeaconCheckpoint, error) {
 	if err != nil {
 		return scale.BeaconCheckpoint{}, err
 	}
-
-	log.WithField("checkpoint", response).Info("checkpoint json")
 
 	header, err := response.Header.ToScale()
 	if err != nil {
