@@ -343,10 +343,10 @@ export type SendResult = {
         messageId: string
         plan: SendValidationResult
         polling?: {
-            bridgeHubBeaconBlock: bigint
-            bridgeHubMessageReceived: bigint
-            assetHubMessageProcessed: bigint
-            destinationMessageProcessed: bigint | undefined
+            bridgeHubBeaconBlock: number
+            bridgeHubMessageReceived: number
+            assetHubMessageProcessed: number
+            destinationMessageProcessed: number | undefined
         }
     }
     failure?: {
@@ -478,7 +478,7 @@ export const trackSendProgressPolling = async (
     result: SendResult,
     options = {
         beaconUpdateTimeout: 10,
-        scanBlocks: 600n,
+        scanBlocks: 600,
     }
 ): Promise<{ status: "success" | "pending"; result: SendResult }> => {
     const {
@@ -493,7 +493,7 @@ export const trackSendProgressPolling = async (
     }
 
     if (success.polling === undefined) {
-        let destinationMessageProcessed: bigint | undefined = undefined
+        let destinationMessageProcessed: number | undefined = undefined
         if (
             success.destinationParachain !== undefined &&
             success.plan.success.destinationParaId in parachains
@@ -503,21 +503,21 @@ export const trackSendProgressPolling = async (
                     await parachains[success.plan.success.destinationParaId].rpc.chain.getHeader(
                         success.destinationParachain.submittedAtHash
                     )
-                ).number.toBigInt() + 1n
+                ).number.toNumber() + 1
         }
         success.polling = {
             bridgeHubBeaconBlock:
                 (
                     await bridgeHub.rpc.chain.getHeader(success.bridgeHub.submittedAtHash)
-                ).number.toBigInt() + 1n,
+                ).number.toNumber() + 1,
             bridgeHubMessageReceived:
                 (
                     await bridgeHub.rpc.chain.getHeader(success.bridgeHub.submittedAtHash)
-                ).number.toBigInt() + 1n,
+                ).number.toNumber() + 1,
             assetHubMessageProcessed:
                 (
                     await assetHub.rpc.chain.getHeader(success.assetHub.submittedAtHash)
-                ).number.toBigInt() + 1n,
+                ).number.toNumber() + 1,
             destinationMessageProcessed: destinationMessageProcessed,
         }
     }
@@ -565,7 +565,7 @@ export const trackSendProgressPolling = async (
                 return false
             }
         )
-        success.polling.bridgeHubBeaconBlock = lastScannedBlock + 1n
+        success.polling.bridgeHubBeaconBlock = lastScannedBlock + 1
         if (!found) {
             return { status: "pending", result }
         }
@@ -616,7 +616,7 @@ export const trackSendProgressPolling = async (
                 return false
             }
         )
-        success.polling.bridgeHubMessageReceived = lastScannedBlock + 1n
+        success.polling.bridgeHubMessageReceived = lastScannedBlock + 1
         if (!found) {
             return { status: "pending", result }
         }
@@ -667,7 +667,7 @@ export const trackSendProgressPolling = async (
                 return false
             }
         )
-        success.polling.assetHubMessageProcessed = lastScannedBlock + 1n
+        success.polling.assetHubMessageProcessed = lastScannedBlock + 1
         if (!found) {
             return { status: "pending", result }
         }
@@ -710,7 +710,7 @@ export const trackSendProgressPolling = async (
                 return false
             }
         )
-        success.polling.destinationMessageProcessed = lastScannedBlock + 1n
+        success.polling.destinationMessageProcessed = lastScannedBlock + 1
         if (!found) {
             return { status: "pending", result }
         }

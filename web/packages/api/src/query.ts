@@ -1,21 +1,21 @@
 import { ApiPromise } from "@polkadot/api"
 import { BlockHash } from "@polkadot/types/interfaces"
 import { Codec } from "@polkadot/types/types"
-import { filter, firstValueFrom, take } from "rxjs"
+import { concatMap, filter, firstValueFrom, take } from "rxjs"
 
 export const scanSubstrateEvents = async (
     parachain: ApiPromise,
-    start: bigint,
-    scanBlocks: bigint,
-    filter: (blockNumber: bigint, blockHash: BlockHash, event: Codec) => Promise<boolean>
+    start: number,
+    scanBlocks: number,
+    filter: (blockNumber: number, blockHash: BlockHash, event: Codec) => Promise<boolean>
 ): Promise<{
     found: boolean
-    lastScannedBlock: bigint
+    lastScannedBlock: number
     events?: Codec
 }> => {
     const finalized = (
         await parachain.rpc.chain.getHeader(await parachain.rpc.chain.getFinalizedHead())
-    ).number.toBigInt()
+    ).number.toNumber()
     const stopScan = start + scanBlocks
     const end = finalized < stopScan ? finalized : stopScan
 
@@ -38,14 +38,20 @@ export const waitForMessageQueuePallet = async (
     siblingParachain: number,
     eventFilter: (event: Codec) => boolean,
     options = {
-        scanBlocks: 10,
+        scanBlocks: 40,
     }
 ): Promise<{ foundEvent?: Codec; allEvents: Codec; extrinsicSuccess: boolean }> => {
     let extrinsicSuccess = false
     let returnEvent = undefined
+
+    parachain.rpc.chain.subscribeFinalizedHeads
     let receivedEvents = await firstValueFrom(
-        parachain.rx.query.system.events().pipe(
+        parachain.rx.rpc.chain.subscribeFinalizedHeads().pipe(
             take(options.scanBlocks),
+            concatMap(async (header) => {
+                const api1 = await parachain.at(header.hash)
+                return await api1.query.system.events()
+            }),
             filter((events) => {
                 let foundMessageQueue = false
                 let foundEvent = false
