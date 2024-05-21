@@ -12,6 +12,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
+	"golang.org/x/exp/slices"
 )
 
 type InitialRequestParams struct {
@@ -118,7 +119,8 @@ func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byt
 	if err != nil {
 		return nil, err
 	}
-	if util.BytesToHexString(r.ValidatorsRoot[:]) != util.BytesToHexString(root) {
+	equal := slices.Equal(r.ValidatorsRoot[:], root)
+	if !equal {
 		return nil, fmt.Errorf("validator root %#x not match calculated root %#x, invalid address are: %s", r.ValidatorsRoot[:], root, invalidAddress)
 	}
 
