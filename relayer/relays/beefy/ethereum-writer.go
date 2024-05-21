@@ -96,7 +96,14 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	if err != nil {
 		return err
 	}
+	nextValidatorSet, err := wr.contract.NextValidatorSet(&callOpts)
+	if err != nil {
+		return err
+	}
 	task.ValidatorsRoot = currentValidatorSet.Root
+	if task.IsHandover {
+		task.ValidatorsRoot = nextValidatorSet.Root
+	}
 
 	// Initial submission
 	tx, initialBitfield, err := wr.doSubmitInitial(ctx, &task)
