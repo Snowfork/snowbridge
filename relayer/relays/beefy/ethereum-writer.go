@@ -175,7 +175,6 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	log.WithFields(logrus.Fields{
 		"validatorCount":      validatorCount,
 		"validValidatorCount": len(signedValidators),
-		"signedValidators":    signedValidators,
 		"chosenValidator":     chosenValidator,
 	}).Info("Creating initial bitfield")
 

@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
@@ -104,10 +103,9 @@ func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byt
 	var leaves [][]byte
 	var err error
 	var invalidAddress []string
-	for i, rawAddress := range r.Validators {
+	for _, rawAddress := range r.Validators {
 		address, err := rawAddress.IntoEthereumAddress()
 		if err != nil {
-			log.Error(fmt.Sprintf("convert %#x to ethereum address at index %d", rawAddress[:], i))
 			invalidAddress = append(invalidAddress, util.BytesToHexString(rawAddress[:]))
 			leaves = append(leaves, make([]byte, 0))
 		} else {
