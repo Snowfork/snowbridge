@@ -6,16 +6,19 @@ import (
 	"math/big"
 
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
 type InitialRequestParams struct {
-	Commitment contracts.BeefyClientCommitment
-	Bitfield   []*big.Int
-	Proof      contracts.BeefyClientValidatorProof
+	Commitment     contracts.BeefyClientCommitment
+	Bitfield       []*big.Int
+	Proof          contracts.BeefyClientValidatorProof
+	ValidatorsRoot [32]byte
 }
 
 type FinalRequestParams struct {
@@ -97,18 +100,26 @@ func cleanSignature(input types.BeefySignature) (uint8, [32]byte, [32]byte) {
 }
 
 func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byte, error) {
-	leaves := make([][]byte, len(r.Validators))
+	var leaves [][]byte
+	var err error
+	var invalidAddress []string
 	for i, rawAddress := range r.Validators {
 		address, err := rawAddress.IntoEthereumAddress()
 		if err != nil {
-			return nil, fmt.Errorf("convert to ethereum address: %w", err)
+			log.Error(fmt.Sprintf("convert %#x to ethereum address at index %d", rawAddress[:], i))
+			invalidAddress = append(invalidAddress, util.BytesToHexString(rawAddress[:]))
+			leaves = append(leaves, make([]byte, 20))
+		} else {
+			leaves = append(leaves, address.Bytes())
 		}
-		leaves[i] = address.Bytes()
-	}
 
-	_, _, proof, err := merkle.GenerateMerkleProof(leaves, validatorIndex)
+	}
+	_, root, proof, err := merkle.GenerateMerkleProof(leaves, validatorIndex)
 	if err != nil {
 		return nil, err
+	}
+	if util.BytesToHexString(r.ValidatorsRoot[:]) != util.BytesToHexString(root) {
+		return nil, fmt.Errorf("validator root %#x not match calculated root %#x, invalid address are: %s", r.ValidatorsRoot[:], root, invalidAddress)
 	}
 
 	return proof, nil
