@@ -109,11 +109,10 @@ func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byt
 		if err != nil {
 			log.Error(fmt.Sprintf("convert %#x to ethereum address at index %d", rawAddress[:], i))
 			invalidAddress = append(invalidAddress, util.BytesToHexString(rawAddress[:]))
-			leaves = append(leaves, make([]byte, 20))
+			leaves = append(leaves, make([]byte, 0))
 		} else {
 			leaves = append(leaves, address.Bytes())
 		}
-
 	}
 	_, root, proof, err := merkle.GenerateMerkleProof(leaves, validatorIndex)
 	if err != nil {
