@@ -35,3 +35,5 @@ go/
 gocache/
 go.work*
 control/target/
+web/packages/operations/.env.polkadot
+web/packages/operations/.env.rococo

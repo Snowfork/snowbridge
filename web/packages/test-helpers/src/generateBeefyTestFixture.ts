@@ -6,7 +6,12 @@ import path from "path"
 import fs from "fs"
 const encoder = new ethers.utils.AbiCoder()
 
-const generateValidatorProof = async (bitfieldFile: string, validatorProofFile: string, validatorSet: ValidatorSet, commitHash: any) => {
+const generateValidatorProof = async (
+    bitfieldFile: string,
+    validatorProofFile: string,
+    validatorSet: ValidatorSet,
+    commitHash: any
+) => {
     const testFixture = JSON.parse(fs.readFileSync(bitfieldFile, "utf8"))
     const bitField = encoder.decode(["uint256[]"], testFixture.final.finalBitFieldRaw)[0]
     console.log(bitField)
@@ -14,14 +19,12 @@ const generateValidatorProof = async (bitfieldFile: string, validatorProofFile: 
     for (let i = 0; i < bitField.length; i++) {
         finalBitfield.push(bitField[i])
     }
-    const finalValidatorsProof: BeefyClient.ValidatorProofStruct[] = readSetBits(
-        finalBitfield
-    ).map((i) => validatorSet.createSignatureProof(i, commitHash))
+    const finalValidatorsProof: BeefyClient.ValidatorProofStruct[] = readSetBits(finalBitfield).map(
+        (i) => validatorSet.createSignatureProof(i, commitHash)
+    )
     console.log("Final Validator proofs:", finalValidatorsProof)
     const finalValidatorsProofRaw = encoder.encode(
-        [
-            "tuple(uint8 v, bytes32 r, bytes32 s, uint256 index,address account,bytes32[] proof)[]",
-        ],
+        ["tuple(uint8 v, bytes32 r, bytes32 s, uint256 index,address account,bytes32[] proof)[]"],
         [finalValidatorsProof]
     )
     fs.writeFileSync(
@@ -49,8 +52,8 @@ const run = async () => {
         process.env["FixedSet"] == "true"
             ? accounts.length
             : process.env["ValidatorSetSize"]
-                ? parseInt(process.env["ValidatorSetSize"])
-                : 300
+            ? parseInt(process.env["ValidatorSetSize"])
+            : 300
     const commitHash = fixtureData.commitmentHash
     let validatorSet: ValidatorSet
     if (process.env["FixedSet"] == "true") {
@@ -80,8 +83,18 @@ const run = async () => {
         fs.writeFileSync(ValidatorSetFile, JSON.stringify(testFixture, null, 2), "utf8")
         console.log("Beefy fixture writing to dest file: " + ValidatorSetFile)
     } else if (command == "GenerateProofs") {
-        generateValidatorProof(BitFieldFile0SigCount, ValidatorProofFile0SigCount, validatorSet, commitHash);
-        generateValidatorProof(BitFieldFile3SigCount, ValidatorProofFile3SigCount, validatorSet, commitHash);
+        generateValidatorProof(
+            BitFieldFile0SigCount,
+            ValidatorProofFile0SigCount,
+            validatorSet,
+            commitHash
+        )
+        generateValidatorProof(
+            BitFieldFile3SigCount,
+            ValidatorProofFile3SigCount,
+            validatorSet,
+            commitHash
+        )
     }
 }
 

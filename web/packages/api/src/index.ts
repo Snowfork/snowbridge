@@ -1,7 +1,12 @@
 // import '@polkadot/api-augment/polkadot'
-import { ApiPromise, WsProvider } from '@polkadot/api'
-import { AbstractProvider, ethers } from 'ethers'
-import { BeefyClient, BeefyClient__factory, IGateway, IGateway__factory } from '@snowbridge/contract-types'
+import { ApiPromise, WsProvider } from "@polkadot/api"
+import { AbstractProvider, ethers } from "ethers"
+import {
+    BeefyClient,
+    BeefyClient__factory,
+    IGateway,
+    IGateway__factory,
+} from "@snowbridge/contract-types"
 
 interface Config {
     ethereum: {
@@ -61,15 +66,15 @@ class PolkadotContext {
             relaychain: relaychain,
             assetHub: assetHub,
             bridgeHub: bridgeHub,
-            parachains: {}
+            parachains: {},
         }
     }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const contextFactory = async (config: Config): Promise<Context> => {
-    let ethApi: AbstractProvider;
-    if(config.ethereum.execution_url.startsWith("http")) {
+    let ethApi: AbstractProvider
+    if (config.ethereum.execution_url.startsWith("http")) {
         ethApi = new ethers.JsonRpcProvider(config.ethereum.execution_url)
     } else {
         ethApi = new ethers.WebSocketProvider(config.ethereum.execution_url)
@@ -106,7 +111,7 @@ export const contextFactory = async (config: Config): Promise<Context> => {
 
 export const addParachainConnection = async (context: Context, url: string): Promise<void> => {
     const api = await ApiPromise.create({
-        provider: new WsProvider(url)
+        provider: new WsProvider(url),
     })
     const paraId = (await api.query.parachainInfo.parachainId()).toPrimitive() as number
     if (paraId in context.polkadot.api.parachains) {
@@ -125,14 +130,15 @@ export const destroyContext = async (context: Context): Promise<void> => {
     await context.polkadot.api.relaychain.disconnect()
     await context.polkadot.api.bridgeHub.disconnect()
     await context.polkadot.api.assetHub.disconnect()
-    
+
     for (const paraId of Object.keys(context.polkadot.api.parachains)) {
         await context.polkadot.api.parachains[Number(paraId)].disconnect()
     }
 }
 
-export * as toPolkadot from './toPolkadot'
-export * as toEthereum from './toEthereum'
-export * as utils from './utils'
-export * as status from './status'
-export * as environment from './environment'
+export * as toPolkadot from "./toPolkadot"
+export * as toEthereum from "./toEthereum"
+export * as utils from "./utils"
+export * as status from "./status"
+export * as assets from "./assets"
+export * as environment from "./environment"

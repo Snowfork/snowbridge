@@ -17,6 +17,9 @@
   },
   "devDependencies": {
     "@remix-project/remixd": "^0.6.14",
-    "turbo": "^1.9.4"
+    "turbo": "^1.9.4",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.4.5"
   }
 }
