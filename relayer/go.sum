@@ -224,6 +224,8 @@ github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20231109131025-3ece5b994f03 h1:MdYbdpjFGIV3znyTYGsQd2ea/rNme9iQFwW85iX/YmY=
 github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20231109131025-3ece5b994f03/go.mod h1:MVk5+w9icYU7MViYFm7CKYhx1VMj6DpN2tWO6s4OK5g=
+github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20240522230933-440128e19727 h1:RakHMKPnX1wcZWU0258HOmv34xx4VoUk7lHst614HHM=
+github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20240522230933-440128e19727/go.mod h1:MVk5+w9icYU7MViYFm7CKYhx1VMj6DpN2tWO6s4OK5g=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/spf13/afero v1.11.0 h1:WJQKhtpdm3v2IzqG8VMqrr6Rf3UYpEF239Jy9wNepM8=

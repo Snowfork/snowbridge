@@ -1,6 +1,8 @@
 module github.com/snowfork/snowbridge/relayer
 
-go 1.20
+go 1.21
+
+toolchain go1.21.10
 
 require (
 	github.com/cbroglie/mustache v1.4.0
@@ -10,7 +12,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20231109131025-3ece5b994f03
+	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20240522230933-440128e19727
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
@@ -111,3 +113,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
+
+// replace github.com/snowfork/go-substrate-rpc-client/v4 => /Users/yangrong/Projects/go-substrate-rpc-client
