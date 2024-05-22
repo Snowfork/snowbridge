@@ -15,10 +15,9 @@ import (
 )
 
 type InitialRequestParams struct {
-	Commitment     contracts.BeefyClientCommitment
-	Bitfield       []*big.Int
-	Proof          contracts.BeefyClientValidatorProof
-	ValidatorsRoot [32]byte
+	Commitment contracts.BeefyClientCommitment
+	Bitfield   []*big.Int
+	Proof      contracts.BeefyClientValidatorProof
 }
 
 type FinalRequestParams struct {
