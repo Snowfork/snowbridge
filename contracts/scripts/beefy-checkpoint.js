@@ -1,6 +1,6 @@
 // Polkadot-JS script to generate a BEEFY checkpoint
 
-let beefyBlock = 20901156;
+let beefyBlock = 20733663;
 let blockHash = await api.rpc.chain.getBlockHash(beefyBlock);
 let apiAtBlock = await api.at(blockHash);
 

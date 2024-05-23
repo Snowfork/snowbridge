@@ -109,7 +109,8 @@ contract GatewayTest is Test {
             assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
             exchangeRate: exchangeRate,
-            multiplier: multiplier
+            multiplier: multiplier,
+            rescueOperator: 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967
         });
         gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
         MockGateway(address(gateway)).setCommitmentsAreVerified(true);

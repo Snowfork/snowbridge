@@ -565,6 +565,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint256 registerTokenFee;
         /// @dev Fee multiplier
         UD60x18 multiplier;
+        /// @dev Optional rescueOperator
+        address rescueOperator;
     }
 
     /// @dev Initialize storage in the gateway
@@ -618,7 +620,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
-        operatorStorage.operator = 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967;
+        operatorStorage.operator = config.rescueOperator;
     }
 
     /// @dev Temporary rescue ability for the initial bootstrapping phase of the bridge
