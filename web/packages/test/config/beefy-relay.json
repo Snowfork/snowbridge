@@ -3,9 +3,8 @@
     "polkadot": {
       "endpoint": "ws://127.0.0.1:9944"
     },
-    "beefy-activation-block": 0,
-    "fast-forward-depth": 20,
-    "update-period": 0
+    "fast-forward-depth": 3000,
+    "update-period": 3000
   },
   "sink": {
     "ethereum": {
