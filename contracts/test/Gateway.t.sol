@@ -887,4 +887,20 @@ contract GatewayTest is Test {
         vm.expectRevert(Gateway.Unauthorized.selector);
         Gateway(address(gateway)).rescue(impl, implCodeHash, initParams);
     }
+
+    function testDropRescueAbility() public {
+        // Upgrade to this new logic contract
+        MockGatewayV2 newLogic = new MockGatewayV2();
+
+        address impl = address(newLogic);
+        bytes32 implCodeHash = address(newLogic).codehash;
+        bytes memory initParams = abi.encode(42);
+
+        hoax(0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967);
+        Gateway(address(gateway)).dropRescueAbility();
+
+        vm.expectRevert(Gateway.Unauthorized.selector);
+        hoax(0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967);
+        Gateway(address(gateway)).rescue(impl, implCodeHash, initParams);
+    }
 }
