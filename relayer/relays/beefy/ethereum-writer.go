@@ -80,6 +80,31 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 }
 
 func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
+	callOpts := bind.CallOpts{
+		Context: ctx,
+	}
+
+	latestBeefyBlock, err := wr.contract.LatestBeefyBlock(&callOpts)
+	if err != nil {
+		return err
+	}
+	if uint32(latestBeefyBlock) >= task.SignedCommitment.Commitment.BlockNumber {
+		return nil
+	}
+
+	currentValidatorSet, err := wr.contract.CurrentValidatorSet(&callOpts)
+	if err != nil {
+		return err
+	}
+	nextValidatorSet, err := wr.contract.NextValidatorSet(&callOpts)
+	if err != nil {
+		return err
+	}
+	task.ValidatorsRoot = currentValidatorSet.Root
+	if task.IsHandover {
+		task.ValidatorsRoot = nextValidatorSet.Root
+	}
+
 	// Initial submission
 	tx, initialBitfield, err := wr.doSubmitInitial(ctx, &task)
 	if err != nil {
@@ -148,9 +173,10 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	chosenValidator := signedValidators[rand.Intn(len(signedValidators))].Int64()
 
 	log.WithFields(logrus.Fields{
-		"validatorCount":   validatorCount,
-		"signedValidators": signedValidators,
-		"chosenValidator":  chosenValidator,
+		"validatorCount":       validatorCount,
+		"signedValidators":     signedValidators,
+		"signedValidatorCount": len(signedValidators),
+		"chosenValidator":      chosenValidator,
 	}).Info("Creating initial bitfield")
 
 	initialBitfield, err := wr.contract.CreateInitialBitfield(

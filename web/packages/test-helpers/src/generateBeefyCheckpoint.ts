@@ -9,7 +9,7 @@ import { u32, u64 } from "@polkadot/types-codec"
 import { H256 } from "@polkadot/types/interfaces"
 import { Struct } from "@polkadot/types"
 
-interface NextAuthoritySet extends Struct {
+interface AuthoritySet extends Struct {
     id: u64
     len: u32
     keysetCommitment: H256
@@ -47,23 +47,42 @@ async function generateBeefyCheckpoint() {
     const validatorSetId = await api.query.beefy.validatorSetId<ValidatorSetId>()
     const authorities = await api.query.beefy.authorities<BeefyId[]>()
 
+    console.log("validatorSetId:", validatorSetId)
+    console.log("authority length is:" + authorities.length)
+
     let addrs = []
+
     for (let i = 0; i < authorities.length; i++) {
-        let publicKey = publicKeyConvert(authorities[i], false).slice(1)
-        let publicKeyHashed = createKeccakHash("keccak256").update(Buffer.from(publicKey)).digest()
-        addrs.push(publicKeyHashed.slice(12))
+        console.log("index is:" + i + ",authority is:" + authorities[i])
+        try {
+            let publicKey = publicKeyConvert(authorities[i], false).slice(1)
+            let publicKeyHashed = createKeccakHash("keccak256")
+                .update(Buffer.from(publicKey))
+                .digest()
+            addrs.push(publicKeyHashed.slice(12))
+        } catch (err) {
+            console.log(err)
+        }
     }
 
-    const tree = createMerkleTree(addrs)
+    console.log("valid authority length is:" + addrs.length)
 
-    const nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<NextAuthoritySet>()
+    let currentAuthorities, nextAuthorities
+
+    if (process.env.NODE_ENV == "production") {
+        currentAuthorities = await api.query.beefyMmrLeaf.beefyAuthorities<AuthoritySet>()
+        nextAuthorities = await api.query.beefyMmrLeaf.beefyNextAuthorities<AuthoritySet>()
+    } else {
+        currentAuthorities = await api.query.mmrLeaf.beefyAuthorities<AuthoritySet>()
+        nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<AuthoritySet>()
+    }
 
     const beefyCheckpoint = {
         startBlock: beefyStartBlock,
         current: {
-            id: validatorSetId.toNumber(),
-            root: tree.getHexRoot(),
-            length: addrs.length,
+            id: currentAuthorities.id.toNumber(),
+            root: currentAuthorities.keysetCommitment.toHex(),
+            length: currentAuthorities.len.toNumber(),
         },
         next: {
             id: nextAuthorities.id.toNumber(),
