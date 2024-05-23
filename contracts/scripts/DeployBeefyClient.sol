@@ -6,8 +6,6 @@ import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 
 contract DeployBeefyClient is Script {
-
-
     struct Config {
         uint64 startBlock;
         BeefyClient.ValidatorSet current;
