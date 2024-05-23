@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.23;
 
-import {UD60x18} from "prb/math/src/UD60x18.sol";
-
 library OperatorStorage {
     struct Layout {
         address operator;
