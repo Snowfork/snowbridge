@@ -23,7 +23,6 @@ import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 import {MultiAddress} from "../src/MultiAddress.sol";
 import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress} from "../src/Types.sol";
 
-
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
 import {PricingStorage} from "../src/storage/PricingStorage.sol";
 
@@ -99,12 +98,7 @@ contract GatewayTest is Test {
     function setUp() public {
         AgentExecutor executor = new AgentExecutor();
         gatewayLogic = new MockGateway(
-            address(0),
-            address(executor),
-            bridgeHubParaID,
-            bridgeHubAgentID,
-            foreignTokenDecimals,
-            maxDestinationFee
+            address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals, maxDestinationFee
         );
         Gateway.Config memory config = Gateway.Config({
             mode: OperatingMode.Normal,
@@ -115,7 +109,8 @@ contract GatewayTest is Test {
             assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
             exchangeRate: exchangeRate,
-            multiplier: multiplier
+            multiplier: multiplier,
+            rescueOperator: 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967
         });
         gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
         MockGateway(address(gateway)).setCommitmentsAreVerified(true);
@@ -857,6 +852,55 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, maxDestinationFee + 1);
 
         vm.expectRevert(Assets.InvalidDestinationFee.selector);
-        IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, maxDestinationFee + 1, 1);
+        IGateway(address(gateway)).sendToken{value: fee}(
+            address(token), destPara, recipientAddress32, maxDestinationFee + 1, 1
+        );
+    }
+
+    function testRescuebyTrustedOperator() public {
+        // Upgrade to this new logic contract
+        MockGatewayV2 newLogic = new MockGatewayV2();
+
+        address impl = address(newLogic);
+        bytes32 implCodeHash = address(newLogic).codehash;
+        bytes memory initParams = abi.encode(42);
+
+        // Expect the gateway to emit `Upgraded`
+        vm.expectEmit(true, false, false, false);
+        emit IUpgradable.Upgraded(address(newLogic));
+
+        hoax(0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967);
+        Gateway(address(gateway)).rescue(impl, implCodeHash, initParams);
+
+        // Verify that the MockGatewayV2.initialize was called
+        assertEq(MockGatewayV2(address(gateway)).getValue(), 42);
+    }
+
+    function testRescuebyPublicFails() public {
+        // Upgrade to this new logic contract
+        MockGatewayV2 newLogic = new MockGatewayV2();
+
+        address impl = address(newLogic);
+        bytes32 implCodeHash = address(newLogic).codehash;
+        bytes memory initParams = abi.encode(42);
+
+        vm.expectRevert(Gateway.Unauthorized.selector);
+        Gateway(address(gateway)).rescue(impl, implCodeHash, initParams);
+    }
+
+    function testDropRescueAbility() public {
+        // Upgrade to this new logic contract
+        MockGatewayV2 newLogic = new MockGatewayV2();
+
+        address impl = address(newLogic);
+        bytes32 implCodeHash = address(newLogic).codehash;
+        bytes memory initParams = abi.encode(42);
+
+        hoax(0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967);
+        Gateway(address(gateway)).dropRescueAbility();
+
+        vm.expectRevert(Gateway.Unauthorized.selector);
+        hoax(0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967);
+        Gateway(address(gateway)).rescue(impl, implCodeHash, initParams);
     }
 }

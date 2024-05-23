@@ -87,7 +87,8 @@ contract DeployLocal is Script {
             assetHubCreateAssetFee: uint128(vm.envUint("CREATE_ASSET_FEE")),
             assetHubReserveTransferFee: uint128(vm.envUint("RESERVE_TRANSFER_FEE")),
             exchangeRate: ud60x18(vm.envUint("EXCHANGE_RATE")),
-            multiplier: ud60x18(vm.envUint("FEE_MULTIPLIER"))
+            multiplier: ud60x18(vm.envUint("FEE_MULTIPLIER")),
+            rescueOperator: address(0)
         });
 
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
