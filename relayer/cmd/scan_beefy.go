@@ -23,12 +23,11 @@ func scanBeefyCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringP("polkadot-url", "p", "ws://127.0.0.1:9944", "Polkadot URL.")
-	cmd.MarkFlagRequired("polkadot-url")
 	cmd.Flags().Uint64P("beefy-block", "b", 0, "Beefy block.")
 	cmd.MarkFlagRequired("beefy-block")
 	cmd.Flags().Uint64P("validator-set-id", "v", 0, "Validator set id.")
 	cmd.MarkFlagRequired("validator-set-id")
-	cmd.Flags().Uint64P("fast-forward-depth", "f", 100, "Fast forward depth.")
+	cmd.Flags().Uint64P("fast-forward-depth", "f", 10000, "Fast forward depth.")
 	return cmd
 }
 

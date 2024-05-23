@@ -40,7 +40,7 @@ func generateBeaconFixtureCmd() *cobra.Command {
 		RunE:  generateBeaconTestFixture,
 	}
 
-	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
+	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
 	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	return cmd
@@ -54,7 +54,7 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 		RunE:  generateBeaconCheckpoint,
 	}
 
-	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
+	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
 	cmd.Flags().Bool("export-json", false, "Export Json")
 
 	return cmd
@@ -68,7 +68,7 @@ func generateExecutionUpdateCmd() *cobra.Command {
 		RunE:  generateExecutionUpdate,
 	}
 
-	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
+	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
 	cmd.Flags().Uint32("slot", 1, "slot number")
 	return cmd
 }
@@ -81,7 +81,8 @@ func generateInboundFixtureCmd() *cobra.Command {
 		RunE:  generateInboundFixture,
 	}
 
-	cmd.Flags().String("url", "http://127.0.0.1:9596", "Beacon URL")
+	cmd.Flags().String("beacon-config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
+	cmd.Flags().String("execution-config", "/tmp/snowbridge/execution-relay-asset-hub.json", "Path to the beacon relay config")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	cmd.Flags().String("test_case", "register_token", "Inbound test case")
 	return cmd
@@ -112,12 +113,12 @@ const (
 // Only print the hex encoded call as output of this command
 func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 	err := func() error {
-		endpoint, err := cmd.Flags().GetString("url")
+		config, err := cmd.Flags().GetString("config")
 		if err != nil {
 			return err
 		}
 
-		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
+		viper.SetConfigFile(config)
 
 		if err := viper.ReadInConfig(); err != nil {
 			return err
@@ -134,7 +135,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		store.Connect()
 		defer store.Close()
 
-		client := api.NewBeaconClient(endpoint)
+		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
 		s := syncer.New(client, &store, p)
 
 		checkPointScale, err := s.GetCheckpoint()
@@ -168,12 +169,12 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		ctx := context.Background()
 
-		endpoint, err := cmd.Flags().GetString("url")
+		config, err := cmd.Flags().GetString("config")
 		if err != nil {
 			return err
 		}
 
-		viper.SetConfigFile("/tmp/snowbridge/beacon-relay.json")
+		viper.SetConfigFile(config)
 		if err = viper.ReadInConfig(); err != nil {
 			return err
 		}
@@ -187,11 +188,14 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		p := protocol.New(conf.Source.Beacon.Spec)
 
 		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
-		store.Connect()
+		err = store.Connect()
+		if err != nil {
+			return err
+		}
 		defer store.Close()
 
-		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
-		client := api.NewBeaconClient(endpoint)
+		log.WithFields(log.Fields{"endpoint": conf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
+		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
 		s := syncer.New(client, &store, p)
 
 		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
@@ -472,19 +476,25 @@ func writeRawDataFile(path string, fileContents string) error {
 
 func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 	err := func() error {
-		endpoint, _ := cmd.Flags().GetString("url")
-		beaconSlot, _ := cmd.Flags().GetUint32("slot")
+		config, err := cmd.Flags().GetString("config")
+		if err != nil {
+			return err
+		}
+		beaconSlot, err := cmd.Flags().GetUint32("slot")
+		if err != nil {
+			return err
+		}
 
-		viper.SetConfigFile("web/packages/test/config/beacon-relay.json")
+		viper.SetConfigFile(config)
 		if err := viper.ReadInConfig(); err != nil {
 			return err
 		}
 		var conf beaconConf.Config
-		err := viper.Unmarshal(&conf)
+		err = viper.Unmarshal(&conf)
 		if err != nil {
 			return err
 		}
-		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
+		log.WithFields(log.Fields{"endpoint": conf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
 
 		p := protocol.New(conf.Source.Beacon.Spec)
 
@@ -493,7 +503,7 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 		defer store.Close()
 
 		// generate executionUpdate
-		client := api.NewBeaconClient(endpoint)
+		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
 		s := syncer.New(client, &store, p)
 		blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(beaconSlot))
 		if err != nil {
@@ -656,45 +666,50 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		ctx := context.Background()
 
-		endpoint, err := cmd.Flags().GetString("url")
+		beaconConfig, err := cmd.Flags().GetString("beacon-config")
 		if err != nil {
 			return err
 		}
 
-		viper.SetConfigFile("/tmp/snowbridge/beacon-relay.json")
+		executionConfig, err := cmd.Flags().GetString("execution-config")
+		if err != nil {
+			return err
+		}
+
+		viper.SetConfigFile(beaconConfig)
 		if err = viper.ReadInConfig(); err != nil {
 			return err
 		}
 
-		var conf beaconConf.Config
-		err = viper.Unmarshal(&conf)
+		var beaconConf beaconConf.Config
+		err = viper.Unmarshal(&beaconConf)
 		if err != nil {
 			return err
 		}
 
-		p := protocol.New(conf.Source.Beacon.Spec)
+		p := protocol.New(beaconConf.Source.Beacon.Spec)
 
-		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
+		store := store.New(beaconConf.Source.Beacon.DataStore.Location, beaconConf.Source.Beacon.DataStore.MaxEntries, *p)
 		store.Connect()
 		defer store.Close()
 
-		log.WithFields(log.Fields{"endpoint": endpoint}).Info("connecting to beacon API")
-		client := api.NewBeaconClient(endpoint)
+		log.WithFields(log.Fields{"endpoint": beaconConf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
+		client := api.NewBeaconClient(beaconConf.Source.Beacon.Endpoint, beaconConf.Source.Beacon.StateEndpoint)
 		s := syncer.New(client, &store, p)
 
-		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
+		viper.SetConfigFile(executionConfig)
 
 		if err = viper.ReadInConfig(); err != nil {
 			return err
 		}
 
-		var executionConfig executionConf.Config
-		err = viper.Unmarshal(&executionConfig, viper.DecodeHook(execution.HexHookFunc()))
+		var executionConf executionConf.Config
+		err = viper.Unmarshal(&executionConf, viper.DecodeHook(execution.HexHookFunc()))
 		if err != nil {
 			return fmt.Errorf("unable to parse execution relay config: %w", err)
 		}
 
-		ethconn := ethereum.NewConnection(&executionConfig.Source.Ethereum, nil)
+		ethconn := ethereum.NewConnection(&executionConf.Source.Ethereum, nil)
 		err = ethconn.Connect(ctx)
 		if err != nil {
 			return err
@@ -708,8 +723,8 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		// get inbound message data start
-		channelID := executionConfig.Source.ChannelID
-		address := common.HexToAddress(executionConfig.Source.Contracts.Gateway)
+		channelID := executionConf.Source.ChannelID
+		address := common.HexToAddress(executionConf.Source.Contracts.Gateway)
 		gatewayContract, err := contracts.NewGateway(address, ethconn.Client())
 		if err != nil {
 			return err

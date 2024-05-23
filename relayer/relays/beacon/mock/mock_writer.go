@@ -15,6 +15,10 @@ type Writer struct {
 	LastFinalizedState state.FinalizedHeader
 }
 
+func (m *Writer) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
+	return state.ExecutionHeader{}, nil
+}
+
 func (m *Writer) GetLastFinalizedStateIndex() (types.U32, error) {
 	return 0, nil
 }

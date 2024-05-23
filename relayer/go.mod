@@ -1,6 +1,8 @@
 module github.com/snowfork/snowbridge/relayer
 
-go 1.20
+go 1.21
+
+toolchain go1.21.10
 
 require (
 	github.com/cbroglie/mustache v1.4.0
@@ -10,10 +12,11 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20231109131025-3ece5b994f03
+	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20240523155545-4272098ec025
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
+	golang.org/x/exp v0.0.0-20240110193028-0dcbfd608b1e
 	golang.org/x/sync v0.6.0
 )
 
@@ -98,7 +101,6 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.18.0 // indirect
-	golang.org/x/exp v0.0.0-20240110193028-0dcbfd608b1e // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect
