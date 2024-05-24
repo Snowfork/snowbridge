@@ -279,6 +279,20 @@ func (s *Syncer) GetBlockRootsFromState(beaconState state.BeaconState) (scale.Bl
 	}, nil
 }
 
+func (s *Syncer) GetFinalizedHeader() (scale.BeaconHeader, error) {
+	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
+	if err != nil {
+		return scale.BeaconHeader{}, fmt.Errorf("fetch finalized update: %w", err)
+	}
+
+	finalizedHeader, err := finalizedUpdate.Data.FinalizedHeader.Beacon.ToScale()
+	if err != nil {
+		return scale.BeaconHeader{}, fmt.Errorf("convert finalized header to scale: %w", err)
+	}
+
+	return finalizedHeader, nil
+}
+
 func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {

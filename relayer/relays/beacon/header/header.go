@@ -71,7 +71,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 
 	log.Info("starting to sync finalized headers")
 
-	ticker := time.NewTicker(time.Second * 10)
+	ticker := time.NewTicker(time.Minute * 1)
 
 	eg.Go(func() error {
 		for {
@@ -167,17 +167,16 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 
 func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
-	update, err := h.syncer.GetFinalizedUpdate()
+	finalizedHeader, err := h.syncer.GetFinalizedHeader()
 	if err != nil {
 		return fmt.Errorf("fetch finalized header update from Ethereum beacon client: %w", err)
 	}
 
 	log.WithFields(log.Fields{
-		"slot":      update.Payload.FinalizedHeader.Slot,
-		"blockRoot": update.FinalizedHeaderBlockRoot,
+		"slot": finalizedHeader.Slot,
 	}).Info("syncing finalized header from Ethereum beacon client")
 
-	currentSyncPeriod := h.protocol.ComputeSyncPeriodAtSlot(uint64(update.Payload.AttestedHeader.Slot))
+	currentSyncPeriod := h.protocol.ComputeSyncPeriodAtSlot(uint64(finalizedHeader.Slot))
 	lastSyncedPeriod := h.protocol.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
 
 	if lastSyncedPeriod < currentSyncPeriod {
@@ -187,7 +186,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 		}
 	}
 
-	return h.updateFinalizedHeaderOnchain(ctx, update)
+	return nil
 }
 
 // Write the provided finalized header update (possibly containing a sync committee) on-chain and check if it was
@@ -321,8 +320,6 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 		return fmt.Errorf("fetch block roots for slot %d: %w", slot, err)
 	}
 
-	log.Info("populating checkpoint")
-
 	h.cache.AddCheckPoint(blockRoot, blockRootsProof.Tree, slot)
 
 	return nil
@@ -411,25 +408,68 @@ func (h *Header) getHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, 
 	return h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
 }
 
-func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.HeaderUpdatePayload, error) {
-	var headerUpdate scale.HeaderUpdatePayload
+func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.MessagePayload, error) {
 	header, err := h.syncer.Client.GetHeaderByBlockRoot(blockRoot)
 	if err != nil {
-		return headerUpdate, fmt.Errorf("get beacon header by blockRoot: %w", err)
+		return scale.MessagePayload{}, fmt.Errorf("get beacon header by blockRoot: %w", err)
 	}
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
-		return headerUpdate, fmt.Errorf("fetch last finalized header state: %w", err)
+		return scale.MessagePayload{}, fmt.Errorf("fetch last finalized header state: %w", err)
 	}
 
-	if header.Slot > lastFinalizedHeaderState.BeaconSlot {
-		return headerUpdate, ErrBeaconHeaderNotFinalized
+	// There is a finalized header on-chain that will be able to verify the header containing the message.
+	if header.Slot <= lastFinalizedHeaderState.BeaconSlot {
+		headerUpdate, err := h.getHeaderUpdateBySlot(header.Slot)
+		if err != nil {
+			return scale.MessagePayload{}, fmt.Errorf("get header update by slot with ancestry proof: %w", err)
+		}
+
+		return scale.MessagePayload{
+			HeaderPayload:    headerUpdate,
+			FinalizedPayload: nil,
+		}, nil
 	}
-	headerUpdate, err = h.getHeaderUpdateBySlot(header.Slot)
+
+	// The latest finalized header on-chain is older than the header containing the message, so we need to sync the
+	// finalized header with the message.
+	finalizedHeader, err := h.syncer.GetFinalizedHeader()
 	if err != nil {
-		return headerUpdate, fmt.Errorf("get header update by slot with ancestry proof: %w", err)
+		return scale.MessagePayload{}, err
 	}
-	return headerUpdate, nil
+
+	// If the header is not finalized yet, we can't do anything further.
+	if header.Slot > uint64(finalizedHeader.Slot) {
+		return scale.MessagePayload{}, ErrBeaconHeaderNotFinalized
+	}
+
+	var finalizedUpdate scale.Update
+	// If we import the last finalized header, the gap between the finalized headers would be too large, so import
+	// a slightly older header.
+	if lastFinalizedHeaderState.BeaconSlot+h.protocol.SlotsPerHistoricalRoot < uint64(finalizedHeader.Slot) {
+		finalizedUpdate, err = h.syncer.GetFinalizedUpdateAtAttestedSlot(lastFinalizedHeaderState.BeaconSlot, lastFinalizedHeaderState.BeaconSlot+h.protocol.SlotsPerHistoricalRoot, false)
+		if err != nil {
+			return scale.MessagePayload{}, fmt.Errorf("get finalized update at attested slot: %w", err)
+		}
+	} else {
+		finalizedUpdate, err = h.syncer.GetFinalizedUpdate()
+		if err != nil {
+			return scale.MessagePayload{}, fmt.Errorf("get finalized update: %w", err)
+		}
+	}
+
+	checkpoint := cache.Proof{
+		FinalizedBlockRoot: finalizedUpdate.FinalizedHeaderBlockRoot,
+		BlockRootsTree:     finalizedUpdate.BlockRootsTree,
+		Slot:               uint64(finalizedUpdate.Payload.FinalizedHeader.Slot),
+	}
+	headerUpdate, err := h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
+
+	return scale.MessagePayload{
+		HeaderPayload:    headerUpdate,
+		FinalizedPayload: &finalizedUpdate,
+	}, nil
+
 }
 
 func (h *Header) isInitialSyncPeriod() bool {

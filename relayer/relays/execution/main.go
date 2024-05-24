@@ -167,7 +167,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				}
 
 				// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
-				executionProof, err := beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot)
+				messagePayload, err := beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot)
 				if err == header.ErrBeaconHeaderNotFinalized {
 					logger.Warn("beacon header not finalized, just skipped")
 					continue
@@ -175,18 +175,34 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				if err != nil {
 					return fmt.Errorf("fetch execution header proof: %w", err)
 				}
-				inboundMsg.Proof.ExecutionProof = executionProof
+				inboundMsg.Proof.ExecutionProof = messagePayload.HeaderPayload
 
 				logger.WithFields(logrus.Fields{
 					"EventLog": inboundMsg.EventLog,
 					"Proof":    inboundMsg.Proof,
 				}).Debug("Generated message from Ethereum log")
 
-				err = writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
-				if err != nil {
-					logger.Error("inbound message fail to sent")
-					return fmt.Errorf("write to parachain: %w", err)
+				if messagePayload.FinalizedPayload == nil {
+					err = writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
+					if err != nil {
+						logger.Error("inbound message fail to send")
+						return fmt.Errorf("write to parachain: %w", err)
+					}
+				} else {
+					logger.WithFields(logrus.Fields{
+						"finalized_slot": messagePayload.FinalizedPayload.Payload.FinalizedHeader.Slot,
+						"finalized_root": messagePayload.FinalizedPayload.FinalizedHeaderBlockRoot,
+						"message_slot":   messagePayload.HeaderPayload.Header.Slot,
+					}).Debug("Batching finalized header update with message")
+					extrinsics := []string{"EthereumBeaconClient.submit", "EthereumInboundQueue.submit"}
+					payloads := []interface{}{inboundMsg, messagePayload.FinalizedPayload.Payload}
+					err = writer.BatchCall(ctx, extrinsics, payloads)
+					if err != nil {
+						logger.Error("batch call message fail to send")
+						return fmt.Errorf("write to parachain: %w", err)
+					}
 				}
+
 				paraNonce, _ = r.fetchLatestParachainNonce()
 				if paraNonce != ev.Nonce {
 					logger.Error("inbound message sent but fail to execute")
