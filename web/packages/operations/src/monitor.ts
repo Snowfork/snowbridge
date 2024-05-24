@@ -1,19 +1,19 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
 import { contextFactory, destroyContext, environment, status, utils } from "@snowbridge/api"
-import { sendAlarm, AllMetrics, Sovereign, sendMetrics } from "./alarm"
+import { AllMetrics, Sovereign, sendMetrics } from "./alarm"
 
 export const monitor = async (): Promise<AllMetrics> => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snwobridgeEnv = environment.SNOWBRIDGE_ENV[env]
-    if (snwobridgeEnv === undefined) {
+    const snowbridgeEnv = environment.SNOWBRIDGE_ENV[env]
+    if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const { config } = snwobridgeEnv
+    const { config } = snowbridgeEnv
 
     const infuraKey = process.env.REACT_APP_INFURA_KEY || ""
 
@@ -37,20 +37,23 @@ export const monitor = async (): Promise<AllMetrics> => {
 
     const bridegStatus = await status.bridgeStatusInfo(context)
     console.log("Bridge Status:", bridegStatus)
+
     const assethub = await status.channelStatusInfo(
         context,
         utils.paraIdToChannelId(config.ASSET_HUB_PARAID)
     )
-    assethub.name = "AssetHub"
+    assethub.name = status.ChannelKind.AssetHub
     console.log("Asset Hub Channel:", assethub)
+
     const primaryGov = await status.channelStatusInfo(context, config.PRIMARY_GOVERNANCE_CHANNEL_ID)
-    primaryGov.name = "Primary"
+    primaryGov.name = status.ChannelKind.Primary
     console.log("Primary Governance Channel:", primaryGov)
+
     const secondaryGov = await status.channelStatusInfo(
         context,
         config.SECONDARY_GOVERNANCE_CHANNEL_ID
     )
-    secondaryGov.name = "Secondary"
+    secondaryGov.name = status.ChannelKind.Secondary
     console.log("Secondary Governance Channel:", secondaryGov)
 
     let assetHubSovereign = BigInt(
@@ -133,8 +136,6 @@ export const monitor = async (): Promise<AllMetrics> => {
     }
 
     await sendMetrics(allMetrics)
-
-    await sendAlarm(allMetrics)
 
     await destroyContext(context)
 

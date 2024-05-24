@@ -1,13 +1,12 @@
 import { status, environment } from "@snowbridge/api"
-import axios from "axios"
 import {
     CloudWatchClient,
     PutMetricDataCommand,
     PutMetricAlarmCommand,
 } from "@aws-sdk/client-cloudwatch"
 
-const SLACK_WEBHOOK_URL = process.env["SLACK_WEBHOOK_URL"]
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
+const SNS_TOPIC_TO_PAGERDUTY = process.env["SNS_TOPIC_TO_PAGERDUTY"] || ""
 
 export const AlarmThreshold = {
     MaxBlockLatency: 2000,
@@ -30,8 +29,6 @@ export enum AlarmReason {
     ToPolkadotChannelStale = "ToPolkadotChannelStale",
     AccountBalanceInsufficient = "AccountBalanceInsufficient",
 }
-
-export type ChannelKind = "Primary" | "Secondary" | "AssetHub"
 
 export const sendMetrics = async (metrics: AllMetrics) => {
     let client = new CloudWatchClient({})
@@ -320,6 +317,7 @@ export const initializeAlarms = async () => {
         Namespace: CLOUD_WATCH_NAME_SPACE,
         Period: 600,
         Threshold: 0,
+        AlarmActions: [SNS_TOPIC_TO_PAGERDUTY],
     }
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
@@ -371,65 +369,7 @@ export const initializeAlarms = async () => {
             ...alarmCommandSharedInput,
         })
     )
-    console.log(cloudWatchAlarms)
     for (let alarm of cloudWatchAlarms) {
         await client.send(alarm)
-    }
-}
-
-export const sendAlarm = async (metrics: AllMetrics) => {
-    let alarm = false
-    let alarms = []
-
-    if (
-        metrics.bridgeStatus.toEthereum.blockLatency > AlarmThreshold.MaxBlockLatency &&
-        metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum ==
-            metrics.bridgeStatus.toEthereum.previousPolkadotBlockOnEthereum
-    ) {
-        alarm = true
-        alarms.push(AlarmReason.BeefyStale)
-    }
-    if (
-        metrics.bridgeStatus.toPolkadot.blockLatency > AlarmThreshold.MaxBlockLatency &&
-        metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot ==
-            metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot
-    ) {
-        alarm = true
-        alarms.push(AlarmReason.BeaconStale)
-    }
-    for (let channel of metrics.channels) {
-        if (
-            channel.toEthereum.outbound != channel.toEthereum.inbound &&
-            channel.toEthereum.inbound == channel.toEthereum.previousInbound
-        ) {
-            alarm = true
-            alarms.push(AlarmReason.ToEthereumChannelStale)
-        }
-        if (
-            channel.toPolkadot.outbound != channel.toPolkadot.inbound &&
-            channel.toPolkadot.inbound == channel.toPolkadot.previousInbound
-        ) {
-            alarm = true
-            alarms.push(AlarmReason.ToPolkadotChannelStale)
-        }
-        break
-    }
-
-    for (let relayer of metrics.relayers) {
-        if (!relayer.balance || relayer.balance < AlarmThreshold.MinBalanceToKeep) {
-            alarm = true
-            alarms.push(AlarmReason.AccountBalanceInsufficient)
-            break
-        }
-    }
-    const text = JSON.stringify(
-        { alarms, metrics },
-        (key, value) => (typeof value === "bigint" ? value.toString() : value),
-        2
-    )
-    console.log(text)
-
-    if (alarm) {
-        await axios.post(SLACK_WEBHOOK_URL || "", { text })
     }
 }
