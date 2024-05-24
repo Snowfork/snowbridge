@@ -65,10 +65,11 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 		settings,
 		&beaconStore,
 		p,
+		8,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
-	err = h.syncInterimFinalizedUpdate(context.Background(), 4563072, 4571360)
+	_, err = h.syncInterimFinalizedUpdate(context.Background(), 4563072, 4571360)
 	require.NoError(t, err)
 }
 
@@ -128,10 +129,11 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 		settings,
 		&beaconStore,
 		p,
+		8,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
-	err = h.syncInterimFinalizedUpdate(context.Background(), 4563072, 4571360)
+	_, err = h.syncInterimFinalizedUpdate(context.Background(), 4563072, 4571360)
 	require.NoError(t, err)
 }
 
@@ -193,10 +195,11 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 		settings,
 		&beaconStore,
 		p,
+		8,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
-	err = h.syncInterimFinalizedUpdate(context.Background(), 4563072, 4571360)
+	_, err = h.syncInterimFinalizedUpdate(context.Background(), 4563072, 4571360)
 	require.NoError(t, err)
 }
 
@@ -238,10 +241,11 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 		settings,
 		&beaconStore,
 		p,
+		8,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
-	err = h.syncInterimFinalizedUpdate(context.Background(), 4570722, 4578922)
+	_, err = h.syncInterimFinalizedUpdate(context.Background(), 4570722, 4578922)
 	require.Error(t, err)
 }
 
@@ -276,9 +280,10 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 		settings,
 		&beaconStore,
 		p,
+		8,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
-	err = h.syncInterimFinalizedUpdate(context.Background(), 4570722, 4578922)
+	_, err = h.syncInterimFinalizedUpdate(context.Background(), 4570722, 4578922)
 	require.Errorf(t, err, "cannot find blocks at boundaries")
 }

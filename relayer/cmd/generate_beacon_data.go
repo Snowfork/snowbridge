@@ -56,6 +56,7 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
+	cmd.Flags().Uint64("finalized-slot", 0, "Optional finalized slot to create checkpoint at")
 	cmd.Flags().Bool("export-json", false, "Export Json")
 
 	return cmd
@@ -101,6 +102,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
+		finalizedSlot, _ := cmd.Flags().GetUint64("finalized-slot")
 
 		viper.SetConfigFile(config)
 
@@ -122,7 +124,13 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
 		s := syncer.New(client, &store, p)
 
-		checkPointScale, err := s.GetCheckpoint()
+		var checkPointScale scale.BeaconCheckpoint
+		if finalizedSlot == 0 {
+			checkPointScale, err = s.GetCheckpoint()
+		} else {
+			checkPointScale, err = s.GetCheckpointAtSlot(finalizedSlot)
+		}
+
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}

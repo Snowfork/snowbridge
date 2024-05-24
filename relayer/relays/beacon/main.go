@@ -67,6 +67,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		specSettings,
 		&s,
 		p,
+		uint64(r.config.Sink.Parachain.MaxBatchCallSize),
 	)
 
 	return headers.Sync(ctx, eg)

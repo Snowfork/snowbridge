@@ -23,24 +23,27 @@ import (
 
 var ErrFinalizedHeaderUnchanged = errors.New("finalized header unchanged")
 var ErrFinalizedHeaderNotImported = errors.New("finalized header not imported")
+var ErrInterimHeaderNotImported = errors.New("interim finalized header not imported")
 var ErrSyncCommitteeNotImported = errors.New("sync committee not imported")
 var ErrSyncCommitteeLatency = errors.New("sync committee latency found")
 var ErrExecutionHeaderNotImported = errors.New("execution header not imported")
 var ErrBeaconHeaderNotFinalized = errors.New("beacon header not finalized")
 
 type Header struct {
-	cache    *cache.BeaconCache
-	writer   parachain.ChainWriter
-	syncer   *syncer.Syncer
-	protocol *protocol.Protocol
+	cache         *cache.BeaconCache
+	writer        parachain.ChainWriter
+	syncer        *syncer.Syncer
+	protocol      *protocol.Protocol
+	batchCallSize uint64
 }
 
-func New(writer parachain.ChainWriter, client api.BeaconAPI, setting config.SpecSettings, store store.BeaconStore, protocol *protocol.Protocol) Header {
+func New(writer parachain.ChainWriter, client api.BeaconAPI, setting config.SpecSettings, store store.BeaconStore, protocol *protocol.Protocol, batchCallSize uint64) Header {
 	return Header{
-		cache:    cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
-		writer:   writer,
-		syncer:   syncer.New(client, store, protocol),
-		protocol: protocol,
+		cache:         cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
+		writer:        writer,
+		syncer:        syncer.New(client, store, protocol),
+		protocol:      protocol,
+		batchCallSize: batchCallSize,
 	}
 }
 
@@ -70,6 +73,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 	// Special handling here for the initial checkpoint to sync the next sync committee which is not included in initial
 	// checkpoint.
 	if h.isInitialSyncPeriod() {
+		log.Info("syncing next sync committee for initial checkpoint")
 		err = h.SyncCommitteePeriodUpdate(ctx, latestSyncedPeriod)
 		if err != nil {
 			return fmt.Errorf("sync next committee for initial sync period: %w", err)
@@ -135,16 +139,27 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 	// finalized header
 	if uint64(update.Payload.FinalizedHeader.Slot) > h.cache.Finalized.LastSyncedSlot {
 		diff := uint64(update.Payload.FinalizedHeader.Slot) - h.cache.Finalized.LastSyncedSlot
-		log.WithFields(log.Fields{"diff": diff, "last_finalized_slot": h.cache.Finalized.LastSyncedSlot, "new_finalized_slot": uint64(update.Payload.FinalizedHeader.Slot)}).Info("checking max latency")
-		if diff > h.protocol.Settings.SlotsInEpoch*h.protocol.Settings.EpochsPerSyncCommitteePeriod {
-			log.Info("syncing an interim update")
-			err = h.syncInterimFinalizedUpdate(ctx, h.cache.Finalized.LastSyncedSlot, uint64(update.Payload.FinalizedHeader.Slot))
+		minSlot := h.cache.Finalized.LastSyncedSlot
+		for diff > h.protocol.Settings.SlotsInEpoch*h.protocol.Settings.EpochsPerSyncCommitteePeriod {
+			log.WithFields(log.Fields{
+				"diff":                diff,
+				"last_finalized_slot": h.cache.Finalized.LastSyncedSlot,
+				"new_finalized_slot":  uint64(update.Payload.FinalizedHeader.Slot),
+			}).Info("interim update required")
+
+			interimUpdate, err := h.syncInterimFinalizedUpdate(ctx, minSlot, uint64(update.Payload.FinalizedHeader.Slot))
 			if err != nil {
 				return fmt.Errorf("sync interim finalized header update: %w", err)
 			}
+
+			diff = uint64(update.Payload.FinalizedHeader.Slot) - uint64(interimUpdate.Payload.FinalizedHeader.Slot)
+			minSlot = uint64(update.Payload.FinalizedHeader.Slot) + h.protocol.Settings.SlotsInEpoch
+			log.WithFields(log.Fields{
+				"new_diff":               diff,
+				"interim_finalized_slot": uint64(interimUpdate.Payload.FinalizedHeader.Slot),
+				"new_finalized_slot":     uint64(update.Payload.FinalizedHeader.Slot),
+			}).Info("interim update synced successfully")
 		}
-	} else {
-		log.Info("interim update not required")
 	}
 
 	log.WithFields(log.Fields{
@@ -290,6 +305,7 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 	for currentSlot <= toSlot {
 		log.WithFields(log.Fields{
 			"currentSlot": currentSlot,
+			"remaining":   toSlot - currentSlot,
 		}).Info("fetching next header at slot")
 
 		var nextHeaderUpdate scale.HeaderUpdatePayload
@@ -307,42 +323,57 @@ func (h *Header) SyncExecutionHeaders(ctx context.Context) error {
 
 		headersToSync = append(headersToSync, headerUpdate)
 		// last slot to be synced, sync headers
-		if currentSlot >= toSlot {
+		if currentSlot%h.batchCallSize == 0 || currentSlot >= toSlot {
+			slotsToSync := []uint64{}
+			for _, h := range headersToSync {
+				slotsToSync = append(slotsToSync, uint64(h.Header.Slot))
+			}
+			log.WithFields(log.Fields{
+				"slotsToSync": slotsToSync,
+			}).Info("syncing batch of headers")
 			err = h.batchSyncHeaders(ctx, headersToSync)
 			if err != nil {
 				return fmt.Errorf("batch sync headers failed: %w", err)
 			}
+
+			// waiting for all batch calls to be executed on chain
+			err = h.waitingForBatchCallFinished(slotsToSync[len(slotsToSync)-1])
+			if err != nil {
+				return err
+			}
+
+			headersToSync = []scale.HeaderUpdatePayload{}
 		}
 		headerUpdate = nextHeaderUpdate
 		currentSlot = uint64(headerUpdate.Header.Slot)
 	}
-	// waiting for all batch calls to be executed on chain
-	err = h.waitingForBatchCallFinished(toSlot)
-	if err != nil {
-		return err
-	}
-	h.cache.SetLastSyncedExecutionSlot(toSlot)
+
 	return nil
 }
 
-func (h *Header) syncInterimFinalizedUpdate(ctx context.Context, lastSyncedSlot, newCheckpointSlot uint64) error {
+func (h *Header) syncInterimFinalizedUpdate(ctx context.Context, lastSyncedSlot, newCheckpointSlot uint64) (scale.Update, error) {
+	currentPeriod := h.protocol.ComputeSyncPeriodAtSlot(lastSyncedSlot)
+
 	// Calculate the range that the interim finalized header update may be in
 	minSlot := newCheckpointSlot - h.protocol.SlotsPerHistoricalRoot
-	maxSlot := lastSyncedSlot + h.protocol.SlotsPerHistoricalRoot
+	maxSlot := ((currentPeriod + 1) * h.protocol.SlotsPerHistoricalRoot) - h.protocol.Settings.SlotsInEpoch // just before the new sync committee boundary
 
 	finalizedUpdate, err := h.syncer.GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot, false)
 	if err != nil {
-		return fmt.Errorf("get interim checkpoint to update chain (last synced slot %d, new slot: %d): %w", lastSyncedSlot, newCheckpointSlot, err)
+		return scale.Update{}, fmt.Errorf("get interim checkpoint to update chain (last synced slot %d, new slot: %d): %w", lastSyncedSlot, newCheckpointSlot, err)
 	}
 
 	log.WithField("slot", finalizedUpdate.Payload.FinalizedHeader.Slot).Info("syncing an interim update to on-chain")
 
 	err = h.updateFinalizedHeaderOnchain(ctx, finalizedUpdate)
-	if err != nil {
-		return fmt.Errorf("update interim finalized header on-chain: %w", err)
+	switch {
+	case errors.Is(err, ErrFinalizedHeaderNotImported):
+		return scale.Update{}, ErrInterimHeaderNotImported
+	case err != nil:
+		return scale.Update{}, fmt.Errorf("update interim finalized header on-chain: %w", err)
 	}
 
-	return nil
+	return finalizedUpdate, nil
 }
 
 func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSyncedPeriod, currentSyncPeriod uint64) error {
@@ -515,6 +546,7 @@ func (h *Header) waitingForBatchCallFinished(toSlot uint64) error {
 		if err != nil {
 			return fmt.Errorf("fetch last execution hash: %w", err)
 		}
+		h.cache.SetLastSyncedExecutionSlot(executionHeaderState.BeaconSlot)
 		if executionHeaderState.BeaconSlot == toSlot {
 			batchCallFinished = true
 			break
