@@ -27,7 +27,7 @@ func (m *Writer) GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error)
 	return types.H256{}, nil
 }
 
-func (m *Writer) BatchCall(ctx context.Context, extrinsic string, calls []interface{}) error {
+func (m *Writer) BatchCall(ctx context.Context, extrinsic []string, calls []interface{}) error {
 	return nil
 }
 
