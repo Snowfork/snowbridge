@@ -36,42 +36,18 @@ export const sendMetrics = async (metrics: AllMetrics) => {
     // Beefy metrics
     metricData.push({
         MetricName: "BeefyLatency",
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToEthereum",
-            },
-        ],
         Value: metrics.bridgeStatus.toEthereum.blockLatency,
     })
     metricData.push({
         MetricName: "LatestBeefyBlock",
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToEthereum",
-            },
-        ],
         Value: metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum,
     })
     metricData.push({
         MetricName: "PreviousBeefyBlock",
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToEthereum",
-            },
-        ],
         Value: metrics.bridgeStatus.toEthereum.previousPolkadotBlockOnEthereum,
     })
     metricData.push({
         MetricName: AlarmReason.BeefyStale.toString(),
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToEthereum",
-            },
-        ],
         Value: Number(
             metrics.bridgeStatus.toEthereum.blockLatency > AlarmThreshold.MaxBlockLatency &&
                 metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum <=
@@ -81,42 +57,18 @@ export const sendMetrics = async (metrics: AllMetrics) => {
     // Beacon metrics
     metricData.push({
         MetricName: "BeaconLatency",
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToPolkadot",
-            },
-        ],
         Value: metrics.bridgeStatus.toPolkadot.blockLatency,
     })
     metricData.push({
         MetricName: "LatestBeaconBlock",
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToPolkadot",
-            },
-        ],
         Value: metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot,
     })
     metricData.push({
         MetricName: "PreviousBeaconBlock",
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToPolkadot",
-            },
-        ],
         Value: metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot,
     })
     metricData.push({
         MetricName: AlarmReason.BeaconStale.toString(),
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToPolkadot",
-            },
-        ],
         Value: Number(
             metrics.bridgeStatus.toPolkadot.blockLatency > AlarmThreshold.MaxBlockLatency &&
                 metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot <=
@@ -130,10 +82,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "ToEthereumOutboundNonce",
             Dimensions: [
                 {
-                    Name: "Direction",
-                    Value: "ToEthereum",
-                },
-                {
                     Name: "ChannelName",
                     Value: channel.name,
                 },
@@ -143,10 +91,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
         metricData.push({
             MetricName: "ToEthereumPreviousOutboundNonce",
             Dimensions: [
-                {
-                    Name: "Direction",
-                    Value: "ToEthereum",
-                },
                 {
                     Name: "ChannelName",
                     Value: channel.name,
@@ -158,10 +102,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "ToEthereumInboundNonce",
             Dimensions: [
                 {
-                    Name: "Direction",
-                    Value: "ToEthereum",
-                },
-                {
                     Name: "ChannelName",
                     Value: channel.name,
                 },
@@ -172,10 +112,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "ToEthereumPreviousInboundNonce",
             Dimensions: [
                 {
-                    Name: "Direction",
-                    Value: "ToEthereum",
-                },
-                {
                     Name: "ChannelName",
                     Value: channel.name,
                 },
@@ -184,12 +120,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
         })
         metricData.push({
             MetricName: AlarmReason.ToEthereumChannelStale.toString(),
-            Dimensions: [
-                {
-                    Name: "Direction",
-                    Value: "ToEthereum",
-                },
-            ],
             Value: Number(
                 channel.toEthereum.outbound < channel.toEthereum.inbound ||
                     (channel.toEthereum.outbound > channel.toEthereum.inbound &&
@@ -201,10 +131,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "ToPolkadotOutboundNonce",
             Dimensions: [
                 {
-                    Name: "Direction",
-                    Value: "ToPolkadot",
-                },
-                {
                     Name: "ChannelName",
                     Value: channel.name,
                 },
@@ -214,10 +140,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
         metricData.push({
             MetricName: "ToPolkadotPreviousOutboundNonce",
             Dimensions: [
-                {
-                    Name: "Direction",
-                    Value: "ToPolkadot",
-                },
                 {
                     Name: "ChannelName",
                     Value: channel.name,
@@ -229,10 +151,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "ToPolkadotInboundNonce",
             Dimensions: [
                 {
-                    Name: "Direction",
-                    Value: "ToPolkadot",
-                },
-                {
                     Name: "ChannelName",
                     Value: channel.name,
                 },
@@ -243,10 +161,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "ToPolkadotPreviousInboundNonce",
             Dimensions: [
                 {
-                    Name: "Direction",
-                    Value: "ToPolkadot",
-                },
-                {
                     Name: "ChannelName",
                     Value: channel.name,
                 },
@@ -255,12 +169,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
         })
         metricData.push({
             MetricName: AlarmReason.ToPolkadotChannelStale.toString(),
-            Dimensions: [
-                {
-                    Name: "Direction",
-                    Value: "ToPolkadot",
-                },
-            ],
             Value: Number(
                 channel.toPolkadot.outbound < channel.toPolkadot.inbound ||
                     (channel.toPolkadot.outbound > channel.toPolkadot.inbound &&
