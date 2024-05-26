@@ -52,7 +52,6 @@ export const createApi = (baseUrl: string, apiKey: string, options = { limit: 1 
             await setTimeout(rateLimit.reset * 1000)
         }
 
-        console.log('aaa',url+subUrl)
         const response = await fetch(`${url}${subUrl}`, request)
 
         rateLimit.limit = Number(response.headers.get("ratelimit-limit"))
