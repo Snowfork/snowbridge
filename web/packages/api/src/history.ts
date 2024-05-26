@@ -151,45 +151,21 @@ export const toPolkadotHistory = async (
         inboundMessagesReceived,
         assetHubMessageQueue,
     ] = await Promise.all([
-        cache(
-            "ethOutbound.json",
-            async () =>
-                await getEthOutboundMessages(
-                    context,
-                    range.ethereum.fromBlock,
-                    range.ethereum.toBlock
-                )
+        getEthOutboundMessages(context, range.ethereum.fromBlock, range.ethereum.toBlock),
+
+        getBeaconClientUpdates(bridgeHubScan, range.bridgeHub.fromBlock, range.bridgeHub.toBlock),
+
+        getBridgeHubInboundMessages(
+            bridgeHubScan,
+            range.bridgeHub.fromBlock,
+            range.bridgeHub.toBlock
         ),
 
-        cache(
-            "beaconClientUpdates.json",
-            async () =>
-                await getBeaconClientUpdates(
-                    bridgeHubScan,
-                    range.bridgeHub.fromBlock,
-                    range.bridgeHub.toBlock
-                )
-        ),
-
-        cache(
-            "bridgeHubInboundMessages.json",
-            async () =>
-                await getBridgeHubInboundMessages(
-                    bridgeHubScan,
-                    range.bridgeHub.fromBlock,
-                    range.bridgeHub.toBlock
-                )
-        ),
-
-        cache(
-            "getAssetHubMessageQueue.json",
-            async () =>
-                await getAssetHubMessageQueueProccessed(
-                    assetHubScan,
-                    bridgeHubParaId,
-                    range.assetHub.fromBlock,
-                    range.assetHub.toBlock
-                )
+        getAssetHubMessageQueueProccessed(
+            assetHubScan,
+            bridgeHubParaId,
+            range.assetHub.fromBlock,
+            range.assetHub.toBlock
         ),
     ])
 
