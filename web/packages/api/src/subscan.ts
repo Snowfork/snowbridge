@@ -92,7 +92,7 @@ export const fetchEvents = async <T>(
     const eventsBody = {
         module,
         block_range: `${fromBlock}-${toBlock}`,
-        event_id: (eventIds.length === 1 ? eventIds[0] : undefined),
+        event_id: eventIds.length === 1 ? eventIds[0] : undefined,
         row: rows,
         page,
     }

@@ -22,7 +22,7 @@ export type ToPolkadotTransferResult = {
         messageId: string
         nonce: number
         parentBeaconSlot: number
-    },
+    }
     beaconClientIncluded?: {
         extrinsic_index: string
         extrinsic_hash: string
@@ -126,29 +126,71 @@ export const toPolkadotHistory = async (
 ): Promise<ToPolkadotTransferResult[]> => {
     console.log("Fetching history To Polkadot")
     console.log(
-        `eth from ${range.ethereum.fromBlock} to ${range.ethereum.toBlock} (${range.ethereum.toBlock - range.ethereum.fromBlock
+        `eth from ${range.ethereum.fromBlock} to ${range.ethereum.toBlock} (${
+            range.ethereum.toBlock - range.ethereum.fromBlock
         } blocks)`
     )
     console.log(
-        `assethub from ${range.assetHub.fromBlock} to ${range.assetHub.toBlock} (${range.assetHub.toBlock - range.assetHub.fromBlock
+        `assethub from ${range.assetHub.fromBlock} to ${range.assetHub.toBlock} (${
+            range.assetHub.toBlock - range.assetHub.fromBlock
         } blocks)`
     )
     console.log(
-        `bridgehub from ${range.bridgeHub.fromBlock} to ${range.bridgeHub.toBlock} (${range.bridgeHub.toBlock - range.bridgeHub.fromBlock
+        `bridgehub from ${range.bridgeHub.fromBlock} to ${range.bridgeHub.toBlock} (${
+            range.bridgeHub.toBlock - range.bridgeHub.fromBlock
         } blocks)`
     )
 
-    const bridgeHubParaIdCodec = await context.polkadot.api.bridgeHub.query.parachainInfo.parachainId()
+    const bridgeHubParaIdCodec =
+        await context.polkadot.api.bridgeHub.query.parachainInfo.parachainId()
     const bridgeHubParaId = bridgeHubParaIdCodec.toPrimitive() as number
 
-    const [ethOutboundMessages, beaconClientUpdates, inboundMessagesReceived, assetHubMessageQueue] = await Promise.all([
-        cache("ethOutbound.json", async () => await getEthOutboundMessages(context, range.ethereum.fromBlock, range.ethereum.toBlock)),
+    const [
+        ethOutboundMessages,
+        beaconClientUpdates,
+        inboundMessagesReceived,
+        assetHubMessageQueue,
+    ] = await Promise.all([
+        cache(
+            "ethOutbound.json",
+            async () =>
+                await getEthOutboundMessages(
+                    context,
+                    range.ethereum.fromBlock,
+                    range.ethereum.toBlock
+                )
+        ),
 
-        cache("beaconClientUpdates.json", async () => await getBeaconClientUpdates(bridgeHubScan, range.bridgeHub.fromBlock, range.bridgeHub.toBlock)),
+        cache(
+            "beaconClientUpdates.json",
+            async () =>
+                await getBeaconClientUpdates(
+                    bridgeHubScan,
+                    range.bridgeHub.fromBlock,
+                    range.bridgeHub.toBlock
+                )
+        ),
 
-        cache("bridgeHubInboundMessages.json", async () => await getBridgeHubInboundMessages(bridgeHubScan, range.bridgeHub.fromBlock, range.bridgeHub.toBlock)),
+        cache(
+            "bridgeHubInboundMessages.json",
+            async () =>
+                await getBridgeHubInboundMessages(
+                    bridgeHubScan,
+                    range.bridgeHub.fromBlock,
+                    range.bridgeHub.toBlock
+                )
+        ),
 
-        cache("getAssetHubMessageQueue.json", async () => await getAssetHubMessageQueueProccessed(assetHubScan, bridgeHubParaId, range.assetHub.fromBlock, range.assetHub.toBlock)),
+        cache(
+            "getAssetHubMessageQueue.json",
+            async () =>
+                await getAssetHubMessageQueueProccessed(
+                    assetHubScan,
+                    bridgeHubParaId,
+                    range.assetHub.fromBlock,
+                    range.assetHub.toBlock
+                )
+        ),
     ])
 
     console.log("number of transfers", ethOutboundMessages.length)
@@ -174,10 +216,8 @@ export const toPolkadotHistory = async (
         }
         results.push(result)
 
-
         const beaconClientIncluded = beaconClientUpdates.find(
-            (ev) =>
-                ev.data.beaconSlot > result.submitted.parentBeaconSlot + 1 // add one to parent to get current
+            (ev) => ev.data.beaconSlot > result.submitted.parentBeaconSlot + 1 // add one to parent to get current
         )
         if (beaconClientIncluded) {
             result.beaconClientIncluded = {
@@ -191,9 +231,10 @@ export const toPolkadotHistory = async (
         }
 
         const inboundMessageReceived = inboundMessagesReceived.find(
-            (ev) => ev.data.messageId === result.submitted.messageId
-                && ev.data.channelId === result.submitted.channelId
-                && ev.data.nonce === result.submitted.nonce
+            (ev) =>
+                ev.data.messageId === result.submitted.messageId &&
+                ev.data.channelId === result.submitted.channelId &&
+                ev.data.nonce === result.submitted.nonce
         )
         if (inboundMessageReceived) {
             result.inboundMessageReceived = {
@@ -208,7 +249,9 @@ export const toPolkadotHistory = async (
         }
 
         const assetHubMessageProcessed = assetHubMessageQueue.find(
-            (ev) => ev.data.sibling === bridgeHubParaId && ev.data.messageId == result.submitted.messageId
+            (ev) =>
+                ev.data.sibling === bridgeHubParaId &&
+                ev.data.messageId == result.submitted.messageId
         )
         if (assetHubMessageProcessed) {
             console.log(assetHubMessageProcessed)
@@ -245,15 +288,18 @@ export const toEthereumHistory = async (
 ): Promise<ToEthereumTransferResult[]> => {
     console.log("Fetching history To Ethereum")
     console.log(
-        `eth from ${range.ethereum.fromBlock} to ${range.ethereum.toBlock} (${range.ethereum.toBlock - range.ethereum.fromBlock
+        `eth from ${range.ethereum.fromBlock} to ${range.ethereum.toBlock} (${
+            range.ethereum.toBlock - range.ethereum.fromBlock
         } blocks)`
     )
     console.log(
-        `assethub from ${range.assetHub.fromBlock} to ${range.assetHub.toBlock} (${range.assetHub.toBlock - range.assetHub.fromBlock
+        `assethub from ${range.assetHub.fromBlock} to ${range.assetHub.toBlock} (${
+            range.assetHub.toBlock - range.assetHub.fromBlock
         } blocks)`
     )
     console.log(
-        `bridgehub from ${range.bridgeHub.fromBlock} to ${range.bridgeHub.toBlock} (${range.bridgeHub.toBlock - range.bridgeHub.fromBlock
+        `bridgehub from ${range.bridgeHub.fromBlock} to ${range.bridgeHub.toBlock} (${
+            range.bridgeHub.toBlock - range.bridgeHub.fromBlock
         } blocks)`
     )
 
@@ -295,11 +341,7 @@ export const toEthereumHistory = async (
 
         getBeefyClientUpdates(context, range.ethereum.fromBlock, range.ethereum.toBlock),
 
-        getEthInboundMessagesDispatched(
-            context,
-            range.ethereum.fromBlock,
-            range.ethereum.toBlock
-        ),
+        getEthInboundMessagesDispatched(context, range.ethereum.fromBlock, range.ethereum.toBlock),
     ])
 
     console.log("number of transfers", allTransfers.length)
@@ -760,18 +802,17 @@ const subFetchOutboundMessages = async (
     )
 }
 
-const getEthOutboundMessages = async (
-    context: Context,
-    fromBlock: number,
-    toBlock: number
-) => {
+const getEthOutboundMessages = async (context: Context, fromBlock: number, toBlock: number) => {
     const { gateway } = context.ethereum.contracts
     const OutboundMessageAccepted = gateway.getEvent("OutboundMessageAccepted")
     const outboundMessages = await gateway.queryFilter(OutboundMessageAccepted, fromBlock, toBlock)
     const result = []
     for (const om of outboundMessages) {
         const block = await om.getBlock()
-        const beaconBlockRoot = await fetchBeaconSlot(context.config.ethereum.beacon_url, block.parentBeaconBlockRoot as any)
+        const beaconBlockRoot = await fetchBeaconSlot(
+            context.config.ethereum.beacon_url,
+            block.parentBeaconBlockRoot as any
+        )
         result.push({
             blockNumber: om.blockNumber,
             blockHash: om.blockHash,
