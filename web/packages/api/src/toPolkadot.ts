@@ -15,8 +15,6 @@ import {
     paraIdToChannelId,
     paraIdToSovereignAccount,
 } from "./utils"
-import { paramsNotation } from "@polkadot/types"
-import { parachains } from "@polkadot/types/interfaces/definitions"
 import { ApiPromise } from "@polkadot/api"
 
 export enum SendValidationCode {

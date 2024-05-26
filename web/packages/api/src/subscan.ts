@@ -52,6 +52,7 @@ export const createApi = (baseUrl: string, apiKey: string, options = { limit: 1 
             await setTimeout(rateLimit.reset * 1000)
         }
 
+        console.log('aaa',url+subUrl)
         const response = await fetch(`${url}${subUrl}`, request)
 
         rateLimit.limit = Number(response.headers.get("ratelimit-limit"))
@@ -97,7 +98,7 @@ export const fetchEvents = async <T>(
         page,
     }
 
-    const eventResponse = await api.post("v2/scan/events", eventsBody)
+    const eventResponse = await api.post("api/v2/scan/events", eventsBody)
 
     let endOfPages = false
     if (eventResponse.json.data.events === null) {
@@ -116,7 +117,7 @@ export const fetchEvents = async <T>(
 
     if (map.size > 0) {
         const paramsBody = { event_index: Array.from(map.keys()) }
-        const paramsResponse = await api.post("scan/event/params", paramsBody)
+        const paramsResponse = await api.post("api/scan/event/params", paramsBody)
 
         if (paramsResponse.json.data === null) {
             paramsResponse.json.data = []
@@ -156,7 +157,7 @@ export const fetchExtrinsics = async <T>(
         row: rows,
         page,
     }
-    const extResponse = await api.post("v2/scan/extrinsics", extBody)
+    const extResponse = await api.post("api/v2/scan/extrinsics", extBody)
 
     let endOfPages = false
     if (extResponse.json.data.extrinsics === null) {
@@ -172,7 +173,7 @@ export const fetchExtrinsics = async <T>(
 
     if (map.size > 0) {
         const paramsBody = { extrinsic_index: Array.from(map.keys()) }
-        const extParams = await api.post("scan/extrinsic/params", paramsBody)
+        const extParams = await api.post("api/scan/extrinsic/params", paramsBody)
 
         if (extParams.json.data === null) {
             extParams.json.data = []

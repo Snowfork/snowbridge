@@ -12,6 +12,11 @@ export type Config = {
     SECONDARY_GOVERNANCE_CHANNEL_ID: string
     RELAYERS: Relayer[]
     PARACHAINS: string[]
+    SUBSCAN_API?: {
+        RELAY_CHAIN_URL: string
+        ASSET_HUB_URL: string
+        BRIDGE_HUB_URL: string
+    }
 }
 
 export type SourceType = "substrate" | "ethereum"
@@ -240,6 +245,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     type: "ethereum",
                 },
             ],
+            SUBSCAN_API: {
+                RELAY_CHAIN_URL: "https://rococo.api.subscan.io",
+                ASSET_HUB_URL: "https://assethub-rococo.api.subscan.io",
+                BRIDGE_HUB_URL: "https://assethub-rococo.api.subscan.io",
+            }
         },
     },
     polkadot_mainnet: {
@@ -318,6 +328,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     type: "ethereum",
                 },
             ],
+            SUBSCAN_API: {
+                RELAY_CHAIN_URL: "https://polkadot.api.subscan.io",
+                ASSET_HUB_URL: "https://assethub-polkadot.api.subscan.io",
+                BRIDGE_HUB_URL: "https://bridgehub-polkadot.api.subscan.io",
+            },
         },
     },
 }

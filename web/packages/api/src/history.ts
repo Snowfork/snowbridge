@@ -626,11 +626,11 @@ const subFetchBridgeTransfers = async (
                     json: { data: relayBlock },
                 },
             ] = await Promise.all([
-                assetHub.post("scan/extrinsic", {
+                assetHub.post("api/scan/extrinsic", {
                     extrinsic_index: extrinsic.extrinsic_index,
                     only_extrinsic_event: true,
                 }),
-                relaychain.post("scan/block", {
+                relaychain.post("api/scan/block", {
                     block_timestamp: extrinsic.block_timestamp,
                     only_head: true,
                 }),
