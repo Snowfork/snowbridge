@@ -41,7 +41,6 @@ export type ToPolkadotTransferResult = {
         nonce: number
     }
     assetHubMessageProcessed?: {
-        extrinsic_index: string
         extrinsic_hash: string
         event_index: string
         block_timestamp: number
@@ -232,7 +231,6 @@ export const toPolkadotHistory = async (
         if (assetHubMessageProcessed) {
             console.log(assetHubMessageProcessed)
             result.assetHubMessageProcessed = {
-                extrinsic_index: assetHubMessageProcessed.extrinsic_index,
                 extrinsic_hash: assetHubMessageProcessed.extrinsic_hash,
                 event_index: assetHubMessageProcessed.event_index,
                 block_timestamp: assetHubMessageProcessed.block_timestamp,
