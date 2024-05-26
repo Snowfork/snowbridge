@@ -9,9 +9,9 @@ export type SubscanResult = {
 
 export type SubscanRateLimit = {
     limit: number | null
-    reset: number | null,
-    remaining: number | null,
-    retryAfter: number | null,
+    reset: number | null
+    remaining: number | null
+    retryAfter: number | null
 }
 
 export type SubscanApiPost = (subUrl: string, body: any) => Promise<SubscanResult>
@@ -21,11 +21,13 @@ export interface SubscanApi {
 
 export const createApi = (baseUrl: string, apiKey: string, options = { limit: 1 }): SubscanApi => {
     let url = baseUrl.trim()
-    if (!url.endsWith('/')) { url += '/' }
+    if (!url.endsWith("/")) {
+        url += "/"
+    }
 
     const headers = new Headers()
-    headers.append("Content-Type", "application/json");
-    headers.append("x-api-key", apiKey);
+    headers.append("Content-Type", "application/json")
+    headers.append("x-api-key", apiKey)
 
     let rateLimit: SubscanRateLimit = {
         limit: options.limit,
@@ -35,10 +37,10 @@ export const createApi = (baseUrl: string, apiKey: string, options = { limit: 1 
     }
     const post: SubscanApiPost = async (subUrl: string, body: any) => {
         const request: RequestInit = {
-            method: 'POST',
+            method: "POST",
             headers,
             body: JSON.stringify(body),
-            redirect: 'follow',
+            redirect: "follow",
         }
 
         while (rateLimit.retryAfter !== null && rateLimit.retryAfter > 0) {
@@ -52,12 +54,16 @@ export const createApi = (baseUrl: string, apiKey: string, options = { limit: 1 
 
         const response = await fetch(`${url}${subUrl}`, request)
 
-        rateLimit.limit = Number(response.headers.get('ratelimit-limit'))
-        rateLimit.reset = Number(response.headers.get('ratelimit-reset'))
-        rateLimit.remaining = Number(response.headers.get('ratelimit-remaining'))
-        rateLimit.retryAfter = Number(response.headers.get('retry-after'))
+        rateLimit.limit = Number(response.headers.get("ratelimit-limit"))
+        rateLimit.reset = Number(response.headers.get("ratelimit-reset"))
+        rateLimit.remaining = Number(response.headers.get("ratelimit-remaining"))
+        rateLimit.retryAfter = Number(response.headers.get("retry-after"))
 
-        if (response.status !== 200) { throw new Error(`Failed to fetch from Subscan: ${response.status} ${response.statusText}`) }
+        if (response.status !== 200) {
+            throw new Error(
+                `Failed to fetch from Subscan: ${response.status} ${response.statusText}`
+            )
+        }
 
         const json = await response.json()
         return {
@@ -69,11 +75,20 @@ export const createApi = (baseUrl: string, apiKey: string, options = { limit: 1 
     }
 
     return {
-        post
+        post,
     }
 }
 
-export const fetchEvents = async <T>(api: SubscanApi, module: string, eventIds: string[], fromBlock: number, toBlock: number, page: number, rows: number, filterMap: (events: any, params: any) => Promise<T | null>) => {
+export const fetchEvents = async <T>(
+    api: SubscanApi,
+    module: string,
+    eventIds: string[],
+    fromBlock: number,
+    toBlock: number,
+    page: number,
+    rows: number,
+    filterMap: (events: any, params: any) => Promise<T | null>
+) => {
     const eventsBody = {
         module,
         block_range: `${fromBlock}-${toBlock}`,
@@ -108,14 +123,30 @@ export const fetchEvents = async <T>(api: SubscanApi, module: string, eventIds: 
         for (const { event_index, params } of paramsResponse.json.data) {
             const event = map.get(event_index)
             const transform = await filterMap(event, params)
-            if (transform === null) { continue }
+            if (transform === null) {
+                continue
+            }
             events.push({ ...event, params, data: transform })
         }
     }
-    return { status: eventResponse.status, statusText: eventResponse.statusText, events, endOfPages }
+    return {
+        status: eventResponse.status,
+        statusText: eventResponse.statusText,
+        events,
+        endOfPages,
+    }
 }
 
-export const fetchExtrinsics = async <T>(api: SubscanApi, module: string, call: string, fromBlock: number, toBlock: number, page: number, rows: number, filterMap: (extrinsic: any, params: any) => Promise<T | null>) => {
+export const fetchExtrinsics = async <T>(
+    api: SubscanApi,
+    module: string,
+    call: string,
+    fromBlock: number,
+    toBlock: number,
+    page: number,
+    rows: number,
+    filterMap: (extrinsic: any, params: any) => Promise<T | null>
+) => {
     const extBody = {
         module,
         call,
@@ -131,10 +162,9 @@ export const fetchExtrinsics = async <T>(api: SubscanApi, module: string, call: 
         endOfPages = true
     }
     const map = new Map<string, any>()
-    extResponse.json.data.extrinsics
-        .forEach((e: any) => {
-            map.set(e.extrinsic_index, e)
-        })
+    extResponse.json.data.extrinsics.forEach((e: any) => {
+        map.set(e.extrinsic_index, e)
+    })
 
     const extrinsics = []
 
@@ -149,10 +179,17 @@ export const fetchExtrinsics = async <T>(api: SubscanApi, module: string, call: 
         for (const { extrinsic_index, params } of extParams.json.data) {
             const event = map.get(extrinsic_index)
             const transform = await filterMap(event, params)
-            if (transform === null) { continue }
+            if (transform === null) {
+                continue
+            }
 
             extrinsics.push({ ...event, params, data: transform })
         }
     }
-    return { status: extResponse.status, statusText: extResponse.statusText, extrinsics, endOfPages }
+    return {
+        status: extResponse.status,
+        statusText: extResponse.statusText,
+        extrinsics,
+        endOfPages,
+    }
 }

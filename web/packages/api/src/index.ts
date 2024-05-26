@@ -63,7 +63,12 @@ class PolkadotContext {
         bridgeHub: ApiPromise
         parachains: Parachains
     }
-    constructor(relaychain: ApiPromise, assetHub: ApiPromise, bridgeHub: ApiPromise, parachains: Parachains) {
+    constructor(
+        relaychain: ApiPromise,
+        assetHub: ApiPromise,
+        bridgeHub: ApiPromise,
+        parachains: Parachains
+    ) {
         this.api = {
             relaychain: relaychain,
             assetHub: assetHub,

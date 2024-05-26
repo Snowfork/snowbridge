@@ -1,10 +1,16 @@
 import { Context } from "./index"
-import { subFetchBridgeTransfers, subFetchMessageQueueProcessed, subFetchOutboundMessages } from "./query"
+import {
+    subFetchBridgeTransfers,
+    subFetchMessageQueueProcessed,
+    subFetchOutboundMessages,
+} from "./query"
 import { SubscanApi } from "./subscan"
 import { paraIdToChannelId } from "./utils"
 
 export enum TransferStatus {
-    Pending, Complete, Failed
+    Pending,
+    Complete,
+    Failed,
 }
 
 export type ToEthereumTransferResult = {
@@ -23,26 +29,26 @@ export type ToEthereumTransferResult = {
             block_hash: string
             block_num: number
         }
-    },
+    }
     bridgeHubXcmDelivered?: {
         extrinsic_hash: string
         event_index: string
         block_timestamp: number
         siblingParachain: number
         success: boolean
-    },
+    }
     bridgeHubChannelDelivered?: {
         extrinsic_hash: string
         event_index: string
         block_timestamp: number
         channelId: string
         success: boolean
-    },
+    }
     bridgeHubMessageQueued?: {
         extrinsic_hash: string
         event_index: string
         block_timestamp: number
-    },
+    }
     bridgeHubMessageAccepted?: {
         extrinsic_hash: string
         event_index: string
@@ -57,7 +63,7 @@ export type ToEthereumTransferResult = {
         logIndex: number
         relayChainblockNumber: number
         mmrRoot: string
-    },
+    }
     ethereumMessageDispatched?: {
         blockNumber: number
         blockHash: string
@@ -77,9 +83,9 @@ export const toEthereumHistory = async (
     bridgeHubScan: SubscanApi,
     relaychainScan: SubscanApi,
     range: {
-        assetHub: { fromBlock: number, toBlock: number }
-        bridgeHub: { fromBlock: number, toBlock: number }
-        ethereum: { fromBlock: number, toBlock: number }
+        assetHub: { fromBlock: number; toBlock: number }
+        bridgeHub: { fromBlock: number; toBlock: number }
+        ethereum: { fromBlock: number; toBlock: number }
     }
 ): Promise<ToEthereumTransferResult[]> => {
     const [ethNetwork, assetHubParaId] = await Promise.all([
@@ -89,49 +95,66 @@ export const toEthereumHistory = async (
     const assetHubParaIdDecoded = assetHubParaId.toPrimitive() as number
     const assetHubChannelId = paraIdToChannelId(assetHubParaIdDecoded)
 
-    console.log('Fetching history To Ethereum')
-    console.log(`eth from ${range.ethereum.fromBlock} to ${range.ethereum.toBlock} (${range.ethereum.toBlock - range.ethereum.fromBlock} blocks)`)
-    console.log(`assethub from ${range.assetHub.fromBlock} to ${range.assetHub.toBlock} (${range.assetHub.toBlock - range.assetHub.fromBlock} blocks)`)
-    console.log(`bridgehub from ${range.bridgeHub.fromBlock} to ${range.bridgeHub.toBlock} (${range.bridgeHub.toBlock - range.bridgeHub.fromBlock} blocks)`)
+    console.log("Fetching history To Ethereum")
+    console.log(
+        `eth from ${range.ethereum.fromBlock} to ${range.ethereum.toBlock} (${
+            range.ethereum.toBlock - range.ethereum.fromBlock
+        } blocks)`
+    )
+    console.log(
+        `assethub from ${range.assetHub.fromBlock} to ${range.assetHub.toBlock} (${
+            range.assetHub.toBlock - range.assetHub.fromBlock
+        } blocks)`
+    )
+    console.log(
+        `bridgehub from ${range.bridgeHub.fromBlock} to ${range.bridgeHub.toBlock} (${
+            range.bridgeHub.toBlock - range.bridgeHub.fromBlock
+        } blocks)`
+    )
 
-    const [allTransfers, allMessageQueues, allOutboundMessages, allBeefyClientUpdates, allInboundMessages] = await Promise.all([
-        await getAssetHubTransfers(assetHubScan,
+    const [
+        allTransfers,
+        allMessageQueues,
+        allOutboundMessages,
+        allBeefyClientUpdates,
+        allInboundMessages,
+    ] = await Promise.all([
+        await getAssetHubTransfers(
+            assetHubScan,
             relaychainScan,
             Number(ethNetwork.chainId),
             range.assetHub.fromBlock,
-            range.assetHub.toBlock,
+            range.assetHub.toBlock
         ),
 
-        await getBridgeHubMessageQueueProccessed(bridgeHubScan,
+        await getBridgeHubMessageQueueProccessed(
+            bridgeHubScan,
             assetHubParaIdDecoded,
             assetHubChannelId,
             range.bridgeHub.fromBlock,
-            range.bridgeHub.toBlock,
+            range.bridgeHub.toBlock
         ),
 
-        await getBridgeHubOutboundMessages(bridgeHubScan,
+        await getBridgeHubOutboundMessages(
+            bridgeHubScan,
             range.bridgeHub.fromBlock,
-            range.bridgeHub.toBlock,
+            range.bridgeHub.toBlock
         ),
 
-        await getBeefyClientUpdates(
-            context,
-            range.ethereum.fromBlock,
-            range.ethereum.toBlock,
-        ),
+        await getBeefyClientUpdates(context, range.ethereum.fromBlock, range.ethereum.toBlock),
 
         await getInboundMessagesDispatched(
             context,
             range.ethereum.fromBlock,
-            range.ethereum.toBlock,
-        )
+            range.ethereum.toBlock
+        ),
     ])
 
-    console.log('number of transfers', allTransfers.length)
-    console.log('message queues', allMessageQueues.length)
-    console.log('outbound messages', allOutboundMessages.length)
-    console.log('beefy updates', allBeefyClientUpdates.length)
-    console.log('inbound messages', allInboundMessages.length)
+    console.log("number of transfers", allTransfers.length)
+    console.log("message queues", allMessageQueues.length)
+    console.log("outbound messages", allOutboundMessages.length)
+    console.log("beefy updates", allBeefyClientUpdates.length)
+    console.log("inbound messages", allInboundMessages.length)
 
     const results: ToEthereumTransferResult[] = []
     for (const transfer of allTransfers) {
@@ -150,13 +173,20 @@ export const toEthereumHistory = async (
                 relayChain: {
                     block_num: transfer.data.relayChain.block_num,
                     block_hash: transfer.data.relayChain.block_hash,
-                }
-            }
+                },
+            },
         }
         results.push(result)
-        if (!result.submitted.success) { result.status = TransferStatus.Failed; continue; }
+        if (!result.submitted.success) {
+            result.status = TransferStatus.Failed
+            continue
+        }
 
-        const bridgeHubXcmDelivered = allMessageQueues.find((ev: any) => ev.data.messageId === result.submitted.bridgeHubMessageId && ev.data.sibling == assetHubParaIdDecoded)
+        const bridgeHubXcmDelivered = allMessageQueues.find(
+            (ev: any) =>
+                ev.data.messageId === result.submitted.bridgeHubMessageId &&
+                ev.data.sibling == assetHubParaIdDecoded
+        )
         if (bridgeHubXcmDelivered) {
             result.bridgeHubXcmDelivered = {
                 block_timestamp: bridgeHubXcmDelivered.block_timestamp,
@@ -165,12 +195,17 @@ export const toEthereumHistory = async (
                 siblingParachain: bridgeHubXcmDelivered.data.sibling,
                 success: bridgeHubXcmDelivered.data.success,
             }
-            if (!result.bridgeHubXcmDelivered.success) { result.status = TransferStatus.Failed; continue; }
+            if (!result.bridgeHubXcmDelivered.success) {
+                result.status = TransferStatus.Failed
+                continue
+            }
         }
-        const bridgeHubChannelDelivered = allMessageQueues.find((ev: any) =>
-            ev.extrinsic_hash === result.bridgeHubXcmDelivered?.extrinsic_hash
-            && ev.data.channelId === assetHubChannelId
-            && ev.block_timestamp === result.bridgeHubXcmDelivered?.block_timestamp)
+        const bridgeHubChannelDelivered = allMessageQueues.find(
+            (ev: any) =>
+                ev.extrinsic_hash === result.bridgeHubXcmDelivered?.extrinsic_hash &&
+                ev.data.channelId === assetHubChannelId &&
+                ev.block_timestamp === result.bridgeHubXcmDelivered?.block_timestamp
+        )
         if (bridgeHubChannelDelivered) {
             result.bridgeHubChannelDelivered = {
                 block_timestamp: bridgeHubChannelDelivered.block_timestamp,
@@ -179,10 +214,17 @@ export const toEthereumHistory = async (
                 channelId: bridgeHubChannelDelivered.data.channelId,
                 success: bridgeHubChannelDelivered.data.success,
             }
-            if (!result.bridgeHubChannelDelivered.success) { result.status = TransferStatus.Failed; continue; }
+            if (!result.bridgeHubChannelDelivered.success) {
+                result.status = TransferStatus.Failed
+                continue
+            }
         }
 
-        const bridgeHubMessageQueued = allOutboundMessages.find((ev: any) => ev.data.messageId === result.submitted.messageId && ev.event_id === 'MessageQueued' /* TODO: ChannelId */)
+        const bridgeHubMessageQueued = allOutboundMessages.find(
+            (ev: any) =>
+                ev.data.messageId === result.submitted.messageId &&
+                ev.event_id === "MessageQueued" /* TODO: ChannelId */
+        )
         if (bridgeHubMessageQueued) {
             result.bridgeHubMessageQueued = {
                 block_timestamp: bridgeHubMessageQueued.block_timestamp,
@@ -190,18 +232,26 @@ export const toEthereumHistory = async (
                 extrinsic_hash: bridgeHubMessageQueued.extrinsic_hash,
             }
         }
-        const bridgeHubMessageAccepted = allOutboundMessages.find((ev: any) => ev.data.messageId === result.submitted.messageId && ev.event_id === 'MessageAccepted' /* TODO: ChannelId */)
+        const bridgeHubMessageAccepted = allOutboundMessages.find(
+            (ev: any) =>
+                ev.data.messageId === result.submitted.messageId &&
+                ev.event_id === "MessageAccepted" /* TODO: ChannelId */
+        )
         if (bridgeHubMessageAccepted) {
             result.bridgeHubMessageAccepted = {
                 block_timestamp: bridgeHubMessageAccepted.block_timestamp,
                 event_index: bridgeHubMessageAccepted.event_index,
                 extrinsic_hash: bridgeHubMessageAccepted.extrinsic_hash,
-                nonce: bridgeHubMessageAccepted.data.nonce
+                nonce: bridgeHubMessageAccepted.data.nonce,
             }
         }
 
-        const secondsTillAcceptedByRelayChain = (6/* 6 secs per block */ * 10/* blocks */)
-        const ethereumBeefyIncluded = allBeefyClientUpdates.find((ev) => ev.data.blockNumber > (result.submitted.relayChain.block_num + secondsTillAcceptedByRelayChain));
+        const secondsTillAcceptedByRelayChain = 6 /* 6 secs per block */ * 10 /* blocks */
+        const ethereumBeefyIncluded = allBeefyClientUpdates.find(
+            (ev) =>
+                ev.data.blockNumber >
+                result.submitted.relayChain.block_num + secondsTillAcceptedByRelayChain
+        )
         if (ethereumBeefyIncluded) {
             result.ethereumBeefyIncluded = {
                 blockNumber: ethereumBeefyIncluded.blockNumber,
@@ -214,10 +264,12 @@ export const toEthereumHistory = async (
             }
         }
 
-        const ethereumMessageDispatched = allInboundMessages.find((ev) =>
-            ev.data.channelId === result.bridgeHubChannelDelivered?.channelId
-            && ev.data.messageId === result.submitted.messageId
-            && ev.data.nonce === result.bridgeHubMessageAccepted?.nonce)
+        const ethereumMessageDispatched = allInboundMessages.find(
+            (ev) =>
+                ev.data.channelId === result.bridgeHubChannelDelivered?.channelId &&
+                ev.data.messageId === result.submitted.messageId &&
+                ev.data.nonce === result.bridgeHubMessageAccepted?.nonce
+        )
 
         if (ethereumMessageDispatched) {
             result.ethereumMessageDispatched = {
@@ -231,7 +283,10 @@ export const toEthereumHistory = async (
                 nonce: ethereumMessageDispatched.data.nonce,
                 success: ethereumMessageDispatched.data.success,
             }
-            if (!result.ethereumMessageDispatched.success) { result.status = TransferStatus.Failed; continue; }
+            if (!result.ethereumMessageDispatched.success) {
+                result.status = TransferStatus.Failed
+                continue
+            }
 
             result.status = TransferStatus.Complete
         }
@@ -239,7 +294,13 @@ export const toEthereumHistory = async (
     return results
 }
 
-const getAssetHubTransfers = async (assetHubScan: SubscanApi, relaychainScan: SubscanApi, ethChainId: number, fromBlock: number, toBlock: number) => {
+const getAssetHubTransfers = async (
+    assetHubScan: SubscanApi,
+    relaychainScan: SubscanApi,
+    ethChainId: number,
+    fromBlock: number,
+    toBlock: number
+) => {
     const acc = []
     const rows = 100
     let page = 0
@@ -253,7 +314,7 @@ const getAssetHubTransfers = async (assetHubScan: SubscanApi, relaychainScan: Su
             fromBlock,
             toBlock,
             page,
-            rows,
+            rows
         )
         endOfPages = end
         acc.push(...transfers)
@@ -262,7 +323,13 @@ const getAssetHubTransfers = async (assetHubScan: SubscanApi, relaychainScan: Su
     return acc
 }
 
-const getBridgeHubMessageQueueProccessed = async (bridgeHubScan: SubscanApi, assetHubParaId: number, assetHubChannelId: string, fromBlock: number, toBlock: number) => {
+const getBridgeHubMessageQueueProccessed = async (
+    bridgeHubScan: SubscanApi,
+    assetHubParaId: number,
+    assetHubChannelId: string,
+    fromBlock: number,
+    toBlock: number
+) => {
     const acc = []
     const rows = 100
     let page = 0
@@ -275,7 +342,7 @@ const getBridgeHubMessageQueueProccessed = async (bridgeHubScan: SubscanApi, ass
             fromBlock,
             toBlock,
             page,
-            rows,
+            rows
         )
         endOfPages = end
         acc.push(...events)
@@ -284,7 +351,11 @@ const getBridgeHubMessageQueueProccessed = async (bridgeHubScan: SubscanApi, ass
     return acc
 }
 
-const getBridgeHubOutboundMessages = async (bridgeHubScan: SubscanApi, fromBlock: number, toBlock: number) => {
+const getBridgeHubOutboundMessages = async (
+    bridgeHubScan: SubscanApi,
+    fromBlock: number,
+    toBlock: number
+) => {
     const acc = []
     const rows = 100
     let page = 0
@@ -295,7 +366,7 @@ const getBridgeHubOutboundMessages = async (bridgeHubScan: SubscanApi, fromBlock
             fromBlock,
             toBlock,
             page,
-            rows,
+            rows
         )
         endOfPages = end
         acc.push(...events)
@@ -308,7 +379,7 @@ const getBeefyClientUpdates = async (context: Context, fromBlock: number, toBloc
     const { beefyClient } = context.ethereum.contracts
     const NewMMRRoot = beefyClient.getEvent("NewMMRRoot")
     const roots = await beefyClient.queryFilter(NewMMRRoot, fromBlock, toBlock)
-    const updates = roots.map(r => {
+    const updates = roots.map((r) => {
         return {
             blockNumber: r.blockNumber,
             blockHash: r.blockHash,
@@ -317,19 +388,23 @@ const getBeefyClientUpdates = async (context: Context, fromBlock: number, toBloc
             transactionHash: r.transactionHash,
             data: {
                 blockNumber: Number(r.args.blockNumber),
-                mmrRoot: r.args.mmrRoot
-            }
+                mmrRoot: r.args.mmrRoot,
+            },
         }
     })
     updates.sort((a, b) => Number(a.data.blockNumber - b.data.blockNumber))
     return updates
 }
 
-const getInboundMessagesDispatched = async (context: Context, fromBlock: number, toBlock: number) => {
+const getInboundMessagesDispatched = async (
+    context: Context,
+    fromBlock: number,
+    toBlock: number
+) => {
     const { gateway } = context.ethereum.contracts
     const InboundMessageDispatched = gateway.getEvent("InboundMessageDispatched")
     const inboundMessages = await gateway.queryFilter(InboundMessageDispatched, fromBlock, toBlock)
-    return inboundMessages.map(im => {
+    return inboundMessages.map((im) => {
         return {
             blockNumber: im.blockNumber,
             blockHash: im.blockHash,
@@ -341,7 +416,7 @@ const getInboundMessagesDispatched = async (context: Context, fromBlock: number,
                 nonce: Number(im.args.nonce),
                 messageId: im.args.messageID,
                 success: im.args.success,
-            }
+            },
         }
     })
 }
