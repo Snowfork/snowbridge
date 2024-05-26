@@ -54,7 +54,6 @@
                     gopls
                     go-outline
                     gopkgs
-                    gocode-gomod
                     godef
                     golint
                     mage
