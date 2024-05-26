@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2023 OpenZeppelin
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.23;
+pragma solidity 0.8.25;
 
 // Derived from OpenZeppelin Contracts (last updated v4.9.0) (utils/Address.sol)
 library Call {
