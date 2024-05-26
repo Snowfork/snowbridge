@@ -270,7 +270,6 @@ export const toPolkadotHistory = async (
 
             result.status = TransferStatus.Complete
         }
-        break
     }
     return results
 }
