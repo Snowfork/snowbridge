@@ -15,11 +15,15 @@ import {
     paraIdToChannelId,
     paraIdToSovereignAccount,
 } from "./utils"
+import { paramsNotation } from "@polkadot/types"
+import { parachains } from "@polkadot/types/interfaces/definitions"
+import { ApiPromise } from "@polkadot/api"
 
 export enum SendValidationCode {
     BridgeNotOperational,
     ChannelNotOperational,
     BeneficiaryAccountMissing,
+    BeneficiaryHasHitMaxConsumers,
     ForeignAssetMissing,
     ERC20InvalidToken,
     ERC20NotRegistered,
@@ -105,6 +109,13 @@ export const getSendFee = async (
     return await gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
 }
 
+export const getSubstrateAccount = async (parachain: ApiPromise, beneficiaryHex: string) => {
+    const account = (await parachain.query.system.account(beneficiaryHex)).toPrimitive() as {
+        data: { free: string }, consumers: number
+    }
+    return { balance: account.data.free, consumers: account.consumers }
+}
+
 export const validateSend = async (
     context: Context,
     source: ethers.Addressable,
@@ -115,12 +126,13 @@ export const validateSend = async (
     destinationFee: bigint,
     options = {
         acceptableLatencyInSeconds: 28800 /* 3 Hours */,
+        maxConsumers: 16
     }
 ): Promise<SendValidationResult> => {
     const {
         ethereum,
         polkadot: {
-            api: { assetHub, bridgeHub, relaychain },
+            api: { assetHub, bridgeHub, relaychain, parachains },
         },
     } = context
 
@@ -194,7 +206,8 @@ export const validateSend = async (
     let { address: beneficiaryAddress, hexAddress: beneficiaryHex } =
         beneficiaryMultiAddress(beneficiary)
 
-    let beneficiaryAccountExists = true
+    let beneficiaryAccountExists = false
+    let hasConsumers = false
     let destinationChainExists = true
     let hrmpChannelSetup = true
     const existentialDeposit = BigInt(
@@ -204,10 +217,9 @@ export const validateSend = async (
         if (destinationFee !== 0n) throw new Error("Asset Hub does not require a destination fee.")
         if (beneficiaryAddress.kind !== 1)
             throw new Error("Asset Hub only supports 32 byte addresses.")
-        const account = (await assetHub.query.system.account(beneficiaryHex)).toPrimitive() as {
-            data: { free: string }
-        }
-        beneficiaryAccountExists = BigInt(account.data.free) > existentialDeposit
+        const { balance, consumers } = await getSubstrateAccount(assetHub, beneficiaryHex)
+        beneficiaryAccountExists = BigInt(balance) > existentialDeposit
+        hasConsumers = consumers + 2 > options.maxConsumers
     } else {
         const [destinationHead, hrmpChannel] = await Promise.all([
             relaychain.query.paras.heads(destinationParaId),
@@ -218,6 +230,16 @@ export const validateSend = async (
         ])
         destinationChainExists = destinationHead.toPrimitive() !== null
         hrmpChannelSetup = hrmpChannel.toPrimitive() !== null
+
+        if (destinationParaId in parachains) {
+            const { balance, consumers } = await getSubstrateAccount(assetHub, beneficiaryHex)
+            beneficiaryAccountExists = BigInt(balance) > existentialDeposit
+            hasConsumers = consumers + 2 > options.maxConsumers
+        } else {
+            // We cannot check this as we do not know the destination.
+            beneficiaryAccountExists = true
+            hasConsumers = true
+        }
     }
     if (!destinationChainExists)
         errors.push({
@@ -228,6 +250,11 @@ export const validateSend = async (
         errors.push({
             code: SendValidationCode.BeneficiaryAccountMissing,
             message: "Beneficiary does not hold existential deposit on destination.",
+        })
+    if (!hasConsumers)
+        errors.push({
+            code: SendValidationCode.BeneficiaryHasHitMaxConsumers,
+            message: "Benificiary does is approaching the asset consumer limit. Transfer may fail.",
         })
     if (!hrmpChannelSetup)
         errors.push({
@@ -556,8 +583,7 @@ export const trackSendProgressPolling = async (
                     }
 
                     console.log(
-                        `Bridge Hub block ${blockHash.toHex()}: Beacon client ${
-                            ethereumBlockNumber - Number(ethBlockNumber)
+                        `Bridge Hub block ${blockHash.toHex()}: Beacon client ${ethereumBlockNumber - Number(ethBlockNumber)
                         } blocks behind.`
                     )
                 }
@@ -644,12 +670,12 @@ export const trackSendProgressPolling = async (
                     assetHub.events.foreignAssets.Issued.is(event.event) &&
                     eventData[2].toString() === success?.plan.success?.amount.toString() &&
                     u8aToHex(decodeAddress(eventData[1])).toLowerCase() ===
-                        issuedTo.toLowerCase() &&
+                    issuedTo.toLowerCase() &&
                     eventData[0]?.parents === 2 &&
                     eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() ===
-                        success?.plan.success?.ethereumChainId.toString() &&
+                    success?.plan.success?.ethereumChainId.toString() &&
                     eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() ===
-                        success?.plan.success?.token.toLowerCase()
+                    success?.plan.success?.token.toLowerCase()
                 ) {
                     transferBlockHash = blockHash.toHex()
                 }
@@ -770,8 +796,7 @@ export async function* trackSendProgress(
                 takeWhile(({ blockNumber }) => ethereumBlockNumber > Number(blockNumber)),
                 tap(({ createdAtHash, blockNumber }) =>
                     console.log(
-                        `Bridge Hub block ${createdAtHash}: Beacon client ${
-                            ethereumBlockNumber - Number(blockNumber)
+                        `Bridge Hub block ${createdAtHash}: Beacon client ${ethereumBlockNumber - Number(blockNumber)
                         } blocks behind.`
                     )
                 )
@@ -809,7 +834,7 @@ export async function* trackSendProgress(
                             bridgeHub.events.ethereumInboundQueue.MessageReceived.is(event.event) &&
                             eventData.nonce === success?.nonce.toString() &&
                             eventData.messageId.toLowerCase() ===
-                                success?.messageId.toLowerCase() &&
+                            success?.messageId.toLowerCase() &&
                             eventData.channelId.toLowerCase() === success?.channelId.toLowerCase()
                         ) {
                             messageReceivedFound = true
@@ -860,12 +885,12 @@ export async function* trackSendProgress(
                     assetHub.events.foreignAssets.Issued.is(event.event) &&
                     eventData[2].toString() === success?.plan.success?.amount.toString() &&
                     u8aToHex(decodeAddress(eventData[1])).toLowerCase() ===
-                        issuedTo.toLowerCase() &&
+                    issuedTo.toLowerCase() &&
                     eventData[0]?.parents === 2 &&
                     eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() ===
-                        success?.plan.success?.ethereumChainId.toString() &&
+                    success?.plan.success?.ethereumChainId.toString() &&
                     eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() ===
-                        success?.plan.success?.token.toLowerCase()
+                    success?.plan.success?.token.toLowerCase()
                 )
             },
             {
@@ -903,12 +928,12 @@ export async function* trackSendProgress(
                         destParaApi.events.foreignAssets.Issued.is(event.event) &&
                         eventData[2].toString() === success?.plan.success?.amount.toString() &&
                         u8aToHex(decodeAddress(eventData[1])).toLowerCase() ===
-                            issuedTo.toLowerCase() &&
+                        issuedTo.toLowerCase() &&
                         eventData[0]?.parents === 2 &&
                         eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() ===
-                            success?.plan.success?.ethereumChainId.toString() &&
+                        success?.plan.success?.ethereumChainId.toString() &&
                         eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() ===
-                            success?.plan.success?.token.toLowerCase()
+                        success?.plan.success?.token.toLowerCase()
                     )
                 },
                 {
@@ -923,9 +948,8 @@ export async function* trackSendProgress(
                 )
             }
         }
-        yield `Message delivered to parachain ${
-            success.plan.success.destinationParaId
-        } at block ${success.destinationParachain?.events?.createdAtHash?.toHex()}.`
+        yield `Message delivered to parachain ${success.plan.success.destinationParaId
+            } at block ${success.destinationParachain?.events?.createdAtHash?.toHex()}.`
     }
 
     yield "Transfer complete."
