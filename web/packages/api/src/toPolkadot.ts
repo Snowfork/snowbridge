@@ -3,7 +3,7 @@ import { Codec } from "@polkadot/types/types"
 import { u8aToHex } from "@polkadot/util"
 import { IERC20__factory, IGateway__factory, WETH9__factory } from "@snowbridge/contract-types"
 import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway"
-import { LogDescription, Signer, TransactionReceipt, ethers, keccak256 } from "ethers"
+import { LogDescription, Signer, TransactionReceipt, ethers } from "ethers"
 import { concatMap, filter, firstValueFrom, lastValueFrom, take, takeWhile, tap } from "rxjs"
 import { assetStatusInfo } from "./assets"
 import { Context } from "./index"
@@ -381,7 +381,6 @@ export const send = async (
     ])
 
     const contract = IGateway__factory.connect(context.config.appContracts.gateway, signer)
-    const fees = await context.ethereum.api.getFeeData()
 
     const response = await contract.sendToken(
         success.token,
