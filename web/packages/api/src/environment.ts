@@ -249,7 +249,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 RELAY_CHAIN_URL: "https://rococo.api.subscan.io",
                 ASSET_HUB_URL: "https://assethub-rococo.api.subscan.io",
                 BRIDGE_HUB_URL: "https://assethub-rococo.api.subscan.io",
-            }
+            },
         },
     },
     polkadot_mainnet: {

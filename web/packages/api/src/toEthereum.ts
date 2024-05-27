@@ -72,6 +72,16 @@ export type SendValidationResult = {
     }
 }
 
+export interface IValidateOptions {
+    defaultFee: bigint
+    acceptableLatencyInSeconds: number
+}
+
+const ValidateOptionDefaults: IValidateOptions = {
+    defaultFee: 2_750_872_500_000n,
+    acceptableLatencyInSeconds: 28800 /* 8 Hours */,
+}
+
 export const getSendFee = async (
     context: Context,
     options = {
@@ -97,11 +107,9 @@ export const validateSend = async (
     beneficiary: string,
     tokenAddress: string,
     amount: bigint,
-    options = {
-        defaultFee: 2_750_872_500_000n,
-        acceptableLatencyInSeconds: 28800 /* 8 Hours */,
-    }
+    validateOptions: Partial<IValidateOptions> = {}
 ): Promise<SendValidationResult> => {
+    const options = { ...ValidateOptionDefaults, ...validateOptions }
     const {
         ethereum,
         ethereum: {

@@ -1,10 +1,4 @@
-import {
-    contextFactory,
-    destroyContext,
-    environment,
-    subscan,
-    history,
-} from "@snowbridge/api"
+import { contextFactory, destroyContext, environment, subscan, history } from "@snowbridge/api"
 
 const monitor = async () => {
     const subscanKey = process.env.REACT_APP_SUBSCAN_KEY ?? ""
@@ -19,7 +13,7 @@ const monitor = async () => {
     }
 
     const { config } = snwobridgeEnv
-    if(!config.SUBSCAN_API) throw Error(`Environment ${env} does not support subscan.`)
+    if (!config.SUBSCAN_API) throw Error(`Environment ${env} does not support subscan.`)
 
     const context = await contextFactory({
         ethereum: {
