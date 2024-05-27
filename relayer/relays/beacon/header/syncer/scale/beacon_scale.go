@@ -32,7 +32,7 @@ type Update struct {
 	BlockRootsTree           *ssz.Node
 }
 
-type MessagePayload struct {
+type ProofPayload struct {
 	HeaderPayload    HeaderUpdatePayload
 	FinalizedPayload *Update
 }
