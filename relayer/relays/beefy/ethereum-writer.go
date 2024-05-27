@@ -68,7 +68,19 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 					return nil
 				}
 
-				err := wr.submit(ctx, task)
+				filterMode := FilterMode{
+					MandatoryCommitmentsOnly: true,
+				}
+
+				accept, err := wr.filter(ctx, &task, filterMode)
+				if err != nil {
+					return fmt.Errorf("filter commitment: %w", err)
+				}
+				if !accept {
+					return nil
+				}
+
+				err = wr.submit(ctx, task)
 				if err != nil {
 					return fmt.Errorf("submit request: %w", err)
 				}
@@ -79,32 +91,89 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 	return nil
 }
 
-func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
+type FilterMode struct {
+	MandatoryCommitmentsOnly bool
+	All                      bool
+	DiscardDepth             uint64
+}
+
+type BeefyClientState struct {
+	LatestBeefyBlock        uint64
+	CurrentValidatorSetID   uint64
+	CurrentValidatorSetRoot [32]byte
+	NextValidatorSetID      uint64
+	NextValidatorSetRoot    [32]byte
+}
+
+func (wr *EthereumWriter) queryBeefyClientState(ctx context.Context) (*BeefyClientState, error) {
 	callOpts := bind.CallOpts{
 		Context: ctx,
 	}
 
 	latestBeefyBlock, err := wr.contract.LatestBeefyBlock(&callOpts)
 	if err != nil {
-		return err
-	}
-	if uint32(latestBeefyBlock) >= task.SignedCommitment.Commitment.BlockNumber {
-		return nil
+		return nil, err
 	}
 
 	currentValidatorSet, err := wr.contract.CurrentValidatorSet(&callOpts)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	nextValidatorSet, err := wr.contract.NextValidatorSet(&callOpts)
 	if err != nil {
-		return err
-	}
-	task.ValidatorsRoot = currentValidatorSet.Root
-	if task.IsHandover {
-		task.ValidatorsRoot = nextValidatorSet.Root
+		return nil, err
 	}
 
+	return &BeefyClientState{
+		LatestBeefyBlock:        latestBeefyBlock,
+		CurrentValidatorSetID:   currentValidatorSet.Id.Uint64(),
+		CurrentValidatorSetRoot: currentValidatorSet.Root,
+		NextValidatorSetID:      nextValidatorSet.Id.Uint64(),
+		NextValidatorSetRoot:    nextValidatorSet.Root,
+	}, nil
+}
+
+// filter out commitments that we don't want to commit
+func (wr *EthereumWriter) filter(ctx context.Context, task *Request, filterMode FilterMode) (bool, error) {
+
+	state, err := wr.queryBeefyClientState(ctx)
+	if err != nil {
+		return false, fmt.Errorf("query beefy client state: %w", err)
+	}
+
+	commitmentBlockNumber := task.SignedCommitment.Commitment.BlockNumber
+	commitmentValidatorSetID := task.SignedCommitment.Commitment.ValidatorSetID
+
+	// Filter out commitments which are stale, regardless of filter mode
+	if commitmentBlockNumber < uint32(state.LatestBeefyBlock) {
+		return false, nil
+	}
+
+	// Mark commitment as mandatory if its signed by the next authority set
+	if commitmentValidatorSetID == state.NextValidatorSetID {
+		task.IsMandatory = true
+		task.ValidatorsRoot = state.NextValidatorSetRoot
+	} else {
+		task.ValidatorsRoot = state.CurrentValidatorSetRoot
+	}
+
+	switch {
+	// Only include mandatory commitments
+	case filterMode.MandatoryCommitmentsOnly:
+		if !task.IsMandatory {
+			return false, nil
+		}
+	// Only include mandatory commitments and non-mandatory commitments that are not too old
+	case filterMode.All:
+		if !task.IsMandatory && task.Depth > filterMode.DiscardDepth {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	// Initial submission
 	tx, initialBitfield, err := wr.doSubmitInitial(ctx, &task)
 	if err != nil {
@@ -131,6 +200,8 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		wr.conn.MakeTxOpts(ctx),
 		*commitmentHash,
 	)
+	log.Info("")
+
 	_, err = wr.conn.WatchTransaction(ctx, tx, 1)
 	if err != nil {
 		log.WithError(err).Error("Failed to CommitPrevRandao")
@@ -153,7 +224,6 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	log.WithFields(logrus.Fields{
 		"tx":          tx.Hash().Hex(),
 		"blockNumber": task.SignedCommitment.Commitment.BlockNumber,
-		"IsHandover":  task.IsHandover,
 	}).Debug("Transaction SubmitFinal succeeded")
 
 	return nil

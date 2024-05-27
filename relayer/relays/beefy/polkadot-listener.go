@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/substrate"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type PolkadotListener struct {
@@ -41,7 +40,7 @@ func (li *PolkadotListener) Start(
 	}
 	li.beefyAuthoritiesKey = storageKey
 
-	requests := make(chan Request)
+	requests := make(chan Request, 1)
 
 	eg.Go(func() error {
 		defer close(requests)
@@ -61,12 +60,10 @@ func (li *PolkadotListener) scanCommitments(
 	currentValidatorSet uint64,
 	requests chan<- Request,
 ) error {
-	in, err := ScanSafeCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentBeefyBlock+1)
+	in, err := ScanProvableCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentBeefyBlock+1)
 	if err != nil {
-		return fmt.Errorf("scan commitments: %w", err)
+		return fmt.Errorf("scan provable commitments: %w", err)
 	}
-	lastSyncedBeefyBlock := currentBeefyBlock
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -83,67 +80,43 @@ func (li *PolkadotListener) scanCommitments(
 			validatorSetID := result.SignedCommitment.Commitment.ValidatorSetID
 			nextValidatorSetID := uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID)
 
-			if validatorSetID != currentValidatorSet && validatorSetID != currentValidatorSet+1 {
-				return fmt.Errorf("commitment has unexpected validatorSetID: blockNumber=%v validatorSetID=%v expectedValidatorSetID=%v",
-					committedBeefyBlock,
-					validatorSetID,
-					currentValidatorSet,
-				)
+			validators, err := li.queryBeefyAuthorities(result.BlockHash)
+			if err != nil {
+				return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
 			}
 
-			logEntry := log.WithFields(log.Fields{
+			currentAuthoritySet, err := li.queryBeefyAuthoritySet(result.BlockHash)
+			if err != nil {
+				return fmt.Errorf("fetch beefy authority set at block %v: %w", result.BlockHash, err)
+			}
+
+			nextAuthoritySet, err := li.queryBeefyNextAuthoritySet(result.BlockHash)
+			if err != nil {
+				return fmt.Errorf("fetch beefy next authority set at block %v: %w", result.BlockHash, err)
+			}
+
+			task := Request{
+				Validators:          validators,
+				SignedCommitment:    result.SignedCommitment,
+				Proof:               result.MMRProof,
+				CurrentAuthoritySet: currentAuthoritySet,
+				NextAuthoritySet:    nextAuthoritySet,
+				Depth:               result.Depth,
+			}
+
+			log.WithFields(log.Fields{
 				"commitment": log.Fields{
 					"blockNumber":        committedBeefyBlock,
 					"validatorSetID":     validatorSetID,
 					"nextValidatorSetID": nextValidatorSetID,
 				},
-				"validatorSetID":       currentValidatorSet,
-				"IsHandover":           validatorSetID == currentValidatorSet+1,
-				"lastSyncedBeefyBlock": lastSyncedBeefyBlock,
-			})
+				"validatorSetID": currentValidatorSet,
+			}).Info("Sending BEEFY commitment to ethereum writer")
 
-			validators, err := li.queryBeefyAuthorities(result.BlockHash)
-			if err != nil {
-				return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
-			}
-			task := Request{
-				Validators:       validators,
-				SignedCommitment: result.SignedCommitment,
-				Proof:            result.MMRProof,
-			}
-
-			if validatorSetID == currentValidatorSet+1 && validatorSetID == nextValidatorSetID-1 {
-				task.IsHandover = true
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case requests <- task:
-					logEntry.Info("New commitment with handover added to channel")
-					currentValidatorSet++
-					lastSyncedBeefyBlock = committedBeefyBlock
-				}
-			} else if validatorSetID == currentValidatorSet {
-				if result.Depth > li.config.FastForwardDepth {
-					logEntry.Warn("Discarded commitment with depth not fast forward")
-					continue
-				}
-				if committedBeefyBlock < lastSyncedBeefyBlock+li.config.UpdatePeriod {
-					logEntry.Info("Discarded commitment with sampling")
-					continue
-				}
-
-				// drop task if it can't be processed immediately
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case requests <- task:
-					lastSyncedBeefyBlock = committedBeefyBlock
-					logEntry.Info("New commitment added to channel")
-				default:
-					logEntry.Warn("Discarded commitment fail adding to channel")
-				}
-			} else {
-				logEntry.Warn("Discarded invalid commitment")
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case requests <- task:
 			}
 		}
 	}
@@ -162,8 +135,22 @@ func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]subst
 	return authorities, nil
 }
 
-func (li *PolkadotListener) queryBeefyNextAuthoritySet(blockHash types.Hash) (types.BeefyNextAuthoritySet, error) {
-	var nextAuthoritySet types.BeefyNextAuthoritySet
+func (li *PolkadotListener) queryBeefyAuthoritySet(blockHash types.Hash) (BeefyAuthoritySet, error) {
+	var authoritySet BeefyAuthoritySet
+	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "MmrLeaf", "BeefyAuthorities", nil, nil)
+	ok, err := li.conn.API().RPC.State.GetStorage(storageKey, &authoritySet, blockHash)
+	if err != nil {
+		return authoritySet, err
+	}
+	if !ok {
+		return authoritySet, fmt.Errorf("beefy authoritySet not found")
+	}
+
+	return authoritySet, nil
+}
+
+func (li *PolkadotListener) queryBeefyNextAuthoritySet(blockHash types.Hash) (BeefyAuthoritySet, error) {
+	var nextAuthoritySet BeefyAuthoritySet
 	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "MmrLeaf", "BeefyNextAuthorities", nil, nil)
 	ok, err := li.conn.API().RPC.State.GetStorage(storageKey, &nextAuthoritySet, blockHash)
 	if err != nil {

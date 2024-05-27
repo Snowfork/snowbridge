@@ -165,7 +165,7 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 
 	proofOrder := new(big.Int)
 
-	if r.IsHandover {
+	if r.IsMandatory {
 		inputLeaf = contracts.BeefyClientMMRLeaf{
 			Version:              uint8(r.Proof.Leaf.Version),
 			ParentNumber:         uint32(r.Proof.Leaf.ParentNumberAndHash.ParentNumber),

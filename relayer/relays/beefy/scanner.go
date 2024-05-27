@@ -131,7 +131,7 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 			log.WithFields(log.Fields{
 				"blockNumber": result.BlockNumber,
 				"depth":       result.Depth,
-			}).Info("fetch block")
+			}).Trace("fetching block")
 
 			var commitment *types.SignedCommitment
 			for j := range block.Justifications {
@@ -166,7 +166,7 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 	}
 }
 
-type ScanSafeCommitmentsResult struct {
+type ScanProvableCommitmentsResult struct {
 	SignedCommitment types.SignedCommitment
 	MMRProof         merkle.SimplifiedMMRProof
 	BlockHash        types.Hash
@@ -174,20 +174,20 @@ type ScanSafeCommitmentsResult struct {
 	Error            error
 }
 
-func ScanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64) (<-chan ScanSafeCommitmentsResult, error) {
-	out := make(chan ScanSafeCommitmentsResult)
-	go scanSafeCommitments(ctx, meta, api, startBlock, out)
+func ScanProvableCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64) (<-chan ScanProvableCommitmentsResult, error) {
+	out := make(chan ScanProvableCommitmentsResult)
+	go scanProvableCommitments(ctx, meta, api, startBlock, out)
 	return out, nil
 }
 
-func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64, out chan<- ScanSafeCommitmentsResult) {
+func scanProvableCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64, out chan<- ScanProvableCommitmentsResult) {
 	defer close(out)
 
 	sendError := func(err error) {
 		select {
 		case <-ctx.Done():
 			return
-		case out <- ScanSafeCommitmentsResult{Error: err}:
+		case out <- ScanProvableCommitmentsResult{Error: err}:
 		}
 	}
 
@@ -214,13 +214,14 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 				"blockNumber": result.BlockNumber,
 				"depth":       result.Depth,
 				"commitment":  result.SignedCommitment.Commitment,
-			}).Info("fetch commitment")
+			}).Info("Detected BEEFY commitment in block")
 
 			blockNumber := result.SignedCommitment.Commitment.BlockNumber
 			blockHash, err := api.RPC.Chain.GetBlockHash(uint64(blockNumber))
 			if err != nil {
 				sendError(fmt.Errorf("fetch block hash: %w", err))
 				return
+
 			}
 			proofIsValid, proof, err := makeProof(meta, api, blockNumber, blockHash)
 			if err != nil {
@@ -229,18 +230,14 @@ func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.S
 			}
 
 			if !proofIsValid {
-				log.WithFields(log.Fields{
-					"parentNumber":   blockNumber,
-					"beefyBlockHash": blockHash,
-					"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
-				}).Info("Proof for leaf is invalid")
-				continue
+				sendError(fmt.Errorf("Leaf for parent block %v at hash %v is unprovable", blockNumber, blockHash.Hex()))
+				return
 			}
 
 			select {
 			case <-ctx.Done():
 				return
-			case out <- ScanSafeCommitmentsResult{result.SignedCommitment, proof, blockHash, result.Depth, nil}:
+			case out <- ScanProvableCommitmentsResult{result.SignedCommitment, proof, blockHash, result.Depth, nil}:
 			}
 
 		}
