@@ -1,4 +1,3 @@
-import { setTimeout } from "timers/promises"
 
 export type SubscanResult = {
     status: number
@@ -17,6 +16,12 @@ export type SubscanRateLimit = {
 export type SubscanApiPost = (subUrl: string, body: any) => Promise<SubscanResult>
 export interface SubscanApi {
     post: SubscanApiPost
+}
+
+const sleepMs = async (ms: number) => {
+    await new Promise<void>((resolve)=> {
+        const id = setTimeout(()=> { resolve(); clearTimeout(id) }, ms)
+    })
 }
 
 export const createApi = (baseUrl: string, apiKey: string, options = { limit: 1 }): SubscanApi => {
@@ -45,11 +50,11 @@ export const createApi = (baseUrl: string, apiKey: string, options = { limit: 1 
 
         while (rateLimit.retryAfter !== null && rateLimit.retryAfter > 0) {
             console.log("Being rate limited", rateLimit)
-            await setTimeout(rateLimit.retryAfter * 1000)
+            await sleepMs(rateLimit.retryAfter * 1000)
         }
         while (rateLimit.remaining === 0 && rateLimit.reset !== null && rateLimit.reset > 0) {
             console.log("Being rate limited", rateLimit)
-            await setTimeout(rateLimit.reset * 1000)
+            await sleepMs(rateLimit.reset * 1000)
         }
 
         const response = await fetch(`${url}${subUrl}`, request)

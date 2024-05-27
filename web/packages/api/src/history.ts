@@ -1,4 +1,3 @@
-import { readFile, writeFile } from "fs/promises"
 import { Context } from "./index"
 import { fetchBeaconSlot, paraIdToChannelId } from "./utils"
 import { SubscanApi, fetchEvents, fetchExtrinsics } from "./subscan"
@@ -923,21 +922,4 @@ const subFetchInboundMessageReceived = async (
             return { channelId, nonce, messageId }
         }
     )
-}
-
-const cache = async <T>(file: string, f: () => T): Promise<T> => {
-    let cachedContents: string | null = null
-    try {
-        cachedContents = (await readFile(file, "utf8")).toString()
-        return JSON.parse(cachedContents)
-    } catch (err) {
-        let message = "Unknown error"
-        if (err instanceof Error) {
-            message = err.message
-        }
-        console.error(message)
-    }
-    const result = await f()
-    await writeFile(file, JSON.stringify(result, null, 2), "utf8")
-    return result
 }
