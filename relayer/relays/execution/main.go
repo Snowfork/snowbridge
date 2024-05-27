@@ -2,6 +2,7 @@ package execution
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -18,6 +19,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"golang.org/x/sync/errgroup"
@@ -30,6 +32,7 @@ type Relay struct {
 	ethconn         *ethereum.Connection
 	gatewayContract *contracts.Gateway
 	beaconHeader    *header.Header
+	writer          *parachain.ParachainWriter
 }
 
 func NewRelay(
@@ -58,13 +61,13 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	r.ethconn = ethconn
 
-	writer := parachain.NewParachainWriter(
+	r.writer = parachain.NewParachainWriter(
 		paraconn,
 		r.config.Sink.Parachain.MaxWatchedExtrinsics,
 		r.config.Sink.Parachain.MaxBatchCallSize,
 	)
 
-	err = writer.Start(ctx, eg)
+	err = r.writer.Start(ctx, eg)
 	if err != nil {
 		return err
 	}
@@ -87,11 +90,10 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	store := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries, *p)
 	store.Connect()
-	defer store.Close()
 
 	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint, r.config.Source.Beacon.StateEndpoint)
 	beaconHeader := header.New(
-		writer,
+		r.writer,
 		beaconAPI,
 		r.config.Source.Beacon.Spec,
 		&store,
@@ -167,51 +169,63 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				}
 
 				// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
-				messagePayload, err := beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot)
-				if err == header.ErrBeaconHeaderNotFinalized {
+				proof, err := beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot)
+				if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
 					logger.Warn("beacon header not finalized, just skipped")
 					continue
 				}
 				if err != nil {
 					return fmt.Errorf("fetch execution header proof: %w", err)
 				}
-				inboundMsg.Proof.ExecutionProof = messagePayload.HeaderPayload
 
-				logger.WithFields(logrus.Fields{
-					"EventLog": inboundMsg.EventLog,
-					"Proof":    inboundMsg.Proof,
-				}).Debug("Generated message from Ethereum log")
-
-				if messagePayload.FinalizedPayload == nil {
-					err = writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
-					if err != nil {
-						logger.Error("inbound message fail to send")
-						return fmt.Errorf("write to parachain: %w", err)
-					}
-				} else {
-					logger.WithFields(logrus.Fields{
-						"finalized_slot": messagePayload.FinalizedPayload.Payload.FinalizedHeader.Slot,
-						"finalized_root": messagePayload.FinalizedPayload.FinalizedHeaderBlockRoot,
-						"message_slot":   messagePayload.HeaderPayload.Header.Slot,
-					}).Debug("Batching finalized header update with message")
-					extrinsics := []string{"EthereumBeaconClient.submit", "EthereumInboundQueue.submit"}
-					payloads := []interface{}{inboundMsg, messagePayload.FinalizedPayload.Payload}
-					err = writer.BatchCall(ctx, extrinsics, payloads)
-					if err != nil {
-						logger.Error("batch call message fail to send")
-						return fmt.Errorf("write to parachain: %w", err)
-					}
+				err = r.writeToParachain(ctx, proof, inboundMsg)
+				if err != nil {
+					return fmt.Errorf("write to parachain: %w", err)
 				}
 
 				paraNonce, _ = r.fetchLatestParachainNonce()
 				if paraNonce != ev.Nonce {
-					logger.Error("inbound message sent but fail to execute")
 					return fmt.Errorf("inbound message fail to execute")
 				}
 				logger.Info("inbound message executed successfully")
 			}
 		}
 	}
+}
+
+func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, inboundMsg *parachain.Message) error {
+	inboundMsg.Proof.ExecutionProof = proof.HeaderPayload
+
+	log.WithFields(logrus.Fields{
+		"EventLog": inboundMsg.EventLog,
+		"Proof":    inboundMsg.Proof,
+	}).Debug("Generated message from Ethereum log")
+
+	// There is already a valid finalized header on-chain that can prove the message
+	if proof.FinalizedPayload == nil {
+		err := r.writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
+		if err != nil {
+			return fmt.Errorf("submit message to inbound queue: %w", err)
+		}
+
+		return nil
+	}
+
+	log.WithFields(logrus.Fields{
+		"finalized_slot": proof.FinalizedPayload.Payload.FinalizedHeader.Slot,
+		"finalized_root": proof.FinalizedPayload.FinalizedHeaderBlockRoot,
+		"message_slot":   proof.HeaderPayload.Header.Slot,
+	}).Debug("Batching finalized header update with message")
+
+	extrinsics := []string{"EthereumBeaconClient.submit", "EthereumInboundQueue.submit"}
+	payloads := []interface{}{proof.FinalizedPayload.Payload, inboundMsg}
+	// Batch the finalized header update with the inbound message
+	err := r.writer.BatchCall(ctx, extrinsics, payloads)
+	if err != nil {
+		return fmt.Errorf("batch call containing finalized header update and inbound queue message: %w", err)
+	}
+
+	return nil
 }
 
 func (r *Relay) fetchLatestParachainNonce() (uint64, error) {

@@ -408,24 +408,24 @@ func (h *Header) getHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, 
 	return h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
 }
 
-func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.MessagePayload, error) {
+func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.ProofPayload, error) {
 	header, err := h.syncer.Client.GetHeaderByBlockRoot(blockRoot)
 	if err != nil {
-		return scale.MessagePayload{}, fmt.Errorf("get beacon header by blockRoot: %w", err)
+		return scale.ProofPayload{}, fmt.Errorf("get beacon header by blockRoot: %w", err)
 	}
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
-		return scale.MessagePayload{}, fmt.Errorf("fetch last finalized header state: %w", err)
+		return scale.ProofPayload{}, fmt.Errorf("fetch last finalized header state: %w", err)
 	}
 
 	// There is a finalized header on-chain that will be able to verify the header containing the message.
 	if header.Slot <= lastFinalizedHeaderState.BeaconSlot {
 		headerUpdate, err := h.getHeaderUpdateBySlot(header.Slot)
 		if err != nil {
-			return scale.MessagePayload{}, fmt.Errorf("get header update by slot with ancestry proof: %w", err)
+			return scale.ProofPayload{}, fmt.Errorf("get header update by slot with ancestry proof: %w", err)
 		}
 
-		return scale.MessagePayload{
+		return scale.ProofPayload{
 			HeaderPayload:    headerUpdate,
 			FinalizedPayload: nil,
 		}, nil
@@ -435,12 +435,12 @@ func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.MessagePayloa
 	// finalized header with the message.
 	finalizedHeader, err := h.syncer.GetFinalizedHeader()
 	if err != nil {
-		return scale.MessagePayload{}, err
+		return scale.ProofPayload{}, err
 	}
 
 	// If the header is not finalized yet, we can't do anything further.
 	if header.Slot > uint64(finalizedHeader.Slot) {
-		return scale.MessagePayload{}, ErrBeaconHeaderNotFinalized
+		return scale.ProofPayload{}, ErrBeaconHeaderNotFinalized
 	}
 
 	var finalizedUpdate scale.Update
@@ -449,12 +449,12 @@ func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.MessagePayloa
 	if lastFinalizedHeaderState.BeaconSlot+h.protocol.SlotsPerHistoricalRoot < uint64(finalizedHeader.Slot) {
 		finalizedUpdate, err = h.syncer.GetFinalizedUpdateAtAttestedSlot(lastFinalizedHeaderState.BeaconSlot, lastFinalizedHeaderState.BeaconSlot+h.protocol.SlotsPerHistoricalRoot, false)
 		if err != nil {
-			return scale.MessagePayload{}, fmt.Errorf("get finalized update at attested slot: %w", err)
+			return scale.ProofPayload{}, fmt.Errorf("get finalized update at attested slot: %w", err)
 		}
 	} else {
 		finalizedUpdate, err = h.syncer.GetFinalizedUpdate()
 		if err != nil {
-			return scale.MessagePayload{}, fmt.Errorf("get finalized update: %w", err)
+			return scale.ProofPayload{}, fmt.Errorf("get finalized update: %w", err)
 		}
 	}
 
@@ -465,7 +465,7 @@ func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.MessagePayloa
 	}
 	headerUpdate, err := h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
 
-	return scale.MessagePayload{
+	return scale.ProofPayload{
 		HeaderPayload:    headerUpdate,
 		FinalizedPayload: &finalizedUpdate,
 	}, nil
