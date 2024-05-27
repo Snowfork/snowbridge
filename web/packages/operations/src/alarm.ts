@@ -30,7 +30,7 @@ export enum AlarmReason {
     AccountBalanceInsufficient = "AccountBalanceInsufficient",
 }
 
-export const sendMetrics = async (metrics: AllMetrics) => {
+export const sendMetrics = async (name: string, metrics: AllMetrics) => {
     let client = new CloudWatchClient({})
     let metricData = []
     // Beefy metrics
@@ -212,24 +212,34 @@ export const sendMetrics = async (metrics: AllMetrics) => {
     }
     const command = new PutMetricDataCommand({
         MetricData: metricData,
-        Namespace: CLOUD_WATCH_NAME_SPACE,
+        Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
     })
     await client.send(command)
 }
 
 export const initializeAlarms = async () => {
+    let env = "local_e2e"
+    if (process.env.NODE_ENV !== undefined) {
+        env = process.env.NODE_ENV
+    }
+    const snowbridgeEnv = environment.SNOWBRIDGE_ENV[env]
+    if (snowbridgeEnv === undefined) {
+        throw Error(`Unknown environment '${env}'`)
+    }
+    const { name } = snowbridgeEnv
+
     let client = new CloudWatchClient({})
     let cloudWatchAlarms = []
     let alarmCommandSharedInput = {
         EvaluationPeriods: 3,
-        Namespace: CLOUD_WATCH_NAME_SPACE,
+        Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
         Period: 600,
         Threshold: 0,
         AlarmActions: [SNS_TOPIC_TO_PAGERDUTY],
     }
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.BeefyStale.toString(),
+            AlarmName: AlarmReason.BeefyStale.toString() + "-" + name,
             MetricName: AlarmReason.BeefyStale.toString(),
             AlarmDescription: AlarmReason.BeefyStale.toString(),
             Statistic: "Average",
@@ -239,7 +249,7 @@ export const initializeAlarms = async () => {
     )
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.BeaconStale.toString(),
+            AlarmName: AlarmReason.BeaconStale.toString() + "-" + name,
             MetricName: AlarmReason.BeaconStale.toString(),
             AlarmDescription: AlarmReason.BeaconStale.toString(),
             Statistic: "Average",
@@ -249,7 +259,7 @@ export const initializeAlarms = async () => {
     )
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.ToEthereumChannelStale.toString(),
+            AlarmName: AlarmReason.ToEthereumChannelStale.toString() + "-" + name,
             MetricName: AlarmReason.ToEthereumChannelStale.toString(),
             AlarmDescription: AlarmReason.ToEthereumChannelStale.toString(),
             Statistic: "Average",
@@ -259,7 +269,7 @@ export const initializeAlarms = async () => {
     )
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.ToPolkadotChannelStale.toString(),
+            AlarmName: AlarmReason.ToPolkadotChannelStale.toString() + "-" + name,
             MetricName: AlarmReason.ToPolkadotChannelStale.toString(),
             AlarmDescription: AlarmReason.ToPolkadotChannelStale.toString(),
             Statistic: "Average",
@@ -269,7 +279,7 @@ export const initializeAlarms = async () => {
     )
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.AccountBalanceInsufficient.toString(),
+            AlarmName: AlarmReason.AccountBalanceInsufficient.toString() + "-" + name,
             MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
             AlarmDescription: AlarmReason.AccountBalanceInsufficient.toString(),
             Statistic: "Average",

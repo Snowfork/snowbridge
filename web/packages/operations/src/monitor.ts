@@ -13,7 +13,7 @@ export const monitor = async (): Promise<AllMetrics> => {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const { config } = snowbridgeEnv
+    const { config, name } = snowbridgeEnv
 
     const infuraKey = process.env.REACT_APP_INFURA_KEY || ""
 
@@ -135,7 +135,7 @@ export const monitor = async (): Promise<AllMetrics> => {
         sovereigns,
     }
 
-    await sendMetrics(allMetrics)
+    await sendMetrics(name, allMetrics)
 
     await destroyContext(context)
 
