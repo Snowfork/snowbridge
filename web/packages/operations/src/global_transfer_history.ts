@@ -36,8 +36,8 @@ const monitor = async () => {
 
     const ethBlockTimeSeconds = 12
     const polkadotBlockTimeSeconds = 9
-    const ethereumSearchPeriodBlocks = (60 * 60 * 24 * 7 * 2) / ethBlockTimeSeconds // 1 Month
-    const polkadotSearchPeriodBlocks = (60 * 60 * 24 * 7 * 2) / polkadotBlockTimeSeconds // 1 Month
+    const ethereumSearchPeriodBlocks = (60 * 60 * 24 * 7 * 2) / ethBlockTimeSeconds // 2 Weeks
+    const polkadotSearchPeriodBlocks = (60 * 60 * 24 * 7 * 2) / polkadotBlockTimeSeconds // 2 Weeks
 
     const assetHubScan = subscan.createApi(config.SUBSCAN_API.ASSET_HUB_URL, subscanKey)
     const bridgeHubScan = subscan.createApi(config.SUBSCAN_API.BRIDGE_HUB_URL, subscanKey)

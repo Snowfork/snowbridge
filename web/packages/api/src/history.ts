@@ -9,8 +9,17 @@ export enum TransferStatus {
     Failed,
 }
 
+export type TransferInfo = {
+    beneficiaryAddress: string
+    tokenAddress: string
+    destinationParachain: number
+    destinationFee: string
+    amount: string
+}
+
 export type ToPolkadotTransferResult = {
     status: TransferStatus
+    info: TransferInfo
     submitted: {
         blockHash: string
         blockNumber: number
@@ -50,6 +59,7 @@ export type ToPolkadotTransferResult = {
 
 export type ToEthereumTransferResult = {
     status: TransferStatus
+    info?: TransferInfo
     submitted: {
         extrinsic_index: string
         extrinsic_hash: string
@@ -176,6 +186,13 @@ export const toPolkadotHistory = async (
     for (const outboundMessage of ethOutboundMessages) {
         const result: ToPolkadotTransferResult = {
             status: TransferStatus.Pending,
+            info: {
+                beneficiaryAddress: outboundMessage.data.beneficiaryAddress,
+                tokenAddress: outboundMessage.data.tokenAddress,
+                destinationParachain: outboundMessage.data.destinationParachain,
+                destinationFee: outboundMessage.data.destinationFee,
+                amount: outboundMessage.data.amount,
+            },
             submitted: {
                 blockHash: outboundMessage.blockHash,
                 blockNumber: outboundMessage.blockNumber,
@@ -785,6 +802,28 @@ const getEthOutboundMessages = async (context: Context, fromBlock: number, toBlo
             context.config.ethereum.beacon_url,
             block.parentBeaconBlockRoot as any
         )
+        const transaction = await block.getTransaction(om.transactionHash)
+        const [
+            tokenAddress,
+            destinationParachain,
+            [addressType, beneficiaryAddress],
+            destinationFee,
+            amount
+        ] = context.ethereum.contracts.gateway.interface.decodeFunctionData('sendToken', transaction.data)
+        let beneficiary = beneficiaryAddress as string
+        switch(addressType) {
+            case 0n: {
+                // 4-byte index
+                const index = BigInt(beneficiary.substring(0, 6))
+                beneficiary = index.toString()
+            } break;
+            case 2n: {
+                // 20-byte address
+                beneficiary = beneficiary.substring(0, 42)
+            } break;
+        }
+        console.log(addressType, beneficiaryAddress)
+        
         result.push({
             blockNumber: om.blockNumber,
             blockHash: om.blockHash,
@@ -796,6 +835,11 @@ const getEthOutboundMessages = async (context: Context, fromBlock: number, toBlo
                 nonce: Number(om.args.nonce),
                 messageId: om.args.messageID,
                 parentBeaconSlot: Number(beaconBlockRoot.data.message.slot),
+                tokenAddress: tokenAddress as string,
+                destinationParachain: Number(destinationParachain),
+                beneficiaryAddress: beneficiary,
+                destinationFee: destinationFee.toString() as string,
+                amount: amount.toString() as string,
             },
         })
     }
