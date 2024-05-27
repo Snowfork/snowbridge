@@ -35,8 +35,8 @@ export const monitor = async (): Promise<AllMetrics> => {
         },
     })
 
-    const bridegStatus = await status.bridgeStatusInfo(context)
-    console.log("Bridge Status:", bridegStatus)
+    const bridgeStatus = await status.bridgeStatusInfo(context)
+    console.log("Bridge Status:", bridgeStatus)
 
     const assethub = await status.channelStatusInfo(
         context,
@@ -128,14 +128,9 @@ export const monitor = async (): Promise<AllMetrics> => {
         },
     ]
 
-    const allMetrics: AllMetrics = {
-        bridgeStatus: bridegStatus,
-        channels: channels,
-        relayers: relayers,
-        sovereigns,
-    }
+    const allMetrics: AllMetrics = { name, bridgeStatus, channels, relayers, sovereigns }
 
-    await sendMetrics(name, allMetrics)
+    await sendMetrics(allMetrics)
 
     await destroyContext(context)
 

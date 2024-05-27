@@ -16,6 +16,7 @@ export const AlarmThreshold = {
 export type Sovereign = { name: string; account: string; balance: bigint }
 
 export type AllMetrics = {
+    name: string
     bridgeStatus: status.BridgeStatusInfo
     channels: status.ChannelStatusInfo[]
     sovereigns: Sovereign[]
@@ -30,7 +31,7 @@ export enum AlarmReason {
     AccountBalanceInsufficient = "AccountBalanceInsufficient",
 }
 
-export const sendMetrics = async (name: string, metrics: AllMetrics) => {
+export const sendMetrics = async (metrics: AllMetrics) => {
     let client = new CloudWatchClient({})
     let metricData = []
     // Beefy metrics
@@ -212,7 +213,7 @@ export const sendMetrics = async (name: string, metrics: AllMetrics) => {
     }
     const command = new PutMetricDataCommand({
         MetricData: metricData,
-        Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
+        Namespace: CLOUD_WATCH_NAME_SPACE + "-" + metrics.name,
     })
     await client.send(command)
 }
