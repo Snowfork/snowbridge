@@ -447,7 +447,7 @@ func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.ProofPayload,
 	// If we import the last finalized header, the gap between the finalized headers would be too large, so import
 	// a slightly older header.
 	if lastFinalizedHeaderState.BeaconSlot+h.protocol.SlotsPerHistoricalRoot < uint64(finalizedHeader.Slot) {
-		finalizedUpdate, err = h.syncer.GetFinalizedUpdateAtAttestedSlot(lastFinalizedHeaderState.BeaconSlot, lastFinalizedHeaderState.BeaconSlot+h.protocol.SlotsPerHistoricalRoot, false)
+		finalizedUpdate, err = h.syncer.GetFinalizedUpdateAtAttestedSlot(header.Slot, lastFinalizedHeaderState.BeaconSlot+h.protocol.SlotsPerHistoricalRoot, false)
 		if err != nil {
 			return scale.ProofPayload{}, fmt.Errorf("get finalized update at attested slot: %w", err)
 		}
