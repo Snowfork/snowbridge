@@ -248,7 +248,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             SUBSCAN_API: {
                 RELAY_CHAIN_URL: "https://rococo.api.subscan.io",
                 ASSET_HUB_URL: "https://assethub-rococo.api.subscan.io",
-                BRIDGE_HUB_URL: "https://assethub-rococo.api.subscan.io",
+                BRIDGE_HUB_URL: "https://bridgehub-rococo.api.subscan.io",
             },
         },
     },

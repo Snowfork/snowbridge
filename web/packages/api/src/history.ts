@@ -12,8 +12,8 @@ export enum TransferStatus {
 export type TransferInfo = {
     beneficiaryAddress: string
     tokenAddress: string
-    destinationParachain: number
-    destinationFee: string
+    destinationParachain?: number
+    destinationFee?: string
     amount: string
 }
 
@@ -59,7 +59,7 @@ export type ToPolkadotTransferResult = {
 
 export type ToEthereumTransferResult = {
     status: TransferStatus
-    info?: TransferInfo
+    info: TransferInfo
     submitted: {
         extrinsic_index: string
         extrinsic_hash: string
@@ -245,7 +245,6 @@ export const toPolkadotHistory = async (
                 ev.data.messageId == result.submitted.messageId
         )
         if (assetHubMessageProcessed) {
-            console.log(assetHubMessageProcessed)
             result.assetHubMessageProcessed = {
                 extrinsic_hash: assetHubMessageProcessed.extrinsic_hash,
                 event_index: assetHubMessageProcessed.event_index,
@@ -334,15 +333,20 @@ export const toEthereumHistory = async (
     ])
 
     console.log("number of transfers", allTransfers.length)
-    console.log("message queues", allMessageQueues.length)
-    console.log("outbound messages", allOutboundMessages.length)
-    console.log("beefy updates", allBeefyClientUpdates.length)
-    console.log("inbound messages", allInboundMessages.length)
+    console.log("number of message queues", allMessageQueues.length)
+    console.log("number of outbound messages", allOutboundMessages.length)
+    console.log("number of beefy updates", allBeefyClientUpdates.length)
+    console.log("number of inbound messages", allInboundMessages.length)
 
     const results: ToEthereumTransferResult[] = []
     for (const transfer of allTransfers) {
         const result: ToEthereumTransferResult = {
             status: TransferStatus.Pending,
+            info: {
+                tokenAddress: transfer.data.tokenAddress,
+                beneficiaryAddress: transfer.data.beneficiary,
+                amount: transfer.data.amount,
+            },
             submitted: {
                 extrinsic_index: transfer.extrinsic_index,
                 extrinsic_hash: transfer.extrinsic_hash,
@@ -634,6 +638,66 @@ const subFetchBridgeTransfers = async (
                 return null
             }
 
+            const beneficiary = params.find((p: any) => p.name == "beneficiary")?.value
+            const beneficiaryParents: number | null =
+                beneficiary.V3?.parents ?? beneficiary.V4?.parents ?? null
+            const beneficiaryAddress: string | null =
+                beneficiary.V3?.interior?.X1?.AccountKey20?.key ??
+                (beneficiary.V4?.interior?.X1 && beneficiary.V4?.interior?.X1[0])?.AccountKey20
+                    ?.key ??
+                null
+
+            if (!(beneficiaryParents === 0 && beneficiaryAddress !== null)) {
+                return null
+            }
+
+            const assets = params.find((p: any) => p.name == "assets")?.value
+            let amount: string | null = null
+            let tokenParents: number | null = null
+            let tokenAddress: string | null = null
+            let tokenChainId: number | null = null
+            for (const asset of assets.V3 ?? assets.V4 ?? []) {
+                amount = asset.fun?.Fungible ?? null
+                if (amount === null) {
+                    continue
+                }
+
+                tokenParents = asset.id?.parents ?? asset.id?.Concrete?.parents ?? null
+                if (tokenParents === null) {
+                    continue
+                }
+
+                const tokenX2 =
+                    asset.id?.interior?.X2 ?? Object.values(asset.id?.Concrete?.interior?.X2 ?? {})
+                if (tokenX2 === null || tokenX2.length !== 2) {
+                    continue
+                }
+
+                tokenChainId = tokenX2[0].GlobalConsensus?.Ethereum ?? null
+                if (tokenChainId === null) {
+                    continue
+                }
+
+                tokenAddress = tokenX2[1].AccountKey20?.key ?? null
+                if (tokenAddress === null) {
+                    continue
+                }
+
+                // found first token
+                break
+            }
+
+            if (
+                !(
+                    tokenParents === 2 &&
+                    tokenChainId === ethChainId &&
+                    tokenAddress !== null &&
+                    amount !== null
+                )
+            ) {
+                return null
+            }
+
             const [
                 {
                     json: { data: transfer },
@@ -678,6 +742,9 @@ const subFetchBridgeTransfers = async (
                 block_hash: transfer.block_hash,
                 account_id: transfer.account_id,
                 relayChain: { block_num: relayBlock.block_num, block_hash: relayBlock.hash },
+                tokenAddress: tokenAddress,
+                beneficiary: beneficiary,
+                amount: amount,
             }
         }
     )
@@ -808,22 +875,28 @@ const getEthOutboundMessages = async (context: Context, fromBlock: number, toBlo
             destinationParachain,
             [addressType, beneficiaryAddress],
             destinationFee,
-            amount
-        ] = context.ethereum.contracts.gateway.interface.decodeFunctionData('sendToken', transaction.data)
+            amount,
+        ] = context.ethereum.contracts.gateway.interface.decodeFunctionData(
+            "sendToken",
+            transaction.data
+        )
         let beneficiary = beneficiaryAddress as string
-        switch(addressType) {
-            case 0n: {
-                // 4-byte index
-                const index = BigInt(beneficiary.substring(0, 6))
-                beneficiary = index.toString()
-            } break;
-            case 2n: {
-                // 20-byte address
-                beneficiary = beneficiary.substring(0, 42)
-            } break;
+        switch (addressType) {
+            case 0n:
+                {
+                    // 4-byte index
+                    const index = BigInt(beneficiary.substring(0, 6))
+                    beneficiary = index.toString()
+                }
+                break
+            case 2n:
+                {
+                    // 20-byte address
+                    beneficiary = beneficiary.substring(0, 42)
+                }
+                break
         }
-        console.log(addressType, beneficiaryAddress)
-        
+
         result.push({
             blockNumber: om.blockNumber,
             blockHash: om.blockHash,

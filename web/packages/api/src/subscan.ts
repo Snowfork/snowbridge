@@ -1,4 +1,3 @@
-
 export type SubscanResult = {
     status: number
     statusText: string
@@ -19,8 +18,11 @@ export interface SubscanApi {
 }
 
 const sleepMs = async (ms: number) => {
-    await new Promise<void>((resolve)=> {
-        const id = setTimeout(()=> { resolve(); clearTimeout(id) }, ms)
+    await new Promise<void>((resolve) => {
+        const id = setTimeout(() => {
+            resolve()
+            clearTimeout(id)
+        }, ms)
     })
 }
 

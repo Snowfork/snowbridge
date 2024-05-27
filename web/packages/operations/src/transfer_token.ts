@@ -62,7 +62,7 @@ const monitor = async () => {
             WETH_CONTRACT,
             1000,
             amount,
-            BigInt(0),
+            BigInt(0)
         )
         console.log("Plan:", plan, plan.failure?.errors)
         let result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
