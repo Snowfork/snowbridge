@@ -234,13 +234,13 @@ export const initializeAlarms = async () => {
     let alarmCommandSharedInput = {
         EvaluationPeriods: 3,
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
-        Period: 600,
+        Period: 300,
         Threshold: 0,
         AlarmActions: [SNS_TOPIC_TO_PAGERDUTY],
     }
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.BeefyStale.toString() + "-" + name,
+            AlarmName: AlarmReason.BeefyStale.toString(),
             MetricName: AlarmReason.BeefyStale.toString(),
             AlarmDescription: AlarmReason.BeefyStale.toString(),
             Statistic: "Average",
@@ -250,7 +250,7 @@ export const initializeAlarms = async () => {
     )
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.BeaconStale.toString() + "-" + name,
+            AlarmName: AlarmReason.BeaconStale.toString(),
             MetricName: AlarmReason.BeaconStale.toString(),
             AlarmDescription: AlarmReason.BeaconStale.toString(),
             Statistic: "Average",
@@ -260,7 +260,7 @@ export const initializeAlarms = async () => {
     )
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.ToEthereumChannelStale.toString() + "-" + name,
+            AlarmName: AlarmReason.ToEthereumChannelStale.toString(),
             MetricName: AlarmReason.ToEthereumChannelStale.toString(),
             AlarmDescription: AlarmReason.ToEthereumChannelStale.toString(),
             Statistic: "Average",
@@ -270,7 +270,7 @@ export const initializeAlarms = async () => {
     )
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.ToPolkadotChannelStale.toString() + "-" + name,
+            AlarmName: AlarmReason.ToPolkadotChannelStale.toString(),
             MetricName: AlarmReason.ToPolkadotChannelStale.toString(),
             AlarmDescription: AlarmReason.ToPolkadotChannelStale.toString(),
             Statistic: "Average",
@@ -280,7 +280,7 @@ export const initializeAlarms = async () => {
     )
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.AccountBalanceInsufficient.toString() + "-" + name,
+            AlarmName: AlarmReason.AccountBalanceInsufficient.toString(),
             MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
             AlarmDescription: AlarmReason.AccountBalanceInsufficient.toString(),
             Statistic: "Average",
