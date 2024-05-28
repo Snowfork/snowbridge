@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.23;
+pragma solidity 0.8.25;
 
 /**
  * @title A utility library for 16 bit counters packed in 256 bit array.

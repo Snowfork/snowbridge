@@ -1,4 +1,4 @@
-{
+ {
     description = "Snowbridge flake";
 
     inputs = {
@@ -53,9 +53,7 @@
                     gotools
                     gopls
                     go-outline
-                    gocode
                     gopkgs
-                    gocode-gomod
                     godef
                     golint
                     mage

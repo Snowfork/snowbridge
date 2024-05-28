@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2023 Axelar Network
 
-pragma solidity 0.8.23;
+pragma solidity 0.8.25;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
