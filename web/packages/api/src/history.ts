@@ -162,24 +162,28 @@ export const toPolkadotHistory = async (
         beaconClientUpdates,
         inboundMessagesReceived,
         assetHubMessageQueue,
-    ] = await Promise.all([
-        getEthOutboundMessages(context, range.ethereum.fromBlock, range.ethereum.toBlock),
+    ] = [
+        await getEthOutboundMessages(context, range.ethereum.fromBlock, range.ethereum.toBlock),
 
-        getBeaconClientUpdates(bridgeHubScan, range.bridgeHub.fromBlock, range.bridgeHub.toBlock),
-
-        getBridgeHubInboundMessages(
+        await getBeaconClientUpdates(
             bridgeHubScan,
             range.bridgeHub.fromBlock,
             range.bridgeHub.toBlock
         ),
 
-        getAssetHubMessageQueueProccessed(
+        await getBridgeHubInboundMessages(
+            bridgeHubScan,
+            range.bridgeHub.fromBlock,
+            range.bridgeHub.toBlock
+        ),
+
+        await getAssetHubMessageQueueProccessed(
             assetHubScan,
             bridgeHubParaId,
             range.assetHub.fromBlock,
             range.assetHub.toBlock
         ),
-    ])
+    ]
 
     console.log("number of transfers", ethOutboundMessages.length)
     console.log("number of beacon client updates", beaconClientUpdates.length)
@@ -311,8 +315,8 @@ export const toEthereumHistory = async (
         allOutboundMessages,
         allBeefyClientUpdates,
         allInboundMessages,
-    ] = await Promise.all([
-        getAssetHubTransfers(
+    ] = [
+        await getAssetHubTransfers(
             assetHubScan,
             relaychainScan,
             Number(ethNetwork.chainId),
@@ -320,7 +324,7 @@ export const toEthereumHistory = async (
             range.assetHub.toBlock
         ),
 
-        getBridgeHubMessageQueueProccessed(
+        await getBridgeHubMessageQueueProccessed(
             bridgeHubScan,
             assetHubParaIdDecoded,
             assetHubChannelId,
@@ -328,16 +332,20 @@ export const toEthereumHistory = async (
             range.bridgeHub.toBlock
         ),
 
-        getBridgeHubOutboundMessages(
+        await getBridgeHubOutboundMessages(
             bridgeHubScan,
             range.bridgeHub.fromBlock,
             range.bridgeHub.toBlock
         ),
 
-        getBeefyClientUpdates(context, range.ethereum.fromBlock, range.ethereum.toBlock),
+        await getBeefyClientUpdates(context, range.ethereum.fromBlock, range.ethereum.toBlock),
 
-        getEthInboundMessagesDispatched(context, range.ethereum.fromBlock, range.ethereum.toBlock),
-    ])
+        await getEthInboundMessagesDispatched(
+            context,
+            range.ethereum.fromBlock,
+            range.ethereum.toBlock
+        ),
+    ]
 
     console.log("number of transfers", allTransfers.length)
     console.log("number of message queues", allMessageQueues.length)
@@ -715,16 +723,16 @@ const subFetchBridgeTransfers = async (
                 {
                     json: { data: relayBlock },
                 },
-            ] = await Promise.all([
-                assetHub.post("api/scan/extrinsic", {
+            ] = [
+                await assetHub.post("api/scan/extrinsic", {
                     extrinsic_index: extrinsic.extrinsic_index,
                     only_extrinsic_event: true,
                 }),
-                relaychain.post("api/scan/block", {
+                await relaychain.post("api/scan/block", {
                     block_timestamp: extrinsic.block_timestamp,
                     only_head: true,
                 }),
-            ])
+            ]
             const maybeEvent = transfer.event.find(
                 (ev: any) => ev.module_id === "polkadotxcm" && ev.event_id === "Sent"
             )
