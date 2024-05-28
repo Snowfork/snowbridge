@@ -11,11 +11,18 @@ pushd  polkadot-sdk
 git checkout snowbridge
 popd
 popd
-
 ln -sf ../polkadot-sdk polkadot-sdk
 
-echo "Setting up submodules"
-git submodule update --init --recursive || true
+echo "Checkout lodestar Snowfork fork"
+pushd ..
+  if [ ! -d "lodestar" ]; then
+    git clone https://github.com/Snowfork/lodestar
+  fi
+  pushd lodestar
+    git checkout snowbridge
+  popd
+popd
+ln -sf ../lodestar lodestar
 
 echo "Setting up git hooks"
 git config --local core.hooksPath hooks/
@@ -36,13 +43,3 @@ cargo install cargo-fuzz
 echo "Installing web packages"
 (cd web && pnpm install)
 
-echo "Download geth to replace the nix version"
-OS=$(uname -s | tr A-Z a-z)
-MACHINE_TYPE=$(uname -m | tr A-Z a-z | sed 's/x86_64/amd64/')
-
-geth_package=geth-$OS-$MACHINE_TYPE-1.13.11-8f7eb9cc
-curl https://gethstore.blob.core.windows.net/builds/$geth_package.tar.gz -o /tmp/geth.tar.gz || { echo 'Download failed'; exit 1; }
-mkdir -p $GOPATH/bin
-tar -xvf /tmp/geth.tar.gz -C $GOPATH
-cp $GOPATH/$geth_package/geth $GOPATH/bin
-geth version
