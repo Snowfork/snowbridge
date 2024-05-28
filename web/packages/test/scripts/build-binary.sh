@@ -59,25 +59,9 @@ build_relayer() {
     cp $relay_bin "$output_bin_dir"
 }
 
-set_slot_time() {
-    local new_value=$1
-    echo "Hack lodestar for faster slot time"
-    local preset_mainnet_config_file="$root_dir/lodestar/packages/config/src/chainConfig/configs/mainnet.ts"
-    if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
-        gsed -i "s/SECONDS_PER_SLOT: .*/SECONDS_PER_SLOT: $new_value,/g" $preset_mainnet_config_file
-    else
-        sed -i "s/SECONDS_PER_SLOT: .*/SECONDS_PER_SLOT: $new_value,/g" $preset_mainnet_config_file
-    fi
-}
-
 build_lodestar() {
     if [ "$rebuild_lodestar" == "true" ]; then
         pushd $root_dir/lodestar
-        if [ "$eth_fast_mode" == "true" ]; then
-            set_slot_time 1
-        else
-            set_slot_time 12
-        fi
         yarn install && yarn run build
         popd
     fi
