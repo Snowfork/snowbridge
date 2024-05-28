@@ -10,6 +10,7 @@ export enum TransferStatus {
 }
 
 export type TransferInfo = {
+    when: Date
     beneficiaryAddress: string
     tokenAddress: string
     destinationParachain?: number
@@ -190,6 +191,7 @@ export const toPolkadotHistory = async (
             id: `${outboundMessage.transactionHash}-${outboundMessage.data.messageId}`,
             status: TransferStatus.Pending,
             info: {
+                when: new Date(outboundMessage.data.timestamp * 1000),
                 beneficiaryAddress: outboundMessage.data.beneficiaryAddress,
                 tokenAddress: outboundMessage.data.tokenAddress,
                 destinationParachain: outboundMessage.data.destinationParachain,
@@ -347,6 +349,7 @@ export const toEthereumHistory = async (
             id: `${transfer.extrinsic_hash}-${transfer.data.messageId}`,
             status: TransferStatus.Pending,
             info: {
+                when: new Date(transfer.block_timestamp * 1000),
                 tokenAddress: transfer.data.tokenAddress,
                 beneficiaryAddress: transfer.data.beneficiary,
                 amount: transfer.data.amount,
@@ -908,6 +911,7 @@ const getEthOutboundMessages = async (context: Context, fromBlock: number, toBlo
             transactionIndex: om.transactionIndex,
             transactionHash: om.transactionHash,
             data: {
+                timestamp: block.timestamp,
                 channelId: om.args.channelID,
                 nonce: Number(om.args.nonce),
                 messageId: om.args.messageID,

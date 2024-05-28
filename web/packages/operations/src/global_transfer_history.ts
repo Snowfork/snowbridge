@@ -45,20 +45,12 @@ const monitor = async () => {
 
     const [ethNowBlock, assetHubNowBlock, bridgeHubNowBlock] = await Promise.all([
         (async () => {
-            const ethNowBlock = await context.ethereum.api.getBlock("finalized")
+            const ethNowBlock = await context.ethereum.api.getBlock("latest")
             if (ethNowBlock == null) throw Error("Cannot fetch block")
             return ethNowBlock
         })(),
-        (async () => {
-            const nowBlockHash = await context.polkadot.api.assetHub.rpc.chain.getFinalizedHead()
-            const nowBlock = await context.polkadot.api.assetHub.rpc.chain.getHeader(nowBlockHash)
-            return nowBlock
-        })(),
-        (async () => {
-            const nowBlockHash = await context.polkadot.api.bridgeHub.rpc.chain.getFinalizedHead()
-            const nowBlock = await context.polkadot.api.bridgeHub.rpc.chain.getHeader(nowBlockHash)
-            return nowBlock
-        })(),
+        context.polkadot.api.assetHub.rpc.chain.getHeader(),
+        context.polkadot.api.bridgeHub.rpc.chain.getHeader(),
     ])
     const resultsToEthereum = await history.toEthereumHistory(
         context,
