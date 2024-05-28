@@ -17,6 +17,7 @@ type PolkadotListener struct {
 	config              *SourceConfig
 	conn                *relaychain.Connection
 	beefyAuthoritiesKey types.StorageKey
+	relayer             *Relay
 }
 
 func NewPolkadotListener(
@@ -96,9 +97,9 @@ func (li *PolkadotListener) scanCommitments(
 			if err != nil {
 				return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
 			}
-			currentAuthoritySet, err := li.queryBeefyAuthoritySet(result.BlockHash)
+			nextAuthoritySet, err := li.queryBeefyNextAuthoritySet(result.BlockHash)
 			if err != nil {
-				return fmt.Errorf("fetch beefy authoritie set at block %v: %w", result.BlockHash, err)
+				return fmt.Errorf("fetch beefy authorities set at block %v: %w", result.BlockHash, err)
 			}
 			task := Request{
 				Validators:       validators,
@@ -106,8 +107,13 @@ func (li *PolkadotListener) scanCommitments(
 				Proof:            result.MMRProof,
 			}
 
+			currentState, err = li.relayer.CurrentState(ctx)
+			if err != nil {
+				return fmt.Errorf("get current state from beefy LC %w", err)
+			}
+
 			if validatorSetID > currentValidatorSet {
-				if currentAuthoritySet.Root == currentState.NextValidatorSetRoot && committedBeefyBlock < lastSyncedBeefyBlock+li.config.UpdatePeriod {
+				if nextAuthoritySet.Root == currentState.NextValidatorSetRoot && committedBeefyBlock < lastSyncedBeefyBlock+li.config.UpdatePeriod {
 					logEntry.Info("Discarded commitment with beefy authorities not change")
 					continue
 				}
@@ -162,7 +168,7 @@ func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]subst
 
 func (li *PolkadotListener) queryBeefyNextAuthoritySet(blockHash types.Hash) (types.BeefyNextAuthoritySet, error) {
 	var nextAuthoritySet types.BeefyNextAuthoritySet
-	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "MmrLeaf", "BeefyNextAuthorities", nil, nil)
+	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "BeefyMmrLeaf", "BeefyNextAuthorities", nil, nil)
 	ok, err := li.conn.API().RPC.State.GetStorage(storageKey, &nextAuthoritySet, blockHash)
 	if err != nil {
 		return nextAuthoritySet, err
@@ -178,7 +184,7 @@ type BeefyAuthoritySet = types.BeefyNextAuthoritySet
 
 func (li *PolkadotListener) queryBeefyAuthoritySet(blockHash types.Hash) (BeefyAuthoritySet, error) {
 	var authoritySet BeefyAuthoritySet
-	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "MmrLeaf", "BeefyAuthorities", nil, nil)
+	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "BeefyMmrLeaf", "BeefyAuthorities", nil, nil)
 	ok, err := li.conn.API().RPC.State.GetStorage(storageKey, &authoritySet, blockHash)
 	if err != nil {
 		return authoritySet, err

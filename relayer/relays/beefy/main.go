@@ -37,13 +37,15 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 
 	log.Info("Beefy relay created")
 
-	return &Relay{
+	relayer := Relay{
 		config:           config,
 		relaychainConn:   relaychainConn,
 		ethereumConn:     ethereumConn,
 		polkadotListener: polkadotListener,
 		ethereumWriter:   ethereumWriter,
-	}, nil
+	}
+	polkadotListener.relayer = &relayer
+	return &relayer, nil
 }
 
 func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
@@ -57,7 +59,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return fmt.Errorf("create ethereum connection: %w", err)
 	}
 
-	currentState, err := relay.getCurrentState(ctx)
+	currentState, err := relay.CurrentState(ctx)
 	if err != nil {
 		return fmt.Errorf("fetch BeefyClient current state: %w", err)
 	}
@@ -78,7 +80,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (relay *Relay) getCurrentState(ctx context.Context) (BeefyState, error) {
+func (relay *Relay) CurrentState(ctx context.Context) (BeefyState, error) {
 	var currentState BeefyState
 	address := common.HexToAddress(relay.config.Sink.Contracts.BeefyClient)
 	beefyClient, err := contracts.NewBeefyClient(address, relay.ethereumConn.Client())

@@ -128,10 +128,6 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 				sendError(fmt.Errorf("fetch block: %w", err))
 				return
 			}
-			log.WithFields(log.Fields{
-				"blockNumber": result.BlockNumber,
-				"depth":       result.Depth,
-			}).Info("fetch block")
 
 			var commitment *types.SignedCommitment
 			for j := range block.Justifications {
