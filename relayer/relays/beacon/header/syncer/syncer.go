@@ -426,6 +426,19 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		return scale.Update{}, fmt.Errorf("parse signature slot as int: %w", err)
 	}
 
+	signatureBlock, err := s.Client.GetBeaconBlockBySlot(signatureSlot)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("get signature block: %w", err)
+	}
+
+	superMajority, err := s.protocol.SyncCommitteeSuperMajority(signatureBlock.Data.Message.Body.SyncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("compute sync committee supermajority: %d err: %w", signatureSlot, err)
+	}
+	if !superMajority {
+		return scale.Update{}, fmt.Errorf("sync committee at slot not supermajority: %d", signatureSlot)
+	}
+
 	updatePayload := scale.UpdatePayload{
 		AttestedHeader: attestedHeader,
 		SyncAggregate:  syncAggregate,
