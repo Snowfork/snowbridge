@@ -351,7 +351,7 @@ export const toEthereumHistory = async (
             info: {
                 when: new Date(transfer.block_timestamp * 1000),
                 tokenAddress: transfer.data.tokenAddress,
-                beneficiaryAddress: transfer.data.beneficiary,
+                beneficiaryAddress: transfer.data.beneficiaryAddress,
                 amount: transfer.data.amount,
             },
             submitted: {
@@ -749,9 +749,9 @@ const subFetchBridgeTransfers = async (
                 block_hash: transfer.block_hash,
                 account_id: transfer.account_id,
                 relayChain: { block_num: relayBlock.block_num, block_hash: relayBlock.hash },
-                tokenAddress: tokenAddress,
-                beneficiary: beneficiary,
-                amount: amount,
+                tokenAddress,
+                beneficiaryAddress,
+                amount,
             }
         }
     )
