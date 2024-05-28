@@ -280,8 +280,6 @@ func (r *Relay) findEvents(
 	blockNumber := latestFinalizedBlockNumber
 
 	for {
-		log.Info("loop")
-
 		var begin uint64
 		if blockNumber < BlocksPerQuery {
 			begin = 0
@@ -374,6 +372,12 @@ func (r *Relay) makeInboundMessage(
 		}).WithError(err).Error("Failed to generate message from ethereum event")
 		return nil, err
 	}
+
+	log.WithFields(logrus.Fields{
+		"blockHash":   event.Raw.BlockHash.Hex(),
+		"blockNumber": event.Raw.BlockNumber,
+		"txHash":      event.Raw.TxHash.Hex(),
+	}).Info("found message")
 
 	return msg, nil
 }

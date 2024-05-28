@@ -71,7 +71,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 
 	log.Info("starting to sync finalized headers")
 
-	ticker := time.NewTicker(time.Minute * 1)
+	ticker := time.NewTicker(time.Minute * 5)
 
 	eg.Go(func() error {
 		for {
@@ -174,7 +174,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 
 	log.WithFields(log.Fields{
 		"slot": finalizedHeader.Slot,
-	}).Info("syncing finalized header from Ethereum beacon client")
+	}).Info("checking finalized header")
 
 	currentSyncPeriod := h.protocol.ComputeSyncPeriodAtSlot(uint64(finalizedHeader.Slot))
 	lastSyncedPeriod := h.protocol.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)
