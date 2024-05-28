@@ -89,9 +89,13 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return err
 	}
 	if uint32(latestBeefyBlock) >= task.SignedCommitment.Commitment.BlockNumber {
+		log.WithFields(logrus.Fields{
+			"blockNumber":    task.SignedCommitment.Commitment.BlockNumber,
+			"IsHandover":     task.IsHandover,
+			"ValidatorSetID": task.SignedCommitment.Commitment.ValidatorSetID,
+		}).Warn("Ignore outdated commitment")
 		return nil
 	}
-
 	currentValidatorSet, err := wr.contract.CurrentValidatorSet(&callOpts)
 	if err != nil {
 		return err
@@ -103,6 +107,13 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	task.ValidatorsRoot = currentValidatorSet.Root
 	if task.IsHandover {
 		task.ValidatorsRoot = nextValidatorSet.Root
+		if task.nextAuthoritiesRoot == task.ValidatorsRoot {
+			log.WithFields(logrus.Fields{
+				"blockNumber":    task.SignedCommitment.Commitment.BlockNumber,
+				"ValidatorSetID": task.SignedCommitment.Commitment.ValidatorSetID,
+			}).Warn("Ignore mandatory commitment authorities not change")
+			return nil
+		}
 	}
 
 	// Initial submission

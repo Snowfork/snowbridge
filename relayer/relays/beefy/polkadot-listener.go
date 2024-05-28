@@ -118,6 +118,7 @@ func (li *PolkadotListener) scanCommitments(
 					continue
 				}
 				task.IsHandover = true
+				task.nextAuthoritiesRoot = nextAuthoritySet.Root
 				select {
 				case <-ctx.Done():
 					return ctx.Err()

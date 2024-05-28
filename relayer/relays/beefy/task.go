@@ -7,9 +7,10 @@ import (
 )
 
 type Request struct {
-	Validators       []substrate.Authority
-	ValidatorsRoot   [32]byte
-	SignedCommitment types.SignedCommitment
-	Proof            merkle.SimplifiedMMRProof
-	IsHandover       bool
+	Validators          []substrate.Authority
+	ValidatorsRoot      [32]byte
+	nextAuthoritiesRoot [32]byte
+	SignedCommitment    types.SignedCommitment
+	Proof               merkle.SimplifiedMMRProof
+	IsHandover          bool
 }
