@@ -18,6 +18,7 @@ export type TransferInfo = {
 }
 
 export type ToPolkadotTransferResult = {
+    id: string
     status: TransferStatus
     info: TransferInfo
     submitted: {
@@ -58,6 +59,7 @@ export type ToPolkadotTransferResult = {
 }
 
 export type ToEthereumTransferResult = {
+    id: string
     status: TransferStatus
     info: TransferInfo
     submitted: {
@@ -185,6 +187,7 @@ export const toPolkadotHistory = async (
     const results: ToPolkadotTransferResult[] = []
     for (const outboundMessage of ethOutboundMessages) {
         const result: ToPolkadotTransferResult = {
+            id: `${outboundMessage.transactionHash}-${outboundMessage.data.messageId}`,
             status: TransferStatus.Pending,
             info: {
                 beneficiaryAddress: outboundMessage.data.beneficiaryAddress,
@@ -341,6 +344,7 @@ export const toEthereumHistory = async (
     const results: ToEthereumTransferResult[] = []
     for (const transfer of allTransfers) {
         const result: ToEthereumTransferResult = {
+            id: `${transfer.extrinsic_hash}-${transfer.data.messageId}`,
             status: TransferStatus.Pending,
             info: {
                 tokenAddress: transfer.data.tokenAddress,
