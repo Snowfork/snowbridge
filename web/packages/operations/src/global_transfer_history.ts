@@ -53,49 +53,39 @@ const monitor = async () => {
         context.polkadot.api.bridgeHub.rpc.chain.getHeader(),
     ])
 
-    const [toEthereum, toPolkadot] = ([
-        await history.toEthereumHistory(
-            context,
-            assetHubScan,
-            bridgeHubScan,
-            relaychainScan,
-            {
-                assetHub: {
-                    fromBlock: assetHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
-                    toBlock: assetHubNowBlock.number.toNumber(),
-                },
-                bridgeHub: {
-                    fromBlock: bridgeHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
-                    toBlock: bridgeHubNowBlock.number.toNumber(),
-                },
-                ethereum: {
-                    fromBlock: ethNowBlock.number - ethereumSearchPeriodBlocks,
-                    toBlock: ethNowBlock.number,
-                },
-            }
-        ),
-        await history.toPolkadotHistory(
-            context,
-            assetHubScan,
-            bridgeHubScan,
-            {
-                assetHub: {
-                    fromBlock: assetHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
-                    toBlock: assetHubNowBlock.number.toNumber(),
-                },
-                bridgeHub: {
-                    fromBlock: bridgeHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
-                    toBlock: bridgeHubNowBlock.number.toNumber(),
-                },
-                ethereum: {
-                    fromBlock: ethNowBlock.number - ethereumSearchPeriodBlocks,
-                    toBlock: ethNowBlock.number,
-                },
-            }
-        )])
+    const [toEthereum, toPolkadot] = [
+        await history.toEthereumHistory(context, assetHubScan, bridgeHubScan, relaychainScan, {
+            assetHub: {
+                fromBlock: assetHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
+                toBlock: assetHubNowBlock.number.toNumber(),
+            },
+            bridgeHub: {
+                fromBlock: bridgeHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
+                toBlock: bridgeHubNowBlock.number.toNumber(),
+            },
+            ethereum: {
+                fromBlock: ethNowBlock.number - ethereumSearchPeriodBlocks,
+                toBlock: ethNowBlock.number,
+            },
+        }),
+        await history.toPolkadotHistory(context, assetHubScan, bridgeHubScan, {
+            assetHub: {
+                fromBlock: assetHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
+                toBlock: assetHubNowBlock.number.toNumber(),
+            },
+            bridgeHub: {
+                fromBlock: bridgeHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
+                toBlock: bridgeHubNowBlock.number.toNumber(),
+            },
+            ethereum: {
+                fromBlock: ethNowBlock.number - ethereumSearchPeriodBlocks,
+                toBlock: ethNowBlock.number,
+            },
+        }),
+    ]
 
-    const transfers = [...toEthereum, ...toPolkadot];
-    transfers.sort((a, b) => b.info.when.getTime() - a.info.when.getTime());
+    const transfers = [...toEthereum, ...toPolkadot]
+    transfers.sort((a, b) => b.info.when.getTime() - a.info.when.getTime())
     console.log(JSON.stringify(transfers, null, 2))
 
     await destroyContext(context)

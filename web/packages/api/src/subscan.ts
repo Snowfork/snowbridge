@@ -50,11 +50,11 @@ export const createApi = (baseUrl: string, apiKey: string, options = { limit: 1 
             redirect: "follow",
         }
 
-        while (rateLimit.retryAfter !== null && rateLimit.retryAfter > 0) {
+        if (rateLimit.retryAfter !== null && rateLimit.retryAfter > 0) {
             console.log("Being rate limited", rateLimit)
             await sleepMs(rateLimit.retryAfter * 1000)
         }
-        while (rateLimit.remaining === 0 && rateLimit.reset !== null && rateLimit.reset > 0) {
+        if (rateLimit.remaining === 0 && rateLimit.reset !== null && rateLimit.reset > 0) {
             console.log("Being rate limited", rateLimit)
             await sleepMs(rateLimit.reset * 1000)
         }
