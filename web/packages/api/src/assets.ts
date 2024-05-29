@@ -107,12 +107,15 @@ export const assetErc20Balance = async (
 }
 
 export type ERC20Metadata = {
-    name: string;
-    symbol: string;
-    decimals: bigint;
-};
+    name: string
+    symbol: string
+    decimals: bigint
+}
 
-export const assetErc20Metadata = async (context: Context, tokenAddress: string): Promise<ERC20Metadata> => {
+export const assetErc20Metadata = async (
+    context: Context,
+    tokenAddress: string
+): Promise<ERC20Metadata> => {
     const tokenMetadata = IERC20Metadata__factory.connect(tokenAddress, context.ethereum.api)
     const [name, symbol, decimals] = await Promise.all([
         tokenMetadata.name(),
