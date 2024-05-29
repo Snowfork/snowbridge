@@ -12,6 +12,11 @@ export type Config = {
     SECONDARY_GOVERNANCE_CHANNEL_ID: string
     RELAYERS: Relayer[]
     PARACHAINS: string[]
+    SUBSCAN_API?: {
+        RELAY_CHAIN_URL: string
+        ASSET_HUB_URL: string
+        BRIDGE_HUB_URL: string
+    }
 }
 
 export type SourceType = "substrate" | "ethereum"
@@ -21,6 +26,7 @@ export type ParachainInfo = {
     destinationFeeDOT: bigint
     has20ByteAccounts: boolean
     decimals: number
+    maxConsumers: number
     ss58Format?: number
 }
 export type TransferLocation = {
@@ -61,6 +67,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     destinationFeeDOT: 0n,
                     has20ByteAccounts: false,
                     decimals: 12,
+                    maxConsumers: 16,
                 },
                 erc20tokensReceivable: {
                     WETH: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
@@ -76,6 +83,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     destinationFeeDOT: 4_000_000_000n,
                     has20ByteAccounts: false,
                     decimals: 12,
+                    maxConsumers: 16,
                 },
                 erc20tokensReceivable: {
                     WETH: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
@@ -165,6 +173,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     destinationFeeDOT: 0n,
                     has20ByteAccounts: false,
                     decimals: 12,
+                    maxConsumers: 16,
                 },
                 erc20tokensReceivable: {
                     WETH: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
@@ -182,6 +191,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     destinationFeeDOT: 200_000_000_000n,
                     has20ByteAccounts: true,
                     decimals: 12,
+                    maxConsumers: 16,
                 },
                 erc20tokensReceivable: {
                     MUSE: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
@@ -235,6 +245,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     type: "ethereum",
                 },
             ],
+            SUBSCAN_API: {
+                RELAY_CHAIN_URL: "https://rococo.api.subscan.io",
+                ASSET_HUB_URL: "https://assethub-rococo.api.subscan.io",
+                BRIDGE_HUB_URL: "https://bridgehub-rococo.api.subscan.io",
+            },
         },
     },
     polkadot_mainnet: {
@@ -259,6 +274,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     destinationFeeDOT: 0n,
                     has20ByteAccounts: false,
                     decimals: 10,
+                    maxConsumers: 64,
                 },
                 erc20tokensReceivable: {
                     WETH: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
@@ -312,6 +328,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     type: "ethereum",
                 },
             ],
+            SUBSCAN_API: {
+                RELAY_CHAIN_URL: "https://polkadot.api.subscan.io",
+                ASSET_HUB_URL: "https://assethub-polkadot.api.subscan.io",
+                BRIDGE_HUB_URL: "https://bridgehub-polkadot.api.subscan.io",
+            },
         },
     },
 }

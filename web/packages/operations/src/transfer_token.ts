@@ -64,7 +64,7 @@ const monitor = async () => {
             amount,
             BigInt(0)
         )
-        console.log("Plan:", plan)
+        console.log("Plan:", plan, plan.failure?.errors)
         let result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
         console.log("Execute:", result)
         while (true) {
@@ -87,7 +87,7 @@ const monitor = async () => {
             WETH_CONTRACT,
             amount
         )
-        console.log("Plan:", plan)
+        console.log("Plan:", plan, plan.failure?.errors)
         const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
         console.log("Execute:", result)
         while (true) {
@@ -111,7 +111,7 @@ const monitor = async () => {
             amount,
             BigInt(4_000_000_000)
         )
-        console.log("Plan:", plan)
+        console.log("Plan:", plan, plan.failure?.errors)
         let result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
         console.log("Execute:", result)
         while (true) {
@@ -134,7 +134,7 @@ const monitor = async () => {
             WETH_CONTRACT,
             amount
         )
-        console.log("Plan:", plan)
+        console.log("Plan:", plan, plan.failure?.errors)
         const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
         console.log("Execute:", result)
         while (true) {
