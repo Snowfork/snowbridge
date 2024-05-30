@@ -10,7 +10,7 @@ This promotes decentralisation in the following ways:
 
 ## Cross-chain Governance
 
-Our bridge has contracts on the Ethereum, and these contracts need to be able to evolve along with the parachain side. Cross-chain governance will control both configuration and code upgrades on the Ethereum side.
+Our bridge has contracts on the Ethereum side, and these contracts need to be able to evolve along with the parachain side. Cross-chain governance will control both configuration and code upgrades on the Ethereum side.
 
 As a prime example, Polkadot and BEEFY consensus algorithms will change, and so we need to make sure the Ethereum side of the bridge remains compatible. Otherwise locked up collateral will not be redeemable.
 
