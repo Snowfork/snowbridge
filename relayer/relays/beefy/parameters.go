@@ -164,22 +164,19 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 	var merkleProofItems [][32]byte
 
 	proofOrder := new(big.Int)
-
-	if r.IsMandatory {
-		inputLeaf = contracts.BeefyClientMMRLeaf{
-			Version:              uint8(r.Proof.Leaf.Version),
-			ParentNumber:         uint32(r.Proof.Leaf.ParentNumberAndHash.ParentNumber),
-			ParentHash:           r.Proof.Leaf.ParentNumberAndHash.Hash,
-			ParachainHeadsRoot:   r.Proof.Leaf.ParachainHeads,
-			NextAuthoritySetID:   uint64(r.Proof.Leaf.BeefyNextAuthoritySet.ID),
-			NextAuthoritySetLen:  uint32(r.Proof.Leaf.BeefyNextAuthoritySet.Len),
-			NextAuthoritySetRoot: r.Proof.Leaf.BeefyNextAuthoritySet.Root,
-		}
-		for _, mmrProofItem := range r.Proof.MerkleProofItems {
-			merkleProofItems = append(merkleProofItems, mmrProofItem)
-		}
-		proofOrder = proofOrder.SetUint64(r.Proof.MerkleProofOrder)
+	inputLeaf = contracts.BeefyClientMMRLeaf{
+		Version:              uint8(r.Proof.Leaf.Version),
+		ParentNumber:         uint32(r.Proof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           r.Proof.Leaf.ParentNumberAndHash.Hash,
+		ParachainHeadsRoot:   r.Proof.Leaf.ParachainHeads,
+		NextAuthoritySetID:   uint64(r.Proof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(r.Proof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: r.Proof.Leaf.BeefyNextAuthoritySet.Root,
 	}
+	for _, mmrProofItem := range r.Proof.MerkleProofItems {
+		merkleProofItems = append(merkleProofItems, mmrProofItem)
+	}
+	proofOrder = proofOrder.SetUint64(r.Proof.MerkleProofOrder)
 
 	msg := FinalRequestParams{
 		Commitment:     commitment,

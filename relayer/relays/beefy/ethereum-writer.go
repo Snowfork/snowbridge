@@ -68,17 +68,22 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 					return nil
 				}
 
-				filterMode := FilterMode{
-					MandatoryCommitmentsOnly: true,
+				state, err := wr.queryBeefyClientState(ctx)
+				if err != nil {
+					return fmt.Errorf("query beefy client state: %w", err)
 				}
 
-				accept, err := wr.filter(ctx, &task, filterMode)
-				if err != nil {
-					return fmt.Errorf("filter commitment: %w", err)
+				if task.SignedCommitment.Commitment.BlockNumber < uint32(state.LatestBeefyBlock) {
+					log.WithFields(logrus.Fields{
+						"beefyBlockNumber": task.SignedCommitment.Commitment.BlockNumber,
+						"latestBeefyBlock": state.LatestBeefyBlock,
+					}).Info("Commitment already synced")
+					continue
 				}
-				if !accept {
-					return nil
-				}
+
+				// Mandatory commitments are always signed by the next validator set recorded in
+				// the beefy light client
+				task.ValidatorsRoot = state.NextValidatorSetRoot
 
 				err = wr.submit(ctx, task)
 				if err != nil {
@@ -133,46 +138,6 @@ func (wr *EthereumWriter) queryBeefyClientState(ctx context.Context) (*BeefyClie
 	}, nil
 }
 
-// filter out commitments that we don't want to commit
-func (wr *EthereumWriter) filter(ctx context.Context, task *Request, filterMode FilterMode) (bool, error) {
-
-	state, err := wr.queryBeefyClientState(ctx)
-	if err != nil {
-		return false, fmt.Errorf("query beefy client state: %w", err)
-	}
-
-	commitmentBlockNumber := task.SignedCommitment.Commitment.BlockNumber
-	commitmentValidatorSetID := task.SignedCommitment.Commitment.ValidatorSetID
-
-	// Filter out commitments which are stale, regardless of filter mode
-	if commitmentBlockNumber < uint32(state.LatestBeefyBlock) {
-		return false, nil
-	}
-
-	// Mark commitment as mandatory if its signed by the next authority set
-	if commitmentValidatorSetID == state.NextValidatorSetID {
-		task.IsMandatory = true
-		task.ValidatorsRoot = state.NextValidatorSetRoot
-	} else {
-		task.ValidatorsRoot = state.CurrentValidatorSetRoot
-	}
-
-	switch {
-	// Only include mandatory commitments
-	case filterMode.MandatoryCommitmentsOnly:
-		if !task.IsMandatory {
-			return false, nil
-		}
-	// Only include mandatory commitments and non-mandatory commitments that are not too old
-	case filterMode.All:
-		if !task.IsMandatory && task.Depth > filterMode.DiscardDepth {
-			return false, nil
-		}
-	}
-
-	return true, nil
-}
-
 func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	// Initial submission
 	tx, initialBitfield, err := wr.doSubmitInitial(ctx, &task)
@@ -200,7 +165,6 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		wr.conn.MakeTxOpts(ctx),
 		*commitmentHash,
 	)
-	log.Info("")
 
 	_, err = wr.conn.WatchTransaction(ctx, tx, 1)
 	if err != nil {

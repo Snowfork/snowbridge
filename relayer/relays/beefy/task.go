@@ -21,12 +21,4 @@ type Request struct {
 	ValidatorsRoot   [32]byte
 	SignedCommitment types.SignedCommitment
 	Proof            merkle.SimplifiedMMRProof
-	// Current authority set for the parent BEEFY block
-	CurrentAuthoritySet BeefyAuthoritySet
-	// Next authority set for the parent BEEFY block
-	NextAuthoritySet BeefyAuthoritySet
-	// Depth of commitment, relative to the chain head
-	Depth uint64
-	// Whether this commitment is mandatory
-	IsMandatory bool
 }

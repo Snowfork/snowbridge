@@ -60,10 +60,11 @@ func (li *PolkadotListener) scanCommitments(
 	currentValidatorSet uint64,
 	requests chan<- Request,
 ) error {
-	in, err := ScanProvableCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentBeefyBlock+1)
+	in, err := ScanCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentBeefyBlock+1)
 	if err != nil {
 		return fmt.Errorf("scan provable commitments: %w", err)
 	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -78,30 +79,17 @@ func (li *PolkadotListener) scanCommitments(
 
 			committedBeefyBlock := uint64(result.SignedCommitment.Commitment.BlockNumber)
 			validatorSetID := result.SignedCommitment.Commitment.ValidatorSetID
-			nextValidatorSetID := uint64(result.MMRProof.Leaf.BeefyNextAuthoritySet.ID)
+			nextValidatorSetID := uint64(result.Proof.Leaf.BeefyNextAuthoritySet.ID)
 
 			validators, err := li.queryBeefyAuthorities(result.BlockHash)
 			if err != nil {
 				return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
 			}
 
-			currentAuthoritySet, err := li.queryBeefyAuthoritySet(result.BlockHash)
-			if err != nil {
-				return fmt.Errorf("fetch beefy authority set at block %v: %w", result.BlockHash, err)
-			}
-
-			nextAuthoritySet, err := li.queryBeefyNextAuthoritySet(result.BlockHash)
-			if err != nil {
-				return fmt.Errorf("fetch beefy next authority set at block %v: %w", result.BlockHash, err)
-			}
-
 			task := Request{
-				Validators:          validators,
-				SignedCommitment:    result.SignedCommitment,
-				Proof:               result.MMRProof,
-				CurrentAuthoritySet: currentAuthoritySet,
-				NextAuthoritySet:    nextAuthoritySet,
-				Depth:               result.Depth,
+				Validators:       validators,
+				SignedCommitment: result.SignedCommitment,
+				Proof:            result.Proof,
 			}
 
 			log.WithFields(log.Fields{

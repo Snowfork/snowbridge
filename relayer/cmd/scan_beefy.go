@@ -55,10 +55,9 @@ func ScanBeefyFn(cmd *cobra.Command, _ []string) error {
 	beefyBlock, _ := cmd.Flags().GetUint64("beefy-block")
 	validatorSetID, _ := cmd.Flags().GetUint64("validator-set-id")
 	logrus.WithFields(logrus.Fields{
-		"polkadot-url":       polkadotUrl,
-		"fast-forward-depth": fastForwardDepth,
-		"beefy-block":        beefyBlock,
-		"validator-set-id":   validatorSetID,
+		"polkadot-url":     polkadotUrl,
+		"beefy-block":      beefyBlock,
+		"validator-set-id": validatorSetID,
 	}).Info("Connected to relaychain.")
 
 	commitments, err := polkadotListener.Start(ctx, eg, beefyBlock, validatorSetID)
