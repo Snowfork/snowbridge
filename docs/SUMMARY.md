@@ -38,3 +38,4 @@
 
 * [Contributing to Snowbridge](runbooks/updating-snowbridge-pallets-bridgehub-and-assethub-runtimes.md)
 * [Governance Updates](runbooks/governance-updates.md)
+* [Test Runtime Upgrades](runbooks/test-runtime-upgrades.md)
