@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
@@ -76,8 +75,6 @@ func scanBlocks(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateA
 	}
 	current := startBlock
 	for {
-		log.Info("foo")
-
 		finalizedBlockNumber := uint64(finalizedHeader.Number)
 		if current > finalizedBlockNumber {
 			select {
@@ -111,7 +108,6 @@ func scanBlocks(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateA
 		}
 
 		if sessionIndex > currentSessionIndex {
-			log.Info("BOO")
 			currentSessionIndex = sessionIndex
 		} else {
 			current++
