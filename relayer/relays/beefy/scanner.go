@@ -169,59 +169,16 @@ func scanCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.Subst
 				return
 			}
 
-			block, err := api.RPC.Chain.GetBlock(result.BlockHash)
+			commitment, proof, err := fetchCommitmentAndProof(ctx, meta, api, result.BlockHash)
 			if err != nil {
-				emitError(fmt.Errorf("fetch block: %w", err))
-				return
-			}
-
-			var commitment *types.SignedCommitment
-			for j := range block.Justifications {
-				sc := types.OptionalSignedCommitment{}
-				// Filter justification by EngineID
-				// https://github.com/paritytech/substrate/blob/55c64bcc2af5a6e5fc3eb245e638379ebe18a58d/primitives/beefy/src/lib.rs#L114
-				if block.Justifications[j].EngineID() == "BEEF" {
-					// Decode as SignedCommitment
-					// https://github.com/paritytech/substrate/blob/bcee526a9b73d2df9d5dea0f1a17677618d70b8e/primitives/beefy/src/commitment.rs#L89
-					err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
-					if err != nil {
-						emitError(fmt.Errorf("decode signed beefy commitment: %w", err))
-						return
-					}
-					ok, value := sc.Unwrap()
-					if ok {
-						commitment = &value
-					}
-				}
-			}
-
-			if commitment == nil {
-				emitError(fmt.Errorf("expected mandatory beefy justification in block"))
-				return
-			}
-
-			blockNumber := commitment.Commitment.BlockNumber
-			blockHash, err := api.RPC.Chain.GetBlockHash(uint64(blockNumber))
-			if err != nil {
-				emitError(fmt.Errorf("fetch block hash: %w", err))
-				return
-
-			}
-			proofIsValid, proof, err := makeProof(meta, api, blockNumber, blockHash)
-			if err != nil {
-				emitError(fmt.Errorf("proof generation for block %v at hash %v: %w", blockNumber, blockHash.Hex(), err))
-				return
-			}
-
-			if !proofIsValid {
-				emitError(fmt.Errorf("Leaf for parent block %v at hash %v is unprovable", blockNumber, blockHash.Hex()))
+				emitError(fmt.Errorf("fetch commitment and proof: %w", err))
 				return
 			}
 
 			select {
 			case <-ctx.Done():
 				return
-			case out <- ScanCommitmentsResult{BlockHash: blockHash, SignedCommitment: *commitment, Proof: proof}:
+			case out <- ScanCommitmentsResult{BlockHash: result.BlockHash, SignedCommitment: *commitment, Proof: *proof}:
 			}
 		}
 	}
@@ -289,4 +246,42 @@ func verifyProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, proof merkle.Sim
 	}
 
 	return actualRoot == expectedRoot, nil
+}
+
+func fetchCommitmentAndProof(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, beefyBlockHash types.Hash) (*types.SignedCommitment, *merkle.SimplifiedMMRProof, error) {
+	beefyHeader, err := api.RPC.Chain.GetHeader(beefyBlockHash)
+	if err != nil {
+		return nil, nil, fmt.Errorf("fetch header: %w", err)
+	}
+	beefyBlock, err := api.RPC.Chain.GetBlock(beefyBlockHash)
+	if err != nil {
+		return nil, nil, fmt.Errorf("fetch block: %w", err)
+	}
+
+	var commitment *types.SignedCommitment
+	for j := range beefyBlock.Justifications {
+		sc := types.OptionalSignedCommitment{}
+		if beefyBlock.Justifications[j].EngineID() == "BEEF" {
+			err := types.DecodeFromBytes(beefyBlock.Justifications[j].Payload(), &sc)
+			if err != nil {
+				return nil, nil, fmt.Errorf("decode BEEFY signed commitment: %w", err)
+			}
+			ok, value := sc.Unwrap()
+			if ok {
+				commitment = &value
+			}
+		}
+	}
+	if commitment == nil {
+		return nil, nil, fmt.Errorf("beefy block without a valid commitment")
+	}
+
+	proofIsValid, proof, err := makeProof(meta, api, uint32(beefyHeader.Number), beefyBlockHash)
+	if err != nil {
+		return nil, nil, fmt.Errorf("proof generation for block %v at hash %v: %w", beefyHeader.Number, beefyBlockHash.Hex(), err)
+	}
+	if !proofIsValid {
+		return nil, nil, fmt.Errorf("Proof for leaf is invalid for block %v at hash %v: %w", beefyHeader.Number, beefyBlockHash.Hex(), err)
+	}
+	return commitment, &proof, nil
 }

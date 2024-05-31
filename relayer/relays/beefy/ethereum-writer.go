@@ -40,11 +40,6 @@ func NewEthereumWriter(
 }
 
 func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, requests <-chan Request) error {
-	err := wr.initialize(ctx)
-	if err != nil {
-		return fmt.Errorf("initialize EthereumWriter: %w", err)
-	}
-
 	// launch task processor
 	eg.Go(func() error {
 		for {

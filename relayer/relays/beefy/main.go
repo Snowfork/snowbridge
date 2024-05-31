@@ -6,11 +6,8 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
-	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 
 	"github.com/sirupsen/logrus"
@@ -57,51 +54,31 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return fmt.Errorf("create ethereum connection: %w", err)
 	}
+	err = relay.ethereumWriter.initialize(ctx)
+	if err != nil {
+		return fmt.Errorf("initialize ethereum writer: %w", err)
+	}
 
-	initialBeefyBlock, initialValidatorSetID, err := relay.getInitialState(ctx)
+	initialState, err := relay.ethereumWriter.queryBeefyClientState(ctx)
 	if err != nil {
 		return fmt.Errorf("fetch BeefyClient current state: %w", err)
 	}
 	log.WithFields(log.Fields{
-		"beefyBlock":     initialBeefyBlock,
-		"validatorSetID": initialValidatorSetID,
+		"beefyBlock":     initialState.LatestBeefyBlock,
+		"validatorSetID": initialState.CurrentValidatorSetID,
 	}).Info("Retrieved current BeefyClient state")
 
-	requests, err := relay.polkadotListener.Start(ctx, eg, initialBeefyBlock, initialValidatorSetID)
+	requests, err := relay.polkadotListener.Start(ctx, eg, initialState.LatestBeefyBlock, initialState.CurrentValidatorSetID)
 	if err != nil {
 		return fmt.Errorf("initialize polkadot listener: %w", err)
 	}
 
 	err = relay.ethereumWriter.Start(ctx, eg, requests)
 	if err != nil {
-		return fmt.Errorf("initialize ethereum writer: %w", err)
+		return fmt.Errorf("start ethereum writer: %w", err)
 	}
 
 	return nil
-}
-
-func (relay *Relay) getInitialState(ctx context.Context) (uint64, uint64, error) {
-	address := common.HexToAddress(relay.config.Sink.Contracts.BeefyClient)
-	beefyClient, err := contracts.NewBeefyClient(address, relay.ethereumConn.Client())
-	if err != nil {
-		return 0, 0, err
-	}
-
-	callOpts := bind.CallOpts{
-		Context: ctx,
-	}
-
-	latestBeefyBlock, err := beefyClient.LatestBeefyBlock(&callOpts)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	currentValidatorSet, err := beefyClient.CurrentValidatorSet(&callOpts)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	return latestBeefyBlock, currentValidatorSet.Id.Uint64(), nil
 }
 
 func (relay *Relay) SyncUpdate(ctx context.Context, relayBlockNumber uint64) error {
@@ -136,7 +113,7 @@ func (relay *Relay) SyncUpdate(ctx context.Context, relayBlockNumber uint64) err
 	}
 
 	// generate beefy update for that specific relay block
-	task, err := relay.polkadotListener.generateBeefyUpdate(relayBlockNumber)
+	task, err := relay.polkadotListener.generateBeefyUpdate(ctx, relayBlockNumber)
 	if err != nil {
 		return fmt.Errorf("fail to generate next beefy request: %w", err)
 	}

@@ -149,7 +149,7 @@ func (li *PolkadotListener) queryBeefyNextAuthoritySet(blockHash types.Hash) (Be
 	return nextAuthoritySet, nil
 }
 
-func (li *PolkadotListener) generateBeefyUpdate(relayBlockNumber uint64) (Request, error) {
+func (li *PolkadotListener) generateBeefyUpdate(ctx context.Context, relayBlockNumber uint64) (Request, error) {
 	api := li.conn.API()
 	meta := li.conn.Metadata()
 	var request Request
@@ -175,35 +175,9 @@ func (li *PolkadotListener) generateBeefyUpdate(relayBlockNumber uint64) (Reques
 		break
 	}
 
-	nextFinalizedBeefyBlock, err := api.RPC.Chain.GetBlock(latestBeefyBlockHash)
+	commitment, proof, err := fetchCommitmentAndProof(ctx, meta, api, latestBeefyBlockHash)
 	if err != nil {
-		return request, fmt.Errorf("fetch block: %w", err)
-	}
-
-	var commitment *types.SignedCommitment
-	for j := range nextFinalizedBeefyBlock.Justifications {
-		sc := types.OptionalSignedCommitment{}
-		if nextFinalizedBeefyBlock.Justifications[j].EngineID() == "BEEF" {
-			err := types.DecodeFromBytes(nextFinalizedBeefyBlock.Justifications[j].Payload(), &sc)
-			if err != nil {
-				return request, fmt.Errorf("decode BEEFY signed commitment: %w", err)
-			}
-			ok, value := sc.Unwrap()
-			if ok {
-				commitment = &value
-			}
-		}
-	}
-	if commitment == nil {
-		return request, fmt.Errorf("beefy block without a valid commitment")
-	}
-
-	proofIsValid, proof, err := makeProof(meta, api, uint32(latestBeefyBlockNumber), latestBeefyBlockHash)
-	if err != nil {
-		return request, fmt.Errorf("proof generation for block %v at hash %v: %w", latestBeefyBlockNumber, latestBeefyBlockHash.Hex(), err)
-	}
-	if !proofIsValid {
-		return request, fmt.Errorf("Proof for leaf is invalid for block %v at hash %v: %w", latestBeefyBlockNumber, latestBeefyBlockHash.Hex(), err)
+		return request, fmt.Errorf("fetch commitment and proof: %w", err)
 	}
 
 	committedBeefyBlockNumber := uint64(commitment.Commitment.BlockNumber)
@@ -216,7 +190,7 @@ func (li *PolkadotListener) generateBeefyUpdate(relayBlockNumber uint64) (Reques
 	request = Request{
 		Validators:       validators,
 		SignedCommitment: *commitment,
-		Proof:            proof,
+		Proof:            *proof,
 	}
 
 	return request, nil
