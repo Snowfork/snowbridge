@@ -3,6 +3,7 @@ package beefy
 import (
 	"context"
 	"fmt"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -13,9 +14,8 @@ import (
 )
 
 type PolkadotListener struct {
-	config              *SourceConfig
-	conn                *relaychain.Connection
-	beefyAuthoritiesKey types.StorageKey
+	config *SourceConfig
+	conn   *relaychain.Connection
 }
 
 func NewPolkadotListener(
@@ -34,12 +34,6 @@ func (li *PolkadotListener) Start(
 	currentBeefyBlock uint64,
 	currentValidatorSetID uint64,
 ) (<-chan Request, error) {
-	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "Beefy", "Authorities", nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("create storage key: %w", err)
-	}
-	li.beefyAuthoritiesKey = storageKey
-
 	requests := make(chan Request, 1)
 
 	eg.Go(func() error {
@@ -111,8 +105,12 @@ func (li *PolkadotListener) scanCommitments(
 }
 
 func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]substrate.Authority, error) {
+	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "Beefy", "Authorities", nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create storage key: %w", err)
+	}
 	var authorities []substrate.Authority
-	ok, err := li.conn.API().RPC.State.GetStorage(li.beefyAuthoritiesKey, &authorities, blockHash)
+	ok, err := li.conn.API().RPC.State.GetStorage(storageKey, &authorities, blockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -149,4 +147,77 @@ func (li *PolkadotListener) queryBeefyNextAuthoritySet(blockHash types.Hash) (Be
 	}
 
 	return nextAuthoritySet, nil
+}
+
+func (li *PolkadotListener) generateBeefyUpdateRequest(relayBlockNumber uint64) (Request, error) {
+	api := li.conn.API()
+	meta := li.conn.Metadata()
+	var request Request
+	var latestBeefyBlockNumber uint64
+	var latestBeefyBlockHash types.Hash
+	for {
+		finalizedBeefyBlockHash, err := api.RPC.Beefy.GetFinalizedHead()
+		if err != nil {
+			return request, fmt.Errorf("fetch beefy finalized head: %w", err)
+		}
+
+		finalizedBeefyBlockHeader, err := api.RPC.Chain.GetHeader(finalizedBeefyBlockHash)
+		if err != nil {
+			return request, fmt.Errorf("fetch block header: %w", err)
+		}
+
+		latestBeefyBlockNumber = uint64(finalizedBeefyBlockHeader.Number)
+		if latestBeefyBlockNumber < relayBlockNumber {
+			time.Sleep(6 * time.Second)
+			continue
+		}
+		latestBeefyBlockHash = finalizedBeefyBlockHash
+		break
+	}
+
+	nextFinalizedBeefyBlock, err := api.RPC.Chain.GetBlock(latestBeefyBlockHash)
+	if err != nil {
+		return request, fmt.Errorf("fetch block: %w", err)
+	}
+
+	var commitment *types.SignedCommitment
+	for j := range nextFinalizedBeefyBlock.Justifications {
+		sc := types.OptionalSignedCommitment{}
+		if nextFinalizedBeefyBlock.Justifications[j].EngineID() == "BEEF" {
+			err := types.DecodeFromBytes(nextFinalizedBeefyBlock.Justifications[j].Payload(), &sc)
+			if err != nil {
+				return request, fmt.Errorf("decode BEEFY signed commitment: %w", err)
+			}
+			ok, value := sc.Unwrap()
+			if ok {
+				commitment = &value
+			}
+		}
+	}
+	if commitment == nil {
+		return request, fmt.Errorf("beefy block without a valid commitment")
+	}
+
+	proofIsValid, proof, err := makeProof(meta, api, uint32(latestBeefyBlockNumber), latestBeefyBlockHash)
+	if err != nil {
+		return request, fmt.Errorf("proof generation for block %v at hash %v: %w", latestBeefyBlockNumber, latestBeefyBlockHash.Hex(), err)
+	}
+	if !proofIsValid {
+		return request, fmt.Errorf("Proof for leaf is invalid for block %v at hash %v: %w", latestBeefyBlockNumber, latestBeefyBlockHash.Hex(), err)
+	}
+
+	committedBeefyBlockNumber := uint64(commitment.Commitment.BlockNumber)
+	committedBeefyBlockHash, err := api.RPC.Chain.GetBlockHash(uint64(committedBeefyBlockNumber))
+
+	validators, err := li.queryBeefyAuthorities(committedBeefyBlockHash)
+	if err != nil {
+		return request, fmt.Errorf("fetch beefy authorities at block %v: %w", committedBeefyBlockHash, err)
+	}
+	request = Request{
+		Validators:       validators,
+		SignedCommitment: *commitment,
+		Proof:            proof,
+	}
+
+	return request, nil
 }

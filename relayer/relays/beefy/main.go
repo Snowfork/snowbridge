@@ -102,3 +102,47 @@ func (relay *Relay) getInitialState(ctx context.Context) (uint64, uint64, error)
 
 	return latestBeefyBlock, currentValidatorSet.Id.Uint64(), nil
 }
+
+func (relay *Relay) SyncUpdate(ctx context.Context, relayBlockNumber uint64) error {
+	err := relay.relaychainConn.Connect(ctx)
+	if err != nil {
+		return fmt.Errorf("create relaychain connection: %w", err)
+	}
+
+	err = relay.ethereumConn.Connect(ctx)
+	if err != nil {
+		return fmt.Errorf("create ethereum connection: %w", err)
+	}
+	beefyBlock, validatorSetID, err := relay.getInitialState(ctx)
+	if err != nil {
+		return fmt.Errorf("fetch BeefyClient current state: %w", err)
+	}
+	if relayBlockNumber <= beefyBlock {
+		log.WithFields(log.Fields{
+			"validatorSetID": validatorSetID,
+			"beefyBlock":     beefyBlock,
+			"relayBlock":     relayBlockNumber,
+		}).Info("Already synced so just ignore")
+		return nil
+	}
+	request, err := relay.polkadotListener.generateBeefyUpdateRequest(relayBlockNumber)
+	if err != nil {
+		return fmt.Errorf("fail to generate next beefy request: %w", err)
+	}
+	err = relay.ethereumWriter.initialize(ctx)
+	if err != nil {
+		return fmt.Errorf("initialize EthereumWriter: %w", err)
+	}
+	err = relay.ethereumWriter.submit(ctx, request)
+	if err != nil {
+		return fmt.Errorf("fail to submit beefy update: %w", err)
+	}
+	updatedBeefyBlock, _, _ := relay.getInitialState(ctx)
+	log.WithFields(log.Fields{
+		"initialValidatorSetID": validatorSetID,
+		"initialBeefyBlock":     beefyBlock,
+		"blockNumber":           relayBlockNumber,
+		"updatedBeefyBlock":     updatedBeefyBlock,
+	}).Info("Sync beefy update success")
+	return nil
+}
