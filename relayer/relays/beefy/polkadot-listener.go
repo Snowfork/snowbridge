@@ -149,7 +149,7 @@ func (li *PolkadotListener) queryBeefyNextAuthoritySet(blockHash types.Hash) (Be
 	return nextAuthoritySet, nil
 }
 
-func (li *PolkadotListener) generateBeefyUpdateRequest(relayBlockNumber uint64) (Request, error) {
+func (li *PolkadotListener) generateBeefyUpdate(relayBlockNumber uint64) (Request, error) {
 	api := li.conn.API()
 	meta := li.conn.Metadata()
 	var request Request

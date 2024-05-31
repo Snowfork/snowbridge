@@ -105,59 +105,70 @@ func (relay *Relay) getInitialState(ctx context.Context) (uint64, uint64, error)
 }
 
 func (relay *Relay) SyncUpdate(ctx context.Context, relayBlockNumber uint64) error {
+	// Initialize relaychainConn
 	err := relay.relaychainConn.Connect(ctx)
 	if err != nil {
 		return fmt.Errorf("create relaychain connection: %w", err)
 	}
 
+	// Initialize ethereumConn
 	err = relay.ethereumConn.Connect(ctx)
 	if err != nil {
 		return fmt.Errorf("create ethereum connection: %w", err)
-	}
-	beefyBlock, validatorSetID, err := relay.getInitialState(ctx)
-	if err != nil {
-		return fmt.Errorf("fetch BeefyClient current state: %w", err)
-	}
-	if relayBlockNumber <= beefyBlock {
-		log.WithFields(log.Fields{
-			"validatorSetID": validatorSetID,
-			"beefyBlock":     beefyBlock,
-			"relayBlock":     relayBlockNumber,
-		}).Info("Already synced so just ignore")
-		return nil
-	}
-	task, err := relay.polkadotListener.generateBeefyUpdateRequest(relayBlockNumber)
-	if err != nil {
-		return fmt.Errorf("fail to generate next beefy request: %w", err)
 	}
 	err = relay.ethereumWriter.initialize(ctx)
 	if err != nil {
 		return fmt.Errorf("initialize EthereumWriter: %w", err)
 	}
+
 	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
 	if err != nil {
 		return fmt.Errorf("query beefy client state: %w", err)
 	}
+	// Ignore relay block already synced
+	if relayBlockNumber <= state.LatestBeefyBlock {
+		log.WithFields(log.Fields{
+			"validatorSetID": state.CurrentValidatorSetID,
+			"beefyBlock":     state.LatestBeefyBlock,
+			"relayBlock":     relayBlockNumber,
+		}).Info("Relay block already synced, just ignore")
+		return nil
+	}
+
+	// generate beefy update for that specific relay block
+	task, err := relay.polkadotListener.generateBeefyUpdate(relayBlockNumber)
+	if err != nil {
+		return fmt.Errorf("fail to generate next beefy request: %w", err)
+	}
+
+	// Ignore commitment already synced
 	if task.SignedCommitment.Commitment.BlockNumber <= uint32(state.LatestBeefyBlock) {
 		log.WithFields(logrus.Fields{
 			"beefyBlockNumber": task.SignedCommitment.Commitment.BlockNumber,
 			"beefyBlockSynced": state.LatestBeefyBlock,
-		}).Info("Commitment already synced")
+		}).Info("New commitment already synced, just ignore")
 		return nil
 	}
-	// Mandatory commitments are always signed by the next validator set recorded in
-	// the beefy light client
-	task.ValidatorsRoot = state.NextValidatorSetRoot
+
+	// Submit the task
+	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
+		task.ValidatorsRoot = state.CurrentValidatorSetRoot
+	} else {
+		task.ValidatorsRoot = state.NextValidatorSetRoot
+	}
 	err = relay.ethereumWriter.submit(ctx, task)
 	if err != nil {
 		return fmt.Errorf("fail to submit beefy update: %w", err)
 	}
-	updatedBeefyBlock, _, _ := relay.getInitialState(ctx)
+
+	updatedState, err := relay.ethereumWriter.queryBeefyClientState(ctx)
+	if err != nil {
+		return fmt.Errorf("query beefy client state: %w", err)
+	}
 	log.WithFields(log.Fields{
-		"initialValidatorSetID": validatorSetID,
-		"initialBeefyBlock":     beefyBlock,
-		"blockNumber":           relayBlockNumber,
-		"updatedBeefyBlock":     updatedBeefyBlock,
+		"latestBeefyBlock":      updatedState.LatestBeefyBlock,
+		"currentValidatorSetID": updatedState.CurrentValidatorSetID,
+		"nextValidatorSetID":    updatedState.NextValidatorSetID,
 	}).Info("Sync beefy update success")
 	return nil
 }
