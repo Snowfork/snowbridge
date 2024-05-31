@@ -16,10 +16,10 @@ ln -sf ../polkadot-sdk polkadot-sdk
 echo "Checkout lodestar Snowfork fork"
 pushd ..
   if [ ! -d "lodestar" ]; then
-    git clone https://github.com/Snowfork/lodestar
+    git clone https://github.com/ChainSafe/lodestar
   fi
   pushd lodestar
-    git checkout snowbridge
+    git checkout $LODESTAR_VERSION
   popd
 popd
 ln -sf ../lodestar lodestar
