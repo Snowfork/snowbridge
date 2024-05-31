@@ -13,6 +13,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -125,7 +126,7 @@ func (relay *Relay) SyncUpdate(ctx context.Context, relayBlockNumber uint64) err
 		}).Info("Already synced so just ignore")
 		return nil
 	}
-	request, err := relay.polkadotListener.generateBeefyUpdateRequest(relayBlockNumber)
+	task, err := relay.polkadotListener.generateBeefyUpdateRequest(relayBlockNumber)
 	if err != nil {
 		return fmt.Errorf("fail to generate next beefy request: %w", err)
 	}
@@ -133,7 +134,21 @@ func (relay *Relay) SyncUpdate(ctx context.Context, relayBlockNumber uint64) err
 	if err != nil {
 		return fmt.Errorf("initialize EthereumWriter: %w", err)
 	}
-	err = relay.ethereumWriter.submit(ctx, request)
+	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
+	if err != nil {
+		return fmt.Errorf("query beefy client state: %w", err)
+	}
+	if task.SignedCommitment.Commitment.BlockNumber <= uint32(state.LatestBeefyBlock) {
+		log.WithFields(logrus.Fields{
+			"beefyBlockNumber": task.SignedCommitment.Commitment.BlockNumber,
+			"beefyBlockSynced": state.LatestBeefyBlock,
+		}).Info("Commitment already synced")
+		return nil
+	}
+	// Mandatory commitments are always signed by the next validator set recorded in
+	// the beefy light client
+	task.ValidatorsRoot = state.NextValidatorSetRoot
+	err = relay.ethereumWriter.submit(ctx, task)
 	if err != nil {
 		return fmt.Errorf("fail to submit beefy update: %w", err)
 	}

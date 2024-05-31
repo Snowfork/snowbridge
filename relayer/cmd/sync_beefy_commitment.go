@@ -20,7 +20,6 @@ func syncBeefyCommitmentCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("config", "/tmp/snowbridge/beefy-relay.json", "Path to configuration file")
-	cmd.MarkFlagRequired("config")
 	cmd.Flags().String("private-key", "", "Ethereum private key")
 	cmd.Flags().String("privateKeyFile", "", "The file from which to read the private key")
 	cmd.Flags().Uint64P("relay-block", "b", 0, "Relay block number which contains a Parachain message")
