@@ -19,6 +19,7 @@ pushd ..
     git clone https://github.com/ChainSafe/lodestar
   fi
   pushd lodestar
+    git fetch
     git checkout $LODESTAR_VERSION
   popd
 popd
