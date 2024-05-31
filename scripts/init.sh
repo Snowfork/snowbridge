@@ -17,12 +17,13 @@ echo "Checkout lodestar Snowfork fork"
 pushd ..
   if [ ! -d "lodestar" ]; then
     git clone https://github.com/ChainSafe/lodestar
+    ln -sf ../lodestar lodestar
   fi
   pushd lodestar
+    git fetch
     git checkout $LODESTAR_VERSION
   popd
 popd
-ln -sf ../lodestar lodestar
 
 echo "Setting up git hooks"
 git config --local core.hooksPath hooks/
