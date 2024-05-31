@@ -30,18 +30,20 @@ var ErrExecutionHeaderNotImported = errors.New("execution header not imported")
 var ErrBeaconHeaderNotFinalized = errors.New("beacon header not finalized")
 
 type Header struct {
-	cache    *cache.BeaconCache
-	writer   parachain.ChainWriter
-	syncer   *syncer.Syncer
-	protocol *protocol.Protocol
+	cache              *cache.BeaconCache
+	writer             parachain.ChainWriter
+	syncer             *syncer.Syncer
+	protocol           *protocol.Protocol
+	updateSlotInterval uint64
 }
 
-func New(writer parachain.ChainWriter, client api.BeaconAPI, setting config.SpecSettings, store store.BeaconStore, protocol *protocol.Protocol) Header {
+func New(writer parachain.ChainWriter, client api.BeaconAPI, setting config.SpecSettings, store store.BeaconStore, protocol *protocol.Protocol, updateSlotInterval uint64) Header {
 	return Header{
-		cache:    cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
-		writer:   writer,
-		syncer:   syncer.New(client, store, protocol),
-		protocol: protocol,
+		cache:              cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
+		writer:             writer,
+		syncer:             syncer.New(client, store, protocol),
+		protocol:           protocol,
+		updateSlotInterval: updateSlotInterval,
 	}
 }
 
@@ -182,7 +184,7 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
 	finalizedHeader, err := h.syncer.GetFinalizedHeader()
 	if err != nil {
-		return fmt.Errorf("fetch finalized header update from Ethereum beacon client: %w", err)
+		return fmt.Errorf("fetch finalized header from Ethereum beacon client: %w", err)
 	}
 
 	log.WithFields(log.Fields{
@@ -196,6 +198,18 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 		err = h.syncLaggingSyncCommitteePeriods(ctx, lastSyncedPeriod, currentSyncPeriod)
 		if err != nil {
 			return fmt.Errorf("sync lagging sync committee periods: %w", err)
+		}
+	}
+
+	if h.shouldUpdate(uint64(finalizedHeader.Slot), h.cache.Finalized.LastSyncedSlot) {
+		update, err := h.syncer.GetFinalizedUpdate()
+		if err != nil {
+			return fmt.Errorf("fetch finalized update from Ethereum beacon client: %w", err)
+		}
+
+		err = h.updateFinalizedHeaderOnchain(ctx, update)
+		if err != nil {
+			return fmt.Errorf("sync finalized header on-chain: %w", err)
 		}
 	}
 
@@ -531,4 +545,8 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 	}
 
 	return beaconState, fmt.Errorf("no checkpoint on chain for slot %d", slot)
+}
+
+func (h *Header) shouldUpdate(currentFinalizedSlot, latestSyncedSlot uint64) bool {
+	return currentFinalizedSlot >= latestSyncedSlot+h.updateSlotInterval
 }

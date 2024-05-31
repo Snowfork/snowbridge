@@ -98,6 +98,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		r.config.Source.Beacon.Spec,
 		&store,
 		p,
+		r.config.Sink.Parachain.UpdateSlotInterval,
 	)
 	r.beaconHeader = &beaconHeader
 

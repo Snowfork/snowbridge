@@ -8,6 +8,7 @@ type ParachainConfig struct {
 	Endpoint             string `mapstructure:"endpoint"`
 	MaxWatchedExtrinsics int64  `mapstructure:"maxWatchedExtrinsics"`
 	MaxBatchCallSize     int64  `mapstructure:"maxBatchCallSize"`
+	UpdateSlotInterval   uint64 `mapstructure:"updateSlotInterval"`
 }
 
 type EthereumConfig struct {
