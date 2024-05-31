@@ -4,26 +4,25 @@ set -eux
 
 echo "Checkout polkadot-sdk Snowfork fork"
 pushd ..
-if [ ! -d "polkadot-sdk" ]; then
-  git clone https://github.com/Snowfork/polkadot-sdk.git
-fi
-pushd  polkadot-sdk
-git checkout snowbridge
+  if [ ! -d "polkadot-sdk" ]; then
+    git clone https://github.com/Snowfork/polkadot-sdk.git
+    cd snowbridge && ln -sf ../polkadot-sdk polkadot-sdk
+  fi
+  pushd  polkadot-sdk
+    git fetch && git checkout snowbridge
+  popd
 popd
-popd
-ln -sf ../polkadot-sdk polkadot-sdk
 
 echo "Checkout lodestar Snowfork fork"
 pushd ..
   if [ ! -d "lodestar" ]; then
     git clone https://github.com/ChainSafe/lodestar
+    cd snowbridge && ln -sf ../lodestar lodestar
   fi
   pushd lodestar
-    git fetch
-    git checkout $LODESTAR_VERSION
+    git fetch && git checkout $LODESTAR_VERSION
   popd
 popd
-ln -sf ../lodestar lodestar
 
 echo "Setting up git hooks"
 git config --local core.hooksPath hooks/
