@@ -126,9 +126,16 @@ func (relay *Relay) SyncUpdate(ctx context.Context, relayBlockNumber uint64) err
 		}).Info("New commitment already synced, just ignore")
 		return nil
 	}
+	if task.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
+		log.WithFields(log.Fields{
+			"state": state,
+			"task":  task,
+		}).Error("Task unexpected, wait for mandatory updates to catch up")
+		return fmt.Errorf("Task unexpected")
+	}
 
 	// Submit the task
-	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
+	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID || task.SignedCommitment.Commitment.ValidatorSetID == state.NextValidatorSetID-1 {
 		task.ValidatorsRoot = state.CurrentValidatorSetRoot
 	} else {
 		task.ValidatorsRoot = state.NextValidatorSetRoot
