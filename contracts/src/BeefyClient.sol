@@ -256,7 +256,8 @@ contract BeefyClient {
 
         ValidatorSetState storage vset;
         uint16 signatureUsageCount;
-        if (commitment.validatorSetID == currentValidatorSet.id) {
+        if (commitment.validatorSetID == currentValidatorSet.id || commitment.validatorSetID == nextValidatorSet.id - 1)
+        {
             signatureUsageCount = currentValidatorSet.usageCounters.get(proof.index);
             currentValidatorSet.usageCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
             vset = currentValidatorSet;
@@ -354,11 +355,12 @@ contract BeefyClient {
 
         bool is_next_session = false;
         ValidatorSetState storage vset;
-        if (commitment.validatorSetID > currentValidatorSet.id) {
+        if (commitment.validatorSetID == currentValidatorSet.id || commitment.validatorSetID == nextValidatorSet.id - 1)
+        {
+            vset = currentValidatorSet;
+        } else if (commitment.validatorSetID >= nextValidatorSet.id) {
             is_next_session = true;
             vset = nextValidatorSet;
-        } else if (commitment.validatorSetID == currentValidatorSet.id) {
-            vset = currentValidatorSet;
         } else {
             revert InvalidCommitment();
         }
