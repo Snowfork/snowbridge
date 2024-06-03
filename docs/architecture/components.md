@@ -21,7 +21,7 @@ This [pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets
 3. At the end of every block, a merkle root of all processed messages is generated and inserted into the parachain header as a [digest item](https://github.com/paritytech/substrate/blob/46136f2a18780d71542ae615565703da754b5348/primitives/runtime/src/generic/digest.rs#L100).
 4. Processed messages are also temporarily held in storage so that they can be queried by offchain message relayers.
 
-The merkle root in (3) is the commitment that needs to verified on the Ethereum side.
+The merkle root in (3) is the commitment that needs to be verified on the Ethereum side.
 
 ### EthereumBeaconClient
 
