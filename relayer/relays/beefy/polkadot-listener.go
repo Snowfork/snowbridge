@@ -9,6 +9,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/substrate"
 )
 
 type PolkadotListener struct {
@@ -107,4 +108,17 @@ func (li *PolkadotListener) scanCommitments(
 			}
 		}
 	}
+}
+
+func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]substrate.Authority, error) {
+	var authorities []substrate.Authority
+	ok, err := li.conn.API().RPC.State.GetStorage(li.beefyAuthoritiesKey, &authorities, blockHash)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, fmt.Errorf("beefy authorities not found")
+	}
+
+	return authorities, nil
 }
