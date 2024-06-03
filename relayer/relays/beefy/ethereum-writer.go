@@ -79,12 +79,6 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 	return nil
 }
 
-type FilterMode struct {
-	MandatoryCommitmentsOnly bool
-	All                      bool
-	DiscardDepth             uint64
-}
-
 type BeefyClientState struct {
 	LatestBeefyBlock        uint64
 	CurrentValidatorSetID   uint64

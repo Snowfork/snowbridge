@@ -184,14 +184,6 @@ func scanCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.Subst
 	}
 }
 
-type ScanProvableCommitmentsResult struct {
-	SignedCommitment types.SignedCommitment
-	MMRProof         merkle.SimplifiedMMRProof
-	BlockHash        types.Hash
-	Depth            uint64
-	Error            error
-}
-
 func makeProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, blockNumber uint32, blockHash types.Hash) (bool, merkle.SimplifiedMMRProof, error) {
 	proof1, err := api.RPC.MMR.GenerateProof(blockNumber, blockHash)
 	if err != nil {

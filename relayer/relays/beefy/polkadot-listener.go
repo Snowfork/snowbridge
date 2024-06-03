@@ -121,34 +121,6 @@ func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]subst
 	return authorities, nil
 }
 
-func (li *PolkadotListener) queryBeefyAuthoritySet(blockHash types.Hash) (BeefyAuthoritySet, error) {
-	var authoritySet BeefyAuthoritySet
-	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "MmrLeaf", "BeefyAuthorities", nil, nil)
-	ok, err := li.conn.API().RPC.State.GetStorage(storageKey, &authoritySet, blockHash)
-	if err != nil {
-		return authoritySet, err
-	}
-	if !ok {
-		return authoritySet, fmt.Errorf("beefy authoritySet not found")
-	}
-
-	return authoritySet, nil
-}
-
-func (li *PolkadotListener) queryBeefyNextAuthoritySet(blockHash types.Hash) (BeefyAuthoritySet, error) {
-	var nextAuthoritySet BeefyAuthoritySet
-	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "MmrLeaf", "BeefyNextAuthorities", nil, nil)
-	ok, err := li.conn.API().RPC.State.GetStorage(storageKey, &nextAuthoritySet, blockHash)
-	if err != nil {
-		return nextAuthoritySet, err
-	}
-	if !ok {
-		return nextAuthoritySet, fmt.Errorf("beefy nextAuthoritySet not found")
-	}
-
-	return nextAuthoritySet, nil
-}
-
 func (li *PolkadotListener) generateBeefyUpdate(ctx context.Context, relayBlockNumber uint64) (Request, error) {
 	api := li.conn.API()
 	meta := li.conn.Metadata()
