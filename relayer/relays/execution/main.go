@@ -122,9 +122,10 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			}
 
 			log.WithFields(log.Fields{
-				"channelId": types.H256(r.config.Source.ChannelID).Hex(),
-				"paraNonce": paraNonce,
-				"ethNonce":  ethNonce,
+				"channelId":           types.H256(r.config.Source.ChannelID).Hex(),
+				"paraNonce":           paraNonce,
+				"ethNonce":            ethNonce,
+				"instantVerification": r.config.InstantVerification,
 			}).Info("Polled Nonces")
 
 			if paraNonce == ethNonce {
@@ -170,7 +171,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				}
 
 				// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
-				proof, err := beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot)
+				proof, err := beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
 				if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
 					logger.Warn("beacon header not finalized, just skipped")
 					continue

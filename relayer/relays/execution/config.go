@@ -6,8 +6,9 @@ import (
 )
 
 type Config struct {
-	Source SourceConfig `mapstructure:"source"`
-	Sink   SinkConfig   `mapstructure:"sink"`
+	Source              SourceConfig `mapstructure:"source"`
+	Sink                SinkConfig   `mapstructure:"sink"`
+	InstantVerification bool         `mapstructure:"instantVerification"`
 }
 
 type SourceConfig struct {

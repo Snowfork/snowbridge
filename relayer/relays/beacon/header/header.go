@@ -75,7 +75,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 
 	log.Info("starting to sync finalized headers")
 
-	ticker := time.NewTicker(time.Minute * 5)
+	ticker := time.NewTicker(time.Minute * 2)
 
 	eg.Go(func() error {
 		for {
@@ -440,7 +440,7 @@ func (h *Header) getHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, 
 	return h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
 }
 
-func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.ProofPayload, error) {
+func (h *Header) FetchExecutionProof(blockRoot common.Hash, instantVerification bool) (scale.ProofPayload, error) {
 	header, err := h.syncer.Client.GetHeaderByBlockRoot(blockRoot)
 	if err != nil {
 		return scale.ProofPayload{}, fmt.Errorf("get beacon header by blockRoot: %w", err)
@@ -448,6 +448,22 @@ func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.ProofPayload,
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
 		return scale.ProofPayload{}, fmt.Errorf("fetch last finalized header state: %w", err)
+	}
+
+	// The latest finalized header on-chain is older than the header containing the message, so we need to sync the
+	// finalized header with the message.
+	finalizedHeader, err := h.syncer.GetFinalizedHeader()
+	if err != nil {
+		return scale.ProofPayload{}, err
+	}
+
+	// If the header is not finalized yet, we can't do anything further.
+	if header.Slot > uint64(finalizedHeader.Slot) {
+		return scale.ProofPayload{}, fmt.Errorf("chain not finalized yet: %w", ErrBeaconHeaderNotFinalized)
+	}
+
+	if header.Slot > lastFinalizedHeaderState.BeaconSlot && !instantVerification {
+		return scale.ProofPayload{}, fmt.Errorf("on-chain header not recent enough and instantVerification is off: %w", ErrBeaconHeaderNotFinalized)
 	}
 
 	// There is a finalized header on-chain that will be able to verify the header containing the message.
@@ -461,18 +477,6 @@ func (h *Header) FetchExecutionProof(blockRoot common.Hash) (scale.ProofPayload,
 			HeaderPayload:    headerUpdate,
 			FinalizedPayload: nil,
 		}, nil
-	}
-
-	// The latest finalized header on-chain is older than the header containing the message, so we need to sync the
-	// finalized header with the message.
-	finalizedHeader, err := h.syncer.GetFinalizedHeader()
-	if err != nil {
-		return scale.ProofPayload{}, err
-	}
-
-	// If the header is not finalized yet, we can't do anything further.
-	if header.Slot > uint64(finalizedHeader.Slot) {
-		return scale.ProofPayload{}, ErrBeaconHeaderNotFinalized
 	}
 
 	var finalizedUpdate scale.Update
