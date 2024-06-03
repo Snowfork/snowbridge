@@ -121,7 +121,7 @@ func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]subst
 	return authorities, nil
 }
 
-func (li *PolkadotListener) generateBeefyUpdate(ctx context.Context, relayBlockNumber uint64) (Request, error) {
+func (li *PolkadotListener) generateBeefyUpdate(relayBlockNumber uint64) (Request, error) {
 	api := li.conn.API()
 	meta := li.conn.Metadata()
 	var request Request
@@ -130,7 +130,7 @@ func (li *PolkadotListener) generateBeefyUpdate(ctx context.Context, relayBlockN
 		return request, fmt.Errorf("find match beefy block: %w", err)
 	}
 
-	commitment, proof, err := fetchCommitmentAndProof(ctx, meta, api, beefyBlockHash)
+	commitment, proof, err := fetchCommitmentAndProof(meta, api, beefyBlockHash)
 	if err != nil {
 		return request, fmt.Errorf("fetch commitment and proof: %w", err)
 	}

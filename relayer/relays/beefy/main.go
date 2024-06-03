@@ -112,7 +112,7 @@ func (relay *Relay) OneShotSync(ctx context.Context, blockNumber uint64) error {
 	}
 
 	// generate beefy update for that specific relay block
-	task, err := relay.polkadotListener.generateBeefyUpdate(ctx, blockNumber)
+	task, err := relay.polkadotListener.generateBeefyUpdate(blockNumber)
 	if err != nil {
 		return fmt.Errorf("fail to generate next beefy request: %w", err)
 	}
