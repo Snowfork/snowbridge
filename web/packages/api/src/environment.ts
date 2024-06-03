@@ -283,13 +283,13 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-mainnet.chainsafe.io",
-            ETHEREUM_WS_API: (key) => `https://mainnet.infura.io/v3/${key}`,
+            ETHEREUM_WS_API: (key) => `https://eth-mainnet.g.alchemy.com/v2/${key}`,
             RELAY_CHAIN_WS_URL: "wss://polkadot-rpc.dwellir.com",
             ASSET_HUB_WS_URL: "wss://asset-hub-polkadot-rpc.dwellir.com",
             BRIDGE_HUB_WS_URL: "wss://polkadot-bridge-hub-rpc.dwellir.com",
             PARACHAINS: [],
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
-            BEEFY_CONTRACT: "0x27e5e17ac995d3d720c311e1e9560e28f5855fb1",
+            BEEFY_CONTRACT: "0xad04888ff41947a2e34f9e7b990bbc6cd85fe1d1",
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
             PRIMARY_GOVERNANCE_CHANNEL_ID:
@@ -299,12 +299,12 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             RELAYERS: [
                 {
                     name: "beacon",
-                    account: "5FyC9GkHhiAYjMtddwVNc2gx8wBjH9gpMKWbQ1QVXmmJtr8M",
+                    account: "5HHDmTHN4FZYhuMSt3oP8YySDxzPLj9ZGBwxZjSdKf29qcnj",
                     type: "substrate",
                 },
                 {
                     name: "beefy",
-                    account: "0xF061685F2B729b89a7A5966B3ab9aee15269e8FE",
+                    account: "0xB8124B07467E46dE73eb5c73a7b1E03863F18062",
                     type: "ethereum",
                 },
                 {
@@ -324,7 +324,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 },
                 {
                     name: "parachain-assethub",
-                    account: "0x0b65d43d159f1C40Bad7768fd59667E3104a2ECE",
+                    account: "0x1F1819C3C68F9533adbB8E51C8E8428a818D693E",
                     type: "ethereum",
                 },
             ],
