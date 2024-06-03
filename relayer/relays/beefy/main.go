@@ -138,7 +138,7 @@ func (relay *Relay) OneShotSync(ctx context.Context, blockNumber uint64) error {
 	}
 
 	// Submit the task
-	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID || task.SignedCommitment.Commitment.ValidatorSetID == state.NextValidatorSetID-1 {
+	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
 		task.ValidatorsRoot = state.CurrentValidatorSetRoot
 	} else {
 		task.ValidatorsRoot = state.NextValidatorSetRoot
