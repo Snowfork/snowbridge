@@ -10,7 +10,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -118,24 +117,28 @@ func (relay *Relay) OneShotSync(ctx context.Context, blockNumber uint64) error {
 		return fmt.Errorf("fail to generate next beefy request: %w", err)
 	}
 
-	// Ignore commitment already synced
+	// Ignore commitment earlier than LatestBeefyBlock which is outdated
 	if task.SignedCommitment.Commitment.BlockNumber <= uint32(state.LatestBeefyBlock) {
-		log.WithFields(logrus.Fields{
-			"beefyBlockNumber": task.SignedCommitment.Commitment.BlockNumber,
-			"beefyBlockSynced": state.LatestBeefyBlock,
-		}).Info("New commitment already synced, just ignore")
+		log.WithFields(log.Fields{
+			"latestBeefyBlock":      state.LatestBeefyBlock,
+			"currentValidatorSetID": state.CurrentValidatorSetID,
+			"nextValidatorSetID":    state.NextValidatorSetID,
+			"blockNumberToSync":     task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Commitment outdated, just ignore")
 		return nil
 	}
 	if task.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
 		log.WithFields(log.Fields{
-			"state": state,
-			"task":  task,
-		}).Error("Task unexpected, wait for mandatory updates to catch up")
-		return fmt.Errorf("Task unexpected")
+			"latestBeefyBlock":      state.LatestBeefyBlock,
+			"currentValidatorSetID": state.CurrentValidatorSetID,
+			"nextValidatorSetID":    state.NextValidatorSetID,
+			"validatorSetIDToSync":  task.SignedCommitment.Commitment.ValidatorSetID,
+		}).Warn("Task unexpected, wait for mandatory updates to catch up first")
+		return nil
 	}
 
 	// Submit the task
-	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID || task.SignedCommitment.Commitment.ValidatorSetID == state.NextValidatorSetID-1 {
+	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
 		task.ValidatorsRoot = state.CurrentValidatorSetRoot
 	} else {
 		task.ValidatorsRoot = state.NextValidatorSetRoot
