@@ -81,7 +81,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (relay *Relay) SyncUpdate(ctx context.Context, relayBlockNumber uint64) error {
+func (relay *Relay) OneShotSync(ctx context.Context, blockNumber uint64) error {
 	// Initialize relaychainConn
 	err := relay.relaychainConn.Connect(ctx)
 	if err != nil {
@@ -103,17 +103,17 @@ func (relay *Relay) SyncUpdate(ctx context.Context, relayBlockNumber uint64) err
 		return fmt.Errorf("query beefy client state: %w", err)
 	}
 	// Ignore relay block already synced
-	if relayBlockNumber <= state.LatestBeefyBlock {
+	if blockNumber <= state.LatestBeefyBlock {
 		log.WithFields(log.Fields{
 			"validatorSetID": state.CurrentValidatorSetID,
 			"beefyBlock":     state.LatestBeefyBlock,
-			"relayBlock":     relayBlockNumber,
+			"relayBlock":     blockNumber,
 		}).Info("Relay block already synced, just ignore")
 		return nil
 	}
 
 	// generate beefy update for that specific relay block
-	task, err := relay.polkadotListener.generateBeefyUpdate(ctx, relayBlockNumber)
+	task, err := relay.polkadotListener.generateBeefyUpdate(ctx, blockNumber)
 	if err != nil {
 		return fmt.Errorf("fail to generate next beefy request: %w", err)
 	}
