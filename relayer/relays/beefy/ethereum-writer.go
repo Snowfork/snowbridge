@@ -40,23 +40,6 @@ func NewEthereumWriter(
 }
 
 func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, requests <-chan Request) error {
-	address := common.HexToAddress(wr.config.Contracts.BeefyClient)
-	contract, err := contracts.NewBeefyClient(address, wr.conn.Client())
-	if err != nil {
-		return fmt.Errorf("create beefy client: %w", err)
-	}
-	wr.contract = contract
-
-	callOpts := bind.CallOpts{
-		Context: ctx,
-	}
-	blockWaitPeriod, err := wr.contract.RandaoCommitDelay(&callOpts)
-	if err != nil {
-		return fmt.Errorf("create randao commit delay: %w", err)
-	}
-	wr.blockWaitPeriod = blockWaitPeriod.Uint64()
-	log.WithField("randaoCommitDelay", wr.blockWaitPeriod).Trace("Fetched randaoCommitDelay")
-
 	// launch task processor
 	eg.Go(func() error {
 		for {
@@ -294,4 +277,25 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 		Info("Sent SubmitFinal transaction")
 
 	return tx, nil
+}
+
+func (wr *EthereumWriter) initialize(ctx context.Context) error {
+	address := common.HexToAddress(wr.config.Contracts.BeefyClient)
+	contract, err := contracts.NewBeefyClient(address, wr.conn.Client())
+	if err != nil {
+		return fmt.Errorf("create beefy client: %w", err)
+	}
+	wr.contract = contract
+
+	callOpts := bind.CallOpts{
+		Context: ctx,
+	}
+	blockWaitPeriod, err := wr.contract.RandaoCommitDelay(&callOpts)
+	if err != nil {
+		return fmt.Errorf("create randao commit delay: %w", err)
+	}
+	wr.blockWaitPeriod = blockWaitPeriod.Uint64()
+	log.WithField("randaoCommitDelay", wr.blockWaitPeriod).Trace("Fetched randaoCommitDelay")
+
+	return nil
 }
