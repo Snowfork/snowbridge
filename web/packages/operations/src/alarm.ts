@@ -1,13 +1,12 @@
 import { status, environment } from "@snowbridge/api"
-import axios from "axios"
 import {
     CloudWatchClient,
     PutMetricDataCommand,
     PutMetricAlarmCommand,
 } from "@aws-sdk/client-cloudwatch"
 
-const SLACK_WEBHOOK_URL = process.env["SLACK_WEBHOOK_URL"]
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
+const SNS_TOPIC_TO_PAGERDUTY = process.env["SNS_TOPIC_TO_PAGERDUTY"] || ""
 
 export const AlarmThreshold = {
     MaxBlockLatency: 2000,
@@ -17,6 +16,7 @@ export const AlarmThreshold = {
 export type Sovereign = { name: string; account: string; balance: bigint }
 
 export type AllMetrics = {
+    name: string
     bridgeStatus: status.BridgeStatusInfo
     channels: status.ChannelStatusInfo[]
     sovereigns: Sovereign[]
@@ -31,50 +31,24 @@ export enum AlarmReason {
     AccountBalanceInsufficient = "AccountBalanceInsufficient",
 }
 
-export type ChannelKind = "Primary" | "Secondary" | "AssetHub"
-
 export const sendMetrics = async (metrics: AllMetrics) => {
     let client = new CloudWatchClient({})
     let metricData = []
     // Beefy metrics
     metricData.push({
         MetricName: "BeefyLatency",
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToEthereum",
-            },
-        ],
         Value: metrics.bridgeStatus.toEthereum.blockLatency,
     })
     metricData.push({
         MetricName: "LatestBeefyBlock",
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToEthereum",
-            },
-        ],
         Value: metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum,
     })
     metricData.push({
         MetricName: "PreviousBeefyBlock",
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToEthereum",
-            },
-        ],
         Value: metrics.bridgeStatus.toEthereum.previousPolkadotBlockOnEthereum,
     })
     metricData.push({
         MetricName: AlarmReason.BeefyStale.toString(),
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToEthereum",
-            },
-        ],
         Value: Number(
             metrics.bridgeStatus.toEthereum.blockLatency > AlarmThreshold.MaxBlockLatency &&
                 metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum <=
@@ -84,42 +58,18 @@ export const sendMetrics = async (metrics: AllMetrics) => {
     // Beacon metrics
     metricData.push({
         MetricName: "BeaconLatency",
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToPolkadot",
-            },
-        ],
         Value: metrics.bridgeStatus.toPolkadot.blockLatency,
     })
     metricData.push({
         MetricName: "LatestBeaconBlock",
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToPolkadot",
-            },
-        ],
         Value: metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot,
     })
     metricData.push({
         MetricName: "PreviousBeaconBlock",
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToPolkadot",
-            },
-        ],
         Value: metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot,
     })
     metricData.push({
         MetricName: AlarmReason.BeaconStale.toString(),
-        Dimensions: [
-            {
-                Name: "Direction",
-                Value: "ToPolkadot",
-            },
-        ],
         Value: Number(
             metrics.bridgeStatus.toPolkadot.blockLatency > AlarmThreshold.MaxBlockLatency &&
                 metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot <=
@@ -133,10 +83,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "ToEthereumOutboundNonce",
             Dimensions: [
                 {
-                    Name: "Direction",
-                    Value: "ToEthereum",
-                },
-                {
                     Name: "ChannelName",
                     Value: channel.name,
                 },
@@ -146,10 +92,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
         metricData.push({
             MetricName: "ToEthereumPreviousOutboundNonce",
             Dimensions: [
-                {
-                    Name: "Direction",
-                    Value: "ToEthereum",
-                },
                 {
                     Name: "ChannelName",
                     Value: channel.name,
@@ -161,10 +103,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "ToEthereumInboundNonce",
             Dimensions: [
                 {
-                    Name: "Direction",
-                    Value: "ToEthereum",
-                },
-                {
                     Name: "ChannelName",
                     Value: channel.name,
                 },
@@ -175,10 +113,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "ToEthereumPreviousInboundNonce",
             Dimensions: [
                 {
-                    Name: "Direction",
-                    Value: "ToEthereum",
-                },
-                {
                     Name: "ChannelName",
                     Value: channel.name,
                 },
@@ -187,12 +121,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
         })
         metricData.push({
             MetricName: AlarmReason.ToEthereumChannelStale.toString(),
-            Dimensions: [
-                {
-                    Name: "Direction",
-                    Value: "ToEthereum",
-                },
-            ],
             Value: Number(
                 channel.toEthereum.outbound < channel.toEthereum.inbound ||
                     (channel.toEthereum.outbound > channel.toEthereum.inbound &&
@@ -204,10 +132,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "ToPolkadotOutboundNonce",
             Dimensions: [
                 {
-                    Name: "Direction",
-                    Value: "ToPolkadot",
-                },
-                {
                     Name: "ChannelName",
                     Value: channel.name,
                 },
@@ -217,10 +141,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
         metricData.push({
             MetricName: "ToPolkadotPreviousOutboundNonce",
             Dimensions: [
-                {
-                    Name: "Direction",
-                    Value: "ToPolkadot",
-                },
                 {
                     Name: "ChannelName",
                     Value: channel.name,
@@ -232,10 +152,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "ToPolkadotInboundNonce",
             Dimensions: [
                 {
-                    Name: "Direction",
-                    Value: "ToPolkadot",
-                },
-                {
                     Name: "ChannelName",
                     Value: channel.name,
                 },
@@ -246,10 +162,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             MetricName: "ToPolkadotPreviousInboundNonce",
             Dimensions: [
                 {
-                    Name: "Direction",
-                    Value: "ToPolkadot",
-                },
-                {
                     Name: "ChannelName",
                     Value: channel.name,
                 },
@@ -258,12 +170,6 @@ export const sendMetrics = async (metrics: AllMetrics) => {
         })
         metricData.push({
             MetricName: AlarmReason.ToPolkadotChannelStale.toString(),
-            Dimensions: [
-                {
-                    Name: "Direction",
-                    Value: "ToPolkadot",
-                },
-            ],
             Value: Number(
                 channel.toPolkadot.outbound < channel.toPolkadot.inbound ||
                     (channel.toPolkadot.outbound > channel.toPolkadot.inbound &&
@@ -307,19 +213,30 @@ export const sendMetrics = async (metrics: AllMetrics) => {
     }
     const command = new PutMetricDataCommand({
         MetricData: metricData,
-        Namespace: CLOUD_WATCH_NAME_SPACE,
+        Namespace: CLOUD_WATCH_NAME_SPACE + "-" + metrics.name,
     })
     await client.send(command)
 }
 
 export const initializeAlarms = async () => {
+    let env = "local_e2e"
+    if (process.env.NODE_ENV !== undefined) {
+        env = process.env.NODE_ENV
+    }
+    const snowbridgeEnv = environment.SNOWBRIDGE_ENV[env]
+    if (snowbridgeEnv === undefined) {
+        throw Error(`Unknown environment '${env}'`)
+    }
+    const { name } = snowbridgeEnv
+
     let client = new CloudWatchClient({})
     let cloudWatchAlarms = []
     let alarmCommandSharedInput = {
         EvaluationPeriods: 3,
-        Namespace: CLOUD_WATCH_NAME_SPACE,
-        Period: 600,
+        Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
+        Period: 300,
         Threshold: 0,
+        AlarmActions: [SNS_TOPIC_TO_PAGERDUTY],
     }
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
@@ -371,65 +288,7 @@ export const initializeAlarms = async () => {
             ...alarmCommandSharedInput,
         })
     )
-    console.log(cloudWatchAlarms)
     for (let alarm of cloudWatchAlarms) {
         await client.send(alarm)
-    }
-}
-
-export const sendAlarm = async (metrics: AllMetrics) => {
-    let alarm = false
-    let alarms = []
-
-    if (
-        metrics.bridgeStatus.toEthereum.blockLatency > AlarmThreshold.MaxBlockLatency &&
-        metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum ==
-            metrics.bridgeStatus.toEthereum.previousPolkadotBlockOnEthereum
-    ) {
-        alarm = true
-        alarms.push(AlarmReason.BeefyStale)
-    }
-    if (
-        metrics.bridgeStatus.toPolkadot.blockLatency > AlarmThreshold.MaxBlockLatency &&
-        metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot ==
-            metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot
-    ) {
-        alarm = true
-        alarms.push(AlarmReason.BeaconStale)
-    }
-    for (let channel of metrics.channels) {
-        if (
-            channel.toEthereum.outbound != channel.toEthereum.inbound &&
-            channel.toEthereum.inbound == channel.toEthereum.previousInbound
-        ) {
-            alarm = true
-            alarms.push(AlarmReason.ToEthereumChannelStale)
-        }
-        if (
-            channel.toPolkadot.outbound != channel.toPolkadot.inbound &&
-            channel.toPolkadot.inbound == channel.toPolkadot.previousInbound
-        ) {
-            alarm = true
-            alarms.push(AlarmReason.ToPolkadotChannelStale)
-        }
-        break
-    }
-
-    for (let relayer of metrics.relayers) {
-        if (!relayer.balance || relayer.balance < AlarmThreshold.MinBalanceToKeep) {
-            alarm = true
-            alarms.push(AlarmReason.AccountBalanceInsufficient)
-            break
-        }
-    }
-    const text = JSON.stringify(
-        { alarms, metrics },
-        (key, value) => (typeof value === "bigint" ? value.toString() : value),
-        2
-    )
-    console.log(text)
-
-    if (alarm) {
-        await axios.post(SLACK_WEBHOOK_URL || "", { text })
     }
 }

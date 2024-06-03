@@ -106,6 +106,11 @@ func importBeaconState(cmd *cobra.Command, _ []string) error {
 	attestedSlot := attestedState.GetSlot()
 	finalizedSlot := finalizedState.GetSlot()
 
+	err = syncer.ValidatePair(finalizedSlot, attestedSlot, attestedState)
+	if err != nil {
+		return fmt.Errorf("state pair validation failed: %w", err)
+	}
+
 	err = store.WriteEntry(attestedSlot, finalizedSlot, attestedData, finalizedData)
 	if err != nil {
 		return fmt.Errorf("write beacon store entry: %w", err)

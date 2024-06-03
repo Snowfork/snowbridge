@@ -134,6 +134,9 @@ func (b *BeaconStateDenebMainnet) GetFinalizedCheckpoint() *Checkpoint {
 	return b.FinalizedCheckpoint
 }
 
-func (b *BeaconStateDenebMainnet) GetSyncSyncCommittee() *SyncCommittee {
+func (b *BeaconStateDenebMainnet) GetNextSyncCommittee() *SyncCommittee {
 	return b.NextSyncCommittee
+}
+func (b *BeaconStateDenebMainnet) GetCurrentSyncCommittee() *SyncCommittee {
+	return b.CurrentSyncCommittee
 }
