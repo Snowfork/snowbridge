@@ -746,6 +746,7 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 	// Try getting beacon data from the API first
 	data, err := s.getBeaconDataFromClient(attestedSlot)
 	if err != nil {
+		log.WithError(err).Warn("unable to fetch beacon data from API, trying beacon store")
 		// If it fails, using the beacon store and look for a relevant finalized update
 		for {
 			if minSlot > maxSlot {
@@ -968,6 +969,7 @@ func (s *Syncer) getBestMatchBeaconDataFromStore(minSlot, maxSlot uint64) (final
 func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {
 	data, err := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
 	if err != nil {
+		log.WithError(err).Warn("unable to fetch beacon state from API, trying beacon store")
 		data, err = s.store.GetBeaconStateData(slot)
 		if err != nil {
 			return nil, fmt.Errorf("fetch beacon state from store: %w", err)
