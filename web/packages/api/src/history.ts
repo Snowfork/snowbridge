@@ -193,7 +193,7 @@ export const toPolkadotHistory = async (
     const results: ToPolkadotTransferResult[] = []
     for (const outboundMessage of ethOutboundMessages) {
         const result: ToPolkadotTransferResult = {
-            id: `${outboundMessage.transactionHash}-${outboundMessage.data.messageId}`,
+            id: outboundMessage.data.messageId,
             status: TransferStatus.Pending,
             info: {
                 when: new Date(outboundMessage.data.timestamp * 1000),
@@ -356,7 +356,7 @@ export const toEthereumHistory = async (
     const results: ToEthereumTransferResult[] = []
     for (const transfer of allTransfers) {
         const result: ToEthereumTransferResult = {
-            id: `${transfer.extrinsic_hash}-${transfer.data.messageId}`,
+            id: transfer.data.messageId,
             status: TransferStatus.Pending,
             info: {
                 when: new Date(transfer.block_timestamp * 1000),
