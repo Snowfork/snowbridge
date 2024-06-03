@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -51,9 +52,14 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	var config config.Config
-	err := viper.Unmarshal(&config)
+	err := viper.UnmarshalExact(&config)
 	if err != nil {
 		return err
+	}
+
+	err = config.Validate()
+	if err != nil {
+		return fmt.Errorf("config file validation failed: %w", err)
 	}
 
 	keypair, err := parachain.ResolvePrivateKey(privateKey, privateKeyFile)

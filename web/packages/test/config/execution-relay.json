@@ -26,7 +26,8 @@
     "parachain": {
       "endpoint": "ws://127.0.0.1:11144",
       "maxWatchedExtrinsics": 8,
-      "maxBatchCallSize": 8
+      "maxBatchCallSize": 8,
+      "UpdateSlotInterval": 316
     }
   },
   "instantVerification": false

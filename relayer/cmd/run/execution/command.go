@@ -3,6 +3,7 @@ package execution
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -57,6 +58,11 @@ func run(_ *cobra.Command, _ []string) error {
 	err := viper.Unmarshal(&config, viper.DecodeHook(HexHookFunc()))
 	if err != nil {
 		return err
+	}
+
+	err = config.Validate()
+	if err != nil {
+		return fmt.Errorf("config file validation failed: %w", err)
 	}
 
 	keypair, err := parachain.ResolvePrivateKey(privateKey, privateKeyFile)

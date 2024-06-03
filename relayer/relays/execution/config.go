@@ -1,6 +1,7 @@
 package execution
 
 import (
+	"fmt"
 	"github.com/snowfork/snowbridge/relayer/config"
 	beaconconf "github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 )
@@ -27,3 +28,21 @@ type SinkConfig struct {
 }
 
 type ChannelID [32]byte
+
+func (c Config) Validate() error {
+	err := c.Source.Beacon.Validate()
+	if err != nil {
+		return fmt.Errorf("beacon config validation: %w", err)
+	}
+	err = c.Sink.Parachain.Validate()
+	if err != nil {
+		return fmt.Errorf("parachain config validation: %w", err)
+	}
+	if c.Source.ChannelID == [32]byte{} {
+		return fmt.Errorf("channel ID is empty")
+	}
+	if c.Source.Contracts.Gateway == "" {
+		return fmt.Errorf("gateway contract is empty")
+	}
+	return nil
+}
