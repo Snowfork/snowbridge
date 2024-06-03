@@ -48,7 +48,6 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 			"leafProofOrder": params.LeafProofOrder,
 		},
 		"commitmentHash": commitmentHash,
-		"handover":       task.IsHandover,
 	}
 
 	return fields, nil

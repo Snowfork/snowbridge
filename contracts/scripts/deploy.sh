@@ -2,11 +2,11 @@
 
 set -eux
 
-forge script "scripts/Deploy.sol:${1}" \
+forge script "scripts/DeployBeefyClient.sol:DeployBeefyClient" \
     --chain-id 1 \
     --rpc-url "${MAINNET_RPC_URL}" \
     --ledger \
-    --mnemonic-derivation-paths "${MNEMONIC_DERIVATION_PATH}" \
+    --mnemonic-derivation-paths "m/44'/60'/1'/0/0" \
     --broadcast \
     --verify \
     --optimize \
