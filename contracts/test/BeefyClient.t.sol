@@ -101,6 +101,20 @@ contract BeefyClientTest is Test {
         return BeefyClient.Commitment(blockNumber, setId, payload);
     }
 
+    function initializeNonConsecutive(uint32 _setId, uint32 _nextSetId)
+        public
+        returns (BeefyClient.Commitment memory)
+    {
+        currentSetId = _setId;
+        nextSetId = _nextSetId;
+        BeefyClient.ValidatorSet memory vset = BeefyClient.ValidatorSet(currentSetId, setSize, root);
+        BeefyClient.ValidatorSet memory nextvset = BeefyClient.ValidatorSet(nextSetId, setSize, root);
+        beefyClient.initialize_public(0, vset, nextvset);
+        BeefyClient.PayloadItem[] memory payload = new BeefyClient.PayloadItem[](1);
+        payload[0] = BeefyClient.PayloadItem(mmrRootID, abi.encodePacked(mmrRoot));
+        return BeefyClient.Commitment(blockNumber, setId, payload);
+    }
+
     function printBitArray(uint256[] memory bits) private view {
         for (uint256 i = 0; i < bits.length; i++) {
             console.log("bits index at %d is %d", i, bits[i]);
@@ -166,7 +180,7 @@ contract BeefyClientTest is Test {
         );
     }
 
-    function testSubmit() public returns (BeefyClient.Commitment memory) {
+    function testSubmitHappyPath() public returns (BeefyClient.Commitment memory) {
         BeefyClient.Commitment memory commitment = initialize(setId);
 
         assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 0);
@@ -388,7 +402,7 @@ contract BeefyClientTest is Test {
         commitPrevRandao();
     }
 
-    function testSubmitWithHandover() public {
+    function testSubmitWithHandoverHappyPath() public {
         //initialize with previous set
         BeefyClient.Commitment memory commitment = initialize(setId - 1);
 
@@ -751,5 +765,52 @@ contract BeefyClientTest is Test {
             BeefyClient.ValidatorSet(currentId, 0, 0x0),
             BeefyClient.ValidatorSet(nextId, 0, 0x0)
         );
+    }
+
+    function testSubmitNonConsecutive() public {
+        BeefyClient.Commitment memory commitment = initializeNonConsecutive(setId, setId + 3);
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+
+        // mine random delay blocks
+        vm.roll(block.number + randaoCommitDelay);
+
+        commitPrevRandao();
+
+        createFinalProofs();
+
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, emptyLeaf, emptyLeafProofs, emptyLeafProofOrder
+        );
+
+        assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+
+        (uint128 _currentSetId,,,) = beefyClient.currentValidatorSet();
+        assertEq(_currentSetId, uint128(setId));
+
+        (uint128 _nextSetId,,,) = beefyClient.nextValidatorSet();
+        assertEq(_nextSetId, uint128(setId + 3));
+    }
+
+    function testSubmitWithHandoverNonConsecutive() public {
+        //initialize with previous set
+        BeefyClient.Commitment memory commitment = initializeNonConsecutive(setId - 3, setId + 1);
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+
+        vm.roll(block.number + randaoCommitDelay);
+
+        commitPrevRandao();
+
+        createFinalProofs();
+
+        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
+        assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+
+        (uint128 _currentSetId,,,) = beefyClient.currentValidatorSet();
+        assertEq(_currentSetId, uint128(setId - 3));
+
+        (uint128 _nextSetId,,,) = beefyClient.nextValidatorSet();
+        assertEq(_nextSetId, uint128(setId + 1));
     }
 }
