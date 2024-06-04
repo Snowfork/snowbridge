@@ -13,7 +13,7 @@ start_geth() {
             .config.CancunTime = $timestamp
             ' \
             config/genesis.json >$output_dir/genesis.json
-        geth init --datadir "$ethereum_data_dir" "$output_dir/genesis.json"
+        geth init --datadir "$ethereum_data_dir" --state.scheme=hash "$output_dir/genesis.json"
         geth --vmdebug --datadir "$ethereum_data_dir" --networkid 11155111 \
             --http --http.api debug,personal,eth,net,web3,txpool,engine,miner --ws --ws.api debug,eth,net,web3 \
             --rpc.allow-unprotected-txs --mine \
@@ -29,6 +29,7 @@ start_geth() {
             --trace "$ethereum_data_dir/trace" \
             --gcmode archive \
             --syncmode=full \
+            --state.scheme=hash \
             >"$output_dir/geth.log" 2>&1 &
     fi
 }
