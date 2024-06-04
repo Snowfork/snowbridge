@@ -6,11 +6,8 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
-	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 
 	log "github.com/sirupsen/logrus"
@@ -56,49 +53,109 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return fmt.Errorf("create ethereum connection: %w", err)
 	}
+	err = relay.ethereumWriter.initialize(ctx)
+	if err != nil {
+		return fmt.Errorf("initialize ethereum writer: %w", err)
+	}
 
-	initialBeefyBlock, initialValidatorSetID, err := relay.getInitialState(ctx)
+	initialState, err := relay.ethereumWriter.queryBeefyClientState(ctx)
 	if err != nil {
 		return fmt.Errorf("fetch BeefyClient current state: %w", err)
 	}
 	log.WithFields(log.Fields{
-		"beefyBlock":     initialBeefyBlock,
-		"validatorSetID": initialValidatorSetID,
+		"beefyBlock":     initialState.LatestBeefyBlock,
+		"validatorSetID": initialState.CurrentValidatorSetID,
 	}).Info("Retrieved current BeefyClient state")
 
-	requests, err := relay.polkadotListener.Start(ctx, eg, initialBeefyBlock, initialValidatorSetID)
+	requests, err := relay.polkadotListener.Start(ctx, eg, initialState.LatestBeefyBlock, initialState.CurrentValidatorSetID)
 	if err != nil {
 		return fmt.Errorf("initialize polkadot listener: %w", err)
 	}
 
 	err = relay.ethereumWriter.Start(ctx, eg, requests)
 	if err != nil {
-		return fmt.Errorf("initialize ethereum writer: %w", err)
+		return fmt.Errorf("start ethereum writer: %w", err)
 	}
 
 	return nil
 }
 
-func (relay *Relay) getInitialState(ctx context.Context) (uint64, uint64, error) {
-	address := common.HexToAddress(relay.config.Sink.Contracts.BeefyClient)
-	beefyClient, err := contracts.NewBeefyClient(address, relay.ethereumConn.Client())
+func (relay *Relay) OneShotSync(ctx context.Context, blockNumber uint64) error {
+	// Initialize relaychainConn
+	err := relay.relaychainConn.Connect(ctx)
 	if err != nil {
-		return 0, 0, err
+		return fmt.Errorf("create relaychain connection: %w", err)
 	}
 
-	callOpts := bind.CallOpts{
-		Context: ctx,
-	}
-
-	latestBeefyBlock, err := beefyClient.LatestBeefyBlock(&callOpts)
+	// Initialize ethereumConn
+	err = relay.ethereumConn.Connect(ctx)
 	if err != nil {
-		return 0, 0, err
+		return fmt.Errorf("create ethereum connection: %w", err)
 	}
-
-	currentValidatorSet, err := beefyClient.CurrentValidatorSet(&callOpts)
+	err = relay.ethereumWriter.initialize(ctx)
 	if err != nil {
-		return 0, 0, err
+		return fmt.Errorf("initialize EthereumWriter: %w", err)
 	}
 
-	return latestBeefyBlock, currentValidatorSet.Id.Uint64(), nil
+	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
+	if err != nil {
+		return fmt.Errorf("query beefy client state: %w", err)
+	}
+	// Ignore relay block already synced
+	if blockNumber <= state.LatestBeefyBlock {
+		log.WithFields(log.Fields{
+			"validatorSetID": state.CurrentValidatorSetID,
+			"beefyBlock":     state.LatestBeefyBlock,
+			"relayBlock":     blockNumber,
+		}).Info("Relay block already synced, just ignore")
+		return nil
+	}
+
+	// generate beefy update for that specific relay block
+	task, err := relay.polkadotListener.generateBeefyUpdate(blockNumber)
+	if err != nil {
+		return fmt.Errorf("fail to generate next beefy request: %w", err)
+	}
+
+	// Ignore commitment earlier than LatestBeefyBlock which is outdated
+	if task.SignedCommitment.Commitment.BlockNumber <= uint32(state.LatestBeefyBlock) {
+		log.WithFields(log.Fields{
+			"latestBeefyBlock":      state.LatestBeefyBlock,
+			"currentValidatorSetID": state.CurrentValidatorSetID,
+			"nextValidatorSetID":    state.NextValidatorSetID,
+			"blockNumberToSync":     task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Commitment outdated, just ignore")
+		return nil
+	}
+	if task.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
+		log.WithFields(log.Fields{
+			"latestBeefyBlock":      state.LatestBeefyBlock,
+			"currentValidatorSetID": state.CurrentValidatorSetID,
+			"nextValidatorSetID":    state.NextValidatorSetID,
+			"validatorSetIDToSync":  task.SignedCommitment.Commitment.ValidatorSetID,
+		}).Warn("Task unexpected, wait for mandatory updates to catch up first")
+		return nil
+	}
+
+	// Submit the task
+	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
+		task.ValidatorsRoot = state.CurrentValidatorSetRoot
+	} else {
+		task.ValidatorsRoot = state.NextValidatorSetRoot
+	}
+	err = relay.ethereumWriter.submit(ctx, task)
+	if err != nil {
+		return fmt.Errorf("fail to submit beefy update: %w", err)
+	}
+
+	updatedState, err := relay.ethereumWriter.queryBeefyClientState(ctx)
+	if err != nil {
+		return fmt.Errorf("query beefy client state: %w", err)
+	}
+	log.WithFields(log.Fields{
+		"latestBeefyBlock":      updatedState.LatestBeefyBlock,
+		"currentValidatorSetID": updatedState.CurrentValidatorSetID,
+		"nextValidatorSetID":    updatedState.NextValidatorSetID,
+	}).Info("Sync beefy update success")
+	return nil
 }

@@ -2,7 +2,7 @@
 
 set -eux
 
-forge script "scripts/Deploy.sol:${1}" \
+forge script "scripts/DeployBeefyClient.sol:DeployBeefyClient" \
     --chain-id 1 \
     --rpc-url "${MAINNET_RPC_URL}" \
     --ledger \

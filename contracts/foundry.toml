@@ -1,8 +1,8 @@
 [profile.default]
 solc_version = "0.8.25"
 optimizer = true
-optimizer_runs = 200
-via_ir = true
+optimizer_runs = 20000
+via_ir = false
 test = 'test'
 script = 'scripts'
 fs_permissions = [{ access = "read-write", path = "test/data" }, { access = "read", path = "./" }]
@@ -13,7 +13,7 @@ ignored_error_codes = [
 ]
 
 [profile.production]
-optimizer_runs = 20_000
+via_ir = true
 
 [profile.production.etherscan]
 mainnet = { key = "${ETHERSCAN_API_KEY}" }
