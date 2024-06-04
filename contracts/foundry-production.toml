@@ -1,0 +1,19 @@
+[profile.default]
+solc_version = "0.8.25"
+optimizer = true
+optimizer_runs = 20_000
+via_ir = true
+test = 'test'
+script = 'scripts'
+fs_permissions = [
+    { access = "read-write", path = "test/data" },
+    { access = "read", path = "./" },
+]
+
+ignored_error_codes = [
+    # DeployLocal.sol is never deployed
+    5574,
+]
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_API_KEY}" }
