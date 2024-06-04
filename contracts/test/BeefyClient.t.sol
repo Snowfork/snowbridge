@@ -72,8 +72,6 @@ contract BeefyClientTest is Test {
         bitSetArray = beefyValidatorSetRaw.readUintArray(".participants");
         absentBitSetArray = beefyValidatorSetRaw.readUintArray(".absentees");
 
-        console.log("current validator's merkle root is: %s", Strings.toHexString(uint256(root), 32));
-
         beefyClient = new BeefyClientMock(randaoCommitDelay, randaoCommitExpiration, minNumRequiredSignatures);
 
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
@@ -792,7 +790,7 @@ contract BeefyClientTest is Test {
         assertEq(_nextSetId, uint128(setId + 3));
     }
 
-    function testSubmitWithHandoverNonConsecutive() public {
+    function testSubmitNonConsecutiveCommitNotInCurrentSet() public {
         //initialize with previous set
         BeefyClient.Commitment memory commitment = initializeNonConsecutive(setId - 3, setId + 1);
 
@@ -809,6 +807,28 @@ contract BeefyClientTest is Test {
 
         (uint128 _currentSetId,,,) = beefyClient.currentValidatorSet();
         assertEq(_currentSetId, uint128(setId - 3));
+
+        (uint128 _nextSetId,,,) = beefyClient.nextValidatorSet();
+        assertEq(_nextSetId, uint128(setId + 1));
+    }
+
+    function testSubmitWithHandoverNonConsecutive() public {
+        //initialize with previous set
+        BeefyClient.Commitment memory commitment = initializeNonConsecutive(setId - 3, setId);
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+
+        vm.roll(block.number + randaoCommitDelay);
+
+        commitPrevRandao();
+
+        createFinalProofs();
+
+        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder);
+        assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+
+        (uint128 _currentSetId,,,) = beefyClient.currentValidatorSet();
+        assertEq(_currentSetId, uint128(setId));
 
         (uint128 _nextSetId,,,) = beefyClient.nextValidatorSet();
         assertEq(_nextSetId, uint128(setId + 1));
