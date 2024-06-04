@@ -26,8 +26,15 @@ export type BridgeStatusInfo = {
         previousEthereumBlockOnPolkadot: number
     }
 }
+
+export enum ChannelKind {
+    Primary = "Primary",
+    Secondary = "Secondary",
+    AssetHub = "AssetHub",
+}
+
 export type ChannelStatusInfo = {
-    name?: string
+    name?: ChannelKind
     toEthereum: {
         outbound: number
         inbound: number

@@ -50,7 +50,7 @@ In both of the scenarios above, there is a common pattern:
 
 Parachain governance therefore has the responsibility to ensure that it has enough funds to cover costs on the destination network.
 
-This can be done by selling collected fees on the source network for currency of the destination network. This currently a manual process, but should only need to be done a few times a year.
+This can be done by selling collected fees on the source network for currency of the destination network. This is currently a manual process, but should only need to be done a few times a year.
 
 Parachains can use the BridgeHub [transfer\_native\_from\_agent](https://github.com/Snowfork/snowbridge/blob/c2142e41b5a2cbd3749a5fd8f22a95abf2b923d9/parachain/pallets/system/src/lib.rs#L503C10-L503C36) API to transfer funds from their agent to some EOA account.
 

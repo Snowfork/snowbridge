@@ -169,7 +169,7 @@ func scanCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.Subst
 				return
 			}
 
-			commitment, proof, err := fetchCommitmentAndProof(ctx, meta, api, result.BlockHash)
+			commitment, proof, err := fetchCommitmentAndProof(meta, api, result.BlockHash)
 			if err != nil {
 				emitError(fmt.Errorf("fetch commitment and proof: %w", err))
 				return
@@ -240,7 +240,7 @@ func verifyProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, proof merkle.Sim
 	return actualRoot == expectedRoot, nil
 }
 
-func fetchCommitmentAndProof(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, beefyBlockHash types.Hash) (*types.SignedCommitment, *merkle.SimplifiedMMRProof, error) {
+func fetchCommitmentAndProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, beefyBlockHash types.Hash) (*types.SignedCommitment, *merkle.SimplifiedMMRProof, error) {
 	beefyHeader, err := api.RPC.Chain.GetHeader(beefyBlockHash)
 	if err != nil {
 		return nil, nil, fmt.Errorf("fetch header: %w", err)

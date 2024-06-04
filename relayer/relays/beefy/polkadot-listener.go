@@ -136,7 +136,7 @@ func (li *PolkadotListener) queryBeefyNextAuthoritySet(blockHash types.Hash) (ty
 	return nextAuthoritySet, nil
 }
 
-func (li *PolkadotListener) generateBeefyUpdate(ctx context.Context, relayBlockNumber uint64) (Request, error) {
+func (li *PolkadotListener) generateBeefyUpdate(relayBlockNumber uint64) (Request, error) {
 	api := li.conn.API()
 	meta := li.conn.Metadata()
 	var request Request
@@ -145,7 +145,7 @@ func (li *PolkadotListener) generateBeefyUpdate(ctx context.Context, relayBlockN
 		return request, fmt.Errorf("find match beefy block: %w", err)
 	}
 
-	commitment, proof, err := fetchCommitmentAndProof(ctx, meta, api, beefyBlockHash)
+	commitment, proof, err := fetchCommitmentAndProof(meta, api, beefyBlockHash)
 	if err != nil {
 		return request, fmt.Errorf("fetch commitment and proof: %w", err)
 	}
@@ -185,8 +185,8 @@ func (li *PolkadotListener) findNextBeefyBlock(blockNumber uint64) (types.Hash, 
 			// The relay block not finalized yet, just wait and retry
 			time.Sleep(6 * time.Second)
 			continue
-		} else if latestBeefyBlockNumber <= nextBeefyBlockNumber+600 {
-			// The relay block has been finalized not long ago(1 hour), just return the finalized block
+		} else if latestBeefyBlockNumber <= nextBeefyBlockNumber+60 {
+			// The relay block has been finalized not long ago, just return the finalized block
 			nextBeefyBlockHash = finalizedBeefyBlockHash
 			break
 		} else {

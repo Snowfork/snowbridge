@@ -3,7 +3,7 @@ import { Codec } from "@polkadot/types/types"
 import { u8aToHex } from "@polkadot/util"
 import { IERC20__factory, IGateway__factory, WETH9__factory } from "@snowbridge/contract-types"
 import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway"
-import { LogDescription, Signer, TransactionReceipt, ethers, keccak256 } from "ethers"
+import { LogDescription, Signer, TransactionReceipt, ethers } from "ethers"
 import { concatMap, filter, firstValueFrom, lastValueFrom, take, takeWhile, tap } from "rxjs"
 import { assetStatusInfo } from "./assets"
 import { Context } from "./index"
@@ -15,11 +15,13 @@ import {
     paraIdToChannelId,
     paraIdToSovereignAccount,
 } from "./utils"
+import { ApiPromise } from "@polkadot/api"
 
 export enum SendValidationCode {
     BridgeNotOperational,
     ChannelNotOperational,
     BeneficiaryAccountMissing,
+    BeneficiaryHasHitMaxConsumers,
     ForeignAssetMissing,
     ERC20InvalidToken,
     ERC20NotRegistered,
@@ -68,7 +70,18 @@ export type SendValidationResult = {
         tokenBalance: bigint
         tokenSpendAllowance: bigint
         lightClientLatencySeconds: number
+        accountConsumers: number | null
     }
+}
+
+export interface IValidateOptions {
+    acceptableLatencyInSeconds: number /* 3 Hours */
+    maxConsumers: number
+}
+
+const ValidateOptionDefaults: IValidateOptions = {
+    acceptableLatencyInSeconds: 28800 /* 3 Hours */,
+    maxConsumers: 16,
 }
 
 export const approveTokenSpend = async (
@@ -105,6 +118,14 @@ export const getSendFee = async (
     return await gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
 }
 
+export const getSubstrateAccount = async (parachain: ApiPromise, beneficiaryHex: string) => {
+    const account = (await parachain.query.system.account(beneficiaryHex)).toPrimitive() as {
+        data: { free: string }
+        consumers: number
+    }
+    return { balance: account.data.free, consumers: account.consumers }
+}
+
 export const validateSend = async (
     context: Context,
     source: ethers.Addressable,
@@ -113,14 +134,13 @@ export const validateSend = async (
     destinationParaId: number,
     amount: bigint,
     destinationFee: bigint,
-    options = {
-        acceptableLatencyInSeconds: 28800 /* 3 Hours */,
-    }
+    validateOptions: Partial<IValidateOptions> = {}
 ): Promise<SendValidationResult> => {
+    const options = { ...ValidateOptionDefaults, ...validateOptions }
     const {
         ethereum,
         polkadot: {
-            api: { assetHub, bridgeHub, relaychain },
+            api: { assetHub, bridgeHub, relaychain, parachains },
         },
     } = context
 
@@ -194,9 +214,11 @@ export const validateSend = async (
     let { address: beneficiaryAddress, hexAddress: beneficiaryHex } =
         beneficiaryMultiAddress(beneficiary)
 
-    let beneficiaryAccountExists = true
+    let beneficiaryAccountExists = false
+    let hasConsumers = false
     let destinationChainExists = true
     let hrmpChannelSetup = true
+    let accountConsumers: number | null = null
     const existentialDeposit = BigInt(
         assetHub.consts.balances.existentialDeposit.toPrimitive() as number
     )
@@ -204,10 +226,10 @@ export const validateSend = async (
         if (destinationFee !== 0n) throw new Error("Asset Hub does not require a destination fee.")
         if (beneficiaryAddress.kind !== 1)
             throw new Error("Asset Hub only supports 32 byte addresses.")
-        const account = (await assetHub.query.system.account(beneficiaryHex)).toPrimitive() as {
-            data: { free: string }
-        }
-        beneficiaryAccountExists = BigInt(account.data.free) > existentialDeposit
+        const { balance, consumers } = await getSubstrateAccount(assetHub, beneficiaryHex)
+        beneficiaryAccountExists = BigInt(balance) > existentialDeposit
+        hasConsumers = consumers + 2 <= options.maxConsumers
+        accountConsumers = consumers
     } else {
         const [destinationHead, hrmpChannel] = await Promise.all([
             relaychain.query.paras.heads(destinationParaId),
@@ -218,6 +240,17 @@ export const validateSend = async (
         ])
         destinationChainExists = destinationHead.toPrimitive() !== null
         hrmpChannelSetup = hrmpChannel.toPrimitive() !== null
+
+        if (destinationParaId in parachains) {
+            const { balance, consumers } = await getSubstrateAccount(assetHub, beneficiaryHex)
+            beneficiaryAccountExists = BigInt(balance) > existentialDeposit
+            hasConsumers = consumers + 2 <= options.maxConsumers
+            accountConsumers = consumers
+        } else {
+            // We cannot check this as we do not know the destination.
+            beneficiaryAccountExists = true
+            hasConsumers = true
+        }
     }
     if (!destinationChainExists)
         errors.push({
@@ -228,6 +261,11 @@ export const validateSend = async (
         errors.push({
             code: SendValidationCode.BeneficiaryAccountMissing,
             message: "Beneficiary does not hold existential deposit on destination.",
+        })
+    if (!hasConsumers)
+        errors.push({
+            code: SendValidationCode.BeneficiaryHasHitMaxConsumers,
+            message: "Benificiary is approaching the asset consumer limit. Transfer may fail.",
         })
     if (!hrmpChannelSetup)
         errors.push({
@@ -300,6 +338,7 @@ export const validateSend = async (
                 tokenBalance: assetInfo.ownerBalance,
                 tokenSpendAllowance: assetInfo.tokenGatewayAllowance,
                 existentialDeposit: existentialDeposit,
+                accountConsumers: accountConsumers,
             },
         }
     }
@@ -381,7 +420,6 @@ export const send = async (
     ])
 
     const contract = IGateway__factory.connect(context.config.appContracts.gateway, signer)
-    const fees = await context.ethereum.api.getFeeData()
 
     const response = await contract.sendToken(
         success.token,
