@@ -78,13 +78,20 @@ class PolkadotContext {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const contextFactory = async (config: Config): Promise<Context> => {
+interface ContextOverride {
+    ethereum?: AbstractProvider
+}
+
+export const contextFactory = async (config: Config, options: ContextOverride = {}): Promise<Context> => {
     let ethApi: AbstractProvider
-    if (config.ethereum.execution_url.startsWith("http")) {
-        ethApi = new ethers.JsonRpcProvider(config.ethereum.execution_url)
+    if(options.ethereum == null) {
+        if (config.ethereum.execution_url.startsWith("http")) {
+            ethApi = new ethers.JsonRpcProvider(config.ethereum.execution_url)
+        } else {
+            ethApi = new ethers.WebSocketProvider(config.ethereum.execution_url)
+        }
     } else {
-        ethApi = new ethers.WebSocketProvider(config.ethereum.execution_url)
+        ethApi = options.ethereum
     }
 
     const parasConnect: Promise<{ paraId: number; api: ApiPromise }>[] = []
