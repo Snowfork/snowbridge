@@ -14,3 +14,9 @@ ignored_error_codes = [
     # DeployLocal.sol is never deployed
     5574,
 ]
+
+[profile.production]
+optimizer_runs = 20_000
+
+[profile.production.etherscan]
+mainnet = { key = "${ETHERSCAN_API_KEY}" }
