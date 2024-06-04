@@ -124,7 +124,13 @@ func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]subst
 
 func (li *PolkadotListener) queryBeefyNextAuthoritySet(blockHash types.Hash) (types.BeefyNextAuthoritySet, error) {
 	var nextAuthoritySet types.BeefyNextAuthoritySet
-	storageKey, err := types.CreateStorageKey(li.conn.Metadata(), "BeefyMmrLeaf", "BeefyNextAuthorities", nil, nil)
+	var storageKey types.StorageKey
+	var err error
+	if li.conn.IsRococo() {
+		storageKey, err = types.CreateStorageKey(li.conn.Metadata(), "MmrLeaf", "BeefyNextAuthorities", nil, nil)
+	} else {
+		storageKey, err = types.CreateStorageKey(li.conn.Metadata(), "BeefyMmrLeaf", "BeefyNextAuthorities", nil, nil)
+	}
 	ok, err := li.conn.API().RPC.State.GetStorage(storageKey, &nextAuthoritySet, blockHash)
 	if err != nil {
 		return nextAuthoritySet, err
