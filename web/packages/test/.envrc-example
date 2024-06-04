@@ -13,7 +13,7 @@ source_up_if_exists
 ## Eth config for production
 # export INFURA_PROJECT_ID=            # Your Infura project id
 # export ETH_NETWORK=sepolia
-# export ETH_NETWORK_ID=5
+# export ETH_NETWORK_ID=11155111
 # export FOUNDRY_PROFILE=production
 # export ETHERSCAN_API_KEY=             # Your etherscan api key
 # export ETH_RPC_ENDPOINT=https://sepolia.infura.io/v3
