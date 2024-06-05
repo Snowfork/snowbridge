@@ -5,10 +5,7 @@ optimizer_runs = 20000
 via_ir = false
 test = 'test'
 script = 'scripts'
-fs_permissions = [
-    { access = "read-write", path = "test/data" },
-    { access = "read", path = "./" },
-]
+fs_permissions = [{ access = "read-write", path = "test/data" }, { access = "read", path = "./" }]
 
 ignored_error_codes = [
     # DeployLocal.sol is never deployed
