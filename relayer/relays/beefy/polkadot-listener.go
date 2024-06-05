@@ -163,10 +163,15 @@ func (li *PolkadotListener) generateBeefyUpdate(relayBlockNumber uint64) (Reques
 	if err != nil {
 		return request, fmt.Errorf("fetch beefy authorities at block %v: %w", committedBeefyBlockHash, err)
 	}
+	nextAuthoritySet, err := li.queryBeefyNextAuthoritySet(committedBeefyBlockHash)
+	if err != nil {
+		return request, fmt.Errorf("fetch beefy authorities set at block %v: %w", committedBeefyBlockHash, err)
+	}
 	request = Request{
-		Validators:       validators,
-		SignedCommitment: *commitment,
-		Proof:            *proof,
+		Validators:         validators,
+		SignedCommitment:   *commitment,
+		Proof:              *proof,
+		NextValidatorsRoot: nextAuthoritySet.Root,
 	}
 
 	return request, nil

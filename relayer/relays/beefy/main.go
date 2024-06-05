@@ -128,13 +128,15 @@ func (relay *Relay) OneShotSync(ctx context.Context, blockNumber uint64) error {
 		return nil
 	}
 	if task.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
-		log.WithFields(log.Fields{
-			"latestBeefyBlock":      state.LatestBeefyBlock,
-			"currentValidatorSetID": state.CurrentValidatorSetID,
-			"nextValidatorSetID":    state.NextValidatorSetID,
-			"validatorSetIDToSync":  task.SignedCommitment.Commitment.ValidatorSetID,
-		}).Warn("Task unexpected, wait for mandatory updates to catch up first")
-		return nil
+		if task.NextValidatorsRoot != state.NextValidatorSetRoot {
+			log.WithFields(log.Fields{
+				"latestBeefyBlock":      state.LatestBeefyBlock,
+				"currentValidatorSetID": state.CurrentValidatorSetID,
+				"nextValidatorSetID":    state.NextValidatorSetID,
+				"validatorSetIDToSync":  task.SignedCommitment.Commitment.ValidatorSetID,
+			}).Warn("Task unexpected, wait for mandatory updates to catch up first")
+			return nil
+		}
 	}
 
 	// Submit the task
