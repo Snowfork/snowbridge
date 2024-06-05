@@ -6,7 +6,7 @@ toolchain go1.21.10
 
 require (
 	github.com/cbroglie/mustache v1.4.0
-	github.com/ethereum/go-ethereum v1.13.10
+	github.com/ethereum/go-ethereum v1.13.15
 	github.com/ferranbt/fastssz v0.1.3
 	github.com/magefile/mage v1.15.0
 	github.com/mattn/go-sqlite3 v1.14.22
