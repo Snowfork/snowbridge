@@ -1,7 +1,7 @@
 // Polkadot-JS script to generate a BEEFY checkpoint
 
-let beefyBlock = 20733663;
-let blockHash = await api.rpc.chain.getBlockHash(beefyBlock);
+let blockHash = await api.rpc.beefy.getFinalizedHead();
+let header = await api.rpc.chain.getHeader(blockHash);
 let apiAtBlock = await api.at(blockHash);
 
 let authorities = await apiAtBlock.query.beefyMmrLeaf.beefyAuthorities();
@@ -9,7 +9,7 @@ let nextAuthorities =
   await apiAtBlock.query.beefyMmrLeaf.beefyNextAuthorities();
 
 let beefyCheckpoint = {
-  startBlock: beefyBlock,
+  startBlock: header.number.toNumber(),
   current: {
     id: authorities.id.toNumber(),
     root: authorities.keysetCommitment.toHex(),

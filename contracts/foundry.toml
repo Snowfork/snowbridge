@@ -1,11 +1,13 @@
 [profile.default]
 solc_version = "0.8.25"
-optimizer = true
-optimizer_runs = 20000
+optimizer = false
 via_ir = false
 test = 'test'
 script = 'scripts'
-fs_permissions = [{ access = "read-write", path = "test/data" }, { access = "read", path = "./" }]
+fs_permissions = [
+    { access = "read-write", path = "test/data" },
+    { access = "read", path = "./" },
+]
 
 ignored_error_codes = [
     # DeployLocal.sol is never deployed
@@ -13,6 +15,8 @@ ignored_error_codes = [
 ]
 
 [profile.production]
+optimizer = true
+optimizer_runs = 20000
 via_ir = true
 
 [profile.production.etherscan]
