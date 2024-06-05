@@ -1,6 +1,7 @@
 [profile.default]
 solc_version = "0.8.25"
-optimizer = false
+optimizer = true
+optimizer_runs = 20000
 via_ir = false
 test = 'test'
 script = 'scripts'
@@ -15,8 +16,6 @@ ignored_error_codes = [
 ]
 
 [profile.production]
-optimizer = true
-optimizer_runs = 20000
 via_ir = true
 
 [profile.production.etherscan]
