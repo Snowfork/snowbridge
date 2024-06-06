@@ -235,7 +235,7 @@ export const initializeAlarms = async () => {
     let alarmCommandSharedInput = {
         EvaluationPeriods: 3,
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
-        Period: 300,
+        Period: 3600,
         Threshold: 0,
         AlarmActions: [SNS_TOPIC_TO_PAGERDUTY],
     }
@@ -292,4 +292,5 @@ export const initializeAlarms = async () => {
     for (let alarm of cloudWatchAlarms) {
         await client.send(alarm)
     }
+    console.log("Initialize alarm rules success.")
 }
