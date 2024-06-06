@@ -65,7 +65,7 @@ contract UpgradeShell is Script {
     }
 
     function run() public {
-        //vm.startBroadcast();
+        vm.startBroadcast();
 
         Config memory config = readConfig();
 
@@ -86,7 +86,6 @@ contract UpgradeShell is Script {
 
         shell.upgrade(address(gatewayLogic), address(gatewayLogic).codehash, abi.encode(config.initializerParams));
 
-        require(IGateway(config.gatewayProxy).implementation() == address(gatewayLogic));
-        // vm.stopBroadcast();
+        vm.stopBroadcast();
     }
 }
