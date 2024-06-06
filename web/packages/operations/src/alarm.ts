@@ -9,7 +9,6 @@ const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
 const SNS_TOPIC_TO_PAGERDUTY = process.env["SNS_TOPIC_TO_PAGERDUTY"] || ""
 
 export const AlarmThreshold = {
-    MaxBlockLatency: 2000,
     MinBalanceToKeep: 10_000_000_000,
 }
 
@@ -50,7 +49,8 @@ export const sendMetrics = async (metrics: AllMetrics) => {
     metricData.push({
         MetricName: AlarmReason.BeefyStale.toString(),
         Value: Number(
-            metrics.bridgeStatus.toEthereum.blockLatency > AlarmThreshold.MaxBlockLatency &&
+            metrics.bridgeStatus.toEthereum.blockLatency >
+                status.BlockLatencyThreshold.ToEthereum &&
                 metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum <=
                     metrics.bridgeStatus.toEthereum.previousPolkadotBlockOnEthereum
         ),
@@ -71,7 +71,8 @@ export const sendMetrics = async (metrics: AllMetrics) => {
     metricData.push({
         MetricName: AlarmReason.BeaconStale.toString(),
         Value: Number(
-            metrics.bridgeStatus.toPolkadot.blockLatency > AlarmThreshold.MaxBlockLatency &&
+            metrics.bridgeStatus.toPolkadot.blockLatency >
+                status.BlockLatencyThreshold.ToPolkadot &&
                 metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot <=
                     metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot
         ),

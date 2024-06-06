@@ -289,7 +289,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             BRIDGE_HUB_WS_URL: "wss://polkadot-bridge-hub-rpc.dwellir.com",
             PARACHAINS: [],
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
-            BEEFY_CONTRACT: "0xad04888ff41947a2e34f9e7b990bbc6cd85fe1d1",
+            BEEFY_CONTRACT: "0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C",
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
             PRIMARY_GOVERNANCE_CHANNEL_ID:
