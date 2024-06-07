@@ -319,7 +319,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 },
                 {
                     name: "execution-assethub",
-                    account: "5GeLu5rPcaoZ2RVDbhX8DKJt8NxnKn6DvvjfuhnwTZyYRY59",
+                    account: "5HHDmTHN4FZYhuMSt3oP8YySDxzPLj9ZGBwxZjSdKf29qcnj",
                     type: "substrate",
                 },
                 {
