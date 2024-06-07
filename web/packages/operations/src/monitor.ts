@@ -1,9 +1,9 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
 import { contextFactory, destroyContext, environment, status, utils } from "@snowbridge/api"
-import { AllMetrics, Sovereign, sendMetrics } from "./alarm"
+import { sendMetrics } from "./alarm"
 
-export const monitor = async (): Promise<AllMetrics> => {
+export const monitor = async (): Promise<status.AllMetrics> => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
@@ -107,11 +107,12 @@ export const monitor = async (): Promise<AllMetrics> => {
 
     const channels = [assethub, primaryGov, secondaryGov]
 
-    let sovereigns: Sovereign[] = [
+    let sovereigns: status.Sovereign[] = [
         {
             name: "AssetHub",
             account: utils.paraIdToSovereignAccount("sibl", config.ASSET_HUB_PARAID),
             balance: assetHubSovereign,
+            type: "substrate",
         },
         {
             name: "AssetHubAgent",
@@ -120,15 +121,17 @@ export const monitor = async (): Promise<AllMetrics> => {
                 config.ASSET_HUB_PARAID
             ),
             balance: assetHubAgentBalance,
+            type: "ethereum",
         },
         {
             name: "BridgeHubAgent",
             account: u8aToHex(blake2AsU8a("0x00", 256)),
             balance: bridgeHubAgentBalance,
+            type: "ethereum",
         },
     ]
 
-    const allMetrics: AllMetrics = { name, bridgeStatus, channels, relayers, sovereigns }
+    const allMetrics: status.AllMetrics = { name, bridgeStatus, channels, relayers, sovereigns }
 
     await sendMetrics(allMetrics)
 

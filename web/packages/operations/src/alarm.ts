@@ -6,33 +6,11 @@ import {
 } from "@aws-sdk/client-cloudwatch"
 
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
-
 const BRIDGE_STALE_SNS_TOPIC = process.env["BRIDGE_STALE_SNS_TOPIC"] || ""
 const ACCOUNT_BALANCE_SNS_TOPIC = process.env["ACCOUNT_BALANCE_SNS_TOPIC"] || ""
 
-export const AlarmThreshold = {
-    MinBalanceToKeep: 10_000_000_000,
-}
-
-export type Sovereign = { name: string; account: string; balance: bigint }
-
-export type AllMetrics = {
-    name: string
-    bridgeStatus: status.BridgeStatusInfo
-    channels: status.ChannelStatusInfo[]
-    sovereigns: Sovereign[]
-    relayers: environment.Relayer[]
-}
-
-export enum AlarmReason {
-    BeefyStale = "BeefyStale",
-    BeaconStale = "BeaconStale",
-    ToEthereumChannelStale = "ToEthereumChannelStale",
-    ToPolkadotChannelStale = "ToPolkadotChannelStale",
-    AccountBalanceInsufficient = "AccountBalanceInsufficient",
-}
-
-export const sendMetrics = async (metrics: AllMetrics) => {
+export const sendMetrics = async (metrics: status.AllMetrics) => {
+    const { AlarmReason, InsufficientBalanceThreshold } = status
     let client = new CloudWatchClient({})
     let metricData = []
     // Beefy metrics
@@ -191,10 +169,14 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             ],
             Value: Number(relayer.balance),
         })
-        metricData.push({
-            MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
-            Value: Number(!relayer.balance || relayer.balance < AlarmThreshold.MinBalanceToKeep),
-        })
+        if (relayer.type == "substrate") {
+            metricData.push({
+                MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
+                Value: Number(
+                    !relayer.balance || relayer.balance < InsufficientBalanceThreshold.Substrate
+                ),
+            })
+        }
     }
     for (let sovereign of metrics.sovereigns) {
         metricData.push({
@@ -207,12 +189,14 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             ],
             Value: Number(sovereign.balance),
         })
-        metricData.push({
-            MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
-            Value: Number(
-                !sovereign.balance || sovereign.balance < AlarmThreshold.MinBalanceToKeep
-            ),
-        })
+        if (sovereign.type == "substrate") {
+            metricData.push({
+                MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
+                Value: Number(
+                    !sovereign.balance || sovereign.balance < InsufficientBalanceThreshold.Substrate
+                ),
+            })
+        }
     }
     const command = new PutMetricDataCommand({
         MetricData: metricData,
@@ -222,6 +206,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
 }
 
 export const initializeAlarms = async () => {
+    const { AlarmReason } = status
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV

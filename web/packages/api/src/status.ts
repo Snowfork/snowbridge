@@ -1,5 +1,6 @@
 import { Context } from "./index"
 import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
+import { Relayer, SourceType } from "./environment"
 
 export type OperatingMode = "Normal" | "Halted"
 export type BridgeStatusInfo = {
@@ -52,11 +53,36 @@ export type ChannelStatusInfo = {
     }
 }
 
+export enum AlarmReason {
+    BeefyStale = "BeefyStale",
+    BeaconStale = "BeaconStale",
+    ToEthereumChannelStale = "ToEthereumChannelStale",
+    ToPolkadotChannelStale = "ToPolkadotChannelStale",
+    AccountBalanceInsufficient = "AccountBalanceInsufficient",
+}
+
+export type Sovereign = { name: string; account: string; balance: bigint; type: SourceType }
+
 export const BlockLatencyThreshold = {
     // Syncing beefy finality update every 4 hours(2400 blocks) so we set 3000 blocks at most.
     ToEthereum: 3000,
     // Syncing beacon finality update every 4 hours(1200 blocks) so we set 1500 blocks at most.
     ToPolkadot: 1500,
+}
+
+export const InsufficientBalanceThreshold = {
+    // Minimum as 1 DOT
+    Substrate: 10_000_000_000,
+    // Minimum as 0.01 Ether
+    Ethereum: 10_000_000_000_000_000,
+}
+
+export type AllMetrics = {
+    name: string
+    bridgeStatus: BridgeStatusInfo
+    channels: ChannelStatusInfo[]
+    sovereigns: Sovereign[]
+    relayers: Relayer[]
 }
 
 export const bridgeStatusInfo = async (
