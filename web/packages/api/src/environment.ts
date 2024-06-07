@@ -309,12 +309,12 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 },
                 {
                     name: "parachain-primary-gov",
-                    account: "0xE3f4e40E0dB2F828e248dB2790958035BaB1a4B5",
+                    account: "0x1F1819C3C68F9533adbB8E51C8E8428a818D693E",
                     type: "ethereum",
                 },
                 {
                     name: "parachain-secondary-gov",
-                    account: "0x71429d3B9d68557C2F49e42e12B9cf7edAADCe3D",
+                    account: "0x1F1819C3C68F9533adbB8E51C8E8428a818D693E",
                     type: "ethereum",
                 },
                 {
