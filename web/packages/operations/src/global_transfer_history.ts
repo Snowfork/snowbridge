@@ -42,6 +42,7 @@ const monitor = async () => {
     const assetHubScan = subscan.createApi(config.SUBSCAN_API.ASSET_HUB_URL, subscanKey)
     const bridgeHubScan = subscan.createApi(config.SUBSCAN_API.BRIDGE_HUB_URL, subscanKey)
     const relaychainScan = subscan.createApi(config.SUBSCAN_API.RELAY_CHAIN_URL, subscanKey)
+    const skipLightClientUpdates = false
 
     const [ethNowBlock, assetHubNowBlock, bridgeHubNowBlock] = await Promise.all([
         (async () => {
@@ -67,7 +68,8 @@ const monitor = async () => {
                 fromBlock: ethNowBlock.number - ethereumSearchPeriodBlocks,
                 toBlock: ethNowBlock.number,
             },
-        }),
+        },
+        skipLightClientUpdates),
         await history.toPolkadotHistory(context, assetHubScan, bridgeHubScan, {
             assetHub: {
                 fromBlock: assetHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
@@ -81,7 +83,8 @@ const monitor = async () => {
                 fromBlock: ethNowBlock.number - ethereumSearchPeriodBlocks,
                 toBlock: ethNowBlock.number,
             },
-        }),
+        },
+        skipLightClientUpdates),
     ]
 
     const transfers = [...toEthereum, ...toPolkadot]
