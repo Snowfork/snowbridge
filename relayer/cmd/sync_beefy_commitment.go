@@ -24,6 +24,7 @@ func syncBeefyCommitmentCmd() *cobra.Command {
 	cmd.Flags().String("private-key-file", "", "The file from which to read the private key")
 	cmd.Flags().Uint64P("block-number", "b", 0, "Relay block number which contains a Parachain message")
 	cmd.MarkFlagRequired("block-number")
+	cmd.Flags().Bool("export-json", false, "Export Json")
 	return cmd
 }
 
@@ -54,11 +55,16 @@ func SyncBeefyCommitmentFn(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	generateLog, err := cmd.Flags().GetBool("export-json")
+	if err != nil {
+		return err
+	}
+
 	relay, err := beefy.NewRelay(&config, keypair)
 	if err != nil {
 		return err
 	}
 	blockNumber, _ := cmd.Flags().GetUint64("block-number")
-	err = relay.OneShotSync(ctx, blockNumber)
+	err = relay.OneShotSync(ctx, blockNumber, generateLog)
 	return err
 }

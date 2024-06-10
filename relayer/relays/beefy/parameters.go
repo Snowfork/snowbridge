@@ -10,6 +10,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
+	"github.com/snowfork/snowbridge/relayer/relays/beefy/json"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 	"golang.org/x/exp/slices"
 )
@@ -240,5 +241,21 @@ func proofToLog(proof contracts.BeefyClientValidatorProof) logrus.Fields {
 		"Index":   proof.Index.Uint64(),
 		"Account": proof.Account.Hex(),
 		"Proof":   hexProof,
+	}
+}
+
+func (p InitialRequestParams) ToJSON() json.InitialRequestJsonParams {
+	payloadItem := json.BeefyClientPayloadItem{PayloadID: p.Commitment.Payload[0].PayloadID, Data: "0x" + hex.EncodeToString(p.Commitment.Payload[0].Data)}
+
+	hexProof := make([]string, len(p.Proof.Proof))
+	for i, proof := range p.Proof.Proof {
+		hexProof[i] = Hex(proof[:])
+	}
+	proof := json.BeefyClientValidatorProof{V: p.Proof.V, R: Hex(p.Proof.R[:]), S: Hex(p.Proof.S[:]), Index: p.Proof.Index.Uint64(), Account: p.Proof.Account.Hex(), Proof: hexProof}
+
+	return json.InitialRequestJsonParams{
+		Commitment: json.BeefyClientCommitment{BlockNumber: p.Commitment.BlockNumber, ValidatorSetID: p.Commitment.ValidatorSetID, Payload: []json.BeefyClientPayloadItem{payloadItem}},
+		Bitfield:   p.Bitfield,
+		Proof:      proof,
 	}
 }

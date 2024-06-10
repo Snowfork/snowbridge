@@ -21,4 +21,5 @@ type Request struct {
 	ValidatorsRoot   [32]byte
 	SignedCommitment types.SignedCommitment
 	Proof            merkle.SimplifiedMMRProof
+	GenerateLog      bool
 }

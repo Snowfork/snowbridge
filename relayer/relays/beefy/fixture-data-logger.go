@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
 func Hex(b []byte) string {
@@ -51,4 +52,17 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 	}
 
 	return fields, nil
+}
+
+func (wr *EthereumWriter) generateSubmitInitial(
+	task *InitialRequestParams,
+) error {
+	jsonTask := task.ToJSON()
+	return util.WriteJSONToFile(jsonTask, "contracts/test/data/initial-commitment.json")
+}
+
+func (wr *EthereumWriter) generateSubmitFinal(
+	task *FinalRequestParams,
+) error {
+	return util.WriteJSONToFile(*task, "contracts/test/data/final-commitment.json")
 }
