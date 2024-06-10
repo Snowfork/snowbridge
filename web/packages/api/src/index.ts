@@ -82,9 +82,12 @@ interface ContextOverride {
     ethereum?: AbstractProvider
 }
 
-export const contextFactory = async (config: Config, options: ContextOverride = {}): Promise<Context> => {
+export const contextFactory = async (
+    config: Config,
+    options: ContextOverride = {}
+): Promise<Context> => {
     let ethApi: AbstractProvider
-    if(options.ethereum == null) {
+    if (options.ethereum == null) {
         if (config.ethereum.execution_url.startsWith("http")) {
             ethApi = new ethers.JsonRpcProvider(config.ethereum.execution_url)
         } else {

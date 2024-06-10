@@ -36,6 +36,11 @@ jobs:
         with:
           version: 8
 
+      - name: Build Contracts
+        working-directory: web/packages/contracts
+        run: |
+          pnpm build
+
       - name: Build Contract Types
         working-directory: web/packages/contract-types
         run: |
@@ -48,6 +53,11 @@ jobs:
         run: |
           pnpm install
           pnpm build
+
+      - name: Publish Contracts
+        working-directory: web/packages/contracts
+        run: |
+          pnpm publish --no-git-checks --access public
 
       - name: Publish Contract Types
         working-directory: web/packages/contract-types
