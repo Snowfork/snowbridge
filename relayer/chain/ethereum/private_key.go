@@ -1,32 +1,37 @@
 package ethereum
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
+	"github.com/snowfork/snowbridge/relayer/secrets"
 )
 
-func ResolvePrivateKey(privateKey, privateKeyFile string) (*secp256k1.Keypair, error) {
-	var cleanedKey string
-
-	if privateKey == "" {
-		if privateKeyFile == "" {
-			return nil, fmt.Errorf("private key not supplied")
-		}
-		contentBytes, err := ioutil.ReadFile(privateKeyFile)
+func ResolvePrivateKey(privateKey, privateKeyFile, privateKeyID string) (*secp256k1.Keypair, error) {
+	switch {
+	case privateKey != "":
+	case privateKeyFile != "":
+		contentBytes, err := os.ReadFile(privateKeyFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load private key: %w", err)
+			return nil, fmt.Errorf("load private key: %w", err)
 		}
-		cleanedKey = strings.TrimPrefix(strings.TrimSpace(string(contentBytes)), "0x")
-	} else {
-		cleanedKey = strings.TrimPrefix(privateKey, "0x")
+		privateKey = strings.TrimSpace(string(contentBytes))
+	case privateKeyID != "":
+		secret, err := secrets.GetSecretValue(context.TODO(), privateKeyID)
+		if err != nil {
+			return nil, err
+		}
+		privateKey = secret
+	default:
+		return nil, fmt.Errorf("Unable to resolve a private key")
 	}
 
-	keypair, err := secp256k1.NewKeypairFromString(cleanedKey)
+	keypair, err := secp256k1.NewKeypairFromString(strings.TrimPrefix(privateKey, "0x"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse private key: %w", err)
+		return nil, fmt.Errorf("parse private key: %w", err)
 	}
 
 	return keypair, nil
