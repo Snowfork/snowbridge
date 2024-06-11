@@ -1,33 +1,37 @@
 package parachain
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
-	"log"
+	"os"
 	"strings"
 
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
+	"github.com/snowfork/snowbridge/relayer/secrets"
 )
 
-func ResolvePrivateKey(privateKey, privateKeyFile string) (*sr25519.Keypair, error) {
-	var cleanedKeyURI string
-
-	if privateKey == "" {
-		if privateKeyFile == "" {
-			return nil, fmt.Errorf("private key URI not supplied")
-		}
-		content, err := ioutil.ReadFile(privateKeyFile)
+func ResolvePrivateKey(privateKey, privateKeyFile, privateKeyID string) (*sr25519.Keypair, error) {
+	switch {
+	case privateKey != "":
+	case privateKeyFile != "":
+		contentBytes, err := os.ReadFile(privateKeyFile)
 		if err != nil {
-			log.Fatal(err)
+			return nil, fmt.Errorf("load private key: %w", err)
 		}
-		cleanedKeyURI = strings.TrimSpace(string(content))
-	} else {
-		cleanedKeyURI = privateKey
+		privateKey = strings.TrimSpace(string(contentBytes))
+	case privateKeyID != "":
+		secret, err := secrets.GetSecretValue(context.TODO(), privateKeyID)
+		if err != nil {
+			return nil, err
+		}
+		privateKey = secret
+	default:
+		return nil, fmt.Errorf("Unable to resolve a private key")
 	}
 
-	keypair, err := sr25519.NewKeypairFromSeed(cleanedKeyURI, 42)
+	keypair, err := sr25519.NewKeypairFromSeed(privateKey, 42)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse private key URI: %w", err)
+		return nil, fmt.Errorf("parse private key: %w", err)
 	}
 
 	return keypair, nil
