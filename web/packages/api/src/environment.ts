@@ -41,12 +41,14 @@ export type TransferLocation = {
 export type SnowbridgeEnvironment = {
     config: Config
     name: string
+    ethChainId: number
     locations: TransferLocation[]
 }
 
 export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
     local_e2e: {
         name: "local_e2e",
+        ethChainId: 11155111,
         locations: [
             {
                 id: "ethereum",
@@ -151,6 +153,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
     },
     rococo_sepolia: {
         name: "rococo_sepolia",
+        ethChainId: 11155111,
         locations: [
             {
                 id: "ethereum",
@@ -254,6 +257,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
     },
     polkadot_mainnet: {
         name: "polkadot_mainnet",
+        ethChainId: 1,
         locations: [
             {
                 id: "ethereum",
@@ -289,7 +293,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             BRIDGE_HUB_WS_URL: "wss://polkadot-bridge-hub-rpc.dwellir.com",
             PARACHAINS: [],
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
-            BEEFY_CONTRACT: "0xad04888ff41947a2e34f9e7b990bbc6cd85fe1d1",
+            BEEFY_CONTRACT: "0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C",
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
             PRIMARY_GOVERNANCE_CHANNEL_ID:
@@ -309,17 +313,17 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 },
                 {
                     name: "parachain-primary-gov",
-                    account: "0xE3f4e40E0dB2F828e248dB2790958035BaB1a4B5",
+                    account: "0x1F1819C3C68F9533adbB8E51C8E8428a818D693E",
                     type: "ethereum",
                 },
                 {
                     name: "parachain-secondary-gov",
-                    account: "0x71429d3B9d68557C2F49e42e12B9cf7edAADCe3D",
+                    account: "0x1F1819C3C68F9533adbB8E51C8E8428a818D693E",
                     type: "ethereum",
                 },
                 {
                     name: "execution-assethub",
-                    account: "5GeLu5rPcaoZ2RVDbhX8DKJt8NxnKn6DvvjfuhnwTZyYRY59",
+                    account: "5HHDmTHN4FZYhuMSt3oP8YySDxzPLj9ZGBwxZjSdKf29qcnj",
                     type: "substrate",
                 },
                 {

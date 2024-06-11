@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/contracts",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Snowbridge contract source and abi.",
   "license": "Apache-2.0",
   "repository": {
