@@ -1,4 +1,4 @@
-{
+ {
     description = "Snowbridge flake";
 
     inputs = {
@@ -53,9 +53,7 @@
                     gotools
                     gopls
                     go-outline
-                    gocode
                     gopkgs
-                    gocode-gomod
                     godef
                     golint
                     mage
@@ -88,6 +86,7 @@
                     export RUSTUP_HOME=$PWD/.rustup
                     export RUST_NIGHTLY_VERSION=nightly-2024-02-08
                     export PATH=$CARGO_HOME/bin:$PATH
+                    export LODESTAR_VERSION=v1.16.0
 
                     eval "$(direnv hook bash)"
 

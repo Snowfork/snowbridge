@@ -26,9 +26,10 @@ type DataStore struct {
 }
 
 type BeaconConfig struct {
-	Endpoint  string       `mapstructure:"endpoint"`
-	Spec      SpecSettings `mapstructure:"spec"`
-	DataStore DataStore    `mapstructure:"datastore"`
+	Endpoint      string       `mapstructure:"endpoint"`
+	StateEndpoint string       `mapstructure:"stateEndpoint"`
+	Spec          SpecSettings `mapstructure:"spec"`
+	DataStore     DataStore    `mapstructure:"datastore"`
 }
 
 type SinkConfig struct {

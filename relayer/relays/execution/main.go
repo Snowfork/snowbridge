@@ -89,7 +89,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	store.Connect()
 	defer store.Close()
 
-	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint)
+	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint, r.config.Source.Beacon.StateEndpoint)
 	beaconHeader := header.New(
 		writer,
 		beaconAPI,

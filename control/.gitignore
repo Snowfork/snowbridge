@@ -11,11 +11,4 @@
 # The cache for chain data in container
 .local
 
-/chain-spec-generator
-/polkadot
-/polkadot-execute-worker
-/polkadot-parachain
-/polkadot-prepare-worker
-/initial-checkpoint.json
-db.sqlite
-db.sqlite-*
+/scratch

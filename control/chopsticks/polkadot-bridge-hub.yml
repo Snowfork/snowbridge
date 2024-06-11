@@ -1,0 +1,12 @@
+endpoint: wss://polkadot-bridge-hub-rpc.dwellir.com
+mock-signature-host: true
+block: ${env.POLKADOT_BRIDGEHUB_BLOCK_NUMBER}
+db: ./bridgehub.sqlite
+
+import-storage:
+  System:
+    Account:
+      - - - 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+        - providers: 1
+          data:
+            free: 1000000000000000

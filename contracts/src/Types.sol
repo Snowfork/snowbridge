@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.23;
+pragma solidity 0.8.25;
 
 import {
     MultiAddress, multiAddressFromUint32, multiAddressFromBytes32, multiAddressFromBytes20
@@ -107,5 +107,4 @@ struct Ticket {
 
 struct TokenInfo {
     bool isRegistered;
-    bytes31 __padding;
 }

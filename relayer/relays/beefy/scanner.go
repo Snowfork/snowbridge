@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
@@ -15,20 +14,19 @@ import (
 type ScanBlocksResult struct {
 	BlockNumber uint64
 	BlockHash   types.Hash
-	Depth       uint64
 	Error       error
 }
 
-func ScanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64) (chan ScanBlocksResult, error) {
+func ScanBlocks(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64) (chan ScanBlocksResult, error) {
 	results := make(chan ScanBlocksResult)
-	go scanBlocks(ctx, api, startBlock, results)
+	go scanBlocks(ctx, meta, api, startBlock, results)
 	return results, nil
 }
 
-func scanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64, out chan<- ScanBlocksResult) {
+func scanBlocks(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64, out chan<- ScanBlocksResult) {
 	defer close(out)
 
-	sendError := func(err error) {
+	emitError := func(err error) {
 		select {
 		case <-ctx.Done():
 			return
@@ -36,20 +34,47 @@ func scanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64,
 		}
 	}
 
-	current := startBlock
-	for {
+	fetchFinalizedBeefyHeader := func() (*types.Header, error) {
 		finalizedHash, err := api.RPC.Beefy.GetFinalizedHead()
 		if err != nil {
-			sendError(fmt.Errorf("fetch finalized head: %w", err))
-			return
+			return nil, fmt.Errorf("fetch finalized head: %w", err)
 		}
 
 		finalizedHeader, err := api.RPC.Chain.GetHeader(finalizedHash)
 		if err != nil {
-			sendError(fmt.Errorf("fetch header for finalised head %v: %w", finalizedHash.Hex(), err))
-			return
+			return nil, fmt.Errorf("fetch header for finalised head %v: %w", finalizedHash.Hex(), err)
 		}
 
+		return finalizedHeader, nil
+	}
+
+	sessionCurrentIndexKey, err := types.CreateStorageKey(meta, "Session", "CurrentIndex", nil, nil)
+	if err != nil {
+		emitError(fmt.Errorf("create storage key: %w", err))
+		return
+	}
+
+	blockHash, err := api.RPC.Chain.GetBlockHash(max(startBlock-1, 0))
+	if err != nil {
+		emitError(fmt.Errorf("fetch block hash: %w", err))
+		return
+	}
+
+	// Get session index of block before start block
+	var currentSessionIndex uint32
+	_, err = api.RPC.State.GetStorage(sessionCurrentIndexKey, &currentSessionIndex, blockHash)
+	if err != nil {
+		emitError(fmt.Errorf("fetch session index: %w", err))
+		return
+	}
+
+	finalizedHeader, err := fetchFinalizedBeefyHeader()
+	if err != nil {
+		emitError(err)
+		return
+	}
+	current := startBlock
+	for {
 		finalizedBlockNumber := uint64(finalizedHeader.Number)
 		if current > finalizedBlockNumber {
 			select {
@@ -57,19 +82,42 @@ func scanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64,
 				return
 			case <-time.After(3 * time.Second):
 			}
+			finalizedHeader, err = fetchFinalizedBeefyHeader()
+			if err != nil {
+				emitError(err)
+				return
+			}
 			continue
+		}
+
+		if current > uint64(finalizedHeader.Number) {
+			return
 		}
 
 		blockHash, err := api.RPC.Chain.GetBlockHash(current)
 		if err != nil {
-			sendError(fmt.Errorf("fetch block hash: %w", err))
+			emitError(fmt.Errorf("fetch block hash: %w", err))
 			return
+		}
+
+		var sessionIndex uint32
+		_, err = api.RPC.State.GetStorage(sessionCurrentIndexKey, &sessionIndex, blockHash)
+		if err != nil {
+			emitError(fmt.Errorf("fetch session index: %w", err))
+			return
+		}
+
+		if sessionIndex > currentSessionIndex {
+			currentSessionIndex = sessionIndex
+		} else {
+			current++
+			continue
 		}
 
 		select {
 		case <-ctx.Done():
 			return
-		case out <- ScanBlocksResult{BlockNumber: current, BlockHash: blockHash, Depth: finalizedBlockNumber - current}:
+		case out <- ScanBlocksResult{BlockNumber: current, BlockHash: blockHash}:
 		}
 
 		current++
@@ -78,22 +126,21 @@ func scanBlocks(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64,
 
 type ScanCommitmentsResult struct {
 	SignedCommitment types.SignedCommitment
-	BlockNumber      uint64
+	Proof            merkle.SimplifiedMMRProof
 	BlockHash        types.Hash
-	Depth            uint64
 	Error            error
 }
 
-func ScanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64) (<-chan ScanCommitmentsResult, error) {
+func ScanCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64) (<-chan ScanCommitmentsResult, error) {
 	out := make(chan ScanCommitmentsResult)
-	go scanCommitments(ctx, api, startBlock, out)
+	go scanCommitments(ctx, meta, api, startBlock, out)
 	return out, nil
 }
 
-func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock uint64, out chan<- ScanCommitmentsResult) {
+func scanCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64, out chan<- ScanCommitmentsResult) {
 	defer close(out)
 
-	sendError := func(err error) {
+	emitError := func(err error) {
 		select {
 		case <-ctx.Done():
 			return
@@ -101,17 +148,16 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 		}
 	}
 
-	in, err := ScanBlocks(ctx, api, startBlock)
+	in, err := ScanBlocks(ctx, meta, api, startBlock)
 	if err != nil {
-		sendError(err)
+		emitError(err)
 		return
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			out <- ScanCommitmentsResult{Error: ctx.Err()}
-			close(out)
+			emitError(err)
 			return
 		case result, ok := <-in:
 			if !ok {
@@ -119,121 +165,21 @@ func scanCommitments(ctx context.Context, api *gsrpc.SubstrateAPI, startBlock ui
 			}
 
 			if result.Error != nil {
-				sendError(result.Error)
+				emitError(result.Error)
 				return
 			}
 
-			block, err := api.RPC.Chain.GetBlock(result.BlockHash)
+			commitment, proof, err := fetchCommitmentAndProof(meta, api, result.BlockHash)
 			if err != nil {
-				sendError(fmt.Errorf("fetch block: %w", err))
+				emitError(fmt.Errorf("fetch commitment and proof: %w", err))
 				return
-			}
-
-			var commitment *types.SignedCommitment
-			for j := range block.Justifications {
-				sc := types.OptionalSignedCommitment{}
-				// Filter justification by EngineID
-				// https://github.com/paritytech/substrate/blob/55c64bcc2af5a6e5fc3eb245e638379ebe18a58d/primitives/beefy/src/lib.rs#L114
-				if block.Justifications[j].EngineID() == "BEEF" {
-					// Decode as SignedCommitment
-					// https://github.com/paritytech/substrate/blob/bcee526a9b73d2df9d5dea0f1a17677618d70b8e/primitives/beefy/src/commitment.rs#L89
-					err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
-					if err != nil {
-						sendError(fmt.Errorf("decode BEEFY signed commitment: %w", err))
-						return
-					}
-					ok, value := sc.Unwrap()
-					if ok {
-						commitment = &value
-					}
-				}
-			}
-
-			if commitment == nil {
-				continue
 			}
 
 			select {
 			case <-ctx.Done():
 				return
-			case out <- ScanCommitmentsResult{BlockNumber: result.BlockNumber, BlockHash: result.BlockHash, SignedCommitment: *commitment, Depth: result.Depth}:
+			case out <- ScanCommitmentsResult{BlockHash: result.BlockHash, SignedCommitment: *commitment, Proof: *proof}:
 			}
-		}
-	}
-}
-
-type ScanSafeCommitmentsResult struct {
-	SignedCommitment types.SignedCommitment
-	MMRProof         merkle.SimplifiedMMRProof
-	BlockHash        types.Hash
-	Depth            uint64
-	Error            error
-}
-
-func ScanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64) (<-chan ScanSafeCommitmentsResult, error) {
-	out := make(chan ScanSafeCommitmentsResult)
-	go scanSafeCommitments(ctx, meta, api, startBlock, out)
-	return out, nil
-}
-
-func scanSafeCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64, out chan<- ScanSafeCommitmentsResult) {
-	defer close(out)
-
-	sendError := func(err error) {
-		select {
-		case <-ctx.Done():
-			return
-		case out <- ScanSafeCommitmentsResult{Error: err}:
-		}
-	}
-
-	in, err := ScanCommitments(ctx, api, startBlock)
-	if err != nil {
-		sendError(err)
-		return
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case result, ok := <-in:
-			if !ok {
-				return
-			}
-
-			if result.Error != nil {
-				sendError(result.Error)
-				return
-			}
-
-			blockNumber := result.SignedCommitment.Commitment.BlockNumber
-			blockHash, err := api.RPC.Chain.GetBlockHash(uint64(blockNumber))
-			if err != nil {
-				sendError(fmt.Errorf("fetch block hash: %w", err))
-				return
-			}
-			proofIsValid, proof, err := makeProof(meta, api, blockNumber, blockHash)
-			if err != nil {
-				sendError(fmt.Errorf("proof generation for block %v at hash %v: %w", blockNumber, blockHash.Hex(), err))
-				return
-			}
-
-			if !proofIsValid {
-				log.WithFields(log.Fields{
-					"parentNumber":   blockNumber,
-					"beefyBlockHash": blockHash,
-					"validatorSetID": result.SignedCommitment.Commitment.ValidatorSetID,
-				}).Info("Proof for leaf is invalid")
-				continue
-			}
-
-			select {
-			case <-ctx.Done():
-				return
-			case out <- ScanSafeCommitmentsResult{result.SignedCommitment, proof, blockHash, result.Depth, nil}:
-			}
-
 		}
 	}
 }
@@ -292,4 +238,42 @@ func verifyProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, proof merkle.Sim
 	}
 
 	return actualRoot == expectedRoot, nil
+}
+
+func fetchCommitmentAndProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, beefyBlockHash types.Hash) (*types.SignedCommitment, *merkle.SimplifiedMMRProof, error) {
+	beefyHeader, err := api.RPC.Chain.GetHeader(beefyBlockHash)
+	if err != nil {
+		return nil, nil, fmt.Errorf("fetch header: %w", err)
+	}
+	beefyBlock, err := api.RPC.Chain.GetBlock(beefyBlockHash)
+	if err != nil {
+		return nil, nil, fmt.Errorf("fetch block: %w", err)
+	}
+
+	var commitment *types.SignedCommitment
+	for j := range beefyBlock.Justifications {
+		sc := types.OptionalSignedCommitment{}
+		if beefyBlock.Justifications[j].EngineID() == "BEEF" {
+			err := types.DecodeFromBytes(beefyBlock.Justifications[j].Payload(), &sc)
+			if err != nil {
+				return nil, nil, fmt.Errorf("decode BEEFY signed commitment: %w", err)
+			}
+			ok, value := sc.Unwrap()
+			if ok {
+				commitment = &value
+			}
+		}
+	}
+	if commitment == nil {
+		return nil, nil, fmt.Errorf("beefy block without a valid commitment")
+	}
+
+	proofIsValid, proof, err := makeProof(meta, api, uint32(beefyHeader.Number), beefyBlockHash)
+	if err != nil {
+		return nil, nil, fmt.Errorf("proof generation for block %v at hash %v: %w", beefyHeader.Number, beefyBlockHash.Hex(), err)
+	}
+	if !proofIsValid {
+		return nil, nil, fmt.Errorf("Proof for leaf is invalid for block %v at hash %v: %w", beefyHeader.Number, beefyBlockHash.Hex(), err)
+	}
+	return commitment, &proof, nil
 }

@@ -10,6 +10,8 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
+	"golang.org/x/exp/slices"
 )
 
 type InitialRequestParams struct {
@@ -97,18 +99,25 @@ func cleanSignature(input types.BeefySignature) (uint8, [32]byte, [32]byte) {
 }
 
 func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byte, error) {
-	leaves := make([][]byte, len(r.Validators))
-	for i, rawAddress := range r.Validators {
+	var leaves [][]byte
+	var err error
+	var invalidAddress []string
+	for _, rawAddress := range r.Validators {
 		address, err := rawAddress.IntoEthereumAddress()
 		if err != nil {
-			return nil, fmt.Errorf("convert to ethereum address: %w", err)
+			invalidAddress = append(invalidAddress, util.BytesToHexString(rawAddress[:]))
+			leaves = append(leaves, make([]byte, 0))
+		} else {
+			leaves = append(leaves, address.Bytes())
 		}
-		leaves[i] = address.Bytes()
 	}
-
-	_, _, proof, err := merkle.GenerateMerkleProof(leaves, validatorIndex)
+	_, root, proof, err := merkle.GenerateMerkleProof(leaves, validatorIndex)
 	if err != nil {
 		return nil, err
+	}
+	equal := slices.Equal(r.ValidatorsRoot[:], root)
+	if !equal {
+		return nil, fmt.Errorf("validator root %#x not match calculated root %#x, invalid address are: %s", r.ValidatorsRoot[:], root, invalidAddress)
 	}
 
 	return proof, nil
@@ -155,22 +164,19 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 	var merkleProofItems [][32]byte
 
 	proofOrder := new(big.Int)
-
-	if r.IsHandover {
-		inputLeaf = contracts.BeefyClientMMRLeaf{
-			Version:              uint8(r.Proof.Leaf.Version),
-			ParentNumber:         uint32(r.Proof.Leaf.ParentNumberAndHash.ParentNumber),
-			ParentHash:           r.Proof.Leaf.ParentNumberAndHash.Hash,
-			ParachainHeadsRoot:   r.Proof.Leaf.ParachainHeads,
-			NextAuthoritySetID:   uint64(r.Proof.Leaf.BeefyNextAuthoritySet.ID),
-			NextAuthoritySetLen:  uint32(r.Proof.Leaf.BeefyNextAuthoritySet.Len),
-			NextAuthoritySetRoot: r.Proof.Leaf.BeefyNextAuthoritySet.Root,
-		}
-		for _, mmrProofItem := range r.Proof.MerkleProofItems {
-			merkleProofItems = append(merkleProofItems, mmrProofItem)
-		}
-		proofOrder = proofOrder.SetUint64(r.Proof.MerkleProofOrder)
+	inputLeaf = contracts.BeefyClientMMRLeaf{
+		Version:              uint8(r.Proof.Leaf.Version),
+		ParentNumber:         uint32(r.Proof.Leaf.ParentNumberAndHash.ParentNumber),
+		ParentHash:           r.Proof.Leaf.ParentNumberAndHash.Hash,
+		ParachainHeadsRoot:   r.Proof.Leaf.ParachainHeads,
+		NextAuthoritySetID:   uint64(r.Proof.Leaf.BeefyNextAuthoritySet.ID),
+		NextAuthoritySetLen:  uint32(r.Proof.Leaf.BeefyNextAuthoritySet.Len),
+		NextAuthoritySetRoot: r.Proof.Leaf.BeefyNextAuthoritySet.Root,
 	}
+	for _, mmrProofItem := range r.Proof.MerkleProofItems {
+		merkleProofItems = append(merkleProofItems, mmrProofItem)
+	}
+	proofOrder = proofOrder.SetUint64(r.Proof.MerkleProofOrder)
 
 	msg := FinalRequestParams{
 		Commitment:     commitment,

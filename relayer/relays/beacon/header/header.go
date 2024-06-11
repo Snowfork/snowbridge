@@ -23,6 +23,7 @@ import (
 
 var ErrFinalizedHeaderUnchanged = errors.New("finalized header unchanged")
 var ErrFinalizedHeaderNotImported = errors.New("finalized header not imported")
+var ErrInterimHeaderNotImported = errors.New("interim finalized header not imported")
 var ErrSyncCommitteeNotImported = errors.New("sync committee not imported")
 var ErrSyncCommitteeLatency = errors.New("sync committee latency found")
 var ErrExecutionHeaderNotImported = errors.New("execution header not imported")
@@ -63,6 +64,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 	// Special handling here for the initial checkpoint to sync the next sync committee which is not included in initial
 	// checkpoint.
 	if h.isInitialSyncPeriod() {
+		log.Info("syncing next sync committee for initial checkpoint")
 		err = h.SyncCommitteePeriodUpdate(ctx, latestSyncedPeriod)
 		if err != nil {
 			return fmt.Errorf("sync next committee for initial sync period: %w", err)
@@ -71,7 +73,7 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 
 	log.Info("starting to sync finalized headers")
 
-	ticker := time.NewTicker(time.Second * 10)
+	ticker := time.NewTicker(time.Second * 30)
 
 	eg.Go(func() error {
 		for {
@@ -126,11 +128,28 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 
 	// If the gap between the last two finalized headers is more than the sync committee period, sync an interim
 	// finalized header
-	maxLatency := h.cache.Finalized.LastSyncedSlot + (h.protocol.Settings.SlotsInEpoch * h.protocol.Settings.EpochsPerSyncCommitteePeriod)
-	if maxLatency < uint64(update.Payload.FinalizedHeader.Slot) {
-		err = h.syncInterimFinalizedUpdate(ctx, h.cache.Finalized.LastSyncedSlot)
-		if err != nil {
-			return fmt.Errorf("sync interim finalized header update: %w", err)
+	if uint64(update.Payload.FinalizedHeader.Slot) > h.cache.Finalized.LastSyncedSlot {
+		diff := uint64(update.Payload.FinalizedHeader.Slot) - h.cache.Finalized.LastSyncedSlot
+		minSlot := h.cache.Finalized.LastSyncedSlot
+		for diff > h.protocol.Settings.SlotsInEpoch*h.protocol.Settings.EpochsPerSyncCommitteePeriod {
+			log.WithFields(log.Fields{
+				"diff":                diff,
+				"last_finalized_slot": h.cache.Finalized.LastSyncedSlot,
+				"new_finalized_slot":  uint64(update.Payload.FinalizedHeader.Slot),
+			}).Info("interim update required")
+
+			interimUpdate, err := h.syncInterimFinalizedUpdate(ctx, minSlot, uint64(update.Payload.FinalizedHeader.Slot))
+			if err != nil {
+				return fmt.Errorf("sync interim finalized header update: %w", err)
+			}
+
+			diff = uint64(update.Payload.FinalizedHeader.Slot) - uint64(interimUpdate.Payload.FinalizedHeader.Slot)
+			minSlot = uint64(update.Payload.FinalizedHeader.Slot) + h.protocol.Settings.SlotsInEpoch
+			log.WithFields(log.Fields{
+				"new_diff":               diff,
+				"interim_finalized_slot": uint64(interimUpdate.Payload.FinalizedHeader.Slot),
+				"new_finalized_slot":     uint64(update.Payload.FinalizedHeader.Slot),
+			}).Info("interim update synced successfully")
 		}
 	}
 
@@ -237,20 +256,29 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 	return nil
 }
 
-func (h *Header) syncInterimFinalizedUpdate(ctx context.Context, lastSyncedSlot uint64) error {
-	checkpointSlot := h.protocol.CalculateNextCheckpointSlot(lastSyncedSlot)
+func (h *Header) syncInterimFinalizedUpdate(ctx context.Context, lastSyncedSlot, newCheckpointSlot uint64) (scale.Update, error) {
+	currentPeriod := h.protocol.ComputeSyncPeriodAtSlot(lastSyncedSlot)
 
-	finalizedUpdate, err := h.syncer.GetLatestPossibleFinalizedUpdate(checkpointSlot, lastSyncedSlot)
+	// Calculate the range that the interim finalized header update may be in
+	minSlot := newCheckpointSlot - h.protocol.SlotsPerHistoricalRoot
+	maxSlot := ((currentPeriod + 1) * h.protocol.SlotsPerHistoricalRoot) - h.protocol.Settings.SlotsInEpoch // just before the new sync committee boundary
+
+	finalizedUpdate, err := h.syncer.GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot, false)
 	if err != nil {
-		return fmt.Errorf("get interim checkpoint to update chain (checkpoint slot %d, original slot: %d): %w", checkpointSlot, lastSyncedSlot, err)
+		return scale.Update{}, fmt.Errorf("get interim checkpoint to update chain (last synced slot %d, new slot: %d): %w", lastSyncedSlot, newCheckpointSlot, err)
 	}
+
+	log.WithField("slot", finalizedUpdate.Payload.FinalizedHeader.Slot).Info("syncing an interim update to on-chain")
 
 	err = h.updateFinalizedHeaderOnchain(ctx, finalizedUpdate)
-	if err != nil {
-		return fmt.Errorf("update interim finalized header on-chain: %w", err)
+	switch {
+	case errors.Is(err, ErrFinalizedHeaderNotImported):
+		return scale.Update{}, ErrInterimHeaderNotImported
+	case err != nil:
+		return scale.Update{}, fmt.Errorf("update interim finalized header on-chain: %w", err)
 	}
 
-	return nil
+	return finalizedUpdate, nil
 }
 
 func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSyncedPeriod, currentSyncPeriod uint64) error {
@@ -436,11 +464,9 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 	}
 	startIndex := uint64(lastIndex)
 	endIndex := uint64(0)
-	if uint64(lastIndex) > h.protocol.Settings.EpochsPerSyncCommitteePeriod {
-		endIndex = endIndex - h.protocol.Settings.EpochsPerSyncCommitteePeriod
-	}
 
 	syncCommitteePeriod := h.protocol.Settings.SlotsInEpoch * h.protocol.Settings.EpochsPerSyncCommitteePeriod
+	slotPeriodIndex := slot / syncCommitteePeriod
 
 	for index := startIndex; index >= endIndex; index-- {
 		beaconRoot, err := h.writer.GetFinalizedBeaconRootByIndex(uint32(index))
@@ -451,10 +477,12 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 		if err != nil {
 			return beaconState, fmt.Errorf("GetFinalizedHeaderStateByBlockRoot %s, error: %w", beaconRoot.Hex(), err)
 		}
+		statePeriodIndex := beaconState.BeaconSlot / syncCommitteePeriod
 		if beaconState.BeaconSlot < slot {
 			break
 		}
-		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod {
+		// Found the beaconState
+		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod && slotPeriodIndex == statePeriodIndex {
 			break
 		}
 	}

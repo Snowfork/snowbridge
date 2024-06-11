@@ -140,7 +140,7 @@ func (co *Connection) waitForTransaction(ctx context.Context, tx *types.Transact
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case <-time.After(500 * time.Millisecond):
+		case <-time.After(6 * time.Second):
 		}
 	}
 }

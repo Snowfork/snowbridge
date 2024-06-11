@@ -40,23 +40,6 @@ func NewEthereumWriter(
 }
 
 func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, requests <-chan Request) error {
-	address := common.HexToAddress(wr.config.Contracts.BeefyClient)
-	contract, err := contracts.NewBeefyClient(address, wr.conn.Client())
-	if err != nil {
-		return fmt.Errorf("create beefy client: %w", err)
-	}
-	wr.contract = contract
-
-	callOpts := bind.CallOpts{
-		Context: ctx,
-	}
-	blockWaitPeriod, err := wr.contract.RandaoCommitDelay(&callOpts)
-	if err != nil {
-		return fmt.Errorf("create randao commit delay: %w", err)
-	}
-	wr.blockWaitPeriod = blockWaitPeriod.Uint64()
-	log.WithField("randaoCommitDelay", wr.blockWaitPeriod).Trace("Fetched randaoCommitDelay")
-
 	// launch task processor
 	eg.Go(func() error {
 		for {
@@ -68,7 +51,24 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 					return nil
 				}
 
-				err := wr.submit(ctx, task)
+				state, err := wr.queryBeefyClientState(ctx)
+				if err != nil {
+					return fmt.Errorf("query beefy client state: %w", err)
+				}
+
+				if task.SignedCommitment.Commitment.BlockNumber < uint32(state.LatestBeefyBlock) {
+					log.WithFields(logrus.Fields{
+						"beefyBlockNumber": task.SignedCommitment.Commitment.BlockNumber,
+						"latestBeefyBlock": state.LatestBeefyBlock,
+					}).Info("Commitment already synced")
+					continue
+				}
+
+				// Mandatory commitments are always signed by the next validator set recorded in
+				// the beefy light client
+				task.ValidatorsRoot = state.NextValidatorSetRoot
+
+				err = wr.submit(ctx, task)
 				if err != nil {
 					return fmt.Errorf("submit request: %w", err)
 				}
@@ -77,6 +77,42 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 	})
 
 	return nil
+}
+
+type BeefyClientState struct {
+	LatestBeefyBlock        uint64
+	CurrentValidatorSetID   uint64
+	CurrentValidatorSetRoot [32]byte
+	NextValidatorSetID      uint64
+	NextValidatorSetRoot    [32]byte
+}
+
+func (wr *EthereumWriter) queryBeefyClientState(ctx context.Context) (*BeefyClientState, error) {
+	callOpts := bind.CallOpts{
+		Context: ctx,
+	}
+
+	latestBeefyBlock, err := wr.contract.LatestBeefyBlock(&callOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	currentValidatorSet, err := wr.contract.CurrentValidatorSet(&callOpts)
+	if err != nil {
+		return nil, err
+	}
+	nextValidatorSet, err := wr.contract.NextValidatorSet(&callOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &BeefyClientState{
+		LatestBeefyBlock:        latestBeefyBlock,
+		CurrentValidatorSetID:   currentValidatorSet.Id.Uint64(),
+		CurrentValidatorSetRoot: currentValidatorSet.Root,
+		NextValidatorSetID:      nextValidatorSet.Id.Uint64(),
+		NextValidatorSetRoot:    nextValidatorSet.Root,
+	}, nil
 }
 
 func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
@@ -106,6 +142,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		wr.conn.MakeTxOpts(ctx),
 		*commitmentHash,
 	)
+
 	_, err = wr.conn.WatchTransaction(ctx, tx, 1)
 	if err != nil {
 		log.WithError(err).Error("Failed to CommitPrevRandao")
@@ -128,7 +165,6 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	log.WithFields(logrus.Fields{
 		"tx":          tx.Hash().Hex(),
 		"blockNumber": task.SignedCommitment.Commitment.BlockNumber,
-		"IsHandover":  task.IsHandover,
 	}).Debug("Transaction SubmitFinal succeeded")
 
 	return nil
@@ -148,9 +184,10 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	chosenValidator := signedValidators[rand.Intn(len(signedValidators))].Int64()
 
 	log.WithFields(logrus.Fields{
-		"validatorCount":   validatorCount,
-		"signedValidators": signedValidators,
-		"chosenValidator":  chosenValidator,
+		"validatorCount":       validatorCount,
+		"signedValidators":     signedValidators,
+		"signedValidatorCount": len(signedValidators),
+		"chosenValidator":      chosenValidator,
 	}).Info("Creating initial bitfield")
 
 	initialBitfield, err := wr.contract.CreateInitialBitfield(
@@ -240,4 +277,25 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 		Info("Sent SubmitFinal transaction")
 
 	return tx, nil
+}
+
+func (wr *EthereumWriter) initialize(ctx context.Context) error {
+	address := common.HexToAddress(wr.config.Contracts.BeefyClient)
+	contract, err := contracts.NewBeefyClient(address, wr.conn.Client())
+	if err != nil {
+		return fmt.Errorf("create beefy client: %w", err)
+	}
+	wr.contract = contract
+
+	callOpts := bind.CallOpts{
+		Context: ctx,
+	}
+	blockWaitPeriod, err := wr.contract.RandaoCommitDelay(&callOpts)
+	if err != nil {
+		return fmt.Errorf("create randao commit delay: %w", err)
+	}
+	wr.blockWaitPeriod = blockWaitPeriod.Uint64()
+	log.WithField("randaoCommitDelay", wr.blockWaitPeriod).Trace("Fetched randaoCommitDelay")
+
+	return nil
 }

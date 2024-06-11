@@ -1,7 +1,12 @@
 // import '@polkadot/api-augment/polkadot'
-import { ApiPromise, WsProvider } from '@polkadot/api'
-import { AbstractProvider, ethers } from 'ethers'
-import { BeefyClient, BeefyClient__factory, IGateway, IGateway__factory } from '@snowbridge/contract-types'
+import { ApiPromise, WsProvider } from "@polkadot/api"
+import { AbstractProvider, ethers } from "ethers"
+import {
+    BeefyClient,
+    BeefyClient__factory,
+    IGateway,
+    IGateway__factory,
+} from "@snowbridge/contract-types"
 
 interface Config {
     ethereum: {
@@ -49,40 +54,74 @@ class EthereumContext {
     }
 }
 
+type Parachains = { [paraId: number]: ApiPromise }
+
 class PolkadotContext {
     api: {
         relaychain: ApiPromise
         assetHub: ApiPromise
         bridgeHub: ApiPromise
-        parachains: { [paraId: number]: ApiPromise }
+        parachains: Parachains
     }
-    constructor(relaychain: ApiPromise, assetHub: ApiPromise, bridgeHub: ApiPromise) {
+    constructor(
+        relaychain: ApiPromise,
+        assetHub: ApiPromise,
+        bridgeHub: ApiPromise,
+        parachains: Parachains
+    ) {
         this.api = {
             relaychain: relaychain,
             assetHub: assetHub,
             bridgeHub: bridgeHub,
-            parachains: {}
+            parachains: parachains,
         }
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const contextFactory = async (config: Config): Promise<Context> => {
-    let ethApi: AbstractProvider;
-    if(config.ethereum.execution_url.startsWith("http")) {
-        ethApi = new ethers.JsonRpcProvider(config.ethereum.execution_url)
+interface ContextOverride {
+    ethereum?: AbstractProvider
+}
+
+export const contextFactory = async (
+    config: Config,
+    options: ContextOverride = {}
+): Promise<Context> => {
+    let ethApi: AbstractProvider
+    if (options.ethereum == null) {
+        if (config.ethereum.execution_url.startsWith("http")) {
+            ethApi = new ethers.JsonRpcProvider(config.ethereum.execution_url)
+        } else {
+            ethApi = new ethers.WebSocketProvider(config.ethereum.execution_url)
+        }
     } else {
-        ethApi = new ethers.WebSocketProvider(config.ethereum.execution_url)
+        ethApi = options.ethereum
     }
-    const relaychainApi = await ApiPromise.create({
-        provider: new WsProvider(config.polkadot.url.relaychain),
-    })
-    const assetHubApi = await ApiPromise.create({
-        provider: new WsProvider(config.polkadot.url.assetHub),
-    })
-    const bridgeHubApi = await ApiPromise.create({
-        provider: new WsProvider(config.polkadot.url.bridgeHub),
-    })
+
+    const parasConnect: Promise<{ paraId: number; api: ApiPromise }>[] = []
+    for (const parachain of config.polkadot.url.parachains ?? []) {
+        parasConnect.push(addParachainConnection(parachain))
+    }
+
+    const [relaychainApi, assetHubApi, bridgeHubApi] = await Promise.all([
+        ApiPromise.create({
+            provider: new WsProvider(config.polkadot.url.relaychain),
+        }),
+        ApiPromise.create({
+            provider: new WsProvider(config.polkadot.url.assetHub),
+        }),
+        ApiPromise.create({
+            provider: new WsProvider(config.polkadot.url.bridgeHub),
+        }),
+    ])
+
+    const paras = await Promise.all(parasConnect)
+    const parachains: Parachains = {}
+    for (const { paraId, api } of paras) {
+        if (paraId in parachains) {
+            throw new Error(`${paraId} already added.`)
+        }
+        parachains[paraId] = api
+    }
 
     const gatewayAddr = config.appContracts.gateway
     const beefyAddr = config.appContracts.beefy
@@ -95,25 +134,20 @@ export const contextFactory = async (config: Config): Promise<Context> => {
     }
 
     const ethCtx = new EthereumContext(ethApi, appContracts)
-    const polCtx = new PolkadotContext(relaychainApi, assetHubApi, bridgeHubApi)
+    const polCtx = new PolkadotContext(relaychainApi, assetHubApi, bridgeHubApi, parachains)
 
     const context = new Context(config, ethCtx, polCtx)
-    for (const parachain of config.polkadot.url.parachains ?? []) {
-        await addParachainConnection(context, parachain)
-    }
+    await Promise.all(parasConnect)
     return context
 }
 
-export const addParachainConnection = async (context: Context, url: string): Promise<void> => {
+export const addParachainConnection = async (url: string) => {
     const api = await ApiPromise.create({
-        provider: new WsProvider(url)
+        provider: new WsProvider(url),
     })
     const paraId = (await api.query.parachainInfo.parachainId()).toPrimitive() as number
-    if (paraId in context.polkadot.api.parachains) {
-        throw new Error(`${paraId} already added.`)
-    }
-    context.polkadot.api.parachains[paraId] = api
     console.log(`${url} added with parachain id: ${paraId}`)
+    return { paraId, api }
 }
 
 export const destroyContext = async (context: Context): Promise<void> => {
@@ -125,13 +159,17 @@ export const destroyContext = async (context: Context): Promise<void> => {
     await context.polkadot.api.relaychain.disconnect()
     await context.polkadot.api.bridgeHub.disconnect()
     await context.polkadot.api.assetHub.disconnect()
-    
+
     for (const paraId of Object.keys(context.polkadot.api.parachains)) {
         await context.polkadot.api.parachains[Number(paraId)].disconnect()
     }
 }
 
-export * as toPolkadot from './toPolkadot'
-export * as toEthereum from './toEthereum'
-export * as utils from './utils'
-export * as status from './status'
+export * as toPolkadot from "./toPolkadot"
+export * as toEthereum from "./toEthereum"
+export * as utils from "./utils"
+export * as status from "./status"
+export * as assets from "./assets"
+export * as environment from "./environment"
+export * as subscan from "./subscan"
+export * as history from "./history"

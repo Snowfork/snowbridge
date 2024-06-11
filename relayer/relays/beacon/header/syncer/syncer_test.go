@@ -21,7 +21,7 @@ import (
 const TestUrl = "https://lodestar-sepolia.chainsafe.io"
 
 func newTestRunner() *Syncer {
-	return New(api.NewBeaconClient(TestUrl), &mock.Store{}, protocol.New(config.SpecSettings{
+	return New(api.NewBeaconClient(TestUrl, TestUrl), &mock.Store{}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
@@ -39,11 +39,11 @@ func TestGetFinalizedUpdateAtSlot(t *testing.T) {
 	require.NoError(t, err)
 	lodestarUpdateJSON := lodestarUpdate.Payload.ToJSON()
 
-	attestedSlot, err := syncer.FindLatestAttestedHeadersAtInterval(uint64(lodestarUpdate.Payload.AttestedHeader.Slot), 9331)
+	attestedSlot, err := syncer.FindValidAttestedHeader(uint64(lodestarUpdate.Payload.AttestedHeader.Slot), 9331)
 	require.NoError(t, err)
 
 	// Manually construct the finalized update for the same block
-	manualUpdate, err := syncer.GetLatestPossibleFinalizedUpdate(attestedSlot, 9331)
+	manualUpdate, err := syncer.GetFinalizedUpdateAtAttestedSlot(attestedSlot, 9331, false)
 	require.NoError(t, err)
 	manualUpdateJSON := manualUpdate.Payload.ToJSON()
 
@@ -167,7 +167,7 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 		DenebForkEpoch:               0,
 	}))
 
-	attested, err := syncer.FindLatestAttestedHeadersAtInterval(8192, 100)
+	attested, err := syncer.FindValidAttestedHeader(8000, 8160)
 	assert.NoError(t, err)
 	assert.Equal(t, "8064", strconv.FormatUint(attested, 10))
 
@@ -197,7 +197,7 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 		DenebForkEpoch:               0,
 	}))
 
-	attested, err = syncer.FindLatestAttestedHeadersAtInterval(32768, 25076)
+	attested, err = syncer.FindValidAttestedHeader(32576, 32704)
 	assert.NoError(t, err)
 	assert.Equal(t, "32704", strconv.FormatUint(attested, 10))
 
@@ -227,7 +227,7 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 		DenebForkEpoch:               0,
 	}))
 
-	attested, err = syncer.FindLatestAttestedHeadersAtInterval(32768, 25076)
+	attested, err = syncer.FindValidAttestedHeader(25076, 32736)
 	assert.NoError(t, err)
 	assert.Equal(t, "32704", strconv.FormatUint(attested, 10))
 
@@ -251,6 +251,6 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 		DenebForkEpoch:               0,
 	}))
 
-	attested, err = syncer.FindLatestAttestedHeadersAtInterval(32768, 32540)
+	attested, err = syncer.FindValidAttestedHeader(32540, 32768)
 	assert.Error(t, err)
 }
