@@ -983,7 +983,7 @@ const getEthOutboundMessages = async (
             if (err instanceof Error) {
                 message = `Transaction decoding error: ${err.message}`
             }
-            console.error("Skipping message", message)
+            console.error("Skipping message: ", message)
             continue
         }
     }
