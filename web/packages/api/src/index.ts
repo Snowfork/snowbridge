@@ -1,6 +1,6 @@
 // import '@polkadot/api-augment/polkadot'
 import { ApiPromise, WsProvider } from "@polkadot/api"
-import { AbstractProvider, ethers } from "ethers"
+import { AbstractProvider, JsonRpcProvider, WebSocketProvider, BrowserProvider } from "ethers"
 import {
     BeefyClient,
     BeefyClient__factory,
@@ -45,10 +45,10 @@ export class Context {
 }
 
 class EthereumContext {
-    api: ethers.AbstractProvider
+    api: AbstractProvider
     contracts: AppContracts
 
-    constructor(api: ethers.AbstractProvider, contracts: AppContracts) {
+    constructor(api: AbstractProvider, contracts: AppContracts) {
         this.api = api
         this.contracts = contracts
     }
@@ -78,18 +78,16 @@ class PolkadotContext {
     }
 }
 
-export const contextFactory = async (
-    config: Config,
-): Promise<Context> => {
+export const contextFactory = async (config: Config): Promise<Context> => {
     let ethApi: AbstractProvider
-    if (config.ethereum.execution_url instanceof AbstractProvider) {
-        ethApi = config.ethereum.execution_url
-    } else {
+    if (typeof config.ethereum.execution_url === "string") {
         if (config.ethereum.execution_url.startsWith("http")) {
-            ethApi = new ethers.JsonRpcProvider(config.ethereum.execution_url)
+            ethApi = new JsonRpcProvider(config.ethereum.execution_url)
         } else {
-            ethApi = new ethers.WebSocketProvider(config.ethereum.execution_url)
+            ethApi = new WebSocketProvider(config.ethereum.execution_url)
         }
+    } else {
+        ethApi = config.ethereum.execution_url
     }
 
     const parasConnect: Promise<{ paraId: number; api: ApiPromise }>[] = []
@@ -149,7 +147,7 @@ export const destroyContext = async (context: Context): Promise<void> => {
     // clean up etheruem
     await context.ethereum.contracts.beefyClient.removeAllListeners()
     await context.ethereum.contracts.gateway.removeAllListeners()
-    if (!(context.config.ethereum.execution_url instanceof AbstractProvider)) {
+    if (typeof context.config.ethereum.execution_url === "string") {
         context.ethereum.api.destroy()
     }
     // clean up polkadot
