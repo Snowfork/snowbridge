@@ -2,6 +2,8 @@ package header
 
 import (
 	"context"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
@@ -11,7 +13,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"github.com/snowfork/snowbridge/relayer/relays/testutil"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 // Verifies that the closest checkpoint is populated successfully if it is not populated in the first place.
@@ -43,6 +44,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 		common.HexToHash("0x5119c1f71943a3eea34ddc48c7fe399d4b66f939350036431847ed0913448749"): headerAtSlot4571072,
 	}
 	client.BlocksAtSlot = map[uint64]api.BeaconBlockResponse{
+		4571072: blockAtSlot4571137,
 		4571137: blockAtSlot4571137,
 	}
 
@@ -100,6 +102,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 		common.HexToHash("0x5119c1f71943a3eea34ddc48c7fe399d4b66f939350036431847ed0913448749"): headerAtSlot4571072,
 	}
 	client.BlocksAtSlot = map[uint64]api.BeaconBlockResponse{
+		4571072: blockAtSlot4571137,
 		4571137: blockAtSlot4571137,
 	}
 
@@ -164,7 +167,9 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 	client.Header = map[common.Hash]api.BeaconHeader{
 		common.HexToHash("0x968a372336b4e08a6bbd25e9f31b336d322ede1e5c70763f61d2241ad3d66d36"): headerAtSlot4570752,
 	}
+	blockAtSlot4571137, err := testutil.GetBlockAtSlot(4571137)
 	client.BlocksAtSlot = map[uint64]api.BeaconBlockResponse{
+		4570752: blockAtSlot4571137,
 		4570818: blockAtSlot4570818,
 	}
 
