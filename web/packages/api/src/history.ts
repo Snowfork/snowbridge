@@ -908,74 +908,84 @@ const getEthOutboundMessages = async (
             om.getBlock(),
             context.ethereum.api.getTransaction(om.transactionHash),
         ])
-        const [
-            tokenAddress,
-            destinationParachain,
-            [addressType, beneficiaryAddress],
-            destinationFee,
-            amount,
-        ] = context.ethereum.contracts.gateway.interface.decodeFunctionData(
-            "sendToken",
-            transaction!.data
-        )
-        let beneficiary = beneficiaryAddress as string
-        switch (addressType) {
-            case 0n:
-                {
-                    // 4-byte index
-                    const index = BigInt(beneficiary.substring(0, 6))
-                    beneficiary = index.toString()
-                }
-                break
-            case 2n:
-                {
-                    // 20-byte address
-                    beneficiary = beneficiary.substring(0, 42)
-                }
-                break
-        }
 
-        let beaconBlockRoot
-        if (!skipLightClientUpdates) {
-            try {
-                beaconBlockRoot = await fetchBeaconSlot(
-                    context.config.ethereum.beacon_url,
-                    block.parentBeaconBlockRoot as any
-                )
-            } catch (err) {
-                let message = "Unknown"
-                if (err instanceof Error) {
-                    message = err.message
-                }
-                console.error(
-                    `Error fetching beacon slot: ${message}. Skipping light client update.`,
-                    err
-                )
+        try {
+            const [
+                tokenAddress,
+                destinationParachain,
+                [addressType, beneficiaryAddress],
+                destinationFee,
+                amount,
+            ] = context.ethereum.contracts.gateway.interface.decodeFunctionData(
+                "sendToken",
+                transaction!.data
+            )
+            let beneficiary = beneficiaryAddress as string
+            switch (addressType) {
+                case 0n:
+                    {
+                        // 4-byte index
+                        const index = BigInt(beneficiary.substring(0, 6))
+                        beneficiary = index.toString()
+                    }
+                    break
+                case 2n:
+                    {
+                        // 20-byte address
+                        beneficiary = beneficiary.substring(0, 42)
+                    }
+                    break
             }
-        }
 
-        result.push({
-            blockNumber: om.blockNumber,
-            blockHash: om.blockHash,
-            logIndex: om.index,
-            transactionIndex: om.transactionIndex,
-            transactionHash: om.transactionHash,
-            data: {
-                sourceAddress: transaction!.from,
-                timestamp: block.timestamp,
-                channelId: om.args.channelID,
-                nonce: Number(om.args.nonce),
-                messageId: om.args.messageID,
-                parentBeaconSlot: beaconBlockRoot
-                    ? Number(beaconBlockRoot.data.message.slot)
-                    : undefined,
-                tokenAddress: tokenAddress as string,
-                destinationParachain: Number(destinationParachain),
-                beneficiaryAddress: beneficiary,
-                destinationFee: destinationFee.toString() as string,
-                amount: amount.toString() as string,
-            },
-        })
+            let beaconBlockRoot
+            if (!skipLightClientUpdates) {
+                try {
+                    beaconBlockRoot = await fetchBeaconSlot(
+                        context.config.ethereum.beacon_url,
+                        block.parentBeaconBlockRoot as any
+                    )
+                } catch (err) {
+                    let message = "Unknown"
+                    if (err instanceof Error) {
+                        message = err.message
+                    }
+                    console.error(
+                        `Error fetching beacon slot: ${message}. Skipping light client update.`,
+                        err
+                    )
+                }
+            }
+
+            result.push({
+                blockNumber: om.blockNumber,
+                blockHash: om.blockHash,
+                logIndex: om.index,
+                transactionIndex: om.transactionIndex,
+                transactionHash: om.transactionHash,
+                data: {
+                    sourceAddress: transaction!.from,
+                    timestamp: block.timestamp,
+                    channelId: om.args.channelID,
+                    nonce: Number(om.args.nonce),
+                    messageId: om.args.messageID,
+                    parentBeaconSlot: beaconBlockRoot
+                        ? Number(beaconBlockRoot.data.message.slot)
+                        : undefined,
+                    tokenAddress: tokenAddress as string,
+                    destinationParachain: Number(destinationParachain),
+                    beneficiaryAddress: beneficiary,
+                    destinationFee: destinationFee.toString() as string,
+                    amount: amount.toString() as string,
+                },
+            })
+        } catch (err) {
+            let message = "Transaction decoding error"
+            if (err instanceof Error) {
+                message = `Transaction decoding error: ${err.message}`
+            }
+            console.error("Skipping message: ", message)
+            continue
+        }
     }
     return result
 }

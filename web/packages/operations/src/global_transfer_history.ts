@@ -17,26 +17,24 @@ const monitor = async () => {
     if (!config.SUBSCAN_API) throw Error(`Environment ${env} does not support subscan.`)
 
     const ethereumProvider = new AlchemyProvider("sepolia", process.env.REACT_APP_ALCHEMY_KEY)
-    const context = await contextFactory(
-        {
-            ethereum: {
-                execution_url: ethereumProvider,
-                beacon_url: config.BEACON_HTTP_API,
+    const context = await contextFactory({
+        ethereum: {
+            execution_url: ethereumProvider,
+            beacon_url: config.BEACON_HTTP_API,
+        },
+        polkadot: {
+            url: {
+                bridgeHub: config.BRIDGE_HUB_WS_URL,
+                assetHub: config.ASSET_HUB_WS_URL,
+                relaychain: config.RELAY_CHAIN_WS_URL,
+                parachains: config.PARACHAINS,
             },
-            polkadot: {
-                url: {
-                    bridgeHub: config.BRIDGE_HUB_WS_URL,
-                    assetHub: config.ASSET_HUB_WS_URL,
-                    relaychain: config.RELAY_CHAIN_WS_URL,
-                    parachains: config.PARACHAINS,
-                },
-            },
-            appContracts: {
-                gateway: config.GATEWAY_CONTRACT,
-                beefy: config.BEEFY_CONTRACT,
-            },
-        }
-    )
+        },
+        appContracts: {
+            gateway: config.GATEWAY_CONTRACT,
+            beefy: config.BEEFY_CONTRACT,
+        },
+    })
 
     const ethBlockTimeSeconds = 12
     const polkadotBlockTimeSeconds = 9
