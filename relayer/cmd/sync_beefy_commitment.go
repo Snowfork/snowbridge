@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/sirupsen/logrus"
@@ -22,6 +21,8 @@ func syncBeefyCommitmentCmd() *cobra.Command {
 	cmd.Flags().String("config", "/tmp/snowbridge/beefy-relay.json", "Path to configuration file")
 	cmd.Flags().String("private-key", "", "Ethereum private key")
 	cmd.Flags().String("private-key-file", "", "The file from which to read the private key")
+	cmd.Flags().String("private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
+
 	cmd.Flags().Uint64P("block-number", "b", 0, "Relay block number which contains a Parachain message")
 	cmd.MarkFlagRequired("block-number")
 	return cmd
@@ -46,10 +47,8 @@ func SyncBeefyCommitmentFn(cmd *cobra.Command, _ []string) error {
 	}
 	privateKey, _ := cmd.Flags().GetString("private-key")
 	privateKeyFile, _ := cmd.Flags().GetString("private-key-file")
-	if privateKey == "" && privateKeyFile == "" {
-		return fmt.Errorf("missing private key")
-	}
-	keypair, err := ethereum.ResolvePrivateKey(privateKey, privateKeyFile)
+	privateKeyID, _ := cmd.Flags().GetString("private-key-id")
+	keypair, err := ethereum.ResolvePrivateKey(privateKey, privateKeyFile, privateKeyID)
 	if err != nil {
 		return err
 	}
