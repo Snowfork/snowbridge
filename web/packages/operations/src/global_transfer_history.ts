@@ -20,7 +20,7 @@ const monitor = async () => {
     const context = await contextFactory(
         {
             ethereum: {
-                execution_url: "badurl",
+                execution_url: ethereumProvider,
                 beacon_url: config.BEACON_HTTP_API,
             },
             polkadot: {
@@ -35,9 +35,6 @@ const monitor = async () => {
                 gateway: config.GATEWAY_CONTRACT,
                 beefy: config.BEEFY_CONTRACT,
             },
-        },
-        {
-            ethereum: ethereumProvider,
         }
     )
 

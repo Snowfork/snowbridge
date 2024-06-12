@@ -10,7 +10,7 @@ import {
 
 interface Config {
     ethereum: {
-        execution_url: string
+        execution_url: string | AbstractProvider
         beacon_url: string
     }
     polkadot: {
@@ -78,23 +78,18 @@ class PolkadotContext {
     }
 }
 
-interface ContextOverride {
-    ethereum?: AbstractProvider
-}
-
 export const contextFactory = async (
     config: Config,
-    options: ContextOverride = {}
 ): Promise<Context> => {
     let ethApi: AbstractProvider
-    if (options.ethereum == null) {
+    if (config.ethereum.execution_url instanceof AbstractProvider) {
+        ethApi = config.ethereum.execution_url
+    } else {
         if (config.ethereum.execution_url.startsWith("http")) {
             ethApi = new ethers.JsonRpcProvider(config.ethereum.execution_url)
         } else {
             ethApi = new ethers.WebSocketProvider(config.ethereum.execution_url)
         }
-    } else {
-        ethApi = options.ethereum
     }
 
     const parasConnect: Promise<{ paraId: number; api: ApiPromise }>[] = []
@@ -154,7 +149,9 @@ export const destroyContext = async (context: Context): Promise<void> => {
     // clean up etheruem
     await context.ethereum.contracts.beefyClient.removeAllListeners()
     await context.ethereum.contracts.gateway.removeAllListeners()
-    await context.ethereum.api.destroy()
+    if (!(context.config.ethereum.execution_url instanceof AbstractProvider)) {
+        context.ethereum.api.destroy()
+    }
     // clean up polkadot
     await context.polkadot.api.relaychain.disconnect()
     await context.polkadot.api.bridgeHub.disconnect()
