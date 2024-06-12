@@ -266,7 +266,8 @@ func (s *Update) RemoveLeadingZeroHashes() {
 	s.FinalityBranch = removeLeadingZeroHashForSlice(s.FinalityBranch)
 	s.BlockRootsRoot = removeLeadingZeroHash(s.BlockRootsRoot)
 	s.BlockRootsBranch = removeLeadingZeroHashForSlice(s.BlockRootsBranch)
-
+	s.ExecutionHeader.RemoveLeadingZeroHashes()
+	s.ExecutionBranch = removeLeadingZeroHashForSlice(s.ExecutionBranch)
 }
 
 func (h *HeaderUpdate) RemoveLeadingZeroHashes() {

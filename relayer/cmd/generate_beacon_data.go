@@ -44,7 +44,7 @@ func generateBeaconFixtureCmd() *cobra.Command {
 	cmd.Flags().String("execution-config", "/tmp/snowbridge/execution-relay-asset-hub.json", "Path to the execution relay config")
 	cmd.Flags().Bool("wait-until-next-period", true, "Waiting until next period")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
-	cmd.Flags().Bool("finality-update-only", true, "Generate finality update only")
+	cmd.Flags().Bool("finality-update-only", false, "Generate finality update only")
 	return cmd
 }
 
@@ -108,7 +108,7 @@ type InboundFixture struct {
 const (
 	pathToBeaconTestFixtureFiles              = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/tests/fixtures"
 	pathToInboundQueueFixtureTemplate         = "polkadot-sdk/bridges/snowbridge/templates/beacon-fixtures.mustache"
-	pathToInboundQueueFixtureData             = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures/src/lib.rs"
+	pathToEthereumClientFixtureData           = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures/src/lib.rs"
 	pathToInboundQueueFixtureTestCaseTemplate = "polkadot-sdk/bridges/snowbridge/templates/inbound-fixtures.mustache"
 	pathToInboundQueueFixtureTestCaseData     = "polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures/src/%s.rs"
 )
@@ -404,9 +404,9 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("render inbound queue benchmark fixture: %w", err)
 		}
 		log.WithFields(log.Fields{
-			"location": pathToInboundQueueFixtureData,
+			"location": pathToEthereumClientFixtureData,
 		}).Info("writing result file")
-		err = writeRawDataFile(fmt.Sprintf("%s", pathToInboundQueueFixtureData), rendered)
+		err = writeRawDataFile(fmt.Sprintf("%s", pathToEthereumClientFixtureData), rendered)
 		if err != nil {
 			return err
 		}
