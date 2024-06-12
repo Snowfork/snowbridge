@@ -438,7 +438,7 @@ export const send = async (
             messageId?: string
         }>((resolve, reject) => {
             try {
-                parachainSignedTx.send((c) => {
+                parachainSignedTx.send((c: any) => {
                     if (c.isError) {
                         console.error(c)
                         reject(c.internalError || c.dispatchError || c)
@@ -544,7 +544,7 @@ export const send = async (
         messageId?: string
     }>((resolve, reject) => {
         try {
-            assetHubSignedTx.send((c) => {
+            assetHubSignedTx.send((c: any) => {
                 if (c.status)
                     if (c.isError) {
                         console.error(c)

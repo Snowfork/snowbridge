@@ -98,3 +98,17 @@ export const fetchBeaconSlot = async (
     }
     return await response.json()
 }
+
+export const fetchFinalityUpdate = async (beaconUrl: string): Promise<number> => {
+    let url = beaconUrl.trim()
+    if (!url.endsWith("/")) {
+        url += "/"
+    }
+    url += `eth/v1/beacon/light_client/finality_update`
+    let response = await fetch(url)
+    if (!response.ok) {
+        throw new Error(response.statusText)
+    }
+    let result: any = await response.json()
+    return Number(result?.data?.finalized_header?.beacon?.slot)
+}
