@@ -14,6 +14,7 @@ use subxt::utils::Static;
 type CheckpointUpdate = snowbridge_beacon_primitives::CheckpointUpdate<512>;
 
 use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
+use crate::asset_hub_runtime::runtime_types::pallet_assets;
 
 use crate::bridge_hub_runtime::runtime_types::{
     snowbridge_core::{
@@ -164,6 +165,21 @@ pub fn set_gateway_address(params: &GatewayAddressArgs) -> BridgeHubRuntimeCall 
     BridgeHubRuntimeCall::System(
         crate::bridge_hub_runtime::runtime_types::frame_system::pallet::Call::set_storage {
             items: vec![(storage_key, storage_value)],
+        },
+    )
+}
+
+pub fn force_asset_status(params: &GatewayOperatingModeArgs) -> AssetHubRuntimeCall {
+    AssetHubRuntimeCall::ForeignAssets(
+        pallet_assets::pallet::Call::force_asset_status {
+            id,
+            owner: admin,
+            issuer: admin,
+            admin,
+            freezer:admin,
+            min_balance: 1,
+            is_sufficient: true,
+            is_frozen: true,
         },
     )
 }

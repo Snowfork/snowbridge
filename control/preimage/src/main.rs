@@ -34,6 +34,7 @@ struct Cli {
 pub enum Command {
     /// Initialize the bridge
     Initialize(InitializeArgs),
+    AssetSufficient(AssetSufficientArgs),
     /// Upgrade the Gateway contract
     Upgrade(UpgradeArgs),
     /// Change the gateway operating mode
@@ -55,6 +56,14 @@ pub struct InitializeArgs {
     #[command(flatten)]
     gateway_address: GatewayAddressArgs,
 }
+
+#[derive(Debug, Args)]
+pub struct AssetSufficientArgs {
+    /// Chain ID of the Ethereum chain bridge from.
+    #[arg(long, value_name = "CHAIN")]
+    chain_id: u64,
+}
+
 
 #[derive(Debug, Args)]
 pub struct UpgradeArgs {
@@ -240,6 +249,19 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let call2 =
                 send_xcm_asset_hub(&context, vec![force_xcm_version(), set_ethereum_fee]).await?;
             utility_force_batch(vec![call1, call2])
+        }
+        Command::AssetSufficient(params) => {
+            let calls = send_xcm_asset_hub(
+                &context,
+                vec![
+                    commands::set_gateway_address(&params.gateway_address),
+                    set_pricing_parameters,
+                    commands::gateway_operating_mode(&params.gateway_operating_mode),
+                    commands::force_checkpoint(&params.force_checkpoint),
+                ],
+            )
+                .await?;
+            utility_force_batch(vec![calls])
         }
         Command::GatewayOperatingMode(params) => {
             let call = commands::gateway_operating_mode(params);
