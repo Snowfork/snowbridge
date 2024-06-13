@@ -193,7 +193,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     paraId: 3369,
                     destinationFeeDOT: 200_000_000_000n,
                     has20ByteAccounts: true,
-                    decimals: 12,
+                    decimals: 18,
                     maxConsumers: 16,
                 },
                 erc20tokensReceivable: {
@@ -263,7 +263,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 id: "ethereum",
                 name: "Ethereum",
                 type: "ethereum",
-                destinationIds: ["assethub"],
+                destinationIds: ["assethub", "mythos"],
                 erc20tokensReceivable: {
                     WETH: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 },
@@ -282,6 +282,23 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 },
                 erc20tokensReceivable: {
                     WETH: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                    MYTH: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003",
+                },
+            },
+            {
+                id: "mythos",
+                name: "Mythos",
+                type: "substrate",
+                destinationIds: [],
+                paraInfo: {
+                    paraId: 3369,
+                    destinationFeeDOT: 20_000_000_000n,
+                    has20ByteAccounts: true,
+                    decimals: 18,
+                    maxConsumers: 16,
+                },
+                erc20tokensReceivable: {
+                    MYTH: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003",
                 },
             },
         ],
@@ -291,7 +308,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             RELAY_CHAIN_WS_URL: "wss://polkadot-rpc.dwellir.com",
             ASSET_HUB_WS_URL: "wss://asset-hub-polkadot-rpc.dwellir.com",
             BRIDGE_HUB_WS_URL: "wss://polkadot-bridge-hub-rpc.dwellir.com",
-            PARACHAINS: [],
+            PARACHAINS: ["wss://polkadot-mythos-rpc.polkadot.io"],
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
             BEEFY_CONTRACT: "0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C",
             ASSET_HUB_PARAID: 1000,

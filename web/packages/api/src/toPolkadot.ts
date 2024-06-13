@@ -219,7 +219,7 @@ export const validateSend = async (
     let destinationChainExists = true
     let hrmpChannelSetup = true
     let accountConsumers: number | null = null
-    const existentialDeposit = BigInt(
+    let existentialDeposit = BigInt(
         assetHub.consts.balances.existentialDeposit.toPrimitive() as number
     )
     if (destinationParaId === assetHubParaId) {
@@ -242,7 +242,10 @@ export const validateSend = async (
         hrmpChannelSetup = hrmpChannel.toPrimitive() !== null
 
         if (destinationParaId in parachains) {
-            const { balance, consumers } = await getSubstrateAccount(assetHub, beneficiaryHex)
+            existentialDeposit = BigInt(
+                parachains[destinationParaId].consts.balances.existentialDeposit.toPrimitive() as number
+            )
+            const { balance, consumers } = await getSubstrateAccount(parachains[destinationParaId], beneficiaryHex)
             beneficiaryAccountExists = BigInt(balance) > existentialDeposit
             hasConsumers = consumers + 2 <= options.maxConsumers
             accountConsumers = consumers
