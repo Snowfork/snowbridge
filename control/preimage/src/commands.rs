@@ -1,20 +1,22 @@
 use crate::bridge_hub_runtime::runtime_types::snowbridge_pallet_ethereum_client;
 use crate::helpers::calculate_delivery_fee;
 use crate::{
-    constants::*, Context, ForceCheckpointArgs, GatewayAddressArgs, GatewayOperatingModeArgs,
-    GatewayOperatingModeEnum, PricingParametersArgs, UpgradeArgs,
+    constants::*, UpdateAssetArgs, Context, ForceCheckpointArgs, GatewayAddressArgs,
+    GatewayOperatingModeArgs, GatewayOperatingModeEnum, PricingParametersArgs, UpgradeArgs,
 };
 use alloy_primitives::{utils::format_units, U256};
 use codec::Encode;
+use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
 use sp_arithmetic::FixedU128;
 use sp_crypto_hashing::twox_128;
 use std::{fs::File, io::Read};
+use subxt::utils::MultiAddress;
 use subxt::utils::Static;
 
 type CheckpointUpdate = snowbridge_beacon_primitives::CheckpointUpdate<512>;
 
-use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
 use crate::asset_hub_runtime::runtime_types::pallet_assets;
+use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
 
 use crate::bridge_hub_runtime::runtime_types::{
     snowbridge_core::{
@@ -169,17 +171,59 @@ pub fn set_gateway_address(params: &GatewayAddressArgs) -> BridgeHubRuntimeCall 
     )
 }
 
-pub fn force_asset_status(params: &GatewayOperatingModeArgs) -> AssetHubRuntimeCall {
-    AssetHubRuntimeCall::ForeignAssets(
-        pallet_assets::pallet::Call::force_asset_status {
-            id,
-            owner: admin,
-            issuer: admin,
-            admin,
-            freezer:admin,
-            min_balance: 1,
-            is_sufficient: true,
-            is_frozen: true,
-        },
-    )
+pub fn make_asset_sufficient(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
+    use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation;
+    use crate::asset_hub_runtime::runtime_types::xcm::v3::{
+        junction::Junction::AccountKey20, junction::Junction::GlobalConsensus, junction::NetworkId,
+        junctions::Junctions::X2,
+    };
+    use subxt::utils::AccountId32;
+    let chain_id = crate::bridge_hub_runtime::CHAIN_ID;
+    let asset_id = MultiLocation {
+        parents: 2,
+        interior: X2(
+            GlobalConsensus(NetworkId::Ethereum { chain_id: chain_id }),
+            AccountKey20 {
+                network: None,
+                key: params.contract_id.into_array().into(),
+            },
+        ),
+    };
+    let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
+    AssetHubRuntimeCall::ForeignAssets(pallet_assets::pallet::Call2::force_asset_status {
+        id: asset_id,
+        owner: MultiAddress::<AccountId32, ()>::Id(owner.into()),
+        issuer: MultiAddress::<AccountId32, ()>::Id(owner.into()),
+        admin: MultiAddress::<AccountId32, ()>::Id(owner.into()),
+        freezer: MultiAddress::<AccountId32, ()>::Id(owner.into()),
+        min_balance: 1,
+        is_sufficient: true,
+        is_frozen: false,
+    })
+}
+
+pub fn force_set_metadata(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
+    use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation;
+    use crate::asset_hub_runtime::runtime_types::xcm::v3::{
+        junction::Junction::AccountKey20, junction::Junction::GlobalConsensus, junction::NetworkId,
+        junctions::Junctions::X2,
+    };
+    let chain_id = crate::bridge_hub_runtime::CHAIN_ID;
+    let asset_id = MultiLocation {
+        parents: 2,
+        interior: X2(
+            GlobalConsensus(NetworkId::Ethereum { chain_id: chain_id }),
+            AccountKey20 {
+                network: None,
+                key: params.contract_id.into_array().into(),
+            },
+        ),
+    };
+    AssetHubRuntimeCall::ForeignAssets(pallet_assets::pallet::Call2::force_set_metadata {
+        id: asset_id,
+        name: params.name.as_bytes().to_vec(),
+        symbol: params.symbol.as_bytes().to_vec(),
+        decimals: params.decimals,
+        is_frozen: false,
+    })
 }

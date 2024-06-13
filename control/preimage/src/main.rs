@@ -34,7 +34,7 @@ struct Cli {
 pub enum Command {
     /// Initialize the bridge
     Initialize(InitializeArgs),
-    AssetSufficient(AssetSufficientArgs),
+    UpdateAsset(UpdateAssetArgs),
     /// Upgrade the Gateway contract
     Upgrade(UpgradeArgs),
     /// Change the gateway operating mode
@@ -58,12 +58,17 @@ pub struct InitializeArgs {
 }
 
 #[derive(Debug, Args)]
-pub struct AssetSufficientArgs {
+pub struct UpdateAssetArgs {
     /// Chain ID of the Ethereum chain bridge from.
-    #[arg(long, value_name = "CHAIN")]
-    chain_id: u64,
+    #[arg(long, value_name = "ADDRESS", value_parser=parse_eth_address)]
+    contract_id: Address,
+    #[arg(long, value_name = "ASSET_NAME")]
+    name: String,
+    #[arg(long, value_name = "ASSET_SYMBOL")]
+    symbol: String,
+    #[arg(long, value_name = "DECIMALS")]
+    decimals: u8,
 }
-
 
 #[derive(Debug, Args)]
 pub struct UpgradeArgs {
@@ -250,18 +255,12 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 send_xcm_asset_hub(&context, vec![force_xcm_version(), set_ethereum_fee]).await?;
             utility_force_batch(vec![call1, call2])
         }
-        Command::AssetSufficient(params) => {
-            let calls = send_xcm_asset_hub(
-                &context,
-                vec![
-                    commands::set_gateway_address(&params.gateway_address),
-                    set_pricing_parameters,
-                    commands::gateway_operating_mode(&params.gateway_operating_mode),
-                    commands::force_checkpoint(&params.force_checkpoint),
-                ],
-            )
-                .await?;
-            utility_force_batch(vec![calls])
+        Command::UpdateAsset(params) => {
+            let asset_sufficient_call =
+                send_xcm_asset_hub(&context, vec![commands::make_asset_sufficient(params)]).await?;
+            let asset_metadata_call =
+                send_xcm_asset_hub(&context, vec![commands::force_set_metadata(params)]).await?;
+            utility_force_batch(vec![asset_sufficient_call, asset_metadata_call])
         }
         Command::GatewayOperatingMode(params) => {
             let call = commands::gateway_operating_mode(params);
