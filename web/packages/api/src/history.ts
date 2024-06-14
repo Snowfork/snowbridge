@@ -1,4 +1,3 @@
-import { Context } from "./index"
 import { fetchBeaconSlot, paraIdToChannelId } from "./utils"
 import { SubscanApi, fetchEvents, fetchExtrinsics } from "./subscan"
 import { forwardedTopicId } from "./utils"
