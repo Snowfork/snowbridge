@@ -1,6 +1,6 @@
 // import '@polkadot/api-augment/polkadot'
 import { ApiPromise, WsProvider } from "@polkadot/api"
-import { AbstractProvider, JsonRpcProvider, WebSocketProvider, BrowserProvider } from "ethers"
+import { AbstractProvider, JsonRpcProvider, WebSocketProvider } from "ethers"
 import {
     BeefyClient,
     BeefyClient__factory,

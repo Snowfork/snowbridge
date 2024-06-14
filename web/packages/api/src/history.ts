@@ -911,6 +911,10 @@ const getEthOutboundMessages = async (
             om.getBlock(),
             provider.getTransaction(om.transactionHash),
         ])
+        if (transaction === null) {
+            console.warn("Skipping message: Couldnt not find transaction", om.args.messageID)
+            continue
+        }
 
         try {
             const [
@@ -919,7 +923,7 @@ const getEthOutboundMessages = async (
                 [addressType, beneficiaryAddress],
                 destinationFee,
                 amount,
-            ] = gateway.interface.decodeFunctionData("sendToken", transaction!.data)
+            ] = gateway.interface.decodeFunctionData("sendToken", transaction.data)
             let beneficiary = beneficiaryAddress as string
             switch (addressType) {
                 case 0n:
@@ -963,7 +967,7 @@ const getEthOutboundMessages = async (
                 transactionIndex: om.transactionIndex,
                 transactionHash: om.transactionHash,
                 data: {
-                    sourceAddress: transaction!.from,
+                    sourceAddress: transaction.from,
                     timestamp: block.timestamp,
                     channelId: om.args.channelID,
                     nonce: Number(om.args.nonce),
