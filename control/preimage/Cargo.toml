@@ -17,7 +17,7 @@ hex-literal = { version = "0.4.1" }
 clap = { version = "4.5.1", features = ["derive"] }
 
 hex = "0.4.3"
-subxt = { version = "0.35.1", features = ["substrate-compat"] }
+subxt = { workspace = true }
 serde = { version = "1.0.197", features = ["derive"] }
 sp-arithmetic = "24.0.0"
 alloy-primitives = "0.6.3"

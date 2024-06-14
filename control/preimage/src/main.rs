@@ -60,7 +60,7 @@ pub struct InitializeArgs {
 #[derive(Debug, Args)]
 pub struct UpdateAssetArgs {
     /// Chain ID of the Ethereum chain bridge from.
-    #[arg(long, value_name = "ADDRESS", value_parser=parse_eth_address)]
+    #[arg(long, value_name = "ADDRESS", value_parser=parse_eth_address_without_validation)]
     contract_id: Address,
     #[arg(long, value_name = "ASSET_NAME")]
     name: String,
@@ -164,6 +164,11 @@ pub struct ApiEndpoints {
 
 fn parse_eth_address(v: &str) -> Result<Address, String> {
     Address::parse_checksummed(v, None).map_err(|_| "invalid ethereum address".to_owned())
+}
+use std::str::FromStr;
+
+fn parse_eth_address_without_validation(v: &str) -> Result<Address, String> {
+    Address::from_str(v).map_err(|_| "invalid ethereum address".to_owned())
 }
 
 fn parse_hex_bytes32(v: &str) -> Result<FixedBytes<32>, String> {

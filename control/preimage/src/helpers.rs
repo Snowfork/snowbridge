@@ -13,16 +13,20 @@ use crate::relay_runtime::runtime_types::{
     staging_xcm::v3::multilocation::MultiLocation,
     xcm::{
         double_encoded::DoubleEncoded,
-        v2::OriginKind,
         v3::{
             junction::Junction,
             junctions::Junctions,
             Instruction::{self, *},
             MaybeErrorCode, WeightLimit, Xcm,
         },
-        VersionedLocation, VersionedXcm,
+        VersionedXcm, VersionedLocation
     },
 };
+#[cfg(feature = "rococo")]
+use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
+#[cfg(feature = "polkadot")]
+use crate::relay_runtime::runtime_types::xcm::v2::OriginKind;
+
 use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 
 use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
