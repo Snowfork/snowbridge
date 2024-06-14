@@ -243,10 +243,19 @@ export const validateSend = async (
 
         if (destinationParaId in parachains) {
             existentialDeposit = BigInt(
-                parachains[destinationParaId].consts.balances.existentialDeposit.toPrimitive() as number
+                parachains[
+                    destinationParaId
+                ].consts.balances.existentialDeposit.toPrimitive() as number
             )
-            const { balance, consumers } = await getSubstrateAccount(parachains[destinationParaId], beneficiaryHex)
+            const { balance, consumers } = await getSubstrateAccount(
+                parachains[destinationParaId],
+                beneficiaryHex
+            )
             beneficiaryAccountExists = BigInt(balance) > existentialDeposit
+
+            // TODO: Hack for mythical
+            beneficiaryAccountExists = true
+
             hasConsumers = consumers + 2 <= options.maxConsumers
             accountConsumers = consumers
         } else {

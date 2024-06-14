@@ -2,6 +2,8 @@ import { Context } from "./index"
 import { fetchBeaconSlot, paraIdToChannelId } from "./utils"
 import { SubscanApi, fetchEvents, fetchExtrinsics } from "./subscan"
 import { forwardedTopicId } from "./utils"
+import { BeefyClient, IGateway } from "@snowbridge/contract-types"
+import { AbstractProvider } from "ethers"
 
 export enum TransferStatus {
     Pending,
@@ -127,7 +129,6 @@ export type ToEthereumTransferResult = {
 }
 
 export const toPolkadotHistory = async (
-    context: Context,
     assetHubScan: SubscanApi,
     bridgeHubScan: SubscanApi,
     range: {
@@ -135,7 +136,11 @@ export const toPolkadotHistory = async (
         bridgeHub: { fromBlock: number; toBlock: number }
         ethereum: { fromBlock: number; toBlock: number }
     },
-    skipLightClientUpdates: boolean
+    skipLightClientUpdates: boolean,
+    bridgeHubParaId: number,
+    gateway: IGateway,
+    provider: AbstractProvider,
+    beacon_url: string
 ): Promise<ToPolkadotTransferResult[]> => {
     console.log("Fetching history To Polkadot")
     console.log(
@@ -154,10 +159,6 @@ export const toPolkadotHistory = async (
         } blocks)`
     )
 
-    const bridgeHubParaIdCodec =
-        await context.polkadot.api.bridgeHub.query.parachainInfo.parachainId()
-    const bridgeHubParaId = bridgeHubParaIdCodec.toPrimitive() as number
-
     const [
         ethOutboundMessages,
         beaconClientUpdates,
@@ -165,10 +166,12 @@ export const toPolkadotHistory = async (
         assetHubMessageQueue,
     ] = [
         await getEthOutboundMessages(
-            context,
             range.ethereum.fromBlock,
             range.ethereum.toBlock,
-            skipLightClientUpdates
+            skipLightClientUpdates,
+            gateway,
+            provider,
+            beacon_url
         ),
 
         await (!skipLightClientUpdates
@@ -289,7 +292,6 @@ export const toPolkadotHistory = async (
 }
 
 export const toEthereumHistory = async (
-    context: Context,
     assetHubScan: SubscanApi,
     bridgeHubScan: SubscanApi,
     relaychainScan: SubscanApi,
@@ -298,7 +300,11 @@ export const toEthereumHistory = async (
         bridgeHub: { fromBlock: number; toBlock: number }
         ethereum: { fromBlock: number; toBlock: number }
     },
-    skipLightClientUpdates: boolean
+    skipLightClientUpdates: boolean,
+    ethereumChainId: number,
+    assetHubParaId: number,
+    beefyClient: BeefyClient,
+    gateway: IGateway
 ): Promise<ToEthereumTransferResult[]> => {
     console.log("Fetching history To Ethereum")
     console.log(
@@ -317,12 +323,7 @@ export const toEthereumHistory = async (
         } blocks)`
     )
 
-    const [ethNetwork, assetHubParaId] = await Promise.all([
-        context.ethereum.api.getNetwork(),
-        context.polkadot.api.assetHub.query.parachainInfo.parachainId(),
-    ])
-    const assetHubParaIdDecoded = assetHubParaId.toPrimitive() as number
-    const assetHubChannelId = paraIdToChannelId(assetHubParaIdDecoded)
+    const assetHubChannelId = paraIdToChannelId(assetHubParaId)
 
     const [
         allTransfers,
@@ -334,14 +335,14 @@ export const toEthereumHistory = async (
         await getAssetHubTransfers(
             assetHubScan,
             relaychainScan,
-            Number(ethNetwork.chainId),
+            ethereumChainId,
             range.assetHub.fromBlock,
             range.assetHub.toBlock
         ),
 
         await getBridgeHubMessageQueueProccessed(
             bridgeHubScan,
-            assetHubParaIdDecoded,
+            assetHubParaId,
             assetHubChannelId,
             range.bridgeHub.fromBlock,
             range.bridgeHub.toBlock
@@ -354,13 +355,13 @@ export const toEthereumHistory = async (
         ),
 
         await (!skipLightClientUpdates
-            ? getBeefyClientUpdates(context, range.ethereum.fromBlock, range.ethereum.toBlock)
+            ? getBeefyClientUpdates(range.ethereum.fromBlock, range.ethereum.toBlock, beefyClient)
             : Promise.resolve([])),
 
         await getEthInboundMessagesDispatched(
-            context,
             range.ethereum.fromBlock,
-            range.ethereum.toBlock
+            range.ethereum.toBlock,
+            gateway
         ),
     ]
 
@@ -407,7 +408,7 @@ export const toEthereumHistory = async (
         const bridgeHubXcmDelivered = allMessageQueues.find(
             (ev: any) =>
                 ev.data.messageId === result.submitted.bridgeHubMessageId &&
-                ev.data.sibling == assetHubParaIdDecoded
+                ev.data.sibling == assetHubParaId
         )
         if (bridgeHubXcmDelivered) {
             result.bridgeHubXcmDelivered = {
@@ -597,8 +598,11 @@ const getBridgeHubOutboundMessages = async (
     return acc
 }
 
-const getBeefyClientUpdates = async (context: Context, fromBlock: number, toBlock: number) => {
-    const { beefyClient } = context.ethereum.contracts
+const getBeefyClientUpdates = async (
+    fromBlock: number,
+    toBlock: number,
+    beefyClient: BeefyClient
+) => {
     const NewMMRRoot = beefyClient.getEvent("NewMMRRoot")
     const roots = await beefyClient.queryFilter(NewMMRRoot, fromBlock, toBlock)
     const updates = roots.map((r) => {
@@ -619,11 +623,10 @@ const getBeefyClientUpdates = async (context: Context, fromBlock: number, toBloc
 }
 
 const getEthInboundMessagesDispatched = async (
-    context: Context,
     fromBlock: number,
-    toBlock: number
+    toBlock: number,
+    gateway: IGateway
 ) => {
-    const { gateway } = context.ethereum.contracts
     const InboundMessageDispatched = gateway.getEvent("InboundMessageDispatched")
     const inboundMessages = await gateway.queryFilter(InboundMessageDispatched, fromBlock, toBlock)
     return inboundMessages.map((im) => {
@@ -894,19 +897,20 @@ const subFetchOutboundMessages = async (
 }
 
 const getEthOutboundMessages = async (
-    context: Context,
     fromBlock: number,
     toBlock: number,
-    skipLightClientUpdates: boolean
+    skipLightClientUpdates: boolean,
+    gateway: IGateway,
+    provider: AbstractProvider,
+    beacon_url: string
 ) => {
-    const { gateway } = context.ethereum.contracts
     const OutboundMessageAccepted = gateway.getEvent("OutboundMessageAccepted")
     const outboundMessages = await gateway.queryFilter(OutboundMessageAccepted, fromBlock, toBlock)
     const result = []
     for (const om of outboundMessages) {
         const [block, transaction] = await Promise.all([
             om.getBlock(),
-            context.ethereum.api.getTransaction(om.transactionHash),
+            provider.getTransaction(om.transactionHash),
         ])
 
         try {
@@ -916,10 +920,7 @@ const getEthOutboundMessages = async (
                 [addressType, beneficiaryAddress],
                 destinationFee,
                 amount,
-            ] = context.ethereum.contracts.gateway.interface.decodeFunctionData(
-                "sendToken",
-                transaction!.data
-            )
+            ] = gateway.interface.decodeFunctionData("sendToken", transaction!.data)
             let beneficiary = beneficiaryAddress as string
             switch (addressType) {
                 case 0n:
@@ -941,7 +942,7 @@ const getEthOutboundMessages = async (
             if (!skipLightClientUpdates) {
                 try {
                     beaconBlockRoot = await fetchBeaconSlot(
-                        context.config.ethereum.beacon_url,
+                        beacon_url,
                         block.parentBeaconBlockRoot as any
                     )
                 } catch (err) {
