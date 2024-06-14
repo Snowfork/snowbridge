@@ -173,7 +173,7 @@ export const bridgeStatusInfo = async (
                 outbound: ethereumOperatingMode === 0n ? "Normal" : ("Halted" as OperatingMode),
             },
             latestEthereumBlockOnPolkadot: latestBeaconBlockOnPolkadot,
-            latestEthereumBlock: latestEthereumBlock,
+            latestEthereumBlock: latestFinalizedBeaconBlock,
             blockLatency: beaconBlockLatency,
             latencySeconds: beaconLatencySeconds,
             previousEthereumBlockOnPolkadot: previousBeaconBlock,

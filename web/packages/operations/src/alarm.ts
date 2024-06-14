@@ -220,7 +220,7 @@ export const initializeAlarms = async () => {
     let client = new CloudWatchClient({})
     let cloudWatchAlarms = []
     let alarmCommandSharedInput = {
-        EvaluationPeriods: 3,
+        EvaluationPeriods: 5,
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
         Period: 3600,
         Threshold: 0,
