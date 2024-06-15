@@ -30,6 +30,10 @@
 * [Processes for keeping track of dependency changes](other/processes-for-keeping-track-of-dependency-changes.md)
 * [Bridges Workshop](other/bridge-workshop.md)
 
+## Security
+
+* [Audits](security/audits.md)
+
 ## Rococo Testnet
 
 * [Rococo-Sepolia Token Transfers](rococo-testnet/rococo-sepolia-token-transfers.md)
