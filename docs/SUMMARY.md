@@ -20,19 +20,16 @@
 
 * [Token Transfers](applications/token-transfers.md)
 
-## Performance
+## Security
 
-* [Benchmarks](performance/benchmarks.md)
+* [Exploit Reporting](security/exploit-reporting.md)
+* [Audits](security/audits.md)
 
 ## Other
 
 * [Quick Start Guide](other/quick-start-guide.md)
 * [Processes for keeping track of dependency changes](other/processes-for-keeping-track-of-dependency-changes.md)
 * [Bridges Workshop](other/bridge-workshop.md)
-
-## Security
-
-* [Audits](security/audits.md)
 
 ## Rococo Testnet
 
