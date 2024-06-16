@@ -28,7 +28,6 @@ export type ParachainInfo = {
     has20ByteAccounts: boolean
     decimals: number
     maxConsumers: number
-    ss58Format?: number
 }
 export type TransferToken = {
     id: string

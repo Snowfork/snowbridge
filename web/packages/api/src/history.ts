@@ -141,23 +141,6 @@ export const toPolkadotHistory = async (
     provider: AbstractProvider,
     beacon_url: string
 ): Promise<ToPolkadotTransferResult[]> => {
-    console.log("Fetching history To Polkadot")
-    console.log(
-        `eth from ${range.ethereum.fromBlock} to ${range.ethereum.toBlock} (${
-            range.ethereum.toBlock - range.ethereum.fromBlock
-        } blocks)`
-    )
-    console.log(
-        `assethub from ${range.assetHub.fromBlock} to ${range.assetHub.toBlock} (${
-            range.assetHub.toBlock - range.assetHub.fromBlock
-        } blocks)`
-    )
-    console.log(
-        `bridgehub from ${range.bridgeHub.fromBlock} to ${range.bridgeHub.toBlock} (${
-            range.bridgeHub.toBlock - range.bridgeHub.fromBlock
-        } blocks)`
-    )
-
     const [
         ethOutboundMessages,
         beaconClientUpdates,
@@ -194,11 +177,6 @@ export const toPolkadotHistory = async (
             range.assetHub.toBlock
         ),
     ]
-
-    console.log("number of transfers", ethOutboundMessages.length)
-    console.log("number of beacon client updates", beaconClientUpdates.length)
-    console.log("number of inbound messages received", inboundMessagesReceived.length)
-    console.log("number of asset hub message queue processed", assetHubMessageQueue.length)
 
     const results: ToPolkadotTransferResult[] = []
     for (const outboundMessage of ethOutboundMessages) {
@@ -305,23 +283,6 @@ export const toEthereumHistory = async (
     beefyClient: BeefyClient,
     gateway: IGateway
 ): Promise<ToEthereumTransferResult[]> => {
-    console.log("Fetching history To Ethereum")
-    console.log(
-        `eth from ${range.ethereum.fromBlock} to ${range.ethereum.toBlock} (${
-            range.ethereum.toBlock - range.ethereum.fromBlock
-        } blocks)`
-    )
-    console.log(
-        `assethub from ${range.assetHub.fromBlock} to ${range.assetHub.toBlock} (${
-            range.assetHub.toBlock - range.assetHub.fromBlock
-        } blocks)`
-    )
-    console.log(
-        `bridgehub from ${range.bridgeHub.fromBlock} to ${range.bridgeHub.toBlock} (${
-            range.bridgeHub.toBlock - range.bridgeHub.fromBlock
-        } blocks)`
-    )
-
     const assetHubChannelId = paraIdToChannelId(assetHubParaId)
 
     const [
@@ -363,12 +324,6 @@ export const toEthereumHistory = async (
             gateway
         ),
     ]
-
-    console.log("number of transfers", allTransfers.length)
-    console.log("number of message queues", allMessageQueues.length)
-    console.log("number of outbound messages", allOutboundMessages.length)
-    console.log("number of beefy updates", allBeefyClientUpdates.length)
-    console.log("number of inbound messages", allInboundMessages.length)
 
     const results: ToEthereumTransferResult[] = []
     for (const transfer of allTransfers) {
