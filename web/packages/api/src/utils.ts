@@ -99,7 +99,9 @@ export const fetchBeaconSlot = async (
     return await response.json()
 }
 
-export const fetchFinalityUpdate = async (beaconUrl: string): Promise<number> => {
+export const fetchFinalityUpdate = async (
+    beaconUrl: string
+): Promise<{ finalized_slot: number; attested_slot: number }> => {
     let url = beaconUrl.trim()
     if (!url.endsWith("/")) {
         url += "/"
@@ -110,5 +112,8 @@ export const fetchFinalityUpdate = async (beaconUrl: string): Promise<number> =>
         throw new Error(response.statusText)
     }
     let result: any = await response.json()
-    return Number(result?.data?.finalized_header?.beacon?.slot)
+    return {
+        finalized_slot: Number(result?.data?.finalized_header?.beacon?.slot),
+        attested_slot: Number(result?.data?.attested_header?.beacon?.slot),
+    }
 }

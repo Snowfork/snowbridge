@@ -20,8 +20,9 @@ export type BridgeStatusInfo = {
             inbound: OperatingMode
             outbound: OperatingMode
         }
-        latestEthereumBlockOnPolkadot: number
-        latestEthereumBlock: number
+        latestBeaconSlotOnPolkadot: number
+        latestBeaconSlotAttested: number
+        latestBeaconSlotFinalized: number
         blockLatency: number
         latencySeconds: number
         previousEthereumBlockOnPolkadot: number
@@ -99,7 +100,7 @@ export const bridgeStatusInfo = async (
     const latestPolkadotBlock = (
         await context.polkadot.api.relaychain.query.system.number()
     ).toPrimitive() as number
-    const latestEthereumBlock = await context.ethereum.api.getBlockNumber()
+    const latestBeaconSlot = await context.ethereum.api.getBlockNumber()
     const latestFinalizedBeefyBlock = (
         await context.polkadot.api.relaychain.rpc.chain.getHeader(
             (await context.polkadot.api.relaychain.rpc.beefy.getFinalizedHead()).toU8a()
@@ -110,8 +111,8 @@ export const bridgeStatusInfo = async (
     const previousBeefyBlock = Number(
         await context.ethereum.contracts.beefyClient.latestBeefyBlock({
             blockTag:
-                latestEthereumBlock > options.toEthereumCheckIntervalInBlock
-                    ? latestEthereumBlock - options.toEthereumCheckIntervalInBlock
+                latestBeaconSlot > options.toEthereumCheckIntervalInBlock
+                    ? latestBeaconSlot - options.toEthereumCheckIntervalInBlock
                     : 100,
         })
     )
@@ -125,7 +126,8 @@ export const bridgeStatusInfo = async (
         (await fetchBeaconSlot(context.config.ethereum.beacon_url, latestBeaconBlockRoot)).data
             .message.slot
     )
-    const beaconBlockLatency = latestFinalizedBeaconBlock - latestBeaconBlockOnPolkadot
+    const beaconBlockLatency =
+        latestFinalizedBeaconBlock.attested_slot - latestBeaconBlockOnPolkadot
     const beaconLatencySeconds = beaconBlockLatency * options.ethereumBlockTimeInSeconds
     const latestBridgeHubBlock = (
         await context.polkadot.api.bridgeHub.query.system.number()
@@ -172,8 +174,9 @@ export const bridgeStatusInfo = async (
                 inbound: inboundOperatingMode as OperatingMode,
                 outbound: ethereumOperatingMode === 0n ? "Normal" : ("Halted" as OperatingMode),
             },
-            latestEthereumBlockOnPolkadot: latestBeaconBlockOnPolkadot,
-            latestEthereumBlock: latestFinalizedBeaconBlock,
+            latestBeaconSlotOnPolkadot: latestBeaconBlockOnPolkadot,
+            latestBeaconSlotAttested: latestFinalizedBeaconBlock.attested_slot,
+            latestBeaconSlotFinalized: latestFinalizedBeaconBlock.finalized_slot,
             blockLatency: beaconBlockLatency,
             latencySeconds: beaconLatencySeconds,
             previousEthereumBlockOnPolkadot: previousBeaconBlock,
