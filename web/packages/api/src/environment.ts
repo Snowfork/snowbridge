@@ -24,10 +24,15 @@ export type Relayer = { name: string; account: string; type: SourceType; balance
 export type ParachainInfo = {
     paraId: number
     destinationFeeDOT: bigint
+    skipExistentialDepositCheck: boolean
     has20ByteAccounts: boolean
     decimals: number
     maxConsumers: number
-    ss58Format?: number
+}
+export type TransferToken = {
+    id: string
+    address: string
+    minimumTransferAmount: bigint
 }
 export type TransferLocation = {
     id: string
@@ -35,7 +40,7 @@ export type TransferLocation = {
     type: SourceType
     destinationIds: string[]
     paraInfo?: ParachainInfo
-    erc20tokensReceivable: { [name: string]: string }
+    erc20tokensReceivable: TransferToken[]
 }
 
 export type SnowbridgeEnvironment = {
@@ -55,9 +60,13 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 name: "Ethereum",
                 type: "ethereum",
                 destinationIds: ["assethub", "penpal"],
-                erc20tokensReceivable: {
-                    WETH: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
-                },
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
+                        minimumTransferAmount: 1n,
+                    },
+                ],
             },
             {
                 id: "assethub",
@@ -67,13 +76,18 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 paraInfo: {
                     paraId: 1000,
                     destinationFeeDOT: 0n,
+                    skipExistentialDepositCheck: false,
                     has20ByteAccounts: false,
                     decimals: 12,
                     maxConsumers: 16,
                 },
-                erc20tokensReceivable: {
-                    WETH: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
-                },
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
+                        minimumTransferAmount: 1n,
+                    },
+                ],
             },
             {
                 id: "penpal",
@@ -83,13 +97,18 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 paraInfo: {
                     paraId: 2000,
                     destinationFeeDOT: 4_000_000_000n,
+                    skipExistentialDepositCheck: false,
                     has20ByteAccounts: false,
                     decimals: 12,
                     maxConsumers: 16,
                 },
-                erc20tokensReceivable: {
-                    WETH: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
-                },
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
+                        minimumTransferAmount: 1n,
+                    },
+                ],
             },
         ],
         config: {
@@ -160,11 +179,23 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 name: "Ethereum",
                 type: "ethereum",
                 destinationIds: ["assethub", "muse"],
-                erc20tokensReceivable: {
-                    WETH: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
-                    vETH: "0xc3d088842dcf02c13699f936bb83dfbbc6f721ab",
-                    MUSE: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
-                },
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "vETH",
+                        address: "0xc3d088842dcf02c13699f936bb83dfbbc6f721ab",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "MUSE",
+                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
+                        minimumTransferAmount: 1n,
+                    },
+                ],
             },
             {
                 id: "assethub",
@@ -174,15 +205,28 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 paraInfo: {
                     paraId: 1000,
                     destinationFeeDOT: 0n,
+                    skipExistentialDepositCheck: false,
                     has20ByteAccounts: false,
                     decimals: 12,
                     maxConsumers: 16,
                 },
-                erc20tokensReceivable: {
-                    WETH: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
-                    vETH: "0xc3d088842dcf02c13699f936bb83dfbbc6f721ab",
-                    MUSE: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
-                },
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "vETH",
+                        address: "0xc3d088842dcf02c13699f936bb83dfbbc6f721ab",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "MUSE",
+                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
+                        minimumTransferAmount: 1n,
+                    },
+                ],
             },
             {
                 id: "muse",
@@ -192,13 +236,18 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 paraInfo: {
                     paraId: 3369,
                     destinationFeeDOT: 200_000_000_000n,
+                    skipExistentialDepositCheck: true,
                     has20ByteAccounts: true,
-                    decimals: 12,
+                    decimals: 18,
                     maxConsumers: 16,
                 },
-                erc20tokensReceivable: {
-                    MUSE: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
-                },
+                erc20tokensReceivable: [
+                    {
+                        id: "MUSE",
+                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
+                        minimumTransferAmount: 10_000_000_000_000_000n,
+                    },
+                ],
             },
         ],
         config: {
@@ -263,10 +312,44 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 id: "ethereum",
                 name: "Ethereum",
                 type: "ethereum",
-                destinationIds: ["assethub"],
-                erc20tokensReceivable: {
-                    WETH: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                },
+                destinationIds: ["assethub", "mythos"],
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "WBTC",
+                        address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "SHIB",
+                        address: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "PEPE",
+                        address: "0x6982508145454Ce325dDbE47a25d4ec3d2311933",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "TON",
+                        address: "0x582d872A1B094FC48F5DE31D3B73F2D9bE47def1",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "wstETH",
+                        address: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "tBTC",
+                        address: "0x18084fbA666a33d37592fA2633fD49a74DD93a88",
+                        minimumTransferAmount: 1n,
+                    },
+                ],
             },
             {
                 id: "assethub",
@@ -276,13 +359,69 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 paraInfo: {
                     paraId: 1000,
                     destinationFeeDOT: 0n,
+                    skipExistentialDepositCheck: false,
                     has20ByteAccounts: false,
                     decimals: 10,
                     maxConsumers: 64,
                 },
-                erc20tokensReceivable: {
-                    WETH: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "WBTC",
+                        address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "SHIB",
+                        address: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "PEPE",
+                        address: "0x6982508145454Ce325dDbE47a25d4ec3d2311933",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "TON",
+                        address: "0x582d872A1B094FC48F5DE31D3B73F2D9bE47def1",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "wstETH",
+                        address: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "tBTC",
+                        address: "0x18084fbA666a33d37592fA2633fD49a74DD93a88",
+                        minimumTransferAmount: 1n,
+                    },
+                ],
+            },
+            {
+                id: "mythos",
+                name: "Mythos",
+                type: "substrate",
+                destinationIds: [],
+                paraInfo: {
+                    paraId: 3369,
+                    destinationFeeDOT: 500_000_000n,
+                    skipExistentialDepositCheck: true,
+                    has20ByteAccounts: true,
+                    decimals: 18,
+                    maxConsumers: 16,
                 },
+                erc20tokensReceivable: [
+                    {
+                        id: "MYTH",
+                        address: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003",
+                        minimumTransferAmount: 10_000_000_000_000_000n,
+                    },
+                ],
             },
         ],
         config: {
@@ -291,7 +430,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             RELAY_CHAIN_WS_URL: "wss://polkadot-rpc.dwellir.com",
             ASSET_HUB_WS_URL: "wss://asset-hub-polkadot-rpc.dwellir.com",
             BRIDGE_HUB_WS_URL: "wss://polkadot-bridge-hub-rpc.dwellir.com",
-            PARACHAINS: [],
+            PARACHAINS: ["wss://polkadot-mythos-rpc.polkadot.io"],
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
             BEEFY_CONTRACT: "0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C",
             ASSET_HUB_PARAID: 1000,
