@@ -7,6 +7,10 @@ use crate::Context;
 
 use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 
+#[cfg(feature = "polkadot")]
+use crate::relay_runtime::runtime_types::xcm::v2::OriginKind;
+#[cfg(feature = "rococo")]
+use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
 use crate::relay_runtime::runtime_types::{
     pallet_xcm,
     sp_weights::weight_v2::Weight,
@@ -19,13 +23,9 @@ use crate::relay_runtime::runtime_types::{
             Instruction::{self, *},
             MaybeErrorCode, WeightLimit, Xcm,
         },
-        VersionedXcm, VersionedLocation
+        VersionedLocation, VersionedXcm,
     },
 };
-#[cfg(feature = "rococo")]
-use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
-#[cfg(feature = "polkadot")]
-use crate::relay_runtime::runtime_types::xcm::v2::OriginKind;
 
 use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 

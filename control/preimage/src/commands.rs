@@ -1,8 +1,8 @@
 use crate::bridge_hub_runtime::runtime_types::snowbridge_pallet_ethereum_client;
 use crate::helpers::calculate_delivery_fee;
 use crate::{
-    constants::*, UpdateAssetArgs, Context, ForceCheckpointArgs, GatewayAddressArgs,
-    GatewayOperatingModeArgs, GatewayOperatingModeEnum, PricingParametersArgs, UpgradeArgs,
+    constants::*, Context, ForceCheckpointArgs, GatewayAddressArgs, GatewayOperatingModeArgs,
+    GatewayOperatingModeEnum, PricingParametersArgs, UpdateAssetArgs, UpgradeArgs,
 };
 use alloy_primitives::{utils::format_units, U256};
 use codec::Encode;

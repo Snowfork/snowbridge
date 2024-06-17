@@ -261,11 +261,14 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             utility_force_batch(vec![call1, call2])
         }
         Command::UpdateAsset(params) => {
-            let asset_sufficient_call =
-                send_xcm_asset_hub(&context, vec![commands::make_asset_sufficient(params)]).await?;
-            let asset_metadata_call =
-                send_xcm_asset_hub(&context, vec![commands::force_set_metadata(params)]).await?;
-            utility_force_batch(vec![asset_sufficient_call, asset_metadata_call])
+            send_xcm_asset_hub(
+                &context,
+                vec![
+                    commands::make_asset_sufficient(params),
+                    commands::force_set_metadata(params),
+                ],
+            )
+            .await?
         }
         Command::GatewayOperatingMode(params) => {
             let call = commands::gateway_operating_mode(params);
