@@ -319,6 +319,36 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                         minimumTransferAmount: 1n,
                     },
+                    {
+                        id: "WBTC",
+                        address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "SHIB",
+                        address: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "PEPE",
+                        address: "0x6982508145454Ce325dDbE47a25d4ec3d2311933",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "TON",
+                        address: "0x582d872A1B094FC48F5DE31D3B73F2D9bE47def1",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "wstETH",
+                        address: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "tBTC",
+                        address: "0x18084fbA666a33d37592fA2633fD49a74DD93a88",
+                        minimumTransferAmount: 1n,
+                    },
                 ],
             },
             {
@@ -341,8 +371,33 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         minimumTransferAmount: 1n,
                     },
                     {
-                        id: "MYTH",
-                        address: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003",
+                        id: "WBTC",
+                        address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "SHIB",
+                        address: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "PEPE",
+                        address: "0x6982508145454Ce325dDbE47a25d4ec3d2311933",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "TON",
+                        address: "0x582d872A1B094FC48F5DE31D3B73F2D9bE47def1",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "wstETH",
+                        address: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "tBTC",
+                        address: "0x18084fbA666a33d37592fA2633fD49a74DD93a88",
                         minimumTransferAmount: 1n,
                     },
                 ],
