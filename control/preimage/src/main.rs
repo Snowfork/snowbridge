@@ -34,6 +34,7 @@ struct Cli {
 pub enum Command {
     /// Initialize the bridge
     Initialize(InitializeArgs),
+    /// Update the asset on AssetHub
     UpdateAsset(UpdateAssetArgs),
     /// Upgrade the Gateway contract
     Upgrade(UpgradeArgs),
@@ -62,12 +63,24 @@ pub struct UpdateAssetArgs {
     /// Chain ID of the Ethereum chain bridge from.
     #[arg(long, value_name = "ADDRESS", value_parser=parse_eth_address_without_validation)]
     contract_id: Address,
-    #[arg(long, value_name = "ASSET_NAME")]
+    /// The asset display name, e.g. Wrapped Ether
+    #[arg(long, value_name = "ASSET_DISPLAY_NAME")]
     name: String,
+    /// The asset symbol, e.g. WETH
     #[arg(long, value_name = "ASSET_SYMBOL")]
     symbol: String,
+    /// The asset's number of decimal places.
     #[arg(long, value_name = "DECIMALS")]
     decimals: u8,
+    /// The minimum balance of the asset.
+    #[arg(long, value_name = "MIN_BALANCE")]
+    min_balance: u128,
+    /// Should the asset be sufficient.
+    #[arg(long, value_name = "IS_SUFFICIENT")]
+    is_sufficient: bool,
+    /// Should the asset be frozen.
+    #[arg(long, value_name = "IS_FROZEN")]
+    is_frozen: bool,
 }
 
 #[derive(Debug, Args)]

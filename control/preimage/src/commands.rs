@@ -196,9 +196,9 @@ pub fn make_asset_sufficient(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
         issuer: MultiAddress::<AccountId32, ()>::Id(owner.into()),
         admin: MultiAddress::<AccountId32, ()>::Id(owner.into()),
         freezer: MultiAddress::<AccountId32, ()>::Id(owner.into()),
-        min_balance: 1,
-        is_sufficient: true,
-        is_frozen: false,
+        min_balance: params.min_balance,
+        is_sufficient: params.is_sufficient,
+        is_frozen: params.is_frozen,
     })
 }
 
@@ -224,6 +224,6 @@ pub fn force_set_metadata(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
         name: params.name.as_bytes().to_vec(),
         symbol: params.symbol.as_bytes().to_vec(),
         decimals: params.decimals,
-        is_frozen: false,
+        is_frozen: params.is_frozen,
     })
 }
