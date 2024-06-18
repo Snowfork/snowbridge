@@ -1,6 +1,6 @@
 // import '@polkadot/api-augment/polkadot'
 import { ApiPromise, WsProvider } from "@polkadot/api"
-import { AbstractProvider, ethers } from "ethers"
+import { AbstractProvider, JsonRpcProvider, WebSocketProvider } from "ethers"
 import {
     BeefyClient,
     BeefyClient__factory,
@@ -10,7 +10,7 @@ import {
 
 interface Config {
     ethereum: {
-        execution_url: string
+        execution_url: string | AbstractProvider
         beacon_url: string
     }
     polkadot: {
@@ -45,10 +45,10 @@ export class Context {
 }
 
 class EthereumContext {
-    api: ethers.AbstractProvider
+    api: AbstractProvider
     contracts: AppContracts
 
-    constructor(api: ethers.AbstractProvider, contracts: AppContracts) {
+    constructor(api: AbstractProvider, contracts: AppContracts) {
         this.api = api
         this.contracts = contracts
     }
@@ -78,13 +78,16 @@ class PolkadotContext {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const contextFactory = async (config: Config): Promise<Context> => {
     let ethApi: AbstractProvider
-    if (config.ethereum.execution_url.startsWith("http")) {
-        ethApi = new ethers.JsonRpcProvider(config.ethereum.execution_url)
+    if (typeof config.ethereum.execution_url === "string") {
+        if (config.ethereum.execution_url.startsWith("http")) {
+            ethApi = new JsonRpcProvider(config.ethereum.execution_url)
+        } else {
+            ethApi = new WebSocketProvider(config.ethereum.execution_url)
+        }
     } else {
-        ethApi = new ethers.WebSocketProvider(config.ethereum.execution_url)
+        ethApi = config.ethereum.execution_url
     }
 
     const parasConnect: Promise<{ paraId: number; api: ApiPromise }>[] = []
@@ -144,7 +147,9 @@ export const destroyContext = async (context: Context): Promise<void> => {
     // clean up etheruem
     await context.ethereum.contracts.beefyClient.removeAllListeners()
     await context.ethereum.contracts.gateway.removeAllListeners()
-    await context.ethereum.api.destroy()
+    if (typeof context.config.ethereum.execution_url === "string") {
+        context.ethereum.api.destroy()
+    }
     // clean up polkadot
     await context.polkadot.api.relaychain.disconnect()
     await context.polkadot.api.bridgeHub.disconnect()

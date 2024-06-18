@@ -6,32 +6,11 @@ import {
 } from "@aws-sdk/client-cloudwatch"
 
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
-const SNS_TOPIC_TO_PAGERDUTY = process.env["SNS_TOPIC_TO_PAGERDUTY"] || ""
+const BRIDGE_STALE_SNS_TOPIC = process.env["BRIDGE_STALE_SNS_TOPIC"] || ""
+const ACCOUNT_BALANCE_SNS_TOPIC = process.env["ACCOUNT_BALANCE_SNS_TOPIC"] || ""
 
-export const AlarmThreshold = {
-    MaxBlockLatency: 2000,
-    MinBalanceToKeep: 10_000_000_000,
-}
-
-export type Sovereign = { name: string; account: string; balance: bigint }
-
-export type AllMetrics = {
-    name: string
-    bridgeStatus: status.BridgeStatusInfo
-    channels: status.ChannelStatusInfo[]
-    sovereigns: Sovereign[]
-    relayers: environment.Relayer[]
-}
-
-export enum AlarmReason {
-    BeefyStale = "BeefyStale",
-    BeaconStale = "BeaconStale",
-    ToEthereumChannelStale = "ToEthereumChannelStale",
-    ToPolkadotChannelStale = "ToPolkadotChannelStale",
-    AccountBalanceInsufficient = "AccountBalanceInsufficient",
-}
-
-export const sendMetrics = async (metrics: AllMetrics) => {
+export const sendMetrics = async (metrics: status.AllMetrics) => {
+    const { AlarmReason, InsufficientBalanceThreshold } = status
     let client = new CloudWatchClient({})
     let metricData = []
     // Beefy metrics
@@ -50,7 +29,8 @@ export const sendMetrics = async (metrics: AllMetrics) => {
     metricData.push({
         MetricName: AlarmReason.BeefyStale.toString(),
         Value: Number(
-            metrics.bridgeStatus.toEthereum.blockLatency > AlarmThreshold.MaxBlockLatency &&
+            metrics.bridgeStatus.toEthereum.blockLatency >
+                status.BlockLatencyThreshold.ToEthereum &&
                 metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum <=
                     metrics.bridgeStatus.toEthereum.previousPolkadotBlockOnEthereum
         ),
@@ -62,7 +42,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
     })
     metricData.push({
         MetricName: "LatestBeaconBlock",
-        Value: metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot,
+        Value: metrics.bridgeStatus.toPolkadot.latestBeaconSlotOnPolkadot,
     })
     metricData.push({
         MetricName: "PreviousBeaconBlock",
@@ -71,8 +51,9 @@ export const sendMetrics = async (metrics: AllMetrics) => {
     metricData.push({
         MetricName: AlarmReason.BeaconStale.toString(),
         Value: Number(
-            metrics.bridgeStatus.toPolkadot.blockLatency > AlarmThreshold.MaxBlockLatency &&
-                metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot <=
+            metrics.bridgeStatus.toPolkadot.blockLatency >
+                status.BlockLatencyThreshold.ToPolkadot &&
+                metrics.bridgeStatus.toPolkadot.latestBeaconSlotOnPolkadot <=
                     metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot
         ),
     })
@@ -188,10 +169,14 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             ],
             Value: Number(relayer.balance),
         })
-        metricData.push({
-            MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
-            Value: Number(!relayer.balance || relayer.balance < AlarmThreshold.MinBalanceToKeep),
-        })
+        if (relayer.type == "substrate") {
+            metricData.push({
+                MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
+                Value: Number(
+                    !relayer.balance || relayer.balance < InsufficientBalanceThreshold.Substrate
+                ),
+            })
+        }
     }
     for (let sovereign of metrics.sovereigns) {
         metricData.push({
@@ -204,12 +189,14 @@ export const sendMetrics = async (metrics: AllMetrics) => {
             ],
             Value: Number(sovereign.balance),
         })
-        metricData.push({
-            MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
-            Value: Number(
-                !sovereign.balance || sovereign.balance < AlarmThreshold.MinBalanceToKeep
-            ),
-        })
+        if (sovereign.type == "substrate") {
+            metricData.push({
+                MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
+                Value: Number(
+                    !sovereign.balance || sovereign.balance < InsufficientBalanceThreshold.Substrate
+                ),
+            })
+        }
     }
     const command = new PutMetricDataCommand({
         MetricData: metricData,
@@ -219,6 +206,7 @@ export const sendMetrics = async (metrics: AllMetrics) => {
 }
 
 export const initializeAlarms = async () => {
+    const { AlarmReason } = status
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
@@ -232,12 +220,13 @@ export const initializeAlarms = async () => {
     let client = new CloudWatchClient({})
     let cloudWatchAlarms = []
     let alarmCommandSharedInput = {
-        EvaluationPeriods: 3,
+        EvaluationPeriods: 5,
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
-        Period: 300,
+        Period: 3600,
         Threshold: 0,
-        AlarmActions: [SNS_TOPIC_TO_PAGERDUTY],
     }
+
+    // Alarm for stale bridge
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
             AlarmName: AlarmReason.BeefyStale.toString(),
@@ -245,6 +234,7 @@ export const initializeAlarms = async () => {
             AlarmDescription: AlarmReason.BeefyStale.toString(),
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
+            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
         })
     )
@@ -255,6 +245,7 @@ export const initializeAlarms = async () => {
             AlarmDescription: AlarmReason.BeaconStale.toString(),
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
+            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
         })
     )
@@ -265,6 +256,7 @@ export const initializeAlarms = async () => {
             AlarmDescription: AlarmReason.ToEthereumChannelStale.toString(),
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
+            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
         })
     )
@@ -275,20 +267,25 @@ export const initializeAlarms = async () => {
             AlarmDescription: AlarmReason.ToPolkadotChannelStale.toString(),
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
-            ...alarmCommandSharedInput,
-        })
-    )
-    cloudWatchAlarms.push(
-        new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.AccountBalanceInsufficient.toString(),
-            MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
-            AlarmDescription: AlarmReason.AccountBalanceInsufficient.toString(),
-            Statistic: "Average",
-            ComparisonOperator: "GreaterThanThreshold",
+            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
         })
     )
     for (let alarm of cloudWatchAlarms) {
         await client.send(alarm)
     }
+
+    // Alarm for account balance insufficient
+    let accountBalanceAlarm = new PutMetricAlarmCommand({
+        AlarmName: AlarmReason.AccountBalanceInsufficient.toString(),
+        MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
+        AlarmDescription: AlarmReason.AccountBalanceInsufficient.toString(),
+        Statistic: "Average",
+        ComparisonOperator: "GreaterThanThreshold",
+        AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
+        ...alarmCommandSharedInput,
+    })
+    await client.send(accountBalanceAlarm)
+
+    console.log("Initialize alarm rules success.")
 }

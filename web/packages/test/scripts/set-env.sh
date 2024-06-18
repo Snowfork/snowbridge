@@ -80,6 +80,7 @@ execution_relayer_penpal_pub_key="${EXECUTION_RELAYER_PENPAL_PUB_KEY:-0xf8aed186
 
 ## Deployment key
 export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
+export ETHERSCAN_API_KEY="${ETHERSCAN_API_KEY:-0x0}"
 
 ## BeefyClient
 # For max safety delay should be MAX_SEED_LOOKAHEAD=4 epochs=4*8*6=192s

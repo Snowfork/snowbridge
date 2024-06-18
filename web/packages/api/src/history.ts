@@ -1,7 +1,8 @@
-import { Context } from "./index"
 import { fetchBeaconSlot, paraIdToChannelId } from "./utils"
 import { SubscanApi, fetchEvents, fetchExtrinsics } from "./subscan"
 import { forwardedTopicId } from "./utils"
+import { BeefyClient, IGateway } from "@snowbridge/contract-types"
+import { AbstractProvider } from "ethers"
 
 export enum TransferStatus {
     Pending,
@@ -32,7 +33,7 @@ export type ToPolkadotTransferResult = {
         channelId: string
         messageId: string
         nonce: number
-        parentBeaconSlot: number
+        parentBeaconSlot?: number
     }
     beaconClientIncluded?: {
         extrinsic_index: string
@@ -127,49 +128,41 @@ export type ToEthereumTransferResult = {
 }
 
 export const toPolkadotHistory = async (
-    context: Context,
     assetHubScan: SubscanApi,
     bridgeHubScan: SubscanApi,
     range: {
         assetHub: { fromBlock: number; toBlock: number }
         bridgeHub: { fromBlock: number; toBlock: number }
         ethereum: { fromBlock: number; toBlock: number }
-    }
+    },
+    skipLightClientUpdates: boolean,
+    bridgeHubParaId: number,
+    gateway: IGateway,
+    provider: AbstractProvider,
+    beacon_url: string
 ): Promise<ToPolkadotTransferResult[]> => {
-    console.log("Fetching history To Polkadot")
-    console.log(
-        `eth from ${range.ethereum.fromBlock} to ${range.ethereum.toBlock} (${
-            range.ethereum.toBlock - range.ethereum.fromBlock
-        } blocks)`
-    )
-    console.log(
-        `assethub from ${range.assetHub.fromBlock} to ${range.assetHub.toBlock} (${
-            range.assetHub.toBlock - range.assetHub.fromBlock
-        } blocks)`
-    )
-    console.log(
-        `bridgehub from ${range.bridgeHub.fromBlock} to ${range.bridgeHub.toBlock} (${
-            range.bridgeHub.toBlock - range.bridgeHub.fromBlock
-        } blocks)`
-    )
-
-    const bridgeHubParaIdCodec =
-        await context.polkadot.api.bridgeHub.query.parachainInfo.parachainId()
-    const bridgeHubParaId = bridgeHubParaIdCodec.toPrimitive() as number
-
     const [
         ethOutboundMessages,
         beaconClientUpdates,
         inboundMessagesReceived,
         assetHubMessageQueue,
     ] = [
-        await getEthOutboundMessages(context, range.ethereum.fromBlock, range.ethereum.toBlock),
-
-        await getBeaconClientUpdates(
-            bridgeHubScan,
-            range.bridgeHub.fromBlock,
-            range.bridgeHub.toBlock
+        await getEthOutboundMessages(
+            range.ethereum.fromBlock,
+            range.ethereum.toBlock,
+            skipLightClientUpdates,
+            gateway,
+            provider,
+            beacon_url
         ),
+
+        await (!skipLightClientUpdates
+            ? getBeaconClientUpdates(
+                  bridgeHubScan,
+                  range.bridgeHub.fromBlock,
+                  range.bridgeHub.toBlock
+              )
+            : Promise.resolve([])),
 
         await getBridgeHubInboundMessages(
             bridgeHubScan,
@@ -185,15 +178,10 @@ export const toPolkadotHistory = async (
         ),
     ]
 
-    console.log("number of transfers", ethOutboundMessages.length)
-    console.log("number of beacon client updates", beaconClientUpdates.length)
-    console.log("number of inbound messages received", inboundMessagesReceived.length)
-    console.log("number of asset hub message queue processed", assetHubMessageQueue.length)
-
     const results: ToPolkadotTransferResult[] = []
     for (const outboundMessage of ethOutboundMessages) {
         const result: ToPolkadotTransferResult = {
-            id: `${outboundMessage.transactionHash}-${outboundMessage.data.messageId}`,
+            id: outboundMessage.data.messageId,
             status: TransferStatus.Pending,
             info: {
                 when: new Date(outboundMessage.data.timestamp * 1000),
@@ -213,22 +201,28 @@ export const toPolkadotHistory = async (
                 channelId: outboundMessage.data.channelId,
                 messageId: outboundMessage.data.messageId,
                 nonce: outboundMessage.data.nonce,
-                parentBeaconSlot: Number(outboundMessage.data.parentBeaconSlot),
+                parentBeaconSlot: outboundMessage.data.parentBeaconSlot
+                    ? Number(outboundMessage.data.parentBeaconSlot)
+                    : undefined,
             },
         }
         results.push(result)
 
-        const beaconClientIncluded = beaconClientUpdates.find(
-            (ev) => ev.data.beaconSlot > result.submitted.parentBeaconSlot + 1 // add one to parent to get current
-        )
-        if (beaconClientIncluded) {
-            result.beaconClientIncluded = {
-                extrinsic_index: beaconClientIncluded.extrinsic_index,
-                extrinsic_hash: beaconClientIncluded.extrinsic_hash,
-                event_index: beaconClientIncluded.event_index,
-                block_timestamp: beaconClientIncluded.block_timestamp,
-                beaconSlot: beaconClientIncluded.data.beaconSlot,
-                beaconBlockHash: beaconClientIncluded.data.beaconBlockHash,
+        if (result.submitted.parentBeaconSlot !== undefined) {
+            const beaconClientIncluded = beaconClientUpdates.find(
+                (ev) =>
+                    ev.data.beaconSlot >
+                    (result.submitted.parentBeaconSlot ?? Number.MAX_SAFE_INTEGER) + 1 // add one to parent to get current
+            )
+            if (beaconClientIncluded) {
+                result.beaconClientIncluded = {
+                    extrinsic_index: beaconClientIncluded.extrinsic_index,
+                    extrinsic_hash: beaconClientIncluded.extrinsic_hash,
+                    event_index: beaconClientIncluded.event_index,
+                    block_timestamp: beaconClientIncluded.block_timestamp,
+                    beaconSlot: beaconClientIncluded.data.beaconSlot,
+                    beaconBlockHash: beaconClientIncluded.data.beaconBlockHash,
+                }
             }
         }
 
@@ -275,7 +269,6 @@ export const toPolkadotHistory = async (
 }
 
 export const toEthereumHistory = async (
-    context: Context,
     assetHubScan: SubscanApi,
     bridgeHubScan: SubscanApi,
     relaychainScan: SubscanApi,
@@ -283,31 +276,14 @@ export const toEthereumHistory = async (
         assetHub: { fromBlock: number; toBlock: number }
         bridgeHub: { fromBlock: number; toBlock: number }
         ethereum: { fromBlock: number; toBlock: number }
-    }
+    },
+    skipLightClientUpdates: boolean,
+    ethereumChainId: number,
+    assetHubParaId: number,
+    beefyClient: BeefyClient,
+    gateway: IGateway
 ): Promise<ToEthereumTransferResult[]> => {
-    console.log("Fetching history To Ethereum")
-    console.log(
-        `eth from ${range.ethereum.fromBlock} to ${range.ethereum.toBlock} (${
-            range.ethereum.toBlock - range.ethereum.fromBlock
-        } blocks)`
-    )
-    console.log(
-        `assethub from ${range.assetHub.fromBlock} to ${range.assetHub.toBlock} (${
-            range.assetHub.toBlock - range.assetHub.fromBlock
-        } blocks)`
-    )
-    console.log(
-        `bridgehub from ${range.bridgeHub.fromBlock} to ${range.bridgeHub.toBlock} (${
-            range.bridgeHub.toBlock - range.bridgeHub.fromBlock
-        } blocks)`
-    )
-
-    const [ethNetwork, assetHubParaId] = await Promise.all([
-        context.ethereum.api.getNetwork(),
-        context.polkadot.api.assetHub.query.parachainInfo.parachainId(),
-    ])
-    const assetHubParaIdDecoded = assetHubParaId.toPrimitive() as number
-    const assetHubChannelId = paraIdToChannelId(assetHubParaIdDecoded)
+    const assetHubChannelId = paraIdToChannelId(assetHubParaId)
 
     const [
         allTransfers,
@@ -319,14 +295,14 @@ export const toEthereumHistory = async (
         await getAssetHubTransfers(
             assetHubScan,
             relaychainScan,
-            Number(ethNetwork.chainId),
+            ethereumChainId,
             range.assetHub.fromBlock,
             range.assetHub.toBlock
         ),
 
         await getBridgeHubMessageQueueProccessed(
             bridgeHubScan,
-            assetHubParaIdDecoded,
+            assetHubParaId,
             assetHubChannelId,
             range.bridgeHub.fromBlock,
             range.bridgeHub.toBlock
@@ -338,25 +314,21 @@ export const toEthereumHistory = async (
             range.bridgeHub.toBlock
         ),
 
-        await getBeefyClientUpdates(context, range.ethereum.fromBlock, range.ethereum.toBlock),
+        await (!skipLightClientUpdates
+            ? getBeefyClientUpdates(range.ethereum.fromBlock, range.ethereum.toBlock, beefyClient)
+            : Promise.resolve([])),
 
         await getEthInboundMessagesDispatched(
-            context,
             range.ethereum.fromBlock,
-            range.ethereum.toBlock
+            range.ethereum.toBlock,
+            gateway
         ),
     ]
-
-    console.log("number of transfers", allTransfers.length)
-    console.log("number of message queues", allMessageQueues.length)
-    console.log("number of outbound messages", allOutboundMessages.length)
-    console.log("number of beefy updates", allBeefyClientUpdates.length)
-    console.log("number of inbound messages", allInboundMessages.length)
 
     const results: ToEthereumTransferResult[] = []
     for (const transfer of allTransfers) {
         const result: ToEthereumTransferResult = {
-            id: `${transfer.extrinsic_hash}-${transfer.data.messageId}`,
+            id: transfer.data.messageId,
             status: TransferStatus.Pending,
             info: {
                 when: new Date(transfer.block_timestamp * 1000),
@@ -390,7 +362,7 @@ export const toEthereumHistory = async (
         const bridgeHubXcmDelivered = allMessageQueues.find(
             (ev: any) =>
                 ev.data.messageId === result.submitted.bridgeHubMessageId &&
-                ev.data.sibling == assetHubParaIdDecoded
+                ev.data.sibling == assetHubParaId
         )
         if (bridgeHubXcmDelivered) {
             result.bridgeHubXcmDelivered = {
@@ -580,8 +552,11 @@ const getBridgeHubOutboundMessages = async (
     return acc
 }
 
-const getBeefyClientUpdates = async (context: Context, fromBlock: number, toBlock: number) => {
-    const { beefyClient } = context.ethereum.contracts
+const getBeefyClientUpdates = async (
+    fromBlock: number,
+    toBlock: number,
+    beefyClient: BeefyClient
+) => {
     const NewMMRRoot = beefyClient.getEvent("NewMMRRoot")
     const roots = await beefyClient.queryFilter(NewMMRRoot, fromBlock, toBlock)
     const updates = roots.map((r) => {
@@ -602,11 +577,10 @@ const getBeefyClientUpdates = async (context: Context, fromBlock: number, toBloc
 }
 
 const getEthInboundMessagesDispatched = async (
-    context: Context,
     fromBlock: number,
-    toBlock: number
+    toBlock: number,
+    gateway: IGateway
 ) => {
-    const { gateway } = context.ethereum.contracts
     const InboundMessageDispatched = gateway.getEvent("InboundMessageDispatched")
     const inboundMessages = await gateway.queryFilter(InboundMessageDispatched, fromBlock, toBlock)
     return inboundMessages.map((im) => {
@@ -876,65 +850,101 @@ const subFetchOutboundMessages = async (
     )
 }
 
-const getEthOutboundMessages = async (context: Context, fromBlock: number, toBlock: number) => {
-    const { gateway } = context.ethereum.contracts
+const getEthOutboundMessages = async (
+    fromBlock: number,
+    toBlock: number,
+    skipLightClientUpdates: boolean,
+    gateway: IGateway,
+    provider: AbstractProvider,
+    beacon_url: string
+) => {
     const OutboundMessageAccepted = gateway.getEvent("OutboundMessageAccepted")
     const outboundMessages = await gateway.queryFilter(OutboundMessageAccepted, fromBlock, toBlock)
     const result = []
     for (const om of outboundMessages) {
-        const block = await om.getBlock()
-        const beaconBlockRoot = await fetchBeaconSlot(
-            context.config.ethereum.beacon_url,
-            block.parentBeaconBlockRoot as any
-        )
-        const transaction = await block.getTransaction(om.transactionHash)
-        const [
-            tokenAddress,
-            destinationParachain,
-            [addressType, beneficiaryAddress],
-            destinationFee,
-            amount,
-        ] = context.ethereum.contracts.gateway.interface.decodeFunctionData(
-            "sendToken",
-            transaction.data
-        )
-        let beneficiary = beneficiaryAddress as string
-        switch (addressType) {
-            case 0n:
-                {
-                    // 4-byte index
-                    const index = BigInt(beneficiary.substring(0, 6))
-                    beneficiary = index.toString()
-                }
-                break
-            case 2n:
-                {
-                    // 20-byte address
-                    beneficiary = beneficiary.substring(0, 42)
-                }
-                break
+        const [block, transaction] = await Promise.all([
+            om.getBlock(),
+            provider.getTransaction(om.transactionHash),
+        ])
+        if (transaction === null) {
+            console.warn("Skipping message: Couldnt not find transaction", om.args.messageID)
+            continue
         }
 
-        result.push({
-            blockNumber: om.blockNumber,
-            blockHash: om.blockHash,
-            logIndex: om.index,
-            transactionIndex: om.transactionIndex,
-            transactionHash: om.transactionHash,
-            data: {
-                sourceAddress: transaction.from,
-                timestamp: block.timestamp,
-                channelId: om.args.channelID,
-                nonce: Number(om.args.nonce),
-                messageId: om.args.messageID,
-                parentBeaconSlot: Number(beaconBlockRoot.data.message.slot),
-                tokenAddress: tokenAddress as string,
-                destinationParachain: Number(destinationParachain),
-                beneficiaryAddress: beneficiary,
-                destinationFee: destinationFee.toString() as string,
-                amount: amount.toString() as string,
-            },
-        })
+        try {
+            const [
+                tokenAddress,
+                destinationParachain,
+                [addressType, beneficiaryAddress],
+                destinationFee,
+                amount,
+            ] = gateway.interface.decodeFunctionData("sendToken", transaction.data)
+            let beneficiary = beneficiaryAddress as string
+            switch (addressType) {
+                case 0n:
+                    {
+                        // 4-byte index
+                        const index = BigInt(beneficiary.substring(0, 6))
+                        beneficiary = index.toString()
+                    }
+                    break
+                case 2n:
+                    {
+                        // 20-byte address
+                        beneficiary = beneficiary.substring(0, 42)
+                    }
+                    break
+            }
+
+            let beaconBlockRoot
+            if (!skipLightClientUpdates) {
+                try {
+                    beaconBlockRoot = await fetchBeaconSlot(
+                        beacon_url,
+                        block.parentBeaconBlockRoot as any
+                    )
+                } catch (err) {
+                    let message = "Unknown"
+                    if (err instanceof Error) {
+                        message = err.message
+                    }
+                    console.error(
+                        `Error fetching beacon slot: ${message}. Skipping light client update.`,
+                        err
+                    )
+                }
+            }
+
+            result.push({
+                blockNumber: om.blockNumber,
+                blockHash: om.blockHash,
+                logIndex: om.index,
+                transactionIndex: om.transactionIndex,
+                transactionHash: om.transactionHash,
+                data: {
+                    sourceAddress: transaction.from,
+                    timestamp: block.timestamp,
+                    channelId: om.args.channelID,
+                    nonce: Number(om.args.nonce),
+                    messageId: om.args.messageID,
+                    parentBeaconSlot: beaconBlockRoot
+                        ? Number(beaconBlockRoot.data.message.slot)
+                        : undefined,
+                    tokenAddress: tokenAddress as string,
+                    destinationParachain: Number(destinationParachain),
+                    beneficiaryAddress: beneficiary,
+                    destinationFee: destinationFee.toString() as string,
+                    amount: amount.toString() as string,
+                },
+            })
+        } catch (err) {
+            let message = "Transaction decoding error"
+            if (err instanceof Error) {
+                message = `Transaction decoding error: ${err.message}`
+            }
+            console.warn("Skipping message:", message)
+            continue
+        }
     }
     return result
 }

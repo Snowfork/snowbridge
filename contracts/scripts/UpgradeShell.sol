@@ -44,7 +44,7 @@ contract UpgradeShell is Script {
     function readConfig() internal pure returns (Config memory config) {
         config = Config({
             gatewayProxy: 0x27ca963C279c93801941e1eB8799c23f407d68e7,
-            beefyClient: address(0),
+            beefyClient: 0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C,
             bridgeHubParaID: ParaID.wrap(1002),
             bridgeHubAgentID: 0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314,
             foreignTokenDecimals: 10,

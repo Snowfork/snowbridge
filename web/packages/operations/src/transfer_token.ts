@@ -51,7 +51,9 @@ const monitor = async () => {
     const amount = 10n
 
     const POLL_INTERVAL_MS = 10_000
-    const WETH_CONTRACT = snwobridgeEnv.locations[0].erc20tokensReceivable["WETH"]
+    const WETH_CONTRACT = snwobridgeEnv.locations[0].erc20tokensReceivable.find(
+        (t) => t.id === "WETH"
+    )!.address
 
     console.log("# Ethereum to Asset Hub")
     {

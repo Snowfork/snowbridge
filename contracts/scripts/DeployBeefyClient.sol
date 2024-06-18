@@ -16,12 +16,11 @@ contract DeployBeefyClient is Script {
     }
 
     function readConfig() internal pure returns (Config memory config) {
-        // Checkpoint generated at block 20733663 using the `./beefy-checkpoint.js` script in Polkadot-JS.
-        // Block 20733663 is significant as that was when our bridge was initialized on BridgeHub.
+        // Checkpoint generated using the script `./beefy-checkpoint.js` script in Polkadot-JS.
         config = Config({
-            startBlock: 20733663,
-            current: BeefyClient.ValidatorSet({id: 496, length: 297, root: 0xdd04a3a0a4a19180bdae78ecc0c089491d22f5b65b685199d877f20b7fc76434}),
-            next: BeefyClient.ValidatorSet({id: 497, length: 297, root: 0xdd04a3a0a4a19180bdae78ecc0c089491d22f5b65b685199d877f20b7fc76434}),
+            startBlock: 21087413,
+            current: BeefyClient.ValidatorSet({id: 644, length: 297, root: 0x3db19e57e6a7deaec1204d4fb8295cab4e24f8902f54e70d25f273abfe346ada}),
+            next: BeefyClient.ValidatorSet({id: 645, length: 297, root: 0x3db19e57e6a7deaec1204d4fb8295cab4e24f8902f54e70d25f273abfe346ada}),
             randaoCommitDelay: 128,
             randaoCommitExpiration: 24,
             minimumSignatures: 17

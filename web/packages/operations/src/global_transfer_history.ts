@@ -1,4 +1,6 @@
 import { contextFactory, destroyContext, environment, subscan, history } from "@snowbridge/api"
+import { BeefyClient__factory, IGateway__factory } from "@snowbridge/contract-types"
+import { AlchemyProvider } from "ethers"
 
 const monitor = async () => {
     const subscanKey = process.env.REACT_APP_SUBSCAN_KEY ?? ""
@@ -12,12 +14,13 @@ const monitor = async () => {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const { config } = snwobridgeEnv
+    const { config, ethChainId } = snwobridgeEnv
     if (!config.SUBSCAN_API) throw Error(`Environment ${env} does not support subscan.`)
 
+    const ethereumProvider = new AlchemyProvider(ethChainId, process.env.REACT_APP_ALCHEMY_KEY)
     const context = await contextFactory({
         ethereum: {
-            execution_url: config.ETHEREUM_WS_API(process.env.REACT_APP_ALCHEMY_KEY ?? ""),
+            execution_url: ethereumProvider,
             beacon_url: config.BEACON_HTTP_API,
         },
         polkadot: {
@@ -42,46 +45,77 @@ const monitor = async () => {
     const assetHubScan = subscan.createApi(config.SUBSCAN_API.ASSET_HUB_URL, subscanKey)
     const bridgeHubScan = subscan.createApi(config.SUBSCAN_API.BRIDGE_HUB_URL, subscanKey)
     const relaychainScan = subscan.createApi(config.SUBSCAN_API.RELAY_CHAIN_URL, subscanKey)
+    const skipLightClientUpdates = true
 
-    const [ethNowBlock, assetHubNowBlock, bridgeHubNowBlock] = await Promise.all([
-        (async () => {
-            const ethNowBlock = await context.ethereum.api.getBlock("latest")
-            if (ethNowBlock == null) throw Error("Cannot fetch block")
-            return ethNowBlock
-        })(),
+    const [
+        ethNowBlock,
+        assetHubNowBlock,
+        bridgeHubNowBlock,
+        bridgeHubParaIdCodec,
+        assetHubParaIdCodec,
+    ] = await Promise.all([
+        context.ethereum.api.getBlock("latest"),
         context.polkadot.api.assetHub.rpc.chain.getHeader(),
         context.polkadot.api.bridgeHub.rpc.chain.getHeader(),
+        context.polkadot.api.bridgeHub.query.parachainInfo.parachainId(),
+        context.polkadot.api.assetHub.query.parachainInfo.parachainId(),
     ])
 
+    if (ethNowBlock == null) throw Error("Cannot fetch block")
+    const bridgeHubParaId = bridgeHubParaIdCodec.toPrimitive() as number
+    const assetHubParaId = assetHubParaIdCodec.toPrimitive() as number
+    const beacon_url = context.config.ethereum.beacon_url
+    const beefyClient = BeefyClient__factory.connect(config.BEEFY_CONTRACT, ethereumProvider)
+    const gateway = IGateway__factory.connect(config.GATEWAY_CONTRACT, ethereumProvider)
+
     const [toEthereum, toPolkadot] = [
-        await history.toEthereumHistory(context, assetHubScan, bridgeHubScan, relaychainScan, {
-            assetHub: {
-                fromBlock: assetHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
-                toBlock: assetHubNowBlock.number.toNumber(),
+        await history.toEthereumHistory(
+            assetHubScan,
+            bridgeHubScan,
+            relaychainScan,
+            {
+                assetHub: {
+                    fromBlock: assetHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
+                    toBlock: assetHubNowBlock.number.toNumber(),
+                },
+                bridgeHub: {
+                    fromBlock: bridgeHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
+                    toBlock: bridgeHubNowBlock.number.toNumber(),
+                },
+                ethereum: {
+                    fromBlock: ethNowBlock.number - ethereumSearchPeriodBlocks,
+                    toBlock: ethNowBlock.number,
+                },
             },
-            bridgeHub: {
-                fromBlock: bridgeHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
-                toBlock: bridgeHubNowBlock.number.toNumber(),
+            skipLightClientUpdates,
+            ethChainId,
+            assetHubParaId,
+            beefyClient,
+            gateway
+        ),
+        await history.toPolkadotHistory(
+            assetHubScan,
+            bridgeHubScan,
+            {
+                assetHub: {
+                    fromBlock: assetHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
+                    toBlock: assetHubNowBlock.number.toNumber(),
+                },
+                bridgeHub: {
+                    fromBlock: bridgeHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
+                    toBlock: bridgeHubNowBlock.number.toNumber(),
+                },
+                ethereum: {
+                    fromBlock: ethNowBlock.number - ethereumSearchPeriodBlocks,
+                    toBlock: ethNowBlock.number,
+                },
             },
-            ethereum: {
-                fromBlock: ethNowBlock.number - ethereumSearchPeriodBlocks,
-                toBlock: ethNowBlock.number,
-            },
-        }),
-        await history.toPolkadotHistory(context, assetHubScan, bridgeHubScan, {
-            assetHub: {
-                fromBlock: assetHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
-                toBlock: assetHubNowBlock.number.toNumber(),
-            },
-            bridgeHub: {
-                fromBlock: bridgeHubNowBlock.number.toNumber() - polkadotSearchPeriodBlocks,
-                toBlock: bridgeHubNowBlock.number.toNumber(),
-            },
-            ethereum: {
-                fromBlock: ethNowBlock.number - ethereumSearchPeriodBlocks,
-                toBlock: ethNowBlock.number,
-            },
-        }),
+            skipLightClientUpdates,
+            bridgeHubParaId,
+            gateway,
+            ethereumProvider,
+            beacon_url
+        ),
     ]
 
     const transfers = [...toEthereum, ...toPolkadot]

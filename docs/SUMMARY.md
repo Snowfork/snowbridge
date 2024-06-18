@@ -20,9 +20,10 @@
 
 * [Token Transfers](applications/token-transfers.md)
 
-## Performance
+## Security
 
-* [Benchmarks](performance/benchmarks.md)
+* [Exploit Reporting](security/exploit-reporting.md)
+* [Audits](security/audits.md)
 
 ## Other
 
@@ -34,8 +35,9 @@
 
 * [Rococo-Sepolia Token Transfers](rococo-testnet/rococo-sepolia-token-transfers.md)
 
-## Runbooks
+## Operations
 
-* [Contributing to Snowbridge](runbooks/updating-snowbridge-pallets-bridgehub-and-assethub-runtimes.md)
-* [Governance Updates](runbooks/governance-updates.md)
-* [Test Runtime Upgrades](runbooks/test-runtime-upgrades.md)
+* [Infrastructure](operations/infrastructure.md)
+* [Contributing to Snowbridge](operations/updating-snowbridge-pallets-bridgehub-and-assethub-runtimes.md)
+* [Governance Updates](operations/governance-updates.md)
+* [Test Runtime Upgrades](operations/test-runtime-upgrades.md)
