@@ -17,7 +17,8 @@ type Relay struct {
 	config                *Config
 	parachainConn         *parachain.Connection
 	relaychainConn        *relaychain.Connection
-	ethereumConn          *ethereum.Connection
+	ethereumListenerConn  *ethereum.Connection
+	ethereumWriterConn    *ethereum.Connection
 	ethereumChannelWriter *EthereumWriter
 	beefyListener         *BeefyListener
 }
@@ -28,15 +29,15 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
 	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
 
-	// TODO: This is used by both the source & sink. They should use separate connections
-	ethereumConn := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
+	ethereumListenerConn := ethereum.NewConnection(&config.Source.Ethereum, keypair)
+	ethereumWriterConn := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
 
 	// channel for messages from beefy listener to ethereum writer
 	var tasks = make(chan *Task, 1)
 
 	ethereumChannelWriter, err := NewEthereumWriter(
 		&config.Sink,
-		ethereumConn,
+		ethereumWriterConn,
 		tasks,
 	)
 	if err != nil {
@@ -45,7 +46,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 
 	beefyListener := NewBeefyListener(
 		&config.Source,
-		ethereumConn,
+		ethereumListenerConn,
 		relaychainConn,
 		parachainConn,
 		tasks,
@@ -55,7 +56,8 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 		config:                config,
 		parachainConn:         parachainConn,
 		relaychainConn:        relaychainConn,
-		ethereumConn:          ethereumConn,
+		ethereumListenerConn:  ethereumListenerConn,
+		ethereumWriterConn:    ethereumWriterConn,
 		ethereumChannelWriter: ethereumChannelWriter,
 		beefyListener:         beefyListener,
 	}, nil
@@ -67,7 +69,12 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	err = relay.ethereumConn.Connect(ctx)
+	err = relay.ethereumListenerConn.Connect(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = relay.ethereumWriterConn.Connect(ctx)
 	if err != nil {
 		return err
 	}
