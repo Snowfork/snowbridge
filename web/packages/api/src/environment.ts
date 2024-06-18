@@ -429,7 +429,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ETHEREUM_WS_API: (key) => `https://eth-mainnet.g.alchemy.com/v2/${key}`,
             RELAY_CHAIN_WS_URL: "wss://polkadot-rpc.dwellir.com",
             ASSET_HUB_WS_URL: "wss://asset-hub-polkadot-rpc.dwellir.com",
-            BRIDGE_HUB_WS_URL: "wss://polkadot-bridge-hub-rpc.dwellir.com",
+            BRIDGE_HUB_WS_URL: "wss://bridge-hub-polkadot-rpc.dwellir.com",
             PARACHAINS: ["wss://polkadot-mythos-rpc.polkadot.io"],
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
             BEEFY_CONTRACT: "0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C",
