@@ -64,7 +64,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	r.writer = parachain.NewParachainWriter(
 		paraconn,
 		r.config.Sink.Parachain.MaxWatchedExtrinsics,
-		r.config.Sink.Parachain.MaxBatchCallSize,
 	)
 
 	err = r.writer.Start(ctx, eg)
@@ -98,7 +97,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		r.config.Source.Beacon.Spec,
 		&store,
 		p,
-		r.config.Sink.Parachain.UpdateSlotInterval,
+		0, // setting is not used in the execution relay
 	)
 	r.beaconHeader = &beaconHeader
 

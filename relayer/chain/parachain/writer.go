@@ -34,19 +34,16 @@ type ParachainWriter struct {
 	pool                 *ExtrinsicPool
 	genesisHash          types.Hash
 	maxWatchedExtrinsics int64
-	maxBatchCallSize     int64
 	mu                   sync.Mutex
 }
 
 func NewParachainWriter(
 	conn *Connection,
 	maxWatchedExtrinsics int64,
-	maxBatchCallSize int64,
 ) *ParachainWriter {
 	return &ParachainWriter{
 		conn:                 conn,
 		maxWatchedExtrinsics: maxWatchedExtrinsics,
-		maxBatchCallSize:     maxBatchCallSize,
 	}
 }
 
@@ -70,7 +67,7 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 }
 
 func (wr *ParachainWriter) BatchCall(ctx context.Context, extrinsic []string, calls []interface{}) error {
-	batchSize := int(wr.maxBatchCallSize)
+	batchSize := int(wr.maxWatchedExtrinsics)
 	var j int
 	for i := 0; i < len(calls); i += batchSize {
 		j += batchSize

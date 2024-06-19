@@ -35,7 +35,8 @@ type BeaconConfig struct {
 }
 
 type SinkConfig struct {
-	Parachain config.ParachainConfig `mapstructure:"parachain"`
+	Parachain          config.ParachainConfig `mapstructure:"parachain"`
+	UpdateSlotInterval uint64                 `mapstructure:"updateSlotInterval"`
 }
 
 func (c Config) Validate() error {
@@ -46,6 +47,9 @@ func (c Config) Validate() error {
 	err = c.Sink.Parachain.Validate()
 	if err != nil {
 		return fmt.Errorf("sink parachain config: %w", err)
+	}
+	if c.Sink.UpdateSlotInterval == 0 {
+		return errors.New("parachain [updateSlotInterval] config is not set")
 	}
 	return nil
 }
