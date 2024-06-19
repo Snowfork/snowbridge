@@ -39,10 +39,10 @@ func (c Config) Validate() error {
 		return fmt.Errorf("parachain config validation: %w", err)
 	}
 	if c.Source.ChannelID == [32]byte{} {
-		return fmt.Errorf("channel ID is empty")
+		return fmt.Errorf("source setting [channel-id] is not set")
 	}
 	if c.Source.Contracts.Gateway == "" {
-		return fmt.Errorf("gateway contract is empty")
+		return fmt.Errorf("source setting [gateway] is not set")
 	}
 	return nil
 }

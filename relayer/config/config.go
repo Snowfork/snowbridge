@@ -22,16 +22,30 @@ type EthereumConfig struct {
 
 func (p ParachainConfig) Validate() error {
 	if p.Endpoint == "" {
-		return errors.New("parachain endpoint is not set")
+		return errors.New("parachain [endpoint] config is not set")
 	}
 	if p.UpdateSlotInterval == 0 {
-		return errors.New("parachain config UpdateSlotInterval is 0")
+		return errors.New("parachain [updateSlotInterval] config is not set")
 	}
 	if p.MaxWatchedExtrinsics == 0 {
-		return errors.New("parachain config MaxWatchedExtrinsics is 0")
+		return errors.New("parachain config [maxWatchedExtrinsics] is not set")
 	}
 	if p.MaxBatchCallSize == 0 {
-		return errors.New("parachain config MaxBatchCallSize is 0")
+		return errors.New("parachain config [maxBatchCallSize] is not set")
+	}
+	return nil
+}
+
+func (e EthereumConfig) Validate() error {
+	if e.Endpoint == "" {
+		return errors.New("ethereum [endpoint] config is not set")
+	}
+	return nil
+}
+
+func (p PolkadotConfig) Validate() error {
+	if p.Endpoint == "" {
+		return errors.New("polkadot [endpoint] config is not set")
 	}
 	return nil
 }

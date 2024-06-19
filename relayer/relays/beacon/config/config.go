@@ -41,11 +41,11 @@ type SinkConfig struct {
 func (c Config) Validate() error {
 	err := c.Source.Beacon.Validate()
 	if err != nil {
-		return fmt.Errorf("beacon config validation: %w", err)
+		return fmt.Errorf("source beacon config: %w", err)
 	}
 	err = c.Sink.Parachain.Validate()
 	if err != nil {
-		return fmt.Errorf("parachain config validation: %w", err)
+		return fmt.Errorf("sink parachain config: %w", err)
 	}
 	return nil
 }
@@ -53,27 +53,27 @@ func (c Config) Validate() error {
 func (b BeaconConfig) Validate() error {
 	// spec settings
 	if b.Spec.EpochsPerSyncCommitteePeriod == 0 {
-		return errors.New("setting EpochsPerSyncCommitteePeriod is 0")
+		return errors.New("source beacon setting [epochsPerSyncCommitteePeriod] is not set")
 	}
 	if b.Spec.SlotsInEpoch == 0 {
-		return errors.New("setting SlotsInEpoch is 0")
+		return errors.New("source beacon setting [slotsInEpoch] is not set")
 	}
 	if b.Spec.SyncCommitteeSize == 0 {
-		return errors.New("setting SyncCommitteeSize is 0")
+		return errors.New("source beacon setting [syncCommitteeSize] is not set")
 	}
 	// data store
 	if b.DataStore.Location == "" {
-		return errors.New("datastore Location is empty")
+		return errors.New("source beacon datastore [location] is not set")
 	}
 	if b.DataStore.MaxEntries == 0 {
-		return errors.New("datastore MaxEntries is 0")
+		return errors.New("source beacon datastore [maxEntries] is not set")
 	}
 	// api endpoints
 	if b.Endpoint == "" {
-		return errors.New("beacon Endpoint is empty")
+		return errors.New("source beacon setting [endpoint] is not set")
 	}
 	if b.StateEndpoint == "" {
-		return errors.New("beacon StateEndpoint is empty")
+		return errors.New("source beacon setting [stateEndpoint] is not set")
 	}
 	return nil
 }
