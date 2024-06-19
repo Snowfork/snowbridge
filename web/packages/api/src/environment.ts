@@ -85,7 +85,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     {
                         id: "WETH",
                         address: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
-                        minimumTransferAmount: 1n,
+                        minimumTransferAmount: 15_000_000_000_000n,
                     },
                 ],
             },
@@ -214,7 +214,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     {
                         id: "WETH",
                         address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
-                        minimumTransferAmount: 1n,
+                        minimumTransferAmount: 15_000_000_000_000n,
                     },
                     {
                         id: "vETH",
@@ -368,7 +368,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     {
                         id: "WETH",
                         address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                        minimumTransferAmount: 1n,
+                        minimumTransferAmount: 15_000_000_000_000n,
                     },
                     {
                         id: "WBTC",
