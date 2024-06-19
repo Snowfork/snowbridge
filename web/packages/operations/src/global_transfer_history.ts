@@ -25,9 +25,9 @@ const monitor = async () => {
         },
         polkadot: {
             url: {
-                bridgeHub: config.BRIDGE_HUB_WS_URL,
-                assetHub: config.ASSET_HUB_WS_URL,
-                relaychain: config.RELAY_CHAIN_WS_URL,
+                bridgeHub: config.BRIDGE_HUB_URL,
+                assetHub: config.ASSET_HUB_URL,
+                relaychain: config.RELAY_CHAIN_URL,
                 parachains: config.PARACHAINS,
             },
         },

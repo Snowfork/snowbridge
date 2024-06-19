@@ -1,5 +1,5 @@
 // import '@polkadot/api-augment/polkadot'
-import { ApiPromise, WsProvider } from "@polkadot/api"
+import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api"
 import { AbstractProvider, JsonRpcProvider, WebSocketProvider } from "ethers"
 import {
     BeefyClient,
@@ -97,13 +97,13 @@ export const contextFactory = async (config: Config): Promise<Context> => {
 
     const [relaychainApi, assetHubApi, bridgeHubApi] = await Promise.all([
         ApiPromise.create({
-            provider: new WsProvider(config.polkadot.url.relaychain),
+            provider: config.polkadot.url.relaychain.startsWith("http") ? new HttpProvider(config.polkadot.url.relaychain) : new WsProvider(config.polkadot.url.relaychain),
         }),
         ApiPromise.create({
-            provider: new WsProvider(config.polkadot.url.assetHub),
+            provider: config.polkadot.url.assetHub.startsWith("http") ? new HttpProvider(config.polkadot.url.assetHub) : new WsProvider(config.polkadot.url.assetHub),
         }),
         ApiPromise.create({
-            provider: new WsProvider(config.polkadot.url.bridgeHub),
+            provider: config.polkadot.url.bridgeHub.startsWith("http") ? new HttpProvider(config.polkadot.url.bridgeHub) : new WsProvider(config.polkadot.url.bridgeHub),
         }),
     ])
 
@@ -136,7 +136,7 @@ export const contextFactory = async (config: Config): Promise<Context> => {
 
 export const addParachainConnection = async (url: string) => {
     const api = await ApiPromise.create({
-        provider: new WsProvider(url),
+        provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
     })
     const paraId = (await api.query.parachainInfo.parachainId()).toPrimitive() as number
     console.log(`${url} added with parachain id: ${paraId}`)
