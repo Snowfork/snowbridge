@@ -39,7 +39,7 @@ func NewRelay(
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
-	ethconn := ethereum.NewConnection(&r.config.Source.Ethereum, nil, r.config.Source.Ethereum.Endpoint)
+	ethconn := ethereum.NewConnection(&r.config.Source.Ethereum, nil)
 
 	err := paraconn.Connect(ctx)
 	if err != nil {

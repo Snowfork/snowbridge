@@ -30,8 +30,8 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
 	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
 
-	ethereumConnWriter := ethereum.NewConnection(&config.Sink.Ethereum, keypair, config.Sink.Ethereum.TransactionEndpoint)
-	ethereumConnBeefy := ethereum.NewConnection(&config.Sink.Ethereum, keypair, config.Sink.Ethereum.Endpoint)
+	ethereumConnWriter := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
+	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
 
 	// channel for messages from beefy listener to ethereum writer
 	var tasks = make(chan *Task, 1)
