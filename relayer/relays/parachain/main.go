@@ -72,12 +72,12 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	err = relay.ethereumConnWriter.Connect(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to connect to ethereum: writer")
+		return fmt.Errorf("unable to connect to ethereum: writer: %w", err)
 	}
 
 	err = relay.ethereumConnBeefy.Connect(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to connect to beefy: writer")
+		return fmt.Errorf("unable to connect to ethereum: beefy: %w", err)
 	}
 
 	err = relay.relaychainConn.Connect(ctx)
