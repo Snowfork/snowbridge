@@ -39,9 +39,9 @@ type JsonError interface {
 	ErrorData() interface{}
 }
 
-func NewConnection(config *config.EthereumConfig, kp *secp256k1.Keypair) *Connection {
+func NewConnection(config *config.EthereumConfig, kp *secp256k1.Keypair, endpoint string) *Connection {
 	return &Connection{
-		endpoint: config.Endpoint,
+		endpoint: endpoint,
 		kp:       kp,
 		config:   config,
 	}

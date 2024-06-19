@@ -202,7 +202,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("unable to parse execution relay config: %w", err)
 		}
 
-		ethconn := ethereum.NewConnection(&executionConfig.Source.Ethereum, nil)
+		ethconn := ethereum.NewConnection(&executionConfig.Source.Ethereum, nil, executionConfig.Source.Ethereum.TransactionEndpoint)
 		err = ethconn.Connect(ctx)
 		if err != nil {
 			return err
