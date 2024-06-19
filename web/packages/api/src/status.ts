@@ -72,10 +72,10 @@ export const BlockLatencyThreshold = {
 }
 
 export const InsufficientBalanceThreshold = {
-    // Minimum as 1 DOT
-    Substrate: 10_000_000_000,
-    // Minimum as 0.01 Ether
-    Ethereum: 10_000_000_000_000_000,
+    // Minimum as 10 DOT
+    Substrate: 100_000_000_000,
+    // Minimum as 0.1 Ether
+    Ethereum: 100_000_000_000_000_000,
 }
 
 export type AllMetrics = {
