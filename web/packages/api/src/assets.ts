@@ -3,13 +3,13 @@ import { Codec, Registry } from "@polkadot/types/types"
 import { IERC20Metadata__factory, IERC20__factory } from "@snowbridge/contract-types"
 import { Context } from "./index"
 
-export const parachainNativeToken = async (
-    api: ApiPromise
-): Promise<{
+export interface NativeAsset {
     tokenSymbol: string
     tokenDecimal: number
-    ss58Format: number | null
-}> => {
+    ss58Format: number
+}
+
+export const parachainNativeAsset = async (api: ApiPromise): Promise<NativeAsset> => {
     const properties = await api.rpc.system.properties()
     const tokenSymbols = properties.tokenSymbol.unwrapOrDefault()
     const tokenDecimals = properties.tokenDecimals.unwrapOrDefault()
@@ -17,7 +17,7 @@ export const parachainNativeToken = async (
     return {
         tokenSymbol: tokenSymbols.at(0)?.toString() ?? "DOT",
         tokenDecimal: tokenDecimals.at(0)?.toNumber() ?? 10,
-        ss58Format: properties.ss58Format.unwrapOr(null)?.toNumber() ?? null,
+        ss58Format: properties.ss58Format.unwrapOr(null)?.toNumber() ?? 42,
     }
 }
 

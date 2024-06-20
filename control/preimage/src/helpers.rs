@@ -7,13 +7,16 @@ use crate::Context;
 
 use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 
+#[cfg(feature = "polkadot")]
+use crate::relay_runtime::runtime_types::xcm::v2::OriginKind;
+#[cfg(feature = "rococo")]
+use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
 use crate::relay_runtime::runtime_types::{
     pallet_xcm,
     sp_weights::weight_v2::Weight,
     staging_xcm::v3::multilocation::MultiLocation,
     xcm::{
         double_encoded::DoubleEncoded,
-        v2::OriginKind,
         v3::{
             junction::Junction,
             junctions::Junctions,
@@ -23,6 +26,7 @@ use crate::relay_runtime::runtime_types::{
         VersionedLocation, VersionedXcm,
     },
 };
+
 use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 
 use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;

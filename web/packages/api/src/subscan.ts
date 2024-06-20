@@ -86,6 +86,28 @@ export const createApi = (baseUrl: string, apiKey: string, options = { limit: 1 
     }
 }
 
+export const fetchBlockNearTimestamp = async (api: SubscanApi, utcTimestamp: number) => {
+    const body = {
+        block_timestamp: utcTimestamp,
+        only_head: true,
+    }
+    const response = await api.post("api/scan/block", body)
+    if (response.json.data !== null) {
+        return {
+            block_num: response.json.data.block_num,
+            block_hash: response.json.data.block_hash,
+            block_timestamp: response.json.data.block_timestamp,
+            status: response.status,
+            statusText: response.statusText,
+        }
+    } else {
+        return {
+            status: response.status,
+            statusText: response.statusText,
+        }
+    }
+}
+
 export const fetchEvents = async <T>(
     api: SubscanApi,
     module: string,

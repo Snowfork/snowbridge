@@ -77,11 +77,13 @@ export type SendValidationResult = {
 export interface IValidateOptions {
     acceptableLatencyInSeconds: number /* 3 Hours */
     maxConsumers: number
+    ignoreExistentialDeposit: boolean
 }
 
 const ValidateOptionDefaults: IValidateOptions = {
     acceptableLatencyInSeconds: 28800 /* 3 Hours */,
     maxConsumers: 16,
+    ignoreExistentialDeposit: false,
 }
 
 export const approveTokenSpend = async (
@@ -219,7 +221,7 @@ export const validateSend = async (
     let destinationChainExists = true
     let hrmpChannelSetup = true
     let accountConsumers: number | null = null
-    const existentialDeposit = BigInt(
+    let existentialDeposit = BigInt(
         assetHub.consts.balances.existentialDeposit.toPrimitive() as number
     )
     if (destinationParaId === assetHubParaId) {
@@ -227,7 +229,8 @@ export const validateSend = async (
         if (beneficiaryAddress.kind !== 1)
             throw new Error("Asset Hub only supports 32 byte addresses.")
         const { balance, consumers } = await getSubstrateAccount(assetHub, beneficiaryHex)
-        beneficiaryAccountExists = BigInt(balance) > existentialDeposit
+        beneficiaryAccountExists =
+            options.ignoreExistentialDeposit || BigInt(balance) > existentialDeposit
         hasConsumers = consumers + 2 <= options.maxConsumers
         accountConsumers = consumers
     } else {
@@ -242,8 +245,18 @@ export const validateSend = async (
         hrmpChannelSetup = hrmpChannel.toPrimitive() !== null
 
         if (destinationParaId in parachains) {
-            const { balance, consumers } = await getSubstrateAccount(assetHub, beneficiaryHex)
-            beneficiaryAccountExists = BigInt(balance) > existentialDeposit
+            existentialDeposit = BigInt(
+                parachains[
+                    destinationParaId
+                ].consts.balances.existentialDeposit.toPrimitive() as number
+            )
+            const { balance, consumers } = await getSubstrateAccount(
+                parachains[destinationParaId],
+                beneficiaryHex
+            )
+            beneficiaryAccountExists =
+                options.ignoreExistentialDeposit || BigInt(balance) > existentialDeposit
+
             hasConsumers = consumers + 2 <= options.maxConsumers
             accountConsumers = consumers
         } else {

@@ -1,6 +1,6 @@
 // import '@polkadot/api-augment/polkadot'
-import { ApiPromise, WsProvider } from "@polkadot/api"
-import { AbstractProvider, ethers } from "ethers"
+import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api"
+import { AbstractProvider, JsonRpcProvider, WebSocketProvider } from "ethers"
 import {
     BeefyClient,
     BeefyClient__factory,
@@ -10,7 +10,7 @@ import {
 
 interface Config {
     ethereum: {
-        execution_url: string
+        execution_url: string | AbstractProvider
         beacon_url: string
     }
     polkadot: {
@@ -45,10 +45,10 @@ export class Context {
 }
 
 class EthereumContext {
-    api: ethers.AbstractProvider
+    api: AbstractProvider
     contracts: AppContracts
 
-    constructor(api: ethers.AbstractProvider, contracts: AppContracts) {
+    constructor(api: AbstractProvider, contracts: AppContracts) {
         this.api = api
         this.contracts = contracts
     }
@@ -78,20 +78,16 @@ class PolkadotContext {
     }
 }
 
-interface ContextOverride {
-    ethereum?: AbstractProvider
-}
-
-export const contextFactory = async (config: Config, options: ContextOverride = {}): Promise<Context> => {
+export const contextFactory = async (config: Config): Promise<Context> => {
     let ethApi: AbstractProvider
-    if(options.ethereum == null) {
+    if (typeof config.ethereum.execution_url === "string") {
         if (config.ethereum.execution_url.startsWith("http")) {
-            ethApi = new ethers.JsonRpcProvider(config.ethereum.execution_url)
+            ethApi = new JsonRpcProvider(config.ethereum.execution_url)
         } else {
-            ethApi = new ethers.WebSocketProvider(config.ethereum.execution_url)
+            ethApi = new WebSocketProvider(config.ethereum.execution_url)
         }
     } else {
-        ethApi = options.ethereum
+        ethApi = config.ethereum.execution_url
     }
 
     const parasConnect: Promise<{ paraId: number; api: ApiPromise }>[] = []
@@ -101,13 +97,13 @@ export const contextFactory = async (config: Config, options: ContextOverride = 
 
     const [relaychainApi, assetHubApi, bridgeHubApi] = await Promise.all([
         ApiPromise.create({
-            provider: new WsProvider(config.polkadot.url.relaychain),
+            provider: config.polkadot.url.relaychain.startsWith("http") ? new HttpProvider(config.polkadot.url.relaychain) : new WsProvider(config.polkadot.url.relaychain),
         }),
         ApiPromise.create({
-            provider: new WsProvider(config.polkadot.url.assetHub),
+            provider: config.polkadot.url.assetHub.startsWith("http") ? new HttpProvider(config.polkadot.url.assetHub) : new WsProvider(config.polkadot.url.assetHub),
         }),
         ApiPromise.create({
-            provider: new WsProvider(config.polkadot.url.bridgeHub),
+            provider: config.polkadot.url.bridgeHub.startsWith("http") ? new HttpProvider(config.polkadot.url.bridgeHub) : new WsProvider(config.polkadot.url.bridgeHub),
         }),
     ])
 
@@ -140,7 +136,7 @@ export const contextFactory = async (config: Config, options: ContextOverride = 
 
 export const addParachainConnection = async (url: string) => {
     const api = await ApiPromise.create({
-        provider: new WsProvider(url),
+        provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
     })
     const paraId = (await api.query.parachainInfo.parachainId()).toPrimitive() as number
     console.log(`${url} added with parachain id: ${paraId}`)
@@ -151,7 +147,9 @@ export const destroyContext = async (context: Context): Promise<void> => {
     // clean up etheruem
     await context.ethereum.contracts.beefyClient.removeAllListeners()
     await context.ethereum.contracts.gateway.removeAllListeners()
-    await context.ethereum.api.destroy()
+    if (typeof context.config.ethereum.execution_url === "string") {
+        context.ethereum.api.destroy()
+    }
     // clean up polkadot
     await context.polkadot.api.relaychain.disconnect()
     await context.polkadot.api.bridgeHub.disconnect()

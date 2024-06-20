@@ -42,7 +42,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
     })
     metricData.push({
         MetricName: "LatestBeaconBlock",
-        Value: metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot,
+        Value: metrics.bridgeStatus.toPolkadot.latestBeaconSlotOnPolkadot,
     })
     metricData.push({
         MetricName: "PreviousBeaconBlock",
@@ -53,7 +53,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
         Value: Number(
             metrics.bridgeStatus.toPolkadot.blockLatency >
                 status.BlockLatencyThreshold.ToPolkadot &&
-                metrics.bridgeStatus.toPolkadot.latestEthereumBlockOnPolkadot <=
+                metrics.bridgeStatus.toPolkadot.latestBeaconSlotOnPolkadot <=
                     metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot
         ),
     })
@@ -220,7 +220,7 @@ export const initializeAlarms = async () => {
     let client = new CloudWatchClient({})
     let cloudWatchAlarms = []
     let alarmCommandSharedInput = {
-        EvaluationPeriods: 3,
+        EvaluationPeriods: 5,
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
         Period: 3600,
         Threshold: 0,

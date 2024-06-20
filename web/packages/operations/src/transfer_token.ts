@@ -22,14 +22,14 @@ const monitor = async () => {
 
     const context = await contextFactory({
         ethereum: {
-            execution_url: config.ETHEREUM_WS_API(process.env.REACT_APP_INFURA_KEY || ""),
+            execution_url: config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY || ""),
             beacon_url: config.BEACON_HTTP_API,
         },
         polkadot: {
             url: {
-                bridgeHub: config.BRIDGE_HUB_WS_URL,
-                assetHub: config.ASSET_HUB_WS_URL,
-                relaychain: config.RELAY_CHAIN_WS_URL,
+                bridgeHub: config.BRIDGE_HUB_URL,
+                assetHub: config.ASSET_HUB_URL,
+                relaychain: config.RELAY_CHAIN_URL,
                 parachains: config.PARACHAINS,
             },
         },
@@ -51,7 +51,9 @@ const monitor = async () => {
     const amount = 10n
 
     const POLL_INTERVAL_MS = 10_000
-    const WETH_CONTRACT = snwobridgeEnv.locations[0].erc20tokensReceivable["WETH"]
+    const WETH_CONTRACT = snwobridgeEnv.locations[0].erc20tokensReceivable.find(
+        (t) => t.id === "WETH"
+    )!.address
 
     console.log("# Ethereum to Asset Hub")
     {

@@ -15,7 +15,7 @@ use crate::{
 			staging_xcm::v3::multilocation::MultiLocation as RelaychainMultiLocation,
 			xcm::{
 				double_encoded::DoubleEncoded as RelaychainDoubleEncoded,
-				v2::OriginKind as RelaychainOriginKind,
+				v3::OriginKind as RelaychainOriginKind,
 				v3::{
 					junction::Junction as RelaychainJunction,
 					junctions::Junctions as RelaychainJunctions,

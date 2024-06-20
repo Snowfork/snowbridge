@@ -13,3 +13,5 @@
 mod runtime {}
 
 pub use runtime::*;
+
+pub const CHAIN_ID: u64 = 11155111;

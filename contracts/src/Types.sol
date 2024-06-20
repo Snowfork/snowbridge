@@ -107,5 +107,4 @@ struct Ticket {
 
 struct TokenInfo {
     bool isRegistered;
-    bytes31 __padding;
 }
