@@ -4439,9 +4439,8 @@ dependencies = [
 
 [[package]]
 name = "sp-arithmetic"
-version = "23.0.0"
+version = "24.0.0"
 dependencies = [
- "docify",
  "integer-sqrt",
  "num-traits",
  "parity-scale-codec",
@@ -4768,15 +4767,16 @@ dependencies = [
 
 [[package]]
 name = "sp-weights"
-version = "27.0.0"
+version = "28.0.0"
 dependencies = [
  "bounded-collections",
  "parity-scale-codec",
  "scale-info",
  "serde",
  "smallvec",
- "sp-arithmetic 23.0.0",
+ "sp-arithmetic 24.0.0",
  "sp-debug-derive 14.0.0",
+ "sp-std 14.0.0",
 ]
 
 [[package]]
@@ -4840,7 +4840,7 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "staging-xcm"
-version = "7.0.0"
+version = "8.0.1"
 dependencies = [
  "array-bytes",
  "bounded-collections",
@@ -4851,7 +4851,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-weights 27.0.0",
+ "sp-weights 28.0.0",
  "xcm-procedural",
 ]
 
@@ -6247,7 +6247,7 @@ dependencies = [
 
 [[package]]
 name = "xcm-procedural"
-version = "7.0.0"
+version = "8.0.0"
 dependencies = [
  "Inflector",
  "proc-macro2",
