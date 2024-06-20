@@ -32,6 +32,11 @@ type Update struct {
 	BlockRootsTree           *ssz.Node
 }
 
+type ProofPayload struct {
+	HeaderPayload    HeaderUpdatePayload
+	FinalizedPayload *Update
+}
+
 type UpdatePayload struct {
 	AttestedHeader          BeaconHeader
 	SyncAggregate           SyncAggregate
@@ -42,7 +47,6 @@ type UpdatePayload struct {
 	BlockRootsRoot          types.H256
 	BlockRootsBranch        []types.H256
 }
-
 type OptionNextSyncCommitteeUpdatePayload struct {
 	HasValue bool
 	Value    NextSyncCommitteeUpdatePayload

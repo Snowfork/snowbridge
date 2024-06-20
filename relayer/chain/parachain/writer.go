@@ -16,7 +16,7 @@ import (
 )
 
 type ChainWriter interface {
-	BatchCall(ctx context.Context, extrinsic string, calls []interface{}) error
+	BatchCall(ctx context.Context, extrinsic []string, calls []interface{}) error
 	WriteToParachainAndRateLimit(ctx context.Context, extrinsicName string, payload ...interface{}) error
 	WriteToParachainAndWatch(ctx context.Context, extrinsicName string, payload ...interface{}) error
 	GetLastFinalizedHeaderState() (state.FinalizedHeader, error)
@@ -34,19 +34,16 @@ type ParachainWriter struct {
 	pool                 *ExtrinsicPool
 	genesisHash          types.Hash
 	maxWatchedExtrinsics int64
-	maxBatchCallSize     int64
 	mu                   sync.Mutex
 }
 
 func NewParachainWriter(
 	conn *Connection,
 	maxWatchedExtrinsics int64,
-	maxBatchCallSize int64,
 ) *ParachainWriter {
 	return &ParachainWriter{
 		conn:                 conn,
 		maxWatchedExtrinsics: maxWatchedExtrinsics,
-		maxBatchCallSize:     maxBatchCallSize,
 	}
 }
 
@@ -69,8 +66,8 @@ func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error 
 	return nil
 }
 
-func (wr *ParachainWriter) BatchCall(ctx context.Context, extrinsic string, calls []interface{}) error {
-	batchSize := int(wr.maxBatchCallSize)
+func (wr *ParachainWriter) BatchCall(ctx context.Context, extrinsic []string, calls []interface{}) error {
+	batchSize := int(wr.maxWatchedExtrinsics)
 	var j int
 	for i := 0; i < len(calls); i += batchSize {
 		j += batchSize
@@ -80,13 +77,13 @@ func (wr *ParachainWriter) BatchCall(ctx context.Context, extrinsic string, call
 		slicedCalls := append([]interface{}{}, calls[i:j]...)
 		encodedCalls := make([]types.Call, len(slicedCalls))
 		for k := range slicedCalls {
-			call, err := wr.prepCall(extrinsic, slicedCalls[k])
+			call, err := wr.prepCall(extrinsic[k], slicedCalls[k])
 			if err != nil {
 				return err
 			}
 			encodedCalls[k] = *call
 		}
-		err := wr.WriteToParachainAndRateLimit(ctx, "Utility.batch_all", encodedCalls)
+		err := wr.WriteToParachainAndWatch(ctx, "Utility.batch_all", encodedCalls)
 		if err != nil {
 			return fmt.Errorf("batch call failed: %w", err)
 		}

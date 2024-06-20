@@ -3,6 +3,7 @@ package parachain
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -41,7 +42,6 @@ func Command() *cobra.Command {
 	cmd.Flags().StringVar(&privateKeyFile, "ethereum.private-key-file", "", "The file from which to read the private key")
 	cmd.Flags().StringVar(&privateKeyID, "ethereum.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
 
-
 	return cmd
 }
 
@@ -55,9 +55,14 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	var config parachain.Config
-	err := viper.Unmarshal(&config, viper.DecodeHook(HexHookFunc()))
+	err := viper.UnmarshalExact(&config, viper.DecodeHook(HexHookFunc()))
 	if err != nil {
 		return err
+	}
+
+	err = config.Validate()
+	if err != nil {
+		return fmt.Errorf("config file validation failed: %w", err)
 	}
 
 	keypair, err := ethereum.ResolvePrivateKey(privateKey, privateKeyFile, privateKeyID)
