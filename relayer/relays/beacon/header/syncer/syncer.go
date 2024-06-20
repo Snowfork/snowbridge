@@ -255,6 +255,11 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 		return scale.Update{}, fmt.Errorf("beacon header hash tree root: %w", err)
 	}
 
+	versionedExecutionPayloadHeader, err := s.getVersionedScaleExecutionHeader(uint64(finalizedHeader.Slot), committeeUpdate.FinalizedHeader.ExecutionHeader)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("get versioned scale execution header: %w", err)
+	}
+
 	syncCommitteePeriodUpdate := scale.Update{
 		Payload: scale.UpdatePayload{
 			AttestedHeader: attestedHeader,
@@ -271,6 +276,8 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 			FinalityBranch:   util.ProofBranchToScale(committeeUpdate.FinalityBranch),
 			BlockRootsRoot:   blockRootsProof.Leaf,
 			BlockRootsBranch: blockRootsProof.Proof,
+			ExecutionHeader:  versionedExecutionPayloadHeader,
+			ExecutionBranch:  util.ProofBranchToScale(committeeUpdate.FinalizedHeader.ExecutionBranch),
 		},
 		FinalizedHeaderBlockRoot: finalizedHeaderBlockRoot,
 		BlockRootsTree:           blockRootsProof.Tree,
@@ -412,6 +419,11 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		return scale.Update{}, fmt.Errorf("parse signature slot as int: %w", err)
 	}
 
+	versionedExecutionPayloadHeader, err := s.getVersionedScaleExecutionHeader(uint64(finalizedHeader.Slot), finalizedUpdate.Data.FinalizedHeader.ExecutionHeader)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("get versioned scale execution header: %w", err)
+	}
+
 	updatePayload := scale.UpdatePayload{
 		AttestedHeader: attestedHeader,
 		SyncAggregate:  syncAggregate,
@@ -423,6 +435,8 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		FinalityBranch:   util.ProofBranchToScale(finalizedUpdate.Data.FinalityBranch),
 		BlockRootsRoot:   blockRootsProof.Leaf,
 		BlockRootsBranch: blockRootsProof.Proof,
+		ExecutionHeader:  versionedExecutionPayloadHeader,
+		ExecutionBranch:  util.ProofBranchToScale(finalizedUpdate.Data.FinalizedHeader.ExecutionBranch),
 	}
 
 	return scale.Update{
@@ -755,6 +769,17 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 		return update, fmt.Errorf("get finalized header proof: %w", err)
 	}
 
+	// Execution header proof
+	finalizedStateTree, err := data.FinalizedState.GetTree()
+	if err != nil {
+		return update, fmt.Errorf("get finalized state tree: %w", err)
+	}
+	_ = finalizedStateTree.Hash() // necessary to populate the proof tree values
+	executionHeaderProof, err := stateTree.Prove(ExecutionPayloadGeneralizedIndex)
+	if err != nil {
+		return update, fmt.Errorf("get execution header proof: %w", err)
+	}
+
 	var nextSyncCommitteeScale scale.OptionNextSyncCommitteeUpdatePayload
 	if fetchNextSyncCommittee {
 		nextSyncCommitteeProof, err := stateTree.Prove(NextSyncCommitteeGeneralizedIndex)
@@ -825,6 +850,21 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 		return update, fmt.Errorf("convert sync aggregate to scale: %w", err)
 	}
 
+	finalizedBlock, err := s.Client.GetBeaconBlockBySlot(data.FinalizedHeader.Slot)
+	if err != nil {
+		return update, fmt.Errorf("get finalized beacon block: %w", err)
+	}
+
+	executionHeaderResponse, err := finalizedBlock.Data.Message.Body.ExecutionPayload.ToExecutionHeaderResponse()
+	if err != nil {
+		return update, fmt.Errorf("get execution header response: %w", err)
+	}
+
+	versionedExecutionPayloadHeader, err := s.getVersionedScaleExecutionHeader(data.FinalizedHeader.Slot, executionHeaderResponse)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("get versioned scale execution header: %w", err)
+	}
+
 	payload := scale.UpdatePayload{
 		AttestedHeader:          scaleHeader,
 		SyncAggregate:           scaleSyncAggregate,
@@ -834,6 +874,8 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 		FinalityBranch:          util.BytesBranchToScale(finalizedHeaderProof.Hashes),
 		BlockRootsRoot:          blockRootsProof.Leaf,
 		BlockRootsBranch:        blockRootsProof.Proof,
+		ExecutionHeader:         versionedExecutionPayloadHeader,
+		ExecutionBranch:         util.BytesBranchToScale(executionHeaderProof.Hashes),
 	}
 
 	return scale.Update{
@@ -936,6 +978,22 @@ func (s *Syncer) getBestMatchBeaconDataFromStore(minSlot, maxSlot uint64) (final
 	}
 
 	return response, nil
+}
+
+func (s *Syncer) getVersionedScaleExecutionHeader(slot uint64, executionHeader api.ExecutionHeaderResponse) (scale.VersionedExecutionPayloadHeader, error) {
+	if s.protocol.DenebForked(slot) {
+		executionPayloadScale, err := api.DenebJsonExecutionPayloadHeaderToScale(executionHeader)
+		if err != nil {
+			return scale.VersionedExecutionPayloadHeader{}, err
+		}
+		return scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}, nil
+	} else {
+		executionPayloadScale, err := api.CapellaJsonExecutionPayloadHeaderToScale(executionHeader)
+		if err != nil {
+			return scale.VersionedExecutionPayloadHeader{}, err
+		}
+		return scale.VersionedExecutionPayloadHeader{Capella: &executionPayloadScale}, nil
+	}
 }
 
 func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {

@@ -5,7 +5,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
@@ -55,7 +54,7 @@ func DenebExecutionPayloadToScale(e *state.ExecutionPayloadDeneb) (scale.Executi
 	}, nil
 }
 
-func DenebJsonExecutionPayloadHeaderToScale(e *beaconjson.FullExecutionPayloadHeaderJson) (scale.ExecutionPayloadHeaderDeneb, error) {
+func DenebJsonExecutionPayloadHeaderToScale(e ExecutionHeaderResponse) (scale.ExecutionPayloadHeaderDeneb, error) {
 	var executionPayloadHeader scale.ExecutionPayloadHeaderDeneb
 	var baseFeePerGas big.Int
 	baseFeePerGasU64, err := util.ToUint64(e.BaseFeePerGas)

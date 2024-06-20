@@ -34,6 +34,8 @@ func (p UpdatePayload) ToJSON() json.Update {
 		FinalityBranch:          util.ScaleBranchToString(p.FinalityBranch),
 		BlockRootsRoot:          p.BlockRootsRoot.Hex(),
 		BlockRootsBranch:        util.ScaleBranchToString(p.BlockRootsBranch),
+		ExecutionHeader:         p.ExecutionHeader.ToJSON(),
+		ExecutionBranch:         util.ScaleBranchToString(p.ExecutionBranch),
 	}
 }
 
