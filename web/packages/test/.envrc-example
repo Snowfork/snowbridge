@@ -18,6 +18,7 @@ source_up_if_exists
 # export ETHERSCAN_API_KEY=             # Your etherscan api key
 # export ETH_RPC_ENDPOINT=https://sepolia.infura.io/v3
 # export ETH_WS_ENDPOINT=wss://sepolia.infura.io/ws/v3
+# export ETH_WRITER_ENDPOINT=https://rpc-sepolia.flashbots.net
 # export BEACON_HTTP_ENDPOINT=https://lodestar-sepolia.chainsafe.io
 # export ACTIVE_SPEC=mainnet            # For real network just uncomment and set as mainnet here
 # export DEPLOYER_ETH_KEY=              # Your private key to deploy contracts
