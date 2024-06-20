@@ -173,18 +173,18 @@ start_relayer() {
         done
     ) &
 
-    # # Launch parachain relay for assethub
-    # (
-    #     : >"$output_dir"/parachain-relay-asset-hub.log
-    #     while :; do
-    #         echo "Starting parachain relay (asset-hub) at $(date)"
-    #         "${relay_bin}" run parachain \
-    #             --config "$output_dir/parachain-relay-asset-hub.json" \
-    #             --ethereum.private-key $parachain_relay_assethub_eth_key \
-    #             >>"$output_dir"/parachain-relay-asset-hub.log 2>&1 || true
-    #         sleep 20
-    #     done
-    # ) &
+    # Launch parachain relay for assethub
+    (
+        : >"$output_dir"/parachain-relay-asset-hub.log
+        while :; do
+            echo "Starting parachain relay (asset-hub) at $(date)"
+            "${relay_bin}" run parachain \
+                --config "$output_dir/parachain-relay-asset-hub.json" \
+                --ethereum.private-key $parachain_relay_assethub_eth_key \
+                >>"$output_dir"/parachain-relay-asset-hub.log 2>&1 || true
+            sleep 20
+        done
+    ) &
 
     # Launch parachain relay for parachain penpal
     (
