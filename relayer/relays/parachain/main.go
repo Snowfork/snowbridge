@@ -2,6 +2,7 @@ package parachain
 
 import (
 	"context"
+	"fmt"
 
 	"golang.org/x/sync/errgroup"
 
@@ -17,8 +18,8 @@ type Relay struct {
 	config                *Config
 	parachainConn         *parachain.Connection
 	relaychainConn        *relaychain.Connection
-	ethereumListenerConn  *ethereum.Connection
-	ethereumWriterConn    *ethereum.Connection
+	ethereumConnWriter    *ethereum.Connection
+	ethereumConnBeefy     *ethereum.Connection
 	ethereumChannelWriter *EthereumWriter
 	beefyListener         *BeefyListener
 }
@@ -29,15 +30,15 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
 	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
 
-	ethereumListenerConn := ethereum.NewConnection(&config.Source.Ethereum, keypair)
-	ethereumWriterConn := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
+	ethereumConnWriter := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
+	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
 
 	// channel for messages from beefy listener to ethereum writer
 	var tasks = make(chan *Task, 1)
 
 	ethereumChannelWriter, err := NewEthereumWriter(
 		&config.Sink,
-		ethereumWriterConn,
+		ethereumConnWriter,
 		tasks,
 	)
 	if err != nil {
@@ -46,7 +47,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 
 	beefyListener := NewBeefyListener(
 		&config.Source,
-		ethereumListenerConn,
+		ethereumConnBeefy,
 		relaychainConn,
 		parachainConn,
 		tasks,
@@ -56,8 +57,8 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 		config:                config,
 		parachainConn:         parachainConn,
 		relaychainConn:        relaychainConn,
-		ethereumListenerConn:  ethereumListenerConn,
-		ethereumWriterConn:    ethereumWriterConn,
+		ethereumConnWriter:    ethereumConnWriter,
+		ethereumConnBeefy:     ethereumConnBeefy,
 		ethereumChannelWriter: ethereumChannelWriter,
 		beefyListener:         beefyListener,
 	}, nil
@@ -69,14 +70,14 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	err = relay.ethereumListenerConn.Connect(ctx)
+	err = relay.ethereumConnWriter.Connect(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to connect to ethereum: writer: %w", err)
 	}
 
-	err = relay.ethereumWriterConn.Connect(ctx)
+	err = relay.ethereumConnBeefy.Connect(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to connect to ethereum: beefy: %w", err)
 	}
 
 	err = relay.relaychainConn.Connect(ctx)
