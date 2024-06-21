@@ -44,7 +44,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	writer := parachain.NewParachainWriter(
 		paraconn,
 		r.config.Sink.Parachain.MaxWatchedExtrinsics,
-		r.config.Sink.Parachain.MaxBatchCallSize,
 	)
 
 	p := protocol.New(specSettings)
@@ -67,6 +66,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		specSettings,
 		&s,
 		p,
+		r.config.Sink.UpdateSlotInterval,
 	)
 
 	return headers.Sync(ctx, eg)

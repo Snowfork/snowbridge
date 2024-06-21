@@ -376,6 +376,20 @@ func (s *Syncer) GetBlockRootsFromState(beaconState state.BeaconState) (scale.Bl
 	}, nil
 }
 
+func (s *Syncer) GetFinalizedHeader() (scale.BeaconHeader, error) {
+	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
+	if err != nil {
+		return scale.BeaconHeader{}, fmt.Errorf("fetch finalized update: %w", err)
+	}
+
+	finalizedHeader, err := finalizedUpdate.Data.FinalizedHeader.Beacon.ToScale()
+	if err != nil {
+		return scale.BeaconHeader{}, fmt.Errorf("convert finalized header to scale: %w", err)
+	}
+
+	return finalizedHeader, nil
+}
+
 func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
@@ -410,6 +424,19 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 	signatureSlot, err := strconv.ParseUint(finalizedUpdate.Data.SignatureSlot, 10, 64)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("parse signature slot as int: %w", err)
+	}
+
+	signatureBlock, err := s.Client.GetBeaconBlockBySlot(signatureSlot)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("get signature block: %w", err)
+	}
+
+	superMajority, err := s.protocol.SyncCommitteeSuperMajority(signatureBlock.Data.Message.Body.SyncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("compute sync committee supermajority: %d err: %w", signatureSlot, err)
+	}
+	if !superMajority {
+		return scale.Update{}, fmt.Errorf("sync committee at slot not supermajority: %d", signatureSlot)
 	}
 
 	updatePayload := scale.UpdatePayload{
@@ -719,6 +746,7 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 	// Try getting beacon data from the API first
 	data, err := s.getBeaconDataFromClient(attestedSlot)
 	if err != nil {
+		log.WithError(err).Warn("unable to fetch beacon data from API, trying beacon store")
 		// If it fails, using the beacon store and look for a relevant finalized update
 		for {
 			if minSlot > maxSlot {
@@ -941,6 +969,7 @@ func (s *Syncer) getBestMatchBeaconDataFromStore(minSlot, maxSlot uint64) (final
 func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {
 	data, err := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
 	if err != nil {
+		log.WithError(err).Warn("unable to fetch beacon state from API, trying beacon store")
 		data, err = s.store.GetBeaconStateData(slot)
 		if err != nil {
 			return nil, fmt.Errorf("fetch beacon state from store: %w", err)

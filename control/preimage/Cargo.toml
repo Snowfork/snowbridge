@@ -17,11 +17,12 @@ hex-literal = { version = "0.4.1" }
 clap = { version = "4.5.1", features = ["derive"] }
 
 hex = "0.4.3"
-subxt = { version = "0.35.1", features = ["substrate-compat"] }
+subxt = { workspace = true }
 serde = { version = "1.0.197", features = ["derive"] }
 sp-arithmetic = "24.0.0"
 alloy-primitives = "0.6.3"
 snowbridge-beacon-primitives = "0.2.0"
+snowbridge-router-primitives = "0.2.0"
 
 rococo-runtime = { path = "../runtimes/rococo", optional = true }
 bridge-hub-rococo-runtime = { path = "../runtimes/bridge-hub-rococo", optional = true }

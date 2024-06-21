@@ -7,13 +7,13 @@
       "endpoint": "ws://127.0.0.1:9944"
     },
     "parachain": {
-      "endpoint": "ws://127.0.0.1:11144"
+      "endpoint": "ws://127.0.0.1:11144",
+      "maxWatchedExtrinsics": 8
     },
     "contracts": {
       "BeefyClient": null,
       "Gateway": null
     },
-    "beefy-activation-block": 0,
     "channel-id": null
   },
   "sink": {

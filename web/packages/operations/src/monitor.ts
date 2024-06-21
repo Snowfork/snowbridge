@@ -19,14 +19,14 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const context = await contextFactory({
         ethereum: {
-            execution_url: config.ETHEREUM_WS_API(infuraKey),
+            execution_url: config.ETHEREUM_API(infuraKey),
             beacon_url: config.BEACON_HTTP_API,
         },
         polkadot: {
             url: {
-                bridgeHub: config.BRIDGE_HUB_WS_URL,
-                assetHub: config.ASSET_HUB_WS_URL,
-                relaychain: config.RELAY_CHAIN_WS_URL,
+                bridgeHub: 'https://rococo-bridge-hub-rpc.polkadot.io', //config.BRIDGE_HUB_URL,
+                assetHub: 'https://rococo-asset-hub-rpc.polkadot.io', //config.ASSET_HUB_URL,
+                relaychain: 'https://rococo-rpc.polkadot.io', //config.RELAY_CHAIN_URL,
             },
         },
         appContracts: {

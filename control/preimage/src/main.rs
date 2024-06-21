@@ -34,6 +34,8 @@ struct Cli {
 pub enum Command {
     /// Initialize the bridge
     Initialize(InitializeArgs),
+    /// Update the asset on AssetHub
+    UpdateAsset(UpdateAssetArgs),
     /// Upgrade the Gateway contract
     Upgrade(UpgradeArgs),
     /// Change the gateway operating mode
@@ -54,6 +56,31 @@ pub struct InitializeArgs {
     force_checkpoint: ForceCheckpointArgs,
     #[command(flatten)]
     gateway_address: GatewayAddressArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct UpdateAssetArgs {
+    /// Chain ID of the Ethereum chain bridge from.
+    #[arg(long, value_name = "ADDRESS", value_parser=parse_eth_address_without_validation)]
+    contract_id: Address,
+    /// The asset display name, e.g. Wrapped Ether
+    #[arg(long, value_name = "ASSET_DISPLAY_NAME")]
+    name: String,
+    /// The asset symbol, e.g. WETH
+    #[arg(long, value_name = "ASSET_SYMBOL")]
+    symbol: String,
+    /// The asset's number of decimal places.
+    #[arg(long, value_name = "DECIMALS")]
+    decimals: u8,
+    /// The minimum balance of the asset.
+    #[arg(long, value_name = "MIN_BALANCE")]
+    min_balance: u128,
+    /// Should the asset be sufficient.
+    #[arg(long, value_name = "IS_SUFFICIENT")]
+    is_sufficient: bool,
+    /// Should the asset be frozen.
+    #[arg(long, value_name = "IS_FROZEN")]
+    is_frozen: bool,
 }
 
 #[derive(Debug, Args)]
@@ -151,6 +178,11 @@ pub struct ApiEndpoints {
 fn parse_eth_address(v: &str) -> Result<Address, String> {
     Address::parse_checksummed(v, None).map_err(|_| "invalid ethereum address".to_owned())
 }
+use std::str::FromStr;
+
+fn parse_eth_address_without_validation(v: &str) -> Result<Address, String> {
+    Address::from_str(v).map_err(|_| "invalid ethereum address".to_owned())
+}
 
 fn parse_hex_bytes32(v: &str) -> Result<FixedBytes<32>, String> {
     v.parse::<FixedBytes<32>>()
@@ -240,6 +272,16 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let call2 =
                 send_xcm_asset_hub(&context, vec![force_xcm_version(), set_ethereum_fee]).await?;
             utility_force_batch(vec![call1, call2])
+        }
+        Command::UpdateAsset(params) => {
+            send_xcm_asset_hub(
+                &context,
+                vec![
+                    commands::make_asset_sufficient(params),
+                    commands::force_set_metadata(params),
+                ],
+            )
+            .await?
         }
         Command::GatewayOperatingMode(params) => {
             let call = commands::gateway_operating_mode(params);

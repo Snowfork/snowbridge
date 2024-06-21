@@ -1,9 +1,9 @@
 export type Config = {
     BEACON_HTTP_API: string
-    ETHEREUM_WS_API: (secret: string) => string
-    RELAY_CHAIN_WS_URL: string
-    ASSET_HUB_WS_URL: string
-    BRIDGE_HUB_WS_URL: string
+    ETHEREUM_API: (secret: string) => string
+    RELAY_CHAIN_URL: string
+    ASSET_HUB_URL: string
+    BRIDGE_HUB_URL: string
     GATEWAY_CONTRACT: string
     BEEFY_CONTRACT: string
     ASSET_HUB_PARAID: number
@@ -113,10 +113,10 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         ],
         config: {
             BEACON_HTTP_API: "http://127.0.0.1:9596",
-            ETHEREUM_WS_API: () => "ws://127.0.0.1:8546",
-            RELAY_CHAIN_WS_URL: "ws://127.0.0.1:9944",
-            ASSET_HUB_WS_URL: "ws://127.0.0.1:12144",
-            BRIDGE_HUB_WS_URL: "ws://127.0.0.1:11144",
+            ETHEREUM_API: () => "ws://127.0.0.1:8546",
+            RELAY_CHAIN_URL: "ws://127.0.0.1:9944",
+            ASSET_HUB_URL: "ws://127.0.0.1:12144",
+            BRIDGE_HUB_URL: "ws://127.0.0.1:11144",
             PARACHAINS: ["ws://127.0.0.1:13144"],
             GATEWAY_CONTRACT: "0xEDa338E4dC46038493b885327842fD3E301CaB39",
             BEEFY_CONTRACT: "0x992B9df075935E522EC7950F37eC8557e86f6fdb",
@@ -252,11 +252,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
-            ETHEREUM_WS_API: (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`,
-            RELAY_CHAIN_WS_URL: "wss://rococo-rpc.polkadot.io",
-            ASSET_HUB_WS_URL: "wss://rococo-asset-hub-rpc.polkadot.io",
-            BRIDGE_HUB_WS_URL: "wss://rococo-bridge-hub-rpc.polkadot.io",
-            PARACHAINS: ["wss://rococo-muse-rpc.polkadot.io"],
+            ETHEREUM_API: (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`,
+            RELAY_CHAIN_URL: "https://rococo-rpc.polkadot.io",
+            ASSET_HUB_URL: "wss://rococo-asset-hub-rpc.polkadot.io",
+            BRIDGE_HUB_URL: "https://rococo-bridge-hub-rpc.polkadot.io",
+            PARACHAINS: ["https://rococo-muse-rpc.polkadot.io"],
             GATEWAY_CONTRACT: "0x5b4909ce6ca82d2ce23bd46738953c7959e710cd",
             BEEFY_CONTRACT: "0x27e5e17ac995d3d720c311e1e9560e28f5855fb1",
             ASSET_HUB_PARAID: 1000,
@@ -426,11 +426,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-mainnet.chainsafe.io",
-            ETHEREUM_WS_API: (key) => `https://eth-mainnet.g.alchemy.com/v2/${key}`,
-            RELAY_CHAIN_WS_URL: "wss://polkadot-rpc.dwellir.com",
-            ASSET_HUB_WS_URL: "wss://asset-hub-polkadot-rpc.dwellir.com",
-            BRIDGE_HUB_WS_URL: "wss://bridge-hub-polkadot-rpc.dwellir.com",
-            PARACHAINS: ["wss://polkadot-mythos-rpc.polkadot.io"],
+            ETHEREUM_API: (key) => `https://eth-mainnet.g.alchemy.com/v2/${key}`,
+            RELAY_CHAIN_URL: "https://polkadot-rpc.dwellir.com",
+            ASSET_HUB_URL: "wss://asset-hub-polkadot-rpc.dwellir.com",
+            BRIDGE_HUB_URL: "https://bridge-hub-polkadot-rpc.dwellir.com",
+            PARACHAINS: ["https://polkadot-mythos-rpc.polkadot.io"],
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
             BEEFY_CONTRACT: "0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C",
             ASSET_HUB_PARAID: 1000,
