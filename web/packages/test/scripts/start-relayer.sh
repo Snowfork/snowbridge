@@ -21,6 +21,7 @@ config_relayer() {
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
         --arg channelID $PRIMARY_GOVERNANCE_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
@@ -28,7 +29,7 @@ config_relayer() {
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.Gateway = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
-    | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."channel-id" = $channelID
     ' \
@@ -39,6 +40,7 @@ config_relayer() {
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
         --arg channelID $SECONDARY_GOVERNANCE_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
@@ -46,7 +48,7 @@ config_relayer() {
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.Gateway = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
-    | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."channel-id" = $channelID
     ' \
@@ -57,6 +59,7 @@ config_relayer() {
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
         --arg channelID $ASSET_HUB_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
@@ -64,7 +67,7 @@ config_relayer() {
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.Gateway = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
-    | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."channel-id" = $channelID
     ' \
@@ -75,6 +78,7 @@ config_relayer() {
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
         --arg channelID $PENPAL_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
@@ -82,7 +86,7 @@ config_relayer() {
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.Gateway = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
-    | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."channel-id" = $channelID
     ' \
