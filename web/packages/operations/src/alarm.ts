@@ -220,9 +220,7 @@ export const initializeAlarms = async () => {
     let client = new CloudWatchClient({})
     let cloudWatchAlarms = []
     let alarmCommandSharedInput = {
-        EvaluationPeriods: 5,
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
-        Period: 3600,
         Threshold: 0,
     }
 
@@ -235,6 +233,8 @@ export const initializeAlarms = async () => {
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            EvaluationPeriods: 5,
+            Period: 3600,
             ...alarmCommandSharedInput,
         })
     )
@@ -246,6 +246,8 @@ export const initializeAlarms = async () => {
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            EvaluationPeriods: 3,
+            Period: 1800,
             ...alarmCommandSharedInput,
         })
     )
@@ -257,6 +259,8 @@ export const initializeAlarms = async () => {
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            EvaluationPeriods: 5,
+            Period: 3600,
             ...alarmCommandSharedInput,
         })
     )
@@ -268,6 +272,8 @@ export const initializeAlarms = async () => {
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            EvaluationPeriods: 3,
+            Period: 1800,
             ...alarmCommandSharedInput,
         })
     )
@@ -283,6 +289,8 @@ export const initializeAlarms = async () => {
         Statistic: "Average",
         ComparisonOperator: "GreaterThanThreshold",
         AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
+        EvaluationPeriods: 1,
+        Period: 1800,
         ...alarmCommandSharedInput,
     })
     await client.send(accountBalanceAlarm)
