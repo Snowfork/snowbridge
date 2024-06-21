@@ -24,9 +24,9 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         },
         polkadot: {
             url: {
-                bridgeHub: 'https://rococo-bridge-hub-rpc.polkadot.io', //config.BRIDGE_HUB_URL,
-                assetHub: 'https://rococo-asset-hub-rpc.polkadot.io', //config.ASSET_HUB_URL,
-                relaychain: 'https://rococo-rpc.polkadot.io', //config.RELAY_CHAIN_URL,
+                bridgeHub: config.BRIDGE_HUB_URL,
+                assetHub: config.ASSET_HUB_URL,
+                relaychain: config.RELAY_CHAIN_URL,
             },
         },
         appContracts: {
