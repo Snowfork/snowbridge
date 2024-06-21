@@ -32,7 +32,7 @@ const (
 
 var (
 	ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("sync committee in different sync period")
-	ErrBeaconStateAvailableYet                    = errors.New("beacon state object not available yet")
+	ErrBeaconStateUnavailable                     = errors.New("beacon state object not available yet")
 )
 
 type Syncer struct {
@@ -943,7 +943,7 @@ func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {
 	if err != nil {
 		data, err = s.store.GetBeaconStateData(slot)
 		if err != nil {
-			return nil, fmt.Errorf("fetch beacon state from store: %w", err)
+			return nil, ErrBeaconStateUnavailable
 		}
 	}
 	return data, nil
