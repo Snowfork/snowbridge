@@ -943,13 +943,9 @@ func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {
 	if apiErr != nil {
 		var storeErr error
 		data, storeErr = s.store.GetBeaconStateData(slot)
-		// If the API returns a 404 (not a server error), treat it as a temporary error.
-		if storeErr != nil && errors.Is(apiErr, api.ErrNotFound) {
+		if storeErr != nil {
+			log.WithFields(log.Fields{"apiError": apiErr, "storeErr": storeErr}).Warn("fetch beacon state from api and store failed")
 			return nil, ErrBeaconStateUnavailable
-		} else if storeErr != nil {
-			// Otherwise if the API returns an unexpected error and the state cannot be found in the store, treat it
-			// as an error.
-			return nil, fmt.Errorf("fetch beacon state from api (%w) and store (%w) failed", apiErr, storeErr)
 		}
 	}
 	return data, nil

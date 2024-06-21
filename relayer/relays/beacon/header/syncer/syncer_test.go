@@ -2,7 +2,6 @@ package syncer
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"testing"
@@ -266,14 +265,9 @@ func TestGetBeaconState(t *testing.T) {
 		DenebForkEpoch:               0,
 	}))
 
-	// Unexpected error
-	mockAPI.ReturnBeaconStateError = errors.New("some error")
-	_, err := syncer.getBeaconState(8160)
-	require.Error(t, err)
-
 	// Beacon state not found in API
 	mockAPI.ReturnBeaconStateError = api.ErrNotFound
-	_, err = syncer.getBeaconState(8160)
+	_, err := syncer.getBeaconState(8160)
 	require.ErrorIs(t, err, ErrBeaconStateUnavailable)
 
 	// Beacon state found in API
