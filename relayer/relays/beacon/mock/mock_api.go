@@ -15,6 +15,7 @@ type API struct {
 	BlocksAtSlot                      map[uint64]api.BeaconBlockResponse
 	Header                            map[common.Hash]api.BeaconHeader
 	BeaconStates                      map[uint64]bool
+	ReturnBeaconStateError            error
 }
 
 func (m *API) GetHeaderAtHead() (api.BeaconHeader, error) {
@@ -77,7 +78,7 @@ func (m *API) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 
 	_, ok := m.BeaconStates[slot]
 	if !ok {
-		return nil, api.ErrNotFound
+		return nil, m.ReturnBeaconStateError
 	}
 
 	data, err := testutil.LoadFile(stateIdOrSlot + ".ssz")

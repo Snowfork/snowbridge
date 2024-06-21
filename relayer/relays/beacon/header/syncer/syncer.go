@@ -32,7 +32,7 @@ const (
 
 var (
 	ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("sync committee in different sync period")
-	ErrBeaconStateAvailableYet                    = errors.New("beacon state object not available yet")
+	ErrBeaconStateUnavailable                     = errors.New("beacon state object not available yet")
 )
 
 type Syncer struct {
@@ -939,11 +939,17 @@ func (s *Syncer) getBestMatchBeaconDataFromStore(minSlot, maxSlot uint64) (final
 }
 
 func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {
-	data, err := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
-	if err != nil {
-		data, err = s.store.GetBeaconStateData(slot)
-		if err != nil {
-			return nil, fmt.Errorf("fetch beacon state from store: %w", err)
+	data, apiErr := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
+	if apiErr != nil {
+		var storeErr error
+		data, storeErr = s.store.GetBeaconStateData(slot)
+		// If the API returns a 404 (not a server error), treat it as a temporary error.
+		if storeErr != nil && errors.Is(apiErr, api.ErrNotFound) {
+			return nil, ErrBeaconStateUnavailable
+		} else if storeErr != nil {
+			// Otherwise if the API returns an unexpected error and the state cannot be found in the store, treat it
+			// as an error.
+			return nil, fmt.Errorf("fetch beacon state from api (%w) and store (%w) failed", apiErr, storeErr)
 		}
 	}
 	return data, nil
