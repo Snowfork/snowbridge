@@ -141,12 +141,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				return fmt.Errorf("find events: %w", err)
 			}
 
-			log.WithFields(log.Fields{"blockNumber": blockNumber, "startNonce": paraNonce + 1}).Info("event query options")
-
-			for _, checkEv := range events {
-				log.WithFields(log.Fields{"msgNonce": checkEv.Nonce, "blockNumber": checkEv.Raw.BlockNumber}).Info("found event with nonce")
-			}
-
 			for _, ev := range events {
 				inboundMsg, err := r.makeInboundMessage(ctx, headerCache, ev)
 				if err != nil {
