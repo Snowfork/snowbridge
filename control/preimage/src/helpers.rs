@@ -264,7 +264,7 @@ pub async fn schedule_payout(
                 },
                 asset_id: runtime_types::xcm::v3::multiasset::AssetId::Concrete {
                     0: MultiLocation {
-                        parents: 0,
+                        parents: 1,
                         interior: Junctions::Here,
                     },
                 },
