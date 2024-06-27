@@ -172,7 +172,7 @@ pub async fn query_weight_asset_hub(
 
 pub fn utility_force_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
     RelayRuntimeCall::Utility(
-        crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::force_batch { calls },
+        crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::batch_all { calls },
     )
 }
 
@@ -223,9 +223,11 @@ pub async fn calculate_delivery_fee(
     Ok(fee)
 }
 
+use polkadot_runtime::api::runtime_types::pallet_vesting::vesting_info::VestingInfo;
 use polkadot_runtime::api::*;
 use subxt::utils::MultiAddress;
-pub async fn direct_payout(
+
+pub async fn instant_payout(
     _context: &Context,
     amount: u128,
     account: [u8; 32],
@@ -272,6 +274,29 @@ pub async fn schedule_payout(
         }),
         amount,
         valid_from: Some(future_block),
+    });
+
+    Ok(call)
+}
+
+pub async fn vesting_payout(
+    ctx: &Context,
+    locked: u128,
+    per_block: u128,
+    source: [u8; 32],
+    target: [u8; 32],
+    delta: u32,
+) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
+    let current_block = ctx.relay_api.blocks().at_latest().await?.number();
+    let starting_block = current_block + delta;
+    let call = RelayRuntimeCall::Vesting(vesting::Call::force_vested_transfer {
+        source: MultiAddress::Address32(source),
+        target: MultiAddress::Address32(target),
+        schedule: VestingInfo {
+            locked,
+            per_block,
+            starting_block,
+        },
     });
 
     Ok(call)
