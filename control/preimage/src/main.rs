@@ -10,7 +10,7 @@ use alloy_primitives::{utils::parse_units, Address, Bytes, FixedBytes, U128, U25
 use chopsticks::generate_chopsticks_script;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
-use constants::{ASSET_HUB_API, BRIDGE_HUB_API, POLKADOT_DECIMALS, POLKADOT_SYMBOL};
+use constants::{ASSET_HUB_API, BRIDGE_HUB_API, POLKADOT_DECIMALS, POLKADOT_SYMBOL, RELAY_API};
 use helpers::{
     force_xcm_version, instant_payout, schedule_payout, send_xcm_asset_hub, send_xcm_bridge_hub,
     utility_force_batch, vesting_payout,
@@ -256,12 +256,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     )
     .await?;
 
-    let relay_api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(
-        cli.api_endpoints
-            .relay_api
-            .unwrap_or(ASSET_HUB_API.to_owned()),
-    )
-    .await?;
+    let relay_api: OnlineClient<PolkadotConfig> =
+        OnlineClient::from_url(cli.api_endpoints.relay_api.unwrap_or(RELAY_API.to_owned())).await?;
 
     let context = Context {
         bridge_hub_api: Box::new(bridge_hub_api),
