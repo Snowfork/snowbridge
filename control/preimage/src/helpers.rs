@@ -246,6 +246,13 @@ pub async fn schedule_payout(
     account: [u8; 32],
     delta: u32,
 ) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
+    use crate::relay_runtime::runtime_types::{
+        staging_xcm::v3::multilocation::MultiLocation,
+        xcm::{
+            v3::{junction::Junction, junctions::Junctions},
+            VersionedLocation,
+        },
+    };
     let current_block = ctx.relay_api.blocks().at_latest().await?.number();
     let future_block = current_block + delta;
     let call = RelayRuntimeCall::Treasury(treasury::Call::spend {
@@ -253,7 +260,7 @@ pub async fn schedule_payout(
             runtime_types::polkadot_runtime_common::impls::VersionedLocatableAsset::V3 {
                 location: MultiLocation {
                     parents: 0,
-                    interior: Junctions::Here,
+                    interior: Junctions::X1(Junction::Parachain(ASSET_HUB_ID)),
                 },
                 asset_id: runtime_types::xcm::v3::multiasset::AssetId::Concrete {
                     0: MultiLocation {
