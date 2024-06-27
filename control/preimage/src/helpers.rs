@@ -222,3 +222,57 @@ pub async fn calculate_delivery_fee(
 
     Ok(fee)
 }
+
+use polkadot_runtime::api::*;
+use subxt::utils::MultiAddress;
+pub async fn direct_payout(
+    _context: &Context,
+    amount: u128,
+    account: [u8; 32],
+) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
+    let call = RelayRuntimeCall::Treasury(treasury::Call::spend_local {
+        amount,
+        beneficiary: MultiAddress::Address32(account),
+    });
+
+    Ok(call)
+}
+
+pub async fn schedule_payout(
+    ctx: &Context,
+    amount: u128,
+    account: [u8; 32],
+    delta: u32,
+) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
+    let current_block = ctx.relay_api.blocks().at_latest().await?.number();
+    let future_block = current_block + delta;
+    let call = RelayRuntimeCall::Treasury(treasury::Call::spend {
+        asset_kind: Box::new(
+            runtime_types::polkadot_runtime_common::impls::VersionedLocatableAsset::V3 {
+                location: MultiLocation {
+                    parents: 0,
+                    interior: Junctions::Here,
+                },
+                asset_id: runtime_types::xcm::v3::multiasset::AssetId::Concrete {
+                    0: MultiLocation {
+                        parents: 0,
+                        interior: Junctions::Here,
+                    },
+                },
+            },
+        ),
+        beneficiary: Box::new(VersionedLocation::V3 {
+            0: MultiLocation {
+                parents: 0,
+                interior: Junctions::X1(Junction::AccountId32 {
+                    network: None,
+                    id: account,
+                }),
+            },
+        }),
+        amount,
+        valid_from: Some(future_block),
+    });
+
+    Ok(call)
+}

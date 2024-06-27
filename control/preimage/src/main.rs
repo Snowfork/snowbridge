@@ -11,7 +11,10 @@ use chopsticks::generate_chopsticks_script;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
 use constants::{ASSET_HUB_API, BRIDGE_HUB_API, POLKADOT_DECIMALS, POLKADOT_SYMBOL};
-use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_force_batch};
+use helpers::{
+    direct_payout, force_xcm_version, schedule_payout, send_xcm_asset_hub, send_xcm_bridge_hub,
+    utility_force_batch,
+};
 use sp_crypto_hashing::blake2_256;
 use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
@@ -44,6 +47,8 @@ pub enum Command {
     PricingParameters(PricingParametersArgs),
     /// Set the checkpoint for the beacon light client
     ForceCheckpoint(ForceCheckpointArgs),
+    /// Treasury proposal
+    TreasuryProposal2024,
 }
 
 #[derive(Debug, Args)]
@@ -173,11 +178,15 @@ pub struct ApiEndpoints {
 
     #[arg(long, value_name = "URL")]
     asset_hub_api: Option<String>,
+
+    #[arg(long, value_name = "URL")]
+    relay_api: Option<String>,
 }
 
 fn parse_eth_address(v: &str) -> Result<Address, String> {
     Address::parse_checksummed(v, None).map_err(|_| "invalid ethereum address".to_owned())
 }
+use hex_literal::hex;
 use std::str::FromStr;
 
 fn parse_eth_address_without_validation(v: &str) -> Result<Address, String> {
@@ -220,6 +229,7 @@ pub enum Format {
 struct Context {
     bridge_hub_api: Box<OnlineClient<PolkadotConfig>>,
     asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
+    relay_api: Box<OnlineClient<PolkadotConfig>>,
 }
 
 #[tokio::main]
@@ -246,9 +256,17 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     )
     .await?;
 
+    let relay_api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(
+        cli.api_endpoints
+            .relay_api
+            .unwrap_or(ASSET_HUB_API.to_owned()),
+    )
+    .await?;
+
     let context = Context {
         bridge_hub_api: Box::new(bridge_hub_api),
         asset_hub_api: Box::new(asset_hub_api),
+        relay_api: Box::new(relay_api),
     };
 
     let call = match &cli.command {
@@ -296,6 +314,27 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 commands::pricing_parameters(&context, params).await?;
             let call1 = send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
             let call2 = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
+            utility_force_batch(vec![call1, call2])
+        }
+        Command::TreasuryProposal2024 => {
+            let beneficiary: [u8; 32] =
+                hex!("40ff75e9f6e5eea6579fd37a8296c58b0ff0f0940ea873e5d26b701163b1b325");
+
+            // Immediate direct payout of 191379 DOT
+            let direct_pay_amount: u128 = 1913790000000000;
+            let call1 = direct_payout(&context, direct_pay_amount, beneficiary).await?;
+
+            // Scheduled payout in 75 days from now of 161637 DOT
+            let scheduled_pay_amount: u128 = 1616370000000000;
+            let delta: u32 = 75 * 24 * 3600 / 6;
+            let call2 = schedule_payout(&context, scheduled_pay_amount, beneficiary, delta).await?;
+            // Todo:
+            // call3:
+            // 6 x scheduled payouts of 53879 DOT each, starting 3.5 months from now
+            // and repeating 6 times from Sept 2024 - Feb 2025
+
+            // call4:
+            // Immediate 2-year vesting payout of 323275 DOT
             utility_force_batch(vec![call1, call2])
         }
     };
