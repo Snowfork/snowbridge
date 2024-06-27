@@ -19,14 +19,14 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const context = await contextFactory({
         ethereum: {
-            execution_url: config.ETHEREUM_API(infuraKey),
-            beacon_url: config.BEACON_HTTP_API,
+            execution_url: process.env["EXECUTION_NODE_URL"] || config.ETHEREUM_API(infuraKey),
+            beacon_url: process.env["BEACON_NODE_URL"] || config.BEACON_HTTP_API,
         },
         polkadot: {
             url: {
-                bridgeHub: config.BRIDGE_HUB_URL,
-                assetHub: config.ASSET_HUB_URL,
-                relaychain: config.RELAY_CHAIN_URL,
+                bridgeHub: process.env["BRIDGE_HUB_URL"] || config.BRIDGE_HUB_URL,
+                assetHub: process.env["ASSET_HUB_URL"] || config.ASSET_HUB_URL,
+                relaychain: process.env["RELAY_CHAIN_URL"] || config.RELAY_CHAIN_URL,
             },
         },
         appContracts: {
