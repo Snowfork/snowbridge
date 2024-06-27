@@ -300,8 +300,6 @@ func (r *Relay) findEvents(
 			Context: ctx,
 		}
 
-		log.WithFields(log.Fields{"begin": begin, "end": blockNumber, "BlocksPerQuery": BlocksPerQuery}).Info("looping through events")
-
 		done, events, err := r.findEventsWithFilter(&opts, channelID, start)
 		if err != nil {
 			return nil, fmt.Errorf("filter events: %w", err)
@@ -318,21 +316,9 @@ func (r *Relay) findEvents(
 		}
 	}
 
-	eventsBeforeSort := []uint64{}
-	for _, checkEv := range allEvents {
-		eventsBeforeSort = append(eventsBeforeSort, checkEv.Nonce)
-	}
-	log.WithFields(log.Fields{"eventsBeforeSort": eventsBeforeSort}).Info("events before sort")
-
 	sort.SliceStable(allEvents, func(i, j int) bool {
 		return allEvents[i].Nonce < allEvents[j].Nonce
 	})
-
-	eventsAfterSort := []uint64{}
-	for _, checkEv := range allEvents {
-		eventsAfterSort = append(eventsAfterSort, checkEv.Nonce)
-	}
-	log.WithFields(log.Fields{"eventsAfterSort": eventsAfterSort}).Info("events after sort")
 
 	return allEvents, nil
 }
@@ -359,10 +345,16 @@ func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, channelID [32]byte, 
 			events = append(events, iter.Event)
 		}
 		if iter.Event.Nonce == start && opts.Start != 0 {
+			// This iteration of findEventsWithFilter contains the last nonce we are interested in,
+			// although the nonces might not be ordered in ascending order in the iterator. So there might be more
+			// nonces that need to be appended (and we need to keep looping until "more" is false, even though we
+			// already have found the oldest nonce.
 			done = true
-			iter.Close()
-			break
 		}
+	}
+
+	if done {
+		iter.Close()
 	}
 
 	return done, events, nil
