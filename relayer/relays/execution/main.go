@@ -144,7 +144,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			log.WithFields(log.Fields{"blockNumber": blockNumber, "startNonce": paraNonce + 1}).Info("event query options")
 
 			for _, checkEv := range events {
-				log.WithFields(log.Fields{"msgNonce": checkEv.Nonce}).Info("found event with nonce")
+				log.WithFields(log.Fields{"msgNonce": checkEv.Nonce, "blockNumber": checkEv.Raw.BlockNumber}).Info("found event with nonce")
 			}
 
 			for _, ev := range events {
@@ -300,6 +300,8 @@ func (r *Relay) findEvents(
 			Context: ctx,
 		}
 
+		log.WithFields(log.Fields{"begin": begin, "end": blockNumber, "BlocksPerQuery": BlocksPerQuery}).Info("looping through events")
+
 		done, events, err := r.findEventsWithFilter(&opts, channelID, start)
 		if err != nil {
 			return nil, fmt.Errorf("filter events: %w", err)
@@ -316,9 +318,21 @@ func (r *Relay) findEvents(
 		}
 	}
 
+	eventsBeforeSort := []uint64{}
+	for _, checkEv := range allEvents {
+		eventsBeforeSort = append(eventsBeforeSort, checkEv.Nonce)
+	}
+	log.WithFields(log.Fields{"eventsBeforeSort": eventsBeforeSort}).Info("events before sort")
+
 	sort.SliceStable(allEvents, func(i, j int) bool {
 		return allEvents[i].Nonce < allEvents[j].Nonce
 	})
+
+	eventsAfterSort := []uint64{}
+	for _, checkEv := range allEvents {
+		eventsAfterSort = append(eventsAfterSort, checkEv.Nonce)
+	}
+	log.WithFields(log.Fields{"eventsAfterSort": eventsAfterSort}).Info("events after sort")
 
 	return allEvents, nil
 }
