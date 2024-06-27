@@ -44,8 +44,9 @@ pub enum Command {
     PricingParameters(PricingParametersArgs),
     /// Set the checkpoint for the beacon light client
     ForceCheckpoint(ForceCheckpointArgs),
+    /// Set the checkpoint for the beacon light client
+    HaltBridge(HaltBridgeArgs),
 }
-
 #[derive(Debug, Args)]
 pub struct InitializeArgs {
     #[command(flatten)]
@@ -119,6 +120,12 @@ pub enum GatewayOperatingModeEnum {
     RejectingOutboundMessages,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, ValueEnum)]
+pub enum OperatingModeEnum {
+    Normal,
+    Halted,
+}
+
 #[derive(Debug, Args)]
 pub struct GatewayAddressArgs {
     /// Address of the contract on Ethereum
@@ -164,6 +171,27 @@ pub struct PricingParametersArgs {
     /// Relayer reward for delivering messages to Ethereum
     #[arg(long, value_name = "ETHER", value_parser = parse_units_eth)]
     pub remote_reward: U256,
+}
+
+#[derive(Debug, Args)]
+pub struct HaltBridgeArgs {
+    /// Halt the Ethereum gateway, blocking message from Ethereum to Polkadot in the Ethereum
+    /// contract.
+    #[arg(long, value_name = "HALT_GATEWAY")]
+    gateway: bool,
+    /// Halt the Ethereum Inbound Queue, blocking messages from BH to AH.
+    #[arg(long, value_name = "HALT_INBOUND_QUEUE")]
+    inbound_queue: bool,
+    /// Halt the Ethereum Outbound Queue, blocking message from AH to BH.
+    #[arg(long, value_name = "HALT_OUTBOUND_QUEUE")]
+    outbound_queue: bool,
+    /// Set the AH to Ethereum fee to a high amount, effectively blocking messages from AH ->
+    /// Ethereum.
+    #[arg(long, value_name = "ASSETHUB_MAX_PRICE")]
+    assethub_max_price: bool,
+    /// Halt all parts of the bridge
+    #[arg(long, value_name = "HALT_SNOWBRIDGE")]
+    all: bool,
 }
 
 #[derive(Debug, Args)]
@@ -284,7 +312,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             .await?
         }
         Command::GatewayOperatingMode(params) => {
-            let call = commands::gateway_operating_mode(params);
+            let call = commands::gateway_operating_mode(params.gateway_operating_mode);
             send_xcm_bridge_hub(&context, vec![call]).await?
         }
         Command::Upgrade(params) => {
@@ -297,6 +325,25 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let call1 = send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
             let call2 = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
             utility_force_batch(vec![call1, call2])
+        }
+        Command::HaltBridge(params) => {
+            let mut calls = vec![];
+            if params.gateway || params.all {
+                calls.push(commands::gateway_operating_mode(GatewayOperatingModeArgs::gateway_operating_mode));
+            }
+            if params.inbound_queue || params.all {
+                calls.push(commands::inbound_queue_operating_mode(OperatingModeEnum::Halted));
+            }
+            if params.outbound_queue || params.all {
+                calls.push(commands::outbound_queue_operating_mode(OperatingModeEnum::Halted));
+            }
+            if params.ethereum_client || params.all {
+                calls.push(commands::ethereum_client_operating_mode(OperatingModeEnum::Halted));
+            }
+            if params.assethub_max_price || params.all {
+                calls.push(commands::set_assethub_fee_max());
+            }
+            send_xcm_bridge_hub(&context, calls).await?
         }
     };
 
