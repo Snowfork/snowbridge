@@ -185,6 +185,9 @@ pub struct HaltBridgeArgs {
     /// Halt the Ethereum Outbound Queue, blocking message from AH to BH.
     #[arg(long, value_name = "HALT_OUTBOUND_QUEUE")]
     outbound_queue: bool,
+    /// Halt the Ethereum client, blocking consensus updates to the ligth client.
+    #[arg(long, value_name = "HALT_ETHEREUM_CLIENT")]
+    ethereum_client: bool,
     /// Set the AH to Ethereum fee to a high amount, effectively blocking messages from AH ->
     /// Ethereum.
     #[arg(long, value_name = "ASSETHUB_MAX_PRICE")]
@@ -292,7 +295,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 vec![
                     commands::set_gateway_address(&params.gateway_address),
                     set_pricing_parameters,
-                    commands::gateway_operating_mode(&params.gateway_operating_mode),
+                    commands::gateway_operating_mode(
+                        &params.gateway_operating_mode.gateway_operating_mode,
+                    ),
                     commands::force_checkpoint(&params.force_checkpoint),
                 ],
             )
@@ -312,7 +317,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             .await?
         }
         Command::GatewayOperatingMode(params) => {
-            let call = commands::gateway_operating_mode(params.gateway_operating_mode);
+            let call = commands::gateway_operating_mode(&params.gateway_operating_mode);
             send_xcm_bridge_hub(&context, vec![call]).await?
         }
         Command::Upgrade(params) => {
@@ -327,23 +332,40 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             utility_force_batch(vec![call1, call2])
         }
         Command::HaltBridge(params) => {
-            let mut calls = vec![];
+            let mut bh_calls = vec![];
+            let mut ah_calls = vec![];
             if params.gateway || params.all {
-                calls.push(commands::gateway_operating_mode(GatewayOperatingModeArgs::gateway_operating_mode));
+                bh_calls.push(commands::gateway_operating_mode(
+                    &GatewayOperatingModeEnum::RejectingOutboundMessages,
+                ));
             }
             if params.inbound_queue || params.all {
-                calls.push(commands::inbound_queue_operating_mode(OperatingModeEnum::Halted));
+                bh_calls.push(commands::inbound_queue_operating_mode(
+                    &OperatingModeEnum::Halted,
+                ));
             }
             if params.outbound_queue || params.all {
-                calls.push(commands::outbound_queue_operating_mode(OperatingModeEnum::Halted));
+                bh_calls.push(commands::outbound_queue_operating_mode(
+                    &OperatingModeEnum::Halted,
+                ));
             }
             if params.ethereum_client || params.all {
-                calls.push(commands::ethereum_client_operating_mode(OperatingModeEnum::Halted));
+                bh_calls.push(commands::ethereum_client_operating_mode(
+                    &OperatingModeEnum::Halted,
+                ));
             }
             if params.assethub_max_price || params.all {
-                calls.push(commands::set_assethub_fee_max());
+                ah_calls.push(commands::set_assethub_fee(u128::MAX));
             }
-            send_xcm_bridge_hub(&context, calls).await?
+            if bh_calls.len() > 0 && ah_calls.len() == 0 {
+                send_xcm_bridge_hub(&context, bh_calls).await?
+            } else if ah_calls.len() > 0 && bh_calls.len() == 0 {
+                send_xcm_asset_hub(&context, ah_calls).await?
+            } else {
+                let call1 = send_xcm_bridge_hub(&context, bh_calls).await?;
+                let call2 = send_xcm_asset_hub(&context, ah_calls).await?;
+                utility_force_batch(vec![call1, call2])
+            }
         }
     };
 

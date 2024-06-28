@@ -1,8 +1,7 @@
-use crate::bridge_hub_runtime::runtime_types::snowbridge_pallet_ethereum_client;
 use crate::helpers::calculate_delivery_fee;
 use crate::{
-    constants::*, Context, ForceCheckpointArgs, GatewayAddressArgs,
-    GatewayOperatingModeEnum, PricingParametersArgs, UpdateAssetArgs, UpgradeArgs,
+    constants::*, Context, ForceCheckpointArgs, GatewayAddressArgs, GatewayOperatingModeEnum,
+    OperatingModeEnum, PricingParametersArgs, UpdateAssetArgs, UpgradeArgs,
 };
 use alloy_primitives::{utils::format_units, U256};
 use codec::Encode;
@@ -20,10 +19,12 @@ use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
 
 use crate::bridge_hub_runtime::runtime_types::{
     snowbridge_core::{
+        operating_mode::BasicOperatingMode,
         outbound::v1::{Initializer, OperatingMode},
         pricing::{PricingParameters, Rewards},
     },
-    snowbridge_pallet_system,
+    snowbridge_pallet_ethereum_client, snowbridge_pallet_inbound_queue,
+    snowbridge_pallet_outbound_queue, snowbridge_pallet_system,
 };
 use crate::bridge_hub_runtime::RuntimeCall as BridgeHubRuntimeCall;
 
@@ -39,15 +40,33 @@ pub fn gateway_operating_mode(operating_mode: &GatewayOperatingModeEnum) -> Brid
     )
 }
 
-pub fn inbound_queue_operating_mode(param: &OperatingModeArgs) -> BridgeHubRuntimeCall {
+pub fn inbound_queue_operating_mode(param: &OperatingModeEnum) -> BridgeHubRuntimeCall {
     let mode = match param {
-        GatewayOperatingModeEnum::Normal => OperatingMode::Normal,
-        GatewayOperatingModeEnum::RejectingOutboundMessages => {
-            OperatingMode::RejectingOutboundMessages
-        }
+        OperatingModeEnum::Normal => BasicOperatingMode::Normal,
+        OperatingModeEnum::Halted => BasicOperatingMode::Halted,
     };
-    BridgeHubRuntimeCall::EthereumSystem(
-        snowbridge_pallet_system::pallet::Call::set_operating_mode { mode },
+    BridgeHubRuntimeCall::EthereumInboundQueue(
+        snowbridge_pallet_inbound_queue::pallet::Call::set_operating_mode { mode },
+    )
+}
+
+pub fn ethereum_client_operating_mode(param: &OperatingModeEnum) -> BridgeHubRuntimeCall {
+    let mode = match param {
+        OperatingModeEnum::Normal => BasicOperatingMode::Normal,
+        OperatingModeEnum::Halted => BasicOperatingMode::Halted,
+    };
+    BridgeHubRuntimeCall::EthereumBeaconClient(
+        snowbridge_pallet_ethereum_client::pallet::Call::set_operating_mode { mode },
+    )
+}
+
+pub fn outbound_queue_operating_mode(param: &OperatingModeEnum) -> BridgeHubRuntimeCall {
+    let mode = match param {
+        OperatingModeEnum::Normal => BasicOperatingMode::Normal,
+        OperatingModeEnum::Halted => BasicOperatingMode::Halted,
+    };
+    BridgeHubRuntimeCall::EthereumOutboundQueue(
+        snowbridge_pallet_outbound_queue::pallet::Call::set_operating_mode { mode },
     )
 }
 
@@ -160,11 +179,10 @@ pub async fn pricing_parameters(
     ))
 }
 
-pub fn set_assethub_fee_max() -> BridgeHubRuntimeCall {
+pub fn set_assethub_fee(fee: u128) -> AssetHubRuntimeCall {
     let asset_hub_outbound_fee_storage_key: Vec<u8> =
         twox_128(b":BridgeHubEthereumBaseFee:").to_vec();
-    let max_fee = u128::MAX;
-    let asset_hub_outbound_fee_encoded: Vec<u8> = max_fee.encode();
+    let asset_hub_outbound_fee_encoded: Vec<u8> = fee.encode();
 
     AssetHubRuntimeCall::System(
         crate::asset_hub_runtime::runtime_types::frame_system::pallet::Call::set_storage {
