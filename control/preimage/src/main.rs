@@ -190,8 +190,8 @@ pub struct HaltBridgeArgs {
     ethereum_client: bool,
     /// Set the AH to Ethereum fee to a high amount, effectively blocking messages from AH ->
     /// Ethereum.
-    #[arg(long, value_name = "ASSETHUB_MAX_PRICE")]
-    assethub_max_price: bool,
+    #[arg(long, value_name = "ASSETHUB_MAX_FEE")]
+    assethub_max_fee: bool,
     /// Halt all parts of the bridge
     #[arg(long, value_name = "HALT_SNOWBRIDGE")]
     all: bool,
@@ -334,27 +334,37 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         Command::HaltBridge(params) => {
             let mut bh_calls = vec![];
             let mut ah_calls = vec![];
-            if params.gateway || params.all {
+            let mut halt_all = params.all;
+            // if no individual option specified, assume halt the whole bridge.
+            if !params.gateway
+                && !params.inbound_queue
+                && !params.outbound_queue
+                && !params.ethereum_client
+                && !params.assethub_max_price
+            {
+                halt_all = true;
+            }
+            if params.gateway || halt_all {
                 bh_calls.push(commands::gateway_operating_mode(
                     &GatewayOperatingModeEnum::RejectingOutboundMessages,
                 ));
             }
-            if params.inbound_queue || params.all {
+            if params.inbound_queue || halt_all {
                 bh_calls.push(commands::inbound_queue_operating_mode(
                     &OperatingModeEnum::Halted,
                 ));
             }
-            if params.outbound_queue || params.all {
+            if params.outbound_queue || halt_all {
                 bh_calls.push(commands::outbound_queue_operating_mode(
                     &OperatingModeEnum::Halted,
                 ));
             }
-            if params.ethereum_client || params.all {
+            if params.ethereum_client || halt_all {
                 bh_calls.push(commands::ethereum_client_operating_mode(
                     &OperatingModeEnum::Halted,
                 ));
             }
-            if params.assethub_max_price || params.all {
+            if params.assethub_max_fee || halt_all {
                 ah_calls.push(commands::set_assethub_fee(u128::MAX));
             }
             if bh_calls.len() > 0 && ah_calls.len() == 0 {
