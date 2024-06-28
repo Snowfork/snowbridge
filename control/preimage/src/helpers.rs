@@ -244,7 +244,7 @@ pub async fn schedule_payout(
     ctx: &Context,
     amount: u128,
     account: [u8; 32],
-    delta: u32,
+    delay: u32,
 ) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
     use crate::relay_runtime::runtime_types::{
         staging_xcm::v3::multilocation::MultiLocation,
@@ -254,7 +254,7 @@ pub async fn schedule_payout(
         },
     };
     let current_block = ctx.relay_api.blocks().at_latest().await?.number();
-    let future_block = current_block + delta;
+    let future_block = current_block + delay;
     let call = RelayRuntimeCall::Treasury(treasury::Call::spend {
         asset_kind: Box::new(
             runtime_types::polkadot_runtime_common::impls::VersionedLocatableAsset::V3 {
@@ -292,10 +292,10 @@ pub async fn vesting_payout(
     per_block: u128,
     source: [u8; 32],
     target: [u8; 32],
-    delta: u32,
+    delay: u32,
 ) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
     let current_block = ctx.relay_api.blocks().at_latest().await?.number();
-    let starting_block = current_block + delta;
+    let starting_block = current_block + delay;
     let call = RelayRuntimeCall::Vesting(vesting::Call::force_vested_transfer {
         source: MultiAddress::Address32(source),
         target: MultiAddress::Address32(target),
