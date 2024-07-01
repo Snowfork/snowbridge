@@ -340,7 +340,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 && !params.inbound_queue
                 && !params.outbound_queue
                 && !params.ethereum_client
-                && !params.assethub_max_price
+                && !params.assethub_max_fee
             {
                 halt_all = true;
             }
