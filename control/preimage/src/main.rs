@@ -13,7 +13,7 @@ use codec::Encode;
 use constants::{ASSET_HUB_API, BRIDGE_HUB_API, POLKADOT_DECIMALS, POLKADOT_SYMBOL, RELAY_API};
 use helpers::{
     force_xcm_version, instant_payout, schedule_payout, send_xcm_asset_hub, send_xcm_bridge_hub,
-    utility_force_batch, vesting_payout,
+    utility_force_batch,
 };
 use polkadot_runtime_constants::currency::UNITS as DOTS;
 use polkadot_runtime_constants::time::DAYS;
@@ -327,25 +327,16 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let call = instant_payout(&context, instant_pay_amount, beneficiary).await?;
             scheduled_calls.push(call);
 
-            // Immediate 2-year vesting payout of 323275 DOT
-            let vesting_pay_amount: u128 = 323275 * DOTS;
-            let vesting_period: u32 = 2 * 365 * DAYS;
-            let per_block: u128 = vesting_pay_amount / (vesting_period as u128);
-            let treasury: [u8; 32] =
-                hex!("6d6f646c70792f74727372790000000000000000000000000000000000000000");
-            // consider the proposal unconfirmed, start vesting after 45 days to make sure the
-            // starting_block is valid.
-            let delay: u32 = 45 * DAYS;
-            let call = vesting_payout(
-                &context,
-                vesting_pay_amount,
-                per_block,
-                treasury,
-                beneficiary,
-                delay,
-            )
-            .await?;
-            scheduled_calls.push(call);
+            // 2-year scheduled payout of 323275 DOT, which is 8x scheduled payouts of 40410 DOT each,
+            // starting 30 days from now and repeating 8 times from Aug 2024 - Aug 2026 every quart
+            let scheduled_pay_amount: u128 = 40410 * DOTS;
+            let mut delay: u32 = 30 * DAYS;
+            for _ in 0..8 {
+                let call =
+                    schedule_payout(&context, scheduled_pay_amount, beneficiary, delay).await?;
+                scheduled_calls.push(call);
+                delay = delay + (90 * DAYS)
+            }
 
             // Scheduled payout in 75 days from now of 161637 DOT
             let scheduled_pay_amount: u128 = 161637 * DOTS;
