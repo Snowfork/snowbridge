@@ -15,6 +15,8 @@ use helpers::{
     force_xcm_version, instant_payout, schedule_payout, send_xcm_asset_hub, send_xcm_bridge_hub,
     utility_force_batch, vesting_payout,
 };
+use polkadot_runtime_constants::currency::UNITS as DOTS;
+use polkadot_runtime_constants::time::DAYS;
 use sp_crypto_hashing::blake2_256;
 use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
@@ -321,19 +323,19 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             > = vec![];
 
             // Immediate direct payout of 191379 DOT
-            let instant_pay_amount: u128 = 1913790000000000;
+            let instant_pay_amount: u128 = 191379 * DOTS;
             let call = instant_payout(&context, instant_pay_amount, beneficiary).await?;
             scheduled_calls.push(call);
 
             // Immediate 2-year vesting payout of 323275 DOT
-            let vesting_pay_amount: u128 = 3232750000000000;
-            let vesting_period: u32 = 2 * 365 * 24 * 3600 / 6;
+            let vesting_pay_amount: u128 = 323275 * DOTS;
+            let vesting_period: u32 = 2 * 365 * DAYS;
             let per_block: u128 = vesting_pay_amount / (vesting_period as u128);
             let treasury: [u8; 32] =
                 hex!("6d6f646c70792f74727372790000000000000000000000000000000000000000");
             // consider the proposal unconfirmed, start vesting after 45 days to make sure the
             // starting_block is valid.
-            let delay: u32 = 45 * 24 * 3600 / 6;
+            let delay: u32 = 45 * DAYS;
             let call = vesting_payout(
                 &context,
                 vesting_pay_amount,
@@ -346,20 +348,20 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             scheduled_calls.push(call);
 
             // Scheduled payout in 75 days from now of 161637 DOT
-            let scheduled_pay_amount: u128 = 1616370000000000;
-            let delay: u32 = 75 * 24 * 3600 / 6;
+            let scheduled_pay_amount: u128 = 161637 * DOTS;
+            let delay: u32 = 75 * DAYS;
             let call = schedule_payout(&context, scheduled_pay_amount, beneficiary, delay).await?;
             scheduled_calls.push(call);
 
             // 6 x scheduled payouts of 53879 DOT each, starting 3.5 months from now
             // and repeating 6 times from Sept 2024 - Feb 2025 every month
-            let scheduled_pay_amount: u128 = 538790000000000;
-            let mut delay: u32 = 105 * 24 * 3600 / 6;
+            let scheduled_pay_amount: u128 = 53879 * DOTS;
+            let mut delay: u32 = 105 * DAYS;
             for _ in 0..6 {
                 let call =
                     schedule_payout(&context, scheduled_pay_amount, beneficiary, delay).await?;
                 scheduled_calls.push(call);
-                delay = delay + (30 * 24 * 3600 / 6)
+                delay = delay + (30 * DAYS)
             }
 
             utility_force_batch(scheduled_calls)

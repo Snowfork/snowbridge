@@ -29,6 +29,7 @@ bridge-hub-rococo-runtime = { path = "../runtimes/bridge-hub-rococo", optional =
 asset-hub-rococo-runtime = { path = "../runtimes/asset-hub-rococo", optional = true }
 
 polkadot-runtime = { path = "../runtimes/polkadot", optional = true }
+polkadot-runtime-constants = "3.0.0"
 bridge-hub-polkadot-runtime = { path = "../runtimes/bridge-hub-polkadot", optional = true }
 asset-hub-polkadot-runtime = { path = "../runtimes/asset-hub-polkadot", optional = true }
 
