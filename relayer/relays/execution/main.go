@@ -276,10 +276,16 @@ func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, channelID [32]byte, 
 			events = append(events, iter.Event)
 		}
 		if iter.Event.Nonce == start && opts.Start != 0 {
+			// This iteration of findEventsWithFilter contains the last nonce we are interested in,
+			// although the nonces might not be ordered in ascending order in the iterator. So there might be more
+			// nonces that need to be appended (and we need to keep looping until "more" is false, even though we
+			// already have found the oldest nonce.
 			done = true
-			iter.Close()
-			break
 		}
+	}
+
+	if done {
+		iter.Close()
 	}
 
 	return done, events, nil

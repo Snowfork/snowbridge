@@ -254,3 +254,34 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 	attested, err = syncer.FindValidAttestedHeader(32540, 32768)
 	assert.Error(t, err)
 }
+
+func TestGetBeaconState(t *testing.T) {
+	mockAPI := mock.API{}
+	mockStore := mock.Store{}
+
+	syncer := New(&mockAPI, &mockStore, protocol.New(config.SpecSettings{
+		SlotsInEpoch:                 32,
+		EpochsPerSyncCommitteePeriod: 256,
+		DenebForkEpoch:               0,
+	}))
+
+	// Beacon state not found in API
+	mockAPI.ReturnBeaconStateError = api.ErrNotFound
+	_, err := syncer.getBeaconState(8160)
+	require.ErrorIs(t, err, ErrBeaconStateUnavailable)
+
+	// Beacon state found in API
+	mockAPI.BeaconStates = map[uint64]bool{4570752: true}
+	mockAPI.ReturnBeaconStateError = nil
+	_, err = syncer.getBeaconState(4570752)
+	require.NoError(t, err)
+
+	// Beacon state found in Store
+	mockAPI.BeaconStates = map[uint64]bool{}
+	mockAPI.ReturnBeaconStateError = api.ErrNotFound
+	beaconData, err := testutil.LoadFile("4570752.ssz")
+	require.NoError(t, err)
+	mockStore.BeaconStateData = map[uint64][]byte{4570752: beaconData}
+	_, err = syncer.getBeaconState(4570752)
+	require.NoError(t, err)
+}

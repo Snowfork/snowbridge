@@ -32,7 +32,7 @@ const (
 
 var (
 	ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("sync committee in different sync period")
-	ErrBeaconStateAvailableYet                    = errors.New("beacon state object not available yet")
+	ErrBeaconStateUnavailable                     = errors.New("beacon state object not available yet")
 	ErrSyncCommitteeNotSuperMajority              = errors.New("update received was not signed by supermajority")
 )
 
@@ -953,11 +953,13 @@ func (s *Syncer) getBestMatchBeaconDataFromStore(minSlot, maxSlot uint64) (final
 }
 
 func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {
-	data, err := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
-	if err != nil {
-		data, err = s.store.GetBeaconStateData(slot)
-		if err != nil {
-			return nil, fmt.Errorf("fetch beacon state from store: %w", err)
+	data, apiErr := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
+	if apiErr != nil {
+		var storeErr error
+		data, storeErr = s.store.GetBeaconStateData(slot)
+		if storeErr != nil {
+			log.WithFields(log.Fields{"apiError": apiErr, "storeErr": storeErr}).Warn("fetch beacon state from api and store failed")
+			return nil, ErrBeaconStateUnavailable
 		}
 	}
 	return data, nil
