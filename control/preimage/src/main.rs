@@ -16,7 +16,6 @@ use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utilit
 use sp_crypto_hashing::blake2_256;
 use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
-use treasury_commands::treasury_spend as spend;
 
 #[derive(Debug, Parser)]
 #[command(name = "snowbridge-preimage", version, about, long_about = None)]
@@ -223,7 +222,7 @@ pub struct ApiEndpoints {
 fn parse_eth_address(v: &str) -> Result<Address, String> {
     Address::parse_checksummed(v, None).map_err(|_| "invalid ethereum address".to_owned())
 }
-use hex_literal::hex;
+
 use std::str::FromStr;
 
 fn parse_eth_address_without_validation(v: &str) -> Result<Address, String> {
@@ -397,7 +396,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 utility_force_batch(vec![call1, call2])
             }
         }
-        Command::TreasuryProposal2024(params) => {}
+        Command::TreasuryProposal2024(params) => treasury_commands::treasury_proposal(&params),
     };
 
     let preimage = call.encode();
