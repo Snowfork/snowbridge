@@ -8,10 +8,8 @@ use crate::Context;
 use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 
 #[cfg(feature = "polkadot")]
-use crate::relay_runtime::runtime_types::xcm::v2::OriginKind;
-#[cfg(feature = "rococo")]
-use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
-use crate::relay_runtime::runtime_types::{
+use crate::relay_runtime::api::runtime_types::xcm::v2::OriginKind;
+use crate::relay_runtime::api::runtime_types::{
     pallet_xcm,
     sp_weights::weight_v2::Weight,
     staging_xcm::v3::multilocation::MultiLocation,
@@ -26,6 +24,8 @@ use crate::relay_runtime::runtime_types::{
         VersionedLocation, VersionedXcm,
     },
 };
+#[cfg(feature = "rococo")]
+use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
 
 use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 
@@ -172,7 +172,7 @@ pub async fn query_weight_asset_hub(
 
 pub fn utility_force_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
     RelayRuntimeCall::Utility(
-        crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::force_batch { calls },
+        crate::relay_runtime::api::runtime_types::pallet_utility::pallet::Call::batch_all { calls },
     )
 }
 

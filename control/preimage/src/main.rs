@@ -5,12 +5,13 @@ mod commands;
 mod constants;
 mod helpers;
 mod relay_runtime;
+mod treasury_commands;
 
 use alloy_primitives::{utils::parse_units, Address, Bytes, FixedBytes, U128, U256};
 use chopsticks::generate_chopsticks_script;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
-use constants::{ASSET_HUB_API, BRIDGE_HUB_API, POLKADOT_DECIMALS, POLKADOT_SYMBOL};
+use constants::{ASSET_HUB_API, BRIDGE_HUB_API, POLKADOT_DECIMALS, POLKADOT_SYMBOL, RELAY_API};
 use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_force_batch};
 use sp_crypto_hashing::blake2_256;
 use std::{io::Write, path::PathBuf};
@@ -46,6 +47,8 @@ pub enum Command {
     ForceCheckpoint(ForceCheckpointArgs),
     /// Set the checkpoint for the beacon light client
     HaltBridge(HaltBridgeArgs),
+    /// Treasury proposal
+    TreasuryProposal2024(TreasuryProposal2024Args),
 }
 #[derive(Debug, Args)]
 pub struct InitializeArgs {
@@ -198,17 +201,28 @@ pub struct HaltBridgeArgs {
 }
 
 #[derive(Debug, Args)]
+pub struct TreasuryProposal2024Args {
+    /// Beneficiary address
+    #[arg(long, value_name = "ADDRESS", value_parser=parse_hex_bytes32)]
+    beneficiary: FixedBytes<32>,
+}
+
+#[derive(Debug, Args)]
 pub struct ApiEndpoints {
     #[arg(long, value_name = "URL")]
     bridge_hub_api: Option<String>,
 
     #[arg(long, value_name = "URL")]
     asset_hub_api: Option<String>,
+
+    #[arg(long, value_name = "URL")]
+    relay_api: Option<String>,
 }
 
 fn parse_eth_address(v: &str) -> Result<Address, String> {
     Address::parse_checksummed(v, None).map_err(|_| "invalid ethereum address".to_owned())
 }
+
 use std::str::FromStr;
 
 fn parse_eth_address_without_validation(v: &str) -> Result<Address, String> {
@@ -251,6 +265,7 @@ pub enum Format {
 struct Context {
     bridge_hub_api: Box<OnlineClient<PolkadotConfig>>,
     asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
+    relay_api: Box<OnlineClient<PolkadotConfig>>,
 }
 
 #[tokio::main]
@@ -277,9 +292,13 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     )
     .await?;
 
+    let relay_api: OnlineClient<PolkadotConfig> =
+        OnlineClient::from_url(cli.api_endpoints.relay_api.unwrap_or(RELAY_API.to_owned())).await?;
+
     let context = Context {
         bridge_hub_api: Box::new(bridge_hub_api),
         asset_hub_api: Box::new(asset_hub_api),
+        relay_api: Box::new(relay_api),
     };
 
     let call = match &cli.command {
@@ -377,6 +396,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 utility_force_batch(vec![call1, call2])
             }
         }
+        Command::TreasuryProposal2024(params) => treasury_commands::treasury_proposal(&params),
     };
 
     let preimage = call.encode();
