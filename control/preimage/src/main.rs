@@ -5,21 +5,18 @@ mod commands;
 mod constants;
 mod helpers;
 mod relay_runtime;
+mod treasury_commands;
 
 use alloy_primitives::{utils::parse_units, Address, Bytes, FixedBytes, U128, U256};
 use chopsticks::generate_chopsticks_script;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
 use constants::{ASSET_HUB_API, BRIDGE_HUB_API, POLKADOT_DECIMALS, POLKADOT_SYMBOL, RELAY_API};
-use helpers::{
-    force_xcm_version, instant_payout, schedule_payout, send_xcm_asset_hub, send_xcm_bridge_hub,
-    utility_force_batch,
-};
-use polkadot_runtime_constants::currency::UNITS as DOTS;
-use polkadot_runtime_constants::time::DAYS;
+use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_force_batch};
 use sp_crypto_hashing::blake2_256;
 use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
+use treasury_commands::treasury_spend as spend;
 
 #[derive(Debug, Parser)]
 #[command(name = "snowbridge-preimage", version, about, long_about = None)]
@@ -400,49 +397,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 utility_force_batch(vec![call1, call2])
             }
         }
-        Command::TreasuryProposal2024(params) => {
-            let beneficiary: [u8; 32] =
-                hex!("40ff75e9f6e5eea6579fd37a8296c58b0ff0f0940ea873e5d26b701163b1b325");
-
-            let mut scheduled_calls: Vec<
-                polkadot_runtime::api::runtime_types::polkadot_runtime::RuntimeCall,
-            > = vec![];
-
-            // Immediate direct payout of 191379 DOT
-            let instant_pay_amount: u128 = 191379 * DOTS;
-            let call = instant_payout(&context, instant_pay_amount, beneficiary).await?;
-            scheduled_calls.push(call);
-
-            // 2-year scheduled payout of 323275 DOT, which is 8x scheduled payouts of 40410 DOT each,
-            // starting 30 days from now and repeating 8 times from Aug 2024 - Aug 2026 every quarter
-            let scheduled_pay_amount: u128 = 40410 * DOTS;
-            let mut delay: u32 = 30 * DAYS;
-            for _ in 0..8 {
-                let call =
-                    schedule_payout(&context, scheduled_pay_amount, beneficiary, delay).await?;
-                scheduled_calls.push(call);
-                delay = delay + (90 * DAYS)
-            }
-
-            // Scheduled payout in 75 days from now of 161637 DOT
-            let scheduled_pay_amount: u128 = 161637 * DOTS;
-            let delay: u32 = 75 * DAYS;
-            let call = schedule_payout(&context, scheduled_pay_amount, beneficiary, delay).await?;
-            scheduled_calls.push(call);
-
-            // 6 x scheduled payouts of 53879 DOT each, starting 3.5 months from now
-            // and repeating 6 times from Sept 2024 - Feb 2025 every month
-            let scheduled_pay_amount: u128 = 53879 * DOTS;
-            let mut delay: u32 = 105 * DAYS;
-            for _ in 0..6 {
-                let call =
-                    schedule_payout(&context, scheduled_pay_amount, beneficiary, delay).await?;
-                scheduled_calls.push(call);
-                delay = delay + (30 * DAYS)
-            }
-
-            utility_force_batch(scheduled_calls)
-        }
+        Command::TreasuryProposal2024(params) => {}
     };
 
     let preimage = call.encode();
