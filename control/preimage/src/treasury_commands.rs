@@ -201,7 +201,6 @@ pub async fn treasury_proposal(
     ctx: &Context,
     params: TreasuryProposal2024Args,
 ) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
-
     let mut calls: Vec<RelayRuntimeCall> = vec![];
 
     for spend in SPENDS.iter() {
@@ -210,7 +209,8 @@ pub async fn treasury_proposal(
             spend.asset,
             spend.amount,
             spend.delay.map(|delay| LAUNCH_BLOCK + delay),
-        )
+        );
+        calls.push(call);
     }
 
     Ok(utility_force_batch(calls))
