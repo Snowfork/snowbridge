@@ -34,6 +34,10 @@ use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
 use sp_arithmetic::helpers_128bit::multiply_by_rational_with_rounding;
 use sp_arithmetic::per_things::Rounding;
 
+#[cfg(feature = "polkadot")]
+use polkadot_runtime::api::*;
+use subxt::utils::MultiAddress;
+
 const MAX_REF_TIME: u128 = 500_000_000_000 - 1;
 const MAX_PROOF_SIZE: u128 = 3 * 1024 * 1024 - 1;
 
@@ -223,10 +227,6 @@ pub async fn calculate_delivery_fee(
     Ok(fee)
 }
 
-use polkadot_runtime::api::runtime_types::pallet_vesting::vesting_info::VestingInfo;
-use polkadot_runtime::api::*;
-use subxt::utils::MultiAddress;
-
 pub async fn instant_payout(
     _context: &Context,
     amount: u128,
@@ -281,29 +281,6 @@ pub async fn schedule_payout(
         }),
         amount,
         valid_from: Some(future_block),
-    });
-
-    Ok(call)
-}
-
-pub async fn vesting_payout(
-    ctx: &Context,
-    locked: u128,
-    per_block: u128,
-    source: [u8; 32],
-    target: [u8; 32],
-    delay: u32,
-) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
-    let current_block = ctx.relay_api.blocks().at_latest().await?.number();
-    let starting_block = current_block + delay;
-    let call = RelayRuntimeCall::Vesting(vesting::Call::force_vested_transfer {
-        source: MultiAddress::Address32(source),
-        target: MultiAddress::Address32(target),
-        schedule: VestingInfo {
-            locked,
-            per_block,
-            starting_block,
-        },
     });
 
     Ok(call)

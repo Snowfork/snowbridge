@@ -328,7 +328,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             scheduled_calls.push(call);
 
             // 2-year scheduled payout of 323275 DOT, which is 8x scheduled payouts of 40410 DOT each,
-            // starting 30 days from now and repeating 8 times from Aug 2024 - Aug 2026 every quart
+            // starting 30 days from now and repeating 8 times from Aug 2024 - Aug 2026 every quarter
             let scheduled_pay_amount: u128 = 40410 * DOTS;
             let mut delay: u32 = 30 * DAYS;
             for _ in 0..8 {
