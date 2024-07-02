@@ -1,8 +1,7 @@
-use crate::bridge_hub_runtime::runtime_types::snowbridge_pallet_ethereum_client;
 use crate::helpers::calculate_delivery_fee;
 use crate::{
-    constants::*, Context, ForceCheckpointArgs, GatewayAddressArgs, GatewayOperatingModeArgs,
-    GatewayOperatingModeEnum, PricingParametersArgs, UpdateAssetArgs, UpgradeArgs,
+    constants::*, Context, ForceCheckpointArgs, GatewayAddressArgs, GatewayOperatingModeEnum,
+    OperatingModeEnum, PricingParametersArgs, UpdateAssetArgs, UpgradeArgs,
 };
 use alloy_primitives::{utils::format_units, U256};
 use codec::Encode;
@@ -20,15 +19,18 @@ use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
 
 use crate::bridge_hub_runtime::runtime_types::{
     snowbridge_core::{
+        operating_mode::BasicOperatingMode,
         outbound::v1::{Initializer, OperatingMode},
         pricing::{PricingParameters, Rewards},
     },
-    snowbridge_pallet_system,
+    snowbridge_pallet_ethereum_client, snowbridge_pallet_inbound_queue,
+    snowbridge_pallet_outbound_queue, snowbridge_pallet_system,
 };
 use crate::bridge_hub_runtime::RuntimeCall as BridgeHubRuntimeCall;
+use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 
-pub fn gateway_operating_mode(params: &GatewayOperatingModeArgs) -> BridgeHubRuntimeCall {
-    let mode = match params.gateway_operating_mode {
+pub fn gateway_operating_mode(operating_mode: &GatewayOperatingModeEnum) -> BridgeHubRuntimeCall {
+    let mode = match operating_mode {
         GatewayOperatingModeEnum::Normal => OperatingMode::Normal,
         GatewayOperatingModeEnum::RejectingOutboundMessages => {
             OperatingMode::RejectingOutboundMessages
@@ -36,6 +38,36 @@ pub fn gateway_operating_mode(params: &GatewayOperatingModeArgs) -> BridgeHubRun
     };
     BridgeHubRuntimeCall::EthereumSystem(
         snowbridge_pallet_system::pallet::Call::set_operating_mode { mode },
+    )
+}
+
+pub fn inbound_queue_operating_mode(param: &OperatingModeEnum) -> BridgeHubRuntimeCall {
+    let mode = match param {
+        OperatingModeEnum::Normal => BasicOperatingMode::Normal,
+        OperatingModeEnum::Halted => BasicOperatingMode::Halted,
+    };
+    BridgeHubRuntimeCall::EthereumInboundQueue(
+        snowbridge_pallet_inbound_queue::pallet::Call::set_operating_mode { mode },
+    )
+}
+
+pub fn ethereum_client_operating_mode(param: &OperatingModeEnum) -> BridgeHubRuntimeCall {
+    let mode = match param {
+        OperatingModeEnum::Normal => BasicOperatingMode::Normal,
+        OperatingModeEnum::Halted => BasicOperatingMode::Halted,
+    };
+    BridgeHubRuntimeCall::EthereumBeaconClient(
+        snowbridge_pallet_ethereum_client::pallet::Call::set_operating_mode { mode },
+    )
+}
+
+pub fn outbound_queue_operating_mode(param: &OperatingModeEnum) -> BridgeHubRuntimeCall {
+    let mode = match param {
+        OperatingModeEnum::Normal => BasicOperatingMode::Normal,
+        OperatingModeEnum::Halted => BasicOperatingMode::Halted,
+    };
+    BridgeHubRuntimeCall::EthereumOutboundQueue(
+        snowbridge_pallet_outbound_queue::pallet::Call::set_operating_mode { mode },
     )
 }
 
@@ -148,6 +180,21 @@ pub async fn pricing_parameters(
     ))
 }
 
+pub fn set_assethub_fee(fee: u128) -> AssetHubRuntimeCall {
+    let asset_hub_outbound_fee_storage_key: Vec<u8> =
+        twox_128(b":BridgeHubEthereumBaseFee:").to_vec();
+    let asset_hub_outbound_fee_encoded: Vec<u8> = fee.encode();
+
+    AssetHubRuntimeCall::System(
+        crate::asset_hub_runtime::runtime_types::frame_system::pallet::Call::set_storage {
+            items: vec![(
+                asset_hub_outbound_fee_storage_key,
+                asset_hub_outbound_fee_encoded,
+            )],
+        },
+    )
+}
+
 pub fn force_checkpoint(params: &ForceCheckpointArgs) -> BridgeHubRuntimeCall {
     let mut file = File::open(params.checkpoint.clone()).expect("File not found");
     let mut data = String::new();
@@ -226,4 +273,50 @@ pub fn force_set_metadata(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
         decimals: params.decimals,
         is_frozen: params.is_frozen,
     })
+}
+
+pub async fn treasury_spend(
+    ctx: &Context,
+    beneficiary: [u8; 32],
+    amount: u128,
+    delay: u32,
+) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
+    use crate::relay_runtime::runtime_types::{
+        staging_xcm::v3::multilocation::MultiLocation,
+        xcm::{
+            v3::{junction::Junction, junctions::Junctions},
+            VersionedLocation,
+        },
+    };
+    let current_block = ctx.relay_api.blocks().at_latest().await?.number();
+    let future_block = current_block + delay;
+    let call = RelayRuntimeCall::Treasury(treasury::Call::spend {
+        asset_kind: Box::new(
+            runtime_types::polkadot_runtime_common::impls::VersionedLocatableAsset::V3 {
+                location: MultiLocation {
+                    parents: 0,
+                    interior: Junctions::X1(Junction::Parachain(ASSET_HUB_ID)),
+                },
+                asset_id: runtime_types::xcm::v3::multiasset::AssetId::Concrete {
+                    0: MultiLocation {
+                        parents: 1,
+                        interior: Junctions::Here,
+                    },
+                },
+            },
+        ),
+        beneficiary: Box::new(VersionedLocation::V3 {
+            0: MultiLocation {
+                parents: 0,
+                interior: Junctions::X1(Junction::AccountId32 {
+                    network: None,
+                    id: account,
+                }),
+            },
+        }),
+        amount,
+        valid_from: Some(future_block),
+    });
+
+    Ok(call)
 }
