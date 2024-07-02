@@ -14,7 +14,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20240701142038-bfb99b8545bd
+	github.com/snowfork/go-substrate-rpc-client/v4 v4.1.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4

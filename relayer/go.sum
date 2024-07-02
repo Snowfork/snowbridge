@@ -279,6 +279,8 @@ github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20240701132815-2edcf88cc
 github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20240701132815-2edcf88cc12c/go.mod h1:MVk5+w9icYU7MViYFm7CKYhx1VMj6DpN2tWO6s4OK5g=
 github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20240701142038-bfb99b8545bd h1:nhpdWz/JTGgPCa4tNlVPZb49PR5NEmBWuQLWLgQkDIQ=
 github.com/snowfork/go-substrate-rpc-client/v4 v4.0.1-0.20240701142038-bfb99b8545bd/go.mod h1:g0ocyVfq0Auj9uXVrBcDHsKudQw6LbEtACpPCHmJXQg=
+github.com/snowfork/go-substrate-rpc-client/v4 v4.1.0 h1:n7bsglvPt/FjRIcE4840hFiH4yHI78uIZIYLCwagvRs=
+github.com/snowfork/go-substrate-rpc-client/v4 v4.1.0/go.mod h1:g0ocyVfq0Auj9uXVrBcDHsKudQw6LbEtACpPCHmJXQg=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/spf13/afero v1.11.0 h1:WJQKhtpdm3v2IzqG8VMqrr6Rf3UYpEF239Jy9wNepM8=
