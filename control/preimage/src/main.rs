@@ -44,8 +44,9 @@ pub enum Command {
     PricingParameters(PricingParametersArgs),
     /// Set the checkpoint for the beacon light client
     ForceCheckpoint(ForceCheckpointArgs),
+    /// Set the checkpoint for the beacon light client
+    HaltBridge(HaltBridgeArgs),
 }
-
 #[derive(Debug, Args)]
 pub struct InitializeArgs {
     #[command(flatten)]
@@ -119,6 +120,12 @@ pub enum GatewayOperatingModeEnum {
     RejectingOutboundMessages,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, ValueEnum)]
+pub enum OperatingModeEnum {
+    Normal,
+    Halted,
+}
+
 #[derive(Debug, Args)]
 pub struct GatewayAddressArgs {
     /// Address of the contract on Ethereum
@@ -164,6 +171,30 @@ pub struct PricingParametersArgs {
     /// Relayer reward for delivering messages to Ethereum
     #[arg(long, value_name = "ETHER", value_parser = parse_units_eth)]
     pub remote_reward: U256,
+}
+
+#[derive(Debug, Args)]
+pub struct HaltBridgeArgs {
+    /// Halt the Ethereum gateway, blocking message from Ethereum to Polkadot in the Ethereum
+    /// contract.
+    #[arg(long, value_name = "HALT_GATEWAY")]
+    gateway: bool,
+    /// Halt the Ethereum Inbound Queue, blocking messages from BH to AH.
+    #[arg(long, value_name = "HALT_INBOUND_QUEUE")]
+    inbound_queue: bool,
+    /// Halt the Ethereum Outbound Queue, blocking message from AH to BH.
+    #[arg(long, value_name = "HALT_OUTBOUND_QUEUE")]
+    outbound_queue: bool,
+    /// Halt the Ethereum client, blocking consensus updates to the ligth client.
+    #[arg(long, value_name = "HALT_ETHEREUM_CLIENT")]
+    ethereum_client: bool,
+    /// Set the AH to Ethereum fee to a high amount, effectively blocking messages from AH ->
+    /// Ethereum.
+    #[arg(long, value_name = "ASSETHUB_MAX_FEE")]
+    assethub_max_fee: bool,
+    /// Halt all parts of the bridge
+    #[arg(long, value_name = "HALT_SNOWBRIDGE")]
+    all: bool,
 }
 
 #[derive(Debug, Args)]
@@ -264,7 +295,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 vec![
                     commands::set_gateway_address(&params.gateway_address),
                     set_pricing_parameters,
-                    commands::gateway_operating_mode(&params.gateway_operating_mode),
+                    commands::gateway_operating_mode(
+                        &params.gateway_operating_mode.gateway_operating_mode,
+                    ),
                     commands::force_checkpoint(&params.force_checkpoint),
                 ],
             )
@@ -284,7 +317,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             .await?
         }
         Command::GatewayOperatingMode(params) => {
-            let call = commands::gateway_operating_mode(params);
+            let call = commands::gateway_operating_mode(&params.gateway_operating_mode);
             send_xcm_bridge_hub(&context, vec![call]).await?
         }
         Command::Upgrade(params) => {
@@ -297,6 +330,52 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let call1 = send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
             let call2 = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
             utility_force_batch(vec![call1, call2])
+        }
+        Command::HaltBridge(params) => {
+            let mut bh_calls = vec![];
+            let mut ah_calls = vec![];
+            let mut halt_all = params.all;
+            // if no individual option specified, assume halt the whole bridge.
+            if !params.gateway
+                && !params.inbound_queue
+                && !params.outbound_queue
+                && !params.ethereum_client
+                && !params.assethub_max_fee
+            {
+                halt_all = true;
+            }
+            if params.gateway || halt_all {
+                bh_calls.push(commands::gateway_operating_mode(
+                    &GatewayOperatingModeEnum::RejectingOutboundMessages,
+                ));
+            }
+            if params.inbound_queue || halt_all {
+                bh_calls.push(commands::inbound_queue_operating_mode(
+                    &OperatingModeEnum::Halted,
+                ));
+            }
+            if params.outbound_queue || halt_all {
+                bh_calls.push(commands::outbound_queue_operating_mode(
+                    &OperatingModeEnum::Halted,
+                ));
+            }
+            if params.ethereum_client || halt_all {
+                bh_calls.push(commands::ethereum_client_operating_mode(
+                    &OperatingModeEnum::Halted,
+                ));
+            }
+            if params.assethub_max_fee || halt_all {
+                ah_calls.push(commands::set_assethub_fee(u128::MAX));
+            }
+            if bh_calls.len() > 0 && ah_calls.len() == 0 {
+                send_xcm_bridge_hub(&context, bh_calls).await?
+            } else if ah_calls.len() > 0 && bh_calls.len() == 0 {
+                send_xcm_asset_hub(&context, ah_calls).await?
+            } else {
+                let call1 = send_xcm_bridge_hub(&context, bh_calls).await?;
+                let call2 = send_xcm_asset_hub(&context, ah_calls).await?;
+                utility_force_batch(vec![call1, call2])
+            }
         }
     };
 
