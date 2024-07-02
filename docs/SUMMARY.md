@@ -39,5 +39,6 @@
 
 * [Infrastructure](operations/infrastructure.md)
 * [Contributing to Snowbridge](operations/updating-snowbridge-pallets-bridgehub-and-assethub-runtimes.md)
-* [Governance Updates](operations/governance-updates.md)
+* [Governance and Operational Processes](operations/governance-and-operational-processes.md)
+* [General Governance Updates](operations/governance-updates.md)
 * [Test Runtime Upgrades](operations/test-runtime-upgrades.md)

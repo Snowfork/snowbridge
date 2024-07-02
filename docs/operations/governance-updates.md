@@ -1,4 +1,4 @@
-# Governance Updates
+# General Governance Updates
 
 Snowbridge has several governance APIs that can only be executed using a democratic process via Polkadot OpenGov.
 
@@ -34,7 +34,7 @@ chopsticks xcm -r polkadot.yml -p polkadot-asset-hub.yml -p polkadot-bridge-hub.
 
 2. Once the chopsticks environment has been initialized, connect to BridgeHub in Polkadot-JS, and execute the contents of `chopsticks-execute-upgrade.js` in the Polkadot-JS Javascript console.
 
-A more [complicated](https://hackmd.io/@vgeddes/B1dsexNx0) testing scenario would involve having to upgrade BridgeHub with new code, and then calling a governance API.
+A more [complicated](test-runtime-upgrades.md) testing scenario would involve having to upgrade BridgeHub with new code, and then calling a governance API.
 
 ### OpenGov
 
