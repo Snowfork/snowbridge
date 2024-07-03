@@ -57,77 +57,77 @@ struct Spend {
 const SPENDS: [Spend; 23] = [
     Spend {
         name: "Operational & Development costs",
-        asset: TreasuryAsset::DOT(179611),
+        asset: TreasuryAsset::DOT(187849),
         delay: None,
     },
     Spend {
         name: "Launch reward",
-        asset: TreasuryAsset::DOT(151699),
+        asset: TreasuryAsset::DOT(158656),
         delay: Some(90 * DAYS),
     },
     Spend {
         name: "Milestone completion reward #1",
-        asset: TreasuryAsset::DOT(12641),
+        asset: TreasuryAsset::DOT(13221),
         delay: None,
     },
     Spend {
         name: "Milestone completion reward #2",
-        asset: TreasuryAsset::DOT(12641),
+        asset: TreasuryAsset::DOT(13221),
         delay: Some(30 * DAYS),
     },
     Spend {
         name: "Milestone completion reward #3",
-        asset: TreasuryAsset::DOT(12641),
+        asset: TreasuryAsset::DOT(13221),
         delay: Some(60 * DAYS),
     },
     Spend {
         name: "Milestone completion reward #4",
-        asset: TreasuryAsset::DOT(12641),
+        asset: TreasuryAsset::DOT(13221),
         delay: Some(90 * DAYS),
     },
     Spend {
         name: "Milestone completion reward #5",
-        asset: TreasuryAsset::DOT(12641),
+        asset: TreasuryAsset::DOT(13221),
         delay: Some(120 * DAYS),
     },
     Spend {
         name: "Milestone completion reward #6",
-        asset: TreasuryAsset::DOT(12641),
+        asset: TreasuryAsset::DOT(13221),
         delay: Some(150 * DAYS),
     },
     Spend {
         name: "Milestone completion reward #7",
-        asset: TreasuryAsset::DOT(12641),
+        asset: TreasuryAsset::DOT(13221),
         delay: Some(180 * DAYS),
     },
     Spend {
         name: "Milestone completion reward #8",
-        asset: TreasuryAsset::DOT(12641),
+        asset: TreasuryAsset::DOT(13221),
         delay: Some(210 * DAYS),
     },
     Spend {
         name: "Milestone completion reward #9",
-        asset: TreasuryAsset::DOT(12641),
+        asset: TreasuryAsset::DOT(13221),
         delay: Some(240 * DAYS),
     },
     Spend {
         name: "Milestone completion reward #10",
-        asset: TreasuryAsset::DOT(12641),
+        asset: TreasuryAsset::DOT(13221),
         delay: Some(270 * DAYS),
     },
     Spend {
         name: "Milestone completion reward #11",
-        asset: TreasuryAsset::DOT(12641),
+        asset: TreasuryAsset::DOT(13221),
         delay: Some(300 * DAYS),
     },
     Spend {
         name: "Milestone completion reward #12",
-        asset: TreasuryAsset::DOT(12641),
+        asset: TreasuryAsset::DOT(13221),
         delay: Some(330 * DAYS),
     },
     Spend {
         name: "General Incentive reward #1",
-        asset: TreasuryAsset::USDC(312500),
+        asset: TreasuryAsset::USDC(13221),
         delay: Some(90 * DAYS),
     },
     Spend {
