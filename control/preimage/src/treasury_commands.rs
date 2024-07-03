@@ -127,7 +127,7 @@ const SPENDS: [Spend; 23] = [
     },
     Spend {
         name: "General Incentive reward #1",
-        asset: TreasuryAsset::USDC(13221),
+        asset: TreasuryAsset::USDC(312500),
         delay: Some(90 * DAYS),
     },
     Spend {
