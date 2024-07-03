@@ -20,8 +20,6 @@ The following calls are essential controls to maintain and operate the bridge ef
 
 * [upgrade](https://github.com/Snowfork/snowbridge/blob/c2142e41b5a2cbd3749a5fd8f22a95abf2b923d9/parachain/pallets/system/src/lib.rs#L304) - Upgrade the gateway contract
 * [set\_operating\_mode](https://github.com/Snowfork/snowbridge/blob/c2142e41b5a2cbd3749a5fd8f22a95abf2b923d9/parachain/pallets/system/src/lib.rs#L332) - Set the operating mode of the gateway contract
-* [force\_update\_channel](https://github.com/Snowfork/snowbridge/blob/c2142e41b5a2cbd3749a5fd8f22a95abf2b923d9/parachain/pallets/system/src/lib.rs#L479) - Force-update a channel's configuration
-* [force\_transfer\_native\_from\_agent](https://github.com/Snowfork/snowbridge/blob/c2142e41b5a2cbd3749a5fd8f22a95abf2b923d9/parachain/pallets/system/src/lib.rs#L536) - Force-transfer ether from an agent
 * [set\_pricing\_parameters](https://github.com/Snowfork/snowbridge/blob/c2142e41b5a2cbd3749a5fd8f22a95abf2b923d9/parachain/pallets/system/src/lib.rs#L349) - Set fee/reward parameters
 
 ## Non-emergency Upgrades
@@ -34,7 +32,7 @@ For emergency situations, there are two possible scenarios:
 
 ### 1. Emergency Pause
 
-When the emergency issue can be mitigated by pausing the bridge via an emergency [set\_operating\_mode](https://github.com/Snowfork/snowbridge/blob/c2142e41b5a2cbd3749a5fd8f22a95abf2b923d9/parachain/pallets/system/src/lib.rs#L332) call. This call needs to be executed as soon as possible, but deploying the fix and resuming the bridge can happen afterwards with less time pressure and sensitivity, similar to a normal upgrade.
+In case of an emergency, a call to halt the bridge needs to be executed as soon as possible. Deploying the fix and resuming the bridge can happen afterwards with less time pressure and sensitivity, similar to a normal upgrade.
 
 The processes to do so is:
 
@@ -50,6 +48,14 @@ cargo run --bin snowbridge-preimage -- \
     --all
 ```
 {% endcode %}
+
+The command will product a preimage hash, to be submitted to the **Whitelisted Caller Track**:
+
+```
+Preimage Hash: 0xc2569b432fba3b01df7da3c90bb546158480067064d4d5bc88c351fcba4355dd
+Preimage Size: 129
+0x1a0408630003000100a90f03242f00000602b28d0b9859460c530101200006028217b42..
+```
 
 The halt-bridge command has the following flags:
 
