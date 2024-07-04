@@ -88,30 +88,30 @@ jobs:
           echo "tag=$tag_name" >> $GITHUB_OUTPUT
           git tag $tag_name
 
-      #- name: Push new tag
-      #  run: |
-      #    git push origin --tags
-#
-      #- name: Create a GitHub Release
-      #  id: create_release
-      #  uses: actions/create-release@v1
-      #  env:
-      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #  with:
-      #    tag_name: ${{ steps.create_tag.outputs.tag }}
-      #    release_name: ${{ steps.create_tag.outputs.tag }}
-      #    body: |
-      #      Changes in this release:
-      #      - ...
-      #    draft: false
-      #    prerelease: false
-#
-      #- name: Upload Release Asset
-      #  uses: actions/upload-release-asset@v1
-      #  env:
-      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #  with:
-      #    upload_url: ${{ steps.create_release.outputs.upload_url }}
-      #    asset_path: ./relayer/build/snowbridge-relay
-      #    asset_name: snowbridge-relay
-      #    asset_content_type: application/octet-stream
+      - name: Push new tag
+        run: |
+          git push origin --tags
+
+      - name: Create a GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.create_tag.outputs.tag }}
+          release_name: ${{ steps.create_tag.outputs.tag }}
+          body: |
+            Changes in this release:
+            - ...
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./relayer/build/snowbridge-relay
+          asset_name: snowbridge-relay
+          asset_content_type: application/octet-stream
