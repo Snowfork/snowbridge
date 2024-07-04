@@ -33,6 +33,7 @@ const (
 var (
 	ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("sync committee in different sync period")
 	ErrBeaconStateUnavailable                     = errors.New("beacon state object not available yet")
+	ErrSyncCommitteeNotSuperMajority              = errors.New("update received was not signed by supermajority")
 )
 
 type Syncer struct {
@@ -410,6 +411,19 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 	signatureSlot, err := strconv.ParseUint(finalizedUpdate.Data.SignatureSlot, 10, 64)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("parse signature slot as int: %w", err)
+	}
+
+	signatureBlock, err := s.Client.GetBeaconBlockBySlot(signatureSlot)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("get signature block: %w", err)
+	}
+
+	superMajority, err := s.protocol.SyncCommitteeSuperMajority(signatureBlock.Data.Message.Body.SyncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("compute sync committee supermajority: %d err: %w", signatureSlot, err)
+	}
+	if !superMajority {
+		return scale.Update{}, ErrSyncCommitteeNotSuperMajority
 	}
 
 	updatePayload := scale.UpdatePayload{
