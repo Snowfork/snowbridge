@@ -1,11 +1,11 @@
-name: relayer
+name: release-relayer
 
 on:
   push:
     branches:
       - main
       - release-v1.0.0
-      - clara/release-relayer
+      - release-relayer
   workflow_dispatch:
 
 jobs:
