@@ -61,7 +61,7 @@ jobs:
         run: |
           branch_name=${GITHUB_REF#refs/heads/}
           echo "Branch name: $branch_name"
-          echo "branch=$(branch_name)" >> $GITHUB_OUTPUT
+          echo "branch=$branch_name" >> $GITHUB_OUTPUT
 
       - name: Determine new version
         id: new_version
@@ -78,14 +78,14 @@ jobs:
           fi
             
           echo "New version: $new_version"
-          echo "version=$(new_version)" >> $GITHUB_OUTPUT
+          echo "version=$new_version" >> $GITHUB_OUTPUT
 
       - name: Create new tag
         id: create_tag
         run: |
           tag_name="relayer-${{ steps.branch_name.outputs.branch }}-${{ steps.new_version.outputs.version }}"
           echo "Tag name: $tag_name"
-          echo "tag=$(tag_name)" >> $GITHUB_OUTPUT
+          echo "tag=$tag_name" >> $GITHUB_OUTPUT
           git tag $tag_name
 
       #- name: Push new tag
