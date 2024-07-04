@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  release-relayer:
     runs-on: snowbridge-runner
     timeout-minutes: 15
     steps:
@@ -56,27 +56,27 @@ jobs:
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
 
-      - name: Create a new release version
+      - name: Determine new version
         id: new_version
         run: |
-          current_version=$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "")
+          # Get the most recent tag in the format relayer-<branchname>-<version>
+          current_version=$(git tag --list "relayer-${{ steps.branch_name.outputs.branch }}-*" --sort=-v:refname | head -n 1 | sed -E 's/relayer-${{ steps.branch_name.outputs.branch }}-//')
           echo "Current version: $current_version"
           
-          # If there is no current version, set it to v1.0.0
+          # If there is no current version, set it to 1.0.0
           if [ -z "$current_version" ]; then
-            new_version="v1.0.0"
+          new_version="1.0.0"
           else
-            new_version=$(npx semver $current_version -i patch)
+          new_version=$(npx semver $current_version -i patch)
           fi
-          
+            
           echo "New version: $new_version"
           echo ::set-output name=version::$new_version
-          git tag $new_version
 
       - name: Create new tag
         id: create_tag
         run: |
-          tag_name="${{ steps.branch_name.outputs.branch }}-${{ steps.new_version.outputs.version }}"
+          tag_name="relayer-${{ steps.branch_name.outputs.branch }}-${{ steps.new_version.outputs.version }}"
           echo "Tag name: $tag_name"
           echo ::set-output name=tag::$tag_name
           git tag $tag_name
