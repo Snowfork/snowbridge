@@ -92,6 +92,10 @@ jobs:
         run: |
           git push origin --tags
 
+      - name: "Build Changelog"
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@{latest-release}
+
       - name: Create a GitHub Release
         id: create_release
         uses: actions/create-release@v1
@@ -101,8 +105,7 @@ jobs:
           tag_name: ${{ steps.create_tag.outputs.tag }}
           release_name: ${{ steps.create_tag.outputs.tag }}
           body: |
-            Changes in this release:
-            - ...
+            ${{steps.build_changelog.outputs.changelog}}
           draft: false
           prerelease: false
 
