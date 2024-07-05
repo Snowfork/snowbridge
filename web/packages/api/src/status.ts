@@ -1,5 +1,5 @@
 import { Context } from "./index"
-import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
+import { fetchBeaconSlot, fetchFinalityUpdate, fetchEstimatedDeliveryTime } from "./utils"
 import { Relayer, SourceType } from "./environment"
 
 export type OperatingMode = "Normal" | "Halted"
@@ -42,6 +42,7 @@ export type ChannelStatusInfo = {
         inbound: number
         previousOutbound: number
         previousInbound: number
+        estimatedDeliveryTime?: number
     }
     toPolkadot: {
         operatingMode: {
@@ -51,6 +52,7 @@ export type ChannelStatusInfo = {
         inbound: number
         previousOutbound: number
         previousInbound: number
+        estimatedDeliveryTime?: number
     }
 }
 
@@ -226,12 +228,25 @@ export const channelStatusInfo = async (
         await bridgeHubApiAt.query.ethereumOutboundQueue.nonce(channelId)
     ).toPrimitive() as number
 
+    let estimatedDeliveryTime: any
+    if (context.config.indexApiUrl) {
+        try {
+            estimatedDeliveryTime = await fetchEstimatedDeliveryTime(
+                context.config.indexApiUrl,
+                channelId
+            )
+        } catch (e) {
+            console.error(e)
+        }
+    }
+
     return {
         toEthereum: {
             outbound: outbound_nonce_sub,
             inbound: Number(inbound_nonce_eth),
             previousOutbound: previous_outbound_nonce_sub,
             previousInbound: Number(previous_inbound_nonce_eth),
+            estimatedDeliveryTime: Number(estimatedDeliveryTime?.toEthereumElapse?.elapse),
         },
         toPolkadot: {
             operatingMode: {
@@ -241,6 +256,7 @@ export const channelStatusInfo = async (
             inbound: inbound_nonce_sub,
             previousOutbound: Number(previous_outbound_nonce_eth),
             previousInbound: previous_inbound_nonce_sub,
+            estimatedDeliveryTime: Number(estimatedDeliveryTime?.toPolkadotElapse?.elapse),
         },
     }
 }

@@ -35,6 +35,7 @@
     "@snowbridge/contract-types": "workspace:*",
     "@typechain/ethers-v6": "^0.5.1",
     "ethers": "^6.12.1",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "axios": "^1.7.2"
   }
 }
