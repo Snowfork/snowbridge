@@ -229,10 +229,10 @@ export const channelStatusInfo = async (
     ).toPrimitive() as number
 
     let estimatedDeliveryTime: any
-    if (context.config.indexApiUrl) {
+    if (context.config.graphqlApiUrl) {
         try {
             estimatedDeliveryTime = await fetchEstimatedDeliveryTime(
-                context.config.indexApiUrl,
+                context.config.graphqlApiUrl,
                 channelId
             )
         } catch (e) {

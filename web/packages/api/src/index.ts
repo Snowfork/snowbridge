@@ -25,7 +25,7 @@ interface Config {
         gateway: string
         beefy: string
     }
-    indexApiUrl?: string
+    graphqlApiUrl?: string
 }
 
 interface AppContracts {

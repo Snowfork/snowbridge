@@ -123,5 +123,5 @@ export const fetchEstimatedDeliveryTime = async (graphqlUrl: string, channelId: 
     let response = await axios.post(graphqlUrl, {
         query: `query { toEthereumElapse(channelId:"${channelId}") { elapse } toPolkadotElapse(channelId:"${channelId}") { elapse } }`,
     })
-    return response.data?.data
+    return response?.data?.data
 }

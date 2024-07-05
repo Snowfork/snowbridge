@@ -17,7 +17,7 @@ export type Config = {
         ASSET_HUB_URL: string
         BRIDGE_HUB_URL: string
     }
-    GRAPHQL_API?: string
+    GRAPHQL_API_URL?: string
 }
 
 export type SourceType = "substrate" | "ethereum"
@@ -478,7 +478,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 BRIDGE_HUB_URL: "https://bridgehub-polkadot.api.subscan.io",
             },
             // todo: For mainnet customize dns service with A record ip point to https://data.snowbridge.network
-            GRAPHQL_API: "https://rococo-rpc.snowbridge.network/graphql",
+            GRAPHQL_API_URL: "https://rococo-rpc.snowbridge.network/graphql",
         },
     },
 }
