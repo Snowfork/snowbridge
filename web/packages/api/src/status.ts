@@ -235,8 +235,8 @@ export const channelStatusInfo = async (
                 context.config.graphqlApiUrl,
                 channelId
             )
-        } catch (e) {
-            console.error(e)
+        } catch (e: any) {
+            console.error(e.message)
         }
     }
 
