@@ -246,7 +246,9 @@ export const channelStatusInfo = async (
             inbound: Number(inbound_nonce_eth),
             previousOutbound: previous_outbound_nonce_sub,
             previousInbound: Number(previous_inbound_nonce_eth),
-            estimatedDeliveryTime: Number(estimatedDeliveryTime?.toEthereumElapse?.elapse),
+            estimatedDeliveryTime: Math.ceil(
+                Number(estimatedDeliveryTime?.toEthereumElapse?.elapse)
+            ),
         },
         toPolkadot: {
             operatingMode: {
@@ -256,7 +258,9 @@ export const channelStatusInfo = async (
             inbound: inbound_nonce_sub,
             previousOutbound: Number(previous_outbound_nonce_eth),
             previousInbound: previous_inbound_nonce_sub,
-            estimatedDeliveryTime: Number(estimatedDeliveryTime?.toPolkadotElapse?.elapse),
+            estimatedDeliveryTime: Math.ceil(
+                Number(estimatedDeliveryTime?.toPolkadotElapse?.elapse)
+            ),
         },
     }
 }
