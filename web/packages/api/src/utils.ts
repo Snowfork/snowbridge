@@ -73,7 +73,7 @@ export const beneficiaryMultiAddress = (beneficiary: string) => {
 
 export const fetchBeaconSlot = async (
     beaconUrl: string,
-    blockId: `0x${string}` | number
+    blockId: `0x${string}` | number | "head" | "finalized"
 ): Promise<{
     data: {
         message: {
