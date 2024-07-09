@@ -3,11 +3,17 @@ import {
     CloudWatchClient,
     PutMetricDataCommand,
     PutMetricAlarmCommand,
+    StandardUnit,
 } from "@aws-sdk/client-cloudwatch"
 
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
 const BRIDGE_STALE_SNS_TOPIC = process.env["BRIDGE_STALE_SNS_TOPIC"] || ""
 const ACCOUNT_BALANCE_SNS_TOPIC = process.env["ACCOUNT_BALANCE_SNS_TOPIC"] || ""
+
+const LatencyDashboard =
+    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Latency"
+const BalanceDashboard =
+    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Balance"
 
 export const sendMetrics = async (metrics: status.AllMetrics) => {
     const { AlarmReason, InsufficientBalanceThreshold } = status
@@ -69,6 +75,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toEthereum.outbound,
+            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: "ToEthereumPreviousOutboundNonce",
@@ -79,6 +86,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toEthereum.previousOutbound,
+            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: "ToEthereumInboundNonce",
@@ -89,6 +97,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toEthereum.inbound,
+            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: "ToEthereumPreviousInboundNonce",
@@ -99,6 +108,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toEthereum.previousInbound,
+            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: AlarmReason.ToEthereumChannelStale.toString(),
@@ -118,6 +128,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toPolkadot.outbound,
+            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: "ToPolkadotPreviousOutboundNonce",
@@ -128,6 +139,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toPolkadot.previousOutbound,
+            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: "ToPolkadotInboundNonce",
@@ -138,6 +150,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toPolkadot.inbound,
+            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: "ToPolkadotPreviousInboundNonce",
@@ -148,6 +161,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toPolkadot.previousInbound,
+            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: AlarmReason.ToPolkadotChannelStale.toString(),
@@ -229,7 +243,7 @@ export const initializeAlarms = async () => {
         new PutMetricAlarmCommand({
             AlarmName: AlarmReason.BeefyStale.toString(),
             MetricName: AlarmReason.BeefyStale.toString(),
-            AlarmDescription: AlarmReason.BeefyStale.toString(),
+            AlarmDescription: AlarmReason.BeefyStale.toString() + "\n" + LatencyDashboard,
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
@@ -242,7 +256,7 @@ export const initializeAlarms = async () => {
         new PutMetricAlarmCommand({
             AlarmName: AlarmReason.BeaconStale.toString(),
             MetricName: AlarmReason.BeaconStale.toString(),
-            AlarmDescription: AlarmReason.BeaconStale.toString(),
+            AlarmDescription: AlarmReason.BeaconStale.toString() + "\n" + LatencyDashboard,
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
@@ -255,7 +269,8 @@ export const initializeAlarms = async () => {
         new PutMetricAlarmCommand({
             AlarmName: AlarmReason.ToEthereumChannelStale.toString(),
             MetricName: AlarmReason.ToEthereumChannelStale.toString(),
-            AlarmDescription: AlarmReason.ToEthereumChannelStale.toString(),
+            AlarmDescription:
+                AlarmReason.ToEthereumChannelStale.toString() + "\n" + LatencyDashboard,
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
@@ -268,7 +283,8 @@ export const initializeAlarms = async () => {
         new PutMetricAlarmCommand({
             AlarmName: AlarmReason.ToPolkadotChannelStale.toString(),
             MetricName: AlarmReason.ToPolkadotChannelStale.toString(),
-            AlarmDescription: AlarmReason.ToPolkadotChannelStale.toString(),
+            AlarmDescription:
+                AlarmReason.ToPolkadotChannelStale.toString() + "\n" + LatencyDashboard,
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
@@ -285,7 +301,8 @@ export const initializeAlarms = async () => {
     let accountBalanceAlarm = new PutMetricAlarmCommand({
         AlarmName: AlarmReason.AccountBalanceInsufficient.toString(),
         MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
-        AlarmDescription: AlarmReason.AccountBalanceInsufficient.toString(),
+        AlarmDescription:
+            AlarmReason.AccountBalanceInsufficient.toString() + "\n" + BalanceDashboard,
         Statistic: "Average",
         ComparisonOperator: "GreaterThanThreshold",
         AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
