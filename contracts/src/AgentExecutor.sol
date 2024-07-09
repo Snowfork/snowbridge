@@ -18,9 +18,15 @@ contract AgentExecutor {
     /// the `data` parameter is constructed by the BridgeHub parachain.
     ///
     function execute(bytes memory data) external {
-        (AgentExecuteCommand command, bytes memory params) = abi.decode(data, (AgentExecuteCommand, bytes));
+        (AgentExecuteCommand command, bytes memory params) = abi.decode(
+            data,
+            (AgentExecuteCommand, bytes)
+        );
         if (command == AgentExecuteCommand.TransferToken) {
-            (address token, address recipient, uint128 amount) = abi.decode(params, (address, address, uint128));
+            (address token, address recipient, uint128 amount) = abi.decode(
+                params,
+                (address, address, uint128)
+            );
             _transferToken(token, recipient, amount);
         }
     }
@@ -28,12 +34,19 @@ contract AgentExecutor {
     /// @dev Transfer ether to `recipient`. Unlike `_transferToken` This logic is not nested within `execute`,
     /// as the gateway needs to control an agent's ether balance directly.
     ///
-    function transferNative(address payable recipient, uint256 amount) external {
+    function transferNative(
+        address payable recipient,
+        uint256 amount
+    ) external {
         recipient.safeNativeTransfer(amount);
     }
 
     /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
-    function _transferToken(address token, address recipient, uint128 amount) internal {
+    function _transferToken(
+        address token,
+        address recipient,
+        uint128 amount
+    ) internal {
         IERC20(token).safeTransfer(recipient, amount);
     }
 }

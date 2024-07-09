@@ -36,6 +36,11 @@ function ChannelIDNe(ChannelID a, ChannelID b) pure returns (bool) {
     return !ChannelIDEq(a, b);
 }
 
+enum Network {
+    Polkadot,
+    Kusama
+}
+
 /// @dev A messaging channel for a Polkadot parachain
 struct Channel {
     /// @dev The operating mode for this channel. Can be used to
@@ -56,7 +61,7 @@ struct InboundMessage {
     /// @dev The channel nonce
     uint64 nonce;
     /// @dev The command to execute
-    Command command;
+    CommandV1 command;
     /// @dev The Parameters for the command
     bytes params;
     /// @dev The maximum gas allowed for message dispatch
@@ -69,13 +74,42 @@ struct InboundMessage {
     bytes32 id;
 }
 
+struct Origin {
+    // Origin network
+    Network network;
+    // Origin chain
+    ParaID paraID;
+    // Stable hash of full origin XCM location;
+    bytes32 locationHash;
+}
+
+/// @dev Inbound message from a Polkadot parachain (via BridgeHub)
+struct InboundMessageV2 {
+    /// Stable ID of origin consensus system
+    Origin origin;
+    /// @dev Non-consensus ID for this message
+    bytes32 id;
+    /// @dev The message nonce
+    uint64 nonce;
+    /// @dev The command to execute
+    CommandV2 command;
+    /// @dev The Parameters for the command
+    bytes params;
+    /// @dev The maximum gas allowed for message dispatch
+    uint64 maxDispatchGas;
+    /// @dev The maximum fee per gas
+    uint256 maxFeePerGas;
+    /// @dev The reward for message submission
+    uint256 reward;
+}
+
 enum OperatingMode {
     Normal,
     RejectingOutboundMessages
 }
 
 /// @dev Messages from Polkadot take the form of these commands.
-enum Command {
+enum CommandV1 {
     AgentExecute,
     Upgrade,
     CreateAgent,

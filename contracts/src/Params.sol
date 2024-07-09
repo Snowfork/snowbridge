@@ -82,3 +82,10 @@ struct SetPricingParametersParams {
     /// @dev Fee multiplier
     UD60x18 multiplier;
 }
+
+// Payload for TokenTransfer
+struct TokenTransfer {
+    address token;
+    address recipient;
+    uint128 amount;
+}
