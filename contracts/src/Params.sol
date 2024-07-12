@@ -54,6 +54,18 @@ struct SetOperatingModeParams {
 }
 
 // Payload for TransferNativeFromAgent
+struct TransferFromAgentParams {
+    /// @dev The ID of the agent to transfer funds from
+    bytes32 agentID;
+    /// @dev token
+    address token;
+    /// @dev The recipient of the funds
+    address recipient;
+    /// @dev The amount to transfer
+    uint128 amount;
+}
+
+// Payload for TransferNativeFromAgent
 struct TransferNativeFromAgentParams {
     /// @dev The ID of the agent to transfer funds from
     bytes32 agentID;
@@ -81,11 +93,4 @@ struct SetPricingParametersParams {
     uint128 deliveryCost;
     /// @dev Fee multiplier
     UD60x18 multiplier;
-}
-
-// Payload for TokenTransfer
-struct TokenTransfer {
-    address token;
-    address recipient;
-    uint128 amount;
 }

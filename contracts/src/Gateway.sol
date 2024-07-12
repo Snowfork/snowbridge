@@ -130,7 +130,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     /// @param leafProof A message proof used to verify that the message is in the merkle tree committed by the OutboundQueue pallet
     /// @param headerProof A proof that the commitment is included in parachain header that was finalized by BEEFY.
     function submitV1(
-        InboundMessage calldata message,
+        InboundMessageV1 calldata message,
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
     ) external {
@@ -162,6 +162,65 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         processReward(channel.agent, msg.sender, startGas, message.maxFeePerGas, message.reward);
 
         emit IGateway.InboundMessageDispatched(message.channelID, message.nonce, message.id, success);
+    }
+
+    function dispatchV1(CommandV1 command, bytes calldata params, uint256 maxDispatchGas) internal returns (bool) {
+        // Make sure relayers provide enough gas so that inner message dispatch
+        // does not run out of gas.
+        uint256 maxDispatchGas = maxDispatchGas;
+        if (gasleft() < maxDispatchGas + DISPATCH_OVERHEAD_GAS) {
+            revert NotEnoughGas();
+        }
+
+        // Dispatch message to a handler
+        if (message.command == Command.AgentExecute) {
+            try Gateway(this).agentExecute{gas: maxDispatchGas}(params) {}
+            catch {
+                return false;
+            }
+        } else if (message.command == Command.CreateAgent) {
+            try Gateway(this).createAgent{gas: maxDispatchGas}(params) {}
+            catch {
+                return false;
+            }
+        } else if (message.command == Command.CreateChannel) {
+            try Gateway(this).createChannel{gas: maxDispatchGas}(params) {}
+            catch {
+                return false;
+            }
+        } else if (message.command == Command.UpdateChannel) {
+            try Gateway(this).updateChannel{gas: maxDispatchGas}(params) {}
+            catch {
+                return false;
+            }
+        } else if (message.command == Command.SetOperatingMode) {
+            try Gateway(this).setOperatingMode{gas: maxDispatchGas}(params) {}
+            catch {
+                return false;
+            }
+        } else if (message.command == Command.TransferNativeFromAgent) {
+            try Gateway(this).transferNativeFromAgent{gas: maxDispatchGas}(params) {}
+            catch {
+                return false;
+            }
+        } else if (message.command == Command.Upgrade) {
+            try Gateway(this).upgrade{gas: maxDispatchGas}(message.params) {}
+            catch {
+                return false;
+            }
+        } else if (message.command == Command.SetTokenTransferFees) {
+            try Gateway(this).setTokenTransferFees{gas: maxDispatchGas}(params) {}
+            catch {
+                return false;
+            }
+        } else if (message.command == Command.SetPricingParameters) {
+            try Gateway(this).setPricingParameters{gas: maxDispatchGas}(params) {}
+            catch {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// @dev Submit a message from Polkadot for verification and dispatch
@@ -200,60 +259,48 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         emit IGateway.InboundMessageDispatched(messageID, success);
     }
 
-    function dispatch(Command calldata command, bytes calldata params, uint256 maxDispatchGas)
-        internal
-        returns (bool)
-    {
+    function dispatchV2(bytes calldata command, uint256 maxDispatchGas) internal returns (bool) {
         // Make sure relayers provide enough gas so that inner message dispatch
         // does not run out of gas.
-        uint256 maxDispatchGas = message.maxDispatchGas;
+        uint256 maxDispatchGas = maxDispatchGas;
         if (gasleft() < maxDispatchGas + DISPATCH_OVERHEAD_GAS) {
             revert NotEnoughGas();
         }
 
-        // Dispatch message to a handler
-        if (message.command == Command.AgentExecute) {
-            try Gateway(this).agentExecute{gas: maxDispatchGas}(message.params) {}
-            catch {
-                return false;
-            }
-        } else if (message.command == Command.CreateAgent) {
-            try Gateway(this).createAgent{gas: maxDispatchGas}(message.params) {}
-            catch {
-                return false;
-            }
-        } else if (message.command == Command.CreateChannel) {
-            try Gateway(this).createChannel{gas: maxDispatchGas}(message.params) {}
-            catch {
-                return false;
-            }
-        } else if (message.command == Command.UpdateChannel) {
-            try Gateway(this).updateChannel{gas: maxDispatchGas}(message.params) {}
-            catch {
-                return false;
-            }
-        } else if (message.command == Command.SetOperatingMode) {
-            try Gateway(this).setOperatingMode{gas: maxDispatchGas}(message.params) {}
-            catch {
-                return false;
-            }
-        } else if (message.command == Command.TransferNativeFromAgent) {
-            try Gateway(this).transferNativeFromAgent{gas: maxDispatchGas}(message.params) {}
-            catch {
-                return false;
-            }
-        } else if (message.command == Command.Upgrade) {
+        uint8 cmdCode = uint8(cmd[31]);
+
+        if (cmdCode == CommandV2.Upgrade) {
             try Gateway(this).upgrade{gas: maxDispatchGas}(message.params) {}
             catch {
                 return false;
             }
-        } else if (message.command == Command.SetTokenTransferFees) {
-            try Gateway(this).setTokenTransferFees{gas: maxDispatchGas}(message.params) {}
+        } else if (cmdCode == CommandV2.SetOperatingMode) {
+            try Gateway(this).setOperatingMode{gas: maxDispatchGas}(params) {}
             catch {
                 return false;
             }
-        } else if (message.command == Command.SetPricingParameters) {
-            try Gateway(this).setPricingParameters{gas: maxDispatchGas}(message.params) {}
+        } else if (cmdCode == CommandV2.SetPricingParameters) {
+            try Gateway(this).setPricingParameters{gas: maxDispatchGas}(params) {}
+            catch {
+                return false;
+            }
+        } else if (cmdCode == CommandV2.CreateAgent) {
+            try Gateway(this).createAgent{gas: maxDispatchGas}(params) {}
+            catch {
+                return false;
+            }
+        } else if (cmdCode == CommandV2.TransferFromAgent) {
+            try Gateway(this).transferFromAgent{gas: maxDispatchGas}(params) {}
+            catch {
+                return false;
+            }
+        } else if (cmdCode == CommandV2.TransferNativeFromAgent) {
+            try Gateway(this).transferNativeFromAgent{gas: maxDispatchGas}(params) {}
+            catch {
+                return false;
+            }
+        } else if (cmdCode == CommandV2.SetTokenTransferFees) {
+            try Gateway(this).setTokenTransferFees{gas: maxDispatchGas}(params) {}
             catch {
                 return false;
             }
@@ -262,13 +309,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return true;
     }
 
-    function processReward(
-        address paymaster,
-        address recipient,
-        uint256 startGas,
-        uint256 maxFeePerGas,
-        uint256 reward
-    ) {
+    function processReward(address paymaster, address recipient, uint256 startGas, uint256 maxFeePerGas, uint256 reward)
+        internal
+    {
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
         // that could drain funds unnecessarily. During these spikes, relayers should back off.
         uint256 gasUsed = _transactionBaseGas() + (startGas - gasleft());
@@ -371,6 +414,32 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         SetOperatingModeParams memory params = abi.decode(data, (SetOperatingModeParams));
         $.mode = params.mode;
         emit OperatingModeChanged(params.mode);
+    }
+
+    function transferFromAgent(bytes calldata data, bool isLegacyDataFormat) external onlySelf {
+        address agent;
+        address token;
+        address recipient;
+        uint128 amount;
+
+        if (isLegacyDataFormat) {
+            AgentExecuteParams memory params = abi.decode(data, (AgentExecuteParams));
+            (AgentExecuteCommand command, bytes memory innerParams) = abi.decode(data, (AgentExecuteCommand, bytes));
+            if (command == AgentExecuteCommand.TransferToken) {
+                (token, recipient, amount) = abi.decode(params, (address, address, uint128));
+                agent = _ensureAgent(params.agentID);
+            } else {
+                return;
+            }
+        } else {
+            TransferFromAgentParams memory params = abi.decode(data, (TransferFromAgentParams));
+            agent = _ensureAgent(params.agentID);
+            token = params.token;
+            recipient = params.recipient;
+            amount = params.amount;
+        }
+
+        _transferFromAgent(agent, payable(params.recipient), params.amount);
     }
 
     // @dev Transfer funds from an agent to a recipient account
@@ -544,6 +613,12 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     function _invokeOnAgent(address agent, bytes memory data) internal returns (bytes memory) {
         (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(AGENT_EXECUTOR, data));
         return Call.verifyResult(success, returndata);
+    }
+
+    /// @dev Transfer tokens from an agent
+    function _transferFromAgent(address agent, address token, address recipient, uint128 amount) internal {
+        bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
+        _invokeOnAgent(agent, call);
     }
 
     /// @dev Transfer ether from an agent

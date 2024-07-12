@@ -11,10 +11,9 @@ contract Paymaster {
 
     event Transfer(address recipient, uint256 amount);
 
-    /// @dev The gateway contract controlling this agent
     address public immutable GATEWAY;
 
-    constructor(bytes32 agentID) {
+    constructor() {
         GATEWAY = msg.sender;
     }
 
@@ -25,6 +24,6 @@ contract Paymaster {
             revert Unauthorized();
         }
         payable(recipient).safeNativeTransfer(amount);
-        emit Transfer(recipient, amount)
+        emit Transfer(recipient, amount);
     }
 }
