@@ -38,6 +38,6 @@ library Command {
     uint8 constant SetTokenTransferFees = 3;
 
     uint8 constant CreateAgent = 20;
-    uint8 constant TransferFromAgent = 21;
-    uint8 constant TransferNativeFromAgent = 22;
+
+    uint8 constant UnlockToken = 40;
 }

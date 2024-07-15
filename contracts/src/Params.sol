@@ -54,7 +54,7 @@ struct SetOperatingModeParams {
 }
 
 // Payload for TransferNativeFromAgent
-struct TransferFromAgentParams {
+struct UnlockTokenParams {
     /// @dev The ID of the agent to transfer funds from
     bytes32 agentID;
     /// @dev token
@@ -63,16 +63,6 @@ struct TransferFromAgentParams {
     address recipient;
     /// @dev The amount to transfer
     uint128 amount;
-}
-
-// Payload for TransferNativeFromAgent
-struct TransferNativeFromAgentParams {
-    /// @dev The ID of the agent to transfer funds from
-    bytes32 agentID;
-    /// @dev The recipient of the funds
-    address recipient;
-    /// @dev The amount to transfer
-    uint256 amount;
 }
 
 // Payload for SetTokenTransferFees

@@ -3,7 +3,6 @@
 pragma solidity 0.8.25;
 
 import {Channel, OperatingMode, ChannelID, ParaID} from "../Types.sol";
-import {PayMaster} from "../PayMaster.sol";
 
 library CoreStorage {
     struct Layout {
@@ -15,8 +14,7 @@ library CoreStorage {
         mapping(bytes32 agentID => address) agents;
         // V2
         mapping(bytes32 messageHash => bool) messageHashes;
-        uint64 nonce;
-        PayMaster payMaster;
+        mapping(uint8 domain => uint64) nonces;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.core");

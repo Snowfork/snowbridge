@@ -18,7 +18,6 @@ contract AgentExecutor {
         recipient.safeNativeTransfer(amount);
     }
 
-    /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
     function transferToken(address token, address recipient, uint128 amount) external {
         IERC20(token).safeTransfer(recipient, amount);
     }

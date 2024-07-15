@@ -158,8 +158,10 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         }
 
         bool success = dispatch(message.command, message.params, maxDispatchGas);
-
-        processReward(channel.agent, msg.sender, startGas, message.maxFeePerGas, message.reward);
+        uint256 amount = calculateTotalReward(startGas, message.maxFeePerGas, message.reward);
+        if (amount > _dustThreshold()) {
+            _transferNativeFromAgent(channel.agent, recipient, amount);
+        }
 
         emit IGateway.InboundMessageDispatched(message.channelID, message.nonce, message.id, success);
     }
@@ -173,51 +175,38 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         }
 
         // Dispatch message to a handler
-        if (message.command == Command.AgentExecute) {
-            try Gateway(this).agentExecute{gas: maxDispatchGas}(params) {}
+        if (command == Command.AgentExecute) {
+            try Gateway(this).unlockToken{gas: maxDispatchGas}(params, true) {}
             catch {
                 return false;
             }
-        } else if (message.command == Command.CreateAgent) {
+        } else if (command == Command.CreateAgent) {
             try Gateway(this).createAgent{gas: maxDispatchGas}(params) {}
             catch {
                 return false;
             }
-        } else if (message.command == Command.CreateChannel) {
-            try Gateway(this).createChannel{gas: maxDispatchGas}(params) {}
-            catch {
-                return false;
-            }
-        } else if (message.command == Command.UpdateChannel) {
-            try Gateway(this).updateChannel{gas: maxDispatchGas}(params) {}
-            catch {
-                return false;
-            }
-        } else if (message.command == Command.SetOperatingMode) {
+        } else if (command == Command.SetOperatingMode) {
             try Gateway(this).setOperatingMode{gas: maxDispatchGas}(params) {}
             catch {
                 return false;
             }
-        } else if (message.command == Command.TransferNativeFromAgent) {
-            try Gateway(this).transferNativeFromAgent{gas: maxDispatchGas}(params) {}
-            catch {
-                return false;
-            }
-        } else if (message.command == Command.Upgrade) {
+        } else if (command == Command.Upgrade) {
             try Gateway(this).upgrade{gas: maxDispatchGas}(message.params) {}
             catch {
                 return false;
             }
-        } else if (message.command == Command.SetTokenTransferFees) {
+        } else if (command == Command.SetTokenTransferFees) {
             try Gateway(this).setTokenTransferFees{gas: maxDispatchGas}(params) {}
             catch {
                 return false;
             }
-        } else if (message.command == Command.SetPricingParameters) {
+        } else if (command == Command.SetPricingParameters) {
             try Gateway(this).setPricingParameters{gas: maxDispatchGas}(params) {}
             catch {
                 return false;
             }
+        } else {
+            return false;
         }
 
         return true;
@@ -252,9 +241,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             revert InvalidProof();
         }
 
-        bool success = dispatch(message.command, message.params, maxDispatchGas);
-
-        processReward($.paymaster, msg.sender, startGas, message.maxFeePerGas, message.reward);
+        bool success = dispatchV2(message.command, maxDispatchGas);
+        uint256 amount = calculateTotalReward(startGas, message.maxFeePerGas, message.reward);
+        if (amount > _dustThreshold()) {
+            payable(msg.sender).safeNativeTransfer(amount);
+        }
 
         emit IGateway.InboundMessageDispatched(messageID, success);
     }
@@ -262,12 +253,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     function dispatchV2(bytes calldata command, uint256 maxDispatchGas) internal returns (bool) {
         // Make sure relayers provide enough gas so that inner message dispatch
         // does not run out of gas.
-        uint256 maxDispatchGas = maxDispatchGas;
         if (gasleft() < maxDispatchGas + DISPATCH_OVERHEAD_GAS) {
             revert NotEnoughGas();
         }
 
-        uint8 cmdCode = uint8(cmd[31]);
+        uint8 cmdCode = uint8(command[31]);
 
         if (cmdCode == CommandV2.Upgrade) {
             try Gateway(this).upgrade{gas: maxDispatchGas}(message.params) {}
@@ -289,18 +279,13 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             catch {
                 return false;
             }
-        } else if (cmdCode == CommandV2.TransferFromAgent) {
-            try Gateway(this).transferFromAgent{gas: maxDispatchGas}(params) {}
-            catch {
-                return false;
-            }
-        } else if (cmdCode == CommandV2.TransferNativeFromAgent) {
-            try Gateway(this).transferNativeFromAgent{gas: maxDispatchGas}(params) {}
-            catch {
-                return false;
-            }
         } else if (cmdCode == CommandV2.SetTokenTransferFees) {
             try Gateway(this).setTokenTransferFees{gas: maxDispatchGas}(params) {}
+            catch {
+                return false;
+            }
+        } else if (cmdCode == CommandV2.UnlockToken) {
+            try Gateway(this).unlockToken{gas: maxDispatchGas}(params, false) {}
             catch {
                 return false;
             }
@@ -309,8 +294,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return true;
     }
 
-    function processReward(address paymaster, address recipient, uint256 startGas, uint256 maxFeePerGas, uint256 reward)
+    function calculateTotalReward(address gasmanager, uint256 startGas, uint256 maxFeePerGas, uint256 reward)
         internal
+        returns (uint256)
     {
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
         // that could drain funds unnecessarily. During these spikes, relayers should back off.
@@ -318,13 +304,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint256 refund = gasUsed * Math.min(tx.gasprice, maxFeePerGas);
 
         // Add the reward to the refund amount. If the sum is more than the funds available
-        // in the channel agent, then reduce the total amount
-        uint256 amount = Math.min(refund + reward, address(paymaster).balance);
-
-        // Do the payment if there funds available in the agent
-        if (amount > _dustThreshold()) {
-            _transferNativeFromAgent(paymaster, recipient, amount);
-        }
+        // in the gasmanager contract, then reduce the total amount
+        return Math.min(refund + reward, address(rewardsAccount).balance);
     }
 
     /**
@@ -396,12 +377,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         emit AgentCreated(params.agentID, agent);
     }
 
-    /// @dev DEPRECATED: Create a messaging channel for a Polkadot parachain
-    function createChannel(bytes calldata data) external onlySelf {}
-
-    /// @dev DEPRECATED: Update the configuration for a channel
-    function updateChannel(bytes calldata data) external onlySelf {}
-
     /// @dev Perform an upgrade of the gateway
     function upgrade(bytes calldata data) external onlySelf {
         UpgradeParams memory params = abi.decode(data, (UpgradeParams));
@@ -416,7 +391,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         emit OperatingModeChanged(params.mode);
     }
 
-    function transferFromAgent(bytes calldata data, bool isLegacyDataFormat) external onlySelf {
+    function unlockToken(bytes calldata data, bool isLegacyDataFormat) external onlySelf {
         address agent;
         address token;
         address recipient;
@@ -432,24 +407,15 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
                 return;
             }
         } else {
-            TransferFromAgentParams memory params = abi.decode(data, (TransferFromAgentParams));
+            UnlockTokenParams memory params = abi.decode(data, (UnlockTokenParams));
             agent = _ensureAgent(params.agentID);
             token = params.token;
             recipient = params.recipient;
             amount = params.amount;
         }
 
-        _transferFromAgent(agent, payable(params.recipient), params.amount);
-    }
-
-    // @dev Transfer funds from an agent to a recipient account
-    function transferNativeFromAgent(bytes calldata data) external onlySelf {
-        TransferNativeFromAgentParams memory params = abi.decode(data, (TransferNativeFromAgentParams));
-
-        address agent = _ensureAgent(params.agentID);
-
-        _transferNativeFromAgent(agent, payable(params.recipient), params.amount);
-        emit AgentFundsWithdrawn(params.agentID, params.recipient, params.amount);
+        bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
+        _invokeOnAgent(agent, call);
     }
 
     // @dev Set token fees of the gateway
@@ -576,23 +542,22 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             revert FeePaymentToLow();
         }
 
-        $.nonce = $.nonce + 1;
-
-        // Deposit total fee into paymaster contract
-        payable($.payMaster).safeNativeTransfer(fee);
+        $.nonces[ticket.destination] = $.nonces[ticket.destination] + 1;
 
         // Reimburse excess fee payment
         if (msg.value > fee) {
             payable(msg.sender).safeNativeTransfer(msg.value - fee);
         }
 
-        // Generate a unique ID for this message
-        bytes32 messageID = keccak256(($.nonce, ticket.payload));
+        bytes memory message = abi.encodePacked(
+            $.nonces[ticket.destination], ticket.sender, ticket.destination, ticket.recipient, ticket.payload
+        );
+        bytes32 messageHash = keccak256(message);
 
-        emit IGateway.OutboundMessageAccepted(msg.sender, messageID, ticket.payload);
+        emit IGateway.OutboundMessageAccepted(messageHash, message);
     }
 
-    /// @dev Ensure that the specified parachain has a channel allocated
+    /// @dev Ensure that the specified parachain has a channel allocated [DEPRECATED]
     function _ensureChannel(ChannelID channelID) internal view returns (Channel storage ch) {
         ch = CoreStorage.layout().channels[channelID];
         // A channel always has an agent specified.
@@ -601,7 +566,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         }
     }
 
-    /// @dev Ensure that the specified agentID has a corresponding contract
+    /// @dev Ensure that the specified agentID has a corresponding contract [DEPRECATED]
     function _ensureAgent(bytes32 agentID) internal view returns (address agent) {
         agent = CoreStorage.layout().agents[agentID];
         if (agent == address(0)) {
@@ -613,18 +578,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     function _invokeOnAgent(address agent, bytes memory data) internal returns (bytes memory) {
         (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(AGENT_EXECUTOR, data));
         return Call.verifyResult(success, returndata);
-    }
-
-    /// @dev Transfer tokens from an agent
-    function _transferFromAgent(address agent, address token, address recipient, uint128 amount) internal {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
-        _invokeOnAgent(agent, call);
-    }
-
-    /// @dev Transfer ether from an agent
-    function _transferNativeFromAgent(address agent, address payable recipient, uint256 amount) internal {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
-        _invokeOnAgent(agent, call);
     }
 
     /// @dev Define the dust threshold as the minimum cost to transfer ether between accounts
