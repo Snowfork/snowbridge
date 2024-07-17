@@ -26,7 +26,7 @@ export type ParachainInfo = {
     paraId: number
     destinationFeeDOT: bigint
     skipExistentialDepositCheck: boolean
-    accountType: AddressType
+    addressType: AddressType
     decimals: number
     maxConsumers: number
 }
@@ -78,7 +78,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     paraId: 1000,
                     destinationFeeDOT: 0n,
                     skipExistentialDepositCheck: false,
-                    accountType: "32byte",
+                    addressType: "32byte",
                     decimals: 12,
                     maxConsumers: 16,
                 },
@@ -99,7 +99,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     paraId: 2000,
                     destinationFeeDOT: 4_000_000_000n,
                     skipExistentialDepositCheck: false,
-                    accountType: "32byte",
+                    addressType: "32byte",
                     decimals: 12,
                     maxConsumers: 16,
                 },
@@ -207,7 +207,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     paraId: 1000,
                     destinationFeeDOT: 0n,
                     skipExistentialDepositCheck: false,
-                    accountType: "32byte",
+                    addressType: "32byte",
                     decimals: 12,
                     maxConsumers: 16,
                 },
@@ -238,7 +238,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     paraId: 3369,
                     destinationFeeDOT: 200_000_000_000n,
                     skipExistentialDepositCheck: true,
-                    accountType: "20byte",
+                    addressType: "20byte",
                     decimals: 18,
                     maxConsumers: 16,
                 },
@@ -361,7 +361,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     paraId: 1000,
                     destinationFeeDOT: 0n,
                     skipExistentialDepositCheck: false,
-                    accountType: "32byte",
+                    addressType: "32byte",
                     decimals: 10,
                     maxConsumers: 64,
                 },
@@ -412,7 +412,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     paraId: 3369,
                     destinationFeeDOT: 500_000_000n,
                     skipExistentialDepositCheck: true,
-                    accountType: "20byte",
+                    addressType: "20byte",
                     decimals: 18,
                     maxConsumers: 16,
                 },
