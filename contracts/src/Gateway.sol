@@ -49,6 +49,8 @@ import {OperatorStorage} from "./storage/OperatorStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
+import {SubstrateTypes} from "./SubstrateTypes.sol";
+
 contract Gateway is IGateway, IInitializable, IUpgradable {
     using Address for address;
     using SafeNativeTransfer for address payable;
@@ -134,8 +136,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
     ) external {
-        uint256 startGas = gasleft();
-
         Channel storage channel = _ensureChannel(message.channelID);
 
         // Ensure this message is not being replayed
@@ -214,18 +214,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             }
         }
 
-        // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
-        // that could drain funds unnecessarily. During these spikes, relayers should back off.
-        uint256 gasUsed = _transactionBaseGas() + (startGas - gasleft());
-        uint256 refund = gasUsed * Math.min(tx.gasprice, message.maxFeePerGas);
-
-        // Add the reward to the refund amount. If the sum is more than the funds available
-        // in the channel agent, then reduce the total amount
-        uint256 amount = Math.min(refund + message.reward, address(channel.agent).balance);
-
-        // Do the payment if there funds available in the agent
-        if (amount > _dustThreshold()) {
-            _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
+        if (success) {
+            Ticket memory ticket;
+            ticket.dest = BRIDGE_HUB_PARA_ID;
+            ticket.payload = SubstrateTypes.RewardMesssageRelayer(message.id, msg.sender);
+            _submitOutboundWithoutFee(ticket);
         }
 
         emit IGateway.InboundMessageDispatched(message.channelID, message.nonce, message.id, success);
@@ -502,6 +495,22 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         emit IGateway.OutboundMessageAccepted(channelID, channel.outboundNonce, messageID, ticket.payload);
     }
 
+    // Submit an outbound message to Polkadot, after taking fees
+    function _submitOutboundWithoutFee(Ticket memory ticket) internal {
+        ChannelID channelID = ticket.dest.into();
+        Channel storage channel = _ensureChannel(channelID);
+
+        // Ensure outbound messaging is allowed
+        _ensureOutboundMessagingEnabled(channel);
+
+        channel.outboundNonce = channel.outboundNonce + 1;
+
+        // Generate a unique ID for this message
+        bytes32 messageID = keccak256(abi.encodePacked(channelID, channel.outboundNonce));
+
+        emit IGateway.OutboundMessageAccepted(channelID, channel.outboundNonce, messageID, ticket.payload);
+    }
+
     /// @dev Outbound message can be disabled globally or on a per-channel basis.
     function _ensureOutboundMessagingEnabled(Channel storage ch) internal view {
         CoreStorage.Layout storage $ = CoreStorage.layout();
@@ -593,6 +602,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // Initialize channel for secondary governance track
         core.channels[SECONDARY_GOVERNANCE_CHANNEL_ID] =
+            Channel({mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0});
+
+        core.channels[BRIDGE_HUB_PARA_ID.into()] =
             Channel({mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0});
 
         // Initialize agent for for AssetHub

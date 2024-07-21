@@ -133,4 +133,18 @@ library SubstrateTypes {
             ScaleCodec.encodeU128(xcmFee)
         );
     }
+
+    /**
+     * @dev SCALE-encodes `router_primitives::inbound::VersionedMessage` containing payload
+     * `MessageDelivered`
+     */
+    function RewardMesssageRelayer(bytes32 messageID, address relayer) internal view returns (bytes memory) {
+        return bytes.concat(
+            bytes1(0x00),
+            ScaleCodec.encodeU64(uint64(block.chainid)),
+            bytes1(0x02),
+            messageID,
+            SubstrateTypes.H160(relayer)
+        );
+    }
 }

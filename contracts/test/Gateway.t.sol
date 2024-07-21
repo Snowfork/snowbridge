@@ -242,43 +242,6 @@ contract GatewayTest is Test {
         );
     }
 
-    /**
-     * Fees & Rewards
-     */
-
-    // Message relayer should be rewarded from the agent for a channel
-    function testRelayerRewardedFromAgent() public {
-        (Command command, bytes memory params) = makeCreateAgentCommand();
-
-        vm.txGasPrice(10 gwei);
-        hoax(relayer, 1 ether);
-        deal(assetHubAgent, 50 ether);
-
-        uint256 relayerBalanceBefore = address(relayer).balance;
-        uint256 agentBalanceBefore = address(assetHubAgent).balance;
-
-        uint256 startGas = gasleft();
-        IGateway(address(gateway)).submitV1(
-            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
-            proof,
-            makeMockProof()
-        );
-        uint256 endGas = gasleft();
-        uint256 estimatedActualRefundAmount = (startGas - endGas) * tx.gasprice;
-        assertLt(estimatedActualRefundAmount, maxRefund);
-
-        // Check that agent balance decreased and relayer balance increases
-        assertLt(address(assetHubAgent).balance, agentBalanceBefore);
-        assertGt(relayer.balance, relayerBalanceBefore);
-
-        // The total amount paid to the relayer
-        uint256 totalPaid = agentBalanceBefore - address(assetHubAgent).balance;
-
-        // Since we know that the actual refund amount is less than the max refund,
-        // the total amount paid to the relayer is less.
-        assertLt(totalPaid, maxRefund + reward);
-    }
-
     // In this case, the agent has no funds to reward the relayer
     function testRelayerNotRewarded() public {
         (Command command, bytes memory params) = makeCreateAgentCommand();
