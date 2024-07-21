@@ -644,4 +644,12 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
         return operatorStorage.operator;
     }
+
+    function channelKeySlot(ChannelID channelID) public view returns (uint256 _slot) {
+        CoreStorage.Layout storage $ = CoreStorage.layout();
+        Channel storage channel = $.channels[channelID];
+        assembly {
+            _slot := channel.slot
+        }
+    }
 }

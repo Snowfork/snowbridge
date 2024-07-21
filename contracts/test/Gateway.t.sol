@@ -903,4 +903,23 @@ contract GatewayTest is Test {
         hoax(0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967);
         Gateway(address(gateway)).rescue(impl, implCodeHash, initParams);
     }
+
+    function testStorageKey() public {
+        uint256 key = MockGateway(address(gateway)).channelKeySlot(ParaID.wrap(1000).into());
+        console.logUint(key);
+        console.logBytes(abi.encodePacked(key));
+        Channel memory channel1;
+        channel1.mode = OperatingMode.RejectingOutboundMessages;
+        channel1.inboundNonce = 8;
+        channel1.outboundNonce = 94;
+        console.logBytes(abi.encode(channel1));
+        Channel memory channel = abi.decode(
+            abi.encodePacked(
+                hex"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000005e0000000000000000000000000000000000000000000000000000000000000000"
+            ),
+            (Channel)
+        );
+        console.logUint(channel.inboundNonce);
+        console.logUint(channel.outboundNonce);
+    }
 }
