@@ -3,7 +3,6 @@ import {
     CloudWatchClient,
     PutMetricDataCommand,
     PutMetricAlarmCommand,
-    StandardUnit,
 } from "@aws-sdk/client-cloudwatch"
 
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
