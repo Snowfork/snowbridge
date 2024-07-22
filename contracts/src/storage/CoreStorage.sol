@@ -12,6 +12,9 @@ library CoreStorage {
         mapping(ChannelID channelID => Channel) channels;
         // Agents
         mapping(bytes32 agentID => address) agents;
+        // V2
+        mapping(bytes32 messageHash => bool) messageHashes;
+        mapping(uint8 domain => uint64) nonces;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.core");
