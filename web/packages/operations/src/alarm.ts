@@ -9,6 +9,11 @@ const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
 const BRIDGE_STALE_SNS_TOPIC = process.env["BRIDGE_STALE_SNS_TOPIC"] || ""
 const ACCOUNT_BALANCE_SNS_TOPIC = process.env["ACCOUNT_BALANCE_SNS_TOPIC"] || ""
 
+const LatencyDashboard =
+    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Latency"
+const BalanceDashboard =
+    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Balance"
+
 export const sendMetrics = async (metrics: status.AllMetrics) => {
     const { AlarmReason, InsufficientBalanceThreshold } = status
     let client = new CloudWatchClient({})
@@ -227,9 +232,9 @@ export const initializeAlarms = async () => {
     // Alarm for stale bridge
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.BeefyStale.toString(),
+            AlarmName: AlarmReason.BeefyStale.toString() + "-" + name,
             MetricName: AlarmReason.BeefyStale.toString(),
-            AlarmDescription: AlarmReason.BeefyStale.toString(),
+            AlarmDescription: LatencyDashboard,
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
@@ -240,9 +245,9 @@ export const initializeAlarms = async () => {
     )
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.BeaconStale.toString(),
+            AlarmName: AlarmReason.BeaconStale.toString() + "-" + name,
             MetricName: AlarmReason.BeaconStale.toString(),
-            AlarmDescription: AlarmReason.BeaconStale.toString(),
+            AlarmDescription: LatencyDashboard,
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
@@ -253,9 +258,9 @@ export const initializeAlarms = async () => {
     )
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.ToEthereumChannelStale.toString(),
+            AlarmName: AlarmReason.ToEthereumChannelStale.toString() + "-" + name,
             MetricName: AlarmReason.ToEthereumChannelStale.toString(),
-            AlarmDescription: AlarmReason.ToEthereumChannelStale.toString(),
+            AlarmDescription: LatencyDashboard,
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
@@ -266,9 +271,9 @@ export const initializeAlarms = async () => {
     )
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.ToPolkadotChannelStale.toString(),
+            AlarmName: AlarmReason.ToPolkadotChannelStale.toString() + "-" + name,
             MetricName: AlarmReason.ToPolkadotChannelStale.toString(),
-            AlarmDescription: AlarmReason.ToPolkadotChannelStale.toString(),
+            AlarmDescription: LatencyDashboard,
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
@@ -283,9 +288,9 @@ export const initializeAlarms = async () => {
 
     // Alarm for account balance insufficient
     let accountBalanceAlarm = new PutMetricAlarmCommand({
-        AlarmName: AlarmReason.AccountBalanceInsufficient.toString(),
+        AlarmName: AlarmReason.AccountBalanceInsufficient.toString() + "-" + name,
         MetricName: AlarmReason.AccountBalanceInsufficient.toString(),
-        AlarmDescription: AlarmReason.AccountBalanceInsufficient.toString(),
+        AlarmDescription: BalanceDashboard,
         Statistic: "Average",
         ComparisonOperator: "GreaterThanThreshold",
         AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],

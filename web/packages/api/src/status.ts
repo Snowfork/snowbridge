@@ -92,8 +92,8 @@ export const bridgeStatusInfo = async (
     options = {
         polkadotBlockTimeInSeconds: 6,
         ethereumBlockTimeInSeconds: 12,
-        toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
-        toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
+        toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
+        toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
     }
 ): Promise<BridgeStatusInfo> => {
     // Beefy status
