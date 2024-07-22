@@ -75,7 +75,6 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toEthereum.outbound,
-            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: "ToEthereumPreviousOutboundNonce",
@@ -86,7 +85,6 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toEthereum.previousOutbound,
-            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: "ToEthereumInboundNonce",
@@ -97,7 +95,6 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toEthereum.inbound,
-            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: "ToEthereumPreviousInboundNonce",
@@ -108,7 +105,6 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toEthereum.previousInbound,
-            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: AlarmReason.ToEthereumChannelStale.toString(),
@@ -128,7 +124,6 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toPolkadot.outbound,
-            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: "ToPolkadotPreviousOutboundNonce",
@@ -139,7 +134,6 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toPolkadot.previousOutbound,
-            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: "ToPolkadotInboundNonce",
@@ -150,7 +144,6 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toPolkadot.inbound,
-            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: "ToPolkadotPreviousInboundNonce",
@@ -161,7 +154,6 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toPolkadot.previousInbound,
-            Unit: StandardUnit.Count,
         })
         metricData.push({
             MetricName: AlarmReason.ToPolkadotChannelStale.toString(),
