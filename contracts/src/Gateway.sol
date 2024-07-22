@@ -217,7 +217,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         if (success) {
             Ticket memory ticket;
             ticket.dest = BRIDGE_HUB_PARA_ID;
-            ticket.payload = SubstrateTypes.RewardMesssageRelayer(message.id, msg.sender);
+            ticket.payload = SubstrateTypes.RewardRelay(message.id, msg.sender);
             _submitOutboundWithoutFee(ticket);
         }
 
