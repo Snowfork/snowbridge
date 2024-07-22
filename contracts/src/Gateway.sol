@@ -495,7 +495,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         emit IGateway.OutboundMessageAccepted(channelID, channel.outboundNonce, messageID, ticket.payload);
     }
 
-    // Submit an outbound message to Polkadot, after taking fees
+    // Submit an outbound message to Polkadot, without taking fees
     function _submitOutboundWithoutFee(Ticket memory ticket) internal {
         ChannelID channelID = ticket.dest.into();
         Channel storage channel = _ensureChannel(channelID);
