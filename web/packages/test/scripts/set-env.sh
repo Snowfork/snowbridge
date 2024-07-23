@@ -1,7 +1,5 @@
 root_dir="$(realpath ../../..)"
 web_dir="$root_dir/web"
-lodestar_version="${LODESTAR_VER:-1.12.0}"
-geth_version="${GETH_VER:-v1.13.5}"
 config_dir="$web_dir/packages/test/config"
 export contract_dir="$root_dir/contracts"
 test_helpers_dir="$web_dir/packages/test-helpers"
