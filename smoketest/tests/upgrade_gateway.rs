@@ -36,7 +36,7 @@ use snowbridge_smoketest::{
 };
 use subxt::{
 	ext::sp_core::{sr25519::Pair, Pair as PairT},
-	tx::{PairSigner, TxPayload},
+	tx::{PairSigner, Payload},
 	OnlineClient, PolkadotConfig,
 };
 
@@ -73,7 +73,8 @@ async fn upgrade_gateway() {
 	let ethereum_system_api = bridgehub::api::ethereum_system::calls::TransactionApi;
 
 	// The upgrade call
-	let upgrade_call = ethereum_system_api
+	let mut encoded = Vec::new();
+	ethereum_system_api
 		.upgrade(
 			new_impl.address(),
 			new_impl_code_hash.into(),
@@ -82,7 +83,7 @@ async fn upgrade_gateway() {
 				maximum_required_gas: 100_000,
 			}),
 		)
-		.encode_call_data(&bridgehub.metadata())
+		.encode_call_data_to(&bridgehub.metadata(), &mut encoded)
 		.expect("encoded call");
 
 	let weight = 3000000000;
@@ -92,12 +93,13 @@ async fn upgrade_gateway() {
 		parents: 0,
 		interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
 	}));
+
 	let message = Box::new(VersionedXcm::V3(Xcm(vec![
 		Instruction::UnpaidExecution { weight_limit: WeightLimit::Unlimited, check_origin: None },
 		Instruction::Transact {
 			origin_kind: OriginKind::Superuser,
 			require_weight_at_most: Weight { ref_time: weight, proof_size },
-			call: DoubleEncoded { encoded: upgrade_call },
+			call: DoubleEncoded { encoded },
 		},
 	])));
 
