@@ -34,7 +34,7 @@ validator = true
 
 ## Bridge Hub
 [[parachains]]
-id = 1013
+id = 1002
 chain = "bridge-hub-westend-local"
 cumulus_based = true
 
