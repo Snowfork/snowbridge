@@ -17,8 +17,9 @@ type BeefyAuthoritySet struct {
 
 type Request struct {
 	// Validators that signed this commitment
-	Validators       []substrate.Authority
-	ValidatorsRoot   [32]byte
-	SignedCommitment types.SignedCommitment
-	Proof            merkle.SimplifiedMMRProof
+	Validators         []substrate.Authority
+	ValidatorsRoot     [32]byte
+	SignedCommitment   types.SignedCommitment
+	Proof              merkle.SimplifiedMMRProof
+	NextValidatorsRoot [32]byte
 }

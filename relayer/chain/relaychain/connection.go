@@ -6,6 +6,7 @@ package relaychain
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -18,6 +19,7 @@ type Connection struct {
 	api         *gsrpc.SubstrateAPI
 	metadata    types.Metadata
 	genesisHash types.Hash
+	isRococo    bool
 }
 
 func NewConnection(endpoint string) *Connection {
@@ -32,6 +34,10 @@ func (co *Connection) API() *gsrpc.SubstrateAPI {
 
 func (co *Connection) Metadata() *types.Metadata {
 	return &co.metadata
+}
+
+func (co *Connection) IsRococo() bool {
+	return co.isRococo
 }
 
 func (co *Connection) Connect(_ context.Context) error {
@@ -55,6 +61,15 @@ func (co *Connection) Connect(_ context.Context) error {
 		return err
 	}
 	co.genesisHash = genesisHash
+
+	// Fetch chain name
+	chainName, err := api.RPC.System.Chain()
+	if err != nil {
+		return err
+	}
+	if strings.HasPrefix(string(chainName), "Rococo") {
+		co.isRococo = true
+	}
 
 	log.WithFields(log.Fields{
 		"endpoint":    co.endpoint,

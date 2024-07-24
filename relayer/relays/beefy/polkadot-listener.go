@@ -31,14 +31,13 @@ func NewPolkadotListener(
 func (li *PolkadotListener) Start(
 	ctx context.Context,
 	eg *errgroup.Group,
-	currentBeefyBlock uint64,
-	currentValidatorSetID uint64,
+	currentState *BeefyClientState,
 ) (<-chan Request, error) {
 	requests := make(chan Request, 1)
 
 	eg.Go(func() error {
 		defer close(requests)
-		err := li.scanCommitments(ctx, currentBeefyBlock, currentValidatorSetID, requests)
+		err := li.scanCommitments(ctx, currentState, requests)
 		if err != nil {
 			return err
 		}
@@ -50,15 +49,13 @@ func (li *PolkadotListener) Start(
 
 func (li *PolkadotListener) scanCommitments(
 	ctx context.Context,
-	currentBeefyBlock uint64,
-	currentValidatorSet uint64,
+	currentState *BeefyClientState,
 	requests chan<- Request,
 ) error {
-	in, err := ScanCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentBeefyBlock+1)
+	in, err := ScanCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentState.LatestBeefyBlock+1)
 	if err != nil {
 		return fmt.Errorf("scan provable commitments: %w", err)
 	}
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -79,11 +76,15 @@ func (li *PolkadotListener) scanCommitments(
 			if err != nil {
 				return fmt.Errorf("fetch beefy authorities at block %v: %w", result.BlockHash, err)
 			}
-
+			nextAuthoritySet, err := li.queryBeefyNextAuthoritySet(result.BlockHash)
+			if err != nil {
+				return fmt.Errorf("fetch beefy authorities set at block %v: %w", result.BlockHash, err)
+			}
 			task := Request{
-				Validators:       validators,
-				SignedCommitment: result.SignedCommitment,
-				Proof:            result.Proof,
+				Validators:         validators,
+				SignedCommitment:   result.SignedCommitment,
+				Proof:              result.Proof,
+				NextValidatorsRoot: nextAuthoritySet.Root,
 			}
 
 			log.WithFields(log.Fields{
@@ -92,7 +93,7 @@ func (li *PolkadotListener) scanCommitments(
 					"validatorSetID":     validatorSetID,
 					"nextValidatorSetID": nextValidatorSetID,
 				},
-				"validatorSetID": currentValidatorSet,
+				"validatorSetID": currentState.CurrentValidatorSetID,
 			}).Info("Sending BEEFY commitment to ethereum writer")
 
 			select {
@@ -121,6 +122,26 @@ func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]subst
 	return authorities, nil
 }
 
+func (li *PolkadotListener) queryBeefyNextAuthoritySet(blockHash types.Hash) (types.BeefyNextAuthoritySet, error) {
+	var nextAuthoritySet types.BeefyNextAuthoritySet
+	var storageKey types.StorageKey
+	var err error
+	if li.conn.IsRococo() {
+		storageKey, err = types.CreateStorageKey(li.conn.Metadata(), "MmrLeaf", "BeefyNextAuthorities", nil, nil)
+	} else {
+		storageKey, err = types.CreateStorageKey(li.conn.Metadata(), "BeefyMmrLeaf", "BeefyNextAuthorities", nil, nil)
+	}
+	ok, err := li.conn.API().RPC.State.GetStorage(storageKey, &nextAuthoritySet, blockHash)
+	if err != nil {
+		return nextAuthoritySet, err
+	}
+	if !ok {
+		return nextAuthoritySet, fmt.Errorf("beefy nextAuthoritySet not found")
+	}
+
+	return nextAuthoritySet, nil
+}
+
 func (li *PolkadotListener) generateBeefyUpdate(relayBlockNumber uint64) (Request, error) {
 	api := li.conn.API()
 	meta := li.conn.Metadata()
@@ -142,10 +163,15 @@ func (li *PolkadotListener) generateBeefyUpdate(relayBlockNumber uint64) (Reques
 	if err != nil {
 		return request, fmt.Errorf("fetch beefy authorities at block %v: %w", committedBeefyBlockHash, err)
 	}
+	nextAuthoritySet, err := li.queryBeefyNextAuthoritySet(committedBeefyBlockHash)
+	if err != nil {
+		return request, fmt.Errorf("fetch beefy authorities set at block %v: %w", committedBeefyBlockHash, err)
+	}
 	request = Request{
-		Validators:       validators,
-		SignedCommitment: *commitment,
-		Proof:            *proof,
+		Validators:         validators,
+		SignedCommitment:   *commitment,
+		Proof:              *proof,
+		NextValidatorsRoot: nextAuthoritySet.Root,
 	}
 
 	return request, nil
@@ -170,8 +196,8 @@ func (li *PolkadotListener) findNextBeefyBlock(blockNumber uint64) (types.Hash, 
 			// The relay block not finalized yet, just wait and retry
 			time.Sleep(6 * time.Second)
 			continue
-		} else if latestBeefyBlockNumber <= nextBeefyBlockNumber+600 {
-			// The relay block has been finalized not long ago(1 hour), just return the finalized block
+		} else if latestBeefyBlockNumber <= nextBeefyBlockNumber+60 {
+			// The relay block has been finalized not long ago, just return the finalized block
 			nextBeefyBlockHash = finalizedBeefyBlockHash
 			break
 		} else {

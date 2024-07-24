@@ -67,6 +67,15 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 				// Mandatory commitments are always signed by the next validator set recorded in
 				// the beefy light client
 				task.ValidatorsRoot = state.NextValidatorSetRoot
+				if task.ValidatorsRoot == task.NextValidatorsRoot {
+					log.WithFields(logrus.Fields{
+						"beefyBlockNumber":   task.SignedCommitment.Commitment.BlockNumber,
+						"latestBeefyBlock":   state.LatestBeefyBlock,
+						"validatorSetId":     task.SignedCommitment.Commitment.ValidatorSetID,
+						"nextValidatorSetId": state.NextValidatorSetID,
+					}).Info("beefy authorities not changed")
+					continue
+				}
 
 				err = wr.submit(ctx, task)
 				if err != nil {
@@ -96,7 +105,6 @@ func (wr *EthereumWriter) queryBeefyClientState(ctx context.Context) (*BeefyClie
 	if err != nil {
 		return nil, err
 	}
-
 	currentValidatorSet, err := wr.contract.CurrentValidatorSet(&callOpts)
 	if err != nil {
 		return nil, err

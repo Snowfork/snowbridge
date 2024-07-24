@@ -67,7 +67,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		"validatorSetID": initialState.CurrentValidatorSetID,
 	}).Info("Retrieved current BeefyClient state")
 
-	requests, err := relay.polkadotListener.Start(ctx, eg, initialState.LatestBeefyBlock, initialState.CurrentValidatorSetID)
+	requests, err := relay.polkadotListener.Start(ctx, eg, initialState)
 	if err != nil {
 		return fmt.Errorf("initialize polkadot listener: %w", err)
 	}
@@ -128,17 +128,19 @@ func (relay *Relay) OneShotSync(ctx context.Context, blockNumber uint64) error {
 		return nil
 	}
 	if task.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
-		log.WithFields(log.Fields{
-			"latestBeefyBlock":      state.LatestBeefyBlock,
-			"currentValidatorSetID": state.CurrentValidatorSetID,
-			"nextValidatorSetID":    state.NextValidatorSetID,
-			"validatorSetIDToSync":  task.SignedCommitment.Commitment.ValidatorSetID,
-		}).Warn("Task unexpected, wait for mandatory updates to catch up first")
-		return nil
+		if task.NextValidatorsRoot != state.NextValidatorSetRoot {
+			log.WithFields(log.Fields{
+				"latestBeefyBlock":      state.LatestBeefyBlock,
+				"currentValidatorSetID": state.CurrentValidatorSetID,
+				"nextValidatorSetID":    state.NextValidatorSetID,
+				"validatorSetIDToSync":  task.SignedCommitment.Commitment.ValidatorSetID,
+			}).Warn("Task unexpected, wait for mandatory updates to catch up first")
+			return nil
+		}
 	}
 
 	// Submit the task
-	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
+	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID || task.SignedCommitment.Commitment.ValidatorSetID == state.NextValidatorSetID-1 {
 		task.ValidatorsRoot = state.CurrentValidatorSetRoot
 	} else {
 		task.ValidatorsRoot = state.NextValidatorSetRoot

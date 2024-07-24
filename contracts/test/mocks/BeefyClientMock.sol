@@ -43,7 +43,6 @@ contract BeefyClientMock is BeefyClient {
         nextValidatorSet.length = _nextValidatorSet.length;
         nextValidatorSet.root = _nextValidatorSet.root;
         nextValidatorSet.usageCounters = createUint16Array(nextValidatorSet.length);
-        console.log(currentValidatorSet.usageCounters.data.length);
     }
 
     // Used to verify integrity of storage to storage copies
