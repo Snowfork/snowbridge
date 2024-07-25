@@ -1,0 +1,17 @@
+{
+  "source": {
+    "polkadot": {
+      "endpoint": "ws://127.0.0.1:9944"
+    }
+  },
+  "sink": {
+    "ethereum": {
+      "endpoint": "wss://sepolia.infura.io/ws/v3/1989f3c5cbc549d9b5c37f64e948fa58",
+      "gas-limit": "5000000"
+    },
+    "descendants-until-final": 3,
+    "contracts": {
+      "BeefyClient": "0x6DFaD3D73A28c48E4F4c616ECda80885b415283a"
+    }
+  }
+}

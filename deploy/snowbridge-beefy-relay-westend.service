@@ -1,0 +1,14 @@
+[Unit]
+Description=Run beefy relayer on westend
+
+[Service]
+WorkingDirectory=/home/ubuntu/snowbridge/deploy
+ExecStart=/home/ubuntu/snowbridge/deploy/start-beefy-relay-on-westend.sh
+Type=simple
+Restart=on-failure
+RestartSec=30
+User=ubuntu
+Group=ubuntu
+
+[Install]
+WantedBy=multi-user.target

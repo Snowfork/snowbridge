@@ -1,0 +1,10 @@
+[Unit]
+Description=Westend
+
+[Service]
+ExecStart=/usr/local/bin/polkadot --name "Snowbridge Westend Archive Node" --chain=westend --database=paritydb --base-path=/home/ubuntu/westend-data --state-pruning=6000000 --blocks-pruning=6000000 --enable-offchain-indexing=true --rpc-cors=all
+Type=exec
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
