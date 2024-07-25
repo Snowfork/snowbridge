@@ -23,6 +23,7 @@ export type BridgeStatusInfo = {
         latestBeaconSlotOnPolkadot: number
         latestBeaconSlotAttested: number
         latestBeaconSlotFinalized: number
+        latestBeaconSlotHead: number
         blockLatency: number
         latencySeconds: number
         previousEthereumBlockOnPolkadot: number
@@ -93,8 +94,8 @@ export const bridgeStatusInfo = async (
     options = {
         polkadotBlockTimeInSeconds: 6,
         ethereumBlockTimeInSeconds: 12,
-        toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
-        toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
+        toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
+        toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
     }
 ): Promise<BridgeStatusInfo> => {
     // Beefy status
@@ -120,7 +121,7 @@ export const bridgeStatusInfo = async (
     )
 
     // Beacon status
-    const latestFinalizedBeaconBlock = await fetchFinalityUpdate(context.config.ethereum.beacon_url)
+    const [latestFinalizedBeaconBlock, latestBeaconBlock] = await Promise.all([fetchFinalityUpdate(context.config.ethereum.beacon_url), fetchBeaconSlot(context.config.ethereum.beacon_url, "head")])
     const latestBeaconBlockRoot = (
         await context.polkadot.api.bridgeHub.query.ethereumBeaconClient.latestFinalizedBlockRoot()
     ).toHex()
@@ -128,8 +129,7 @@ export const bridgeStatusInfo = async (
         (await fetchBeaconSlot(context.config.ethereum.beacon_url, latestBeaconBlockRoot)).data
             .message.slot
     )
-    const beaconBlockLatency =
-        latestFinalizedBeaconBlock.attested_slot - latestBeaconBlockOnPolkadot
+    const beaconBlockLatency = latestBeaconBlock.data.message.slot - latestBeaconBlockOnPolkadot
     const beaconLatencySeconds = beaconBlockLatency * options.ethereumBlockTimeInSeconds
     const latestBridgeHubBlock = (
         await context.polkadot.api.bridgeHub.query.system.number()
@@ -179,6 +179,7 @@ export const bridgeStatusInfo = async (
             latestBeaconSlotOnPolkadot: latestBeaconBlockOnPolkadot,
             latestBeaconSlotAttested: latestFinalizedBeaconBlock.attested_slot,
             latestBeaconSlotFinalized: latestFinalizedBeaconBlock.finalized_slot,
+            latestBeaconSlotHead: latestBeaconBlock.data.message.slot,
             blockLatency: beaconBlockLatency,
             latencySeconds: beaconLatencySeconds,
             previousEthereumBlockOnPolkadot: previousBeaconBlock,

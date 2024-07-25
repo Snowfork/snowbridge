@@ -1,0 +1,119 @@
+name: release-relayer
+
+on:
+  push:
+    branches:
+      - main
+      - release-v1.0.0
+  workflow_dispatch:
+
+jobs:
+  release-relayer:
+    runs-on: snowbridge-runner
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Setup go
+        uses: actions/checkout@v4
+        with:
+          go-version: '^1.21.0'
+
+      - name: Install Go tools
+        run: >
+          go install github.com/magefile/mage@v1.15.0 && 
+          go install github.com/ferranbt/fastssz/sszgen@v0.1.3 &&
+          go install github.com/ethereum/go-ethereum/cmd/abigen@v1.13.15
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Build contracts
+        working-directory: contracts
+        run: forge build
+
+      - name: Install dependencies
+        working-directory: relayer
+        run: go mod download
+
+      - name: Add gopath to bin
+        run: echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Build
+        working-directory: relayer
+        run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 mage build
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+
+      - name: Determine branch name
+        id: branch_name
+        run: |
+          branch_name=${GITHUB_REF#refs/heads/}
+          echo "Branch name: $branch_name"
+          echo "branch=$branch_name" >> $GITHUB_OUTPUT
+
+      - name: Determine new version
+        id: new_version
+        run: |
+          # Get the most recent tag in the format relayer-<branchname>-<version>
+          current_version=$(git tag --list "relayer-${{ steps.branch_name.outputs.branch }}-*" --sort=-v:refname | head -n 1 | sed -E 's/relayer-${{ steps.branch_name.outputs.branch }}-//')
+          echo "Current version: $current_version"
+          
+          # If there is no current version, set it to 1.0.0
+          if [ -z "$current_version" ]; then
+          new_version="1.0.0"
+          else
+          new_version=$(npx semver $current_version -i patch)
+          fi
+            
+          echo "New version: $new_version"
+          echo "version=$new_version" >> $GITHUB_OUTPUT
+
+      - name: Create new tag
+        id: create_tag
+        run: |
+          tag_name="relayer-${{ steps.branch_name.outputs.branch }}-${{ steps.new_version.outputs.version }}"
+          echo "Tag name: $tag_name"
+          echo "tag=$tag_name" >> $GITHUB_OUTPUT
+          git tag $tag_name
+
+      - name: Push new tag
+        run: |
+          git push origin --tags
+
+      - name: "Build Changelog"
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@v4
+
+      - name: Create a GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.create_tag.outputs.tag }}
+          release_name: ${{ steps.create_tag.outputs.tag }}
+          body: |
+            ${{steps.build_changelog.outputs.changelog}}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./relayer/build/snowbridge-relay
+          asset_name: snowbridge-relay
+          asset_content_type: application/octet-stream
