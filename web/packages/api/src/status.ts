@@ -121,7 +121,10 @@ export const bridgeStatusInfo = async (
     )
 
     // Beacon status
-    const [latestFinalizedBeaconBlock, latestBeaconBlock] = await Promise.all([fetchFinalityUpdate(context.config.ethereum.beacon_url), fetchBeaconSlot(context.config.ethereum.beacon_url, "head")])
+    const [latestFinalizedBeaconBlock, latestBeaconBlock] = await Promise.all([
+        fetchFinalityUpdate(context.config.ethereum.beacon_url),
+        fetchBeaconSlot(context.config.ethereum.beacon_url, "head"),
+    ])
     const latestBeaconBlockRoot = (
         await context.polkadot.api.bridgeHub.query.ethereumBeaconClient.latestFinalizedBlockRoot()
     ).toHex()
@@ -237,7 +240,7 @@ export const channelStatusInfo = async (
                 channelId
             )
         } catch (e: any) {
-            console.error(e.message)
+            console.error("estimate api error:" + e.message)
         }
     }
 

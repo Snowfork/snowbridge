@@ -3,7 +3,6 @@ import { bnToU8a, hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
 import { blake2AsU8a, decodeAddress, keccak256AsU8a } from "@polkadot/util-crypto"
 import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway"
 import { ethers } from "ethers"
-import axios from "axios"
 
 export const paraIdToSovereignAccount = (type: "para" | "sibl", paraId: number): string => {
     const typeEncoded = stringToU8a(type)
@@ -120,8 +119,15 @@ export const fetchFinalityUpdate = async (
 }
 
 export const fetchEstimatedDeliveryTime = async (graphqlUrl: string, channelId: string) => {
-    let response = await axios.post(graphqlUrl, {
-        query: `query { toEthereumElapse(channelId:"${channelId}") { elapse } toPolkadotElapse(channelId:"${channelId}") { elapse } }`,
+    let response = await fetch(graphqlUrl, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            query: `query { toEthereumElapse(channelId:"${channelId}") { elapse } toPolkadotElapse(channelId:"${channelId}") { elapse } }`,
+        }),
     })
-    return response?.data?.data
+    let data = await response.json()
+    return data?.data
 }
