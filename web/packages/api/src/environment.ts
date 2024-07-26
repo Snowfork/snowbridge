@@ -17,6 +17,7 @@ export type Config = {
         ASSET_HUB_URL: string
         BRIDGE_HUB_URL: string
     }
+    GRAPHQL_API_URL?: string
 }
 
 export type AddressType = "20byte" | "32byte" | "both"
@@ -477,6 +478,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 ASSET_HUB_URL: "https://assethub-polkadot.api.subscan.io",
                 BRIDGE_HUB_URL: "https://bridgehub-polkadot.api.subscan.io",
             },
+            GRAPHQL_API_URL: "https://data.snowbridge.network/graphql",
         },
     },
 }

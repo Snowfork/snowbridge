@@ -25,6 +25,7 @@ interface Config {
         gateway: string
         beefy: string
     }
+    graphqlApiUrl?: string
 }
 
 interface AppContracts {
@@ -97,13 +98,19 @@ export const contextFactory = async (config: Config): Promise<Context> => {
 
     const [relaychainApi, assetHubApi, bridgeHubApi] = await Promise.all([
         ApiPromise.create({
-            provider: config.polkadot.url.relaychain.startsWith("http") ? new HttpProvider(config.polkadot.url.relaychain) : new WsProvider(config.polkadot.url.relaychain),
+            provider: config.polkadot.url.relaychain.startsWith("http")
+                ? new HttpProvider(config.polkadot.url.relaychain)
+                : new WsProvider(config.polkadot.url.relaychain),
         }),
         ApiPromise.create({
-            provider: config.polkadot.url.assetHub.startsWith("http") ? new HttpProvider(config.polkadot.url.assetHub) : new WsProvider(config.polkadot.url.assetHub),
+            provider: config.polkadot.url.assetHub.startsWith("http")
+                ? new HttpProvider(config.polkadot.url.assetHub)
+                : new WsProvider(config.polkadot.url.assetHub),
         }),
         ApiPromise.create({
-            provider: config.polkadot.url.bridgeHub.startsWith("http") ? new HttpProvider(config.polkadot.url.bridgeHub) : new WsProvider(config.polkadot.url.bridgeHub),
+            provider: config.polkadot.url.bridgeHub.startsWith("http")
+                ? new HttpProvider(config.polkadot.url.bridgeHub)
+                : new WsProvider(config.polkadot.url.bridgeHub),
         }),
     ])
 

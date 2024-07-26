@@ -33,6 +33,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
             gateway: config.GATEWAY_CONTRACT,
             beefy: config.BEEFY_CONTRACT,
         },
+        graphqlApiUrl: process.env["GRAPHQL_API_URL"] || config.GRAPHQL_API_URL,
     })
 
     const bridgeStatus = await status.bridgeStatusInfo(context)

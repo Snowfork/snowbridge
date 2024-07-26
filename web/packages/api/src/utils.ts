@@ -117,3 +117,17 @@ export const fetchFinalityUpdate = async (
         attested_slot: Number(result?.data?.attested_header?.beacon?.slot),
     }
 }
+
+export const fetchEstimatedDeliveryTime = async (graphqlUrl: string, channelId: string) => {
+    let response = await fetch(graphqlUrl, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            query: `query { toEthereumElapse(channelId:"${channelId}") { elapse } toPolkadotElapse(channelId:"${channelId}") { elapse } }`,
+        }),
+    })
+    let data = await response.json()
+    return data?.data
+}
