@@ -20,5 +20,3 @@ subxt-signer = { version = "0.37.0" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", default-features = false, features = ["abigen", "ws"] }
 lazy_static = "1.4.0"
 
-[dev-dependencies]
-xcm = { path = "../polkadot-sdk/polkadot/xcm", package = "staging-xcm" }
