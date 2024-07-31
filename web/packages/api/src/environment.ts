@@ -351,6 +351,21 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         address: "0x18084fbA666a33d37592fA2633fD49a74DD93a88",
                         minimumTransferAmount: 1n,
                     },
+                    {
+                        id: "USDC",
+                        address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "USDT",
+                        address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "DAI",
+                        address: "0x6b175474e89094c44da98b954eedeac495271d0f",
+                        minimumTransferAmount: 1n,
+                    },
                 ],
             },
             {
@@ -400,6 +415,21 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     {
                         id: "tBTC",
                         address: "0x18084fbA666a33d37592fA2633fD49a74DD93a88",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "USDC",
+                        address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "USDT",
+                        address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "DAI",
+                        address: "0x6b175474e89094c44da98b954eedeac495271d0f",
                         minimumTransferAmount: 1n,
                     },
                 ],
