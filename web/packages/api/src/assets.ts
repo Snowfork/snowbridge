@@ -109,7 +109,7 @@ export const assetErc20Balance = async (
 export type ERC20Metadata = {
     name: string
     symbol: string
-    decimals: bigint
+    decimals: number
 }
 
 export const assetErc20Metadata = async (
@@ -122,7 +122,7 @@ export const assetErc20Metadata = async (
         tokenMetadata.symbol(),
         tokenMetadata.decimals(),
     ])
-    return { name, symbol, decimals }
+    return { name, symbol, decimals: Number(decimals) }
 }
 
 export const palletAssetsBalance = async (
