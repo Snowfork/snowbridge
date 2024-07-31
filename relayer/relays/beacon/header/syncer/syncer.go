@@ -422,6 +422,11 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("compute sync committee supermajority: %d err: %w", signatureSlot, err)
 	}
+	log.WithFields(logrus.Fields{
+		"superMajority": superMajority,
+		"signatureSlot": signatureSlot,
+		"slot":          finalizedUpdate.Data.FinalizedHeader.Beacon.Slot,
+	}).Info("checked finalized update supermajority")
 	if !superMajority {
 		return scale.Update{}, ErrSyncCommitteeNotSuperMajority
 	}
