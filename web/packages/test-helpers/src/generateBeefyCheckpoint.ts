@@ -69,13 +69,8 @@ async function generateBeefyCheckpoint() {
 
     let currentAuthorities, nextAuthorities
 
-    if (process.env.NODE_ENV == "production") {
-        currentAuthorities = await api.query.beefyMmrLeaf.beefyAuthorities<AuthoritySet>()
-        nextAuthorities = await api.query.beefyMmrLeaf.beefyNextAuthorities<AuthoritySet>()
-    } else {
-        currentAuthorities = await api.query.mmrLeaf.beefyAuthorities<AuthoritySet>()
-        nextAuthorities = await api.query.mmrLeaf.beefyNextAuthorities<AuthoritySet>()
-    }
+    currentAuthorities = await api.query.beefyMmrLeaf.beefyAuthorities<AuthoritySet>()
+    nextAuthorities = await api.query.beefyMmrLeaf.beefyNextAuthorities<AuthoritySet>()
 
     const beefyCheckpoint = {
         startBlock: beefyStartBlock,
