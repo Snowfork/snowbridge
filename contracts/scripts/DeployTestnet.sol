@@ -102,8 +102,6 @@ contract DeployTestnet is Script {
         payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);
 
-        AgentExecutor executor = new AgentExecutor();
-
         new Gateway(
             address(beefyClient),
             address(executor),
