@@ -206,6 +206,13 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		return nil, nil, err
 	}
 
+	if task.GenerateLog {
+		err = wr.generateSubmitInitial(msg)
+		if err != nil {
+			log.Warn(fmt.Errorf("Generate submitInitial: %w", err))
+		}
+	}
+
 	var tx *types.Transaction
 	tx, err = wr.contract.SubmitInitial(
 		wr.conn.MakeTxOpts(ctx),
@@ -257,6 +264,13 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 	logFields, err := wr.makeSubmitFinalLogFields(task, params)
 	if err != nil {
 		return nil, fmt.Errorf("logging params: %w", err)
+	}
+
+	if task.GenerateLog {
+		err = wr.generateSubmitFinal(params)
+		if err != nil {
+			log.Warn(fmt.Errorf("Generate submitFinal: %w", err))
+		}
 	}
 
 	tx, err := wr.contract.SubmitFinal(

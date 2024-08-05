@@ -2,7 +2,9 @@ package util
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -177,4 +179,24 @@ func ByteArrayToPublicKeyArray(pubkeys [][]byte) ([][48]byte, error) {
 		result = append(result, tmpPubkey)
 	}
 	return result, nil
+}
+
+func WriteJSONToFile(data interface{}, path string) error {
+	file, _ := json.MarshalIndent(data, "", "  ")
+
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+
+	if err != nil {
+		return fmt.Errorf("create file: %w", err)
+	}
+
+	defer f.Close()
+
+	_, err = f.Write(file)
+
+	if err != nil {
+		return fmt.Errorf("write to file: %w", err)
+	}
+
+	return nil
 }

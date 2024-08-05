@@ -80,7 +80,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (relay *Relay) OneShotSync(ctx context.Context, blockNumber uint64) error {
+func (relay *Relay) OneShotSync(ctx context.Context, blockNumber uint64, generateLog bool) error {
 	// Initialize relaychainConn
 	err := relay.relaychainConn.Connect(ctx)
 	if err != nil {
@@ -143,6 +143,7 @@ func (relay *Relay) OneShotSync(ctx context.Context, blockNumber uint64) error {
 	} else {
 		task.ValidatorsRoot = state.NextValidatorSetRoot
 	}
+	task.GenerateLog = generateLog
 	err = relay.ethereumWriter.submit(ctx, task)
 	if err != nil {
 		return fmt.Errorf("fail to submit beefy update: %w", err)
