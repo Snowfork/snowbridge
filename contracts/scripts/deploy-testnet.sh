@@ -7,7 +7,8 @@ export FOUNDRY_PROFILE=production
 forge script \
       --rpc-url "${ETH_WS_ENDPOINT}" \
       --broadcast \
+      --legacy \
       --verify \
       --etherscan-api-key "${ETHERSCAN_API_KEY}" \
-      -vvv \
+      -vvvvv \
       scripts/DeployTestnet.sol:DeployTestnet
