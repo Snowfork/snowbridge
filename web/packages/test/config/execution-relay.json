@@ -28,5 +28,5 @@
       "maxWatchedExtrinsics": 8
     }
   },
-  "instantVerification": false
+  "instantVerification": true
 }

@@ -10,17 +10,16 @@ use crate::{
 		relaychain,
 		relaychain::api::runtime_types::{
 			pallet_xcm::pallet::Call as RelaychainPalletXcmCall,
-			rococo_runtime::RuntimeCall as RelaychainRuntimeCall,
 			sp_weights::weight_v2::Weight as RelaychainWeight,
 			staging_xcm::v3::multilocation::MultiLocation as RelaychainMultiLocation,
+			westend_runtime::RuntimeCall as RelaychainRuntimeCall,
 			xcm::{
 				double_encoded::DoubleEncoded as RelaychainDoubleEncoded,
-				v3::OriginKind as RelaychainOriginKind,
 				v3::{
 					junction::Junction as RelaychainJunction,
 					junctions::Junctions as RelaychainJunctions,
-					Instruction as RelaychainInstruction, WeightLimit as RelaychainWeightLimit,
-					Xcm as RelaychainXcm,
+					Instruction as RelaychainInstruction, OriginKind as RelaychainOriginKind,
+					WeightLimit as RelaychainWeightLimit, Xcm as RelaychainXcm,
 				},
 				VersionedLocation as RelaychainVersionedLocation,
 				VersionedXcm as RelaychainVersionedXcm,
@@ -52,7 +51,7 @@ use subxt::{
 	config::DefaultExtrinsicParams,
 	events::StaticEvent,
 	ext::sp_core::{sr25519::Pair, Pair as PairT, H160},
-	tx::{PairSigner, TxPayload},
+	tx::{PairSigner, Payload},
 	Config, OnlineClient, PolkadotConfig,
 };
 
@@ -249,21 +248,23 @@ pub async fn fund_account(
 pub async fn construct_create_agent_call(
 	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let call = bridgehub::api::ethereum_system::calls::TransactionApi
+	let mut encoded = Vec::new();
+	bridgehub::api::ethereum_system::calls::TransactionApi
 		.create_agent()
-		.encode_call_data(&bridge_hub_client.metadata())?;
+		.encode_call_data_to(&bridge_hub_client.metadata(), &mut encoded)?;
 
-	Ok(call)
+	Ok(encoded)
 }
 
 pub async fn construct_create_channel_call(
 	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let call = bridgehub::api::ethereum_system::calls::TransactionApi
+	let mut encoded = Vec::new();
+	bridgehub::api::ethereum_system::calls::TransactionApi
 		.create_channel(OperatingMode::Normal)
-		.encode_call_data(&bridge_hub_client.metadata())?;
+		.encode_call_data_to(&bridge_hub_client.metadata(), &mut encoded)?;
 
-	Ok(call)
+	Ok(encoded)
 }
 
 pub async fn construct_transfer_native_from_agent_call(
@@ -271,11 +272,12 @@ pub async fn construct_transfer_native_from_agent_call(
 	recipient: H160,
 	amount: u128,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let call = bridgehub::api::ethereum_system::calls::TransactionApi
+	let mut encoded = Vec::new();
+	bridgehub::api::ethereum_system::calls::TransactionApi
 		.transfer_native_from_agent(recipient, amount)
-		.encode_call_data(&bridge_hub_client.metadata())?;
+		.encode_call_data_to(&bridge_hub_client.metadata(), &mut encoded)?;
 
-	Ok(call)
+	Ok(encoded)
 }
 
 pub async fn governance_bridgehub_call_from_relay_chain(
@@ -320,7 +322,7 @@ pub async fn governance_bridgehub_call_from_relay_chain(
 		.await
 		.expect("sudo call success");
 
-	println!("Sudo call issued at relaychain block hash {:?}", result.block_hash());
+	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
 
 	Ok(())
 }
