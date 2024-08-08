@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"golang.org/x/exp/rand"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -85,7 +86,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	eg.Go(func() error {
 		defer close(li.tasks)
 
-		ticker := time.NewTicker(time.Second * 30)
+		ticker := time.NewTicker(time.Second*60 + time.Duration(rand.Intn(30))*time.Second)
 		for {
 			beefyBlockNumber, _, err := li.fetchLatestBeefyBlock(ctx)
 			if err != nil {
