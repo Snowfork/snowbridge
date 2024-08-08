@@ -20,6 +20,8 @@ type Task struct {
 	ProofOutput *ProofOutput
 	// Proofs for messages from outbound channel on Polkadot
 	MessageProofs *[]MessageProof
+	// ID of the relayer for the message
+	RelayID uint64
 }
 
 // A ProofInput is data needed to generate a proof of parachain header inclusion

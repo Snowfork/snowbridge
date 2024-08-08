@@ -1,13 +1,16 @@
 package parachain
 
 import (
+	"errors"
 	"fmt"
+
 	"github.com/snowfork/snowbridge/relayer/config"
 )
 
 type Config struct {
-	Source SourceConfig `mapstructure:"source"`
-	Sink   SinkConfig   `mapstructure:"sink"`
+	Source SourceConfig  `mapstructure:"source"`
+	Sink   SinkConfig    `mapstructure:"sink"`
+	Relay  RelayerConfig `mapstructure:"relay"`
 }
 
 type SourceConfig struct {
@@ -30,6 +33,19 @@ type SinkConfig struct {
 
 type SinkContractsConfig struct {
 	Gateway string `mapstructure:"Gateway"`
+}
+
+type RelayerConfig struct {
+	ID      uint64 `mapstructure:"id"`
+	Num     uint64 `mapstructure:"num"`
+	Timeout uint64 `mapstructure:"timeout"`
+}
+
+func (r RelayerConfig) Validate() error {
+	if r.Num < 1 {
+		return errors.New("Number of relayer is not set")
+	}
+	return nil
 }
 
 type ChannelID [32]byte
@@ -66,5 +82,12 @@ func (c Config) Validate() error {
 	if c.Sink.Contracts.Gateway == "" {
 		return fmt.Errorf("sink contracts setting [Gateway] is not set")
 	}
+
+	// Relay
+	err = c.Relay.Validate()
+	if err != nil {
+		return fmt.Errorf("relay config: %w", err)
+	}
+
 	return nil
 }

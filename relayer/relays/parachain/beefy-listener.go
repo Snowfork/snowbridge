@@ -2,8 +2,8 @@ package parachain
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -22,6 +22,7 @@ import (
 
 type BeefyListener struct {
 	config              *SourceConfig
+	relayConfig         *RelayerConfig
 	ethereumConn        *ethereum.Connection
 	beefyClientContract *contracts.BeefyClient
 	relaychainConn      *relaychain.Connection
@@ -33,6 +34,7 @@ type BeefyListener struct {
 
 func NewBeefyListener(
 	config *SourceConfig,
+	relayConfig *RelayerConfig,
 	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
@@ -40,6 +42,7 @@ func NewBeefyListener(
 ) *BeefyListener {
 	return &BeefyListener{
 		config:              config,
+		relayConfig:         relayConfig,
 		ethereumConn:        ethereumConn,
 		relaychainConn:      relaychainConn,
 		parachainConnection: parachainConnection,
@@ -82,27 +85,24 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	eg.Go(func() error {
 		defer close(li.tasks)
 
-		// Subscribe NewMMRRoot event logs and fetch parachain message commitments
-		// since latest beefy block
-		beefyBlockNumber, _, err := li.fetchLatestBeefyBlock(ctx)
-		if err != nil {
-			return fmt.Errorf("fetch latest beefy block: %w", err)
-		}
-
-		err = li.doScan(ctx, beefyBlockNumber)
-		if err != nil {
-			return fmt.Errorf("scan for sync tasks bounded by BEEFY block %v: %w", beefyBlockNumber, err)
-		}
-
-		err = li.subscribeNewMMRRoots(ctx)
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return nil
+		ticker := time.NewTicker(time.Second * 30)
+		for {
+			beefyBlockNumber, _, err := li.fetchLatestBeefyBlock(ctx)
+			if err != nil {
+				return fmt.Errorf("fetch latest beefy block: %w", err)
 			}
-			return err
-		}
 
-		return nil
+			err = li.doScan(ctx, beefyBlockNumber)
+			if err != nil {
+				return fmt.Errorf("scan for sync tasks bounded by BEEFY block %v: %w", beefyBlockNumber, err)
+			}
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-ticker.C:
+				continue
+			}
+		}
 	})
 
 	return nil
@@ -154,18 +154,27 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 	if err != nil {
 		return err
 	}
-
-	for _, task := range tasks {
-		// do final proof generation right before sending. The proof needs to be fresh.
-		task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
-		if err != nil {
-			return err
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case li.tasks <- task:
-			log.Info("Beefy Listener emitted new task")
+	latestBlockNumber, err := li.scanner.findLatestBlockNumber()
+	if err != nil {
+		return err
+	}
+	if len(tasks) > 0 {
+		task := tasks[0]
+		if li.isAssigned(task) || li.isTimeout(task, latestBlockNumber) {
+			log.Info(fmt.Sprintf("Nonce %d round-robin to current relay:%d", (*task.MessageProofs)[0].Message.Nonce, li.relayConfig.ID))
+			task.RelayID = li.relayConfig.ID
+			task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
+			if err != nil {
+				return err
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case li.tasks <- task:
+				log.Info("Beefy Listener emitted new task")
+			}
+		} else {
+			log.Info(fmt.Sprintf("Nonce %d does not belong to current relay:%d", (*task.MessageProofs)[0].Message.Nonce, li.relayConfig.ID))
 		}
 	}
 
@@ -284,4 +293,19 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, h
 	}
 
 	return &output, nil
+}
+
+func (li *BeefyListener) isAssigned(task *Task) bool {
+	proofs := *task.MessageProofs
+	if len(proofs) == 0 {
+		return false
+	}
+	if proofs[0].Message.Nonce%li.relayConfig.Num == li.relayConfig.ID {
+		return true
+	}
+	return false
+}
+
+func (li *BeefyListener) isTimeout(task *Task, latestBlock uint64) bool {
+	return uint64(task.Header.Number)+li.relayConfig.Timeout < latestBlock
 }

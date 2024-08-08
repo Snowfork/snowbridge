@@ -24,5 +24,10 @@
     "contracts": {
       "Gateway": null
     }
+  },
+  "relay": {
+    "id": null,
+    "num": 2,
+    "timeout": 20
   }
 }
