@@ -161,8 +161,9 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 	}
 	if len(tasks) > 0 {
 		task := tasks[0]
+		paraNonce := (*task.MessageProofs)[0].Message.Nonce
 		if li.isAssigned(task) || li.isTimeout(task, latestBlockNumber) {
-			log.Info(fmt.Sprintf("Nonce %d round-robin to current relay:%d", (*task.MessageProofs)[0].Message.Nonce, li.relayConfig.ID))
+			log.Info(fmt.Sprintf("Nonce %d round-robin to current relay:%d", paraNonce, li.relayConfig.ID))
 			task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
 			if err != nil {
 				return err
@@ -173,8 +174,6 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 			case li.tasks <- task:
 				log.Info("Beefy Listener emitted new task")
 			}
-		} else {
-			log.Info(fmt.Sprintf("Nonce %d does not belong to current relay:%d", (*task.MessageProofs)[0].Message.Nonce, li.relayConfig.ID))
 		}
 	}
 
@@ -296,14 +295,7 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, h
 }
 
 func (li *BeefyListener) isAssigned(task *Task) bool {
-	proofs := *task.MessageProofs
-	if len(proofs) == 0 {
-		return false
-	}
-	if proofs[0].Message.Nonce%li.relayConfig.Num == li.relayConfig.ID {
-		return true
-	}
-	return false
+	return (*task.MessageProofs)[0].Message.Nonce%li.relayConfig.Num == li.relayConfig.ID
 }
 
 func (li *BeefyListener) isTimeout(task *Task, latestBlock uint64) bool {
