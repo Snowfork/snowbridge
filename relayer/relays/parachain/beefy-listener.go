@@ -158,7 +158,6 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 		task := tasks[0]
 		if li.isAssigned(task) || li.isTimeout(task, beefyBlockNumber) {
 			log.Info(fmt.Sprintf("Nonce %d round-robin to current relay:%d", (*task.MessageProofs)[0].Message.Nonce, li.relayConfig.ID))
-			task.RelayID = li.relayConfig.ID
 			task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
 			if err != nil {
 				return err
