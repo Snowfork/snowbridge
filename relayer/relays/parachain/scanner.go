@@ -458,15 +458,3 @@ func fetchMessageProof(
 
 	return MessageProof{Message: message, Proof: proof}, nil
 }
-
-func (s *Scanner) findLatestBlockNumber() (uint64, error) {
-	headerHash, err := s.paraConn.API().RPC.Chain.GetFinalizedHead()
-	if err != nil {
-		return 0, fmt.Errorf("fetch parachain hash: %w", err)
-	}
-	header, err := s.paraConn.API().RPC.Chain.GetHeader(headerHash)
-	if err != nil {
-		return 0, fmt.Errorf("fetch parachain header: %w", err)
-	}
-	return uint64(header.Number), nil
-}
