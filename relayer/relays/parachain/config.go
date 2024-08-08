@@ -36,9 +36,8 @@ type SinkContractsConfig struct {
 }
 
 type RelayerConfig struct {
-	ID      uint64 `mapstructure:"id"`
-	Num     uint64 `mapstructure:"num"`
-	Timeout uint64 `mapstructure:"timeout"`
+	ID  uint64 `mapstructure:"id"`
+	Num uint64 `mapstructure:"num"`
 }
 
 func (r RelayerConfig) Validate() error {
