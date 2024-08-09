@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -71,30 +72,13 @@ func (s *Scanner) findTasks(
 	paraHash types.Hash,
 ) ([]*Task, error) {
 	// Fetch latest nonce in ethereum gateway
-	gatewayAddress := common.HexToAddress(s.config.Contracts.Gateway)
-	gatewayContract, err := contracts.NewGateway(
-		gatewayAddress,
-		s.ethConn.Client(),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("create gateway contract for address '%v': %w", gatewayAddress, err)
-	}
-
-	options := bind.CallOpts{
-		Pending: true,
-		Context: ctx,
-	}
-	ethInboundNonce, _, err := gatewayContract.ChannelNoncesOf(&options, s.config.ChannelID)
-	if err != nil {
-		return nil, fmt.Errorf("fetch nonce from gateway contract for channelID '%v': %w", s.config.ChannelID, err)
-	}
+	ethInboundNonce, err := s.findLatestNonce(ctx)
 	log.WithFields(log.Fields{
 		"nonce":     ethInboundNonce,
 		"channelID": s.config.ChannelID,
 	}).Info("Checked latest nonce delivered to ethereum gateway")
 
 	// Fetch latest nonce in parachain outbound queue
-
 	paraNonceKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueue", "Nonce", s.config.ChannelID[:], nil)
 	if err != nil {
 		return nil, fmt.Errorf("create storage key for parachain outbound queue nonce with channelID '%v': %w", s.config.ChannelID, err)
@@ -456,4 +440,26 @@ func fetchMessageProof(
 	}
 
 	return MessageProof{Message: message, Proof: proof}, nil
+}
+
+func (s *Scanner) findLatestNonce(ctx context.Context) (uint64, error) {
+	// Fetch latest nonce in ethereum gateway
+	gatewayAddress := common.HexToAddress(s.config.Contracts.Gateway)
+	gatewayContract, err := contracts.NewGateway(
+		gatewayAddress,
+		s.ethConn.Client(),
+	)
+	if err != nil {
+		return 0, fmt.Errorf("create gateway contract for address '%v': %w", gatewayAddress, err)
+	}
+
+	options := bind.CallOpts{
+		Pending: true,
+		Context: ctx,
+	}
+	ethInboundNonce, _, err := gatewayContract.ChannelNoncesOf(&options, s.config.ChannelID)
+	if err != nil {
+		return 0, fmt.Errorf("fetch nonce from gateway contract for channelID '%v': %w", s.config.ChannelID, err)
+	}
+	return ethInboundNonce, err
 }
