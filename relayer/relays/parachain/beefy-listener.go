@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"golang.org/x/exp/rand"
 	"golang.org/x/sync/errgroup"
 
@@ -86,7 +85,9 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	eg.Go(func() error {
 		defer close(li.tasks)
 
-		ticker := time.NewTicker(time.Second*60 + time.Duration(rand.Intn(30))*time.Second)
+		// Add some randomness here in case one relayer is down and other relayers won't compete for
+		// that failed message at same time.
+		ticker := time.NewTicker(time.Second*30 + time.Duration(rand.Intn(10))*time.Second)
 		for {
 			beefyBlockNumber, _, err := li.fetchLatestBeefyBlock(ctx)
 			if err != nil {
@@ -109,70 +110,33 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (li *BeefyListener) subscribeNewMMRRoots(ctx context.Context) error {
-	headers := make(chan *gethTypes.Header, 5)
-
-	sub, err := li.ethereumConn.Client().SubscribeNewHead(ctx, headers)
-	if err != nil {
-		return fmt.Errorf("creating ethereum header subscription: %w", err)
-	}
-	defer sub.Unsubscribe()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case err := <-sub.Err():
-			return fmt.Errorf("header subscription: %w", err)
-		case gethheader := <-headers:
-			blockNumber := gethheader.Number.Uint64()
-			contractEvents, err := li.queryBeefyClientEvents(ctx, blockNumber, &blockNumber)
-			if err != nil {
-				return fmt.Errorf("query NewMMRRoot event logs in block %v: %w", blockNumber, err)
-			}
-
-			if len(contractEvents) > 0 {
-				log.Info(fmt.Sprintf("Found %d BeefyLightClient.NewMMRRoot events in block %d", len(contractEvents), blockNumber))
-				// Only process the last emitted event in the block
-				event := contractEvents[len(contractEvents)-1]
-				log.WithFields(log.Fields{
-					"beefyBlockNumber":    event.BlockNumber,
-					"ethereumBlockNumber": event.Raw.BlockNumber,
-					"ethereumTxHash":      event.Raw.TxHash.Hex(),
-				}).Info("Witnessed a new MMRRoot event")
-
-				err = li.doScan(ctx, event.BlockNumber)
-				if err != nil {
-					return fmt.Errorf("scan for sync tasks bounded by BEEFY block %v: %w", event.BlockNumber, err)
-				}
-			}
-		}
-	}
-}
-
 func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) error {
 	tasks, err := li.scanner.Scan(ctx, beefyBlockNumber)
-	if err != nil {
-		return err
-	}
-	latestBlockNumber, err := li.scanner.findLatestBlockNumber()
 	if err != nil {
 		return err
 	}
 	if len(tasks) > 0 {
 		task := tasks[0]
 		paraNonce := (*task.MessageProofs)[0].Message.Nonce
-		if li.isAssigned(task) || li.isTimeout(task, latestBlockNumber) {
-			log.Info(fmt.Sprintf("Nonce %d round-robin to current relay:%d", paraNonce, li.relayConfig.ID))
-			task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
+		if paraNonce%li.relayConfig.Num == li.relayConfig.ID {
+			// Task self assigned
+			err = li.addTask(ctx, task)
 			if err != nil {
-				return err
+				return fmt.Errorf("add task for nonce %d: %w", paraNonce, err)
 			}
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case li.tasks <- task:
-				log.Info("Beefy Listener emitted new task")
+			log.Info(fmt.Sprintf("nonce %d self assigned to relay(%d)", paraNonce, li.relayConfig.ID))
+		} else {
+			// Task wait for picked up by another relayer, submit anyway if timeout
+			done, err := li.waitForTask(ctx, task)
+			if err != nil {
+				return fmt.Errorf("wait task for nonce %d: %w", paraNonce, err)
+			}
+			if !done {
+				err = li.addTask(ctx, task)
+				if err != nil {
+					return fmt.Errorf("add task for nonce %d: %w", paraNonce, err)
+				}
+				log.Info(fmt.Sprintf("nonce %d timeout but picked up by relay(%d)", paraNonce, li.relayConfig.ID))
 			}
 		}
 	}
@@ -180,33 +144,39 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 	return nil
 }
 
-// queryBeefyClientEvents queries ContractNewMMRRoot events from the BeefyClient contract
-func (li *BeefyListener) queryBeefyClientEvents(
-	ctx context.Context, start uint64,
-	end *uint64,
-) ([]*contracts.BeefyClientNewMMRRoot, error) {
-	var events []*contracts.BeefyClientNewMMRRoot
-	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
-
-	iter, err := li.beefyClientContract.FilterNewMMRRoot(&filterOps)
+func (li *BeefyListener) addTask(ctx context.Context, task *Task) (err error) {
+	task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case li.tasks <- task:
+		log.Info("Beefy Listener emitted new task")
+	}
+	return nil
+}
 
+func (li *BeefyListener) waitForTask(ctx context.Context, task *Task) (bool, error) {
+	paraNonce := (*task.MessageProofs)[0].Message.Nonce
+	cnt := 0
+	log.Info(fmt.Sprintf("waiting for nonce %d to be picked up by another relayer", paraNonce))
 	for {
-		more := iter.Next()
-		if !more {
-			err = iter.Error()
-			if err != nil {
-				return nil, err
-			}
+		ethInboundNonce, err := li.scanner.findLatestNonce(ctx)
+		if err != nil {
+			return false, err
+		}
+		if ethInboundNonce >= paraNonce {
+			return true, nil
+		}
+		time.Sleep(10 * time.Second)
+		if cnt == 12 {
 			break
 		}
-
-		events = append(events, iter.Event)
+		cnt++
 	}
-
-	return events, nil
+	return false, nil
 }
 
 // Fetch the latest verified beefy block number and hash from Ethereum
@@ -292,12 +262,4 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, h
 	}
 
 	return &output, nil
-}
-
-func (li *BeefyListener) isAssigned(task *Task) bool {
-	return (*task.MessageProofs)[0].Message.Nonce%li.relayConfig.Num == li.relayConfig.ID
-}
-
-func (li *BeefyListener) isTimeout(task *Task, latestBlock uint64) bool {
-	return uint64(task.Header.Number)+li.relayConfig.Timeout < latestBlock
 }
