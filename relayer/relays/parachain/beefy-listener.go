@@ -87,7 +87,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 
 		// Add some randomness here in case one relayer is down and other relayers won't compete for
 		// that failed message at same time.
-		ticker := time.NewTicker(time.Second*30 + time.Duration(rand.Intn(10))*time.Second)
+		ticker := time.NewTicker(time.Second*60 + time.Duration(rand.Intn(30))*time.Second)
 		for {
 			beefyBlockNumber, _, err := li.fetchLatestBeefyBlock(ctx)
 			if err != nil {
@@ -256,8 +256,8 @@ func (li *BeefyListener) waitForTask(ctx context.Context, task *Task) (bool, err
 			log.Info(fmt.Sprintf("nonce %d picked up by another relayer, just skip", paraNonce))
 			return true, nil
 		}
-		time.Sleep(10 * time.Second)
-		if cnt == 12 {
+		time.Sleep(5 * time.Second)
+		if cnt == 6 {
 			break
 		}
 		cnt++

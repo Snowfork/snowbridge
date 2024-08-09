@@ -94,6 +94,26 @@ config_relayer() {
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay-asset-hub-1.json
 
+    # Configure parachain relay (asset hub)-2
+    jq \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --arg k2 "$(address_for BeefyClient)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
+        --arg channelID $ASSET_HUB_CHANNEL_ID \
+        --arg eth_gas_limit $eth_gas_limit \
+        '
+      .source.contracts.Gateway = $k1
+    | .source.contracts.BeefyClient = $k2
+    | .sink.contracts.Gateway = $k1
+    | .source.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
+    | .sink.ethereum."gas-limit" = $eth_gas_limit
+    | .source."channel-id" = $channelID
+    | .relay.id = 2
+    ' \
+        config/parachain-relay.json >$output_dir/parachain-relay-asset-hub-2.json
+
     # Configure parachain relay (penpal)
     jq \
         --arg k1 "$(address_for GatewayProxy)" \
@@ -213,8 +233,21 @@ start_relayer() {
             echo "Starting parachain relay (asset-hub) at $(date)"
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay-asset-hub-1.json" \
-                --ethereum.private-key $parachain_relay_secondary_gov_eth_key \
+                --ethereum.private-key $parachain_relay_primary_gov_eth_key \
                 >>"$output_dir"/parachain-relay-asset-hub-1.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch parachain relay 2 for assethub
+    (
+        : >"$output_dir"/parachain-relay-asset-hub-2.log
+        while :; do
+            echo "Starting parachain relay (asset-hub) at $(date)"
+            "${relay_bin}" run parachain \
+                --config "$output_dir/parachain-relay-asset-hub-2.json" \
+                --ethereum.private-key $parachain_relay_secondary_gov_eth_key \
+                >>"$output_dir"/parachain-relay-asset-hub-2.log 2>&1 || true
             sleep 20
         done
     ) &
