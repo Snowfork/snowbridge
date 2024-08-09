@@ -144,41 +144,6 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 	return nil
 }
 
-func (li *BeefyListener) addTask(ctx context.Context, task *Task) (err error) {
-	task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
-	if err != nil {
-		return err
-	}
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case li.tasks <- task:
-		log.Info("Beefy Listener emitted new task")
-	}
-	return nil
-}
-
-func (li *BeefyListener) waitForTask(ctx context.Context, task *Task) (bool, error) {
-	paraNonce := (*task.MessageProofs)[0].Message.Nonce
-	cnt := 0
-	log.Info(fmt.Sprintf("waiting for nonce %d to be picked up by another relayer", paraNonce))
-	for {
-		ethInboundNonce, err := li.scanner.findLatestNonce(ctx)
-		if err != nil {
-			return false, err
-		}
-		if ethInboundNonce >= paraNonce {
-			return true, nil
-		}
-		time.Sleep(10 * time.Second)
-		if cnt == 12 {
-			break
-		}
-		cnt++
-	}
-	return false, nil
-}
-
 // Fetch the latest verified beefy block number and hash from Ethereum
 func (li *BeefyListener) fetchLatestBeefyBlock(ctx context.Context) (uint64, types.Hash, error) {
 	number, err := li.beefyClientContract.LatestBeefyBlock(&bind.CallOpts{
@@ -262,4 +227,39 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, h
 	}
 
 	return &output, nil
+}
+
+func (li *BeefyListener) addTask(ctx context.Context, task *Task) (err error) {
+	task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
+	if err != nil {
+		return err
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case li.tasks <- task:
+		log.Info("Beefy Listener emitted new task")
+	}
+	return nil
+}
+
+func (li *BeefyListener) waitForTask(ctx context.Context, task *Task) (bool, error) {
+	paraNonce := (*task.MessageProofs)[0].Message.Nonce
+	cnt := 0
+	log.Info(fmt.Sprintf("waiting for nonce %d to be picked up by another relayer", paraNonce))
+	for {
+		ethInboundNonce, err := li.scanner.findLatestNonce(ctx)
+		if err != nil {
+			return false, err
+		}
+		if ethInboundNonce >= paraNonce {
+			return true, nil
+		}
+		time.Sleep(10 * time.Second)
+		if cnt == 12 {
+			break
+		}
+		cnt++
+	}
+	return false, nil
 }
