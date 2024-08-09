@@ -245,14 +245,15 @@ func (li *BeefyListener) addTask(ctx context.Context, task *Task) (err error) {
 
 func (li *BeefyListener) waitForTask(ctx context.Context, task *Task) (bool, error) {
 	paraNonce := (*task.MessageProofs)[0].Message.Nonce
-	cnt := 0
 	log.Info(fmt.Sprintf("waiting for nonce %d to be picked up by another relayer", paraNonce))
+	cnt := 0
 	for {
 		ethInboundNonce, err := li.scanner.findLatestNonce(ctx)
 		if err != nil {
 			return false, err
 		}
 		if ethInboundNonce >= paraNonce {
+			log.Info(fmt.Sprintf("nonce %d picked up by another relayer, just skip", paraNonce))
 			return true, nil
 		}
 		time.Sleep(10 * time.Second)
