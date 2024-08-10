@@ -85,24 +85,22 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	eg.Go(func() error {
 		defer close(li.tasks)
 
-		// Add some randomness here in case one relayer is down and other relayers won't compete for
-		// that failed message at same time.
-		ticker := time.NewTicker(time.Second*60 + time.Duration(rand.Intn(30))*time.Second)
 		for {
-			beefyBlockNumber, _, err := li.fetchLatestBeefyBlock(ctx)
-			if err != nil {
-				return fmt.Errorf("fetch latest beefy block: %w", err)
-			}
-
-			err = li.doScan(ctx, beefyBlockNumber)
-			if err != nil {
-				return fmt.Errorf("scan for sync tasks bounded by BEEFY block %v: %w", beefyBlockNumber, err)
-			}
 			select {
 			case <-ctx.Done():
 				return nil
-			case <-ticker.C:
-				continue
+			// Add some randomness here in case one relayer is down and other relayers won't compete for
+			// that failed message at same time.
+			case <-time.After(time.Second*90 + time.Duration(rand.Intn(30))*time.Second):
+				beefyBlockNumber, _, err := li.fetchLatestBeefyBlock(ctx)
+				if err != nil {
+					return fmt.Errorf("fetch latest beefy block: %w", err)
+				}
+
+				err = li.doScan(ctx, beefyBlockNumber)
+				if err != nil {
+					return fmt.Errorf("scan for sync tasks bounded by BEEFY block %v: %w", beefyBlockNumber, err)
+				}
 			}
 		}
 	})
@@ -257,7 +255,7 @@ func (li *BeefyListener) waitForTask(ctx context.Context, task *Task) (bool, err
 			return true, nil
 		}
 		time.Sleep(5 * time.Second)
-		if cnt == 6 {
+		if cnt == 12 {
 			break
 		}
 		cnt++
