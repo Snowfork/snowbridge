@@ -33,6 +33,7 @@ type Relay struct {
 	gatewayContract *contracts.Gateway
 	beaconHeader    *header.Header
 	writer          *parachain.ParachainWriter
+	headerCache     *ethereum.HeaderCache
 }
 
 func NewRelay(
@@ -77,6 +78,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return err
 	}
+	r.headerCache = headerCache
 
 	address := common.HexToAddress(r.config.Source.Contracts.Gateway)
 	contract, err := contracts.NewGateway(address, ethconn.Client())
@@ -105,7 +107,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(6 * time.Second):
+		case <-time.After(30 * time.Second):
 			log.WithFields(log.Fields{
 				"channelId": r.config.Source.ChannelID,
 			}).Info("Polling Nonces")
@@ -140,55 +142,14 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			if err != nil {
 				return fmt.Errorf("find events: %w", err)
 			}
+			if len(events) == 0 {
+				continue
+			}
 
-			for _, ev := range events {
-				inboundMsg, err := r.makeInboundMessage(ctx, headerCache, ev)
-				if err != nil {
-					return fmt.Errorf("make outgoing message: %w", err)
-				}
-				logger := log.WithFields(log.Fields{
-					"paraNonce":   paraNonce,
-					"ethNonce":    ethNonce,
-					"msgNonce":    ev.Nonce,
-					"address":     ev.Raw.Address.Hex(),
-					"blockHash":   ev.Raw.BlockHash.Hex(),
-					"blockNumber": ev.Raw.BlockNumber,
-					"txHash":      ev.Raw.TxHash.Hex(),
-					"txIndex":     ev.Raw.TxIndex,
-					"channelID":   types.H256(ev.ChannelID).Hex(),
-				})
-
-				if ev.Nonce <= paraNonce {
-					logger.Warn("inbound message outdated, just skipped")
-					continue
-				}
-				nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
-
-				blockHeader, err := ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
-				if err != nil {
-					return fmt.Errorf("get block header: %w", err)
-				}
-
-				// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
-				proof, err := beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
-				if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
-					logger.Warn("beacon header not finalized, just skipped")
-					continue
-				}
-				if err != nil {
-					return fmt.Errorf("fetch execution header proof: %w", err)
-				}
-
-				err = r.writeToParachain(ctx, proof, inboundMsg)
-				if err != nil {
-					return fmt.Errorf("write to parachain: %w", err)
-				}
-
-				paraNonce, _ = r.fetchLatestParachainNonce()
-				if paraNonce != ev.Nonce {
-					return fmt.Errorf("inbound message fail to execute")
-				}
-				logger.Info("inbound message executed successfully")
+			ev := events[0]
+			err = r.doSubmit(ctx, ev)
+			if err != nil {
+				return fmt.Errorf("submit message: %w", err)
 			}
 		}
 	}
@@ -387,4 +348,63 @@ func (r *Relay) makeInboundMessage(
 	}).Info("found message")
 
 	return msg, nil
+}
+
+func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) error {
+
+	inboundMsg, err := r.makeInboundMessage(ctx, r.headerCache, ev)
+	if err != nil {
+		return fmt.Errorf("make outgoing message: %w", err)
+	}
+
+	paraNonce, err := r.fetchLatestParachainNonce()
+	if err != nil {
+		return fmt.Errorf("fetch latest parachain nonce: %w", err)
+	}
+
+	logger := log.WithFields(log.Fields{
+		"paraNonce":   paraNonce,
+		"ethNonce":    ev.Nonce,
+		"msgNonce":    ev.Nonce,
+		"address":     ev.Raw.Address.Hex(),
+		"blockHash":   ev.Raw.BlockHash.Hex(),
+		"blockNumber": ev.Raw.BlockNumber,
+		"txHash":      ev.Raw.TxHash.Hex(),
+		"txIndex":     ev.Raw.TxIndex,
+		"channelID":   types.H256(ev.ChannelID).Hex(),
+	})
+
+	if ev.Nonce <= paraNonce {
+		logger.Warn("inbound message outdated, just skipped")
+		return nil
+	}
+	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
+
+	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
+	if err != nil {
+		return fmt.Errorf("get block header: %w", err)
+	}
+
+	// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
+	proof, err := r.beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
+	if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
+		logger.Warn("beacon header not finalized, just skipped")
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("fetch execution header proof: %w", err)
+	}
+
+	err = r.writeToParachain(ctx, proof, inboundMsg)
+	if err != nil {
+		return fmt.Errorf("write to parachain: %w", err)
+	}
+
+	paraNonce, _ = r.fetchLatestParachainNonce()
+	if paraNonce != ev.Nonce {
+		return fmt.Errorf("inbound message fail to execute")
+	}
+	logger.Info("inbound message executed successfully")
+
+	return nil
 }
