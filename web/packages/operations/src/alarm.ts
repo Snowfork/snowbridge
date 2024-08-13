@@ -227,6 +227,7 @@ export const initializeAlarms = async () => {
     let alarmCommandSharedInput = {
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
         Threshold: 0,
+        TreatMissingData: "BREACHING",
     }
 
     // Alarm for stale bridge
