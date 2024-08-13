@@ -8,9 +8,9 @@ import (
 )
 
 type Config struct {
-	Source SourceConfig  `mapstructure:"source"`
-	Sink   SinkConfig    `mapstructure:"sink"`
-	Relay  RelayerConfig `mapstructure:"relay"`
+	Source SourceConfig   `mapstructure:"source"`
+	Sink   SinkConfig     `mapstructure:"sink"`
+	Relay  ScheduleConfig `mapstructure:"relay"`
 }
 
 type SourceConfig struct {
@@ -35,12 +35,12 @@ type SinkContractsConfig struct {
 	Gateway string `mapstructure:"Gateway"`
 }
 
-type RelayerConfig struct {
+type ScheduleConfig struct {
 	ID  uint64 `mapstructure:"id"`
 	Num uint64 `mapstructure:"num"`
 }
 
-func (r RelayerConfig) Validate() error {
+func (r ScheduleConfig) Validate() error {
 	if r.Num < 1 {
 		return errors.New("Number of relayer is not set")
 	}
