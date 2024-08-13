@@ -34,7 +34,7 @@ type BeefyListener struct {
 
 func NewBeefyListener(
 	config *SourceConfig,
-	relayConfig *ScheduleConfig,
+	scheduleConfig *ScheduleConfig,
 	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
@@ -42,7 +42,7 @@ func NewBeefyListener(
 ) *BeefyListener {
 	return &BeefyListener{
 		config:              config,
-		relayConfig:         relayConfig,
+		relayConfig:         scheduleConfig,
 		ethereumConn:        ethereumConn,
 		relaychainConn:      relaychainConn,
 		parachainConnection: parachainConnection,
