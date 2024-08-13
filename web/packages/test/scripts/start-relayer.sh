@@ -70,7 +70,7 @@ config_relayer() {
     | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."channel-id" = $channelID
-    | .relay.id = 0
+    | .schedule.id = 0
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay-asset-hub-0.json
 
@@ -90,7 +90,7 @@ config_relayer() {
     | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."channel-id" = $channelID
-    | .relay.id = 1
+    | .schedule.id = 1
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay-asset-hub-1.json
 
@@ -110,7 +110,7 @@ config_relayer() {
     | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."channel-id" = $channelID
-    | .relay.id = 2
+    | .schedule.id = 2
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay-asset-hub-2.json
 

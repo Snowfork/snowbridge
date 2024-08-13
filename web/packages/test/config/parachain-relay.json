@@ -25,7 +25,7 @@
       "Gateway": null
     }
   },
-  "relay": {
+  "schedule": {
     "id": null,
     "num": 3
   }

@@ -47,7 +47,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 
 	beefyListener := NewBeefyListener(
 		&config.Source,
-		&config.Relay,
+		&config.Schedule,
 		ethereumConnBeefy,
 		relaychainConn,
 		parachainConn,
@@ -98,7 +98,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	log.Info("Current relay's ID:", relay.config.Relay.ID)
+	log.Info("Current relay's ID:", relay.config.Schedule.ID)
 
 	return nil
 }

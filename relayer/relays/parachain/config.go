@@ -8,9 +8,9 @@ import (
 )
 
 type Config struct {
-	Source SourceConfig   `mapstructure:"source"`
-	Sink   SinkConfig     `mapstructure:"sink"`
-	Relay  ScheduleConfig `mapstructure:"relay"`
+	Source   SourceConfig   `mapstructure:"source"`
+	Sink     SinkConfig     `mapstructure:"sink"`
+	Schedule ScheduleConfig `mapstructure:"schedule"`
 }
 
 type SourceConfig struct {
@@ -83,7 +83,7 @@ func (c Config) Validate() error {
 	}
 
 	// Relay
-	err = c.Relay.Validate()
+	err = c.Schedule.Validate()
 	if err != nil {
 		return fmt.Errorf("relay config: %w", err)
 	}
