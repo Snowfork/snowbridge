@@ -22,7 +22,7 @@ import (
 
 type BeefyListener struct {
 	config              *SourceConfig
-	relayConfig         *ScheduleConfig
+	scheduleConfig      *ScheduleConfig
 	ethereumConn        *ethereum.Connection
 	beefyClientContract *contracts.BeefyClient
 	relaychainConn      *relaychain.Connection
@@ -42,7 +42,7 @@ func NewBeefyListener(
 ) *BeefyListener {
 	return &BeefyListener{
 		config:              config,
-		relayConfig:         scheduleConfig,
+		scheduleConfig:      scheduleConfig,
 		ethereumConn:        ethereumConn,
 		relaychainConn:      relaychainConn,
 		parachainConnection: parachainConnection,
@@ -116,13 +116,13 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 	if len(tasks) > 0 {
 		task := tasks[0]
 		paraNonce := (*task.MessageProofs)[0].Message.Nonce
-		if paraNonce%li.relayConfig.Num == li.relayConfig.ID {
+		if paraNonce%li.scheduleConfig.Num == li.scheduleConfig.ID {
 			// Task self assigned
 			err = li.addTask(ctx, task)
 			if err != nil {
 				return fmt.Errorf("add task for nonce %d: %w", paraNonce, err)
 			}
-			log.Info(fmt.Sprintf("nonce %d self assigned to relay(%d)", paraNonce, li.relayConfig.ID))
+			log.Info(fmt.Sprintf("nonce %d self assigned to relay(%d)", paraNonce, li.scheduleConfig.ID))
 		} else {
 			// Task wait for picked up by another relayer, submit anyway if timeout
 			done, err := li.waitForTask(ctx, task)
@@ -134,7 +134,7 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 				if err != nil {
 					return fmt.Errorf("add task for nonce %d: %w", paraNonce, err)
 				}
-				log.Info(fmt.Sprintf("nonce %d timeout but picked up by relay(%d)", paraNonce, li.relayConfig.ID))
+				log.Info(fmt.Sprintf("nonce %d timeout but picked up by relay(%d)", paraNonce, li.scheduleConfig.ID))
 			}
 		}
 	}
