@@ -1,0 +1,10 @@
+version: "3"
+services:
+  minitor-service:
+    image: snowbridge-monitor
+    build:
+      context: .
+      dockerfile: monitor.Dockerfile
+    container_name: snowbridge-monitor-1
+    volumes:
+      - ./packages/operations/env:/env
