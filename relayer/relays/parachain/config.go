@@ -36,13 +36,18 @@ type SinkContractsConfig struct {
 }
 
 type ScheduleConfig struct {
-	ID  uint64 `mapstructure:"id"`
+	// ID of current relayer, starting from 0
+	ID uint64 `mapstructure:"id"`
+	// Number of total count of all relayers
 	Num uint64 `mapstructure:"num"`
 }
 
 func (r ScheduleConfig) Validate() error {
 	if r.Num < 1 {
 		return errors.New("Number of relayer is not set")
+	}
+	if r.ID >= r.Num {
+		return errors.New("ID of the Number of relayer is not set")
 	}
 	return nil
 }
