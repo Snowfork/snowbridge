@@ -213,44 +213,44 @@ start_relayer() {
         done
     ) &
 
-    # # Launch parachain relay 0 for assethub
-    # (
-    #     : >"$output_dir"/parachain-relay-asset-hub-0.log
-    #     while :; do
-    #         echo "Starting parachain relay (asset-hub) at $(date)"
-    #         "${relay_bin}" run parachain \
-    #             --config "$output_dir/parachain-relay-asset-hub-0.json" \
-    #             --ethereum.private-key $parachain_relay_assethub_eth_key \
-    #             >>"$output_dir"/parachain-relay-asset-hub-0.log 2>&1 || true
-    #         sleep 20
-    #     done
-    # ) &
+    # Launch parachain relay 0 for assethub
+    (
+        : >"$output_dir"/parachain-relay-asset-hub-0.log
+        while :; do
+            echo "Starting parachain relay (asset-hub) at $(date)"
+            "${relay_bin}" run parachain \
+                --config "$output_dir/parachain-relay-asset-hub-0.json" \
+                --ethereum.private-key $parachain_relay_assethub_eth_key \
+                >>"$output_dir"/parachain-relay-asset-hub-0.log 2>&1 || true
+            sleep 20
+        done
+    ) &
 
-    # # Launch parachain relay 1 for assethub
-    # (
-    #     : >"$output_dir"/parachain-relay-asset-hub-1.log
-    #     while :; do
-    #         echo "Starting parachain relay (asset-hub) at $(date)"
-    #         "${relay_bin}" run parachain \
-    #             --config "$output_dir/parachain-relay-asset-hub-1.json" \
-    #             --ethereum.private-key $parachain_relay_primary_gov_eth_key \
-    #             >>"$output_dir"/parachain-relay-asset-hub-1.log 2>&1 || true
-    #         sleep 20
-    #     done
-    # ) &
+    # Launch parachain relay 1 for assethub
+    (
+        : >"$output_dir"/parachain-relay-asset-hub-1.log
+        while :; do
+            echo "Starting parachain relay (asset-hub) at $(date)"
+            "${relay_bin}" run parachain \
+                --config "$output_dir/parachain-relay-asset-hub-1.json" \
+                --ethereum.private-key $parachain_relay_primary_gov_eth_key \
+                >>"$output_dir"/parachain-relay-asset-hub-1.log 2>&1 || true
+            sleep 20
+        done
+    ) &
 
-    # # Launch parachain relay 2 for assethub
-    # (
-    #     : >"$output_dir"/parachain-relay-asset-hub-2.log
-    #     while :; do
-    #         echo "Starting parachain relay (asset-hub) at $(date)"
-    #         "${relay_bin}" run parachain \
-    #             --config "$output_dir/parachain-relay-asset-hub-2.json" \
-    #             --ethereum.private-key $parachain_relay_secondary_gov_eth_key \
-    #             >>"$output_dir"/parachain-relay-asset-hub-2.log 2>&1 || true
-    #         sleep 20
-    #     done
-    # ) &
+    # Launch parachain relay 2 for assethub
+    (
+        : >"$output_dir"/parachain-relay-asset-hub-2.log
+        while :; do
+            echo "Starting parachain relay (asset-hub) at $(date)"
+            "${relay_bin}" run parachain \
+                --config "$output_dir/parachain-relay-asset-hub-2.json" \
+                --ethereum.private-key $parachain_relay_secondary_gov_eth_key \
+                >>"$output_dir"/parachain-relay-asset-hub-2.log 2>&1 || true
+            sleep 20
+        done
+    ) &
 
     # Launch parachain relay for parachain penpal
     (
