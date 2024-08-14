@@ -24,5 +24,9 @@
     "contracts": {
       "Gateway": null
     }
+  },
+  "schedule": {
+    "id": null,
+    "num": 3
   }
 }

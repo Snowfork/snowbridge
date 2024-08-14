@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -22,6 +23,7 @@ import (
 
 type BeefyListener struct {
 	config              *SourceConfig
+	scheduleConfig      *ScheduleConfig
 	ethereumConn        *ethereum.Connection
 	beefyClientContract *contracts.BeefyClient
 	relaychainConn      *relaychain.Connection
@@ -33,6 +35,7 @@ type BeefyListener struct {
 
 func NewBeefyListener(
 	config *SourceConfig,
+	scheduleConfig *ScheduleConfig,
 	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
@@ -40,6 +43,7 @@ func NewBeefyListener(
 ) *BeefyListener {
 	return &BeefyListener{
 		config:              config,
+		scheduleConfig:      scheduleConfig,
 		ethereumConn:        ethereumConn,
 		relaychainConn:      relaychainConn,
 		parachainConnection: parachainConnection,
@@ -154,18 +158,18 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 	if err != nil {
 		return err
 	}
-
 	for _, task := range tasks {
-		// do final proof generation right before sending. The proof needs to be fresh.
-		task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
-		if err != nil {
-			return err
+		paraNonce := (*task.MessageProofs)[0].Message.Nonce
+		modNonce := paraNonce % li.scheduleConfig.Num
+		var waitingPeriod uint64
+		if modNonce > li.scheduleConfig.ID {
+			waitingPeriod = modNonce - li.scheduleConfig.ID
+		} else {
+			waitingPeriod = li.scheduleConfig.ID - modNonce
 		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case li.tasks <- task:
-			log.Info("Beefy Listener emitted new task")
+		err = li.waitAndSend(ctx, task, waitingPeriod)
+		if err != nil {
+			return fmt.Errorf("wait task for nonce %d: %w", paraNonce, err)
 		}
 	}
 
@@ -284,4 +288,38 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, h
 	}
 
 	return &output, nil
+}
+
+func (li *BeefyListener) waitAndSend(ctx context.Context, task *Task, waitingPeriod uint64) error {
+	paraNonce := (*task.MessageProofs)[0].Message.Nonce
+	log.Info(fmt.Sprintf("waiting for nonce %d to be picked up by another relayer", paraNonce))
+	var cnt uint64
+	var err error
+	for {
+		ethInboundNonce, err := li.scanner.findLatestNonce(ctx)
+		if err != nil {
+			return err
+		}
+		if ethInboundNonce >= paraNonce {
+			log.Info(fmt.Sprintf("nonce %d picked up by another relayer, just skip", paraNonce))
+			return nil
+		}
+		if cnt == waitingPeriod {
+			break
+		}
+		time.Sleep(45 * time.Second)
+		cnt++
+	}
+	log.Info(fmt.Sprintf("nonce %d is not picked up by any one, submit anyway", paraNonce))
+	task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
+	if err != nil {
+		return err
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case li.tasks <- task:
+		log.Info("Beefy Listener emitted new task")
+	}
+	return nil
 }
