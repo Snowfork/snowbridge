@@ -40,6 +40,8 @@ type ScheduleConfig struct {
 	ID uint64 `mapstructure:"id"`
 	// Number of total count of all relayers
 	TotalRelayerCount uint64 `mapstructure:"totalRelayerCount"`
+	// Sleep interval(in seconds) to check if message(nonce) has already been relayed
+	SleepInterval uint64 `mapstructure:"sleepInterval"`
 }
 
 func (r ScheduleConfig) Validate() error {

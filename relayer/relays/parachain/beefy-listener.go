@@ -301,7 +301,7 @@ func (li *BeefyListener) waitAndSend(ctx context.Context, task *Task, waitingPer
 		if cnt == waitingPeriod {
 			break
 		}
-		time.Sleep(45 * time.Second)
+		time.Sleep(time.Duration(li.scheduleConfig.SleepInterval) * time.Second)
 		cnt++
 	}
 	log.Info(fmt.Sprintf("nonce %d is not picked up by any one, submit anyway", paraNonce))

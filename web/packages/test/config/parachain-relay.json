@@ -27,6 +27,7 @@
   },
   "schedule": {
     "id": null,
-    "totalRelayerCount": 3
+    "totalRelayerCount": 3,
+    "sleepInterval": 45
   }
 }
