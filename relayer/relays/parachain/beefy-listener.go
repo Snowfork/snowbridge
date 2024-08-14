@@ -160,7 +160,7 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 	}
 	for _, task := range tasks {
 		paraNonce := (*task.MessageProofs)[0].Message.Nonce
-		waitingPeriod := (paraNonce + li.scheduleConfig.Num - li.scheduleConfig.ID) % li.scheduleConfig.Num
+		waitingPeriod := (paraNonce + li.scheduleConfig.TotalRelayerCount - li.scheduleConfig.ID) % li.scheduleConfig.TotalRelayerCount
 		err = li.waitAndSend(ctx, task, waitingPeriod)
 		if err != nil {
 			return fmt.Errorf("wait task for nonce %d: %w", paraNonce, err)

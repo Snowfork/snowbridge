@@ -27,6 +27,6 @@
   },
   "schedule": {
     "id": null,
-    "num": 3
+    "totalRelayerCount": 3
   }
 }

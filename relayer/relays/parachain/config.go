@@ -39,14 +39,14 @@ type ScheduleConfig struct {
 	// ID of current relayer, starting from 0
 	ID uint64 `mapstructure:"id"`
 	// Number of total count of all relayers
-	Num uint64 `mapstructure:"num"`
+	TotalRelayerCount uint64 `mapstructure:"totalRelayerCount"`
 }
 
 func (r ScheduleConfig) Validate() error {
-	if r.Num < 1 {
+	if r.TotalRelayerCount < 1 {
 		return errors.New("Number of relayer is not set")
 	}
-	if r.ID >= r.Num {
+	if r.ID >= r.TotalRelayerCount {
 		return errors.New("ID of the Number of relayer is not set")
 	}
 	return nil
