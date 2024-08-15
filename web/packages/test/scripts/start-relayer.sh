@@ -106,7 +106,7 @@ config_relayer() {
     ' \
         config/beacon-relay.json >$output_dir/beacon-relay.json
 
-    # Configure execution relay for assethub
+    # Configure execution relay for assethub-0
     jq \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg k1 "$(address_for GatewayProxy)" \
@@ -115,8 +115,35 @@ config_relayer() {
       .source.ethereum.endpoint = $eth_endpoint_ws
     | .source.contracts.Gateway = $k1
     | .source."channel-id" = $channelID
+    | .schedule.id = 0
     ' \
-        config/execution-relay.json >$output_dir/execution-relay-asset-hub.json
+        config/execution-relay.json >$output_dir/execution-relay-asset-hub-0.json
+
+    # Configure execution relay for assethub-1
+    jq \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --arg channelID $ASSET_HUB_CHANNEL_ID \
+        '
+      .source.ethereum.endpoint = $eth_endpoint_ws
+    | .source.contracts.Gateway = $k1
+    | .source."channel-id" = $channelID
+    | .schedule.id = 1
+    ' \
+        config/execution-relay.json >$output_dir/execution-relay-asset-hub-1.json
+
+    # Configure execution relay for assethub-2
+    jq \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --arg channelID $ASSET_HUB_CHANNEL_ID \
+        '
+      .source.ethereum.endpoint = $eth_endpoint_ws
+    | .source.contracts.Gateway = $k1
+    | .source."channel-id" = $channelID
+    | .schedule.id = 2
+    ' \
+        config/execution-relay.json >$output_dir/execution-relay-asset-hub-2.json
 
     # Configure execution relay for penpal
     jq \
@@ -211,15 +238,41 @@ start_relayer() {
         done
     ) &
 
-    # Launch execution relay for assethub
+    # Launch execution relay for assethub-0
     (
-        : >$output_dir/execution-relay-asset-hub.log
+        : >$output_dir/execution-relay-asset-hub-0.log
         while :; do
-            echo "Starting execution relay (asset-hub) at $(date)"
+            echo "Starting execution relay (asset-hub-0) at $(date)"
             "${relay_bin}" run execution \
-                --config $output_dir/execution-relay-asset-hub.json \
+                --config $output_dir/execution-relay-asset-hub-0.json \
                 --substrate.private-key "//ExecutionRelayAssetHub" \
-                >>"$output_dir"/execution-relay-asset-hub.log 2>&1 || true
+                >>"$output_dir"/execution-relay-asset-hub-0.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch execution relay for assethub-1
+    (
+        : >$output_dir/execution-relay-asset-hub-1.log
+        while :; do
+            echo "Starting execution relay (asset-hub-1) at $(date)"
+            "${relay_bin}" run execution \
+                --config $output_dir/execution-relay-asset-hub-1.json \
+                --substrate.private-key "//Alice" \
+                >>"$output_dir"/execution-relay-asset-hub-1.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch execution relay for assethub-2
+    (
+        : >$output_dir/execution-relay-asset-hub-2.log
+        while :; do
+            echo "Starting execution relay (asset-hub-2) at $(date)"
+            "${relay_bin}" run execution \
+                --config $output_dir/execution-relay-asset-hub-2.json \
+                --substrate.private-key "//Bob" \
+                >>"$output_dir"/execution-relay-asset-hub-2.log 2>&1 || true
             sleep 20
         done
     ) &

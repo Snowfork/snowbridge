@@ -103,11 +103,13 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	)
 	r.beaconHeader = &beaconHeader
 
+	log.Info("Current relay's ID:", r.config.Schedule.ID)
+
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(30 * time.Second):
+		case <-time.After(60 * time.Second):
 			log.WithFields(log.Fields{
 				"channelId": r.config.Source.ChannelID,
 			}).Info("Polling Nonces")
@@ -142,14 +144,12 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			if err != nil {
 				return fmt.Errorf("find events: %w", err)
 			}
-			if len(events) == 0 {
-				continue
-			}
 
-			ev := events[0]
-			err = r.doSubmit(ctx, ev)
-			if err != nil {
-				return fmt.Errorf("submit message: %w", err)
+			for _, ev := range events {
+				err = r.waitAndSend(ctx, ev)
+				if err != nil {
+					return fmt.Errorf("submit message: %w", err)
+				}
 			}
 		}
 	}
@@ -350,20 +350,42 @@ func (r *Relay) makeInboundMessage(
 	return msg, nil
 }
 
-func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) error {
+func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) (err error) {
+	var paraNonce uint64
+	ethNonce := ev.Nonce
+	waitingPeriod := (ethNonce + r.config.Schedule.TotalRelayerCount - r.config.Schedule.ID) % r.config.Schedule.TotalRelayerCount
 
+	var cnt uint64
+	for {
+		paraNonce, err = r.fetchLatestParachainNonce()
+		if err != nil {
+			return fmt.Errorf("fetch latest parachain nonce: %w", err)
+		}
+		if ethNonce <= paraNonce {
+			log.Info(fmt.Sprintf("nonce %d picked up by another relayer, just skip", paraNonce))
+			return nil
+		}
+		if cnt == waitingPeriod {
+			break
+		}
+		time.Sleep(time.Duration(r.config.Schedule.SleepInterval) * time.Second)
+		cnt++
+	}
+	err = r.doSubmit(ctx, ev)
+	if err != nil {
+		return fmt.Errorf("submit inbound message: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) error {
 	inboundMsg, err := r.makeInboundMessage(ctx, r.headerCache, ev)
 	if err != nil {
 		return fmt.Errorf("make outgoing message: %w", err)
 	}
 
-	paraNonce, err := r.fetchLatestParachainNonce()
-	if err != nil {
-		return fmt.Errorf("fetch latest parachain nonce: %w", err)
-	}
-
 	logger := log.WithFields(log.Fields{
-		"paraNonce":   paraNonce,
 		"ethNonce":    ev.Nonce,
 		"msgNonce":    ev.Nonce,
 		"address":     ev.Raw.Address.Hex(),
@@ -374,10 +396,6 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		"channelID":   types.H256(ev.ChannelID).Hex(),
 	})
 
-	if ev.Nonce <= paraNonce {
-		logger.Warn("inbound message outdated, just skipped")
-		return nil
-	}
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
 
 	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
@@ -400,7 +418,10 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		return fmt.Errorf("write to parachain: %w", err)
 	}
 
-	paraNonce, _ = r.fetchLatestParachainNonce()
+	paraNonce, err := r.fetchLatestParachainNonce()
+	if err != nil {
+		return fmt.Errorf("fetch latest parachain nonce: %w", err)
+	}
 	if paraNonce != ev.Nonce {
 		return fmt.Errorf("inbound message fail to execute")
 	}
