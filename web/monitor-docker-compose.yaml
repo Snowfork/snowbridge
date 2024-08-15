@@ -7,4 +7,4 @@ services:
       dockerfile: monitor.Dockerfile
     container_name: snowbridge-monitor-1
     volumes:
-      - ./packages/operations/env:/env
+      - ./packages/operations/config:/config
