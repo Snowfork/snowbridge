@@ -9,5 +9,5 @@ RUN rm -rf /app/packages/contracts && rm -rf /app/packages/test && rm -rf /app/p
 WORKDIR /app/packages/operations
 VOLUME /config
 ENV DOTENV_CONFIG_PATH=/config/.env
-CMD ["node", "./dist/src/cron.js"]
+ENTRYPOINT ["node", "./dist/src/main.js"]
 

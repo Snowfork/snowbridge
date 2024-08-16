@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: monitor.Dockerfile
+    command: cron
     container_name: snowbridge-monitor-1
     volumes:
       - ./packages/operations/config:/config
