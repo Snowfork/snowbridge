@@ -73,7 +73,7 @@ cumulus_based = true
 ## Penpal
 [[parachains]]
 id = 2000
-chain = "penpal-rococo-2000"
+chain = "penpal-westend-2000"
 cumulus_based = true
 
     [[parachains.collators]]
