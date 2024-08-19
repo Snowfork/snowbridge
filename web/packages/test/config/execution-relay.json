@@ -28,5 +28,10 @@
       "maxWatchedExtrinsics": 8
     }
   },
-  "instantVerification": true
+  "instantVerification": false,
+  "schedule": {
+    "id": null,
+    "totalRelayerCount": 3,
+    "sleepInterval": 20
+  }
 }
