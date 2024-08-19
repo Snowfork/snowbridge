@@ -24,5 +24,10 @@
     "contracts": {
       "Gateway": null
     }
+  },
+  "schedule": {
+    "id": null,
+    "totalRelayerCount": 3,
+    "sleepInterval": 45
   }
 }
