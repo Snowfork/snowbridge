@@ -22,17 +22,3 @@ services:
     env_file:
       - .env
     restart: on-failure
-
-  vector:
-    platform: linux/amd64
-    image: timberio/vector:0.40.0-debian
-    depends_on:
-      - execution-assethub
-      - parachain-assethub
-    ports:
-      - "8686:8686"
-    volumes:
-      - $PWD/vector.yaml:/etc/vector/vector.yaml
-      - /var/run/docker.sock:/var/run/docker.sock
-    env_file:
-      - .env
