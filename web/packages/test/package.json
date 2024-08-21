@@ -9,12 +9,12 @@
     "directory": "web/packages/test"
   },
   "devDependencies": {
-    "@polkadot/api": "^11.2.1",
-    "@polkadot/api-cli": "^0.56.11",
-    "@polkadot/types": "^11.2.1",
+    "@polkadot/api": "^12.3.1",
+    "@polkadot/types": "^12.3.1",
     "@polkadot/util": "^13.0.2",
     "@polkadot/keyring": "^13.0.2",
     "@polkadot/util-crypto": "^13.0.2",
+    "@polkadot/api-cli": "^0.57.3",
     "@types/keccak": "^3.0.1",
     "@types/node": "^18.16.8",
     "@types/yargs": "^17.0.24",

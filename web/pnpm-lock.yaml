@@ -10,7 +10,7 @@ importers:
     devDependencies:
       '@remix-project/remixd':
         specifier: ^0.6.14
-        version: 0.6.36(typescript@5.5.4)
+        version: 0.6.36(typescript@5.5.4)(zod@3.23.8)
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@18.19.45)(typescript@5.5.4)
@@ -31,7 +31,7 @@ importers:
         version: 11.3.1
       '@polkadot/keyring':
         specifier: ^12.6.2
-        version: 12.6.2(@polkadot/util-crypto@12.6.2)(@polkadot/util@12.6.2)
+        version: 12.6.2(@polkadot/util-crypto@12.6.2(@polkadot/util@12.6.2))(@polkadot/util@12.6.2)
       '@polkadot/types':
         specifier: ^11.2.1
         version: 11.3.1
@@ -46,7 +46,7 @@ importers:
         version: link:../contract-types
       '@typechain/ethers-v6':
         specifier: ^0.5.1
-        version: 0.5.1(ethers@6.13.2)(typechain@8.3.2)(typescript@5.5.4)
+        version: 0.5.1(ethers@6.13.2)(typechain@8.3.2(typescript@5.5.4))(typescript@5.5.4)
       ethers:
         specifier: ^6.13.1
         version: 6.13.2
@@ -59,7 +59,7 @@ importers:
         version: 18.19.45
       '@typescript-eslint/eslint-plugin':
         specifier: ^5.62.0
-        version: 5.62.0(@typescript-eslint/parser@5.62.0)(eslint@8.57.0)(typescript@5.5.4)
+        version: 5.62.0(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.5.4))(eslint@8.57.0)(typescript@5.5.4)
       '@typescript-eslint/parser':
         specifier: ^5.62.0
         version: 5.62.0(eslint@8.57.0)(typescript@5.5.4)
@@ -90,7 +90,7 @@ importers:
     devDependencies:
       '@typechain/ethers-v6':
         specifier: ^0.5.1
-        version: 0.5.1(ethers@6.13.2)(typechain@8.3.2)(typescript@5.5.4)
+        version: 0.5.1(ethers@6.13.2)(typechain@8.3.2(typescript@5.5.4))(typescript@5.5.4)
       '@types/node':
         specifier: ^18.19.31
         version: 18.19.45
@@ -129,7 +129,7 @@ importers:
         version: 11.3.1
       '@polkadot/keyring':
         specifier: ^12.6.2
-        version: 12.6.2(@polkadot/util-crypto@12.6.2)(@polkadot/util@12.6.2)
+        version: 12.6.2(@polkadot/util-crypto@12.6.2(@polkadot/util@12.6.2))(@polkadot/util@12.6.2)
       '@polkadot/types':
         specifier: ^11.2.1
         version: 11.3.1
@@ -205,7 +205,7 @@ importers:
     devDependencies:
       '@typescript-eslint/eslint-plugin':
         specifier: ^5.62.0
-        version: 5.62.0(@typescript-eslint/parser@5.62.0)(eslint@8.57.0)(typescript@5.5.4)
+        version: 5.62.0(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.5.4))(eslint@8.57.0)(typescript@5.5.4)
       '@typescript-eslint/parser':
         specifier: ^5.62.0
         version: 5.62.0(eslint@8.57.0)(typescript@5.5.4)
@@ -228,17 +228,17 @@ importers:
   packages/test:
     devDependencies:
       '@polkadot/api':
-        specifier: ^11.2.1
-        version: 11.3.1
+        specifier: ^12.3.1
+        version: 12.4.1
       '@polkadot/api-cli':
-        specifier: ^0.56.11
-        version: 0.56.14
+        specifier: ^0.57.3
+        version: 0.57.4
       '@polkadot/keyring':
         specifier: ^13.0.2
-        version: 13.0.2(@polkadot/util-crypto@13.0.2)(@polkadot/util@13.0.2)
+        version: 13.0.2(@polkadot/util-crypto@13.0.2(@polkadot/util@13.0.2))(@polkadot/util@13.0.2)
       '@polkadot/types':
-        specifier: ^11.2.1
-        version: 11.3.1
+        specifier: ^12.3.1
+        version: 12.4.1
       '@polkadot/util':
         specifier: ^13.0.2
         version: 13.0.2
@@ -256,7 +256,7 @@ importers:
         version: 17.0.33
       '@zombienet/cli':
         specifier: ^1.3.93
-        version: 1.3.109(@polkadot/util@13.0.2)(@types/node@18.19.45)
+        version: 1.3.109(@polkadot/util@13.0.2)(@types/node@18.19.45)(chokidar@3.6.0)
       bignumber.js:
         specifier: ^9.1.1
         version: 9.1.2
@@ -337,7 +337,7 @@ importers:
         version: link:../contract-types
       '@typechain/ethers-v5':
         specifier: ^10.1.1
-        version: 10.2.1(@ethersproject/abi@5.7.0)(@ethersproject/providers@5.7.2)(ethers@5.7.2)(typechain@8.3.2)(typescript@5.5.4)
+        version: 10.2.1(@ethersproject/abi@5.7.0)(@ethersproject/providers@5.7.2)(ethers@5.7.2)(typechain@8.3.2(typescript@5.5.4))(typescript@5.5.4)
       '@types/keccak':
         specifier: ^3.0.1
         version: 3.0.4
@@ -386,7 +386,7 @@ importers:
         version: 18.19.45
       '@typescript-eslint/eslint-plugin':
         specifier: ^5.42.0
-        version: 5.62.0(@typescript-eslint/parser@5.62.0)(eslint@8.57.0)(typescript@5.5.4)
+        version: 5.62.0(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.5.4))(eslint@8.57.0)(typescript@5.5.4)
       '@typescript-eslint/parser':
         specifier: ^5.42.0
         version: 5.62.0(eslint@8.57.0)(typescript@5.5.4)
@@ -867,8 +867,8 @@ packages:
     resolution: {integrity: sha512-FE0GA9NGaAfBB6V8Mf5E6ZyHbccuEyIDQv+qP64hzOhn01nYheTkjzDSXpjk7SyQXAvBJ8/ADefCXGunnAZUsg==}
     engines: {node: '>=18'}
 
-  '@polkadot/api-cli@0.56.14':
-    resolution: {integrity: sha512-sUdQgov0PlQwtbUnWudZdYCOR1Is6XGvW2cQ0zZK7+1hqv2FSY1bm5uHoMLD8kKxqBJdSL6ufYM0yNeRtRWcEQ==}
+  '@polkadot/api-cli@0.57.4':
+    resolution: {integrity: sha512-H/KEiusJFuEzNti5+qI+hkZK2SMV7TgB90URvZDoiHhB9lYkFpIeN7rS1FwGspPLzAmjl92U1L2wPI+nUKD0Vg==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -4279,7 +4279,7 @@ snapshots:
       '@aws-sdk/client-sso-oidc': 3.635.0(@aws-sdk/client-sts@3.635.0)
       '@aws-sdk/client-sts': 3.635.0
       '@aws-sdk/core': 3.635.0
-      '@aws-sdk/credential-provider-node': 3.635.0(@aws-sdk/client-sso-oidc@3.635.0)(@aws-sdk/client-sts@3.635.0)
+      '@aws-sdk/credential-provider-node': 3.635.0(@aws-sdk/client-sso-oidc@3.635.0(@aws-sdk/client-sts@3.635.0))(@aws-sdk/client-sts@3.635.0)
       '@aws-sdk/middleware-host-header': 3.620.0
       '@aws-sdk/middleware-logger': 3.609.0
       '@aws-sdk/middleware-recursion-detection': 3.620.0
@@ -4326,7 +4326,7 @@ snapshots:
       '@aws-crypto/sha256-js': 5.2.0
       '@aws-sdk/client-sts': 3.635.0
       '@aws-sdk/core': 3.635.0
-      '@aws-sdk/credential-provider-node': 3.635.0(@aws-sdk/client-sso-oidc@3.635.0)(@aws-sdk/client-sts@3.635.0)
+      '@aws-sdk/credential-provider-node': 3.635.0(@aws-sdk/client-sso-oidc@3.635.0(@aws-sdk/client-sts@3.635.0))(@aws-sdk/client-sts@3.635.0)
       '@aws-sdk/middleware-host-header': 3.620.0
       '@aws-sdk/middleware-logger': 3.609.0
       '@aws-sdk/middleware-recursion-detection': 3.620.0
@@ -4414,7 +4414,7 @@ snapshots:
       '@aws-crypto/sha256-js': 5.2.0
       '@aws-sdk/client-sso-oidc': 3.635.0(@aws-sdk/client-sts@3.635.0)
       '@aws-sdk/core': 3.635.0
-      '@aws-sdk/credential-provider-node': 3.635.0(@aws-sdk/client-sso-oidc@3.635.0)(@aws-sdk/client-sts@3.635.0)
+      '@aws-sdk/credential-provider-node': 3.635.0(@aws-sdk/client-sso-oidc@3.635.0(@aws-sdk/client-sts@3.635.0))(@aws-sdk/client-sts@3.635.0)
       '@aws-sdk/middleware-host-header': 3.620.0
       '@aws-sdk/middleware-logger': 3.609.0
       '@aws-sdk/middleware-recursion-detection': 3.620.0
@@ -4485,13 +4485,13 @@ snapshots:
       '@smithy/util-stream': 3.1.3
       tslib: 2.6.3
 
-  '@aws-sdk/credential-provider-ini@3.635.0(@aws-sdk/client-sso-oidc@3.635.0)(@aws-sdk/client-sts@3.635.0)':
+  '@aws-sdk/credential-provider-ini@3.635.0(@aws-sdk/client-sso-oidc@3.635.0(@aws-sdk/client-sts@3.635.0))(@aws-sdk/client-sts@3.635.0)':
     dependencies:
       '@aws-sdk/client-sts': 3.635.0
       '@aws-sdk/credential-provider-env': 3.620.1
       '@aws-sdk/credential-provider-http': 3.635.0
       '@aws-sdk/credential-provider-process': 3.620.1
-      '@aws-sdk/credential-provider-sso': 3.635.0(@aws-sdk/client-sso-oidc@3.635.0)
+      '@aws-sdk/credential-provider-sso': 3.635.0(@aws-sdk/client-sso-oidc@3.635.0(@aws-sdk/client-sts@3.635.0))
       '@aws-sdk/credential-provider-web-identity': 3.621.0(@aws-sdk/client-sts@3.635.0)
       '@aws-sdk/types': 3.609.0
       '@smithy/credential-provider-imds': 3.2.0
@@ -4503,13 +4503,13 @@ snapshots:
       - '@aws-sdk/client-sso-oidc'
       - aws-crt
 
-  '@aws-sdk/credential-provider-node@3.635.0(@aws-sdk/client-sso-oidc@3.635.0)(@aws-sdk/client-sts@3.635.0)':
+  '@aws-sdk/credential-provider-node@3.635.0(@aws-sdk/client-sso-oidc@3.635.0(@aws-sdk/client-sts@3.635.0))(@aws-sdk/client-sts@3.635.0)':
     dependencies:
       '@aws-sdk/credential-provider-env': 3.620.1
       '@aws-sdk/credential-provider-http': 3.635.0
-      '@aws-sdk/credential-provider-ini': 3.635.0(@aws-sdk/client-sso-oidc@3.635.0)(@aws-sdk/client-sts@3.635.0)
+      '@aws-sdk/credential-provider-ini': 3.635.0(@aws-sdk/client-sso-oidc@3.635.0(@aws-sdk/client-sts@3.635.0))(@aws-sdk/client-sts@3.635.0)
       '@aws-sdk/credential-provider-process': 3.620.1
-      '@aws-sdk/credential-provider-sso': 3.635.0(@aws-sdk/client-sso-oidc@3.635.0)
+      '@aws-sdk/credential-provider-sso': 3.635.0(@aws-sdk/client-sso-oidc@3.635.0(@aws-sdk/client-sts@3.635.0))
       '@aws-sdk/credential-provider-web-identity': 3.621.0(@aws-sdk/client-sts@3.635.0)
       '@aws-sdk/types': 3.609.0
       '@smithy/credential-provider-imds': 3.2.0
@@ -4530,10 +4530,10 @@ snapshots:
       '@smithy/types': 3.3.0
       tslib: 2.6.3
 
-  '@aws-sdk/credential-provider-sso@3.635.0(@aws-sdk/client-sso-oidc@3.635.0)':
+  '@aws-sdk/credential-provider-sso@3.635.0(@aws-sdk/client-sso-oidc@3.635.0(@aws-sdk/client-sts@3.635.0))':
     dependencies:
       '@aws-sdk/client-sso': 3.635.0
-      '@aws-sdk/token-providers': 3.614.0(@aws-sdk/client-sso-oidc@3.635.0)
+      '@aws-sdk/token-providers': 3.614.0(@aws-sdk/client-sso-oidc@3.635.0(@aws-sdk/client-sts@3.635.0))
       '@aws-sdk/types': 3.609.0
       '@smithy/property-provider': 3.1.3
       '@smithy/shared-ini-file-loader': 3.1.4
@@ -4588,7 +4588,7 @@ snapshots:
       '@smithy/util-middleware': 3.0.3
       tslib: 2.6.3
 
-  '@aws-sdk/token-providers@3.614.0(@aws-sdk/client-sso-oidc@3.635.0)':
+  '@aws-sdk/token-providers@3.614.0(@aws-sdk/client-sso-oidc@3.635.0(@aws-sdk/client-sts@3.635.0))':
     dependencies:
       '@aws-sdk/client-sso-oidc': 3.635.0(@aws-sdk/client-sts@3.635.0)
       '@aws-sdk/types': 3.609.0
@@ -5289,14 +5289,14 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@polkadot/api-cli@0.56.14':
+  '@polkadot/api-cli@0.57.4':
     dependencies:
       '@polkadot/api': 12.4.1
       '@polkadot/api-augment': 12.4.1
-      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2)(@polkadot/util@12.6.2)
+      '@polkadot/keyring': 13.0.2(@polkadot/util-crypto@13.0.2(@polkadot/util@13.0.2))(@polkadot/util@13.0.2)
       '@polkadot/types': 12.4.1
-      '@polkadot/util': 12.6.2
-      '@polkadot/util-crypto': 12.6.2(@polkadot/util@12.6.2)
+      '@polkadot/util': 13.0.2
+      '@polkadot/util-crypto': 13.0.2(@polkadot/util@13.0.2)
       tslib: 2.6.3
       yargs: 17.7.2
     transitivePeerDependencies:
@@ -5360,7 +5360,7 @@ snapshots:
       '@polkadot/api-augment': 10.13.1
       '@polkadot/api-base': 10.13.1
       '@polkadot/api-derive': 10.13.1
-      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2)(@polkadot/util@12.6.2)
+      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2(@polkadot/util@12.6.2))(@polkadot/util@12.6.2)
       '@polkadot/rpc-augment': 10.13.1
       '@polkadot/rpc-core': 10.13.1
       '@polkadot/rpc-provider': 10.13.1
@@ -5384,7 +5384,7 @@ snapshots:
       '@polkadot/api-augment': 11.3.1
       '@polkadot/api-base': 11.3.1
       '@polkadot/api-derive': 11.3.1
-      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2)(@polkadot/util@12.6.2)
+      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2(@polkadot/util@12.6.2))(@polkadot/util@12.6.2)
       '@polkadot/rpc-augment': 11.3.1
       '@polkadot/rpc-core': 11.3.1
       '@polkadot/rpc-provider': 11.3.1
@@ -5408,7 +5408,7 @@ snapshots:
       '@polkadot/api-augment': 12.4.1
       '@polkadot/api-base': 12.4.1
       '@polkadot/api-derive': 12.4.1
-      '@polkadot/keyring': 13.0.2(@polkadot/util-crypto@13.0.2)(@polkadot/util@13.0.2)
+      '@polkadot/keyring': 13.0.2(@polkadot/util-crypto@13.0.2(@polkadot/util@13.0.2))(@polkadot/util@13.0.2)
       '@polkadot/rpc-augment': 12.4.1
       '@polkadot/rpc-core': 12.4.1
       '@polkadot/rpc-provider': 12.4.1
@@ -5427,13 +5427,13 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@polkadot/keyring@12.6.2(@polkadot/util-crypto@12.6.2)(@polkadot/util@12.6.2)':
+  '@polkadot/keyring@12.6.2(@polkadot/util-crypto@12.6.2(@polkadot/util@12.6.2))(@polkadot/util@12.6.2)':
     dependencies:
       '@polkadot/util': 12.6.2
       '@polkadot/util-crypto': 12.6.2(@polkadot/util@12.6.2)
       tslib: 2.6.3
 
-  '@polkadot/keyring@13.0.2(@polkadot/util-crypto@13.0.2)(@polkadot/util@13.0.2)':
+  '@polkadot/keyring@13.0.2(@polkadot/util-crypto@13.0.2(@polkadot/util@13.0.2))(@polkadot/util@13.0.2)':
     dependencies:
       '@polkadot/util': 13.0.2
       '@polkadot/util-crypto': 13.0.2(@polkadot/util@13.0.2)
@@ -5528,7 +5528,7 @@ snapshots:
 
   '@polkadot/rpc-provider@10.13.1':
     dependencies:
-      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2)(@polkadot/util@12.6.2)
+      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2(@polkadot/util@12.6.2))(@polkadot/util@12.6.2)
       '@polkadot/types': 10.13.1
       '@polkadot/types-support': 10.13.1
       '@polkadot/util': 12.6.2
@@ -5549,7 +5549,7 @@ snapshots:
 
   '@polkadot/rpc-provider@11.3.1':
     dependencies:
-      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2)(@polkadot/util@12.6.2)
+      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2(@polkadot/util@12.6.2))(@polkadot/util@12.6.2)
       '@polkadot/types': 11.3.1
       '@polkadot/types-support': 11.3.1
       '@polkadot/util': 12.6.2
@@ -5570,7 +5570,7 @@ snapshots:
 
   '@polkadot/rpc-provider@12.4.1':
     dependencies:
-      '@polkadot/keyring': 13.0.2(@polkadot/util-crypto@13.0.2)(@polkadot/util@13.0.2)
+      '@polkadot/keyring': 13.0.2(@polkadot/util-crypto@13.0.2(@polkadot/util@13.0.2))(@polkadot/util@13.0.2)
       '@polkadot/types': 12.4.1
       '@polkadot/types-support': 12.4.1
       '@polkadot/util': 13.0.2
@@ -5690,7 +5690,7 @@ snapshots:
 
   '@polkadot/types@10.13.1':
     dependencies:
-      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2)(@polkadot/util@12.6.2)
+      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2(@polkadot/util@12.6.2))(@polkadot/util@12.6.2)
       '@polkadot/types-augment': 10.13.1
       '@polkadot/types-codec': 10.13.1
       '@polkadot/types-create': 10.13.1
@@ -5701,7 +5701,7 @@ snapshots:
 
   '@polkadot/types@11.3.1':
     dependencies:
-      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2)(@polkadot/util@12.6.2)
+      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2(@polkadot/util@12.6.2))(@polkadot/util@12.6.2)
       '@polkadot/types-augment': 11.3.1
       '@polkadot/types-codec': 11.3.1
       '@polkadot/types-create': 11.3.1
@@ -5712,7 +5712,7 @@ snapshots:
 
   '@polkadot/types@12.4.1':
     dependencies:
-      '@polkadot/keyring': 13.0.2(@polkadot/util-crypto@13.0.2)(@polkadot/util@13.0.2)
+      '@polkadot/keyring': 13.0.2(@polkadot/util-crypto@13.0.2(@polkadot/util@13.0.2))(@polkadot/util@13.0.2)
       '@polkadot/types-augment': 12.4.1
       '@polkadot/types-codec': 12.4.1
       '@polkadot/types-create': 12.4.1
@@ -5727,10 +5727,10 @@ snapshots:
       '@noble/hashes': 1.4.0
       '@polkadot/networks': 12.6.2
       '@polkadot/util': 12.6.2
-      '@polkadot/wasm-crypto': 7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2)
+      '@polkadot/wasm-crypto': 7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@12.6.2)))
       '@polkadot/wasm-util': 7.3.2(@polkadot/util@12.6.2)
       '@polkadot/x-bigint': 12.6.2
-      '@polkadot/x-randomvalues': 12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2)
+      '@polkadot/x-randomvalues': 12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@12.6.2))
       '@scure/base': 1.1.7
       tslib: 2.6.3
 
@@ -5740,10 +5740,10 @@ snapshots:
       '@noble/hashes': 1.4.0
       '@polkadot/networks': 13.0.2
       '@polkadot/util': 13.0.2
-      '@polkadot/wasm-crypto': 7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2)
+      '@polkadot/wasm-crypto': 7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@13.0.2)))
       '@polkadot/wasm-util': 7.3.2(@polkadot/util@13.0.2)
       '@polkadot/x-bigint': 13.0.2
-      '@polkadot/x-randomvalues': 13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2)
+      '@polkadot/x-randomvalues': 13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@13.0.2))
       '@scure/base': 1.1.7
       tslib: 2.6.3
 
@@ -5767,18 +5767,18 @@ snapshots:
       bn.js: 5.2.1
       tslib: 2.6.3
 
-  '@polkadot/wasm-bridge@7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2)':
+  '@polkadot/wasm-bridge@7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@12.6.2)))':
     dependencies:
       '@polkadot/util': 12.6.2
       '@polkadot/wasm-util': 7.3.2(@polkadot/util@12.6.2)
-      '@polkadot/x-randomvalues': 12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2)
+      '@polkadot/x-randomvalues': 12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@12.6.2))
       tslib: 2.6.3
 
-  '@polkadot/wasm-bridge@7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2)':
+  '@polkadot/wasm-bridge@7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@13.0.2)))':
     dependencies:
       '@polkadot/util': 13.0.2
       '@polkadot/wasm-util': 7.3.2(@polkadot/util@13.0.2)
-      '@polkadot/x-randomvalues': 13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2)
+      '@polkadot/x-randomvalues': 13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@13.0.2))
       tslib: 2.6.3
 
   '@polkadot/wasm-crypto-asmjs@7.3.2(@polkadot/util@12.6.2)':
@@ -5791,24 +5791,24 @@ snapshots:
       '@polkadot/util': 13.0.2
       tslib: 2.6.3
 
-  '@polkadot/wasm-crypto-init@7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2)':
+  '@polkadot/wasm-crypto-init@7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@12.6.2)))':
     dependencies:
       '@polkadot/util': 12.6.2
-      '@polkadot/wasm-bridge': 7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2)
+      '@polkadot/wasm-bridge': 7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@12.6.2)))
       '@polkadot/wasm-crypto-asmjs': 7.3.2(@polkadot/util@12.6.2)
       '@polkadot/wasm-crypto-wasm': 7.3.2(@polkadot/util@12.6.2)
       '@polkadot/wasm-util': 7.3.2(@polkadot/util@12.6.2)
-      '@polkadot/x-randomvalues': 12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2)
+      '@polkadot/x-randomvalues': 12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@12.6.2))
       tslib: 2.6.3
 
-  '@polkadot/wasm-crypto-init@7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2)':
+  '@polkadot/wasm-crypto-init@7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@13.0.2)))':
     dependencies:
       '@polkadot/util': 13.0.2
-      '@polkadot/wasm-bridge': 7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2)
+      '@polkadot/wasm-bridge': 7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@13.0.2)))
       '@polkadot/wasm-crypto-asmjs': 7.3.2(@polkadot/util@13.0.2)
       '@polkadot/wasm-crypto-wasm': 7.3.2(@polkadot/util@13.0.2)
       '@polkadot/wasm-util': 7.3.2(@polkadot/util@13.0.2)
-      '@polkadot/x-randomvalues': 13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2)
+      '@polkadot/x-randomvalues': 13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@13.0.2))
       tslib: 2.6.3
 
   '@polkadot/wasm-crypto-wasm@7.3.2(@polkadot/util@12.6.2)':
@@ -5823,26 +5823,26 @@ snapshots:
       '@polkadot/wasm-util': 7.3.2(@polkadot/util@13.0.2)
       tslib: 2.6.3
 
-  '@polkadot/wasm-crypto@7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2)':
+  '@polkadot/wasm-crypto@7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@12.6.2)))':
     dependencies:
       '@polkadot/util': 12.6.2
-      '@polkadot/wasm-bridge': 7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2)
+      '@polkadot/wasm-bridge': 7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@12.6.2)))
       '@polkadot/wasm-crypto-asmjs': 7.3.2(@polkadot/util@12.6.2)
-      '@polkadot/wasm-crypto-init': 7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2)
+      '@polkadot/wasm-crypto-init': 7.3.2(@polkadot/util@12.6.2)(@polkadot/x-randomvalues@12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@12.6.2)))
       '@polkadot/wasm-crypto-wasm': 7.3.2(@polkadot/util@12.6.2)
       '@polkadot/wasm-util': 7.3.2(@polkadot/util@12.6.2)
-      '@polkadot/x-randomvalues': 12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2)
+      '@polkadot/x-randomvalues': 12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@12.6.2))
       tslib: 2.6.3
 
-  '@polkadot/wasm-crypto@7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2)':
+  '@polkadot/wasm-crypto@7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@13.0.2)))':
     dependencies:
       '@polkadot/util': 13.0.2
-      '@polkadot/wasm-bridge': 7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2)
+      '@polkadot/wasm-bridge': 7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@13.0.2)))
       '@polkadot/wasm-crypto-asmjs': 7.3.2(@polkadot/util@13.0.2)
-      '@polkadot/wasm-crypto-init': 7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2)
+      '@polkadot/wasm-crypto-init': 7.3.2(@polkadot/util@13.0.2)(@polkadot/x-randomvalues@13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@13.0.2)))
       '@polkadot/wasm-crypto-wasm': 7.3.2(@polkadot/util@13.0.2)
       '@polkadot/wasm-util': 7.3.2(@polkadot/util@13.0.2)
-      '@polkadot/x-randomvalues': 13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2)
+      '@polkadot/x-randomvalues': 13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@13.0.2))
       tslib: 2.6.3
 
   '@polkadot/wasm-util@7.3.2(@polkadot/util@12.6.2)':
@@ -5885,14 +5885,14 @@ snapshots:
     dependencies:
       tslib: 2.6.3
 
-  '@polkadot/x-randomvalues@12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2)':
+  '@polkadot/x-randomvalues@12.6.2(@polkadot/util@12.6.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@12.6.2))':
     dependencies:
       '@polkadot/util': 12.6.2
       '@polkadot/wasm-util': 7.3.2(@polkadot/util@12.6.2)
       '@polkadot/x-global': 12.6.2
       tslib: 2.6.3
 
-  '@polkadot/x-randomvalues@13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2)':
+  '@polkadot/x-randomvalues@13.0.2(@polkadot/util@13.0.2)(@polkadot/wasm-util@7.3.2(@polkadot/util@13.0.2))':
     dependencies:
       '@polkadot/util': 13.0.2
       '@polkadot/wasm-util': 7.3.2(@polkadot/util@13.0.2)
@@ -5960,7 +5960,7 @@ snapshots:
 
   '@protobufjs/utf8@1.1.0': {}
 
-  '@remix-project/remix-lib@0.5.63(typescript@5.5.4)':
+  '@remix-project/remix-lib@0.5.63(typescript@5.5.4)(zod@3.23.8)':
     dependencies:
       '@ethereumjs/util': 9.1.0
       async: 2.6.4
@@ -5972,7 +5972,7 @@ snapshots:
       rlp: 3.0.0
       solc: 0.7.6
       string-similarity: 4.0.4
-      web3: 4.11.1(typescript@5.5.4)
+      web3: 4.11.1(typescript@5.5.4)(zod@3.23.8)
       web3-validator: 2.0.6
     transitivePeerDependencies:
       - bufferutil
@@ -5982,13 +5982,13 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@remix-project/remix-solidity@0.5.42(typescript@5.5.4)':
+  '@remix-project/remix-solidity@0.5.42(typescript@5.5.4)(zod@3.23.8)':
     dependencies:
       '@ethereumjs/block': 5.3.0
       '@ethereumjs/tx': 5.4.0
       '@ethereumjs/util': 9.1.0
       '@ethereumjs/vm': 8.1.0
-      '@remix-project/remix-lib': 0.5.63(typescript@5.5.4)
+      '@remix-project/remix-lib': 0.5.63(typescript@5.5.4)(zod@3.23.8)
       async: 2.6.4
       eslint-scope: 5.1.1
       ethers: 5.7.2
@@ -5997,7 +5997,7 @@ snapshots:
       semver: 6.3.1
       solc: 0.7.6
       string-similarity: 4.0.4
-      web3: 4.11.1(typescript@5.5.4)
+      web3: 4.11.1(typescript@5.5.4)(zod@3.23.8)
       webworkify-webpack: 2.1.5
     transitivePeerDependencies:
       - bufferutil
@@ -6008,9 +6008,9 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@remix-project/remixd@0.6.36(typescript@5.5.4)':
+  '@remix-project/remixd@0.6.36(typescript@5.5.4)(zod@3.23.8)':
     dependencies:
-      '@remix-project/remix-solidity': 0.5.42(typescript@5.5.4)
+      '@remix-project/remix-solidity': 0.5.42(typescript@5.5.4)(zod@3.23.8)
       '@remixproject/plugin': 0.3.33
       '@remixproject/plugin-api': 0.3.33
       '@remixproject/plugin-utils': 0.3.33
@@ -6442,7 +6442,7 @@ snapshots:
 
   '@tsconfig/node16@1.0.4': {}
 
-  '@typechain/ethers-v5@10.2.1(@ethersproject/abi@5.7.0)(@ethersproject/providers@5.7.2)(ethers@5.7.2)(typechain@8.3.2)(typescript@5.5.4)':
+  '@typechain/ethers-v5@10.2.1(@ethersproject/abi@5.7.0)(@ethersproject/providers@5.7.2)(ethers@5.7.2)(typechain@8.3.2(typescript@5.5.4))(typescript@5.5.4)':
     dependencies:
       '@ethersproject/abi': 5.7.0
       '@ethersproject/providers': 5.7.2
@@ -6452,7 +6452,7 @@ snapshots:
       typechain: 8.3.2(typescript@5.5.4)
       typescript: 5.5.4
 
-  '@typechain/ethers-v6@0.5.1(ethers@6.13.2)(typechain@8.3.2)(typescript@5.5.4)':
+  '@typechain/ethers-v6@0.5.1(ethers@6.13.2)(typechain@8.3.2(typescript@5.5.4))(typescript@5.5.4)':
     dependencies:
       ethers: 6.13.2
       lodash: 4.17.21
@@ -6529,7 +6529,7 @@ snapshots:
     dependencies:
       '@types/yargs-parser': 21.0.3
 
-  '@typescript-eslint/eslint-plugin@5.62.0(@typescript-eslint/parser@5.62.0)(eslint@8.57.0)(typescript@5.5.4)':
+  '@typescript-eslint/eslint-plugin@5.62.0(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.5.4))(eslint@8.57.0)(typescript@5.5.4)':
     dependencies:
       '@eslint-community/regexpp': 4.11.0
       '@typescript-eslint/parser': 5.62.0(eslint@8.57.0)(typescript@5.5.4)
@@ -6543,6 +6543,7 @@ snapshots:
       natural-compare-lite: 1.4.0
       semver: 7.6.3
       tsutils: 3.21.0(typescript@5.5.4)
+    optionalDependencies:
       typescript: 5.5.4
     transitivePeerDependencies:
       - supports-color
@@ -6554,6 +6555,7 @@ snapshots:
       '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.5.4)
       debug: 4.3.6(supports-color@8.1.1)
       eslint: 8.57.0
+    optionalDependencies:
       typescript: 5.5.4
     transitivePeerDependencies:
       - supports-color
@@ -6570,6 +6572,7 @@ snapshots:
       debug: 4.3.6(supports-color@8.1.1)
       eslint: 8.57.0
       tsutils: 3.21.0(typescript@5.5.4)
+    optionalDependencies:
       typescript: 5.5.4
     transitivePeerDependencies:
       - supports-color
@@ -6585,6 +6588,7 @@ snapshots:
       is-glob: 4.0.3
       semver: 7.6.3
       tsutils: 3.21.0(typescript@5.5.4)
+    optionalDependencies:
       typescript: 5.5.4
     transitivePeerDependencies:
       - supports-color
@@ -6613,15 +6617,15 @@ snapshots:
 
   '@ungap/structured-clone@1.2.0': {}
 
-  '@zombienet/cli@1.3.109(@polkadot/util@13.0.2)(@types/node@18.19.45)':
+  '@zombienet/cli@1.3.109(@polkadot/util@13.0.2)(@types/node@18.19.45)(chokidar@3.6.0)':
     dependencies:
       '@zombienet/dsl-parser-wrapper': 0.1.10
-      '@zombienet/orchestrator': 0.0.90(@polkadot/util@13.0.2)(@types/node@18.19.45)
-      '@zombienet/utils': 0.0.25(@types/node@18.19.45)(typescript@5.5.4)
+      '@zombienet/orchestrator': 0.0.90(@polkadot/util@13.0.2)(@types/node@18.19.45)(chokidar@3.6.0)
+      '@zombienet/utils': 0.0.25(@types/node@18.19.45)(chokidar@3.6.0)(typescript@5.5.4)
       cli-progress: 3.12.0
       commander: 11.1.0
       debug: 4.3.6(supports-color@8.1.1)
-      nunjucks: 3.2.4
+      nunjucks: 3.2.4(chokidar@3.6.0)
       typescript: 5.5.4
     transitivePeerDependencies:
       - '@polkadot/util'
@@ -6636,12 +6640,12 @@ snapshots:
 
   '@zombienet/dsl-parser-wrapper@0.1.10': {}
 
-  '@zombienet/orchestrator@0.0.90(@polkadot/util@13.0.2)(@types/node@18.19.45)':
+  '@zombienet/orchestrator@0.0.90(@polkadot/util@13.0.2)(@types/node@18.19.45)(chokidar@3.6.0)':
     dependencies:
       '@polkadot/api': 12.4.1
-      '@polkadot/keyring': 13.0.2(@polkadot/util-crypto@13.0.2)(@polkadot/util@13.0.2)
+      '@polkadot/keyring': 13.0.2(@polkadot/util-crypto@13.0.2(@polkadot/util@13.0.2))(@polkadot/util@13.0.2)
       '@polkadot/util-crypto': 13.0.2(@polkadot/util@13.0.2)
-      '@zombienet/utils': 0.0.25(@types/node@18.19.45)(typescript@5.5.4)
+      '@zombienet/utils': 0.0.25(@types/node@18.19.45)(chokidar@3.6.0)(typescript@5.5.4)
       JSONStream: 1.3.5
       chai: 4.5.0
       debug: 4.3.6(supports-color@8.1.1)
@@ -6668,12 +6672,12 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@zombienet/utils@0.0.25(@types/node@18.19.45)(typescript@5.5.4)':
+  '@zombienet/utils@0.0.25(@types/node@18.19.45)(chokidar@3.6.0)(typescript@5.5.4)':
     dependencies:
       cli-table3: 0.6.5
       debug: 4.3.6(supports-color@8.1.1)
       mocha: 10.7.3
-      nunjucks: 3.2.4
+      nunjucks: 3.2.4(chokidar@3.6.0)
       toml: 3.0.0
       ts-node: 10.9.2(@types/node@18.19.45)(typescript@5.5.4)
     transitivePeerDependencies:
@@ -6691,9 +6695,11 @@ snapshots:
 
   a-sync-waterfall@1.0.1: {}
 
-  abitype@0.7.1(typescript@5.5.4):
+  abitype@0.7.1(typescript@5.5.4)(zod@3.23.8):
     dependencies:
       typescript: 5.5.4
+    optionalDependencies:
+      zod: 3.23.8
 
   abort-controller@3.0.0:
     dependencies:
@@ -6722,11 +6728,11 @@ snapshots:
       - supports-color
 
   ajv-formats@2.1.1(ajv@8.17.1):
-    dependencies:
+    optionalDependencies:
       ajv: 8.17.1
 
   ajv-formats@3.0.1(ajv@8.17.1):
-    dependencies:
+    optionalDependencies:
       ajv: 8.17.1
 
   ajv@6.12.6:
@@ -7215,11 +7221,13 @@ snapshots:
   debug@4.3.1(supports-color@8.1.1):
     dependencies:
       ms: 2.1.2
+    optionalDependencies:
       supports-color: 8.1.1
 
   debug@4.3.6(supports-color@8.1.1):
     dependencies:
       ms: 2.1.2
+    optionalDependencies:
       supports-color: 8.1.1
 
   decamelize@4.0.0: {}
@@ -8525,11 +8533,13 @@ snapshots:
       bn.js: 4.11.6
       strip-hex-prefix: 1.0.0
 
-  nunjucks@3.2.4:
+  nunjucks@3.2.4(chokidar@3.6.0):
     dependencies:
       a-sync-waterfall: 1.0.1
       asap: 2.0.6
       commander: 5.1.0
+    optionalDependencies:
+      chokidar: 3.6.0
 
   object-copy@0.1.0:
     dependencies:
@@ -9367,9 +9377,9 @@ snapshots:
     dependencies:
       web3-types: 1.7.0
 
-  web3-eth-abi@4.2.3(typescript@5.5.4):
+  web3-eth-abi@4.2.3(typescript@5.5.4)(zod@3.23.8):
     dependencies:
-      abitype: 0.7.1(typescript@5.5.4)
+      abitype: 0.7.1(typescript@5.5.4)(zod@3.23.8)
       web3-errors: 1.2.1
       web3-types: 1.7.0
       web3-utils: 4.3.1
@@ -9388,13 +9398,13 @@ snapshots:
       web3-utils: 4.3.1
       web3-validator: 2.0.6
 
-  web3-eth-contract@4.6.0(typescript@5.5.4):
+  web3-eth-contract@4.6.0(typescript@5.5.4)(zod@3.23.8):
     dependencies:
       '@ethereumjs/rlp': 5.0.2
       web3-core: 4.5.0
       web3-errors: 1.2.1
-      web3-eth: 4.8.2(typescript@5.5.4)
-      web3-eth-abi: 4.2.3(typescript@5.5.4)
+      web3-eth: 4.8.2(typescript@5.5.4)(zod@3.23.8)
+      web3-eth-abi: 4.2.3(typescript@5.5.4)(zod@3.23.8)
       web3-types: 1.7.0
       web3-utils: 4.3.1
       web3-validator: 2.0.6
@@ -9405,13 +9415,13 @@ snapshots:
       - utf-8-validate
       - zod
 
-  web3-eth-ens@4.4.0(typescript@5.5.4):
+  web3-eth-ens@4.4.0(typescript@5.5.4)(zod@3.23.8):
     dependencies:
       '@adraffy/ens-normalize': 1.10.1
       web3-core: 4.5.0
       web3-errors: 1.2.1
-      web3-eth: 4.8.2(typescript@5.5.4)
-      web3-eth-contract: 4.6.0(typescript@5.5.4)
+      web3-eth: 4.8.2(typescript@5.5.4)(zod@3.23.8)
+      web3-eth-contract: 4.6.0(typescript@5.5.4)(zod@3.23.8)
       web3-net: 4.1.0
       web3-types: 1.7.0
       web3-utils: 4.3.1
@@ -9430,10 +9440,10 @@ snapshots:
       web3-utils: 4.3.1
       web3-validator: 2.0.6
 
-  web3-eth-personal@4.0.8(typescript@5.5.4):
+  web3-eth-personal@4.0.8(typescript@5.5.4)(zod@3.23.8):
     dependencies:
       web3-core: 4.5.0
-      web3-eth: 4.8.2(typescript@5.5.4)
+      web3-eth: 4.8.2(typescript@5.5.4)(zod@3.23.8)
       web3-rpc-methods: 1.3.0
       web3-types: 1.7.0
       web3-utils: 4.3.1
@@ -9445,12 +9455,12 @@ snapshots:
       - utf-8-validate
       - zod
 
-  web3-eth@4.8.2(typescript@5.5.4):
+  web3-eth@4.8.2(typescript@5.5.4)(zod@3.23.8):
     dependencies:
       setimmediate: 1.0.5
       web3-core: 4.5.0
       web3-errors: 1.2.1
-      web3-eth-abi: 4.2.3(typescript@5.5.4)
+      web3-eth-abi: 4.2.3(typescript@5.5.4)(zod@3.23.8)
       web3-eth-accounts: 4.1.3
       web3-net: 4.1.0
       web3-providers-ws: 4.0.8
@@ -9556,17 +9566,17 @@ snapshots:
       web3-types: 1.7.0
       zod: 3.23.8
 
-  web3@4.11.1(typescript@5.5.4):
+  web3@4.11.1(typescript@5.5.4)(zod@3.23.8):
     dependencies:
       web3-core: 4.5.0
       web3-errors: 1.2.1
-      web3-eth: 4.8.2(typescript@5.5.4)
-      web3-eth-abi: 4.2.3(typescript@5.5.4)
+      web3-eth: 4.8.2(typescript@5.5.4)(zod@3.23.8)
+      web3-eth-abi: 4.2.3(typescript@5.5.4)(zod@3.23.8)
       web3-eth-accounts: 4.1.3
-      web3-eth-contract: 4.6.0(typescript@5.5.4)
-      web3-eth-ens: 4.4.0(typescript@5.5.4)
+      web3-eth-contract: 4.6.0(typescript@5.5.4)(zod@3.23.8)
+      web3-eth-ens: 4.4.0(typescript@5.5.4)(zod@3.23.8)
       web3-eth-iban: 4.0.7
-      web3-eth-personal: 4.0.8(typescript@5.5.4)
+      web3-eth-personal: 4.0.8(typescript@5.5.4)(zod@3.23.8)
       web3-net: 4.1.0
       web3-providers-http: 4.1.0
       web3-providers-ws: 4.0.8
