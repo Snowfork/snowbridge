@@ -1,0 +1,24 @@
+version: "3"
+
+services:
+  execution-assethub:
+    platform: linux/amd64
+    image: ghcr.io/snowfork/snowbridge-relay
+    build:
+      context: .
+    command: run execution --config /config/execution-relay-asset-hub-0.json --substrate.private-key ${EXECUTION_RELAY_ASSETHUB_SUB_KEY}
+    volumes:
+      - ${CONFIG_DIR}:/config
+    env_file:
+      - .env
+    restart: on-failure
+
+  parachain-assethub:
+    platform: linux/amd64
+    image: ghcr.io/snowfork/snowbridge-relay
+    command: run parachain --config /config/parachain-relay-asset-hub-0.json --ethereum.private-key ${PARACHAIN_RELAY_ASSETHUB_ETH_KEY}
+    volumes:
+      - ${CONFIG_DIR}:/config
+    env_file:
+      - .env
+    restart: on-failure
