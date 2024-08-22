@@ -10,15 +10,13 @@ use snowbridge_smoketest::{
 	parachains::{
 		assethub::api::{
 			foreign_assets::events::Issued as AssetHubIssued,
-			runtime_types::{
-				staging_xcm::v4::{
-					location::Location,
-					junction::{
-						Junction::{AccountKey20, GlobalConsensus},
-						NetworkId,
-					},
-					junctions::Junctions::X2,
+			runtime_types::staging_xcm::v4::{
+				junction::{
+					Junction::{AccountKey20, GlobalConsensus},
+					NetworkId,
 				},
+				junctions::Junctions::X2,
+				location::Location,
 			},
 		},
 		penpal::{self, api::foreign_assets::events::Issued as PenpalIssued},
@@ -156,15 +154,13 @@ async fn send_token_to_penpal() {
 }
 
 async fn ensure_penpal_asset_exists(penpal_client: &mut OnlineClient<PenpalConfig>) {
-	use penpal::api::runtime_types::{
-		staging_xcm::v4::{
-			location::Location,
-			junction::{
-				Junction::{AccountKey20, GlobalConsensus},
-				NetworkId,
-			},
-			junctions::Junctions::X2,
+	use penpal::api::runtime_types::staging_xcm::v4::{
+		junction::{
+			Junction::{AccountKey20, GlobalConsensus},
+			NetworkId,
 		},
+		junctions::Junctions::X2,
+		location::Location,
 	};
 	let penpal_asset_id = Location {
 		parents: 2,
