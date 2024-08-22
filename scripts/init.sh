@@ -17,7 +17,9 @@ echo "Checkout lodestar Snowfork fork"
 pushd ..
   if [ ! -d "lodestar" ]; then
     git clone https://github.com/ChainSafe/lodestar
-    cd snowbridge && ln -sf ../lodestar lodestar
+  fi
+  if [ ! -L "snowbridge/lodestar" ]; then
+    (cd snowbridge && ln -sf ../lodestar lodestar)
   fi
   pushd lodestar
     git fetch && git checkout $LODESTAR_VERSION
