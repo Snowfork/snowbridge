@@ -22,13 +22,12 @@ use snowbridge_smoketest::{
 		relaychain,
 		relaychain::api::runtime_types::{
 			pallet_xcm::pallet::Call,
-			rococo_runtime::RuntimeCall,
+			westend_runtime::RuntimeCall,
 			sp_weights::weight_v2::Weight,
 			staging_xcm::v3::multilocation::MultiLocation,
 			xcm::{
 				double_encoded::DoubleEncoded,
-				v2::OriginKind,
-				v3::{junction::Junction, junctions::Junctions, Instruction, WeightLimit, Xcm},
+				v3::{junction::Junction, junctions::Junctions, Instruction, OriginKind, WeightLimit, Xcm},
 				VersionedLocation, VersionedXcm,
 			},
 		},

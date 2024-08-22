@@ -11,8 +11,8 @@ use snowbridge_smoketest::{
 		assethub::api::{
 			foreign_assets::events::Issued as AssetHubIssued,
 			runtime_types::{
-				staging_xcm::v3::multilocation::MultiLocation,
-				xcm::v3::{
+				staging_xcm::v4::{
+					location::Location,
 					junction::{
 						Junction::{AccountKey20, GlobalConsensus},
 						NetworkId,
@@ -98,12 +98,12 @@ async fn send_token_to_penpal() {
 		.expect("block subscription")
 		.take(wait_for_blocks);
 
-	let expected_asset_id: MultiLocation = MultiLocation {
+	let expected_asset_id = Location {
 		parents: 2,
-		interior: X2(
+		interior: X2([
 			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
 			AccountKey20 { network: None, key: WETH_CONTRACT.into() },
-		),
+		]),
 	};
 	let assethub_expected_owner: AccountId32 = PENPAL_SOVEREIGN.into();
 
@@ -157,8 +157,8 @@ async fn send_token_to_penpal() {
 
 async fn ensure_penpal_asset_exists(penpal_client: &mut OnlineClient<PenpalConfig>) {
 	use penpal::api::runtime_types::{
-		staging_xcm::v3::multilocation::MultiLocation,
-		xcm::v3::{
+		staging_xcm::v4::{
+			location::Location,
 			junction::{
 				Junction::{AccountKey20, GlobalConsensus},
 				NetworkId,
@@ -166,12 +166,12 @@ async fn ensure_penpal_asset_exists(penpal_client: &mut OnlineClient<PenpalConfi
 			junctions::Junctions::X2,
 		},
 	};
-	let penpal_asset_id = MultiLocation {
+	let penpal_asset_id = Location {
 		parents: 2,
-		interior: X2(
+		interior: X2([
 			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
 			AccountKey20 { network: None, key: WETH_CONTRACT.into() },
-		),
+		]),
 	};
 
 	let penpal_asset_address = penpal::api::storage().foreign_assets().asset(&penpal_asset_id);

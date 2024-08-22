@@ -53,8 +53,6 @@ open_hrmp_channel() {
         --ws "${relay_url?}" \
         --seed "${relay_chain_seed?}" \
         --sudo \
-        --noWait \
-        --nonce -1 \
         tx.hrmp.forceOpenHrmpChannel \
         ${sender_para_id} \
         ${recipient_para_id} \
