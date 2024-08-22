@@ -61,6 +61,8 @@ send_governance_transact_from_relaychain() {
         --ws "${relaychain_ws_url?}" \
         --seed "${relaychain_sudo_seed?}" \
         --sudo \
+        --noWait \
+        --nonce -1 \
         tx.xcmPallet.send \
             "${dest}" \
             "${message}"
@@ -112,6 +114,8 @@ transfer_balance() {
     npx polkadot-js-api \
         --ws "${runtime_para_endpoint}" \
         --seed "${seed?}" \
+        --noWait \
+        --nonce -1 \
         tx.xcmPallet.transferAssets \
             "${dest}" \
             "${beneficiary}" \
@@ -145,5 +149,5 @@ function call_polkadot_js_api() {
     #           With it, it just submits it to the tx pool and exits.
     # --nonce -1: means to compute transaction nonce using `system_accountNextIndex` RPC, which includes all
     #             transaction that are in the tx pool.
-    npx polkadot-js-api  "$@" || true
+    polkadot-js-api --noWait --nonce -1 "$@" || true
 }

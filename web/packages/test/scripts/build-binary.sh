@@ -62,7 +62,7 @@ build_relayer() {
 set_slot_time() {
     local new_value=$1
     echo "Hack lodestar for faster slot time"
-    local preset_mainnet_config_file="$root_dir/lodestar/packages/config/src/chainConfig/networks/mainnet.ts"
+    local preset_mainnet_config_file="$root_dir/lodestar/packages/config/src/chainConfig/configs/mainnet.ts"
     if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
         gsed -i "s/SECONDS_PER_SLOT: .*/SECONDS_PER_SLOT: $new_value,/g" $preset_mainnet_config_file
     else
