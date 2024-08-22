@@ -132,18 +132,10 @@ function transfer_local_balance() {
     echo "      amount: ${amount}"
     echo "--------------------------------------------------"
 
-    call_polkadot_js_api \
+    npx polkadot-js-api \
         --ws "${runtime_para_endpoint}" \
         --seed "${seed?}" \
         tx.balances.transferAllowDeath \
             "${target_account}" \
             "${amount}"
-}
-
-function call_polkadot_js_api() {
-    # --noWait: without that argument `polkadot-js-api` waits until transaction is included into the block.
-    #           With it, it just submits it to the tx pool and exits.
-    # --nonce -1: means to compute transaction nonce using `system_accountNextIndex` RPC, which includes all
-    #             transaction that are in the tx pool.
-    polkadot-js-api "$@" || true
 }
