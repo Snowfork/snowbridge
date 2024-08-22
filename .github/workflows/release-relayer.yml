@@ -134,4 +134,4 @@ jobs:
         with:
           context: ./relayer
           push: true
-          tags: ${{ steps.create_tag.outputs.tag }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.create_tag.outputs.tag }}
