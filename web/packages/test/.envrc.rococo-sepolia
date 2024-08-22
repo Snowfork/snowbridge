@@ -1,0 +1,43 @@
+source_up_if_exists
+
+# Secrets
+# export INFURA_PROJECT_ID=
+# export ETHERSCAN_API_KEY=
+# export DEPLOYER_ETH_KEY=
+
+# Chain
+export ETH_NETWORK=sepolia
+export ETH_NETWORK_ID=11155111
+export ACTIVE_SPEC=mainnet
+
+# Endpoints
+export RELAYCHAIN_ENDPOINT=wss://rococo-rpc.polkadot.io
+export ETH_RPC_ENDPOINT=https://sepolia.infura.io/v3
+export ETH_WS_ENDPOINT=wss://sepolia.infura.io/ws/v3
+export BEACON_HTTP_ENDPOINT=https://lodestar-sepolia.chainsafe.io
+
+# Beefy
+export BEEFY_START_BLOCK=8414045
+export MINIMUM_REQUIRED_SIGNATURES=16
+export ETH_RANDAO_DELAY=128       # 4 epochs=128 slots=25.6mins
+export ETH_RANDAO_EXP=6           # 6 slots before expired
+
+# Channels and Agents
+export BRIDGE_HUB_PARAID=1013
+export BRIDGE_HUB_AGENT_ID=0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314
+export ASSET_HUB_PARAID=1000
+export ASSET_HUB_AGENT_ID=0x81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79
+export REJECT_OUTBOUND_MESSAGES=false
+
+# Fees
+export FEE_MULTIPLIER=1000000000000000000
+export CREATE_ASSET_FEE=10000000000
+export DELIVERY_COST=10000000000
+export EXCHANGE_RATE=25000000000000
+export REGISTER_TOKEN_FEE=5000000000000000000
+export RESERVE_TRANSFER_FEE=10000000000
+
+export FOREIGN_TOKEN_DECIMALS=12
+
+# Initial agents deposits. Set low on purpose as they can be topped up manually
+export ETH_BRIDGE_HUB_INITIAL_DEPOSIT=1000000

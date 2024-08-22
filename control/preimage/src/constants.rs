@@ -19,6 +19,7 @@ mod polkadot {
     pub const ASSET_HUB_API: &str = "wss://polkadot-asset-hub-rpc.polkadot.io";
     pub const BRIDGE_HUB_ID: u32 = 1002;
     pub const BRIDGE_HUB_API: &str = "wss://polkadot-bridge-hub-rpc.polkadot.io";
+    pub const RELAY_API: &str = "wss://polkadot.api.onfinality.io/public-ws";
 }
 
 #[cfg(feature = "polkadot")]

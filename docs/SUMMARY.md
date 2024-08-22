@@ -20,9 +20,10 @@
 
 * [Token Transfers](applications/token-transfers.md)
 
-## Performance
+## Security
 
-* [Benchmarks](performance/benchmarks.md)
+* [Exploit Reporting](security/exploit-reporting.md)
+* [Audits](security/audits.md)
 
 ## Other
 
@@ -34,11 +35,10 @@
 
 * [Rococo-Sepolia Token Transfers](rococo-testnet/rococo-sepolia-token-transfers.md)
 
-## Runbooks
+## Operations
 
-* [Updating Snowbridge Pallets, BridgeHub & AssetHub Runtimes](runbooks/updating-snowbridge-pallets-bridgehub-and-assethub-runtimes.md)
-* [Initialize Ethereum light client with Forced Checkpoint](runbooks/initialize-ethereum-light-client-with-forced-checkpoint.md)
-* [Initial Deployment of Gateway Contracts](runbooks/initial-deployment-of-gateway-contracts.md)
-* [Halt Bridge in Case of Emergency](runbooks/halt-bridge-in-case-of-emergency.md)
-* [Contract Upgrades](runbooks/contract-upgrades.md)
-* [Run Relayers](runbooks/run-relayers.md)
+* [Infrastructure](operations/infrastructure.md)
+* [Contributing to Snowbridge](operations/updating-snowbridge-pallets-bridgehub-and-assethub-runtimes.md)
+* [Governance and Operational Processes](operations/governance-and-operational-processes.md)
+* [General Governance Updates](operations/governance-updates.md)
+* [Test Runtime Upgrades](operations/test-runtime-upgrades.md)

@@ -17,8 +17,7 @@ build_binaries() {
     # Check that all 3 binaries are available and no changes made in the polkadot and substrate dirs
     if [[ ! -e "target/release/polkadot" || ! -e "target/release/polkadot-execute-worker" || ! -e "target/release/polkadot-prepare-worker" || "$changes_detected" -eq 1 ]]; then
         echo "Building polkadot binary, due to changes detected in polkadot or substrate, or binaries not found"
-        # Increase session length to 2 mins
-        ROCOCO_EPOCH_DURATION=20 cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker
+        cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker $features
     else
         echo "No changes detected in polkadot or substrate and binaries are available, not rebuilding relaychain binaries."
     fi

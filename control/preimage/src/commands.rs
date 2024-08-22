@@ -1,31 +1,35 @@
-use crate::bridge_hub_runtime::runtime_types::snowbridge_pallet_ethereum_client;
 use crate::helpers::calculate_delivery_fee;
 use crate::{
-    constants::*, Context, ForceCheckpointArgs, GatewayAddressArgs, GatewayOperatingModeArgs,
-    GatewayOperatingModeEnum, PricingParametersArgs, UpgradeArgs,
+    constants::*, Context, ForceCheckpointArgs, GatewayAddressArgs, GatewayOperatingModeEnum,
+    OperatingModeEnum, PricingParametersArgs, UpdateAssetArgs, UpgradeArgs,
 };
 use alloy_primitives::{utils::format_units, U256};
 use codec::Encode;
+use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
 use sp_arithmetic::FixedU128;
 use sp_crypto_hashing::twox_128;
 use std::{fs::File, io::Read};
+use subxt::utils::MultiAddress;
 use subxt::utils::Static;
 
 type CheckpointUpdate = snowbridge_beacon_primitives::CheckpointUpdate<512>;
 
+use crate::asset_hub_runtime::runtime_types::pallet_assets;
 use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
 
 use crate::bridge_hub_runtime::runtime_types::{
     snowbridge_core::{
+        operating_mode::BasicOperatingMode,
         outbound::v1::{Initializer, OperatingMode},
         pricing::{PricingParameters, Rewards},
     },
-    snowbridge_pallet_system,
+    snowbridge_pallet_ethereum_client, snowbridge_pallet_inbound_queue,
+    snowbridge_pallet_outbound_queue, snowbridge_pallet_system,
 };
 use crate::bridge_hub_runtime::RuntimeCall as BridgeHubRuntimeCall;
 
-pub fn gateway_operating_mode(params: &GatewayOperatingModeArgs) -> BridgeHubRuntimeCall {
-    let mode = match params.gateway_operating_mode {
+pub fn gateway_operating_mode(operating_mode: &GatewayOperatingModeEnum) -> BridgeHubRuntimeCall {
+    let mode = match operating_mode {
         GatewayOperatingModeEnum::Normal => OperatingMode::Normal,
         GatewayOperatingModeEnum::RejectingOutboundMessages => {
             OperatingMode::RejectingOutboundMessages
@@ -33,6 +37,36 @@ pub fn gateway_operating_mode(params: &GatewayOperatingModeArgs) -> BridgeHubRun
     };
     BridgeHubRuntimeCall::EthereumSystem(
         snowbridge_pallet_system::pallet::Call::set_operating_mode { mode },
+    )
+}
+
+pub fn inbound_queue_operating_mode(param: &OperatingModeEnum) -> BridgeHubRuntimeCall {
+    let mode = match param {
+        OperatingModeEnum::Normal => BasicOperatingMode::Normal,
+        OperatingModeEnum::Halted => BasicOperatingMode::Halted,
+    };
+    BridgeHubRuntimeCall::EthereumInboundQueue(
+        snowbridge_pallet_inbound_queue::pallet::Call::set_operating_mode { mode },
+    )
+}
+
+pub fn ethereum_client_operating_mode(param: &OperatingModeEnum) -> BridgeHubRuntimeCall {
+    let mode = match param {
+        OperatingModeEnum::Normal => BasicOperatingMode::Normal,
+        OperatingModeEnum::Halted => BasicOperatingMode::Halted,
+    };
+    BridgeHubRuntimeCall::EthereumBeaconClient(
+        snowbridge_pallet_ethereum_client::pallet::Call::set_operating_mode { mode },
+    )
+}
+
+pub fn outbound_queue_operating_mode(param: &OperatingModeEnum) -> BridgeHubRuntimeCall {
+    let mode = match param {
+        OperatingModeEnum::Normal => BasicOperatingMode::Normal,
+        OperatingModeEnum::Halted => BasicOperatingMode::Halted,
+    };
+    BridgeHubRuntimeCall::EthereumOutboundQueue(
+        snowbridge_pallet_outbound_queue::pallet::Call::set_operating_mode { mode },
     )
 }
 
@@ -123,6 +157,11 @@ pub async fn pricing_parameters(
         twox_128(b":BridgeHubEthereumBaseFee:").to_vec();
     let asset_hub_outbound_fee_encoded: Vec<u8> = total_outbound_fee_adjusted.encode();
 
+    eprintln!(
+        "Storage key for 'BridgeHubEthereumBaseFee': 0x{}",
+        hex::encode(&asset_hub_outbound_fee_storage_key)
+    );
+
     Ok((
         BridgeHubRuntimeCall::EthereumSystem(
             snowbridge_pallet_system::pallet::Call::set_pricing_parameters {
@@ -138,6 +177,21 @@ pub async fn pricing_parameters(
             },
         ),
     ))
+}
+
+pub fn set_assethub_fee(fee: u128) -> AssetHubRuntimeCall {
+    let asset_hub_outbound_fee_storage_key: Vec<u8> =
+        twox_128(b":BridgeHubEthereumBaseFee:").to_vec();
+    let asset_hub_outbound_fee_encoded: Vec<u8> = fee.encode();
+
+    AssetHubRuntimeCall::System(
+        crate::asset_hub_runtime::runtime_types::frame_system::pallet::Call::set_storage {
+            items: vec![(
+                asset_hub_outbound_fee_storage_key,
+                asset_hub_outbound_fee_encoded,
+            )],
+        },
+    )
 }
 
 pub fn force_checkpoint(params: &ForceCheckpointArgs) -> BridgeHubRuntimeCall {
@@ -161,4 +215,61 @@ pub fn set_gateway_address(params: &GatewayAddressArgs) -> BridgeHubRuntimeCall 
             items: vec![(storage_key, storage_value)],
         },
     )
+}
+
+pub fn make_asset_sufficient(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
+    use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation;
+    use crate::asset_hub_runtime::runtime_types::xcm::v3::{
+        junction::Junction::AccountKey20, junction::Junction::GlobalConsensus, junction::NetworkId,
+        junctions::Junctions::X2,
+    };
+    use subxt::utils::AccountId32;
+    let chain_id = crate::bridge_hub_runtime::CHAIN_ID;
+    let asset_id = MultiLocation {
+        parents: 2,
+        interior: X2(
+            GlobalConsensus(NetworkId::Ethereum { chain_id: chain_id }),
+            AccountKey20 {
+                network: None,
+                key: params.contract_id.into_array().into(),
+            },
+        ),
+    };
+    let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
+    AssetHubRuntimeCall::ForeignAssets(pallet_assets::pallet::Call2::force_asset_status {
+        id: asset_id,
+        owner: MultiAddress::<AccountId32, ()>::Id(owner.into()),
+        issuer: MultiAddress::<AccountId32, ()>::Id(owner.into()),
+        admin: MultiAddress::<AccountId32, ()>::Id(owner.into()),
+        freezer: MultiAddress::<AccountId32, ()>::Id(owner.into()),
+        min_balance: params.min_balance,
+        is_sufficient: params.is_sufficient,
+        is_frozen: params.is_frozen,
+    })
+}
+
+pub fn force_set_metadata(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
+    use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation;
+    use crate::asset_hub_runtime::runtime_types::xcm::v3::{
+        junction::Junction::AccountKey20, junction::Junction::GlobalConsensus, junction::NetworkId,
+        junctions::Junctions::X2,
+    };
+    let chain_id = crate::bridge_hub_runtime::CHAIN_ID;
+    let asset_id = MultiLocation {
+        parents: 2,
+        interior: X2(
+            GlobalConsensus(NetworkId::Ethereum { chain_id: chain_id }),
+            AccountKey20 {
+                network: None,
+                key: params.contract_id.into_array().into(),
+            },
+        ),
+    };
+    AssetHubRuntimeCall::ForeignAssets(pallet_assets::pallet::Call2::force_set_metadata {
+        id: asset_id,
+        name: params.name.as_bytes().to_vec(),
+        symbol: params.symbol.as_bytes().to_vec(),
+        decimals: params.decimals,
+        is_frozen: params.is_frozen,
+    })
 }

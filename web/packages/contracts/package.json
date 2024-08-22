@@ -1,0 +1,21 @@
+{
+  "name": "@snowbridge/contracts",
+  "version": "0.1.19",
+  "description": "Snowbridge contract source and abi.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Snowfork/snowbridge.git",
+    "directory": "web/packages/contract-types"
+  },
+  "files": [
+    "/src/**/*",
+    "/test/**/*",
+    "/out/**/*"
+  ],
+  "scripts": {
+    "build": "cp -R '../../../contracts/src' '../../../contracts/out' '../../../contracts/test' ."
+  },
+  "devDependencies": { },
+  "dependencies": { }
+}

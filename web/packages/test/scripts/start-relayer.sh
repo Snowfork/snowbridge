@@ -11,7 +11,6 @@ config_relayer() {
         --arg eth_gas_limit $eth_gas_limit \
         '
       .sink.contracts.BeefyClient = $k1
-    | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     ' \
@@ -22,6 +21,7 @@ config_relayer() {
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
         --arg channelID $PRIMARY_GOVERNANCE_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
@@ -29,7 +29,7 @@ config_relayer() {
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.Gateway = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
-    | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."channel-id" = $channelID
     ' \
@@ -40,6 +40,7 @@ config_relayer() {
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
         --arg channelID $SECONDARY_GOVERNANCE_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
@@ -47,17 +48,18 @@ config_relayer() {
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.Gateway = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
-    | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."channel-id" = $channelID
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay-bridge-hub-02.json
 
-    # Configure parachain relay (asset hub)
+    # Configure parachain relay (asset hub)-0
     jq \
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
         --arg channelID $ASSET_HUB_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
@@ -65,17 +67,59 @@ config_relayer() {
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.Gateway = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
-    | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."channel-id" = $channelID
+    | .schedule.id = 0
     ' \
-        config/parachain-relay.json >$output_dir/parachain-relay-asset-hub.json
+        config/parachain-relay.json >$output_dir/parachain-relay-asset-hub-0.json
+
+    # Configure parachain relay (asset hub)-1
+    jq \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --arg k2 "$(address_for BeefyClient)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
+        --arg channelID $ASSET_HUB_CHANNEL_ID \
+        --arg eth_gas_limit $eth_gas_limit \
+        '
+      .source.contracts.Gateway = $k1
+    | .source.contracts.BeefyClient = $k2
+    | .sink.contracts.Gateway = $k1
+    | .source.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
+    | .sink.ethereum."gas-limit" = $eth_gas_limit
+    | .source."channel-id" = $channelID
+    | .schedule.id = 1
+    ' \
+        config/parachain-relay.json >$output_dir/parachain-relay-asset-hub-1.json
+
+    # Configure parachain relay (asset hub)-2
+    jq \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --arg k2 "$(address_for BeefyClient)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
+        --arg channelID $ASSET_HUB_CHANNEL_ID \
+        --arg eth_gas_limit $eth_gas_limit \
+        '
+      .source.contracts.Gateway = $k1
+    | .source.contracts.BeefyClient = $k2
+    | .sink.contracts.Gateway = $k1
+    | .source.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
+    | .sink.ethereum."gas-limit" = $eth_gas_limit
+    | .source."channel-id" = $channelID
+    | .schedule.id = 2
+    ' \
+        config/parachain-relay.json >$output_dir/parachain-relay-asset-hub-2.json
 
     # Configure parachain relay (penpal)
     jq \
         --arg k1 "$(address_for GatewayProxy)" \
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
         --arg channelID $PENPAL_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
@@ -83,7 +127,7 @@ config_relayer() {
     | .source.contracts.BeefyClient = $k2
     | .sink.contracts.Gateway = $k1
     | .source.ethereum.endpoint = $eth_endpoint_ws
-    | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     | .source."channel-id" = $channelID
     ' \
@@ -103,7 +147,7 @@ config_relayer() {
     ' \
         config/beacon-relay.json >$output_dir/beacon-relay.json
 
-    # Configure execution relay for assethub
+    # Configure execution relay for assethub-0
     jq \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg k1 "$(address_for GatewayProxy)" \
@@ -112,8 +156,35 @@ config_relayer() {
       .source.ethereum.endpoint = $eth_endpoint_ws
     | .source.contracts.Gateway = $k1
     | .source."channel-id" = $channelID
+    | .schedule.id = 0
     ' \
-        config/execution-relay.json >$output_dir/execution-relay-asset-hub.json
+        config/execution-relay.json >$output_dir/execution-relay-asset-hub-0.json
+
+    # Configure execution relay for assethub-1
+    jq \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --arg channelID $ASSET_HUB_CHANNEL_ID \
+        '
+      .source.ethereum.endpoint = $eth_endpoint_ws
+    | .source.contracts.Gateway = $k1
+    | .source."channel-id" = $channelID
+    | .schedule.id = 1
+    ' \
+        config/execution-relay.json >$output_dir/execution-relay-asset-hub-1.json
+
+    # Configure execution relay for assethub-2
+    jq \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --arg channelID $ASSET_HUB_CHANNEL_ID \
+        '
+      .source.ethereum.endpoint = $eth_endpoint_ws
+    | .source.contracts.Gateway = $k1
+    | .source."channel-id" = $channelID
+    | .schedule.id = 2
+    ' \
+        config/execution-relay.json >$output_dir/execution-relay-asset-hub-2.json
 
     # Configure execution relay for penpal
     jq \
@@ -169,15 +240,41 @@ start_relayer() {
         done
     ) &
 
-    # Launch parachain relay for assethub
+    # Launch parachain relay 0 for assethub
     (
-        : >"$output_dir"/parachain-relay-asset-hub.log
+        : >"$output_dir"/parachain-relay-asset-hub-0.log
         while :; do
             echo "Starting parachain relay (asset-hub) at $(date)"
             "${relay_bin}" run parachain \
-                --config "$output_dir/parachain-relay-asset-hub.json" \
+                --config "$output_dir/parachain-relay-asset-hub-0.json" \
                 --ethereum.private-key $parachain_relay_assethub_eth_key \
-                >>"$output_dir"/parachain-relay-asset-hub.log 2>&1 || true
+                >>"$output_dir"/parachain-relay-asset-hub-0.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch parachain relay 1 for assethub
+    (
+        : >"$output_dir"/parachain-relay-asset-hub-1.log
+        while :; do
+            echo "Starting parachain relay (asset-hub) at $(date)"
+            "${relay_bin}" run parachain \
+                --config "$output_dir/parachain-relay-asset-hub-1.json" \
+                --ethereum.private-key $parachain_relay_primary_gov_eth_key \
+                >>"$output_dir"/parachain-relay-asset-hub-1.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch parachain relay 2 for assethub
+    (
+        : >"$output_dir"/parachain-relay-asset-hub-2.log
+        while :; do
+            echo "Starting parachain relay (asset-hub) at $(date)"
+            "${relay_bin}" run parachain \
+                --config "$output_dir/parachain-relay-asset-hub-2.json" \
+                --ethereum.private-key $parachain_relay_secondary_gov_eth_key \
+                >>"$output_dir"/parachain-relay-asset-hub-2.log 2>&1 || true
             sleep 20
         done
     ) &
@@ -208,15 +305,41 @@ start_relayer() {
         done
     ) &
 
-    # Launch execution relay for assethub
+    # Launch execution relay for assethub-0
     (
-        : >$output_dir/execution-relay-asset-hub.log
+        : >$output_dir/execution-relay-asset-hub-0.log
         while :; do
-            echo "Starting execution relay (asset-hub) at $(date)"
+            echo "Starting execution relay (asset-hub-0) at $(date)"
             "${relay_bin}" run execution \
-                --config $output_dir/execution-relay-asset-hub.json \
+                --config $output_dir/execution-relay-asset-hub-0.json \
                 --substrate.private-key "//ExecutionRelayAssetHub" \
-                >>"$output_dir"/execution-relay-asset-hub.log 2>&1 || true
+                >>"$output_dir"/execution-relay-asset-hub-0.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch execution relay for assethub-1
+    (
+        : >$output_dir/execution-relay-asset-hub-1.log
+        while :; do
+            echo "Starting execution relay (asset-hub-1) at $(date)"
+            "${relay_bin}" run execution \
+                --config $output_dir/execution-relay-asset-hub-1.json \
+                --substrate.private-key "//Alice" \
+                >>"$output_dir"/execution-relay-asset-hub-1.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch execution relay for assethub-2
+    (
+        : >$output_dir/execution-relay-asset-hub-2.log
+        while :; do
+            echo "Starting execution relay (asset-hub-2) at $(date)"
+            "${relay_bin}" run execution \
+                --config $output_dir/execution-relay-asset-hub-2.json \
+                --substrate.private-key "//Bob" \
+                >>"$output_dir"/execution-relay-asset-hub-2.log 2>&1 || true
             sleep 20
         done
     ) &

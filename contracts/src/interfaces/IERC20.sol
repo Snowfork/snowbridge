@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Axelar Network
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 
-pragma solidity 0.8.23;
+pragma solidity 0.8.25;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.

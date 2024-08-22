@@ -116,9 +116,38 @@ transfer_balance() {
         --seed "${seed?}" \
         --noWait \
         --nonce -1 \
-        tx.xcmPallet.teleportAssets \
+        tx.xcmPallet.transferAssets \
             "${dest}" \
             "${beneficiary}" \
             "${assets}" \
-            "${asset_fee_item}"
+            "${asset_fee_item}" \
+            "Unlimited"
+}
+
+function transfer_local_balance() {
+    local runtime_para_endpoint=$1
+    local seed=$2
+    local target_account=$3
+    local amount=$4
+    echo "  calling transfer_balance:"
+    echo "      runtime_para_endpoint: ${runtime_para_endpoint}"
+    echo "      seed: ${seed}"
+    echo "      target_account: ${target_account}"
+    echo "      amount: ${amount}"
+    echo "--------------------------------------------------"
+
+    call_polkadot_js_api \
+        --ws "${runtime_para_endpoint}" \
+        --seed "${seed?}" \
+        tx.balances.transferAllowDeath \
+            "${target_account}" \
+            "${amount}"
+}
+
+function call_polkadot_js_api() {
+    # --noWait: without that argument `polkadot-js-api` waits until transaction is included into the block.
+    #           With it, it just submits it to the tx pool and exits.
+    # --nonce -1: means to compute transaction nonce using `system_accountNextIndex` RPC, which includes all
+    #             transaction that are in the tx pool.
+    polkadot-js-api --noWait --nonce -1 "$@" || true
 }

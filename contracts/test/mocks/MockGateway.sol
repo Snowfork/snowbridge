@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.23;
+pragma solidity 0.8.25;
 
 import {Gateway} from "../../src/Gateway.sol";
 import {ParaID, OperatingMode} from "../../src/Types.sol";

@@ -101,7 +101,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("connect to parachain: %w", err)
 		}
 
-		writer := parachain.NewParachainWriter(paraconn, 8, 8)
+		writer := parachain.NewParachainWriter(paraconn, 8)
 		err = writer.Start(ctx, eg)
 		if err != nil {
 			return fmt.Errorf("start parachain conn: %w", err)
@@ -114,7 +114,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		store.Connect()
 		defer store.Close()
 
-		client := api.NewBeaconClient(lodestarEndpoint)
+		client := api.NewBeaconClient(lodestarEndpoint, lodestarEndpoint)
 		syncer := syncer.New(client, &store, p)
 
 		beaconHeaderHash := common.HexToHash(finalizedHeader)

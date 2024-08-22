@@ -1,0 +1,12 @@
+endpoint: wss://statemint-rpc.dwellir.com
+mock-signature-host: true
+block: ${env.POLKADOT_ASSET_HUB_BLOCK_NUMBER}
+db: ./assethub.sqlite
+
+import-storage:
+  System:
+    Account:
+      - - - 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+        - providers: 1
+          data:
+            free: 1000000000000000

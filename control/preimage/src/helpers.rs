@@ -7,13 +7,14 @@ use crate::Context;
 
 use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 
-use crate::relay_runtime::runtime_types::{
+#[cfg(feature = "polkadot")]
+use crate::relay_runtime::api::runtime_types::xcm::v2::OriginKind;
+use crate::relay_runtime::api::runtime_types::{
     pallet_xcm,
     sp_weights::weight_v2::Weight,
     staging_xcm::v3::multilocation::MultiLocation,
     xcm::{
         double_encoded::DoubleEncoded,
-        v2::OriginKind,
         v3::{
             junction::Junction,
             junctions::Junctions,
@@ -23,6 +24,9 @@ use crate::relay_runtime::runtime_types::{
         VersionedLocation, VersionedXcm,
     },
 };
+#[cfg(feature = "rococo")]
+use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
+
 use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 
 use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
@@ -33,10 +37,10 @@ use sp_arithmetic::per_things::Rounding;
 const MAX_REF_TIME: u128 = 500_000_000_000 - 1;
 const MAX_PROOF_SIZE: u128 = 3 * 1024 * 1024 - 1;
 
-// Increase call weight by 25% as a buffer in case the chain is upgraded with new weights
+// Increase call weight by 50% as a buffer in case the chain is upgraded with new weights
 // while the proposal is still in flight.
 pub fn increase_weight(ref_time: &mut u64, proof_size: &mut u64) {
-    let _ref_time = multiply_by_rational_with_rounding(*ref_time as u128, 125, 100, Rounding::Up)
+    let _ref_time = multiply_by_rational_with_rounding(*ref_time as u128, 3, 2, Rounding::Up)
         .expect("overflow")
         .min(MAX_REF_TIME);
     let _proof_size =
@@ -168,7 +172,7 @@ pub async fn query_weight_asset_hub(
 
 pub fn utility_force_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
     RelayRuntimeCall::Utility(
-        crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::force_batch { calls },
+        crate::relay_runtime::api::runtime_types::pallet_utility::pallet::Call::batch_all { calls },
     )
 }
 

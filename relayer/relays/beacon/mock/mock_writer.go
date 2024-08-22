@@ -15,6 +15,10 @@ type Writer struct {
 	LastFinalizedState state.FinalizedHeader
 }
 
+func (m *Writer) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
+	return state.ExecutionHeader{}, nil
+}
+
 func (m *Writer) GetLastFinalizedStateIndex() (types.U32, error) {
 	return 0, nil
 }
@@ -23,7 +27,7 @@ func (m *Writer) GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error)
 	return types.H256{}, nil
 }
 
-func (m *Writer) BatchCall(ctx context.Context, extrinsic string, calls []interface{}) error {
+func (m *Writer) BatchCall(ctx context.Context, extrinsic []string, calls []interface{}) error {
 	return nil
 }
 

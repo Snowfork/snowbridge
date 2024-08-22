@@ -6,7 +6,7 @@ const run = async () => {
     const basedir = process.env.contract_dir || "../contracts"
     const DeployInfoFile = path.join(
         basedir,
-        `./broadcast/DeployLocal.sol/${NetworkId}/run-latest.json`,
+        `./broadcast/DeployLocal.sol/${NetworkId}/run-latest.json`
     )
     const BuildInfoDir = path.join(basedir, "./out")
     const DestFile =
@@ -28,8 +28,8 @@ const run = async () => {
                 let contractBuildingInfo = JSON.parse(
                     fs.readFileSync(
                         path.join(BuildInfoDir, contractName + ".sol", contractName + ".json"),
-                        "utf8",
-                    ),
+                        "utf8"
+                    )
                 )
                 contractInfo.abi = contractBuildingInfo.abi
                 contracts[contractName] = contractInfo

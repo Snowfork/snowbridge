@@ -9,3 +9,9 @@ members = [
     "runtimes/asset-hub-polkadot",
     "preimage",
 ]
+
+[workspace.dependencies]
+codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false }
+scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
+serde = { version = "1.0.197", features = ["derive"] }
+subxt = { version = "0.37.0", features = ["substrate-compat"] }

@@ -12,12 +12,14 @@ source_up_if_exists
 
 ## Eth config for production
 # export INFURA_PROJECT_ID=            # Your Infura project id
-# export ETH_NETWORK=goerli
-# export ETH_NETWORK_ID=5
+# export ETH_NETWORK=sepolia
+# export ETH_NETWORK_ID=11155111
+# export FOUNDRY_PROFILE=production
 # export ETHERSCAN_API_KEY=             # Your etherscan api key
-# export ETH_RPC_ENDPOINT=https://goerli.infura.io/v3
-# export ETH_WS_ENDPOINT=wss://goerli.infura.io/ws/v3
-# export BEACON_HTTP_ENDPOINT=https://lodestar-goerli.chainsafe.io
+# export ETH_RPC_ENDPOINT=https://sepolia.infura.io/v3
+# export ETH_WS_ENDPOINT=wss://sepolia.infura.io/ws/v3
+# export ETH_WRITER_ENDPOINT=https://rpc-sepolia.flashbots.net
+# export BEACON_HTTP_ENDPOINT=https://lodestar-sepolia.chainsafe.io
 # export ACTIVE_SPEC=mainnet            # For real network just uncomment and set as mainnet here
 # export DEPLOYER_ETH_KEY=              # Your private key to deploy contracts
 # export BEEFY_RELAY_ETH_KEY=           # Your Beefy relayer account private key
@@ -25,8 +27,7 @@ source_up_if_exists
 # export E2E_TEST_ETH_KEY=              # Your E2E test account private key
 # export ETH_RANDAO_DELAY=128           # 4 epochs=128 slots=25.6mins
 # export ETH_RANDAO_EXP=6               # 6 slots before expired
-# export MINIMUM_REQUIRED_SIGNATURES=16 # The minimum number of signatures. See ~/scripts/beefy_signature_sampling.py 
-
+# export MINIMUM_REQUIRED_SIGNATURES=16 # The minimum number of signatures. See ~/scripts/beefy_signature_sampling.py
 
 ## For local dev setup
 # export CUMULUS_VER=snowbridge       # For dev setup change to some feature branch

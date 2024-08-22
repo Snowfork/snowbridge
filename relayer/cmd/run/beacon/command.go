@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -20,6 +21,7 @@ var (
 	configFile     string
 	privateKey     string
 	privateKeyFile string
+	privateKeyID string
 )
 
 func Command() *cobra.Command {
@@ -35,6 +37,8 @@ func Command() *cobra.Command {
 
 	cmd.Flags().StringVar(&privateKey, "substrate.private-key", "", "Private key URI for Substrate")
 	cmd.Flags().StringVar(&privateKeyFile, "substrate.private-key-file", "", "The file from which to read the private key URI")
+	cmd.Flags().StringVar(&privateKeyID, "substrate.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
+
 
 	return cmd
 }
@@ -51,12 +55,17 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	var config config.Config
-	err := viper.Unmarshal(&config)
+	err := viper.UnmarshalExact(&config)
 	if err != nil {
 		return err
 	}
 
-	keypair, err := parachain.ResolvePrivateKey(privateKey, privateKeyFile)
+	err = config.Validate()
+	if err != nil {
+		return fmt.Errorf("config file validation failed: %w", err)
+	}
+
+	keypair, err := parachain.ResolvePrivateKey(privateKey, privateKeyFile, privateKeyID)
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"github.com/snowfork/snowbridge/relayer/relays/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -65,10 +66,11 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 		settings,
 		&beaconStore,
 		p,
+		316,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
-	err = h.syncInterimFinalizedUpdate(context.Background(), 4570722)
+	_, err = h.syncInterimFinalizedUpdate(context.Background(), 4563072, 4571360)
 	require.NoError(t, err)
 }
 
@@ -128,10 +130,11 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 		settings,
 		&beaconStore,
 		p,
+		316,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
-	err = h.syncInterimFinalizedUpdate(context.Background(), 4570722)
+	_, err = h.syncInterimFinalizedUpdate(context.Background(), 4563072, 4571360)
 	require.NoError(t, err)
 }
 
@@ -193,10 +196,11 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 		settings,
 		&beaconStore,
 		p,
+		316,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
-	err = h.syncInterimFinalizedUpdate(context.Background(), 4570722)
+	_, err = h.syncInterimFinalizedUpdate(context.Background(), 4563072, 4571360)
 	require.NoError(t, err)
 }
 
@@ -238,10 +242,11 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 		settings,
 		&beaconStore,
 		p,
+		316,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
-	err = h.syncInterimFinalizedUpdate(context.Background(), 4570722)
+	_, err = h.syncInterimFinalizedUpdate(context.Background(), 4570722, 4578922)
 	require.Error(t, err)
 }
 
@@ -276,9 +281,46 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 		settings,
 		&beaconStore,
 		p,
+		316,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
-	err = h.syncInterimFinalizedUpdate(context.Background(), 4570722)
+	_, err = h.syncInterimFinalizedUpdate(context.Background(), 4570722, 4578922)
 	require.Errorf(t, err, "cannot find blocks at boundaries")
+}
+
+func TestShouldUpdate(t *testing.T) {
+	values := []struct {
+		name        string
+		apiSlot     uint64
+		onChainSlot uint64
+		result      bool
+	}{
+		{
+			name:        "should sync, equal to interval",
+			apiSlot:     500,
+			onChainSlot: 200,
+			result:      true,
+		},
+		{
+			name:        "should sync, large gap",
+			apiSlot:     800,
+			onChainSlot: 200,
+			result:      true,
+		},
+		{
+			name:        "should not sync",
+			apiSlot:     500,
+			onChainSlot: 201,
+			result:      false,
+		},
+	}
+
+	h := Header{}
+	h.updateSlotInterval = 300
+
+	for _, tt := range values {
+		result := h.shouldUpdate(tt.apiSlot, tt.onChainSlot)
+		assert.Equal(t, tt.result, result, "expected %t but found %t", tt.result, result)
+	}
 }

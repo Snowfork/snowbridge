@@ -6,11 +6,10 @@ use penpalXcm::v3::multilocation::MultiLocation;
 
 use penpalTypes::xcm::{
 	double_encoded::DoubleEncoded,
-	v2::OriginKind,
 	v3::{
 		junctions::Junctions,
 		multiasset::{AssetId::Concrete, Fungibility::Fungible, MultiAsset, MultiAssets},
-		Instruction, MaybeErrorCode, WeightLimit, Xcm,
+		Instruction, MaybeErrorCode, OriginKind, WeightLimit, Xcm,
 	},
 	VersionedXcm,
 };

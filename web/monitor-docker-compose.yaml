@@ -1,0 +1,11 @@
+version: "3"
+services:
+  minitor-service:
+    image: snowbridge-monitor
+    build:
+      context: .
+      dockerfile: monitor.Dockerfile
+    command: cron
+    container_name: snowbridge-monitor-1
+    volumes:
+      - ./packages/operations/config:/config

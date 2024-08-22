@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.23;
+pragma solidity 0.8.25;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
@@ -50,6 +50,7 @@ import {
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
+import {OperatorStorage} from "./storage/OperatorStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
@@ -661,6 +662,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint256 registerTokenFee;
         /// @dev Fee multiplier
         UD60x18 multiplier;
+        /// @dev Optional rescueOperator
+        address rescueOperator;
     }
 
     /// @dev Initialize storage in the gateway
@@ -713,5 +716,31 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+
+        // Initialize operator storage
+        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
+        operatorStorage.operator = config.rescueOperator;
+    }
+
+    /// @dev Temporary rescue ability for the initial bootstrapping phase of the bridge
+    function rescue(address impl, bytes32 implCodeHash, bytes calldata initializerParams) external {
+        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
+        if (msg.sender != operatorStorage.operator) {
+            revert Unauthorized();
+        }
+        Upgrade.upgrade(impl, implCodeHash, initializerParams);
+    }
+
+    function dropRescueAbility() external {
+        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
+        if (msg.sender != operatorStorage.operator) {
+            revert Unauthorized();
+        }
+        operatorStorage.operator = address(0);
+    }
+
+    function rescueOperator() external view returns (address) {
+        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
+        return operatorStorage.operator;
     }
 }

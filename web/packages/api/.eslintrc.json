@@ -1,20 +1,27 @@
 {
-    "root": true,
-    "parser": "@typescript-eslint/parser",
-    "plugins": [
-      "@typescript-eslint"
-    ],
-    "extends": [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/eslint-recommended",
-      "plugin:@typescript-eslint/recommended",
-      "prettier"
-    ],
-    "rules": {
-        "prefer-const": ["off", {
-            "destructuring": "any",
-            "ignoreReadBeforeAssign": false
-        }]
-    },
-    "ignorePatterns": ["dist", "artifacts", "build", "contracts", "truffle-config.js"]
-  }
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier"
+  ],
+  "rules": {
+    "prefer-const": [
+      "off",
+      {
+        "destructuring": "any",
+        "ignoreReadBeforeAssign": false
+      }
+    ]
+  },
+  "ignorePatterns": [
+    "dist",
+    "artifacts",
+    "build",
+    "contracts",
+    "truffle-config.js"
+  ]
+}

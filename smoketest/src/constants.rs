@@ -5,7 +5,7 @@ use subxt::ext::sp_core::{sr25519::Pair, Pair as PairT};
 
 // Todo: load all configs from env in consistent with set-env.sh
 pub const ASSET_HUB_PARA_ID: u32 = 1000;
-pub const BRIDGE_HUB_PARA_ID: u32 = 1013;
+pub const BRIDGE_HUB_PARA_ID: u32 = 1002;
 pub const PENPAL_PARA_ID: u32 = 2000;
 
 pub const ETHEREUM_API: &str = "ws://localhost:8546";
@@ -31,7 +31,7 @@ pub const ERC20_DOT_CONTRACT: [u8; 20] = hex!("B8C39CbCe8106c8415472e3AAe88Eb694
 pub const ERC20_DOT_TOKEN_ID: [u8; 32] =
 	hex!("fb3d635c7cb573d1b9e9bff4a64ab4f25190d29b6fd8db94c605a218a23fa9ad");
 
-// Agent for bridge hub parachain 1013
+// Agent for bridge hub parachain 1002
 pub const BRIDGE_HUB_AGENT_ID: [u8; 32] =
 	hex!("03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314");
 // Agent for asset hub parachain 1000

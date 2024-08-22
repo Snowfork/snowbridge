@@ -1,7 +1,5 @@
 root_dir="$(realpath ../../..)"
 web_dir="$root_dir/web"
-lodestar_version="${LODESTAR_VER:-1.12.0}"
-geth_version="${GETH_VER:-v1.13.5}"
 config_dir="$web_dir/packages/test/config"
 export contract_dir="$root_dir/contracts"
 test_helpers_dir="$web_dir/packages/test-helpers"
@@ -16,6 +14,7 @@ export PATH="$output_bin_dir:$PATH"
 eth_network="${ETH_NETWORK:-localhost}"
 eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
 eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://127.0.0.1:8546}/${INFURA_PROJECT_ID:-}"
+eth_writer_endpoint="${ETH_WRITER_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
 eth_gas_limit="${ETH_GAS_LIMIT:-5000000}"
 eth_chain_id="${ETH_NETWORK_ID:-15}"
 eth_fast_mode="${ETH_FAST_MODE:-true}"
@@ -40,7 +39,7 @@ beacon_endpoint_http="${BEACON_HTTP_ENDPOINT:-http://127.0.0.1:9596}"
 bridgehub_ws_url="${BRIDGE_HUB_WS_URL:-ws://127.0.0.1:11144}"
 bridgehub_seed="${BRIDGE_HUB_SEED:-//Alice}"
 bridgehub_pallets_owner="${BRIDGE_HUB_PALLETS_OWNER:-0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d}"
-export BRIDGE_HUB_PARAID="${BRIDGE_HUB_PARAID:-1013}"
+export BRIDGE_HUB_PARAID="${BRIDGE_HUB_PARAID:-1002}"
 export BRIDGE_HUB_AGENT_ID="${BRIDGE_HUB_AGENT_ID:-0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314}"
 
 assethub_ws_url="${ASSET_HUB_WS_URL:-ws://127.0.0.1:12144}"
@@ -80,6 +79,7 @@ execution_relayer_penpal_pub_key="${EXECUTION_RELAYER_PENPAL_PUB_KEY:-0xf8aed186
 
 ## Deployment key
 export PRIVATE_KEY="${DEPLOYER_ETH_KEY:-0x4e9444a6efd6d42725a250b650a781da2737ea308c839eaccb0f7f3dbd2fea77}"
+export ETHERSCAN_API_KEY="${ETHERSCAN_API_KEY:-0x0}"
 
 ## BeefyClient
 # For max safety delay should be MAX_SEED_LOOKAHEAD=4 epochs=4*8*6=192s
@@ -94,8 +94,8 @@ export REJECT_OUTBOUND_MESSAGES="${REJECT_OUTBOUND_MESSAGES:-false}"
 
 ## Fee
 export REGISTER_TOKEN_FEE="${REGISTER_TOKEN_FEE:-200000000000000000}"
-export CREATE_ASSET_FEE="${CREATE_ASSET_FEE:-10000000000}"
-export RESERVE_TRANSFER_FEE="${RESERVE_TRANSFER_FEE:-10000000000}"
+export CREATE_ASSET_FEE="${CREATE_ASSET_FEE:-100000000000}"
+export RESERVE_TRANSFER_FEE="${RESERVE_TRANSFER_FEE:-100000000000}"
 export RESERVE_TRANSFER_MAX_DESTINATION_FEE="${RESERVE_TRANSFER_MAX_DESTINATION_FEE:-10000000000000}"
 
 ## Pricing Parameters
