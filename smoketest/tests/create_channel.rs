@@ -20,8 +20,8 @@ async fn create_channel() {
 
 	println!(
 		"xcm call issued at block hash {:?}, transaction hash {:?}",
-		result.block_hash(),
-		result.extrinsic_hash()
+		result.block_hash,
+		result.extrinsic_hash
 	);
 
 	wait_for_bridgehub_event::<CreateChannel>(&test_clients.bridge_hub_client).await;

@@ -181,8 +181,8 @@ pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Pro
 }
 
 pub struct SudoResult {
-	block_hash: H256,
-	extrinsic_hash: H256,
+	pub block_hash: H256,
+	pub extrinsic_hash: H256,
 }
 
 pub async fn send_sudo_xcm_transact(
