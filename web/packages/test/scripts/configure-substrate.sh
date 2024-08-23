@@ -49,7 +49,7 @@ open_hrmp_channel() {
     echo "      params:"
     echo "--------------------------------------------------"
 
-    npx polkadot-js-api \
+    call_polkadot_js_api \
         --ws "${relay_url?}" \
         --seed "${relay_chain_seed?}" \
         --sudo \
