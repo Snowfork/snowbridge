@@ -6,7 +6,7 @@ pragma solidity 0.8.25;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IERC20Permit} from "./interfaces/IERC20Permit.sol";
-import {ERC20Lib} from "./ERC20Lib.sol";
+import {TokenLib} from "./TokenLib.sol";
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -28,33 +28,29 @@ import {ERC20Lib} from "./ERC20Lib.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract ERC20 is IERC20, IERC20Permit {
-    using ERC20Lib for ERC20Lib.TokenStorage;
+contract Token is IERC20, IERC20Permit {
+    using TokenLib for TokenLib.Token;
 
-    error Unauthorized();
+    TokenLib.Token token;
 
-    ERC20Lib.TokenStorage token;
-
-    address public immutable OWNER;
-
-    uint8 public immutable decimals;
-
+    address public immutable GATEWAY;
     string public name;
     string public symbol;
+    uint8 public immutable decimals;
 
     /**
      * @dev Sets the values for {name}, {symbol}, and {decimals}.
      */
-    constructor(address _owner, string memory name_, string memory symbol_, uint8 decimals_) {
-        OWNER = _owner;
-        name = name_;
-        symbol = symbol_;
-        decimals = decimals_;
-        token.init(name_);
+    constructor(string memory _name, string memory _symbol, uint8 _decimals) {
+        name = _name;
+        symbol = _symbol;
+        decimals = _decimals;
+        GATEWAY = msg.sender;
+        token.initialize(_name);
     }
 
-    modifier onlyOwner() {
-        if (msg.sender != OWNER) {
+    modifier onlyGateway() {
+        if (msg.sender != GATEWAY) {
             revert Unauthorized();
         }
         _;
@@ -70,14 +66,14 @@ contract ERC20 is IERC20, IERC20Permit {
      *
      * - `account` cannot be the zero address.
      */
-    function mint(address account, uint256 amount) external virtual onlyOwner {
+    function mint(address account, uint256 amount) external virtual onlyGateway {
         token.mint(account, amount);
     }
 
     /**
      * @dev Destroys `amount` tokens from the account.
      */
-    function burn(address account, uint256 amount) external virtual onlyOwner {
+    function burn(address account, uint256 amount) external virtual onlyGateway {
         token.burn(account, amount);
     }
 

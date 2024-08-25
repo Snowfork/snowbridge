@@ -85,11 +85,12 @@ enum Command {
     TransferNativeFromAgent,
     SetTokenTransferFees,
     SetPricingParameters,
-    TransferToken,
+    TransferNativeToken,
     RegisterForeignToken,
     MintForeignToken
 }
 
+/// @dev DEPRECATED
 enum AgentExecuteCommand {
     TransferToken
 }
@@ -110,8 +111,5 @@ struct Ticket {
 
 struct TokenInfo {
     bool isRegistered;
-    bool isForeign;
-    bytes32 tokenID;
-    bytes32 agentID;
-    address token;
+    bytes32 foreignID;
 }

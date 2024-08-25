@@ -36,7 +36,7 @@ interface IGateway {
     event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
 
     // Emitted when foreign token from polkadot registed
-    event ForeignTokenRegistered(bytes32 indexed tokenID, bytes32 agentID, address token);
+    event ForeignTokenRegistered(bytes32 indexed tokenID, address token);
 
     /**
      * Getters
