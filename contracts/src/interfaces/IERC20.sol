@@ -8,7 +8,7 @@ pragma solidity 0.8.25;
  * @dev Interface of the ERC20 standard as defined in the EIP.
  */
 interface IERC20 {
-    error Unauthorized();
+    error InvalidAccount();
     error InsufficientBalance(address sender, uint256 balance, uint256 needed);
     error InsufficientAllowance(address spender, uint256 allowance, uint256 needed);
 

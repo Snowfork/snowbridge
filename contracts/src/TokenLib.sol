@@ -23,15 +23,6 @@ library TokenLib {
         mapping(address account => mapping(address spender => uint256)) allowance;
         mapping(address token => uint256) nonces;
         uint256 totalSupply;
-        bytes32 domainSeparator;
-    }
-
-    function initialize(Token storage token, string memory name) internal {
-        token.domainSeparator = keccak256(
-            abi.encode(
-                DOMAIN_TYPE_SIGNATURE_HASH, keccak256(bytes(name)), keccak256(bytes("1")), block.chainid, address(this)
-            )
-        );
     }
 
     /**
@@ -58,7 +49,9 @@ library TokenLib {
      * - `to` cannot be the zero address.
      */
     function mint(Token storage token, address account, uint256 amount) external {
-        if (account == address(0)) revert IERC20.Unauthorized();
+        if (account == address(0)) {
+            revert IERC20.InvalidAccount();
+        }
 
         _update(token, address(0), account, amount);
     }
@@ -75,7 +68,9 @@ library TokenLib {
      * - `account` must have at least `amount` tokens.
      */
     function burn(Token storage token, address account, uint256 amount) external {
-        if (account == address(0)) revert IERC20.Unauthorized();
+        if (account == address(0)) {
+            revert IERC20.InvalidAccount();
+        }
 
         _update(token, account, address(0), amount);
     }
@@ -182,6 +177,7 @@ library TokenLib {
 
     function permit(
         Token storage token,
+        bytes32 domainSeparator,
         address issuer,
         address spender,
         uint256 value,
@@ -201,7 +197,7 @@ library TokenLib {
         bytes32 digest = keccak256(
             abi.encodePacked(
                 EIP191_PREFIX_FOR_EIP712_STRUCTURED_DATA,
-                token.domainSeparator,
+                domainSeparator,
                 keccak256(abi.encode(PERMIT_SIGNATURE_HASH, issuer, spender, value, token.nonces[issuer]++, deadline))
             )
         );
@@ -212,26 +208,6 @@ library TokenLib {
 
         // _approve will revert if issuer is address(0x0)
         _approve(token, issuer, spender, value);
-    }
-
-    function balancesOf(Token storage token, address account) internal view returns (uint256) {
-        return token.balance[account];
-    }
-
-    function noncesOf(Token storage token, address account) external view returns (uint256) {
-        return token.nonces[account];
-    }
-
-    function totalSupplyOf(Token storage token) external view returns (uint256) {
-        return token.totalSupply;
-    }
-
-    function allowanceOf(Token storage token, address owner, address spender) external view returns (uint256) {
-        return token.allowance[owner][spender];
-    }
-
-    function domainSeparatorOf(Token storage token) external view returns (bytes32) {
-        return token.domainSeparator;
     }
 
     /**
@@ -249,7 +225,9 @@ library TokenLib {
      * - `sender` must have a balance of at least `amount`.
      */
     function _transfer(Token storage token, address sender, address recipient, uint256 amount) internal {
-        if (sender == address(0) || recipient == address(0)) revert IERC20.Unauthorized();
+        if (sender == address(0) || recipient == address(0)) {
+            revert IERC20.InvalidAccount();
+        }
 
         _update(token, sender, recipient, amount);
     }
@@ -268,7 +246,9 @@ library TokenLib {
      * - `spender` cannot be the zero address.
      */
     function _approve(Token storage token, address owner, address spender, uint256 amount) internal {
-        if (owner == address(0) || spender == address(0)) revert IERC20.Unauthorized();
+        if (owner == address(0) || spender == address(0)) {
+            revert IERC20.InvalidAccount();
+        }
 
         token.allowance[owner][spender] = amount;
         emit IERC20.Approval(owner, spender, amount);

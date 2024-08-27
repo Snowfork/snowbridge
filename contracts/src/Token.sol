@@ -31,12 +31,15 @@ import {TokenLib} from "./TokenLib.sol";
 contract Token is IERC20, IERC20Permit {
     using TokenLib for TokenLib.Token;
 
-    TokenLib.Token token;
-
     address public immutable GATEWAY;
+    bytes32 public immutable DOMAIN_SEPARATOR;
+    uint8 public immutable decimals;
+
     string public name;
     string public symbol;
-    uint8 public immutable decimals;
+    TokenLib.Token token;
+
+    error Unauthorized();
 
     /**
      * @dev Sets the values for {name}, {symbol}, and {decimals}.
@@ -46,7 +49,15 @@ contract Token is IERC20, IERC20Permit {
         symbol = _symbol;
         decimals = _decimals;
         GATEWAY = msg.sender;
-        token.initialize(_name);
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                TokenLib.DOMAIN_TYPE_SIGNATURE_HASH,
+                keccak256(bytes(_name)),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(this)
+            )
+        );
     }
 
     modifier onlyGateway() {
@@ -66,14 +77,14 @@ contract Token is IERC20, IERC20Permit {
      *
      * - `account` cannot be the zero address.
      */
-    function mint(address account, uint256 amount) external virtual onlyGateway {
+    function mint(address account, uint256 amount) external onlyGateway {
         token.mint(account, amount);
     }
 
     /**
      * @dev Destroys `amount` tokens from the account.
      */
-    function burn(address account, uint256 amount) external virtual onlyGateway {
+    function burn(address account, uint256 amount) external onlyGateway {
         token.burn(account, amount);
     }
 
@@ -85,7 +96,7 @@ contract Token is IERC20, IERC20Permit {
      * - `recipient` cannot be the zero address.
      * - the caller must have a balance of at least `amount`.
      */
-    function transfer(address recipient, uint256 amount) external virtual override returns (bool) {
+    function transfer(address recipient, uint256 amount) external returns (bool) {
         return token.transfer(msg.sender, recipient, amount);
     }
 
@@ -104,7 +115,7 @@ contract Token is IERC20, IERC20Permit {
      *
      * - `spender` cannot be the zero address.
      */
-    function approve(address spender, uint256 amount) external virtual override returns (bool) {
+    function approve(address spender, uint256 amount) external returns (bool) {
         return token.approve(msg.sender, spender, amount);
     }
 
@@ -121,7 +132,7 @@ contract Token is IERC20, IERC20Permit {
      * - the caller must have allowance for ``sender``'s tokens of at least
      * `amount`.
      */
-    function transferFrom(address sender, address recipient, uint256 amount) external virtual override returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool) {
         return token.transferFrom(sender, recipient, amount);
     }
 
@@ -137,7 +148,7 @@ contract Token is IERC20, IERC20Permit {
      *
      * - `spender` cannot be the zero address.
      */
-    function increaseAllowance(address spender, uint256 addedValue) external virtual returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
         return token.increaseAllowance(spender, addedValue);
     }
 
@@ -155,33 +166,29 @@ contract Token is IERC20, IERC20Permit {
      * - `spender` must have allowance for the caller of at least
      * `subtractedValue`.
      */
-    function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
         return token.decreaseAllowance(spender, subtractedValue);
     }
 
     function permit(address issuer, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external
     {
-        token.permit(issuer, spender, value, deadline, v, r, s);
+        token.permit(DOMAIN_SEPARATOR, issuer, spender, value, deadline, v, r, s);
     }
 
     function balanceOf(address account) external view returns (uint256) {
-        return token.balancesOf(account);
+        return token.balance[account];
     }
 
     function nonces(address account) external view returns (uint256) {
-        return token.noncesOf(account);
+        return token.nonces[account];
     }
 
     function totalSupply() external view returns (uint256) {
-        return token.totalSupplyOf();
+        return token.totalSupply;
     }
 
     function allowance(address owner, address spender) external view returns (uint256) {
-        return token.allowanceOf(owner, spender);
-    }
-
-    function DOMAIN_SEPARATOR() external view returns (bytes32) {
-        return token.domainSeparatorOf();
+        return token.allowance[owner][spender];
     }
 }
