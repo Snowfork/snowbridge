@@ -15,7 +15,7 @@ stop_relayer()
 
 build_image()
 {
-    docker build -f Dockerfile -t snowbridge-relayer .
+    docker build -f Dockerfile -t ghcr.io/snowfork/snowbridge-relay .
 }
 
 if [ -z "${from_start_services:-}" ]; then

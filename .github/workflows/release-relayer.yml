@@ -126,7 +126,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
@@ -134,4 +134,4 @@ jobs:
         with:
           context: ./relayer
           push: true
-          tags: ${{ steps.create_tag.outputs.tag }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.create_tag.outputs.tag }}
