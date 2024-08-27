@@ -31,6 +31,11 @@ asset-hub-rococo-runtime = { path = "../runtimes/asset-hub-rococo", optional = t
 polkadot-runtime = { path = "../runtimes/polkadot", optional = true }
 bridge-hub-polkadot-runtime = { path = "../runtimes/bridge-hub-polkadot", optional = true }
 asset-hub-polkadot-runtime = { path = "../runtimes/asset-hub-polkadot", optional = true }
+
+paseo-runtime = { path = "../runtimes/paseo", optional = true }
+bridge-hub-paseo-runtime = { path = "../runtimes/bridge-hub-paseo", optional = true }
+asset-hub-paseo-runtime = { path = "../runtimes/asset-hub-paseo", optional = true }
+
 polkadot-runtime-constants = "3.0.0"
 
 serde_json = "1.0.114"
@@ -49,4 +54,9 @@ polkadot = [
     "polkadot-runtime",
     "asset-hub-polkadot-runtime",
     "bridge-hub-polkadot-runtime",
+]
+paseo = [
+    "paseo-runtime",
+    "asset-hub-paseo-runtime",
+    "bridge-hub-paseo-runtime",
 ]

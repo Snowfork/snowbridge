@@ -7,6 +7,9 @@ members = [
     "runtimes/polkadot",
     "runtimes/bridge-hub-polkadot",
     "runtimes/asset-hub-polkadot",
+    "runtimes/paseo",
+    "runtimes/bridge-hub-paseo",
+    "runtimes/asset-hub-paseo",
     "preimage",
 ]
 
