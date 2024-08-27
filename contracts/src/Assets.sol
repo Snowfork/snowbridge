@@ -120,7 +120,14 @@ library Assets {
             );
         } else {
             return _sendForeignToken(
-                info.foreignID, token, sender, destinationChain, destinationAddress, destinationChainFee, amount
+                info.foreignID,
+                token,
+                sender,
+                destinationChain,
+                destinationAddress,
+                destinationChainFee,
+                maxDestinationChainFee,
+                amount
             );
         }
     }
@@ -187,6 +194,36 @@ library Assets {
         emit IGateway.TokenSent(token, sender, destinationChain, destinationAddress, amount);
     }
 
+    function _sendForeignTokenCosts(
+        ParaID destinationChain,
+        uint128 destinationChainFee,
+        uint128 maxDestinationChainFee
+    ) internal view returns (Costs memory costs) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if ($.assetHubParaID == destinationChain) {
+            costs.foreign = $.assetHubReserveTransferFee;
+        } else {
+            // Reduce the ability for users to perform arbitrage by exploiting a
+            // favourable exchange rate. For example supplying Ether
+            // and gaining a more valuable amount of DOT on the destination chain.
+            //
+            // Also prevents users from mistakenly sending more fees than would be required
+            // which has negative effects like draining AssetHub's sovereign account.
+            //
+            // For safety, `maxDestinationChainFee` should be less valuable
+            // than the gas cost to send tokens.
+            if (destinationChainFee > maxDestinationChainFee) {
+                revert InvalidDestinationFee();
+            }
+
+            // If the final destination chain is not AssetHub, then the fee needs to additionally
+            // include the cost of executing an XCM on the final destination parachain.
+            costs.foreign = $.assetHubReserveTransferFee + destinationChainFee;
+        }
+        // We don't charge any extra fees beyond delivery costs
+        costs.native = 0;
+    }
+
     // @dev Transfer Polkadot-native tokens back to Polkadot
     function _sendForeignToken(
         bytes32 foreignID,
@@ -195,29 +232,45 @@ library Assets {
         ParaID destinationChain,
         MultiAddress calldata destinationAddress,
         uint128 destinationChainFee,
+        uint128 maxDestinationChainFee,
         uint128 amount
     ) internal returns (Ticket memory ticket) {
-        if (destinationChainFee == 0) {
-            revert InvalidDestinationFee();
-        }
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
         Token(token).burn(sender, amount);
 
-        ticket.dest = destinationChain;
-        ticket.costs = _sendForeignTokenCosts(destinationChainFee);
+        ticket.dest = $.assetHubParaID;
+        ticket.costs = _sendForeignTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
 
-        if (destinationAddress.isAddress32()) {
-            // The receiver has a 32-byte account ID
-            ticket.payload = SubstrateTypes.SendForeignTokenToAddress32(
-                foreignID, destinationChain, destinationAddress.asAddress32(), destinationChainFee, amount
-            );
-        } else if (destinationAddress.isAddress20()) {
-            // The receiver has a 20-byte account ID
-            ticket.payload = SubstrateTypes.SendForeignTokenToAddress20(
-                foreignID, destinationChain, destinationAddress.asAddress20(), destinationChainFee, amount
-            );
+        // Construct a message payload
+        if (destinationChain == $.assetHubParaID) {
+            // The funds will be minted into the receiver's account on AssetHub
+            if (destinationAddress.isAddress32()) {
+                // The receiver has a 32-byte account ID
+                ticket.payload = SubstrateTypes.SendTokenToAssetHubAddress32(
+                    token, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
+                );
+            } else {
+                // AssetHub does not support 20-byte account IDs
+                revert Unsupported();
+            }
         } else {
-            revert Unsupported();
+            if (destinationChainFee == 0) {
+                revert InvalidDestinationFee();
+            }
+            if (destinationAddress.isAddress32()) {
+                // The receiver has a 32-byte account ID
+                ticket.payload = SubstrateTypes.SendForeignTokenToAddress32(
+                    foreignID, destinationChain, destinationAddress.asAddress32(), destinationChainFee, amount
+                );
+            } else if (destinationAddress.isAddress20()) {
+                // The receiver has a 20-byte account ID
+                ticket.payload = SubstrateTypes.SendForeignTokenToAddress20(
+                    foreignID, destinationChain, destinationAddress.asAddress20(), destinationChainFee, amount
+                );
+            } else {
+                revert Unsupported();
+            }
         }
 
         emit IGateway.TokenSent(token, sender, destinationChain, destinationAddress, amount);
@@ -257,11 +310,6 @@ library Assets {
         ticket.payload = SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee);
 
         emit IGateway.TokenRegistrationSent(token);
-    }
-
-    function _sendForeignTokenCosts(uint128 destinationChainFee) internal pure returns (Costs memory costs) {
-        costs.foreign = destinationChainFee;
-        costs.native = 0;
     }
 
     // @dev Register a new fungible Polkadot token for an agent
