@@ -9,6 +9,6 @@ pub use bridge_hub_polkadot_runtime::runtime_types::bridge_hub_polkadot_runtime:
 pub use bridge_hub_polkadot_runtime::*;
 
 #[cfg(feature = "paseo")]
-pub use bridge_hub_paseo_runtime::runtime_types::bridge_hub_polkadot_runtime::RuntimeCall;
+pub use bridge_hub_paseo_runtime::runtime_types::bridge_hub_paseo_runtime::RuntimeCall;
 #[cfg(feature = "paseo")]
 pub use bridge_hub_paseo_runtime::*;
