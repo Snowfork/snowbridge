@@ -176,6 +176,12 @@ pub fn utility_force_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
     )
 }
 
+pub fn sudo(call: Box<RelayRuntimeCall>) -> RelayRuntimeCall {
+    RelayRuntimeCall::Sudo(
+        crate::relay_runtime::api::runtime_types::pallet_sudo::pallet::Call::sudo { call },
+    )
+}
+
 pub fn force_xcm_version() -> AssetHubRuntimeCall {
     use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
         junction::Junction::GlobalConsensus, junction::NetworkId, junctions::Junctions::X1,
