@@ -183,7 +183,7 @@ pub fn force_xcm_version() -> AssetHubRuntimeCall {
     };
     let location = Box::new(Location {
         parents: 2,
-        interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: 1 })]),
+        interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: 11155111 })]),
     });
 
     AssetHubRuntimeCall::PolkadotXcm(

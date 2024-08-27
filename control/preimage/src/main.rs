@@ -54,8 +54,8 @@ pub enum Command {
 pub struct InitializeArgs {
     #[command(flatten)]
     gateway_operating_mode: GatewayOperatingModeArgs,
-    //#[command(flatten)]
-    //pricing_parameters: PricingParametersArgs,
+    #[command(flatten)]
+    pricing_parameters: PricingParametersArgs,
     #[command(flatten)]
     force_checkpoint: ForceCheckpointArgs,
     #[command(flatten)]
@@ -307,13 +307,13 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             send_xcm_bridge_hub(&context, vec![call]).await?
         }
         Command::Initialize(params) => {
-            /*let (set_pricing_parameters, set_ethereum_fee) =
-                commands::pricing_parameters(&context, &params.pricing_parameters).await?;*/
+            let (set_pricing_parameters, set_ethereum_fee) =
+                commands::pricing_parameters(&context, &params.pricing_parameters).await?;
             let call1 = send_xcm_bridge_hub(
                 &context,
                 vec![
                     commands::set_gateway_address(&params.gateway_address),
-                    //set_pricing_parameters,
+                    set_pricing_parameters,
                     commands::gateway_operating_mode(
                         &params.gateway_operating_mode.gateway_operating_mode,
                     ),
@@ -322,7 +322,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             )
             .await?;
             let call2 =
-                send_xcm_asset_hub(&context, vec![force_xcm_version()]).await?;
+                send_xcm_asset_hub(&context, vec![force_xcm_version(), set_ethereum_fee]).await?;
             utility_force_batch(vec![call1, call2])
         }
         Command::UpdateAsset(params) => {
