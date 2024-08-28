@@ -46,6 +46,20 @@ func generateBeaconFixtureCmd() *cobra.Command {
 	return cmd
 }
 
+func generateSpecificBeaconFixtureCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "generate-specific-beacon-fixture",
+		Short: "Generate specific beacon fixture.",
+		Args:  cobra.ExactArgs(0),
+		RunE:  generateSpecificBeaconTestFixture,
+	}
+
+	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
+	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
+	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
+	return cmd
+}
+
 func generateBeaconCheckpointCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "generate-beacon-checkpoint",
@@ -433,6 +447,87 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			}
 		}
 
+		log.Info("done")
+
+		return nil
+	}()
+	if err != nil {
+		log.WithError(err).Error("error generating beacon data")
+	}
+
+	return nil
+}
+
+func generateSpecificBeaconTestFixture(cmd *cobra.Command, _ []string) error {
+	err := func() error {
+		config, err := cmd.Flags().GetString("config")
+		if err != nil {
+			return err
+		}
+
+		viper.SetConfigFile(config)
+		if err = viper.ReadInConfig(); err != nil {
+			return err
+		}
+
+		var conf beaconConf.Config
+		err = viper.Unmarshal(&conf)
+		if err != nil {
+			return err
+		}
+
+		p := protocol.New(conf.Source.Beacon.Spec)
+
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
+		err = store.Connect()
+		if err != nil {
+			return err
+		}
+		defer store.Close()
+
+		log.WithFields(log.Fields{"endpoint": conf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
+		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
+		s := syncer.New(client, &store, p)
+
+		// generate InitialUpdate
+		initialSyncScale, err := s.GetCheckpoint()
+		if err != nil {
+			return fmt.Errorf("get initial sync: %w", err)
+		}
+		initialSync := initialSyncScale.ToJSON()
+		err = writeJSONToFile(initialSync, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "initial-checkpoint-test.json"))
+		if err != nil {
+			return err
+		}
+		initialSyncHeaderSlot := initialSync.Header.Slot
+		initialSyncPeriod := p.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
+		initialEpoch := p.ComputeEpochAtSlot(initialSyncHeaderSlot)
+
+		// generate SyncCommitteeUpdate for filling the missing NextSyncCommittee in initial checkpoint
+		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod, 0)
+		if err != nil {
+			return fmt.Errorf("get sync committee update: %w", err)
+		}
+		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
+		log.WithFields(log.Fields{
+			"epoch":  initialEpoch,
+			"period": initialSyncPeriod,
+		}).Info("created initial sync file")
+		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update-test.json"))
+		if err != nil {
+			return err
+		}
+		log.Info("created sync committee update file")
+
+		secondSyncCommitteeUpdateScale, err := s.GetFinalizedUpdateWithSyncCommittee(initialSyncPeriod)
+		if err != nil {
+			return fmt.Errorf("get sync committee update: %w", err)
+		}
+		secondSyncCommitteeUpdate := secondSyncCommitteeUpdateScale.Payload.ToJSON()
+		err = writeJSONToFile(secondSyncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "second-sync-committee-update-test.json"))
+		if err != nil {
+			return err
+		}
 		log.Info("done")
 
 		return nil

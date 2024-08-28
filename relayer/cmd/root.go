@@ -30,6 +30,7 @@ func init() {
 	rootCmd.AddCommand(parachainHeadProofCmd())
 	rootCmd.AddCommand(importExecutionHeaderCmd())
 	rootCmd.AddCommand(generateBeaconFixtureCmd())
+	rootCmd.AddCommand(generateSpecificBeaconFixtureCmd())
 	rootCmd.AddCommand(generateBeaconCheckpointCmd())
 	rootCmd.AddCommand(generateExecutionUpdateCmd())
 	rootCmd.AddCommand(generateInboundFixtureCmd())
