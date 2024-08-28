@@ -247,8 +247,8 @@ library Assets {
             // The funds will be minted into the receiver's account on AssetHub
             if (destinationAddress.isAddress32()) {
                 // The receiver has a 32-byte account ID
-                ticket.payload = SubstrateTypes.SendTokenToAssetHubAddress32(
-                    token, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
+                ticket.payload = SubstrateTypes.SendForeignTokenToAssetHubAddress32(
+                    foreignID, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
                 );
             } else {
                 // AssetHub does not support 20-byte account IDs
@@ -261,12 +261,22 @@ library Assets {
             if (destinationAddress.isAddress32()) {
                 // The receiver has a 32-byte account ID
                 ticket.payload = SubstrateTypes.SendForeignTokenToAddress32(
-                    foreignID, destinationChain, destinationAddress.asAddress32(), destinationChainFee, amount
+                    foreignID,
+                    destinationChain,
+                    destinationAddress.asAddress32(),
+                    $.assetHubReserveTransferFee,
+                    destinationChainFee,
+                    amount
                 );
             } else if (destinationAddress.isAddress20()) {
                 // The receiver has a 20-byte account ID
                 ticket.payload = SubstrateTypes.SendForeignTokenToAddress20(
-                    foreignID, destinationChain, destinationAddress.asAddress20(), destinationChainFee, amount
+                    foreignID,
+                    destinationChain,
+                    destinationAddress.asAddress20(),
+                    $.assetHubReserveTransferFee,
+                    destinationChainFee,
+                    amount
                 );
             } else {
                 revert Unsupported();
