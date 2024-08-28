@@ -44,7 +44,7 @@ import {
     SetPricingParametersParams,
     RegisterForeignTokenParams,
     MintForeignTokenParams,
-    TransferTokenParams
+    TransferNativeTokenParams
 } from "./Params.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
@@ -228,8 +228,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             catch {
                 success = false;
             }
-        } else if (message.command == Command.TransferToken) {
-            try Gateway(this).transferToken{gas: maxDispatchGas}(message.params) {}
+        } else if (message.command == Command.TransferNativeToken) {
+            try Gateway(this).transferNativeToken{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
@@ -306,11 +306,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             revert InvalidAgentExecutionPayload();
         }
 
-        bytes memory call = abi.encodeCall(AgentExecutor.execute, params.payload);
-
-        (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
-        if (!success) {
-            revert AgentExecutionFailed(returndata);
+        (AgentExecuteCommand command, bytes memory commandParams) =
+            abi.decode(params.payload, (AgentExecuteCommand, bytes));
+        if (command == AgentExecuteCommand.TransferToken) {
+            (address token, address recipient, uint128 amount) = abi.decode(commandParams, (address, address, uint128));
+            Assets.transferNativeToken(AGENT_EXECUTOR, agent, token, recipient, amount);
         }
     }
 
@@ -419,22 +419,20 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     // @dev Register a new fungible Polkadot token for an agent
     function registerForeignToken(bytes calldata data) external onlySelf {
         RegisterForeignTokenParams memory params = abi.decode(data, (RegisterForeignTokenParams));
-        address agent = _ensureAgent(params.agentID);
-        Assets.registerForeignToken(params.agentID, agent, params.tokenID, params.name, params.symbol, params.decimals);
+        Assets.registerForeignToken(params.foreignTokenID, params.name, params.symbol, params.decimals);
     }
 
     // @dev Mint foreign token from polkadot
     function mintForeignToken(bytes calldata data) external onlySelf {
         MintForeignTokenParams memory params = abi.decode(data, (MintForeignTokenParams));
-        address agent = _ensureAgent(params.agentID);
-        Assets.mintForeignToken(AGENT_EXECUTOR, agent, params.tokenID, params.recipient, params.amount);
+        Assets.mintForeignToken(params.foreignTokenID, params.recipient, params.amount);
     }
 
     // @dev Transfer Ethereum native token back from polkadot
-    function transferToken(bytes calldata data) external onlySelf {
-        TransferTokenParams memory params = abi.decode(data, (TransferTokenParams));
+    function transferNativeToken(bytes calldata data) external onlySelf {
+        TransferNativeTokenParams memory params = abi.decode(data, (TransferNativeTokenParams));
         address agent = _ensureAgent(params.agentID);
-        Assets.transferToken(AGENT_EXECUTOR, agent, params.token, params.recipient, params.amount);
+        Assets.transferNativeToken(AGENT_EXECUTOR, agent, params.token, params.recipient, params.amount);
     }
 
     function isTokenRegistered(address token) external view returns (bool) {
@@ -468,33 +466,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint128 destinationFee,
         uint128 amount
     ) external payable {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        Ticket memory ticket = Assets.sendToken(
+            token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
+        );
 
-        TokenInfo storage tokenInfo = $.tokenRegistry[token];
-        if (!tokenInfo.isRegistered) {
-            revert TokenNotRegistered();
-        }
-        if (tokenInfo.isForeign) {
-            address agent = _ensureAgent(tokenInfo.agentID);
-            _submitOutbound(
-                Assets.sendForeignToken(
-                    agent,
-                    AGENT_EXECUTOR,
-                    tokenInfo,
-                    msg.sender,
-                    destinationChain,
-                    destinationAddress,
-                    destinationFee,
-                    amount
-                )
-            );
-        } else {
-            _submitOutbound(
-                Assets.sendToken(
-                    token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
-                )
-            );
-        }
+        _submitOutbound(ticket);
     }
 
     // @dev Get token address by tokenID
@@ -720,27 +696,5 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
         operatorStorage.operator = config.rescueOperator;
-    }
-
-    /// @dev Temporary rescue ability for the initial bootstrapping phase of the bridge
-    function rescue(address impl, bytes32 implCodeHash, bytes calldata initializerParams) external {
-        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
-        if (msg.sender != operatorStorage.operator) {
-            revert Unauthorized();
-        }
-        Upgrade.upgrade(impl, implCodeHash, initializerParams);
-    }
-
-    function dropRescueAbility() external {
-        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
-        if (msg.sender != operatorStorage.operator) {
-            revert Unauthorized();
-        }
-        operatorStorage.operator = address(0);
-    }
-
-    function rescueOperator() external view returns (address) {
-        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
-        return operatorStorage.operator;
     }
 }

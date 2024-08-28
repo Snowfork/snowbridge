@@ -85,10 +85,8 @@ struct SetPricingParametersParams {
 
 // Payload for RegisterForeignToken
 struct RegisterForeignTokenParams {
-    /// @dev The agent ID of the consensus system
-    bytes32 agentID;
-    /// @dev The token ID
-    bytes32 tokenID;
+    /// @dev The token ID (hash of stable location id of token)
+    bytes32 foreignTokenID;
     /// @dev The name of the token
     string name;
     /// @dev The symbol of the token
@@ -99,10 +97,8 @@ struct RegisterForeignTokenParams {
 
 // Payload for MintForeignToken
 struct MintForeignTokenParams {
-    /// @dev The agent ID of the consensus system
-    bytes32 agentID;
     /// @dev The token ID
-    bytes32 tokenID;
+    bytes32 foreignTokenID;
     /// @dev The address of the recipient
     address recipient;
     /// @dev The amount to mint with
@@ -110,7 +106,7 @@ struct MintForeignTokenParams {
 }
 
 // Payload for TransferToken
-struct TransferTokenParams {
+struct TransferNativeTokenParams {
     /// @dev The agent ID of the consensus system
     bytes32 agentID;
     /// @dev The token address

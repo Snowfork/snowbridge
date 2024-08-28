@@ -16,8 +16,7 @@ library AssetsStorage {
         uint256 registerTokenFee;
         // Token registry by token address
         mapping(address token => TokenInfo) tokenRegistry;
-        // Token registry by tokenID
-        mapping(bytes32 tokenID => TokenInfo) tokenRegistryByID;
+        mapping(bytes32 foreignID => address) tokenAddressOf;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets.v2");

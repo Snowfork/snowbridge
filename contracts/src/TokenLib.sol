@@ -7,7 +7,7 @@ pragma solidity 0.8.25;
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IERC20Permit} from "./interfaces/IERC20Permit.sol";
 
-library ERC20Lib {
+library TokenLib {
     // keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')
     bytes32 internal constant DOMAIN_TYPE_SIGNATURE_HASH =
         bytes32(0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f);
@@ -18,29 +18,11 @@ library ERC20Lib {
 
     string internal constant EIP191_PREFIX_FOR_EIP712_STRUCTURED_DATA = "\x19\x01";
 
-    error InvalidAccount();
-    error PermitExpired();
-    error InvalidS();
-    error InvalidV();
-    error InvalidSignature();
-    error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
-    error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed);
-    error OwnableInvalidOwner(address owner);
-
-    struct TokenStorage {
-        mapping(address => uint256) balanceOf;
-        mapping(address => mapping(address => uint256)) allowance;
-        mapping(address => uint256) nonces;
+    struct Token {
+        mapping(address account => uint256) balance;
+        mapping(address account => mapping(address spender => uint256)) allowance;
+        mapping(address token => uint256) nonces;
         uint256 totalSupply;
-        bytes32 domainSeparator;
-    }
-
-    function init(TokenStorage storage self, string memory name_) internal {
-        self.domainSeparator = keccak256(
-            abi.encode(
-                DOMAIN_TYPE_SIGNATURE_HASH, keccak256(bytes(name_)), keccak256(bytes("1")), block.chainid, address(this)
-            )
-        );
     }
 
     /**
@@ -51,11 +33,8 @@ library ERC20Lib {
      * - `recipient` cannot be the zero address.
      * - the caller must have a balance of at least `amount`.
      */
-    function transfer(TokenStorage storage self, address sender, address recipient, uint256 amount)
-        external
-        returns (bool)
-    {
-        _transfer(self, sender, recipient, amount);
+    function transfer(Token storage token, address sender, address recipient, uint256 amount) external returns (bool) {
+        _transfer(token, sender, recipient, amount);
         return true;
     }
 
@@ -69,10 +48,12 @@ library ERC20Lib {
      *
      * - `to` cannot be the zero address.
      */
-    function mint(TokenStorage storage self, address account, uint256 amount) external {
-        if (account == address(0)) revert InvalidAccount();
+    function mint(Token storage token, address account, uint256 amount) external {
+        if (account == address(0)) {
+            revert IERC20.InvalidAccount();
+        }
 
-        _update(self, address(0), account, amount);
+        _update(token, address(0), account, amount);
     }
 
     /**
@@ -86,10 +67,12 @@ library ERC20Lib {
      * - `account` cannot be the zero address.
      * - `account` must have at least `amount` tokens.
      */
-    function burn(TokenStorage storage self, address account, uint256 amount) external {
-        if (account == address(0)) revert InvalidAccount();
+    function burn(Token storage token, address account, uint256 amount) external {
+        if (account == address(0)) {
+            revert IERC20.InvalidAccount();
+        }
 
-        _update(self, account, address(0), amount);
+        _update(token, account, address(0), amount);
     }
 
     /**
@@ -107,11 +90,8 @@ library ERC20Lib {
      *
      * - `spender` cannot be the zero address.
      */
-    function approve(TokenStorage storage self, address owner, address spender, uint256 amount)
-        external
-        returns (bool)
-    {
-        _approve(self, owner, spender, amount);
+    function approve(Token storage token, address owner, address spender, uint256 amount) external returns (bool) {
+        _approve(token, owner, spender, amount);
         return true;
     }
 
@@ -128,22 +108,22 @@ library ERC20Lib {
      * - the caller must have allowance for ``sender``'s tokens of at least
      * `amount`.
      */
-    function transferFrom(TokenStorage storage self, address sender, address recipient, uint256 amount)
+    function transferFrom(Token storage token, address sender, address recipient, uint256 amount)
         external
         returns (bool)
     {
-        uint256 _allowance = self.allowance[sender][msg.sender];
+        uint256 _allowance = token.allowance[sender][msg.sender];
 
         if (_allowance != type(uint256).max) {
             if (_allowance < amount) {
-                revert ERC20InsufficientAllowance(msg.sender, _allowance, amount);
+                revert IERC20.InsufficientAllowance(msg.sender, _allowance, amount);
             }
             unchecked {
-                _approve(self, sender, msg.sender, _allowance - amount);
+                _approve(token, sender, msg.sender, _allowance - amount);
             }
         }
 
-        _transfer(self, sender, recipient, amount);
+        _transfer(token, sender, recipient, amount);
 
         return true;
     }
@@ -160,13 +140,10 @@ library ERC20Lib {
      *
      * - `spender` cannot be the zero address.
      */
-    function increaseAllowance(TokenStorage storage self, address spender, uint256 addedValue)
-        external
-        returns (bool)
-    {
-        uint256 _allowance = self.allowance[msg.sender][spender];
+    function increaseAllowance(Token storage token, address spender, uint256 addedValue) external returns (bool) {
+        uint256 _allowance = token.allowance[msg.sender][spender];
         if (_allowance != type(uint256).max) {
-            _approve(self, msg.sender, spender, _allowance + addedValue);
+            _approve(token, msg.sender, spender, _allowance + addedValue);
         }
         return true;
     }
@@ -185,24 +162,22 @@ library ERC20Lib {
      * - `spender` must have allowance for the caller of at least
      * `subtractedValue`.
      */
-    function decreaseAllowance(TokenStorage storage self, address spender, uint256 subtractedValue)
-        external
-        returns (bool)
-    {
-        uint256 _allowance = self.allowance[msg.sender][spender];
+    function decreaseAllowance(Token storage token, address spender, uint256 subtractedValue) external returns (bool) {
+        uint256 _allowance = token.allowance[msg.sender][spender];
         if (_allowance != type(uint256).max) {
             if (_allowance < subtractedValue) {
-                revert ERC20InsufficientAllowance(msg.sender, _allowance, subtractedValue);
+                revert IERC20.InsufficientAllowance(msg.sender, _allowance, subtractedValue);
             }
             unchecked {
-                _approve(self, msg.sender, spender, _allowance - subtractedValue);
+                _approve(token, msg.sender, spender, _allowance - subtractedValue);
             }
         }
         return true;
     }
 
     function permit(
-        TokenStorage storage self,
+        Token storage token,
+        bytes32 domainSeparator,
         address issuer,
         address spender,
         uint256 value,
@@ -211,46 +186,28 @@ library ERC20Lib {
         bytes32 r,
         bytes32 s
     ) external {
-        if (block.timestamp > deadline) revert PermitExpired();
+        if (block.timestamp > deadline) revert IERC20Permit.PermitExpired();
 
-        if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) revert InvalidS();
+        if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {
+            revert IERC20Permit.InvalidS();
+        }
 
-        if (v != 27 && v != 28) revert InvalidV();
+        if (v != 27 && v != 28) revert IERC20Permit.InvalidV();
 
         bytes32 digest = keccak256(
             abi.encodePacked(
                 EIP191_PREFIX_FOR_EIP712_STRUCTURED_DATA,
-                self.domainSeparator,
-                keccak256(abi.encode(PERMIT_SIGNATURE_HASH, issuer, spender, value, self.nonces[issuer]++, deadline))
+                domainSeparator,
+                keccak256(abi.encode(PERMIT_SIGNATURE_HASH, issuer, spender, value, token.nonces[issuer]++, deadline))
             )
         );
 
         address recoveredAddress = ecrecover(digest, v, r, s);
 
-        if (recoveredAddress != issuer) revert InvalidSignature();
+        if (recoveredAddress != issuer) revert IERC20Permit.InvalidSignature();
 
         // _approve will revert if issuer is address(0x0)
-        _approve(self, issuer, spender, value);
-    }
-
-    function balancesOf(TokenStorage storage self, address account) internal view returns (uint256) {
-        return self.balanceOf[account];
-    }
-
-    function noncesOf(TokenStorage storage self, address account) external view returns (uint256) {
-        return self.nonces[account];
-    }
-
-    function totalSupplyOf(TokenStorage storage self) external view returns (uint256) {
-        return self.totalSupply;
-    }
-
-    function allowanceOf(TokenStorage storage self, address owner, address spender) external view returns (uint256) {
-        return self.allowance[owner][spender];
-    }
-
-    function domainSeparatorOf(TokenStorage storage self) external view returns (bytes32) {
-        return self.domainSeparator;
+        _approve(token, issuer, spender, value);
     }
 
     /**
@@ -267,10 +224,12 @@ library ERC20Lib {
      * - `recipient` cannot be the zero address.
      * - `sender` must have a balance of at least `amount`.
      */
-    function _transfer(TokenStorage storage self, address sender, address recipient, uint256 amount) internal {
-        if (sender == address(0) || recipient == address(0)) revert InvalidAccount();
+    function _transfer(Token storage token, address sender, address recipient, uint256 amount) internal {
+        if (sender == address(0) || recipient == address(0)) {
+            revert IERC20.InvalidAccount();
+        }
 
-        _update(self, sender, recipient, amount);
+        _update(token, sender, recipient, amount);
     }
 
     /**
@@ -286,10 +245,12 @@ library ERC20Lib {
      * - `owner` cannot be the zero address.
      * - `spender` cannot be the zero address.
      */
-    function _approve(TokenStorage storage self, address owner, address spender, uint256 amount) internal {
-        if (owner == address(0) || spender == address(0)) revert InvalidAccount();
+    function _approve(Token storage token, address owner, address spender, uint256 amount) internal {
+        if (owner == address(0) || spender == address(0)) {
+            revert IERC20.InvalidAccount();
+        }
 
-        self.allowance[owner][spender] = amount;
+        token.allowance[owner][spender] = amount;
         emit IERC20.Approval(owner, spender, amount);
     }
 
@@ -300,30 +261,30 @@ library ERC20Lib {
      *
      * Emits a {Transfer} event.
      */
-    function _update(TokenStorage storage self, address from, address to, uint256 value) internal {
+    function _update(Token storage token, address from, address to, uint256 value) internal {
         if (from == address(0)) {
             // Overflow check required: The rest of the code assumes that totalSupply never overflows
-            self.totalSupply += value;
+            token.totalSupply += value;
         } else {
-            uint256 fromBalance = self.balanceOf[from];
+            uint256 fromBalance = token.balance[from];
             if (fromBalance < value) {
-                revert ERC20InsufficientBalance(from, fromBalance, value);
+                revert IERC20.InsufficientBalance(from, fromBalance, value);
             }
             unchecked {
                 // Overflow not possible: value <= fromBalance <= totalSupply.
-                self.balanceOf[from] = fromBalance - value;
+                token.balance[from] = fromBalance - value;
             }
         }
 
         if (to == address(0)) {
             unchecked {
                 // Overflow not possible: value <= totalSupply or value <= fromBalance <= totalSupply.
-                self.totalSupply -= value;
+                token.totalSupply -= value;
             }
         } else {
             unchecked {
                 // Overflow not possible: balance + value is at most totalSupply, which we know fits into a uint256.
-                self.balanceOf[to] += value;
+                token.balance[to] += value;
             }
         }
 
