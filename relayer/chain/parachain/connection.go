@@ -65,7 +65,6 @@ func (co *Connection) Connect(_ context.Context) error {
 	}
 	co.genesisHash = genesisHash
 
-
 	log.WithFields(logrus.Fields{
 		"endpoint":    co.endpoint,
 		"metaVersion": meta.Version,
