@@ -314,7 +314,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 id: "ethereum",
                 name: "Ethereum",
                 type: "ethereum",
-                destinationIds: ["assethub", "muse"],
+                destinationIds: ["assethub"],
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
@@ -361,7 +361,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             RELAY_CHAIN_URL: "wss://paseo-rpc.dwellir.com",
             ASSET_HUB_URL: "wss://asset-hub-paseo-rpc.dwellir.com",
             BRIDGE_HUB_URL: "wss://sys.ibp.network/bridge-hub-paseo",
-            PARACHAINS: ["https://paseo-muse-rpc.polkadot.io"],
+            PARACHAINS: [],
             GATEWAY_CONTRACT: "0x5a84b15B618beEE6F6285F6bd2bA20a08673e473",
             BEEFY_CONTRACT: "0xE7388f953f50d377D131350490156dB649E5DC10",
             ASSET_HUB_PARAID: 1000,
