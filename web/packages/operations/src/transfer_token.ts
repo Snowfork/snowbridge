@@ -6,6 +6,7 @@ import {
     toEthereum,
     toPolkadot,
 } from "@snowbridge/api"
+import { WETH9__factory } from "@snowbridge/contract-types"
 import { Wallet } from "ethers"
 
 const monitor = async () => {
@@ -54,6 +55,18 @@ const monitor = async () => {
     const WETH_CONTRACT = snwobridgeEnv.locations[0].erc20tokensReceivable.find(
         (t) => t.id === "WETH"
     )!.address
+
+    console.log("# Deposit and Approve WETH")
+    {
+        const weth9 = WETH9__factory.connect(WETH_CONTRACT, ETHEREUM_ACCOUNT)
+        const depositResult = await weth9.deposit({ value: amount })
+        const depositReceipt = await depositResult.wait()
+
+        const approveResult = await weth9.approve(config.GATEWAY_CONTRACT, amount)
+        const approveReceipt = await approveResult.wait()
+
+        console.log('deposit tx', depositReceipt?.hash, 'approve tx', approveReceipt?.hash)
+    }
 
     console.log("# Ethereum to Asset Hub")
     {

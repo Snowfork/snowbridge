@@ -37,7 +37,7 @@
                     ps
 
                     # typescript
-                    python3
+                    python311
                     nodePackages.pnpm
                     nodejs_20
                     (yarn.override { nodejs = nodejs_20; })
