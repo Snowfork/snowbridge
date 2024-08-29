@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"time"
 
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
@@ -36,7 +37,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 
-	err := paraconn.Connect(ctx)
+	err := paraconn.ConnectWithHeartBeat(ctx, 60 * time.Second)
 	if err != nil {
 		return err
 	}
