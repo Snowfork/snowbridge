@@ -14,6 +14,10 @@ default_args = [
     "archive",
 ]
 
+[relaychain.properties]
+tokenDecimals = 12
+tokenSymbol = "WND"
+
 [[relaychain.nodes]]
 name = "westend01"
 rpc_port = 30444
