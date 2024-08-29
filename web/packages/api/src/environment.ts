@@ -325,12 +325,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         id: "vETH",
                         address: "0xc3d088842dcf02c13699f936bb83dfbbc6f721ab",
                         minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "MUSE",
-                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
-                        minimumTransferAmount: 1n,
-                    },
+                    }
                 ],
             },
             {
@@ -356,35 +351,9 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         id: "vETH",
                         address: "0xc3d088842dcf02c13699f936bb83dfbbc6f721ab",
                         minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "MUSE",
-                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
-                        minimumTransferAmount: 1n,
-                    },
+                    }
                 ],
-            },
-            {
-                id: "muse",
-                name: "Muse",
-                type: "substrate",
-                destinationIds: [],
-                paraInfo: {
-                    paraId: 3369,
-                    destinationFeeDOT: 200_000_000_000n,
-                    skipExistentialDepositCheck: true,
-                    addressType: "20byte",
-                    decimals: 18,
-                    maxConsumers: 16,
-                },
-                erc20tokensReceivable: [
-                    {
-                        id: "MUSE",
-                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
-                        minimumTransferAmount: 10_000_000_000_000_000n,
-                    },
-                ],
-            },
+            }
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
