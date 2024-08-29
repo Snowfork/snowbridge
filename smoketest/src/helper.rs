@@ -47,11 +47,11 @@ use penpalTypes::{
 };
 use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
-	blocks::ExtrinsicEvents,
 	config::DefaultExtrinsicParams,
 	events::StaticEvent,
 	ext::sp_core::{sr25519::Pair, Pair as PairT, H160},
 	tx::{PairSigner, Payload},
+	utils::H256,
 	Config, OnlineClient, PolkadotConfig,
 };
 
@@ -180,10 +180,15 @@ pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Pro
 	assert!(ethereum_event_found);
 }
 
+pub struct SudoResult {
+	pub block_hash: H256,
+	pub extrinsic_hash: H256,
+}
+
 pub async fn send_sudo_xcm_transact(
 	penpal_client: &Box<OnlineClient<PenpalConfig>>,
 	message: Box<VersionedXcm>,
-) -> Result<ExtrinsicEvents<PenpalConfig>, Box<dyn std::error::Error>> {
+) -> Result<SudoResult, Box<dyn std::error::Error>> {
 	let dest = Box::new(VersionedLocation::V3(MultiLocation {
 		parents: 1,
 		interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
@@ -203,11 +208,20 @@ pub async fn send_sudo_xcm_transact(
 		.sign_and_submit_then_watch_default(&sudo_call, &signer)
 		.await
 		.expect("send through xcm call.")
-		.wait_for_finalized_success()
+		.wait_for_finalized()
 		.await
 		.expect("xcm call failed");
 
-	Ok(result)
+	let block_hash = result.block_hash();
+	let extrinsic_hash = result.extrinsic_hash();
+
+	let sudo_result = SudoResult { block_hash, extrinsic_hash };
+
+	if let Err(err) = result.wait_for_success().await {
+		Err(Box::new(err))
+	} else {
+		Ok(sudo_result)
+	}
 }
 
 pub async fn initialize_wallet(
