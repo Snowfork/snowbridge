@@ -16,6 +16,8 @@ jobs:
   build:
     runs-on: snowbridge-runner
     timeout-minutes: 15
+    env:
+      MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
     steps:
       - uses: actions/checkout@v1
         with:
