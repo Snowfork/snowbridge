@@ -2,23 +2,8 @@ use crate::{
 	constants::*,
 	contracts::i_gateway,
 	parachains::{
-		bridgehub::{
-			self,
-			api::{
-				runtime_types,
-				runtime_types::{
-					snowbridge_core::outbound::v1::OperatingMode,
-					staging_xcm::v4::junction::NetworkId, xcm::VersionedLocation,
-				},
-			},
-		},
-		penpal::{
-			api::{
-				runtime_types as penpalTypes,
-				runtime_types::xcm::VersionedLocation as penpalVersionLocation,
-			},
-			{self},
-		},
+		bridgehub::{self, api::runtime_types::snowbridge_core::outbound::v1::OperatingMode},
+		penpal::{self, api::runtime_types as penpalTypes},
 		relaychain,
 		relaychain::api::runtime_types::{
 			pallet_xcm::pallet::Call as RelaychainPalletXcmCall,
@@ -49,13 +34,12 @@ use ethers::{
 };
 use futures::StreamExt;
 use penpalTypes::{
-	pallet_xcm::pallet::Call,
-	penpal_runtime::RuntimeCall,
-	staging_xcm::v3::multilocation::MultiLocation,
-	xcm::{
-		v3::{junction::Junction, junctions::Junctions},
-		VersionedXcm,
+	penpal_runtime::RuntimeCall as PenpalRuntimeCall,
+	staging_xcm::v4::{
+		junction::Junction as PenpalJunction, junctions::Junctions as PenpalJunctions,
+		location::Location as PenpalLocation,
 	},
+	xcm::{VersionedLocation as PenpalVersionedLocation, VersionedXcm as PenpalVersionedXcm},
 };
 use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
@@ -199,16 +183,19 @@ pub struct SudoResult {
 
 pub async fn send_sudo_xcm_transact(
 	penpal_client: &Box<OnlineClient<PenpalConfig>>,
-	message: Box<VersionedXcm>,
+	message: Box<PenpalVersionedXcm>,
 ) -> Result<SudoResult, Box<dyn std::error::Error>> {
-	let dest = Box::new(VersionedLocation::V3(MultiLocation {
+	let dest = Box::new(PenpalVersionedLocation::V4(PenpalLocation {
 		parents: 1,
-		interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
+		interior: PenpalJunctions::X1([PenpalJunction::Parachain(BRIDGE_HUB_PARA_ID)]),
 	}));
 
 	let sudo_call = penpal::api::sudo::calls::TransactionApi::sudo(
 		&penpal::api::sudo::calls::TransactionApi,
-		RuntimeCall::PolkadotXcm(Call::send { dest, message }),
+		PenpalRuntimeCall::PolkadotXcm(penpalTypes::pallet_xcm::pallet::Call::send {
+			dest,
+			message,
+		}),
 	);
 
 	let owner = Pair::from_string("//Alice", None).expect("cannot create keypair");
@@ -380,29 +367,4 @@ pub fn print_event_log_for_unit_tests(log: &Log) {
 	println!("	data: hex!(\"{}\").into(),", hex::encode(&log.data));
 
 	println!("}}")
-}
-
-pub async fn construct_register_relay_token_call(
-	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	type Junctions = runtime_types::staging_xcm::v4::junctions::Junctions;
-	type Junction = runtime_types::staging_xcm::v4::junction::Junction;
-	let location = VersionedLocation::V4(runtime_types::staging_xcm::v4::location::Location {
-		parents: 1,
-		interior: Junctions::X1([Junction::Parachain(ASSET_HUB_PARA_ID)]),
-	});
-	let asset = VersionedLocation::V4(runtime_types::staging_xcm::v4::location::Location {
-		parents: 1,
-		interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Rococo)]),
-	});
-	let metadata = runtime_types::snowbridge_core::AssetRegistrarMetadata {
-		name: "roc".as_bytes().to_vec(),
-		symbol: "roc".as_bytes().to_vec(),
-		decimals: 12,
-	};
-	let call = bridgehub::api::ethereum_system::calls::TransactionApi
-		.force_register_token(location, asset, metadata)
-		.encode_call_data(&bridge_hub_client.metadata())?;
-
-	Ok(call)
 }
