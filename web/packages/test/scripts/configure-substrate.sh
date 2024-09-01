@@ -49,12 +49,10 @@ open_hrmp_channel() {
     echo "      params:"
     echo "--------------------------------------------------"
 
-    npx polkadot-js-api \
+    call_polkadot_js_api \
         --ws "${relay_url?}" \
         --seed "${relay_chain_seed?}" \
         --sudo \
-        --noWait \
-        --nonce -1 \
         tx.hrmp.forceOpenHrmpChannel \
         ${sender_para_id} \
         ${recipient_para_id} \

@@ -11,9 +11,10 @@
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/*",
-    "initialize": "npx ts-node src/init.ts",
-    "start": "npx ts-node src/start.ts",
-    "cron": "npx ts-node src/cron.ts",
+    "initialize": "npx ts-node src/main.ts init",
+    "initializeFromContainer": "docker run -v $(pwd)/config:/config --rm snowbridge-monitor:latest init",
+    "start": "npx ts-node src/main.ts start",
+    "cron": "npx ts-node src/main.ts cron",
     "server": "npx ts-node src/server.ts",
     "format": "prettier src --write"
   },
