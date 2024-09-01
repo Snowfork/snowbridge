@@ -7,7 +7,7 @@ use ethers::{
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{erc20, erc20::TransferFilter},
+	contracts::{token, token::TransferFilter},
 	helper::AssetHubConfig,
 	parachains::assethub::{
 		api::runtime_types::{
@@ -73,7 +73,7 @@ async fn transfer_polkadot_token() {
 		.expect("call success");
 
 	let erc20_dot_address: Address = ERC20_DOT_CONTRACT.into();
-	let erc20_dot = erc20::ERC20::new(erc20_dot_address, ethereum_client.clone());
+	let erc20_dot = token::Token::new(erc20_dot_address, ethereum_client.clone());
 
 	let wait_for_blocks = 500;
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
