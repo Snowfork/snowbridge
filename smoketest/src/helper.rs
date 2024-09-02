@@ -3,10 +3,7 @@ use crate::{
 	contracts::i_gateway,
 	parachains::{
 		bridgehub::{self, api::runtime_types::snowbridge_core::outbound::v1::OperatingMode},
-		penpal::{
-			api::{runtime_types as penpalTypes, runtime_types::xcm::VersionedLocation},
-			{self},
-		},
+		penpal::{self, api::runtime_types as penpalTypes},
 		relaychain,
 		relaychain::api::runtime_types::{
 			pallet_xcm::pallet::Call as RelaychainPalletXcmCall,
@@ -37,13 +34,12 @@ use ethers::{
 };
 use futures::StreamExt;
 use penpalTypes::{
-	pallet_xcm::pallet::Call,
-	penpal_runtime::RuntimeCall,
-	staging_xcm::v3::multilocation::MultiLocation,
-	xcm::{
-		v3::{junction::Junction, junctions::Junctions},
-		VersionedXcm,
+	penpal_runtime::RuntimeCall as PenpalRuntimeCall,
+	staging_xcm::v4::{
+		junction::Junction as PenpalJunction, junctions::Junctions as PenpalJunctions,
+		location::Location as PenpalLocation,
 	},
+	xcm::{VersionedLocation as PenpalVersionedLocation, VersionedXcm as PenpalVersionedXcm},
 };
 use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
@@ -160,7 +156,7 @@ pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Pro
 	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
 	let gateway = i_gateway::IGateway::new(gateway_addr, (*ethereum_client).deref().clone());
 
-	let wait_for_blocks = 300;
+	let wait_for_blocks = 500;
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
 
 	let mut ethereum_event_found = false;
@@ -187,16 +183,19 @@ pub struct SudoResult {
 
 pub async fn send_sudo_xcm_transact(
 	penpal_client: &Box<OnlineClient<PenpalConfig>>,
-	message: Box<VersionedXcm>,
+	message: Box<PenpalVersionedXcm>,
 ) -> Result<SudoResult, Box<dyn std::error::Error>> {
-	let dest = Box::new(VersionedLocation::V3(MultiLocation {
+	let dest = Box::new(PenpalVersionedLocation::V4(PenpalLocation {
 		parents: 1,
-		interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
+		interior: PenpalJunctions::X1([PenpalJunction::Parachain(BRIDGE_HUB_PARA_ID)]),
 	}));
 
 	let sudo_call = penpal::api::sudo::calls::TransactionApi::sudo(
 		&penpal::api::sudo::calls::TransactionApi,
-		RuntimeCall::PolkadotXcm(Call::send { dest, message }),
+		PenpalRuntimeCall::PolkadotXcm(penpalTypes::pallet_xcm::pallet::Call::send {
+			dest,
+			message,
+		}),
 	);
 
 	let owner = Pair::from_string("//Alice", None).expect("cannot create keypair");

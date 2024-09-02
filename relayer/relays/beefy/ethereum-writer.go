@@ -232,7 +232,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	return tx, initialBitfield, nil
 }
 
-// doFinalSubmit sends a SubmitFinal tx to the BeefyClient contract
+// doSubmitFinal sends a SubmitFinal tx to the BeefyClient contract
 func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]byte, initialBitfield []*big.Int, task *Request) (*types.Transaction, error) {
 	finalBitfield, err := wr.contract.CreateFinalBitfield(
 		&bind.CallOpts{

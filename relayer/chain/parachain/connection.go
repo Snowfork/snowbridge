@@ -5,6 +5,7 @@ package parachain
 
 import (
 	"context"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -68,6 +69,33 @@ func (co *Connection) Connect(_ context.Context) error {
 		"endpoint":    co.endpoint,
 		"metaVersion": meta.Version,
 	}).Info("Connected to chain")
+
+	return nil
+}
+
+func (co *Connection) ConnectWithHeartBeat(ctx context.Context, heartBeat time.Duration) error {
+	err := co.Connect(ctx)
+	if err != nil {
+		return err
+	}
+
+	ticker := time.NewTicker(heartBeat)
+
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				_, err := co.API().RPC.System.Version()
+				if err != nil {
+					log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
+					return
+				}
+			}
+		}
+	}()
 
 	return nil
 }

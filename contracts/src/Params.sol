@@ -82,3 +82,37 @@ struct SetPricingParametersParams {
     /// @dev Fee multiplier
     UD60x18 multiplier;
 }
+
+// Payload for RegisterForeignToken
+struct RegisterForeignTokenParams {
+    /// @dev The token ID (hash of stable location id of token)
+    bytes32 foreignTokenID;
+    /// @dev The name of the token
+    string name;
+    /// @dev The symbol of the token
+    string symbol;
+    /// @dev The decimal of the token
+    uint8 decimals;
+}
+
+// Payload for MintForeignToken
+struct MintForeignTokenParams {
+    /// @dev The token ID
+    bytes32 foreignTokenID;
+    /// @dev The address of the recipient
+    address recipient;
+    /// @dev The amount to mint with
+    uint256 amount;
+}
+
+// Payload for TransferToken
+struct TransferNativeTokenParams {
+    /// @dev The agent ID of the consensus system
+    bytes32 agentID;
+    /// @dev The token address
+    address token;
+    /// @dev The address of the recipient
+    address recipient;
+    /// @dev The amount to mint with
+    uint128 amount;
+}

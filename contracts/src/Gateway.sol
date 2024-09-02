@@ -17,7 +17,9 @@ import {
     Command,
     MultiAddress,
     Ticket,
-    Costs
+    Costs,
+    TokenInfo,
+    AgentExecuteCommand
 } from "./Types.sol";
 import {Upgrade} from "./Upgrade.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
@@ -31,15 +33,18 @@ import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
 import {
+    AgentExecuteParams,
     UpgradeParams,
     CreateAgentParams,
-    AgentExecuteParams,
     CreateChannelParams,
     UpdateChannelParams,
     SetOperatingModeParams,
     TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
-    SetPricingParametersParams
+    SetPricingParametersParams,
+    RegisterForeignTokenParams,
+    MintForeignTokenParams,
+    TransferNativeTokenParams
 } from "./Params.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
@@ -95,10 +100,21 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
+    error AlreadyInitialized();
+    error TokenNotRegistered();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
         if (msg.sender != address(this)) {
+            revert Unauthorized();
+        }
+        _;
+    }
+
+    // handler functions are privileged from agent only
+    modifier onlyAgent(bytes32 agentID) {
+        bytes32 _agentID = _ensureAgentAddress(msg.sender);
+        if (_agentID != agentID) {
             revert Unauthorized();
         }
         _;
@@ -212,6 +228,21 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             catch {
                 success = false;
             }
+        } else if (message.command == Command.TransferNativeToken) {
+            try Gateway(this).transferNativeToken{gas: maxDispatchGas}(message.params) {}
+            catch {
+                success = false;
+            }
+        } else if (message.command == Command.RegisterForeignToken) {
+            try Gateway(this).registerForeignToken{gas: maxDispatchGas}(message.params) {}
+            catch {
+                success = false;
+            }
+        } else if (message.command == Command.MintForeignToken) {
+            try Gateway(this).mintForeignToken{gas: maxDispatchGas}(message.params) {}
+            catch {
+                success = false;
+            }
         }
 
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
@@ -275,11 +306,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             revert InvalidAgentExecutionPayload();
         }
 
-        bytes memory call = abi.encodeCall(AgentExecutor.execute, params.payload);
-
-        (bool success, bytes memory returndata) = Agent(payable(agent)).invoke(AGENT_EXECUTOR, call);
-        if (!success) {
-            revert AgentExecutionFailed(returndata);
+        (AgentExecuteCommand command, bytes memory commandParams) =
+            abi.decode(params.payload, (AgentExecuteCommand, bytes));
+        if (command == AgentExecuteCommand.TransferToken) {
+            (address token, address recipient, uint128 amount) = abi.decode(commandParams, (address, address, uint128));
+            Assets.transferNativeToken(AGENT_EXECUTOR, agent, token, recipient, amount);
         }
     }
 
@@ -385,6 +416,25 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     /**
      * Assets
      */
+    // @dev Register a new fungible Polkadot token for an agent
+    function registerForeignToken(bytes calldata data) external onlySelf {
+        RegisterForeignTokenParams memory params = abi.decode(data, (RegisterForeignTokenParams));
+        Assets.registerForeignToken(params.foreignTokenID, params.name, params.symbol, params.decimals);
+    }
+
+    // @dev Mint foreign token from polkadot
+    function mintForeignToken(bytes calldata data) external onlySelf {
+        MintForeignTokenParams memory params = abi.decode(data, (MintForeignTokenParams));
+        Assets.mintForeignToken(params.foreignTokenID, params.recipient, params.amount);
+    }
+
+    // @dev Transfer Ethereum native token back from polkadot
+    function transferNativeToken(bytes calldata data) external onlySelf {
+        TransferNativeTokenParams memory params = abi.decode(data, (TransferNativeTokenParams));
+        address agent = _ensureAgent(params.agentID);
+        Assets.transferNativeToken(AGENT_EXECUTOR, agent, params.token, params.recipient, params.amount);
+    }
+
     function isTokenRegistered(address token) external view returns (bool) {
         return Assets.isTokenRegistered(token);
     }
@@ -416,11 +466,16 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint128 destinationFee,
         uint128 amount
     ) external payable {
-        _submitOutbound(
-            Assets.sendToken(
-                token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
-            )
+        Ticket memory ticket = Assets.sendToken(
+            token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
         );
+
+        _submitOutbound(ticket);
+    }
+
+    // @dev Get token address by tokenID
+    function tokenAddressOf(bytes32 tokenID) external view returns (address) {
+        return Assets.tokenAddressOf(tokenID);
     }
 
     /**
@@ -479,6 +534,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Ensure outbound messaging is allowed
         _ensureOutboundMessagingEnabled(channel);
 
+        // Destination fee always in DOT
         uint256 fee = _calculateFee(ticket.costs);
 
         // Ensure the user has enough funds for this message to be accepted
@@ -523,6 +579,14 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     function _ensureAgent(bytes32 agentID) internal view returns (address agent) {
         agent = CoreStorage.layout().agents[agentID];
         if (agent == address(0)) {
+            revert AgentDoesNotExist();
+        }
+    }
+
+    /// @dev Ensure that the specified address is an valid agent
+    function _ensureAgentAddress(address agent) internal view returns (bytes32 agentID) {
+        agentID = CoreStorage.layout().agentAddresses[agent];
+        if (agentID == bytes32(0)) {
             revert AgentDoesNotExist();
         }
     }
@@ -586,6 +650,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Initialize agent for BridgeHub
         address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
         core.agents[BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
+        core.agentAddresses[bridgeHubAgent] = BRIDGE_HUB_AGENT_ID;
 
         // Initialize channel for primary governance track
         core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] =
@@ -598,6 +663,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Initialize agent for for AssetHub
         address assetHubAgent = address(new Agent(config.assetHubAgentID));
         core.agents[config.assetHubAgentID] = assetHubAgent;
+        core.agentAddresses[assetHubAgent] = config.assetHubAgentID;
 
         // Initialize channel for AssetHub
         core.channels[config.assetHubParaID.into()] =
@@ -621,27 +687,5 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
         operatorStorage.operator = config.rescueOperator;
-    }
-
-    /// @dev Temporary rescue ability for the initial bootstrapping phase of the bridge
-    function rescue(address impl, bytes32 implCodeHash, bytes calldata initializerParams) external {
-        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
-        if (msg.sender != operatorStorage.operator) {
-            revert Unauthorized();
-        }
-        Upgrade.upgrade(impl, implCodeHash, initializerParams);
-    }
-
-    function dropRescueAbility() external {
-        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
-        if (msg.sender != operatorStorage.operator) {
-            revert Unauthorized();
-        }
-        operatorStorage.operator = address(0);
-    }
-
-    function rescueOperator() external view returns (address) {
-        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
-        return operatorStorage.operator;
     }
 }
