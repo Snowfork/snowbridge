@@ -35,14 +35,22 @@ interface IGateway {
     // Emitted when funds are withdrawn from an agent
     event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
 
+    // Emitted when foreign token from polkadot registed
+    event ForeignTokenRegistered(bytes32 indexed tokenID, address token);
+
     /**
      * Getters
      */
     function operatingMode() external view returns (OperatingMode);
+
     function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode);
+
     function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);
+
     function agentOf(bytes32 agentID) external view returns (address);
+
     function pricingParameters() external view returns (UD60x18, uint128);
+
     function implementation() external view returns (address);
 
     /**
