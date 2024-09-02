@@ -74,7 +74,7 @@ build_lodestar() {
     if [ "$rebuild_lodestar" == "true" ]; then
         pushd $root_dir/lodestar
         if [ "$eth_fast_mode" == "true" ]; then
-            set_slot_time 1
+            set_slot_time 4
         else
             set_slot_time 12
         fi

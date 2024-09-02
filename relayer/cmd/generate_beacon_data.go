@@ -490,36 +490,33 @@ func generateSpecificBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		s := syncer.New(client, &store, p)
 
 		// generate InitialUpdate
-		initialSyncScale, err := s.GetCheckpoint()
-		if err != nil {
-			return fmt.Errorf("get initial sync: %w", err)
-		}
-		initialSync := initialSyncScale.ToJSON()
-		err = writeJSONToFile(initialSync, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "initial-checkpoint-test.json"))
-		if err != nil {
-			return err
-		}
-		initialSyncHeaderSlot := initialSync.Header.Slot
-		initialSyncPeriod := p.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
-		initialEpoch := p.ComputeEpochAtSlot(initialSyncHeaderSlot)
+		//initialSyncScale, err := s.GetCheckpoint()
+		//if err != nil {
+		//	return fmt.Errorf("get initial sync: %w", err)
+		//}
+		//initialSync := initialSyncScale.ToJSON()
+		//err = writeJSONToFile(initialSync, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "initial-checkpoint-test.json"))
+		//if err != nil {
+		//	return err
+		//}
+		//initialSyncHeaderSlot := initialSync.Header.Slot
+		//initialSyncPeriod := p.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
+		//initialEpoch := p.ComputeEpochAtSlot(initialSyncHeaderSlot)
 
 		// generate SyncCommitteeUpdate for filling the missing NextSyncCommittee in initial checkpoint
-		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod, 0)
+		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(0, 0)
 		if err != nil {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
 		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
-		log.WithFields(log.Fields{
-			"epoch":  initialEpoch,
-			"period": initialSyncPeriod,
-		}).Info("created initial sync file")
+
 		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update-test.json"))
 		if err != nil {
 			return err
 		}
 		log.Info("created sync committee update file")
 
-		secondSyncCommitteeUpdateScale, err := s.GetFinalizedUpdateWithSyncCommittee(initialSyncPeriod)
+		secondSyncCommitteeUpdateScale, err := s.GetFinalizedUpdateAtAttestedSlot(60, 8192, true)
 		if err != nil {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
