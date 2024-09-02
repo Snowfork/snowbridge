@@ -2,14 +2,10 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
-import "../../Gateway.sol";
+import "../Gateway.sol";
 
-import {UD60x18, convert} from "prb/math/src/UD60x18.sol";
-import {PricingStorage} from "../../storage/PricingStorage.sol";
-
-contract RococoGatewayV2 is Gateway {
+contract GatewayV2 is Gateway {
     constructor(
-        address recoveryOperator,
         address beefyClient,
         address agentExecutor,
         ParaID bridgeHubParaID,
@@ -32,9 +28,5 @@ contract RococoGatewayV2 is Gateway {
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();
         }
-
-        PricingStorage.Layout storage pricing = PricingStorage.layout();
-
-        pricing.multiplier = abi.decode(data, (UD60x18));
     }
 }
