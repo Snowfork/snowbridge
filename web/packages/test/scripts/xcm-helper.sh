@@ -145,5 +145,5 @@ function call_polkadot_js_api() {
     #           With it, it just submits it to the tx pool and exits.
     # --nonce -1: means to compute transaction nonce using `system_accountNextIndex` RPC, which includes all
     #             transaction that are in the tx pool.
-    npx polkadot-js-api --noWait --nonce -1 "$@" || true
+    npx polkadot-js-api "$@" || true
 }
