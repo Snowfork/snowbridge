@@ -70,6 +70,7 @@ start_lodestar() {
             --params.BELLATRIX_FORK_EPOCH 0 \
             --params.CAPELLA_FORK_EPOCH 0 \
             --params.DENEB_FORK_EPOCH 0 \
+            --params.ELECTRA_FORK_EPOCH 0 \
             --eth1=true \
             --rest.namespace="*" \
             --jwt-secret $config_dir/jwtsecret \
