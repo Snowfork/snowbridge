@@ -12,10 +12,15 @@ type Config struct {
 }
 
 type SpecSettings struct {
-	SyncCommitteeSize            uint64 `mapstructure:"syncCommitteeSize"`
-	SlotsInEpoch                 uint64 `mapstructure:"slotsInEpoch"`
-	EpochsPerSyncCommitteePeriod uint64 `mapstructure:"epochsPerSyncCommitteePeriod"`
-	DenebForkEpoch               uint64 `mapstructure:"denebForkedEpoch"`
+	SyncCommitteeSize            uint64       `mapstructure:"syncCommitteeSize"`
+	SlotsInEpoch                 uint64       `mapstructure:"slotsInEpoch"`
+	EpochsPerSyncCommitteePeriod uint64       `mapstructure:"epochsPerSyncCommitteePeriod"`
+	ForkVersions                 ForkVersions `mapstructure:"forkVersions"`
+}
+
+type ForkVersions struct {
+	Deneb   uint64 `mapstructure:"deneb"`
+	Electra uint64 `mapstructure:"electra"`
 }
 
 type SourceConfig struct {

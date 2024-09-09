@@ -9,7 +9,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
-func DenebExecutionPayloadToScale(e *state.ExecutionPayloadDeneb) (scale.ExecutionPayloadHeaderDeneb, error) {
+func ElectraExecutionPayloadToScale(e *state.ExecutionPayloadElectra) (scale.ExecutionPayloadHeaderDeneb, error) {
 	var payloadHeader scale.ExecutionPayloadHeaderDeneb
 	transactionsContainer := state.TransactionsRootContainer{}
 	transactionsContainer.Transactions = e.Transactions
@@ -52,4 +52,3 @@ func DenebExecutionPayloadToScale(e *state.ExecutionPayloadDeneb) (scale.Executi
 		ExcessBlobGas:    types.NewU64(e.ExcessBlobGas),
 	}, nil
 }
-

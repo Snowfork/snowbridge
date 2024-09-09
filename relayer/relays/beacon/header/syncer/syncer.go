@@ -294,10 +294,13 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 	if err != nil {
 		return blockRootProof, fmt.Errorf("fetch beacon state: %w", err)
 	}
-	isDeneb := s.protocol.DenebForked(slot)
+
+	forkVersion := s.protocol.ForkVersion(slot)
 
 	blockRootsContainer = &state.BlockRootsContainerMainnet{}
-	if isDeneb {
+	if forkVersion == protocol.Electra {
+		beaconState = &state.BeaconStateElectra{}
+	} else if forkVersion == protocol.Deneb {
 		beaconState = &state.BeaconStateDenebMainnet{}
 	} else {
 		beaconState = &state.BeaconStateCapellaMainnet{}
@@ -534,7 +537,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 		return update, err
 	}
 
-	sszBlock, err := blockResponse.ToFastSSZ(s.protocol.DenebForked(slot))
+	sszBlock, err := blockResponse.ToFastSSZ(s.protocol.ForkVersion(slot))
 	if err != nil {
 		return update, err
 	}
@@ -555,7 +558,14 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 	}
 
 	var versionedExecutionPayloadHeader scale.VersionedExecutionPayloadHeader
-	if s.protocol.DenebForked(slot) {
+	forkVersion := protocol.ForkVersion(slot)
+	if forkVersion == protocol.Electra {
+		executionPayloadScale, err := api.ElectraExecutionPayloadToScale(sszBlock.ExecutionPayloadElectra())
+		if err != nil {
+			return scale.HeaderUpdatePayload{}, err
+		}
+		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
+	} else if forkVersion == protocol.Deneb {
 		executionPayloadScale, err := api.DenebExecutionPayloadToScale(sszBlock.ExecutionPayloadDeneb())
 		if err != nil {
 			return scale.HeaderUpdatePayload{}, err
@@ -617,9 +627,10 @@ func (s *Syncer) getBeaconStateAtSlot(slot uint64) (state.BeaconState, error) {
 
 func (s *Syncer) UnmarshalBeaconState(slot uint64, data []byte) (state.BeaconState, error) {
 	var beaconState state.BeaconState
-	isDeneb := s.protocol.DenebForked(slot)
-
-	if isDeneb {
+	forkVersion := protocol.ForkVersion(slot)
+	if forkVersion == protocol.Electra {
+		beaconState = &state.BeaconStateElectra{}
+	} else if forkVersion == protocol.Deneb {
 		beaconState = &state.BeaconStateDenebMainnet{}
 	} else {
 		beaconState = &state.BeaconStateCapellaMainnet{}
