@@ -23,7 +23,7 @@ async fn register_polkadot_token() {
 	type Junction = runtime_types::staging_xcm::v4::junction::Junction;
 	let asset = VersionedLocation::V4(runtime_types::staging_xcm::v4::location::Location {
 		parents: 1,
-		interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Westend)]),
+		interior: Junctions::Here,
 	});
 	let metadata = runtime_types::snowbridge_core::AssetMetadata {
 		name: BoundedVec(
