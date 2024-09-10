@@ -558,7 +558,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 	}
 
 	var versionedExecutionPayloadHeader scale.VersionedExecutionPayloadHeader
-	forkVersion := protocol.ForkVersion(slot)
+	forkVersion := s.protocol.ForkVersion(slot)
 	if forkVersion == protocol.Electra {
 		executionPayloadScale, err := api.ElectraExecutionPayloadToScale(sszBlock.ExecutionPayloadElectra())
 		if err != nil {
@@ -627,7 +627,7 @@ func (s *Syncer) getBeaconStateAtSlot(slot uint64) (state.BeaconState, error) {
 
 func (s *Syncer) UnmarshalBeaconState(slot uint64, data []byte) (state.BeaconState, error) {
 	var beaconState state.BeaconState
-	forkVersion := protocol.ForkVersion(slot)
+	forkVersion := s.protocol.ForkVersion(slot)
 	if forkVersion == protocol.Electra {
 		beaconState = &state.BeaconStateElectra{}
 	} else if forkVersion == protocol.Deneb {
