@@ -564,7 +564,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 		if err != nil {
 			return scale.HeaderUpdatePayload{}, err
 		}
-		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
+		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Electra: &executionPayloadScale}
 	} else if forkVersion == protocol.Deneb {
 		executionPayloadScale, err := api.DenebExecutionPayloadToScale(sszBlock.ExecutionPayloadDeneb())
 		if err != nil {

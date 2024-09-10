@@ -13,7 +13,7 @@ func Build() {
 }
 
 func BuildMain() error {
-	err := sh.Run("sszgen", "--path", "relays/beacon/state", "--objs", "BeaconStateCapellaMainnet,BlockRootsContainerMainnet,TransactionsRootContainer,BeaconBlockCapellaMainnet,WithdrawalsRootContainerMainnet,BeaconStateDenebMainnet,BeaconBlockDenebMainnet,BeaconStateElectra,BeaconBlockElectra")
+	err := sh.Run("sszgen", "--path", "relays/beacon/state", "--objs", "BeaconStateCapellaMainnet,BlockRootsContainerMainnet,TransactionsRootContainer,BeaconBlockCapellaMainnet,WithdrawalsRootContainerMainnet,BeaconStateDenebMainnet,BeaconBlockDenebMainnet,BeaconStateElectra,BeaconBlockElectra,DepositRequestsContainer,WithdrawalRequestsContainer,ConsolidationRequestsContainer")
 	if err != nil {
 		return err
 	}

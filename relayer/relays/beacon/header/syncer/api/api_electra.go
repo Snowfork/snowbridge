@@ -9,8 +9,8 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
-func ElectraExecutionPayloadToScale(e *state.ExecutionPayloadElectra) (scale.ExecutionPayloadHeaderDeneb, error) {
-	var payloadHeader scale.ExecutionPayloadHeaderDeneb
+func ElectraExecutionPayloadToScale(e *state.ExecutionPayloadElectra) (scale.ExecutionPayloadHeaderElectra, error) {
+	var payloadHeader scale.ExecutionPayloadHeaderElectra
 	transactionsContainer := state.TransactionsRootContainer{}
 	transactionsContainer.Transactions = e.Transactions
 
@@ -19,11 +19,30 @@ func ElectraExecutionPayloadToScale(e *state.ExecutionPayloadElectra) (scale.Exe
 		return payloadHeader, err
 	}
 
-	var withdrawalRoot types.H256
-
 	withdrawalContainer := state.WithdrawalsRootContainerMainnet{}
 	withdrawalContainer.Withdrawals = e.Withdrawals
-	withdrawalRoot, err = withdrawalContainer.HashTreeRoot()
+	withdrawalRoot, err := withdrawalContainer.HashTreeRoot()
+	if err != nil {
+		return payloadHeader, err
+	}
+
+	depositRequestsContainer := state.DepositRequestsContainer{}
+	depositRequestsContainer.DepositRequests = e.DepositRequests
+	depositRequestsRoot, err := depositRequestsContainer.HashTreeRoot()
+	if err != nil {
+		return payloadHeader, err
+	}
+
+	withdrawalRequestsContainer := state.WithdrawalRequestsContainer{}
+	withdrawalRequestsContainer.WithdrawalRequests = e.WithdrawalRequests
+	withdrawalRequestsRoot, err := withdrawalRequestsContainer.HashTreeRoot()
+	if err != nil {
+		return payloadHeader, err
+	}
+
+	consolidationRequestsContainer := state.ConsolidationRequestsContainer{}
+	consolidationRequestsContainer.ConsolidationRequests = e.ConsolidationRequests
+	consolidationRequestsRoot, err := consolidationRequestsContainer.HashTreeRoot()
 	if err != nil {
 		return payloadHeader, err
 	}
@@ -32,24 +51,27 @@ func ElectraExecutionPayloadToScale(e *state.ExecutionPayloadElectra) (scale.Exe
 	// Change BaseFeePerGas back from little-endian to big-endian
 	baseFeePerGas.SetBytes(util.ChangeByteOrder(e.BaseFeePerGas[:]))
 
-	return scale.ExecutionPayloadHeaderDeneb{
-		ParentHash:       types.NewH256(e.ParentHash[:]),
-		FeeRecipient:     e.FeeRecipient,
-		StateRoot:        types.NewH256(e.StateRoot[:]),
-		ReceiptsRoot:     types.NewH256(e.ReceiptsRoot[:]),
-		LogsBloom:        e.LogsBloom[:],
-		PrevRandao:       types.NewH256(e.PrevRandao[:]),
-		BlockNumber:      types.NewU64(e.BlockNumber),
-		GasLimit:         types.NewU64(e.GasLimit),
-		GasUsed:          types.NewU64(e.GasUsed),
-		Timestamp:        types.NewU64(e.Timestamp),
-		ExtraData:        e.ExtraData,
-		BaseFeePerGas:    types.NewU256(baseFeePerGas),
-		BlockHash:        types.NewH256(e.BlockHash[:]),
-		TransactionsRoot: transactionsRoot,
-		WithdrawalsRoot:  withdrawalRoot,
-		BlobGasUsed:      types.NewU64(e.BlobGasUsed),
-		ExcessBlobGas:    types.NewU64(e.ExcessBlobGas),
+	return scale.ExecutionPayloadHeaderElectra{
+		ParentHash:                types.NewH256(e.ParentHash[:]),
+		FeeRecipient:              e.FeeRecipient,
+		StateRoot:                 types.NewH256(e.StateRoot[:]),
+		ReceiptsRoot:              types.NewH256(e.ReceiptsRoot[:]),
+		LogsBloom:                 e.LogsBloom[:],
+		PrevRandao:                types.NewH256(e.PrevRandao[:]),
+		BlockNumber:               types.NewU64(e.BlockNumber),
+		GasLimit:                  types.NewU64(e.GasLimit),
+		GasUsed:                   types.NewU64(e.GasUsed),
+		Timestamp:                 types.NewU64(e.Timestamp),
+		ExtraData:                 e.ExtraData,
+		BaseFeePerGas:             types.NewU256(baseFeePerGas),
+		BlockHash:                 types.NewH256(e.BlockHash[:]),
+		TransactionsRoot:          transactionsRoot,
+		WithdrawalsRoot:           withdrawalRoot,
+		BlobGasUsed:               types.NewU64(e.BlobGasUsed),
+		ExcessBlobGas:             types.NewU64(e.ExcessBlobGas),
+		DepositRequestsRoot:       depositRequestsRoot,
+		WithdrawalRequestsRoot:    withdrawalRequestsRoot,
+		ConsolidationRequestsRoot: consolidationRequestsRoot,
 	}, nil
 }
 

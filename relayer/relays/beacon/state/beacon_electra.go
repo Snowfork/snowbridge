@@ -48,6 +48,18 @@ type ExecutionPayloadHeaderElectra struct {
 	ConsolidationRequestsRoot []byte `json:"consolidation_requests_root" ssz-size:"32"` // New in Electra
 }
 
+type DepositRequestsContainer struct {
+	DepositRequests []*DepositRequest `ssz-max:"8192" json:"deposit_requests"`
+}
+
+type WithdrawalRequestsContainer struct {
+	WithdrawalRequests []*WithdrawalRequest `ssz-max:"16" json:"withdrawal_requests"`
+}
+
+type ConsolidationRequestsContainer struct {
+	ConsolidationRequests []*ConsolidationRequest `ssz-max:"1" json:"consolidation_requests"`
+}
+
 type DepositRequest struct {
 	Pubkey                [48]byte `json:"pubkey" ssz-size:"48"`
 	WithdrawalCredentials [32]byte `ssz-size:"32" json:"withdrawal_credentials"`
