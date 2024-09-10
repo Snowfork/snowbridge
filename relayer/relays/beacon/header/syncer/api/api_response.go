@@ -151,6 +151,7 @@ type AttestationResponse struct {
 	AggregationBits string                  `json:"aggregation_bits"`
 	Data            AttestationDataResponse `json:"data"`
 	Signature       string                  `json:"signature"`
+	CommitteeBits   string                  `json:"committee_bits,omitempty"`
 }
 
 type SignedVoluntaryExitResponse struct {
@@ -522,26 +523,6 @@ func (b BeaconBlockResponse) ToFastSSZ(forkVersion protocol.ForkVersion) (state.
 		proposerSlashings = append(proposerSlashings, proposerSlashingSSZ)
 	}
 
-	attesterSlashings := []*state.AttesterSlashing{}
-	for _, attesterSlashing := range body.AttesterSlashings {
-		attesterSlashingSSZ, err := attesterSlashing.ToFastSSZ()
-		if err != nil {
-			return nil, err
-		}
-
-		attesterSlashings = append(attesterSlashings, attesterSlashingSSZ)
-	}
-
-	attestations := []*state.Attestation{}
-	for _, attestation := range body.Attestations {
-		attestationSSZ, err := attestation.ToFastSSZ()
-		if err != nil {
-			return nil, err
-		}
-
-		attestations = append(attestations, attestationSSZ)
-	}
-
 	deposits := []*state.Deposit{}
 	for _, deposit := range body.Deposits {
 		depositScale, err := deposit.ToFastSSZ()
@@ -694,7 +675,93 @@ func (b BeaconBlockResponse) ToFastSSZ(forkVersion protocol.ForkVersion) (state.
 
 	if forkVersion == protocol.Electra {
 
+		attesterSlashings := []*state.AttesterSlashingElectra{}
+		for _, attesterSlashing := range body.AttesterSlashings {
+			attesterSlashingSSZ, err := attesterSlashing.ToFastSSZElectra()
+			if err != nil {
+				return nil, err
+			}
+
+			attesterSlashings = append(attesterSlashings, attesterSlashingSSZ)
+		}
+
+		attestations := []*state.AttestationElectra{}
+		for _, attestation := range body.Attestations {
+			attestationSSZ, err := attestation.ToFastSSZElectra()
+			if err != nil {
+				return nil, err
+			}
+
+			attestations = append(attestations, attestationSSZ)
+		}
+
+		return &state.BeaconBlockElectra{
+			Slot:          slot,
+			ProposerIndex: proposerIndex,
+			ParentRoot:    parentRoot,
+			StateRoot:     stateRoot,
+			Body: &state.BeaconBlockBodyElectra{
+				RandaoReveal: randaoReveal,
+				Eth1Data: &state.Eth1Data{
+					DepositRoot:  eth1DepositRoot,
+					DepositCount: eth1DepositCount,
+					BlockHash:    eth1BlockHash,
+				},
+				Graffiti:          graffiti,
+				ProposerSlashings: proposerSlashings,
+				AttesterSlashings: attesterSlashings,
+				Attestations:      attestations,
+				Deposits:          deposits,
+				VoluntaryExits:    voluntaryExits,
+				SyncAggregate: &state.SyncAggregateMainnet{
+					SyncCommitteeBits:      syncCommitteeBits,
+					SyncCommitteeSignature: syncCommitteeSignature,
+				},
+				ExecutionPayload: &state.ExecutionPayloadElectra{
+					ParentHash:    parentHash,
+					FeeRecipient:  feeRecipient,
+					StateRoot:     executionStateRoot,
+					ReceiptsRoot:  receiptsRoot,
+					LogsBloom:     logsBloom,
+					PrevRandao:    prevRando,
+					BlockNumber:   blockNumber,
+					GasLimit:      gasLimit,
+					GasUsed:       gasUsed,
+					Timestamp:     timestamp,
+					ExtraData:     extraData,
+					BaseFeePerGas: baseFeePerGasBytes,
+					BlockHash:     blockHash,
+					Transactions:  transactions,
+					Withdrawals:   withdrawals,
+					BlobGasUsed:   blobGasUsed,
+					ExcessBlobGas: excessBlobGas,
+				},
+				BlsToExecutionChanges: blsExecutionChanges,
+				BlobKzgCommitments:    kzgCommitments,
+			},
+		}, nil
 	}
+
+	attesterSlashings := []*state.AttesterSlashing{}
+	for _, attesterSlashing := range body.AttesterSlashings {
+		attesterSlashingSSZ, err := attesterSlashing.ToFastSSZ()
+		if err != nil {
+			return nil, err
+		}
+
+		attesterSlashings = append(attesterSlashings, attesterSlashingSSZ)
+	}
+
+	attestations := []*state.Attestation{}
+	for _, attestation := range body.Attestations {
+		attestationSSZ, err := attestation.ToFastSSZ()
+		if err != nil {
+			return nil, err
+		}
+
+		attestations = append(attestations, attestationSSZ)
+	}
+
 	if forkVersion == protocol.Deneb {
 		return &state.BeaconBlockDenebMainnet{
 			Slot:          slot,

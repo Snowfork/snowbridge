@@ -3,23 +3,26 @@ package state
 import ssz "github.com/ferranbt/fastssz"
 
 type ExecutionPayloadElectra struct {
-	ParentHash    [32]byte      `ssz-size:"32" json:"parent_hash"`
-	FeeRecipient  [20]byte      `ssz-size:"20" json:"fee_recipient"`
-	StateRoot     [32]byte      `ssz-size:"32" json:"state_root"`
-	ReceiptsRoot  [32]byte      `ssz-size:"32" json:"receipts_root"`
-	LogsBloom     [256]byte     `ssz-size:"256" json:"logs_bloom"`
-	PrevRandao    [32]byte      `ssz-size:"32" json:"prev_randao"`
-	BlockNumber   uint64        `json:"block_number"`
-	GasLimit      uint64        `json:"gas_limit"`
-	GasUsed       uint64        `json:"gas_used"`
-	Timestamp     uint64        `json:"timestamp"`
-	ExtraData     []byte        `ssz-max:"32" json:"extra_data"`
-	BaseFeePerGas [32]byte      `ssz-size:"32" json:"base_fee_per_gas"`
-	BlockHash     [32]byte      `ssz-size:"32" json:"block_hash"`
-	Transactions  [][]byte      `ssz-max:"1048576,1073741824" ssz-size:"?,?" json:"transactions"`
-	Withdrawals   []*Withdrawal `ssz-max:"16" json:"withdrawals"`
-	BlobGasUsed   uint64        `json:"blob_gas_used,omitempty"`
-	ExcessBlobGas uint64        `json:"excess_blob_gas,omitempty"`
+	ParentHash            [32]byte                `ssz-size:"32" json:"parent_hash"`
+	FeeRecipient          [20]byte                `ssz-size:"20" json:"fee_recipient"`
+	StateRoot             [32]byte                `ssz-size:"32" json:"state_root"`
+	ReceiptsRoot          [32]byte                `ssz-size:"32" json:"receipts_root"`
+	LogsBloom             [256]byte               `ssz-size:"256" json:"logs_bloom"`
+	PrevRandao            [32]byte                `ssz-size:"32" json:"prev_randao"`
+	BlockNumber           uint64                  `json:"block_number"`
+	GasLimit              uint64                  `json:"gas_limit"`
+	GasUsed               uint64                  `json:"gas_used"`
+	Timestamp             uint64                  `json:"timestamp"`
+	ExtraData             []byte                  `ssz-max:"32" json:"extra_data"`
+	BaseFeePerGas         [32]byte                `ssz-size:"32" json:"base_fee_per_gas"`
+	BlockHash             [32]byte                `ssz-size:"32" json:"block_hash"`
+	Transactions          [][]byte                `ssz-max:"1048576,1073741824" ssz-size:"?,?" json:"transactions"`
+	Withdrawals           []*Withdrawal           `ssz-max:"16" json:"withdrawals"`
+	BlobGasUsed           uint64                  `json:"blob_gas_used,omitempty"`
+	ExcessBlobGas         uint64                  `json:"excess_blob_gas,omitempty"`
+	DepositRequests       []*DepositRequest       `ssz-max:"8192" json:"deposit_requests,omitempty"`    // New in Electra
+	WithdrawalRequests    []*WithdrawalRequest    `ssz-max:"16" json:"withdrawal_requests,omitempty"`   // New in Electra
+	ConsolidationRequests []*ConsolidationRequest `ssz-max:"1" json:"consolidation_requests,omitempty"` // New in Electra
 }
 
 type ExecutionPayloadHeaderElectra struct {
@@ -45,6 +48,26 @@ type ExecutionPayloadHeaderElectra struct {
 	ConsolidationRequestsRoot []byte `json:"consolidation_requests_root" ssz-size:"32"` // New in Electra
 }
 
+type DepositRequest struct {
+	Pubkey                [48]byte `json:"pubkey" ssz-size:"48"`
+	WithdrawalCredentials [32]byte `ssz-size:"32" json:"withdrawal_credentials"`
+	Amount                uint64   `json:"amount"`
+	Signature             []byte   `json:"signature,omitempty" ssz-size:"96"`
+	Index                 uint64   `json:"index,omitempty"`
+}
+
+type WithdrawalRequest struct {
+	SourceAddress   [20]byte `ssz-size:"20" json:"source_address" `
+	ValidatorPubkey [48]byte `ssz-size:"48" json:"validator_pubkey"`
+	Amount          uint64   `json:"amount"`
+}
+
+type ConsolidationRequest struct {
+	SourceAddress [20]byte `ssz-size:"20" json:"source_address" `
+	SourcePubkey  [48]byte `ssz-size:"48" json:"source_pubkey"`
+	TargetPubkey  [48]byte `ssz-size:"48" json:"target_pubkey"`
+}
+
 type BeaconBlockElectra struct {
 	Slot          uint64                  `json:"slot"`
 	ProposerIndex uint64                  `json:"proposer_index"`
@@ -58,8 +81,8 @@ type BeaconBlockBodyElectra struct {
 	Eth1Data              *Eth1Data                     `json:"eth1_data"`
 	Graffiti              [32]byte                      `json:"graffiti" ssz-size:"32"`
 	ProposerSlashings     []*ProposerSlashing           `json:"proposer_slashings" ssz-max:"16"`
-	AttesterSlashings     []*AttesterSlashing           `json:"attester_slashings" ssz-max:"2"`
-	Attestations          []*Attestation                `json:"attestations" ssz-max:"128"`
+	AttesterSlashings     []*AttesterSlashingElectra    `json:"attester_slashings" ssz-max:"1"` // Modified in Electra
+	Attestations          []*AttestationElectra         `json:"attestations" ssz-max:"8"`       // Modified in Electra
 	Deposits              []*Deposit                    `json:"deposits" ssz-max:"16"`
 	VoluntaryExits        []*SignedVoluntaryExit        `json:"voluntary_exits" ssz-max:"16"`
 	SyncAggregate         *SyncAggregateMainnet         `json:"sync_aggregate"`
@@ -106,6 +129,24 @@ type BeaconStateElectra struct {
 	PendingBalanceDeposits        []*PendingBalanceDeposit       `json:"pending_balance_deposits,omitempty" ssz-max:"134217728"`    // New in Electra
 	PendingPartialWithdrawals     []*PendingPartialWithdrawal    `json:"pending_partial_withdrawals,omitempty" ssz-max:"134217728"` // New in Electra
 	PendingConsolidations         []*PendingConsolidation        `json:"pending_consolidations,omitempty" ssz-max:"262144"`         // New in Electra
+}
+
+type AttestationElectra struct {
+	AggregationBits []byte           `json:"aggregation_bits" ssz:"bitlist" ssz-max:"131072"` // Modified in Electra
+	Data            *AttestationData `json:"data"`
+	Signature       [96]byte         `json:"signature" ssz-size:"96"`
+	CommitteeBits   []byte           `json:"committee_bits" ssz-size:"64"` // New in Electra
+}
+
+type AttesterSlashingElectra struct {
+	Attestation1 *IndexedAttestationElectra `json:"attestation_1"`
+	Attestation2 *IndexedAttestationElectra `json:"attestation_2"`
+}
+
+type IndexedAttestationElectra struct {
+	AttestationIndices []uint64         `json:"attesting_indices" ssz-max:"131072"` // Modified in Electra
+	Data               *AttestationData `json:"data"`
+	Signature          []byte           `json:"signature" ssz-size:"96"`
 }
 
 type PendingBalanceDeposit struct {
