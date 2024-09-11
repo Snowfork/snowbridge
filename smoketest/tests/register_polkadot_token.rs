@@ -6,10 +6,7 @@ use snowbridge_smoketest::{
 		bridgehub::api::{
 			ethereum_system::events::RegisterToken,
 			runtime_types,
-			runtime_types::{
-				bounded_collections::bounded_vec::BoundedVec, staging_xcm::v4::junction::NetworkId,
-				xcm::VersionedLocation,
-			},
+			runtime_types::{bounded_collections::bounded_vec::BoundedVec, xcm::VersionedLocation},
 		},
 	},
 };
@@ -20,10 +17,9 @@ async fn register_polkadot_token() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 
 	type Junctions = runtime_types::staging_xcm::v4::junctions::Junctions;
-	type Junction = runtime_types::staging_xcm::v4::junction::Junction;
 	let asset = VersionedLocation::V4(runtime_types::staging_xcm::v4::location::Location {
 		parents: 1,
-		interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Westend)]),
+		interior: Junctions::Here,
 	});
 	let metadata = runtime_types::snowbridge_core::AssetMetadata {
 		name: BoundedVec(

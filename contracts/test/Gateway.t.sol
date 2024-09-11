@@ -919,7 +919,7 @@ contract GatewayTest is Test {
         MockGateway(address(gateway)).mintForeignTokenPublic(abi.encode(params));
     }
 
-    function testSendRelayTokenToAssetHub() public {
+    function testSendRelayTokenToAssetHubWithAddress32() public {
         // Register and then mint some DOT to account1
         testMintForeignToken();
 
@@ -937,6 +937,48 @@ contract GatewayTest is Test {
         emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
         IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(dotToken), destPara, recipientAddress32, 1, 1);
+    }
+
+    function testSendRelayTokenToAssetHubWithAddress20() public {
+        // Register and then mint some DOT to account1
+        testMintForeignToken();
+
+        address dotToken = MockGateway(address(gateway)).tokenAddressOf(dotTokenID);
+
+        ParaID destPara = assetHubParaID;
+
+        vm.prank(account1);
+
+        vm.expectRevert(Assets.Unsupported.selector);
+        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(dotToken), destPara, recipientAddress20, 1, 1);
+    }
+
+    function testSendRelayTokenToDestinationChainWithAddress32() public {
+        // Register and then mint some DOT to account1
+        testMintForeignToken();
+
+        address dotToken = MockGateway(address(gateway)).tokenAddressOf(dotTokenID);
+
+        ParaID destPara = ParaID.wrap(2043);
+
+        vm.prank(account1);
+
+        vm.expectRevert(Assets.Unsupported.selector);
+        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(dotToken), destPara, recipientAddress32, 1, 1);
+    }
+
+    function testSendRelayTokenToDestinationChainWithAddress20() public {
+        // Register and then mint some DOT to account1
+        testMintForeignToken();
+
+        address dotToken = MockGateway(address(gateway)).tokenAddressOf(dotTokenID);
+
+        ParaID destPara = ParaID.wrap(2043);
+
+        vm.prank(account1);
+
+        vm.expectRevert(Assets.Unsupported.selector);
+        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(dotToken), destPara, recipientAddress20, 1, 1);
     }
 
     function testSendNotRegisteredTokenWillFail() public {

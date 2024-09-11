@@ -243,44 +243,14 @@ library Assets {
         ticket.costs = _sendForeignTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
 
         // Construct a message payload
-        if (destinationChain == $.assetHubParaID) {
+        if (destinationChain == $.assetHubParaID && destinationAddress.isAddress32()) {
             // The funds will be minted into the receiver's account on AssetHub
-            if (destinationAddress.isAddress32()) {
-                // The receiver has a 32-byte account ID
-                ticket.payload = SubstrateTypes.SendForeignTokenToAssetHubAddress32(
-                    foreignID, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
-                );
-            } else {
-                // AssetHub does not support 20-byte account IDs
-                revert Unsupported();
-            }
+            // The receiver has a 32-byte account ID
+            ticket.payload = SubstrateTypes.SendForeignTokenToAssetHubAddress32(
+                foreignID, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
+            );
         } else {
-            if (destinationChainFee == 0) {
-                revert InvalidDestinationFee();
-            }
-            if (destinationAddress.isAddress32()) {
-                // The receiver has a 32-byte account ID
-                ticket.payload = SubstrateTypes.SendForeignTokenToAddress32(
-                    foreignID,
-                    destinationChain,
-                    destinationAddress.asAddress32(),
-                    $.assetHubReserveTransferFee,
-                    destinationChainFee,
-                    amount
-                );
-            } else if (destinationAddress.isAddress20()) {
-                // The receiver has a 20-byte account ID
-                ticket.payload = SubstrateTypes.SendForeignTokenToAddress20(
-                    foreignID,
-                    destinationChain,
-                    destinationAddress.asAddress20(),
-                    $.assetHubReserveTransferFee,
-                    destinationChainFee,
-                    amount
-                );
-            } else {
-                revert Unsupported();
-            }
+            revert Unsupported();
         }
 
         emit IGateway.TokenSent(token, sender, destinationChain, destinationAddress, amount);
