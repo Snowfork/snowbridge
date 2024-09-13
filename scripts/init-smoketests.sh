@@ -2,17 +2,6 @@
 
 set -eux
 
-echo "Checkout polkadot-sdk"
-pushd ..
-  if [ ! -d "polkadot-sdk" ]; then
-    git clone https://github.com/parity-tech/polkadot-sdk.git
-    cd snowbridge && ln -sf ../polkadot-sdk polkadot-sdk
-  fi
-  pushd  polkadot-sdk
-    git fetch && git checkout snowbridge
-  popd
-popd
-
 echo "Checkout lodestar"
 pushd ..
   if [ ! -d "lodestar" ]; then
