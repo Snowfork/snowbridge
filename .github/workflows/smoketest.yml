@@ -30,7 +30,6 @@ jobs:
         with:
           repository: snowfork/snowbridge
           ref: smoketests-on-snowbridge
-          path: snowbridge
       - uses: actions/checkout@v2
         with:
           repository: paritytech/polkadot-sdk
