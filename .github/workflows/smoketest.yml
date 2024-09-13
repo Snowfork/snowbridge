@@ -34,7 +34,6 @@ jobs:
         with:
           repository: paritytech/polkadot-sdk
           ref: release-crates-io-v1.7.0
-          path: snowbridge/polkadot-sdk
       - run: pwd
       - run: ls
       - run: cd snowbridge && pwd && ls && cd -
