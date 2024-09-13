@@ -32,6 +32,7 @@ jobs:
           ref: smoketests-on-snowbridge
       - run: pwd
       - run: ls
+      - run: mkdir -p polkadot-sdk
       - uses: actions/checkout@v2
         with:
           repository: paritytech/polkadot-sdk
