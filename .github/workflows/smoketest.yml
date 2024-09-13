@@ -37,7 +37,7 @@ jobs:
           path: snowbridge/polkadot-sdk
       - run: pwd
       - run: ls
-      - run: ls && cd snowbridge && ls && cd -
+      - run: cd snowbridge && pwd && ls && cd -
       - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
