@@ -35,6 +35,8 @@ jobs:
           repository: paritytech/polkadot-sdk
           ref: release-crates-io-v1.7.0
           path: snowbridge/polkadot-sdk
+      - run: pwd
+      - run: ls && cd snowbridge && ls && cd -
       - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
