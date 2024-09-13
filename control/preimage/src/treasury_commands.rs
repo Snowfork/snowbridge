@@ -1,7 +1,7 @@
 use crate::{constants::*, TreasuryProposal2024Args};
 
 use crate::helpers::utility_force_batch;
-use crate::relay_runtime::api::runtime_types::{
+use crate::relay_runtime::runtime_types::{
     pallet_treasury,
     polkadot_runtime_common::impls::VersionedLocatableAsset,
     staging_xcm::v4::{

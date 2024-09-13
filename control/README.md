@@ -5,9 +5,7 @@ Tools for generating governance proposals
 ## Example: Generate bridge activation preimage
 
 ```shell
-cargo run --bin snowbridge-preimage -- \
-  --bridge-hub-api ws://localhost:8001 \
-  --asset-hub-api ws://localhost:8000 \
+cargo run --features polkadot --bin snowbridge-preimage -- \
   initialize \
   --exchange-rate-numerator 1 \
   --exchange-rate-denominator 400 \
@@ -16,8 +14,23 @@ cargo run --bin snowbridge-preimage -- \
   --fee-per-gas 80 \
   --local-reward 0.01 \
   --remote-reward 0.0001 \
-  --checkpoint initial-checkpoint.json \
+  --checkpoint initial-checkpoint-mainnet.json \
   --gateway-address 0x1F98431c8aD98523631AE4a59f267346ea31F984 \
+  --gateway-operating-mode normal
+```
+
+```shell
+cargo run --features westend --bin snowbridge-preimage -- \
+  initialize \
+  --exchange-rate-numerator 1 \
+  --exchange-rate-denominator 400 \
+  --multiplier-numerator 4 \
+  --multiplier-denominator 3 \
+  --fee-per-gas 80 \
+  --local-reward 0.01 \
+  --remote-reward 0.0001 \
+  --checkpoint initial-checkpoint-sepolia.json \
+  --gateway-address 0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9 \
   --gateway-operating-mode normal
 ```
 
