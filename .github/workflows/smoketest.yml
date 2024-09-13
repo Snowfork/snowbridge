@@ -31,14 +31,11 @@ jobs:
           repository: snowfork/snowbridge
           ref: smoketests-on-snowbridge
       - run: rm -rf polkadot-sdk
-      - run: ls
       - uses: actions/checkout@v2
         with:
           repository: paritytech/polkadot-sdk
           ref: release-crates-io-v1.7.0
           path: ./polkadot-sdk
-      - run: pwd
-      - run: ls
       - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -56,7 +53,6 @@ jobs:
       - name: run E2E stack
         id: run_e2e_stack
         run: |
-          cd snowbridge
           nix develop -c sh -c '
           ./scripts/init-smoketests.sh &&
           cd web/packages/test &&
