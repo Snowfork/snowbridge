@@ -30,7 +30,7 @@ jobs:
         with:
           repository: snowfork/snowbridge
           ref: smoketests-on-snowbridge
-      - run: pwd
+      - run: rm -rf polkadot-sdk
       - run: ls
       - uses: actions/checkout@v2
         with:
