@@ -265,7 +265,8 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, h
 	// https://github.com/paritytech/polkadot-sdk/blob/d66dee3c3da836bcf41a12ca4e1191faee0b6a5b/polkadot/runtime/westend/src/lib.rs#L453-L460
 	// Truncate the ParaHeads to the 1024
 	// https://github.com/paritytech/polkadot-sdk/blob/d66dee3c3da836bcf41a12ca4e1191faee0b6a5b/polkadot/runtime/parachains/src/paras/mod.rs#L1305-L1311
-	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads[:MaxParaHeads], input.ParaID)
+	numParas := min(MaxParaHeads, len(input.ParaHeads))
+	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads[:numParas], input.ParaID)
 	if err != nil {
 		return nil, fmt.Errorf("create parachain header proof: %w", err)
 	}
