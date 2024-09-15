@@ -5,11 +5,11 @@ set -eux
 echo "Checkout polkadot-sdk Snowfork fork"
 pushd ..
   if [ ! -d "polkadot-sdk" ]; then
-    git clone https://github.com/Snowfork/polkadot-sdk.git
-    cd snowbridge && ln -sf ../polkadot-sdk polkadot-sdk
+    git clone https://github.com/paritytech/polkadot-sdk.git
+    cd snowbridge && ln -sf ../polkadot-sdk polkadot-sdk && cp rust-toolchain.toml polkadot-sdk
   fi
   pushd  polkadot-sdk
-    git fetch && git checkout snowbridge
+    git pull origin master
   popd
 popd
 
