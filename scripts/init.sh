@@ -15,9 +15,6 @@ pushd ..
 
     cd snowbridge && ln -sf ../polkadot-sdk polkadot-sdk
   fi
-  pushd  polkadot-sdk
-    git fetch && git checkout snowbridge
-  popd
 popd
 
 echo "Checkout lodestar Snowfork fork"
