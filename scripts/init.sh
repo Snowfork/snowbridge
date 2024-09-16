@@ -7,12 +7,6 @@ pushd ..
   if [ ! -d "polkadot-sdk" ]; then
     gitUserName=$(git config user.name)
     git clone "https://github.com/$gitUserName/polkadot-sdk.git"
-
-    if [ $? -ne 0 ]; then
-        echo "Error: The repository 'polkadot-sdk' does not exist for user '$gitUserName'. Please fork the 'polkadot-sdk' repository first before cloning."
-        exit 1
-    fi
-
     cd snowbridge && ln -sf ../polkadot-sdk polkadot-sdk
   fi
 popd
