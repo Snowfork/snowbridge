@@ -5,7 +5,14 @@ set -eux
 echo "Checkout polkadot-sdk Snowfork fork"
 pushd ..
   if [ ! -d "polkadot-sdk" ]; then
-    git clone https://github.com/Snowfork/polkadot-sdk.git
+    gitUserName=$(git config user.name)
+    git clone "https://github.com/$gitUserName/polkadot-sdk.git"
+
+    if [ $? -ne 0 ]; then
+        echo "Error: The repository 'polkadot-sdk' does not exist for user '$gitUserName'. Please fork the 'polkadot-sdk' repository first before cloning."
+        exit 1
+    fi
+
     cd snowbridge && ln -sf ../polkadot-sdk polkadot-sdk
   fi
   pushd  polkadot-sdk
