@@ -3,6 +3,7 @@ use crate::{
 	contracts::i_gateway,
 	parachains::{
 		bridgehub::{self, api::runtime_types::snowbridge_core::outbound::v1::OperatingMode},
+		penpal::{self, api::runtime_types as penpalTypes},
 		relaychain,
 		relaychain::api::runtime_types::{
 			pallet_xcm::pallet::Call as RelaychainPalletXcmCall,
@@ -32,6 +33,14 @@ use ethers::{
 	types::Log,
 };
 use futures::StreamExt;
+use penpalTypes::{
+	penpal_runtime::RuntimeCall as PenpalRuntimeCall,
+	staging_xcm::v4::{
+		junction::Junction as PenpalJunction, junctions::Junctions as PenpalJunctions,
+		location::Location as PenpalLocation,
+	},
+	xcm::{VersionedLocation as PenpalVersionedLocation, VersionedXcm as PenpalVersionedXcm},
+};
 use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
 	config::DefaultExtrinsicParams,
@@ -80,13 +89,13 @@ pub struct TestClients {
 }
 
 pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>> {
-	let bridge_hub_client: OnlineClient<PolkadotConfig> = OnlineClient::from_url((*BRIDGE_HUB_WS_URL).to_string())
+	let bridge_hub_client: OnlineClient<PolkadotConfig> = OnlineClient::from_url(BRIDGE_HUB_WS_URL.clone())
 		.await
 		.expect("can not connect to bridgehub");
 
 	let asset_hub_client: OnlineClient<AssetHubConfig> = OnlineClient::from_url(ASSET_HUB_WS_URL)
 		.await
-		.expect("can not connect to assethub");
+		.expect("can not connect to bridgehub");
 
 	let penpal_client: OnlineClient<PenpalConfig> = OnlineClient::from_url(PENPAL_WS_URL)
 		.await
@@ -170,6 +179,48 @@ pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Pro
 pub struct SudoResult {
 	pub block_hash: H256,
 	pub extrinsic_hash: H256,
+}
+
+pub async fn send_sudo_xcm_transact(
+	penpal_client: &Box<OnlineClient<PenpalConfig>>,
+	message: Box<PenpalVersionedXcm>,
+) -> Result<SudoResult, Box<dyn std::error::Error>> {
+	let dest = Box::new(PenpalVersionedLocation::V4(PenpalLocation {
+		parents: 1,
+		interior: PenpalJunctions::X1([PenpalJunction::Parachain(BRIDGE_HUB_PARA_ID)]),
+	}));
+
+	let sudo_call = penpal::api::sudo::calls::TransactionApi::sudo(
+		&penpal::api::sudo::calls::TransactionApi,
+		PenpalRuntimeCall::PolkadotXcm(penpalTypes::pallet_xcm::pallet::Call::send {
+			dest,
+			message,
+		}),
+	);
+
+	let owner = Pair::from_string("//Alice", None).expect("cannot create keypair");
+
+	let signer: PairSigner<PenpalConfig, _> = PairSigner::new(owner);
+
+	let result = penpal_client
+		.tx()
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.await
+		.expect("send through xcm call.")
+		.wait_for_finalized()
+		.await
+		.expect("xcm call failed");
+
+	let block_hash = result.block_hash();
+	let extrinsic_hash = result.extrinsic_hash();
+
+	let sudo_result = SudoResult { block_hash, extrinsic_hash };
+
+	if let Err(err) = result.wait_for_success().await {
+		Err(Box::new(err))
+	} else {
+		Ok(sudo_result)
+	}
 }
 
 pub async fn initialize_wallet(

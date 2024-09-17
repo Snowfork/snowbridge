@@ -12,7 +12,6 @@ pub const ETHEREUM_API: &str = "ws://localhost:8546";
 pub const ETHEREUM_HTTP_API: &str = "http://localhost:8545";
 
 pub const ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:12144";
-pub const BRIDGE_HUB_WS_URL: &str = "ws://127.0.0.1:11144";
 pub const PENPAL_WS_URL: &str = "ws://127.0.0.1:13144";
 pub const RELAY_CHAIN_WS_URL: &str = "ws://127.0.0.1:9944";
 pub const TEMPLATE_NODE_WS_URL: &str = "ws://127.0.0.1:13144";
@@ -47,6 +46,8 @@ pub const SNOWBRIDGE_SOVEREIGN: [u8; 32] =
 	hex!("ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d");
 pub const PENPAL_SOVEREIGN: [u8; 32] =
 	hex!("7369626cd0070000000000000000000000000000000000000000000000000000");
+
+pub const DEFAULT_BRIDGE_HUB_WS_URL: &str = "ws://127.0.0.1:11144";
 
 lazy_static! {
 	// SS58: 5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL
@@ -86,4 +87,12 @@ lazy_static! {
 		.unwrap_or("1000000000000000".to_string())
 		.parse()
 		.unwrap();
+	pub static ref BRIDGE_HUB_WS_URL: String = {
+		if let Ok(val) = env::var("BRIDGE_HUB_WS_URL") {
+				val
+		}
+		else {
+			DEFAULT_BRIDGE_HUB_WS_URL.to_string()
+		}
+	};
 }
