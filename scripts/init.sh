@@ -2,13 +2,17 @@
 
 set -eux
 
-echo "Checkout polkadot-sdk Snowfork fork"
+echo "Checkout polkadot-sdk"
 pushd ..
   if [ ! -d "polkadot-sdk" ]; then
-    gitUserName=$(git config user.name)
-    git clone "https://github.com/$gitUserName/polkadot-sdk.git"
+    repoURL="${POLKADOT_SDK_REPO:-https://github.com/paritytech/polkadot-sdk.git}"
+
+    git clone "$repoURL" polkadot-sdk
     cd snowbridge && ln -sf ../polkadot-sdk polkadot-sdk
   fi
+  pushd polkadot-sdk
+    git pull origin master
+  popd
 popd
 
 echo "Checkout lodestar Snowfork fork"
