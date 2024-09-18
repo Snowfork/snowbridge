@@ -4,15 +4,18 @@ set -eux
 
 echo "Checkout polkadot-sdk"
 pushd ..
-  if [ ! -d "polkadot-sdk" ]; then
+  if [[ -d ../polkadot-sdk ]] && (cd ../polkadot-sdk && git rev-parse --is-inside-work-tree) 2>&1 >/dev/nu
+  ls; then
+     echo "polkadot-sdk already exists"
+  else
     repoURL="${POLKADOT_SDK_REPO:-https://github.com/paritytech/polkadot-sdk.git}"
 
     git clone "$repoURL" polkadot-sdk
-    cd snowbridge && ln -sf ../polkadot-sdk polkadot-sdk
+
+    pushd polkadot-sdk
+      git pull origin master
+    popd
   fi
-  pushd polkadot-sdk
-    git pull origin master
-  popd
 popd
 
 echo "Checkout lodestar Snowfork fork"
