@@ -29,10 +29,10 @@ async fn send_token() {
 	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
 	let assethub = *(test_clients.asset_hub_client.clone());
 
-	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
 
-	let weth_addr: Address = WETH_CONTRACT.into();
+	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
 	// Mint WETH tokens
@@ -101,7 +101,7 @@ async fn send_token() {
 		parents: 2,
 		interior: X2(
 			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
-			AccountKey20 { network: None, key: WETH_CONTRACT.into() },
+			AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
 		),
 	};
 	let expected_owner: AccountId32 = (*BOB_PUBLIC).into();

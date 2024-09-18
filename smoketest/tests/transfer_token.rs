@@ -36,22 +36,24 @@ const DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333
 
 #[tokio::test]
 async fn transfer_token() {
-	let ethereum_provider = Provider::<Ws>::connect(ETHEREUM_API)
+	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
 		.await
 		.unwrap()
 		.interval(Duration::from_millis(10u64));
 
 	let ethereum_client = Arc::new(ethereum_provider);
 
-	let weth_addr: Address = WETH_CONTRACT.into();
+	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = WETH9::new(weth_addr, ethereum_client.clone());
 
-	let gateway = IGateway::new(GATEWAY_PROXY_CONTRACT, ethereum_client.clone());
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
+	let gateway = IGateway::new(gateway_addr, ethereum_client.clone());
+
 	let agent_src =
 		gateway.agent_of(ASSET_HUB_AGENT_ID).await.expect("could not get agent address");
 
 	let assethub: OnlineClient<AssetHubConfig> =
-		OnlineClient::from_url(ASSET_HUB_WS_URL).await.unwrap();
+		OnlineClient::from_url((*ASSET_HUB_WS_URL).to_string()).await.unwrap();
 
 	let amount: u128 = 1_000_000_000;
 	let assets = VersionedAssets::V3(MultiAssets(vec![MultiAsset {
@@ -59,7 +61,7 @@ async fn transfer_token() {
 			parents: 2,
 			interior: Junctions::X2(
 				Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
-				Junction::AccountKey20 { network: None, key: WETH_CONTRACT.into() },
+				Junction::AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
 			),
 		}),
 		fun: Fungibility::Fungible(amount),
