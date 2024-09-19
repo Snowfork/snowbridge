@@ -4,8 +4,7 @@ set -eux
 
 echo "Checkout polkadot-sdk"
 pushd ..
-  if [[ -d ../polkadot-sdk ]] && (cd ../polkadot-sdk && git rev-parse --is-inside-work-tree) 2>&1 >/dev/nu
-  ls; then
+  if [[ -d polkadot-sdk ]] && (cd polkadot-sdk && git rev-parse --is-inside-work-tree > /dev/null 2>&1); then
      echo "polkadot-sdk already exists"
   else
     repoURL="${POLKADOT_SDK_REPO:-https://github.com/paritytech/polkadot-sdk.git}"
