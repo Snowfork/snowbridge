@@ -44,7 +44,7 @@
 
                     # ethereum
                     foundry-bin
-                    go-ethereum
+                    #go-ethereum Geth 1.14.9 is not in nix flakes yet
                     # gnupg for forge install
                     gnupg
 
