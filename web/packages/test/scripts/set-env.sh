@@ -10,6 +10,7 @@ export output_bin_dir="$output_dir/bin"
 ethereum_data_dir="$output_dir/ethereum"
 zombienet_data_dir="$output_dir/zombienet"
 export PATH="$output_bin_dir:$PATH"
+export polkadot_sdk_dir="${POLKADOT_SDK_DIR:-../polkadot-sdk}"
 
 eth_network="${ETH_NETWORK:-localhost}"
 eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"

@@ -6,24 +6,19 @@ use snowbridge_smoketest::{
 		bridgehub::api::{
 			ethereum_system::events::RegisterToken,
 			runtime_types,
-			runtime_types::{
-				bounded_collections::bounded_vec::BoundedVec, staging_xcm::v4::junction::NetworkId,
-				xcm::VersionedLocation,
-			},
+			runtime_types::{bounded_collections::bounded_vec::BoundedVec, xcm::VersionedLocation},
 		},
 	},
 };
-use subxt_signer::sr25519::dev;
+use subxt::tx::Payload;
 
 #[tokio::test]
 async fn register_polkadot_token() {
 	let test_clients = initial_clients().await.expect("initialize clients");
-
 	type Junctions = runtime_types::staging_xcm::v4::junctions::Junctions;
-	type Junction = runtime_types::staging_xcm::v4::junction::Junction;
 	let asset = VersionedLocation::V4(runtime_types::staging_xcm::v4::location::Location {
 		parents: 1,
-		interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Westend)]),
+		interior: Junctions::Here,
 	});
 	let metadata = runtime_types::snowbridge_core::AssetMetadata {
 		name: BoundedVec(
@@ -46,20 +41,18 @@ async fn register_polkadot_token() {
 		),
 		decimals: 12,
 	};
-	let call =
-		bridgehub::api::ethereum_system::calls::TransactionApi.register_token(asset, metadata);
 
-	let result = test_clients
-		.bridge_hub_client
-		.tx()
-		.sign_and_submit_then_watch_default(&call, &dev::bob())
-		.await
-		.expect("send register call.")
-		.wait_for_finalized_success()
-		.await
-		.expect("call success");
+	let ethereum_system_api = bridgehub::api::ethereum_system::calls::TransactionApi;
 
-	println!("call issued at bridgehub block hash {:?}", result.extrinsic_hash());
+	let mut encoded = Vec::new();
+	ethereum_system_api
+		.register_token(asset, metadata)
+		.encode_call_data_to(&test_clients.bridge_hub_client.metadata(), &mut encoded)
+		.expect("encoded call");
+
+	governance_bridgehub_call_from_relay_chain(encoded)
+		.await
+		.expect("set token fees");
 
 	wait_for_bridgehub_event::<RegisterToken>(&test_clients.bridge_hub_client).await;
 

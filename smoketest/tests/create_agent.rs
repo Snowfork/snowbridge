@@ -20,8 +20,7 @@ async fn create_agent() {
 
 	println!(
 		"xcm call issued at block hash {:?}, transaction hash {:?}",
-		result.block_hash,
-		result.extrinsic_hash
+		result.block_hash, result.extrinsic_hash
 	);
 
 	wait_for_bridgehub_event::<CreateAgent>(&test_clients.bridge_hub_client).await;
