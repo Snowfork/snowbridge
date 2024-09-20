@@ -103,7 +103,10 @@ func (s *SyncAggregate) ToJSON() json.SyncAggregate {
 }
 
 func (v *VersionedExecutionPayloadHeader) ToJSON() json.VersionedExecutionPayloadHeader {
-	if v.Deneb != nil {
+	if v.Electra != nil {
+		data := v.Electra.ToJSON()
+		return json.VersionedExecutionPayloadHeader{Electra: &data}
+	} else if v.Deneb != nil {
 		data := v.Deneb.ToJSON()
 		return json.VersionedExecutionPayloadHeader{Deneb: &data}
 	} else {

@@ -42,10 +42,6 @@ func (p *Protocol) CalculateNextCheckpointSlot(slot uint64) uint64 {
 	return (syncPeriod + 1) * p.Settings.SlotsInEpoch * p.Settings.EpochsPerSyncCommitteePeriod
 }
 
-func (p *Protocol) DenebForked(slot uint64) bool {
-	return p.ComputeEpochAtSlot(slot) >= p.Settings.DenebForkEpoch
-}
-
 func (p *Protocol) SyncPeriodLength() uint64 {
 	return p.Settings.SlotsInEpoch * p.Settings.EpochsPerSyncCommitteePeriod
 }
@@ -73,4 +69,24 @@ func (p *Protocol) SyncCommitteeSuperMajority(syncCommitteeHex string) (bool, er
 		return false, nil
 	}
 	return true, nil
+}
+
+// ForkVersion is a custom type for Ethereum fork versions.
+type ForkVersion string
+
+const (
+	Deneb   ForkVersion = "Deneb"
+	Capella ForkVersion = "Capella"
+	Electra ForkVersion = "Electra"
+)
+
+func (p *Protocol) ForkVersion(slot uint64) ForkVersion {
+	epoch := p.ComputeEpochAtSlot(slot)
+	if epoch >= p.Settings.ForkVersions.Electra {
+		return Electra
+	}
+	if epoch >= p.Settings.ForkVersions.Deneb {
+		return Deneb
+	}
+	return Capella
 }
