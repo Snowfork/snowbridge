@@ -1,37 +1,55 @@
 #!/usr/bin/env bash
-set -eu
+set -eux
 
 source scripts/set-env.sh
+HOST=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1')
 
 start_geth() {
+    mkdir -p snowbridge
+    mkdir -p snowbridge/ethereum
+    cp config/genesis.json snowbridge
+    cp config/jwtsecret snowbridge
+
     if [ "$eth_network" == "localhost" ]; then
         echo "Starting geth local node"
-        local timestamp="0" #start Cancun from genesis
-        jq \
-            --argjson timestamp "$timestamp" \
-            '
-            .config.CancunTime = $timestamp
-            ' \
-            config/genesis.json >$output_dir/genesis.json
-        geth init --datadir "$ethereum_data_dir" --state.scheme=hash "$output_dir/genesis.json"
-        geth --vmdebug --datadir "$ethereum_data_dir" --networkid 11155111 \
-            --http --http.api debug,personal,eth,net,web3,txpool,engine,miner --ws --ws.api debug,eth,net,web3 \
-            --rpc.allow-unprotected-txs --mine \
-            --miner.etherbase=0xBe68fC2d8249eb60bfCf0e71D5A0d2F2e292c4eD \
-            --authrpc.addr="127.0.0.1" \
-            --http.addr="0.0.0.0" \
-            --ws.addr="0.0.0.0" \
+       docker run -it --rm \
+               -v "$(pwd)/snowbridge:/mnt" \
+               docker.io/ethpandaops/geth:prague-devnet-3-effcd38 \
+               init --datadir /mnt/ethereum --state.scheme=hash /mnt/genesis.json
+        docker run --rm -m=12g --memory-reservation=8g --cpus 2 \
+            -v snowbridge:/mnt \
+            -p 8551:8551 \
+            -p 8545:8545 \
+            -p 8546:8546 \
+            --env 'NODE_OPTIONS=--max-old-space-size=8192' \
+            docker.io/ethpandaops/geth:prague-devnet-3-effcd38 \
+            --vmdebug \
+            --datadir /mnt/ethereum \
+            --networkid 11155111 \
+            --http \
+            --http.api debug,personal,eth,net,web3,txpool,engine \
+            --ws --ws.api debug,eth,net,web3 \
+            --rpc.allow-unprotected-txs \
+            --authrpc.addr 0.0.0.0 \
+            --authrpc.vhosts "*" \
+            --http \
+            --http.api "debug,personal,eth,net,web3,txpool,engine,miner" \
+            --http.addr 0.0.0.0 \
+            --http.vhosts "*" \
             --http.corsdomain '*' \
+            --ws \
+            --ws.api "debug,eth,net,web3" \
+            --ws.addr 0.0.0.0 \
+            --ws.origins "*" \
             --allow-insecure-unlock \
-            --authrpc.jwtsecret config/jwtsecret \
+            --authrpc.jwtsecret mnt/jwtsecret \
             --password /dev/null \
             --rpc.gascap 0 \
             --ws.origins "*" \
-            --trace "$ethereum_data_dir/trace" \
             --gcmode archive \
             --syncmode=full \
             --state.scheme=hash \
-            >"$output_dir/geth.log" 2>&1 &
+            > ./snowbridge/geth.log 2>&1 &
     fi
 }
 
@@ -53,16 +71,20 @@ start_lodestar() {
 
         export LODESTAR_PRESET="mainnet"
 
-        pushd $root_dir/lodestar
-        ./lodestar dev \
+        #pushd $root_dir/lodestar
+        docker run --rm -m=12g --memory-reservation=8g --cpus 2 \
+            -v snowbridge:/mnt \
+            -p 9596:9596 \
+            --env 'NODE_OPTIONS=--max-old-space-size=8192' \
+            docker.io/ethpandaops/lodestar:unstable-295690b \
+            dev \
             --genesisValidators 8 \
             --genesisTime $timestamp \
             --startValidators "0..7" \
             --enr.ip6 "127.0.0.1" \
-            --rest.address "0.0.0.0" \
-            --eth1.providerUrls "http://127.0.0.1:8545" \
-            --execution.urls "http://127.0.0.1:8551" \
-            --dataDir "$ethereum_data_dir" \
+            --eth1.providerUrls "http://$HOST:8545" \
+            --execution.urls "http://$HOST:8551" \
+            --dataDir "/mnt/lodestar" \
             --reset \
             --terminal-total-difficulty-override 0 \
             --genesisEth1Hash $genesisHash \
@@ -73,10 +95,10 @@ start_lodestar() {
             --params.ELECTRA_FORK_EPOCH 0 \
             --eth1=true \
             --rest.namespace="*" \
-            --jwt-secret $config_dir/jwtsecret \
+            --jwt-secret /mnt/jwtsecret \
             --chain.archiveStateEpochFrequency 1 \
-            >"$output_dir/lodestar.log" 2>&1 &
-        popd
+             > ./snowbridge/lodestar.log 2>&1 &
+       # popd
     fi
 }
 
@@ -86,7 +108,7 @@ deploy_local() {
     start_geth
 
     echo "Waiting for geth API to be ready"
-    sleep 3
+    sleep 10
 
     # 2. deploy consensus client
     echo "Starting beacon node"
