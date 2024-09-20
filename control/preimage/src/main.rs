@@ -265,7 +265,7 @@ pub enum Format {
 struct Context {
     bridge_hub_api: Box<OnlineClient<PolkadotConfig>>,
     asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
-    relay_api: Box<OnlineClient<PolkadotConfig>>,
+    _relay_api: Box<OnlineClient<PolkadotConfig>>,
 }
 
 #[tokio::main]
@@ -298,7 +298,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let context = Context {
         bridge_hub_api: Box::new(bridge_hub_api),
         asset_hub_api: Box::new(asset_hub_api),
-        relay_api: Box::new(relay_api),
+        _relay_api: Box::new(relay_api),
     };
 
     let call = match &cli.command {
