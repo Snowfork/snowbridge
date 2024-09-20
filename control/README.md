@@ -14,7 +14,7 @@ cargo run --features polkadot --bin snowbridge-preimage -- \
   --fee-per-gas 80 \
   --local-reward 0.01 \
   --remote-reward 0.0001 \
-  --checkpoint initial-checkpoint-mainnet.json \
+  --checkpoint data/mainnet/initial-checkpoint.json \
   --gateway-address 0x1F98431c8aD98523631AE4a59f267346ea31F984 \
   --gateway-operating-mode normal
 ```
@@ -29,7 +29,7 @@ cargo run --features westend --bin snowbridge-preimage -- \
   --fee-per-gas 80 \
   --local-reward 0.01 \
   --remote-reward 0.0001 \
-  --checkpoint initial-checkpoint-sepolia.json \
+  --checkpoint data/sepolia/initial-checkpoint.json \
   --gateway-address 0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9 \
   --gateway-operating-mode normal
 ```
