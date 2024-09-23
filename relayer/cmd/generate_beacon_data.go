@@ -516,7 +516,7 @@ func generateSpecificBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		}
 		log.Info("created sync committee update file")
 
-		secondSyncCommitteeUpdateScale, err := s.GetFinalizedUpdateAtAttestedSlot(60, 8192, true)
+		secondSyncCommitteeUpdateScale, err := s.GetFinalizedUpdateAtAttestedSlot(0, 8192, true)
 		if err != nil {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}

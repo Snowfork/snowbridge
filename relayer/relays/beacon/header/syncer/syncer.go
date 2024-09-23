@@ -616,6 +616,16 @@ func (s *Syncer) getBeaconStateAtSlot(slot uint64) (state.BeaconState, error) {
 	return s.UnmarshalBeaconState(slot, beaconData)
 }
 
+func (s *Syncer) getBeaconStateAtHead() (state.BeaconState, error) {
+	var beaconState state.BeaconState
+	beaconData, err := s.getBeaconDataHead()
+	if err != nil {
+		return beaconState, fmt.Errorf("fetch beacon state: %w", err)
+	}
+
+	return s.UnmarshalBeaconState(1, beaconData)
+}
+
 func (s *Syncer) UnmarshalBeaconState(slot uint64, data []byte) (state.BeaconState, error) {
 	var beaconState state.BeaconState
 	isDeneb := s.protocol.DenebForked(slot)
@@ -647,6 +657,7 @@ func (s *Syncer) FindValidAttestedHeader(minSlot, maxSlot uint64) (uint64, error
 	for {
 		finalizedSlot, attestedSlot, err := s.findValidUpdatePair(slot)
 		if err != nil {
+			log.WithError(err).Info("looking for slot")
 			if slot > maxSlot {
 				return 0, fmt.Errorf("unable to find valid slot")
 			}
@@ -766,8 +777,6 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 				continue
 			}
 
-			// The datastore may not have found the attested slot we wanted, but provided another valid one
-			attestedSlot = data.AttestedSlot
 			break
 		}
 	}
@@ -816,13 +825,13 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 	}
 
 	// Get the header at the slot
-	header, err := s.Client.GetHeaderBySlot(attestedSlot)
+	header, err := s.Client.GetHeaderBySlot(data.AttestedSlot)
 	if err != nil {
 		return update, fmt.Errorf("fetch header at slot: %w", err)
 	}
 
 	// Get the next block for the sync aggregate
-	nextHeader, err := s.FindBeaconHeaderWithBlockIncluded(attestedSlot + 1)
+	nextHeader, err := s.FindBeaconHeaderWithBlockIncluded(data.AttestedSlot + 1)
 	if err != nil {
 		return update, fmt.Errorf("fetch block: %w", err)
 	}
@@ -913,7 +922,7 @@ func (s *Syncer) getBeaconDataFromClient(attestedSlot uint64) (finalizedUpdateCo
 
 	response.AttestedSlot = attestedSlot
 	// Get the beacon data first since it is mostly likely to fail
-	response.AttestedState, err = s.getBeaconStateAtSlot(attestedSlot)
+	response.AttestedState, err = s.getBeaconStateAtHead()
 	if err != nil {
 		return response, fmt.Errorf("fetch attested header beacon state at slot %d: %w", attestedSlot, err)
 	}
@@ -976,6 +985,14 @@ func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {
 			log.WithFields(log.Fields{"apiError": apiErr, "storeErr": storeErr}).Warn("fetch beacon state from api and store failed")
 			return nil, ErrBeaconStateUnavailable
 		}
+	}
+	return data, nil
+}
+
+func (s *Syncer) getBeaconDataHead() ([]byte, error) {
+	data, apiErr := s.Client.GetBeaconState("head")
+	if apiErr != nil {
+		return nil, ErrBeaconStateUnavailable
 	}
 	return data, nil
 }
