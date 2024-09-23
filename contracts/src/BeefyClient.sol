@@ -292,7 +292,7 @@ contract BeefyClient {
             validatorSetLen: uint32(vset.length),
             numRequiredSignatures: uint32(
                 computeNumRequiredSignatures(vset.length, signatureUsageCount, minNumRequiredSignatures)
-                ),
+            ),
             prevRandao: 0,
             bitfieldHash: keccak256(abi.encodePacked(bitfield))
         });

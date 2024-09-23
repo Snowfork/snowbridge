@@ -19,8 +19,16 @@ contract DeployBeefyClient is Script {
         // Checkpoint generated using the script `./beefy-checkpoint.js` script in Polkadot-JS.
         config = Config({
             startBlock: 21087413,
-            current: BeefyClient.ValidatorSet({id: 644, length: 297, root: 0x3db19e57e6a7deaec1204d4fb8295cab4e24f8902f54e70d25f273abfe346ada}),
-            next: BeefyClient.ValidatorSet({id: 645, length: 297, root: 0x3db19e57e6a7deaec1204d4fb8295cab4e24f8902f54e70d25f273abfe346ada}),
+            current: BeefyClient.ValidatorSet({
+                id: 644,
+                length: 297,
+                root: 0x3db19e57e6a7deaec1204d4fb8295cab4e24f8902f54e70d25f273abfe346ada
+            }),
+            next: BeefyClient.ValidatorSet({
+                id: 645,
+                length: 297,
+                root: 0x3db19e57e6a7deaec1204d4fb8295cab4e24f8902f54e70d25f273abfe346ada
+            }),
             randaoCommitDelay: 128,
             randaoCommitExpiration: 24,
             minimumSignatures: 17

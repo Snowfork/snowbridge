@@ -3,3 +3,5 @@ if ! has nix_direnv_version || ! nix_direnv_version 2.2.1; then
 fi
 
 use flake
+
+export POLKADOT_SDK_REPO=https://github.com/paritytech/polkadot-sdk.git

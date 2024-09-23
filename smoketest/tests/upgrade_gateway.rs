@@ -119,10 +119,7 @@ async fn upgrade_gateway() {
 
 	println!("Sudo call issued at relaychain block hash {:?}", result.block_hash());
 
-	result
-		.wait_for_success()
-		.await
-		.expect("sudo call success");
+	result.wait_for_success().await.expect("sudo call success");
 
 	let wait_for_blocks = 5;
 	let mut blocks = bridgehub
