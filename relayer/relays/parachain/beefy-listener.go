@@ -217,6 +217,10 @@ func (li *BeefyListener) fetchLatestBeefyBlock(ctx context.Context) (uint64, typ
 	return number, hash, nil
 }
 
+// The maximum paras that will be included in the proof.
+// https://github.com/paritytech/polkadot-sdk/blob/d66dee3c3da836bcf41a12ca4e1191faee0b6a5b/polkadot/runtime/parachains/src/paras/mod.rs#L1225-L1232
+const MaxParaHeads = 1024
+
 // Generates a proof for an MMR leaf, and then generates a merkle proof for our parachain header, which should be verifiable against the
 // parachains root in the mmr leaf.
 func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, header *types.Header) (*ProofOutput, error) {
@@ -258,8 +262,11 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, h
 	// Generate a merkle proof for the parachain head with input ParaId
 	// and verify with merkle root hash of all parachain heads
 	// Polkadot uses the following code to generate merkle root from parachain headers:
-	// https://github.com/paritytech/polkadot/blob/2eb7672905d99971fc11ad7ff4d57e68967401d2/runtime/rococo/src/lib.rs#L706-L709
-	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads, input.ParaID)
+	// https://github.com/paritytech/polkadot-sdk/blob/d66dee3c3da836bcf41a12ca4e1191faee0b6a5b/polkadot/runtime/westend/src/lib.rs#L453-L460
+	// Truncate the ParaHeads to the 1024
+	// https://github.com/paritytech/polkadot-sdk/blob/d66dee3c3da836bcf41a12ca4e1191faee0b6a5b/polkadot/runtime/parachains/src/paras/mod.rs#L1305-L1311
+	numParas := min(MaxParaHeads, len(input.ParaHeads))
+	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads[:numParas], input.ParaID)
 	if err != nil {
 		return nil, fmt.Errorf("create parachain header proof: %w", err)
 	}
