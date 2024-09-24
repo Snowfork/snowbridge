@@ -36,7 +36,7 @@ async fn send_token() {
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
 	// Mint WETH tokens
-	let value = parse_units("1", "ether").unwrap();
+	let value = parse_units("0.01", "ether").unwrap();
 	let receipt = weth.deposit().value(value).send().await.unwrap().await.unwrap().unwrap();
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
@@ -63,7 +63,7 @@ async fn send_token() {
 		.send_token(
 			weth.address(),
 			ASSET_HUB_PARA_ID,
-			i_gateway::MultiAddress { kind: 1, data: (*BOB_PUBLIC).into() },
+			i_gateway::MultiAddress { kind: 1, data: (*SUBSTRATE_RECEIVER).into() },
 			destination_fee,
 			amount,
 		)
@@ -89,7 +89,7 @@ async fn send_token() {
 
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
-	let wait_for_blocks = 100;
+	let wait_for_blocks = 1000;
 	let mut blocks = assethub
 		.blocks()
 		.subscribe_finalized()
@@ -104,7 +104,7 @@ async fn send_token() {
 			AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
 		),
 	};
-	let expected_owner: AccountId32 = (*BOB_PUBLIC).into();
+	let expected_owner: AccountId32 = (*SUBSTRATE_RECEIVER).into();
 
 	let mut issued_event_found = false;
 	while let Some(Ok(block)) = blocks.next().await {

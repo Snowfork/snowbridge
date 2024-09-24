@@ -153,4 +153,30 @@ lazy_static! {
 			DEFAULT_WETH_CONTRACT
 		}
 	};
+
+	pub static ref SUBSTRATE_RECEIVER: [u8; 32] = {
+		if let Ok(val) = env::var("SUBSTRATE_RECEIVER") {
+				<[u8; 32]>::from_hex(val).unwrap()
+		}
+		else {
+			BOB_PUBLIC.clone()
+		}
+	};
+
+	pub static ref ETHEREUM_RECEIVER: [u8; 20] = {
+		if let Ok(val) = env::var("ETHEREUM_RECEIVER") {
+				<[u8; 20]>::from_hex(val).unwrap()
+		}
+		else {
+			<[u8; 20]>::from_hex("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e").unwrap()
+		}
+	};
+	pub static ref SUBSTRATE_KEY: String = {
+		if let Ok(val) = env::var("SUBSTRATE_KEY") {
+				"0x".to_owned() + &val
+		}
+		else {
+			"//Bob".to_string()
+		}
+	};
 }

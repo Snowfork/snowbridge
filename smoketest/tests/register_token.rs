@@ -59,7 +59,7 @@ async fn register_token() {
 
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
-	let wait_for_blocks = 100;
+	let wait_for_blocks = 1000;
 	let mut blocks = assethub
 		.blocks()
 		.subscribe_finalized()

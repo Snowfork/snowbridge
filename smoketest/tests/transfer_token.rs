@@ -5,7 +5,6 @@ use ethers::{
 	types::Address,
 };
 use futures::StreamExt;
-use hex_literal::hex;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{
@@ -28,11 +27,9 @@ use snowbridge_smoketest::{
 		{self},
 	},
 };
-use std::{sync::Arc, time::Duration};
+use std::{str::FromStr, sync::Arc, time::Duration};
 use subxt::OnlineClient;
-use subxt_signer::sr25519::dev;
-
-const DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
+use subxt_signer::{sr25519, SecretUri};
 
 #[tokio::test]
 async fn transfer_token() {
@@ -78,11 +75,13 @@ async fn transfer_token() {
 		parents: 0,
 		interior: Junctions::X1(Junction::AccountKey20 {
 			network: None,
-			key: DESTINATION_ADDRESS.into(),
+			key: (*ETHEREUM_RECEIVER).into(),
 		}),
 	});
 
-	let signer = dev::bob();
+	let suri = SecretUri::from_str(&SUBSTRATE_KEY).expect("Parse SURI");
+
+	let signer = sr25519::Keypair::from_uri(&suri).expect("valid keypair");
 
 	let token_transfer_call =
 		TransactionApi.reserve_transfer_assets(destination, beneficiary, assets, 0);
@@ -103,11 +102,13 @@ async fn transfer_token() {
 			weth.event::<TransferFilter>().at_block_hash(block.hash.unwrap()).query().await
 		{
 			for transfer in transfers {
-				println!("Transfer event found at ethereum block {:?}", block.number.unwrap());
-				assert_eq!(transfer.src, agent_src.into());
-				assert_eq!(transfer.dst, DESTINATION_ADDRESS.into());
-				assert_eq!(transfer.wad, amount.into());
-				transfer_event_found = true;
+				if transfer.src.eq(&agent_src) {
+					println!("Transfer event found at ethereum block {:?}", block.number.unwrap());
+					assert_eq!(transfer.src, agent_src.into());
+					assert_eq!(transfer.dst, (*ETHEREUM_RECEIVER).into());
+					assert_eq!(transfer.wad, amount.into());
+					transfer_event_found = true;
+				}
 			}
 		}
 		if transfer_event_found {
