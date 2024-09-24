@@ -16,6 +16,8 @@
     "start": "npx ts-node src/main.ts start",
     "cron": "npx ts-node src/main.ts cron",
     "server": "npx ts-node src/server.ts",
+    "smokeTest": "npx ts-node src/transfer_token.ts start",
+    "cronSmokeTest": "npx ts-node src/transfer_token.ts cron",
     "format": "prettier src --write"
   },
   "devDependencies": {

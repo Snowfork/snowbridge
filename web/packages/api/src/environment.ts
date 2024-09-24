@@ -545,7 +545,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     {
                         id: "WETH",
                         address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
-                        minimumTransferAmount: 15_000_000_000_000n,
+                        minimumTransferAmount: 1_000_000_000_000n,
                     },
                     {
                         id: "vETH",
