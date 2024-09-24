@@ -532,4 +532,138 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             GRAPHQL_API_URL: "https://data.snowbridge.network/graphql",
         },
     },
+    westend_sepolia: {
+        name: "westend_sepolia",
+        ethChainId: 11155111,
+        locations: [
+            {
+                id: "ethereum",
+                name: "Ethereum",
+                type: "ethereum",
+                destinationIds: ["assethub", "muse"],
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                        minimumTransferAmount: 15_000_000_000_000n,
+                    },
+                    {
+                        id: "vETH",
+                        address: "0xc3d088842dcf02c13699f936bb83dfbbc6f721ab",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "MUSE",
+                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
+                        minimumTransferAmount: 1n,
+                    },
+                ],
+            },
+            {
+                id: "assethub",
+                name: "Asset Hub",
+                type: "substrate",
+                destinationIds: ["ethereum"],
+                paraInfo: {
+                    paraId: 1000,
+                    destinationFeeDOT: 0n,
+                    skipExistentialDepositCheck: false,
+                    addressType: "32byte",
+                    decimals: 12,
+                    maxConsumers: 16,
+                },
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                        minimumTransferAmount: 15_000_000_000_000n,
+                    },
+                    {
+                        id: "vETH",
+                        address: "0xc3d088842dcf02c13699f936bb83dfbbc6f721ab",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "MUSE",
+                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
+                        minimumTransferAmount: 1n,
+                    },
+                ],
+            },
+            {
+                id: "muse",
+                name: "Muse",
+                type: "substrate",
+                destinationIds: [],
+                paraInfo: {
+                    paraId: 3369,
+                    destinationFeeDOT: 200_000_000_000n,
+                    skipExistentialDepositCheck: true,
+                    addressType: "20byte",
+                    decimals: 18,
+                    maxConsumers: 16,
+                },
+                erc20tokensReceivable: [
+                    {
+                        id: "MUSE",
+                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
+                        minimumTransferAmount: 10_000_000_000_000_000n,
+                    },
+                ],
+            },
+        ],
+        config: {
+            BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
+            ETHEREUM_API: (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`,
+            RELAY_CHAIN_URL: "https://westend-rpc.polkadot.io",
+            ASSET_HUB_URL: "wss://westend-asset-hub-rpc.polkadot.io",
+            BRIDGE_HUB_URL: "https://westend-bridge-hub-rpc.polkadot.io",
+            PARACHAINS: ["https://westend-muse-rpc.polkadot.io"],
+            GATEWAY_CONTRACT: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
+            BEEFY_CONTRACT: "0x6DFaD3D73A28c48E4F4c616ECda80885b415283a",
+            ASSET_HUB_PARAID: 1000,
+            BRIDGE_HUB_PARAID: 1002,
+            PRIMARY_GOVERNANCE_CHANNEL_ID:
+                "0x0000000000000000000000000000000000000000000000000000000000000001",
+            SECONDARY_GOVERNANCE_CHANNEL_ID:
+                "0x0000000000000000000000000000000000000000000000000000000000000002",
+            RELAYERS: [
+                {
+                    name: "beacon",
+                    account: "5E4Hf7LzHE4W3jabjLWSP8p8RzEa9ednwRivFEwYAprzpgwc",
+                    type: "substrate",
+                },
+                {
+                    name: "beefy",
+                    account: "0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd",
+                    type: "ethereum",
+                },
+                {
+                    name: "parachain-primary-gov",
+                    account: "0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd",
+                    type: "ethereum",
+                },
+                {
+                    name: "parachain-secondary-gov",
+                    account: "0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd",
+                    type: "ethereum",
+                },
+                {
+                    name: "execution-assethub",
+                    account: "5E4Hf7LzHE4W3jabjLWSP8p8RzEa9ednwRivFEwYAprzpgwc",
+                    type: "substrate",
+                },
+                {
+                    name: "parachain-assethub",
+                    account: "0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd",
+                    type: "ethereum",
+                },
+            ],
+            SUBSCAN_API: {
+                RELAY_CHAIN_URL: "https://westend.api.subscan.io",
+                ASSET_HUB_URL: "https://assethub-westend.api.subscan.io",
+                BRIDGE_HUB_URL: "https://bridgehub-westend.api.subscan.io",
+            },
+        },
+    },
 }
