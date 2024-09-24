@@ -19,9 +19,9 @@ eth_network="${ETH_NETWORK:-localhost}"
 polkadot_network="${POLKADOT_NETWORK:-localhost}"
 
 if [ "$polkadot_network" == "westend" ]; then
+  # Todo: There is no penpal nodes on westend yet
   subxt codegen --url wss://westend-bridge-hub-rpc.polkadot.io >src/parachains/bridgehub.rs
   subxt codegen --url wss://westend-asset-hub-rpc.polkadot.io >src/parachains/assethub.rs
-  subxt codegen --url wss://people-westend-rpc.dwellir.com >src/parachains/penpal.rs
   subxt codegen --url wss://westend-rpc.polkadot.io >src/parachains/relaychain.rs
 else
   if ! lsof -Pi :11144 -sTCP:LISTEN -t >/dev/null; then

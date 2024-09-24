@@ -42,20 +42,6 @@ use subxt::{
 	Config, OnlineClient, PolkadotConfig,
 };
 
-/// Custom config that works with Penpal
-pub enum PenpalConfig {}
-
-impl Config for PenpalConfig {
-	type Hash = <PolkadotConfig as Config>::Hash;
-	type AccountId = <PolkadotConfig as Config>::AccountId;
-	type Address = <PolkadotConfig as Config>::Address;
-	type AssetId = <PolkadotConfig as Config>::AssetId;
-	type Signature = <PolkadotConfig as Config>::Signature;
-	type Hasher = <PolkadotConfig as Config>::Hasher;
-	type Header = <PolkadotConfig as Config>::Header;
-	type ExtrinsicParams = DefaultExtrinsicParams<PenpalConfig>;
-}
-
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
 
@@ -73,31 +59,28 @@ impl Config for AssetHubConfig {
 pub struct TestClients {
 	pub asset_hub_client: Box<OnlineClient<AssetHubConfig>>,
 	pub bridge_hub_client: Box<OnlineClient<PolkadotConfig>>,
-	pub penpal_client: Box<OnlineClient<PenpalConfig>>,
 	pub relaychain_client: Box<OnlineClient<PolkadotConfig>>,
 	pub ethereum_client: Box<Arc<Provider<Ws>>>,
 	pub ethereum_signed_client: Box<Arc<SignerMiddleware<Provider<Http>, LocalWallet>>>,
 }
 
 pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>> {
-	let bridge_hub_client: OnlineClient<PolkadotConfig> = OnlineClient::from_url((*BRIDGE_HUB_WS_URL).to_string())
-		.await
-		.expect("can not connect to bridgehub");
+	let bridge_hub_client: OnlineClient<PolkadotConfig> =
+		OnlineClient::from_url((*BRIDGE_HUB_WS_URL).to_string())
+			.await
+			.expect("can not connect to bridgehub");
 
-	let asset_hub_client: OnlineClient<AssetHubConfig> = OnlineClient::from_url(ASSET_HUB_WS_URL)
-		.await
-		.expect("can not connect to assethub");
-
-	let penpal_client: OnlineClient<PenpalConfig> = OnlineClient::from_url(PENPAL_WS_URL)
-		.await
-		.expect("can not connect to penpal parachain");
+	let asset_hub_client: OnlineClient<AssetHubConfig> =
+		OnlineClient::from_url((*ASSET_HUB_WS_URL).to_string())
+			.await
+			.expect("can not connect to assethub");
 
 	let relaychain_client: OnlineClient<PolkadotConfig> =
-		OnlineClient::from_url(RELAY_CHAIN_WS_URL)
+		OnlineClient::from_url((*RELAY_CHAIN_WS_URL).to_string())
 			.await
 			.expect("can not connect to relaychain");
 
-	let ethereum_provider = Provider::<Ws>::connect(ETHEREUM_API)
+	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
 		.await
 		.unwrap()
 		.interval(Duration::from_millis(10u64));
@@ -109,7 +92,6 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
 	Ok(TestClients {
 		asset_hub_client: Box::new(asset_hub_client),
 		bridge_hub_client: Box::new(bridge_hub_client),
-		penpal_client: Box::new(penpal_client),
 		relaychain_client: Box::new(relaychain_client),
 		ethereum_client: Box::new(ethereum_client),
 		ethereum_signed_client: Box::new(Arc::new(ethereum_signed_client)),
@@ -144,7 +126,7 @@ pub async fn wait_for_bridgehub_event<Ev: StaticEvent>(
 }
 
 pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Provider<Ws>>>) {
-	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = i_gateway::IGateway::new(gateway_addr, (*ethereum_client).deref().clone());
 
 	let wait_for_blocks = 500;
@@ -174,12 +156,15 @@ pub struct SudoResult {
 
 pub async fn initialize_wallet(
 ) -> Result<SignerMiddleware<Provider<Http>, LocalWallet>, Box<dyn std::error::Error>> {
-	let provider = Provider::<Http>::try_from(ETHEREUM_HTTP_API)
+	let provider = Provider::<Http>::try_from((*ETHEREUM_HTTP_API).to_string())
 		.unwrap()
 		.interval(Duration::from_millis(10u64));
 
-	let wallet: LocalWallet =
-		ETHEREUM_KEY.parse::<LocalWallet>().unwrap().with_chain_id(ETHEREUM_CHAIN_ID);
+	let wallet: LocalWallet = (*ETHEREUM_KEY)
+		.to_string()
+		.parse::<LocalWallet>()
+		.unwrap()
+		.with_chain_id(ETHEREUM_CHAIN_ID);
 
 	Ok(SignerMiddleware::new(provider.clone(), wallet.clone()))
 }
@@ -291,7 +276,7 @@ pub async fn governance_bridgehub_call_from_relay_chain(
 
 pub async fn fund_agent(agent_id: [u8; 32]) -> Result<(), Box<dyn std::error::Error>> {
 	let test_clients = initial_clients().await.expect("initialize clients");
-	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let ethereum_client = *(test_clients.ethereum_client.clone());
 	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
 	let agent_address = gateway.agent_of(agent_id).await.expect("find agent");

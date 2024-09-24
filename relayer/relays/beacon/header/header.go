@@ -95,8 +95,10 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 				log.WithFields(logFields).WithError(err).Warn("SyncCommittee latency found")
 			case errors.Is(err, ErrExecutionHeaderNotImported):
 				log.WithFields(logFields).WithError(err).Warn("ExecutionHeader not imported")
-			case errors.Is(err, syncer.ErrBeaconStateAvailableYet):
+			case errors.Is(err, syncer.ErrBeaconStateUnavailable):
 				log.WithFields(logFields).WithError(err).Warn("beacon state not available for finalized state yet")
+			case errors.Is(err, syncer.ErrSyncCommitteeNotSuperMajority):
+				log.WithFields(logFields).WithError(err).Warn("update received was not signed by supermajority")
 			case err != nil:
 				return err
 			}
@@ -348,7 +350,7 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 	}
 
 	blockRootsProof, err := h.syncer.GetBlockRoots(slot)
-	if err != nil && !errors.Is(err, syncer.ErrBeaconStateAvailableYet) {
+	if err != nil && !errors.Is(err, syncer.ErrBeaconStateUnavailable) {
 		return fmt.Errorf("fetch block roots for slot %d: %w", slot, err)
 	}
 

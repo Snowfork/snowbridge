@@ -1,0 +1,18 @@
+source_up_if_exists
+
+export ETH_NETWORK=sepolia
+export POLKADOT_NETWORK=westend
+
+# Endpoints
+export BRIDGE_HUB_WS_URL=wss://westend-bridge-hub-rpc.polkadot.io
+export ASSET_HUB_WS_URL=wss://westend-asset-hub-rpc.polkadot.io
+export RELAY_CHAIN_WS_URL=wss://westend-rpc.polkadot.io
+export ETHEREUM_HTTP_API=https://sepolia.infura.io/v3/***
+export ETHEREUM_API=wss://sepolia.infura.io/ws/v3/***
+
+# Contract address
+export GATEWAY_PROXY_CONTRACT=9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9
+export WETH_CONTRACT=fff9976782d46cc05630d1f6ebab18b2324d6b14
+
+# Keys
+export ETHEREUM_KEY=***
