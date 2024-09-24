@@ -17,7 +17,8 @@
     "cron": "npx ts-node src/main.ts cron",
     "server": "npx ts-node src/server.ts",
     "smokeTest": "npx ts-node src/transfer_token.ts start",
-    "cronSmokeTest": "npx ts-node src/transfer_token.ts cron",
+    "transferToPolkadot": "npx ts-node src/transfer_to_polkadot.ts start",
+    "transferToEthereum": "npx ts-node src/transfer_to_ethereum.ts start",
     "format": "prettier src --write"
   },
   "devDependencies": {
