@@ -14,12 +14,12 @@ const transfer = async () => {
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snwobridgeEnv = environment.SNOWBRIDGE_ENV[env]
-    if (snwobridgeEnv === undefined) {
+    const snowbridgeEnv = environment.SNOWBRIDGE_ENV[env]
+    if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const { config } = snwobridgeEnv
+    const { config } = snowbridgeEnv
 
     const context = await contextFactory({
         ethereum: {
@@ -50,7 +50,7 @@ const transfer = async () => {
 
     const amount = 2_000_000_000_000n
 
-    const WETH_CONTRACT = snwobridgeEnv.locations[0].erc20tokensReceivable.find(
+    const WETH_CONTRACT = snowbridgeEnv.locations[0].erc20tokensReceivable.find(
         (t) => t.id === "WETH"
     )!.address
 
