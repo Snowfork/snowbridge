@@ -198,7 +198,8 @@ func (co *Connection) FetchMMRLeafCount(relayBlockhash types.Hash) (uint64, erro
 //	Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
 const ParaIDOffset = 16 + 16 + 8
 
-func (co *Connection) FetchParachainHeads(blockHash types.Hash) ([]ParaHead, error) {
+// Fetch heads for all Paras. Included parachains and parathreads.
+func (co *Connection) FetchParasHeads(blockHash types.Hash) ([]ParaHead, error) {
 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
 	keys, err := co.fetchKeys(keyPrefix, blockHash)
 	if err != nil {
@@ -218,8 +219,7 @@ func (co *Connection) FetchParachainHeads(blockHash types.Hash) ([]ParaHead, err
 		return nil, err
 	}
 
-	const numParas = 16
-	heads := make([]ParaHead, 0, numParas)
+	heads := make([]ParaHead, 0, 32)
 	for _, changeSet := range changeSets {
 		for _, change := range changeSet.Changes {
 			if change.StorageData.IsNone() {
@@ -251,6 +251,37 @@ func (co *Connection) FetchParachainHeads(blockHash types.Hash) ([]ParaHead, err
 		return heads[i].ParaID < heads[j].ParaID
 	})
 
+	return heads, nil
+}
+
+// Filters para heads to parachains only.
+func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlockHash types.Hash) ([]ParaHead, error) {
+
+	// fetch ids of parachains (not including parathreads)
+	var parachainIDs []uint32
+	parachainsKey, err := types.CreateStorageKey(conn.Metadata(), "Paras", "Parachains", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = conn.API().RPC.State.GetStorage(parachainsKey, &parachainIDs, relayChainBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a set of parachains
+	parachains := make(map[uint32]struct{}, len(paraHeads))
+	for _, parachain := range parachainIDs {
+		parachains[parachain] = struct{}{}
+	}
+
+	// filter to return parachains
+	heads := make([]ParaHead, 0, len(paraHeads))
+	for _, head := range paraHeads {
+		if _, ok := parachains[head.ParaID]; ok {
+			heads = append(heads, head)
+		}
+	}
 	return heads, nil
 }
 
