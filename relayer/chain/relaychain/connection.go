@@ -198,7 +198,7 @@ func (co *Connection) FetchMMRLeafCount(relayBlockhash types.Hash) (uint64, erro
 //	Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
 const ParaIDOffset = 16 + 16 + 8
 
-// Fetch heads for all Paras. Included parachains and parathreads.
+// Fetch heads for all Paras. Included are parachains and parathreads.
 func (co *Connection) FetchParasHeads(blockHash types.Hash) ([]ParaHead, error) {
 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
 	keys, err := co.fetchKeys(keyPrefix, blockHash)
