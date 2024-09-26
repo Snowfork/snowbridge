@@ -526,7 +526,6 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 	endIndex := startIndex + 1
 
 	syncCommitteePeriod := h.protocol.Settings.SlotsInEpoch * h.protocol.Settings.EpochsPerSyncCommitteePeriod
-	slotPeriodIndex := slot / syncCommitteePeriod
 	totalStates := syncCommitteePeriod * 20 // Total size of the circular buffer,
 	// https://github.com/paritytech/polkadot-sdk/blob/master/bridges/snowbridge/pallets/ethereum-client/src/lib.rs#L75
 
@@ -538,16 +537,16 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 		}
 		beaconState, err = h.writer.GetFinalizedHeaderStateByBlockRoot(beaconRoot)
 		if err != nil {
+			// As soon as it can't find a block root, it means the circular wrap around array is empty.
 			log.WithFields(log.Fields{"index": index, "blockRoot": beaconRoot.Hex()}).WithError(err).Info("searching for checkpoint on-chain failed")
 			break
 		}
-		statePeriodIndex := beaconState.BeaconSlot / syncCommitteePeriod
 
 		if beaconState.BeaconSlot < slot {
 			break
 		}
 		// Found the beaconState
-		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod && slotPeriodIndex == statePeriodIndex {
+		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod {
 			log.WithFields(log.Fields{"index": index}).Info("found it!")
 			break
 		}
