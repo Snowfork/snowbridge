@@ -94,8 +94,12 @@ export const bridgeStatusInfo = async (
     options = {
         polkadotBlockTimeInSeconds: 6,
         ethereumBlockTimeInSeconds: 12,
-        toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
-        toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
+        toPolkadotCheckIntervalInBlock: process.env["CheckIntervalToPolkadot"]
+            ? parseInt(process.env["CheckIntervalToPolkadot"])
+            : BlockLatencyThreshold.ToPolkadot,
+        toEthereumCheckIntervalInBlock: process.env["CheckIntervalToEthereum"]
+            ? parseInt(process.env["CheckIntervalToEthereum"])
+            : BlockLatencyThreshold.ToEthereum,
     }
 ): Promise<BridgeStatusInfo> => {
     // Beefy status
@@ -194,8 +198,12 @@ export const channelStatusInfo = async (
     context: Context,
     channelId: string,
     options = {
-        toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
-        toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
+        toPolkadotCheckIntervalInBlock: process.env["CheckIntervalToPolkadot"]
+            ? parseInt(process.env["CheckIntervalToPolkadot"])
+            : BlockLatencyThreshold.ToPolkadot,
+        toEthereumCheckIntervalInBlock: process.env["CheckIntervalToEthereum"]
+            ? parseInt(process.env["CheckIntervalToEthereum"])
+            : BlockLatencyThreshold.ToEthereum,
     }
 ): Promise<ChannelStatusInfo> => {
     const [inbound_nonce_eth, outbound_nonce_eth] =
