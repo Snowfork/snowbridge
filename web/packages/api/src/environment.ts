@@ -546,17 +546,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         id: "WETH",
                         address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
                         minimumTransferAmount: 1_000_000_000_000n,
-                    },
-                    {
-                        id: "vETH",
-                        address: "0xc3d088842dcf02c13699f936bb83dfbbc6f721ab",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "MUSE",
-                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
-                        minimumTransferAmount: 1n,
-                    },
+                    }
                 ],
             },
             {
@@ -577,40 +567,9 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         id: "WETH",
                         address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
                         minimumTransferAmount: 15_000_000_000_000n,
-                    },
-                    {
-                        id: "vETH",
-                        address: "0xc3d088842dcf02c13699f936bb83dfbbc6f721ab",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "MUSE",
-                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
-                        minimumTransferAmount: 1n,
-                    },
+                    }
                 ],
-            },
-            {
-                id: "muse",
-                name: "Muse",
-                type: "substrate",
-                destinationIds: [],
-                paraInfo: {
-                    paraId: 3369,
-                    destinationFeeDOT: 200_000_000_000n,
-                    skipExistentialDepositCheck: true,
-                    addressType: "20byte",
-                    decimals: 18,
-                    maxConsumers: 16,
-                },
-                erc20tokensReceivable: [
-                    {
-                        id: "MUSE",
-                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
-                        minimumTransferAmount: 10_000_000_000_000_000n,
-                    },
-                ],
-            },
+            }
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
@@ -618,7 +577,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             RELAY_CHAIN_URL: "https://westend-rpc.polkadot.io",
             ASSET_HUB_URL: "wss://westend-asset-hub-rpc.polkadot.io",
             BRIDGE_HUB_URL: "https://westend-bridge-hub-rpc.polkadot.io",
-            PARACHAINS: ["https://westend-muse-rpc.polkadot.io"],
+            PARACHAINS: [],
             GATEWAY_CONTRACT: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
             BEEFY_CONTRACT: "0x6DFaD3D73A28c48E4F4c616ECda80885b415283a",
             ASSET_HUB_PARAID: 1000,
