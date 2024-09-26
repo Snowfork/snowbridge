@@ -89,7 +89,7 @@ async fn send_token() {
 
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
-	let wait_for_blocks = 1000;
+	let wait_for_blocks = (*WAIT_PERIOD) as usize;
 	let mut blocks = assethub
 		.blocks()
 		.subscribe_finalized()

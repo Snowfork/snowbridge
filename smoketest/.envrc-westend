@@ -21,3 +21,6 @@ export ETHEREUM_RECEIVER=302F0B71B8aD3CF6dD90aDb668E49b2168d652fd
 # Sender Keys
 export ETHEREUM_KEY=*
 export SUBSTRATE_KEY=*
+
+# Wait period in blocks
+WAIT_PERIOD=1000

@@ -179,4 +179,6 @@ lazy_static! {
 			"//Bob".to_string()
 		}
 	};
+	pub static ref WAIT_PERIOD: u64 =
+		env::var("WAIT_PERIOD").unwrap_or("100".to_string()).parse().unwrap();
 }
