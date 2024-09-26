@@ -523,23 +523,32 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 		return beaconState, fmt.Errorf("GetLastFinalizedStateIndex error: %w", err)
 	}
 	startIndex := uint64(lastIndex)
-	endIndex := uint64(0)
+	endIndex := startIndex + 1
 
 	syncCommitteePeriod := h.protocol.Settings.SlotsInEpoch * h.protocol.Settings.EpochsPerSyncCommitteePeriod
-	for index := startIndex; index >= endIndex; index-- {
+	slotPeriodIndex := slot / syncCommitteePeriod
+	totalStates := syncCommitteePeriod * 20 // Total size of the circular buffer,
+	// https://github.com/paritytech/polkadot-sdk/blob/master/bridges/snowbridge/pallets/ethereum-client/src/lib.rs#L75
+
+	for index := startIndex; index != endIndex; index = (index - 1 + totalStates) % totalStates {
+		log.WithFields(log.Fields{"index": index}).Info("searching for checkpoint on-chain")
 		beaconRoot, err := h.writer.GetFinalizedBeaconRootByIndex(uint32(index))
 		if err != nil {
 			return beaconState, fmt.Errorf("GetFinalizedBeaconRootByIndex %d, error: %w", index, err)
 		}
 		beaconState, err = h.writer.GetFinalizedHeaderStateByBlockRoot(beaconRoot)
 		if err != nil {
-			return beaconState, fmt.Errorf("GetFinalizedHeaderStateByBlockRoot %s, error: %w", beaconRoot.Hex(), err)
+			log.WithFields(log.Fields{"index": index, "blockRoot": beaconRoot.Hex()}).WithError(err).Info("searching for checkpoint on-chain failed")
+			break
 		}
+		statePeriodIndex := beaconState.BeaconSlot / syncCommitteePeriod
+
 		if beaconState.BeaconSlot < slot {
 			break
 		}
 		// Found the beaconState
-		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod {
+		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod && slotPeriodIndex == statePeriodIndex {
+			log.WithFields(log.Fields{"index": index}).Info("found it!")
 			break
 		}
 	}
