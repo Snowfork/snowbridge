@@ -543,10 +543,12 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 		statePeriodIndex := beaconState.BeaconSlot / syncCommitteePeriod
 
 		if beaconState.BeaconSlot < slot {
-			break
+			log.WithFields(log.Fields{"index": index}).Info("break condition")
+			//break
 		}
 		// Found the beaconState
 		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod && slotPeriodIndex == statePeriodIndex {
+			log.WithFields(log.Fields{"index": index}).Info("found it!")
 			break
 		}
 	}
