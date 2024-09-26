@@ -523,12 +523,15 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 		return beaconState, fmt.Errorf("GetLastFinalizedStateIndex error: %w", err)
 	}
 	startIndex := uint64(lastIndex)
-	endIndex := uint64(0)
+	endIndex := startIndex + 1
 
 	syncCommitteePeriod := h.protocol.Settings.SlotsInEpoch * h.protocol.Settings.EpochsPerSyncCommitteePeriod
 	slotPeriodIndex := slot / syncCommitteePeriod
+	totalStates := syncCommitteePeriod * 20 // Total size of the circular buffer,
+	// https://github.com/paritytech/polkadot-sdk/blob/master/bridges/snowbridge/pallets/ethereum-client/src/lib.rs#L75
 
-	for index := startIndex; index >= endIndex; index-- {
+	for index := startIndex; index != endIndex; index = (index - 1 + totalStates) % totalStates {
+		log.WithFields(log.Fields{"index": index}).Info("searching for checkpoint on-chain")
 		beaconRoot, err := h.writer.GetFinalizedBeaconRootByIndex(uint32(index))
 		if err != nil {
 			return beaconState, fmt.Errorf("GetFinalizedBeaconRootByIndex %d, error: %w", index, err)
@@ -538,6 +541,7 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 			return beaconState, fmt.Errorf("GetFinalizedHeaderStateByBlockRoot %s, error: %w", beaconRoot.Hex(), err)
 		}
 		statePeriodIndex := beaconState.BeaconSlot / syncCommitteePeriod
+
 		if beaconState.BeaconSlot < slot {
 			break
 		}
