@@ -69,3 +69,8 @@ BEEFY commitments & proofs extracted from `/tmp/snowbridge/beefy-relay.log`.
 
 1. Search for `Sent SubmitFinal transaction` in relayer log file
 2. Copy into `test/data/beefy-commitment.json`
+```
+
+## Deploy to Testnet
+
+To deploy to a testnet, run script `deploy-test.sh`. Replace `--with-gas-price` with standard gas value (found at https://sepolia.beaconcha.in/gasnow). Make sure to add all the necessary envs in .envrc.
