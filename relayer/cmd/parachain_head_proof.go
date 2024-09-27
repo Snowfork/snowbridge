@@ -92,7 +92,7 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	paraHeadsAsSlice, err := conn.FetchParachainHeads(relayChainBlockHash)
+	paraHeadsAsSlice, err := conn.FetchParasHeads(relayChainBlockHash)
 	if err != nil {
 		log.WithError(err).Error("Cannot fetch parachain headers")
 		return err

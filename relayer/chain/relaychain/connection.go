@@ -297,3 +297,97 @@ func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types
 
 	return results, nil
 }
+
+// Offset of encoded para id in storage key.
+// The key is of this format:
+//
+//	ParaId: u32
+//	Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
+const ParaIDOffset = 16 + 16 + 8
+
+// Fetch heads for all Paras. Included are parachains and parathreads.
+func (co *Connection) FetchParasHeads(blockHash types.Hash) ([]ParaHead, error) {
+	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
+	keys, err := co.fetchKeys(keyPrefix, blockHash)
+	if err != nil {
+		log.WithError(err).Error("Failed to get all parachain keys")
+		return nil, err
+	}
+
+	log.WithFields(log.Fields{
+		"numKeys":          len(keys),
+		"storageKeyPrefix": fmt.Sprintf("%#x", keyPrefix),
+		"block":            blockHash.Hex(),
+	}).Trace("Found keys for Paras.Heads storage map")
+
+	changeSets, err := co.API().RPC.State.QueryStorageAt(keys, blockHash)
+	if err != nil {
+		log.WithError(err).Error("Failed to get all parachain headers")
+		return nil, err
+	}
+
+	heads := make([]ParaHead, 0, 32)
+	for _, changeSet := range changeSets {
+		for _, change := range changeSet.Changes {
+			if change.StorageData.IsNone() {
+				continue
+			}
+
+			var paraID uint32
+			if err := types.DecodeFromBytes(change.StorageKey[ParaIDOffset:], &paraID); err != nil {
+				log.WithError(err).Error("Failed to decode parachain ID")
+				return nil, err
+			}
+
+			_, headDataWrapped := change.StorageData.Unwrap()
+
+			var headData types.Bytes
+			if err := types.DecodeFromBytes(headDataWrapped, &headData); err != nil {
+				log.WithError(err).Error("Failed to decode HeadData wrapper")
+				return nil, err
+			}
+
+			heads = append(heads, ParaHead{
+				ParaID: paraID,
+				Data:   headData,
+			})
+		}
+	}
+
+	sort.SliceStable(heads, func(i int, j int) bool {
+		return heads[i].ParaID < heads[j].ParaID
+	})
+
+	return heads, nil
+}
+
+// Filters para heads to parachains only.
+func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlockHash types.Hash) ([]ParaHead, error) {
+
+	// fetch ids of parachains (not including parathreads)
+	var parachainIDs []uint32
+	parachainsKey, err := types.CreateStorageKey(conn.Metadata(), "Paras", "Parachains", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = conn.API().RPC.State.GetStorage(parachainsKey, &parachainIDs, relayChainBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a set of parachains
+	parachains := make(map[uint32]struct{}, len(paraHeads))
+	for _, parachain := range parachainIDs {
+		parachains[parachain] = struct{}{}
+	}
+
+	// filter to return parachains
+	heads := make([]ParaHead, 0, len(paraHeads))
+	for _, head := range paraHeads {
+		if _, ok := parachains[head.ParaID]; ok {
+			heads = append(heads, head)
+		}
+	}
+	return heads, nil
+}
