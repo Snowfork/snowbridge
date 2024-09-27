@@ -3,24 +3,20 @@ use crate::{
 	contracts::i_gateway,
 	parachains::{
 		bridgehub::{self, api::runtime_types::snowbridge_core::outbound::v1::OperatingMode},
-		penpal::{
-			api::{runtime_types as penpalTypes, runtime_types::xcm::VersionedLocation},
-			{self},
-		},
+		penpal::{self, api::runtime_types as penpalTypes},
 		relaychain,
 		relaychain::api::runtime_types::{
 			pallet_xcm::pallet::Call as RelaychainPalletXcmCall,
-			rococo_runtime::RuntimeCall as RelaychainRuntimeCall,
 			sp_weights::weight_v2::Weight as RelaychainWeight,
 			staging_xcm::v3::multilocation::MultiLocation as RelaychainMultiLocation,
+			westend_runtime::RuntimeCall as RelaychainRuntimeCall,
 			xcm::{
 				double_encoded::DoubleEncoded as RelaychainDoubleEncoded,
-				v3::OriginKind as RelaychainOriginKind,
 				v3::{
 					junction::Junction as RelaychainJunction,
 					junctions::Junctions as RelaychainJunctions,
-					Instruction as RelaychainInstruction, WeightLimit as RelaychainWeightLimit,
-					Xcm as RelaychainXcm,
+					Instruction as RelaychainInstruction, OriginKind as RelaychainOriginKind,
+					WeightLimit as RelaychainWeightLimit, Xcm as RelaychainXcm,
 				},
 				VersionedLocation as RelaychainVersionedLocation,
 				VersionedXcm as RelaychainVersionedXcm,
@@ -38,21 +34,20 @@ use ethers::{
 };
 use futures::StreamExt;
 use penpalTypes::{
-	pallet_xcm::pallet::Call,
-	penpal_runtime::RuntimeCall,
-	staging_xcm::v3::multilocation::MultiLocation,
-	xcm::{
-		v3::{junction::Junction, junctions::Junctions},
-		VersionedXcm,
+	penpal_runtime::RuntimeCall as PenpalRuntimeCall,
+	staging_xcm::v4::{
+		junction::Junction as PenpalJunction, junctions::Junctions as PenpalJunctions,
+		location::Location as PenpalLocation,
 	},
+	xcm::{VersionedLocation as PenpalVersionedLocation, VersionedXcm as PenpalVersionedXcm},
 };
 use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
-	blocks::ExtrinsicEvents,
 	config::DefaultExtrinsicParams,
 	events::StaticEvent,
 	ext::sp_core::{sr25519::Pair, Pair as PairT, H160},
-	tx::{PairSigner, TxPayload},
+	tx::{PairSigner, Payload},
+	utils::H256,
 	Config, OnlineClient, PolkadotConfig,
 };
 
@@ -161,7 +156,7 @@ pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Pro
 	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
 	let gateway = i_gateway::IGateway::new(gateway_addr, (*ethereum_client).deref().clone());
 
-	let wait_for_blocks = 300;
+	let wait_for_blocks = 500;
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
 
 	let mut ethereum_event_found = false;
@@ -181,18 +176,26 @@ pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Pro
 	assert!(ethereum_event_found);
 }
 
+pub struct SudoResult {
+	pub block_hash: H256,
+	pub extrinsic_hash: H256,
+}
+
 pub async fn send_sudo_xcm_transact(
 	penpal_client: &Box<OnlineClient<PenpalConfig>>,
-	message: Box<VersionedXcm>,
-) -> Result<ExtrinsicEvents<PenpalConfig>, Box<dyn std::error::Error>> {
-	let dest = Box::new(VersionedLocation::V3(MultiLocation {
+	message: Box<PenpalVersionedXcm>,
+) -> Result<SudoResult, Box<dyn std::error::Error>> {
+	let dest = Box::new(PenpalVersionedLocation::V4(PenpalLocation {
 		parents: 1,
-		interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
+		interior: PenpalJunctions::X1([PenpalJunction::Parachain(BRIDGE_HUB_PARA_ID)]),
 	}));
 
 	let sudo_call = penpal::api::sudo::calls::TransactionApi::sudo(
 		&penpal::api::sudo::calls::TransactionApi,
-		RuntimeCall::PolkadotXcm(Call::send { dest, message }),
+		PenpalRuntimeCall::PolkadotXcm(penpalTypes::pallet_xcm::pallet::Call::send {
+			dest,
+			message,
+		}),
 	);
 
 	let owner = Pair::from_string("//Alice", None).expect("cannot create keypair");
@@ -204,11 +207,20 @@ pub async fn send_sudo_xcm_transact(
 		.sign_and_submit_then_watch_default(&sudo_call, &signer)
 		.await
 		.expect("send through xcm call.")
-		.wait_for_finalized_success()
+		.wait_for_finalized()
 		.await
 		.expect("xcm call failed");
 
-	Ok(result)
+	let block_hash = result.block_hash();
+	let extrinsic_hash = result.extrinsic_hash();
+
+	let sudo_result = SudoResult { block_hash, extrinsic_hash };
+
+	if let Err(err) = result.wait_for_success().await {
+		Err(Box::new(err))
+	} else {
+		Ok(sudo_result)
+	}
 }
 
 pub async fn initialize_wallet(
@@ -249,21 +261,23 @@ pub async fn fund_account(
 pub async fn construct_create_agent_call(
 	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let call = bridgehub::api::ethereum_system::calls::TransactionApi
+	let mut encoded = Vec::new();
+	bridgehub::api::ethereum_system::calls::TransactionApi
 		.create_agent()
-		.encode_call_data(&bridge_hub_client.metadata())?;
+		.encode_call_data_to(&bridge_hub_client.metadata(), &mut encoded)?;
 
-	Ok(call)
+	Ok(encoded)
 }
 
 pub async fn construct_create_channel_call(
 	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let call = bridgehub::api::ethereum_system::calls::TransactionApi
+	let mut encoded = Vec::new();
+	bridgehub::api::ethereum_system::calls::TransactionApi
 		.create_channel(OperatingMode::Normal)
-		.encode_call_data(&bridge_hub_client.metadata())?;
+		.encode_call_data_to(&bridge_hub_client.metadata(), &mut encoded)?;
 
-	Ok(call)
+	Ok(encoded)
 }
 
 pub async fn construct_transfer_native_from_agent_call(
@@ -271,11 +285,12 @@ pub async fn construct_transfer_native_from_agent_call(
 	recipient: H160,
 	amount: u128,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let call = bridgehub::api::ethereum_system::calls::TransactionApi
+	let mut encoded = Vec::new();
+	bridgehub::api::ethereum_system::calls::TransactionApi
 		.transfer_native_from_agent(recipient, amount)
-		.encode_call_data(&bridge_hub_client.metadata())?;
+		.encode_call_data_to(&bridge_hub_client.metadata(), &mut encoded)?;
 
-	Ok(call)
+	Ok(encoded)
 }
 
 pub async fn governance_bridgehub_call_from_relay_chain(
@@ -320,7 +335,7 @@ pub async fn governance_bridgehub_call_from_relay_chain(
 		.await
 		.expect("sudo call success");
 
-	println!("Sudo call issued at relaychain block hash {:?}", result.block_hash());
+	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
 
 	Ok(())
 }

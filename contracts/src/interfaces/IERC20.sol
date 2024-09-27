@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2023 Axelar Network
+// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 
 pragma solidity 0.8.25;
 
@@ -8,6 +9,8 @@ pragma solidity 0.8.25;
  */
 interface IERC20 {
     error InvalidAccount();
+    error InsufficientBalance(address sender, uint256 balance, uint256 needed);
+    error InsufficientAllowance(address spender, uint256 allowance, uint256 needed);
 
     /**
      * @dev Returns the amount of tokens in existence.

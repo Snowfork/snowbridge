@@ -7,6 +7,10 @@ on:
       - release-v1.0.0
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: snowfork/snowbridge-relay
+
 jobs:
   release-relayer:
     runs-on: snowbridge-runner
@@ -19,12 +23,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: "14"
 
       - name: Setup go
         uses: actions/checkout@v4
         with:
-          go-version: '^1.21.0'
+          go-version: "^1.21.0"
 
       - name: Install Go tools
         run: >
@@ -68,7 +72,7 @@ jobs:
           # Get the most recent tag in the format relayer-<branchname>-<version>
           current_version=$(git tag --list "relayer-${{ steps.branch_name.outputs.branch }}-*" --sort=-v:refname | head -n 1 | sed -E 's/relayer-${{ steps.branch_name.outputs.branch }}-//')
           echo "Current version: $current_version"
-          
+
           # If there is no current version, set it to 1.0.0
           if [ -z "$current_version" ]; then
           new_version="1.0.0"
@@ -117,3 +121,17 @@ jobs:
           asset_path: ./relayer/build/snowbridge-relay
           asset_name: snowbridge-relay
           asset_content_type: application/octet-stream
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./relayer
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.create_tag.outputs.tag }}

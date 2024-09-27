@@ -15,7 +15,7 @@ use snowbridge_smoketest::{
 		},
 	},
 };
-use subxt::tx::TxPayload;
+use subxt::tx::Payload;
 
 #[tokio::test]
 async fn set_pricing_params() {
@@ -29,17 +29,18 @@ async fn set_pricing_params() {
 
 	let ethereum_system_api = bridgehub::api::ethereum_system::calls::TransactionApi;
 
-	let set_pricing_params_call = ethereum_system_api
+	let mut encoded = Vec::new();
+	ethereum_system_api
 		.set_pricing_parameters(PricingParameters {
 			exchange_rate: FixedU128(*EXCHANGE_RATE),
 			rewards: Rewards { local: *LOCAL_REWARD, remote: U256([*REMOTE_REWARD, 0, 0, 0]) },
 			fee_per_gas: U256([*FEE_PER_GAS, 0, 0, 0]),
 			multiplier: FixedU128(*FEE_MULTIPLIER),
 		})
-		.encode_call_data(&test_clients.bridge_hub_client.metadata())
+		.encode_call_data_to(&test_clients.bridge_hub_client.metadata(), &mut encoded)
 		.expect("encoded call");
 
-	governance_bridgehub_call_from_relay_chain(set_pricing_params_call)
+	governance_bridgehub_call_from_relay_chain(encoded)
 		.await
 		.expect("set token fees");
 

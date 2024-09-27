@@ -10,7 +10,7 @@ use snowbridge_smoketest::{
 		},
 	},
 };
-use subxt::tx::TxPayload;
+use subxt::tx::Payload;
 
 #[tokio::test]
 async fn set_token_transfer_fees() {
@@ -24,16 +24,17 @@ async fn set_token_transfer_fees() {
 
 	let ethereum_system_api = bridgehub::api::ethereum_system::calls::TransactionApi;
 
-	let set_token_fees_call = ethereum_system_api
+	let mut encoded = Vec::new();
+	ethereum_system_api
 		.set_token_transfer_fees(
 			*CREATE_ASSET_FEE,
 			*RESERVE_TRANSFER_FEE,
 			U256([*REGISTER_TOKEN_FEE, 0, 0, 0]),
 		)
-		.encode_call_data(&test_clients.bridge_hub_client.metadata())
+		.encode_call_data_to(&test_clients.bridge_hub_client.metadata(), &mut encoded)
 		.expect("encoded call");
 
-	governance_bridgehub_call_from_relay_chain(set_token_fees_call)
+	governance_bridgehub_call_from_relay_chain(encoded)
 		.await
 		.expect("set token fees");
 

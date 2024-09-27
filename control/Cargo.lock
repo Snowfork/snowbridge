@@ -488,6 +488,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "asset-hub-westend-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic 24.0.0",
+ "subxt",
+]
+
+[[package]]
 name = "async-channel"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -929,6 +940,18 @@ dependencies = [
 
 [[package]]
 name = "bridge-hub-rococo-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "snowbridge-beacon-primitives",
+ "sp-arithmetic 24.0.0",
+ "subxt",
+]
+
+[[package]]
+name = "bridge-hub-westend-runtime"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
@@ -5660,9 +5683,11 @@ dependencies = [
  "asset-hub-paseo-runtime",
  "asset-hub-polkadot-runtime",
  "asset-hub-rococo-runtime",
+ "asset-hub-westend-runtime",
  "bridge-hub-paseo-runtime",
  "bridge-hub-polkadot-runtime",
  "bridge-hub-rococo-runtime",
+ "bridge-hub-westend-runtime",
  "clap",
  "futures",
  "handlebars",
@@ -5682,6 +5707,7 @@ dependencies = [
  "sp-crypto-hashing",
  "subxt",
  "tokio",
+ "westend-runtime",
 ]
 
 [[package]]
@@ -8132,6 +8158,16 @@ dependencies = [
  "serde",
  "thiserror",
  "wasmparser",
+]
+
+[[package]]
+name = "westend-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "subxt",
 ]
 
 [[package]]

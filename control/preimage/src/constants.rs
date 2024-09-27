@@ -25,6 +25,20 @@ mod polkadot {
 #[cfg(feature = "polkadot")]
 pub use polkadot::*;
 
+#[cfg(feature = "westend")]
+mod westend {
+    pub const POLKADOT_SYMBOL: &str = "WND";
+    pub const POLKADOT_DECIMALS: u8 = 12;
+    pub const ASSET_HUB_ID: u32 = 1000;
+    pub const ASSET_HUB_API: &str = "wss://westend-asset-hub-rpc.polkadot.io";
+    pub const BRIDGE_HUB_ID: u32 = 1002;
+    pub const BRIDGE_HUB_API: &str = "wss://westend-bridge-hub-rpc.polkadot.io";
+    pub const RELAY_API: &str = "wss://westend-rpc.polkadot.io";
+}
+
+#[cfg(feature = "westend")]
+pub use westend::*;
+
 #[cfg(feature = "paseo")]
 mod paseo {
     pub const POLKADOT_SYMBOL: &str = "PAS";

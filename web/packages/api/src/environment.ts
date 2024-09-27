@@ -123,7 +123,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             GATEWAY_CONTRACT: "0xEDa338E4dC46038493b885327842fD3E301CaB39",
             BEEFY_CONTRACT: "0x992B9df075935E522EC7950F37eC8557e86f6fdb",
             ASSET_HUB_PARAID: 1000,
-            BRIDGE_HUB_PARAID: 1013,
+            BRIDGE_HUB_PARAID: 1002,
             PRIMARY_GOVERNANCE_CHANNEL_ID:
                 "0x0000000000000000000000000000000000000000000000000000000000000001",
             SECONDARY_GOVERNANCE_CHANNEL_ID:
@@ -314,7 +314,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 id: "ethereum",
                 name: "Ethereum",
                 type: "ethereum",
-                destinationIds: ["assethub", "mythos"],
+                destinationIds: ["assethub", "mythos", "bifrost"],
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
@@ -452,6 +452,27 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         id: "MYTH",
                         address: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003",
                         minimumTransferAmount: 10_000_000_000_000_000n,
+                    },
+                ],
+            },
+            {
+                id: "bifrost",
+                name: "Bifrost",
+                type: "substrate",
+                destinationIds: [],
+                paraInfo: {
+                    paraId: 2030,
+                    destinationFeeDOT: 20_000_000n,
+                    skipExistentialDepositCheck: false,
+                    addressType: "32byte",
+                    decimals: 12,
+                    maxConsumers: 16,
+                },
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        minimumTransferAmount: 15_000_000_000_000n,
                     },
                 ],
             },

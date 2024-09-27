@@ -22,13 +22,15 @@ use snowbridge_smoketest::{
 		relaychain,
 		relaychain::api::runtime_types::{
 			pallet_xcm::pallet::Call,
-			rococo_runtime::RuntimeCall,
 			sp_weights::weight_v2::Weight,
 			staging_xcm::v3::multilocation::MultiLocation,
+			westend_runtime::RuntimeCall,
 			xcm::{
 				double_encoded::DoubleEncoded,
-				v2::OriginKind,
-				v3::{junction::Junction, junctions::Junctions, Instruction, WeightLimit, Xcm},
+				v3::{
+					junction::Junction, junctions::Junctions, Instruction, OriginKind, WeightLimit,
+					Xcm,
+				},
 				VersionedLocation, VersionedXcm,
 			},
 		},
@@ -36,7 +38,7 @@ use snowbridge_smoketest::{
 };
 use subxt::{
 	ext::sp_core::{sr25519::Pair, Pair as PairT},
-	tx::{PairSigner, TxPayload},
+	tx::{PairSigner, Payload},
 	OnlineClient, PolkadotConfig,
 };
 
@@ -73,7 +75,8 @@ async fn upgrade_gateway() {
 	let ethereum_system_api = bridgehub::api::ethereum_system::calls::TransactionApi;
 
 	// The upgrade call
-	let upgrade_call = ethereum_system_api
+	let mut encoded = Vec::new();
+	ethereum_system_api
 		.upgrade(
 			new_impl.address(),
 			new_impl_code_hash.into(),
@@ -82,7 +85,7 @@ async fn upgrade_gateway() {
 				maximum_required_gas: 100_000,
 			}),
 		)
-		.encode_call_data(&bridgehub.metadata())
+		.encode_call_data_to(&bridgehub.metadata(), &mut encoded)
 		.expect("encoded call");
 
 	let weight = 3000000000;
@@ -92,12 +95,13 @@ async fn upgrade_gateway() {
 		parents: 0,
 		interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_PARA_ID)),
 	}));
+
 	let message = Box::new(VersionedXcm::V3(Xcm(vec![
 		Instruction::UnpaidExecution { weight_limit: WeightLimit::Unlimited, check_origin: None },
 		Instruction::Transact {
 			origin_kind: OriginKind::Superuser,
 			require_weight_at_most: Weight { ref_time: weight, proof_size },
-			call: DoubleEncoded { encoded: upgrade_call },
+			call: DoubleEncoded { encoded },
 		},
 	])));
 
@@ -109,11 +113,13 @@ async fn upgrade_gateway() {
 		.sign_and_submit_then_watch_default(&sudo_call, &signer)
 		.await
 		.expect("send through sudo call.")
-		.wait_for_finalized_success()
+		.wait_for_finalized()
 		.await
-		.expect("sudo call success");
+		.expect("sudo call in block");
 
 	println!("Sudo call issued at relaychain block hash {:?}", result.block_hash());
+
+	result.wait_for_success().await.expect("sudo call success");
 
 	let wait_for_blocks = 5;
 	let mut blocks = bridgehub
