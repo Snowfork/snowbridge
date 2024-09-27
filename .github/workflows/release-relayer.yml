@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - populate-checkpoint-fix
   workflow_dispatch:
 
 env:
