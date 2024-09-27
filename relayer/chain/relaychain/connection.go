@@ -191,13 +191,6 @@ func (co *Connection) FetchMMRLeafCount(relayBlockhash types.Hash) (uint64, erro
 	return mmrLeafCount, nil
 }
 
-// Offset of encoded para id in storage key.
-// The key is of this format:
-//
-//	ParaId: u32
-//	Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
-const ParaIDOffset = 16 + 16 + 8
-
 func (co *Connection) FetchParachainHeads(blockHash types.Hash) ([]ParaHead, error) {
 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
 	keys, err := co.fetchKeys(keyPrefix, blockHash)
