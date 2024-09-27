@@ -393,7 +393,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 },
             ],
             SUBSCAN_API: {
-                RELAY_CHAIN_URL: "https://paseo.subscan.io/",
+                RELAY_CHAIN_URL: "https://paseo.api.subscan.io/",
                 ASSET_HUB_URL: "https://assethub-paseo.api.subscan.io",
                 BRIDGE_HUB_URL: "https://bridgehub-paseo.api.subscan.io",
             },
