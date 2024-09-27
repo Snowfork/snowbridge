@@ -324,7 +324,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
             let call2 =
                 send_xcm_asset_hub(&context, vec![force_xcm_version(), set_ethereum_fee]).await?;
-            sudo(Box::new(utility_force_batch(vec![call1, call2])))
+            if cfg!(any(feature = "paseo", feature = "westend")) {
+                sudo(Box::new(utility_force_batch(vec![call1, call2])))
+            } else {
+                utility_force_batch(vec![call1, call2])
+            }
         }
         Command::UpdateAsset(params) => {
             let call = send_xcm_asset_hub(
@@ -335,7 +339,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ],
             )
             .await?;
-            sudo(Box::new(call))
+            if cfg!(any(feature = "paseo", feature = "westend")) {
+                sudo(Box::new(call))
+            } else {
+                call
+            }
         }
         Command::GatewayOperatingMode(params) => {
             let call = commands::gateway_operating_mode(&params.gateway_operating_mode);
