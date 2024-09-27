@@ -131,50 +131,6 @@ type ParaHead struct {
 	Data   types.Bytes
 }
 
-func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types.StorageKey, error) {
-	const pageSize = 200
-	var startKey *types.StorageKey
-
-	if pageSize < 1 {
-		return nil, fmt.Errorf("page size cannot be zero")
-	}
-
-	var results []types.StorageKey
-	log.WithFields(log.Fields{
-		"keyPrefix": keyPrefix,
-		"blockHash": blockHash.Hex(),
-		"pageSize":  pageSize,
-	}).Trace("Fetching paged keys.")
-
-	pageIndex := 0
-	for {
-		response, err := co.API().RPC.State.GetKeysPaged(keyPrefix, pageSize, startKey, blockHash)
-		if err != nil {
-			return nil, err
-		}
-
-		log.WithFields(log.Fields{
-			"keysInPage": len(response),
-			"pageIndex":  pageIndex,
-		}).Trace("Fetched a page of keys.")
-
-		results = append(results, response...)
-		if uint32(len(response)) < pageSize {
-			break
-		} else {
-			startKey = &response[len(response)-1]
-			pageIndex++
-		}
-	}
-
-	log.WithFields(log.Fields{
-		"totalNumKeys":  len(results),
-		"totalNumPages": pageIndex + 1,
-	}).Trace("Fetching of paged keys complete.")
-
-	return results, nil
-}
-
 func (co *Connection) FetchParachainHead(relayBlockhash types.Hash, paraID uint32, header *types.Header) (bool, error) {
 	encodedParaID, err := types.EncodeToBytes(paraID)
 	if err != nil {
@@ -233,6 +189,50 @@ func (co *Connection) FetchMMRLeafCount(relayBlockhash types.Hash) (uint64, erro
 	}).Info("MMR Leaf Count")
 
 	return mmrLeafCount, nil
+}
+
+func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types.StorageKey, error) {
+	const pageSize = 200
+	var startKey *types.StorageKey
+
+	if pageSize < 1 {
+		return nil, fmt.Errorf("page size cannot be zero")
+	}
+
+	var results []types.StorageKey
+	log.WithFields(log.Fields{
+		"keyPrefix": keyPrefix,
+		"blockHash": blockHash.Hex(),
+		"pageSize":  pageSize,
+	}).Trace("Fetching paged keys.")
+
+	pageIndex := 0
+	for {
+		response, err := co.API().RPC.State.GetKeysPaged(keyPrefix, pageSize, startKey, blockHash)
+		if err != nil {
+			return nil, err
+		}
+
+		log.WithFields(log.Fields{
+			"keysInPage": len(response),
+			"pageIndex":  pageIndex,
+		}).Trace("Fetched a page of keys.")
+
+		results = append(results, response...)
+		if uint32(len(response)) < pageSize {
+			break
+		} else {
+			startKey = &response[len(response)-1]
+			pageIndex++
+		}
+	}
+
+	log.WithFields(log.Fields{
+		"totalNumKeys":  len(results),
+		"totalNumPages": pageIndex + 1,
+	}).Trace("Fetching of paged keys complete.")
+
+	return results, nil
 }
 
 // Offset of encoded para id in storage key.
