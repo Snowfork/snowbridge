@@ -178,13 +178,8 @@ pub fn utility_force_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
 }
 
 pub fn sudo(call: Box<RelayRuntimeCall>) -> RelayRuntimeCall {
-    #[cfg(feature = "paseo")]
     return RelayRuntimeCall::Sudo(
         crate::relay_runtime::runtime_types::pallet_sudo::pallet::Call::sudo { call },
-    );
-    #[cfg(not(feature = "paseo"))]
-    return RelayRuntimeCall::Utility(
-        crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::batch_all { calls },
     );
 }
 
