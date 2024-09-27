@@ -7,9 +7,9 @@ use crate::Context;
 
 use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 
-#[cfg(any(feature = "polkadot", feature = "paseo"))]
+#[cfg(feature = "polkadot")]
 use crate::relay_runtime::runtime_types::xcm::v2::OriginKind;
-#[cfg(feature = "westend")]
+#[cfg(any(feature = "westend", feature = "paseo"))]
 use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
 
 use crate::relay_runtime::runtime_types::{
@@ -178,9 +178,14 @@ pub fn utility_force_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
 }
 
 pub fn sudo(call: Box<RelayRuntimeCall>) -> RelayRuntimeCall {
-    RelayRuntimeCall::Sudo(
-        crate::relay_runtime::api::runtime_types::pallet_sudo::pallet::Call::sudo { call },
-    )
+    #[cfg(feature = "paseo")]
+    return RelayRuntimeCall::Sudo(
+        crate::relay_runtime::runtime_types::pallet_sudo::pallet::Call::sudo { call },
+    );
+    #[cfg(not(feature = "paseo"))]
+    return RelayRuntimeCall::Utility(
+        crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::batch_all { calls },
+    );
 }
 
 pub fn force_xcm_version() -> AssetHubRuntimeCall {

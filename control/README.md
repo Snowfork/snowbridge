@@ -79,3 +79,8 @@ subxt metadata --url ws://127.0.0.1:8000 -f bytes -o runtimes/polkadot/polkadot-
 subxt metadata --url ws://127.0.0.1:8001 -f bytes -o runtimes/bridge-hub-polkadot/bridge-hub-metadata.bin
 subxt metadata --url ws://127.0.0.1:8002 -f bytes -o runtimes/asset-hub-polkadot/asset-hub-metadata.bin
 ```
+
+Update runtime.rs:
+```shell
+subxt codegen --url wss://paseo-rpc.dwellir.com > runtimes/paseo/src/runtime.rs
+```
