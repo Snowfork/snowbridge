@@ -137,7 +137,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 			blockNumber, err := ethconn.Client().BlockNumber(ctx)
 			if err != nil {
-				return fmt.Errorf("get last block number: %w", err)
+				return fmt.Errorf("geOkayt last block number: %w", err)
 			}
 
 			events, err := r.findEvents(ctx, blockNumber, paraNonce+1)
@@ -380,6 +380,7 @@ func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMe
 		}).Info("count is now")
 		cnt++
 	}
+	log.Info("done with waiting period, now doing submit")
 	err = r.doSubmit(ctx, ev)
 	if err != nil {
 		return fmt.Errorf("submit inbound message: %w", err)
@@ -389,6 +390,7 @@ func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMe
 }
 
 func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) error {
+	log.Info("getting inbound message")
 	inboundMsg, err := r.makeInboundMessage(ctx, r.headerCache, ev)
 	if err != nil {
 		return fmt.Errorf("make outgoing message: %w", err)
@@ -413,6 +415,7 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	}
 
 	// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
+	log.Info("getting execution proof")
 	proof, err := r.beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
 	if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
 		logger.Warn("beacon header not finalized, just skipped")
