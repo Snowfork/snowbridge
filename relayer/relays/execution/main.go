@@ -354,6 +354,9 @@ func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMe
 	var paraNonce uint64
 	ethNonce := ev.Nonce
 	waitingPeriod := (ethNonce + r.config.Schedule.TotalRelayerCount - r.config.Schedule.ID) % r.config.Schedule.TotalRelayerCount
+	log.WithFields(logrus.Fields{
+		"waitingPeriod": waitingPeriod,
+	}).Info("waiting period is")
 
 	var cnt uint64
 	for {
@@ -368,7 +371,13 @@ func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMe
 		if cnt == waitingPeriod {
 			break
 		}
+		log.WithFields(logrus.Fields{
+			"seconds": time.Duration(r.config.Schedule.SleepInterval) * time.Second,
+		}).Info("sleeping")
 		time.Sleep(time.Duration(r.config.Schedule.SleepInterval) * time.Second)
+		log.WithFields(logrus.Fields{
+			"count": cnt,
+		}).Info("count is now")
 		cnt++
 	}
 	err = r.doSubmit(ctx, ev)
