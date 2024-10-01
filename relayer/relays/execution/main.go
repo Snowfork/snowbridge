@@ -430,12 +430,21 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		return fmt.Errorf("fetch execution header proof: %w", err)
 	}
 
+	paraNonce, err := r.fetchLatestParachainNonce()
+	if err != nil {
+		return fmt.Errorf("fetch latest parachain nonce: %w", err)
+	}
+	if ev.Nonce <= paraNonce {
+		log.WithField("nonce", paraNonce).Info("message picked up by another relayer, skipped")
+		return nil
+	}
+
 	err = r.writeToParachain(ctx, proof, inboundMsg)
 	if err != nil {
 		return fmt.Errorf("write to parachain: %w", err)
 	}
 
-	paraNonce, err := r.fetchLatestParachainNonce()
+	paraNonce, err = r.fetchLatestParachainNonce()
 	if err != nil {
 		return fmt.Errorf("fetch latest parachain nonce: %w", err)
 	}

@@ -3,8 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Config struct {
@@ -92,14 +90,12 @@ func (b BeaconConfig) Validate() error {
 }
 
 func (p ParachainConfig) Validate() error {
-	log.Info("validating parachain settings")
 	if p.Endpoint == "" {
 		return errors.New("[endpoint] is not set")
 	}
 	if p.MaxWatchedExtrinsics == 0 {
 		return errors.New("[maxWatchedExtrinsics] is not set")
 	}
-	log.WithField("HeaderRedundancy", p.HeaderRedundancy).Info("p.HeaderRedundancy is")
 	if p.HeaderRedundancy == 0 {
 		return errors.New("[headerRedundancy] is not set")
 	}
