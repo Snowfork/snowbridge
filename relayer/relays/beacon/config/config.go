@@ -41,7 +41,9 @@ type SinkConfig struct {
 type ParachainConfig struct {
 	Endpoint             string `mapstructure:"endpoint"`
 	MaxWatchedExtrinsics int64  `mapstructure:"maxWatchedExtrinsics"`
-	HeaderRedundancy     uint64 `mapstructure:"headerRedundancy"`
+	// The max number of header in the FinalizedBeaconStateBuffer on-chain.
+	// https://github.com/paritytech/polkadot-sdk/blob/master/bridges/snowbridge/pallets/ethereum-client/src/types.rs#L23
+	HeaderRedundancy uint64 `mapstructure:"headerRedundancy"`
 }
 
 func (c Config) Validate() error {
