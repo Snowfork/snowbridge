@@ -46,13 +46,13 @@ const GATEWAY_V2_ADDRESS: [u8; 20] = hex!("f8f7758fbcefd546eaeff7de24aff666b6228
 
 #[tokio::test]
 async fn upgrade_gateway() {
-	let ethereum_provider = Provider::<Ws>::connect(ETHEREUM_API)
+	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
 		.await
 		.unwrap()
 		.interval(Duration::from_millis(10u64));
 	let ethereum_client = Arc::new(ethereum_provider);
 
-	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = i_upgradable::IUpgradable::new(gateway_addr, ethereum_client.clone());
 
 	let new_impl = mock_gateway_v2::MockGatewayV2::new(
@@ -64,9 +64,9 @@ async fn upgrade_gateway() {
 	let new_impl_initializer_params = ethers::abi::encode(&[Token::Uint(42.into())]);
 
 	let relaychain: OnlineClient<PolkadotConfig> =
-		OnlineClient::from_url(RELAY_CHAIN_WS_URL).await.unwrap();
+		OnlineClient::from_url((*RELAY_CHAIN_WS_URL).to_string()).await.unwrap();
 	let bridgehub: OnlineClient<PolkadotConfig> =
-		OnlineClient::from_url(BRIDGE_HUB_WS_URL).await.unwrap();
+		OnlineClient::from_url((*BRIDGE_HUB_WS_URL).to_string()).await.unwrap();
 
 	let sudo: Pair = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 

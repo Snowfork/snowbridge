@@ -109,7 +109,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 
 		log.WithField("hash", beaconHeader).Info("will be syncing execution header for beacon hash")
 
-		p := protocol.New(conf.Source.Beacon.Spec)
+		p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
 		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 		store.Connect()
 		defer store.Close()

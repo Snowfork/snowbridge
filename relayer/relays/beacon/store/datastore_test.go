@@ -13,6 +13,7 @@ import (
 )
 
 const TestDataStoreFile = "./"
+const MaxRedundancy = 20
 
 func TestGetBeaconState(t *testing.T) {
 	_ = os.RemoveAll(TestDataStoreFile + BeaconStateDir)
@@ -22,7 +23,7 @@ func TestGetBeaconState(t *testing.T) {
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
-	}))
+	}, MaxRedundancy))
 	err := store.Connect()
 	require.NoError(t, err)
 	defer func() {
@@ -66,7 +67,7 @@ func TestPruneOldStates(t *testing.T) {
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
-	}))
+	}, MaxRedundancy))
 	err := store.Connect()
 	require.NoError(t, err)
 	defer func() {
@@ -137,7 +138,7 @@ func TestFindBeaconStateWithinRange(t *testing.T) {
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
 		DenebForkEpoch:               0,
-	})
+	}, MaxRedundancy)
 	store := New(TestDataStoreFile, 2, *p)
 	err := store.Connect()
 	require.NoError(t, err)

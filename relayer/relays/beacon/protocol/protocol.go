@@ -10,12 +10,14 @@ import (
 type Protocol struct {
 	Settings               config.SpecSettings
 	SlotsPerHistoricalRoot uint64
+	HeaderRedundancy       uint64
 }
 
-func New(setting config.SpecSettings) *Protocol {
+func New(setting config.SpecSettings, headerRedundancy uint64) *Protocol {
 	return &Protocol{
 		Settings:               setting,
 		SlotsPerHistoricalRoot: setting.SlotsInEpoch * setting.EpochsPerSyncCommitteePeriod,
+		HeaderRedundancy:       headerRedundancy,
 	}
 }
 
