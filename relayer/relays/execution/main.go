@@ -103,7 +103,11 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	)
 	r.beaconHeader = &beaconHeader
 
-	log.Info("Current relay's ID:", r.config.Schedule.ID)
+	log.WithFields(log.Fields{
+		"relayerId":     r.config.Schedule.ID,
+		"relayerCount":  r.config.Schedule.TotalRelayerCount,
+		"sleepInterval": r.config.Schedule.SleepInterval,
+	}).Info("decentralization config")
 
 	for {
 		select {
@@ -355,32 +359,33 @@ func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMe
 	ethNonce := ev.Nonce
 	waitingPeriod := (ethNonce + r.config.Schedule.TotalRelayerCount - r.config.Schedule.ID) % r.config.Schedule.TotalRelayerCount
 	log.WithFields(logrus.Fields{
+		"ethNonce":      ethNonce,
+		"relayerCount":  r.config.Schedule.TotalRelayerCount,
+		"relayerID":     r.config.Schedule.ID,
 		"waitingPeriod": waitingPeriod,
-	}).Info("waiting period is")
+	}).Info("relayer decentralization details")
 
 	var cnt uint64
 	for {
+		log.Info("checking if message should be processed")
 		paraNonce, err = r.fetchLatestParachainNonce()
 		if err != nil {
 			return fmt.Errorf("fetch latest parachain nonce: %w", err)
 		}
 		if ethNonce <= paraNonce {
-			log.Info(fmt.Sprintf("nonce %d picked up by another relayer, just skip", paraNonce))
+			log.WithField("nonce", paraNonce).Info("message picked up by another relayer, skipped")
 			return nil
 		}
 		if cnt == waitingPeriod {
+			log.WithField("cnt", cnt).Info("waiting period done")
 			break
 		}
-		log.WithFields(logrus.Fields{
-			"seconds": time.Duration(r.config.Schedule.SleepInterval) * time.Second,
-		}).Info("sleeping")
+		log.Info("sleeping...")
 		time.Sleep(time.Duration(r.config.Schedule.SleepInterval) * time.Second)
-		log.WithFields(logrus.Fields{
-			"count": cnt,
-		}).Info("count is now")
+		log.Info("done sleeping...")
 		cnt++
 	}
-	log.Info("done with waiting period, now doing submit")
+
 	err = r.doSubmit(ctx, ev)
 	if err != nil {
 		return fmt.Errorf("submit inbound message: %w", err)
@@ -390,7 +395,7 @@ func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMe
 }
 
 func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) error {
-	log.Info("getting inbound message")
+	log.Info("getting messages")
 	inboundMsg, err := r.makeInboundMessage(ctx, r.headerCache, ev)
 	if err != nil {
 		return fmt.Errorf("make outgoing message: %w", err)
