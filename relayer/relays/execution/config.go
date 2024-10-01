@@ -46,7 +46,7 @@ type ContractsConfig struct {
 }
 
 type SinkConfig struct {
-	Parachain config.ParachainConfig `mapstructure:"parachain"`
+	Parachain beaconconf.ParachainConfig `mapstructure:"parachain"`
 }
 
 type ChannelID [32]byte
