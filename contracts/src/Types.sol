@@ -113,3 +113,13 @@ struct TokenInfo {
     bool isRegistered;
     bytes32 foreignID;
 }
+
+// V2
+
+struct TicketV2 {
+    bytes[] xfers;
+    bytes xcm;
+}
+
+
+ enum TransferKind { LocalReserve, DestinationReserve }

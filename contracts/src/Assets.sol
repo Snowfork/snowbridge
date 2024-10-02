@@ -11,12 +11,13 @@ import {AssetsStorage, TokenInfo} from "./storage/AssetsStorage.sol";
 import {CoreStorage} from "./storage/CoreStorage.sol";
 
 import {SubstrateTypes} from "./SubstrateTypes.sol";
-import {ParaID, MultiAddress, Ticket, Costs} from "./Types.sol";
+import {ParaID, MultiAddress, Ticket, Costs, TransferKind, TicketV2} from "./Types.sol";
 import {Address} from "./utils/Address.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
 import {Call} from "./utils/Call.sol";
 import {Token} from "./Token.sol";
+import {WETH9} from "canonical-weth/WETH9.sol";
 
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
 library Assets {
@@ -40,7 +41,12 @@ library Assets {
     }
 
     /// @dev transfer tokens from the sender to the specified agent
-    function _transferToAgent(address agent, address token, address sender, uint128 amount) internal {
+    function _transferToAgent(
+        address agent,
+        address token,
+        address sender,
+        uint128 amount
+    ) internal {
         if (!token.isContract()) {
             revert InvalidToken();
         }
@@ -64,14 +70,19 @@ library Assets {
             revert TokenNotRegistered();
         }
 
-        return _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
+        return
+            _sendTokenCosts(
+                destinationChain,
+                destinationChainFee,
+                maxDestinationChainFee
+            );
     }
 
-    function _sendTokenCosts(ParaID destinationChain, uint128 destinationChainFee, uint128 maxDestinationChainFee)
-        internal
-        view
-        returns (Costs memory costs)
-    {
+    function _sendTokenCosts(
+        ParaID destinationChain,
+        uint128 destinationChainFee,
+        uint128 maxDestinationChainFee
+    ) internal view returns (Costs memory costs) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.assetHubParaID == destinationChain) {
             costs.foreign = $.assetHubReserveTransferFee;
@@ -115,20 +126,28 @@ library Assets {
         }
 
         if (info.foreignID == bytes32(0)) {
-            return _sendNativeToken(
-                token, sender, destinationChain, destinationAddress, destinationChainFee, maxDestinationChainFee, amount
-            );
+            return
+                _sendNativeToken(
+                    token,
+                    sender,
+                    destinationChain,
+                    destinationAddress,
+                    destinationChainFee,
+                    maxDestinationChainFee,
+                    amount
+                );
         } else {
-            return _sendForeignToken(
-                info.foreignID,
-                token,
-                sender,
-                destinationChain,
-                destinationAddress,
-                destinationChainFee,
-                maxDestinationChainFee,
-                amount
-            );
+            return
+                _sendForeignToken(
+                    info.foreignID,
+                    token,
+                    sender,
+                    destinationChain,
+                    destinationAddress,
+                    destinationChainFee,
+                    maxDestinationChainFee,
+                    amount
+                );
         }
     }
 
@@ -147,7 +166,11 @@ library Assets {
         _transferToAgent($.assetHubAgent, token, sender, amount);
 
         ticket.dest = $.assetHubParaID;
-        ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
+        ticket.costs = _sendTokenCosts(
+            destinationChain,
+            destinationChainFee,
+            maxDestinationChainFee
+        );
 
         // Construct a message payload
         if (destinationChain == $.assetHubParaID) {
@@ -155,7 +178,10 @@ library Assets {
             if (destinationAddress.isAddress32()) {
                 // The receiver has a 32-byte account ID
                 ticket.payload = SubstrateTypes.SendTokenToAssetHubAddress32(
-                    token, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
+                    token,
+                    destinationAddress.asAddress32(),
+                    $.assetHubReserveTransferFee,
+                    amount
                 );
             } else {
                 // AssetHub does not support 20-byte account IDs
@@ -191,7 +217,13 @@ library Assets {
                 revert Unsupported();
             }
         }
-        emit IGateway.TokenSent(token, sender, destinationChain, destinationAddress, amount);
+        emit IGateway.TokenSent(
+            token,
+            sender,
+            destinationChain,
+            destinationAddress,
+            amount
+        );
     }
 
     function _sendForeignTokenCosts(
@@ -240,20 +272,36 @@ library Assets {
         Token(token).burn(sender, amount);
 
         ticket.dest = $.assetHubParaID;
-        ticket.costs = _sendForeignTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
+        ticket.costs = _sendForeignTokenCosts(
+            destinationChain,
+            destinationChainFee,
+            maxDestinationChainFee
+        );
 
         // Construct a message payload
-        if (destinationChain == $.assetHubParaID && destinationAddress.isAddress32()) {
+        if (
+            destinationChain == $.assetHubParaID &&
+            destinationAddress.isAddress32()
+        ) {
             // The funds will be minted into the receiver's account on AssetHub
             // The receiver has a 32-byte account ID
             ticket.payload = SubstrateTypes.SendForeignTokenToAssetHubAddress32(
-                foreignID, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
+                foreignID,
+                destinationAddress.asAddress32(),
+                $.assetHubReserveTransferFee,
+                amount
             );
         } else {
             revert Unsupported();
         }
 
-        emit IGateway.TokenSent(token, sender, destinationChain, destinationAddress, amount);
+        emit IGateway.TokenSent(
+            token,
+            sender,
+            destinationChain,
+            destinationAddress,
+            amount
+        );
     }
 
     function registerTokenCosts() external view returns (Costs memory costs) {
@@ -270,12 +318,25 @@ library Assets {
         costs.native = $.registerTokenFee;
     }
 
+    address public constant WETH_ADDRESS = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+
     /// @dev Registers a token (only native tokens at this time)
     /// @param token The ERC20 token address.
-    function registerToken(address token) external returns (Ticket memory ticket) {
+    function registerToken(
+        address token,
+        uint256 remainingUserFee,
+    ) external returns (Ticket memory ticket) {
         if (!token.isContract()) {
             revert InvalidToken();
         }
+
+        if (remainingUserFee < $.registerTokenFee) {
+            revert();
+        }
+
+        WETH9 weth = WETH9(WETH_ADDRESS);
+
+        weth.deposit{value: remainingUserFee}();
 
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
@@ -285,23 +346,33 @@ library Assets {
         TokenInfo storage info = $.tokenRegistry[token];
         info.isRegistered = true;
 
-        ticket.dest = $.assetHubParaID;
-        ticket.costs = _registerTokenCosts();
-        ticket.payload = SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee);
+        bytes[] memory xfers = new bytes[](1);
+        bytes memory xcm = hex"";
+        xfers[0] = "WETH";
+
+        TicketV2 memory ticket = TicketV2({xfers: xfers, xcm: xcm});
 
         emit IGateway.TokenRegistrationSent(token);
+
+        return ticket;
     }
 
     // @dev Register a new fungible Polkadot token for an agent
-    function registerForeignToken(bytes32 foreignTokenID, string memory name, string memory symbol, uint8 decimals)
-        external
-    {
+    function registerForeignToken(
+        bytes32 foreignTokenID,
+        string memory name,
+        string memory symbol,
+        uint8 decimals
+    ) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenAddressOf[foreignTokenID] != address(0)) {
             revert TokenAlreadyRegistered();
         }
         Token token = new Token(name, symbol, decimals);
-        TokenInfo memory info = TokenInfo({isRegistered: true, foreignID: foreignTokenID});
+        TokenInfo memory info = TokenInfo({
+            isRegistered: true,
+            foreignID: foreignTokenID
+        });
 
         $.tokenAddressOf[foreignTokenID] = address(token);
         $.tokenRegistry[address(token)] = info;
@@ -310,17 +381,28 @@ library Assets {
     }
 
     // @dev Mint foreign token from Polkadot
-    function mintForeignToken(bytes32 foreignTokenID, address recipient, uint256 amount) external {
+    function mintForeignToken(
+        bytes32 foreignTokenID,
+        address recipient,
+        uint256 amount
+    ) external {
         address token = _ensureTokenAddressOf(foreignTokenID);
         Token(token).mint(recipient, amount);
     }
 
     // @dev Transfer ERC20 to `recipient`
-    function transferNativeToken(address executor, address agent, address token, address recipient, uint128 amount)
-        external
-    {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
-        (bool success,) = Agent(payable(agent)).invoke(executor, call);
+    function transferNativeToken(
+        address executor,
+        address agent,
+        address token,
+        address recipient,
+        uint128 amount
+    ) external {
+        bytes memory call = abi.encodeCall(
+            AgentExecutor.transferToken,
+            (token, recipient, amount)
+        );
+        (bool success, ) = Agent(payable(agent)).invoke(executor, call);
         if (!success) {
             revert TokenTransferFailed();
         }
@@ -333,7 +415,9 @@ library Assets {
     }
 
     // @dev Get token address by tokenID
-    function _ensureTokenAddressOf(bytes32 tokenID) internal view returns (address) {
+    function _ensureTokenAddressOf(
+        bytes32 tokenID
+    ) internal view returns (address) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenAddressOf[tokenID] == address(0)) {
             revert TokenNotRegistered();
@@ -344,5 +428,70 @@ library Assets {
     function _isTokenRegistered(address token) internal view returns (bool) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         return $.tokenRegistry[token].isRegistered;
+    }
+
+    function sendMessage(
+        bytes calldata xcm,
+        bytes[] calldata assets
+    ) external returns (TicketV2 memory) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+
+        bytes[] memory xfers = new bytes[](assets.length);
+        for (uint256 i = 0; i < assets.length; i++) {
+            xfers[i] = _handleAsset(assets[i]);
+        }
+
+        return
+            TicketV2({
+                costs: Costs({foreign: 0, native: 0}),
+                xfers: xfers,
+                xcm: xcm
+            });
+    }
+
+    function _handleAsset(
+        bytes calldata asset
+    ) internal returns (bytes memory) {
+        uint8 assetKind;
+        assembly {
+            assetKind := calldataload(asset.offset)
+        }
+        if (assetKind == 0) {
+            (, address token, uint128 amount) = abi.decode(
+                asset,
+                (uint8, address, uint128)
+            );
+            return _handleAssetERC20(token, amount);
+        }
+    }
+
+    function _handleAssetERC20(
+        address token,
+        uint128 amount
+    ) internal returns (bytes memory) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        TokenInfo storage info = $.tokenRegistry[token];
+
+        if (!info.isRegistered) {
+            revert TokenNotRegistered();
+        }
+
+        if (info.foreignID == bytes32(0)) {
+            _transferToAgent($.assetHubAgent, token, msg.sender, amount);
+            return
+                SubstrateTypes.encodeTransfer(
+                    TransferKind.LocalReserve,
+                    token,
+                    amount
+                );
+        } else {
+            Token(token).burn(msg.sender, amount);
+            return
+                SubstrateTypes.encodeTransfer(
+                    TransferKind.DestinationReserve,
+                    token,
+                    amount
+                );
+        }
     }
 }

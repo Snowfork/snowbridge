@@ -27,6 +27,8 @@ contract AgentExecutor {
         _transferToken(token, recipient, amount);
     }
 
+    function deposit() external payable {}
+
     /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
     function _transferToken(address token, address recipient, uint128 amount) internal {
         IERC20(token).safeTransfer(recipient, amount);

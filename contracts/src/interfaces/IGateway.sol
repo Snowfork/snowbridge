@@ -12,10 +12,20 @@ interface IGateway {
      */
 
     // Emitted when inbound message has been dispatched
-    event InboundMessageDispatched(ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bool success);
+    event InboundMessageDispatched(
+        ChannelID indexed channelID,
+        uint64 nonce,
+        bytes32 indexed messageID,
+        bool success
+    );
 
     // Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
-    event OutboundMessageAccepted(ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bytes payload);
+    event OutboundMessageAccepted(
+        ChannelID indexed channelID,
+        uint64 nonce,
+        bytes32 indexed messageID,
+        bytes payload
+    );
 
     // Emitted when an agent has been created for a consensus system on Polkadot
     event AgentCreated(bytes32 agentID, address agent);
@@ -33,7 +43,11 @@ interface IGateway {
     event PricingParametersChanged();
 
     // Emitted when funds are withdrawn from an agent
-    event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
+    event AgentFundsWithdrawn(
+        bytes32 indexed agentID,
+        address indexed recipient,
+        uint256 amount
+    );
 
     // Emitted when foreign token from polkadot registed
     event ForeignTokenRegistered(bytes32 indexed tokenID, address token);
@@ -43,9 +57,13 @@ interface IGateway {
      */
     function operatingMode() external view returns (OperatingMode);
 
-    function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode);
+    function channelOperatingModeOf(
+        ChannelID channelID
+    ) external view returns (OperatingMode);
 
-    function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);
+    function channelNoncesOf(
+        ChannelID channelID
+    ) external view returns (uint64, uint64);
 
     function agentOf(bytes32 agentID) external view returns (address);
 
@@ -97,10 +115,11 @@ interface IGateway {
     /// @dev Quote a fee in Ether for sending a token
     /// 1. Delivery costs to BridgeHub
     /// 2. XCM execution costs on destinationChain
-    function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
-        external
-        view
-        returns (uint256);
+    function quoteSendTokenFee(
+        address token,
+        ParaID destinationChain,
+        uint128 destinationFee
+    ) external view returns (uint256);
 
     /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
     function sendToken(
@@ -109,5 +128,10 @@ interface IGateway {
         MultiAddress calldata destinationAddress,
         uint128 destinationFee,
         uint128 amount
+    ) external payable;
+
+    function sendMessage(
+        bytes calldata xcm,
+        bytes[] calldata assets
     ) external payable;
 }
