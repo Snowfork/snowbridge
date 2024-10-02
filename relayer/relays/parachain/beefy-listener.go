@@ -217,6 +217,10 @@ func (li *BeefyListener) fetchLatestBeefyBlock(ctx context.Context) (uint64, typ
 	return number, hash, nil
 }
 
+// The maximum paras that will be included in the proof.
+// https://github.com/paritytech/polkadot-sdk/blob/d66dee3c3da836bcf41a12ca4e1191faee0b6a5b/polkadot/runtime/parachains/src/paras/mod.rs#L1225-L1232
+const MaxParaHeads = 1024
+
 // Generates a proof for an MMR leaf, and then generates a merkle proof for our parachain header, which should be verifiable against the
 // parachains root in the mmr leaf.
 func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, header *types.Header) (*ProofOutput, error) {
@@ -255,21 +259,10 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, h
 		return nil, fmt.Errorf("retrieve MMR root hash at block %v: %w", latestBeefyBlockHash.Hex(), err)
 	}
 
-	// Generate a merkle proof for the parachain head with input ParaId
-	// and verify with merkle root hash of all parachain heads
-	// Polkadot uses the following code to generate merkle root from parachain headers:
-	// https://github.com/paritytech/polkadot/blob/2eb7672905d99971fc11ad7ff4d57e68967401d2/runtime/rococo/src/lib.rs#L706-L709
-	merkleProofData, err := CreateParachainMerkleProof(input.ParaHeads, input.ParaID)
+	var merkleProofData *MerkleProofData
+	merkleProofData, input.ParaHeads, err = li.generateAndValidateParasHeadsMerkleProof(input, &mmrProof)
 	if err != nil {
-		return nil, fmt.Errorf("create parachain header proof: %w", err)
-	}
-
-	// Verify merkle root generated is same as value generated in relaychain
-	if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
-		return nil, fmt.Errorf("MMR parachain merkle root does not match calculated parachain merkle root (mmr: %s, computed: %s)",
-			mmrProof.Leaf.ParachainHeads.Hex(),
-			merkleProofData.Root.String(),
-		)
+		return nil, err
 	}
 
 	log.Debug("Created all parachain merkle proof data")
@@ -278,10 +271,52 @@ func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, h
 		MMRProof:        simplifiedProof,
 		MMRRootHash:     mmrRootHash,
 		Header:          *header,
-		MerkleProofData: merkleProofData,
+		MerkleProofData: *merkleProofData,
 	}
 
 	return &output, nil
+}
+
+// Generate a merkle proof for the parachain head with input ParaId and verify with merkle root hash of all parachain heads
+func (li *BeefyListener) generateAndValidateParasHeadsMerkleProof(input *ProofInput, mmrProof *types.GenerateMMRProofResponse) (*MerkleProofData, []relaychain.ParaHead, error) {
+	// Polkadot uses the following code to generate merkle root from parachain headers:
+	// https://github.com/paritytech/polkadot-sdk/blob/d66dee3c3da836bcf41a12ca4e1191faee0b6a5b/polkadot/runtime/westend/src/lib.rs#L453-L460
+	// Truncate the ParaHeads to the 1024
+	// https://github.com/paritytech/polkadot-sdk/blob/d66dee3c3da836bcf41a12ca4e1191faee0b6a5b/polkadot/runtime/parachains/src/paras/mod.rs#L1305-L1311
+	paraHeads := input.ParaHeads
+	numParas := min(MaxParaHeads, len(paraHeads))
+	merkleProofData, err := CreateParachainMerkleProof(paraHeads[:numParas], input.ParaID)
+	if err != nil {
+		return nil, paraHeads, fmt.Errorf("create parachain header proof: %w", err)
+	}
+
+	// Verify merkle root generated is same as value generated in relaychain and if so exit early
+	if merkleProofData.Root.Hex() == mmrProof.Leaf.ParachainHeads.Hex() {
+		return &merkleProofData, paraHeads, nil
+	}
+
+	// Try a filtering out parathreads
+	log.WithFields(log.Fields{
+		"beefyBlock": merkleProofData.Root.Hex(),
+		"leafIndex":  mmrProof.Leaf.ParachainHeads.Hex(),
+	}).Warn("MMR parachain merkle root does not match calculated merkle root. Trying to filtering out parathreads.")
+
+	paraHeads, err = li.relaychainConn.FilterParachainHeads(paraHeads, input.RelayBlockHash)
+	if err != nil {
+		return nil, paraHeads, fmt.Errorf("could not filter out parathreads: %w", err)
+	}
+
+	merkleProofData, err = CreateParachainMerkleProof(paraHeads[:numParas], input.ParaID)
+	if err != nil {
+		return nil, paraHeads, fmt.Errorf("create parachain header proof: %w", err)
+	}
+	if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
+		return nil, paraHeads, fmt.Errorf("MMR parachain merkle root does not match calculated parachain merkle root (mmr: %s, computed: %s)",
+			mmrProof.Leaf.ParachainHeads.Hex(),
+			merkleProofData.Root.String(),
+		)
+	}
+	return &merkleProofData, paraHeads, nil
 }
 
 func (li *BeefyListener) waitAndSend(ctx context.Context, task *Task, waitingPeriod uint64) error {

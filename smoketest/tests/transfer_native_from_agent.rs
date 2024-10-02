@@ -4,6 +4,7 @@ use snowbridge_smoketest::{
 	contracts::{i_gateway, i_gateway::InboundMessageDispatchedFilter},
 	helper::*,
 	parachains::bridgehub::api::ethereum_system::events::TransferNativeFromAgent,
+	penpal_helper::send_sudo_xcm_transact,
 	xcm::construct_xcm_message_with_fee,
 };
 
@@ -11,7 +12,7 @@ use snowbridge_smoketest::{
 async fn transfer_native_from_agent() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 
-	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let ethereum_client = *(test_clients.ethereum_client.clone());
 	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
 	let agent_address = gateway.agent_of(SIBLING_AGENT_ID).await.expect("find agent");
@@ -40,9 +41,7 @@ async fn transfer_native_from_agent() {
 		.expect("construct inner call."),
 	);
 
-	let result = send_sudo_xcm_transact(&test_clients.penpal_client, message)
-		.await
-		.expect("failed to send xcm transact.");
+	let result = send_sudo_xcm_transact(message).await.expect("failed to send xcm transact.");
 
 	println!(
 		"xcm call issued at block hash {:?}, transaction hash {:?}",

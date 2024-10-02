@@ -6,7 +6,7 @@ use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{i_gateway, weth9},
-	helper::{initial_clients, PenpalConfig},
+	helper::initial_clients,
 	parachains::{
 		assethub::api::{
 			foreign_assets::events::Issued as AssetHubIssued,
@@ -21,6 +21,7 @@ use snowbridge_smoketest::{
 		},
 		penpal::{self, api::foreign_assets::events::Issued as PenpalIssued},
 	},
+	penpal_helper::PenpalConfig,
 };
 use subxt::{
 	ext::codec::Encode,
@@ -34,12 +35,14 @@ async fn send_token_to_penpal() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
 	let assethub_client = *(test_clients.asset_hub_client.clone());
-	let penpal_client = *(test_clients.penpal_client.clone());
+	let penpal_client: OnlineClient<PenpalConfig> = OnlineClient::from_url(PENPAL_WS_URL)
+		.await
+		.expect("can not connect to penpal parachain");
 
-	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
 
-	let weth_addr: Address = WETH_CONTRACT.into();
+	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
 	// Mint WETH tokens
@@ -47,7 +50,7 @@ async fn send_token_to_penpal() {
 	let receipt = weth.deposit().value(value).send().await.unwrap().await.unwrap().unwrap();
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
-	ensure_penpal_asset_exists(&mut test_clients.penpal_client.clone()).await;
+	ensure_penpal_asset_exists(&mut penpal_client.clone()).await;
 
 	// Approve token spend
 	weth.approve(gateway_addr, value.into())
@@ -100,7 +103,7 @@ async fn send_token_to_penpal() {
 		parents: 2,
 		interior: X2([
 			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
-			AccountKey20 { network: None, key: WETH_CONTRACT.into() },
+			AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
 		]),
 	};
 	let assethub_expected_owner: AccountId32 = PENPAL_SOVEREIGN.into();
@@ -166,7 +169,7 @@ async fn ensure_penpal_asset_exists(penpal_client: &mut OnlineClient<PenpalConfi
 		parents: 2,
 		interior: X2([
 			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
-			AccountKey20 { network: None, key: WETH_CONTRACT.into() },
+			AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
 		]),
 	};
 

@@ -27,10 +27,10 @@ async fn register_token() {
 	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
 	let assethub = *(test_clients.asset_hub_client.clone());
 
-	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
 
-	let weth_addr: Address = WETH_CONTRACT.into();
+	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
 	let fee = gateway.quote_register_token_fee().call().await.unwrap();
@@ -59,7 +59,7 @@ async fn register_token() {
 
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
-	let wait_for_blocks = 100;
+	let wait_for_blocks = (*WAIT_PERIOD) as usize;
 	let mut blocks = assethub
 		.blocks()
 		.subscribe_finalized()
@@ -71,7 +71,7 @@ async fn register_token() {
 		parents: 2,
 		interior: X2(
 			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
-			AccountKey20 { network: None, key: WETH_CONTRACT.into() },
+			AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
 		),
 	};
 	let expected_creator: AccountId32 = SNOWBRIDGE_SOVEREIGN.into();
