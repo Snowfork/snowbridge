@@ -455,6 +455,7 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	return nil
 }
 
+// isMessageProcessed checks if the provided event nonce has already been processed on-chain.
 func (r *Relay) isMessageProcessed(eventNonce uint64) (bool, error) {
 	paraNonce, err := r.fetchLatestParachainNonce()
 	if err != nil {
@@ -469,6 +470,7 @@ func (r *Relay) isMessageProcessed(eventNonce uint64) (bool, error) {
 	return false, nil
 }
 
+// isInFinalizedBlock checks if the block containing the event is a finalized block.
 func (r *Relay) isInFinalizedBlock(ctx context.Context, event *contracts.GatewayOutboundMessageAccepted) error {
 	nextBlockNumber := new(big.Int).SetUint64(event.Raw.BlockNumber + 1)
 

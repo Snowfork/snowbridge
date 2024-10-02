@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - decentralize-relayer-logs
   workflow_dispatch:
 
 env:
