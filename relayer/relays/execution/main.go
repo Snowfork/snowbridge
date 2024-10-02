@@ -151,7 +151,11 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 			for _, ev := range events {
 				err = r.waitAndSend(ctx, ev)
-				if err != nil {
+				switch {
+				case errors.Is(err, header.ErrBeaconHeaderNotFinalized):
+					log.WithField("nonce", ev.Nonce).Info("beacon header not finalized yet")
+					break
+				case err != nil:
 					return fmt.Errorf("submit message: %w", err)
 				}
 			}
@@ -423,8 +427,7 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	log.Info("getting execution proof")
 	proof, err := r.beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
 	if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
-		logger.Warn("beacon header not finalized, just skipped")
-		return nil
+		return err
 	}
 	if err != nil {
 		return fmt.Errorf("fetch execution header proof: %w", err)
