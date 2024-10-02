@@ -480,7 +480,7 @@ func (r *Relay) isMessageProcessed(eventNonce uint64) (bool, error) {
 }
 
 func (r *Relay) isInFinalizedBlock(ctx context.Context, events []*contracts.GatewayOutboundMessageAccepted) error {
-	if len(events) > 0 {
+	if len(events) == 0 {
 		return nil
 	}
 	firstEvent := events[0]
