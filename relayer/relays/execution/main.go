@@ -384,7 +384,7 @@ func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMe
 		if err != nil {
 			return fmt.Errorf("is message procssed: %w", err)
 		}
-		// If the message is already processed we shouldn't try to submit it again
+		// If the message is already processed we shouldn't submit it again
 		if isProcessed {
 			return nil
 		}
@@ -442,7 +442,7 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	if err != nil {
 		return fmt.Errorf("is message procssed: %w", err)
 	}
-	// If the message is already processed we shouldn't try to submit it again
+	// If the message is already processed we shouldn't submit it again
 	if isProcessed {
 		return nil
 	}
