@@ -151,6 +151,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			} else if err != nil {
 				return fmt.Errorf("find finalized events: %w", err)
 			}
+			log.WithField("nonce", events[0].Nonce).Info("event is in finalized block")
 
 			for _, ev := range events {
 				err := r.waitAndSend(ctx, ev)
