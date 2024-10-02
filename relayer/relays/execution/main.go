@@ -434,6 +434,7 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	if err != nil {
 		return fmt.Errorf("fetch latest parachain nonce: %w", err)
 	}
+	// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state
 	if ev.Nonce <= paraNonce {
 		log.WithField("nonce", paraNonce).Info("message picked up by another relayer, skipped")
 		return nil
