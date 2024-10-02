@@ -144,19 +144,18 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				return fmt.Errorf("get last block number: %w", err)
 			}
 
-			events, err := r.findFinalizedEvents(ctx, blockNumber, paraNonce+1)
-			if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
-				log.WithField("nonce", events[0].Nonce).Info("beacon header not finalized yet")
-				continue
-			} else if err != nil {
-				return fmt.Errorf("find finalized events: %w", err)
+			events, err := r.findEvents(ctx, blockNumber, paraNonce+1)
+			if err != nil {
+				return fmt.Errorf("find events: %w", err)
 			}
-			log.WithField("nonce", events[0].Nonce).Info("event is in finalized block")
 
 			for _, ev := range events {
 				err := r.waitAndSend(ctx, ev)
-				if err != nil {
-					return fmt.Errorf("submit message: %w", err)
+				if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
+					log.Info("beacon header not finalized yet")
+					continue
+				} else if err != nil {
+					return fmt.Errorf("submit event: %w", err)
 				}
 			}
 		}
@@ -236,19 +235,6 @@ func (r *Relay) fetchEthereumNonce(ctx context.Context) (uint64, error) {
 }
 
 const BlocksPerQuery = 4096
-
-func (r *Relay) findFinalizedEvents(
-	ctx context.Context,
-	blockNumber uint64,
-	start uint64,
-) ([]*contracts.GatewayOutboundMessageAccepted, error) {
-	events, err := r.findEvents(ctx, blockNumber, start)
-	if err != nil {
-		return []*contracts.GatewayOutboundMessageAccepted{}, fmt.Errorf("find events: %w", err)
-	}
-
-	return events, r.isInFinalizedBlock(ctx, events)
-}
 
 func (r *Relay) findEvents(
 	ctx context.Context,
@@ -389,6 +375,10 @@ func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMe
 		if isProcessed {
 			return nil
 		}
+		// Check if the beacon header is finalized
+		if r.isInFinalizedBlock(ctx, ev) != nil {
+			return err
+		}
 		if cnt == waitingPeriod {
 			break
 		}
@@ -479,13 +469,8 @@ func (r *Relay) isMessageProcessed(eventNonce uint64) (bool, error) {
 	return false, nil
 }
 
-func (r *Relay) isInFinalizedBlock(ctx context.Context, events []*contracts.GatewayOutboundMessageAccepted) error {
-	if len(events) == 0 {
-		return nil
-	}
-	firstEvent := events[0]
-
-	nextBlockNumber := new(big.Int).SetUint64(firstEvent.Raw.BlockNumber + 1)
+func (r *Relay) isInFinalizedBlock(ctx context.Context, event *contracts.GatewayOutboundMessageAccepted) error {
+	nextBlockNumber := new(big.Int).SetUint64(event.Raw.BlockNumber + 1)
 
 	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
 	if err != nil {
