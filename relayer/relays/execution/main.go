@@ -152,7 +152,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			for _, ev := range events {
 				err := r.waitAndSend(ctx, ev)
 				if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
-					log.Info("beacon header not finalized yet")
+					log.WithField("nonce", ev.Nonce).Info("beacon header not finalized yet")
 					continue
 				} else if err != nil {
 					return fmt.Errorf("submit event: %w", err)
