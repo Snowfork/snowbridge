@@ -633,7 +633,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 id: "ethereum",
                 name: "Ethereum",
                 type: "ethereum",
-                destinationIds: ["assethub", "muse"],
+                destinationIds: ["assethub"],
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
