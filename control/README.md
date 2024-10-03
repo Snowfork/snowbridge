@@ -19,60 +19,15 @@ cargo run --features polkadot --bin snowbridge-preimage -- \
   --gateway-operating-mode normal
 ```
 
-```shell
-cargo run --features westend --bin snowbridge-preimage -- \
-  initialize \
-  --exchange-rate-numerator 1 \
-  --exchange-rate-denominator 400 \
-  --multiplier-numerator 4 \
-  --multiplier-denominator 3 \
-  --fee-per-gas 80 \
-  --local-reward 0.01 \
-  --remote-reward 0.0001 \
-  --checkpoint data/sepolia/initial-checkpoint.json \
-  --gateway-address 0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9 \
-  --gateway-operating-mode normal
-```
+To target a different chain, replace `--features polkadot` with the applicable chain, e.g. `--features westend`.
 
-The preimage can be tested using the generated `chopsticks-execute-upgrade.js` script
+The preimage can be tested using the generated `chopsticks-execute-upgrade.js` script.
 
-NOTE: Since the 1.2.0 upgrade has not executed yet on mainnet Polkadot, I tested the tool using a local zombienet or chopsticks environment. Pass the `--bridge-hub-api` the `--asset-hub-api` params to override the default API endpoints.
+NOTE: To test an upgrade that has not executed yet on the relevant environment, it can be tested using a local zombienet or chopsticks environment. Pass the `--bridge-hub-api` the `--asset-hub-api` params to override the default API endpoints.
 
-## Update runtime bindings
+# Update bindings
 
-To generate runtime bindings that include the 1.2.0 runtime release, we need to start a local `polkadot-local` network using zombienet.
-
-Build polkadot executables:
-
-```shell
-cd $WORKSPACE/polkadot-sdk
-cargo build --release
-cp target/release/{polkadot,polkadot-prepare-worker,polkadot-execute-worker,polkadot-parachain} $WORKDIR/
-```
-
-Build the `chain-spec-generator` for production runtimes:
-
-```shell
-cd $WORKSPACE/runtimes
-cargo build -p chain-spec-generator --profile production
-cp target/production/chain-spec-generator $WORKDIR/
-```
-
-Create initial chainspecs:
-
-```shell
-chain-spec-generator polkadot-local > polkadot-local.json
-chain-spec-generator asset-hub-polkadot-local > asset-hub-polkadot-local.json
-chain-spec-generator bridge-hub-polkadot-local > bridge-hub-polkadot-local.json
-```
-
-Launch zombienet:
-
-```shell
-zombienet spawn launch-config.toml
-```
-
-Update bindings:
+To update the runtime code binding, run the following commands:
 
 ```shell
 subxt metadata --url ws://127.0.0.1:8000 -f bytes -o runtimes/polkadot/polkadot-metadata.bin
@@ -80,7 +35,5 @@ subxt metadata --url ws://127.0.0.1:8001 -f bytes -o runtimes/bridge-hub-polkado
 subxt metadata --url ws://127.0.0.1:8002 -f bytes -o runtimes/asset-hub-polkadot/asset-hub-metadata.bin
 ```
 
-Update runtime.rs:
-```shell
-subxt codegen --url wss://paseo-rpc.dwellir.com > runtimes/paseo/src/runtime.rs
-```
+To update Westend/Paseo bindings, replace the chain name in the command, e.g. replace `runtimes/polkadot/polkadot-metadata.bin` 
+with `runtimes/westend/polkadot-metadata.bin`.
