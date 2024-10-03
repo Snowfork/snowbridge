@@ -39,6 +39,8 @@ jobs:
         run: echo "OUTPUT_DIR=${GITHUB_WORKSPACE}/tmp" >> $GITHUB_ENV
       - name: Set log directory environment variable
         run: echo "LOG_DIR=${GITHUB_WORKSPACE}/log-tmp" >> $GITHUB_ENV
+      - name: polkadot-sdk dir
+        run: echo "POLKADOT_SDK_DIR=./polkadot-sdk" >> $GITHUB_ENV
       - name: Create directories
         run: mkdir -p $OUTPUT_DIR &&  mkdir -p $LOG_DIR
       - uses: actions/cache@v1
@@ -58,7 +60,10 @@ jobs:
           nix develop -c sh -c '
           ./scripts/init-smoketests.sh &&
           cd web/packages/test &&
-          ./scripts/start-services.sh'
+          ./scripts/start-services.sh > "${{ env.LOG_DIR }}/start-services.log" 2>&1 &) &&
+          sleep 10 &&
+          ./scripts/check-relayer.sh &&
+          ./scripts/run-smoketests.sh'
         continue-on-error: true
       - name: Save start-services log file
         uses: actions/upload-artifact@v3
