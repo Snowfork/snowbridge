@@ -95,8 +95,10 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 				log.WithFields(logFields).WithError(err).Warn("SyncCommittee latency found")
 			case errors.Is(err, ErrExecutionHeaderNotImported):
 				log.WithFields(logFields).WithError(err).Warn("ExecutionHeader not imported")
-			case errors.Is(err, syncer.ErrBeaconStateAvailableYet):
+			case errors.Is(err, syncer.ErrBeaconStateUnavailable):
 				log.WithFields(logFields).WithError(err).Warn("beacon state not available for finalized state yet")
+			case errors.Is(err, syncer.ErrSyncCommitteeNotSuperMajority):
+				log.WithFields(logFields).WithError(err).Warn("update received was not signed by supermajority")
 			case err != nil:
 				return err
 			}
@@ -348,7 +350,7 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 	}
 
 	blockRootsProof, err := h.syncer.GetBlockRoots(slot)
-	if err != nil && !errors.Is(err, syncer.ErrBeaconStateAvailableYet) {
+	if err != nil && !errors.Is(err, syncer.ErrBeaconStateUnavailable) {
 		return fmt.Errorf("fetch block roots for slot %d: %w", slot, err)
 	}
 
@@ -521,31 +523,31 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 		return beaconState, fmt.Errorf("GetLastFinalizedStateIndex error: %w", err)
 	}
 	startIndex := uint64(lastIndex)
-	endIndex := uint64(0)
+	endIndex := startIndex + 1
 
 	syncCommitteePeriod := h.protocol.Settings.SlotsInEpoch * h.protocol.Settings.EpochsPerSyncCommitteePeriod
-	slotPeriodIndex := slot / syncCommitteePeriod
-
-	for index := startIndex; index >= endIndex; index-- {
+	totalStates := syncCommitteePeriod * h.protocol.HeaderRedundancy // Total size of the circular buffer,
+	// https://github.com/paritytech/polkadot-sdk/blob/master/bridges/snowbridge/pallets/ethereum-client/src/lib.rs#L75
+	for index := startIndex; index != endIndex; index = (index - 1 + totalStates) % totalStates {
 		beaconRoot, err := h.writer.GetFinalizedBeaconRootByIndex(uint32(index))
 		if err != nil {
 			return beaconState, fmt.Errorf("GetFinalizedBeaconRootByIndex %d, error: %w", index, err)
 		}
 		beaconState, err = h.writer.GetFinalizedHeaderStateByBlockRoot(beaconRoot)
 		if err != nil {
-			return beaconState, fmt.Errorf("GetFinalizedHeaderStateByBlockRoot %s, error: %w", beaconRoot.Hex(), err)
+			// As soon as it can't find a block root, it means the circular wrap around array is empty.
+			log.WithFields(log.Fields{"index": index, "blockRoot": beaconRoot.Hex()}).WithError(err).Info("searching for checkpoint on-chain failed")
+			break
 		}
-		statePeriodIndex := beaconState.BeaconSlot / syncCommitteePeriod
+
 		if beaconState.BeaconSlot < slot {
+			log.WithFields(log.Fields{"index": index, "blockRoot": beaconRoot.Hex()}).WithError(err).Debug("unable to find a relevant on-chain header")
 			break
 		}
 		// Found the beaconState
-		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod && slotPeriodIndex == statePeriodIndex {
-			break
+		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod {
+			return beaconState, nil
 		}
-	}
-	if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod {
-		return beaconState, nil
 	}
 
 	return beaconState, fmt.Errorf("no checkpoint on chain for slot %d", slot)

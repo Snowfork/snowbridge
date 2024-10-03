@@ -1,3 +1,4 @@
+use hex::FromHex;
 use hex_literal::hex;
 use lazy_static::lazy_static;
 use std::{env, string::ToString};
@@ -8,23 +9,25 @@ pub const ASSET_HUB_PARA_ID: u32 = 1000;
 pub const BRIDGE_HUB_PARA_ID: u32 = 1002;
 pub const PENPAL_PARA_ID: u32 = 2000;
 
-pub const ETHEREUM_API: &str = "ws://localhost:8546";
-pub const ETHEREUM_HTTP_API: &str = "http://localhost:8545";
+pub const DEFAULT_ETHEREUM_API: &str = "ws://localhost:8546";
+pub const DEFAULT_ETHEREUM_HTTP_API: &str = "http://localhost:8545";
 
-pub const ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:12144";
-pub const BRIDGE_HUB_WS_URL: &str = "ws://127.0.0.1:11144";
+pub const DEFAULT_BRIDGE_HUB_WS_URL: &str = "ws://127.0.0.1:11144";
+pub const DEFAULT_ASSET_HUB_WS_URL: &str = "ws://127.0.0.1:12144";
 pub const PENPAL_WS_URL: &str = "ws://127.0.0.1:13144";
-pub const RELAY_CHAIN_WS_URL: &str = "ws://127.0.0.1:9944";
+pub const DEFAULT_RELAY_CHAIN_WS_URL: &str = "ws://127.0.0.1:9944";
 pub const TEMPLATE_NODE_WS_URL: &str = "ws://127.0.0.1:13144";
 
 pub const ETHEREUM_CHAIN_ID: u64 = 11155111;
-pub const ETHEREUM_KEY: &str = "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342";
+pub const DEFAULT_ETHEREUM_KEY: &str =
+	"0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342";
 pub const ETHEREUM_ADDRESS: [u8; 20] = hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe");
 
 // The deployment addresses of the following contracts are stable in our E2E env, unless we modify
 // the order in contracts are deployed in DeployScript.sol.
-pub const GATEWAY_PROXY_CONTRACT: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
-pub const WETH_CONTRACT: [u8; 20] = hex!("774667629726ec1FaBEbCEc0D9139bD1C8f72a23");
+pub const DEFAULT_GATEWAY_PROXY_CONTRACT: [u8; 20] =
+	hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
+pub const DEFAULT_WETH_CONTRACT: [u8; 20] = hex!("774667629726ec1FaBEbCEc0D9139bD1C8f72a23");
 pub const AGENT_EXECUTOR_CONTRACT: [u8; 20] = hex!("Fc97A6197dc90bef6bbEFD672742Ed75E9768553");
 
 pub const ERC20_DOT_CONTRACT: [u8; 20] = hex!("B8C39CbCe8106c8415472e3AAe88Eb694Cc70B57");
@@ -86,4 +89,96 @@ lazy_static! {
 		.unwrap_or("1000000000000000".to_string())
 		.parse()
 		.unwrap();
+	pub static ref BRIDGE_HUB_WS_URL: String = {
+		if let Ok(val) = env::var("BRIDGE_HUB_WS_URL") {
+				val
+		}
+		else {
+			DEFAULT_BRIDGE_HUB_WS_URL.to_string()
+		}
+	};
+	pub static ref ASSET_HUB_WS_URL: String = {
+		if let Ok(val) = env::var("ASSET_HUB_WS_URL") {
+				val
+		}
+		else {
+			DEFAULT_ASSET_HUB_WS_URL.to_string()
+		}
+	};
+	pub static ref RELAY_CHAIN_WS_URL: String = {
+		if let Ok(val) = env::var("RELAY_CHAIN_WS_URL") {
+				val
+		}
+		else {
+			DEFAULT_RELAY_CHAIN_WS_URL.to_string()
+		}
+	};
+	pub static ref ETHEREUM_API: String = {
+		if let Ok(val) = env::var("ETHEREUM_API") {
+				val
+		}
+		else {
+			DEFAULT_ETHEREUM_API.to_string()
+		}
+	};
+	pub static ref ETHEREUM_HTTP_API: String = {
+		if let Ok(val) = env::var("ETHEREUM_HTTP_API") {
+				val
+		}
+		else {
+			DEFAULT_ETHEREUM_HTTP_API.to_string()
+		}
+	};
+	pub static ref ETHEREUM_KEY: String = {
+		if let Ok(val) = env::var("ETHEREUM_KEY") {
+				val
+		}
+		else {
+			DEFAULT_ETHEREUM_KEY.to_string()
+		}
+	};
+	pub static ref GATEWAY_PROXY_CONTRACT: [u8; 20] = {
+		if let Ok(val) = env::var("GATEWAY_PROXY_CONTRACT") {
+				<[u8; 20]>::from_hex(val).unwrap()
+		}
+		else {
+			DEFAULT_GATEWAY_PROXY_CONTRACT
+		}
+	};
+	pub static ref WETH_CONTRACT: [u8; 20] = {
+		if let Ok(val) = env::var("WETH_CONTRACT") {
+				<[u8; 20]>::from_hex(val).unwrap()
+		}
+		else {
+			DEFAULT_WETH_CONTRACT
+		}
+	};
+
+	pub static ref SUBSTRATE_RECEIVER: [u8; 32] = {
+		if let Ok(val) = env::var("SUBSTRATE_RECEIVER") {
+				<[u8; 32]>::from_hex(val).unwrap()
+		}
+		else {
+			BOB_PUBLIC.clone()
+		}
+	};
+
+	pub static ref ETHEREUM_RECEIVER: [u8; 20] = {
+		if let Ok(val) = env::var("ETHEREUM_RECEIVER") {
+				<[u8; 20]>::from_hex(val).unwrap()
+		}
+		else {
+			<[u8; 20]>::from_hex("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e").unwrap()
+		}
+	};
+	pub static ref SUBSTRATE_KEY: String = {
+		if let Ok(val) = env::var("SUBSTRATE_KEY") {
+				"0x".to_owned() + &val
+		}
+		else {
+			"//Bob".to_string()
+		}
+	};
+	pub static ref WAIT_PERIOD: u64 =
+		env::var("WAIT_PERIOD").unwrap_or("100".to_string()).parse().unwrap();
 }

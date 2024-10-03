@@ -64,6 +64,10 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
     })
     // Channel metrics
     for (let channel of metrics.channels) {
+        // Only monitor AH channel
+        if (channel.name != status.ChannelKind.AssetHub) {
+            continue
+        }
         // To Ethereum
         metricData.push({
             MetricName: "ToEthereumOutboundNonce",
@@ -111,6 +115,12 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 channel.toEthereum.outbound < channel.toEthereum.inbound ||
                     (channel.toEthereum.outbound > channel.toEthereum.inbound &&
                         channel.toEthereum.inbound <= channel.toEthereum.previousInbound)
+            ),
+        })
+        metricData.push({
+            MetricName: AlarmReason.ToEthereumNoTransfer.toString(),
+            Value: Number(
+                channel.toEthereum.inbound == channel.toEthereum.previousInbound
             ),
         })
         // To Polkadot
