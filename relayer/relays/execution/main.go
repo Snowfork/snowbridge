@@ -431,7 +431,7 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state
 	isProcessed, err := r.isMessageProcessed(ev.Nonce)
 	if err != nil {
-		return fmt.Errorf("is message procssed: %w", err)
+		return fmt.Errorf("is message processed: %w", err)
 	}
 	// If the message is already processed we shouldn't submit it again
 	if isProcessed {
