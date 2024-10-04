@@ -510,6 +510,35 @@ func (h *Header) FetchExecutionProof(blockRoot common.Hash, instantVerification 
 
 }
 
+func (h *Header) CheckHeaderFinalized(blockRoot common.Hash, instantVerification bool) error {
+	header, err := h.syncer.Client.GetHeaderByBlockRoot(blockRoot)
+	if err != nil {
+		return fmt.Errorf("get beacon header by blockRoot: %w", err)
+	}
+	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
+	if err != nil {
+		return fmt.Errorf("fetch last finalized header state: %w", err)
+	}
+
+	// The latest finalized header on-chain is older than the header containing the message, so we need to sync the
+	// finalized header with the message.
+	finalizedHeader, err := h.syncer.GetFinalizedHeader()
+	if err != nil {
+		return err
+	}
+
+	// If the header is not finalized yet, we can't do anything further.
+	if header.Slot > uint64(finalizedHeader.Slot) {
+		return fmt.Errorf("chain not finalized yet: %w", ErrBeaconHeaderNotFinalized)
+	}
+
+	if header.Slot > lastFinalizedHeaderState.BeaconSlot && !instantVerification {
+		return fmt.Errorf("on-chain header not recent enough and instantVerification is off: %w", ErrBeaconHeaderNotFinalized)
+	}
+
+	return nil
+}
+
 func (h *Header) isInitialSyncPeriod() bool {
 	initialPeriod := h.protocol.ComputeSyncPeriodAtSlot(h.cache.InitialCheckpointSlot)
 	lastFinalizedPeriod := h.protocol.ComputeSyncPeriodAtSlot(h.cache.Finalized.LastSyncedSlot)

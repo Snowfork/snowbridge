@@ -97,7 +97,7 @@ func (p ParachainConfig) Validate() error {
 		return errors.New("[maxWatchedExtrinsics] is not set")
 	}
 	if p.HeaderRedundancy == 0 {
-		return errors.New("[HeaderRedundancy] is not set")
+		return errors.New("[headerRedundancy] is not set")
 	}
 	return nil
 }
