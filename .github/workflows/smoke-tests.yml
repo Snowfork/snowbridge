@@ -58,6 +58,7 @@ jobs:
           nix develop -c sh -c '
           ./scripts/init-smoketests.sh &&
           cd web/packages/test &&
+          env | grep GATEWAY_PROXY_CONTRACT &&
           (./scripts/start-services.sh > "${{ env.LOG_DIR }}/start-services.log" 2>&1 &) &&
           sleep 10 &&
           ./scripts/check-relayer.sh &&

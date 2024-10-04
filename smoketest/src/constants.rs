@@ -137,9 +137,9 @@ lazy_static! {
 			DEFAULT_ETHEREUM_KEY.to_string()
 		}
 	};
-	println!("GATEWAY_PROXY_CONTRACT: {}", env::var("GATEWAY_PROXY_CONTRACT").unwrap());
 	pub static ref GATEWAY_PROXY_CONTRACT: [u8; 20] = {
 		if let Ok(val) = env::var("GATEWAY_PROXY_CONTRACT") {
+				println!("{}", env::var("GATEWAY_PROXY_CONTRACT").unwrap());
 				<[u8; 20]>::from_hex(val).unwrap()
 		}
 		else {
