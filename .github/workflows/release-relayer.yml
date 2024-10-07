@@ -2,10 +2,10 @@ name: release-relayer
 
 on:
   push:
-    #paths:
-    #  - "relayer/**"
-    #branches:
-    #  - main
+    paths:
+      - "relayer/**"
+    branches:
+      - main
   workflow_dispatch:
 
 env:
