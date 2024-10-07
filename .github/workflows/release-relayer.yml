@@ -2,8 +2,8 @@ name: release-relayer
 
 on:
   push:
-    paths:
-      - "relayer/**"
+    #paths:
+    #  - "relayer/**"
     #branches:
     #  - main
   workflow_dispatch:
