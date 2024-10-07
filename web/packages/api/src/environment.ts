@@ -197,6 +197,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
                         minimumTransferAmount: 1n,
                     },
+                    {
+                        id: "RILT",
+                        address: "0x45Ffe5A44Dae5438Ee7FdD26EE5bEFaD13d52832",
+                        minimumTransferAmount: 1n,
+                    },
                 ],
             },
             {
@@ -228,6 +233,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
                         minimumTransferAmount: 1n,
                     },
+                    {
+                        id: "RILT",
+                        address: "0x45Ffe5A44Dae5438Ee7FdD26EE5bEFaD13d52832",
+                        minimumTransferAmount: 1n,
+                    },
                 ],
             },
             {
@@ -250,7 +260,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         minimumTransferAmount: 10_000_000_000_000_000n,
                     },
                 ],
-            },{
+            },
+            {
                 id: "RILT",
                 name: "RILT",
                 type: "substrate",
@@ -340,7 +351,12 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         id: "WETH",
                         address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
                         minimumTransferAmount: 15_000_000_000_000n,
-                    }
+                    },
+                    {
+                        id: "PILT",
+                        address: "0x99E743964C036bc28931Fb564817db428Aa7f752",
+                        minimumTransferAmount: 1n,
+                    },
                 ],
             },
             {
@@ -361,7 +377,12 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         id: "WETH",
                         address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
                         minimumTransferAmount: 15_000_000_000_000n,
-                    }
+                    },
+                    {
+                        id: "PILT",
+                        address: "0x99E743964C036bc28931Fb564817db428Aa7f752",
+                        minimumTransferAmount: 1n,
+                    },
                 ],
             },
             {
@@ -500,6 +521,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         address: "0x6b175474e89094c44da98b954eedeac495271d0f",
                         minimumTransferAmount: 1n,
                     },
+                    {
+                        id: "KILT",
+                        address: "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
+                        minimumTransferAmount: 1n,
+                    },
                 ],
             },
             {
@@ -564,6 +590,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     {
                         id: "DAI",
                         address: "0x6b175474e89094c44da98b954eedeac495271d0f",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "KILT",
+                        address: "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
                         minimumTransferAmount: 1n,
                     },
                 ],
