@@ -140,7 +140,7 @@ lazy_static! {
 	pub static ref GATEWAY_PROXY_CONTRACT: [u8; 20] = {
 		if let Ok(val) = env::var("GATEWAY_PROXY_CONTRACT") {
 				println!("{}", env::var("GATEWAY_PROXY_CONTRACT").unwrap());
-			    let stripped_address = var.strip_prefix("0x").unwrap_or(&var);
+			    let stripped_address = val.strip_prefix("0x").unwrap_or(&val);
 				<[u8; 20]>::from_hex(stripped_address).unwrap()
 		}
 		else {
