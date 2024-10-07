@@ -4,8 +4,8 @@ on:
   push:
     paths:
       - "relayer/**"
-    branches:
-      - main
+    #branches:
+    #  - main
   workflow_dispatch:
 
 env:
