@@ -1,0 +1,11 @@
+[package]
+name = "asset-hub-paseo-runtime"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+codec = { workspace = true }
+scale-info = { workspace = true }
+serde = { workspace = true }
+subxt= { workspace = true }
+sp-arithmetic = "24.0.0"

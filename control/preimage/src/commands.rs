@@ -28,7 +28,7 @@ use crate::bridge_hub_runtime::runtime_types::{
 };
 use crate::bridge_hub_runtime::RuntimeCall as BridgeHubRuntimeCall;
 
-#[cfg(feature = "polkadot")]
+#[cfg(any(feature = "polkadot", feature = "paseo"))]
 pub mod asset_hub_polkadot_types {
     pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation;
     pub use crate::asset_hub_runtime::runtime_types::xcm::v3::{
@@ -262,11 +262,10 @@ pub fn set_gateway_address(params: &GatewayAddressArgs) -> BridgeHubRuntimeCall 
 pub fn make_asset_sufficient(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
     use subxt::utils::AccountId32;
     let chain_id = crate::bridge_hub_runtime::CHAIN_ID;
-    #[cfg(feature = "polkadot")]
+    #[cfg(any(feature = "polkadot", feature = "paseo"))]
     use asset_hub_polkadot_types::*;
     #[cfg(feature = "westend")]
     use asset_hub_westend_types::*;
-
     let asset_id = get_asset_id(chain_id, params.contract_id.into_array().into());
     let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
     AssetHubRuntimeCall::ForeignAssets(pallet_assets::pallet::Call2::force_asset_status {
@@ -283,7 +282,7 @@ pub fn make_asset_sufficient(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
 
 pub fn force_set_metadata(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
     let chain_id = crate::bridge_hub_runtime::CHAIN_ID;
-    #[cfg(feature = "polkadot")]
+    #[cfg(any(feature = "polkadot", feature = "paseo"))]
     use asset_hub_polkadot_types::*;
     #[cfg(feature = "westend")]
     use asset_hub_westend_types::*;
