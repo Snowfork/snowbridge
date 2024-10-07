@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
-import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress} from "../Types.sol";
+import {
+    OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress
+} from "../Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
@@ -11,12 +13,17 @@ interface IGateway {
      * Events
      */
 
-    // Emitted when inbound message has been dispatched
+    // V1: Emitted when inbound message has been dispatched
     event InboundMessageDispatched(
         ChannelID indexed channelID,
         uint64 nonce,
         bytes32 indexed messageID,
         bool success
+    );
+
+    // V2: Emitted when inbound message has been dispatched
+    event InboundMessageDispatched(
+        uint64 indexed nonce, bytes32 indexed topicID, bool success
     );
 
     // Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
@@ -44,9 +51,7 @@ interface IGateway {
 
     // Emitted when funds are withdrawn from an agent
     event AgentFundsWithdrawn(
-        bytes32 indexed agentID,
-        address indexed recipient,
-        uint256 amount
+        bytes32 indexed agentID, address indexed recipient, uint256 amount
     );
 
     // Emitted when foreign token from polkadot registed
@@ -57,13 +62,15 @@ interface IGateway {
      */
     function operatingMode() external view returns (OperatingMode);
 
-    function channelOperatingModeOf(
-        ChannelID channelID
-    ) external view returns (OperatingMode);
+    function channelOperatingModeOf(ChannelID channelID)
+        external
+        view
+        returns (OperatingMode);
 
-    function channelNoncesOf(
-        ChannelID channelID
-    ) external view returns (uint64, uint64);
+    function channelNoncesOf(ChannelID channelID)
+        external
+        view
+        returns (uint64, uint64);
 
     function agentOf(bytes32 agentID) external view returns (address);
 
@@ -130,8 +137,5 @@ interface IGateway {
         uint128 amount
     ) external payable;
 
-    function sendMessage(
-        bytes calldata xcm,
-        bytes[] calldata assets
-    ) external payable;
+    function sendMessage(bytes calldata xcm, bytes[] calldata assets) external payable;
 }

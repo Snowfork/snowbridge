@@ -5,21 +5,49 @@ pragma solidity 0.8.25;
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
 
-import {Assets} from "./Assets.sol";
+import {AssetsV1} from "./AssetsV1.sol";
+import {AssetsV2} from "./AssetsV2.sol";
+
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
 import {
-    Channel,
-    ChannelID,
-    InboundMessage,
     OperatingMode,
     ParaID,
-    Command,
-    MultiAddress,
-    Ticket,
-    Costs,
     TokenInfo,
-    AgentExecuteCommand
+    MultiAddress,
+
+    Channel,
+    ChannelID,
+    InboundMessageV1,
+    CommandV1,
+    AgentExecuteCommandV1,
+    TicketV1,
+    CostsV1,
+
+    AgentExecuteParamsV1,
+    UpgradeParamsV1,
+    CreateAgentParamsV1,
+    CreateChannelParamsV1,
+    UpdateChannelParamsV1,
+    SetOperatingModeParamsV1,
+    TransferNativeFromAgentParamsV1,
+    SetTokenTransferFeesParamsV1,
+    SetPricingParametersParamsV1,
+    RegisterForeignTokenParamsV1,
+    MintForeignTokenParamsV1,
+    TransferNativeTokenParamsV1,
+
+    InboundMessageV2,
+    CommandV2,
+    TicketV2,
+    InstructionV2,
+    InstructionKindV2,
+    TicketV2,
+    UpgradeParamsV2,
+    SetOperatingModeParamsV2,
+    NativeTokenUnlockParamsV2,
+    MintForeignTokenParamsV2,
+    CallContractParamsV2
 } from "./Types.sol";
 import {Upgrade} from "./Upgrade.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
@@ -33,18 +61,7 @@ import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
 import {
-    AgentExecuteParams,
-    UpgradeParams,
-    CreateAgentParams,
-    CreateChannelParams,
-    UpdateChannelParams,
-    SetOperatingModeParams,
-    TransferNativeFromAgentParams,
-    SetTokenTransferFeesParams,
-    SetPricingParametersParams,
-    RegisterForeignTokenParams,
-    MintForeignTokenParams,
-    TransferNativeTokenParams
+
 } from "./Params.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
@@ -67,24 +84,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     ParaID internal immutable BRIDGE_HUB_PARA_ID;
     bytes4 internal immutable BRIDGE_HUB_PARA_ID_ENCODED;
     bytes32 internal immutable BRIDGE_HUB_AGENT_ID;
-
-    // ChannelIDs
-    ChannelID internal constant PRIMARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(1)));
-    ChannelID internal constant SECONDARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(2)));
-
-    // Gas used for:
-    // 1. Mapping a command id to an implementation function
-    // 2. Calling implementation function
-    uint256 DISPATCH_OVERHEAD_GAS = 10_000;
-
-    // The maximum fee that can be sent to a destination parachain to pay for execution (DOT).
-    // Has two functions:
-    // * Reduces the ability of users to perform arbitrage using a favourable exchange rate
-    // * Prevents users from mistakenly providing too much fees, which would drain AssetHub's
-    //   sovereign account here on Ethereum.
-    uint128 internal immutable MAX_DESTINATION_FEE;
-
-    uint8 internal immutable FOREIGN_TOKEN_DECIMALS;
 
     error InvalidProof();
     error InvalidNonce();
@@ -134,12 +133,101 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         BEEFY_CLIENT = beefyClient;
         AGENT_EXECUTOR = agentExecutor;
-        BRIDGE_HUB_PARA_ID_ENCODED = ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
+        BRIDGE_HUB_PARA_ID_ENCODED =
+            ScaleCodec.encodeU32(uint32(ParaID.unwrap(bridgeHubParaID)));
         BRIDGE_HUB_PARA_ID = bridgeHubParaID;
         BRIDGE_HUB_AGENT_ID = bridgeHubAgentID;
         FOREIGN_TOKEN_DECIMALS = foreignTokenDecimals;
         MAX_DESTINATION_FEE = maxDestinationFee;
     }
+
+    /*
+    *     _________
+    *     \_   ___ \   ____    _____    _____    ____    ____
+    *     /    \  \/  /  _ \  /     \  /     \  /  _ \  /    \
+    *     \     \____(  <_> )|  Y Y  \|  Y Y  \(  <_> )|   |  \
+    *      \______  / \____/ |__|_|  /|__|_|  / \____/ |___|  /
+    *             \/               \/       \/              \/
+    */
+
+    /// @dev Ensure that the specified agentID has a corresponding contract
+    function _ensureAgent(bytes32 agentID) internal view returns (address agent) {
+        agent = CoreStorage.layout().agents[agentID];
+        if (agent == address(0)) {
+            revert AgentDoesNotExist();
+        }
+    }
+
+    /// @dev Ensure that the specified address is an valid agent
+    function _ensureAgentAddress(address agent)
+        internal
+        view
+        returns (bytes32 agentID)
+    {
+        agentID = CoreStorage.layout().agentAddresses[agent];
+        if (agentID == bytes32(0)) {
+            revert AgentDoesNotExist();
+        }
+    }
+
+    /// @dev Invoke some code within an agent
+    function _invokeOnAgent(address agent, bytes memory data)
+        internal
+        returns (bytes memory)
+    {
+        (bool success, bytes memory returndata) =
+            (Agent(payable(agent)).invoke(AGENT_EXECUTOR, data));
+        return Call.verifyResult(success, returndata);
+    }
+
+    // Verify that a message commitment is considered finalized by our BEEFY light client.
+    function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
+        internal
+        view
+        virtual
+        returns (bool)
+    {
+        return Verification.verifyCommitment(
+            BEEFY_CLIENT, BRIDGE_HUB_PARA_ID_ENCODED, commitment, proof
+        );
+    }
+
+    /*
+    *     _____   __________ .___          ____
+    *    /  _  \  \______   \|   | ___  __/_   |
+    *   /  /_\  \  |     ___/|   | \  \/ / |   |
+    *  /    |    \ |    |    |   |  \   /  |   |
+    *  \____|__  / |____|    |___|   \_/   |___|
+    *          \/
+    */
+
+    /**
+     * APIv1 Constants
+     */
+
+    // ChannelIDs
+    ChannelID internal constant PRIMARY_GOVERNANCE_CHANNEL_ID =
+        ChannelID.wrap(bytes32(uint256(1)));
+    ChannelID internal constant SECONDARY_GOVERNANCE_CHANNEL_ID =
+        ChannelID.wrap(bytes32(uint256(2)));
+
+    // Gas used for:
+    // 1. Mapping a command id to an implementation function
+    // 2. Calling implementation function
+    uint256 DISPATCH_OVERHEAD_GAS = 10_000;
+
+    // The maximum fee that can be sent to a destination parachain to pay for execution (DOT).
+    // Has two functions:
+    // * Reduces the ability of users to perform arbitrage using a favourable exchange rate
+    // * Prevents users from mistakenly providing too much fees, which would drain AssetHub's
+    //   sovereign account here on Ethereum.
+    uint128 internal immutable MAX_DESTINATION_FEE;
+
+    uint8 internal immutable FOREIGN_TOKEN_DECIMALS;
+
+    /**
+     * APIv1 External API
+     */
 
     /// @dev Submit a message from Polkadot for verification and dispatch
     /// @param message A message produced by the OutboundQueue pallet on BridgeHub
@@ -209,8 +297,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
                 success = false;
             }
         } else if (message.command == Command.TransferNativeFromAgent) {
-            try Gateway(this).transferNativeFromAgent{gas: maxDispatchGas}(message.params) {}
-            catch {
+            try Gateway(this).transferNativeFromAgent{gas: maxDispatchGas}(
+                message.params
+            ) {} catch {
                 success = false;
             }
         } else if (message.command == Command.Upgrade) {
@@ -252,29 +341,37 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // Add the reward to the refund amount. If the sum is more than the funds available
         // in the channel agent, then reduce the total amount
-        uint256 amount = Math.min(refund + message.reward, address(channel.agent).balance);
+        uint256 amount =
+            Math.min(refund + message.reward, address(channel.agent).balance);
 
         // Do the payment if there funds available in the agent
         if (amount > _dustThreshold()) {
             _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
         }
 
-        emit IGateway.InboundMessageDispatched(message.channelID, message.nonce, message.id, success);
+        emit IGateway.InboundMessageDispatched(
+            message.channelID, message.nonce, message.id, success
+        );
     }
 
-    /**
-     * Getters
-     */
     function operatingMode() external view returns (OperatingMode) {
         return CoreStorage.layout().mode;
     }
 
-    function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode) {
+    function channelOperatingModeOf(ChannelID channelID)
+        external
+        view
+        returns (OperatingMode)
+    {
         Channel storage ch = _ensureChannel(channelID);
         return ch.mode;
     }
 
-    function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64) {
+    function channelNoncesOf(ChannelID channelID)
+        external
+        view
+        returns (uint64, uint64)
+    {
         Channel storage ch = _ensureChannel(channelID);
         return (ch.inboundNonce, ch.outboundNonce);
     }
@@ -292,8 +389,61 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return ERC1967.load();
     }
 
+    function isTokenRegistered(address token) external view returns (bool) {
+        return AssetsV1.isTokenRegistered(token);
+    }
+
+    // Total fee for registering a token
+    function quoteRegisterTokenFee() external view returns (uint256) {
+        return _calculateFee(AssetsV1.registerTokenCosts());
+    }
+
+    // Register an Ethereum-native token in the gateway and on AssetHub
+    function registerToken(address token) external payable {
+        _submitOutbound(AssetsV1.registerToken(token));
+    }
+
+    // Total fee for sending a token
+    function quoteSendTokenFee(
+        address token,
+        ParaID destinationChain,
+        uint128 destinationFee
+    ) external view returns (uint256) {
+        return _calculateFee(
+            AssetsV1.sendTokenCosts(
+                token, destinationChain, destinationFee, MAX_DESTINATION_FEE
+            )
+        );
+    }
+
+    // Transfer ERC20 tokens to a Polkadot parachain
+    function sendToken(
+        address token,
+        ParaID destinationChain,
+        MultiAddress calldata destinationAddress,
+        uint128 destinationFee,
+        uint128 amount
+    ) external payable {
+        Ticket memory ticket = AssetsV1.sendToken(
+            token,
+            msg.sender,
+            destinationChain,
+            destinationAddress,
+            destinationFee,
+            MAX_DESTINATION_FEE,
+            amount
+        );
+
+        _submitOutbound(ticket);
+    }
+
+    // @dev Get token address by tokenID
+    function tokenAddressOf(bytes32 tokenID) external view returns (address) {
+        return AssetsV1.tokenAddressOf(tokenID);
+    }
+
     /**
-     * Handlers
+     * APIv1 Inbound Message Handlers
      */
 
     // Execute code within an agent
@@ -309,8 +459,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         (AgentExecuteCommand command, bytes memory commandParams) =
             abi.decode(params.payload, (AgentExecuteCommand, bytes));
         if (command == AgentExecuteCommand.TransferToken) {
-            (address token, address recipient, uint128 amount) = abi.decode(commandParams, (address, address, uint128));
-            Assets.transferNativeToken(AGENT_EXECUTOR, agent, token, recipient, amount);
+            (address token, address recipient, uint128 amount) =
+                abi.decode(commandParams, (address, address, uint128));
+            AssetsV1.transferNativeToken(AGENT_EXECUTOR, agent, token, recipient, amount);
         }
     }
 
@@ -331,44 +482,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         emit AgentCreated(params.agentID, agent);
     }
 
-    /// @dev Create a messaging channel for a Polkadot parachain
-    function createChannel(bytes calldata data) external onlySelf {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-
-        CreateChannelParams memory params = abi.decode(data, (CreateChannelParams));
-
-        // Ensure that specified agent actually exists
-        address agent = _ensureAgent(params.agentID);
-
-        // Ensure channel has not already been created
-        Channel storage ch = $.channels[params.channelID];
-        if (address(ch.agent) != address(0)) {
-            revert ChannelAlreadyCreated();
-        }
-
-        ch.mode = params.mode;
-        ch.agent = agent;
-        ch.inboundNonce = 0;
-        ch.outboundNonce = 0;
-
-        emit ChannelCreated(params.channelID);
-    }
-
-    /// @dev Update the configuration for a channel
-    function updateChannel(bytes calldata data) external onlySelf {
-        UpdateChannelParams memory params = abi.decode(data, (UpdateChannelParams));
-
-        Channel storage ch = _ensureChannel(params.channelID);
-
-        // Extra sanity checks when updating the primary governance channel, which should never be halted.
-        if (params.channelID == PRIMARY_GOVERNANCE_CHANNEL_ID && (params.mode != OperatingMode.Normal)) {
-            revert InvalidChannelUpdate();
-        }
-
-        ch.mode = params.mode;
-        emit ChannelUpdated(params.channelID);
-    }
-
     /// @dev Perform an upgrade of the gateway
     function upgrade(bytes calldata data) external onlySelf {
         UpgradeParams memory params = abi.decode(data, (UpgradeParams));
@@ -385,7 +498,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
     // @dev Transfer funds from an agent to a recipient account
     function transferNativeFromAgent(bytes calldata data) external onlySelf {
-        TransferNativeFromAgentParams memory params = abi.decode(data, (TransferNativeFromAgentParams));
+        TransferNativeFromAgentParams memory params =
+            abi.decode(data, (TransferNativeFromAgentParams));
 
         address agent = _ensureAgent(params.agentID);
 
@@ -396,7 +510,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     // @dev Set token fees of the gateway
     function setTokenTransferFees(bytes calldata data) external onlySelf {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        SetTokenTransferFeesParams memory params = abi.decode(data, (SetTokenTransferFeesParams));
+        SetTokenTransferFeesParams memory params =
+            abi.decode(data, (SetTokenTransferFeesParams));
         $.assetHubCreateAssetFee = params.assetHubCreateAssetFee;
         $.assetHubReserveTransferFee = params.assetHubReserveTransferFee;
         $.registerTokenFee = params.registerTokenFee;
@@ -406,80 +521,45 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     // @dev Set pricing params of the gateway
     function setPricingParameters(bytes calldata data) external onlySelf {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
-        SetPricingParametersParams memory params = abi.decode(data, (SetPricingParametersParams));
+        SetPricingParametersParams memory params =
+            abi.decode(data, (SetPricingParametersParams));
         pricing.exchangeRate = params.exchangeRate;
         pricing.deliveryCost = params.deliveryCost;
         pricing.multiplier = params.multiplier;
         emit PricingParametersChanged();
     }
 
-    /**
-     * Assets
-     */
     // @dev Register a new fungible Polkadot token for an agent
     function registerForeignToken(bytes calldata data) external onlySelf {
-        RegisterForeignTokenParams memory params = abi.decode(data, (RegisterForeignTokenParams));
-        Assets.registerForeignToken(params.foreignTokenID, params.name, params.symbol, params.decimals);
+        RegisterForeignTokenParams memory params =
+            abi.decode(data, (RegisterForeignTokenParams));
+        AssetsV1.registerForeignToken(
+            params.foreignTokenID, params.name, params.symbol, params.decimals
+        );
     }
 
     // @dev Mint foreign token from polkadot
     function mintForeignToken(bytes calldata data) external onlySelf {
         MintForeignTokenParams memory params = abi.decode(data, (MintForeignTokenParams));
-        Assets.mintForeignToken(params.foreignTokenID, params.recipient, params.amount);
+        AssetsV1.mintForeignToken(params.foreignTokenID, params.recipient, params.amount);
     }
 
     // @dev Transfer Ethereum native token back from polkadot
     function transferNativeToken(bytes calldata data) external onlySelf {
-        TransferNativeTokenParams memory params = abi.decode(data, (TransferNativeTokenParams));
+        TransferNativeTokenParams memory params =
+            abi.decode(data, (TransferNativeTokenParams));
         address agent = _ensureAgent(params.agentID);
-        Assets.transferNativeToken(AGENT_EXECUTOR, agent, params.token, params.recipient, params.amount);
-    }
-
-    function isTokenRegistered(address token) external view returns (bool) {
-        return Assets.isTokenRegistered(token);
-    }
-
-    // Total fee for registering a token
-    function quoteRegisterTokenFee() external view returns (uint256) {
-        return _calculateFee(Assets.registerTokenCosts());
-    }
-
-    // Register an Ethereum-native token in the gateway and on AssetHub
-    function registerToken(address token) external payable {
-        _submitOutbound(Assets.registerToken(token));
-    }
-
-    // Total fee for sending a token
-    function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
-        external
-        view
-        returns (uint256)
-    {
-        return _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee, MAX_DESTINATION_FEE));
-    }
-
-    // Transfer ERC20 tokens to a Polkadot parachain
-    function sendToken(
-        address token,
-        ParaID destinationChain,
-        MultiAddress calldata destinationAddress,
-        uint128 destinationFee,
-        uint128 amount
-    ) external payable {
-        Ticket memory ticket = Assets.sendToken(
-            token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
+        AssetsV1.transferNativeToken(
+            AGENT_EXECUTOR, agent, params.token, params.recipient, params.amount
         );
-
-        _submitOutbound(ticket);
-    }
-
-    // @dev Get token address by tokenID
-    function tokenAddressOf(bytes32 tokenID) external view returns (address) {
-        return Assets.tokenAddressOf(tokenID);
     }
 
     /**
-     * Internal functions
+     * APIv1 External API
+     */
+
+    /**
+     * APIv1 Internal functions
      */
 
     // Best-effort attempt at estimating the base gas use of `submitInbound` transaction, outside the block of
@@ -497,16 +577,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return 21_000 + 14_698 + (msg.data.length * 16);
     }
 
-    // Verify that a message commitment is considered finalized by our BEEFY light client.
-    function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
-        internal
-        view
-        virtual
-        returns (bool)
-    {
-        return Verification.verifyCommitment(BEEFY_CLIENT, BRIDGE_HUB_PARA_ID_ENCODED, commitment, proof);
-    }
-
     // Convert foreign currency to native currency (ROC/KSM/DOT -> ETH)
     function _convertToNative(UD60x18 exchangeRate, UD60x18 multiplier, UD60x18 amount)
         internal
@@ -514,8 +584,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         returns (uint256)
     {
         UD60x18 ethDecimals = convert(1e18);
-        UD60x18 foreignDecimals = convert(10).pow(convert(uint256(FOREIGN_TOKEN_DECIMALS)));
-        UD60x18 nativeAmount = multiplier.mul(amount).mul(exchangeRate).div(foreignDecimals).mul(ethDecimals);
+        UD60x18 foreignDecimals =
+            convert(10).pow(convert(uint256(FOREIGN_TOKEN_DECIMALS)));
+        UD60x18 nativeAmount = multiplier.mul(amount).mul(exchangeRate).div(
+            foreignDecimals
+        ).mul(ethDecimals);
         return convert(nativeAmount);
     }
 
@@ -523,11 +596,12 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     function _calculateFee(Costs memory costs) internal view returns (uint256) {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
         UD60x18 amount = convert(pricing.deliveryCost + costs.foreign);
-        return costs.native + _convertToNative(pricing.exchangeRate, pricing.multiplier, amount);
+        return costs.native
+            + _convertToNative(pricing.exchangeRate, pricing.multiplier, amount);
     }
 
     // Submit an outbound message to Polkadot, after taking fees
-    function _submitOutbound(Ticket memory ticket) internal {
+    function _submitOutboundV1(Ticket memory ticket) internal {
         ChannelID channelID = ticket.dest.into();
         Channel storage channel = _ensureChannel(channelID);
 
@@ -555,7 +629,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Generate a unique ID for this message
         bytes32 messageID = keccak256(abi.encodePacked(channelID, channel.outboundNonce));
 
-        emit IGateway.OutboundMessageAccepted(channelID, channel.outboundNonce, messageID, ticket.payload);
+        emit IGateway.OutboundMessageAccepted(
+            channelID, channel.outboundNonce, messageID, ticket.payload
+        );
     }
 
     /// @dev Outbound message can be disabled globally or on a per-channel basis.
@@ -567,7 +643,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     }
 
     /// @dev Ensure that the specified parachain has a channel allocated
-    function _ensureChannel(ChannelID channelID) internal view returns (Channel storage ch) {
+    function _ensureChannel(ChannelID channelID)
+        internal
+        view
+        returns (Channel storage ch)
+    {
         ch = CoreStorage.layout().channels[channelID];
         // A channel always has an agent specified.
         if (ch.agent == address(0)) {
@@ -575,37 +655,90 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         }
     }
 
-    /// @dev Ensure that the specified agentID has a corresponding contract
-    function _ensureAgent(bytes32 agentID) internal view returns (address agent) {
-        agent = CoreStorage.layout().agents[agentID];
-        if (agent == address(0)) {
-            revert AgentDoesNotExist();
-        }
-    }
-
-    /// @dev Ensure that the specified address is an valid agent
-    function _ensureAgentAddress(address agent) internal view returns (bytes32 agentID) {
-        agentID = CoreStorage.layout().agentAddresses[agent];
-        if (agentID == bytes32(0)) {
-            revert AgentDoesNotExist();
-        }
-    }
-
-    /// @dev Invoke some code within an agent
-    function _invokeOnAgent(address agent, bytes memory data) internal returns (bytes memory) {
-        (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(AGENT_EXECUTOR, data));
-        return Call.verifyResult(success, returndata);
-    }
-
     /// @dev Transfer ether from an agent
-    function _transferNativeFromAgent(address agent, address payable recipient, uint256 amount) internal {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
+    function _transferNativeFromAgent(
+        address agent,
+        address payable recipient,
+        uint256 amount
+    ) internal {
+        bytes memory call =
+            abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
         _invokeOnAgent(agent, call);
     }
 
     /// @dev Define the dust threshold as the minimum cost to transfer ether between accounts
     function _dustThreshold() internal view returns (uint256) {
-        return 21000 * tx.gasprice;
+        return 21_000 * tx.gasprice;
+    }
+
+    /*
+    *     _____   __________ .___         ________
+    *    /  _  \  \______   \|   | ___  __\_____  \
+    *   /  /_\  \  |     ___/|   | \  \/ / /  ____/§
+    *  /    |    \ |    |    |   |  \   / /       \
+    *  \____|__  / |____|    |___|   \_/  \_______ \
+    *          \/                                 \/
+    */
+
+    /// @dev Submit a message from Polkadot for verification and dispatch
+    /// @param message A message produced by the OutboundQueue pallet on BridgeHub
+    /// @param leafProof A message proof used to verify that the message is in the merkle tree committed by the OutboundQueue pallet
+    /// @param headerProof A proof that the commitment is included in parachain header that was finalized by BEEFY.
+    function submitV2(
+        InboundMessageV2 calldata message,
+        bytes32[] calldata leafProof,
+        Verification.Proof calldata headerProof
+    ) external {
+        uint256 startGas = gasleft();
+
+        CoreStorage.Layout storage $ = CoreStorage.layout();
+
+        bytes32 leafHash = keccak256(abi.encode(message));
+
+        if ($.inboundNonce.get(message.nonce)) {
+            emit InvalidNonce();
+        }
+
+        $.inboundNonce.set(message.nonce);
+
+        // Produce the commitment (message root) by applying the leaf proof to the message leaf
+        bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
+
+        // Verify that the commitment is included in a parachain header finalized by BEEFY.
+        if (!_verifyCommitment(commitment, headerProof)) {
+            revert InvalidProof();
+        }
+
+        bool success = dispatchV2(message);
+
+        emit IGateway.InboundMessageDispatched(message.nonce, success);
+    }
+
+    function dispatchV2(InboundMessageV2 calldata message) internal returns (bool) {
+        for (uint256 i = 0; i < messages.commands.length; i++) {
+            if (messages.commands[i].kind == CommandKind.Upgrade) {
+                try Gateway(this).upgrade(message.commands[i].payload) {}
+                catch {
+                    return false;
+                }
+            } else if (cmdCode == CommandKind.SetOperatingMode) {
+                try Gateway(this).setOperatingMode(message.commands[i].payload) {}
+                catch {
+                    return false;
+                }
+            } else if (cmdCode == CommandKind.NativeTokenUnlock) {
+                try Gateway(this).unlockToken(message.commands[i].payload) {}
+                catch {
+                    return false;
+                }
+            } else if (cmdCode == CommandKind.ForeignTokenMint) {
+                try Gateway(this).unlockToken(message.commands[i].payload) {}
+                catch {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /**
@@ -653,12 +786,20 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         core.agentAddresses[bridgeHubAgent] = BRIDGE_HUB_AGENT_ID;
 
         // Initialize channel for primary governance track
-        core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] =
-            Channel({mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0});
+        core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] = Channel({
+            mode: OperatingMode.Normal,
+            agent: bridgeHubAgent,
+            inboundNonce: 0,
+            outboundNonce: 0
+        });
 
         // Initialize channel for secondary governance track
-        core.channels[SECONDARY_GOVERNANCE_CHANNEL_ID] =
-            Channel({mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0});
+        core.channels[SECONDARY_GOVERNANCE_CHANNEL_ID] = Channel({
+            mode: OperatingMode.Normal,
+            agent: bridgeHubAgent,
+            inboundNonce: 0,
+            outboundNonce: 0
+        });
 
         // Initialize agent for for AssetHub
         address assetHubAgent = address(new Agent(config.assetHubAgentID));
@@ -666,8 +807,12 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         core.agentAddresses[assetHubAgent] = config.assetHubAgentID;
 
         // Initialize channel for AssetHub
-        core.channels[config.assetHubParaID.into()] =
-            Channel({mode: OperatingMode.Normal, agent: assetHubAgent, inboundNonce: 0, outboundNonce: 0});
+        core.channels[config.assetHubParaID.into()] = Channel({
+            mode: OperatingMode.Normal,
+            agent: assetHubAgent,
+            inboundNonce: 0,
+            outboundNonce: 0
+        });
 
         // Initialize pricing storage
         PricingStorage.Layout storage pricing = PricingStorage.layout();
