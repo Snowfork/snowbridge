@@ -60,19 +60,12 @@ jobs:
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
 
-      - name: Determine branch name
-        id: branch_name
-        run: |
-          branch_name=${GITHUB_REF#refs/heads/}
-          echo "Branch name: $branch_name"
-          echo "branch=$branch_name" >> $GITHUB_OUTPUT
-
       - name: Determine new version
         id: new_version
         run: |
-          # Get the most recent tag in the format relayer-<branchname>-<version>
-          current_tag=$(git tag --list "relayer-${{ steps.branch_name.outputs.branch }}-*" --sort=-v:refname | head -n 1
-          current_version=$(git tag --list "relayer-${{ steps.branch_name.outputs.branch }}-*" --sort=-v:refname | head -n 1 | sed -E 's/relayer-${{ steps.branch_name.outputs.branch }}-//')
+          # Get the most recent tag in the format relayer-v<version>
+          current_tag=$(git tag --list "relayer-v*" --sort=-v:refname | head -n 1)
+          current_version=$(git tag --list "relayer-v*" --sort=-v:refname | head -n 1 | sed -E 's/relayer-v//')
           echo "Current version: $current_version"
 
           # If there is no current version, set it to 1.0.0
@@ -89,7 +82,7 @@ jobs:
       - name: Create new tag
         id: create_tag
         run: |
-          tag_name="relayer-${{ steps.branch_name.outputs.branch }}-${{ steps.new_version.outputs.version }}"
+          tag_name="relayer-v${{ steps.new_version.outputs.version }}"
           echo "Tag name: $tag_name"
           echo "tag=$tag_name" >> $GITHUB_OUTPUT
           git tag $tag_name
