@@ -261,27 +261,6 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     },
                 ],
             },
-            {
-                id: "RILT",
-                name: "RILT",
-                type: "substrate",
-                destinationIds: ["assethub"],
-                paraInfo: {
-                  paraId: 4504,
-                  destinationFeeDOT: 0n,
-                  skipExistentialDepositCheck: false,
-                  addressType: "32byte",
-                  decimals: 15,
-                  maxConsumers: 16,
-                },
-                erc20tokensReceivable: [
-                  {
-                    id: "RILT",
-                    address: "0x45Ffe5A44Dae5438Ee7FdD26EE5bEFaD13d52832",
-                    minimumTransferAmount: 1n,
-                  },
-                ],
-              },
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
@@ -385,27 +364,6 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     },
                 ],
             },
-            {
-                id: "PILT",
-                name: "PILT",
-                type: "substrate",
-                destinationIds: ["assethub"],
-                paraInfo: {
-                  paraId: 2086,
-                  destinationFeeDOT: 0n,
-                  skipExistentialDepositCheck: false,
-                  addressType: "32byte",
-                  decimals: 15,
-                  maxConsumers: 16,
-                },
-                erc20tokensReceivable: [
-                  {
-                    id: "PILT",
-                    address: "0x99E743964C036bc28931Fb564817db428Aa7f752",
-                    minimumTransferAmount: 1n,
-                  },
-                ],
-              },
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
@@ -641,27 +599,6 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     },
                 ],
             },
-            {
-                id: "KILT",
-                name: "KILT",
-                type: "substrate",
-                destinationIds: ["assethub"],
-                paraInfo: {
-                  paraId: 2086,
-                  destinationFeeDOT: 0n,
-                  skipExistentialDepositCheck: false,
-                  addressType: "32byte",
-                  decimals: 15,
-                  maxConsumers: 16,
-                },
-                erc20tokensReceivable: [
-                  {
-                    id: "KILT",
-                    address: "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
-                    minimumTransferAmount: 1n,
-                  },
-                ],
-              },
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-mainnet.chainsafe.io",
@@ -732,7 +669,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         id: "WETH",
                         address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
                         minimumTransferAmount: 1_000_000_000_000n,
-                    }
+                    },
                 ],
             },
             {
@@ -753,9 +690,9 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         id: "WETH",
                         address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
                         minimumTransferAmount: 15_000_000_000_000n,
-                    }
+                    },
                 ],
-            }
+            },
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
