@@ -153,7 +153,7 @@ export const fetchEvents = async <T>(
 
         for (const { event_index, params } of paramsResponse.json.data) {
             if (params === undefined) {
-                console.log("Event does not have any params", event_index)
+                console.warn("Event does not have any params", event_index)
                 continue;
             }
 
