@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/contract-types",
-  "version": "0.1.22",
+  "version": "0.1.23",
   "description": "Snowbridge contract type bindings",
   "license": "Apache-2.0",
   "repository": {
@@ -22,6 +22,6 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "ethers": "^6.13.1"
+    "ethers": "^6.13.3"
   }
 }
