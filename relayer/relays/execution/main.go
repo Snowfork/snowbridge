@@ -50,7 +50,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 	ethconn := ethereum.NewConnection(&r.config.Source.Ethereum, nil)
 
-	err := paraconn.Connect(ctx)
+	err := paraconn.ConnectWithHeartBeat(ctx, 20*time.Second)
 	if err != nil {
 		return err
 	}
