@@ -553,7 +553,6 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 	}
 	startIndex := uint64(lastIndex)
 
-	fmt.Printf("startIndex: %d\n", startIndex)
 	endIndex := startIndex + 1
 	iterations := uint64(0)
 
