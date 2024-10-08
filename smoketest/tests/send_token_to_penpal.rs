@@ -29,6 +29,11 @@ use subxt::{
 	utils::{AccountId32, MultiAddress},
 	OnlineClient,
 };
+use sp_crypto_hashing::twox_128;
+use penpal::{api::runtime_types as penpalTypes};
+use penpalTypes::{
+	penpal_runtime::RuntimeCall as PenpalRuntimeCall,
+};
 
 #[tokio::test]
 async fn send_token_to_penpal() {
@@ -50,6 +55,7 @@ async fn send_token_to_penpal() {
 	let receipt = weth.deposit().value(value).send().await.unwrap().await.unwrap().unwrap();
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
+	set_reserve_asset_storage(&mut penpal_client.clone()).await;
 	ensure_penpal_asset_exists(&mut penpal_client.clone()).await;
 
 	// Approve token spend
@@ -201,4 +207,46 @@ async fn ensure_penpal_asset_exists(penpal_client: &mut OnlineClient<PenpalConfi
 		.wait_for_finalized_success()
 		.await
 		.expect("asset created");
+}
+
+async fn set_reserve_asset_storage(penpal_client: &mut OnlineClient<PenpalConfig>) {
+	use penpal::api::runtime_types::staging_xcm::v4::{
+		junction::{
+			Junction::GlobalConsensus,
+			NetworkId,
+		},
+		junctions::Junctions::X1,
+		location::Location,
+	};
+	let storage_key: Vec<u8> = twox_128(b":CustomizableAssetFromSystemAssetHub:").to_vec();
+	let reserve_location: Vec<u8> = Location {
+		parents: 2,
+		interior: X1([
+			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
+		]),
+	}.encode();
+
+	println!("setting storage on penpal.");
+	println!("key is {:x?}", storage_key);
+	let signer: PairSigner<PenpalConfig, _> = PairSigner::new((*ALICE).clone());
+
+	let items = vec![(
+		storage_key,
+		reserve_location,
+	)];
+
+	let sudo_call = penpal::api::sudo::calls::TransactionApi::sudo(
+		&penpal::api::sudo::calls::TransactionApi,
+		PenpalRuntimeCall::System(crate::penpalTypes::frame_system::pallet::Call::set_storage {
+			items
+		}),
+	);
+	penpal_client
+		.tx()
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.await
+		.unwrap()
+		.wait_for_finalized_success()
+		.await
+		.expect("reserve location set");
 }
