@@ -25,15 +25,17 @@ struct InboundMessage {
 
 struct Command {
     uint8 kind;
+    uint256 gas;
     bytes payload;
 }
 
 library CommandKind {
     uint8 constant Upgrade = 0;
     uint8 constant SetOperatingMode = 1;
-    uint8 constant NativeTokenUnlock = 2;
-    uint8 constant ForeignTokenMint = 3;
-    uint8 constant CallContract = 4;
+    uint8 constant UnlockNativeToken = 2;
+    uint8 constant MintForeignToken = 3;
+    uint8 constant CreateAgent = 4;
+    uint8 constant CallContract = 5;
 }
 
 struct Ticket {
@@ -65,7 +67,7 @@ struct SetOperatingModeParams {
 }
 
 // Payload for NativeTokenUnlock instruction
-struct NativeTokenUnlockParams {
+struct UnlockNativeTokenParams {
     // Token address
     address token;
     // Recipient address

@@ -689,8 +689,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
     ) external {
-        uint256 startGas = gasleft();
-
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
         bytes32 leafHash = keccak256(abi.encode(message));
@@ -714,31 +712,119 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         emit IGateway.InboundMessageDispatched(message.nonce, success);
     }
 
+    uint256 public constant DISPATCH_OVERHEAD_GAS = 32_000;
+
     function dispatchV2(InboundMessageV2 calldata message) internal returns (bool) {
         for (uint256 i = 0; i < messages.commands.length; i++) {
-            if (messages.commands[i].kind == CommandKind.Upgrade) {
-                try Gateway(this).upgrade(message.commands[i].payload) {}
+            if (gasleft() * 63 / 64 < message.commands[i].gas + DISPATCH_OVERHEAD_GAS) {
+                assembly {
+                    invalid()
+                }
+            }
+
+            if (message.commands[i].kind == CommandKind.Upgrade) {
+                UpgradeParamsV2 memory params = abi.decode(params, UpgradeParamsV2);
+                try Gateway(this).handleUpgrade{gas: message.commands[i].gas}(
+                    params.impl,
+                    params.implCodeHash,
+                    params.initParams
+                ) {}
                 catch {
                     return false;
                 }
-            } else if (cmdCode == CommandKind.SetOperatingMode) {
-                try Gateway(this).setOperatingMode(message.commands[i].payload) {}
+            } else if (message.commands[i].kind == CommandKind.SetOperatingMode) {
+                SetOperatingModeV2 memory params = abi.decode(params, SetOperatingModeV2);
+                try Gateway(this).handleSetOperatingMode{gas: message.commands[i].gas}(
+                    params.mode
+                ) {}
                 catch {
                     return false;
                 }
-            } else if (cmdCode == CommandKind.NativeTokenUnlock) {
-                try Gateway(this).unlockToken(message.commands[i].payload) {}
+            } else if (message.commands[i].kind == CommandKind.NativeTokenUnlock) {
+                NativeTokenUnlockParams memory params = abi.decode(data, (NativeTokenUnlockParamsV2));
+                try Gateway(this).handleNativeTokenUnlock{gas: message.commands[i].gas}(
+                    params.token,
+                    params.recipient,
+                    params.amount
+                ) {}
                 catch {
                     return false;
                 }
-            } else if (cmdCode == CommandKind.ForeignTokenMint) {
-                try Gateway(this).unlockToken(message.commands[i].payload) {}
+            } else if (message.commands[i].kind == CommandKind.ForeignTokenMint) {
+                MintForeignTokenParams memory params = abi.decode(data, (MintForeignTokenParamsV2));
+                try Gateway(this).handleMintForeignToken{gas: message.commands[i].gas}(
+                    params.foreignTokenID,
+                    params.recipient,
+                    params.amount
+                ) {}
+                catch {
+                    return false;
+                }
+            } else if (messages.commands[i].kind == CommandKind.CreateAgent) {
+                try Gateway(this).handleCreateAgent{gas: messages.commands[i].gas}(
+                    message.origin,
+                ) {}
+                catch {
+                    return false;
+                }
+            }
+            else if (messages.commands[i].kind == CommandKind.CallContract) {
+                CallContractParams memory params = abi.decode(data, (CallContractParamsV2));
+                try Gateway(this).handleCallContract{gas: messages.commands[i].gas}(
+                    message.origin,
+                    params.target,
+                    params.data
+                ) {}
                 catch {
                     return false;
                 }
             }
         }
         return true;
+    }
+
+    /**
+     * APIv2 Message Handlers
+     */
+
+    //  Perform an upgrade of the gateway
+    function handleUpgrade(address impl, bytes32 implCodeHash, bytes initParams) external onlySelf {
+        Upgrade.upgrade(params.impl, params.implCodeHash, params.initParams);
+    }
+
+    // Set the operating mode of the gateway
+    function handleSetOperatingMode(OperatingMode mode) external onlySelf {
+        CoreStorage.Layout storage $ = CoreStorage.layout();
+        $.mode = mode;
+        emit OperatingModeChanged(params.mode);
+    }
+
+    // Unlock Native token
+    function handleUnlockNativeToken(address token, address recipient, uint128 amount) external onlySelf {
+        AssetsV2.unlockNativeToken(
+            AGENT_EXECUTOR, agent, params.token, params.recipient, params.amount
+        );
+    }
+
+    // Mint foreign token from polkadot
+    function handleMintForeignToken(bytes32 foreignTokenID, address recipient, uint128 amount) external onlySelf {
+        AssetsV2.mintForeignToken(foreignTokenID, recipient, amount);
+    }
+
+    function handleCreateAgent(bytes32 origin) external onlySelf {
+        CoreStorage.Layout storage core = CoreStorage.layout();
+        address agent = CoreStorage.layout().agents[agentID];
+        if (agent == address(0)) {
+            agent = address(new Agent(origin));
+            core.agents[origin] = agent;
+            core.agentAddresses[agent] = origin;
+        }
+    }
+
+    function handleCallContract(bytes32 origin, address target, bytes data) external onlySelf {
+        bytes memory call =
+            abi.encodeCall(AgentExecutor.callContract, (target, data));
+        _invokeOnAgent(agent, call);
     }
 
     /**
