@@ -123,9 +123,7 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 			"mmr":         mmrProof.Leaf.ParachainHeads.Hex(),
 		}).Warn("MMR parachain merkle root does not match calculated merkle root. Filtering out parachain heads.")
 
-		log.WithField("heads", len(paraHeadsAsSlice)).Info("here")
 		paraHeadsAsSlice, err = conn.FilterParachainHeads(paraHeadsAsSlice, relayChainBlockHash)
-		log.WithField("heads", len(paraHeadsAsSlice)).Info("here")
 		if err != nil {
 			log.WithError(err).Fatal("Filtering out parachain heads failed.")
 		}
