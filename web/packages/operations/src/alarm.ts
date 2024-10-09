@@ -112,9 +112,8 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
         metricData.push({
             MetricName: AlarmReason.ToEthereumChannelStale.toString(),
             Value: Number(
-                channel.toEthereum.outbound < channel.toEthereum.inbound ||
-                    (channel.toEthereum.outbound > channel.toEthereum.inbound &&
-                        channel.toEthereum.inbound <= channel.toEthereum.previousInbound)
+                channel.toEthereum.outbound < channel.toEthereum.inbound &&
+                    channel.toEthereum.inbound <= channel.toEthereum.previousInbound
             ),
         })
         metricData.push({
