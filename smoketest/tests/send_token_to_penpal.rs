@@ -154,15 +154,16 @@ async fn send_token_to_penpal() {
 
 		let events = block.events().await.unwrap();
 		for issued in events.find::<PenpalIssued>() {
-			println!("Created event found in penpal block {}.", block.number());
 			let issued = issued.unwrap();
 			// DOT fee deposited
 			if issued.asset_id.encode() == expected_dot_id.encode() {
+				println!("Issued DOT event found in penpal block {}.", block.number());
 				assert_eq!(issued.owner, penpal_expected_owner);
 				issued_fee_event_found = true
 			}
 			// Weth deposited
 			if issued.asset_id.encode() == expected_asset_id.encode() {
+				println!("Issued Weth event found in penpal block {}.", block.number());
 				assert_eq!(issued.owner, penpal_expected_owner);
 				assert_eq!(issued.amount, amount);
 				issued_event_found = true;
@@ -279,8 +280,7 @@ async fn set_reserve_asset_storage(penpal_client: &mut OnlineClient<PenpalConfig
 		]),
 	}.encode();
 
-	println!("setting storage on penpal.");
-	println!("key is {:x?}", storage_key);
+	println!("setting CustomizableAssetFromSystemAssetHub storage on penpal.");
 	let signer: PairSigner<PenpalConfig, _> = PairSigner::new((*ALICE).clone());
 
 	let items = vec![(
