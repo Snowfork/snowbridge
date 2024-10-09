@@ -53,6 +53,8 @@ pub const PENPAL_SOVEREIGN: [u8; 32] =
 
 lazy_static! {
 	// SS58: 5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL
+	pub static ref ALICE: Pair = Pair::from_string("//Alice", None)
+		.expect("cannot create keypair");
 	pub static ref FERDIE: Pair = Pair::from_string("//Ferdie", None)
 		.expect("cannot create keypair");
 	pub static ref FERDIE_PUBLIC: [u8; 32] = (*FERDIE).public().into();
