@@ -553,16 +553,14 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 	}
 	startIndex := uint64(lastIndex)
 
-	endIndex := startIndex + 1
-	iterations := uint64(0)
+	index := startIndex
 
 	syncCommitteePeriod := h.protocol.Settings.SlotsInEpoch * h.protocol.Settings.EpochsPerSyncCommitteePeriod
 	totalStates := h.protocol.Settings.EpochsPerSyncCommitteePeriod * h.protocol.HeaderRedundancy // Total size of the circular buffer,
 	// https://github.com/paritytech/polkadot-sdk/blob/master/bridges/snowbridge/pallets/ethereum-client/src/lib.rs#L75
-	for index := startIndex; index != endIndex; index = (index - 1 + totalStates) % totalStates {
-		iterations++
-		// Sanity check, in case the number of loops are more than the states available in the ring buffer
-		if iterations > totalStates {
+	for {
+		index = (index - 1 + totalStates) % totalStates
+		if index == startIndex {
 			log.WithError(err).Debug("unable to find a relevant on-chain header, max iterations reached")
 			break
 		}
