@@ -334,9 +334,9 @@ func TestFindLatestCheckPoint(t *testing.T) {
 		EpochsPerSyncCommitteePeriod: 2,
 		DenebForkEpoch:               0,
 	}
-	maxRedundancy := uint64(2)
+	maxRedundancy := uint64(8)
 	p := protocol.New(settings, maxRedundancy)
-	// Total circular array would be 4 * 2 * 2 = 16
+	// Total circular array would be 2 * 8 = 16
 	client := mock.API{}
 	beaconStore := mock.Store{}
 
@@ -349,60 +349,61 @@ func TestFindLatestCheckPoint(t *testing.T) {
 	headerIndex15 := common.HexToHash("0x416f890494e218d3cb32ce1ef3bd08e3acccf6e112b66db544cfcc6295bbdc2a")
 	headerIndex14 := common.HexToHash("0x74c4e67ca468722a7c3af52c5f96f4bbdd60b4d237ae7693863dca308e3c354c")
 
-	h := New(
-		&mock.Writer{
-			LastFinalizedState: state.FinalizedHeader{
-				BeaconBlockRoot:       common.Hash{},
-				BeaconSlot:            50,
-				InitialCheckpointRoot: common.Hash{},
-				InitialCheckpointSlot: 0,
+	mockWriter := &mock.Writer{
+		LastFinalizedState: state.FinalizedHeader{
+			BeaconBlockRoot:       common.Hash{},
+			BeaconSlot:            50,
+			InitialCheckpointRoot: common.Hash{},
+			InitialCheckpointSlot: 0,
+		},
+		LastFinalizedStateIndex: 5,
+		FinalizedBeaconRootByIndex: map[uint32]types.H256{
+			5:  types.H256(headerIndex5),
+			4:  types.H256(headerIndex4),
+			3:  types.H256(headerIndex3),
+			2:  types.H256(headerIndex2),
+			1:  types.H256(headerIndex1),
+			0:  types.H256(headerIndex0),
+			15: types.H256(headerIndex15),
+			14: types.H256(headerIndex14),
+		},
+		FinalizedHeaderStateByBlockRoot: map[types.H256]state.FinalizedHeader{
+			types.H256(headerIndex5): {
+				BeaconBlockRoot: headerIndex5,
+				BeaconSlot:      50,
 			},
-			LastFinalizedStateIndex: 5,
-			FinalizedBeaconRootByIndex: map[uint32]types.H256{
-				5:  types.H256(headerIndex5),
-				4:  types.H256(headerIndex4),
-				3:  types.H256(headerIndex3),
-				2:  types.H256(headerIndex2),
-				1:  types.H256(headerIndex1),
-				0:  types.H256(headerIndex0),
-				15: types.H256(headerIndex15),
-				14: types.H256(headerIndex14),
+			types.H256(headerIndex4): {
+				BeaconBlockRoot: headerIndex4,
+				BeaconSlot:      46,
 			},
-			FinalizedHeaderStateByBlockRoot: map[types.H256]state.FinalizedHeader{
-				types.H256(headerIndex5): state.FinalizedHeader{
-					BeaconBlockRoot: headerIndex5,
-					BeaconSlot:      50,
-				},
-				types.H256(headerIndex4): state.FinalizedHeader{
-					BeaconBlockRoot: headerIndex4,
-					BeaconSlot:      46,
-				},
-				types.H256(headerIndex3): state.FinalizedHeader{
-					BeaconBlockRoot: headerIndex3,
-					BeaconSlot:      42,
-				},
-				types.H256(headerIndex2): state.FinalizedHeader{
-					BeaconBlockRoot: headerIndex2,
-					BeaconSlot:      38,
-				},
-				types.H256(headerIndex1): state.FinalizedHeader{
-					BeaconBlockRoot: headerIndex1,
-					BeaconSlot:      30,
-				},
-				types.H256(headerIndex0): state.FinalizedHeader{
-					BeaconBlockRoot: headerIndex0,
-					BeaconSlot:      32,
-				},
-				types.H256(headerIndex15): state.FinalizedHeader{
-					BeaconBlockRoot: headerIndex15,
-					BeaconSlot:      20,
-				},
-				types.H256(headerIndex14): state.FinalizedHeader{
-					BeaconBlockRoot: headerIndex14,
-					BeaconSlot:      18,
-				},
+			types.H256(headerIndex3): {
+				BeaconBlockRoot: headerIndex3,
+				BeaconSlot:      42,
+			},
+			types.H256(headerIndex2): {
+				BeaconBlockRoot: headerIndex2,
+				BeaconSlot:      38,
+			},
+			types.H256(headerIndex1): {
+				BeaconBlockRoot: headerIndex1,
+				BeaconSlot:      30,
+			},
+			types.H256(headerIndex0): {
+				BeaconBlockRoot: headerIndex0,
+				BeaconSlot:      32,
+			},
+			types.H256(headerIndex15): {
+				BeaconBlockRoot: headerIndex15,
+				BeaconSlot:      20,
+			},
+			types.H256(headerIndex14): {
+				BeaconBlockRoot: headerIndex14,
+				BeaconSlot:      18,
 			},
 		},
+	}
+	h := New(
+		mockWriter,
 		&client,
 		settings,
 		&beaconStore,
@@ -425,4 +426,15 @@ func TestFindLatestCheckPoint(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, headerIndex4, header.BeaconBlockRoot)
 	assert.Equal(t, uint64(46), header.BeaconSlot)
+
+	// Check that the first item in the ringbuffer can be found
+	header, err = h.findLatestCheckPoint(43)
+	assert.NoError(t, err)
+	assert.Equal(t, headerIndex5, header.BeaconBlockRoot)
+	assert.Equal(t, uint64(50), header.BeaconSlot)
+
+	// Check last finalized state index outside of the circular array does not cause an infinite loop
+	mockWriter.LastFinalizedStateIndex = types.U32((maxRedundancy * settings.EpochsPerSyncCommitteePeriod) + 50)
+	header, err = h.findLatestCheckPoint(40)
+	assert.Error(t, err)
 }
