@@ -3,6 +3,7 @@ package parachain
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -66,7 +67,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 }
 
 func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
-	err := relay.parachainConn.Connect(ctx)
+	err := relay.parachainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
 	if err != nil {
 		return err
 	}
