@@ -43,12 +43,6 @@ func parachainHeadProofCmd() *cobra.Command {
 	)
 	cmd.MarkFlagRequired("parachain-id")
 
-	//cmd.Flags().Uint64(
-	//	"parachain-block",
-	//	0,
-	//	"The parachain block you are trying to prove. i.e. The block containing the message.",
-	//)
-	cmd.MarkFlagRequired("parachain-block")
 	return cmd
 }
 
@@ -72,19 +66,19 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 	copy(beefyBlockHash[:], beefyBlockHashHex[0:32])
 
 	relayChainBlock, _ := cmd.Flags().GetUint64("relaychain-block")
+	// magic plus 1 to make the block a leaf index
 	mmrProof, err := conn.GenerateProofForBlock(relayChainBlock+1, beefyBlockHash)
 	if err != nil {
 		log.WithError(err).Error("Cannot connect.")
 		return err
 	}
-	//log.WithFields(log.Fields{
-	//	"relayChainBlock": relayChainBlock,
-	//	"beefyBlockHash":  beefyBlockHash,
-	//	"mmrProof":        mmrProof,
-	//}).Info("conn.GenerateProofForBlock")
+	log.WithFields(log.Fields{
+		"relayChainBlock": relayChainBlock,
+		"beefyBlockHash":  beefyBlockHash,
+		"mmrProof":        mmrProof,
+	}).Info("conn.GenerateProofForBlock")
 
 	paraID, _ := cmd.Flags().GetUint32("parachain-id")
-	//parachainBlock, _ := cmd.Flags().GetUint64("parachain-block")
 
 	relayChainBlockHash, err := conn.API().RPC.Chain.GetBlockHash(relayChainBlock)
 	if err != nil {
@@ -110,15 +104,14 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("parachain is not registered")
 	}
 
-	const MaxParaHeads = 1024
-	//log.WithFields(log.Fields{
-	//	"paraHeadsAsSlice":    paraHeadsAsSlice,
-	//	"parachainHeader":     parachainHeader,
-	//	"paraId":              paraID,
-	//	"relayChainBlockHash": relayChainBlockHash.Hex(),
-	//}).Info("parachain.CreateParachainMerkleProof")
-	//numParas := min(MaxParaHeads, len(paraHeadsAsSlice))
-	merkleProofData, err := parachain.CreateParachainMerkleProof(paraHeadsAsSlice, paraID)
+	log.WithFields(log.Fields{
+		"paraHeadsAsSlice":    paraHeadsAsSlice,
+		"parachainHeader":     parachainHeader,
+		"paraId":              paraID,
+		"relayChainBlockHash": relayChainBlockHash.Hex(),
+	}).Info("parachain.CreateParachainMerkleProof")
+	numParas := min(parachain.MaxParaHeads, len(paraHeadsAsSlice))
+	merkleProofData, err := parachain.CreateParachainMerkleProof(paraHeadsAsSlice[:numParas], paraID)
 	if err != nil {
 		log.WithError(err).Error("Cannot create merkle proof.")
 		return err
@@ -130,47 +123,46 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 			"mmr":         mmrProof.Leaf.ParachainHeads.Hex(),
 		}).Warn("MMR parachain merkle root does not match calculated merkle root. Filtering out parachain heads.")
 
-		//log.WithField("heads", len(paraHeadsAsSlice)).Info("here")
-		//paraHeadsAsSlice, err = conn.FilterParachainHeads(paraHeadsAsSlice, relayChainBlockHash)
-		//log.WithField("heads", len(paraHeadsAsSlice)).Info("here")
-		//if err != nil {
-		//	log.WithError(err).Fatal("Filtering out parachain heads failed.")
-		//}
+		log.WithField("heads", len(paraHeadsAsSlice)).Info("here")
+		paraHeadsAsSlice, err = conn.FilterParachainHeads(paraHeadsAsSlice, relayChainBlockHash)
+		log.WithField("heads", len(paraHeadsAsSlice)).Info("here")
+		if err != nil {
+			log.WithError(err).Fatal("Filtering out parachain heads failed.")
+		}
 
-		//numParas = min(MaxParaHeads, len(paraHeadsAsSlice))
-		//merkleProofData, err = parachain.CreateParachainMerkleProof(paraHeadsAsSlice[:numParas], paraID)
-		//if err != nil {
-		//	log.WithError(err).Fatal("Filtering out parachain heads failed.")
-		//}
-		//if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
-		//	log.WithFields(log.Fields{
-		//		"computedMmr": merkleProofData.Root.Hex(),
-		//		"mmr":         mmrProof.Leaf.ParachainHeads.Hex(),
-		//	}).Fatal("MMR parachain merkle root does not match calculated merkle root.")
-		//}
+		numParas = min(parachain.MaxParaHeads, len(paraHeadsAsSlice))
+		merkleProofData, err = parachain.CreateParachainMerkleProof(paraHeadsAsSlice[:numParas], paraID)
+		if err != nil {
+			log.WithError(err).Fatal("Filtering out parachain heads failed.")
+		}
+		if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
+			log.WithFields(log.Fields{
+				"computedMmr": merkleProofData.Root.Hex(),
+				"mmr":         mmrProof.Leaf.ParachainHeads.Hex(),
+			}).Fatal("MMR parachain merkle root does not match calculated merkle root.")
+		}
 	}
 
-	//log.WithFields(log.Fields{
-	//	"paraHeadsAsSlice": paraHeadsAsSlice,
-	//	"paraId":           paraID,
-	//	"merkleProofData":  merkleProofData,
-	//}).Info("parachain.CreateParachainMerkleProof")
+	log.WithFields(log.Fields{
+		"paraHeadsAsSlice": paraHeadsAsSlice,
+		"paraId":           paraID,
+		"merkleProofData":  merkleProofData,
+	}).Info("parachain.CreateParachainMerkleProof")
 
-	//log.WithFields(log.Fields{
-	//	"parachainId":           paraID,
-	//	"relaychainBlockHash":   relayChainBlockHash.Hex(),
-	//	"relaychainBlockNumber": relayChainBlock,
-	//	"parachainBlockNumber":  parachainBlock,
-	//	"paraHeads":             paraHeadsAsSlice,
-	//	"parachainHeader":       parachainHeader,
-	//}).Info("Generated proof input for parachain block.")
+	log.WithFields(log.Fields{
+		"parachainId":           paraID,
+		"relaychainBlockHash":   relayChainBlockHash.Hex(),
+		"relaychainBlockNumber": relayChainBlock,
+		"paraHeads":             paraHeadsAsSlice,
+		"parachainHeader":       parachainHeader,
+	}).Info("Generated proof input for parachain block.")
 
-	//log.WithFields(log.Fields{
-	//	"mmrProofParachainHeads":           mmrProof.Leaf.ParachainHeads.Hex(),
-	//	"mmrProofParentNumberAndHash":      mmrProof.Leaf.ParentNumberAndHash,
-	//	"computedProofParachainHeads":      merkleProofData.Root.Hex(),
-	//	"computedProofParentNumberAndHash": types.ParentNumberAndHash{ParentNumber: types.U32(relayChainBlock), Hash: relayChainBlockHash},
-	//}).Info("Complete.")
+	log.WithFields(log.Fields{
+		"mmrProofParachainHeads":           mmrProof.Leaf.ParachainHeads.Hex(),
+		"mmrProofParentNumberAndHash":      mmrProof.Leaf.ParentNumberAndHash,
+		"computedProofParachainHeads":      merkleProofData.Root.Hex(),
+		"computedProofParentNumberAndHash": types.ParentNumberAndHash{ParentNumber: types.U32(relayChainBlock), Hash: relayChainBlockHash},
+	}).Info("Complete.")
 
 	return nil
 }
