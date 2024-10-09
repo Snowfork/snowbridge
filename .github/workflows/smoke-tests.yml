@@ -4,11 +4,10 @@ on:
   push:
     branches:
       - main
-      - smoketests-on-snowbridge
   workflow_dispatch:
   schedule:
     # Runs at 8:00 AM every day
-    - cron: '0 9 * * *'
+    - cron: '0 8 * * *'
 
 jobs:
   smoketests:
@@ -23,7 +22,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: snowfork/snowbridge
-          ref: smoketests-on-snowbridge # TODO update to "main" once approved
+          ref: main
       - run: rm -rf polkadot-sdk
       - uses: actions/checkout@v2
         with:
