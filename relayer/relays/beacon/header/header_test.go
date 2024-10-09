@@ -430,8 +430,8 @@ func TestFindLatestCheckPoint(t *testing.T) {
 	// Check that the first item in the ringbuffer can be found
 	header, err = h.findLatestCheckPoint(43)
 	assert.NoError(t, err)
-	assert.Equal(t, headerIndex4, header.BeaconBlockRoot)
-	assert.Equal(t, uint64(46), header.BeaconSlot)
+	assert.Equal(t, headerIndex5, header.BeaconBlockRoot)
+	assert.Equal(t, uint64(50), header.BeaconSlot)
 
 	// Check last finalized state index outside of the circular array does not cause an infinite loop
 	mockWriter.LastFinalizedStateIndex = types.U32((maxRedundancy * settings.EpochsPerSyncCommitteePeriod) + 50)

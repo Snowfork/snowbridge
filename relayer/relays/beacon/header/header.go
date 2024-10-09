@@ -559,13 +559,6 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 	totalStates := h.protocol.Settings.EpochsPerSyncCommitteePeriod * h.protocol.HeaderRedundancy // Total size of the circular buffer,
 	// https://github.com/paritytech/polkadot-sdk/blob/master/bridges/snowbridge/pallets/ethereum-client/src/lib.rs#L75
 	for {
-		index = (index - 1 + totalStates) % totalStates
-		// We have searched the whole ringbuffer and could not find the header.
-		if index == startIndex {
-			log.WithError(err).Debug("unable to find a relevant on-chain header, max iterations reached")
-			break
-		}
-
 		beaconRoot, err := h.writer.GetFinalizedBeaconRootByIndex(uint32(index))
 		if err != nil {
 			return beaconState, fmt.Errorf("GetFinalizedBeaconRootByIndex %d, error: %w", index, err)
@@ -586,6 +579,12 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 			return beaconState, nil
 		}
 
+		index = (index - 1 + totalStates) % totalStates
+		// We have searched the whole ringbuffer and could not find the header.
+		if index == startIndex {
+			log.WithError(err).Debug("unable to find a relevant on-chain header, max iterations reached")
+			break
+		}
 	}
 
 	return beaconState, fmt.Errorf("no checkpoint on chain for slot %d", slot)
