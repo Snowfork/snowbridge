@@ -19,4 +19,4 @@ subxt-codegen = { version = "0.37.0" }
 subxt-signer = { version = "0.37.0" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", default-features = false, features = ["abigen", "ws", "rustls"] }
 lazy_static = "1.4.0"
-
+sp-crypto-hashing = "0.1.0"

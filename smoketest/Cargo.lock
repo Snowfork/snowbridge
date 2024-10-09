@@ -5039,6 +5039,7 @@ dependencies = [
  "lazy_static",
  "parity-scale-codec",
  "serde",
+ "sp-crypto-hashing",
  "subxt",
  "subxt-codegen",
  "subxt-macro",
