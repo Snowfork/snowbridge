@@ -297,8 +297,8 @@ func (li *BeefyListener) generateAndValidateParasHeadsMerkleProof(input *ProofIn
 
 	// Try a filtering out parathreads
 	log.WithFields(log.Fields{
-		"beefyBlock": merkleProofData.Root.Hex(),
-		"leafIndex":  mmrProof.Leaf.ParachainHeads.Hex(),
+		"computedMmr": merkleProofData.Root.Hex(),
+		"mmr":         mmrProof.Leaf.ParachainHeads.Hex(),
 	}).Warn("MMR parachain merkle root does not match calculated merkle root. Trying to filtering out parathreads.")
 
 	paraHeads, err = li.relaychainConn.FilterParachainHeads(paraHeads, input.RelayBlockHash)
@@ -306,6 +306,7 @@ func (li *BeefyListener) generateAndValidateParasHeadsMerkleProof(input *ProofIn
 		return nil, paraHeads, fmt.Errorf("could not filter out parathreads: %w", err)
 	}
 
+	numParas = min(MaxParaHeads, len(paraHeads))
 	merkleProofData, err = CreateParachainMerkleProof(paraHeads[:numParas], input.ParaID)
 	if err != nil {
 		return nil, paraHeads, fmt.Errorf("create parachain header proof: %w", err)
