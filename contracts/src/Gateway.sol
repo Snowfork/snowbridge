@@ -684,10 +684,12 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     /// @param message A message produced by the OutboundQueue pallet on BridgeHub
     /// @param leafProof A message proof used to verify that the message is in the merkle tree committed by the OutboundQueue pallet
     /// @param headerProof A proof that the commitment is included in parachain header that was finalized by BEEFY.
+    /// @param rewardAddress Account on BH to credit delivery rewards
     function submitV2(
         InboundMessageV2 calldata message,
         bytes32[] calldata leafProof,
-        Verification.Proof calldata headerProof
+        Verification.Proof calldata headerProof,
+        bytes32 rewardAddress,
     ) external {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
@@ -709,7 +711,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         bool success = dispatchV2(message);
 
-        emit IGateway.InboundMessageDispatched(message.nonce, success);
+        emit IGateway.InboundMessageDispatched(message.nonce, success, rewardAddress);
     }
 
     uint256 public constant DISPATCH_OVERHEAD_GAS = 32_000;
