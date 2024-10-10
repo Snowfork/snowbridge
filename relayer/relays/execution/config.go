@@ -9,10 +9,11 @@ import (
 )
 
 type Config struct {
-	Source              SourceConfig   `mapstructure:"source"`
-	Sink                SinkConfig     `mapstructure:"sink"`
-	InstantVerification bool           `mapstructure:"instantVerification"`
-	Schedule            ScheduleConfig `mapstructure:"schedule"`
+	Source              SourceConfig      `mapstructure:"source"`
+	Sink                SinkConfig        `mapstructure:"sink"`
+	InstantVerification bool              `mapstructure:"instantVerification"`
+	Schedule            ScheduleConfig    `mapstructure:"schedule"`
+	OFAC                config.OFACConfig `mapstructure:"ofac"`
 }
 
 type ScheduleConfig struct {
@@ -69,6 +70,10 @@ func (c Config) Validate() error {
 	err = c.Schedule.Validate()
 	if err != nil {
 		return fmt.Errorf("schedule config: %w", err)
+	}
+	err = c.OFAC.Validate()
+	if err != nil {
+		return fmt.Errorf("ofac config: %w", err)
 	}
 	return nil
 }

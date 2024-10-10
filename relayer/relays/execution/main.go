@@ -89,6 +89,8 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	p := protocol.New(r.config.Source.Beacon.Spec, r.config.Sink.Parachain.HeaderRedundancy)
 
+	//ofacCheck := ofac.New(r.config.OFAC.Enabled, r.config.OFAC.ApiKey)
+
 	store := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries, *p)
 	store.Connect()
 

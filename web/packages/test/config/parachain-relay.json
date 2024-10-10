@@ -29,5 +29,9 @@
     "id": null,
     "totalRelayerCount": 3,
     "sleepInterval": 45
+  },
+  "ofac": {
+    "enabled": false,
+    "apiKey": ""
   }
 }
