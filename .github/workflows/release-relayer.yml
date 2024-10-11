@@ -2,8 +2,6 @@ name: release-relayer
 
 on:
   push:
-    paths:
-      - "relayer/**"
     branches:
       - main
       - clara/fix-merkle-proof
