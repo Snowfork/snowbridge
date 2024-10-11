@@ -65,7 +65,6 @@ jobs:
           tag_name="relayer-fix-merkle-proof"
           echo "Tag name: $tag_name"
           echo "tag=$tag_name" >> $GITHUB_OUTPUT
-          git tag $tag_name
 
     #  - name: Push new tag
     #    run: |
