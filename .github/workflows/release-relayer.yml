@@ -74,9 +74,6 @@ jobs:
       - name: "Build Changelog"
         id: build_changelog
         uses: mikepenz/release-changelog-builder-action@v4
-        with:
-          fromTag: ${{ steps.new_version.outputs.from_tag }}
-          toTag: ${{ steps.create_tag.outputs.tag }}
 
       - name: Create a GitHub Release
         id: create_release
@@ -84,6 +81,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          tag_name: ${{ steps.create_tag.outputs.tag }}
+          release_name: ${{ steps.create_tag.outputs.tag }}
           body: |
             ${{steps.build_changelog.outputs.changelog}}
           draft: false
