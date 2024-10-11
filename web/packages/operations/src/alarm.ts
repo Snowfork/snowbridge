@@ -10,9 +10,9 @@ const BRIDGE_STALE_SNS_TOPIC = process.env["BRIDGE_STALE_SNS_TOPIC"] || ""
 const ACCOUNT_BALANCE_SNS_TOPIC = process.env["ACCOUNT_BALANCE_SNS_TOPIC"] || ""
 
 const LatencyDashboard =
-    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Latency"
+    process.env["LATENCY_DASHBOARD_URL"] || "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Latency"
 const BalanceDashboard =
-    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Balance"
+    process.env["BALANCE_DASHBOARD_URL"] || "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Balance"
 
 export const sendMetrics = async (metrics: status.AllMetrics) => {
     const { AlarmReason, InsufficientBalanceThreshold } = status
@@ -112,9 +112,14 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
         metricData.push({
             MetricName: AlarmReason.ToEthereumChannelStale.toString(),
             Value: Number(
-                channel.toEthereum.outbound < channel.toEthereum.inbound ||
                     (channel.toEthereum.outbound > channel.toEthereum.inbound &&
-                        channel.toEthereum.inbound <= channel.toEthereum.previousInbound)
+                        channel.toEthereum.inbound == channel.toEthereum.previousInbound)
+            ),
+        })
+        metricData.push({
+            MetricName: AlarmReason.ToEthereumChannelAttacked.toString(),
+            Value: Number(
+                channel.toEthereum.outbound < channel.toEthereum.inbound     
             ),
         })
         metricData.push({
@@ -167,9 +172,20 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
         metricData.push({
             MetricName: AlarmReason.ToPolkadotChannelStale.toString(),
             Value: Number(
-                channel.toPolkadot.outbound < channel.toPolkadot.inbound ||
                     (channel.toPolkadot.outbound > channel.toPolkadot.inbound &&
-                        channel.toPolkadot.inbound <= channel.toPolkadot.previousInbound)
+                        channel.toPolkadot.inbound == channel.toPolkadot.previousInbound)
+            ),
+        })
+        metricData.push({
+            MetricName: AlarmReason.ToPolkadotChannelAttacked.toString(),
+            Value: Number(
+                channel.toPolkadot.outbound < channel.toPolkadot.inbound
+            ),
+        })
+        metricData.push({
+            MetricName: AlarmReason.ToPolkadotNoTransfer.toString(),
+            Value: Number(
+                channel.toPolkadot.inbound == channel.toPolkadot.previousInbound
             ),
         })
     }
@@ -293,6 +309,62 @@ export const initializeAlarms = async () => {
             ...alarmCommandSharedInput,
         })
     )
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.ToEthereumChannelAttacked.toString() + "-" + name,
+            MetricName: AlarmReason.ToEthereumChannelAttacked.toString(),
+            AlarmDescription: LatencyDashboard,
+            Statistic: "Sum",
+            ComparisonOperator: "GreaterThanThreshold",
+            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            EvaluationPeriods: 1,
+            Period: 1800,
+            ...alarmCommandSharedInput,
+        })
+    )
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.ToPolkadotChannelAttacked.toString() + "-" + name,
+            MetricName: AlarmReason.ToPolkadotChannelAttacked.toString(),
+            AlarmDescription: LatencyDashboard,
+            Statistic: "Sum",
+            ComparisonOperator: "GreaterThanThreshold",
+            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            EvaluationPeriods: 1,
+            Period: 1800,
+            ...alarmCommandSharedInput,
+        })
+    )
+    // For westend alarm when there is no transfer(i.e. nonce not increased) for more than 1 day
+    if(name == "westend_sepolia") {
+        cloudWatchAlarms.push(
+            new PutMetricAlarmCommand({
+                AlarmName: AlarmReason.ToEthereumNoTransfer.toString() + "-" + name,
+                MetricName: AlarmReason.ToEthereumNoTransfer.toString(),
+                AlarmDescription: LatencyDashboard,
+                Statistic: "Average",
+                ComparisonOperator: "GreaterThanThreshold",
+                AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+                EvaluationPeriods: 2,
+                Period: 43200,
+                ...alarmCommandSharedInput,
+            })
+        )
+        cloudWatchAlarms.push(
+            new PutMetricAlarmCommand({
+                AlarmName: AlarmReason.ToPolkadotNoTransfer.toString() + "-" + name,
+                MetricName: AlarmReason.ToPolkadotNoTransfer.toString(),
+                AlarmDescription: LatencyDashboard,
+                Statistic: "Average",
+                ComparisonOperator: "GreaterThanThreshold",
+                AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+                EvaluationPeriods: 2,
+                Period: 43200,
+                ...alarmCommandSharedInput,
+            })
+        )
+    }
+    
     for (let alarm of cloudWatchAlarms) {
         await client.send(alarm)
     }

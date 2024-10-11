@@ -65,6 +65,8 @@ export enum AlarmReason {
     AccountBalanceInsufficient = "AccountBalanceInsufficient",
     ToEthereumNoTransfer = "ToEthereumNoTransfer",
     ToPolkadotNoTransfer = "ToPolkadotNoTransfer",
+    ToEthereumChannelAttacked = "ToEthereumChannelAttacked",
+    ToPolkadotChannelAttacked = "ToPolkadotChannelAttacked"
 }
 
 export type Sovereign = { name: string; account: string; balance: bigint; type: SourceType }
