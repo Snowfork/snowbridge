@@ -7,6 +7,7 @@ import {
 
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
 const BRIDGE_STALE_SNS_TOPIC = process.env["BRIDGE_STALE_SNS_TOPIC"] || ""
+const BRIDGE_ATTACKED_SNS_TOPIC = process.env["BRIDGE_ATTACKED_SNS_TOPIC"] || ""
 const ACCOUNT_BALANCE_SNS_TOPIC = process.env["ACCOUNT_BALANCE_SNS_TOPIC"] || ""
 
 const LatencyDashboard =
@@ -314,11 +315,11 @@ export const initializeAlarms = async () => {
             AlarmName: AlarmReason.ToEthereumChannelAttacked.toString() + "-" + name,
             MetricName: AlarmReason.ToEthereumChannelAttacked.toString(),
             AlarmDescription: LatencyDashboard,
-            Statistic: "Sum",
+            Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
-            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            EvaluationPeriods: 1,
-            Period: 1800,
+            AlarmActions: [BRIDGE_ATTACKED_SNS_TOPIC],
+            EvaluationPeriods: 3,
+            Period: 3600,
             ...alarmCommandSharedInput,
         })
     )
@@ -327,11 +328,11 @@ export const initializeAlarms = async () => {
             AlarmName: AlarmReason.ToPolkadotChannelAttacked.toString() + "-" + name,
             MetricName: AlarmReason.ToPolkadotChannelAttacked.toString(),
             AlarmDescription: LatencyDashboard,
-            Statistic: "Sum",
+            Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
-            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            EvaluationPeriods: 1,
-            Period: 1800,
+            AlarmActions: [BRIDGE_ATTACKED_SNS_TOPIC],
+            EvaluationPeriods: 3,
+            Period: 3600,
             ...alarmCommandSharedInput,
         })
     )
@@ -345,8 +346,8 @@ export const initializeAlarms = async () => {
                 Statistic: "Average",
                 ComparisonOperator: "GreaterThanThreshold",
                 AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-                EvaluationPeriods: 2,
-                Period: 43200,
+                EvaluationPeriods: 3,
+                Period: 21600,
                 ...alarmCommandSharedInput,
             })
         )
@@ -358,8 +359,8 @@ export const initializeAlarms = async () => {
                 Statistic: "Average",
                 ComparisonOperator: "GreaterThanThreshold",
                 AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-                EvaluationPeriods: 2,
-                Period: 43200,
+                EvaluationPeriods: 3,
+                Period: 21600,
                 ...alarmCommandSharedInput,
             })
         )
