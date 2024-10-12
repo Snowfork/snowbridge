@@ -72,10 +72,10 @@ export enum AlarmReason {
 export type Sovereign = { name: string; account: string; balance: bigint; type: SourceType }
 
 export const BlockLatencyThreshold = {
-    // Syncing beefy finality update every 4 hours(2400 blocks) so we set 3000 blocks at most.
-    ToEthereum: 3000,
-    // Syncing beacon finality update every 6.4 minutes(32 blocks) so we set 128 blocks (4 epochs) at most.
-    ToPolkadot: 128,
+    // Syncing beefy finality update every 4 hours(1200 ethereum blocks)
+    ToEthereum: 1200,
+    // Syncing beacon finality update every 1 hours(600 substrate blocks)
+    ToPolkadot: 600,
 }
 
 export const InsufficientBalanceThreshold = {
