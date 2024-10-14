@@ -251,10 +251,12 @@ export const initializeAlarms = async () => {
 
     let client = new CloudWatchClient({})
     let cloudWatchAlarms = []
-    let alarmCommandSharedInput = {
+    let alarmCommandSharedInput: any = {
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
-        Threshold: 0,
-        // TreatMissingData: "breaching",
+        Threshold: 0
+    }
+    if(name == "polkadot_mainnet") {
+        alarmCommandSharedInput.TreatMissingData = "breaching";
     }
 
     // Alarm for stale bridge
