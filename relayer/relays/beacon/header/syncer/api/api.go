@@ -412,16 +412,16 @@ func (b *BeaconClient) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 	}
 
 	req.Header.Add("Accept", "application/octet-stream")
+
 	startTime := time.Now()
 	res, err := b.httpClient.Do(req)
 	endTime := time.Now()
+	duration := endTime.Sub(startTime)
+	log.WithFields(log.Fields{"startTime": startTime.Format(time.UnixDate), "endTime": endTime.Format(time.UnixDate), "duration": duration.Seconds()}).Warn("beacon state download time")
+
 	if err != nil {
 		return data, err
 	}
-
-	duration := endTime.Sub(startTime)
-
-	log.WithFields(log.Fields{"startTime": startTime.Format(time.UnixDate), "endTime": endTime.Format(time.UnixDate), "duration": duration.Seconds()}).Warn("beacon state download time")
 
 	if res.StatusCode != http.StatusOK {
 		if res.StatusCode == 404 {
