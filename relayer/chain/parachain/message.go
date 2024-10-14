@@ -125,3 +125,118 @@ func removeLeadingZeroHashForSlice(s []string) []string {
 func removeLeadingZeroHash(s string) string {
 	return strings.Replace(s, "0x", "", 1)
 }
+
+type DestinationEnum uint8
+
+const (
+	DestinationAccountId32 DestinationEnum = iota
+	DestinationForeignAccountId32
+	DestinationForeignAccountId20
+)
+
+type Destination struct {
+	Variant DestinationEnum
+	// Use pointers to handle variant fields, only one should be populated.
+	AccountId32        *types.H256
+	ForeignAccountId32 *ForeignAccountId32
+	ForeignAccountId20 *ForeignAccountId20
+}
+
+type AccountId32 struct {
+	ID [32]byte
+}
+
+type ForeignAccountId32 struct {
+	ParaID uint32
+	ID     types.H256
+	Fee    types.U128
+}
+
+type ForeignAccountId20 struct {
+	ParaID uint32
+	ID     types.H160
+	Fee    types.U128
+}
+
+type RegisterToken struct {
+	Token types.H256
+	Fee   types.U128
+}
+
+type SendToken struct {
+	Token       types.H256
+	Destination Destination
+	Amount      types.U128
+	Fee         types.U128
+}
+
+type SendNativeToken struct {
+	TokenID     types.H256
+	Destination Destination
+	Amount      types.U128
+	Fee         types.U128
+}
+
+type InboundMessage struct {
+	Version      types.U8
+	ChainID      types.U64
+	Command      types.U8
+	CommandBytes types.Data
+}
+
+type Envelope struct {
+	Gateway   types.H256
+	ChannelID types.H256
+	Nonce     types.U64
+	MessageID types.H256
+	Payload   InboundMessage
+}
+
+func GetDestination(input []byte) (string, error) {
+	var envelope = &Envelope{}
+	err := types.DecodeFromBytes(input, envelope)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode message: %v", err)
+	}
+
+	address := ""
+	switch envelope.Payload.Command {
+	case 0:
+		// Register token does not have a destination
+		break
+	case 1:
+		// Send token has destination
+		var command = &SendToken{}
+		err = types.DecodeFromBytes(input, command)
+		if err != nil {
+			return "", fmt.Errorf("failed to decode send token command: %v", err)
+		}
+
+		switch command.Destination.Variant {
+		case 0:
+			address = command.Destination.AccountId32.Hex()
+		case 1:
+			address = command.Destination.ForeignAccountId32.ID.Hex()
+		case 2:
+			address = command.Destination.ForeignAccountId20.ID.Hex()
+		}
+	case 2:
+		// Send native token has destination
+		var command = &SendNativeToken{}
+		err = types.DecodeFromBytes(input, command)
+		if err != nil {
+			return "", fmt.Errorf("failed to decode send native token command: %v", err)
+		}
+
+		switch command.Destination.Variant {
+		case 0:
+			address = command.Destination.AccountId32.Hex()
+		case 1:
+			address = command.Destination.ForeignAccountId32.ID.Hex()
+		case 2:
+			address = command.Destination.ForeignAccountId20.ID.Hex()
+		}
+	}
+
+	return address, nil
+}

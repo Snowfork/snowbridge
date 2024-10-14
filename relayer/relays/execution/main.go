@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/ofac"
 	"math/big"
 	"sort"
 	"time"
@@ -34,6 +35,7 @@ type Relay struct {
 	beaconHeader    *header.Header
 	writer          *parachain.ParachainWriter
 	headerCache     *ethereum.HeaderCache
+	ofac            *ofac.OFAC
 }
 
 func NewRelay(
@@ -89,7 +91,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	p := protocol.New(r.config.Source.Beacon.Spec, r.config.Sink.Parachain.HeaderRedundancy)
 
-	//ofacCheck := ofac.New(r.config.OFAC.Enabled, r.config.OFAC.ApiKey)
+	r.ofac = ofac.New(r.config.OFAC.Enabled, r.config.OFAC.ApiKey)
 
 	store := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries, *p)
 	store.Connect()
@@ -413,6 +415,20 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		"txIndex":     ev.Raw.TxIndex,
 		"channelID":   types.H256(ev.ChannelID).Hex(),
 	})
+
+	destination, err := parachain.GetDestination(inboundMsg.EventLog.Data)
+	if err != nil {
+		return err
+	}
+
+	banned, err := r.ofac.IsBanned(ev.Raw.Address.Hex(), destination)
+	if err != nil {
+		return err
+	}
+	if banned {
+		logger.Warn("found ofac banned address, skipping message")
+		return nil
+	}
 
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
 

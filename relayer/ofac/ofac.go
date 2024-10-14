@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type OFAC struct {
@@ -21,8 +23,8 @@ type Response struct {
 	} `json:"identifications"`
 }
 
-func New(enabled bool, apiKey string) OFAC {
-	return OFAC{enabled, apiKey}
+func New(enabled bool, apiKey string) *OFAC {
+	return &OFAC{enabled, apiKey}
 }
 
 func (o OFAC) IsBanned(source, destination string) (bool, error) {
@@ -35,6 +37,7 @@ func (o OFAC) IsBanned(source, destination string) (bool, error) {
 		return true, err
 	}
 	if isSourcedBanned {
+		log.WithField("source", source).Warn("found ofac banned source address")
 		return true, nil
 	}
 
@@ -43,6 +46,7 @@ func (o OFAC) IsBanned(source, destination string) (bool, error) {
 		return true, err
 	}
 	if isDestinationBanned {
+		log.WithField("destination", destination).Warn("found ofac banned destination address")
 		return true, nil
 	}
 
