@@ -629,8 +629,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint256 registerTokenFee;
         /// @dev Fee multiplier
         UD60x18 multiplier;
-        /// @dev Optional rescueOperator
-        address rescueOperator;
     }
 
     /// @dev Initialize storage in the gateway
@@ -683,9 +681,5 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
-
-        // Initialize operator storage
-        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
-        operatorStorage.operator = config.rescueOperator;
     }
 }

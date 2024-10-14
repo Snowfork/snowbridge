@@ -58,8 +58,7 @@ contract UpgradeShell is Script {
                 assetHubCreateAssetFee: mDot(100), // 0.1 DOT
                 assetHubReserveTransferFee: mDot(100), // 0.1 DOT
                 exchangeRate: ud60x18(0.0024e18),
-                multiplier: ud60x18(1.33e18),
-                rescueOperator: 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967
+                multiplier: ud60x18(1.33e18)
             })
         });
     }
