@@ -65,15 +65,17 @@ export enum AlarmReason {
     AccountBalanceInsufficient = "AccountBalanceInsufficient",
     ToEthereumNoTransfer = "ToEthereumNoTransfer",
     ToPolkadotNoTransfer = "ToPolkadotNoTransfer",
+    ToEthereumChannelAttacked = "ToEthereumChannelAttacked",
+    ToPolkadotChannelAttacked = "ToPolkadotChannelAttacked"
 }
 
 export type Sovereign = { name: string; account: string; balance: bigint; type: SourceType }
 
 export const BlockLatencyThreshold = {
-    // Syncing beefy finality update every 4 hours(2400 blocks) so we set 3000 blocks at most.
-    ToEthereum: 3000,
-    // Syncing beacon finality update every 6.4 minutes(32 blocks) so we set 128 blocks (4 epochs) at most.
-    ToPolkadot: 128,
+    // Syncing beefy finality update every 4 hours(1200 ethereum blocks), leave some buffer here
+    ToEthereum: 1350,
+    // Syncing beacon finality update every 6.4 minutes(64 substrate blocks), leave some buffer here
+    ToPolkadot: 80,
 }
 
 export const InsufficientBalanceThreshold = {
