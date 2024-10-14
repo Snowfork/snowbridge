@@ -58,11 +58,12 @@ const monitor = async () => {
 
     console.log("# Deposit and Approve WETH")
     {
+        const deposit = BigInt(Number(amount)*2);
         const weth9 = WETH9__factory.connect(WETH_CONTRACT, ETHEREUM_ACCOUNT)
-        const depositResult = await weth9.deposit({ value: amount })
+        const depositResult = await weth9.deposit({ value: deposit })
         const depositReceipt = await depositResult.wait()
 
-        const approveResult = await weth9.approve(config.GATEWAY_CONTRACT, amount)
+        const approveResult = await weth9.approve(config.GATEWAY_CONTRACT, deposit)
         const approveReceipt = await approveResult.wait()
 
         console.log('deposit tx', depositReceipt?.hash, 'approve tx', approveReceipt?.hash)
