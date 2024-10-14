@@ -3,6 +3,7 @@
 pragma solidity 0.8.25;
 
 import {Channel, OperatingMode, ChannelID, ParaID} from "../Types.sol";
+import {SparseBitmap} from "../utils/SparseBitmap.sol";
 
 library CoreStorage {
     struct Layout {
@@ -14,6 +15,8 @@ library CoreStorage {
         mapping(bytes32 agentID => address) agents;
         // Agent addresses
         mapping(address agent => bytes32 agentID) agentAddresses;
+        // V2
+        SparseBitmap inboundNonce;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.core");

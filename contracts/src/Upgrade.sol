@@ -12,7 +12,9 @@ import {IUpgradable} from "./interfaces/IUpgradable.sol";
 library Upgrade {
     using Address for address;
 
-    function upgrade(address impl, bytes32 implCodeHash, bytes memory initializerParams) internal {
+    function upgrade(address impl, bytes32 implCodeHash, bytes memory initializerParams)
+        external
+    {
         // Verify that the implementation is actually a contract
         if (!impl.isContract()) {
             revert IUpgradable.InvalidContract();
@@ -28,8 +30,9 @@ library Upgrade {
         ERC1967.store(impl);
 
         // Call the initializer
-        (bool success, bytes memory returndata) =
-            impl.delegatecall(abi.encodeCall(IInitializable.initialize, initializerParams));
+        (bool success, bytes memory returndata) = impl.delegatecall(
+            abi.encodeCall(IInitializable.initialize, initializerParams)
+        );
         Call.verifyResult(success, returndata);
 
         emit IUpgradable.Upgraded(impl);
