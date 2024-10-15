@@ -183,66 +183,28 @@ func GetDestination(input []byte) (string, error) {
 		// Register token does not have a destination
 		break
 	case 1:
-		// Send token has destination
+		// Send token has a destination
 		var command = &SendToken{}
 		err = types.DecodeFromBytes(inboundMessage.CommandBytes, command)
 		if err != nil {
 			return "", fmt.Errorf("failed to decode send token command: %v", err)
 		}
 
-		switch command.Destination.Variant {
-		case 0:
-			account32 := &types.H256{}
-			err = types.DecodeFromBytes(command.Destination.DestinationBytes, account32)
-			if err != nil {
-				return "", fmt.Errorf("failed to decode destination: %v", err)
-			}
-			address = account32.Hex()
-		case 1:
-			var account = &ForeignAccountId32{}
-			err = types.DecodeFromBytes(command.Destination.DestinationBytes, account)
-			if err != nil {
-				return "", fmt.Errorf("failed to decode foreign account: %v", err)
-			}
-			address = account.ID.Hex()
-		case 2:
-			var account = &ForeignAccountId20{}
-			err = types.DecodeFromBytes(command.Destination.DestinationBytes, account)
-			if err != nil {
-				return "", fmt.Errorf("failed to decode foreign account: %v", err)
-			}
-			address = account.ID.Hex()
+		address, err = decodeDestination(command.Destination.Variant, command.Destination.DestinationBytes)
+		if err != nil {
+			return "", fmt.Errorf("decode destination: %v", err)
 		}
 	case 2:
-		// Send native token has destination
+		// Send native token has a destination
 		var command = &SendNativeToken{}
 		err = types.DecodeFromBytes(input, command)
 		if err != nil {
 			return "", fmt.Errorf("failed to decode send native token command: %v", err)
 		}
 
-		switch command.Destination.Variant {
-		case 0:
-			account32 := &types.H256{}
-			err = types.DecodeFromBytes(command.Destination.DestinationBytes, account32)
-			if err != nil {
-				return "", fmt.Errorf("failed to decode destination: %v", err)
-			}
-			address = account32.Hex()
-		case 1:
-			var account = &ForeignAccountId32{}
-			err = types.DecodeFromBytes(command.Destination.DestinationBytes, account)
-			if err != nil {
-				return "", fmt.Errorf("failed to decode foreign account: %v", err)
-			}
-			address = account.ID.Hex()
-		case 2:
-			var account = &ForeignAccountId20{}
-			err = types.DecodeFromBytes(command.Destination.DestinationBytes, account)
-			if err != nil {
-				return "", fmt.Errorf("failed to decode foreign account: %v", err)
-			}
-			address = account.ID.Hex()
+		address, err = decodeDestination(command.Destination.Variant, command.Destination.DestinationBytes)
+		if err != nil {
+			return "", fmt.Errorf("decode destination: %v", err)
 		}
 	}
 
