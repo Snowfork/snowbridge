@@ -9,8 +9,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
@@ -410,7 +412,13 @@ func (b *BeaconClient) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 	}
 
 	req.Header.Add("Accept", "application/octet-stream")
+
+	startTime := time.Now()
 	res, err := b.httpClient.Do(req)
+	endTime := time.Now()
+	duration := endTime.Sub(startTime)
+	log.WithFields(log.Fields{"startTime": startTime.Format(time.UnixDate), "endTime": endTime.Format(time.UnixDate), "duration": duration.Seconds()}).Warn("beacon state download time")
+
 	if err != nil {
 		return data, err
 	}
