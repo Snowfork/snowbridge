@@ -416,21 +416,24 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		"channelID":   types.H256(ev.ChannelID).Hex(),
 	})
 
-	log.WithField("data", common.BytesToHash(ev.Payload)).Info("Payload bytes is......")
+	log.WithField("event", ev).Info("event data")
 
-	//destination, err := parachain.GetDestination(ev.Payload)
-	//if err != nil {
-	//	return err
-	//}
-
-	//banned, err := r.ofac.IsBanned(ev.Raw.Address.Hex(), destination)
-	//if err != nil {
-	//	return err
-	//}
-	//if banned {
-	//	logger.Warn("found ofac banned address, skipping message")
-	//	return nil
-	//}
+	destination, err := parachain.GetDestination(ev.Raw.Data[96:])
+	if err != nil {
+		return err
+	}
+	if destination != "" {
+		banned, err := r.ofac.IsBanned(ev.Raw.Address.Hex(), destination)
+		if err != nil {
+			return err
+		}
+		if banned {
+			logger.Warn("found ofac banned address, skipping message")
+			//return nil
+		} else {
+			logger.Info("address is not banned, continuing")
+		}
+	}
 
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
 

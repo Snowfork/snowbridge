@@ -170,6 +170,24 @@ type InboundMessage struct {
 	CommandBytes types.Data
 }
 
+type Envelope struct {
+	Gateway   types.H160
+	ChannelID [32]types.U8
+	Nonce     types.U64
+	MessageID types.H256
+	Payload   types.Data
+}
+
+func GetDestinationFromEnvelope(input []byte) (string, error) {
+	var envelope = &Envelope{}
+	err := types.DecodeFromBytes(input, envelope)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode message: %v", err)
+	}
+
+	return GetDestination(envelope.Payload)
+}
+
 func GetDestination(input []byte) (string, error) {
 	var inboundMessage = &InboundMessage{}
 	err := types.DecodeFromBytes(input, inboundMessage)

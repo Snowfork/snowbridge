@@ -16,6 +16,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
+	"github.com/snowfork/snowbridge/relayer/ofac"
 )
 
 type Scanner struct {
@@ -24,6 +25,7 @@ type Scanner struct {
 	relayConn *relaychain.Connection
 	paraConn  *parachain.Connection
 	paraID    uint32
+	ofac      *ofac.OFAC
 	tasks     chan<- *Task
 }
 
@@ -186,7 +188,9 @@ func (s *Scanner) findTasksImpl(
 			if err != nil {
 				return nil, fmt.Errorf("decode message error: %w", err)
 			}
-			messages = append(messages, m)
+			if !s.IsBanned(m) {
+				messages = append(messages, m)
+			}
 		}
 
 		// For the outbound channel, the commitment hash is the merkle root of the messages
@@ -463,4 +467,37 @@ func (s *Scanner) findLatestNonce(ctx context.Context) (uint64, error) {
 		return 0, fmt.Errorf("fetch nonce from gateway contract for channelID '%v': %w", s.config.ChannelID, err)
 	}
 	return ethInboundNonce, err
+}
+
+func (s *Scanner) IsBanned(message OutboundQueueMessage) bool {
+	log.WithFields(log.Fields{
+		"command": message.Command,
+		"params":  message.Params,
+	}).Debug("Checking message for OFAC")
+
+	switch message.Command {
+
+	case 0:
+		// AgentExecute
+		log.WithFields(log.Fields{
+			"params": common.Bytes2Hex(message.Params),
+		}).Debug("Found AgentExecute message")
+	case 6:
+		// TransferNativeFromAgent
+		log.WithFields(log.Fields{
+			"params": common.Bytes2Hex(message.Params),
+		}).Debug("Found TransferNativeFromAgent message")
+	case 9:
+		// TransferNativeToken
+		log.WithFields(log.Fields{
+			"params": common.Bytes2Hex(message.Params),
+		}).Debug("Found TransferNativeToken message")
+	case 11:
+		// MintForeignToken
+		log.WithFields(log.Fields{
+			"params": common.Bytes2Hex(message.Params),
+		}).Debug("Found MintForeignToken message")
+	}
+
+	return false
 }
