@@ -197,7 +197,7 @@ func GetDestination(input []byte) (string, error) {
 	case 2:
 		// Send native token has a destination
 		var command = &SendNativeToken{}
-		err = types.DecodeFromBytes(input, command)
+		err = types.DecodeFromBytes(inboundMessage.CommandBytes, command)
 		if err != nil {
 			return "", fmt.Errorf("failed to decode send native token command: %v", err)
 		}
