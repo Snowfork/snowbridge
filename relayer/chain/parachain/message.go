@@ -4,6 +4,7 @@
 package parachain
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -126,20 +127,9 @@ func removeLeadingZeroHash(s string) string {
 	return strings.Replace(s, "0x", "", 1)
 }
 
-type DestinationEnum uint8
-
-const (
-	DestinationAccountId32 DestinationEnum = iota
-	DestinationForeignAccountId32
-	DestinationForeignAccountId20
-)
-
 type Destination struct {
-	Variant DestinationEnum
-	// Use pointers to handle variant fields, only one should be populated.
-	AccountId32        *types.H256
-	ForeignAccountId32 *ForeignAccountId32
-	ForeignAccountId20 *ForeignAccountId20
+	Variant          types.U8
+	DestinationBytes types.Data
 }
 
 type AccountId32 struct {
@@ -159,22 +149,18 @@ type ForeignAccountId20 struct {
 }
 
 type RegisterToken struct {
-	Token types.H256
+	Token types.H160
 	Fee   types.U128
 }
 
 type SendToken struct {
-	Token       types.H256
+	Token       types.H160
 	Destination Destination
-	Amount      types.U128
-	Fee         types.U128
 }
 
 type SendNativeToken struct {
 	TokenID     types.H256
 	Destination Destination
-	Amount      types.U128
-	Fee         types.U128
 }
 
 type InboundMessage struct {
@@ -184,41 +170,48 @@ type InboundMessage struct {
 	CommandBytes types.Data
 }
 
-type Envelope struct {
-	Gateway   types.H256
-	ChannelID types.H256
-	Nonce     types.U64
-	MessageID types.H256
-	Payload   InboundMessage
-}
-
 func GetDestination(input []byte) (string, error) {
-	var envelope = &Envelope{}
-	err := types.DecodeFromBytes(input, envelope)
+	var inboundMessage = &InboundMessage{}
+	err := types.DecodeFromBytes(input, inboundMessage)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode message: %v", err)
 	}
 
 	address := ""
-	switch envelope.Payload.Command {
+	switch inboundMessage.Command {
 	case 0:
 		// Register token does not have a destination
 		break
 	case 1:
 		// Send token has destination
 		var command = &SendToken{}
-		err = types.DecodeFromBytes(input, command)
+		err = types.DecodeFromBytes(inboundMessage.CommandBytes, command)
 		if err != nil {
 			return "", fmt.Errorf("failed to decode send token command: %v", err)
 		}
 
 		switch command.Destination.Variant {
 		case 0:
-			address = command.Destination.AccountId32.Hex()
+			account32 := &types.H256{}
+			err = types.DecodeFromBytes(command.Destination.DestinationBytes, account32)
+			if err != nil {
+				return "", fmt.Errorf("failed to decode destination: %v", err)
+			}
+			address = account32.Hex()
 		case 1:
-			address = command.Destination.ForeignAccountId32.ID.Hex()
+			var account = &ForeignAccountId32{}
+			err = types.DecodeFromBytes(command.Destination.DestinationBytes, account)
+			if err != nil {
+				return "", fmt.Errorf("failed to decode foreign account: %v", err)
+			}
+			address = account.ID.Hex()
 		case 2:
-			address = command.Destination.ForeignAccountId20.ID.Hex()
+			var account = &ForeignAccountId20{}
+			err = types.DecodeFromBytes(command.Destination.DestinationBytes, account)
+			if err != nil {
+				return "", fmt.Errorf("failed to decode foreign account: %v", err)
+			}
+			address = account.ID.Hex()
 		}
 	case 2:
 		// Send native token has destination
@@ -230,13 +223,56 @@ func GetDestination(input []byte) (string, error) {
 
 		switch command.Destination.Variant {
 		case 0:
-			address = command.Destination.AccountId32.Hex()
+			account32 := &types.H256{}
+			err = types.DecodeFromBytes(command.Destination.DestinationBytes, account32)
+			if err != nil {
+				return "", fmt.Errorf("failed to decode destination: %v", err)
+			}
+			address = account32.Hex()
 		case 1:
-			address = command.Destination.ForeignAccountId32.ID.Hex()
+			var account = &ForeignAccountId32{}
+			err = types.DecodeFromBytes(command.Destination.DestinationBytes, account)
+			if err != nil {
+				return "", fmt.Errorf("failed to decode foreign account: %v", err)
+			}
+			address = account.ID.Hex()
 		case 2:
-			address = command.Destination.ForeignAccountId20.ID.Hex()
+			var account = &ForeignAccountId20{}
+			err = types.DecodeFromBytes(command.Destination.DestinationBytes, account)
+			if err != nil {
+				return "", fmt.Errorf("failed to decode foreign account: %v", err)
+			}
+			address = account.ID.Hex()
 		}
 	}
 
 	return address, nil
+}
+
+func decodeDestination(variant types.U8, destinationBytes []byte) (string, error) {
+	switch variant {
+	case 0:
+		account32 := &types.H256{}
+		err := types.DecodeFromBytes(destinationBytes, account32)
+		if err != nil {
+			return "", fmt.Errorf("failed to decode destination: %v", err)
+		}
+		return account32.Hex(), nil
+	case 1:
+		var account = &ForeignAccountId32{}
+		err := types.DecodeFromBytes(destinationBytes, account)
+		if err != nil {
+			return "", fmt.Errorf("failed to decode foreign account: %v", err)
+		}
+		return account.ID.Hex(), nil
+	case 2:
+		var account = &ForeignAccountId20{}
+		err := types.DecodeFromBytes(destinationBytes, account)
+		if err != nil {
+			return "", fmt.Errorf("failed to decode foreign account: %v", err)
+		}
+		return account.ID.Hex(), nil
+	}
+
+	return "", errors.New("destination variant could not be matched")
 }

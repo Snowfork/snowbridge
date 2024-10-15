@@ -1,26 +1,29 @@
 package parachain
 
 import (
-	"fmt"
 	gethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	assert "github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestGetDestination(t *testing.T) {
-	s := "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002e00a736aa00000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d00e40b54020000000000000000000000000000000000000000000000000000000000"
+	registerTokenPayload := "00a736aa0000000000017746600a736aa000000000000774667629726ec1fabebcec0d9139bd1c8f72a2300e876481700000000000000000000007629726ec1fabebcec0d9139bd1c8f72a23008eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a4800c16ff2862300000000000000000000e87648170000000000000000000000"
+	decodePayloadAndCompareDestinationAddress(t, registerTokenPayload, "") // register token does not have a destination
 
-	value := types.U64(1115511)
+	sendTokenPayload := "00a736aa000000000001774667629726ec1fabebcec0d9139bd1c8f72a23008eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a4800c16ff2862300000000000000000000e87648170000000000000000000000"
+	bobAddress := "0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
+	decodePayloadAndCompareDestinationAddress(t, sendTokenPayload, bobAddress)
 
-	hex, err := types.Hex(value)
-	assert.NoError(t, err)
+	sendTokenToPayload := "00a736aa000000000001774667629726ec1fabebcec0d9139bd1c8f72a2301d00700001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c00286bee000000000000000000000000000064a7b3b6e00d000000000000000000e87648170000000000000000000000"
+	ferdieAddress := "0x1cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c"
+	decodePayloadAndCompareDestinationAddress(t, sendTokenToPayload, ferdieAddress)
+}
 
-	fmt.Println(hex)
-	data := gethCommon.Hex2Bytes(s)
+func decodePayloadAndCompareDestinationAddress(t *testing.T, payload, expectedAddress string) {
+	data := gethCommon.Hex2Bytes(payload)
 
 	destination, err := GetDestination(data)
 	assert.NoError(t, err)
 
-	fmt.Println(destination)
+	assert.Equal(t, expectedAddress, destination)
 }
