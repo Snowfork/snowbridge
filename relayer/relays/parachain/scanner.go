@@ -192,9 +192,15 @@ func (s *Scanner) findTasksImpl(
 			if err != nil {
 				return nil, fmt.Errorf("decode message error: %w", err)
 			}
-			//if !s.IsBanned(m) {
+			isBanned, err := s.IsBanned(m)
+			if err != nil {
+				return nil, fmt.Errorf("banned check: %w", err)
+			}
+			if isBanned {
+				log.Fatal("banned address found")
+				return nil, errors.New("banned address found")
+			}
 			messages = append(messages, m)
-			//}
 		}
 
 		// For the outbound channel, the commitment hash is the merkle root of the messages
@@ -473,6 +479,15 @@ func (s *Scanner) findLatestNonce(ctx context.Context) (uint64, error) {
 	return ethInboundNonce, err
 }
 
+func (s *Scanner) IsBanned(m OutboundQueueMessage) (bool, error) {
+	destination, err := GetDestination(m)
+	if err != nil {
+		return true, err
+	}
+
+	return s.ofac.IsBanned(destination, "")
+}
+
 func GetDestination(message OutboundQueueMessage) (string, error) {
 	log.WithFields(log.Fields{
 		"command": message.Command,
@@ -481,7 +496,6 @@ func GetDestination(message OutboundQueueMessage) (string, error) {
 
 	switch message.Command {
 	case 0:
-		// AgentExecute
 		log.Debug("Found AgentExecute message")
 
 		uintTy, err := abi.NewType("uint256", "", nil)
@@ -504,79 +518,95 @@ func GetDestination(message OutboundQueueMessage) (string, error) {
 			return "", err
 		}
 
-		argument := abi.Arguments{
+		tupleArgument := abi.Arguments{
 			{Type: tupleTy},
 		}
-
-		// Decode the ABI-encoded byte payload
-		decodedTuple, err := argument.Unpack(message.Params)
-		if err != nil {
-			return "", fmt.Errorf("unpack tuple: %w", err)
-		}
-
-		if len(decodedTuple) < 1 {
-			return "", fmt.Errorf("tuple could not be decoded")
-		}
-
-		values := reflect.ValueOf(decodedTuple[0])
-		commandBytes := values.FieldByName("Command").Bytes()
-		fmt.Println(common.Bytes2Hex(commandBytes))
-
-		argument = abi.Arguments{
+		commandArgument := abi.Arguments{
 			{Type: uintTy},
 			{Type: bytesTy},
 		}
+		transferTokenArgument := abi.Arguments{
+			{Type: addressTy},
+			{Type: addressTy},
+			{Type: uintTy},
+		}
 
 		// Decode the ABI-encoded byte payload
-		decodedCommand, err := argument.Unpack(commandBytes)
+		decodedTuple, err := tupleArgument.Unpack(message.Params)
+		if err != nil {
+			return "", fmt.Errorf("unpack tuple: %w", err)
+		}
+		if len(decodedTuple) < 1 {
+			return "", fmt.Errorf("decoded tuple not found")
+		}
+
+		tuple := reflect.ValueOf(decodedTuple[0])
+		commandBytes := tuple.FieldByName("Command").Bytes()
+
+		decodedCommand, err := commandArgument.Unpack(commandBytes)
 		if err != nil {
 			return "", fmt.Errorf("unpack command: %w", err)
 		}
-
 		if len(decodedCommand) < 2 {
-			return "", errors.New("command could not be decoded")
+			return "", errors.New("decoded command not found")
 		}
 
-		argument = abi.Arguments{
-			{
-				Type: addressTy,
-			},
-			{
-				Type: addressTy,
-			},
-			{
-				Type: uintTy,
-			},
-		}
-
-		decodedTransferToken, err := argument.Unpack(decodedCommand[1].([]byte))
+		decodedTransferToken, err := transferTokenArgument.Unpack(decodedCommand[1].([]byte))
 		if err != nil {
 			return "", err
 		}
-
 		if len(decodedTransferToken) < 3 {
-			return "", errors.New("transfer token could not be decoded")
+			return "", errors.New("decode transfer token command")
 		}
-
 		address := decodedTransferToken[1].(common.Address)
-
 		return strings.ToLower(address.String()), nil
 	case 6:
-		// TransferNativeFromAgent
-		log.WithFields(log.Fields{
-			"params": common.Bytes2Hex(message.Params),
-		}).Debug("Found TransferNativeFromAgent message")
+		log.Debug("Found TransferNativeFromAgent message")
+		return recipientFromTuple(message.Params, []abi.ArgumentMarshaling{
+			{Name: "AgentId", Type: "bytes32"},
+			{Name: "Recipient", Type: "address"},
+			{Name: "Amount", Type: "uint256"},
+		})
 	case 9:
-		// TransferNativeToken
-		log.WithFields(log.Fields{
-			"params": common.Bytes2Hex(message.Params),
-		}).Debug("Found TransferNativeToken message")
+		log.Debug("Found TransferNativeToken message")
+		return recipientFromTuple(message.Params, []abi.ArgumentMarshaling{
+			{Name: "AgentId", Type: "bytes32"},
+			{Name: "Token", Type: "address"},
+			{Name: "Recipient", Type: "address"},
+			{Name: "Amount", Type: "uint256"},
+		})
 	case 11:
-		// MintForeignToken
-		log.WithFields(log.Fields{
-			"params": common.Bytes2Hex(message.Params),
-		}).Debug("Found MintForeignToken message")
+		log.Debug("Found MintForeignToken message")
+		return recipientFromTuple(message.Params, []abi.ArgumentMarshaling{
+			{Name: "AgentId", Type: "bytes32"},
+			{Name: "Recipient", Type: "address"},
+			{Name: "Amount", Type: "uint256"},
+		})
 	}
 
 	return "", nil
+}
+
+func recipientFromTuple(messageBytes []byte, args []abi.ArgumentMarshaling) (string, error) {
+	tupleTy, err := abi.NewType("tuple", "", args)
+	if err != nil {
+		return "", err
+	}
+
+	tupleArgument := abi.Arguments{
+		{Type: tupleTy},
+	}
+
+	decodedTuple, err := tupleArgument.Unpack(messageBytes)
+	if err != nil {
+		return "", fmt.Errorf("unpack tuple: %w", err)
+	}
+	if len(decodedTuple) < 1 {
+		return "", fmt.Errorf("decoded tuple not found")
+	}
+
+	values := reflect.ValueOf(decodedTuple[0])
+	address := values.FieldByName("Recipient").Bytes()
+
+	return strings.ToLower(common.Bytes2Hex(address)), nil
 }

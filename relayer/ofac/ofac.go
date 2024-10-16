@@ -32,28 +32,32 @@ func (o OFAC) IsBanned(source, destination string) (bool, error) {
 		return false, nil
 	}
 
-	isSourcedBanned, err := o.checkOFAC(source)
-	if err != nil {
-		return true, err
-	}
-	if isSourcedBanned {
-		log.WithField("source", source).Warn("found ofac banned source address")
-		return true, nil
+	if source != "" {
+		isSourcedBanned, err := o.isOFACListed(source)
+		if err != nil {
+			return true, err
+		}
+		if isSourcedBanned {
+			log.WithField("source", source).Warn("found ofac banned source address")
+			return true, nil
+		}
 	}
 
-	isDestinationBanned, err := o.checkOFAC(destination)
-	if err != nil {
-		return true, err
-	}
-	if isDestinationBanned {
-		log.WithField("destination", destination).Warn("found ofac banned destination address")
-		return true, nil
+	if destination != "" {
+		isDestinationBanned, err := o.isOFACListed(destination)
+		if err != nil {
+			return true, err
+		}
+		if isDestinationBanned {
+			log.WithField("destination", destination).Warn("found ofac banned destination address")
+			return true, nil
+		}
 	}
 
 	return false, nil
 }
 
-func (o OFAC) checkOFAC(address string) (bool, error) {
+func (o OFAC) isOFACListed(address string) (bool, error) {
 	client := &http.Client{}
 
 	req, err := http.NewRequest("GET", fmt.Sprintf("https://public.chainalysis.com/api/v1/address/%s", address), nil)

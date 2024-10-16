@@ -425,17 +425,15 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		"destination": destination,
 		"payload":     common.Bytes2Hex(ev.Payload),
 	}).Info("extracted destination from message")
-	if destination != "" {
-		banned, err := r.ofac.IsBanned(ev.Raw.Address.Hex(), destination)
-		if err != nil {
-			return err
-		}
-		if banned {
-			log.Warn("found ofac banned address, skipping message")
-			return nil
-		} else {
-			log.Info("address is not banned, continuing")
-		}
+	banned, err := r.ofac.IsBanned(ev.Raw.Address.Hex(), destination)
+	if err != nil {
+		return err
+	}
+	if banned {
+		log.Fatal("banned address found")
+		return errors.New("banned address found")
+	} else {
+		log.Info("address is not banned, continuing")
 	}
 
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
