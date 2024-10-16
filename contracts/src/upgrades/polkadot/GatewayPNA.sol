@@ -26,8 +26,4 @@ contract GatewayPNA is Gateway {
     {}
 
     function initialize(bytes memory) external override {}
-
-    function tokenInfo(address token) external view returns (TokenInfo memory) {
-        return AssetsStorage.layout().tokenRegistry[token];
-    }
 }
