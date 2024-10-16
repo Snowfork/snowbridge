@@ -3,7 +3,11 @@ package parachain
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"reflect"
+	"strings"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 
@@ -188,9 +192,9 @@ func (s *Scanner) findTasksImpl(
 			if err != nil {
 				return nil, fmt.Errorf("decode message error: %w", err)
 			}
-			if !s.IsBanned(m) {
-				messages = append(messages, m)
-			}
+			//if !s.IsBanned(m) {
+			messages = append(messages, m)
+			//}
 		}
 
 		// For the outbound channel, the commitment hash is the merkle root of the messages
@@ -469,19 +473,94 @@ func (s *Scanner) findLatestNonce(ctx context.Context) (uint64, error) {
 	return ethInboundNonce, err
 }
 
-func (s *Scanner) IsBanned(message OutboundQueueMessage) bool {
+func GetDestination(message OutboundQueueMessage) (string, error) {
 	log.WithFields(log.Fields{
 		"command": message.Command,
 		"params":  message.Params,
 	}).Debug("Checking message for OFAC")
 
 	switch message.Command {
-
 	case 0:
 		// AgentExecute
-		log.WithFields(log.Fields{
-			"params": common.Bytes2Hex(message.Params),
-		}).Debug("Found AgentExecute message")
+		log.Debug("Found AgentExecute message")
+
+		uintTy, err := abi.NewType("uint256", "", nil)
+		if err != nil {
+			return "", err
+		}
+		bytesTy, err := abi.NewType("bytes", "", nil)
+		if err != nil {
+			return "", err
+		}
+		addressTy, err := abi.NewType("address", "", nil)
+		if err != nil {
+			return "", err
+		}
+		tupleTy, err := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+			{Name: "AgentId", Type: "bytes32"},
+			{Name: "Command", Type: "bytes"},
+		})
+		if err != nil {
+			return "", err
+		}
+
+		argument := abi.Arguments{
+			{Type: tupleTy},
+		}
+
+		// Decode the ABI-encoded byte payload
+		decodedTuple, err := argument.Unpack(message.Params)
+		if err != nil {
+			return "", fmt.Errorf("unpack tuple: %w", err)
+		}
+
+		if len(decodedTuple) < 1 {
+			return "", fmt.Errorf("tuple could not be decoded")
+		}
+
+		values := reflect.ValueOf(decodedTuple[0])
+		commandBytes := values.FieldByName("Command").Bytes()
+		fmt.Println(common.Bytes2Hex(commandBytes))
+
+		argument = abi.Arguments{
+			{Type: uintTy},
+			{Type: bytesTy},
+		}
+
+		// Decode the ABI-encoded byte payload
+		decodedCommand, err := argument.Unpack(commandBytes)
+		if err != nil {
+			return "", fmt.Errorf("unpack command: %w", err)
+		}
+
+		if len(decodedCommand) < 2 {
+			return "", errors.New("command could not be decoded")
+		}
+
+		argument = abi.Arguments{
+			{
+				Type: addressTy,
+			},
+			{
+				Type: addressTy,
+			},
+			{
+				Type: uintTy,
+			},
+		}
+
+		decodedTransferToken, err := argument.Unpack(decodedCommand[1].([]byte))
+		if err != nil {
+			return "", err
+		}
+
+		if len(decodedTransferToken) < 3 {
+			return "", errors.New("transfer token could not be decoded")
+		}
+
+		address := decodedTransferToken[1].(common.Address)
+
+		return strings.ToLower(address.String()), nil
 	case 6:
 		// TransferNativeFromAgent
 		log.WithFields(log.Fields{
@@ -499,5 +578,5 @@ func (s *Scanner) IsBanned(message OutboundQueueMessage) bool {
 		}).Debug("Found MintForeignToken message")
 	}
 
-	return false
+	return "", nil
 }
