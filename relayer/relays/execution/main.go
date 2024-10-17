@@ -539,6 +539,10 @@ func (r *Relay) getTransactionDestination(ev *contracts.GatewayOutboundMessageAc
 		return "", fmt.Errorf("fetch execution header proof: %w", err)
 	}
 
+	if destination == "" {
+		return "", nil
+	}
+
 	destinationSS58, err := parachain.SS58Encode(destination, r.config.Sink.SS58Prefix)
 	if err != nil {
 		return "", fmt.Errorf("ss58 encode: %w", err)
