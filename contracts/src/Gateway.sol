@@ -7,6 +7,7 @@ import {Verification} from "./Verification.sol";
 
 import {AssetsV1} from "./AssetsV1.sol";
 import {AssetsV2} from "./AssetsV2.sol";
+import {Initializer} from "./Initializer.sol";
 
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
@@ -195,12 +196,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     /**
      * APIv1 Constants
      */
-
-    // ChannelIDs
-    ChannelID internal constant PRIMARY_GOVERNANCE_CHANNEL_ID =
-        ChannelID.wrap(bytes32(uint256(1)));
-    ChannelID internal constant SECONDARY_GOVERNANCE_CHANNEL_ID =
-        ChannelID.wrap(bytes32(uint256(2)));
 
     // Gas used for:
     // 1. Mapping a command id to an implementation function
@@ -838,92 +833,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
      * Upgrades
      */
 
-    // Initial configuration for bridge
-    struct Config {
-        OperatingMode mode;
-        /// @dev The fee charged to users for submitting outbound messages (DOT)
-        uint128 deliveryCost;
-        /// @dev The ETH/DOT exchange rate
-        UD60x18 exchangeRate;
-        ParaID assetHubParaID;
-        bytes32 assetHubAgentID;
-        /// @dev The extra fee charged for registering tokens (DOT)
-        uint128 assetHubCreateAssetFee;
-        /// @dev The extra fee charged for sending tokens (DOT)
-        uint128 assetHubReserveTransferFee;
-        /// @dev extra fee to discourage spamming
-        uint256 registerTokenFee;
-        /// @dev Fee multiplier
-        UD60x18 multiplier;
-        /// @dev Optional rescueOperator
-        address rescueOperator;
-    }
-
     /// @dev Initialize storage in the gateway
     /// NOTE: This is not externally accessible as this function selector is overshadowed in the proxy
     function initialize(bytes calldata data) external virtual {
-        // Prevent initialization of storage in implementation contract
-        if (ERC1967.load() == address(0)) {
-            revert Unauthorized();
-        }
-
-        CoreStorage.Layout storage core = CoreStorage.layout();
-
-        Config memory config = abi.decode(data, (Config));
-
-        core.mode = config.mode;
-
-        // Initialize agent for BridgeHub
-        address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
-        core.agents[BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
-        core.agentAddresses[bridgeHubAgent] = BRIDGE_HUB_AGENT_ID;
-
-        // Initialize channel for primary governance track
-        core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] = Channel({
-            mode: OperatingMode.Normal,
-            agent: bridgeHubAgent,
-            inboundNonce: 0,
-            outboundNonce: 0
-        });
-
-        // Initialize channel for secondary governance track
-        core.channels[SECONDARY_GOVERNANCE_CHANNEL_ID] = Channel({
-            mode: OperatingMode.Normal,
-            agent: bridgeHubAgent,
-            inboundNonce: 0,
-            outboundNonce: 0
-        });
-
-        // Initialize agent for for AssetHub
-        address assetHubAgent = address(new Agent(config.assetHubAgentID));
-        core.agents[config.assetHubAgentID] = assetHubAgent;
-        core.agentAddresses[assetHubAgent] = config.assetHubAgentID;
-
-        // Initialize channel for AssetHub
-        core.channels[config.assetHubParaID.into()] = Channel({
-            mode: OperatingMode.Normal,
-            agent: assetHubAgent,
-            inboundNonce: 0,
-            outboundNonce: 0
-        });
-
-        // Initialize pricing storage
-        PricingStorage.Layout storage pricing = PricingStorage.layout();
-        pricing.exchangeRate = config.exchangeRate;
-        pricing.deliveryCost = config.deliveryCost;
-        pricing.multiplier = config.multiplier;
-
-        // Initialize assets storage
-        AssetsStorage.Layout storage assets = AssetsStorage.layout();
-
-        assets.assetHubParaID = config.assetHubParaID;
-        assets.assetHubAgent = assetHubAgent;
-        assets.registerTokenFee = config.registerTokenFee;
-        assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
-        assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
-
-        // Initialize operator storage
-        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
-        operatorStorage.operator = config.rescueOperator;
+        Initializer.initialize(data);
     }
 }
