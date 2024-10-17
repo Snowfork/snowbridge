@@ -97,24 +97,13 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error ChannelAlreadyCreated();
     error ChannelDoesNotExist();
     error InvalidChannelUpdate();
-    error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
-    error AlreadyInitialized();
     error TokenNotRegistered();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
         if (msg.sender != address(this)) {
-            revert Unauthorized();
-        }
-        _;
-    }
-
-    // handler functions are privileged from agent only
-    modifier onlyAgent(bytes32 agentID) {
-        bytes32 _agentID = _ensureAgentAddress(msg.sender);
-        if (_agentID != agentID) {
             revert Unauthorized();
         }
         _;
@@ -583,14 +572,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         }
     }
 
-    /// @dev Ensure that the specified address is an valid agent
-    function _ensureAgentAddress(address agent) internal view returns (bytes32 agentID) {
-        agentID = CoreStorage.layout().agentAddresses[agent];
-        if (agentID == bytes32(0)) {
-            revert AgentDoesNotExist();
-        }
-    }
-
     /// @dev Invoke some code within an agent
     function _invokeOnAgent(address agent, bytes memory data) internal returns (bytes memory) {
         (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(AGENT_EXECUTOR, data));
@@ -650,7 +631,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Initialize agent for BridgeHub
         address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
         core.agents[BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
-        core.agentAddresses[bridgeHubAgent] = BRIDGE_HUB_AGENT_ID;
 
         // Initialize channel for primary governance track
         core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] =
@@ -663,7 +643,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Initialize agent for for AssetHub
         address assetHubAgent = address(new Agent(config.assetHubAgentID));
         core.agents[config.assetHubAgentID] = assetHubAgent;
-        core.agentAddresses[assetHubAgent] = config.assetHubAgentID;
 
         // Initialize channel for AssetHub
         core.channels[config.assetHubParaID.into()] =
