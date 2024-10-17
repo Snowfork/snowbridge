@@ -17,6 +17,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
+	"github.com/snowfork/snowbridge/relayer/ofac"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -28,6 +29,7 @@ type BeefyListener struct {
 	beefyClientContract *contracts.BeefyClient
 	relaychainConn      *relaychain.Connection
 	parachainConnection *parachain.Connection
+	ofac                *ofac.OFAC
 	paraID              uint32
 	tasks               chan<- *Task
 	scanner             *Scanner
@@ -39,6 +41,7 @@ func NewBeefyListener(
 	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
+	ofac *ofac.OFAC,
 	tasks chan<- *Task,
 ) *BeefyListener {
 	return &BeefyListener{
@@ -47,6 +50,7 @@ func NewBeefyListener(
 		ethereumConn:        ethereumConn,
 		relaychainConn:      relaychainConn,
 		parachainConnection: parachainConnection,
+		ofac:                ofac,
 		tasks:               tasks,
 	}
 }
@@ -81,6 +85,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 		relayConn: li.relaychainConn,
 		paraConn:  li.parachainConnection,
 		paraID:    paraID,
+		ofac:      li.ofac,
 	}
 
 	eg.Go(func() error {

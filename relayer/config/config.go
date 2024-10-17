@@ -18,6 +18,11 @@ type EthereumConfig struct {
 	GasLimit  uint64 `mapstructure:"gas-limit"`
 }
 
+type OFACConfig struct {
+	Enabled bool   `mapstructure:"enabled"`
+	ApiKey  string `mapstructure:"apiKey"`
+}
+
 func (p ParachainConfig) Validate() error {
 	if p.Endpoint == "" {
 		return errors.New("[endpoint] is not set")
@@ -38,6 +43,13 @@ func (e EthereumConfig) Validate() error {
 func (p PolkadotConfig) Validate() error {
 	if p.Endpoint == "" {
 		return errors.New("[endpoint] config is not set")
+	}
+	return nil
+}
+
+func (o OFACConfig) Validate() error {
+	if o.Enabled && o.ApiKey == "" {
+		return errors.New("OFAC is enabled but no [apiKey] set")
 	}
 	return nil
 }
