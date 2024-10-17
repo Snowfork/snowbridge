@@ -95,9 +95,7 @@ struct Costs {
 }
 
 struct Ticket {
-    address sender;
-    uint8 destination;
-    ParaID recipient;
+    ParaID dest;
     Costs costs;
     bytes payload;
 }

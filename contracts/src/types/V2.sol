@@ -2,16 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
-import {ParaID} from "./Common.sol";
-
-struct Origin {
-    // Origin network
-    uint8 network;
-    // Origin chain
-    ParaID paraID;
-    // Stable hash of full origin location;
-    bytes32 locationID;
-}
+import {OperatingMode} from "./Common.sol";
 
 // Inbound message from a Polkadot parachain (via BridgeHub)
 struct InboundMessage {
@@ -83,7 +74,7 @@ struct MintForeignTokenParams {
     // Recipient address
     address recipient;
     // Amount to mint
-    uint256 amount;
+    uint128 amount;
 }
 
 // Payload for CallContractParams instruction

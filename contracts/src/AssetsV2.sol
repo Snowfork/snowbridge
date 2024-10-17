@@ -11,16 +11,16 @@ import {AssetsStorage, TokenInfo} from "./storage/AssetsStorage.sol";
 import {CoreStorage} from "./storage/CoreStorage.sol";
 
 import {SubstrateTypes} from "./SubstrateTypes.sol";
-import {ParaID, MultiAddress, Ticket, Costs, TransferKind, TicketV2} from "./Types.sol";
+import {MultiAddress} from "./types/Common.sol";
+import {Ticket, TransferKind} from "./types/V2.sol";
 import {Address} from "./utils/Address.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
 import {Call} from "./utils/Call.sol";
 import {Token} from "./Token.sol";
-import {WETH9} from "canonical-weth/WETH9.sol";
 
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
-library Assets {
+library AssetsV2 {
     using Address for address;
     using SafeTokenTransferFrom for IERC20;
 
@@ -35,15 +35,6 @@ library Assets {
     error TokenAlreadyRegistered();
     error TokenMintFailed();
     error TokenTransferFailed();
-
-    /*
-    *     _____   __________ .___          ____
-    *    /  _  \  \______   \|   | ___  __/_   |
-    *   /  /_\  \  |     ___/|   | \  \/ / |   |
-    *  /    |    \ |    |    |   |  \   /  |   |
-    *  \____|__  / |____|    |___|   \_/   |___|
-    *          \/
-    */
 
     function isTokenRegistered(address token) external view returns (bool) {
         return AssetsStorage.layout().tokenRegistry[token].isRegistered;
@@ -69,7 +60,7 @@ library Assets {
 
     /// @dev Registers a token (only native tokens at this time)
     /// @param token The ERC20 token address.
-    function registerToken(address token) external returns (TicketV2 memory ticket) {}
+    function registerToken(address token) external returns (Ticket memory ticket) {}
 
     // @dev Register a new fungible Polkadot token for an agent
     function registerForeignToken(
@@ -101,7 +92,7 @@ library Assets {
     }
 
     // @dev Transfer ERC20 to `recipient`
-    function transferNativeToken(
+    function unlockNativeToken(
         address executor,
         address agent,
         address token,
@@ -145,9 +136,21 @@ library Assets {
     *          \/                                 \/
     */
 
+    // Send an XCM along with assets to Polkadot Asset Hub
+    //
+    // Params:
+    //   * `xcm` (bytes): SCALE-encoded XCM message
+    //   * `assets` (bytes[]): Array of asset transfer instructions
+    //
+    // The specified assets will be locked/burned locally, and their foreign equivalents will
+    // be minted/unlocked on Polkadot Asset Hub.
+    //
+    // Supported asset instructions:
+    // * ERC20: abi.encode(0, tokenAddress, value)
+    //
     function sendMessage(bytes calldata xcm, bytes[] calldata assets)
         external
-        returns (TicketV2 memory)
+        returns (Ticket memory)
     {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
@@ -156,7 +159,7 @@ library Assets {
             xfers[i] = _handleAsset(assets[i]);
         }
 
-        return TicketV2({costs: Costs({foreign: 0, native: 0}), xfers: xfers, xcm: xcm});
+        return Ticket({xfers: xfers, xcm: xcm});
     }
 
     function _handleAsset(bytes calldata asset) internal returns (bytes memory) {
@@ -165,6 +168,7 @@ library Assets {
             assetKind := calldataload(asset.offset)
         }
         if (assetKind == 0) {
+            // ERC20: abi.encode(0, tokenAddress, value)
             (, address token, uint128 amount) =
                 abi.decode(asset, (uint8, address, uint128));
             return _handleAssetERC20(token, amount);

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
-import {AgentExecuteCommand, ParaID} from "./Types.sol";
+import {ParaID} from "./Types.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 import {IERC20} from "./interfaces/IERC20.sol";
@@ -28,7 +28,7 @@ contract AgentExecutor {
         _transferToken(token, recipient, amount);
     }
 
-    function callContract(address target, bytes data) external {
+    function callContract(address target, bytes memory data) external {
         bool success = Call.safeCall(target, data);
         if (!success) {
             revert();

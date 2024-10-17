@@ -3,7 +3,11 @@
 pragma solidity 0.8.25;
 
 import {
-    OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress
+    OperatingMode,
+    InboundMessageV1,
+    ParaID,
+    ChannelID,
+    MultiAddress
 } from "../Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
@@ -84,7 +88,7 @@ interface IGateway {
 
     // Submit a message from a Polkadot network
     function submitV1(
-        InboundMessage calldata message,
+        InboundMessageV1 calldata message,
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
     ) external;
@@ -137,5 +141,5 @@ interface IGateway {
         uint128 amount
     ) external payable;
 
-    function sendMessage(bytes calldata xcm, bytes[] calldata assets) external payable;
+    function sendMessage(bytes calldata xcm, bytes[] calldata assets) external;
 }

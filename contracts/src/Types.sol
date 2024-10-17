@@ -5,11 +5,15 @@ pragma solidity 0.8.25;
 import "./types/Common.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 import {
+    ParaID,
+    ChannelID,
+    Channel,
     InboundMessage as InboundMessageV1,
     Command as CommandV1,
     AgentExecuteCommand as AgentExecuteCommandV1,
     Ticket as TicketV1,
-    Costs as CostsV1,
+    Costs as Costs,
+    AgentExecuteParams as AgentExecuteParamsV1,
     CreateAgentParams as CreateAgentParamsV1,
     CreateChannelParams as CreateChannelParamsV1,
     UpdateChannelParams as UpdateChannelParamsV1,
@@ -24,15 +28,14 @@ import {
 } from "./types/V1.sol";
 
 import {
+    TransferKind,
     InboundMessage as InboundMessageV2,
     Command as CommandV2,
     Ticket as TicketV2,
-    Instruction as InstructionV2,
-    InstructionKind as InstructionKindV2,
-    Ticket as TicketV2,
+    CommandKind as CommandKindV2,
     UpgradeParams as UpgradeParamsV2,
     SetOperatingModeParams as SetOperatingModeParamsV2,
-    NativeTokenUnlockParams as NativeTokenUnlockParamsV2,
+    UnlockNativeTokenParams as UnlockNativeTokenParamsV2,
     MintForeignTokenParams as MintForeignTokenParamsV2,
     CallContractParams as CallContractParamsV2
 } from "./types/V2.sol";
