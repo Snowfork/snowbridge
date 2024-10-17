@@ -199,7 +199,7 @@ func (s *Scanner) findTasksImpl(
 			}
 			if isBanned {
 				log.Fatal("banned address found")
-				//return nil, errors.New("banned address found")
+				return nil, errors.New("banned address found")
 			}
 			messages = append(messages, m)
 		}
