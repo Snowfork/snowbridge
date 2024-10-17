@@ -7,7 +7,6 @@ import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
-import {Gateway} from "./Gateway.sol";
 
 /// @title Code which will run within an `Agent` using `delegatecall`.
 /// @dev This is a singleton contract, meaning that all agents will execute the same code.
