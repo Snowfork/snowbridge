@@ -439,6 +439,10 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return Assets.isTokenRegistered(token);
     }
 
+    function tokenInfo(address token) external view returns (TokenInfo memory) {
+        return AssetsStorage.layout().tokenRegistry[token];
+    }
+
     // Total fee for registering a token
     function quoteRegisterTokenFee() external view returns (uint256) {
         return _calculateFee(Assets.registerTokenCosts());

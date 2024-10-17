@@ -3,8 +3,6 @@
 pragma solidity 0.8.25;
 
 import "../../Gateway.sol";
-import {AssetsStorage} from "../../storage/AssetsStorage.sol";
-import {TokenInfo} from "../../Types.sol";
 
 contract GatewayPNA is Gateway {
     constructor(
@@ -26,8 +24,4 @@ contract GatewayPNA is Gateway {
     {}
 
     function initialize(bytes memory) external override {}
-
-    function tokenInfo(address token) external view returns (TokenInfo memory) {
-        return AssetsStorage.layout().tokenRegistry[token];
-    }
 }
