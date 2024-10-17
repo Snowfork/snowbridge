@@ -194,8 +194,8 @@ func (s *Scanner) findTasksImpl(
 			}
 			isBanned, err := s.IsBanned(m)
 			if err != nil {
-				//return nil, fmt.Errorf("banned check: %w", err)
 				log.WithError(err).Fatal("error checking banned address found")
+				return nil, fmt.Errorf("banned check: %w", err)
 			}
 			if isBanned {
 				log.Fatal("banned address found")
