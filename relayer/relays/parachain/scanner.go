@@ -633,5 +633,9 @@ func GetDestination(message OutboundQueueMessage) (string, error) {
 		address = addressValue.String()
 	}
 
-	return strings.ToLower(address), nil
+	destination := strings.ToLower(address)
+
+	log.WithField("destination", destination).Debug("extracted destination from message")
+
+	return destination, nil
 }
