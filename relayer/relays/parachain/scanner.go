@@ -486,7 +486,7 @@ func (s *Scanner) IsBanned(m OutboundQueueMessage) (bool, error) {
 		return true, err
 	}
 
-	return s.ofac.IsBanned(destination, "")
+	return s.ofac.IsBanned("", destination) // TODO the source will be fetched from Subscan in a follow-up PR
 }
 
 func GetDestination(message OutboundQueueMessage) (string, error) {

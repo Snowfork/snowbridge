@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -36,6 +37,7 @@ type Relay struct {
 	writer          *parachain.ParachainWriter
 	headerCache     *ethereum.HeaderCache
 	ofac            *ofac.OFAC
+	chainID         *big.Int
 }
 
 func NewRelay(
@@ -107,11 +109,17 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	)
 	r.beaconHeader = &beaconHeader
 
+	r.chainID, err = r.ethconn.Client().NetworkID(ctx)
+	if err != nil {
+		return err
+	}
+
 	log.WithFields(log.Fields{
 		"relayerId":     r.config.Schedule.ID,
 		"relayerCount":  r.config.Schedule.TotalRelayerCount,
 		"sleepInterval": r.config.Schedule.SleepInterval,
-	}).Info("decentralization config")
+		"chainId":       r.chainID,
+	}).Info("relayer config")
 
 	for {
 		select {
@@ -416,16 +424,17 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		"channelID":   types.H256(ev.ChannelID).Hex(),
 	})
 
-	destination, err := parachain.GetDestination(ev.Payload)
+	source, err := r.getTransactionSender(ctx, ev)
 	if err != nil {
 		return err
 	}
 
-	log.WithFields(log.Fields{
-		"destination": destination,
-		"payload":     common.Bytes2Hex(ev.Payload),
-	}).Info("extracted destination from message")
-	banned, err := r.ofac.IsBanned(ev.Raw.Address.Hex(), destination)
+	destination, err := r.getTransactionDestination(ev)
+	if err != nil {
+		return err
+	}
+
+	banned, err := r.ofac.IsBanned(source, destination)
 	if err != nil {
 		return err
 	}
@@ -504,4 +513,41 @@ func (r *Relay) isInFinalizedBlock(ctx context.Context, event *contracts.Gateway
 	}
 
 	return r.beaconHeader.CheckHeaderFinalized(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
+}
+
+func (r *Relay) getTransactionSender(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) (string, error) {
+	tx, _, err := r.ethconn.Client().TransactionByHash(ctx, ev.Raw.TxHash)
+	if err != nil {
+		return "", err
+	}
+
+	sender, err := ethtypes.Sender(ethtypes.LatestSignerForChainID(r.chainID), tx)
+	if err != nil {
+		return "", fmt.Errorf("retrieve message sender: %w", err)
+	}
+
+	log.WithFields(log.Fields{
+		"sender": sender,
+	}).Debug("extracted sender from transaction")
+
+	return sender.Hex(), nil
+}
+
+func (r *Relay) getTransactionDestination(ev *contracts.GatewayOutboundMessageAccepted) (string, error) {
+	destination, err := parachain.GetDestination(ev.Payload)
+	if err != nil {
+		return "", fmt.Errorf("fetch execution header proof: %w", err)
+	}
+
+	destinationSS58, err := parachain.SS58Encode(destination, r.config.Sink.SS58Prefix)
+	if err != nil {
+		return "", fmt.Errorf("ss58 encode: %w", err)
+	}
+
+	log.WithFields(log.Fields{
+		"destinationSS58": destinationSS58,
+		"destination":     destination,
+	}).Debug("extracted destination from message")
+
+	return destinationSS58, nil
 }
