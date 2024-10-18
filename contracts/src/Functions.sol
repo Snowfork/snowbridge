@@ -78,14 +78,16 @@ library Functions {
         if (agent == address(0)) {
             agent = address(new Agent(origin));
             core.agents[origin] = agent;
+            emit IGateway.AgentCreated(origin, agent);
+        } else {
+            revert IGateway.AgentAlreadyCreated();
         }
-        emit IGateway.AgentCreated(origin, agent);
     }
 
     /// @dev Transfer ether from an agent
     function withdrawEther(
-        address agent,
         address executor,
+        address agent,
         address payable recipient,
         uint256 amount
     ) internal {

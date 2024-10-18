@@ -106,7 +106,7 @@ library HandlersV1 {
         address agent = Functions.ensureAgent(params.agentID);
 
         Functions.withdrawEther(
-            agent, executor, payable(params.recipient), params.amount
+            executor, agent, payable(params.recipient), params.amount
         );
         emit IGateway.AgentFundsWithdrawn(
             params.agentID, params.recipient, params.amount

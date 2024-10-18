@@ -2,20 +2,41 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
+import {MultiAddress} from "../MultiAddress.sol";
 import {
     OperatingMode,
     InboundMessage as InboundMessageV1,
     ParaID,
-    ChannelID,
-    MultiAddress
+    ChannelID
 } from "../v1/Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 interface IGateway {
-    error TokenTransferFailed();
-    error TokenAlreadyRegistered();
+    error InvalidToken();
+    error InvalidAmount();
+    error InvalidDestination();
     error TokenNotRegistered();
+    error Unsupported();
+    error InvalidDestinationFee();
+    error AgentDoesNotExist();
+    error TokenAlreadyRegistered();
+    error TokenMintFailed();
+    error TokenTransferFailed();
+    error InvalidProof();
+    error InvalidNonce();
+    error NotEnoughGas();
+    error FeePaymentToLow();
+    error Unauthorized();
+    error Disabled();
+    error AgentAlreadyCreated();
+    error ChannelAlreadyCreated();
+    error ChannelDoesNotExist();
+    error InvalidChannelUpdate();
+    error AgentExecutionFailed(bytes returndata);
+    error InvalidAgentExecutionPayload();
+    error InvalidConstructorParams();
+    error AlreadyInitialized();
 
     /**
      * Events

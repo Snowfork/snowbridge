@@ -11,7 +11,7 @@ import {AssetsStorage, TokenInfo} from "../storage/AssetsStorage.sol";
 import {CoreStorage} from "../storage/CoreStorage.sol";
 import {PricingStorage} from "../storage/PricingStorage.sol";
 import {SubstrateTypes} from "../SubstrateTypes.sol";
-import {MultiAddress} from "../types/Common.sol";
+import {MultiAddress} from "../MultiAddress.sol";
 import {Address} from "../utils/Address.sol";
 import {AgentExecutor} from "../AgentExecutor.sol";
 import {Agent} from "../Agent.sol";
@@ -19,7 +19,6 @@ import {Call} from "../utils/Call.sol";
 import {Token} from "../Token.sol";
 import {Functions} from "../Functions.sol";
 import {
-    MultiAddress,
     TokenInfo,
     OperatingMode,
     ParaID,
@@ -49,7 +48,6 @@ library CallsV1 {
     error TokenAlreadyRegistered();
     error TokenMintFailed();
     error TokenTransferFailed();
-
     error InvalidProof();
     error InvalidNonce();
     error NotEnoughGas();
@@ -105,7 +103,6 @@ library CallsV1 {
         ParaID destinationChain,
         MultiAddress calldata destinationAddress,
         uint128 destinationChainFee,
-        uint128 maxDestinationChainFee,
         uint128 amount
     ) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
@@ -124,7 +121,6 @@ library CallsV1 {
                     destinationChain,
                     destinationAddress,
                     destinationChainFee,
-                    maxDestinationChainFee,
                     amount
                 )
             );
@@ -137,7 +133,6 @@ library CallsV1 {
                     destinationChain,
                     destinationAddress,
                     destinationChainFee,
-                    maxDestinationChainFee,
                     amount
                 )
             );
@@ -147,19 +142,14 @@ library CallsV1 {
     function quoteSendTokenFee(
         address token,
         ParaID destinationChain,
-        uint128 destinationChainFee,
-        uint128 maxDestinationChainFee
+        uint128 destinationChainFee
     ) external view returns (uint256) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
         if (!info.isRegistered) {
             revert TokenNotRegistered();
         }
-        return _calculateFee(
-            _sendTokenCosts(
-                destinationChain, destinationChainFee, maxDestinationChainFee
-            )
-        );
+        return _calculateFee(_sendTokenCosts(destinationChain, destinationChainFee));
     }
 
     function pricingParameters() external view returns (UD60x18, uint128) {
@@ -266,11 +256,11 @@ library CallsV1 {
         return AssetsStorage.layout().tokenRegistry[token].isRegistered;
     }
 
-    function _sendTokenCosts(
-        ParaID destinationChain,
-        uint128 destinationChainFee,
-        uint128 maxDestinationChainFee
-    ) internal view returns (Costs memory costs) {
+    function _sendTokenCosts(ParaID destinationChain, uint128 destinationChainFee)
+        internal
+        view
+        returns (Costs memory costs)
+    {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.assetHubParaID == destinationChain) {
             costs.foreign = $.assetHubReserveTransferFee;
@@ -284,7 +274,7 @@ library CallsV1 {
             //
             // For safety, `maxDestinationChainFee` should be less valuable
             // than the gas cost to send tokens.
-            if (destinationChainFee > maxDestinationChainFee) {
+            if (destinationChainFee > $.maxDestinationFee) {
                 revert InvalidDestinationFee();
             }
 
@@ -302,7 +292,6 @@ library CallsV1 {
         ParaID destinationChain,
         MultiAddress calldata destinationAddress,
         uint128 destinationChainFee,
-        uint128 maxDestinationChainFee,
         uint128 amount
     ) internal returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
@@ -311,9 +300,7 @@ library CallsV1 {
         Functions.transferToAgent($.assetHubAgent, token, sender, amount);
 
         ticket.dest = $.assetHubParaID;
-        ticket.costs = _sendTokenCosts(
-            destinationChain, destinationChainFee, maxDestinationChainFee
-        );
+        ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee);
 
         // Construct a message payload
         if (destinationChain == $.assetHubParaID) {
@@ -365,11 +352,11 @@ library CallsV1 {
         );
     }
 
-    function _sendForeignTokenCosts(
-        ParaID destinationChain,
-        uint128 destinationChainFee,
-        uint128 maxDestinationChainFee
-    ) internal view returns (Costs memory costs) {
+    function _sendForeignTokenCosts(ParaID destinationChain, uint128 destinationChainFee)
+        internal
+        view
+        returns (Costs memory costs)
+    {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.assetHubParaID == destinationChain) {
             costs.foreign = $.assetHubReserveTransferFee;
@@ -383,7 +370,7 @@ library CallsV1 {
             //
             // For safety, `maxDestinationChainFee` should be less valuable
             // than the gas cost to send tokens.
-            if (destinationChainFee > maxDestinationChainFee) {
+            if (destinationChainFee > $.maxDestinationFee) {
                 revert InvalidDestinationFee();
             }
 
@@ -403,7 +390,6 @@ library CallsV1 {
         ParaID destinationChain,
         MultiAddress calldata destinationAddress,
         uint128 destinationChainFee,
-        uint128 maxDestinationChainFee,
         uint128 amount
     ) internal returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
@@ -411,9 +397,7 @@ library CallsV1 {
         Token(token).burn(sender, amount);
 
         ticket.dest = $.assetHubParaID;
-        ticket.costs = _sendForeignTokenCosts(
-            destinationChain, destinationChainFee, maxDestinationChainFee
-        );
+        ticket.costs = _sendForeignTokenCosts(destinationChain, destinationChainFee);
 
         // Construct a message payload
         if (destinationChain == $.assetHubParaID && destinationAddress.isAddress32()) {

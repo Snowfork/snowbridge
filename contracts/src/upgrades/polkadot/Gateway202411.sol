@@ -6,17 +6,12 @@ import "../../Gateway.sol";
 import {AssetsStorage} from "../../storage/AssetsStorage.sol";
 import {TokenInfo} from "../../Types.sol";
 
-contract GatewayPNA is Gateway {
-    constructor(
-        address beefyClient,
-        address agentExecutor,
-        ParaID bridgeHubParaID,
-        bytes32 bridgeHubAgentID,
-        uint8 foreignTokenDecimals,
-        uint128 destinationMaxTransferFee
-    ) Gateway(beefyClient, agentExecutor) {}
+contract Gateway202411 is Gateway {
+    constructor(address beefyClient, address agentExecutor)
+        Gateway(beefyClient, agentExecutor)
+    {}
 
-    function initialize(bytes memory) external override {
+    function initialize(bytes memory) external view override {
         // Prevent initialization of storage in implementation contract
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();

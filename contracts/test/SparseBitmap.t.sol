@@ -7,7 +7,7 @@ import "forge-std/console.sol";
 import {SparseBitmap} from "../src/utils/SparseBitmap.sol";
 
 contract SparseBitmapTest is Test {
-    SparseBitmap public bitmap;
+    SparseBitmap bitmap;
 
     function setUp() public {}
 
@@ -15,3 +15,4 @@ contract SparseBitmapTest is Test {
         bitmap.set(384);
         assertEq(bitmap.get(384), true);
     }
+}

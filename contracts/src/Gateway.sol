@@ -7,11 +7,11 @@ import {Verification} from "./Verification.sol";
 import {Initializer} from "./Initializer.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
+import {MultiAddress} from "./MultiAddress.sol";
 import {
     OperatingMode,
     ParaID,
     TokenInfo,
-    MultiAddress,
     Channel,
     ChannelID,
     InboundMessageV1,
@@ -58,16 +58,10 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     bytes4 internal immutable BRIDGE_HUB_PARA_ID_ENCODED;
     bytes32 internal immutable BRIDGE_HUB_AGENT_ID;
 
-    error InvalidProof();
-    error InvalidNonce();
-    error NotEnoughGas();
-    error Unauthorized();
-    error Disabled();
-
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
         if (msg.sender != address(this)) {
-            revert Unauthorized();
+            revert IGateway.Unauthorized();
         }
         _;
     }
@@ -119,15 +113,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     // 2. Calling implementation function
     uint256 DISPATCH_OVERHEAD_GAS_V1 = 10_000;
 
-    // The maximum fee that can be sent to a destination parachain to pay for execution (DOT).
-    // Has two functions:
-    // * Reduces the ability of users to perform arbitrage using a favourable exchange rate
-    // * Prevents users from mistakenly providing too much fees, which would drain AssetHub's
-    //   sovereign account here on Ethereum.
-    uint128 internal immutable MAX_DESTINATION_FEE;
-
-    uint8 internal immutable FOREIGN_TOKEN_DECIMALS;
-
     /**
      * APIv1 External API
      */
@@ -147,7 +132,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // Ensure this message is not being replayed
         if (message.nonce != channel.inboundNonce + 1) {
-            revert InvalidNonce();
+            revert IGateway.InvalidNonce();
         }
 
         // Increment nonce for origin.
@@ -161,27 +146,27 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // Verify that the commitment is included in a parachain header finalized by BEEFY.
         if (!_verifyCommitment(commitment, headerProof)) {
-            revert InvalidProof();
+            revert IGateway.InvalidProof();
         }
 
         // Make sure relayers provide enough gas so that inner message dispatch
         // does not run out of gas.
         uint256 maxDispatchGas = message.maxDispatchGas;
         if (gasleft() < maxDispatchGas + DISPATCH_OVERHEAD_GAS_V1) {
-            revert NotEnoughGas();
+            revert IGateway.NotEnoughGas();
         }
 
         bool success = true;
 
         // Dispatch message to a handler
         if (message.command == CommandV1.AgentExecute) {
-            try Gateway(this).v1_handlerAgentExecute{gas: maxDispatchGas}(message.params)
+            try Gateway(this).v1_handleAgentExecute{gas: maxDispatchGas}(message.params)
             {} catch {
                 success = false;
             }
         } else if (message.command == CommandV1.CreateAgent) {
-            try Gateway(this).v1_handlerCreateAgent{gas: maxDispatchGas}(message.params)
-            {} catch {
+            try Gateway(this).v1_handleCreateAgent{gas: maxDispatchGas}(message.params) {}
+            catch {
                 success = false;
             }
         } else if (message.command == CommandV1.CreateChannel) {
@@ -189,48 +174,48 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         } else if (message.command == CommandV1.UpdateChannel) {
             success = false;
         } else if (message.command == CommandV1.SetOperatingMode) {
-            try Gateway(this).v1_handlerSetOperatingMode{gas: maxDispatchGas}(
+            try Gateway(this).v1_handleSetOperatingMode{gas: maxDispatchGas}(
                 message.params
             ) {} catch {
                 success = false;
             }
         } else if (message.command == CommandV1.TransferNativeFromAgent) {
-            try Gateway(this).v1_handlerTransferNativeFromAgent{gas: maxDispatchGas}(
+            try Gateway(this).v1_handleTransferNativeFromAgent{gas: maxDispatchGas}(
                 message.params
             ) {} catch {
                 success = false;
             }
         } else if (message.command == CommandV1.Upgrade) {
-            try Gateway(this).v1_handlerUpgrade{gas: maxDispatchGas}(message.params) {}
+            try Gateway(this).v1_handleUpgrade{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
         } else if (message.command == CommandV1.SetTokenTransferFees) {
-            try Gateway(this).v1_handlerSetTokenTransferFees{gas: maxDispatchGas}(
+            try Gateway(this).v1_handleSetTokenTransferFees{gas: maxDispatchGas}(
                 message.params
             ) {} catch {
                 success = false;
             }
         } else if (message.command == CommandV1.SetPricingParameters) {
-            try Gateway(this).v1_handlerSetPricingParameters{gas: maxDispatchGas}(
+            try Gateway(this).v1_handleSetPricingParameters{gas: maxDispatchGas}(
                 message.params
             ) {} catch {
                 success = false;
             }
         } else if (message.command == CommandV1.UnlockNativeToken) {
-            try Gateway(this).v1_handlerUnlockNativeToken{gas: maxDispatchGas}(
+            try Gateway(this).v1_handleUnlockNativeToken{gas: maxDispatchGas}(
                 message.params
             ) {} catch {
                 success = false;
             }
         } else if (message.command == CommandV1.RegisterForeignToken) {
-            try Gateway(this).v1_handlerRegisterForeignToken{gas: maxDispatchGas}(
+            try Gateway(this).v1_handleRegisterForeignToken{gas: maxDispatchGas}(
                 message.params
             ) {} catch {
                 success = false;
             }
         } else if (message.command == CommandV1.MintForeignToken) {
-            try Gateway(this).v1_handlerMintForeignToken{gas: maxDispatchGas}(
+            try Gateway(this).v1_handleMintForeignToken{gas: maxDispatchGas}(
                 message.params
             ) {} catch {
                 success = false;
@@ -311,9 +296,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         ParaID destinationChain,
         uint128 destinationFee
     ) external view returns (uint256) {
-        return CallsV1.quoteSendTokenFee(
-            token, destinationChain, destinationFee, MAX_DESTINATION_FEE
-        );
+        return CallsV1.quoteSendTokenFee(token, destinationChain, destinationFee);
     }
 
     // Transfer ERC20 tokens to a Polkadot parachain
@@ -330,7 +313,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             destinationChain,
             destinationAddress,
             destinationFee,
-            MAX_DESTINATION_FEE,
             amount
         );
     }
@@ -345,52 +327,52 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
      */
 
     // Execute code within an agent
-    function v1_handlerAgentExecute(bytes calldata data) external onlySelf {
+    function v1_handleAgentExecute(bytes calldata data) external onlySelf {
         HandlersV1.agentExecute(AGENT_EXECUTOR, data);
     }
 
     /// @dev Create an agent for a consensus system on Polkadot
-    function v1_handlerCreateAgent(bytes calldata data) external onlySelf {
+    function v1_handleCreateAgent(bytes calldata data) external onlySelf {
         HandlersV1.createAgent(data);
     }
 
     /// @dev Perform an upgrade of the gateway
-    function v1_handlerUpgrade(bytes calldata data) external onlySelf {
+    function v1_handleUpgrade(bytes calldata data) external onlySelf {
         HandlersV1.upgrade(data);
     }
 
     // @dev Set the operating mode of the gateway
-    function v1_handlerSetOperatingMode(bytes calldata data) external onlySelf {
+    function v1_handleSetOperatingMode(bytes calldata data) external onlySelf {
         HandlersV1.setOperatingMode(data);
     }
 
     // @dev Transfer funds from an agent to a recipient account
-    function v1_handlerTransferNativeFromAgent(bytes calldata data) external onlySelf {
+    function v1_handleTransferNativeFromAgent(bytes calldata data) external onlySelf {
         HandlersV1.transferNativeFromAgent(AGENT_EXECUTOR, data);
     }
 
     // @dev Set token fees of the gateway
-    function v1_handlerSetTokenTransferFees(bytes calldata data) external onlySelf {
+    function v1_handleSetTokenTransferFees(bytes calldata data) external onlySelf {
         HandlersV1.setTokenTransferFees(data);
     }
 
     // @dev Set pricing params of the gateway
-    function v1_handlerSetPricingParameters(bytes calldata data) external onlySelf {
+    function v1_handleSetPricingParameters(bytes calldata data) external onlySelf {
         HandlersV1.setPricingParameters(data);
     }
 
     // @dev Transfer Ethereum native token back from polkadot
-    function v1_handlerUnlockNativeToken(bytes calldata data) external onlySelf {
+    function v1_handleUnlockNativeToken(bytes calldata data) external onlySelf {
         HandlersV1.unlockNativeToken(AGENT_EXECUTOR, data);
     }
 
     // @dev Register a new fungible Polkadot token for an agent
-    function v1_handlerRegisterForeignToken(bytes calldata data) external onlySelf {
+    function v1_handleRegisterForeignToken(bytes calldata data) external onlySelf {
         HandlersV1.registerForeignToken(data);
     }
 
     // @dev Mint foreign token from polkadot
-    function v1_handlerMintForeignToken(bytes calldata data) external onlySelf {
+    function v1_handleMintForeignToken(bytes calldata data) external onlySelf {
         HandlersV1.mintForeignToken(data);
     }
 
@@ -445,7 +427,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         bytes32 leafHash = keccak256(abi.encode(message));
 
         if ($.inboundNonce.get(message.nonce)) {
-            revert InvalidNonce();
+            revert IGateway.InvalidNonce();
         }
 
         $.inboundNonce.set(message.nonce);
@@ -455,7 +437,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // Verify that the commitment is included in a parachain header finalized by BEEFY.
         if (!_verifyCommitment(commitment, headerProof)) {
-            revert InvalidProof();
+            revert IGateway.InvalidProof();
         }
 
         bool success = v2_dispatch(message);

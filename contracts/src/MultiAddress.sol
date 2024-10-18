@@ -2,7 +2,14 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
-using {isIndex, asIndex, isAddress32, asAddress32, isAddress20, asAddress20} for MultiAddress global;
+using {
+    isIndex,
+    asIndex,
+    isAddress32,
+    asAddress32,
+    isAddress20,
+    asAddress20
+} for MultiAddress global;
 
 /// @dev An address for an on-chain account
 struct MultiAddress {

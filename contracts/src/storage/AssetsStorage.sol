@@ -20,6 +20,11 @@ library AssetsStorage {
         // Foreign token registry by token ID
         mapping(bytes32 foreignID => address) tokenAddressOf;
         uint8 foreignTokenDecimals;
+        // The maximum fee that can be sent to a destination parachain to pay for execution (DOT).
+        // Has two functions:
+        // * Reduces the ability of users to perform arbitrage using a favourable exchange rate
+        // * Prevents users from mistakenly providing too much fees, which would drain AssetHub's
+        //   sovereign account here on Ethereum.
         uint128 maxDestinationFee;
     }
 

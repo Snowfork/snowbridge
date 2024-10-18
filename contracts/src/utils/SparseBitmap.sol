@@ -8,9 +8,13 @@ struct SparseBitmap {
 using {get, set} for SparseBitmap global;
 
 function get(SparseBitmap storage self, uint256 index) view returns (bool) {
-    return ((self.data[index >> 8] >> (index & 255)) & 1) == 1;
+    uint256 bucket = index >> 8;
+    uint256 mask = 1 << (index & 0xff);
+    return self.data[bucket] & mask != 0;
 }
 
 function set(SparseBitmap storage self, uint256 index) {
-    self.data[index >> 8] = self.data[index >> 8] & (1 << (index & 255));
+    uint256 bucket = index >> 8;
+    uint256 mask = 1 << (index & 0xff);
+    self.data[bucket] |= mask;
 }
