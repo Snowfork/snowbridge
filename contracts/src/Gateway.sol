@@ -50,7 +50,6 @@ import {
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
-import {OperatorStorage} from "./storage/OperatorStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
@@ -629,8 +628,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint256 registerTokenFee;
         /// @dev Fee multiplier
         UD60x18 multiplier;
-        /// @dev Optional rescueOperator
-        address rescueOperator;
     }
 
     /// @dev Initialize storage in the gateway
@@ -683,9 +680,5 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
-
-        // Initialize operator storage
-        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
-        operatorStorage.operator = config.rescueOperator;
     }
 }
