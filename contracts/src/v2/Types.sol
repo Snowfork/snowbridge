@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
-import {OperatingMode} from "./Common.sol";
+import {OperatingMode} from "./../types/Common.sol";
 
 // Inbound message from a Polkadot parachain (via BridgeHub)
 struct InboundMessage {
@@ -24,9 +24,10 @@ library CommandKind {
     uint8 constant Upgrade = 0;
     uint8 constant SetOperatingMode = 1;
     uint8 constant UnlockNativeToken = 2;
-    uint8 constant MintForeignToken = 3;
-    uint8 constant CreateAgent = 4;
-    uint8 constant CallContract = 5;
+    uint8 constant RegisterForeignToken = 3;
+    uint8 constant MintForeignToken = 4;
+    uint8 constant CreateAgent = 5;
+    uint8 constant CallContract = 6;
 }
 
 struct Ticket {
@@ -65,6 +66,18 @@ struct UnlockNativeTokenParams {
     address recipient;
     // Amount to unlock
     uint128 amount;
+}
+
+// Payload for RegisterForeignToken
+struct RegisterForeignTokenParams {
+    /// @dev The token ID (hash of stable location id of token)
+    bytes32 foreignTokenID;
+    /// @dev The name of the token
+    string name;
+    /// @dev The symbol of the token
+    string symbol;
+    /// @dev The decimal of the token
+    uint8 decimals;
 }
 
 // Payload for MintForeignTokenParams instruction

@@ -4,15 +4,19 @@ pragma solidity 0.8.25;
 
 import {
     OperatingMode,
-    InboundMessageV1,
+    InboundMessage as InboundMessageV1,
     ParaID,
     ChannelID,
     MultiAddress
-} from "../Types.sol";
+} from "../v1/Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 interface IGateway {
+    error TokenTransferFailed();
+    error TokenAlreadyRegistered();
+    error TokenNotRegistered();
+
     /**
      * Events
      */

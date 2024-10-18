@@ -2,27 +2,41 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
-import {IERC20} from "./interfaces/IERC20.sol";
-import {IGateway} from "./interfaces/IGateway.sol";
+import {IERC20} from "../interfaces/IERC20.sol";
+import {IGateway} from "../interfaces/IGateway.sol";
 
-import {SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
+import {SafeNativeTransfer, SafeTokenTransferFrom} from "../utils/SafeTransfer.sol";
 
-import {AssetsStorage, TokenInfo} from "./storage/AssetsStorage.sol";
-import {CoreStorage} from "./storage/CoreStorage.sol";
+import {AssetsStorage, TokenInfo} from "../storage/AssetsStorage.sol";
+import {CoreStorage} from "../storage/CoreStorage.sol";
+import {PricingStorage} from "../storage/PricingStorage.sol";
+import {SubstrateTypes} from "../SubstrateTypes.sol";
+import {MultiAddress} from "../types/Common.sol";
+import {Address} from "../utils/Address.sol";
+import {AgentExecutor} from "../AgentExecutor.sol";
+import {Agent} from "../Agent.sol";
+import {Call} from "../utils/Call.sol";
+import {Token} from "../Token.sol";
+import {Functions} from "../Functions.sol";
+import {
+    MultiAddress,
+    TokenInfo,
+    OperatingMode,
+    ParaID,
+    Channel,
+    ChannelID,
+    AgentExecuteCommand,
+    Ticket,
+    Costs
+} from "./Types.sol";
 
-import {SubstrateTypes} from "./SubstrateTypes.sol";
-import {MultiAddress} from "./types/Common.sol";
-import {ParaID, Ticket, Costs} from "./types/V1.sol";
-import {Address} from "./utils/Address.sol";
-import {AgentExecutor} from "./AgentExecutor.sol";
-import {Agent} from "./Agent.sol";
-import {Call} from "./utils/Call.sol";
-import {Token} from "./Token.sol";
+import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
-library AssetsV1 {
+library CallsV1 {
     using Address for address;
     using SafeTokenTransferFrom for IERC20;
+    using SafeNativeTransfer for address payable;
 
     /* Errors */
     error InvalidToken();
@@ -36,43 +50,220 @@ library AssetsV1 {
     error TokenMintFailed();
     error TokenTransferFailed();
 
-    function isTokenRegistered(address token) external view returns (bool) {
-        return AssetsStorage.layout().tokenRegistry[token].isRegistered;
-    }
+    error InvalidProof();
+    error InvalidNonce();
+    error NotEnoughGas();
+    error FeePaymentToLow();
+    error Unauthorized();
+    error Disabled();
+    error AgentAlreadyCreated();
+    error ChannelAlreadyCreated();
+    error ChannelDoesNotExist();
+    error InvalidChannelUpdate();
+    error AgentExecutionFailed(bytes returndata);
+    error InvalidAgentExecutionPayload();
+    error InvalidConstructorParams();
+    error AlreadyInitialized();
 
-    /// @dev transfer tokens from the sender to the specified agent
-    function _transferToAgent(
-        address agent,
-        address token,
-        address sender,
-        uint128 amount
-    ) internal {
+    /*
+    * External API
+    */
+
+    /// @dev Registers a token (only native tokens at this time)
+    /// @param token The ERC20 token address.
+    function registerToken(address token) external {
         if (!token.isContract()) {
             revert InvalidToken();
         }
 
-        if (amount == 0) {
-            revert InvalidAmount();
-        }
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
-        IERC20(token).safeTransferFrom(sender, agent, amount);
+        // NOTE: Explicitly allow a token to be re-registered. This offers resiliency
+        // in case a previous registration attempt of the same token failed on the remote side.
+        // It means that registration can be retried.
+        TokenInfo storage info = $.tokenRegistry[token];
+        info.isRegistered = true;
+
+        Ticket memory ticket = Ticket({
+            dest: $.assetHubParaID,
+            costs: _registerTokenCosts(),
+            payload: SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee)
+        });
+
+        emit IGateway.TokenRegistrationSent(token);
+
+        _submitOutbound(ticket);
     }
 
-    function sendTokenCosts(
+    function quoteRegisterTokenFee() external view returns (uint256) {
+        return _calculateFee(_registerTokenCosts());
+    }
+
+    function sendToken(
+        address token,
+        address sender,
+        ParaID destinationChain,
+        MultiAddress calldata destinationAddress,
+        uint128 destinationChainFee,
+        uint128 maxDestinationChainFee,
+        uint128 amount
+    ) external {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+
+        TokenInfo storage info = $.tokenRegistry[token];
+
+        if (!info.isRegistered) {
+            revert TokenNotRegistered();
+        }
+
+        if (info.foreignID == bytes32(0)) {
+            _submitOutbound(
+                _sendNativeToken(
+                    token,
+                    sender,
+                    destinationChain,
+                    destinationAddress,
+                    destinationChainFee,
+                    maxDestinationChainFee,
+                    amount
+                )
+            );
+        } else {
+            _submitOutbound(
+                _sendForeignToken(
+                    info.foreignID,
+                    token,
+                    sender,
+                    destinationChain,
+                    destinationAddress,
+                    destinationChainFee,
+                    maxDestinationChainFee,
+                    amount
+                )
+            );
+        }
+    }
+
+    function quoteSendTokenFee(
         address token,
         ParaID destinationChain,
         uint128 destinationChainFee,
         uint128 maxDestinationChainFee
-    ) external view returns (Costs memory costs) {
+    ) external view returns (uint256) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
         if (!info.isRegistered) {
             revert TokenNotRegistered();
         }
-
-        return _sendTokenCosts(
-            destinationChain, destinationChainFee, maxDestinationChainFee
+        return _calculateFee(
+            _sendTokenCosts(
+                destinationChain, destinationChainFee, maxDestinationChainFee
+            )
         );
+    }
+
+    function pricingParameters() external view returns (UD60x18, uint128) {
+        PricingStorage.Layout storage pricing = PricingStorage.layout();
+        return (pricing.exchangeRate, pricing.deliveryCost);
+    }
+
+    function channelNoncesOf(ChannelID channelID)
+        external
+        view
+        returns (uint64, uint64)
+    {
+        Channel storage ch = Functions.ensureChannel(channelID);
+        return (ch.inboundNonce, ch.outboundNonce);
+    }
+
+    function channelOperatingModeOf(ChannelID channelID)
+        external
+        view
+        returns (OperatingMode)
+    {
+        Channel storage ch = Functions.ensureChannel(channelID);
+        return ch.mode;
+    }
+
+    // @dev Get token address by tokenID
+    function tokenAddressOf(bytes32 tokenID) external view returns (address) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        return $.tokenAddressOf[tokenID];
+    }
+
+    /*
+    * Internal functions
+    */
+
+    // Convert foreign currency to native currency (ROC/KSM/DOT -> ETH)
+    function _convertToNative(UD60x18 exchangeRate, UD60x18 multiplier, UD60x18 amount)
+        internal
+        view
+        returns (uint256)
+    {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+
+        UD60x18 ethDecimals = convert(1e18);
+        UD60x18 foreignDecimals =
+            convert(10).pow(convert(uint256($.foreignTokenDecimals)));
+        UD60x18 nativeAmount = multiplier.mul(amount).mul(exchangeRate).div(
+            foreignDecimals
+        ).mul(ethDecimals);
+        return convert(nativeAmount);
+    }
+
+    // Calculate the fee for accepting an outbound message
+    function _calculateFee(Costs memory costs) internal view returns (uint256) {
+        PricingStorage.Layout storage pricing = PricingStorage.layout();
+        UD60x18 amount = convert(pricing.deliveryCost + costs.foreign);
+        return costs.native
+            + _convertToNative(pricing.exchangeRate, pricing.multiplier, amount);
+    }
+
+    /// @dev Outbound message can be disabled globally or on a per-channel basis.
+    function _ensureOutboundMessagingEnabled(Channel storage ch) internal view {
+        CoreStorage.Layout storage $ = CoreStorage.layout();
+        if ($.mode != OperatingMode.Normal || ch.mode != OperatingMode.Normal) {
+            revert Disabled();
+        }
+    }
+
+    // Submit an outbound message to Polkadot, after taking fees
+    function _submitOutbound(Ticket memory ticket) internal {
+        ChannelID channelID = ticket.dest.into();
+        Channel storage channel = Functions.ensureChannel(channelID);
+
+        // Ensure outbound messaging is allowed
+        _ensureOutboundMessagingEnabled(channel);
+
+        // Destination fee always in DOT
+        uint256 fee = _calculateFee(ticket.costs);
+
+        // Ensure the user has enough funds for this message to be accepted
+        if (msg.value < fee) {
+            revert FeePaymentToLow();
+        }
+
+        channel.outboundNonce = channel.outboundNonce + 1;
+
+        // Deposit total fee into agent's contract
+        payable(channel.agent).safeNativeTransfer(fee);
+
+        // Reimburse excess fee payment
+        if (msg.value > fee) {
+            payable(msg.sender).safeNativeTransfer(msg.value - fee);
+        }
+
+        // Generate a unique ID for this message
+        bytes32 messageID = keccak256(abi.encodePacked(channelID, channel.outboundNonce));
+
+        emit IGateway.OutboundMessageAccepted(
+            channelID, channel.outboundNonce, messageID, ticket.payload
+        );
+    }
+
+    function isTokenRegistered(address token) external view returns (bool) {
+        return AssetsStorage.layout().tokenRegistry[token].isRegistered;
     }
 
     function _sendTokenCosts(
@@ -105,47 +296,6 @@ library AssetsV1 {
         costs.native = 0;
     }
 
-    function sendToken(
-        address token,
-        address sender,
-        ParaID destinationChain,
-        MultiAddress calldata destinationAddress,
-        uint128 destinationChainFee,
-        uint128 maxDestinationChainFee,
-        uint128 amount
-    ) external returns (Ticket memory ticket) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-
-        TokenInfo storage info = $.tokenRegistry[token];
-
-        if (!info.isRegistered) {
-            revert TokenNotRegistered();
-        }
-
-        if (info.foreignID == bytes32(0)) {
-            return _sendNativeToken(
-                token,
-                sender,
-                destinationChain,
-                destinationAddress,
-                destinationChainFee,
-                maxDestinationChainFee,
-                amount
-            );
-        } else {
-            return _sendForeignToken(
-                info.foreignID,
-                token,
-                sender,
-                destinationChain,
-                destinationAddress,
-                destinationChainFee,
-                maxDestinationChainFee,
-                amount
-            );
-        }
-    }
-
     function _sendNativeToken(
         address token,
         address sender,
@@ -158,7 +308,7 @@ library AssetsV1 {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
         // Lock the funds into AssetHub's agent contract
-        _transferToAgent($.assetHubAgent, token, sender, amount);
+        Functions.transferToAgent($.assetHubAgent, token, sender, amount);
 
         ticket.dest = $.assetHubParaID;
         ticket.costs = _sendTokenCosts(
@@ -284,10 +434,6 @@ library AssetsV1 {
         );
     }
 
-    function registerTokenCosts() external view returns (Costs memory costs) {
-        return _registerTokenCosts();
-    }
-
     function _registerTokenCosts() internal view returns (Costs memory costs) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
@@ -296,88 +442,6 @@ library AssetsV1 {
 
         // Extra fee to prevent spamming
         costs.native = $.registerTokenFee;
-    }
-
-    /// @dev Registers a token (only native tokens at this time)
-    /// @param token The ERC20 token address.
-    function registerToken(address token) external returns (Ticket memory ticket) {
-        if (!token.isContract()) {
-            revert InvalidToken();
-        }
-
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-
-        // NOTE: Explicitly allow a token to be re-registered. This offers resiliency
-        // in case a previous registration attempt of the same token failed on the remote side.
-        // It means that registration can be retried.
-        TokenInfo storage info = $.tokenRegistry[token];
-        info.isRegistered = true;
-
-        ticket.dest = $.assetHubParaID;
-        ticket.costs = _registerTokenCosts();
-        ticket.payload = SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee);
-
-        emit IGateway.TokenRegistrationSent(token);
-    }
-
-    // @dev Register a new fungible Polkadot token for an agent
-    function registerForeignToken(
-        bytes32 foreignTokenID,
-        string memory name,
-        string memory symbol,
-        uint8 decimals
-    ) external {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        if ($.tokenAddressOf[foreignTokenID] != address(0)) {
-            revert TokenAlreadyRegistered();
-        }
-        Token token = new Token(name, symbol, decimals);
-        TokenInfo memory info =
-            TokenInfo({isRegistered: true, foreignID: foreignTokenID});
-
-        $.tokenAddressOf[foreignTokenID] = address(token);
-        $.tokenRegistry[address(token)] = info;
-
-        emit IGateway.ForeignTokenRegistered(foreignTokenID, address(token));
-    }
-
-    // @dev Mint foreign token from Polkadot
-    function mintForeignToken(bytes32 foreignTokenID, address recipient, uint256 amount)
-        external
-    {
-        address token = _ensureTokenAddressOf(foreignTokenID);
-        Token(token).mint(recipient, amount);
-    }
-
-    // @dev Transfer ERC20 to `recipient`
-    function transferNativeToken(
-        address executor,
-        address agent,
-        address token,
-        address recipient,
-        uint128 amount
-    ) external {
-        bytes memory call =
-            abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
-        (bool success,) = Agent(payable(agent)).invoke(executor, call);
-        if (!success) {
-            revert TokenTransferFailed();
-        }
-    }
-
-    // @dev Get token address by tokenID
-    function tokenAddressOf(bytes32 tokenID) external view returns (address) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        return $.tokenAddressOf[tokenID];
-    }
-
-    // @dev Get token address by tokenID
-    function _ensureTokenAddressOf(bytes32 tokenID) internal view returns (address) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        if ($.tokenAddressOf[tokenID] == address(0)) {
-            revert TokenNotRegistered();
-        }
-        return $.tokenAddressOf[tokenID];
     }
 
     function _isTokenRegistered(address token) internal view returns (bool) {

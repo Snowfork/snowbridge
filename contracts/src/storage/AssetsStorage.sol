@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
-import {TokenInfo, ParaID} from "../Types.sol";
+import {TokenInfo} from "../types/Common.sol";
+import {ParaID} from "../v1/Types.sol";
 
 library AssetsStorage {
     struct Layout {
@@ -18,6 +19,8 @@ library AssetsStorage {
         uint256 registerTokenFee;
         // Foreign token registry by token ID
         mapping(bytes32 foreignID => address) tokenAddressOf;
+        uint8 foreignTokenDecimals;
+        uint128 maxDestinationFee;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets");

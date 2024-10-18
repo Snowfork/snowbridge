@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
-import {OperatingMode} from "./Common.sol";
+import {MultiAddress, TokenInfo, OperatingMode} from "../types/Common.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 type ParaID is uint32;
@@ -77,7 +77,7 @@ enum Command {
     TransferNativeFromAgent,
     SetTokenTransferFees,
     SetPricingParameters,
-    TransferNativeToken,
+    UnlockNativeToken,
     RegisterForeignToken,
     MintForeignToken
 }
@@ -178,6 +178,18 @@ struct SetPricingParametersParams {
     UD60x18 multiplier;
 }
 
+// Payload for TransferToken
+struct UnlockNativeTokenParams {
+    /// @dev The agent ID of the consensus system
+    bytes32 agentID;
+    /// @dev The token address
+    address token;
+    /// @dev The address of the recipient
+    address recipient;
+    /// @dev The amount to mint with
+    uint128 amount;
+}
+
 // Payload for RegisterForeignToken
 struct RegisterForeignTokenParams {
     /// @dev The token ID (hash of stable location id of token)
@@ -194,18 +206,6 @@ struct RegisterForeignTokenParams {
 struct MintForeignTokenParams {
     /// @dev The token ID
     bytes32 foreignTokenID;
-    /// @dev The address of the recipient
-    address recipient;
-    /// @dev The amount to mint with
-    uint256 amount;
-}
-
-// Payload for TransferToken
-struct TransferNativeTokenParams {
-    /// @dev The agent ID of the consensus system
-    bytes32 agentID;
-    /// @dev The token address
-    address token;
     /// @dev The address of the recipient
     address recipient;
     /// @dev The amount to mint with

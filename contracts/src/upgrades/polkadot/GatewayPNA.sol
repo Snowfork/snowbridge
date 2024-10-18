@@ -14,18 +14,14 @@ contract GatewayPNA is Gateway {
         bytes32 bridgeHubAgentID,
         uint8 foreignTokenDecimals,
         uint128 destinationMaxTransferFee
-    )
-        Gateway(
-            beefyClient,
-            agentExecutor,
-            bridgeHubParaID,
-            bridgeHubAgentID,
-            foreignTokenDecimals,
-            destinationMaxTransferFee
-        )
-    {}
+    ) Gateway(beefyClient, agentExecutor) {}
 
-    function initialize(bytes memory) external override {}
+    function initialize(bytes memory) external override {
+        // Prevent initialization of storage in implementation contract
+        if (ERC1967.load() == address(0)) {
+            revert Unauthorized();
+        }
+    }
 
     function tokenInfo(address token) external view returns (TokenInfo memory) {
         return AssetsStorage.layout().tokenRegistry[token];

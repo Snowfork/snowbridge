@@ -5,9 +5,6 @@ pragma solidity 0.8.25;
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
 
-import {AssetsV1} from "./AssetsV1.sol";
-import {AssetsV2} from "./AssetsV2.sol";
-
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
 import {
@@ -16,33 +13,7 @@ import {
     TokenInfo,
     MultiAddress,
     Channel,
-    ChannelID,
-    InboundMessageV1,
-    CommandV1,
-    AgentExecuteCommandV1,
-    TicketV1,
-    Costs,
-    AgentExecuteParamsV1,
-    UpgradeParamsV1,
-    CreateAgentParamsV1,
-    CreateChannelParamsV1,
-    UpdateChannelParamsV1,
-    SetOperatingModeParamsV1,
-    TransferNativeFromAgentParamsV1,
-    SetTokenTransferFeesParamsV1,
-    SetPricingParametersParamsV1,
-    RegisterForeignTokenParamsV1,
-    MintForeignTokenParamsV1,
-    TransferNativeTokenParamsV1,
-    InboundMessageV2,
-    CommandV2,
-    CommandKindV2,
-    TicketV2,
-    UpgradeParamsV2,
-    SetOperatingModeParamsV2,
-    UnlockNativeTokenParamsV2,
-    MintForeignTokenParamsV2,
-    CallContractParamsV2
+    ChannelID
 } from "./Types.sol";
 import {Upgrade} from "./Upgrade.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
@@ -60,24 +31,12 @@ import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 import {OperatorStorage} from "./storage/OperatorStorage.sol";
 
+import {Constants} from "./Constants.sol";
+
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
 library Initializer {
     error Unauthorized();
-
-    ParaID constant ASSET_HUB_PARA_ID = ParaID.wrap(1000);
-    bytes32 constant ASSET_HUB_AGENT_ID =
-        0x81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79;
-
-    ParaID constant BRIDGE_HUB_PARA_ID = ParaID.wrap(1002);
-    bytes32 constant BRIDGE_HUB_AGENT_ID =
-        0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314;
-
-    // ChannelIDs
-    ChannelID internal constant PRIMARY_GOVERNANCE_CHANNEL_ID =
-        ChannelID.wrap(bytes32(uint256(1)));
-    ChannelID internal constant SECONDARY_GOVERNANCE_CHANNEL_ID =
-        ChannelID.wrap(bytes32(uint256(2)));
 
     // Initial configuration for bridge
     struct Config {
@@ -98,6 +57,8 @@ library Initializer {
         UD60x18 multiplier;
         /// @dev Optional rescueOperator
         address rescueOperator;
+        uint8 foreignTokenDecimals;
+        uint128 maxDestinationFee;
     }
 
     function initialize(bytes calldata data) external {
@@ -113,12 +74,11 @@ library Initializer {
         core.mode = config.mode;
 
         // Initialize agent for BridgeHub
-        address bridgeHubAgent = address(new Agent(BRIDGE_HUB_AGENT_ID));
-        core.agents[BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
-        core.agentAddresses[bridgeHubAgent] = BRIDGE_HUB_AGENT_ID;
+        address bridgeHubAgent = address(new Agent(Constants.BRIDGE_HUB_AGENT_ID));
+        core.agents[Constants.BRIDGE_HUB_AGENT_ID] = bridgeHubAgent;
 
         // Initialize channel for primary governance track
-        core.channels[PRIMARY_GOVERNANCE_CHANNEL_ID] = Channel({
+        core.channels[Constants.PRIMARY_GOVERNANCE_CHANNEL_ID] = Channel({
             mode: OperatingMode.Normal,
             agent: bridgeHubAgent,
             inboundNonce: 0,
@@ -126,7 +86,7 @@ library Initializer {
         });
 
         // Initialize channel for secondary governance track
-        core.channels[SECONDARY_GOVERNANCE_CHANNEL_ID] = Channel({
+        core.channels[Constants.SECONDARY_GOVERNANCE_CHANNEL_ID] = Channel({
             mode: OperatingMode.Normal,
             agent: bridgeHubAgent,
             inboundNonce: 0,
@@ -136,7 +96,6 @@ library Initializer {
         // Initialize agent for for AssetHub
         address assetHubAgent = address(new Agent(config.assetHubAgentID));
         core.agents[config.assetHubAgentID] = assetHubAgent;
-        core.agentAddresses[assetHubAgent] = config.assetHubAgentID;
 
         // Initialize channel for AssetHub
         core.channels[config.assetHubParaID.into()] = Channel({
@@ -160,6 +119,8 @@ library Initializer {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+        assets.foreignTokenDecimals = config.foreignTokenDecimals;
+        assets.maxDestinationFee = config.maxDestinationFee;
 
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
