@@ -419,8 +419,10 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		return fmt.Errorf("get block header: %w", err)
 	}
 
+	log.Debug("fetching beacon proofs")
 	// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
 	proof, err := r.beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
+	log.Debug("finished fetching beacon proofs")
 	if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
 		return err
 	}
