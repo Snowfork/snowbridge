@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/ofac"
 	"math/big"
 	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -34,6 +36,8 @@ type Relay struct {
 	beaconHeader    *header.Header
 	writer          *parachain.ParachainWriter
 	headerCache     *ethereum.HeaderCache
+	ofac            *ofac.OFAC
+	chainID         *big.Int
 }
 
 func NewRelay(
@@ -89,6 +93,8 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	p := protocol.New(r.config.Source.Beacon.Spec, r.config.Sink.Parachain.HeaderRedundancy)
 
+	r.ofac = ofac.New(r.config.OFAC.Enabled, r.config.OFAC.ApiKey)
+
 	store := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries, *p)
 	store.Connect()
 
@@ -103,11 +109,17 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	)
 	r.beaconHeader = &beaconHeader
 
+	r.chainID, err = r.ethconn.Client().NetworkID(ctx)
+	if err != nil {
+		return err
+	}
+
 	log.WithFields(log.Fields{
 		"relayerId":     r.config.Schedule.ID,
 		"relayerCount":  r.config.Schedule.TotalRelayerCount,
 		"sleepInterval": r.config.Schedule.SleepInterval,
-	}).Info("decentralization config")
+		"chainId":       r.chainID,
+	}).Info("relayer config")
 
 	for {
 		select {
@@ -412,6 +424,27 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		"channelID":   types.H256(ev.ChannelID).Hex(),
 	})
 
+	source, err := r.getTransactionSender(ctx, ev)
+	if err != nil {
+		return err
+	}
+
+	destination, err := r.getTransactionDestination(ev)
+	if err != nil {
+		return err
+	}
+
+	banned, err := r.ofac.IsBanned(source, destination)
+	if err != nil {
+		return err
+	}
+	if banned {
+		log.Fatal("banned address found")
+		return errors.New("banned address found")
+	} else {
+		log.Info("address is not banned, continuing")
+	}
+
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
 
 	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
@@ -480,4 +513,45 @@ func (r *Relay) isInFinalizedBlock(ctx context.Context, event *contracts.Gateway
 	}
 
 	return r.beaconHeader.CheckHeaderFinalized(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
+}
+
+func (r *Relay) getTransactionSender(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) (string, error) {
+	tx, _, err := r.ethconn.Client().TransactionByHash(ctx, ev.Raw.TxHash)
+	if err != nil {
+		return "", err
+	}
+
+	sender, err := ethtypes.Sender(ethtypes.LatestSignerForChainID(r.chainID), tx)
+	if err != nil {
+		return "", fmt.Errorf("retrieve message sender: %w", err)
+	}
+
+	log.WithFields(log.Fields{
+		"sender": sender,
+	}).Debug("extracted sender from transaction")
+
+	return sender.Hex(), nil
+}
+
+func (r *Relay) getTransactionDestination(ev *contracts.GatewayOutboundMessageAccepted) (string, error) {
+	destination, err := parachain.GetDestination(ev.Payload)
+	if err != nil {
+		return "", fmt.Errorf("fetch execution header proof: %w", err)
+	}
+
+	if destination == "" {
+		return "", nil
+	}
+
+	destinationSS58, err := parachain.SS58Encode(destination, r.config.Sink.SS58Prefix)
+	if err != nil {
+		return "", fmt.Errorf("ss58 encode: %w", err)
+	}
+
+	log.WithFields(log.Fields{
+		"destinationSS58": destinationSS58,
+		"destination":     destination,
+	}).Debug("extracted destination from message")
+
+	return destinationSS58, nil
 }
