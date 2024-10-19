@@ -16,6 +16,7 @@ use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utilit
 use sp_crypto_hashing::blake2_256;
 use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
+use crate::helpers::sudo;
 
 #[derive(Debug, Parser)]
 #[command(name = "snowbridge-preimage", version, about, long_about = None)]
@@ -323,17 +324,26 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
             let call2 =
                 send_xcm_asset_hub(&context, vec![force_xcm_version(), set_ethereum_fee]).await?;
-            utility_force_batch(vec![call1, call2])
+            if cfg!(any(feature = "paseo", feature = "westend")) {
+                sudo(Box::new(utility_force_batch(vec![call1, call2])))
+            } else {
+                utility_force_batch(vec![call1, call2])
+            }
         }
         Command::UpdateAsset(params) => {
-            send_xcm_asset_hub(
+            let call = send_xcm_asset_hub(
                 &context,
                 vec![
                     commands::make_asset_sufficient(params),
                     commands::force_set_metadata(params),
                 ],
             )
-            .await?
+            .await?;
+            if cfg!(any(feature = "paseo", feature = "westend")) {
+                sudo(Box::new(call))
+            } else {
+                call
+            }
         }
         Command::GatewayOperatingMode(params) => {
             let call = commands::gateway_operating_mode(&params.gateway_operating_mode);

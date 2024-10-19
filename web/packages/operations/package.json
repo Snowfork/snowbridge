@@ -16,6 +16,9 @@
     "start": "npx ts-node src/main.ts start",
     "cron": "npx ts-node src/main.ts cron",
     "server": "npx ts-node src/server.ts",
+    "smokeTest": "npx ts-node src/transfer_token.ts start",
+    "transferToPolkadot": "npx ts-node src/transfer_to_polkadot.ts start",
+    "transferToEthereum": "npx ts-node src/transfer_to_ethereum.ts start",
     "format": "prettier src --write"
   },
   "devDependencies": {
@@ -51,7 +54,7 @@
     "axios": "^1.6.8",
     "bitfield": "^4.2.0",
     "dotenv": "^16.4.5",
-    "ethers": "^6.13.1",
+    "ethers": "^6.13.3",
     "fastify": "^4.27.0",
     "keccak": "^3.0.4",
     "lodash": "^4.17.21",

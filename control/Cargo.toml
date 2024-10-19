@@ -10,6 +10,9 @@ members = [
     "runtimes/westend",
     "runtimes/bridge-hub-westend",
     "runtimes/asset-hub-westend",
+    "runtimes/paseo",
+    "runtimes/bridge-hub-paseo",
+    "runtimes/asset-hub-paseo",
     "preimage",
 ]
 

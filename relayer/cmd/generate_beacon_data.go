@@ -132,7 +132,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		p := protocol.New(conf.Source.Beacon.Spec)
+		p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
 		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 		store.Connect()
 		defer store.Close()
@@ -193,7 +193,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		p := protocol.New(conf.Source.Beacon.Spec)
+		p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
 
 		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 		err = store.Connect()
@@ -504,7 +504,7 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 		}
 		log.WithFields(log.Fields{"endpoint": conf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
 
-		p := protocol.New(conf.Source.Beacon.Spec)
+		p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
 
 		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 		store.Connect()
@@ -695,7 +695,7 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		p := protocol.New(beaconConf.Source.Beacon.Spec)
+		p := protocol.New(beaconConf.Source.Beacon.Spec, beaconConf.Sink.Parachain.HeaderRedundancy)
 
 		store := store.New(beaconConf.Source.Beacon.DataStore.Location, beaconConf.Source.Beacon.DataStore.MaxEntries, *p)
 		store.Connect()

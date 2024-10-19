@@ -253,7 +253,7 @@ func (s *Scanner) gatherProofInputs(
 			return fmt.Errorf("fetch relaychain block hash: %w", err)
 		}
 
-		parachainHeads, err := s.relayConn.FetchParachainHeads(relayBlockHash)
+		parachainHeads, err := s.relayConn.FetchParasHeads(relayBlockHash)
 		if err != nil {
 			return fmt.Errorf("fetch parachain heads: %w", err)
 		}
@@ -261,6 +261,7 @@ func (s *Scanner) gatherProofInputs(
 		task.ProofInput = &ProofInput{
 			ParaID:           s.paraID,
 			RelayBlockNumber: relayBlockNumber,
+			RelayBlockHash:   relayBlockHash,
 			ParaHeads:        parachainHeads,
 		}
 	}

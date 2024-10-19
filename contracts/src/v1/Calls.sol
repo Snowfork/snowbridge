@@ -352,36 +352,6 @@ library CallsV1 {
         );
     }
 
-    function _sendForeignTokenCosts(ParaID destinationChain, uint128 destinationChainFee)
-        internal
-        view
-        returns (Costs memory costs)
-    {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        if ($.assetHubParaID == destinationChain) {
-            costs.foreign = $.assetHubReserveTransferFee;
-        } else {
-            // Reduce the ability for users to perform arbitrage by exploiting a
-            // favourable exchange rate. For example supplying Ether
-            // and gaining a more valuable amount of DOT on the destination chain.
-            //
-            // Also prevents users from mistakenly sending more fees than would be required
-            // which has negative effects like draining AssetHub's sovereign account.
-            //
-            // For safety, `maxDestinationChainFee` should be less valuable
-            // than the gas cost to send tokens.
-            if (destinationChainFee > $.maxDestinationFee) {
-                revert InvalidDestinationFee();
-            }
-
-            // If the final destination chain is not AssetHub, then the fee needs to additionally
-            // include the cost of executing an XCM on the final destination parachain.
-            costs.foreign = $.assetHubReserveTransferFee + destinationChainFee;
-        }
-        // We don't charge any extra fees beyond delivery costs
-        costs.native = 0;
-    }
-
     // @dev Transfer Polkadot-native tokens back to Polkadot
     function _sendForeignToken(
         bytes32 foreignID,
@@ -397,7 +367,7 @@ library CallsV1 {
         Token(token).burn(sender, amount);
 
         ticket.dest = $.assetHubParaID;
-        ticket.costs = _sendForeignTokenCosts(destinationChain, destinationChainFee);
+        ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee);
 
         // Construct a message payload
         if (destinationChain == $.assetHubParaID && destinationAddress.isAddress32()) {

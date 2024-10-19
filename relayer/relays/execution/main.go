@@ -50,7 +50,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 	ethconn := ethereum.NewConnection(&r.config.Source.Ethereum, nil)
 
-	err := paraconn.Connect(ctx)
+	err := paraconn.ConnectWithHeartBeat(ctx, 30*time.Second)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	r.gatewayContract = contract
 
-	p := protocol.New(r.config.Source.Beacon.Spec)
+	p := protocol.New(r.config.Source.Beacon.Spec, r.config.Sink.Parachain.HeaderRedundancy)
 
 	store := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries, *p)
 	store.Connect()
@@ -103,7 +103,11 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	)
 	r.beaconHeader = &beaconHeader
 
-	log.Info("Current relay's ID:", r.config.Schedule.ID)
+	log.WithFields(log.Fields{
+		"relayerId":     r.config.Schedule.ID,
+		"relayerCount":  r.config.Schedule.TotalRelayerCount,
+		"sleepInterval": r.config.Schedule.SleepInterval,
+	}).Info("decentralization config")
 
 	for {
 		select {
@@ -146,9 +150,12 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			}
 
 			for _, ev := range events {
-				err = r.waitAndSend(ctx, ev)
-				if err != nil {
-					return fmt.Errorf("submit message: %w", err)
+				err := r.waitAndSend(ctx, ev)
+				if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
+					log.WithField("nonce", ev.Nonce).Info("beacon header not finalized yet")
+					continue
+				} else if err != nil {
+					return fmt.Errorf("submit event: %w", err)
 				}
 			}
 		}
@@ -351,23 +358,32 @@ func (r *Relay) makeInboundMessage(
 }
 
 func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) (err error) {
-	var paraNonce uint64
 	ethNonce := ev.Nonce
 	waitingPeriod := (ethNonce + r.config.Schedule.TotalRelayerCount - r.config.Schedule.ID) % r.config.Schedule.TotalRelayerCount
+	log.WithFields(logrus.Fields{
+		"waitingPeriod": waitingPeriod,
+	}).Info("relayer waiting period")
 
 	var cnt uint64
 	for {
-		paraNonce, err = r.fetchLatestParachainNonce()
+		// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state
+		isProcessed, err := r.isMessageProcessed(ev.Nonce)
 		if err != nil {
-			return fmt.Errorf("fetch latest parachain nonce: %w", err)
+			return fmt.Errorf("is message procssed: %w", err)
 		}
-		if ethNonce <= paraNonce {
-			log.Info(fmt.Sprintf("nonce %d picked up by another relayer, just skip", paraNonce))
+		// If the message is already processed we shouldn't submit it again
+		if isProcessed {
 			return nil
+		}
+		// Check if the beacon header is finalized
+		if r.isInFinalizedBlock(ctx, ev) != nil {
+			return err
 		}
 		if cnt == waitingPeriod {
 			break
 		}
+		log.Info(fmt.Sprintf("sleeping for %d seconds.", time.Duration(r.config.Schedule.SleepInterval)))
+
 		time.Sleep(time.Duration(r.config.Schedule.SleepInterval) * time.Second)
 		cnt++
 	}
@@ -406,11 +422,20 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
 	proof, err := r.beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
 	if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
-		logger.Warn("beacon header not finalized, just skipped")
-		return nil
+		return err
 	}
 	if err != nil {
 		return fmt.Errorf("fetch execution header proof: %w", err)
+	}
+
+	// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state
+	isProcessed, err := r.isMessageProcessed(ev.Nonce)
+	if err != nil {
+		return fmt.Errorf("is message processed: %w", err)
+	}
+	// If the message is already processed we shouldn't submit it again
+	if isProcessed {
+		return nil
 	}
 
 	err = r.writeToParachain(ctx, proof, inboundMsg)
@@ -428,4 +453,31 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	logger.Info("inbound message executed successfully")
 
 	return nil
+}
+
+// isMessageProcessed checks if the provided event nonce has already been processed on-chain.
+func (r *Relay) isMessageProcessed(eventNonce uint64) (bool, error) {
+	paraNonce, err := r.fetchLatestParachainNonce()
+	if err != nil {
+		return false, fmt.Errorf("fetch latest parachain nonce: %w", err)
+	}
+	// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state
+	if eventNonce <= paraNonce {
+		log.WithField("nonce", paraNonce).Info("message picked up by another relayer, skipped")
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// isInFinalizedBlock checks if the block containing the event is a finalized block.
+func (r *Relay) isInFinalizedBlock(ctx context.Context, event *contracts.GatewayOutboundMessageAccepted) error {
+	nextBlockNumber := new(big.Int).SetUint64(event.Raw.BlockNumber + 1)
+
+	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
+	if err != nil {
+		return fmt.Errorf("get block header: %w", err)
+	}
+
+	return r.beaconHeader.CheckHeaderFinalized(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
 }

@@ -12,7 +12,10 @@ import (
 )
 
 type Writer struct {
-	LastFinalizedState state.FinalizedHeader
+	LastFinalizedState              state.FinalizedHeader
+	LastFinalizedStateIndex         types.U32
+	FinalizedBeaconRootByIndex      map[uint32]types.H256
+	FinalizedHeaderStateByBlockRoot map[types.H256]state.FinalizedHeader
 }
 
 func (m *Writer) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
@@ -20,11 +23,11 @@ func (m *Writer) GetLastExecutionHeaderState() (state.ExecutionHeader, error) {
 }
 
 func (m *Writer) GetLastFinalizedStateIndex() (types.U32, error) {
-	return 0, nil
+	return m.LastFinalizedStateIndex, nil
 }
 
 func (m *Writer) GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error) {
-	return types.H256{}, nil
+	return m.FinalizedBeaconRootByIndex[index], nil
 }
 
 func (m *Writer) BatchCall(ctx context.Context, extrinsic []string, calls []interface{}) error {
@@ -66,7 +69,7 @@ func (m *Writer) GetLastBasicChannelNonceByAddress(address common.Address) (uint
 
 }
 func (m *Writer) GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state.FinalizedHeader, error) {
-	return state.FinalizedHeader{}, nil
+	return m.FinalizedHeaderStateByBlockRoot[blockRoot], nil
 }
 
 func (m *Writer) FindCheckPointBackward(slot uint64) (state.FinalizedHeader, error) {

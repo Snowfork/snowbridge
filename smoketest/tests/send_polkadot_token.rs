@@ -14,7 +14,7 @@ async fn send_polkadot_token() {
 	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
 	let assethub = *(test_clients.asset_hub_client.clone());
 
-	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
 
 	let token: Address = ERC20_DOT_CONTRACT.into();

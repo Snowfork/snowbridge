@@ -6,6 +6,8 @@ package relaychain
 import (
 	"context"
 	"fmt"
+	"sort"
+	"time"
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -60,6 +62,33 @@ func (co *Connection) Connect(_ context.Context) error {
 		"endpoint":    co.endpoint,
 		"metaVersion": meta.Version,
 	}).Info("Connected to chain")
+
+	return nil
+}
+
+func (co *Connection) ConnectWithHeartBeat(ctx context.Context, heartBeat time.Duration) error {
+	err := co.Connect(ctx)
+	if err != nil {
+		return err
+	}
+
+	ticker := time.NewTicker(heartBeat)
+
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				_, err := co.API().RPC.System.Version()
+				if err != nil {
+					log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
+					return
+				}
+			}
+		}
+	}()
 
 	return nil
 }
@@ -128,37 +157,6 @@ func (co *Connection) GenerateProofForBlock(
 type ParaHead struct {
 	ParaID uint32
 	Data   types.Bytes
-}
-
-// Fetches heads for each parachain Id filtering out para threads.
-func (conn *Connection) FetchParachainHeads(relayChainBlockHash types.Hash) ([]ParaHead, error) {
-	// Fetch para heads
-	paraHeads, err := conn.fetchParaHeads(relayChainBlockHash)
-	if err != nil {
-		log.WithError(err).Error("Cannot fetch para heads.")
-		return nil, err
-	}
-
-	// fetch ids of parachains (not including parathreads)
-	var parachainIDs []uint32
-	parachainsKey, err := types.CreateStorageKey(conn.Metadata(), "Paras", "Parachains", nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = conn.API().RPC.State.GetStorage(parachainsKey, &parachainIDs, relayChainBlockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	// filter out parathreads
-	var parachainHeads []ParaHead
-	for _, v := range parachainIDs {
-		if head, ok := paraHeads[v]; ok {
-			parachainHeads = append(parachainHeads, head)
-		}
-	}
-	return parachainHeads, nil
 }
 
 func (co *Connection) FetchParachainHead(relayBlockhash types.Hash, paraID uint32, header *types.Header) (bool, error) {
@@ -272,7 +270,8 @@ func (co *Connection) fetchKeys(keyPrefix []byte, blockHash types.Hash) ([]types
 //	Key: hash_twox_128("Paras") + hash_twox_128("Heads") + hash_twox_64(ParaId) + Encode(ParaId)
 const ParaIDOffset = 16 + 16 + 8
 
-func (co *Connection) fetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead, error) {
+// Fetch heads for all Paras. Included are parachains and parathreads.
+func (co *Connection) FetchParasHeads(blockHash types.Hash) ([]ParaHead, error) {
 	keyPrefix := types.CreateStorageKeyPrefix("Paras", "Heads")
 	keys, err := co.fetchKeys(keyPrefix, blockHash)
 	if err != nil {
@@ -292,7 +291,7 @@ func (co *Connection) fetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 		return nil, err
 	}
 
-	heads := make(map[uint32]ParaHead)
+	heads := make([]ParaHead, 0, 32)
 	for _, changeSet := range changeSets {
 		for _, change := range changeSet.Changes {
 			if change.StorageData.IsNone() {
@@ -313,12 +312,47 @@ func (co *Connection) fetchParaHeads(blockHash types.Hash) (map[uint32]ParaHead,
 				return nil, err
 			}
 
-			heads[paraID] = ParaHead{
+			heads = append(heads, ParaHead{
 				ParaID: paraID,
 				Data:   headData,
-			}
+			})
 		}
 	}
 
+	sort.SliceStable(heads, func(i int, j int) bool {
+		return heads[i].ParaID < heads[j].ParaID
+	})
+
+	return heads, nil
+}
+
+// Filters para heads to parachains only.
+func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlockHash types.Hash) ([]ParaHead, error) {
+
+	// fetch ids of parachains (not including parathreads)
+	var parachainIDs []uint32
+	parachainsKey, err := types.CreateStorageKey(conn.Metadata(), "Paras", "Parachains", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = conn.API().RPC.State.GetStorage(parachainsKey, &parachainIDs, relayChainBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a set of parachains
+	parachains := make(map[uint32]struct{}, len(paraHeads))
+	for _, parachain := range parachainIDs {
+		parachains[parachain] = struct{}{}
+	}
+
+	// filter to return parachains
+	heads := make([]ParaHead, 0, len(paraHeads))
+	for _, head := range paraHeads {
+		if _, ok := parachains[head.ParaID]; ok {
+			heads = append(heads, head)
+		}
+	}
 	return heads, nil
 }
