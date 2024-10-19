@@ -17,7 +17,7 @@ library SubstrateTypes {
      * @return bytes SCALE-encoded bytes
      */
     // solhint-disable-next-line func-name-mixedcase
-    function MultiAddressWithID(bytes32 account) internal pure returns (bytes memory) {
+    function MultiAddressID(bytes32 account) internal pure returns (bytes memory) {
         return bytes.concat(hex"00", account);
     }
 
@@ -206,37 +206,63 @@ library SubstrateTypes {
         );
     }
 
-    // Serializes a transfer instruction to a SCALE-encoded `Transfer` object
+    // Encode V2 Payload
+    //
     // ```rust
-    //
-    // struct Transfer {
-    //     TransferKind kind;
-    //     Asset asset;
+    // struct Payload {
+    //   origin: H160,
+    //   assets: Vec<Asset>
+    //   xcm: Vec<u8>
     // }
     //
-    // enum TransferKind {
-    //     LocalReserve,
-    //     DestinationReserve,
-    // }
-    //
-    // enum Asset {
-    //     ERC20 {
-    //         address: H160;
-    //         amount: u128;
-    //     },
-    // }
-    // ```
-    //
-    function encodeTransfer(TransferKind kind, address token, uint128 value)
+    function encodePayloadV2(address origin, bytes[] memory assets, bytes memory xcm)
         internal
         pure
         returns (bytes memory)
     {
-        bytes1 kindEncoded =
-            kind == TransferKind.LocalReserve ? bytes1(0x00) : bytes1(0x01);
-        bytes memory assetEncoded = bytes.concat(
+        return bytes.concat(abi.encodePacked(origin), VecAsset(assets), VecU8(xcm));
+    }
+
+    // Encode `Vec<Asset>`
+    function VecAsset(bytes[] memory assets) internal pure returns (bytes memory) {
+        bytes memory accum = hex"";
+        for (uint256 i = 0; i < assets.length; i++) {
+            accum = bytes.concat(accum, assets[i]);
+        }
+        return bytes.concat(ScaleCodec.checkedEncodeCompactU32(assets.length), accum);
+    }
+
+    // Serializes a transfer instruction to a SCALE-encoded `Transfer` object
+    //
+    // ```rust
+    //
+    // enum Asset {
+    //     NativeTokenERC20 {
+    // 	       address: H160,
+    // 	       amount: u128
+    //     },
+    //     ForeignTokenERC20 {
+    // 	       foreignTokenID: H256,
+    // 	       amount: u128
+    //     },
+    // }
+    // ```
+    //
+    function encodeTransferNativeTokenERC20(address token, uint128 value)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return bytes.concat(
             bytes1(0x00), SubstrateTypes.H160(token), ScaleCodec.encodeU128(value)
         );
-        return bytes.concat(kindEncoded, assetEncoded);
+    }
+
+    function encodeTransferForeignTokenERC20(bytes32 foreignTokenID, uint128 value)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return bytes.concat(bytes1(0x01), foreignTokenID, ScaleCodec.encodeU128(value));
     }
 }

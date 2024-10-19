@@ -31,13 +31,14 @@ library CommandKind {
 }
 
 struct Ticket {
-    bytes[] xfers;
+    address origin;
+    bytes[] assets;
     bytes xcm;
 }
 
 enum TransferKind {
-    LocalReserve,
-    DestinationReserve
+    NativeERC20,
+    ForeignERC20
 }
 
 // V2 Command Params

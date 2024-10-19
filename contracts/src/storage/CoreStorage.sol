@@ -15,6 +15,7 @@ library CoreStorage {
         mapping(bytes32 agentID => address) agents;
         // V2
         SparseBitmap inboundNonce;
+        uint64 outboundNonce;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.core");

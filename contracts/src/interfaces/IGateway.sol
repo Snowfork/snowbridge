@@ -63,6 +63,9 @@ interface IGateway {
         bytes payload
     );
 
+    // v2 Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
+    event OutboundMessageAccepted(uint64 nonce, uint256 reward, bytes payload);
+
     // Emitted when an agent has been created for a consensus system on Polkadot
     event AgentCreated(bytes32 agentID, address agent);
 
