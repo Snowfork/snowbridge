@@ -27,6 +27,7 @@ interface IGateway {
     error InvalidNonce();
     error NotEnoughGas();
     error FeePaymentToLow();
+    error InvalidFee();
     error Unauthorized();
     error Disabled();
     error AgentAlreadyCreated();
@@ -37,6 +38,7 @@ interface IGateway {
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
     error AlreadyInitialized();
+    error TooManyAssets();
 
     /**
      * Events
@@ -169,5 +171,33 @@ interface IGateway {
         uint128 amount
     ) external payable;
 
+    // V2
+
+    // Send an XCM with arbitrary assets to Polkadot Asset Hub
+    //
+    // Params:
+    //   * `xcm` (bytes): SCALE-encoded XCM message
+    //   * `assets` (bytes[]): Array of asset specs, constrained to maximum of eight.
+    //
+    // Supported asset specs:
+    // * ERC20: abi.encode(0, tokenAddress, value)
+    //
+    // On Asset Hub, the assets will be received into the assets holding register.
+    //
+    // The `xcm` should contain the necessary instructions to:
+    // 1. Pay XCM execution fees, either from assets in holding,
+    //    or from the sovereign account of `msg.sender`.
+    // 2. Handle the assets in holding, either depositing them into
+    //    some account, or forwarding them to another destination.
+    //
     function sendMessage(bytes calldata xcm, bytes[] calldata assets) external;
+
+    // Register Ethereum-native token on AHP, using `xcmFeeAHP` of `msg.value`
+    // to pay for execution on AHP
+    function registerToken(address token, uint128 xcmFeeAHP) external;
+
+    // Register Ethereum-native token on AHK, using `xcmFeeAHP` and `xcmFeeAHK`
+    // of `msg.value` to pay for execution on AHP and AHK respectively.
+    function registerTokenOnKusama(address token, uint128 xcmFeeAHP, uint128 xcmFeeAHK)
+        external;
 }

@@ -34,6 +34,7 @@ struct Ticket {
     address origin;
     bytes[] assets;
     bytes xcm;
+    uint256 reward;
 }
 
 enum TransferKind {

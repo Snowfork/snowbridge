@@ -48,37 +48,98 @@ library CallsV2 {
     error InvalidConstructorParams();
     error AlreadyInitialized();
     error TokenNotRegistered();
-
     error InvalidAsset();
 
     address public constant WETH_ADDRESS = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    uint8 public constant MAX_ASSETS = 8;
 
-    // Send an XCM with assets to Polkadot Asset Hub
+    // Send an XCM with arbitrary assets to Polkadot Asset Hub
     //
     // Params:
     //   * `xcm` (bytes): SCALE-encoded XCM message
-    //   * `assets` (bytes[]): Array of asset transfer instructions
+    //   * `assets` (bytes[]): Array of asset specs.
     //
-    // The specified assets will be locked/burned locally, and their foreign equivalents will
-    // be minted/unlocked on Polkadot Asset Hub.
-    //
-    // Supported asset instructions:
+    // Supported asset specs:
     // * ERC20: abi.encode(0, tokenAddress, value)
     //
+    // On Asset Hub, the assets will be received into the assets holding register.
+    //
+    // The `xcm` should contain the necessary instructions to:
+    // 1. Pay XCM execution fees, either from assets in holding,
+    //    or from the sovereign account of `msg.sender`.
+    // 2. Handle the assets in holding, either depositing them into
+    //    some account, or forwarding them to another destination.
+    //
     function sendMessage(bytes calldata xcm, bytes[] calldata assets) external {
-        bytes[] memory encodedAssets = new bytes[](assets.length);
-        for (uint256 i = 0; i < assets.length; i++) {
-            encodedAssets[i] = _handleAsset(assets[i]);
-        }
+        _sendMessage(msg.sender, xcm, assets, msg.value);
+    }
 
-        Ticket memory ticket =
-            Ticket({origin: msg.sender, assets: encodedAssets, xcm: xcm});
-        _submitOutbound(ticket);
+    // Register Ethereum-native token on AHP, using `xcmFeeAHP` of `msg.value`
+    // to pay for execution on AHP
+    function registerToken(address token, uint128 xcmFeeAHP) external {
+        _registerToken(token, xcmFeeAHP, 0);
+    }
+
+    // Register Ethereum-native token on AHK, using `xcmFeeAHP` and `xcmFeeAHK`
+    // of `msg.value` to pay for execution on AHP and AHK respectively.
+    function registerTokenOnKusama(address token, uint128 xcmFeeAHP, uint128 xcmFeeAHK)
+        external
+    {
+        _registerToken(token, xcmFeeAHP, xcmFeeAHK);
     }
 
     /*
     * Internal functions
     */
+
+    function _sendMessage(
+        address origin,
+        bytes memory xcm,
+        bytes[] memory assets,
+        uint256 reward
+    ) internal {
+        if (assets.length > MAX_ASSETS) {
+            revert IGateway.TooManyAssets();
+        }
+
+        bytes[] memory encodedAssets = new bytes[](assets.length);
+        for (uint256 i = 0; i < assets.length; i++) {
+            encodedAssets[i] = _handleAsset(assets[i]);
+        }
+        Ticket memory ticket =
+            Ticket({origin: origin, assets: encodedAssets, xcm: xcm, reward: reward});
+        _submitOutbound(ticket);
+    }
+
+    function _registerToken(address token, uint128 xcmFeeAHP, uint128 xcmFeeAHK)
+        internal
+    {
+        // Build XCM for token registration on AHP and possibly AHK
+        // The XCM includes the necessary `PaysFee` instructions that:
+        // 1. Buy `xcmFeeAHP` worth of execution on AHP
+        // 2. Buy `xcmFeeAHK` worth of execution on AHK
+        bytes memory xcm;
+        if (xcmFeeAHK > 0) {
+            // Build XCM that is executed on AHP and forwards another message to AHK
+            xcm = bytes.concat(hex"deadbeef", abi.encodePacked(token), hex"deadbeef");
+        } else {
+            // Build XCM that executes on AHP only
+            xcm = bytes.concat(hex"deadbeef", abi.encodePacked(token), hex"deadbeef");
+        }
+
+        uint256 xcmFee = xcmFeeAHP + xcmFeeAHK;
+
+        // Lock up the total xcm fee
+        if (xcmFee > msg.value) {
+            revert IGateway.InvalidFee();
+        }
+        _lockEther(xcmFee);
+
+        bytes[] memory assets = new bytes[](1);
+        assets[0] = abi.encode(0, WETH_ADDRESS, xcmFee);
+
+        _sendMessage(address(this), xcm, assets, msg.value - xcmFee);
+    }
 
     // Submit an outbound message to Polkadot, after taking fees
     function _submitOutbound(Ticket memory ticket) internal {
@@ -87,17 +148,22 @@ library CallsV2 {
         // Ensure outbound messaging is allowed
         _ensureOutboundMessagingEnabled();
 
-        // Wrap provided ether and transfer to AssetHub agent
-        address assetHubAgent = Functions.ensureAgent(Constants.ASSET_HUB_AGENT_ID);
-        WETH9(payable(WETH_ADDRESS)).deposit{value: msg.value}();
-        IERC20(WETH_ADDRESS).safeTransfer(assetHubAgent, msg.value);
+        // Lock up the relayer reward
+        _lockEther(ticket.reward);
 
         $.outboundNonce = $.outboundNonce + 1;
 
         bytes memory payload =
             SubstrateTypes.encodePayloadV2(ticket.origin, ticket.assets, ticket.xcm);
 
-        emit IGateway.OutboundMessageAccepted($.outboundNonce, msg.value, payload);
+        emit IGateway.OutboundMessageAccepted($.outboundNonce, ticket.reward, payload);
+    }
+
+    // Lock wrapped ether into the AssetHub Agent
+    function _lockEther(uint256 value) internal {
+        address assetHubAgent = Functions.ensureAgent(Constants.ASSET_HUB_AGENT_ID);
+        WETH9(payable(WETH_ADDRESS)).deposit{value: value}();
+        IERC20(WETH_ADDRESS).safeTransfer(assetHubAgent, value);
     }
 
     /// @dev Outbound message can be disabled globally or on a per-channel basis.
@@ -108,10 +174,10 @@ library CallsV2 {
         }
     }
 
-    function _handleAsset(bytes calldata asset) internal returns (bytes memory) {
+    function _handleAsset(bytes memory asset) internal returns (bytes memory) {
         uint8 assetKind;
         assembly {
-            assetKind := calldataload(asset.offset)
+            assetKind := byte(31, mload(add(asset, 32)))
         }
         if (assetKind == 0) {
             // ERC20: abi.encode(0, tokenAddress, value)
