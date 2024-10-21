@@ -97,24 +97,13 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error ChannelAlreadyCreated();
     error ChannelDoesNotExist();
     error InvalidChannelUpdate();
-    error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
-    error AlreadyInitialized();
     error TokenNotRegistered();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
         if (msg.sender != address(this)) {
-            revert Unauthorized();
-        }
-        _;
-    }
-
-    // handler functions are privileged from agent only
-    modifier onlyAgent(bytes32 agentID) {
-        bytes32 _agentID = _ensureAgentAddress(msg.sender);
-        if (_agentID != agentID) {
             revert Unauthorized();
         }
         _;
@@ -579,14 +568,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     function _ensureAgent(bytes32 agentID) internal view returns (address agent) {
         agent = CoreStorage.layout().agents[agentID];
         if (agent == address(0)) {
-            revert AgentDoesNotExist();
-        }
-    }
-
-    /// @dev Ensure that the specified address is an valid agent
-    function _ensureAgentAddress(address agent) internal view returns (bytes32 agentID) {
-        agentID = CoreStorage.layout().agentAddresses[agent];
-        if (agentID == bytes32(0)) {
             revert AgentDoesNotExist();
         }
     }
