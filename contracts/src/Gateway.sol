@@ -501,18 +501,19 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     }
 
     // See docs for `IGateway.sendMessage`
-    function sendMessage(bytes calldata xcm, bytes[] calldata assets) external {
+    function sendMessage(bytes calldata xcm, bytes[] calldata assets) external payable {
         CallsV2.sendMessage(xcm, assets);
     }
 
     // See docs for `IGateway.registerToken`
-    function registerToken(address token, uint128 xcmFeeAHP) external {
+    function registerToken(address token, uint128 xcmFeeAHP) external payable {
         CallsV2.registerToken(token, xcmFeeAHP);
     }
 
     // See docs for `IGateway.registerTokenOnKusama`
     function registerTokenOnKusama(address token, uint128 xcmFeeAHP, uint128 xcmFeeAHK)
         external
+        payable
     {
         CallsV2.registerTokenOnKusama(token, xcmFeeAHP, xcmFeeAHK);
     }

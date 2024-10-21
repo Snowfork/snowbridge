@@ -190,14 +190,19 @@ interface IGateway {
     // 2. Handle the assets in holding, either depositing them into
     //    some account, or forwarding them to another destination.
     //
-    function sendMessage(bytes calldata xcm, bytes[] calldata assets) external;
+    // To incentivize message delivery, some amount of ether should be passed as well.
+    // will also be sent across the bridge as WETH, and given to the relayer as a reward. This
+    // amount should at least cover the total cost of delivery to Polkadot,
+    //
+    function sendMessage(bytes calldata xcm, bytes[] calldata assets) external payable;
 
     // Register Ethereum-native token on AHP, using `xcmFeeAHP` of `msg.value`
     // to pay for execution on AHP
-    function registerToken(address token, uint128 xcmFeeAHP) external;
+    function registerToken(address token, uint128 xcmFeeAHP) external payable;
 
     // Register Ethereum-native token on AHK, using `xcmFeeAHP` and `xcmFeeAHK`
     // of `msg.value` to pay for execution on AHP and AHK respectively.
     function registerTokenOnKusama(address token, uint128 xcmFeeAHP, uint128 xcmFeeAHK)
-        external;
+        external
+        payable;
 }
