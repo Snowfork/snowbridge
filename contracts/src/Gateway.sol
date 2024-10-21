@@ -18,7 +18,6 @@ import {
     MultiAddress,
     Ticket,
     Costs,
-    TokenInfo,
     AgentExecuteCommand
 } from "./Types.sol";
 import {Upgrade} from "./Upgrade.sol";
@@ -439,8 +438,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return Assets.isTokenRegistered(token);
     }
 
-    function tokenInfo(address token) external view returns (TokenInfo memory) {
-        return AssetsStorage.layout().tokenRegistry[token];
+    function tokenForeignIDOf(address token) external view returns (bytes32) {
+        return AssetsStorage.layout().tokenRegistry[token].foreignID;
     }
 
     // Total fee for registering a token
