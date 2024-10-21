@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
-import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress} from "../Types.sol";
+import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress, TokenInfo} from "../Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
@@ -85,6 +85,9 @@ interface IGateway {
 
     /// @dev Check whether a token is registered
     function isTokenRegistered(address token) external view returns (bool);
+
+    /// @dev Get token id an ERC20 contract address.
+    function tokenForeignIDOf(address token) external view returns (bytes32);
 
     /// @dev Quote a fee in Ether for registering a token, covering
     /// 1. Delivery costs to BridgeHub
