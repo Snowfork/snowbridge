@@ -20,22 +20,9 @@ contract DeployLocalGatewayLogic is Script {
 
         address beefyClient = vm.envAddress("BEEFY_CLIENT_CONTRACT_ADDRESS");
 
-        ParaID bridgeHubParaID = ParaID.wrap(uint32(vm.envUint("BRIDGE_HUB_PARAID")));
-        bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
-
-        uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
-        uint128 maxDestinationFee = uint128(vm.envUint("RESERVE_TRANSFER_MAX_DESTINATION_FEE"));
-
         AgentExecutor executor = new AgentExecutor();
 
-        new Gateway(
-            address(beefyClient),
-            address(executor),
-            bridgeHubParaID,
-            bridgeHubAgentID,
-            foreignTokenDecimals,
-            maxDestinationFee
-        );
+        new Gateway(address(beefyClient), address(executor));
 
         vm.stopBroadcast();
     }

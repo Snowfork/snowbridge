@@ -11,6 +11,7 @@ import {IShell} from "../src/interfaces/IShell.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {MockGatewayV2} from "../test/mocks/MockGatewayV2.sol";
+import {Initializer} from "../src/Initializer.sol";
 import {Agent} from "../src/Agent.sol";
 import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {ChannelID, ParaID, OperatingMode} from "../src/Types.sol";
@@ -36,9 +37,7 @@ contract UpgradeShell is Script {
         address beefyClient;
         ParaID bridgeHubParaID;
         bytes32 bridgeHubAgentID;
-        uint8 foreignTokenDecimals;
-        uint128 maxDestinationFee;
-        Gateway.Config initializerParams;
+        Initializer.Config initializerParams;
     }
 
     function readConfig() internal pure returns (Config memory config) {
@@ -47,9 +46,7 @@ contract UpgradeShell is Script {
             beefyClient: 0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C,
             bridgeHubParaID: ParaID.wrap(1002),
             bridgeHubAgentID: 0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314,
-            foreignTokenDecimals: 10,
-            maxDestinationFee: dot(2),
-            initializerParams: Gateway.Config({
+            initializerParams: Initializer.Config({
                 mode: OperatingMode.Normal,
                 deliveryCost: mDot(100), // 0.1 DOT
                 registerTokenFee: 0.002 ether,
@@ -59,7 +56,9 @@ contract UpgradeShell is Script {
                 assetHubReserveTransferFee: mDot(100), // 0.1 DOT
                 exchangeRate: ud60x18(0.0024e18),
                 multiplier: ud60x18(1.33e18),
-                rescueOperator: 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967
+                rescueOperator: 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967,
+                foreignTokenDecimals: 10,
+                maxDestinationFee: dot(2)
             })
         });
     }
@@ -73,18 +72,15 @@ contract UpgradeShell is Script {
         AgentExecutor executor = new AgentExecutor();
 
         // Gateway implementation
-        Gateway gatewayLogic = new Gateway(
-            config.beefyClient,
-            address(executor),
-            config.bridgeHubParaID,
-            config.bridgeHubAgentID,
-            config.foreignTokenDecimals,
-            config.maxDestinationFee
-        );
+        Gateway gatewayLogic = new Gateway(config.beefyClient, address(executor));
 
         IShell shell = IShell(config.gatewayProxy);
 
-        shell.upgrade(address(gatewayLogic), address(gatewayLogic).codehash, abi.encode(config.initializerParams));
+        shell.upgrade(
+            address(gatewayLogic),
+            address(gatewayLogic).codehash,
+            abi.encode(config.initializerParams)
+        );
 
         vm.stopBroadcast();
     }
