@@ -185,14 +185,14 @@ interface IGateway {
     // On Asset Hub, the assets will be received into the assets holding register.
     //
     // The `xcm` should contain the necessary instructions to:
-    // 1. Pay XCM execution fees, either from assets in holding,
+    // 1. Pay XCM execution fees for `xcm`, either from assets in holding,
     //    or from the sovereign account of `msg.sender`.
     // 2. Handle the assets in holding, either depositing them into
     //    some account, or forwarding them to another destination.
     //
-    // To incentivize message delivery, some amount of ether should be passed as well.
-    // will also be sent across the bridge as WETH, and given to the relayer as a reward. This
-    // amount should at least cover the total cost of delivery to Polkadot,
+    // To incentivize message delivery, some amount of ether must be passed and should
+    // at least cover the total cost of delivery to Polkadot. This ether be sent across
+    // the bridge as WETH, and given to the relayer as compensation and incentivization.
     //
     function sendMessage(bytes calldata xcm, bytes[] calldata assets) external payable;
 
