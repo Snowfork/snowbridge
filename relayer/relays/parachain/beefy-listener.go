@@ -31,7 +31,7 @@ type BeefyListener struct {
 	parachainConnection *parachain.Connection
 	ofac                *ofac.OFAC
 	paraID              uint32
-	tasks               chan<- *Task
+	tasks               chan<- *TaskV2
 	scanner             *Scanner
 }
 
@@ -42,7 +42,7 @@ func NewBeefyListener(
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
 	ofac *ofac.OFAC,
-	tasks chan<- *Task,
+	tasks chan<- *TaskV2,
 ) *BeefyListener {
 	return &BeefyListener{
 		config:              config,
@@ -325,7 +325,7 @@ func (li *BeefyListener) generateAndValidateParasHeadsMerkleProof(input *ProofIn
 	return &merkleProofData, paraHeads, nil
 }
 
-func (li *BeefyListener) waitAndSend(ctx context.Context, task *Task, waitingPeriod uint64) error {
+func (li *BeefyListener) waitAndSend(ctx context.Context, task *TaskV2, waitingPeriod uint64) error {
 	paraNonce := (*task.MessageProofs)[0].Message.Nonce
 	log.Info(fmt.Sprintf("waiting for nonce %d to be picked up by another relayer", paraNonce))
 	var cnt uint64

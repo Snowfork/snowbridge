@@ -25,18 +25,18 @@ import (
 )
 
 type EthereumWriter struct {
-	config      *SinkConfig
-	conn        *ethereum.Connection
-	gateway     *contracts.Gateway
-	tasks       <-chan *Task
-	gatewayABI  abi.ABI
+	config     *SinkConfig
+	conn       *ethereum.Connection
+	gateway    *contracts.Gateway
+	tasks      <-chan *TaskV2
+	gatewayABI abi.ABI
 	relayConfig *Config
 }
 
 func NewEthereumWriter(
 	config *SinkConfig,
 	conn *ethereum.Connection,
-	tasks <-chan *Task,
+	tasks <-chan *TaskV2,
 	relayConfig *Config,
 ) (*EthereumWriter, error) {
 	return &EthereumWriter{
@@ -97,7 +97,7 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 func (wr *EthereumWriter) WriteChannels(
 	ctx context.Context,
 	options *bind.TransactOpts,
-	task *Task,
+	task *TaskV2,
 ) error {
 	for _, proof := range *task.MessageProofs {
 		err := wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
@@ -113,10 +113,10 @@ func (wr *EthereumWriter) WriteChannels(
 func (wr *EthereumWriter) WriteChannel(
 	ctx context.Context,
 	options *bind.TransactOpts,
-	commitmentProof *MessageProof,
+	commitmentProof *MessageProofV2,
 	proof *ProofOutput,
 ) error {
-	message := commitmentProof.Message.IntoInboundMessage()
+	message := commitmentProof.Message.IntoInboundMessageV2()
 
 	convertedHeader, err := convertHeader(proof.Header)
 	if err != nil {

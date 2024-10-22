@@ -467,6 +467,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         emit IGatewayV2.InboundMessageDispatched(message.nonce, success, rewardAddress);
     }
 
+    function isRelayed(uint64 nonce) external view returns (bool) {
+        CoreStorage.Layout storage $ = CoreStorage.layout();
+        return $.inboundNonce.get(nonce);
+    }
+
     function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {
         for (uint256 i = 0; i < message.commands.length; i++) {
             if (gasleft() * 63 / 64 < message.commands[i].gas + DISPATCH_OVERHEAD_GAS_V2) {

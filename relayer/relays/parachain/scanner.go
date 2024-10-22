@@ -30,9 +30,14 @@ type Scanner struct {
 
 // Scans for all parachain message commitments that need to be relayed and can be
 // proven using the MMR root at the specified beefyBlockNumber of the relay chain.
-// The algorithm fetch PendingOrders storage in OutboundQueue of BH and
-// just relay each order which has not been processed on Ethereum yet.
-func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*Task, error) {
+//
+// The algorithm works roughly like this:
+//  1. Fetch channel nonce on both sides of the bridge and compare them
+//  2. If the nonce on the parachain side is larger that means messages need to be relayed. If not then exit early.
+//  3. Scan parachain blocks to figure out exactly which commitments need to be relayed.
+//  4. For all the parachain blocks with unsettled commitments, determine the relay chain block number in which the
+//     parachain block was included.
+func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*TaskV2, error) {
 	// fetch last parachain header that was finalized *before* the BEEFY block
 	beefyBlockMinusOneHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber - 1))
 	if err != nil {
@@ -65,31 +70,31 @@ func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*Task, e
 func (s *Scanner) findTasks(
 	ctx context.Context,
 	paraHash types.Hash,
-) ([]*Task, error) {
-	// Fetch PendingOrders storage in parachain outbound queue
-	storageKey := types.NewStorageKey(types.CreateStorageKeyPrefix("EthereumOutboundQueueV2", "PendingOrders"))
+) ([]*TaskV2, error) {
+	// Fetch LockedFee storage in parachain outbound queue
+	storageKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueueV2", "LockedFee", nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create storage key for parachain outbound queue lockedFee: %w", err)
+	}
 	keys, err := s.paraConn.API().RPC.State.GetKeys(storageKey, paraHash)
 	if err != nil {
-		return nil, fmt.Errorf("fetch nonces from PendingOrders start with key '%v' and hash '%v': %w", storageKey, paraHash, err)
+		return nil, fmt.Errorf("fetch nonces from lockedFee start with key '%v' and hash '%v': %w", storageKey, paraHash, err)
 	}
-	var pendingOrders []PendingOrder
+	var pendingNonces []FeeWithBlockNumber
 	for _, key := range keys {
-		var pendingOrder PendingOrder
-		value, err := s.paraConn.API().RPC.State.GetStorageRaw(key, paraHash)
+		var pendingNonce FeeWithBlockNumber
+		ok, err := s.paraConn.API().RPC.State.GetStorage(key, &pendingNonce, paraHash)
 		if err != nil {
-			return nil, fmt.Errorf("fetch value of pendingOrder with key '%v' and hash '%v': %w", key, paraHash, err)
+			return nil, fmt.Errorf("fetch value of pendingFee with key '%v' and hash '%v': %w", key, paraHash, err)
 		}
-		decoder := scale.NewDecoder(bytes.NewReader(*value))
-		err = decoder.Decode(&pendingOrder)
-		if err != nil {
-			return nil, fmt.Errorf("decode order error: %w", err)
+		if ok {
+			pendingNonces = append(pendingNonces, pendingNonce)
 		}
-		pendingOrders = append(pendingOrders, pendingOrder)
 	}
 
-	tasks, err := s.filterTasks(
+	tasks, err := s.findTasksImpl(
 		ctx,
-		pendingOrders,
+		pendingNonces,
 	)
 	if err != nil {
 		return nil, err
@@ -103,15 +108,13 @@ func (s *Scanner) findTasks(
 	return tasks, nil
 }
 
-// Filter profitable and undelivered orders, convert to tasks
-// Todo: check order is profitable or not with some price oracle
-// or some fee estimation api
-func (s *Scanner) filterTasks(
+// Searches from for all outstanding commitments
+func (s *Scanner) findTasksImpl(
 	ctx context.Context,
-	pendingNonces []PendingOrder,
-) ([]*Task, error) {
+	pendingNonces []FeeWithBlockNumber,
+) ([]*TaskV2, error) {
 
-	var tasks []*Task
+	var tasks []*TaskV2
 
 	for _, pending := range pendingNonces {
 
@@ -155,7 +158,7 @@ func (s *Scanner) filterTasks(
 			continue
 		}
 
-		var messages []OutboundQueueMessage
+		var messages []OutboundQueueMessageV2
 		raw, err := s.paraConn.API().RPC.State.GetStorageRaw(messagesKey, blockHash)
 		if err != nil {
 			return nil, fmt.Errorf("fetch committed messages for block %v: %w", blockHash.Hex(), err)
@@ -166,7 +169,7 @@ func (s *Scanner) filterTasks(
 			return nil, fmt.Errorf("decode message length error: %w", err)
 		}
 		for i := uint64(0); i < n.Uint64(); i++ {
-			m := OutboundQueueMessage{}
+			m := OutboundQueueMessageV2{}
 			err = decoder.Decode(&m)
 			messages = append(messages, m)
 		}
@@ -185,7 +188,7 @@ func (s *Scanner) filterTasks(
 		}
 
 		if len(result.proofs) > 0 {
-			task := Task{
+			task := TaskV2{
 				Header:        header,
 				MessageProofs: &result.proofs,
 				ProofInput:    nil,
@@ -208,7 +211,7 @@ type PersistedValidationData struct {
 // For each task, gatherProofInputs will search to find the relay chain block
 // in which that header was included as well as the parachain heads for that block.
 func (s *Scanner) gatherProofInputs(
-	tasks []*Task,
+	tasks []*TaskV2,
 ) error {
 	for _, task := range tasks {
 
@@ -297,11 +300,11 @@ func scanForOutboundQueueProofs(
 	api *gsrpc.SubstrateAPI,
 	blockHash types.Hash,
 	commitmentHash types.H256,
-	messages []OutboundQueueMessage,
+	messages []OutboundQueueMessageV2,
 ) (*struct {
-	proofs []MessageProof
+	proofs []MessageProofV2
 }, error) {
-	proofs := []MessageProof{}
+	proofs := []MessageProofV2{}
 
 	for i := len(messages) - 1; i >= 0; i-- {
 		message := messages[i]
@@ -324,7 +327,7 @@ func scanForOutboundQueueProofs(
 	}
 
 	return &struct {
-		proofs []MessageProof
+		proofs []MessageProofV2
 	}{
 		proofs: proofs,
 	}, nil
@@ -334,10 +337,10 @@ func fetchMessageProof(
 	api *gsrpc.SubstrateAPI,
 	blockHash types.Hash,
 	messageIndex uint64,
-	message OutboundQueueMessage,
-) (MessageProof, error) {
+	message OutboundQueueMessageV2,
+) (MessageProofV2, error) {
 	var proofHex string
-	var proof MessageProof
+	var proof MessageProofV2
 
 	params, err := types.EncodeToHexString(messageIndex)
 	if err != nil {
@@ -364,7 +367,7 @@ func fetchMessageProof(
 		return proof, fmt.Errorf("decode merkle proof: %w", err)
 	}
 
-	return MessageProof{Message: message, Proof: merkleProof}, nil
+	return MessageProofV2{Message: message, Proof: merkleProof}, nil
 }
 
 func (s *Scanner) isNonceRelayed(ctx context.Context, nonce uint64) (bool, error) {
@@ -422,4 +425,27 @@ func (s *Scanner) findOrderUndelivered(
 	}
 
 	return undeliveredOrders, nil
+}
+
+func (s *Scanner) isNonceRelayed(ctx context.Context, nonce uint64) (bool, error) {
+	var isRelayed bool
+	// Fetch latest nonce in ethereum gateway
+	gatewayAddress := common.HexToAddress(s.config.Contracts.Gateway)
+	gatewayContract, err := contracts.NewGateway(
+		gatewayAddress,
+		s.ethConn.Client(),
+	)
+	if err != nil {
+		return isRelayed, fmt.Errorf("create gateway contract for address '%v': %w", gatewayAddress, err)
+	}
+
+	options := bind.CallOpts{
+		Pending: true,
+		Context: ctx,
+	}
+	isRelayed, err = gatewayContract.IsRelayed(&options, nonce)
+	if err != nil {
+		return isRelayed, fmt.Errorf("check nonce from gateway contract: %w", err)
+	}
+	return isRelayed, nil
 }
