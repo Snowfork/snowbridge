@@ -65,7 +65,7 @@ snowbridge/asset-hub-parachain-relay
 
 ### Lodestar, Polkadot Nodes & Chainalysis Key
 
-Ask for API keys for `dwellir-eth-node-api-key`, `dwellir-polkadot-node-api-key` and `chainalysis-api-key` in Snowbridge Relayer Telegram group: [https://t.me/+I8Iel-Eaxcw3NjU0](https://t.me/+I8Iel-Eaxcw3NjU0)
+Ask for API keys for `dwellir-eth-node-api-key`, `dwellir-polkadot-node-api-key` and `chainalysis-api-key` in Snowbridge Relayer Telegram group: [https://t.me/+I8Iel-Eaxcw3NjU0](https://t.me/+I8Iel-Eaxcw3NjU0) (keys will be DM'ed to you).
 
 ### Ethereum Relay Key
 
