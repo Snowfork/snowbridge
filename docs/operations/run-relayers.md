@@ -83,6 +83,10 @@ Use the secret seed hash as the `snowbridge/asset-hub-ethereum-relay` secret.
 
 The `asset-hub-parachain-relay` is a private key for a funded account on Ethereum.
 
+## Set Relayer Number
+
+Once you have set up all of the above, ask for a relayer ID and relayer count in Snowbridge Relayer Telegram group: [https://t.me/+I8Iel-Eaxcw3NjU0](https://t.me/+I8Iel-Eaxcw3NjU0). The ID and count should be updated in your [inventory file](https://github.com/Snowfork/snowbrige-relayers-infra/blob/main/inventory/message-relayers/group\_vars/all.yml#L28-L29).
+
 ## Install Relayers
 
 Once you have added all the secrets, you can deploy your relayers:
@@ -105,6 +109,10 @@ Check that you see no relayer errors for each relayer:
 sudo journalctl -fu snowbridge-asset-hub-ethereum-relay --since today
 sudo journalctl -fu snowbridge-asset-hub-parachain-relay --since today
 ```
+
+### Increment Relayer count
+
+Once the relayer has started up successfully, all relaying parties should increment their [relayer count config](https://github.com/Snowfork/snowbrige-relayers-infra/blob/main/inventory/message-relayers/group\_vars/all.yml#L29) and redeploy their relayer config. This action will be prompted in the TG group.
 
 ### Monitoring
 
