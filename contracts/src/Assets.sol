@@ -310,9 +310,4 @@ library Assets {
         }
         return $.tokenAddressOf[tokenID];
     }
-
-    function _isTokenRegistered(address token) internal view returns (bool) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        return $.tokenRegistry[token].isRegistered;
-    }
 }
