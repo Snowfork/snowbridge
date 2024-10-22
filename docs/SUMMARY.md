@@ -42,3 +42,4 @@
 * [Governance and Operational Processes](operations/governance-and-operational-processes.md)
 * [General Governance Updates](operations/governance-updates.md)
 * [Test Runtime Upgrades](operations/test-runtime-upgrades.md)
+* [Run Relayers](operations/run-relayers.md)
