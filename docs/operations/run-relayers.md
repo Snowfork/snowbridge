@@ -10,7 +10,7 @@ The first thing you will need is an AWS account. [Register](https://signin.aws.a
 
 ## Clone infra Repo
 
-Clone the infrastructure repository:
+Clone the [infrastructure repository](https://github.com/Snowfork/snowbrige-relayers-infra):
 
 ```sh
 git clone https://github.com/Snowfork/snowbrige-relayers-infra.git
@@ -62,6 +62,8 @@ snowbridge/chainalysis-api-key
 snowbridge/asset-hub-ethereum-relay
 snowbridge/asset-hub-parachain-relay
 ```
+
+<figure><img src="../.gitbook/assets/Screenshot 2024-10-22 at 19.44.27.png" alt="" width="563"><figcaption><p>Example of how to add an AWS secret.</p></figcaption></figure>
 
 ### Lodestar, Polkadot Nodes & Chainalysis Key
 
