@@ -29,7 +29,7 @@ type BeefyListener struct {
 	relaychainConn      *relaychain.Connection
 	parachainConnection *parachain.Connection
 	paraID              uint32
-	tasks               chan<- *Task
+	tasks               chan<- *TaskV2
 	scanner             *Scanner
 }
 
@@ -39,7 +39,7 @@ func NewBeefyListener(
 	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
-	tasks chan<- *Task,
+	tasks chan<- *TaskV2,
 ) *BeefyListener {
 	return &BeefyListener{
 		config:              config,
@@ -160,7 +160,7 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 	}
 	for _, task := range tasks {
 		paraNonce := (*task.MessageProofs)[0].Message.Nonce
-		waitingPeriod := (paraNonce + li.scheduleConfig.TotalRelayerCount - li.scheduleConfig.ID) % li.scheduleConfig.TotalRelayerCount
+		waitingPeriod := (uint64(paraNonce) + li.scheduleConfig.TotalRelayerCount - li.scheduleConfig.ID) % li.scheduleConfig.TotalRelayerCount
 		err = li.waitAndSend(ctx, task, waitingPeriod)
 		if err != nil {
 			return fmt.Errorf("wait task for nonce %d: %w", paraNonce, err)
@@ -320,17 +320,17 @@ func (li *BeefyListener) generateAndValidateParasHeadsMerkleProof(input *ProofIn
 	return &merkleProofData, paraHeads, nil
 }
 
-func (li *BeefyListener) waitAndSend(ctx context.Context, task *Task, waitingPeriod uint64) error {
+func (li *BeefyListener) waitAndSend(ctx context.Context, task *TaskV2, waitingPeriod uint64) error {
 	paraNonce := (*task.MessageProofs)[0].Message.Nonce
 	log.Info(fmt.Sprintf("waiting for nonce %d to be picked up by another relayer", paraNonce))
 	var cnt uint64
 	var err error
 	for {
-		ethInboundNonce, err := li.scanner.findLatestNonce(ctx)
+		isRelayed, err := li.scanner.isNonceRelayed(ctx, uint64(paraNonce))
 		if err != nil {
 			return err
 		}
-		if ethInboundNonce >= paraNonce {
+		if isRelayed {
 			log.Info(fmt.Sprintf("nonce %d picked up by another relayer, just skip", paraNonce))
 			return nil
 		}

@@ -35,7 +35,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
 
 	// channel for messages from beefy listener to ethereum writer
-	var tasks = make(chan *Task, 1)
+	var tasks = make(chan *TaskV2, 1)
 
 	ethereumChannelWriter, err := NewEthereumWriter(
 		&config.Sink,

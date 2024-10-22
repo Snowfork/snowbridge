@@ -27,14 +27,14 @@ type EthereumWriter struct {
 	config     *SinkConfig
 	conn       *ethereum.Connection
 	gateway    *contracts.Gateway
-	tasks      <-chan *Task
+	tasks      <-chan *TaskV2
 	gatewayABI abi.ABI
 }
 
 func NewEthereumWriter(
 	config *SinkConfig,
 	conn *ethereum.Connection,
-	tasks <-chan *Task,
+	tasks <-chan *TaskV2,
 ) (*EthereumWriter, error) {
 	return &EthereumWriter{
 		config:  config,
@@ -93,7 +93,7 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 func (wr *EthereumWriter) WriteChannels(
 	ctx context.Context,
 	options *bind.TransactOpts,
-	task *Task,
+	task *TaskV2,
 ) error {
 	for _, proof := range *task.MessageProofs {
 		err := wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
@@ -109,10 +109,10 @@ func (wr *EthereumWriter) WriteChannels(
 func (wr *EthereumWriter) WriteChannel(
 	ctx context.Context,
 	options *bind.TransactOpts,
-	commitmentProof *MessageProof,
+	commitmentProof *MessageProofV2,
 	proof *ProofOutput,
 ) error {
-	message := commitmentProof.Message.IntoInboundMessage()
+	message := commitmentProof.Message.IntoInboundMessageV2()
 
 	convertedHeader, err := convertHeader(proof.Header)
 	if err != nil {
@@ -143,8 +143,11 @@ func (wr *EthereumWriter) WriteChannel(
 		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 
-	tx, err := wr.gateway.SubmitV1(
-		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
+	// Todo: from config
+	var rewardAddress [32]byte
+
+	tx, err := wr.gateway.V2Submit(
+		options, message, commitmentProof.Proof.InnerHashes, verificationProof, rewardAddress,
 	)
 	if err != nil {
 		return fmt.Errorf("send transaction Gateway.submit: %w", err)
