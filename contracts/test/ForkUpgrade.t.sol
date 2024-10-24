@@ -41,9 +41,9 @@ contract ForkUpgradeTest is Test {
 
     function checkLegacyToken() public {
         assert(IGateway(GatewayProxy).isTokenRegistered(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
-        assertEq(IGateway(GatewayProxy).tokenForeignIDOf(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2), bytes32(""));
+        assertEq(IGateway(GatewayProxy).foreignTokenIDOf(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2), bytes32(""));
         assert(IGateway(GatewayProxy).isTokenRegistered(0xBA41Ddf06B7fFD89D1267b5A93BFeF2424eb2003));
-        assertEq(IGateway(GatewayProxy).tokenForeignIDOf(0xBA41Ddf06B7fFD89D1267b5A93BFeF2424eb2003), bytes32(""));
+        assertEq(IGateway(GatewayProxy).foreignTokenIDOf(0xBA41Ddf06B7fFD89D1267b5A93BFeF2424eb2003), bytes32(""));
     }
 
     function registerForeignToken() public {
@@ -56,7 +56,7 @@ contract ForkUpgradeTest is Test {
 
         GatewayPNA(GatewayProxy).registerForeignToken(abi.encode(params));
         assert(IGateway(GatewayProxy).isTokenRegistered(0x70D9d338A6b17957B16836a90192BD8CDAe0b53d));
-        assertEq(IGateway(GatewayProxy).tokenForeignIDOf(0x70D9d338A6b17957B16836a90192BD8CDAe0b53d), dotId);
+        assertEq(IGateway(GatewayProxy).foreignTokenIDOf(0x70D9d338A6b17957B16836a90192BD8CDAe0b53d), dotId);
     }
 
     function testSanityCheck() public {
