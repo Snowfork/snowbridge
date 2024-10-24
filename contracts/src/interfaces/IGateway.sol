@@ -2,20 +2,71 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
-import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress} from "../Types.sol";
+import {MultiAddress} from "../MultiAddress.sol";
+import {
+    OperatingMode,
+    InboundMessage as InboundMessageV1,
+    ParaID,
+    ChannelID
+} from "../v1/Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 interface IGateway {
+    error InvalidToken();
+    error InvalidAmount();
+    error InvalidDestination();
+    error TokenNotRegistered();
+    error Unsupported();
+    error InvalidDestinationFee();
+    error AgentDoesNotExist();
+    error TokenAlreadyRegistered();
+    error TokenMintFailed();
+    error TokenTransferFailed();
+    error InvalidProof();
+    error InvalidNonce();
+    error NotEnoughGas();
+    error FeePaymentToLow();
+    error InvalidFee();
+    error Unauthorized();
+    error Disabled();
+    error AgentAlreadyCreated();
+    error ChannelAlreadyCreated();
+    error ChannelDoesNotExist();
+    error InvalidChannelUpdate();
+    error AgentExecutionFailed(bytes returndata);
+    error InvalidAgentExecutionPayload();
+    error InvalidConstructorParams();
+    error AlreadyInitialized();
+    error TooManyAssets();
+
     /**
      * Events
      */
 
-    // Emitted when inbound message has been dispatched
-    event InboundMessageDispatched(ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bool success);
+    // V1: Emitted when inbound message has been dispatched
+    event InboundMessageDispatched(
+        ChannelID indexed channelID,
+        uint64 nonce,
+        bytes32 indexed messageID,
+        bool success
+    );
+
+    // V2: Emitted when inbound message has been dispatched
+    event InboundMessageDispatched(
+        uint64 indexed nonce, bool success, bytes32 rewardAddress
+    );
 
     // Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
-    event OutboundMessageAccepted(ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bytes payload);
+    event OutboundMessageAccepted(
+        ChannelID indexed channelID,
+        uint64 nonce,
+        bytes32 indexed messageID,
+        bytes payload
+    );
+
+    // v2 Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
+    event OutboundMessageAccepted(uint64 nonce, uint256 reward, bytes payload);
 
     // Emitted when an agent has been created for a consensus system on Polkadot
     event AgentCreated(bytes32 agentID, address agent);
@@ -33,7 +84,9 @@ interface IGateway {
     event PricingParametersChanged();
 
     // Emitted when funds are withdrawn from an agent
-    event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
+    event AgentFundsWithdrawn(
+        bytes32 indexed agentID, address indexed recipient, uint256 amount
+    );
 
     // Emitted when foreign token from polkadot registed
     event ForeignTokenRegistered(bytes32 indexed tokenID, address token);
@@ -43,9 +96,15 @@ interface IGateway {
      */
     function operatingMode() external view returns (OperatingMode);
 
-    function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode);
+    function channelOperatingModeOf(ChannelID channelID)
+        external
+        view
+        returns (OperatingMode);
 
-    function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);
+    function channelNoncesOf(ChannelID channelID)
+        external
+        view
+        returns (uint64, uint64);
 
     function agentOf(bytes32 agentID) external view returns (address);
 
@@ -59,7 +118,7 @@ interface IGateway {
 
     // Submit a message from a Polkadot network
     function submitV1(
-        InboundMessage calldata message,
+        InboundMessageV1 calldata message,
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
     ) external;
@@ -97,10 +156,11 @@ interface IGateway {
     /// @dev Quote a fee in Ether for sending a token
     /// 1. Delivery costs to BridgeHub
     /// 2. XCM execution costs on destinationChain
-    function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
-        external
-        view
-        returns (uint256);
+    function quoteSendTokenFee(
+        address token,
+        ParaID destinationChain,
+        uint128 destinationFee
+    ) external view returns (uint256);
 
     /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
     function sendToken(
@@ -110,4 +170,39 @@ interface IGateway {
         uint128 destinationFee,
         uint128 amount
     ) external payable;
+
+    // V2
+
+    // Send an XCM with arbitrary assets to Polkadot Asset Hub
+    //
+    // Params:
+    //   * `xcm` (bytes): SCALE-encoded VersionedXcm message
+    //   * `assets` (bytes[]): Array of asset specs, constrained to maximum of eight.
+    //
+    // Supported asset specs:
+    // * ERC20: abi.encode(0, tokenAddress, value)
+    //
+    // On Asset Hub, the assets will be received into the assets holding register.
+    //
+    // The `xcm` should contain the necessary instructions to:
+    // 1. Pay XCM execution fees for `xcm`, either from assets in holding,
+    //    or from the sovereign account of `msg.sender`.
+    // 2. Handle the assets in holding, either depositing them into
+    //    some account, or forwarding them to another destination.
+    //
+    // To incentivize message delivery, some amount of ether must be passed and should
+    // at least cover the total cost of delivery to Polkadot. This ether be sent across
+    // the bridge as WETH, and given to the relayer as compensation and incentivization.
+    //
+    function sendMessage(bytes calldata xcm, bytes[] calldata assets) external payable;
+
+    // Register Ethereum-native token on AHP, using `xcmFeeAHP` of `msg.value`
+    // to pay for execution on AHP.
+    function registerToken(address token, uint128 xcmFeeAHP) external payable;
+
+    // Register Ethereum-native token on AHK, using `xcmFeeAHP` and `xcmFeeAHK`
+    // of `msg.value` to pay for execution on AHP and AHK respectively.
+    function registerTokenOnKusama(address token, uint128 xcmFeeAHP, uint128 xcmFeeAHK)
+        external
+        payable;
 }

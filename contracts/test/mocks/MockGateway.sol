@@ -12,43 +12,48 @@ import {UD60x18} from "prb/math/src/UD60x18.sol";
 contract MockGateway is Gateway {
     bool public commitmentsAreVerified;
 
-    constructor(
-        address beefyClient,
-        address agentExecutor,
-        ParaID bridgeHubParaID,
-        bytes32 bridgeHubHubAgentID,
-        uint8 foreignTokenDecimals,
-        uint128 maxDestinationFee
-    )
-        Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubHubAgentID, foreignTokenDecimals, maxDestinationFee)
+    constructor(address beefyClient, address agentExecutor)
+        Gateway(beefyClient, agentExecutor)
     {}
 
-    function agentExecutePublic(bytes calldata params) external {
-        this.agentExecute(params);
+    function v1_handleAgentExecute_public(bytes calldata params) external {
+        this.v1_handleAgentExecute(params);
     }
 
-    function createAgentPublic(bytes calldata params) external {
-        this.createAgent(params);
+    function v1_handleCreateAgent_public(bytes calldata params) external {
+        this.v1_handleCreateAgent(params);
     }
 
-    function upgradePublic(bytes calldata params) external {
-        this.upgrade(params);
+    function v1_handleUpgrade_public(bytes calldata params) external {
+        this.v1_handleUpgrade(params);
     }
 
-    function createChannelPublic(bytes calldata params) external {
-        this.createChannel(params);
+    function v1_handleSetOperatingMode_public(bytes calldata params) external {
+        this.v1_handleSetOperatingMode(params);
     }
 
-    function updateChannelPublic(bytes calldata params) external {
-        this.updateChannel(params);
+    function v1_handleTransferNativeFromAgent_public(bytes calldata params) external {
+        this.v1_handleTransferNativeFromAgent(params);
     }
 
-    function setOperatingModePublic(bytes calldata params) external {
-        this.setOperatingMode(params);
+    function v1_handleSetTokenTransferFees_public(bytes calldata params) external {
+        this.v1_handleSetTokenTransferFees(params);
     }
 
-    function transferNativeFromAgentPublic(bytes calldata params) external {
-        this.transferNativeFromAgent(params);
+    function v1_handleSetPricingParameters_public(bytes calldata params) external {
+        this.v1_handleSetPricingParameters(params);
+    }
+
+    function v1_handleUnlockNativeToken_public(bytes calldata params) external {
+        this.v1_handleUnlockNativeToken(params);
+    }
+
+    function v1_handleRegisterForeignToken_public(bytes calldata params) external {
+        this.v1_handleRegisterForeignToken(params);
+    }
+
+    function v1_handleMintForeignToken_public(bytes calldata params) external {
+        this.v1_handleMintForeignToken(params);
     }
 
     function setCommitmentsAreVerified(bool value) external {
@@ -67,25 +72,5 @@ contract MockGateway is Gateway {
             // for unit tests, verification is set with commitmentsAreVerified
             return commitmentsAreVerified;
         }
-    }
-
-    function setTokenTransferFeesPublic(bytes calldata params) external {
-        this.setTokenTransferFees(params);
-    }
-
-    function setPricingParametersPublic(bytes calldata params) external {
-        this.setPricingParameters(params);
-    }
-
-    function registerForeignTokenPublic(bytes calldata params) external {
-        this.registerForeignToken(params);
-    }
-
-    function mintForeignTokenPublic(bytes calldata params) external {
-        this.mintForeignToken(params);
-    }
-
-    function transferNativeTokenPublic(bytes calldata params) external {
-        this.transferNativeToken(params);
     }
 }

@@ -16,16 +16,7 @@ contract RococoGatewayV2 is Gateway {
         bytes32 bridgeHubAgentID,
         uint8 foreignTokenDecimals,
         uint128 destinationMaxTransferFee
-    )
-        Gateway(
-            beefyClient,
-            agentExecutor,
-            bridgeHubParaID,
-            bridgeHubAgentID,
-            foreignTokenDecimals,
-            destinationMaxTransferFee
-        )
-    {}
+    ) Gateway(beefyClient, agentExecutor) {}
 
     function initialize(bytes memory data) external override {
         // Prevent initialization of storage in implementation contract
