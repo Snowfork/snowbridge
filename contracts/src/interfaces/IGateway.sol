@@ -176,7 +176,7 @@ interface IGateway {
     // Send an XCM with arbitrary assets to Polkadot Asset Hub
     //
     // Params:
-    //   * `xcm` (bytes): SCALE-encoded XCM message
+    //   * `xcm` (bytes): SCALE-encoded VersionedXcm message
     //   * `assets` (bytes[]): Array of asset specs, constrained to maximum of eight.
     //
     // Supported asset specs:
@@ -197,7 +197,7 @@ interface IGateway {
     function sendMessage(bytes calldata xcm, bytes[] calldata assets) external payable;
 
     // Register Ethereum-native token on AHP, using `xcmFeeAHP` of `msg.value`
-    // to pay for execution on AHP
+    // to pay for execution on AHP.
     function registerToken(address token, uint128 xcmFeeAHP) external payable;
 
     // Register Ethereum-native token on AHK, using `xcmFeeAHP` and `xcmFeeAHK`
