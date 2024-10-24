@@ -57,7 +57,7 @@ type MessageProofV2 struct {
 	Proof   MerkleProof
 }
 
-type FeeWithBlockNumber struct {
+type PendingOrder struct {
 	Nonce       types.U64
 	BlockNumber types.U32
 	Fee         types.U128

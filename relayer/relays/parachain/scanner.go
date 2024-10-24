@@ -70,30 +70,30 @@ func (s *Scanner) findTasks(
 	ctx context.Context,
 	paraHash types.Hash,
 ) ([]*TaskV2, error) {
-	// Fetch LockedFee storage in parachain outbound queue
-	storageKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueueV2", "LockedFee", nil, nil)
+	// Fetch PendingOrders storage in parachain outbound queue
+	storageKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueueV2", "PendingOrders", nil, nil)
 	if err != nil {
-		return nil, fmt.Errorf("create storage key for parachain outbound queue lockedFee: %w", err)
+		return nil, fmt.Errorf("create storage key for parachain outbound queue PendingOrders: %w", err)
 	}
 	keys, err := s.paraConn.API().RPC.State.GetKeys(storageKey, paraHash)
 	if err != nil {
-		return nil, fmt.Errorf("fetch nonces from lockedFee start with key '%v' and hash '%v': %w", storageKey, paraHash, err)
+		return nil, fmt.Errorf("fetch nonces from PendingOrders start with key '%v' and hash '%v': %w", storageKey, paraHash, err)
 	}
-	var pendingNonces []FeeWithBlockNumber
+	var pendingOrders []PendingOrder
 	for _, key := range keys {
-		var pendingNonce FeeWithBlockNumber
-		ok, err := s.paraConn.API().RPC.State.GetStorage(key, &pendingNonce, paraHash)
+		var pendingOrder PendingOrder
+		ok, err := s.paraConn.API().RPC.State.GetStorage(key, &pendingOrder, paraHash)
 		if err != nil {
-			return nil, fmt.Errorf("fetch value of pendingFee with key '%v' and hash '%v': %w", key, paraHash, err)
+			return nil, fmt.Errorf("fetch value of pendingOrder with key '%v' and hash '%v': %w", key, paraHash, err)
 		}
 		if ok {
-			pendingNonces = append(pendingNonces, pendingNonce)
+			pendingOrders = append(pendingOrders, pendingOrder)
 		}
 	}
 
 	tasks, err := s.findTasksImpl(
 		ctx,
-		pendingNonces,
+		pendingOrders,
 	)
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func (s *Scanner) findTasks(
 // Searches from for all outstanding commitments
 func (s *Scanner) findTasksImpl(
 	ctx context.Context,
-	pendingNonces []FeeWithBlockNumber,
+	pendingNonces []PendingOrder,
 ) ([]*TaskV2, error) {
 
 	var tasks []*TaskV2
