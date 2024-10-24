@@ -82,13 +82,16 @@ func (s *Scanner) findTasks(
 	var pendingOrders []PendingOrder
 	for _, key := range keys {
 		var pendingOrder PendingOrder
-		ok, err := s.paraConn.API().RPC.State.GetStorage(key, &pendingOrder, paraHash)
+		value, err := s.paraConn.API().RPC.State.GetStorageRaw(key, paraHash)
 		if err != nil {
 			return nil, fmt.Errorf("fetch value of pendingOrder with key '%v' and hash '%v': %w", key, paraHash, err)
 		}
-		if ok {
-			pendingOrders = append(pendingOrders, pendingOrder)
+		decoder := scale.NewDecoder(bytes.NewReader(*value))
+		err = decoder.Decode(&pendingOrder)
+		if err != nil {
+			return nil, fmt.Errorf("decode order error: %w", err)
 		}
+		pendingOrders = append(pendingOrders, pendingOrder)
 	}
 
 	tasks, err := s.findTasksImpl(

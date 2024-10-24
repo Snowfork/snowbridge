@@ -3,6 +3,7 @@ package parachain
 import (
 	"math/big"
 
+	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 )
@@ -58,7 +59,28 @@ type MessageProofV2 struct {
 }
 
 type PendingOrder struct {
-	Nonce       types.U64
-	BlockNumber types.U32
-	Fee         types.U128
+	Nonce       uint64
+	BlockNumber uint32
+	Fee         big.Int
+}
+
+func (p *PendingOrder) Decode(decoder scale.Decoder) error {
+	var nonce types.U64
+	err := decoder.Decode(&nonce)
+	if err != nil {
+		return err
+	}
+	p.Nonce = uint64(nonce)
+	var blockNumber types.U32
+	err = decoder.Decode(&blockNumber)
+	if err != nil {
+		return err
+	}
+	p.BlockNumber = uint32(blockNumber)
+	decoded, err := decoder.DecodeUintCompact()
+	if err != nil {
+		return err
+	}
+	p.Fee = *types.U128{Int: decoded}.Int
+	return nil
 }
