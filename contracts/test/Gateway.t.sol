@@ -14,6 +14,7 @@ import {Gateway} from "../src/Gateway.sol";
 import {MockGateway} from "./mocks/MockGateway.sol";
 import {MockGatewayV2} from "./mocks/MockGatewayV2.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
+import {DepositWETH9AndSend} from "../src/DepositWETH9AndSend.sol";
 
 import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {Agent} from "../src/Agent.sol";
@@ -76,6 +77,7 @@ contract GatewayTest is Test {
 
     MockGateway public gatewayLogic;
     GatewayProxy public gateway;
+    DepositWETH9AndSend public depositAndSend;
 
     WETH9 public token;
 
@@ -154,6 +156,9 @@ contract GatewayTest is Test {
         recipientAddress20 = multiAddressFromBytes20(bytes20(keccak256("recipient")));
 
         dotTokenID = bytes32(uint256(1));
+
+        // Deposit and send
+        depositAndSend = new DepositWETH9AndSend(address(gateway), payable(token));
     }
 
     function makeCreateAgentCommand() public pure returns (Command, bytes memory) {
@@ -607,6 +612,29 @@ contract GatewayTest is Test {
         emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
         IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, 1, 1);
+    }
+
+
+    function testDepositAndSendTokenAddress32() public {
+        // Multilocation for recipient
+        ParaID destPara = ParaID.wrap(2043);
+
+        // register token first
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        IGateway(address(gateway)).registerToken{value: fee}(address(token));
+
+        fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
+
+        vm.expectEmit(true, true, false, true);
+        emit IGateway.TokenSent(address(token), address(depositAndSend), destPara, recipientAddress32, 1);
+
+        // Expect the gateway to emit `OutboundMessageAccepted`
+        vm.expectEmit(true, false, false, false);
+        emit IGateway.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
+
+        uint128 amount = 1;
+
+        depositAndSend.sendToken{value: fee + amount}(destPara, recipientAddress32, 1, amount);
     }
 
     function testSendTokenAddress32ToAssetHub() public {
