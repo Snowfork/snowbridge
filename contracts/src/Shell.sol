@@ -8,6 +8,11 @@ import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {IShell} from "./interfaces/IShell.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
 
+/**
+ * @title Shell
+ * Only used for initial trusted bootstrapping, the operator is removed after that
+ * so in fact no longer has any use for production.
+ */
 contract Shell is IShell, IUpgradable, IInitializable {
     address public immutable OPERATOR;
 
