@@ -5,9 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"reflect"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 
@@ -122,7 +123,10 @@ func (s *Scanner) findTasks(
 		return nil, err
 	}
 
-	s.gatherProofInputs(tasks)
+	err = s.gatherProofInputs(tasks)
+	if err != nil {
+		return nil, err
+	}
 
 	return tasks, nil
 }

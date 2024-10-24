@@ -86,7 +86,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return fmt.Errorf("unable to connect to ethereum: beefy: %w", err)
 	}
 
-	err = relay.relaychainConn.Connect(ctx)
+	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
 	if err != nil {
 		return err
 	}
