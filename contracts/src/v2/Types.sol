@@ -5,7 +5,7 @@ pragma solidity 0.8.25;
 import {OperatingMode} from "./../types/Common.sol";
 
 // Inbound message from a Polkadot parachain (via BridgeHub)
-struct InboundMessage {
+struct InboundMessageV2 {
     // origin
     bytes32 origin;
     // Message nonce

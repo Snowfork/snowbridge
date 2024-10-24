@@ -13,7 +13,7 @@ func Hex(b []byte) string {
 }
 
 func (wr *EthereumWriter) logFieldsForSubmission(
-	message contracts.InboundMessage,
+	message contracts.InboundMessageV2,
 	messageProof [][32]byte,
 	proof contracts.VerificationProof,
 ) log.Fields {
@@ -43,10 +43,9 @@ func (wr *EthereumWriter) logFieldsForSubmission(
 
 	params := log.Fields{
 		"message": log.Fields{
-			"channelID": Hex(message.ChannelID[:]),
-			"nonce":     message.Nonce,
-			"command":   message.Command,
-			"params":    Hex(message.Params),
+			"nonce":    message.Nonce,
+			"commands": message.Commands,
+			"origin":   Hex(message.Origin[:]),
 		},
 		"messageProof": messageProofHexes,
 		"proof": log.Fields{
