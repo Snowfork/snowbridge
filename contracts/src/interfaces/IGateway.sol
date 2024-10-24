@@ -87,7 +87,7 @@ interface IGateway {
     function isTokenRegistered(address token) external view returns (bool);
 
     /// @dev Get token id of an ERC20 contract address.
-    function foreignTokenIDOf(address token) external view returns (bytes32);
+    function queryForeignTokenID(address token) external view returns (bytes32);
 
     /// @dev Quote a fee in Ether for registering a token, covering
     /// 1. Delivery costs to BridgeHub

@@ -438,7 +438,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return Assets.isTokenRegistered(token);
     }
 
-    function foreignTokenIDOf(address token) external view returns (bytes32) {
+    function queryForeignTokenID(address token) external view returns (bytes32) {
         return AssetsStorage.layout().tokenRegistry[token].foreignID;
     }
 
