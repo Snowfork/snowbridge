@@ -28,6 +28,7 @@
                     curl
                     direnv
                     git
+                    lsof
                     jq
                     moreutils
                     typos
