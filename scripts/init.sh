@@ -38,6 +38,7 @@ rustup default stable
 rustup target add wasm32-unknown-unknown
 rustup install --profile minimal $RUST_NIGHTLY_VERSION
 rustup component add --toolchain $RUST_NIGHTLY_VERSION rustfmt
+rustup component add --toolchain stable rust-src
 rustup show
 
 echo "Installing sszgen"
