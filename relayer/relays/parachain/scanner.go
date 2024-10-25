@@ -125,7 +125,7 @@ func (s *Scanner) findTasks(
 
 	err = s.gatherProofInputs(tasks)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("gather proof input: %w", err)
 	}
 
 	return tasks, nil
