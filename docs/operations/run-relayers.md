@@ -13,7 +13,7 @@ The first thing you will need is an AWS account. [Register](https://signin.aws.a
 Clone the [infrastructure repository](https://github.com/Snowfork/snowbrige-relayers-infra):
 
 ```sh
-git clone https://github.com/Snowfork/snowbrige-relayers-infra.git
+git clone https://github.com/Snowfork/snowbridge-relayers-infra.git
 ```
 
 ## Install Ansible & dependencies
