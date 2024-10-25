@@ -283,7 +283,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 id: "ethereum",
                 name: "Ethereum",
                 type: "ethereum",
-                destinationIds: ["assethub", "mythos", "bifrost"],
+                destinationIds: ["assethub", "mythos", "bifrost", "hydradx", "moonbeam"],
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
@@ -452,6 +452,63 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         id: "WETH",
                         address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                         minimumTransferAmount: 15_000_000_000_000n,
+                    },
+                ],
+            },
+            {
+                id: "hydradx",
+                name: "Hydration",
+                type: "substrate",
+                destinationIds: [],
+                paraInfo: {
+                    paraId: 2034,
+                    destinationFeeDOT: 100_000_000n,
+                    skipExistentialDepositCheck: true,
+                    addressType: "32byte",
+                    decimals: 12,
+                    maxConsumers: 16,
+                },
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "WBTC",
+                        address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        minimumTransferAmount: 1n,
+                    },
+                ],
+            },
+            {
+                id: "moonbeam",
+                name: "Moonbeam",
+                type: "substrate",
+                destinationIds: [],
+                paraInfo: {
+                    paraId: 2004,
+                    destinationFeeDOT: 100_000_000n,
+                    skipExistentialDepositCheck: false,
+                    addressType: "20byte",
+                    decimals: 18,
+                    maxConsumers: 16,
+                },
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "WBTC",
+                        address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "wstETH",
+                        address: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        minimumTransferAmount: 1n,
                     },
                 ],
             },
