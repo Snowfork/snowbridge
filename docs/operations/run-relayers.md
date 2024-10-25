@@ -24,6 +24,7 @@ Install Ansible and its dependencies:
 brew install pipx
 pipx install --include-deps ansible boto3 botocore
 pipx ensurepath
+ansible-galaxy collection install amazon.aws
 ```
 
 ## Create AWS Key Pair
@@ -82,6 +83,10 @@ Use the secret seed hash as the `snowbridge/asset-hub-ethereum-relay` secret.
 ### Parachain Relay Key
 
 The `asset-hub-parachain-relay` is a private key for a funded account on Ethereum.
+
+## Fund Relayer Accounts
+
+The Ethereum and Polkadot BridgeHub account should be funded with $10 each, at least.
 
 ## Set Relayer Number
 
