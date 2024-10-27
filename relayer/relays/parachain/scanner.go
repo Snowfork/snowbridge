@@ -27,15 +27,10 @@ type Scanner struct {
 	tasks     chan<- *Task
 }
 
-// Scans for all parachain message commitments for the configured parachain channelID that need to be relayed and can be
+// Scans for all parachain message commitments that need to be relayed and can be
 // proven using the MMR root at the specified beefyBlockNumber of the relay chain.
-//
-// The algorithm works roughly like this:
-//  1. Fetch channel nonce on both sides of the bridge and compare them
-//  2. If the nonce on the parachain side is larger that means messages need to be relayed. If not then exit early.
-//  3. Scan parachain blocks to figure out exactly which commitments need to be relayed.
-//  4. For all the parachain blocks with unsettled commitments, determine the relay chain block number in which the
-//     parachain block was included.
+// The algorithm fetch PendingOrders storage in OutboundQueue of BH and
+// just relay each order which has not been processed on Ethereum yet.
 func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*TaskV2, error) {
 	// fetch last parachain header that was finalized *before* the BEEFY block
 	beefyBlockMinusOneHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber - 1))
