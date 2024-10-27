@@ -16,7 +16,7 @@ struct InboundMessage {
 
 struct Command {
     uint8 kind;
-    uint256 gas;
+    uint64 gas;
     bytes payload;
 }
 
@@ -34,6 +34,7 @@ struct Ticket {
     address origin;
     bytes[] assets;
     bytes xcm;
+    bytes claimer;
     uint256 reward;
 }
 

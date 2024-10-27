@@ -500,21 +500,31 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return true;
     }
 
+    function v2_isDispatched(uint64 nonce) external view returns (bool) {
+        CoreStorage.Layout storage $ = CoreStorage.layout();
+        return $.inboundNonce.get(nonce);
+    }
+
     // See docs for `IGateway.sendMessage`
-    function sendMessage(bytes calldata xcm, bytes[] calldata assets) external payable {
-        CallsV2.sendMessage(xcm, assets);
+    function v2_sendMessage(
+        bytes calldata xcm,
+        bytes[] calldata assets,
+        bytes calldata claimer
+    ) external payable {
+        CallsV2.sendMessage(xcm, assets, claimer);
     }
 
     // See docs for `IGateway.registerToken`
-    function registerToken(address token, uint128 xcmFeeAHP) external payable {
+    function v2_registerToken(address token, uint128 xcmFeeAHP) external payable {
         CallsV2.registerToken(token, xcmFeeAHP);
     }
 
     // See docs for `IGateway.registerTokenOnKusama`
-    function registerTokenOnKusama(address token, uint128 xcmFeeAHP, uint128 xcmFeeAHK)
-        external
-        payable
-    {
+    function v2_registerTokenOnKusama(
+        address token,
+        uint128 xcmFeeAHP,
+        uint128 xcmFeeAHK
+    ) external payable {
         CallsV2.registerTokenOnKusama(token, xcmFeeAHP, xcmFeeAHK);
     }
 

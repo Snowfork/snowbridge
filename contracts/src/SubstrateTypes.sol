@@ -54,6 +54,15 @@ library SubstrateTypes {
         }
     }
 
+    // solhint-disable-next-line func-name-mixedcase
+    function OptionVecU8(bytes memory v) internal pure returns (bytes memory) {
+        if (v.length == 0) {
+            return hex"00";
+        } else {
+            return bytes.concat(bytes1(0x01), VecU8(v));
+        }
+    }
+
     /**
      * @dev SCALE-encodes `router_primitives::inbound::VersionedMessage` containing payload
      * `NativeTokensMessage::Create`
@@ -213,14 +222,21 @@ library SubstrateTypes {
     //   origin: H160,
     //   assets: Vec<Asset>
     //   xcm: Vec<u8>
+    //   claimer: Option<Vec<u8>>
     // }
+    // ```
     //
-    function encodePayloadV2(address origin, bytes[] memory assets, bytes memory xcm)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return bytes.concat(abi.encodePacked(origin), VecAsset(assets), VecU8(xcm));
+    //
+    //
+    function encodePayloadV2(
+        address origin,
+        bytes[] memory assets,
+        bytes memory xcm,
+        bytes memory claimer
+    ) internal pure returns (bytes memory) {
+        return bytes.concat(
+            abi.encodePacked(origin), VecAsset(assets), VecU8(xcm), OptionVecU8(claimer)
+        );
     }
 
     // Encode `Vec<Asset>`
