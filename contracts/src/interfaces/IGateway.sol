@@ -55,7 +55,7 @@ interface IGateway {
 
     // V2: Emitted when inbound message has been dispatched
     event InboundMessageDispatched(
-        uint64 indexed nonce, bool success, bytes32 rewardAddress
+        uint64 indexed nonce, bool success, bytes32 indexed rewardAddress
     );
 
     // Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
