@@ -9,6 +9,7 @@ import {
     ParaID,
     ChannelID
 } from "../v1/Types.sol";
+import {InboundMessage as InboundMessageV2} from "../v2/Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
@@ -172,6 +173,14 @@ interface IGateway {
     ) external payable;
 
     // V2
+
+    // Submit a message for verification and dispatch
+    function v2_submit(
+        InboundMessageV2 calldata message,
+        bytes32[] calldata leafProof,
+        Verification.Proof calldata headerProof,
+        bytes32 rewardAddress
+    ) external;
 
     // Send an XCM with arbitrary assets to Polkadot Asset Hub
     //

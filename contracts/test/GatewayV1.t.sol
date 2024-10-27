@@ -40,6 +40,7 @@ import {TokenLib} from "../src/TokenLib.sol";
 import {Token} from "../src/Token.sol";
 
 import {Initializer} from "../src/Initializer.sol";
+import {Constants} from "../src/Constants.sol";
 
 import {
     UpgradeParams,
@@ -67,7 +68,7 @@ import {
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
-contract GatewayTest is Test {
+contract GatewayV1Test is Test {
     // Emitted when token minted/burnt/transfered
     event Transfer(address indexed from, address indexed to, uint256 value);
 
@@ -124,8 +125,6 @@ contract GatewayTest is Test {
             mode: OperatingMode.Normal,
             deliveryCost: outboundFee,
             registerTokenFee: registerTokenFee,
-            assetHubParaID: assetHubParaID,
-            assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
             exchangeRate: exchangeRate,
@@ -143,8 +142,9 @@ contract GatewayTest is Test {
             abi.encode(params)
         );
 
-        bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
-        assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
+        bridgeHubAgent =
+            IGateway(address(gateway)).agentOf(Constants.BRIDGE_HUB_AGENT_ID);
+        assetHubAgent = IGateway(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID);
 
         // fund the message relayer account
         relayer = makeAddr("relayer");

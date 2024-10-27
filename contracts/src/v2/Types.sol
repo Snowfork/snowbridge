@@ -38,11 +38,6 @@ struct Ticket {
     uint256 reward;
 }
 
-enum TransferKind {
-    NativeERC20,
-    ForeignERC20
-}
-
 // V2 Command Params
 
 // Payload for Upgrade

@@ -50,8 +50,6 @@ contract UpgradeShell is Script {
                 mode: OperatingMode.Normal,
                 deliveryCost: mDot(100), // 0.1 DOT
                 registerTokenFee: 0.002 ether,
-                assetHubParaID: ParaID.wrap(1000),
-                assetHubAgentID: 0x81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79,
                 assetHubCreateAssetFee: mDot(100), // 0.1 DOT
                 assetHubReserveTransferFee: mDot(100), // 0.1 DOT
                 exchangeRate: ud60x18(0.0024e18),

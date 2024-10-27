@@ -22,7 +22,7 @@ import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
 import {Constants} from "../Constants.sol";
 
-import {Ticket, TransferKind, OperatingMode} from "./Types.sol";
+import {Ticket, OperatingMode} from "./Types.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 

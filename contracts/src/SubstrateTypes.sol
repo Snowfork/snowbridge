@@ -4,7 +4,6 @@ pragma solidity 0.8.25;
 
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {ParaID} from "./v1/Types.sol";
-import {TransferKind} from "./v2/Types.sol";
 
 /**
  * @title SCALE encoders for common Substrate types
