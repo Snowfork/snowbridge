@@ -367,28 +367,6 @@ func fetchMessageProof(
 	return MessageProofV2{Message: message, Proof: merkleProof}, nil
 }
 
-func (s *Scanner) findLatestNonce(ctx context.Context) (uint64, error) {
-	// Fetch latest nonce in ethereum gateway
-	gatewayAddress := common.HexToAddress(s.config.Contracts.Gateway)
-	gatewayContract, err := contracts.NewGateway(
-		gatewayAddress,
-		s.ethConn.Client(),
-	)
-	if err != nil {
-		return 0, fmt.Errorf("create gateway contract for address '%v': %w", gatewayAddress, err)
-	}
-
-	options := bind.CallOpts{
-		Pending: true,
-		Context: ctx,
-	}
-	ethInboundNonce, _, err := gatewayContract.ChannelNoncesOf(&options, s.config.ChannelID)
-	if err != nil {
-		return 0, fmt.Errorf("fetch nonce from gateway contract for channelID '%v': %w", s.config.ChannelID, err)
-	}
-	return ethInboundNonce, err
-}
-
 func (s *Scanner) isNonceRelayed(ctx context.Context, nonce uint64) (bool, error) {
 	var isRelayed bool
 	// Fetch latest nonce in ethereum gateway

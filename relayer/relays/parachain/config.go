@@ -18,7 +18,6 @@ type SourceConfig struct {
 	Parachain config.ParachainConfig `mapstructure:"parachain"`
 	Ethereum  config.EthereumConfig  `mapstructure:"ethereum"`
 	Contracts SourceContractsConfig  `mapstructure:"contracts"`
-	ChannelID ChannelID              `mapstructure:"channel-id"`
 }
 
 type SourceContractsConfig struct {
@@ -75,9 +74,6 @@ func (c Config) Validate() error {
 	}
 	if c.Source.Contracts.Gateway == "" {
 		return fmt.Errorf("source contracts setting [Gateway] is not set")
-	}
-	if c.Source.ChannelID == [32]byte{} {
-		return fmt.Errorf("source setting [channel-id] is not set")
 	}
 
 	// Sink
