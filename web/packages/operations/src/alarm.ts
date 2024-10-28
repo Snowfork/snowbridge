@@ -36,7 +36,9 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
         MetricName: AlarmReason.BeefyStale.toString(),
         Value: Number(
             metrics.bridgeStatus.toEthereum.blockLatency >
-                status.BlockLatencyThreshold.ToEthereum &&
+            (process.env["CheckIntervalToEthereum"]
+            ? parseInt(process.env["CheckIntervalToEthereum"])
+            : status.BlockLatencyThreshold.ToEthereum) &&
                 metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum <=
                     metrics.bridgeStatus.toEthereum.previousPolkadotBlockOnEthereum
         ),
@@ -58,7 +60,9 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
         MetricName: AlarmReason.BeaconStale.toString(),
         Value: Number(
             metrics.bridgeStatus.toPolkadot.blockLatency >
-                status.BlockLatencyThreshold.ToPolkadot &&
+            (process.env["CheckIntervalToPolkadot"]
+            ? parseInt(process.env["CheckIntervalToPolkadot"])
+            : status.BlockLatencyThreshold.ToPolkadot) &&
                 metrics.bridgeStatus.toPolkadot.latestBeaconSlotOnPolkadot <=
                     metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot
         ),
