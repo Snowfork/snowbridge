@@ -15,8 +15,7 @@ import {CallsV1} from "./v1/Calls.sol";
 import {HandlersV1} from "./v1/Handlers.sol";
 
 import {
-    TransferKind,
-    InboundMessageV2,
+    InboundMessage as InboundMessageV2,
     Command as CommandV2,
     CommandKind
 } from "./v2/Types.sol";

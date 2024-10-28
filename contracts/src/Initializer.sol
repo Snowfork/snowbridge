@@ -45,8 +45,6 @@ library Initializer {
         uint128 deliveryCost;
         /// @dev The ETH/DOT exchange rate
         UD60x18 exchangeRate;
-        ParaID assetHubParaID;
-        bytes32 assetHubAgentID;
         /// @dev The extra fee charged for registering tokens (DOT)
         uint128 assetHubCreateAssetFee;
         /// @dev The extra fee charged for sending tokens (DOT)
@@ -94,11 +92,11 @@ library Initializer {
         });
 
         // Initialize agent for for AssetHub
-        address assetHubAgent = address(new Agent(config.assetHubAgentID));
-        core.agents[config.assetHubAgentID] = assetHubAgent;
+        address assetHubAgent = address(new Agent(Constants.ASSET_HUB_AGENT_ID));
+        core.agents[Constants.ASSET_HUB_AGENT_ID] = assetHubAgent;
 
         // Initialize channel for AssetHub
-        core.channels[config.assetHubParaID.into()] = Channel({
+        core.channels[Constants.ASSET_HUB_PARA_ID.into()] = Channel({
             mode: OperatingMode.Normal,
             agent: assetHubAgent,
             inboundNonce: 0,
@@ -114,7 +112,7 @@ library Initializer {
         // Initialize assets storage
         AssetsStorage.Layout storage assets = AssetsStorage.layout();
 
-        assets.assetHubParaID = config.assetHubParaID;
+        assets.assetHubParaID = Constants.ASSET_HUB_PARA_ID;
         assets.assetHubAgent = assetHubAgent;
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;

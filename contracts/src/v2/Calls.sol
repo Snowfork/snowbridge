@@ -22,7 +22,7 @@ import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
 import {Constants} from "../Constants.sol";
 
-import {Ticket, TransferKind, OperatingMode} from "./Types.sol";
+import {Ticket, OperatingMode} from "./Types.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
@@ -70,8 +70,12 @@ library CallsV2 {
     // 2. Handle the assets in holding, either depositing them into
     //    some account, or forwarding them to another destination.
     //
-    function sendMessage(bytes calldata xcm, bytes[] calldata assets) external {
-        _sendMessage(msg.sender, xcm, assets, msg.value);
+    function sendMessage(
+        bytes calldata xcm,
+        bytes[] calldata assets,
+        bytes calldata claimer
+    ) external {
+        _sendMessage(msg.sender, xcm, assets, claimer, msg.value);
     }
 
     // Register Ethereum-native token on AHP, using `xcmFeeAHP` of `msg.value`
@@ -96,6 +100,7 @@ library CallsV2 {
         address origin,
         bytes memory xcm,
         bytes[] memory assets,
+        bytes memory claimer,
         uint256 reward
     ) internal {
         if (assets.length > MAX_ASSETS) {
@@ -106,8 +111,13 @@ library CallsV2 {
         for (uint256 i = 0; i < assets.length; i++) {
             encodedAssets[i] = _handleAsset(assets[i]);
         }
-        Ticket memory ticket =
-            Ticket({origin: origin, assets: encodedAssets, xcm: xcm, reward: reward});
+        Ticket memory ticket = Ticket({
+            origin: origin,
+            assets: encodedAssets,
+            xcm: xcm,
+            claimer: claimer,
+            reward: reward
+        });
         _submitOutbound(ticket);
     }
 
@@ -138,7 +148,7 @@ library CallsV2 {
         bytes[] memory assets = new bytes[](1);
         assets[0] = abi.encode(0, WETH_ADDRESS, xcmFee);
 
-        _sendMessage(address(this), xcm, assets, msg.value - xcmFee);
+        _sendMessage(address(this), xcm, assets, "", msg.value - xcmFee);
     }
 
     // Submit an outbound message to Polkadot, after taking fees
@@ -153,8 +163,9 @@ library CallsV2 {
 
         $.outboundNonce = $.outboundNonce + 1;
 
-        bytes memory payload =
-            SubstrateTypes.encodePayloadV2(ticket.origin, ticket.assets, ticket.xcm);
+        bytes memory payload = SubstrateTypes.encodePayloadV2(
+            ticket.origin, ticket.assets, ticket.xcm, ticket.claimer
+        );
 
         emit IGateway.OutboundMessageAccepted($.outboundNonce, ticket.reward, payload);
     }
