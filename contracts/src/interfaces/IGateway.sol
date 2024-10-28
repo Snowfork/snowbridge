@@ -9,7 +9,7 @@ import {
     ParaID,
     ChannelID
 } from "../v1/Types.sol";
-import {InboundMessage as InboundMessageV2} from "../v2/Types.sol";
+import {InboundMessageV2} from "../v2/Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 

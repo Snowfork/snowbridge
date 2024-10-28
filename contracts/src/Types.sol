@@ -14,10 +14,6 @@ import {
 import {CallsV1} from "./v1/Calls.sol";
 import {HandlersV1} from "./v1/Handlers.sol";
 
-import {
-    InboundMessage as InboundMessageV2,
-    Command as CommandV2,
-    CommandKind
-} from "./v2/Types.sol";
+import {InboundMessageV2, Command as CommandV2, CommandKind} from "./v2/Types.sol";
 import {CallsV2} from "./v2/Calls.sol";
 import {HandlersV2} from "./v2/Handlers.sol";
