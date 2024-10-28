@@ -222,5 +222,5 @@ interface IGateway {
     ) external payable;
 
     // Check if an inbound message was previously accepted and dispatched
-    function v2_isDispatched(uint64 nonce) external returns (bool);
+    function v2_isDispatched(uint64 nonce) external view returns (bool);
 }
