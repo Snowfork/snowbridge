@@ -21,6 +21,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -55,6 +56,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 		&config.Sink,
 		ethereumConnWriter,
 		tasks,
+		config,
 	)
 	if err != nil {
 		return nil, err
@@ -197,6 +199,11 @@ func (relay *Relay) findEvent(
 
 	done := false
 
+	rewardAddress, err := util.HexStringTo32Bytes(relay.config.RewardAddress)
+	if err != nil {
+		return event, fmt.Errorf("convert to reward address: %w", err)
+	}
+
 	for {
 		var begin uint64
 		if blockNumber < BlocksPerQuery {
@@ -211,7 +218,7 @@ func (relay *Relay) findEvent(
 			Context: ctx,
 		}
 
-		iter, err := relay.ethereumChannelWriter.gateway.FilterInboundMessageDispatched0(&opts, []uint64{nonce})
+		iter, err := relay.ethereumChannelWriter.gateway.FilterInboundMessageDispatched0(&opts, []uint64{nonce}, [][32]byte{rewardAddress})
 		if err != nil {
 			return event, fmt.Errorf("iter dispatch event: %w", err)
 		}

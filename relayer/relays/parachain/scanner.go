@@ -382,7 +382,7 @@ func (s *Scanner) isNonceRelayed(ctx context.Context, nonce uint64) (bool, error
 		Pending: true,
 		Context: ctx,
 	}
-	isRelayed, err = gatewayContract.IsRelayed(&options, nonce)
+	isRelayed, err = gatewayContract.V2IsDispatched(&options, nonce)
 	if err != nil {
 		return isRelayed, fmt.Errorf("check nonce from gateway contract: %w", err)
 	}

@@ -24,7 +24,7 @@ type CommandWrapper struct {
 func (r CommandWrapper) IntoCommandV2() contracts.Command {
 	return contracts.Command{
 		Kind:    uint8(r.Kind),
-		Gas:     big.NewInt(0).SetUint64(uint64(r.MaxDispatchGas)),
+		Gas:     uint64(r.MaxDispatchGas),
 		Payload: r.Params,
 	}
 }
