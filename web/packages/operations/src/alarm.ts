@@ -389,6 +389,4 @@ export const initializeAlarms = async () => {
         ...alarmCommandSharedInput,
     })
     await client.send(accountBalanceAlarm)
-
-    console.log("Initialize alarm rules success.")
 }
