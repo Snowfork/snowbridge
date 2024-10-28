@@ -369,7 +369,6 @@ func fetchMessageProof(
 
 func (s *Scanner) isNonceRelayed(ctx context.Context, nonce uint64) (bool, error) {
 	var isRelayed bool
-	// Fetch latest nonce in ethereum gateway
 	gatewayAddress := common.HexToAddress(s.config.Contracts.Gateway)
 	gatewayContract, err := contracts.NewGateway(
 		gatewayAddress,
@@ -388,4 +387,42 @@ func (s *Scanner) isNonceRelayed(ctx context.Context, nonce uint64) (bool, error
 		return isRelayed, fmt.Errorf("check nonce from gateway contract: %w", err)
 	}
 	return isRelayed, nil
+}
+
+func (s *Scanner) findOrderUndelivered(
+	ctx context.Context,
+) ([]*PendingOrder, error) {
+	storageKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueueV2", "PendingOrders", nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create storage key for parachain outbound queue PendingOrders: %w", err)
+	}
+	keys, err := s.paraConn.API().RPC.State.GetKeysLatest(storageKey)
+	if err != nil {
+		return nil, fmt.Errorf("fetch nonces from PendingOrders start with key '%v': %w", storageKey, err)
+	}
+	var undeliveredOrders []*PendingOrder
+	for _, key := range keys {
+		var undeliveredOrder PendingOrder
+		value, err := s.paraConn.API().RPC.State.GetStorageRawLatest(key)
+		if err != nil {
+			return nil, fmt.Errorf("fetch value of pendingOrder with key '%v': %w", key, err)
+		}
+		decoder := scale.NewDecoder(bytes.NewReader(*value))
+		err = decoder.Decode(&undeliveredOrder)
+		if err != nil {
+			return nil, fmt.Errorf("decode order error: %w", err)
+		}
+		isRelayed, err := s.isNonceRelayed(ctx, uint64(undeliveredOrder.Nonce))
+		if err != nil {
+			return nil, fmt.Errorf("check nonce relayed: %w", err)
+		}
+		if isRelayed {
+			log.WithFields(log.Fields{
+				"nonce": uint64(undeliveredOrder.Nonce),
+			}).Debug("Relayed but not delivered to BH")
+			undeliveredOrders = append(undeliveredOrders, &undeliveredOrder)
+		}
+	}
+
+	return undeliveredOrders, nil
 }

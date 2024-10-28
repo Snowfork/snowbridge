@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/snowfork/snowbridge/relayer/config"
+	beaconconf "github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 )
 
 type Config struct {
@@ -14,10 +15,11 @@ type Config struct {
 }
 
 type SourceConfig struct {
-	Polkadot  config.PolkadotConfig  `mapstructure:"polkadot"`
-	Parachain config.ParachainConfig `mapstructure:"parachain"`
-	Ethereum  config.EthereumConfig  `mapstructure:"ethereum"`
-	Contracts SourceContractsConfig  `mapstructure:"contracts"`
+	Polkadot  config.PolkadotConfig   `mapstructure:"polkadot"`
+	Parachain config.ParachainConfig  `mapstructure:"parachain"`
+	Ethereum  config.EthereumConfig   `mapstructure:"ethereum"`
+	Contracts SourceContractsConfig   `mapstructure:"contracts"`
+	Beacon    beaconconf.BeaconConfig `mapstructure:"beacon"`
 }
 
 type SourceContractsConfig struct {
