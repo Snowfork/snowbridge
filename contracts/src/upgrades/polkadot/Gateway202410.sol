@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 
 import "../../Gateway.sol";
 
-contract GatewayPNA is Gateway {
+contract Gateway202410 is Gateway {
     constructor(
         address beefyClient,
         address agentExecutor,
@@ -23,5 +23,9 @@ contract GatewayPNA is Gateway {
         )
     {}
 
-    function initialize(bytes memory) external override {}
+    function initialize(bytes memory) external override {
+        if (ERC1967.load() == address(0)) {
+            revert Unauthorized();
+        }
+    }
 }

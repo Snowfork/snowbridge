@@ -594,6 +594,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
     /**
      * Upgrades
+     *
+     *
      */
 
     // Initial configuration for bridge
@@ -617,10 +619,33 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         address rescueOperator;
     }
 
-    /// @dev Initialize storage in the gateway
-    /// NOTE: This is not externally accessible as this function selector is overshadowed in the proxy
+    /// Initialize storage within the `GatewayProxy` contract using this initializer.
+    ///
+    /// This initializer cannot be called externally via the proxy as the function selector
+    /// is overshadowed in the proxy.
+    ///
+    /// This implementation is only intended to initialize storage for initial deployments
+    /// of the `GatewayProxy` contract to transient or long-lived testnets.
+    ///
+    /// The `GatewayProxy` deployed to Ethereum mainnet already has its storage initialized.
+    /// When its logic contract needs to upgraded, a new logic contract should be developed
+    /// that inherits from this base `Gateway` contract. Particularly, the `initialize` function
+    /// must be overriden.
+    ///
+    /// ```solidity
+    /// contract Gateway202508 is Gatewat {
+    ///     function initialize(bytes calldata data) external override {
+    ///         if (ERC1967.load() == address(0)) {
+    ///             revert Unauthorized();
+    ///         }
+    ///         # Initialization routines here...
+    ///     }
+    /// }
+    /// ```
+    ///
     function initialize(bytes calldata data) external virtual {
-        // Prevent initialization of storage in implementation contract
+        // Guard against initialization of storage in the deployed logic contract rather
+        // the proxy contract.
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();
         }
