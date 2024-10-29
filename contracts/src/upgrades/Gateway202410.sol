@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
-import "../../Gateway.sol";
+import "../Gateway.sol";
 
-contract GatewayPNA is Gateway {
+// New `Gateway` logic contract for the `GatewayProxy` deployed on mainnet
+contract Gateway202410 is Gateway {
     constructor(
         address beefyClient,
         address agentExecutor,
@@ -23,5 +24,11 @@ contract GatewayPNA is Gateway {
         )
     {}
 
-    function initialize(bytes memory) external override {}
+    // Override parent initializer to prevent re-initialization of storage.
+    function initialize(bytes memory) external view override {
+        // Ensure that arbitrary users cannot initialize storage in this logic contract.
+        if (ERC1967.load() == address(0)) {
+            revert Unauthorized();
+        }
+    }
 }
