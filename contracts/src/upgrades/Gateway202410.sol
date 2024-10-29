@@ -2,14 +2,11 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
-import "../../Gateway.sol";
+import "../Gateway.sol";
 
-import {UD60x18, convert} from "prb/math/src/UD60x18.sol";
-import {PricingStorage} from "../../storage/PricingStorage.sol";
-
-contract RococoGatewayV2 is Gateway {
+// New `Gateway` logic contract for the `GatewayProxy` deployed on mainnet
+contract Gateway202410 is Gateway {
     constructor(
-        address recoveryOperator,
         address beefyClient,
         address agentExecutor,
         ParaID bridgeHubParaID,
@@ -27,14 +24,11 @@ contract RococoGatewayV2 is Gateway {
         )
     {}
 
-    function initialize(bytes memory data) external override {
-        // Prevent initialization of storage in implementation contract
+    // Override parent initializer to prevent re-initialization of storage.
+    function initialize(bytes memory) external view override {
+        // Ensure that arbitrary users cannot initialize storage in this logic contract.
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();
         }
-
-        PricingStorage.Layout storage pricing = PricingStorage.layout();
-
-        pricing.multiplier = abi.decode(data, (UD60x18));
     }
 }
