@@ -14,7 +14,7 @@ import {Gateway} from "../src/Gateway.sol";
 import {MockGateway} from "./mocks/MockGateway.sol";
 import {MockGatewayV2} from "./mocks/MockGatewayV2.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
-import {DepositWETH9AndSend} from "../src/DepositWETH9AndSend.sol";
+import {AutoWETH9} from "../src/utils/AutoWETH9.sol";
 
 import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {Agent} from "../src/Agent.sol";
@@ -77,7 +77,7 @@ contract GatewayTest is Test {
 
     MockGateway public gatewayLogic;
     GatewayProxy public gateway;
-    DepositWETH9AndSend public depositAndSend;
+    AutoWETH9 public depositAndSend;
 
     WETH9 public token;
 
@@ -158,7 +158,7 @@ contract GatewayTest is Test {
         dotTokenID = bytes32(uint256(1));
 
         // Deposit and send
-        depositAndSend = new DepositWETH9AndSend(address(gateway), payable(token));
+        depositAndSend = new AutoWETH9(address(gateway), payable(token));
     }
 
     function makeCreateAgentCommand() public pure returns (Command, bytes memory) {
@@ -613,7 +613,6 @@ contract GatewayTest is Test {
 
         IGateway(address(gateway)).sendToken{value: fee}(address(token), destPara, recipientAddress32, 1, 1);
     }
-
 
     function testDepositAndSendTokenAddress32() public {
         // Multilocation for recipient
