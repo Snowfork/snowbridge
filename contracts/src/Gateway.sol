@@ -594,8 +594,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
     /**
      * Upgrades
-     *
-     *
      */
 
     // Initial configuration for bridge
