@@ -180,7 +180,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 id: "ethereum",
                 name: "Ethereum",
                 type: "ethereum",
-                destinationIds: ["assethub"],
+                destinationIds: ["assethub", "hydradx"],
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
@@ -216,6 +216,77 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     {
                         id: "PILT",
                         address: "0x99E743964C036bc28931Fb564817db428Aa7f752",
+                        minimumTransferAmount: 1n,
+                    },
+                ],
+            },
+            {
+                id: "muse",
+                name: "Muse",
+                type: "substrate",
+                destinationIds: [],
+                paraInfo: {
+                    paraId: 3369,
+                    destinationFeeDOT: 500_000_000n,
+                    skipExistentialDepositCheck: true,
+                    addressType: "20byte",
+                    decimals: 18,
+                    maxConsumers: 16,
+                },
+                erc20tokensReceivable: [
+                    // TODO: Register
+                    {
+                        id: "MYTH",
+                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
+                        minimumTransferAmount: 10_000_000_000_000_000n,
+                    },
+                ],
+            },
+            {
+                id: "bifrost",
+                name: "Bifrost",
+                type: "substrate",
+                destinationIds: [],
+                paraInfo: {
+                    paraId: 2030,
+                    destinationFeeDOT: 20_000_000n,
+                    skipExistentialDepositCheck: false,
+                    addressType: "32byte",
+                    decimals: 12,
+                    maxConsumers: 16,
+                },
+                erc20tokensReceivable: [
+                    // TODO: Register
+                    {
+                        id: "WETH",
+                        address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                        minimumTransferAmount: 15_000_000_000_000n,
+                    },
+                ],
+            },
+            {
+                id: "hydradx",
+                name: "Hydration",
+                type: "substrate",
+                destinationIds: [],
+                paraInfo: {
+                    paraId: 2034,
+                    destinationFeeDOT: 100_000_000n,
+                    skipExistentialDepositCheck: true,
+                    addressType: "32byte",
+                    decimals: 12,
+                    maxConsumers: 16,
+                },
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                        minimumTransferAmount: 15_000_000_000_000n,
+                    },
+                    // Todo fix registration
+                    {
+                        id: "WBTC",
+                        address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
                         minimumTransferAmount: 1n,
                     },
                 ],
