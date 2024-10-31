@@ -283,12 +283,12 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
                         minimumTransferAmount: 15_000_000_000_000n,
                     },
-                    // Todo fix registration
-                    {
-                        id: "WBTC",
-                        address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
-                        minimumTransferAmount: 1n,
-                    },
+                    // Todo fix token metadata
+                    //{
+                    //    id: "WBTC",
+                    //    address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                    //    minimumTransferAmount: 1n,
+                    //},
                 ],
             },
         ],
