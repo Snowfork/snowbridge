@@ -73,9 +73,9 @@ export type Sovereign = { name: string; account: string; balance: bigint; type: 
 
 export const BlockLatencyThreshold = {
     // Syncing beefy finality update every 4 hours(1200 ethereum blocks), leave some buffer here
-    ToEthereum: 1350,
+    ToEthereum: 1500,
     // Syncing beacon finality update every 6.4 minutes(64 substrate blocks), leave some buffer here
-    ToPolkadot: 80,
+    ToPolkadot: 100,
 }
 
 export const InsufficientBalanceThreshold = {
