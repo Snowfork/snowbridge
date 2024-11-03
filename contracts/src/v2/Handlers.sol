@@ -3,7 +3,6 @@
 pragma solidity 0.8.25;
 
 import {IERC20} from "../interfaces/IERC20.sol";
-import {IGateway} from "../interfaces/IGateway.sol";
 import {SafeTokenTransferFrom} from "../utils/SafeTransfer.sol";
 import {AssetsStorage, TokenInfo} from "../storage/AssetsStorage.sol";
 import {CoreStorage} from "../storage/CoreStorage.sol";
@@ -18,6 +17,8 @@ import {Token} from "../Token.sol";
 import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
 import {Constants} from "../Constants.sol";
+import {IGatewayV2} from "./IGateway.sol";
+import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
 
 import {
     UpgradeParams,
@@ -45,7 +46,7 @@ library HandlersV2 {
         SetOperatingModeParams memory params = abi.decode(data, (SetOperatingModeParams));
         CoreStorage.Layout storage $ = CoreStorage.layout();
         $.mode = params.mode;
-        emit IGateway.OperatingModeChanged(params.mode);
+        emit IGatewayBase.OperatingModeChanged(params.mode);
     }
 
     // @dev Register a new fungible Polkadot token for an agent

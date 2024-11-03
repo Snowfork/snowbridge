@@ -6,7 +6,7 @@ import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 
-import {IGateway} from "../src/interfaces/IGateway.sol";
+import {IGatewayV2} from "../src/v2/IGateway.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {MockGatewayV2} from "../test/mocks/MockGatewayV2.sol";
@@ -99,9 +99,9 @@ contract DeployLocal is Script {
         uint256 initialDeposit = vm.envUint("BRIDGE_HUB_INITIAL_DEPOSIT");
 
         address bridgeHubAgent =
-            IGateway(address(gateway)).agentOf(Constants.BRIDGE_HUB_AGENT_ID);
+            IGatewayV2(address(gateway)).agentOf(Constants.BRIDGE_HUB_AGENT_ID);
         address assetHubAgent =
-            IGateway(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID);
+            IGatewayV2(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID);
 
         payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);

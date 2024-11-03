@@ -3,8 +3,10 @@
 pragma solidity 0.8.25;
 
 import {IERC20} from "../interfaces/IERC20.sol";
-import {IGateway} from "../interfaces/IGateway.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
+
+import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
+import {IGatewayV2} from "./IGateway.sol";
 
 import {SafeNativeTransfer, SafeTokenTransfer} from "../utils/SafeTransfer.sol";
 
@@ -31,24 +33,6 @@ library CallsV2 {
     using Address for address;
     using SafeTokenTransfer for IERC20;
     using SafeNativeTransfer for address payable;
-
-    error InvalidProof();
-    error InvalidNonce();
-    error NotEnoughGas();
-    error FeePaymentToLow();
-    error Unauthorized();
-    error Disabled();
-    error AgentAlreadyCreated();
-    error AgentDoesNotExist();
-    error ChannelAlreadyCreated();
-    error ChannelDoesNotExist();
-    error InvalidChannelUpdate();
-    error AgentExecutionFailed(bytes returndata);
-    error InvalidAgentExecutionPayload();
-    error InvalidConstructorParams();
-    error AlreadyInitialized();
-    error TokenNotRegistered();
-    error InvalidAsset();
 
     address public constant WETH_ADDRESS = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint8 public constant MAX_ASSETS = 8;
@@ -104,7 +88,7 @@ library CallsV2 {
         uint256 reward
     ) internal {
         if (assets.length > MAX_ASSETS) {
-            revert IGateway.TooManyAssets();
+            revert IGatewayBase.TooManyAssets();
         }
 
         bytes[] memory encodedAssets = new bytes[](assets.length);
@@ -141,7 +125,7 @@ library CallsV2 {
 
         // Lock up the total xcm fee
         if (xcmFee > msg.value) {
-            revert IGateway.InvalidFee();
+            revert IGatewayV2.InvalidFee();
         }
         _lockEther(xcmFee);
 
@@ -167,7 +151,7 @@ library CallsV2 {
             ticket.origin, ticket.assets, ticket.xcm, ticket.claimer
         );
 
-        emit IGateway.OutboundMessageAccepted($.outboundNonce, ticket.reward, payload);
+        emit IGatewayV2.OutboundMessageAccepted($.outboundNonce, ticket.reward, payload);
     }
 
     // Lock wrapped ether into the AssetHub Agent
@@ -181,7 +165,7 @@ library CallsV2 {
     function _ensureOutboundMessagingEnabled() internal view {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         if ($.mode != OperatingMode.Normal) {
-            revert Disabled();
+            revert IGatewayBase.Disabled();
         }
     }
 
@@ -196,7 +180,7 @@ library CallsV2 {
                 abi.decode(asset, (uint8, address, uint128));
             return _handleAssetERC20(token, amount);
         } else {
-            revert InvalidAsset();
+            revert IGatewayV2.InvalidAsset();
         }
     }
 
@@ -208,7 +192,7 @@ library CallsV2 {
         TokenInfo storage info = $.tokenRegistry[token];
 
         if (!info.isRegistered) {
-            revert TokenNotRegistered();
+            revert IGatewayBase.TokenNotRegistered();
         }
 
         if (info.foreignID == bytes32(0)) {

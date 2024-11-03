@@ -8,7 +8,6 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
 
 import {BeefyClient} from "../../src/BeefyClient.sol";
-import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {IShell} from "../../src/interfaces/IShell.sol";
 import {GatewayProxy} from "../../src/GatewayProxy.sol";
 import {Gateway} from "../../src/Gateway.sol";

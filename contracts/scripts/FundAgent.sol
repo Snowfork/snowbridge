@@ -5,8 +5,7 @@ pragma solidity 0.8.25;
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
-
-import {IGateway} from "../src/interfaces/IGateway.sol";
+import {IGatewayV2} from "../src/v2/IGateway.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {Agent} from "../src/Agent.sol";
@@ -32,8 +31,8 @@ contract FundAgent is Script {
         bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
         bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
 
-        address bridgeHubAgent = IGateway(gatewayAddress).agentOf(bridgeHubAgentID);
-        address assetHubAgent = IGateway(gatewayAddress).agentOf(assetHubAgentID);
+        address bridgeHubAgent = IGatewayV2(gatewayAddress).agentOf(bridgeHubAgentID);
+        address assetHubAgent = IGatewayV2(gatewayAddress).agentOf(assetHubAgentID);
 
         payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);

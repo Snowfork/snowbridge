@@ -6,7 +6,6 @@ import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 
-import {IGateway} from "../src/interfaces/IGateway.sol";
 import {IShell} from "../src/interfaces/IShell.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Gateway} from "../src/Gateway.sol";

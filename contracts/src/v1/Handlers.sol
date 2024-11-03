@@ -3,7 +3,6 @@
 pragma solidity 0.8.25;
 
 import {IERC20} from "../interfaces/IERC20.sol";
-import {IGateway} from "../interfaces/IGateway.sol";
 
 import {SafeTokenTransferFrom} from "../utils/SafeTransfer.sol";
 
@@ -19,6 +18,8 @@ import {Call} from "../utils/Call.sol";
 import {Token} from "../Token.sol";
 import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
+import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
+import {IGatewayV1} from "./IGateway.sol";
 
 import {
     ParaID,
@@ -43,30 +44,13 @@ library HandlersV1 {
     using Address for address;
     using SafeTokenTransferFrom for IERC20;
 
-    error InvalidProof();
-    error InvalidNonce();
-    error NotEnoughGas();
-    error FeePaymentToLow();
-    error Unauthorized();
-    error Disabled();
-    error AgentAlreadyCreated();
-    error AgentDoesNotExist();
-    error ChannelAlreadyCreated();
-    error ChannelDoesNotExist();
-    error InvalidChannelUpdate();
-    error AgentExecutionFailed(bytes returndata);
-    error InvalidAgentExecutionPayload();
-    error InvalidConstructorParams();
-    error AlreadyInitialized();
-    error TokenNotRegistered();
-
     function agentExecute(address executor, bytes calldata data) external {
         AgentExecuteParams memory params = abi.decode(data, (AgentExecuteParams));
 
         address agent = Functions.ensureAgent(params.agentID);
 
         if (params.payload.length == 0) {
-            revert InvalidAgentExecutionPayload();
+            revert IGatewayBase.InvalidAgentExecutionPayload();
         }
 
         (AgentExecuteCommand command, bytes memory commandParams) =
@@ -95,7 +79,7 @@ library HandlersV1 {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         SetOperatingModeParams memory params = abi.decode(data, (SetOperatingModeParams));
         $.mode = params.mode;
-        emit IGateway.OperatingModeChanged(params.mode);
+        emit IGatewayBase.OperatingModeChanged(params.mode);
     }
 
     // @dev Transfer funds from an agent to a recipient account
@@ -108,7 +92,7 @@ library HandlersV1 {
         Functions.withdrawEther(
             executor, agent, payable(params.recipient), params.amount
         );
-        emit IGateway.AgentFundsWithdrawn(
+        emit IGatewayV1.AgentFundsWithdrawn(
             params.agentID, params.recipient, params.amount
         );
     }
@@ -121,7 +105,7 @@ library HandlersV1 {
         $.assetHubCreateAssetFee = params.assetHubCreateAssetFee;
         $.assetHubReserveTransferFee = params.assetHubReserveTransferFee;
         $.registerTokenFee = params.registerTokenFee;
-        emit IGateway.TokenTransferFeesChanged();
+        emit IGatewayV1.TokenTransferFeesChanged();
     }
 
     // @dev Set pricing params of the gateway
@@ -132,7 +116,7 @@ library HandlersV1 {
         pricing.exchangeRate = params.exchangeRate;
         pricing.deliveryCost = params.deliveryCost;
         pricing.multiplier = params.multiplier;
-        emit IGateway.PricingParametersChanged();
+        emit IGatewayV1.PricingParametersChanged();
     }
 
     // @dev Register a new fungible Polkadot token for an agent

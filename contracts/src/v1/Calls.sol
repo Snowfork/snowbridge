@@ -3,8 +3,6 @@
 pragma solidity 0.8.25;
 
 import {IERC20} from "../interfaces/IERC20.sol";
-import {IGateway} from "../interfaces/IGateway.sol";
-
 import {SafeNativeTransfer, SafeTokenTransferFrom} from "../utils/SafeTransfer.sol";
 
 import {AssetsStorage, TokenInfo} from "../storage/AssetsStorage.sol";
@@ -28,6 +26,8 @@ import {
     Ticket,
     Costs
 } from "./Types.sol";
+import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
+import {IGatewayV1} from "./IGateway.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
@@ -88,7 +88,7 @@ library CallsV1 {
             payload: SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee)
         });
 
-        emit IGateway.TokenRegistrationSent(token);
+        emit IGatewayBase.TokenRegistrationSent(token);
 
         _submitOutbound(ticket);
     }
@@ -247,7 +247,7 @@ library CallsV1 {
         // Generate a unique ID for this message
         bytes32 messageID = keccak256(abi.encodePacked(channelID, channel.outboundNonce));
 
-        emit IGateway.OutboundMessageAccepted(
+        emit IGatewayV1.OutboundMessageAccepted(
             channelID, channel.outboundNonce, messageID, ticket.payload
         );
     }
@@ -347,7 +347,7 @@ library CallsV1 {
                 revert Unsupported();
             }
         }
-        emit IGateway.TokenSent(
+        emit IGatewayV1.TokenSent(
             token, sender, destinationChain, destinationAddress, amount
         );
     }
@@ -383,7 +383,7 @@ library CallsV1 {
             revert Unsupported();
         }
 
-        emit IGateway.TokenSent(
+        emit IGatewayV1.TokenSent(
             token, sender, destinationChain, destinationAddress, amount
         );
     }

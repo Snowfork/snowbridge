@@ -7,7 +7,8 @@ import {console} from "forge-std/console.sol";
 
 import {BeefyClient} from "../src/BeefyClient.sol";
 
-import {IGateway} from "../src/interfaces/IGateway.sol";
+import {IGatewayBase} from "../src/interfaces/IGatewayBase.sol";
+import {IGatewayV2} from "../src/v2/IGateway.sol";
 import {IInitializable} from "../src/interfaces/IInitializable.sol";
 import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
 import {Gateway} from "../src/Gateway.sol";
@@ -109,7 +110,8 @@ contract GatewayV2Test is Test {
             abi.encode(params)
         );
 
-        assetHubAgent = IGateway(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID);
+        assetHubAgent =
+            IGatewayV2(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID);
 
         // fund the message relayer account
         relayer = makeAddr("relayer");
@@ -175,10 +177,10 @@ contract GatewayV2Test is Test {
     function testSubmitHappyPath() public {
         // Expect the gateway to emit `InboundMessageDispatched`
         vm.expectEmit(true, false, false, true);
-        emit IGateway.InboundMessageDispatched(1, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(1, true, relayerRewardAddress);
 
         hoax(relayer, 1 ether);
-        IGateway(address(gateway)).v2_submit(
+        IGatewayV2(address(gateway)).v2_submit(
             InboundMessageV2({
                 origin: keccak256("666"),
                 nonce: 1,
@@ -198,13 +200,13 @@ contract GatewayV2Test is Test {
         });
 
         hoax(relayer, 1 ether);
-        IGateway(address(gateway)).v2_submit(
+        IGatewayV2(address(gateway)).v2_submit(
             message, proof, makeMockProof(), relayerRewardAddress
         );
 
-        vm.expectRevert(IGateway.InvalidNonce.selector);
+        vm.expectRevert(IGatewayBase.InvalidNonce.selector);
         hoax(relayer, 1 ether);
-        IGateway(address(gateway)).v2_submit(
+        IGatewayV2(address(gateway)).v2_submit(
             message, proof, makeMockProof(), relayerRewardAddress
         );
     }
@@ -217,10 +219,10 @@ contract GatewayV2Test is Test {
         });
 
         MockGateway(address(gateway)).setCommitmentsAreVerified(false);
-        vm.expectRevert(IGateway.InvalidProof.selector);
+        vm.expectRevert(IGatewayBase.InvalidProof.selector);
 
         hoax(relayer, 1 ether);
-        IGateway(address(gateway)).v2_submit(
+        IGatewayV2(address(gateway)).v2_submit(
             message, proof, makeMockProof(), relayerRewardAddress
         );
     }

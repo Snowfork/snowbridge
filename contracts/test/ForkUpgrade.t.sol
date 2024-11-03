@@ -5,7 +5,8 @@ import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 
 import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
-import {IGateway} from "../src/interfaces/IGateway.sol";
+import {IGatewayBase} from "../src/interfaces/IGatewayBase.sol";
+import {IGatewayV1} from "../src/v1/IGateway.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {Gateway202411} from "../src/upgrades/polkadot/Gateway202411.sol";
 import {AgentExecutor} from "../src/AgentExecutor.sol";
@@ -79,7 +80,7 @@ contract ForkUpgradeTest is Test {
         });
 
         vm.expectEmit(true, true, false, false);
-        emit IGateway.ForeignTokenRegistered(dotId, address(0x0));
+        emit IGatewayBase.ForeignTokenRegistered(dotId, address(0x0));
 
         Gateway202411(GATEWAY_PROXY).v1_handleRegisterForeignToken(abi.encode(params));
         TokenInfo memory dot = Gateway202411(GATEWAY_PROXY).tokenInfo(
@@ -91,7 +92,7 @@ contract ForkUpgradeTest is Test {
 
     function testSanityCheck() public {
         // Check AH channel nonces as expected
-        (uint64 inbound, uint64 outbound) = IGateway(GATEWAY_PROXY).channelNoncesOf(
+        (uint64 inbound, uint64 outbound) = IGatewayV1(GATEWAY_PROXY).channelNoncesOf(
             ChannelID.wrap(
                 0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539
             )

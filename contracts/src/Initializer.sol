@@ -16,7 +16,6 @@ import {
     ChannelID
 } from "./Types.sol";
 import {Upgrade} from "./Upgrade.sol";
-import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";

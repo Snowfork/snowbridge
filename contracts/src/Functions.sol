@@ -3,7 +3,6 @@
 pragma solidity 0.8.25;
 
 import {IERC20} from "./interfaces/IERC20.sol";
-import {IGateway} from "./interfaces/IGateway.sol";
 import {SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
 import {Agent} from "./Agent.sol";
 import {Call} from "./utils/Call.sol";
@@ -14,6 +13,9 @@ import {AssetsStorage} from "./storage/AssetsStorage.sol";
 import {Token} from "./Token.sol";
 import {TokenInfo} from "./types/Common.sol";
 import {ChannelID, Channel} from "./v1/Types.sol";
+import {IGatewayBase} from "./interfaces/IGatewayBase.sol";
+import {IGatewayV1} from "./v1/IGateway.sol";
+import {IGatewayV2} from "./v2/IGateway.sol";
 
 library Functions {
     using Address for address;
@@ -27,7 +29,7 @@ library Functions {
     function ensureAgent(bytes32 agentID) internal view returns (address agent) {
         agent = CoreStorage.layout().agents[agentID];
         if (agent == address(0)) {
-            revert AgentDoesNotExist();
+            revert IGatewayBase.AgentDoesNotExist();
         }
     }
 
@@ -40,7 +42,7 @@ library Functions {
         ch = CoreStorage.layout().channels[channelID];
         // A channel always has an agent specified.
         if (ch.agent == address(0)) {
-            revert ChannelDoesNotExist();
+            revert IGatewayV1.ChannelDoesNotExist();
         }
     }
 
@@ -78,9 +80,9 @@ library Functions {
         if (agent == address(0)) {
             agent = address(new Agent(origin));
             core.agents[origin] = agent;
-            emit IGateway.AgentCreated(origin, agent);
+            emit IGatewayBase.AgentCreated(origin, agent);
         } else {
-            revert IGateway.AgentAlreadyCreated();
+            revert IGatewayBase.AgentAlreadyCreated();
         }
     }
 
@@ -108,7 +110,7 @@ library Functions {
             abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
         (bool success,) = Agent(payable(agent)).invoke(executor, call);
         if (!success) {
-            revert IGateway.TokenTransferFailed();
+            revert IGatewayBase.TokenTransferFailed();
         }
     }
 
@@ -120,7 +122,7 @@ library Functions {
     ) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenAddressOf[foreignTokenID] != address(0)) {
-            revert IGateway.TokenAlreadyRegistered();
+            revert IGatewayBase.TokenAlreadyRegistered();
         }
         Token token = new Token(name, symbol, decimals);
         TokenInfo memory info =
@@ -129,7 +131,7 @@ library Functions {
         $.tokenAddressOf[foreignTokenID] = address(token);
         $.tokenRegistry[address(token)] = info;
 
-        emit IGateway.ForeignTokenRegistered(foreignTokenID, address(token));
+        emit IGatewayBase.ForeignTokenRegistered(foreignTokenID, address(token));
     }
 
     function mintForeignToken(bytes32 foreignTokenID, address recipient, uint128 amount)
@@ -143,7 +145,7 @@ library Functions {
     function _ensureTokenAddressOf(bytes32 tokenID) internal view returns (address) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenAddressOf[tokenID] == address(0)) {
-            revert IGateway.TokenNotRegistered();
+            revert IGatewayBase.TokenNotRegistered();
         }
         return $.tokenAddressOf[tokenID];
     }
