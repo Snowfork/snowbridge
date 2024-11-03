@@ -11,10 +11,10 @@ struct InboundMessageV2 {
     // Message nonce
     uint64 nonce;
     // Commands
-    Command[] commands;
+    CommandV2[] commands;
 }
 
-struct Command {
+struct CommandV2 {
     uint8 kind;
     uint64 gas;
     bytes payload;

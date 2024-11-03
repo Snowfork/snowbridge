@@ -5,7 +5,7 @@ set -eu
 mkdir -p src/contracts
 
 # Generate Rust bindings for contracts
-forge bind --module --overwrite \
+forge bind --module --overwrite --ethers\
     --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token' \
     --bindings-path src/contracts \
     --root ../contracts

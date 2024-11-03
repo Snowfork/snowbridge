@@ -1,6 +1,6 @@
 use crate::{
 	constants::*,
-	contracts::i_gateway,
+	contracts::igateway as i_gateway,
 	parachains::{
 		bridgehub::{self, api::runtime_types::snowbridge_core::outbound::OperatingMode},
 		relaychain,
@@ -25,8 +25,8 @@ use crate::{
 };
 use ethers::{
 	prelude::{
-		Address, EthEvent, LocalWallet, Middleware, Provider, Signer, SignerMiddleware,
-		TransactionRequest, Ws, U256,
+		Address, LocalWallet, Middleware, Provider, Signer, SignerMiddleware, TransactionRequest,
+		Ws, U256,
 	},
 	providers::Http,
 	types::Log,
@@ -56,12 +56,18 @@ impl Config for AssetHubConfig {
 	type AssetId = <PolkadotConfig as Config>::AssetId;
 }
 
+use alloy::{
+	providers::{Provider as AlloyProvider, ProviderBuilder, ReqwestProvider},
+	sol_types::SolEvent,
+};
+
 pub struct TestClients {
 	pub asset_hub_client: Box<OnlineClient<AssetHubConfig>>,
 	pub bridge_hub_client: Box<OnlineClient<PolkadotConfig>>,
 	pub relaychain_client: Box<OnlineClient<PolkadotConfig>>,
 	pub ethereum_client: Box<Arc<Provider<Ws>>>,
 	pub ethereum_signed_client: Box<Arc<SignerMiddleware<Provider<Http>, LocalWallet>>>,
+	pub ethereum_alloy_client: Box<Arc<ReqwestProvider>>,
 }
 
 pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>> {
@@ -87,6 +93,9 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
 
 	let ethereum_client = Arc::new(ethereum_provider);
 
+	let ethereum_rpc_url = ETHEREUM_API.parse()?;
+	let alloy_provider = ProviderBuilder::new().on_http(ethereum_rpc_url);
+
 	let ethereum_signed_client = initialize_wallet().await.expect("initialize wallet");
 
 	Ok(TestClients {
@@ -95,6 +104,7 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
 		relaychain_client: Box::new(relaychain_client),
 		ethereum_client: Box::new(ethereum_client),
 		ethereum_signed_client: Box::new(Arc::new(ethereum_signed_client)),
+		ethereum_alloy_client: Box::new(Arc::new(alloy_provider)),
 	})
 }
 
@@ -125,19 +135,26 @@ pub async fn wait_for_bridgehub_event<Ev: StaticEvent>(
 	assert!(substrate_event_found);
 }
 
-pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Provider<Ws>>>) {
-	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway::IGateway::new(gateway_addr, (*ethereum_client).deref().clone());
+pub async fn wait_for_ethereum_event<Ev: SolEvent>(ethereum_client: &Box<Arc<ReqwestProvider>>) {
+	let gateway_addr: alloy::primitives::Address = (*GATEWAY_PROXY_CONTRACT).into();
+	let gateway = i_gateway::IGateway::new(gateway_addr.into(), (*ethereum_client).deref().clone());
 
 	let wait_for_blocks = 500;
-	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
+	let mut stream = ethereum_client
+		.subscribe_blocks()
+		.await
+		.unwrap()
+		.into_stream()
+		.take(wait_for_blocks);
 
 	let mut ethereum_event_found = false;
 	while let Some(block) = stream.next().await {
-		println!("Polling ethereum block {:?} for expected event", block.number.unwrap());
-		if let Ok(events) = gateway.event::<Ev>().at_block_hash(block.hash.unwrap()).query().await {
+		println!("Polling ethereum block {:?} for expected event", block.header.number);
+		if let Ok(events) =
+			gateway.event_filter::<Ev>().at_block_hash(block.header.hash).query().await
+		{
 			for _ in events {
-				println!("Event found at ethereum block {:?}", block.number.unwrap());
+				println!("Event found at ethereum block {:?}", block.header.number);
 				ethereum_event_found = true;
 				break
 			}
@@ -221,7 +238,7 @@ pub async fn construct_transfer_native_from_agent_call(
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
 	let mut encoded = Vec::new();
 	bridgehub::api::ethereum_system::calls::TransactionApi
-		.transfer_native_from_agent(recipient, amount)
+		.transfer_native_from_agent(recipient.into(), amount)
 		.encode_call_data_to(&bridge_hub_client.metadata(), &mut encoded)?;
 
 	Ok(encoded)
@@ -271,21 +288,6 @@ pub async fn governance_bridgehub_call_from_relay_chain(
 
 	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
 
-	Ok(())
-}
-
-pub async fn fund_agent(agent_id: [u8; 32]) -> Result<(), Box<dyn std::error::Error>> {
-	let test_clients = initial_clients().await.expect("initialize clients");
-	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let ethereum_client = *(test_clients.ethereum_client.clone());
-	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
-	let agent_address = gateway.agent_of(agent_id).await.expect("find agent");
-
-	println!("agent address {}", hex::encode(agent_address));
-
-	fund_account(&test_clients.ethereum_signed_client, agent_address)
-		.await
-		.expect("fund account");
 	Ok(())
 }
 
