@@ -224,4 +224,33 @@ contract GatewayV2Test is Test {
             message, proof, makeMockProof(), relayerRewardAddress
         );
     }
+
+    function testEncodeDecodeMessageV2() public {
+        UnlockNativeTokenParams memory params = UnlockNativeTokenParams({
+            token: 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
+            recipient: 0xEDa338E4dC46038493b885327842fD3E301CaB39,
+            amount: 1_000_000
+        });
+        bytes memory encoded = abi.encode(params);
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] = CommandV2({
+            kind: CommandKind.UnlockNativeToken,
+            gas: 100_000,
+            payload: encoded
+        });
+        InboundMessageV2 memory message = InboundMessageV2({
+            origin: bytes32(uint256(1000)),
+            nonce: 1,
+            commands: commands
+        });
+        bytes memory rawBytes = abi.encode(message);
+
+        //From OutboundQueueV2
+        bytes memory data = abi.encodePacked(
+            hex"000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000003e80000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000186a000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000060000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000000000000000000000000eda338e4dc46038493b885327842fd3e301cab3900000000000000000000000000000000000000000000000000000000000f4240"
+        );
+        assertEq(data, rawBytes);
+        InboundMessageV2 memory result = abi.decode(data, (InboundMessageV2));
+        assertEq(result.nonce, 1);
+    }
 }
