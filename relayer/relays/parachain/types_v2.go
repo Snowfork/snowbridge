@@ -21,8 +21,8 @@ type CommandWrapper struct {
 	Params         types.Bytes
 }
 
-func (r CommandWrapper) IntoCommandV2() contracts.Command {
-	return contracts.Command{
+func (r CommandWrapper) IntoCommandV2() contracts.CommandV2 {
+	return contracts.CommandV2{
 		Kind:    uint8(r.Kind),
 		Gas:     uint64(r.MaxDispatchGas),
 		Payload: r.Params,
@@ -30,7 +30,7 @@ func (r CommandWrapper) IntoCommandV2() contracts.Command {
 }
 
 func (m OutboundQueueMessageV2) IntoInboundMessageV2() contracts.InboundMessageV2 {
-	var commands []contracts.Command
+	var commands []contracts.CommandV2
 	for _, command := range m.Commands {
 		commands = append(commands, command.IntoCommandV2())
 	}

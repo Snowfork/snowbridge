@@ -5,7 +5,7 @@ set -eu
 mkdir -p src/contracts
 
 # Generate Rust bindings for contracts
-forge bind --module --overwrite \
+forge bind --module --overwrite --ethers\
     --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token' \
     --bindings-path src/contracts \
     --root ../contracts
@@ -13,7 +13,7 @@ forge bind --module --overwrite \
 # Install subxt
 command -v subxt || cargo install subxt-cli \
     --git https://github.com/paritytech/subxt.git \
-    --tag v0.37.0
+    --tag v0.38.0
 
 eth_network="${ETH_NETWORK:-localhost}"
 polkadot_network="${POLKADOT_NETWORK:-localhost}"
