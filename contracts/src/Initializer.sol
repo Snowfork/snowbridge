@@ -16,7 +16,6 @@ import {
     ChannelID
 } from "./Types.sol";
 import {Upgrade} from "./Upgrade.sol";
-import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
@@ -57,6 +56,7 @@ library Initializer {
         address rescueOperator;
         uint8 foreignTokenDecimals;
         uint128 maxDestinationFee;
+        address weth;
     }
 
     function initialize(bytes calldata data) external {
@@ -119,6 +119,7 @@ library Initializer {
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
         assets.foreignTokenDecimals = config.foreignTokenDecimals;
         assets.maxDestinationFee = config.maxDestinationFee;
+        assets.weth = config.weth;
 
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();

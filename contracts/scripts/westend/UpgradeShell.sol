@@ -8,7 +8,6 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
 
 import {BeefyClient} from "../../src/BeefyClient.sol";
-import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {IShell} from "../../src/interfaces/IShell.sol";
 import {GatewayProxy} from "../../src/GatewayProxy.sol";
 import {Gateway} from "../../src/Gateway.sol";
@@ -43,7 +42,8 @@ contract UpgradeShell is Script {
                 multiplier: ud60x18(1_330_000_000_000_000_000),
                 rescueOperator: 0x302F0B71B8aD3CF6dD90aDb668E49b2168d652fd,
                 foreignTokenDecimals: 12,
-                maxDestinationFee: 2_000_000_000_000
+                maxDestinationFee: 2_000_000_000_000,
+                weth: 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9
             })
         });
     }
