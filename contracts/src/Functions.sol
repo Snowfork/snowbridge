@@ -26,6 +26,11 @@ library Functions {
     error InvalidAmount();
     error ChannelDoesNotExist();
 
+    function weth() internal view returns (address) {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        return $.weth;
+    }
+
     function ensureAgent(bytes32 agentID) internal view returns (address agent) {
         agent = CoreStorage.layout().agents[agentID];
         if (agent == address(0)) {

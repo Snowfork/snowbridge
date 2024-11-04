@@ -34,7 +34,6 @@ library CallsV2 {
     using SafeTokenTransfer for IERC20;
     using SafeNativeTransfer for address payable;
 
-    address public constant WETH_ADDRESS = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint8 public constant MAX_ASSETS = 8;
 
     // Send an XCM with arbitrary assets to Polkadot Asset Hub
@@ -130,7 +129,7 @@ library CallsV2 {
         _lockEther(xcmFee);
 
         bytes[] memory assets = new bytes[](1);
-        assets[0] = abi.encode(0, WETH_ADDRESS, xcmFee);
+        assets[0] = abi.encode(0, Functions.weth(), xcmFee);
 
         _sendMessage(address(this), xcm, assets, "", msg.value - xcmFee);
     }
@@ -156,9 +155,10 @@ library CallsV2 {
 
     // Lock wrapped ether into the AssetHub Agent
     function _lockEther(uint256 value) internal {
+        address weth = Functions.weth();
         address assetHubAgent = Functions.ensureAgent(Constants.ASSET_HUB_AGENT_ID);
-        WETH9(payable(WETH_ADDRESS)).deposit{value: value}();
-        IERC20(WETH_ADDRESS).safeTransfer(assetHubAgent, value);
+        WETH9(payable(weth)).deposit{value: value}();
+        IERC20(weth).safeTransfer(assetHubAgent, value);
     }
 
     /// @dev Outbound message can be disabled globally or on a per-channel basis.

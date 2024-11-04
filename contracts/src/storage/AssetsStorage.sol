@@ -26,6 +26,7 @@ library AssetsStorage {
         // * Prevents users from mistakenly providing too much fees, which would drain AssetHub's
         //   sovereign account here on Ethereum.
         uint128 maxDestinationFee;
+        address weth;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets");

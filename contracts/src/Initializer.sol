@@ -56,6 +56,7 @@ library Initializer {
         address rescueOperator;
         uint8 foreignTokenDecimals;
         uint128 maxDestinationFee;
+        address weth;
     }
 
     function initialize(bytes calldata data) external {
@@ -118,6 +119,7 @@ library Initializer {
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
         assets.foreignTokenDecimals = config.foreignTokenDecimals;
         assets.maxDestinationFee = config.maxDestinationFee;
+        assets.weth = config.weth;
 
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();

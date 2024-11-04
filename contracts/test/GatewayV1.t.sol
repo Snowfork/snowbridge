@@ -119,6 +119,7 @@ contract GatewayV1Test is Test {
     bytes32 public dotTokenID;
 
     function setUp() public {
+        token = new WETH9();
         AgentExecutor executor = new AgentExecutor();
         gatewayLogic = new MockGateway(address(0), address(executor));
         Initializer.Config memory config = Initializer.Config({
@@ -131,7 +132,8 @@ contract GatewayV1Test is Test {
             multiplier: multiplier,
             rescueOperator: 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967,
             foreignTokenDecimals: foreignTokenDecimals,
-            maxDestinationFee: maxDestinationFee
+            maxDestinationFee: maxDestinationFee,
+            weth: address(token)
         });
         gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
         MockGateway(address(gateway)).setCommitmentsAreVerified(true);
@@ -151,8 +153,6 @@ contract GatewayV1Test is Test {
         relayer = makeAddr("relayer");
 
         // Features
-
-        token = new WETH9();
 
         account1 = makeAddr("account1");
         account2 = makeAddr("account2");
