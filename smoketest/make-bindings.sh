@@ -13,7 +13,7 @@ forge bind --module --overwrite --ethers\
 # Install subxt
 command -v subxt || cargo install subxt-cli \
     --git https://github.com/paritytech/subxt.git \
-    --tag v0.37.0
+    --tag v0.38.0
 
 eth_network="${ETH_NETWORK:-localhost}"
 polkadot_network="${POLKADOT_NETWORK:-localhost}"
