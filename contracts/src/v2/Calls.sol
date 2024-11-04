@@ -58,7 +58,7 @@ library CallsV2 {
         bytes[] calldata assets,
         bytes calldata claimer
     ) external {
-        _sendMessage(msg.sender, xcm, assets, claimer, msg.value);
+        _sendMessage(msg.sender, xcm, assets, claimer);
     }
 
     // Register Ethereum-native token on AHP, using `xcmFeeAHP` of `msg.value`
@@ -83,23 +83,31 @@ library CallsV2 {
         address origin,
         bytes memory xcm,
         bytes[] memory assets,
-        bytes memory claimer,
-        uint256 reward
+        bytes memory claimer
     ) internal {
         if (assets.length > MAX_ASSETS) {
             revert IGatewayBase.TooManyAssets();
         }
 
         bytes[] memory encodedAssets = new bytes[](assets.length);
+        uint128 etherValue = 0;
+        uint128 totalEtherValue = 0;
+
         for (uint256 i = 0; i < assets.length; i++) {
-            encodedAssets[i] = _handleAsset(assets[i]);
+            (encodedAssets[i], etherValue) = _handleAsset(assets[i]);
+            totalEtherValue += etherValue;
         }
+
+        if (totalEtherValue > msg.value) {
+            revert IGatewayV2.InvalidEtherValue();
+        }
+
         Ticket memory ticket = Ticket({
             origin: origin,
             assets: encodedAssets,
             xcm: xcm,
             claimer: claimer,
-            reward: reward
+            reward: msg.value - totalEtherValue
         });
         _submitOutbound(ticket);
     }
@@ -126,12 +134,11 @@ library CallsV2 {
         if (xcmFee > msg.value) {
             revert IGatewayV2.InvalidFee();
         }
-        _lockEther(xcmFee);
 
         bytes[] memory assets = new bytes[](1);
-        assets[0] = abi.encode(0, Functions.weth(), xcmFee);
+        assets[0] = abi.encode(0, xcmFee);
 
-        _sendMessage(address(this), xcm, assets, "", msg.value - xcmFee);
+        _sendMessage(address(this), xcm, assets, "");
     }
 
     // Submit an outbound message to Polkadot, after taking fees
@@ -169,13 +176,17 @@ library CallsV2 {
         }
     }
 
-    function _handleAsset(bytes memory asset) internal returns (bytes memory) {
+    function _handleAsset(bytes memory asset) internal returns (bytes memory, uint128) {
         uint8 assetKind;
         assembly {
             assetKind := byte(31, mload(add(asset, 32)))
         }
         if (assetKind == 0) {
-            // ERC20: abi.encode(0, tokenAddress, value)
+            // Ether: abi.encode(0, value)
+            (, uint128 amount) = abi.decode(asset, (uint8, uint128));
+            return _handleAssetEther(amount);
+        } else if (assetKind == 1) {
+            // ERC20: abi.encode(1, tokenAddress, value)
             (, address token, uint128 amount) =
                 abi.decode(asset, (uint8, address, uint128));
             return _handleAssetERC20(token, amount);
@@ -184,9 +195,20 @@ library CallsV2 {
         }
     }
 
+    function _handleAssetEther(uint128 amount)
+        internal
+        returns (bytes memory, uint128)
+    {
+        _lockEther(amount);
+        return (
+            SubstrateTypes.encodeTransferNativeTokenERC20(Functions.weth(), amount),
+            amount
+        );
+    }
+
     function _handleAssetERC20(address token, uint128 amount)
         internal
-        returns (bytes memory)
+        returns (bytes memory, uint128)
     {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
@@ -197,10 +219,12 @@ library CallsV2 {
 
         if (info.foreignID == bytes32(0)) {
             Functions.transferToAgent($.assetHubAgent, token, msg.sender, amount);
-            return SubstrateTypes.encodeTransferNativeTokenERC20(token, amount);
+            return (SubstrateTypes.encodeTransferNativeTokenERC20(token, amount), 0);
         } else {
             Token(token).burn(msg.sender, amount);
-            return SubstrateTypes.encodeTransferForeignTokenERC20(info.foreignID, amount);
+            return (
+                SubstrateTypes.encodeTransferForeignTokenERC20(info.foreignID, amount), 0
+            );
         }
     }
 }

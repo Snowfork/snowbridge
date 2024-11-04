@@ -10,6 +10,7 @@ import {UD60x18} from "prb/math/src/UD60x18.sol";
 interface IGatewayV2 {
     error InvalidAsset();
     error InvalidFee();
+    error InvalidEtherValue();
 
     function operatingMode() external view returns (OperatingMode);
 
@@ -44,7 +45,8 @@ interface IGatewayV2 {
     //   * `assets` (bytes[]): Array of asset specs, constrained to maximum of eight.
     //
     // Supported asset specs:
-    // * ERC20: abi.encode(0, tokenAddress, value)
+    // * Ether: abi.encode(0, value)
+    // * ERC20: abi.encode(1, tokenAddress, value)
     //
     // On Asset Hub, the assets will be received into the assets holding register.
     //

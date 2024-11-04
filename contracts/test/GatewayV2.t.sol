@@ -80,8 +80,8 @@ contract GatewayV2Test is Test {
 
     WETH9 public token;
 
-    address public account1;
-    address public account2;
+    address public user1;
+    address public user2;
 
     // tokenID for DOT
     bytes32 public dotTokenID;
@@ -120,14 +120,15 @@ contract GatewayV2Test is Test {
 
         // Features
 
-        account1 = makeAddr("account1");
-        account2 = makeAddr("account2");
+        user1 = makeAddr("user1");
+        user2 = makeAddr("user2");
 
         // create tokens for account 1
-        hoax(account1);
+        hoax(user1);
         token.deposit{value: 500}();
 
         // create tokens for account 2
+        hoax(user2);
         token.deposit{value: 500}();
 
         dotTokenID = bytes32(uint256(1));
@@ -225,5 +226,18 @@ contract GatewayV2Test is Test {
         IGatewayV2(address(gateway)).v2_submit(
             message, proof, makeMockProof(), relayerRewardAddress
         );
+    }
+
+    function testSendEther() public {
+        bytes[] memory assets = new bytes[](1);
+        assets[0] = abi.encode(0, 0.5 ether);
+
+        hoax(user1, 1 ether);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
+            "", assets, ""
+        );
+
+        // Agent balance should be 0.5 + 0.5
+        assertEq(token.balanceOf(assetHubAgent), 1 ether);
     }
 }
