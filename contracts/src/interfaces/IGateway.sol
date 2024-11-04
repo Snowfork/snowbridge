@@ -9,6 +9,7 @@ import {
     ParaID,
     ChannelID
 } from "../v1/Types.sol";
+import {InboundMessageV2} from "../v2/Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
@@ -54,7 +55,7 @@ interface IGateway {
 
     // V2: Emitted when inbound message has been dispatched
     event InboundMessageDispatched(
-        uint64 indexed nonce, bool success, bytes32 rewardAddress
+        uint64 indexed nonce, bool success, bytes32 indexed rewardAddress
     );
 
     // Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
@@ -173,6 +174,14 @@ interface IGateway {
 
     // V2
 
+    // Submit a message for verification and dispatch
+    function v2_submit(
+        InboundMessageV2 calldata message,
+        bytes32[] calldata leafProof,
+        Verification.Proof calldata headerProof,
+        bytes32 rewardAddress
+    ) external;
+
     // Send an XCM with arbitrary assets to Polkadot Asset Hub
     //
     // Params:
@@ -194,15 +203,24 @@ interface IGateway {
     // at least cover the total cost of delivery to Polkadot. This ether be sent across
     // the bridge as WETH, and given to the relayer as compensation and incentivization.
     //
-    function sendMessage(bytes calldata xcm, bytes[] calldata assets) external payable;
+    function v2_sendMessage(
+        bytes calldata xcm,
+        bytes[] calldata assets,
+        bytes calldata claimer
+    ) external payable;
 
     // Register Ethereum-native token on AHP, using `xcmFeeAHP` of `msg.value`
     // to pay for execution on AHP.
-    function registerToken(address token, uint128 xcmFeeAHP) external payable;
+    function v2_registerToken(address token, uint128 xcmFeeAHP) external payable;
 
     // Register Ethereum-native token on AHK, using `xcmFeeAHP` and `xcmFeeAHK`
     // of `msg.value` to pay for execution on AHP and AHK respectively.
-    function registerTokenOnKusama(address token, uint128 xcmFeeAHP, uint128 xcmFeeAHK)
-        external
-        payable;
+    function v2_registerTokenOnKusama(
+        address token,
+        uint128 xcmFeeAHP,
+        uint128 xcmFeeAHK
+    ) external payable;
+
+    // Check if an inbound message was previously accepted and dispatched
+    function v2_isDispatched(uint64 nonce) external view returns (bool);
 }

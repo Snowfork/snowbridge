@@ -29,6 +29,13 @@ var (
 	_ = abi.ConvertType
 )
 
+// CommandV2 is an auto generated low-level Go binding around an user-defined struct.
+type CommandV2 struct {
+	Kind    uint8
+	Gas     uint64
+	Payload []byte
+}
+
 // InboundMessage is an auto generated low-level Go binding around an user-defined struct.
 type InboundMessage struct {
 	ChannelID      [32]byte
@@ -39,6 +46,13 @@ type InboundMessage struct {
 	MaxFeePerGas   *big.Int
 	Reward         *big.Int
 	Id             [32]byte
+}
+
+// InboundMessageV2 is an auto generated low-level Go binding around an user-defined struct.
+type InboundMessageV2 struct {
+	Origin   [32]byte
+	Nonce    uint64
+	Commands []CommandV2
 }
 
 // MultiAddress is an auto generated low-level Go binding around an user-defined struct.
@@ -91,7 +105,7 @@ type VerificationProof struct {
 
 // GatewayMetaData contains all meta data concerning the Gateway contract.
 var GatewayMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"function\",\"name\":\"agentOf\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"channelNoncesOf\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"internalType\":\"ChannelID\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"channelOperatingModeOf\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"internalType\":\"ChannelID\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"enumOperatingMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"implementation\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isTokenRegistered\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"operatingMode\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"enumOperatingMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pricingParameters\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"UD60x18\"},{\"name\":\"\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"quoteRegisterTokenFee\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"quoteSendTokenFee\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"internalType\":\"ParaID\"},{\"name\":\"destinationFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"registerToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"sendToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"internalType\":\"ParaID\"},{\"name\":\"destinationAddress\",\"type\":\"tuple\",\"internalType\":\"structMultiAddress\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"enumKind\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"destinationFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"amount\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"submitV1\",\"inputs\":[{\"name\":\"message\",\"type\":\"tuple\",\"internalType\":\"structInboundMessage\",\"components\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"internalType\":\"ChannelID\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"command\",\"type\":\"uint8\",\"internalType\":\"enumCommand\"},{\"name\":\"params\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"maxDispatchGas\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"maxFeePerGas\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"reward\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"id\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"headerProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.Proof\",\"components\":[{\"name\":\"header\",\"type\":\"tuple\",\"internalType\":\"structVerification.ParachainHeader\",\"components\":[{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"number\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"stateRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"digestItems\",\"type\":\"tuple[]\",\"internalType\":\"structVerification.DigestItem[]\",\"components\":[{\"name\":\"kind\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"consensusEngineID\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"headProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.HeadProof\",\"components\":[{\"name\":\"pos\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"width\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]},{\"name\":\"leafPartial\",\"type\":\"tuple\",\"internalType\":\"structVerification.MMRLeafPartial\",\"components\":[{\"name\":\"version\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"parentNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"leafProofOrder\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"AgentCreated\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"agent\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"AgentFundsWithdrawn\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"recipient\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelCreated\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelUpdated\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ForeignTokenRegistered\",\"inputs\":[{\"name\":\"tokenID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"token\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InboundMessageDispatched\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"messageID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"success\",\"type\":\"bool\",\"indexed\":false,\"internalType\":\"bool\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatingModeChanged\",\"inputs\":[{\"name\":\"mode\",\"type\":\"uint8\",\"indexed\":false,\"internalType\":\"enumOperatingMode\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OutboundMessageAccepted\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"messageID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"payload\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"PricingParametersChanged\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenRegistrationSent\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenSent\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"indexed\":true,\"internalType\":\"ParaID\"},{\"name\":\"destinationAddress\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structMultiAddress\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"enumKind\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"amount\",\"type\":\"uint128\",\"indexed\":false,\"internalType\":\"uint128\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenTransferFeesChanged\",\"inputs\":[],\"anonymous\":false}]",
+	ABI: "[{\"type\":\"function\",\"name\":\"agentOf\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"channelNoncesOf\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"internalType\":\"ChannelID\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"channelOperatingModeOf\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"internalType\":\"ChannelID\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"enumOperatingMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"implementation\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isTokenRegistered\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"operatingMode\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"enumOperatingMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pricingParameters\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"UD60x18\"},{\"name\":\"\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"quoteRegisterTokenFee\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"quoteSendTokenFee\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"internalType\":\"ParaID\"},{\"name\":\"destinationFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"registerToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"sendToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"internalType\":\"ParaID\"},{\"name\":\"destinationAddress\",\"type\":\"tuple\",\"internalType\":\"structMultiAddress\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"enumKind\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"destinationFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"amount\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"submitV1\",\"inputs\":[{\"name\":\"message\",\"type\":\"tuple\",\"internalType\":\"structInboundMessage\",\"components\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"internalType\":\"ChannelID\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"command\",\"type\":\"uint8\",\"internalType\":\"enumCommand\"},{\"name\":\"params\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"maxDispatchGas\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"maxFeePerGas\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"reward\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"id\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"headerProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.Proof\",\"components\":[{\"name\":\"header\",\"type\":\"tuple\",\"internalType\":\"structVerification.ParachainHeader\",\"components\":[{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"number\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"stateRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"digestItems\",\"type\":\"tuple[]\",\"internalType\":\"structVerification.DigestItem[]\",\"components\":[{\"name\":\"kind\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"consensusEngineID\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"headProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.HeadProof\",\"components\":[{\"name\":\"pos\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"width\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]},{\"name\":\"leafPartial\",\"type\":\"tuple\",\"internalType\":\"structVerification.MMRLeafPartial\",\"components\":[{\"name\":\"version\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"parentNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"leafProofOrder\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"v2_isDispatched\",\"inputs\":[{\"name\":\"nonce\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"v2_registerToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"xcmFeeAHP\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"v2_registerTokenOnKusama\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"xcmFeeAHP\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"xcmFeeAHK\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"v2_sendMessage\",\"inputs\":[{\"name\":\"xcm\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"assets\",\"type\":\"bytes[]\",\"internalType\":\"bytes[]\"},{\"name\":\"claimer\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"v2_submit\",\"inputs\":[{\"name\":\"message\",\"type\":\"tuple\",\"internalType\":\"structInboundMessageV2\",\"components\":[{\"name\":\"origin\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"commands\",\"type\":\"tuple[]\",\"internalType\":\"structCommandV2[]\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"gas\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"payload\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"headerProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.Proof\",\"components\":[{\"name\":\"header\",\"type\":\"tuple\",\"internalType\":\"structVerification.ParachainHeader\",\"components\":[{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"number\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"stateRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"digestItems\",\"type\":\"tuple[]\",\"internalType\":\"structVerification.DigestItem[]\",\"components\":[{\"name\":\"kind\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"consensusEngineID\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"headProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.HeadProof\",\"components\":[{\"name\":\"pos\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"width\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]},{\"name\":\"leafPartial\",\"type\":\"tuple\",\"internalType\":\"structVerification.MMRLeafPartial\",\"components\":[{\"name\":\"version\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"parentNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"leafProofOrder\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"rewardAddress\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"AgentCreated\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"agent\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"AgentFundsWithdrawn\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"recipient\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelCreated\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelUpdated\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ForeignTokenRegistered\",\"inputs\":[{\"name\":\"tokenID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"token\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InboundMessageDispatched\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"messageID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"success\",\"type\":\"bool\",\"indexed\":false,\"internalType\":\"bool\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InboundMessageDispatched\",\"inputs\":[{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"success\",\"type\":\"bool\",\"indexed\":false,\"internalType\":\"bool\"},{\"name\":\"rewardAddress\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatingModeChanged\",\"inputs\":[{\"name\":\"mode\",\"type\":\"uint8\",\"indexed\":false,\"internalType\":\"enumOperatingMode\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OutboundMessageAccepted\",\"inputs\":[{\"name\":\"channelID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"ChannelID\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"messageID\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"payload\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OutboundMessageAccepted\",\"inputs\":[{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"reward\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"payload\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"PricingParametersChanged\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenRegistrationSent\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenSent\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"destinationChain\",\"type\":\"uint32\",\"indexed\":true,\"internalType\":\"ParaID\"},{\"name\":\"destinationAddress\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structMultiAddress\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"enumKind\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"amount\",\"type\":\"uint128\",\"indexed\":false,\"internalType\":\"uint128\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenTransferFeesChanged\",\"inputs\":[],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AgentAlreadyCreated\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AgentDoesNotExist\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AgentExecutionFailed\",\"inputs\":[{\"name\":\"returndata\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"type\":\"error\",\"name\":\"AlreadyInitialized\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChannelAlreadyCreated\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChannelDoesNotExist\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Disabled\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"FeePaymentToLow\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidAgentExecutionPayload\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidChannelUpdate\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidConstructorParams\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidDestination\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidDestinationFee\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidFee\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidNonce\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidProof\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidToken\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotEnoughGas\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TokenAlreadyRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TokenMintFailed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TokenNotRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TokenTransferFailed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TooManyAssets\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Unauthorized\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Unsupported\",\"inputs\":[]}]",
 }
 
 // GatewayABI is the input ABI used to generate the binding from.
@@ -521,6 +535,37 @@ func (_Gateway *GatewayCallerSession) QuoteSendTokenFee(token common.Address, de
 	return _Gateway.Contract.QuoteSendTokenFee(&_Gateway.CallOpts, token, destinationChain, destinationFee)
 }
 
+// V2IsDispatched is a free data retrieval call binding the contract method 0xc66414c5.
+//
+// Solidity: function v2_isDispatched(uint64 nonce) view returns(bool)
+func (_Gateway *GatewayCaller) V2IsDispatched(opts *bind.CallOpts, nonce uint64) (bool, error) {
+	var out []interface{}
+	err := _Gateway.contract.Call(opts, &out, "v2_isDispatched", nonce)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// V2IsDispatched is a free data retrieval call binding the contract method 0xc66414c5.
+//
+// Solidity: function v2_isDispatched(uint64 nonce) view returns(bool)
+func (_Gateway *GatewaySession) V2IsDispatched(nonce uint64) (bool, error) {
+	return _Gateway.Contract.V2IsDispatched(&_Gateway.CallOpts, nonce)
+}
+
+// V2IsDispatched is a free data retrieval call binding the contract method 0xc66414c5.
+//
+// Solidity: function v2_isDispatched(uint64 nonce) view returns(bool)
+func (_Gateway *GatewayCallerSession) V2IsDispatched(nonce uint64) (bool, error) {
+	return _Gateway.Contract.V2IsDispatched(&_Gateway.CallOpts, nonce)
+}
+
 // RegisterToken is a paid mutator transaction binding the contract method 0x09824a80.
 //
 // Solidity: function registerToken(address token) payable returns()
@@ -582,6 +627,90 @@ func (_Gateway *GatewaySession) SubmitV1(message InboundMessage, leafProof [][32
 // Solidity: function submitV1((bytes32,uint64,uint8,bytes,uint64,uint256,uint256,bytes32) message, bytes32[] leafProof, ((bytes32,uint256,bytes32,bytes32,(uint256,bytes4,bytes)[]),(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) headerProof) returns()
 func (_Gateway *GatewayTransactorSession) SubmitV1(message InboundMessage, leafProof [][32]byte, headerProof VerificationProof) (*types.Transaction, error) {
 	return _Gateway.Contract.SubmitV1(&_Gateway.TransactOpts, message, leafProof, headerProof)
+}
+
+// V2RegisterToken is a paid mutator transaction binding the contract method 0xd0b8c486.
+//
+// Solidity: function v2_registerToken(address token, uint128 xcmFeeAHP) payable returns()
+func (_Gateway *GatewayTransactor) V2RegisterToken(opts *bind.TransactOpts, token common.Address, xcmFeeAHP *big.Int) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "v2_registerToken", token, xcmFeeAHP)
+}
+
+// V2RegisterToken is a paid mutator transaction binding the contract method 0xd0b8c486.
+//
+// Solidity: function v2_registerToken(address token, uint128 xcmFeeAHP) payable returns()
+func (_Gateway *GatewaySession) V2RegisterToken(token common.Address, xcmFeeAHP *big.Int) (*types.Transaction, error) {
+	return _Gateway.Contract.V2RegisterToken(&_Gateway.TransactOpts, token, xcmFeeAHP)
+}
+
+// V2RegisterToken is a paid mutator transaction binding the contract method 0xd0b8c486.
+//
+// Solidity: function v2_registerToken(address token, uint128 xcmFeeAHP) payable returns()
+func (_Gateway *GatewayTransactorSession) V2RegisterToken(token common.Address, xcmFeeAHP *big.Int) (*types.Transaction, error) {
+	return _Gateway.Contract.V2RegisterToken(&_Gateway.TransactOpts, token, xcmFeeAHP)
+}
+
+// V2RegisterTokenOnKusama is a paid mutator transaction binding the contract method 0x49c481ba.
+//
+// Solidity: function v2_registerTokenOnKusama(address token, uint128 xcmFeeAHP, uint128 xcmFeeAHK) payable returns()
+func (_Gateway *GatewayTransactor) V2RegisterTokenOnKusama(opts *bind.TransactOpts, token common.Address, xcmFeeAHP *big.Int, xcmFeeAHK *big.Int) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "v2_registerTokenOnKusama", token, xcmFeeAHP, xcmFeeAHK)
+}
+
+// V2RegisterTokenOnKusama is a paid mutator transaction binding the contract method 0x49c481ba.
+//
+// Solidity: function v2_registerTokenOnKusama(address token, uint128 xcmFeeAHP, uint128 xcmFeeAHK) payable returns()
+func (_Gateway *GatewaySession) V2RegisterTokenOnKusama(token common.Address, xcmFeeAHP *big.Int, xcmFeeAHK *big.Int) (*types.Transaction, error) {
+	return _Gateway.Contract.V2RegisterTokenOnKusama(&_Gateway.TransactOpts, token, xcmFeeAHP, xcmFeeAHK)
+}
+
+// V2RegisterTokenOnKusama is a paid mutator transaction binding the contract method 0x49c481ba.
+//
+// Solidity: function v2_registerTokenOnKusama(address token, uint128 xcmFeeAHP, uint128 xcmFeeAHK) payable returns()
+func (_Gateway *GatewayTransactorSession) V2RegisterTokenOnKusama(token common.Address, xcmFeeAHP *big.Int, xcmFeeAHK *big.Int) (*types.Transaction, error) {
+	return _Gateway.Contract.V2RegisterTokenOnKusama(&_Gateway.TransactOpts, token, xcmFeeAHP, xcmFeeAHK)
+}
+
+// V2SendMessage is a paid mutator transaction binding the contract method 0xb7c02d39.
+//
+// Solidity: function v2_sendMessage(bytes xcm, bytes[] assets, bytes claimer) payable returns()
+func (_Gateway *GatewayTransactor) V2SendMessage(opts *bind.TransactOpts, xcm []byte, assets [][]byte, claimer []byte) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "v2_sendMessage", xcm, assets, claimer)
+}
+
+// V2SendMessage is a paid mutator transaction binding the contract method 0xb7c02d39.
+//
+// Solidity: function v2_sendMessage(bytes xcm, bytes[] assets, bytes claimer) payable returns()
+func (_Gateway *GatewaySession) V2SendMessage(xcm []byte, assets [][]byte, claimer []byte) (*types.Transaction, error) {
+	return _Gateway.Contract.V2SendMessage(&_Gateway.TransactOpts, xcm, assets, claimer)
+}
+
+// V2SendMessage is a paid mutator transaction binding the contract method 0xb7c02d39.
+//
+// Solidity: function v2_sendMessage(bytes xcm, bytes[] assets, bytes claimer) payable returns()
+func (_Gateway *GatewayTransactorSession) V2SendMessage(xcm []byte, assets [][]byte, claimer []byte) (*types.Transaction, error) {
+	return _Gateway.Contract.V2SendMessage(&_Gateway.TransactOpts, xcm, assets, claimer)
+}
+
+// V2Submit is a paid mutator transaction binding the contract method 0x9a13f0e7.
+//
+// Solidity: function v2_submit((bytes32,uint64,(uint8,uint64,bytes)[]) message, bytes32[] leafProof, ((bytes32,uint256,bytes32,bytes32,(uint256,bytes4,bytes)[]),(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) headerProof, bytes32 rewardAddress) returns()
+func (_Gateway *GatewayTransactor) V2Submit(opts *bind.TransactOpts, message InboundMessageV2, leafProof [][32]byte, headerProof VerificationProof, rewardAddress [32]byte) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "v2_submit", message, leafProof, headerProof, rewardAddress)
+}
+
+// V2Submit is a paid mutator transaction binding the contract method 0x9a13f0e7.
+//
+// Solidity: function v2_submit((bytes32,uint64,(uint8,uint64,bytes)[]) message, bytes32[] leafProof, ((bytes32,uint256,bytes32,bytes32,(uint256,bytes4,bytes)[]),(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) headerProof, bytes32 rewardAddress) returns()
+func (_Gateway *GatewaySession) V2Submit(message InboundMessageV2, leafProof [][32]byte, headerProof VerificationProof, rewardAddress [32]byte) (*types.Transaction, error) {
+	return _Gateway.Contract.V2Submit(&_Gateway.TransactOpts, message, leafProof, headerProof, rewardAddress)
+}
+
+// V2Submit is a paid mutator transaction binding the contract method 0x9a13f0e7.
+//
+// Solidity: function v2_submit((bytes32,uint64,(uint8,uint64,bytes)[]) message, bytes32[] leafProof, ((bytes32,uint256,bytes32,bytes32,(uint256,bytes4,bytes)[]),(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) headerProof, bytes32 rewardAddress) returns()
+func (_Gateway *GatewayTransactorSession) V2Submit(message InboundMessageV2, leafProof [][32]byte, headerProof VerificationProof, rewardAddress [32]byte) (*types.Transaction, error) {
+	return _Gateway.Contract.V2Submit(&_Gateway.TransactOpts, message, leafProof, headerProof, rewardAddress)
 }
 
 // GatewayAgentCreatedIterator is returned from FilterAgentCreated and is used to iterate over the raw logs and unpacked data for AgentCreated events raised by the Gateway contract.
@@ -1463,6 +1592,162 @@ func (_Gateway *GatewayFilterer) ParseInboundMessageDispatched(log types.Log) (*
 	return event, nil
 }
 
+// GatewayInboundMessageDispatched0Iterator is returned from FilterInboundMessageDispatched0 and is used to iterate over the raw logs and unpacked data for InboundMessageDispatched0 events raised by the Gateway contract.
+type GatewayInboundMessageDispatched0Iterator struct {
+	Event *GatewayInboundMessageDispatched0 // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *GatewayInboundMessageDispatched0Iterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(GatewayInboundMessageDispatched0)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(GatewayInboundMessageDispatched0)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *GatewayInboundMessageDispatched0Iterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *GatewayInboundMessageDispatched0Iterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// GatewayInboundMessageDispatched0 represents a InboundMessageDispatched0 event raised by the Gateway contract.
+type GatewayInboundMessageDispatched0 struct {
+	Nonce         uint64
+	Success       bool
+	RewardAddress [32]byte
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterInboundMessageDispatched0 is a free log retrieval operation binding the contract event 0x755d3b4d173427dc415f2c82a71641bfdbc1e8f79e36a2bd0d480237e94a159b.
+//
+// Solidity: event InboundMessageDispatched(uint64 indexed nonce, bool success, bytes32 indexed rewardAddress)
+func (_Gateway *GatewayFilterer) FilterInboundMessageDispatched0(opts *bind.FilterOpts, nonce []uint64, rewardAddress [][32]byte) (*GatewayInboundMessageDispatched0Iterator, error) {
+
+	var nonceRule []interface{}
+	for _, nonceItem := range nonce {
+		nonceRule = append(nonceRule, nonceItem)
+	}
+
+	var rewardAddressRule []interface{}
+	for _, rewardAddressItem := range rewardAddress {
+		rewardAddressRule = append(rewardAddressRule, rewardAddressItem)
+	}
+
+	logs, sub, err := _Gateway.contract.FilterLogs(opts, "InboundMessageDispatched0", nonceRule, rewardAddressRule)
+	if err != nil {
+		return nil, err
+	}
+	return &GatewayInboundMessageDispatched0Iterator{contract: _Gateway.contract, event: "InboundMessageDispatched0", logs: logs, sub: sub}, nil
+}
+
+// WatchInboundMessageDispatched0 is a free log subscription operation binding the contract event 0x755d3b4d173427dc415f2c82a71641bfdbc1e8f79e36a2bd0d480237e94a159b.
+//
+// Solidity: event InboundMessageDispatched(uint64 indexed nonce, bool success, bytes32 indexed rewardAddress)
+func (_Gateway *GatewayFilterer) WatchInboundMessageDispatched0(opts *bind.WatchOpts, sink chan<- *GatewayInboundMessageDispatched0, nonce []uint64, rewardAddress [][32]byte) (event.Subscription, error) {
+
+	var nonceRule []interface{}
+	for _, nonceItem := range nonce {
+		nonceRule = append(nonceRule, nonceItem)
+	}
+
+	var rewardAddressRule []interface{}
+	for _, rewardAddressItem := range rewardAddress {
+		rewardAddressRule = append(rewardAddressRule, rewardAddressItem)
+	}
+
+	logs, sub, err := _Gateway.contract.WatchLogs(opts, "InboundMessageDispatched0", nonceRule, rewardAddressRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(GatewayInboundMessageDispatched0)
+				if err := _Gateway.contract.UnpackLog(event, "InboundMessageDispatched0", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseInboundMessageDispatched0 is a log parse operation binding the contract event 0x755d3b4d173427dc415f2c82a71641bfdbc1e8f79e36a2bd0d480237e94a159b.
+//
+// Solidity: event InboundMessageDispatched(uint64 indexed nonce, bool success, bytes32 indexed rewardAddress)
+func (_Gateway *GatewayFilterer) ParseInboundMessageDispatched0(log types.Log) (*GatewayInboundMessageDispatched0, error) {
+	event := new(GatewayInboundMessageDispatched0)
+	if err := _Gateway.contract.UnpackLog(event, "InboundMessageDispatched0", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
 // GatewayOperatingModeChangedIterator is returned from FilterOperatingModeChanged and is used to iterate over the raw logs and unpacked data for OperatingModeChanged events raised by the Gateway contract.
 type GatewayOperatingModeChangedIterator struct {
 	Event *GatewayOperatingModeChanged // Event containing the contract specifics and raw log
@@ -1748,6 +2033,142 @@ func (_Gateway *GatewayFilterer) WatchOutboundMessageAccepted(opts *bind.WatchOp
 func (_Gateway *GatewayFilterer) ParseOutboundMessageAccepted(log types.Log) (*GatewayOutboundMessageAccepted, error) {
 	event := new(GatewayOutboundMessageAccepted)
 	if err := _Gateway.contract.UnpackLog(event, "OutboundMessageAccepted", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// GatewayOutboundMessageAccepted0Iterator is returned from FilterOutboundMessageAccepted0 and is used to iterate over the raw logs and unpacked data for OutboundMessageAccepted0 events raised by the Gateway contract.
+type GatewayOutboundMessageAccepted0Iterator struct {
+	Event *GatewayOutboundMessageAccepted0 // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *GatewayOutboundMessageAccepted0Iterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(GatewayOutboundMessageAccepted0)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(GatewayOutboundMessageAccepted0)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *GatewayOutboundMessageAccepted0Iterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *GatewayOutboundMessageAccepted0Iterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// GatewayOutboundMessageAccepted0 represents a OutboundMessageAccepted0 event raised by the Gateway contract.
+type GatewayOutboundMessageAccepted0 struct {
+	Nonce   uint64
+	Reward  *big.Int
+	Payload []byte
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterOutboundMessageAccepted0 is a free log retrieval operation binding the contract event 0xf2297c2b692d37814ed50b9ff0f52bf87ab5d1692a651f2a9ee8a872fdea1dda.
+//
+// Solidity: event OutboundMessageAccepted(uint64 nonce, uint256 reward, bytes payload)
+func (_Gateway *GatewayFilterer) FilterOutboundMessageAccepted0(opts *bind.FilterOpts) (*GatewayOutboundMessageAccepted0Iterator, error) {
+
+	logs, sub, err := _Gateway.contract.FilterLogs(opts, "OutboundMessageAccepted0")
+	if err != nil {
+		return nil, err
+	}
+	return &GatewayOutboundMessageAccepted0Iterator{contract: _Gateway.contract, event: "OutboundMessageAccepted0", logs: logs, sub: sub}, nil
+}
+
+// WatchOutboundMessageAccepted0 is a free log subscription operation binding the contract event 0xf2297c2b692d37814ed50b9ff0f52bf87ab5d1692a651f2a9ee8a872fdea1dda.
+//
+// Solidity: event OutboundMessageAccepted(uint64 nonce, uint256 reward, bytes payload)
+func (_Gateway *GatewayFilterer) WatchOutboundMessageAccepted0(opts *bind.WatchOpts, sink chan<- *GatewayOutboundMessageAccepted0) (event.Subscription, error) {
+
+	logs, sub, err := _Gateway.contract.WatchLogs(opts, "OutboundMessageAccepted0")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(GatewayOutboundMessageAccepted0)
+				if err := _Gateway.contract.UnpackLog(event, "OutboundMessageAccepted0", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseOutboundMessageAccepted0 is a log parse operation binding the contract event 0xf2297c2b692d37814ed50b9ff0f52bf87ab5d1692a651f2a9ee8a872fdea1dda.
+//
+// Solidity: event OutboundMessageAccepted(uint64 nonce, uint256 reward, bytes payload)
+func (_Gateway *GatewayFilterer) ParseOutboundMessageAccepted0(log types.Log) (*GatewayOutboundMessageAccepted0, error) {
+	event := new(GatewayOutboundMessageAccepted0)
+	if err := _Gateway.contract.UnpackLog(event, "OutboundMessageAccepted0", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

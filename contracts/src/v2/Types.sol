@@ -5,18 +5,18 @@ pragma solidity 0.8.25;
 import {OperatingMode} from "./../types/Common.sol";
 
 // Inbound message from a Polkadot parachain (via BridgeHub)
-struct InboundMessage {
+struct InboundMessageV2 {
     // origin
     bytes32 origin;
     // Message nonce
     uint64 nonce;
     // Commands
-    Command[] commands;
+    CommandV2[] commands;
 }
 
-struct Command {
+struct CommandV2 {
     uint8 kind;
-    uint256 gas;
+    uint64 gas;
     bytes payload;
 }
 
@@ -34,12 +34,8 @@ struct Ticket {
     address origin;
     bytes[] assets;
     bytes xcm;
+    bytes claimer;
     uint256 reward;
-}
-
-enum TransferKind {
-    NativeERC20,
-    ForeignERC20
 }
 
 // V2 Command Params

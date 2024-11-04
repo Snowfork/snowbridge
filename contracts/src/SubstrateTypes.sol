@@ -4,7 +4,6 @@ pragma solidity 0.8.25;
 
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {ParaID} from "./v1/Types.sol";
-import {TransferKind} from "./v2/Types.sol";
 
 /**
  * @title SCALE encoders for common Substrate types
@@ -51,6 +50,15 @@ library SubstrateTypes {
             return bytes.concat(
                 bytes1(0x01), ScaleCodec.encodeU32(uint32(ParaID.unwrap(v)))
             );
+        }
+    }
+
+    // solhint-disable-next-line func-name-mixedcase
+    function OptionVecU8(bytes memory v) internal pure returns (bytes memory) {
+        if (v.length == 0) {
+            return hex"00";
+        } else {
+            return bytes.concat(bytes1(0x01), VecU8(v));
         }
     }
 
@@ -213,14 +221,21 @@ library SubstrateTypes {
     //   origin: H160,
     //   assets: Vec<Asset>
     //   xcm: Vec<u8>
+    //   claimer: Option<Vec<u8>>
     // }
+    // ```
     //
-    function encodePayloadV2(address origin, bytes[] memory assets, bytes memory xcm)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return bytes.concat(abi.encodePacked(origin), VecAsset(assets), VecU8(xcm));
+    //
+    //
+    function encodePayloadV2(
+        address origin,
+        bytes[] memory assets,
+        bytes memory xcm,
+        bytes memory claimer
+    ) internal pure returns (bytes memory) {
+        return bytes.concat(
+            abi.encodePacked(origin), VecAsset(assets), VecU8(xcm), OptionVecU8(claimer)
+        );
     }
 
     // Encode `Vec<Asset>`

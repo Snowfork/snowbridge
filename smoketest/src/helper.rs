@@ -2,7 +2,7 @@ use crate::{
 	constants::*,
 	contracts::i_gateway,
 	parachains::{
-		bridgehub::{self, api::runtime_types::snowbridge_core::outbound::v1::OperatingMode},
+		bridgehub::{self, api::runtime_types::snowbridge_core::outbound::OperatingMode},
 		relaychain,
 		relaychain::api::runtime_types::{
 			pallet_xcm::pallet::Call as RelaychainPalletXcmCall,
@@ -36,9 +36,9 @@ use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
 	config::DefaultExtrinsicParams,
 	events::StaticEvent,
-	ext::sp_core::{sr25519::Pair, Pair as PairT, H160},
+	ext::sp_core::{sr25519::Pair, Pair as PairT},
 	tx::{PairSigner, Payload},
-	utils::H256,
+	utils::{H160, H256},
 	Config, OnlineClient, PolkadotConfig,
 };
 

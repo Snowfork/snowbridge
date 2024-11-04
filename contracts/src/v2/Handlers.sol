@@ -20,7 +20,6 @@ import {Functions} from "../Functions.sol";
 import {Constants} from "../Constants.sol";
 
 import {
-    TransferKind,
     UpgradeParams,
     SetOperatingModeParams,
     UnlockNativeTokenParams,

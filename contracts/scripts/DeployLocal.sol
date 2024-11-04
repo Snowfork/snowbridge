@@ -12,6 +12,7 @@ import {Gateway} from "../src/Gateway.sol";
 import {MockGatewayV2} from "../test/mocks/MockGatewayV2.sol";
 import {Agent} from "../src/Agent.sol";
 import {AgentExecutor} from "../src/AgentExecutor.sol";
+import {Constants} from "../src/Constants.sol";
 import {ChannelID, ParaID, OperatingMode} from "../src/Types.sol";
 import {Initializer} from "../src/Initializer.sol";
 import {SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
@@ -59,10 +60,6 @@ contract DeployLocal is Script {
             next
         );
 
-        bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
-        ParaID assetHubParaID = ParaID.wrap(uint32(vm.envUint("ASSET_HUB_PARAID")));
-        bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
-
         uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
         uint128 maxDestinationFee =
             uint128(vm.envUint("RESERVE_TRANSFER_MAX_DESTINATION_FEE"));
@@ -82,8 +79,6 @@ contract DeployLocal is Script {
             mode: defaultOperatingMode,
             deliveryCost: uint128(vm.envUint("DELIVERY_COST")),
             registerTokenFee: uint128(vm.envUint("REGISTER_TOKEN_FEE")),
-            assetHubParaID: assetHubParaID,
-            assetHubAgentID: assetHubAgentID,
             assetHubCreateAssetFee: uint128(vm.envUint("CREATE_ASSET_FEE")),
             assetHubReserveTransferFee: uint128(vm.envUint("RESERVE_TRANSFER_FEE")),
             exchangeRate: ud60x18(vm.envUint("EXCHANGE_RATE")),
@@ -103,8 +98,10 @@ contract DeployLocal is Script {
         // of messages originating from BridgeHub
         uint256 initialDeposit = vm.envUint("BRIDGE_HUB_INITIAL_DEPOSIT");
 
-        address bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
-        address assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
+        address bridgeHubAgent =
+            IGateway(address(gateway)).agentOf(Constants.BRIDGE_HUB_AGENT_ID);
+        address assetHubAgent =
+            IGateway(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID);
 
         payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);
