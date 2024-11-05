@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/test",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Snowbridge Integration Tests",
   "license": "Apache-2.0",
   "repository": {
@@ -9,12 +9,12 @@
     "directory": "web/packages/test"
   },
   "devDependencies": {
-    "@polkadot/api": "^12.4.2",
-    "@polkadot/types": "^12.4.2",
+    "@polkadot/api": "^14.2.1",
+    "@polkadot/types": "^14.2.1",
     "@polkadot/api-cli": "^0.60.1",
-    "@polkadot/keyring": "^13.0.2",
-    "@polkadot/util": "^13.0.2",
-    "@polkadot/util-crypto": "^13.0.2",
+    "@polkadot/keyring": "^13.2.2",
+    "@polkadot/util": "^13.2.2",
+    "@polkadot/util-crypto": "^13.2.2",
     "@types/keccak": "^3.0.1",
     "@types/node": "^18.16.8",
     "@types/yargs": "^17.0.24",
