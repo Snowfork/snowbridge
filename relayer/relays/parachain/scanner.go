@@ -24,14 +24,13 @@ type Scanner struct {
 	relayConn *relaychain.Connection
 	paraConn  *parachain.Connection
 	paraID    uint32
-	tasks     chan<- *Task
 }
 
 // Scans for all parachain message commitments that need to be relayed and can be
 // proven using the MMR root at the specified beefyBlockNumber of the relay chain.
 // The algorithm fetch PendingOrders storage in OutboundQueue of BH and
 // just relay each order which has not been processed on Ethereum yet.
-func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*TaskV2, error) {
+func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*Task, error) {
 	// fetch last parachain header that was finalized *before* the BEEFY block
 	beefyBlockMinusOneHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber - 1))
 	if err != nil {
@@ -64,7 +63,7 @@ func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*TaskV2,
 func (s *Scanner) findTasks(
 	ctx context.Context,
 	paraHash types.Hash,
-) ([]*TaskV2, error) {
+) ([]*Task, error) {
 	// Fetch PendingOrders storage in parachain outbound queue
 	storageKey := types.NewStorageKey(types.CreateStorageKeyPrefix("EthereumOutboundQueueV2", "PendingOrders"))
 	keys, err := s.paraConn.API().RPC.State.GetKeys(storageKey, paraHash)
@@ -103,9 +102,9 @@ func (s *Scanner) findTasks(
 func (s *Scanner) findTasksImpl(
 	ctx context.Context,
 	pendingNonces []PendingOrder,
-) ([]*TaskV2, error) {
+) ([]*Task, error) {
 
-	var tasks []*TaskV2
+	var tasks []*Task
 
 	for _, pending := range pendingNonces {
 
@@ -149,7 +148,7 @@ func (s *Scanner) findTasksImpl(
 			continue
 		}
 
-		var messages []OutboundQueueMessageV2
+		var messages []OutboundQueueMessage
 		raw, err := s.paraConn.API().RPC.State.GetStorageRaw(messagesKey, blockHash)
 		if err != nil {
 			return nil, fmt.Errorf("fetch committed messages for block %v: %w", blockHash.Hex(), err)
@@ -160,7 +159,7 @@ func (s *Scanner) findTasksImpl(
 			return nil, fmt.Errorf("decode message length error: %w", err)
 		}
 		for i := uint64(0); i < n.Uint64(); i++ {
-			m := OutboundQueueMessageV2{}
+			m := OutboundQueueMessage{}
 			err = decoder.Decode(&m)
 			if err != nil {
 				return nil, fmt.Errorf("decode message error: %w", err)
@@ -182,7 +181,7 @@ func (s *Scanner) findTasksImpl(
 		}
 
 		if len(result.proofs) > 0 {
-			task := TaskV2{
+			task := Task{
 				Header:        header,
 				MessageProofs: &result.proofs,
 				ProofInput:    nil,
@@ -205,7 +204,7 @@ type PersistedValidationData struct {
 // For each task, gatherProofInputs will search to find the relay chain block
 // in which that header was included as well as the parachain heads for that block.
 func (s *Scanner) gatherProofInputs(
-	tasks []*TaskV2,
+	tasks []*Task,
 ) error {
 	for _, task := range tasks {
 
@@ -294,11 +293,11 @@ func scanForOutboundQueueProofs(
 	api *gsrpc.SubstrateAPI,
 	blockHash types.Hash,
 	commitmentHash types.H256,
-	messages []OutboundQueueMessageV2,
+	messages []OutboundQueueMessage,
 ) (*struct {
-	proofs []MessageProofV2
+	proofs []MessageProof
 }, error) {
-	proofs := []MessageProofV2{}
+	proofs := []MessageProof{}
 
 	for i := len(messages) - 1; i >= 0; i-- {
 		message := messages[i]
@@ -321,7 +320,7 @@ func scanForOutboundQueueProofs(
 	}
 
 	return &struct {
-		proofs []MessageProofV2
+		proofs []MessageProof
 	}{
 		proofs: proofs,
 	}, nil
@@ -331,10 +330,10 @@ func fetchMessageProof(
 	api *gsrpc.SubstrateAPI,
 	blockHash types.Hash,
 	messageIndex uint64,
-	message OutboundQueueMessageV2,
-) (MessageProofV2, error) {
+	message OutboundQueueMessage,
+) (MessageProof, error) {
 	var proofHex string
-	var proof MessageProofV2
+	var proof MessageProof
 
 	params, err := types.EncodeToHexString(messageIndex)
 	if err != nil {
@@ -361,7 +360,7 @@ func fetchMessageProof(
 		return proof, fmt.Errorf("decode merkle proof: %w", err)
 	}
 
-	return MessageProofV2{Message: message, Proof: merkleProof}, nil
+	return MessageProof{Message: message, Proof: merkleProof}, nil
 }
 
 func (s *Scanner) isNonceRelayed(ctx context.Context, nonce uint64) (bool, error) {

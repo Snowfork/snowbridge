@@ -51,7 +51,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
 
 	// channel for messages from beefy listener to ethereum writer
-	var tasks = make(chan *TaskV2, 1)
+	var tasks = make(chan *Task, 1)
 
 	ethereumChannelWriter, err := NewEthereumWriter(
 		&config.Sink,
@@ -189,11 +189,11 @@ func (relay *Relay) startDeliverProof(ctx context.Context, eg *errgroup.Group) e
 func (relay *Relay) findEvent(
 	ctx context.Context,
 	nonce uint64,
-) (*contracts.GatewayInboundMessageDispatched0, error) {
+) (*contracts.GatewayInboundMessageDispatched, error) {
 
 	const BlocksPerQuery = 4096
 
-	var event *contracts.GatewayInboundMessageDispatched0
+	var event *contracts.GatewayInboundMessageDispatched
 
 	blockNumber, err := relay.ethereumConnWriter.Client().BlockNumber(ctx)
 	if err != nil {
@@ -221,7 +221,7 @@ func (relay *Relay) findEvent(
 			Context: ctx,
 		}
 
-		iter, err := relay.ethereumChannelWriter.gateway.FilterInboundMessageDispatched0(&opts, []uint64{nonce}, [][32]byte{rewardAddress})
+		iter, err := relay.ethereumChannelWriter.gateway.FilterInboundMessageDispatched(&opts, []uint64{nonce}, [][32]byte{rewardAddress})
 		if err != nil {
 			return event, fmt.Errorf("iter dispatch event: %w", err)
 		}
@@ -259,7 +259,7 @@ func (relay *Relay) findEvent(
 func (relay *Relay) makeInboundMessage(
 	ctx context.Context,
 	headerCache *ethereum.HeaderCache,
-	event *contracts.GatewayInboundMessageDispatched0,
+	event *contracts.GatewayInboundMessageDispatched,
 ) (*parachain.Message, error) {
 	receiptTrie, err := headerCache.GetReceiptTrie(ctx, event.Raw.BlockHash)
 	if err != nil {
@@ -291,7 +291,7 @@ func (relay *Relay) makeInboundMessage(
 	return msg, nil
 }
 
-func (relay *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayInboundMessageDispatched0) error {
+func (relay *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayInboundMessageDispatched) error {
 	inboundMsg, err := relay.makeInboundMessage(ctx, relay.headerCache, ev)
 	if err != nil {
 		return fmt.Errorf("make outgoing message: %w", err)

@@ -28,7 +28,7 @@ type EthereumWriter struct {
 	config      *SinkConfig
 	conn        *ethereum.Connection
 	gateway     *contracts.Gateway
-	tasks       <-chan *TaskV2
+	tasks       <-chan *Task
 	gatewayABI  abi.ABI
 	relayConfig *Config
 }
@@ -36,7 +36,7 @@ type EthereumWriter struct {
 func NewEthereumWriter(
 	config *SinkConfig,
 	conn *ethereum.Connection,
-	tasks <-chan *TaskV2,
+	tasks <-chan *Task,
 	relayConfig *Config,
 ) (*EthereumWriter, error) {
 	return &EthereumWriter{
@@ -97,7 +97,7 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 func (wr *EthereumWriter) WriteChannels(
 	ctx context.Context,
 	options *bind.TransactOpts,
-	task *TaskV2,
+	task *Task,
 ) error {
 	for _, proof := range *task.MessageProofs {
 		err := wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
@@ -113,10 +113,10 @@ func (wr *EthereumWriter) WriteChannels(
 func (wr *EthereumWriter) WriteChannel(
 	ctx context.Context,
 	options *bind.TransactOpts,
-	commitmentProof *MessageProofV2,
+	commitmentProof *MessageProof,
 	proof *ProofOutput,
 ) error {
-	message := commitmentProof.Message.IntoInboundMessageV2()
+	message := commitmentProof.Message.IntoInboundMessage()
 
 	convertedHeader, err := convertHeader(proof.Header)
 	if err != nil {
@@ -192,9 +192,8 @@ func (wr *EthereumWriter) WriteChannel(
 				return fmt.Errorf("unpack event log: %w", err)
 			}
 			log.WithFields(log.Fields{
-				"channelID": Hex(holder.ChannelID[:]),
-				"nonce":     holder.Nonce,
-				"success":   holder.Success,
+				"nonce":   holder.Nonce,
+				"success": holder.Success,
 			}).Info("Message dispatched")
 		}
 	}

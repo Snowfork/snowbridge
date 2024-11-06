@@ -556,7 +556,7 @@ func getEthereumEvent(ctx context.Context, gatewayContract *contracts.Gateway, c
 	for event == nil {
 		log.Info("looking for Ethereum event")
 
-		iter, err := gatewayContract.FilterOutboundMessageAccepted(&opts, [][32]byte{channelID}, [][32]byte{})
+		iter, err := gatewayContract.FilterOutboundMessageAccepted(&opts)
 		if err != nil {
 			return nil, err
 		}

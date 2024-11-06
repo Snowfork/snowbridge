@@ -13,7 +13,7 @@ func Hex(b []byte) string {
 }
 
 func (wr *EthereumWriter) logFieldsForSubmission(
-	message contracts.InboundMessageV2,
+	message contracts.InboundMessage,
 	messageProof [][32]byte,
 	proof contracts.VerificationProof,
 ) log.Fields {

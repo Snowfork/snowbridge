@@ -10,18 +10,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
 
-// A Task contains the working state for message commitments in a single parachain block
-type Task struct {
-	// Parachain header
-	Header *types.Header
-	// Inputs for MMR proof generation
-	ProofInput *ProofInput
-	// Outputs of MMR proof generation
-	ProofOutput *ProofOutput
-	// Proofs for messages from outbound channel on Polkadot
-	MessageProofs *[]MessageProof
-}
-
 // A ProofInput is data needed to generate a proof of parachain header inclusion
 type ProofInput struct {
 	// Parachain ID
@@ -85,82 +73,77 @@ func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
 }
 
 type OutboundQueueMessage struct {
-	ChannelID      types.H256
-	Nonce          uint64
-	Command        uint8
-	Params         []byte
-	MaxDispatchGas uint64
-	MaxFeePerGas   types.U128
-	Reward         types.U128
-	ID             types.Bytes32
+	Origin   types.H256
+	Nonce    types.U64
+	Commands []CommandWrapper
+}
+
+type CommandWrapper struct {
+	Kind           types.U8
+	MaxDispatchGas types.U64
+	Params         types.Bytes
+}
+
+func (r CommandWrapper) IntoCommand() contracts.Command {
+	return contracts.Command{
+		Kind:    uint8(r.Kind),
+		Gas:     uint64(r.MaxDispatchGas),
+		Payload: r.Params,
+	}
 }
 
 func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
+	var commands []contracts.Command
+	for _, command := range m.Commands {
+		commands = append(commands, command.IntoCommand())
+	}
 	return contracts.InboundMessage{
-		ChannelID:      m.ChannelID,
-		Nonce:          m.Nonce,
-		Command:        m.Command,
-		Params:         m.Params,
-		MaxDispatchGas: m.MaxDispatchGas,
-		MaxFeePerGas:   m.MaxFeePerGas.Int,
-		Reward:         m.Reward.Int,
-		Id:             m.ID,
+		Origin:   m.Origin,
+		Nonce:    uint64(m.Nonce),
+		Commands: commands,
 	}
 }
 
-func (m OutboundQueueMessage) Encode(encoder scale.Encoder) error {
-	encoder.Encode(m.ChannelID)
-	encoder.EncodeUintCompact(*big.NewInt(0).SetUint64(m.Nonce))
-	encoder.Encode(m.Command)
-	encoder.Encode(m.Params)
-	encoder.EncodeUintCompact(*big.NewInt(0).SetUint64(m.MaxDispatchGas))
-	encoder.EncodeUintCompact(*m.MaxFeePerGas.Int)
-	encoder.EncodeUintCompact(*m.Reward.Int)
-	encoder.Encode(m.ID)
-	return nil
-}
-
-func (m *OutboundQueueMessage) Decode(decoder scale.Decoder) error {
-	err := decoder.Decode(&m.ChannelID)
-	if err != nil {
-		return err
-	}
-	decoded, err := decoder.DecodeUintCompact()
-	if err != nil {
-		return err
-	}
-	m.Nonce = decoded.Uint64()
-	err = decoder.Decode(&m.Command)
-	if err != nil {
-		return err
-	}
-	err = decoder.Decode(&m.Params)
-	if err != nil {
-		return err
-	}
-	decoded, err = decoder.DecodeUintCompact()
-	if err != nil {
-		return err
-	}
-	m.MaxDispatchGas = decoded.Uint64()
-	decoded, err = decoder.DecodeUintCompact()
-	if err != nil {
-		return err
-	}
-	m.MaxFeePerGas = types.U128{Int: decoded}
-	decoded, err = decoder.DecodeUintCompact()
-	if err != nil {
-		return err
-	}
-	m.Reward = types.U128{Int: decoded}
-	err = decoder.Decode(&m.ID)
-	if err != nil {
-		return err
-	}
-	return nil
+// A Task contains the working state for message commitments in a single parachain block
+type Task struct {
+	// Parachain header
+	Header *types.Header
+	// Inputs for MMR proof generation
+	ProofInput *ProofInput
+	// Outputs of MMR proof generation
+	ProofOutput *ProofOutput
+	// Proofs for messages from outbound channel on Polkadot
+	MessageProofs *[]MessageProof
 }
 
 type MessageProof struct {
 	Message OutboundQueueMessage
 	Proof   MerkleProof
+}
+
+type PendingOrder struct {
+	Nonce       uint64
+	BlockNumber uint32
+	Fee         big.Int
+}
+
+func (p *PendingOrder) Decode(decoder scale.Decoder) error {
+	var nonce types.U64
+	err := decoder.Decode(&nonce)
+	if err != nil {
+		return err
+	}
+	p.Nonce = uint64(nonce)
+	var blockNumber types.U32
+	err = decoder.Decode(&blockNumber)
+	if err != nil {
+		return err
+	}
+	p.BlockNumber = uint32(blockNumber)
+	decoded, err := decoder.DecodeUintCompact()
+	if err != nil {
+		return err
+	}
+	p.Fee = *types.U128{Int: decoded}.Int
+	return nil
 }
