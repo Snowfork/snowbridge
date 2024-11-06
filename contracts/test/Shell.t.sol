@@ -5,7 +5,6 @@ import {Test} from "forge-std/Test.sol";
 import {Strings} from "openzeppelin/utils/Strings.sol";
 import {console} from "forge-std/console.sol";
 
-import {IGateway} from "../src/interfaces/IGateway.sol";
 import {IInitializable} from "../src/interfaces/IInitializable.sol";
 import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
 import {IShell} from "../src/interfaces/IShell.sol";

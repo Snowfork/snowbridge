@@ -8,6 +8,7 @@ import {Initializer} from "./Initializer.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
 import {MultiAddress} from "./MultiAddress.sol";
+import {IGatewayBase} from "./interfaces/IGatewayBase.sol";
 import {
     OperatingMode,
     ParaID,
@@ -22,10 +23,11 @@ import {
     CallsV1,
     HandlersV1,
     CallsV2,
-    HandlersV2
+    HandlersV2,
+    IGatewayV1,
+    IGatewayV2
 } from "./Types.sol";
 import {Upgrade} from "./Upgrade.sol";
-import {IGateway} from "./interfaces/IGateway.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
@@ -44,7 +46,7 @@ import {OperatorStorage} from "./storage/OperatorStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
-contract Gateway is IGateway, IInitializable, IUpgradable {
+contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgradable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
@@ -61,7 +63,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
         if (msg.sender != address(this)) {
-            revert IGateway.Unauthorized();
+            revert IGatewayBase.Unauthorized();
         }
         _;
     }
@@ -132,7 +134,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // Ensure this message is not being replayed
         if (message.nonce != channel.inboundNonce + 1) {
-            revert IGateway.InvalidNonce();
+            revert IGatewayBase.InvalidNonce();
         }
 
         // Increment nonce for origin.
@@ -146,14 +148,14 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // Verify that the commitment is included in a parachain header finalized by BEEFY.
         if (!_verifyCommitment(commitment, headerProof)) {
-            revert IGateway.InvalidProof();
+            revert IGatewayBase.InvalidProof();
         }
 
         // Make sure relayers provide enough gas so that inner message dispatch
         // does not run out of gas.
         uint256 maxDispatchGas = message.maxDispatchGas;
         if (gasleft() < maxDispatchGas + DISPATCH_OVERHEAD_GAS_V1) {
-            revert IGateway.NotEnoughGas();
+            revert IGatewayBase.NotEnoughGas();
         }
 
         bool success = true;
@@ -239,12 +241,17 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             );
         }
 
-        emit IGateway.InboundMessageDispatched(
+        emit IGatewayV1.InboundMessageDispatched(
             message.channelID, message.nonce, message.id, success
         );
     }
 
-    function operatingMode() external view returns (OperatingMode) {
+    function operatingMode()
+        external
+        view
+        override(IGatewayV1, IGatewayV2)
+        returns (OperatingMode)
+    {
         return CoreStorage.layout().mode;
     }
 
@@ -264,7 +271,12 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return CallsV1.channelNoncesOf(channelID);
     }
 
-    function agentOf(bytes32 agentID) external view returns (address) {
+    function agentOf(bytes32 agentID)
+        external
+        view
+        override(IGatewayV1, IGatewayV2)
+        returns (address)
+    {
         return Functions.ensureAgent(agentID);
     }
 
@@ -276,7 +288,12 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return ERC1967.load();
     }
 
-    function isTokenRegistered(address token) external view returns (bool) {
+    function isTokenRegistered(address token)
+        external
+        view
+        override(IGatewayV1, IGatewayV2)
+        returns (bool)
+    {
         return CallsV1.isTokenRegistered(token);
     }
 
@@ -427,7 +444,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         bytes32 leafHash = keccak256(abi.encode(message));
 
         if ($.inboundNonce.get(message.nonce)) {
-            revert IGateway.InvalidNonce();
+            revert IGatewayBase.InvalidNonce();
         }
 
         $.inboundNonce.set(message.nonce);
@@ -437,12 +454,12 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // Verify that the commitment is included in a parachain header finalized by BEEFY.
         if (!_verifyCommitment(commitment, headerProof)) {
-            revert IGateway.InvalidProof();
+            revert IGatewayBase.InvalidProof();
         }
 
         bool success = v2_dispatch(message);
 
-        emit IGateway.InboundMessageDispatched(message.nonce, success, rewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(message.nonce, success, rewardAddress);
     }
 
     function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {

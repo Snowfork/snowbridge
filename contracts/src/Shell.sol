@@ -15,7 +15,11 @@ contract Shell is IShell, IUpgradable, IInitializable {
         OPERATOR = _operator;
     }
 
-    function upgrade(address impl, bytes32 implCodeHash, bytes calldata initializerParams) external {
+    function upgrade(
+        address impl,
+        bytes32 implCodeHash,
+        bytes calldata initializerParams
+    ) external {
         if (msg.sender != OPERATOR) {
             revert Unauthorized();
         }
@@ -31,5 +35,9 @@ contract Shell is IShell, IUpgradable, IInitializable {
 
     function operator() external view returns (address) {
         return OPERATOR;
+    }
+
+    function implementation() public view returns (address) {
+        return ERC1967.load();
     }
 }

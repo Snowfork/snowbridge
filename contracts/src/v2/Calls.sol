@@ -3,8 +3,10 @@
 pragma solidity 0.8.25;
 
 import {IERC20} from "../interfaces/IERC20.sol";
-import {IGateway} from "../interfaces/IGateway.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
+
+import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
+import {IGatewayV2} from "./IGateway.sol";
 
 import {SafeNativeTransfer, SafeTokenTransfer} from "../utils/SafeTransfer.sol";
 
@@ -32,25 +34,6 @@ library CallsV2 {
     using SafeTokenTransfer for IERC20;
     using SafeNativeTransfer for address payable;
 
-    error InvalidProof();
-    error InvalidNonce();
-    error NotEnoughGas();
-    error FeePaymentToLow();
-    error Unauthorized();
-    error Disabled();
-    error AgentAlreadyCreated();
-    error AgentDoesNotExist();
-    error ChannelAlreadyCreated();
-    error ChannelDoesNotExist();
-    error InvalidChannelUpdate();
-    error AgentExecutionFailed(bytes returndata);
-    error InvalidAgentExecutionPayload();
-    error InvalidConstructorParams();
-    error AlreadyInitialized();
-    error TokenNotRegistered();
-    error InvalidAsset();
-
-    address public constant WETH_ADDRESS = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint8 public constant MAX_ASSETS = 8;
 
     // Send an XCM with arbitrary assets to Polkadot Asset Hub
@@ -75,7 +58,7 @@ library CallsV2 {
         bytes[] calldata assets,
         bytes calldata claimer
     ) external {
-        _sendMessage(msg.sender, xcm, assets, claimer, msg.value);
+        _sendMessage(msg.sender, xcm, assets, claimer);
     }
 
     // Register Ethereum-native token on AHP, using `xcmFeeAHP` of `msg.value`
@@ -100,23 +83,31 @@ library CallsV2 {
         address origin,
         bytes memory xcm,
         bytes[] memory assets,
-        bytes memory claimer,
-        uint256 reward
+        bytes memory claimer
     ) internal {
         if (assets.length > MAX_ASSETS) {
-            revert IGateway.TooManyAssets();
+            revert IGatewayBase.TooManyAssets();
         }
 
         bytes[] memory encodedAssets = new bytes[](assets.length);
+        uint128 etherValue = 0;
+        uint128 totalEtherValue = 0;
+
         for (uint256 i = 0; i < assets.length; i++) {
-            encodedAssets[i] = _handleAsset(assets[i]);
+            (encodedAssets[i], etherValue) = _handleAsset(assets[i]);
+            totalEtherValue += etherValue;
         }
+
+        if (totalEtherValue > msg.value) {
+            revert IGatewayV2.InvalidEtherValue();
+        }
+
         Ticket memory ticket = Ticket({
             origin: origin,
             assets: encodedAssets,
             xcm: xcm,
             claimer: claimer,
-            reward: reward
+            reward: msg.value - totalEtherValue
         });
         _submitOutbound(ticket);
     }
@@ -141,14 +132,13 @@ library CallsV2 {
 
         // Lock up the total xcm fee
         if (xcmFee > msg.value) {
-            revert IGateway.InvalidFee();
+            revert IGatewayV2.InvalidFee();
         }
-        _lockEther(xcmFee);
 
         bytes[] memory assets = new bytes[](1);
-        assets[0] = abi.encode(0, WETH_ADDRESS, xcmFee);
+        assets[0] = abi.encode(0, xcmFee);
 
-        _sendMessage(address(this), xcm, assets, "", msg.value - xcmFee);
+        _sendMessage(address(this), xcm, assets, "");
     }
 
     // Submit an outbound message to Polkadot, after taking fees
@@ -167,56 +157,74 @@ library CallsV2 {
             ticket.origin, ticket.assets, ticket.xcm, ticket.claimer
         );
 
-        emit IGateway.OutboundMessageAccepted($.outboundNonce, ticket.reward, payload);
+        emit IGatewayV2.OutboundMessageAccepted($.outboundNonce, ticket.reward, payload);
     }
 
     // Lock wrapped ether into the AssetHub Agent
     function _lockEther(uint256 value) internal {
+        address weth = Functions.weth();
         address assetHubAgent = Functions.ensureAgent(Constants.ASSET_HUB_AGENT_ID);
-        WETH9(payable(WETH_ADDRESS)).deposit{value: value}();
-        IERC20(WETH_ADDRESS).safeTransfer(assetHubAgent, value);
+        WETH9(payable(weth)).deposit{value: value}();
+        IERC20(weth).safeTransfer(assetHubAgent, value);
     }
 
     /// @dev Outbound message can be disabled globally or on a per-channel basis.
     function _ensureOutboundMessagingEnabled() internal view {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         if ($.mode != OperatingMode.Normal) {
-            revert Disabled();
+            revert IGatewayBase.Disabled();
         }
     }
 
-    function _handleAsset(bytes memory asset) internal returns (bytes memory) {
+    function _handleAsset(bytes memory asset) internal returns (bytes memory, uint128) {
         uint8 assetKind;
         assembly {
             assetKind := byte(31, mload(add(asset, 32)))
         }
         if (assetKind == 0) {
-            // ERC20: abi.encode(0, tokenAddress, value)
+            // Ether: abi.encode(0, value)
+            (, uint128 amount) = abi.decode(asset, (uint8, uint128));
+            return _handleAssetEther(amount);
+        } else if (assetKind == 1) {
+            // ERC20: abi.encode(1, tokenAddress, value)
             (, address token, uint128 amount) =
                 abi.decode(asset, (uint8, address, uint128));
             return _handleAssetERC20(token, amount);
         } else {
-            revert InvalidAsset();
+            revert IGatewayV2.InvalidAsset();
         }
+    }
+
+    function _handleAssetEther(uint128 amount)
+        internal
+        returns (bytes memory, uint128)
+    {
+        _lockEther(amount);
+        return (
+            SubstrateTypes.encodeTransferNativeTokenERC20(Functions.weth(), amount),
+            amount
+        );
     }
 
     function _handleAssetERC20(address token, uint128 amount)
         internal
-        returns (bytes memory)
+        returns (bytes memory, uint128)
     {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
 
         if (!info.isRegistered) {
-            revert TokenNotRegistered();
+            revert IGatewayBase.TokenNotRegistered();
         }
 
         if (info.foreignID == bytes32(0)) {
             Functions.transferToAgent($.assetHubAgent, token, msg.sender, amount);
-            return SubstrateTypes.encodeTransferNativeTokenERC20(token, amount);
+            return (SubstrateTypes.encodeTransferNativeTokenERC20(token, amount), 0);
         } else {
             Token(token).burn(msg.sender, amount);
-            return SubstrateTypes.encodeTransferForeignTokenERC20(info.foreignID, amount);
+            return (
+                SubstrateTypes.encodeTransferForeignTokenERC20(info.foreignID, amount), 0
+            );
         }
     }
 }

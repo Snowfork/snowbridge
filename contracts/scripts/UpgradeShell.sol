@@ -6,7 +6,6 @@ import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 
-import {IGateway} from "../src/interfaces/IGateway.sol";
 import {IShell} from "../src/interfaces/IShell.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Gateway} from "../src/Gateway.sol";
@@ -56,7 +55,8 @@ contract UpgradeShell is Script {
                 multiplier: ud60x18(1.33e18),
                 rescueOperator: 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967,
                 foreignTokenDecimals: 10,
-                maxDestinationFee: dot(2)
+                maxDestinationFee: dot(2),
+                weth: 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
             })
         });
     }
