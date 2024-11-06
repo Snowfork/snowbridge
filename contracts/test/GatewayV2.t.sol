@@ -268,9 +268,8 @@ contract GatewayV2Test is Test {
         assertEq(data, rawBytes);
         InboundMessageV2 memory result = abi.decode(data, (InboundMessageV2));
         assertEq(result.nonce, 1);
-        assertEq(result.commands.length,1);
+        assertEq(result.commands.length, 1);
     }
-
 
     function testSubmitRegisterPNA() public {
         //From Relayer V2
@@ -279,10 +278,13 @@ contract GatewayV2Test is Test {
         );
         InboundMessageV2 memory message = abi.decode(data, (InboundMessageV2));
         assertEq(message.nonce, 0);
-        assertEq(message.commands.length,1);
+        assertEq(message.commands.length, 1);
         hoax(relayer, 1 ether);
         vm.expectEmit(true, false, false, false);
-        emit IGatewayBase.ForeignTokenRegistered(bytes32(0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7), address(0x7ff9C67c93D9f7318219faacB5c619a773AFeF6A));
+        emit IGatewayBase.ForeignTokenRegistered(
+            bytes32(0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7),
+            address(0x7ff9C67c93D9f7318219faacB5c619a773AFeF6A)
+        );
         IGatewayV2(address(gateway)).v2_submit(
             message, proof, makeMockProof(), relayerRewardAddress
         );
