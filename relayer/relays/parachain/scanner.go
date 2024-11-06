@@ -85,7 +85,7 @@ func (s *Scanner) findTasks(
 		pendingOrders = append(pendingOrders, pendingOrder)
 	}
 
-	tasks, err := s.findTasksImpl(
+	tasks, err := s.filterTasks(
 		ctx,
 		pendingOrders,
 	)
@@ -98,8 +98,10 @@ func (s *Scanner) findTasks(
 	return tasks, nil
 }
 
-// Searches from for all outstanding commitments
-func (s *Scanner) findTasksImpl(
+// Filter profitable and undelivered orders, convert to tasks
+// Todo: check order is profitable or not with some price oracle
+// or some fee estimation api
+func (s *Scanner) filterTasks(
 	ctx context.Context,
 	pendingNonces []PendingOrder,
 ) ([]*Task, error) {
