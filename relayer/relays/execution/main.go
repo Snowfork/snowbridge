@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/ofac"
 	"math/big"
 	"sort"
 	"time"
+
+	"github.com/snowfork/snowbridge/relayer/ofac"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -388,8 +389,9 @@ func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMe
 			return nil
 		}
 		// Check if the beacon header is finalized
-		if r.isInFinalizedBlock(ctx, ev) != nil {
-			return err
+		err = r.isInFinalizedBlock(ctx, ev)
+		if err != nil {
+			return fmt.Errorf("check beacon header finalized: %w", err)
 		}
 		if cnt == waitingPeriod {
 			break
