@@ -10,6 +10,18 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
 
+// A Task contains the working state for message commitments in a single parachain block
+type Task struct {
+	// Parachain header
+	Header *types.Header
+	// Inputs for MMR proof generation
+	ProofInput *ProofInput
+	// Outputs of MMR proof generation
+	ProofOutput *ProofOutput
+	// Proofs for messages from outbound channel on Polkadot
+	MessageProofs *[]MessageProof
+}
+
 // A ProofInput is data needed to generate a proof of parachain header inclusion
 type ProofInput struct {
 	// Parachain ID
@@ -102,18 +114,6 @@ func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
 		Nonce:    uint64(m.Nonce),
 		Commands: commands,
 	}
-}
-
-// A Task contains the working state for message commitments in a single parachain block
-type Task struct {
-	// Parachain header
-	Header *types.Header
-	// Inputs for MMR proof generation
-	ProofInput *ProofInput
-	// Outputs of MMR proof generation
-	ProofOutput *ProofOutput
-	// Proofs for messages from outbound channel on Polkadot
-	MessageProofs *[]MessageProof
 }
 
 type MessageProof struct {
