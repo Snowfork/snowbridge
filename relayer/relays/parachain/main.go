@@ -15,6 +15,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
+	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
@@ -40,7 +41,7 @@ type Relay struct {
 	headerCache           *ethereum.HeaderCache
 }
 
-func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
+func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keypair) (*Relay, error) {
 	log.Info("Creating worker")
 
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
@@ -71,8 +72,10 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 		tasks,
 	)
 
+	parachainWriterConn := parachain.NewConnection(config.Source.Parachain.Endpoint, keypair2.AsKeyringPair())
+
 	parachainWriter := parachain.NewParachainWriter(
-		parachainConn,
+		parachainWriterConn,
 		8,
 	)
 	headerCache, err := ethereum.NewHeaderBlockCache(

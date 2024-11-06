@@ -11,7 +11,6 @@ import (
 type OutboundQueueMessageV2 struct {
 	Origin   types.H256
 	Nonce    types.U64
-	ID       types.H256
 	Commands []CommandWrapper
 }
 

@@ -66,10 +66,7 @@ func (s *Scanner) findTasks(
 	paraHash types.Hash,
 ) ([]*TaskV2, error) {
 	// Fetch PendingOrders storage in parachain outbound queue
-	storageKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueueV2", "PendingOrders", nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("create storage key for parachain outbound queue PendingOrders: %w", err)
-	}
+	storageKey := types.NewStorageKey(types.CreateStorageKeyPrefix("EthereumOutboundQueueV2", "PendingOrders"))
 	keys, err := s.paraConn.API().RPC.State.GetKeys(storageKey, paraHash)
 	if err != nil {
 		return nil, fmt.Errorf("fetch nonces from PendingOrders start with key '%v' and hash '%v': %w", storageKey, paraHash, err)

@@ -14,7 +14,20 @@
       "BeefyClient": null,
       "Gateway": null
     },
-    "channel-id": null
+    "beacon": {
+      "endpoint": "http://127.0.0.1:9596",
+      "stateEndpoint": "http://127.0.0.1:9596",
+      "spec": {
+        "syncCommitteeSize": 512,
+        "slotsInEpoch": 32,
+        "epochsPerSyncCommitteePeriod": 256,
+        "denebForkedEpoch": 0
+      },
+      "datastore": {
+        "location": "/tmp/snowbridge/beaconstore",
+        "maxEntries": 100
+      }
+    }
   },
   "sink": {
     "ethereum": {
@@ -26,8 +39,9 @@
     }
   },
   "schedule": {
-    "id": null,
-    "totalRelayerCount": 3,
+    "id": 0,
+    "totalRelayerCount": 1,
     "sleepInterval": 45
-  }
+  },
+  "reward-address": "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 }
