@@ -5,16 +5,16 @@ pragma solidity 0.8.25;
 import {OperatingMode} from "./../types/Common.sol";
 
 // Inbound message from a Polkadot parachain (via BridgeHub)
-struct InboundMessageV2 {
+struct InboundMessage {
     // origin
     bytes32 origin;
     // Message nonce
     uint64 nonce;
     // Commands
-    CommandV2[] commands;
+    Command[] commands;
 }
 
-struct CommandV2 {
+struct Command {
     uint8 kind;
     uint64 gas;
     bytes payload;

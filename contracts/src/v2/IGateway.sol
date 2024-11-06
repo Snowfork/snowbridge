@@ -3,7 +3,7 @@
 pragma solidity 0.8.25;
 
 import {MultiAddress} from "../MultiAddress.sol";
-import {OperatingMode, InboundMessageV2} from "./Types.sol";
+import {OperatingMode, InboundMessage} from "./Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
@@ -32,7 +32,7 @@ interface IGatewayV2 {
 
     // Submit a message for verification and dispatch
     function v2_submit(
-        InboundMessageV2 calldata message,
+        InboundMessage calldata message,
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof,
         bytes32 rewardAddress
