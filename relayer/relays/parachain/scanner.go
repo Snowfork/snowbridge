@@ -389,10 +389,7 @@ func (s *Scanner) isNonceRelayed(ctx context.Context, nonce uint64) (bool, error
 func (s *Scanner) findOrderUndelivered(
 	ctx context.Context,
 ) ([]*PendingOrder, error) {
-	storageKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueueV2", "PendingOrders", nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("create storage key for parachain outbound queue PendingOrders: %w", err)
-	}
+	storageKey := types.NewStorageKey(types.CreateStorageKeyPrefix("EthereumOutboundQueueV2", "PendingOrders"))
 	keys, err := s.paraConn.API().RPC.State.GetKeysLatest(storageKey)
 	if err != nil {
 		return nil, fmt.Errorf("fetch nonces from PendingOrders start with key '%v': %w", storageKey, err)
