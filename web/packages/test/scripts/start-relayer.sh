@@ -123,6 +123,7 @@ start_relayer() {
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay-bridge-hub-01.json" \
                 --ethereum.private-key $parachain_relay_primary_gov_eth_key \
+                --substrate.private-key "//ExecutionRelayAssetHub" \
                 >>"$output_dir"/parachain-relay-bridge-hub-01.log 2>&1 || true
             sleep 20
         done
