@@ -172,11 +172,11 @@ func (relay *Relay) startDeliverProof(ctx context.Context, eg *errgroup.Group) e
 				for _, order := range orders {
 					event, err := relay.findEvent(ctx, order.Nonce)
 					if err != nil {
-						return fmt.Errorf("find event GatewayInboundMessageDispatched0: %w", err)
+						return fmt.Errorf("find event GatewayInboundMessageDispatched: %w", err)
 					}
 					err = relay.doSubmit(ctx, event)
 					if err != nil {
-						return fmt.Errorf("submit delivery proof for GatewayInboundMessageDispatched0: %w", err)
+						return fmt.Errorf("submit delivery proof for GatewayInboundMessageDispatched: %w", err)
 					}
 				}
 			}

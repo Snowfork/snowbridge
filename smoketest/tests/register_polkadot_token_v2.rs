@@ -15,10 +15,10 @@ use subxt::tx::Payload;
 #[tokio::test]
 async fn register_polkadot_token_v2() {
 	let test_clients = initial_clients().await.expect("initialize clients");
-	type Junctions = runtime_types::staging_xcm::v4::junctions::Junctions;
-	let asset = VersionedLocation::V4(runtime_types::staging_xcm::v4::location::Location {
+
+	let asset = VersionedLocation::V5(runtime_types::staging_xcm::v5::location::Location {
 		parents: 1,
-		interior: Junctions::Here,
+		interior: runtime_types::staging_xcm::v5::junctions::Junctions::Here,
 	});
 	let metadata = runtime_types::snowbridge_core::AssetMetadata {
 		name: BoundedVec(

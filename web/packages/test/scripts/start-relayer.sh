@@ -119,7 +119,7 @@ start_relayer() {
     (
         : >"$output_dir"/parachain-relay-bridge-hub-01.log
         while :; do
-            echo "Starting parachain-relay (primary governance) at $(date)"
+            echo "Starting parachain-relay at $(date)"
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay-bridge-hub-01.json" \
                 --ethereum.private-key $parachain_relay_primary_gov_eth_key \
@@ -138,58 +138,6 @@ start_relayer() {
                 --config $output_dir/beacon-relay.json \
                 --substrate.private-key "//BeaconRelay" \
                 >>"$output_dir"/beacon-relay.log 2>&1 || true
-            sleep 20
-        done
-    ) &
-
-    # Launch execution relay for assethub-0
-    (
-        : >$output_dir/execution-relay-asset-hub-0.log
-        while :; do
-            echo "Starting execution relay (asset-hub-0) at $(date)"
-            "${relay_bin}" run execution \
-                --config $output_dir/execution-relay-asset-hub-0.json \
-                --substrate.private-key "//ExecutionRelayAssetHub" \
-                >>"$output_dir"/execution-relay-asset-hub-0.log 2>&1 || true
-            sleep 20
-        done
-    ) &
-
-    # Launch execution relay for assethub-1
-    (
-        : >$output_dir/execution-relay-asset-hub-1.log
-        while :; do
-            echo "Starting execution relay (asset-hub-1) at $(date)"
-            "${relay_bin}" run execution \
-                --config $output_dir/execution-relay-asset-hub-1.json \
-                --substrate.private-key "//Alice" \
-                >>"$output_dir"/execution-relay-asset-hub-1.log 2>&1 || true
-            sleep 20
-        done
-    ) &
-
-    # Launch execution relay for assethub-2
-    (
-        : >$output_dir/execution-relay-asset-hub-2.log
-        while :; do
-            echo "Starting execution relay (asset-hub-2) at $(date)"
-            "${relay_bin}" run execution \
-                --config $output_dir/execution-relay-asset-hub-2.json \
-                --substrate.private-key "//Bob" \
-                >>"$output_dir"/execution-relay-asset-hub-2.log 2>&1 || true
-            sleep 20
-        done
-    ) &
-
-    # Launch execution relay for penpal
-    (
-        : >$output_dir/execution-relay-penpal.log
-        while :; do
-            echo "Starting execution relay (penpal) at $(date)"
-            "${relay_bin}" run execution \
-                --config $output_dir/execution-relay-penpal.json \
-                --substrate.private-key "//ExecutionRelayPenpal" \
-                >>"$output_dir"/execution-relay-penpal.log 2>&1 || true
             sleep 20
         done
     ) &
