@@ -62,9 +62,17 @@ library HandlersV2 {
         UnlockNativeTokenParams memory params =
             abi.decode(data, (UnlockNativeTokenParams));
         address agent = Functions.ensureAgent(Constants.ASSET_HUB_AGENT_ID);
-        Functions.withdrawNativeToken(
-            executor, agent, params.token, params.recipient, params.amount
-        );
+
+        // If the token is WETH, unwrap it before sending to user
+        if (params.token == Functions.weth()) {
+            Functions.withdrawWrappedEther(
+                executor, agent, payable(params.recipient), params.amount
+            );
+        } else {
+            Functions.withdrawNativeToken(
+                executor, agent, params.token, params.recipient, params.amount
+            );
+        }
     }
 
     function mintForeignToken(bytes calldata data) external {

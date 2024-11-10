@@ -3,7 +3,8 @@
 pragma solidity 0.8.25;
 
 import {IERC20} from "./interfaces/IERC20.sol";
-import {SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
+import {WETH9} from "canonical-weth/WETH9.sol";
+import {SafeNativeTransfer, SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
 import {Agent} from "./Agent.sol";
 import {Call} from "./utils/Call.sol";
 import {Address} from "./utils/Address.sol";
@@ -16,9 +17,11 @@ import {ChannelID, Channel} from "./v1/Types.sol";
 import {IGatewayBase} from "./interfaces/IGatewayBase.sol";
 import {IGatewayV1} from "./v1/IGateway.sol";
 import {IGatewayV2} from "./v2/IGateway.sol";
+import {OperatingMode} from "./types/Common.sol";
 
 library Functions {
     using Address for address;
+    using SafeNativeTransfer for address payable;
     using SafeTokenTransferFrom for IERC20;
 
     error AgentDoesNotExist();
@@ -101,6 +104,17 @@ library Functions {
         bytes memory call =
             abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
         invokeOnAgent(agent, executor, call);
+    }
+
+    function withdrawWrappedEther(
+        address executor,
+        address agent,
+        address payable recipient,
+        uint128 amount
+    ) internal {
+        withdrawNativeToken(executor, agent, weth(), address(this), amount);
+        WETH9(payable(weth())).withdraw(amount);
+        recipient.safeNativeTransfer(amount);
     }
 
     // @dev Transfer Ethereum native token back from polkadot
