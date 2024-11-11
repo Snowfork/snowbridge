@@ -79,7 +79,7 @@ interface IGatewayV2 {
     ) external payable;
 
     // Check if an inbound message was previously accepted and dispatched
-    function v2_isDispatched(uint64 nonce) external returns (bool);
+    function v2_isDispatched(uint64 nonce) external view returns (bool);
 
     /// @dev Check whether a token is registered
     function isTokenRegistered(address token) external view returns (bool);
