@@ -225,8 +225,6 @@ library SubstrateTypes {
     // }
     // ```
     //
-    //
-    //
     function encodePayloadV2(
         address origin,
         bytes[] memory assets,
@@ -247,7 +245,7 @@ library SubstrateTypes {
         return bytes.concat(ScaleCodec.checkedEncodeCompactU32(assets.length), accum);
     }
 
-    // Serializes a transfer instruction to a SCALE-encoded `Transfer` object
+    // Serializes a transfer instruction to a SCALE-encoded `Asset` object
     //
     // ```rust
     //
