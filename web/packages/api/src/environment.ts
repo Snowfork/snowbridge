@@ -554,7 +554,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
             ETHEREUM_API: (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`,
             RELAY_CHAIN_URL: "https://westend-rpc.polkadot.io",
-            ASSET_HUB_URL: "https://westend-asset-hub-rpc.polkadot.io",
+            ASSET_HUB_URL: "wss://westend-asset-hub-rpc.polkadot.io",
             BRIDGE_HUB_URL: "https://westend-bridge-hub-rpc.polkadot.io",
             PARACHAINS: [],
             GATEWAY_CONTRACT: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
