@@ -17,6 +17,6 @@ contract VerificationWrapper {
         pure
         returns (bool)
     {
-        return Verification.isCommitmentInHeaderDigest(commitment, header);
+        return Verification.isCommitmentInHeaderDigest(commitment, header, false);
     }
 }

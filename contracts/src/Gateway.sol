@@ -83,7 +83,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     */
 
     // Verify that a message commitment is considered finalized by our BEEFY light client.
-    function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
+    function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof, bool isV2)
         internal
         view
         virtual
@@ -93,7 +93,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             BEEFY_CLIENT,
             ScaleCodec.encodeU32(uint32(ParaID.unwrap(Constants.BRIDGE_HUB_PARA_ID))),
             commitment,
-            proof
+            proof,
+            isV2
         );
     }
 
@@ -147,7 +148,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
 
         // Verify that the commitment is included in a parachain header finalized by BEEFY.
-        if (!_verifyCommitment(commitment, headerProof)) {
+        if (!_verifyCommitment(commitment, headerProof, false)) {
             revert IGatewayBase.InvalidProof();
         }
 
@@ -453,7 +454,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
 
         // Verify that the commitment is included in a parachain header finalized by BEEFY.
-        if (!_verifyCommitment(commitment, headerProof)) {
+        if (!_verifyCommitment(commitment, headerProof, true)) {
             revert IGatewayBase.InvalidProof();
         }
 
