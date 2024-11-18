@@ -111,10 +111,6 @@ export const validateSend = async (
 ): Promise<SendValidationResult> => {
     const options = { ...ValidateOptionDefaults, ...validateOptions }
     const {
-        ethereum,
-        ethereum: {
-            contracts: { gateway },
-        },
         polkadot: {
             api: { assetHub, bridgeHub, relaychain, parachains },
         },
@@ -218,11 +214,8 @@ export const validateSend = async (
             message: "Asset balance insufficient for transfer.",
         })
 
-    const [bridgeStatus] = await Promise.all([
-        bridgeStatusInfo(context),
-        ethereum.api.getNetwork(),
-        gateway.isTokenRegistered(tokenAddress),
-    ])
+    const bridgeStatus = await bridgeStatusInfo(context);
+    
     const bridgeOperational = bridgeStatus.toEthereum.operatingMode.outbound === "Normal"
     const lightClientLatencyIsAcceptable =
         bridgeStatus.toEthereum.latencySeconds < options.acceptableLatencyInSeconds
