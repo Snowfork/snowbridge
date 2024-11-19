@@ -100,7 +100,7 @@ jobs:
               "categories": [
                 {
                     "title": "## Relayer Changes",
-                    "labels": ["Component Relayer"]
+                    "labels": ["Component: Relayer"]
                 }
               ]
             }
