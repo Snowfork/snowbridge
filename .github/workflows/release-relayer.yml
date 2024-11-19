@@ -6,6 +6,7 @@ on:
       - "relayer/**"
     branches:
       - main
+      - fix-relayer-build
   workflow_dispatch:
 
 env:
@@ -29,7 +30,7 @@ jobs:
       - name: Setup go
         uses: actions/checkout@v4
         with:
-          go-version: "^1.21.0"
+          go-version: "~1.22.0" # 1.23.0 has a known abigen build issue: https://github.com/sei-protocol/sei-chain/issues/1902
 
       - name: Install Go tools
         run: >
