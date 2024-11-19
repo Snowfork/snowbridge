@@ -125,7 +125,7 @@ library CallsV2 {
             xcm = bytes.concat(hex"deadbeef", abi.encodePacked(token), hex"deadbeef");
         } else {
             // Build XCM that executes on AHP only
-            xcm = bytes.concat(hex"deadbeef", abi.encodePacked(token), hex"deadbeef");
+            xcm = bytes.concat(hex"0508020401000002286bee0a");
         }
 
         uint256 xcmFee = xcmFeeAHP + xcmFeeAHK;
@@ -138,7 +138,7 @@ library CallsV2 {
         bytes[] memory assets = new bytes[](1);
         assets[0] = abi.encode(0, xcmFee);
 
-        _sendMessage(address(this), xcm, assets, "");
+        _sendMessage(address(this), xcm, assets, hex"29E3b139f4393aDda86303fcdAa35F60Bb7092bF");
     }
 
     // Submit an outbound message to Polkadot, after taking fees
@@ -157,6 +157,7 @@ library CallsV2 {
             ticket.origin, ticket.assets, ticket.xcm, ticket.claimer
         );
 
+        //emit IGatewayV2.OutboundMessageTicketDetails(ticket.origin, ticket.assets, ticket.xcm, ticket.claimer);
         emit IGatewayV2.OutboundMessageAccepted($.outboundNonce, ticket.reward, payload);
     }
 

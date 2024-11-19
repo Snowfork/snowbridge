@@ -3,7 +3,7 @@
 pragma solidity 0.8.25;
 
 import {MultiAddress} from "../MultiAddress.sol";
-import {OperatingMode, InboundMessage} from "./Types.sol";
+import {OperatingMode, InboundMessageV2} from "./Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
@@ -27,12 +27,13 @@ interface IGatewayV2 {
 
     // v2 Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
     event OutboundMessageAccepted(uint64 nonce, uint256 reward, bytes payload);
+    event OutboundMessageTicketDetails(address origin, bytes[] assets, bytes xcm, bytes claimer);
 
     // V2
 
     // Submit a message for verification and dispatch
     function v2_submit(
-        InboundMessage calldata message,
+        InboundMessageV2 calldata message,
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof,
         bytes32 rewardAddress

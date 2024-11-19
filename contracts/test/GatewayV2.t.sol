@@ -240,4 +240,13 @@ contract GatewayV2Test is Test {
         // Agent balance should be 0.5 + 0.5
         assertEq(token.balanceOf(assetHubAgent), 1 ether);
     }
+
+    function testRegisterToken() public {
+        bytes[] memory assets = new bytes[](1);
+
+        hoax(user1, 1 ether);
+        IGatewayV2(payable(address(gateway))).v2_registerToken{value: 1 ether}(
+            address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2), 0
+        );
+    }
 }
