@@ -1,0 +1,7 @@
+"Component: Docs":
+  - changed-files:
+      - any-glob-to-any-file: docs/**
+
+"Component: Relayer":
+  - changed-files:
+      - any-glob-to-any-file: relayer/**

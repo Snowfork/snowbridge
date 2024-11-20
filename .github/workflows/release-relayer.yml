@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - clara/test-label-release-notes
   workflow_dispatch:
 
 env:

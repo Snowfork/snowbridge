@@ -1,48 +1,15 @@
 name: label PRs
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  - pull_request_target
 
 jobs:
-  auto-label:
+  labeler:
+    permissions:
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Fetch default branch
-        run: git fetch origin main
-
-      - name: Check for changes and set labels
-        id: check_changes
-        run: |
-          LABELS=""
-          
-          if git diff --name-only origin/main...HEAD | grep -q '^relayer/'; then
-            LABELS="${LABELS}Component: Relayer,"
-          fi
-          if git diff --name-only origin/main...HEAD | grep -q '^contracts/'; then
-            LABELS="${LABELS}Component: Ethereum,"
-          fi
-          if git diff --name-only origin/main...HEAD | grep -q '^web/'; then
-            LABELS="${LABELS}Component: Web,"
-          fi
-          if git diff --name-only origin/main...HEAD | grep -q '^docs/'; then
-            LABELS="${LABELS}Component: Docs,"
-          fi
-          if git diff --name-only origin/main...HEAD | grep -q '^smoketest/'; then
-            LABELS="${LABELS}Component: Smoke Tests,"
-          fi
-          if git diff --name-only origin/main...HEAD | grep -q '^control/'; then
-            LABELS="${LABELS}Component: Control Tool,"
-          fi
-          
-          echo "labels=${LABELS%,}" >> $GITHUB_ENV
-
-      - name: Add labels to PR
-        if: env.labels != ''
-        uses: actions-ecosystem/action-add-labels@v1
+      - uses: actions/labeler@v5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          labels: ${{ env.labels }}
+         sync-labels: true
