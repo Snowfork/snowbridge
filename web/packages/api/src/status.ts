@@ -57,33 +57,7 @@ export type ChannelStatusInfo = {
     }
 }
 
-export enum AlarmReason {
-    BeefyStale = "BeefyStale",
-    BeaconStale = "BeaconStale",
-    ToEthereumChannelStale = "ToEthereumChannelStale",
-    ToPolkadotChannelStale = "ToPolkadotChannelStale",
-    AccountBalanceInsufficient = "AccountBalanceInsufficient",
-    ToEthereumNoTransfer = "ToEthereumNoTransfer",
-    ToPolkadotNoTransfer = "ToPolkadotNoTransfer",
-    ToEthereumChannelAttacked = "ToEthereumChannelAttacked",
-    ToPolkadotChannelAttacked = "ToPolkadotChannelAttacked"
-}
-
 export type Sovereign = { name: string; account: string; balance: bigint; type: SourceType }
-
-export const BlockLatencyThreshold = {
-    // Syncing beefy finality update every 4 hours(1200 ethereum blocks), leave some buffer here
-    ToEthereum: 1500,
-    // Syncing beacon finality update every 6.4 minutes(64 substrate blocks), leave some buffer here
-    ToPolkadot: 100,
-}
-
-export const InsufficientBalanceThreshold = {
-    // Minimum as 300 DOT
-    Substrate: 3_000_000_000_000,
-    // Minimum as 0.3 Ether
-    Ethereum: 300_000_000_000_000_000,
-}
 
 export type AllMetrics = {
     name: string
@@ -98,12 +72,8 @@ export const bridgeStatusInfo = async (
     options = {
         polkadotBlockTimeInSeconds: 6,
         ethereumBlockTimeInSeconds: 12,
-        toPolkadotCheckIntervalInBlock: process.env["CheckIntervalToPolkadot"]
-            ? parseInt(process.env["CheckIntervalToPolkadot"])
-            : BlockLatencyThreshold.ToPolkadot,
-        toEthereumCheckIntervalInBlock: process.env["CheckIntervalToEthereum"]
-            ? parseInt(process.env["CheckIntervalToEthereum"])
-            : BlockLatencyThreshold.ToEthereum,
+        toPolkadotCheckIntervalInBlock: 100,
+        toEthereumCheckIntervalInBlock: 1500,
     }
 ): Promise<BridgeStatusInfo> => {
     // Beefy status
@@ -202,12 +172,8 @@ export const channelStatusInfo = async (
     context: Context,
     channelId: string,
     options = {
-        toPolkadotCheckIntervalInBlock: process.env["CheckIntervalToPolkadot"]
-            ? parseInt(process.env["CheckIntervalToPolkadot"])
-            : BlockLatencyThreshold.ToPolkadot,
-        toEthereumCheckIntervalInBlock: process.env["CheckIntervalToEthereum"]
-            ? parseInt(process.env["CheckIntervalToEthereum"])
-            : BlockLatencyThreshold.ToEthereum,
+        toPolkadotCheckIntervalInBlock: 100,
+        toEthereumCheckIntervalInBlock: 1500,
     }
 ): Promise<ChannelStatusInfo> => {
     const [inbound_nonce_eth, outbound_nonce_eth] =
