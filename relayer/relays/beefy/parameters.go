@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/holiman/uint256"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/contracts"
@@ -63,7 +64,10 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 		return nil, fmt.Errorf("convert to ethereum address: %w", err)
 	}
 
-	v, _r, s := cleanSignature(validatorSignature)
+	v, _r, s, err := cleanSignature(validatorSignature)
+	if err != nil {
+		return nil, fmt.Errorf("cleanSignature: %w", err)
+	}
 
 	msg := InitialRequestParams{
 		Commitment: *commitment,
@@ -89,13 +93,37 @@ func toBeefyClientCommitment(c *types.Commitment) *contracts.BeefyClientCommitme
 	}
 }
 
-func cleanSignature(input types.BeefySignature) (uint8, [32]byte, [32]byte) {
+func cleanSignature(input types.BeefySignature) (v uint8, r [32]byte, s [32]byte, err error) {
 	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
 	// Split signature into r, s, v and add 27 to v
-	r := *(*[32]byte)(input[:32])
-	s := *(*[32]byte)(input[32:64])
-	v := byte(uint8(input[64]) + 27)
-	return v, r, s
+	r = *(*[32]byte)(input[:32])
+	s = *(*[32]byte)(input[32:64])
+	v = uint8(input[64])
+	if v < 27 {
+		v += 27
+	}
+	if v != 27 && v != 28 {
+		return v, r, s, fmt.Errorf("invalid V:%d", v)
+	}
+	var N *uint256.Int
+	N.SetFromHex("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141")
+	var halfN *uint256.Int
+	halfN.SetFromHex("0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0")
+	var s256 *uint256.Int
+	err = s256.SetFromHex(util.BytesToHexString(s[:]))
+	if err != nil {
+		return v, r, s, fmt.Errorf("invalid S:%s", util.BytesToHexString(s[:]))
+	}
+	if s256.Gt(halfN) {
+		s256 = s256.Sub(N, s256)
+		s = s256.Bytes32()
+		if v%2 == 0 {
+			v = v - 1
+		} else {
+			v = v + 1
+		}
+	}
+	return v, r, s, nil
 }
 
 func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byte, error) {
@@ -132,7 +160,10 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 			return nil, fmt.Errorf("signature is empty")
 		}
 
-		v, _r, s := cleanSignature(beefySig)
+		v, _r, s, err := cleanSignature(beefySig)
+		if err != nil {
+			return nil, fmt.Errorf("cleanSignature: %w", err)
+		}
 		account, err := r.Validators[validatorIndex].IntoEthereumAddress()
 		if err != nil {
 			return nil, fmt.Errorf("convert to ethereum address: %w", err)
