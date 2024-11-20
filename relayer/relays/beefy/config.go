@@ -2,6 +2,7 @@ package beefy
 
 import (
 	"fmt"
+
 	"github.com/snowfork/snowbridge/relayer/config"
 )
 
@@ -11,7 +12,8 @@ type Config struct {
 }
 
 type SourceConfig struct {
-	Polkadot config.PolkadotConfig `mapstructure:"polkadot"`
+	Polkadot          config.PolkadotConfig `mapstructure:"polkadot"`
+	BridgeHubEndpoint string                `mapstructure:"bridge-hub-endpoint"`
 	// Depth to ignore the beefy updates too far away (in number of blocks)
 	FastForwardDepth uint64 `mapstructure:"fast-forward-depth"`
 	// Period to sample the beefy updates (in number of blocks)
@@ -26,6 +28,7 @@ type SinkConfig struct {
 
 type ContractsConfig struct {
 	BeefyClient string `mapstructure:"BeefyClient"`
+	Gateway     string `mapstructure:"Gateway"`
 }
 
 func (c Config) Validate() error {
