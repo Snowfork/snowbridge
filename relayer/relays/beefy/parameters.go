@@ -105,11 +105,11 @@ func cleanSignature(input types.BeefySignature) (v uint8, r [32]byte, s [32]byte
 	if v != 27 && v != 28 {
 		return v, r, s, fmt.Errorf("invalid V:%d", v)
 	}
-	var N *uint256.Int
+	var N *uint256.Int = uint256.NewInt(0)
 	N.SetFromHex("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141")
-	var halfN *uint256.Int
+	var halfN *uint256.Int = uint256.NewInt(0)
 	halfN.SetFromHex("0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0")
-	var s256 *uint256.Int
+	var s256 *uint256.Int = uint256.NewInt(0)
 	err = s256.SetFromHex(util.BytesToHexString(s[:]))
 	if err != nil {
 		return v, r, s, fmt.Errorf("invalid S:%s", util.BytesToHexString(s[:]))
