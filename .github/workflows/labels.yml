@@ -11,6 +11,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Fetch default branch
+        run: git fetch origin main
+
       - name: Check for changes and set labels
         id: check_changes
         run: |
