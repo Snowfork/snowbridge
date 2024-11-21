@@ -44,46 +44,29 @@ export const BlockLatencyThreshold = {
     // Syncing beefy finality update every 4 hours(1200 ethereum blocks), leave some buffer here
     ToEthereum: process.env["BlockLatencyToEthereum"]
         ? parseInt(process.env["BlockLatencyToEthereum"])
-        : 1500,
+        : 2400,
     // Syncing beacon finality update every 6.4 minutes(64 substrate blocks), leave some buffer here
     ToPolkadot: process.env["BlockLatencyToPolkadot"]
         ? parseInt(process.env["BlockLatencyToPolkadot"])
-        : 100,
+        : 120,
 }
 
 export const AlarmEvaluationConfiguration = {
     ToEthereumStale: {
-        EvaluationPeriods: process.env["ToEthereumStaleEvaluationPeriods"]
-            ? parseInt(process.env["ToEthereumStaleEvaluationPeriods"])
-            : 8,
-        Period: process.env["ToEthereumStalePeriod"]
-            ? parseInt(process.env["ToEthereumStalePeriod"])
-            : 1800,
-        DatapointsToAlarm: process.env["ToEthereumStaleDatapointsToAlarm"]
-            ? parseInt(process.env["ToEthereumStaleDatapointsToAlarm"])
-            : 6,
-    },
-    ToPolkadotStale: {
-        EvaluationPeriods: process.env["ToPolkadotStaleEvaluationPeriods"]
-            ? parseInt(process.env["ToPolkadotStaleEvaluationPeriods"])
+        EvaluationPeriods: process.env["ToEthereumEvaluationPeriods"]
+            ? parseInt(process.env["ToEthereumEvaluationPeriods"])
             : 4,
-        Period: process.env["ToPolkadotStalePeriod"]
-            ? parseInt(process.env["ToPolkadotStalePeriod"])
-            : 1800,
-        DatapointsToAlarm: process.env["ToPolkadotStaleDatapointsToAlarm"]
-            ? parseInt(process.env["ToPolkadotStaleDatapointsToAlarm"])
+        DatapointsToAlarm: process.env["ToEthereumDatapointsToAlarm"]
+            ? parseInt(process.env["ToEthereumDatapointsToAlarm"])
             : 3,
     },
-    AccountBalanceInsufficient: {
-        EvaluationPeriods: process.env["AccountBalanceEvaluationPeriods"]
-            ? parseInt(process.env["AccountBalanceEvaluationPeriods"])
+    ToPolkadotStale: {
+        EvaluationPeriods: process.env["ToPolkadotEvaluationPeriods"]
+            ? parseInt(process.env["ToPolkadotEvaluationPeriods"])
+            : 3,
+        DatapointsToAlarm: process.env["ToPolkadotDatapointsToAlarm"]
+            ? parseInt(process.env["ToPolkadotDatapointsToAlarm"])
             : 2,
-        Period: process.env["AccountBalancePeriod"]
-            ? parseInt(process.env["AccountBalancePeriod"])
-            : 1800,
-        DatapointsToAlarm: process.env["AccountBalanceDatapointsToAlarm"]
-            ? parseInt(process.env["AccountBalanceDatapointsToAlarm"])
-            : 1,
     },
 }
 
@@ -128,7 +111,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
         MetricName: AlarmReason.BeaconStale.toString(),
         Value: Number(
             metrics.bridgeStatus.toPolkadot.blockLatency > BlockLatencyThreshold.ToPolkadot &&
-                metrics.bridgeStatus.toPolkadot.latestBeaconSlotOnPolkadot <=
+                metrics.bridgeStatus.toPolkadot.latestBeaconSlotOnPolkadot ==
                     metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot
         ),
     })
@@ -329,7 +312,7 @@ export const initializeAlarms = async () => {
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             EvaluationPeriods: AlarmEvaluationConfiguration.ToEthereumStale.EvaluationPeriods,
-            Period: AlarmEvaluationConfiguration.ToEthereumStale.Period,
+            Period: 1800,
             DatapointsToAlarm: AlarmEvaluationConfiguration.ToEthereumStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
         })
@@ -343,7 +326,7 @@ export const initializeAlarms = async () => {
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             EvaluationPeriods: AlarmEvaluationConfiguration.ToPolkadotStale.EvaluationPeriods,
-            Period: AlarmEvaluationConfiguration.ToPolkadotStale.Period,
+            Period: 1800,
             DatapointsToAlarm: AlarmEvaluationConfiguration.ToPolkadotStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
         })
@@ -357,7 +340,7 @@ export const initializeAlarms = async () => {
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             EvaluationPeriods: AlarmEvaluationConfiguration.ToEthereumStale.EvaluationPeriods,
-            Period: AlarmEvaluationConfiguration.ToEthereumStale.Period,
+            Period: 1800,
             DatapointsToAlarm: AlarmEvaluationConfiguration.ToEthereumStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
         })
@@ -371,7 +354,7 @@ export const initializeAlarms = async () => {
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             EvaluationPeriods: AlarmEvaluationConfiguration.ToPolkadotStale.EvaluationPeriods,
-            Period: AlarmEvaluationConfiguration.ToPolkadotStale.Period,
+            Period: 1800,
             DatapointsToAlarm: AlarmEvaluationConfiguration.ToPolkadotStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
         })
@@ -444,9 +427,8 @@ export const initializeAlarms = async () => {
         Statistic: "Average",
         ComparisonOperator: "GreaterThanThreshold",
         AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
-        EvaluationPeriods:
-            AlarmEvaluationConfiguration.AccountBalanceInsufficient.EvaluationPeriods,
-        Period: AlarmEvaluationConfiguration.AccountBalanceInsufficient.Period,
+        EvaluationPeriods: 2,
+        Period: 1800,
         ...alarmCommandSharedInput,
     })
     await client.send(accountBalanceAlarm)

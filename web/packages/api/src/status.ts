@@ -72,8 +72,8 @@ export const bridgeStatusInfo = async (
     options = {
         polkadotBlockTimeInSeconds: 6,
         ethereumBlockTimeInSeconds: 12,
-        toPolkadotCheckIntervalInBlock: 100,
-        toEthereumCheckIntervalInBlock: 1500,
+        toPolkadotCheckIntervalInBlock: 120,
+        toEthereumCheckIntervalInBlock: 2400,
     }
 ): Promise<BridgeStatusInfo> => {
     // Beefy status
@@ -172,8 +172,8 @@ export const channelStatusInfo = async (
     context: Context,
     channelId: string,
     options = {
-        toPolkadotCheckIntervalInBlock: 100,
-        toEthereumCheckIntervalInBlock: 1500,
+        toPolkadotCheckIntervalInBlock: 120,
+        toEthereumCheckIntervalInBlock: 2400,
     }
 ): Promise<ChannelStatusInfo> => {
     const [inbound_nonce_eth, outbound_nonce_eth] =
