@@ -114,9 +114,13 @@ func cleanSignature(input types.BeefySignature) (v uint8, r [32]byte, s [32]byte
 	if err != nil {
 		return v, r, s, fmt.Errorf("invalid S:%s", util.BytesToHexString(s[:]))
 	}
+	// If polkadot library generates malleable signatures, such as s-values in the upper range, calculate a new s-value
+	// with 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141 - s1 and flip v from 27 to 28 or
+	// vice versa.
 	if s256.Gt(halfN) {
-		s256 = s256.Sub(N, s256)
-		s = s256.Bytes32()
+		var negativeS256 *uint256.Int = uint256.NewInt(0)
+		negativeS256 = negativeS256.Sub(N, s256)
+		s = negativeS256.Bytes32()
 		if v%2 == 0 {
 			v = v - 1
 		} else {
