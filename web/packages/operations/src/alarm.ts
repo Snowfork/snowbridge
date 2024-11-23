@@ -55,18 +55,18 @@ export const AlarmEvaluationConfiguration = {
     ToEthereumStale: {
         EvaluationPeriods: process.env["ToEthereumEvaluationPeriods"]
             ? parseInt(process.env["ToEthereumEvaluationPeriods"])
-            : 4,
+            : 5,
         DatapointsToAlarm: process.env["ToEthereumDatapointsToAlarm"]
             ? parseInt(process.env["ToEthereumDatapointsToAlarm"])
-            : 3,
+            : 4,
     },
     ToPolkadotStale: {
         EvaluationPeriods: process.env["ToPolkadotEvaluationPeriods"]
             ? parseInt(process.env["ToPolkadotEvaluationPeriods"])
-            : 3,
+            : 5,
         DatapointsToAlarm: process.env["ToPolkadotDatapointsToAlarm"]
             ? parseInt(process.env["ToPolkadotDatapointsToAlarm"])
-            : 2,
+            : 4,
     },
 }
 
@@ -89,9 +89,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
     metricData.push({
         MetricName: AlarmReason.BeefyStale.toString(),
         Value: Number(
-            metrics.bridgeStatus.toEthereum.blockLatency > BlockLatencyThreshold.ToEthereum &&
-                metrics.bridgeStatus.toEthereum.latestPolkadotBlockOnEthereum ==
-                    metrics.bridgeStatus.toEthereum.previousPolkadotBlockOnEthereum
+            metrics.bridgeStatus.toEthereum.blockLatency > BlockLatencyThreshold.ToEthereum
         ),
     })
     // Beacon metrics
@@ -110,9 +108,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
     metricData.push({
         MetricName: AlarmReason.BeaconStale.toString(),
         Value: Number(
-            metrics.bridgeStatus.toPolkadot.blockLatency > BlockLatencyThreshold.ToPolkadot &&
-                metrics.bridgeStatus.toPolkadot.latestBeaconSlotOnPolkadot ==
-                    metrics.bridgeStatus.toPolkadot.previousEthereumBlockOnPolkadot
+            metrics.bridgeStatus.toPolkadot.blockLatency > BlockLatencyThreshold.ToPolkadot
         ),
     })
     // Channel metrics
@@ -161,6 +157,16 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toEthereum.previousInbound,
+        })
+        metricData.push({
+            MetricName: "ToEthereumUndelivered",
+            Dimensions: [
+                {
+                    Name: "ChannelName",
+                    Value: channel.name,
+                },
+            ],
+            Value: channel.toEthereum.outbound - channel.toEthereum.inbound,
         })
         metricData.push({
             MetricName: AlarmReason.ToEthereumChannelStale.toString(),
@@ -217,6 +223,16 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: channel.toPolkadot.previousInbound,
+        })
+        metricData.push({
+            MetricName: "ToPolkadotUndelivered",
+            Dimensions: [
+                {
+                    Name: "ChannelName",
+                    Value: channel.name,
+                },
+            ],
+            Value: channel.toPolkadot.outbound - channel.toPolkadot.inbound,
         })
         metricData.push({
             MetricName: AlarmReason.ToPolkadotChannelStale.toString(),
