@@ -62,6 +62,8 @@ import {
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
+import {HelloWorld} from "./mocks/HelloWorld.sol";
+
 contract GatewayV2Test is Test {
     // Emitted when token minted/burnt/transfered
     event Transfer(address indexed from, address indexed to, uint256 value);
@@ -85,6 +87,10 @@ contract GatewayV2Test is Test {
 
     // tokenID for DOT
     bytes32 public dotTokenID;
+
+    HelloWorld public helloWorld;
+
+    event SaidHello(string indexed message);
 
     function setUp() public {
         token = new WETH9();
@@ -132,6 +138,8 @@ contract GatewayV2Test is Test {
         token.deposit{value: 500}();
 
         dotTokenID = bytes32(uint256(1));
+
+        helloWorld = new HelloWorld();
     }
 
     function recipientAddress32() internal pure returns (MultiAddress memory) {
@@ -169,6 +177,21 @@ contract GatewayV2Test is Test {
         CommandV2[] memory commands = new CommandV2[](1);
         commands[0] =
             CommandV2({kind: CommandKind.CreateAgent, gas: 500_000, payload: ""});
+        return commands;
+    }
+
+    function makeCallContractCommand(uint256 value) public view returns (CommandV2[] memory) {
+        bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
+        CallContractParams memory params = CallContractParams({
+            target: address(helloWorld),
+            data: data,
+            value: value
+        });
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.CallContract, gas: 500_000, payload: payload});
         return commands;
     }
 
@@ -287,6 +310,24 @@ contract GatewayV2Test is Test {
         );
         IGatewayV2(address(gateway)).v2_submit(
             message, proof, makeMockProof(), relayerRewardAddress
+        );
+    }
+
+    function testAgentCallContractSuccess() public {
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, true, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: Constants.ASSET_HUB_AGENT_ID,
+                nonce: 1,
+                commands: makeCallContractCommand(0.1 ether)
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
         );
     }
 }

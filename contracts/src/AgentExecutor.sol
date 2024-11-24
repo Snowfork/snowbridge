@@ -28,8 +28,8 @@ contract AgentExecutor {
         _transferToken(token, recipient, amount);
     }
 
-    function callContract(address target, bytes memory data) external {
-        bool success = Call.safeCall(target, data);
+    function callContract(address target, bytes memory data, uint256 value) external {
+        bool success = Call.safeCall(target, data, value);
         if (!success) {
             revert();
         }
