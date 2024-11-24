@@ -55,10 +55,10 @@ export const AlarmEvaluationConfiguration = {
     ToEthereumStale: {
         EvaluationPeriods: process.env["ToEthereumEvaluationPeriods"]
             ? parseInt(process.env["ToEthereumEvaluationPeriods"])
-            : 5,
+            : 10,
         DatapointsToAlarm: process.env["ToEthereumDatapointsToAlarm"]
             ? parseInt(process.env["ToEthereumDatapointsToAlarm"])
-            : 4,
+            : 8,
     },
     ToPolkadotStale: {
         EvaluationPeriods: process.env["ToPolkadotEvaluationPeriods"]
