@@ -16,8 +16,8 @@ The gateway is defined by the following contracts
 
 The gateway is modular in design, being composed of libraries implementing specific functionality:
 
-* [Verification.sol](src/Verification.sol): Verification of inbound messages from Polakdot
-* [Assets.sol](src/Assets.sol): ERC20 token transfers to Polkadot
+* [Verification.sol](src/Verification.sol): Verification of inbound messages from Polkadot
+* [Assets.sol](src/Assets.sol): ERC-20 token transfers to Polkadot
 
 #### Governance
 
@@ -25,14 +25,14 @@ Using cross-chain messaging, the gateway is governed remotely by the governance 
 
 #### Upgrades
 
-The gateway consists of an upgradable proxy, and an implementation contract, loosely following the [ERC1967](https://eips.ethereum.org/EIPS/eip-1967) standard.
+The gateway consists of an upgradable proxy, and an implementation contract, loosely following the [ERC-1967](https://eips.ethereum.org/EIPS/eip-1967) standard.
 
 ### Agents
 
 Agents are proxy contracts for arbitrary consensus systems on Polkadot. Logically, one can think of them as the sovereign accounts of remote consensus systems.
 
 They have a number of uses:
-* When an Ethereum user sends ERC20 tokens to Polkadot (Specifically the AssetHub parachain), these tokens are actually locked into the agent contract corresponding to the AssetHub parachain. Then finally, on the AssetHub parachain, wrapped tokens are minted into an account controlled by the sender.
+* When an Ethereum user sends ERC-20 tokens to Polkadot (Specifically the AssetHub parachain), these tokens are actually locked into the agent contract corresponding to the AssetHub parachain. Then finally, on the AssetHub parachain, wrapped tokens are minted into an account controlled by the sender.
 * When a Polkadot parachain wishes to call a function on an Ethereum contract, it will appear to the destination contract that the message sender is the agent contract for the origin parachain.
 * Agents control the funds for receiving fees from users and disbursing rewards to message relayers
 
