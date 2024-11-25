@@ -64,9 +64,9 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 		return nil, fmt.Errorf("convert to ethereum address: %w", err)
 	}
 
-	v, _r, s, err := CleanSignature(validatorSignature)
+	v, _r, s, _, err := CleanSignature(validatorSignature)
 	if err != nil {
-		logrus.WithError(err).Warn("cleanSignature")
+		return nil, fmt.Errorf("clean signature: %w", err)
 	}
 
 	msg := InitialRequestParams{
@@ -93,7 +93,7 @@ func toBeefyClientCommitment(c *types.Commitment) *contracts.BeefyClientCommitme
 	}
 }
 
-func CleanSignature(input types.BeefySignature) (v uint8, r [32]byte, s [32]byte, err error) {
+func CleanSignature(input types.BeefySignature) (v uint8, r [32]byte, s [32]byte, reverted bool, err error) {
 	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
 	// Split signature into r, s, v and add 27 to v
 	r = *(*[32]byte)(input[:32])
@@ -103,7 +103,7 @@ func CleanSignature(input types.BeefySignature) (v uint8, r [32]byte, s [32]byte
 		v += 27
 	}
 	if v != 27 && v != 28 {
-		return v, r, s, fmt.Errorf("invalid V:%d", v)
+		return v, r, s, reverted, fmt.Errorf("invalid V:%d", v)
 	}
 	var N *uint256.Int = uint256.NewInt(0)
 	N.SetFromHex("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141")
@@ -111,8 +111,8 @@ func CleanSignature(input types.BeefySignature) (v uint8, r [32]byte, s [32]byte
 	halfN.SetFromHex("0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0")
 	var s256 *uint256.Int = uint256.NewInt(0)
 	err = s256.SetFromHex(util.BytesToHexString(s[:]))
-	if err != nil {
-		return v, r, s, fmt.Errorf("invalid S:%s,error is:%w", util.BytesToHexString(s[:]), err)
+	if err != nil && err != uint256.ErrLeadingZero {
+		return v, r, s, reverted, fmt.Errorf("invalid S:%s,error is:%w", util.BytesToHexString(s[:]), err)
 	}
 	// If polkadot library generates malleable signatures, such as s-values in the upper range, calculate a new s-value
 	// with 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141 - s1 and flip v from 27 to 28 or
@@ -126,9 +126,9 @@ func CleanSignature(input types.BeefySignature) (v uint8, r [32]byte, s [32]byte
 		} else {
 			v = v + 1
 		}
-		logrus.Warn("malleable beefy signature found")
+		reverted = true
 	}
-	return v, r, s, nil
+	return v, r, s, reverted, nil
 }
 
 func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byte, error) {
@@ -165,9 +165,9 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 			return nil, fmt.Errorf("signature is empty")
 		}
 
-		v, _r, s, err := CleanSignature(beefySig)
+		v, _r, s, _, err := CleanSignature(beefySig)
 		if err != nil {
-			logrus.WithError(err).Warn("cleanSignature")
+			return nil, fmt.Errorf("clean signature: %w", err)
 		}
 		account, err := r.Validators[validatorIndex].IntoEthereumAddress()
 		if err != nil {
