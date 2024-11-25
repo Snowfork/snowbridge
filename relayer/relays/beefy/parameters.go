@@ -64,9 +64,9 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 		return nil, fmt.Errorf("convert to ethereum address: %w", err)
 	}
 
-	v, _r, s, err := cleanSignature(validatorSignature)
+	v, _r, s, err := CleanSignature(validatorSignature)
 	if err != nil {
-		return nil, fmt.Errorf("cleanSignature: %w", err)
+		logrus.WithError(err).Warn("cleanSignature")
 	}
 
 	msg := InitialRequestParams{
@@ -93,7 +93,7 @@ func toBeefyClientCommitment(c *types.Commitment) *contracts.BeefyClientCommitme
 	}
 }
 
-func cleanSignature(input types.BeefySignature) (v uint8, r [32]byte, s [32]byte, err error) {
+func CleanSignature(input types.BeefySignature) (v uint8, r [32]byte, s [32]byte, err error) {
 	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
 	// Split signature into r, s, v and add 27 to v
 	r = *(*[32]byte)(input[:32])
@@ -112,7 +112,7 @@ func cleanSignature(input types.BeefySignature) (v uint8, r [32]byte, s [32]byte
 	var s256 *uint256.Int = uint256.NewInt(0)
 	err = s256.SetFromHex(util.BytesToHexString(s[:]))
 	if err != nil {
-		return v, r, s, fmt.Errorf("invalid S:%s", util.BytesToHexString(s[:]))
+		return v, r, s, fmt.Errorf("invalid S:%s,error is:%w", util.BytesToHexString(s[:]), err)
 	}
 	// If polkadot library generates malleable signatures, such as s-values in the upper range, calculate a new s-value
 	// with 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141 - s1 and flip v from 27 to 28 or
@@ -126,6 +126,7 @@ func cleanSignature(input types.BeefySignature) (v uint8, r [32]byte, s [32]byte
 		} else {
 			v = v + 1
 		}
+		logrus.Warn("malleable beefy signature found")
 	}
 	return v, r, s, nil
 }
@@ -164,9 +165,9 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 			return nil, fmt.Errorf("signature is empty")
 		}
 
-		v, _r, s, err := cleanSignature(beefySig)
+		v, _r, s, err := CleanSignature(beefySig)
 		if err != nil {
-			return nil, fmt.Errorf("cleanSignature: %w", err)
+			logrus.WithError(err).Warn("cleanSignature")
 		}
 		account, err := r.Validators[validatorIndex].IntoEthereumAddress()
 		if err != nil {
