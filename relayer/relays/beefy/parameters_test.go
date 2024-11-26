@@ -13,14 +13,14 @@ func TestCleanSignatureNochange(t *testing.T) {
 	s, err := util.HexStringTo32Bytes("0x6dc0d1a7743c3328bfcfe05a2f8691e114f9143776a461ddad6e8b858bb19c1d")
 	v := byte(28)
 	signature := buildSignature(v, r, s)
-	vAfter, rAfter, sAfter, err := CleanSignature(signature)
+	vAfter, rAfter, sAfter, reverted, err := CleanSignature(signature)
 	if err != nil {
 		t.Fatal(err)
 	}
+	assert.Equal(t, reverted, false)
 	assert.Equal(t, vAfter, v)
 	assert.Equal(t, rAfter, r)
 	assert.Equal(t, sAfter, s)
-
 }
 
 func TestCleanSignatureWithSConverted(t *testing.T) {
@@ -32,10 +32,11 @@ func TestCleanSignatureWithSConverted(t *testing.T) {
 	negativeS, err := util.HexStringTo32Bytes("0x6dc0d1a7743c3328bfcfe05a2f8691e114f9143776a461ddad6e8b858bb19c1d")
 	negativeV := byte(28)
 
-	vAfter, rAfter, sAfter, err := CleanSignature(signature)
+	vAfter, rAfter, sAfter, reverted, err := CleanSignature(signature)
 	if err != nil {
 		t.Fatal(err)
 	}
+	assert.Equal(t, reverted, true)
 	assert.Equal(t, vAfter, negativeV)
 	assert.Equal(t, rAfter, r)
 	assert.Equal(t, sAfter, negativeS)
