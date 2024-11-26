@@ -166,10 +166,10 @@ func ScanSingleBeefyBlockFn(cmd *cobra.Command, _ []string) error {
 	}
 	var emptyNum uint
 	var errNum uint
+	var revertedNum uint
 	for _, s := range commitment.Signatures {
 		ok, beefySig := s.Unwrap()
 		if !ok {
-			logrus.Warn("beefy signature is empty")
 			emptyNum++
 			continue
 		}
@@ -181,9 +181,10 @@ func ScanSingleBeefyBlockFn(cmd *cobra.Command, _ []string) error {
 		}
 		sAfter := util.BytesToHexString(s[:])
 		if reverted {
+			revertedNum++
 			logrus.Info(fmt.Sprintf("s is reverted, before clean:%s, after clean:%s", sBefore, sAfter))
 		}
 	}
-	logrus.Info(fmt.Sprintf("number of total signatures:%d,empty signatures:%d,invalid signatures:%d", len(commitment.Signatures), emptyNum, errNum))
+	logrus.Info(fmt.Sprintf("number of total signatures:%d,empty signatures:%d,invalid signatures:%d,reverted signatures:%d", len(commitment.Signatures), emptyNum, errNum, revertedNum))
 	return nil
 }
