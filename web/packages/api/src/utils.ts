@@ -94,7 +94,7 @@ export const fetchBeaconSlot = async (
     url += `eth/v2/beacon/blocks/${blockId}`
     let response = await fetch(url)
     if (!response.ok) {
-        throw new Error(response.statusText)
+        throw new Error(`${blockId}: ${response.statusText}`)
     }
     return await response.json()
 }
