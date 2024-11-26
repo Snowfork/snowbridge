@@ -93,6 +93,7 @@ func toBeefyClientCommitment(c *types.Commitment) *contracts.BeefyClientCommitme
 	}
 }
 
+// Implementation derived from https://github.com/OpenZeppelin/openzeppelin-contracts/blob/5bb3f3e788c6b2c806d562ef083b438354f969d7/contracts/utils/cryptography/ECDSA.sol#L139-L145
 func CleanSignature(input types.BeefySignature) (v uint8, r [32]byte, s [32]byte, reverted bool, err error) {
 	// Update signature format (Polkadot uses recovery IDs 0 or 1, Eth uses 27 or 28, so we need to add 27)
 	// Split signature into r, s, v and add 27 to v
