@@ -280,6 +280,14 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return Functions.ensureAgent(agentID);
     }
 
+    function outboundNonce()
+        external
+        view
+        returns (uint64)
+    {
+        return CallsV2.outboundNonce();
+    }
+
     function pricingParameters() external view returns (UD60x18, uint128) {
         return CallsV1.pricingParameters();
     }

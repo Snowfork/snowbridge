@@ -227,4 +227,8 @@ library CallsV2 {
             );
         }
     }
+
+    function outboundNonce() external view returns (uint64) {
+        return CoreStorage.layout().outboundNonce;
+    }
 }

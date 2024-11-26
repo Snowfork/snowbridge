@@ -118,7 +118,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				"channelId": r.config.Source.ChannelID,
 			}).Info("Polling Nonces")
 
-			paraNonce, err := r.fetchLatestParachainNonce()
+			paraNonces, err := r.fetchUnprocessedParachainNonces()
 			if err != nil {
 				return err
 			}
@@ -130,32 +130,30 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 			log.WithFields(log.Fields{
 				"channelId":           types.H256(r.config.Source.ChannelID).Hex(),
-				"paraNonce":           paraNonce,
+				"paraNonces":          paraNonces,
 				"ethNonce":            ethNonce,
 				"instantVerification": r.config.InstantVerification,
 			}).Info("Polled Nonces")
-
-			if paraNonce == ethNonce {
-				continue
-			}
 
 			blockNumber, err := ethconn.Client().BlockNumber(ctx)
 			if err != nil {
 				return fmt.Errorf("get last block number: %w", err)
 			}
 
-			events, err := r.findEvents(ctx, blockNumber, paraNonce+1)
-			if err != nil {
-				return fmt.Errorf("find events: %w", err)
-			}
+			for _, paraNonce := range paraNonces {
+				events, err := r.findEvents(ctx, blockNumber, paraNonce+1)
+				if err != nil {
+					return fmt.Errorf("find events: %w", err)
+				}
 
-			for _, ev := range events {
-				err := r.waitAndSend(ctx, ev)
-				if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
-					log.WithField("nonce", ev.Nonce).Info("beacon header not finalized yet")
-					continue
-				} else if err != nil {
-					return fmt.Errorf("submit event: %w", err)
+				for _, ev := range events {
+					err := r.waitAndSend(ctx, ev)
+					if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
+						log.WithField("nonce", ev.Nonce).Info("beacon header not finalized yet")
+						continue
+					} else if err != nil {
+						return fmt.Errorf("submit event: %w", err)
+					}
 				}
 			}
 		}
@@ -197,38 +195,86 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 	return nil
 }
 
-func (r *Relay) fetchLatestParachainNonce() (uint64, error) {
-	paraID := r.config.Source.ChannelID
-	encodedParaID, err := types.EncodeToBytes(r.config.Source.ChannelID)
+func (r *Relay) fetchUnprocessedParachainNonces() ([]uint64, error) {
+	unprocessedNonces := []uint64{}
+	startKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueue", "NonceBitmap", nil)
 	if err != nil {
-		return 0, err
+		return unprocessedNonces, fmt.Errorf("create storage key for EthereumInboundQueue.NonceBitmap: %w", err)
 	}
 
-	paraNonceKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueue", "Nonce", encodedParaID, nil)
+	blockHash, err := r.paraconn.API().RPC.Chain.GetBlockHashLatest()
 	if err != nil {
-		return 0, fmt.Errorf("create storage key for EthereumInboundQueue.Nonce(%v): %w",
-			paraID, err)
+		return unprocessedNonces, fmt.Errorf("fetch latest parachain block hash: %w", err)
 	}
-	var paraNonce uint64
-	ok, err := r.paraconn.API().RPC.State.GetStorageLatest(paraNonceKey, &paraNonce)
+
+	keys, err := r.paraconn.API().RPC.State.GetKeysPaged(startKey, 100, nil, blockHash)
 	if err != nil {
-		return 0, fmt.Errorf("fetch storage EthereumInboundQueue.Nonce(%v): %w",
-			paraID, err)
+		return unprocessedNonces, fmt.Errorf("fetch storage EthereumInboundQueue.NonceBitmap keys: %w", err)
+	}
+	for _, key := range keys {
+		var value types.U128
+		ok, err := r.paraconn.API().RPC.State.GetStorageLatest(key, &value)
+		if err != nil {
+			return unprocessedNonces, fmt.Errorf("fetch latest parachain value: %w", err)
+		}
+		if !ok || value.Int.Cmp(big.NewInt(0)) == 0 {
+			continue // Skip empty buckets
+		}
+
+		unprocessedNonces = extractUnprocessedNonces(value)
+		fmt.Printf("Unprocessed nonces for bucket %s: %v\n", key.Hex(), unprocessedNonces)
+	}
+
+	return unprocessedNonces, nil
+}
+
+func (r *Relay) isParachainNonceSet(index uint64) (bool, error) {
+	// Calculate the bucket and bit position
+	bucket := index / 128
+	bitPosition := index % 128
+
+	encodedBucket, err := types.EncodeToBytes(types.NewU64(bucket))
+	bucketKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueue", "NonceBitmap", encodedBucket)
+	if err != nil {
+		return false, fmt.Errorf("create storage key for EthereumInboundQueue.NonceBitmap: %w", err)
+	}
+
+	var bucketValue types.U128
+	ok, err := r.paraconn.API().RPC.State.GetStorageLatest(bucketKey, &bucketValue)
+	if err != nil {
+		return false, fmt.Errorf("fetch storage EthereumInboundQueue.NonceBitmap keys: %w", err)
 	}
 	if !ok {
-		paraNonce = 0
+		return false, fmt.Errorf("bucket does not exist: %w", err)
 	}
 
-	return paraNonce, nil
+	return checkBitState(bucketValue, bitPosition), nil
+}
+
+func checkBitState(bucketValue types.U128, bitPosition uint64) bool {
+	mask := new(big.Int).Lsh(big.NewInt(1), uint(bitPosition)) // Create mask for the bit position
+	return new(big.Int).And(bucketValue.Int, mask).Cmp(big.NewInt(0)) != 0
+}
+
+func extractUnprocessedNonces(bitmap types.U128) []uint64 {
+	var unprocessed []uint64
+	for i := 0; i < 128; i++ {
+		mask := new(big.Int).Lsh(big.NewInt(1), uint(i))
+		bit := new(big.Int).And(bitmap.Int, mask)
+		if bit.Cmp(big.NewInt(0)) == 0 {
+			unprocessed = append(unprocessed, uint64(i))
+		}
+	}
+	return unprocessed
 }
 
 func (r *Relay) fetchEthereumNonce(ctx context.Context) (uint64, error) {
 	opts := bind.CallOpts{
 		Context: ctx,
 	}
-	_, ethOutboundNonce, err := r.gatewayContract.ChannelNoncesOf(&opts, r.config.Source.ChannelID)
+	ethOutboundNonce, err := r.gatewayContract.OutboundNonce(&opts)
 	if err != nil {
-		return 0, fmt.Errorf("fetch Gateway.ChannelNoncesOf(%v): %w", r.config.Source.ChannelID, err)
+		return 0, fmt.Errorf("fetch Gateway.OutboundNonce: %w", err)
 	}
 
 	return ethOutboundNonce, nil
@@ -241,9 +287,6 @@ func (r *Relay) findEvents(
 	latestFinalizedBlockNumber uint64,
 	start uint64,
 ) ([]*contracts.GatewayOutboundMessageAccepted, error) {
-
-	channelID := r.config.Source.ChannelID
-
 	var allEvents []*contracts.GatewayOutboundMessageAccepted
 
 	blockNumber := latestFinalizedBlockNumber
@@ -262,7 +305,7 @@ func (r *Relay) findEvents(
 			Context: ctx,
 		}
 
-		done, events, err := r.findEventsWithFilter(&opts, channelID, start)
+		done, events, err := r.findEventsWithFilter(&opts, start)
 		if err != nil {
 			return nil, fmt.Errorf("filter events: %w", err)
 		}
@@ -285,8 +328,8 @@ func (r *Relay) findEvents(
 	return allEvents, nil
 }
 
-func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, channelID [32]byte, start uint64) (bool, []*contracts.GatewayOutboundMessageAccepted, error) {
-	iter, err := r.gatewayContract.FilterOutboundMessageAccepted(opts, [][32]byte{channelID}, [][32]byte{})
+func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, start uint64) (bool, []*contracts.GatewayOutboundMessageAccepted, error) {
+	iter, err := r.gatewayContract.FilterOutboundMessageAccepted(opts)
 	if err != nil {
 		return false, nil, err
 	}
@@ -409,7 +452,6 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		"blockNumber": ev.Raw.BlockNumber,
 		"txHash":      ev.Raw.TxHash.Hex(),
 		"txIndex":     ev.Raw.TxIndex,
-		"channelID":   types.H256(ev.ChannelID).Hex(),
 	})
 
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
@@ -443,11 +485,8 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		return fmt.Errorf("write to parachain: %w", err)
 	}
 
-	paraNonce, err := r.fetchLatestParachainNonce()
-	if err != nil {
-		return fmt.Errorf("fetch latest parachain nonce: %w", err)
-	}
-	if paraNonce != ev.Nonce {
+	ok, err := r.isParachainNonceSet(ev.Nonce)
+	if !ok {
 		return fmt.Errorf("inbound message fail to execute")
 	}
 	logger.Info("inbound message executed successfully")
@@ -457,17 +496,21 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 
 // isMessageProcessed checks if the provided event nonce has already been processed on-chain.
 func (r *Relay) isMessageProcessed(eventNonce uint64) (bool, error) {
-	paraNonce, err := r.fetchLatestParachainNonce()
+	paraNonces, err := r.fetchUnprocessedParachainNonces()
 	if err != nil {
 		return false, fmt.Errorf("fetch latest parachain nonce: %w", err)
 	}
 	// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state
-	if eventNonce <= paraNonce {
-		log.WithField("nonce", paraNonce).Info("message picked up by another relayer, skipped")
-		return true, nil
+
+	for _, paraNonce := range paraNonces {
+		if eventNonce == paraNonce {
+			log.WithField("nonce", paraNonce).Info("unprocessed message found")
+			return false, nil
+		}
 	}
 
-	return false, nil
+	log.WithField("nonce", eventNonce).Info("processed message found")
+	return true, nil
 }
 
 // isInFinalizedBlock checks if the block containing the event is a finalized block.
@@ -480,4 +523,8 @@ func (r *Relay) isInFinalizedBlock(ctx context.Context, event *contracts.Gateway
 	}
 
 	return r.beaconHeader.CheckHeaderFinalized(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
+}
+
+func (r *Relay) UnprocessedNonces() {
+
 }

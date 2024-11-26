@@ -16,6 +16,8 @@ interface IGatewayV2 {
 
     function agentOf(bytes32 agentID) external view returns (address);
 
+    function outboundNonce() external view returns (uint64);
+
     /**
      * Events
      */
