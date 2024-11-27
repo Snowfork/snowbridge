@@ -17,3 +17,5 @@ tsconfig.tsbuildinfo
 lcov.info
 tenderly.yaml
 docs/
+
+.history/
