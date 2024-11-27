@@ -30,10 +30,10 @@ NOTE: To test an upgrade that has not executed yet on the relevant environment, 
 To update the runtime code binding, run the following commands:
 
 ```shell
-subxt metadata --url ws://127.0.0.1:8000 -f bytes -o runtimes/polkadot/polkadot-metadata.bin
-subxt metadata --url ws://127.0.0.1:8001 -f bytes -o runtimes/bridge-hub-polkadot/bridge-hub-metadata.bin
-subxt metadata --url ws://127.0.0.1:8002 -f bytes -o runtimes/asset-hub-polkadot/asset-hub-metadata.bin
+subxt metadata --url wss://polkadot-rpc.dwellir.com -f bytes -o runtimes/polkadot/polkadot-metadata.bin
+subxt metadata --url wss://bridge-hub-polkadot-rpc.dwellir.com -f bytes -o runtimes/bridge-hub-polkadot/bridge-hub-metadata.bin
+subxt metadata --url wss://asset-hub-polkadot-rpc.dwellir.com -f bytes -o runtimes/asset-hub-polkadot/asset-hub-metadata.bin
 ```
 
-To update Westend/Paseo bindings, replace the chain name in the command, e.g. replace `runtimes/polkadot/polkadot-metadata.bin` 
+To update Westend/Paseo bindings, replace the chain name in the command, e.g. replace `runtimes/polkadot/polkadot-metadata.bin`
 with `runtimes/westend/polkadot-metadata.bin`.

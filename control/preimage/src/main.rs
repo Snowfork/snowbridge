@@ -16,6 +16,8 @@ use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utilit
 use sp_crypto_hashing::blake2_256;
 use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
+
+#[cfg(any(feature = "westend", feature = "paseo"))]
 use crate::helpers::sudo;
 
 #[derive(Debug, Parser)]
@@ -324,11 +326,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
             let call2 =
                 send_xcm_asset_hub(&context, vec![force_xcm_version(), set_ethereum_fee]).await?;
-            if cfg!(any(feature = "paseo", feature = "westend")) {
-                sudo(Box::new(utility_force_batch(vec![call1, call2])))
-            } else {
-                utility_force_batch(vec![call1, call2])
-            }
+            #[cfg(any(feature = "westend", feature = "paseo"))]
+            let final_call = sudo(Box::new(utility_force_batch(vec![call1, call2])));
+            #[cfg(not(any(feature = "westend", feature = "paseo")))]
+            let final_call = utility_force_batch(vec![call1, call2]);
+            final_call
         }
         Command::UpdateAsset(params) => {
             let call = send_xcm_asset_hub(
@@ -339,11 +341,12 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ],
             )
             .await?;
-            if cfg!(any(feature = "paseo", feature = "westend")) {
-                sudo(Box::new(call))
-            } else {
-                call
-            }
+
+            #[cfg(any(feature = "westend", feature = "paseo"))]
+            let final_call = sudo(Box::new(call));
+            #[cfg(not(any(feature = "westend", feature = "paseo")))]
+            let final_call = call;
+            final_call
         }
         Command::GatewayOperatingMode(params) => {
             let call = commands::gateway_operating_mode(&params.gateway_operating_mode);

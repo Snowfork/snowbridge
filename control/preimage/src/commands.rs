@@ -30,21 +30,21 @@ use crate::bridge_hub_runtime::RuntimeCall as BridgeHubRuntimeCall;
 
 #[cfg(any(feature = "polkadot", feature = "paseo"))]
 pub mod asset_hub_polkadot_types {
-    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation;
-    pub use crate::asset_hub_runtime::runtime_types::xcm::v3::{
+    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::location::Location;
+    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
         junction::Junction::AccountKey20, junction::Junction::GlobalConsensus, junction::NetworkId,
         junctions::Junctions::X2,
     };
-    pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> MultiLocation {
-        return MultiLocation {
+    pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> Location {
+        return Location {
             parents: 2,
-            interior: X2(
+            interior: X2([
                 GlobalConsensus(NetworkId::Ethereum { chain_id: chain_id }),
                 AccountKey20 {
                     network: None,
                     key: key,
                 },
-            ),
+            ]),
         };
     }
 }
