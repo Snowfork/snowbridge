@@ -40,7 +40,7 @@ Integration tests for our local testnet. See [smoketest/README.md](https://githu
 
 We use the Nix package manager to provide a reproducible and maintainable developer environment.
 
-After [installing nix](https://nixos.org/download.html) Nix, enable [flakes](https://wiki.nixos.org/wiki/Flakes):
+After [installing Nix](https://nixos.org/download.html), enable [flakes](https://wiki.nixos.org/wiki/Flakes):
 
 ```sh
 mkdir -p ~/.config/nix
