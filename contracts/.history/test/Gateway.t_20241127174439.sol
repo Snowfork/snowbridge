@@ -20,6 +20,7 @@ import {Agent} from "../src/Agent.sol";
 import {Verification} from "../src/Verification.sol";
 import {Assets} from "../src/Assets.sol";
 import {Operators} from "../src/Operators.sol";
+
 import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 import {MultiAddress} from "../src/MultiAddress.sol";
 import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress} from "../src/Types.sol";
@@ -1018,8 +1019,14 @@ contract GatewayTest is Test {
 
     bytes private constant FINAL_VALIDATORS_PAYLOAD =
         hex"7015003800000cd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48";
-    bytes private constant VALIDATORS_DATA =
-        "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48";
+    // bytes private constant VALIDATORS_DATA =
+    //     "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48";
+
+    bytes32[] private VALIDATORS_DATA = [
+        bytes32(0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d),
+        bytes32(0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22),
+        bytes32(0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a4)8
+    ];
 
     bytes private constant WRONG_LENGTH_VALIDATORS_DATA =
         "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a4";

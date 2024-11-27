@@ -9,7 +9,7 @@ import {ParaID} from "./Types.sol";
  * @title SCALE encoders for common Substrate types
  */
 library SubstrateTypes {
-    error SubstrateTypes__UnsupportedCompactEncoding();
+    error UnsupportedCompactEncoding();
 
     /**
      * @dev Encodes `MultiAddress::Id`: https://crates.parity.io/sp_runtime/enum.MultiAddress.html#variant.Id

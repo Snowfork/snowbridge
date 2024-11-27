@@ -197,11 +197,11 @@ library SubstrateTypes {
         );
     }
 
-    function EncodedOperatorsData(bytes calldata operatorsKeys, uint32 operatorsCount)
+    function EncodedOperatorsData(bytes calldata validatorsKeys, uint32 validatorsCount)
         internal
         pure
         returns (bytes memory)
     {
-        return bytes.concat(bytes4(0x70150038), ScaleCodec.encodeCompactU32(operatorsCount), operatorsKeys);
+        return bytes.concat(bytes4(0x70150038), ScaleCodec.encodeCompactU32(validatorsCount), validatorsKeys);
     }
 }

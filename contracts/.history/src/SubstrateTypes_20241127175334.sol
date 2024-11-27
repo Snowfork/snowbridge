@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
+import {console2} from "forge-std/console2.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {ParaID} from "./Types.sol";
 
@@ -197,11 +198,19 @@ library SubstrateTypes {
         );
     }
 
-    function EncodedOperatorsData(bytes calldata operatorsKeys, uint32 operatorsCount)
+    function EncodedOperatorsData(bytes32[] calldata operatorsKeys, uint32 operatorsCount)
         internal
         pure
         returns (bytes memory)
     {
-        return bytes.concat(bytes4(0x70150038), ScaleCodec.encodeCompactU32(operatorsCount), operatorsKeys);
+        bytes memory operatorsFlattened = new bytes(operatorsCount);
+        for (uint32 i = 0; i < operatorsCount; i++) {
+            for (uint32 j = 0; j < 32; j++) {
+                console2.logBytes32(operatorsKeys[i]);
+                console2.logBytes1(operatorsKeys[i][j]);
+                operatorsFlattened[i * 32 + j] = operatorsKeys[i][j];
+            }
+        }
+        return bytes.concat(bytes4(0x70150038), ScaleCodec.encodeCompactU32(operatorsCount), operatorsFlattened);
     }
 }

@@ -19,7 +19,6 @@ import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {Agent} from "../src/Agent.sol";
 import {Verification} from "../src/Verification.sol";
 import {Assets} from "../src/Assets.sol";
-import {Operators} from "../src/Operators.sol";
 import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 import {MultiAddress} from "../src/MultiAddress.sol";
 import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress} from "../src/Types.sol";
@@ -1016,73 +1015,25 @@ contract GatewayTest is Test {
         MockGateway(address(gateway)).agentExecutePublic(encodedParams);
     }
 
+    //     Whole payload: "7015003800000cd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
+    // Breaking down payload into components below:
+    // Magic bytes: "70150038"
+    // Message: "00000cd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
+    // Breaking down message below
+    // Validators: "0cd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
+    // Breaking down validators array below:
+    // Size of validator vector compact encoded: "0c"
+    // Array without the scale encoded size in front: "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
+
     bytes private constant FINAL_VALIDATORS_PAYLOAD =
         hex"7015003800000cd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48";
     bytes private constant VALIDATORS_DATA =
         "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48";
 
-    bytes private constant WRONG_LENGTH_VALIDATORS_DATA =
-        "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a4";
+    function testSendValidatorsData() public {
+        vm.expectEmit(true, true, false, false);
+        emit IGateway.ValidatorsDataCreated(3, VALIDATORS_DATA);
 
-    function createLongOperatorsData() public pure returns (bytes memory) {
-        bytes memory result = new bytes(VALIDATORS_DATA.length * 1000);
-
-        for (uint256 i = 0; i < 33; i++) {
-            for (uint256 j = 0; j < VALIDATORS_DATA.length; j++) {
-                result[i * VALIDATORS_DATA.length + j] = VALIDATORS_DATA[j];
-            }
-        }
-
-        return result;
-    }
-
-    function testSendOperatorsData() public {
-        // Create mock agent and paraID
-        ParaID paraID = ParaID.wrap(1);
-        bytes32 agentID = keccak256("1");
-
-        MockGateway(address(gateway)).createAgentPublic(abi.encode(CreateAgentParams({agentID: agentID})));
-
-        CreateChannelParams memory params =
-            CreateChannelParams({channelID: paraID.into(), agentID: agentID, mode: OperatingMode.Normal});
-
-        MockGateway(address(gateway)).createChannelPublic(abi.encode(params));
-
-        vm.expectEmit(true, false, false, false);
-        emit IGateway.OutboundMessageAccepted(paraID.into(), 1, messageID, FINAL_VALIDATORS_PAYLOAD);
-
-        IGateway(address(gateway)).sendOperatorsData{value: 1 ether}(VALIDATORS_DATA, paraID);
-    }
-
-    function testShouldNotSendOperatorsDataBecauseOperatorsNotMultipleOf32() public {
-        // Create mock agent and paraID
-        ParaID paraID = ParaID.wrap(1);
-        bytes32 agentID = keccak256("1");
-
-        MockGateway(address(gateway)).createAgentPublic(abi.encode(CreateAgentParams({agentID: agentID})));
-
-        CreateChannelParams memory params =
-            CreateChannelParams({channelID: paraID.into(), agentID: agentID, mode: OperatingMode.Normal});
-
-        MockGateway(address(gateway)).createChannelPublic(abi.encode(params));
-        vm.expectRevert(Operators.Operators__UnsupportedOperatorsLength.selector);
-        IGateway(address(gateway)).sendOperatorsData{value: 1 ether}(WRONG_LENGTH_VALIDATORS_DATA, paraID);
-    }
-
-    function testShouldNotSendOperatorsDataBecauseOperatorsTooLong() public {
-        // Create mock agent and paraID
-        ParaID paraID = ParaID.wrap(1);
-        bytes32 agentID = keccak256("1");
-
-        MockGateway(address(gateway)).createAgentPublic(abi.encode(CreateAgentParams({agentID: agentID})));
-
-        CreateChannelParams memory params =
-            CreateChannelParams({channelID: paraID.into(), agentID: agentID, mode: OperatingMode.Normal});
-
-        MockGateway(address(gateway)).createChannelPublic(abi.encode(params));
-        bytes memory longOperatorsData = createLongOperatorsData();
-
-        vm.expectRevert(Operators.Operators__OperatorsLengthTooLong.selector);
-        IGateway(address(gateway)).sendOperatorsData{value: 1 ether}(longOperatorsData, paraID);
+        IGateway(address(gateway)).sendValidatorsData(1000, VALIDATORS_DATA);
     }
 }

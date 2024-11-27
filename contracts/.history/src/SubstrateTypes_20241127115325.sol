@@ -9,7 +9,7 @@ import {ParaID} from "./Types.sol";
  * @title SCALE encoders for common Substrate types
  */
 library SubstrateTypes {
-    error SubstrateTypes__UnsupportedCompactEncoding();
+    error UnsupportedCompactEncoding();
 
     /**
      * @dev Encodes `MultiAddress::Id`: https://crates.parity.io/sp_runtime/enum.MultiAddress.html#variant.Id
@@ -195,13 +195,5 @@ library SubstrateTypes {
             ScaleCodec.encodeU128(amount),
             ScaleCodec.encodeU128(xcmFee)
         );
-    }
-
-    function EncodedOperatorsData(bytes calldata operatorsKeys, uint32 operatorsCount)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return bytes.concat(bytes4(0x70150038), ScaleCodec.encodeCompactU32(operatorsCount), operatorsKeys);
     }
 }

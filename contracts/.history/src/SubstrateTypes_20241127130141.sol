@@ -10,6 +10,7 @@ import {ParaID} from "./Types.sol";
  */
 library SubstrateTypes {
     error SubstrateTypes__UnsupportedCompactEncoding();
+    error SubstrateTypes__UnsupportedValidatorsLength();
 
     /**
      * @dev Encodes `MultiAddress::Id`: https://crates.parity.io/sp_runtime/enum.MultiAddress.html#variant.Id
@@ -197,11 +198,35 @@ library SubstrateTypes {
         );
     }
 
-    function EncodedOperatorsData(bytes calldata operatorsKeys, uint32 operatorsCount)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return bytes.concat(bytes4(0x70150038), ScaleCodec.encodeCompactU32(operatorsCount), operatorsKeys);
+    //     Whole payload: "7015003800000cd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
+    // Breaking down payload into components below:
+    // Magic bytes: "70150038"
+    // Message: "00000cd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
+    // Breaking down message below
+    // Validators: "0cd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
+    // Breaking down validators array below:
+    // Size of validator vector compact encoded: "0c"
+    // Array without the scale encoded size in front: "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
+
+    function EncodedValidatorsData(bytes32[] calldata validatorsKeys) internal view returns (bytes memory) {
+        uint16 validatorsKeysLength = validatorsKeys.length;
+        if (validatorsKeysLength > 1000) {
+            revert SubstrateTypes__UnsupportedValidatorsLength();
+        }
+
+        return bytes.concat(
+            bytes4(0x70150038),
+            bytes2(0x00),
+            bytes2(validatorsKeysLength),
+            ScaleCodec.encodeU64(uint64(block.chainid)),
+            bytes1(0x02),
+            tokenID,
+            bytes1(0x02),
+            ScaleCodec.encodeU32(uint32(ParaID.unwrap(paraID))),
+            recipient,
+            ScaleCodec.encodeU128(destinationXcmFee),
+            ScaleCodec.encodeU128(amount),
+            ScaleCodec.encodeU128(xcmFee)
+        );
     }
 }

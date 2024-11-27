@@ -19,7 +19,8 @@ import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {Agent} from "../src/Agent.sol";
 import {Verification} from "../src/Verification.sol";
 import {Assets} from "../src/Assets.sol";
-import {Operators} from "../src/Operators.sol";
+import {Validators} from "../src/Validators.sol";
+
 import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 import {MultiAddress} from "../src/MultiAddress.sol";
 import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress} from "../src/Types.sol";
@@ -1024,7 +1025,7 @@ contract GatewayTest is Test {
     bytes private constant WRONG_LENGTH_VALIDATORS_DATA =
         "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a4";
 
-    function createLongOperatorsData() public pure returns (bytes memory) {
+    function createLongValidatorsData() public pure returns (bytes memory) {
         bytes memory result = new bytes(VALIDATORS_DATA.length * 1000);
 
         for (uint256 i = 0; i < 33; i++) {
@@ -1036,10 +1037,10 @@ contract GatewayTest is Test {
         return result;
     }
 
-    function testSendOperatorsData() public {
+    function testSendValidatorsData() public {
         // Create mock agent and paraID
-        ParaID paraID = ParaID.wrap(1);
-        bytes32 agentID = keccak256("1");
+        ParaID paraID = ParaID.wrap(3);
+        bytes32 agentID = keccak256("3");
 
         MockGateway(address(gateway)).createAgentPublic(abi.encode(CreateAgentParams({agentID: agentID})));
 
@@ -1051,13 +1052,13 @@ contract GatewayTest is Test {
         vm.expectEmit(true, false, false, false);
         emit IGateway.OutboundMessageAccepted(paraID.into(), 1, messageID, FINAL_VALIDATORS_PAYLOAD);
 
-        IGateway(address(gateway)).sendOperatorsData{value: 1 ether}(VALIDATORS_DATA, paraID);
+        IGateway(address(gateway)).sendValidatorsData{value: 1 ether}(VALIDATORS_DATA, paraID);
     }
 
-    function testShouldNotSendOperatorsDataBecauseOperatorsNotMultipleOf32() public {
+    function testShouldNotSendValidatorsDataBecauseValidatorsNotMultipleOf32() public {
         // Create mock agent and paraID
-        ParaID paraID = ParaID.wrap(1);
-        bytes32 agentID = keccak256("1");
+        ParaID paraID = ParaID.wrap(3);
+        bytes32 agentID = keccak256("3");
 
         MockGateway(address(gateway)).createAgentPublic(abi.encode(CreateAgentParams({agentID: agentID})));
 
@@ -1065,14 +1066,14 @@ contract GatewayTest is Test {
             CreateChannelParams({channelID: paraID.into(), agentID: agentID, mode: OperatingMode.Normal});
 
         MockGateway(address(gateway)).createChannelPublic(abi.encode(params));
-        vm.expectRevert(Operators.Operators__UnsupportedOperatorsLength.selector);
-        IGateway(address(gateway)).sendOperatorsData{value: 1 ether}(WRONG_LENGTH_VALIDATORS_DATA, paraID);
+        vm.expectRevert(Validators.Validators__UnsupportedValidatorsLength.selector);
+        IGateway(address(gateway)).sendValidatorsData{value: 1 ether}(WRONG_LENGTH_VALIDATORS_DATA, paraID);
     }
 
-    function testShouldNotSendOperatorsDataBecauseOperatorsTooLong() public {
+    function testShouldNotSendValidatorsDataBecauseValidatorsTooLong() public {
         // Create mock agent and paraID
-        ParaID paraID = ParaID.wrap(1);
-        bytes32 agentID = keccak256("1");
+        ParaID paraID = ParaID.wrap(3);
+        bytes32 agentID = keccak256("3");
 
         MockGateway(address(gateway)).createAgentPublic(abi.encode(CreateAgentParams({agentID: agentID})));
 
@@ -1080,9 +1081,9 @@ contract GatewayTest is Test {
             CreateChannelParams({channelID: paraID.into(), agentID: agentID, mode: OperatingMode.Normal});
 
         MockGateway(address(gateway)).createChannelPublic(abi.encode(params));
-        bytes memory longOperatorsData = createLongOperatorsData();
+        bytes memory longValidatorsData = createLongValidatorsData();
 
-        vm.expectRevert(Operators.Operators__OperatorsLengthTooLong.selector);
-        IGateway(address(gateway)).sendOperatorsData{value: 1 ether}(longOperatorsData, paraID);
+        vm.expectRevert(Validators.Validators__ValidatorsLengthTooLong.selector);
+        IGateway(address(gateway)).sendValidatorsData{value: 1 ether}(longValidatorsData, paraID);
     }
 }

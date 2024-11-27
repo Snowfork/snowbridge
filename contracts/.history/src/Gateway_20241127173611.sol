@@ -19,7 +19,6 @@ import {
     MultiAddress,
     Ticket,
     Costs,
-    TokenInfo,
     AgentExecuteCommand
 } from "./Types.sol";
 import {Upgrade} from "./Upgrade.sol";
@@ -98,24 +97,13 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error ChannelAlreadyCreated();
     error ChannelDoesNotExist();
     error InvalidChannelUpdate();
-    error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
-    error AlreadyInitialized();
     error TokenNotRegistered();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
         if (msg.sender != address(this)) {
-            revert Unauthorized();
-        }
-        _;
-    }
-
-    // handler functions are privileged from agent only
-    modifier onlyAgent(bytes32 agentID) {
-        bytes32 _agentID = _ensureAgentAddress(msg.sender);
-        if (_agentID != agentID) {
             revert Unauthorized();
         }
         _;
@@ -440,6 +428,10 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return Assets.isTokenRegistered(token);
     }
 
+    function queryForeignTokenID(address token) external view returns (bytes32) {
+        return AssetsStorage.layout().tokenRegistry[token].foreignID;
+    }
+
     // Total fee for registering a token
     function quoteRegisterTokenFee() external view returns (uint256) {
         return _calculateFee(Assets.registerTokenCosts());
@@ -589,14 +581,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         }
     }
 
-    /// @dev Ensure that the specified address is an valid agent
-    function _ensureAgentAddress(address agent) internal view returns (bytes32 agentID) {
-        agentID = CoreStorage.layout().agentAddresses[agent];
-        if (agentID == bytes32(0)) {
-            revert AgentDoesNotExist();
-        }
-    }
-
     /// @dev Invoke some code within an agent
     function _invokeOnAgent(address agent, bytes memory data) internal returns (bytes memory) {
         (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(AGENT_EXECUTOR, data));
@@ -639,10 +623,33 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         address rescueOperator;
     }
 
-    /// @dev Initialize storage in the gateway
-    /// NOTE: This is not externally accessible as this function selector is overshadowed in the proxy
+    /// Initialize storage within the `GatewayProxy` contract using this initializer.
+    ///
+    /// This initializer cannot be called externally via the proxy as the function selector
+    /// is overshadowed in the proxy.
+    ///
+    /// This implementation is only intended to initialize storage for initial deployments
+    /// of the `GatewayProxy` contract to transient or long-lived testnets.
+    ///
+    /// The `GatewayProxy` deployed to Ethereum mainnet already has its storage initialized.
+    /// When its logic contract needs to upgraded, a new logic contract should be developed
+    /// that inherits from this base `Gateway` contract. Particularly, the `initialize` function
+    /// must be overriden to ensure selective initialization of storage fields relevant
+    /// to the upgrade.
+    ///
+    /// ```solidity
+    /// contract Gateway202508 is Gateway {
+    ///     function initialize(bytes calldata data) external override {
+    ///         if (ERC1967.load() == address(0)) {
+    ///             revert Unauthorized();
+    ///         }
+    ///         # Initialization routines here...
+    ///     }
+    /// }
+    /// ```
+    ///
     function initialize(bytes calldata data) external virtual {
-        // Prevent initialization of storage in implementation contract
+        // Ensure that arbitrary users cannot initialize storage in this logic contract.
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();
         }
