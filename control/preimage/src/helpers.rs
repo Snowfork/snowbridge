@@ -7,9 +7,6 @@ use crate::Context;
 
 use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 
-#[cfg(any(feature = "westend", feature = "paseo"))]
-use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
-#[cfg(feature = "polkadot")]
 use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
 
 use crate::relay_runtime::runtime_types::{
