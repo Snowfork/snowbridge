@@ -14,6 +14,7 @@
 // along with Tanssi.  If not, see <http://www.gnu.org/licenses/>
 pragma solidity 0.8.25;
 
+import {console2} from "forge-std/console2.sol";
 import {BeefyClient} from "./BeefyClient.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
@@ -21,22 +22,21 @@ import {MultiAddress, Ticket, Costs, ParaID} from "./Types.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
 
 library Operators {
-    error Operators__UnsupportedOperatorsLength();
     error Operators__OperatorsLengthTooLong();
     error Operators__OperatorsKeysCannotBeEmpty();
 
     uint8 private constant VALIDATOR_KEY_HEX_LENGTH = 32 * 2;
     uint16 private constant MAX_OPERATORS = 1000;
 
-    function encodeOperatorsData(bytes calldata operatorsKeys, ParaID dest) internal returns (Ticket memory ticket) {
+    function encodeOperatorsData(bytes32[] calldata operatorsKeys, ParaID dest)
+        internal
+        returns (Ticket memory ticket)
+    {
         if (operatorsKeys.length == 0) {
             revert Operators__OperatorsKeysCannotBeEmpty();
         }
-        if (operatorsKeys.length % VALIDATOR_KEY_HEX_LENGTH != 0) {
-            revert Operators__UnsupportedOperatorsLength();
-        }
-        uint256 validatorsKeysLength = operatorsKeys.length / VALIDATOR_KEY_HEX_LENGTH;
-
+        uint256 validatorsKeysLength = operatorsKeys.length;
+        console2.log(validatorsKeysLength);
         if (validatorsKeysLength > MAX_OPERATORS) {
             revert Operators__OperatorsLengthTooLong();
         }

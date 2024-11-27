@@ -474,7 +474,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         _submitOutbound(ticket);
     }
 
-    function sendOperatorsData(bytes calldata data, ParaID destinationChain) external payable {
+    function sendOperatorsData(bytes32[] calldata data, ParaID destinationChain) external payable {
         Ticket memory ticket = Operators.encodeOperatorsData(data, destinationChain);
         _submitOutbound(ticket);
     }
