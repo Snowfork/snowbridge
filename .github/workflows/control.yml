@@ -35,6 +35,17 @@ jobs:
       - uses: cachix/install-nix-action@v22
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Rust
+        run: |
+          nix develop -c sh -c '
+            echo "Installing Rust nightly toolchain"
+            rustup default stable
+            rustup target add wasm32-unknown-unknown
+            rustup component add rust-src
+            rustup install --profile minimal $RUST_NIGHTLY_VERSION
+            rustup component add --toolchain $RUST_NIGHTLY_VERSION rustfmt
+            rustup show
+          '
 
       - name: Build Paseo
         run: |
