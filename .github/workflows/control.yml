@@ -1,0 +1,48 @@
+name: control
+
+on:
+  push:
+    paths:
+      - "control/**"
+    branches:
+      - main
+  pull_request:
+    paths:
+      - "control/**"
+
+jobs:
+  control:
+    runs-on: snowbridge-runner
+    env:
+      CARGO_INCREMENTAL: 0
+      RUST_BACKTRACE: 1
+      RUSTFLAGS: -C debuginfo=1
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 2
+
+      - uses: actions/cache@v1
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build Paseo
+        id: build
+        run: |
+          nix develop -c sh -c 'cd control && cargo build --features paseo'
+
+      - name: Build Polkadot
+        id: build
+        run: |
+          nix develop -c sh -c 'cd control && cargo build --features polkadot'
+
+      - name: Build Westend
+        id: build
+        run: |
+          nix develop -c sh -c 'cd control && cargo build --features westend'
