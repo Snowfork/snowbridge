@@ -33,16 +33,13 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Build Paseo
-        id: build
         run: |
           nix develop -c sh -c 'cd control && cargo build --features paseo'
 
       - name: Build Polkadot
-        id: build
         run: |
           nix develop -c sh -c 'cd control && cargo build --features polkadot'
 
       - name: Build Westend
-        id: build
         run: |
           nix develop -c sh -c 'cd control && cargo build --features westend'
