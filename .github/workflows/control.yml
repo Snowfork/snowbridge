@@ -35,6 +35,7 @@ jobs:
       - uses: cachix/install-nix-action@v22
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install Rust
         run: |
           nix develop -c sh -c '
