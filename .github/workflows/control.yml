@@ -59,3 +59,4 @@ jobs:
       - name: Build Westend
         run: |
           nix develop -c sh -c 'cd control && cargo build --features westend'
+
