@@ -26,7 +26,7 @@ interface Config {
     graphqlApiUrl?: string
 }
 
-export interface ChainProperties {
+export type ChainProperties = {
     tokenSymbol: string
     tokenDecimal: number
     ss58Format: number
