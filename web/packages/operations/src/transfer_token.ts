@@ -1,11 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import {
-    contextFactory,
-    destroyContext,
-    environment,
-    toEthereum,
-    toPolkadot,
-} from "@snowbridge/api"
+import { Context, environment, toEthereum, toPolkadot } from "@snowbridge/api"
 import { WETH9__factory } from "@snowbridge/contract-types"
 import { Wallet } from "ethers"
 
@@ -21,18 +15,16 @@ const monitor = async () => {
 
     const { config } = snwobridgeEnv
 
-    const context = await contextFactory({
+    const context = new Context({
         ethereum: {
             execution_url: config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY || ""),
             beacon_url: config.BEACON_HTTP_API,
         },
         polkadot: {
-            url: {
-                bridgeHub: config.BRIDGE_HUB_URL,
-                assetHub: config.ASSET_HUB_URL,
-                relaychain: config.RELAY_CHAIN_URL,
-                parachains: config.PARACHAINS,
-            },
+            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
+            assetHubParaId: config.ASSET_HUB_PARAID,
+            relaychain: config.RELAY_CHAIN_URL,
+            parachains: config.PARACHAINS,
         },
         appContracts: {
             gateway: config.GATEWAY_CONTRACT,
@@ -43,7 +35,7 @@ const monitor = async () => {
 
     const ETHEREUM_ACCOUNT = new Wallet(
         "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
-        context.ethereum.api
+        context.ethereum()
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri("//Ferdie")
@@ -65,7 +57,7 @@ const monitor = async () => {
         const approveResult = await weth9.approve(config.GATEWAY_CONTRACT, amount)
         const approveReceipt = await approveResult.wait()
 
-        console.log('deposit tx', depositReceipt?.hash, 'approve tx', approveReceipt?.hash)
+        console.log("deposit tx", depositReceipt?.hash, "approve tx", approveReceipt?.hash)
     }
 
     console.log("# Ethereum to Asset Hub")
@@ -162,7 +154,7 @@ const monitor = async () => {
         console.log("Complete:", result)
     }
 
-    await destroyContext(context)
+    await context.destroyContext()
 }
 
 monitor()

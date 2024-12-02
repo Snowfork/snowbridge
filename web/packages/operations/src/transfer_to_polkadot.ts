@@ -1,11 +1,6 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
-import {
-    contextFactory,
-    destroyContext,
-    environment,
-    toPolkadot,
-} from "@snowbridge/api"
+import { Context, environment, toPolkadot } from "@snowbridge/api"
 import { WETH9__factory } from "@snowbridge/contract-types"
 import { Wallet } from "ethers"
 import cron from "node-cron"
@@ -22,17 +17,28 @@ const transfer = async () => {
 
     const { config } = snowbridgeEnv
 
-    const context = await contextFactory({
+    const parachains = { ...config.PARACHAINS }
+    Object.keys(config.PARACHAINS).forEach((parachainId) => {
+        const paraId = Number(parachainId)
+        if (paraId === config.BRIDGE_HUB_PARAID) {
+            parachains[paraId] = process.env["BRIDGE_HUB_URL"] || config.PARACHAINS[paraId]
+        }
+        if (paraId === config.ASSET_HUB_PARAID) {
+            parachains[paraId] = process.env["ASSET_HUB_URL"] || config.PARACHAINS[paraId]
+        }
+    })
+    const context = new Context({
         ethereum: {
-            execution_url: process.env["EXECUTION_NODE_URL"] || config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY || ""),
+            execution_url:
+                process.env["EXECUTION_NODE_URL"] ||
+                config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY || ""),
             beacon_url: process.env["BEACON_NODE_URL"] || config.BEACON_HTTP_API,
         },
         polkadot: {
-            url: {
-                bridgeHub: process.env["BRIDGE_HUB_URL"] || config.BRIDGE_HUB_URL,
-                assetHub: process.env["ASSET_HUB_URL"] || config.ASSET_HUB_URL,
-                relaychain: process.env["RELAY_CHAIN_URL"] || config.RELAY_CHAIN_URL,
-            },
+            relaychain: process.env["RELAY_CHAIN_URL"] || config.RELAY_CHAIN_URL,
+            assetHubParaId: config.ASSET_HUB_PARAID,
+            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
+            parachains,
         },
         appContracts: {
             gateway: config.GATEWAY_CONTRACT,
@@ -42,10 +48,13 @@ const transfer = async () => {
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        process.env["ETHEREUM_KEY"] || "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
-        context.ethereum.api
+        process.env["ETHEREUM_KEY"] ||
+            "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
+        context.ethereum()
     )
-    const POLKADOT_ACCOUNT = process.env["SUBSTRATE_KEY"]?polkadot_keyring.addFromUri(process.env["SUBSTRATE_KEY"]):polkadot_keyring.addFromUri("//Ferdie")
+    const POLKADOT_ACCOUNT = process.env["SUBSTRATE_KEY"]
+        ? polkadot_keyring.addFromUri(process.env["SUBSTRATE_KEY"])
+        : polkadot_keyring.addFromUri("//Ferdie")
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
     const amount = 2_000_000_000_000n
@@ -63,7 +72,7 @@ const transfer = async () => {
         const approveResult = await weth9.approve(config.GATEWAY_CONTRACT, amount)
         const approveReceipt = await approveResult.wait()
 
-        console.log('deposit tx', depositReceipt?.hash, 'approve tx', approveReceipt?.hash)
+        console.log("deposit tx", depositReceipt?.hash, "approve tx", approveReceipt?.hash)
     }
 
     console.log("# Ethereum to Asset Hub")
@@ -81,7 +90,7 @@ const transfer = async () => {
         let result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
         console.log("Execute:", result)
     }
-    await destroyContext(context)
+    await context.destroyContext()
 }
 
 if (process.argv.length != 3) {
