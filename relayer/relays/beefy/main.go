@@ -68,7 +68,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		"validatorSetID": initialState.CurrentValidatorSetID,
 	}).Info("Retrieved current BeefyClient state")
 
-	requests, err := relay.polkadotListener.Start(ctx, eg, initialState.LatestBeefyBlock, initialState.CurrentValidatorSetID)
+	requests, err := relay.polkadotListener.Start(ctx, eg, initialState.LatestBeefyBlock)
 	if err != nil {
 		return fmt.Errorf("initialize polkadot listener: %w", err)
 	}

@@ -20,6 +20,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20240110193028-0dcbfd608b1e
 	golang.org/x/sync v0.6.0
+	github.com/holiman/uint256 v1.3.1
 )
 
 require (
