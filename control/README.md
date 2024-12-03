@@ -30,6 +30,12 @@ NOTE: To test an upgrade that has not executed yet on the relevant environment, 
 To update the runtime code binding, run the following commands:
 
 ```shell
+./update-runtimes.sh
+```
+
+You can update runtimes manually with the following commands:
+
+```shell
 subxt metadata --url wss://polkadot-rpc.dwellir.com -f bytes -o runtimes/polkadot/polkadot-metadata.bin
 subxt metadata --url wss://bridge-hub-polkadot-rpc.dwellir.com -f bytes -o runtimes/bridge-hub-polkadot/bridge-hub-metadata.bin
 subxt metadata --url wss://asset-hub-polkadot-rpc.dwellir.com -f bytes -o runtimes/asset-hub-polkadot/asset-hub-metadata.bin
