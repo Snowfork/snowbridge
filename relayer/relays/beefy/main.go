@@ -202,7 +202,7 @@ func (relay *Relay) RateLimitedSync(ctx context.Context) error {
 	var tokens atomic.Uint64
 	tokens.Store(1)
 
-	go refiller(ctx, &tokens, 1, 1, time.Minute*30)
+	go refiller(ctx, &tokens, 1, 1, time.Minute*60)
 
 	for {
 		log.Info("Starting check")
@@ -237,14 +237,22 @@ func (relay *Relay) RateLimitedSync(ctx context.Context) error {
 			}
 
 			log.Info("Sync completed")
+
+			// Sleep for 5 minute to allow message relayer to sync nonces
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(time.Second * 300):
+			}
+		} else {
+			// Sleep for 1 minute
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(time.Second * 60):
+			}
 		}
 
-		// Sleep for 5 minute
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-time.After(time.Second * 300):
-		}
 	}
 }
 

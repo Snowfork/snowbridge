@@ -12,7 +12,7 @@ import (
 
 func syncBeefyCommitmentCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sync-latest-beefy-commitment",
+		Use:   "sync-beefy-commitment",
 		Short: "Sync beefy commitment on demand",
 		Args:  cobra.ExactArgs(0),
 		RunE:  SyncBeefyCommitmentFn,
@@ -22,9 +22,6 @@ func syncBeefyCommitmentCmd() *cobra.Command {
 	cmd.Flags().String("private-key", "", "Ethereum private key")
 	cmd.Flags().String("private-key-file", "", "The file from which to read the private key")
 	cmd.Flags().String("private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
-
-	cmd.Flags().Uint64P("block-number", "b", 0, "Relay block number which contains a Parachain message")
-	cmd.MarkFlagRequired("block-number")
 	return cmd
 }
 
@@ -57,7 +54,6 @@ func SyncBeefyCommitmentFn(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	blockNumber, _ := cmd.Flags().GetUint64("block-number")
-	err = relay.OneShotSync(ctx, blockNumber)
+	err = relay.RateLimitedSync(ctx)
 	return err
 }
