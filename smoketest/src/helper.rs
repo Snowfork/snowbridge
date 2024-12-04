@@ -1,6 +1,6 @@
 use crate::{
 	constants::*,
-	contracts::i_gateway,
+	contracts::i_gateway_v1 as i_gateway,
 	parachains::{
 		bridgehub::{self, api::runtime_types::snowbridge_core::outbound::v1::OperatingMode},
 		relaychain,
@@ -36,9 +36,9 @@ use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
 	config::DefaultExtrinsicParams,
 	events::StaticEvent,
-	ext::sp_core::{sr25519::Pair, Pair as PairT, H160},
+	ext::sp_core::{sr25519::Pair, Pair as PairT},
 	tx::{PairSigner, Payload},
-	utils::H256,
+	utils::{H160, H256},
 	Config, OnlineClient, PolkadotConfig,
 };
 
@@ -127,7 +127,7 @@ pub async fn wait_for_bridgehub_event<Ev: StaticEvent>(
 
 pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Provider<Ws>>>) {
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway::IGateway::new(gateway_addr, (*ethereum_client).deref().clone());
+	let gateway = i_gateway::IGatewayV1::new(gateway_addr, (*ethereum_client).deref().clone());
 
 	let wait_for_blocks = 500;
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
@@ -278,7 +278,7 @@ pub async fn fund_agent(agent_id: [u8; 32]) -> Result<(), Box<dyn std::error::Er
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let ethereum_client = *(test_clients.ethereum_client.clone());
-	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
+	let gateway = i_gateway::IGatewayV1::new(gateway_addr, ethereum_client.clone());
 	let agent_address = gateway.agent_of(agent_id).await.expect("find agent");
 
 	println!("agent address {}", hex::encode(agent_address));

@@ -26,7 +26,7 @@ pub const ETHEREUM_ADDRESS: [u8; 20] = hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3d
 // The deployment addresses of the following contracts are stable in our E2E env, unless we modify
 // the order in contracts are deployed in DeployScript.sol.
 pub const DEFAULT_GATEWAY_PROXY_CONTRACT: [u8; 20] =
-	hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
+	hex!("8cf6147918a5cbb672703f879f385036f8793a24");
 pub const DEFAULT_WETH_CONTRACT: [u8; 20] = hex!("774667629726ec1FaBEbCEc0D9139bD1C8f72a23");
 pub const AGENT_EXECUTOR_CONTRACT: [u8; 20] = hex!("Fc97A6197dc90bef6bbEFD672742Ed75E9768553");
 

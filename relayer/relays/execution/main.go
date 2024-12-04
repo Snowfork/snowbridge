@@ -118,12 +118,12 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				"channelId": r.config.Source.ChannelID,
 			}).Info("Polling Nonces")
 
-			paraNonces, err := r.fetchUnprocessedParachainNonces()
+			ethNonce, err := r.fetchEthereumNonce(ctx)
 			if err != nil {
 				return err
 			}
 
-			ethNonce, err := r.fetchEthereumNonce(ctx)
+			paraNonces, err := r.fetchUnprocessedParachainNonces(ethNonce)
 			if err != nil {
 				return err
 			}
@@ -195,7 +195,8 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 	return nil
 }
 
-func (r *Relay) fetchUnprocessedParachainNonces() ([]uint64, error) {
+func (r *Relay) fetchUnprocessedParachainNonces(latest uint64) ([]uint64, error) {
+	log.WithField("latest", latest).Info("latest nonce is")
 	unprocessedNonces := []uint64{}
 	startKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueue", "NonceBitmap", nil)
 	if err != nil {
@@ -221,10 +222,18 @@ func (r *Relay) fetchUnprocessedParachainNonces() ([]uint64, error) {
 			continue // Skip empty buckets
 		}
 
-		unprocessedNonces = extractUnprocessedNonces(value)
+		unprocessedNonces = extractUnprocessedNonces(value, latest)
+
+		if len(unprocessedNonces) > 0 && unprocessedNonces[len(unprocessedNonces)-1] >= latest {
+			break
+		}
+
 		fmt.Printf("Unprocessed nonces for bucket %s: %v\n", key.Hex(), unprocessedNonces)
 	}
 
+	log.WithFields(logrus.Fields{
+		"unprocessedNonces": unprocessedNonces,
+	}).Debug("unprocessed nonces")
 	return unprocessedNonces, nil
 }
 
@@ -256,9 +265,13 @@ func checkBitState(bucketValue types.U128, bitPosition uint64) bool {
 	return new(big.Int).And(bucketValue.Int, mask).Cmp(big.NewInt(0)) != 0
 }
 
-func extractUnprocessedNonces(bitmap types.U128) []uint64 {
+func extractUnprocessedNonces(bitmap types.U128, latest uint64) []uint64 {
 	var unprocessed []uint64
 	for i := 0; i < 128; i++ {
+		if uint64(i) > latest {
+			break // Stop processing if index exceeds `latest`
+		}
+
 		mask := new(big.Int).Lsh(big.NewInt(1), uint(i))
 		bit := new(big.Int).And(bitmap.Int, mask)
 		if bit.Cmp(big.NewInt(0)) == 0 {
@@ -496,7 +509,7 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 
 // isMessageProcessed checks if the provided event nonce has already been processed on-chain.
 func (r *Relay) isMessageProcessed(eventNonce uint64) (bool, error) {
-	paraNonces, err := r.fetchUnprocessedParachainNonces()
+	paraNonces, err := r.fetchUnprocessedParachainNonces(eventNonce)
 	if err != nil {
 		return false, fmt.Errorf("fetch latest parachain nonce: %w", err)
 	}
