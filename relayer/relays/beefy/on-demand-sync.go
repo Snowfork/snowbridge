@@ -132,15 +132,13 @@ func (relay *OnDemandRelay) Start(ctx context.Context) error {
 
 			log.Info("Sync completed")
 
-			// Sleep for 10 minutes to allow message relayer to sync nonces
-			sleep(ctx, time.Minute*10)
-
 			relay.waitUntilMessagesSynced(ctx, paraNonce)
 		}
 	}
 }
 
 func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, paraNonce uint64) {
+	sleep(ctx, time.Minute*10)
 	for {
 		ethNonce, err := relay.fetchEthereumNonce(ctx)
 		if err != nil {
