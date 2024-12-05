@@ -43,6 +43,7 @@ func NewOnDemandRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*OnDe
 	}
 
 	relay := OnDemandRelay{
+		config:            config,
 		ethereumConn:      ethereumConn,
 		parachainConn:     parachainConn,
 		relaychainConn:    relaychainConn,
