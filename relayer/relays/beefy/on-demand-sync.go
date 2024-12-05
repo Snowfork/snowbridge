@@ -88,6 +88,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context) error {
 	relay.tokenBucket.Start(ctx)
 
 	for {
+		sleep(ctx, time.Minute*1)
 		log.Info("Starting check")
 
 		paraNonce, ethNonce, err := relay.queryNonces(ctx)
@@ -105,7 +106,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context) error {
 
 			// Check if we are rate-limited
 			if !relay.tokenBucket.TryConsume(1) {
-				sleep(ctx, time.Minute*1)
+				log.Info("Rate-limit exceeded")
 				continue
 			}
 
@@ -131,12 +132,28 @@ func (relay *OnDemandRelay) Start(ctx context.Context) error {
 
 			log.Info("Sync completed")
 
-			// Sleep for 10 minute to allow message relayer to sync nonces
+			// Sleep for 10 minutes to allow message relayer to sync nonces
 			sleep(ctx, time.Minute*10)
-		} else {
-			sleep(ctx, time.Minute*1)
+
+			relay.waitUntilMessagesSynced(ctx, paraNonce)
 		}
 	}
+}
+
+func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, paraNonce uint64) {
+	for {
+		ethNonce, err := relay.fetchEthereumNonce(ctx)
+		if err != nil {
+			log.WithError(err).Error("fetch latest ethereum nonce")
+			sleep(ctx, time.Minute*1)
+			continue
+		}
+
+		if ethNonce >= paraNonce {
+			return
+		}
+	}
+
 }
 
 func sleep(ctx context.Context, d time.Duration) {
