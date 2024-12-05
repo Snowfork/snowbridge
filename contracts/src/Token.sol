@@ -31,7 +31,7 @@ import {TokenLib} from "./TokenLib.sol";
 contract Token is IERC20, IERC20Permit {
     using TokenLib for TokenLib.Token;
 
-    address public immutable GATEWAY;
+    address public immutable AGENT_OWNER;
     bytes32 public immutable DOMAIN_SEPARATOR;
     uint8 public immutable decimals;
 
@@ -44,11 +44,11 @@ contract Token is IERC20, IERC20Permit {
     /**
      * @dev Sets the values for {name}, {symbol}, and {decimals}.
      */
-    constructor(string memory _name, string memory _symbol, uint8 _decimals) {
+    constructor(address agentOwner, string memory _name, string memory _symbol, uint8 _decimals) {
         name = _name;
         symbol = _symbol;
         decimals = _decimals;
-        GATEWAY = msg.sender;
+        AGENT_OWNER = agentOwner;
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 TokenLib.DOMAIN_TYPE_SIGNATURE_HASH,
@@ -60,8 +60,8 @@ contract Token is IERC20, IERC20Permit {
         );
     }
 
-    modifier onlyGateway() {
-        if (msg.sender != GATEWAY) {
+    modifier onlyAgentOwner() {
+        if (msg.sender != AGENT_OWNER) {
             revert Unauthorized();
         }
         _;
@@ -77,14 +77,14 @@ contract Token is IERC20, IERC20Permit {
      *
      * - `account` cannot be the zero address.
      */
-    function mint(address account, uint256 amount) external onlyGateway {
+    function mint(address account, uint256 amount) external onlyAgentOwner {
         token.mint(account, amount);
     }
 
     /**
      * @dev Destroys `amount` tokens from the account.
      */
-    function burn(address account, uint256 amount) external onlyGateway {
+    function burn(address account, uint256 amount) external onlyAgentOwner {
         token.burn(account, amount);
     }
 

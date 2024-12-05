@@ -16,6 +16,7 @@ contract ForkUpgradeTest is Test {
     address private constant GatewayProxy = 0x27ca963C279c93801941e1eB8799c23f407d68e7;
     address private constant BeefyClient = 0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C;
     bytes32 private constant BridgeHubAgent = 0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314;
+    bytes32 private constant AssetHubAgent = 0x81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79;
 
     function setUp() public {
         vm.createSelectFork("https://rpc.tenderly.co/fork/b77e07b8-ad6d-4e83-b5be-30a2001964aa", 20645700);
@@ -48,8 +49,13 @@ contract ForkUpgradeTest is Test {
 
     function registerForeignToken() public {
         bytes32 dotId = 0xa8f2ec5bdd7a07d844ee3bce83f9ba3881f495d96f07cacbeeb77d9e031db4f0;
-        RegisterForeignTokenParams memory params =
-            RegisterForeignTokenParams({foreignTokenID: dotId, name: "DOT", symbol: "DOT", decimals: 10});
+        RegisterForeignTokenParams memory params = RegisterForeignTokenParams({
+            foreignTokenID: dotId,
+            name: "DOT",
+            symbol: "DOT",
+            decimals: 10,
+            agentID: AssetHubAgent
+        });
 
         vm.expectEmit(true, true, false, false);
         emit IGateway.ForeignTokenRegistered(dotId, address(0x0));

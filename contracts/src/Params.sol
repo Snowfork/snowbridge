@@ -85,6 +85,8 @@ struct SetPricingParametersParams {
 
 // Payload for RegisterForeignToken
 struct RegisterForeignTokenParams {
+    /// @dev The ID of the agent to transfer funds from
+    bytes32 agentID;
     /// @dev The token ID (hash of stable location id of token)
     bytes32 foreignTokenID;
     /// @dev The name of the token
@@ -97,6 +99,8 @@ struct RegisterForeignTokenParams {
 
 // Payload for MintForeignToken
 struct MintForeignTokenParams {
+    /// @dev The ID of the agent to transfer funds from
+    bytes32 agentID;
     /// @dev The token ID
     bytes32 foreignTokenID;
     /// @dev The address of the recipient

@@ -407,13 +407,15 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     // @dev Register a new fungible Polkadot token for an agent
     function registerForeignToken(bytes calldata data) external onlySelf {
         RegisterForeignTokenParams memory params = abi.decode(data, (RegisterForeignTokenParams));
-        Assets.registerForeignToken(params.foreignTokenID, params.name, params.symbol, params.decimals);
+        address agent = _ensureAgent(params.agentID);
+        Assets.registerForeignToken(agent, params.foreignTokenID, params.name, params.symbol, params.decimals);
     }
 
     // @dev Mint foreign token from polkadot
     function mintForeignToken(bytes calldata data) external onlySelf {
         MintForeignTokenParams memory params = abi.decode(data, (MintForeignTokenParams));
-        Assets.mintForeignToken(params.foreignTokenID, params.recipient, params.amount);
+        address agent = _ensureAgent(params.agentID);
+        Assets.mintForeignToken(AGENT_EXECUTOR, agent, params.foreignTokenID, params.recipient, params.amount);
     }
 
     // @dev Transfer Ethereum native token back from polkadot
@@ -459,7 +461,14 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint128 amount
     ) external payable {
         Ticket memory ticket = Assets.sendToken(
-            token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
+            AGENT_EXECUTOR,
+            token,
+            msg.sender,
+            destinationChain,
+            destinationAddress,
+            destinationFee,
+            MAX_DESTINATION_FEE,
+            amount
         );
 
         _submitOutbound(ticket);

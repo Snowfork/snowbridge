@@ -33,6 +33,7 @@ library Assets {
     error AgentDoesNotExist();
     error TokenAlreadyRegistered();
     error TokenMintFailed();
+    error TokenBurnFailed();
     error TokenTransferFailed();
 
     function isTokenRegistered(address token) external view returns (bool) {
@@ -98,6 +99,7 @@ library Assets {
     }
 
     function sendToken(
+        address executor,
         address token,
         address sender,
         ParaID destinationChain,
@@ -120,6 +122,7 @@ library Assets {
             );
         } else {
             return _sendForeignToken(
+                executor,
                 info.foreignID,
                 token,
                 sender,
@@ -196,6 +199,7 @@ library Assets {
 
     // @dev Transfer Polkadot-native tokens back to Polkadot
     function _sendForeignToken(
+        address executor,
         bytes32 foreignID,
         address token,
         address sender,
@@ -207,7 +211,7 @@ library Assets {
     ) internal returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
-        Token(token).burn(sender, amount);
+        burnForeignToken(executor, Token(token).AGENT_OWNER(), foreignID, sender, amount);
 
         ticket.dest = $.assetHubParaID;
         ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
@@ -263,14 +267,19 @@ library Assets {
     }
 
     // @dev Register a new fungible Polkadot token for an agent
-    function registerForeignToken(bytes32 foreignTokenID, string memory name, string memory symbol, uint8 decimals)
-        external
-    {
+    function registerForeignToken(
+        address owningAgentID,
+        bytes32 foreignTokenID,
+        string memory name,
+        string memory symbol,
+        uint8 decimals
+    ) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenAddressOf[foreignTokenID] != address(0)) {
             revert TokenAlreadyRegistered();
         }
-        Token token = new Token(name, symbol, decimals);
+
+        Token token = new Token(owningAgentID, name, symbol, decimals);
         TokenInfo memory info = TokenInfo({isRegistered: true, foreignID: foreignTokenID});
 
         $.tokenAddressOf[foreignTokenID] = address(token);
@@ -280,9 +289,19 @@ library Assets {
     }
 
     // @dev Mint foreign token from Polkadot
-    function mintForeignToken(bytes32 foreignTokenID, address recipient, uint256 amount) external {
+    function mintForeignToken(
+        address executor,
+        address agent,
+        bytes32 foreignTokenID,
+        address recipient,
+        uint256 amount
+    ) external {
         address token = _ensureTokenAddressOf(foreignTokenID);
-        Token(token).mint(recipient, amount);
+        bytes memory call = abi.encodeCall(AgentExecutor.mintForeignToken, (token, recipient, amount));
+        (bool success,) = Agent(payable(agent)).invoke(executor, call);
+        if (!success) {
+            revert TokenMintFailed();
+        }
     }
 
     // @dev Transfer ERC20 to `recipient`
@@ -293,6 +312,18 @@ library Assets {
         (bool success,) = Agent(payable(agent)).invoke(executor, call);
         if (!success) {
             revert TokenTransferFailed();
+        }
+    }
+
+    // @dev Mint foreign token from Polkadot
+    function burnForeignToken(address executor, address agent, bytes32 foreignTokenID, address sender, uint256 amount)
+        internal
+    {
+        address token = _ensureTokenAddressOf(foreignTokenID);
+        bytes memory call = abi.encodeCall(AgentExecutor.burnForeignToken, (token, sender, amount));
+        (bool success,) = Agent(payable(agent)).invoke(executor, call);
+        if (!success) {
+            revert TokenBurnFailed();
         }
     }
 
