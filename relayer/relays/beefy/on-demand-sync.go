@@ -2,6 +2,7 @@ package beefy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -94,6 +95,9 @@ func (relay *OnDemandRelay) Start(ctx context.Context) error {
 
 		paraNonce, ethNonce, err := relay.queryNonces(ctx)
 		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
 			log.WithError(err).Error("Query nonces")
 			continue
 		}
@@ -115,18 +119,27 @@ func (relay *OnDemandRelay) Start(ctx context.Context) error {
 
 			beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
 			if err != nil {
+				if errors.Is(err, context.Canceled) {
+					return nil
+				}
 				log.WithError(err).Error("Fetch latest beefy block hash")
 				continue
 			}
 
 			header, err := relay.relaychainConn.API().RPC.Chain.GetHeader(beefyBlockHash)
 			if err != nil {
+				if errors.Is(err, context.Canceled) {
+					return nil
+				}
 				log.WithError(err).Error("Fetch latest beefy block header")
 				continue
 			}
 
 			err = relay.sync(ctx, uint64(header.Number))
 			if err != nil {
+				if errors.Is(err, context.Canceled) {
+					return nil
+				}
 				log.WithError(err).Error("Sync failed")
 				continue
 			}
@@ -143,6 +156,9 @@ func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, paraNon
 	for {
 		ethNonce, err := relay.fetchEthereumNonce(ctx)
 		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return
+			}
 			log.WithError(err).Error("fetch latest ethereum nonce")
 			sleep(ctx, time.Minute*1)
 			continue
