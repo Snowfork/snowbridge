@@ -29,9 +29,10 @@ type ContractsConfig struct {
 }
 
 type OnDemandSyncConfig struct {
-	MaxTokens    uint64 `mapstructure:"max-tokens"`
-	RefillAmount uint64 `mapstructure:"refill-amount"`
-	RefillPeriod uint64 `mapstructure:"refill-period"`
+	AssetHubChannelID string `mapstructure:"asset-hub-channel-id"`
+	MaxTokens         uint64 `mapstructure:"max-tokens"`
+	RefillAmount      uint64 `mapstructure:"refill-amount"`
+	RefillPeriod      uint64 `mapstructure:"refill-period"`
 }
 
 func (c Config) Validate() error {

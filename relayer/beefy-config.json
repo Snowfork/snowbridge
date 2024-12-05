@@ -1,0 +1,21 @@
+{
+  "source": {
+    "polkadot": {
+      "endpoint": "wss://api-polkadot.dwellir.com/315ea1a3-184f-4a1a-a573-2afafd56e02c"
+    },
+    "bridge-hub-endpoint": "wss://api-bridge-hub-polkadot.dwellir.com/315ea1a3-184f-4a1a-a573-2afafd56e02c", 
+    "fast-forward-depth": 20,
+    "update-period": 0
+  },
+  "sink": {
+    "ethereum": {
+      "endpoint": "https://snowfork-eth-mainnet-full-geth.dwellir.com/77988556-aa78-4b49-b90b-b6bc9a045109",
+      "gas-limit": 0
+    },
+    "descendants-until-final": 3,
+    "contracts": {
+      "BeefyClient": "0x6ed05baa904df3de117ecfa638d4cb84e1b8a00c",
+      "Gateway": "0x27ca963c279c93801941e1eb8799c23f407d68e7"
+    }
+  }
+}

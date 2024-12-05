@@ -21,6 +21,7 @@ var (
 	privateKey     string
 	privateKeyFile string
 	privateKeyID   string
+	onDemand       bool
 )
 
 func Command() *cobra.Command {
@@ -37,6 +38,8 @@ func Command() *cobra.Command {
 	cmd.Flags().StringVar(&privateKey, "ethereum.private-key", "", "Ethereum private key")
 	cmd.Flags().StringVar(&privateKeyFile, "ethereum.private-key-file", "", "The file from which to read the private key")
 	cmd.Flags().StringVar(&privateKeyID, "ethereum.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
+
+	cmd.Flags().BoolVarP(&onDemand, "on-demand", "", false, "Synchronize commitments on demand")
 
 	return cmd
 }
@@ -66,11 +69,6 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	relay, err := beefy.NewRelay(&config, keypair)
-	if err != nil {
-		return err
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
 
@@ -90,11 +88,30 @@ func run(_ *cobra.Command, _ []string) error {
 		return nil
 	})
 
-	err = relay.Start(ctx, eg)
-	if err != nil {
-		logrus.WithError(err).Fatal("Unhandled error")
-		cancel()
-		return err
+	if !onDemand {
+		relay, err := beefy.NewRelay(&config, keypair)
+		if err != nil {
+			return err
+		}
+
+		err = relay.Start(ctx, eg)
+		if err != nil {
+			logrus.WithError(err).Fatal("Unhandled error")
+			cancel()
+			return err
+		}
+	} else {
+		relay, err := beefy.NewOnDemandRelay(&config, keypair)
+		if err != nil {
+			return err
+		}
+
+		err = relay.Start(ctx)
+		if err != nil {
+			logrus.WithError(err).Fatal("Unhandled error")
+			cancel()
+			return err
+		}
 	}
 
 	err = eg.Wait()

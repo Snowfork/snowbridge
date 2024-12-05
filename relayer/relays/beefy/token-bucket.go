@@ -7,21 +7,27 @@ import (
 )
 
 type TokenBucket struct {
-	tokens       atomic.Uint64
-	maxTokens    uint64
+	tokens atomic.Uint64
+	// Maximum number of tokens available to consume
+	maxTokens uint64
+	// The number of tokens added each refill period
 	refillAmount uint64
+	// The refill period
 	refillPeriod time.Duration
 }
 
-func NewTokenBucket(ctx context.Context, maxTokens, refillAmount uint64, refillPeriod time.Duration) *TokenBucket {
+func NewTokenBucket(maxTokens, refillAmount uint64, refillPeriod time.Duration) *TokenBucket {
 	tb := &TokenBucket{
 		maxTokens:    maxTokens,
 		refillAmount: refillAmount,
 		refillPeriod: refillPeriod,
 	}
 	tb.tokens.Store(maxTokens)
-	go tb.refiller(ctx)
 	return tb
+}
+
+func (tb *TokenBucket) Start(ctx context.Context) {
+	go tb.refiller(ctx)
 }
 
 func (tb *TokenBucket) refiller(ctx context.Context) {
