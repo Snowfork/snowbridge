@@ -3,7 +3,6 @@ package beefy
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -119,10 +118,11 @@ func (relay *Relay) OnDemandSync(ctx context.Context) error {
 		return fmt.Errorf("create gateway client: %w", err)
 	}
 
-	var tokens atomic.Uint64
-	tokens.Store(1)
-
-	go refiller(ctx, &tokens, 1, 1, time.Minute*60)
+	tb := NewTokenBucket(ctx,
+		relay.config.OnDemandSync.MaxTokens,
+		relay.config.OnDemandSync.RefillAmount,
+		time.Duration(relay.config.OnDemandSync.RefillPeriod)*time.Second,
+	)
 
 	for {
 		log.Info("Starting check")
@@ -137,7 +137,7 @@ func (relay *Relay) OnDemandSync(ctx context.Context) error {
 			"ethNonce":  ethNonce,
 		}).Info("Nonces checked")
 
-		if paraNonce > ethNonce && tryConsume(&tokens) {
+		if paraNonce > ethNonce && tb.TryConsume(1) {
 			log.Info("Performing sync")
 
 			beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
@@ -152,56 +152,22 @@ func (relay *Relay) OnDemandSync(ctx context.Context) error {
 
 			relay.doSync(ctx, uint64(header.Number))
 
-			if tokens.Load() > 0 {
-				tokens.Add(^uint64(0))
-			}
-
 			log.Info("Sync completed")
 
-			// Sleep for 5 minute to allow message relayer to sync nonces
-			select {
-			case <-ctx.Done():
-				return nil
-			case <-time.After(time.Second * 300):
-			}
+			// Sleep for 10 minute to allow message relayer to sync nonces
+			sleep(ctx, time.Minute*10)
 		} else {
-			// Sleep for 1 minute
-			select {
-			case <-ctx.Done():
-				return nil
-			case <-time.After(time.Second * 60):
-			}
+			sleep(ctx, time.Minute*1)
 		}
 
 	}
 }
 
-func refiller(ctx context.Context, tokens *atomic.Uint64, refillAmount uint64, maxTokens uint64, refillPeriod time.Duration) {
-	ticker := time.NewTicker(refillPeriod)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			currentTokens := tokens.Load()
-			newTokens := currentTokens + refillAmount
-			tokens.Store(newTokens)
-		}
-	}
-}
-
-func tryConsume(tokens *atomic.Uint64) bool {
-	for {
-		currentTokens := tokens.Load()
-		if currentTokens < 1 {
-			return false
-		}
-
-		if tokens.CompareAndSwap(currentTokens, currentTokens-1) {
-			return true
-		}
+func sleep(ctx context.Context, d time.Duration) {
+	select {
+	case <-ctx.Done():
+		return
+	case <-time.After(d):
 	}
 }
 

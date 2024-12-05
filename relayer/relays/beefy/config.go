@@ -7,8 +7,9 @@ import (
 )
 
 type Config struct {
-	Source SourceConfig `mapstructure:"source"`
-	Sink   SinkConfig   `mapstructure:"sink"`
+	Source       SourceConfig       `mapstructure:"source"`
+	Sink         SinkConfig         `mapstructure:"sink"`
+	OnDemandSync OnDemandSyncConfig `mapstructure:"on-demand-sync"`
 }
 
 type SourceConfig struct {
@@ -27,6 +28,12 @@ type ContractsConfig struct {
 	Gateway     string `mapstructure:"Gateway"`
 }
 
+type OnDemandSyncConfig struct {
+	MaxTokens    uint64 `mapstructure:"max-tokens"`
+	RefillAmount uint64 `mapstructure:"refill-amount"`
+	RefillPeriod uint64 `mapstructure:"refill-period"`
+}
+
 func (c Config) Validate() error {
 	err := c.Source.Polkadot.Validate()
 	if err != nil {
@@ -43,7 +50,7 @@ func (c Config) Validate() error {
 		return fmt.Errorf("sink contracts setting [BeefyClient] is not set")
 	}
 	if c.Sink.Contracts.Gateway == "" {
-		return fmt.Errorf("sink contracts setting [BeefyClient] is not set")
+		return fmt.Errorf("sink contracts setting [Gateway] is not set")
 	}
 	return nil
 }
