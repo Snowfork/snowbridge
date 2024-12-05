@@ -289,7 +289,13 @@ library Assets {
     function transferNativeToken(address executor, address agent, address token, address recipient, uint128 amount)
         external
     {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        bytes memory call;
+        if (token == $.weth) {
+            call = abi.encodeCall(AgentExecutor.transferAndUnwrapWETH, (token, recipient, amount));
+        } else {
+            call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
+        }
         (bool success,) = Agent(payable(agent)).invoke(executor, call);
         if (!success) {
             revert TokenTransferFailed();

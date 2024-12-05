@@ -692,6 +692,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+        assets.weth = config.weth;
 
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
