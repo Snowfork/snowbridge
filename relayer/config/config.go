@@ -7,8 +7,7 @@ type PolkadotConfig struct {
 }
 
 type ParachainConfig struct {
-	Endpoint             string `mapstructure:"endpoint"`
-	MaxWatchedExtrinsics int64  `mapstructure:"maxWatchedExtrinsics"`
+	Endpoint string `mapstructure:"endpoint"`
 }
 
 type EthereumConfig struct {
@@ -26,9 +25,6 @@ type OFACConfig struct {
 func (p ParachainConfig) Validate() error {
 	if p.Endpoint == "" {
 		return errors.New("[endpoint] is not set")
-	}
-	if p.MaxWatchedExtrinsics == 0 {
-		return errors.New("[maxWatchedExtrinsics] is not set")
 	}
 	return nil
 }
