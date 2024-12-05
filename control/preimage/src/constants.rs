@@ -30,10 +30,10 @@ mod westend {
     pub const POLKADOT_SYMBOL: &str = "WND";
     pub const POLKADOT_DECIMALS: u8 = 12;
     pub const ASSET_HUB_ID: u32 = 1000;
-    pub const ASSET_HUB_API: &str = "wss://westend-asset-hub-rpc.polkadot.io";
+    pub const ASSET_HUB_API: &str = "wss://asset-hub-westend-rpc.dwellir.com";
     pub const BRIDGE_HUB_ID: u32 = 1002;
-    pub const BRIDGE_HUB_API: &str = "wss://westend-bridge-hub-rpc.polkadot.io";
-    pub const RELAY_API: &str = "wss://westend-rpc.polkadot.io";
+    pub const BRIDGE_HUB_API: &str = "wss://bridge-hub-westend-rpc.dwellir.com";
+    pub const RELAY_API: &str = "wss://westend-rpc.dwellir.com";
 }
 
 #[cfg(feature = "westend")]
@@ -46,7 +46,7 @@ mod paseo {
     pub const ASSET_HUB_ID: u32 = 1000;
     pub const ASSET_HUB_API: &str = "wss://asset-hub-paseo-rpc.dwellir.com";
     pub const BRIDGE_HUB_ID: u32 = 1002;
-    pub const BRIDGE_HUB_API: &str = "wss://sys.ibp.network/bridge-hub-paseo";
+    pub const BRIDGE_HUB_API: &str = "wss://bridge-hub-paseo.dotters.network";
     pub const RELAY_API: &str = "wss://paseo-rpc.dwellir.com";
 }
 

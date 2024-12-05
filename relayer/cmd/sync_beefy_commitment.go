@@ -54,6 +54,6 @@ func SyncBeefyCommitmentFn(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	err = relay.RateLimitedSync(ctx)
+	err = relay.OnDemandSync(ctx)
 	return err
 }

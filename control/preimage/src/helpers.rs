@@ -7,9 +7,6 @@ use crate::Context;
 
 use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 
-#[cfg(feature = "polkadot")]
-use crate::relay_runtime::runtime_types::xcm::v2::OriginKind;
-#[cfg(any(feature = "westend", feature = "paseo"))]
 use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
 
 use crate::relay_runtime::runtime_types::{
@@ -177,6 +174,7 @@ pub fn utility_force_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
     )
 }
 
+#[cfg(any(feature = "westend", feature = "paseo"))]
 pub fn sudo(call: Box<RelayRuntimeCall>) -> RelayRuntimeCall {
     return RelayRuntimeCall::Sudo(
         crate::relay_runtime::runtime_types::pallet_sudo::pallet::Call::sudo { call },
@@ -184,7 +182,13 @@ pub fn sudo(call: Box<RelayRuntimeCall>) -> RelayRuntimeCall {
 }
 
 pub fn force_xcm_version() -> AssetHubRuntimeCall {
+    #[cfg(any(feature = "paseo", feature = "polkadot"))]
     use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
+        junction::Junction::GlobalConsensus, junction::NetworkId, junctions::Junctions::X1,
+        location::Location,
+    };
+    #[cfg(feature = "westend")]
+    use crate::asset_hub_runtime::runtime_types::staging_xcm::v5::{
         junction::Junction::GlobalConsensus, junction::NetworkId, junctions::Junctions::X1,
         location::Location,
     };

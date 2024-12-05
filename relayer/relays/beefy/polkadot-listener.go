@@ -32,13 +32,12 @@ func (li *PolkadotListener) Start(
 	ctx context.Context,
 	eg *errgroup.Group,
 	currentBeefyBlock uint64,
-	currentValidatorSetID uint64,
 ) (<-chan Request, error) {
 	requests := make(chan Request, 1)
 
 	eg.Go(func() error {
 		defer close(requests)
-		err := li.scanCommitments(ctx, currentBeefyBlock, currentValidatorSetID, requests)
+		err := li.scanCommitments(ctx, currentBeefyBlock, requests)
 		if err != nil {
 			return err
 		}
@@ -51,7 +50,6 @@ func (li *PolkadotListener) Start(
 func (li *PolkadotListener) scanCommitments(
 	ctx context.Context,
 	currentBeefyBlock uint64,
-	currentValidatorSet uint64,
 	requests chan<- Request,
 ) error {
 	in, err := ScanCommitments(ctx, li.conn.Metadata(), li.conn.API(), currentBeefyBlock+1)
@@ -92,7 +90,6 @@ func (li *PolkadotListener) scanCommitments(
 					"validatorSetID":     validatorSetID,
 					"nextValidatorSetID": nextValidatorSetID,
 				},
-				"validatorSetID": currentValidatorSet,
 			}).Info("Sending BEEFY commitment to ethereum writer")
 
 			select {

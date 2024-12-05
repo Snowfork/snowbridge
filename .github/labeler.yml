@@ -1,0 +1,23 @@
+"Component: Docs":
+  - changed-files:
+      - any-glob-to-any-file: docs/**
+
+"Component: Relayer":
+  - changed-files:
+      - any-glob-to-any-file: relayer/**
+
+"Component: Web":
+  - changed-files:
+      - any-glob-to-any-file: web/**
+
+"Component: Smoke Tests":
+  - changed-files:
+      - any-glob-to-any-file: smoketest/**
+
+"Component: Control Tool":
+  - changed-files:
+      - any-glob-to-any-file: control/**
+
+"Component: Ethereum":
+  - changed-files:
+      - any-glob-to-any-file: contracts/**

@@ -28,8 +28,25 @@ use crate::bridge_hub_runtime::runtime_types::{
 };
 use crate::bridge_hub_runtime::RuntimeCall as BridgeHubRuntimeCall;
 
-#[cfg(any(feature = "polkadot", feature = "paseo"))]
+#[cfg(feature = "polkadot")]
 pub mod asset_hub_polkadot_types {
+    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
+        junction::Junction::AccountKey20, junction::Junction::GlobalConsensus, junction::NetworkId,
+        junctions::Junctions::X2, location::Location,
+    };
+    pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> Location {
+        return Location {
+            parents: 2,
+            interior: X2([
+                GlobalConsensus(NetworkId::Ethereum { chain_id }),
+                AccountKey20 { network: None, key },
+            ]),
+        };
+    }
+}
+
+#[cfg(feature = "paseo")]
+pub mod asset_hub_paseo_types {
     pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation;
     pub use crate::asset_hub_runtime::runtime_types::xcm::v3::{
         junction::Junction::AccountKey20, junction::Junction::GlobalConsensus, junction::NetworkId,
@@ -39,11 +56,8 @@ pub mod asset_hub_polkadot_types {
         return MultiLocation {
             parents: 2,
             interior: X2(
-                GlobalConsensus(NetworkId::Ethereum { chain_id: chain_id }),
-                AccountKey20 {
-                    network: None,
-                    key: key,
-                },
+                GlobalConsensus(NetworkId::Ethereum { chain_id }),
+                AccountKey20 { network: None, key },
             ),
         };
     }
@@ -51,20 +65,16 @@ pub mod asset_hub_polkadot_types {
 
 #[cfg(feature = "westend")]
 pub mod asset_hub_westend_types {
-    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::location::Location;
-    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
+    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v5::{
         junction::Junction::AccountKey20, junction::Junction::GlobalConsensus, junction::NetworkId,
-        junctions::Junctions::X2,
+        junctions::Junctions::X2, location::Location,
     };
     pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> Location {
         return Location {
             parents: 2,
             interior: X2([
-                GlobalConsensus(NetworkId::Ethereum { chain_id: chain_id }),
-                AccountKey20 {
-                    network: None,
-                    key: key,
-                },
+                GlobalConsensus(NetworkId::Ethereum { chain_id }),
+                AccountKey20 { network: None, key },
             ]),
         };
     }
@@ -262,7 +272,9 @@ pub fn set_gateway_address(params: &GatewayAddressArgs) -> BridgeHubRuntimeCall 
 pub fn make_asset_sufficient(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
     use subxt::utils::AccountId32;
     let chain_id = crate::bridge_hub_runtime::CHAIN_ID;
-    #[cfg(any(feature = "polkadot", feature = "paseo"))]
+    #[cfg(feature = "paseo")]
+    use asset_hub_paseo_types::*;
+    #[cfg(feature = "polkadot")]
     use asset_hub_polkadot_types::*;
     #[cfg(feature = "westend")]
     use asset_hub_westend_types::*;
@@ -282,7 +294,9 @@ pub fn make_asset_sufficient(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
 
 pub fn force_set_metadata(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
     let chain_id = crate::bridge_hub_runtime::CHAIN_ID;
-    #[cfg(any(feature = "polkadot", feature = "paseo"))]
+    #[cfg(feature = "paseo")]
+    use asset_hub_paseo_types::*;
+    #[cfg(feature = "polkadot")]
     use asset_hub_polkadot_types::*;
     #[cfg(feature = "westend")]
     use asset_hub_westend_types::*;

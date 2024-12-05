@@ -2,6 +2,7 @@ import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
 import { contextFactory, destroyContext, environment, status, utils } from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
+import { BlockLatencyThreshold } from "./alarm"
 
 export const monitor = async (): Promise<status.AllMetrics> => {
     let env = "local_e2e"
@@ -36,23 +37,43 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         graphqlApiUrl: process.env["GRAPHQL_API_URL"] || config.GRAPHQL_API_URL,
     })
 
-    const bridgeStatus = await status.bridgeStatusInfo(context)
+    const bridgeStatus = await status.bridgeStatusInfo(context, {
+        polkadotBlockTimeInSeconds: 6,
+        ethereumBlockTimeInSeconds: 12,
+        toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
+        toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
+    })
     console.log("Bridge Status:", bridgeStatus)
 
     const assethub = await status.channelStatusInfo(
         context,
-        utils.paraIdToChannelId(config.ASSET_HUB_PARAID)
+        utils.paraIdToChannelId(config.ASSET_HUB_PARAID),
+        {
+            toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
+            toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
+        }
     )
     assethub.name = status.ChannelKind.AssetHub
     console.log("Asset Hub Channel:", assethub)
 
-    const primaryGov = await status.channelStatusInfo(context, config.PRIMARY_GOVERNANCE_CHANNEL_ID)
+    const primaryGov = await status.channelStatusInfo(
+        context,
+        config.PRIMARY_GOVERNANCE_CHANNEL_ID,
+        {
+            toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
+            toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
+        }
+    )
     primaryGov.name = status.ChannelKind.Primary
     console.log("Primary Governance Channel:", primaryGov)
 
     const secondaryGov = await status.channelStatusInfo(
         context,
-        config.SECONDARY_GOVERNANCE_CHANNEL_ID
+        config.SECONDARY_GOVERNANCE_CHANNEL_ID,
+        {
+            toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
+            toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
+        }
     )
     secondaryGov.name = status.ChannelKind.Secondary
     console.log("Secondary Governance Channel:", secondaryGov)
