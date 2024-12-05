@@ -615,6 +615,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         UD60x18 multiplier;
         /// @dev Optional rescueOperator
         address rescueOperator;
+        /// @dev The WETH address used for wrapping ETH
+        address weth;
     }
 
     /// Initialize storage within the `GatewayProxy` contract using this initializer.
