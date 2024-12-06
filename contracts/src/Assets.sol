@@ -280,7 +280,11 @@ library Assets {
     }
 
     // @dev Mint foreign token from Polkadot
-    function mintForeignToken(bytes32 foreignTokenID, address recipient, uint256 amount) external {
+    function mintForeignToken(address agent, bytes32 foreignTokenID, address recipient, uint256 amount) external {
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        if(agent != $.assetHubAgent) {
+            revert TokenMintFailed();
+        }
         address token = _ensureTokenAddressOf(foreignTokenID);
         Token(token).mint(recipient, amount);
     }

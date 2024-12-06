@@ -227,7 +227,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
                 success = false;
             }
         } else if (message.command == Command.MintForeignToken) {
-            try Gateway(this).mintForeignToken{gas: maxDispatchGas}(message.params) {}
+            try Gateway(this).mintForeignToken{gas: maxDispatchGas}(channel.agent, message.params) {}
             catch {
                 success = false;
             }
@@ -411,9 +411,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     }
 
     // @dev Mint foreign token from polkadot
-    function mintForeignToken(bytes calldata data) external onlySelf {
+    function mintForeignToken(address agent, bytes calldata data) external onlySelf {
         MintForeignTokenParams memory params = abi.decode(data, (MintForeignTokenParams));
-        Assets.mintForeignToken(params.foreignTokenID, params.recipient, params.amount);
+        Assets.mintForeignToken(agent, params.foreignTokenID, params.recipient, params.amount);
     }
 
     // @dev Transfer Ethereum native token back from polkadot
