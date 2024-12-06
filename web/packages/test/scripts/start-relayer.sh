@@ -13,10 +13,10 @@ config_relayer() {
         --arg assetHubChannelID $ASSET_HUB_CHANNEL_ID \
         '
       .sink.contracts.BeefyClient = $k1
-      .sink.contracts.Gateway = $k2
+    | .sink.contracts.Gateway = $k2
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
-    | ."on-demand-sync"."asset-hub-channel-id" = assetHubChannelID
+    | ."on-demand-sync"."asset-hub-channel-id" = $assetHubChannelID
     ' \
         config/beefy-relay.json >$output_dir/beefy-relay.json
 
