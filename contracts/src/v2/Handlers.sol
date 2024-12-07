@@ -61,11 +61,13 @@ library HandlersV2 {
         UnlockNativeTokenParams memory params = abi.decode(data, (UnlockNativeTokenParams));
         address agent = Functions.ensureAgent(Constants.ASSET_HUB_AGENT_ID);
 
-        // If the token is WETH, unwrap it before sending to user
         if (params.token == Functions.weth()) {
+            // If the token is WETH, unwrap it before sending to user
             Functions.withdrawWrappedEther(
                 executor, agent, payable(params.recipient), params.amount
             );
+        } else if (params.token == address(0)) {
+            Functions.withdrawEther(executor, agent, payable(params.recipient), params.amount);
         } else {
             Functions.withdrawNativeToken(
                 executor, agent, params.token, params.recipient, params.amount

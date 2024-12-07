@@ -144,10 +144,7 @@ library CallsV2 {
 
         uint128 executionFee = executionFeeAHP + executionFeeAHK;
 
-        // Lock up the total xcm fee
-        if (executionFee > msg.value) {
-            revert IGatewayV2.InvalidFee();
-        }
+        Functions.registerNativeToken(token);
 
         _sendMessage(address(this), xcm, new bytes[](0), "", executionFee, relayerFee);
     }
