@@ -78,6 +78,9 @@ contract DeployLocal is Script {
             defaultOperatingMode = OperatingMode.Normal;
         }
 
+        // Deploy WETH for testing
+        address weth = address(new WETH9());
+
         Gateway.Config memory config = Gateway.Config({
             mode: defaultOperatingMode,
             deliveryCost: uint128(vm.envUint("DELIVERY_COST")),
@@ -88,13 +91,11 @@ contract DeployLocal is Script {
             assetHubReserveTransferFee: uint128(vm.envUint("RESERVE_TRANSFER_FEE")),
             exchangeRate: ud60x18(vm.envUint("EXCHANGE_RATE")),
             multiplier: ud60x18(vm.envUint("FEE_MULTIPLIER")),
-            rescueOperator: address(0)
+            rescueOperator: address(0),
+            weth: weth
         });
 
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
-
-        // Deploy WETH for testing
-        new WETH9();
 
         // Fund the sovereign account for the BridgeHub parachain. Used to reward relayers
         // of messages originating from BridgeHub

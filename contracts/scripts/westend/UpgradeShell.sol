@@ -50,7 +50,8 @@ contract UpgradeShell is Script {
                 assetHubReserveTransferFee: 200000000000, // 0.2 Wnd
                 exchangeRate: ud60x18(2400000000000000),
                 multiplier: ud60x18(1330000000000000000),
-                rescueOperator: 0x302F0B71B8aD3CF6dD90aDb668E49b2168d652fd
+                rescueOperator: 0x302F0B71B8aD3CF6dD90aDb668E49b2168d652fd,
+                weth: address(0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14)
             })
         });
     }

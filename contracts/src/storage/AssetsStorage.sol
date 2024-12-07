@@ -18,6 +18,8 @@ library AssetsStorage {
         uint256 registerTokenFee;
         // Foreign token registry by token ID
         mapping(bytes32 foreignID => address) tokenAddressOf;
+        // WETH token address for wrapping ETH
+        address weth;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets");

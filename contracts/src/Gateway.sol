@@ -615,6 +615,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         UD60x18 multiplier;
         /// @dev Optional rescueOperator
         address rescueOperator;
+        /// @dev The WETH address used for wrapping ETH
+        address weth;
     }
 
     /// Initialize storage within the `GatewayProxy` contract using this initializer.
@@ -690,6 +692,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+        assets.weth = config.weth;
 
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();

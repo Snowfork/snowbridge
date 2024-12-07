@@ -112,6 +112,9 @@ contract GatewayTest is Test {
         gatewayLogic = new MockGateway(
             address(0), address(executor), bridgeHubParaID, bridgeHubAgentID, foreignTokenDecimals, maxDestinationFee
         );
+
+        token = new WETH9();
+
         Gateway.Config memory config = Gateway.Config({
             mode: OperatingMode.Normal,
             deliveryCost: outboundFee,
@@ -122,7 +125,8 @@ contract GatewayTest is Test {
             assetHubReserveTransferFee: sendTokenFee,
             exchangeRate: exchangeRate,
             multiplier: multiplier,
-            rescueOperator: 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967
+            rescueOperator: 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967,
+            weth: address(token)
         });
         gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
         MockGateway(address(gateway)).setCommitmentsAreVerified(true);
@@ -137,8 +141,6 @@ contract GatewayTest is Test {
         relayer = makeAddr("relayer");
 
         // Features
-
-        token = new WETH9();
 
         account1 = makeAddr("account1");
         account2 = makeAddr("account2");
