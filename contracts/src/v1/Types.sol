@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {MultiAddress, TokenInfo, OperatingMode} from "../types/Common.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";

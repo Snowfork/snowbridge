@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {MultiAddress} from "../MultiAddress.sol";
-import {OperatingMode, InboundMessage} from "./Types.sol";
+import {OperatingMode, InboundMessage, Payload} from "./Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 interface IGatewayV2 {
+    error ShouldNotReachHere();
     error InvalidAsset();
     error InvalidFee();
-    error InvalidEtherValue();
+    error InsufficientValue();
+    error ExceededMaximumValue();
 
     function operatingMode() external view returns (OperatingMode);
 
@@ -26,7 +28,7 @@ interface IGatewayV2 {
     );
 
     // v2 Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
-    event OutboundMessageAccepted(uint64 nonce, uint256 reward, bytes payload);
+    event OutboundMessageAccepted(uint64 nonce, Payload payload);
 
     // V2
 
@@ -63,19 +65,24 @@ interface IGatewayV2 {
     function v2_sendMessage(
         bytes calldata xcm,
         bytes[] calldata assets,
-        bytes calldata claimer
+        bytes calldata claimer,
+        uint128 executionFee,
+        uint128 relayerFee
     ) external payable;
 
     // Register Ethereum-native token on AHP, using `xcmFeeAHP` of `msg.value`
     // to pay for execution on AHP.
-    function v2_registerToken(address token, uint128 xcmFeeAHP) external payable;
+    function v2_registerToken(address token, uint128 xcmFeeAHP, uint128 relayerFee)
+        external
+        payable;
 
     // Register Ethereum-native token on AHK, using `xcmFeeAHP` and `xcmFeeAHK`
     // of `msg.value` to pay for execution on AHP and AHK respectively.
     function v2_registerTokenOnKusama(
         address token,
         uint128 xcmFeeAHP,
-        uint128 xcmFeeAHK
+        uint128 xcmFeeAHK,
+        uint128 relayerFee
     ) external payable;
 
     // Check if an inbound message was previously accepted and dispatched

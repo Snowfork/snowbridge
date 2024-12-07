@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
@@ -42,11 +42,7 @@ library Functions {
     }
 
     /// @dev Ensure that the specified parachain has a channel allocated
-    function ensureChannel(ChannelID channelID)
-        internal
-        view
-        returns (Channel storage ch)
-    {
+    function ensureChannel(ChannelID channelID) internal view returns (Channel storage ch) {
         ch = CoreStorage.layout().channels[channelID];
         // A channel always has an agent specified.
         if (ch.agent == address(0)) {
@@ -59,18 +55,14 @@ library Functions {
         internal
         returns (bytes memory)
     {
-        (bool success, bytes memory returndata) =
-            (Agent(payable(agent)).invoke(executor, data));
+        (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(executor, data));
         return Call.verifyResult(success, returndata);
     }
 
     /// @dev transfer tokens from the sender to the specified agent
-    function transferToAgent(
-        address agent,
-        address token,
-        address sender,
-        uint128 amount
-    ) internal {
+    function transferToAgent(address agent, address token, address sender, uint128 amount)
+        internal
+    {
         if (!token.isContract()) {
             revert InvalidToken();
         }
@@ -101,8 +93,7 @@ library Functions {
         address payable recipient,
         uint256 amount
     ) internal {
-        bytes memory call =
-            abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
+        bytes memory call = abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
         invokeOnAgent(agent, executor, call);
     }
 
@@ -125,12 +116,20 @@ library Functions {
         address recipient,
         uint128 amount
     ) internal {
-        bytes memory call =
-            abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
+        bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
         (bool success,) = Agent(payable(agent)).invoke(executor, call);
         if (!success) {
             revert IGatewayBase.TokenTransferFailed();
         }
+    }
+
+    function registerNativeToken(address token) internal {
+        // NOTE: Explicitly allow a token to be re-registered. This offers resiliency
+        // in case a previous registration attempt of the same token failed on the remote side.
+        // It means that registration can be retried.
+        AssetsStorage.Layout storage $ = AssetsStorage.layout();
+        TokenInfo storage info = $.tokenRegistry[token];
+        info.isRegistered = true;
     }
 
     function registerForeignToken(
@@ -138,19 +137,20 @@ library Functions {
         string memory name,
         string memory symbol,
         uint8 decimals
-    ) external {
+    ) internal returns (Token) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenAddressOf[foreignTokenID] != address(0)) {
             revert IGatewayBase.TokenAlreadyRegistered();
         }
         Token token = new Token(name, symbol, decimals);
-        TokenInfo memory info =
-            TokenInfo({isRegistered: true, foreignID: foreignTokenID});
+        TokenInfo memory info = TokenInfo({isRegistered: true, foreignID: foreignTokenID});
 
         $.tokenAddressOf[foreignTokenID] = address(token);
         $.tokenRegistry[address(token)] = info;
 
         emit IGatewayBase.ForeignTokenRegistered(foreignTokenID, address(token));
+
+        return token;
     }
 
     function mintForeignToken(bytes32 foreignTokenID, address recipient, uint128 amount)

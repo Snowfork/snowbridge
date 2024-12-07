@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
@@ -52,17 +52,11 @@ contract DeployLocal is Script {
         uint256 randaoCommitExpiration = vm.envUint("RANDAO_COMMIT_EXP");
         uint256 minimumSignatures = vm.envUint("MINIMUM_REQUIRED_SIGNATURES");
         BeefyClient beefyClient = new BeefyClient(
-            randaoCommitDelay,
-            randaoCommitExpiration,
-            minimumSignatures,
-            startBlock,
-            current,
-            next
+            randaoCommitDelay, randaoCommitExpiration, minimumSignatures, startBlock, current, next
         );
 
         uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
-        uint128 maxDestinationFee =
-            uint128(vm.envUint("RESERVE_TRANSFER_MAX_DESTINATION_FEE"));
+        uint128 maxDestinationFee = uint128(vm.envUint("RESERVE_TRANSFER_MAX_DESTINATION_FEE"));
 
         AgentExecutor executor = new AgentExecutor();
         Gateway gatewayLogic = new Gateway(address(beefyClient), address(executor));
@@ -92,8 +86,7 @@ contract DeployLocal is Script {
             weth: weth
         });
 
-        GatewayProxy gateway =
-            new GatewayProxy(address(gatewayLogic), abi.encode(config));
+        GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
 
         // Fund the sovereign account for the BridgeHub parachain. Used to reward relayers
         // of messages originating from BridgeHub
@@ -101,8 +94,7 @@ contract DeployLocal is Script {
 
         address bridgeHubAgent =
             IGatewayV2(address(gateway)).agentOf(Constants.BRIDGE_HUB_AGENT_ID);
-        address assetHubAgent =
-            IGatewayV2(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID);
+        address assetHubAgent = IGatewayV2(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID);
 
         payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
         payable(assetHubAgent).safeNativeTransfer(initialDeposit);

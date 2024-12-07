@@ -1,5 +1,5 @@
 [profile.default]
-solc_version = "0.8.25"
+solc_version = "0.8.28"
 optimizer = true
 optimizer_runs = 20000
 via_ir = false
@@ -13,6 +13,8 @@ fs_permissions = [
 ignored_error_codes = [
     # DeployLocal.sol is never deployed
     5574,
+    # tstore
+    2394,
 ]
 
 [profile.production]
@@ -23,4 +25,4 @@ mainnet = { key = "${ETHERSCAN_API_KEY}" }
 
 [fmt]
 number_underscore = "thousands"
-line_length = 89
+line_length = 99

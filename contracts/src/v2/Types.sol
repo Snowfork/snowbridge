@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {OperatingMode} from "./../types/Common.sol";
 
@@ -30,12 +30,34 @@ library CommandKind {
     uint8 constant CallContract = 6;
 }
 
-struct Ticket {
+struct Payload {
     address origin;
-    bytes[] assets;
+    uint128 value;
+    Asset[] assets;
     bytes xcm;
     bytes claimer;
-    uint256 reward;
+    uint128 executionFee;
+    uint128 relayerFee;
+}
+
+struct Asset {
+    AssetKind kind;
+    bytes data;
+}
+
+enum AssetKind {
+    NativeTokenERC20,
+    ForeignTokenERC20
+}
+
+struct NativeTokenERC20 {
+    address token;
+    uint128 amount;
+}
+
+struct ForeignTokenERC20 {
+    bytes32 foreignTokenID;
+    uint128 amount;
 }
 
 // V2 Command Params
