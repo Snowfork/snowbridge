@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Axelar Network
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IERC20Permit} from "./interfaces/IERC20Permit.sol";
@@ -33,7 +33,10 @@ library TokenLib {
      * - `recipient` cannot be the zero address.
      * - the caller must have a balance of at least `amount`.
      */
-    function transfer(Token storage token, address sender, address recipient, uint256 amount) external returns (bool) {
+    function transfer(Token storage token, address sender, address recipient, uint256 amount)
+        external
+        returns (bool)
+    {
         _transfer(token, sender, recipient, amount);
         return true;
     }
@@ -90,7 +93,10 @@ library TokenLib {
      *
      * - `spender` cannot be the zero address.
      */
-    function approve(Token storage token, address owner, address spender, uint256 amount) external returns (bool) {
+    function approve(Token storage token, address owner, address spender, uint256 amount)
+        external
+        returns (bool)
+    {
         _approve(token, owner, spender, amount);
         return true;
     }
@@ -140,7 +146,10 @@ library TokenLib {
      *
      * - `spender` cannot be the zero address.
      */
-    function increaseAllowance(Token storage token, address spender, uint256 addedValue) external returns (bool) {
+    function increaseAllowance(Token storage token, address spender, uint256 addedValue)
+        external
+        returns (bool)
+    {
         uint256 _allowance = token.allowance[msg.sender][spender];
         if (_allowance != type(uint256).max) {
             _approve(token, msg.sender, spender, _allowance + addedValue);
@@ -162,7 +171,10 @@ library TokenLib {
      * - `spender` must have allowance for the caller of at least
      * `subtractedValue`.
      */
-    function decreaseAllowance(Token storage token, address spender, uint256 subtractedValue) external returns (bool) {
+    function decreaseAllowance(Token storage token, address spender, uint256 subtractedValue)
+        external
+        returns (bool)
+    {
         uint256 _allowance = token.allowance[msg.sender][spender];
         if (_allowance != type(uint256).max) {
             if (_allowance < subtractedValue) {
@@ -198,7 +210,16 @@ library TokenLib {
             abi.encodePacked(
                 EIP191_PREFIX_FOR_EIP712_STRUCTURED_DATA,
                 domainSeparator,
-                keccak256(abi.encode(PERMIT_SIGNATURE_HASH, issuer, spender, value, token.nonces[issuer]++, deadline))
+                keccak256(
+                    abi.encode(
+                        PERMIT_SIGNATURE_HASH,
+                        issuer,
+                        spender,
+                        value,
+                        token.nonces[issuer]++,
+                        deadline
+                    )
+                )
             )
         );
 
@@ -224,7 +245,9 @@ library TokenLib {
      * - `recipient` cannot be the zero address.
      * - `sender` must have a balance of at least `amount`.
      */
-    function _transfer(Token storage token, address sender, address recipient, uint256 amount) internal {
+    function _transfer(Token storage token, address sender, address recipient, uint256 amount)
+        internal
+    {
         if (sender == address(0) || recipient == address(0)) {
             revert IERC20.InvalidAccount();
         }
@@ -245,7 +268,9 @@ library TokenLib {
      * - `owner` cannot be the zero address.
      * - `spender` cannot be the zero address.
      */
-    function _approve(Token storage token, address owner, address spender, uint256 amount) internal {
+    function _approve(Token storage token, address owner, address spender, uint256 amount)
+        internal
+    {
         if (owner == address(0) || spender == address(0)) {
             revert IERC20.InvalidAccount();
         }

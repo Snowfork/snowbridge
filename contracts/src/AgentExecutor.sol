@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
-import {AgentExecuteCommand, ParaID} from "./Types.sol";
+import {ParaID} from "./Types.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
+import {Call} from "./utils/Call.sol";
 import {Gateway} from "./Gateway.sol";
 
 /// @title Code which will run within an `Agent` using `delegatecall`.
@@ -26,6 +27,15 @@ contract AgentExecutor {
     function transferToken(address token, address recipient, uint128 amount) external {
         _transferToken(token, recipient, amount);
     }
+
+    function callContract(address target, bytes memory data) external {
+        bool success = Call.safeCall(target, data);
+        if (!success) {
+            revert();
+        }
+    }
+
+    function deposit() external payable {}
 
     /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
     function _transferToken(address token, address recipient, uint128 amount) internal {

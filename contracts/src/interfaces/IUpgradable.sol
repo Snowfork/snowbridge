@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 interface IUpgradable {
     // The new implementation address is a not a contract
@@ -10,4 +10,6 @@ interface IUpgradable {
 
     // The implementation contract was upgraded
     event Upgraded(address indexed implementation);
+
+    function implementation() external view returns (address);
 }
