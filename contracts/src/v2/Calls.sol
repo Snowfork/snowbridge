@@ -74,7 +74,6 @@ library CallsV2 {
             xcm = bytes.concat(
                 hex"deadbeef", abi.encodePacked(token), hex"deadbeef", abi.encodePacked(etherValue)
             );
-            xcm = bytes.concat(hex"deadbeef", abi.encodePacked(token), hex"deadbeef");
         } else {
             revert IGatewayV2.ShouldNotReachHere();
         }
