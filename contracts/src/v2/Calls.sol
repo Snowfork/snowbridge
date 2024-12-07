@@ -39,23 +39,7 @@ library CallsV2 {
 
     uint8 public constant MAX_ASSETS = 8;
 
-    // Send an XCM with arbitrary assets to Polkadot Asset Hub
-    //
-    // Params:
-    //   * `xcm` (bytes): SCALE-encoded XCM message
-    //   * `assets` (bytes[]): Array of asset specs.
-    //
-    // Supported asset specs:
-    // * ERC20: abi.encode(0, tokenAddress, value)
-    //
-    // On Asset Hub, the assets will be received into the assets holding register.
-    //
-    // The `xcm` should contain the necessary instructions to:
-    // 1. Pay XCM execution fees, either from assets in holding,
-    //    or from the sovereign account of `msg.sender`.
-    // 2. Handle the assets in holding, either depositing them into
-    //    some account, or forwarding them to another destination.
-    //
+    // Refer to `IGateway.sendMessage` for documentation
     function sendMessage(
         bytes calldata xcm,
         bytes[] calldata assets,
@@ -66,8 +50,7 @@ library CallsV2 {
         _sendMessage(msg.sender, xcm, assets, claimer, executionFee, relayerFee);
     }
 
-    // Register Ethereum-native token on AHP, using `xcmFeeAHP` of `msg.value`
-    // to pay for execution on AHP
+    // Refer to `IGateway.registerToken` for documentation
     function registerToken(
         address token,
         Network network,
@@ -97,7 +80,6 @@ library CallsV2 {
         }
 
         Functions.registerNativeToken(token);
-
         _sendMessage(address(this), xcm, new bytes[](0), "", executionFee, relayerFee);
     }
 
@@ -146,9 +128,7 @@ library CallsV2 {
     /// @dev Outbound message can be disabled globally or on a per-channel basis.
     function _ensureOutboundMessagingEnabled() internal view {
         CoreStorage.Layout storage $ = CoreStorage.layout();
-        if ($.mode != OperatingMode.Normal) {
-            revert IGatewayBase.Disabled();
-        }
+        require($.mode == OperatingMode.Normal, IGatewayBase.Disabled());
     }
 
     function _handleAsset(bytes memory asset) internal returns (Asset memory) {
@@ -167,18 +147,17 @@ library CallsV2 {
 
     function _handleAssetERC20(address token, uint128 amount) internal returns (Asset memory) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        TokenInfo storage info = $.tokenRegistry[token];
+        TokenInfo storage tokenInfo = $.tokenRegistry[token];
 
-        if (!info.exists()) {
-            revert IGatewayBase.TokenNotRegistered();
-        }
+        require(tokenInfo.exists(), IGatewayBase.TokenNotRegistered());
+        require(amount > 0, IGatewayBase.InvalidAmount());
 
-        if (info.isNative()) {
+        if (tokenInfo.isNative()) {
             Functions.transferToAgent($.assetHubAgent, token, msg.sender, amount);
             return makeNativeAsset(token, amount);
-        } else if (info.isForeign()) {
+        } else if (tokenInfo.isForeign()) {
             Token(token).burn(msg.sender, amount);
-            return makeForeignAsset(info.foreignID, amount);
+            return makeForeignAsset(tokenInfo.foreignID, amount);
         } else {
             revert IGatewayV2.ShouldNotReachHere();
         }
