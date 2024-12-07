@@ -46,9 +46,8 @@ import {
     CallContractParams,
     Payload,
     Asset,
-    AssetKind,
-    NativeTokenERC20,
-    ForeignTokenERC20
+    makeNativeAsset,
+    makeForeignAsset
 } from "../src/v2/Types.sol";
 
 import {
@@ -222,10 +221,7 @@ contract GatewayV2Test is Test {
         hoax(user);
         WETH9(payable(token)).deposit{value: amount}();
         bytes memory inputAsset = abi.encode(0, token, amount);
-        Asset memory expectedOutputAsset = Asset({
-            kind: AssetKind.NativeTokenERC20,
-            data: abi.encode(NativeTokenERC20({token: token, amount: amount}))
-        });
+        Asset memory expectedOutputAsset = makeNativeAsset(token, amount);
 
         hoax(user);
         IERC20(token).approve(address(gateway), amount);
@@ -243,10 +239,7 @@ contract GatewayV2Test is Test {
         hoax(address(gateway));
         token.mint(user, amount);
         bytes memory inputAsset = abi.encode(0, address(token), amount);
-        Asset memory expectedOutputAsset = Asset({
-            kind: AssetKind.ForeignTokenERC20,
-            data: abi.encode(ForeignTokenERC20({foreignTokenID: keccak256("ABC"), amount: amount}))
-        });
+        Asset memory expectedOutputAsset = makeForeignAsset(keccak256("ABC"), amount);
 
         hoax(user);
         token.approve(address(gateway), amount);

@@ -24,14 +24,7 @@ import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
 import {Constants} from "../Constants.sol";
 
-import {
-    Payload,
-    OperatingMode,
-    Asset,
-    AssetKind,
-    NativeTokenERC20,
-    ForeignTokenERC20
-} from "./Types.sol";
+import {Payload, OperatingMode, Asset, makeNativeAsset, makeForeignAsset} from "./Types.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
@@ -191,16 +184,10 @@ library CallsV2 {
 
         if (info.isNativeToken()) {
             Functions.transferToAgent($.assetHubAgent, token, msg.sender, amount);
-            return Asset({
-                kind: AssetKind.NativeTokenERC20,
-                data: abi.encode(NativeTokenERC20({token: token, amount: amount}))
-            });
+            return makeNativeAsset(token, amount);
         } else if (info.isForeignToken()) {
             Token(token).burn(msg.sender, amount);
-            return Asset({
-                kind: AssetKind.ForeignTokenERC20,
-                data: abi.encode(ForeignTokenERC20({foreignTokenID: info.foreignID, amount: amount}))
-            });
+            return makeForeignAsset(info.foreignID, amount);
         } else {
             revert IGatewayV2.ShouldNotReachHere();
         }

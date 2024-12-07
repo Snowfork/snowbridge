@@ -41,23 +41,37 @@ struct Payload {
 }
 
 struct Asset {
-    AssetKind kind;
+    uint8 kind;
     bytes data;
 }
 
-enum AssetKind {
-    NativeTokenERC20,
-    ForeignTokenERC20
+library AssetKind {
+    uint8 constant NativeTokenERC20 = 0;
+    uint8 constant ForeignTokenERC20 = 1;
 }
 
-struct NativeTokenERC20 {
+struct AsNativeTokenERC20 {
     address token;
     uint128 amount;
 }
 
-struct ForeignTokenERC20 {
-    bytes32 foreignTokenID;
+struct AsForeignTokenERC20 {
+    bytes32 foreignID;
     uint128 amount;
+}
+
+function makeNativeAsset(address token, uint128 amount) pure returns (Asset memory) {
+    return Asset({
+        kind: AssetKind.NativeTokenERC20,
+        data: abi.encode(AsNativeTokenERC20({token: token, amount: amount}))
+    });
+}
+
+function makeForeignAsset(bytes32 foreignID, uint128 amount) pure returns (Asset memory) {
+    return Asset({
+        kind: AssetKind.ForeignTokenERC20,
+        data: abi.encode(AsForeignTokenERC20({foreignID: foreignID, amount: amount}))
+    });
 }
 
 // V2 Command Params

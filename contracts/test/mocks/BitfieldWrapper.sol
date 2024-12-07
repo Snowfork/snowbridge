@@ -14,6 +14,7 @@ contract BitfieldWrapper {
 
     function subsample(uint256 seed, uint256[] memory prior, uint256 n, uint256 length)
         public
+        pure
         returns (uint256[] memory bitfield)
     {
         return Bitfield.subsample(seed, prior, n, length);
