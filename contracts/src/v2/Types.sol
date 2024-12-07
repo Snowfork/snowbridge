@@ -131,3 +131,8 @@ struct CallContractParams {
     // Call data
     bytes data;
 }
+
+enum Network {
+    Polkadot,
+    Kusama
+}

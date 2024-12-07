@@ -26,11 +26,11 @@ library TokenInfoFunctions {
         return self.isRegistered;
     }
 
-    function isNativeToken(TokenInfo storage self) internal view returns (bool) {
+    function isNative(TokenInfo storage self) internal view returns (bool) {
         return self.foreignID == bytes32(0);
     }
 
-    function isForeignToken(TokenInfo storage self) internal view returns (bool) {
+    function isForeign(TokenInfo storage self) internal view returns (bool) {
         return self.foreignID != bytes32(0);
     }
 }

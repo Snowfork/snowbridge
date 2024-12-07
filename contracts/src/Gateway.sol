@@ -27,6 +27,7 @@ import {
     IGatewayV1,
     IGatewayV2
 } from "./Types.sol";
+import {Network} from "./v2/Types.sol";
 import {Upgrade} from "./Upgrade.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {IUpgradable} from "./interfaces/IUpgradable.sol";
@@ -523,22 +524,14 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     }
 
     // See docs for `IGateway.registerToken`
-    function v2_registerToken(address token, uint128 xcmFeeAHP, uint128 relayerFee)
-        external
-        payable
-        nonreentrant
-    {
-        CallsV2.registerToken(token, xcmFeeAHP, relayerFee);
-    }
-
-    // See docs for `IGateway.registerTokenOnKusama`
-    function v2_registerTokenOnKusama(
+    function v2_registerToken(
         address token,
-        uint128 xcmFeeAHP,
-        uint128 xcmFeeAHK,
+        uint8 network,
+        uint128 executionFee,
         uint128 relayerFee
     ) external payable nonreentrant {
-        CallsV2.registerTokenOnKusama(token, xcmFeeAHP, xcmFeeAHK, relayerFee);
+        require(network <= uint8(Network.Kusama), IGatewayV2.InvalidNetwork());
+        CallsV2.registerToken(token, Network(network), executionFee, relayerFee);
     }
 
     /**

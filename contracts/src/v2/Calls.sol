@@ -24,7 +24,9 @@ import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
 import {Constants} from "../Constants.sol";
 
-import {Payload, OperatingMode, Asset, makeNativeAsset, makeForeignAsset} from "./Types.sol";
+import {
+    Payload, OperatingMode, Asset, makeNativeAsset, makeForeignAsset, Network
+} from "./Types.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
@@ -66,19 +68,37 @@ library CallsV2 {
 
     // Register Ethereum-native token on AHP, using `xcmFeeAHP` of `msg.value`
     // to pay for execution on AHP
-    function registerToken(address token, uint128 executionFee, uint128 relayerFee) external {
-        _registerToken(token, executionFee, 0, relayerFee);
-    }
-
-    // Register Ethereum-native token on AHK, using `xcmFeeAHP` and `xcmFeeAHK`
-    // of `msg.value` to pay for execution on AHP and AHK respectively.
-    function registerTokenOnKusama(
+    function registerToken(
         address token,
+        Network network,
         uint128 executionFee,
-        uint128 executionFeeAHK,
         uint128 relayerFee
-    ) external {
-        _registerToken(token, executionFee, executionFeeAHK, relayerFee);
+    ) internal {
+        // Build XCM for token registration on AHP and possibly AHK
+        bytes memory xcm;
+
+        require(msg.value <= type(uint128).max, IGatewayV2.ExceededMaximumValue());
+        require(msg.value >= executionFee + relayerFee, IGatewayV2.InsufficientValue());
+        uint128 etherValue = uint128(msg.value) - executionFee - relayerFee;
+
+        if (network == Network.Polkadot) {
+            // Build XCM that executes on AHP only
+            xcm = bytes.concat(
+                hex"deadbeef", abi.encodePacked(token), hex"deadbeef", abi.encodePacked(etherValue)
+            );
+        } else if (network == Network.Kusama) {
+            // Build XCM that is executed on AHP and forwards another message to AHK
+            xcm = bytes.concat(
+                hex"deadbeef", abi.encodePacked(token), hex"deadbeef", abi.encodePacked(etherValue)
+            );
+            xcm = bytes.concat(hex"deadbeef", abi.encodePacked(token), hex"deadbeef");
+        } else {
+            revert IGatewayV2.ShouldNotReachHere();
+        }
+
+        Functions.registerNativeToken(token);
+
+        _sendMessage(address(this), xcm, new bytes[](0), "", executionFee, relayerFee);
     }
 
     /*
@@ -123,32 +143,6 @@ library CallsV2 {
         emit IGatewayV2.OutboundMessageAccepted($.outboundNonce, payload);
     }
 
-    function _registerToken(
-        address token,
-        uint128 executionFeeAHP,
-        uint128 executionFeeAHK,
-        uint128 relayerFee
-    ) internal {
-        // Build XCM for token registration on AHP and possibly AHK
-        // The XCM includes the necessary `PaysFee` instructions that:
-        // 1. Buy `xcmFeeAHP` worth of execution on AHP
-        // 2. Buy `xcmFeeAHK` worth of execution on AHK
-        bytes memory xcm;
-        if (executionFeeAHK > 0) {
-            // Build XCM that is executed on AHP and forwards another message to AHK
-            xcm = bytes.concat(hex"deadbeef", abi.encodePacked(token), hex"deadbeef");
-        } else {
-            // Build XCM that executes on AHP only
-            xcm = bytes.concat(hex"deadbeef", abi.encodePacked(token), hex"deadbeef");
-        }
-
-        uint128 executionFee = executionFeeAHP + executionFeeAHK;
-
-        Functions.registerNativeToken(token);
-
-        _sendMessage(address(this), xcm, new bytes[](0), "", executionFee, relayerFee);
-    }
-
     /// @dev Outbound message can be disabled globally or on a per-channel basis.
     function _ensureOutboundMessagingEnabled() internal view {
         CoreStorage.Layout storage $ = CoreStorage.layout();
@@ -179,10 +173,10 @@ library CallsV2 {
             revert IGatewayBase.TokenNotRegistered();
         }
 
-        if (info.isNativeToken()) {
+        if (info.isNative()) {
             Functions.transferToAgent($.assetHubAgent, token, msg.sender, amount);
             return makeNativeAsset(token, amount);
-        } else if (info.isForeignToken()) {
+        } else if (info.isForeign()) {
             Token(token).burn(msg.sender, amount);
             return makeForeignAsset(info.foreignID, amount);
         } else {

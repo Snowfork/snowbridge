@@ -12,7 +12,7 @@ import {AgentExecutor} from "./AgentExecutor.sol";
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 import {Token} from "./Token.sol";
-import {TokenInfo} from "./types/Common.sol";
+import {TokenInfo, TokenInfoFunctions} from "./types/Common.sol";
 import {ChannelID, Channel} from "./v1/Types.sol";
 import {IGatewayBase} from "./interfaces/IGatewayBase.sol";
 import {IGatewayV1} from "./v1/IGateway.sol";
@@ -23,6 +23,7 @@ library Functions {
     using Address for address;
     using SafeNativeTransfer for address payable;
     using SafeTokenTransferFrom for IERC20;
+    using TokenInfoFunctions for TokenInfo;
 
     error AgentDoesNotExist();
     error InvalidToken();
@@ -124,12 +125,18 @@ library Functions {
     }
 
     function registerNativeToken(address token) internal {
-        // NOTE: Explicitly allow a token to be re-registered. This offers resiliency
+        // NOTE: Explicitly allow a native token to be re-registered. This offers resiliency
         // in case a previous registration attempt of the same token failed on the remote side.
         // It means that registration can be retried.
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
-        info.isRegistered = true;
+
+        if (info.exists() && info.isForeign()) {
+            // Prevent registration of foreign tokens as native tokens
+            revert IGatewayBase.TokenAlreadyRegistered();
+        } else if (!info.exists()) {
+            info.isRegistered = true;
+        }
     }
 
     function registerForeignToken(
