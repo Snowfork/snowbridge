@@ -271,10 +271,10 @@ contract GatewayV2Test is Test {
             1,
             Payload({
                 origin: user1,
-                value: 1 ether,
                 assets: outputAssets,
                 xcm: "",
                 claimer: "",
+                value: 0.5 ether,
                 executionFee: 0.1 ether,
                 relayerFee: 0.4 ether
             })

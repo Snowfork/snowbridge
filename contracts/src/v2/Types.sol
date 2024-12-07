@@ -31,12 +31,16 @@ library CommandKind {
 }
 
 struct Payload {
+    // sender of the message
     address origin;
-    uint128 value;
     Asset[] assets;
     bytes xcm;
     bytes claimer;
+    // ether value
+    uint128 value;
+    // additional ether value for execution fees
     uint128 executionFee;
+    // additional ether value for relayer fees
     uint128 relayerFee;
 }
 

@@ -114,10 +114,10 @@ library CallsV2 {
 
         Payload memory payload = Payload({
             origin: origin,
-            value: uint128(msg.value),
             assets: preparedAssets,
             xcm: xcm,
             claimer: claimer,
+            value: uint128(msg.value) - executionFee - relayerFee,
             executionFee: executionFee,
             relayerFee: relayerFee
         });
