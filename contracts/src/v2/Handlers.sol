@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {IERC20} from "../interfaces/IERC20.sol";
 import {SafeTokenTransferFrom} from "../utils/SafeTransfer.sol";
@@ -51,23 +51,23 @@ library HandlersV2 {
 
     // @dev Register a new fungible Polkadot token for an agent
     function registerForeignToken(bytes calldata data) external {
-        RegisterForeignTokenParams memory params =
-            abi.decode(data, (RegisterForeignTokenParams));
+        RegisterForeignTokenParams memory params = abi.decode(data, (RegisterForeignTokenParams));
         Functions.registerForeignToken(
             params.foreignTokenID, params.name, params.symbol, params.decimals
         );
     }
 
     function unlockNativeToken(address executor, bytes calldata data) external {
-        UnlockNativeTokenParams memory params =
-            abi.decode(data, (UnlockNativeTokenParams));
+        UnlockNativeTokenParams memory params = abi.decode(data, (UnlockNativeTokenParams));
         address agent = Functions.ensureAgent(Constants.ASSET_HUB_AGENT_ID);
 
-        // If the token is WETH, unwrap it before sending to user
         if (params.token == Functions.weth()) {
+            // If the token is WETH, unwrap it before sending to user
             Functions.withdrawWrappedEther(
                 executor, agent, payable(params.recipient), params.amount
             );
+        } else if (params.token == address(0)) {
+            Functions.withdrawEther(executor, agent, payable(params.recipient), params.amount);
         } else {
             Functions.withdrawNativeToken(
                 executor, agent, params.token, params.recipient, params.amount
@@ -77,14 +77,10 @@ library HandlersV2 {
 
     function mintForeignToken(bytes calldata data) external {
         MintForeignTokenParams memory params = abi.decode(data, (MintForeignTokenParams));
-        Functions.mintForeignToken(
-            params.foreignTokenID, params.recipient, params.amount
-        );
+        Functions.mintForeignToken(params.foreignTokenID, params.recipient, params.amount);
     }
 
-    function callContract(bytes32 origin, address executor, bytes calldata data)
-        external
-    {
+    function callContract(bytes32 origin, address executor, bytes calldata data) external {
         CallContractParams memory params = abi.decode(data, (CallContractParams));
         address agent = Functions.ensureAgent(origin);
         bytes memory call =

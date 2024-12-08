@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 contract HelloWorld {
     event SaidHello(string indexed message);
 
     error Unauthorized();
 
-    function sayHello(string memory _text) payable public {
-        string memory fullMessage = string(abi.encodePacked("Hello there, ", _text));
+    function sayHello(string memory _text) public payable {
+        string memory fullMessage = string(
+            abi.encodePacked("Hello there, ", _text)
+        );
         emit SaidHello(fullMessage);
     }
 

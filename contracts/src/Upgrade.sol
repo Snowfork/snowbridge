@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {ERC1967} from "./utils/ERC1967.sol";
 import {Call} from "./utils/Call.sol";
@@ -30,9 +30,8 @@ library Upgrade {
         ERC1967.store(impl);
 
         // Call the initializer
-        (bool success, bytes memory returndata) = impl.delegatecall(
-            abi.encodeCall(IInitializable.initialize, initializerParams)
-        );
+        (bool success, bytes memory returndata) =
+            impl.delegatecall(abi.encodeCall(IInitializable.initialize, initializerParams));
         Call.verifyResult(success, returndata);
 
         emit IUpgradable.Upgraded(impl);

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {IERC20} from "../interfaces/IERC20.sol";
 import {SafeNativeTransfer, SafeTokenTransferFrom} from "../utils/SafeTransfer.sol";
@@ -79,8 +79,7 @@ library CallsV1 {
         // NOTE: Explicitly allow a token to be re-registered. This offers resiliency
         // in case a previous registration attempt of the same token failed on the remote side.
         // It means that registration can be retried.
-        TokenInfo storage info = $.tokenRegistry[token];
-        info.isRegistered = true;
+        Functions.registerNativeToken(token);
 
         Ticket memory ticket = Ticket({
             dest: $.assetHubParaID,
@@ -139,11 +138,11 @@ library CallsV1 {
         }
     }
 
-    function quoteSendTokenFee(
-        address token,
-        ParaID destinationChain,
-        uint128 destinationChainFee
-    ) external view returns (uint256) {
+    function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationChainFee)
+        external
+        view
+        returns (uint256)
+    {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
         if (!info.isRegistered) {
@@ -157,20 +156,12 @@ library CallsV1 {
         return (pricing.exchangeRate, pricing.deliveryCost);
     }
 
-    function channelNoncesOf(ChannelID channelID)
-        external
-        view
-        returns (uint64, uint64)
-    {
+    function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64) {
         Channel storage ch = Functions.ensureChannel(channelID);
         return (ch.inboundNonce, ch.outboundNonce);
     }
 
-    function channelOperatingModeOf(ChannelID channelID)
-        external
-        view
-        returns (OperatingMode)
-    {
+    function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode) {
         Channel storage ch = Functions.ensureChannel(channelID);
         return ch.mode;
     }
@@ -194,11 +185,9 @@ library CallsV1 {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
         UD60x18 ethDecimals = convert(1e18);
-        UD60x18 foreignDecimals =
-            convert(10).pow(convert(uint256($.foreignTokenDecimals)));
-        UD60x18 nativeAmount = multiplier.mul(amount).mul(exchangeRate).div(
-            foreignDecimals
-        ).mul(ethDecimals);
+        UD60x18 foreignDecimals = convert(10).pow(convert(uint256($.foreignTokenDecimals)));
+        UD60x18 nativeAmount =
+            multiplier.mul(amount).mul(exchangeRate).div(foreignDecimals).mul(ethDecimals);
         return convert(nativeAmount);
     }
 
@@ -206,8 +195,7 @@ library CallsV1 {
     function _calculateFee(Costs memory costs) internal view returns (uint256) {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
         UD60x18 amount = convert(pricing.deliveryCost + costs.foreign);
-        return costs.native
-            + _convertToNative(pricing.exchangeRate, pricing.multiplier, amount);
+        return costs.native + _convertToNative(pricing.exchangeRate, pricing.multiplier, amount);
     }
 
     /// @dev Outbound message can be disabled globally or on a per-channel basis.
@@ -308,10 +296,7 @@ library CallsV1 {
             if (destinationAddress.isAddress32()) {
                 // The receiver has a 32-byte account ID
                 ticket.payload = SubstrateTypes.SendTokenToAssetHubAddress32(
-                    token,
-                    destinationAddress.asAddress32(),
-                    $.assetHubReserveTransferFee,
-                    amount
+                    token, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
                 );
             } else {
                 // AssetHub does not support 20-byte account IDs
@@ -347,9 +332,7 @@ library CallsV1 {
                 revert Unsupported();
             }
         }
-        emit IGatewayV1.TokenSent(
-            token, sender, destinationChain, destinationAddress, amount
-        );
+        emit IGatewayV1.TokenSent(token, sender, destinationChain, destinationAddress, amount);
     }
 
     // @dev Transfer Polkadot-native tokens back to Polkadot
@@ -374,18 +357,13 @@ library CallsV1 {
             // The funds will be minted into the receiver's account on AssetHub
             // The receiver has a 32-byte account ID
             ticket.payload = SubstrateTypes.SendForeignTokenToAssetHubAddress32(
-                foreignID,
-                destinationAddress.asAddress32(),
-                $.assetHubReserveTransferFee,
-                amount
+                foreignID, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
             );
         } else {
             revert Unsupported();
         }
 
-        emit IGatewayV1.TokenSent(
-            token, sender, destinationChain, destinationAddress, amount
-        );
+        emit IGatewayV1.TokenSent(token, sender, destinationChain, destinationAddress, amount);
     }
 
     function _registerTokenCosts() internal view returns (Costs memory costs) {

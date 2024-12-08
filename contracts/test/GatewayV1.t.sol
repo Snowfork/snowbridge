@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {Strings} from "openzeppelin/utils/Strings.sol";
@@ -138,16 +138,11 @@ contract GatewayV1Test is Test {
         gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
         MockGateway(address(gateway)).setCommitmentsAreVerified(true);
 
-        SetOperatingModeParams memory params =
-            SetOperatingModeParams({mode: OperatingMode.Normal});
-        MockGateway(address(gateway)).v1_handleSetOperatingMode_public(
-            abi.encode(params)
-        );
+        SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
+        MockGateway(address(gateway)).v1_handleSetOperatingMode_public(abi.encode(params));
 
-        bridgeHubAgent =
-            IGatewayV1(address(gateway)).agentOf(Constants.BRIDGE_HUB_AGENT_ID);
-        assetHubAgent =
-            IGatewayV1(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID);
+        bridgeHubAgent = IGatewayV1(address(gateway)).agentOf(Constants.BRIDGE_HUB_AGENT_ID);
+        assetHubAgent = IGatewayV1(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID);
 
         // fund the message relayer account
         relayer = makeAddr("relayer");
@@ -176,10 +171,7 @@ contract GatewayV1Test is Test {
     }
 
     function makeCreateAgentCommand() public pure returns (Command, bytes memory) {
-        return (
-            Command.CreateAgent,
-            abi.encode(CreateAgentParams({agentID: keccak256("6666")}))
-        );
+        return (Command.CreateAgent, abi.encode(CreateAgentParams({agentID: keccak256("6666")})));
     }
 
     function makeMockProof() public pure returns (Verification.Proof memory) {
@@ -219,9 +211,7 @@ contract GatewayV1Test is Test {
 
         // Expect the gateway to emit `InboundMessageDispatched`
         vm.expectEmit(true, false, false, false);
-        emit IGatewayV1.InboundMessageDispatched(
-            assetHubParaID.into(), 1, messageID, true
-        );
+        emit IGatewayV1.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
 
         hoax(relayer, 1 ether);
         IGatewayV1(address(gateway)).submitV1(
@@ -406,9 +396,7 @@ contract GatewayV1Test is Test {
         uint256 fee = IGatewayV1(address(gateway)).quoteRegisterTokenFee();
         IGatewayV1(address(gateway)).registerToken{value: fee}(address(token));
 
-        fee = IGatewayV1(address(gateway)).quoteSendTokenFee(
-            address(token), ParaID.wrap(0), 1
-        );
+        fee = IGatewayV1(address(gateway)).quoteSendTokenFee(address(token), ParaID.wrap(0), 1);
 
         // Let gateway lock up to 1 tokens
         hoax(user);
@@ -528,9 +516,7 @@ contract GatewayV1Test is Test {
         OperatingMode mode = IGatewayV1(address(gateway)).operatingMode();
         assertEq(uint256(mode), 0);
 
-        MockGateway(address(gateway)).v1_handleSetOperatingMode_public(
-            abi.encode(params)
-        );
+        MockGateway(address(gateway)).v1_handleSetOperatingMode_public(abi.encode(params));
 
         mode = IGatewayV1(address(gateway)).operatingMode();
         assertEq(uint256(mode), 1);
@@ -563,9 +549,7 @@ contract GatewayV1Test is Test {
         emit IGatewayBase.TokenRegistrationSent(address(token));
 
         vm.expectEmit(true, false, false, false);
-        emit IGatewayV1.OutboundMessageAccepted(
-            assetHubParaID.into(), 1, messageID, bytes("")
-        );
+        emit IGatewayV1.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
         IGatewayV1(address(gateway)).registerToken{value: 2 ether}(address(token));
     }
@@ -575,16 +559,12 @@ contract GatewayV1Test is Test {
         emit IGatewayBase.TokenRegistrationSent(address(token));
 
         vm.expectEmit(true, false, false, false);
-        emit IGatewayV1.OutboundMessageAccepted(
-            assetHubParaID.into(), 1, messageID, bytes("")
-        );
+        emit IGatewayV1.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
         uint256 totalFee = MockGateway(address(gateway)).quoteRegisterTokenFee();
 
         uint256 balanceBefore = address(this).balance;
-        IGatewayV1(address(gateway)).registerToken{value: totalFee + 1 ether}(
-            address(token)
-        );
+        IGatewayV1(address(gateway)).registerToken{value: totalFee + 1 ether}(address(token));
         uint256 balanceAfter = address(this).balance;
 
         // Check that the balance has decreased by the amount of gas used
@@ -607,15 +587,11 @@ contract GatewayV1Test is Test {
         fee = IGatewayV1(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
 
         vm.expectEmit(true, true, false, true);
-        emit IGatewayV1.TokenSent(
-            address(token), address(this), destPara, recipientAddress32(), 1
-        );
+        emit IGatewayV1.TokenSent(address(token), address(this), destPara, recipientAddress32(), 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
-        emit IGatewayV1.OutboundMessageAccepted(
-            assetHubParaID.into(), 1, messageID, bytes("")
-        );
+        emit IGatewayV1.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
         IGatewayV1(address(gateway)).sendToken{value: fee}(
             address(token), destPara, recipientAddress32(), 1, 1
@@ -636,15 +612,11 @@ contract GatewayV1Test is Test {
         fee = IGatewayV1(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
 
         vm.expectEmit(true, true, false, true);
-        emit IGatewayV1.TokenSent(
-            address(token), address(this), destPara, recipientAddress32(), 1
-        );
+        emit IGatewayV1.TokenSent(address(token), address(this), destPara, recipientAddress32(), 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
-        emit IGatewayV1.OutboundMessageAccepted(
-            assetHubParaID.into(), 1, messageID, bytes("")
-        );
+        emit IGatewayV1.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
         IGatewayV1(address(gateway)).sendToken{value: fee}(
             address(token), destPara, recipientAddress32(), 1, 1
@@ -665,15 +637,11 @@ contract GatewayV1Test is Test {
         fee = IGatewayV1(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
 
         vm.expectEmit(true, true, false, true);
-        emit IGatewayV1.TokenSent(
-            address(token), address(this), destPara, recipientAddress20(), 1
-        );
+        emit IGatewayV1.TokenSent(address(token), address(this), destPara, recipientAddress20(), 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
-        emit IGatewayV1.OutboundMessageAccepted(
-            assetHubParaID.into(), 1, messageID, bytes("")
-        );
+        emit IGatewayV1.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
         IGatewayV1(address(gateway)).sendToken{value: fee}(
             address(token), destPara, recipientAddress20(), 1, 1
@@ -705,9 +673,7 @@ contract GatewayV1Test is Test {
         token.approve(address(gateway), 1);
 
         MockGateway(address(gateway)).v1_handleSetOperatingMode_public(
-            abi.encode(
-                SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages})
-            )
+            abi.encode(SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages}))
         );
 
         OperatingMode mode = IGatewayV1(address(gateway)).operatingMode();
@@ -774,20 +740,11 @@ contract GatewayV1Test is Test {
 
         vm.expectEmit(true, false, false, true);
         // Expect dispatch result as false for `OutOfGas`
-        emit IGatewayV1.InboundMessageDispatched(
-            assetHubParaID.into(), 1, messageID, false
-        );
+        emit IGatewayV1.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);
         // maxDispatchGas as 1 for `create_agent` is definitely not enough
         IGatewayV1(address(gateway)).submitV1(
             InboundMessage(
-                assetHubParaID.into(),
-                1,
-                command,
-                params,
-                1,
-                maxRefund,
-                reward,
-                messageID
+                assetHubParaID.into(), 1, command, params, 1, maxRefund, reward, messageID
             ),
             proof,
             makeMockProof()
@@ -904,9 +861,7 @@ contract GatewayV1Test is Test {
         vm.expectEmit(true, true, false, false);
         emit IGatewayBase.ForeignTokenRegistered(bytes32(uint256(1)), address(0));
 
-        MockGateway(address(gateway)).v1_handleRegisterForeignToken_public(
-            abi.encode(params)
-        );
+        MockGateway(address(gateway)).v1_handleRegisterForeignToken_public(abi.encode(params));
     }
 
     function testRegisterForeignTokenDuplicateFail() public {
@@ -921,9 +876,7 @@ contract GatewayV1Test is Test {
 
         vm.expectRevert(IGatewayBase.TokenAlreadyRegistered.selector);
 
-        MockGateway(address(gateway)).v1_handleRegisterForeignToken_public(
-            abi.encode(params)
-        );
+        MockGateway(address(gateway)).v1_handleRegisterForeignToken_public(abi.encode(params));
     }
 
     function testMintForeignToken() public {
@@ -940,9 +893,7 @@ contract GatewayV1Test is Test {
         vm.expectEmit(true, true, false, false);
         emit Transfer(address(0), account1, 1000);
 
-        MockGateway(address(gateway)).v1_handleMintForeignToken_public(
-            abi.encode(params)
-        );
+        MockGateway(address(gateway)).v1_handleMintForeignToken_public(abi.encode(params));
 
         address dotToken = MockGateway(address(gateway)).tokenAddressOf(dotTokenID);
 
@@ -960,9 +911,7 @@ contract GatewayV1Test is Test {
 
         vm.expectRevert(IGatewayBase.TokenNotRegistered.selector);
 
-        MockGateway(address(gateway)).v1_handleMintForeignToken_public(
-            abi.encode(params)
-        );
+        MockGateway(address(gateway)).v1_handleMintForeignToken_public(abi.encode(params));
     }
 
     function testSendRelayTokenToAssetHubWithAddress32() public {
@@ -976,15 +925,11 @@ contract GatewayV1Test is Test {
         vm.prank(account1);
 
         vm.expectEmit(true, true, false, true);
-        emit IGatewayV1.TokenSent(
-            address(dotToken), account1, destPara, recipientAddress32(), 1
-        );
+        emit IGatewayV1.TokenSent(address(dotToken), account1, destPara, recipientAddress32(), 1);
 
         // Expect the gateway to emit `OutboundMessageAccepted`
         vm.expectEmit(true, false, false, false);
-        emit IGatewayV1.OutboundMessageAccepted(
-            assetHubParaID.into(), 1, messageID, bytes("")
-        );
+        emit IGatewayV1.OutboundMessageAccepted(assetHubParaID.into(), 1, messageID, bytes(""));
 
         IGatewayV1(address(gateway)).sendToken{value: 0.1 ether}(
             address(dotToken), destPara, recipientAddress32(), 1, 1
@@ -1073,8 +1018,7 @@ contract GatewayV1Test is Test {
         AgentExecuteParams memory params = AgentExecuteParams({
             agentID: assetHubAgentID,
             payload: abi.encode(
-                AgentExecuteCommand.TransferToken,
-                abi.encode(address(token), address(account2), 10)
+                AgentExecuteCommand.TransferToken, abi.encode(address(token), address(account2), 10)
             )
         });
 

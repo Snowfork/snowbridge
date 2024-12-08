@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {ParaID} from "./v1/Types.sol";
@@ -47,9 +47,7 @@ library SubstrateTypes {
         if (ParaID.unwrap(v) == 0) {
             return hex"00";
         } else {
-            return bytes.concat(
-                bytes1(0x01), ScaleCodec.encodeU32(uint32(ParaID.unwrap(v)))
-            );
+            return bytes.concat(bytes1(0x01), ScaleCodec.encodeU32(uint32(ParaID.unwrap(v))));
         }
     }
 
@@ -67,11 +65,7 @@ library SubstrateTypes {
      * `NativeTokensMessage::Create`
      */
     // solhint-disable-next-line func-name-mixedcase
-    function RegisterToken(address token, uint128 fee)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function RegisterToken(address token, uint128 fee) internal view returns (bytes memory) {
         return bytes.concat(
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
@@ -212,70 +206,5 @@ library SubstrateTypes {
             ScaleCodec.encodeU128(amount),
             ScaleCodec.encodeU128(xcmFee)
         );
-    }
-
-    // Encode V2 Payload
-    //
-    // ```rust
-    // struct Payload {
-    //   origin: H160,
-    //   assets: Vec<Asset>
-    //   xcm: Vec<u8>
-    //   claimer: Option<Vec<u8>>
-    // }
-    // ```
-    //
-    function encodePayloadV2(
-        address origin,
-        bytes[] memory assets,
-        bytes memory xcm,
-        bytes memory claimer
-    ) internal pure returns (bytes memory) {
-        return bytes.concat(
-            abi.encodePacked(origin), VecAsset(assets), VecU8(xcm), OptionVecU8(claimer)
-        );
-    }
-
-    // Encode `Vec<Asset>`
-    function VecAsset(bytes[] memory assets) internal pure returns (bytes memory) {
-        bytes memory accum = hex"";
-        for (uint256 i = 0; i < assets.length; i++) {
-            accum = bytes.concat(accum, assets[i]);
-        }
-        return bytes.concat(ScaleCodec.checkedEncodeCompactU32(assets.length), accum);
-    }
-
-    // Serializes a transfer instruction to a SCALE-encoded `Asset` object
-    //
-    // ```rust
-    //
-    // enum Asset {
-    //     NativeTokenERC20 {
-    // 	       address: H160,
-    // 	       amount: u128
-    //     },
-    //     ForeignTokenERC20 {
-    // 	       foreignTokenID: H256,
-    // 	       amount: u128
-    //     },
-    // }
-    // ```
-    //
-    function encodeTransferNativeTokenERC20(address token, uint128 value)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return bytes.concat(
-            bytes1(0x00), SubstrateTypes.H160(token), ScaleCodec.encodeU128(value)
-        );
-    }
-
-    function encodeTransferForeignTokenERC20(bytes32 foreignTokenID, uint128 value)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return bytes.concat(bytes1(0x01), foreignTokenID, ScaleCodec.encodeU128(value));
     }
 }

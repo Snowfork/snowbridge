@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Gateway} from "../../src/Gateway.sol";
+import {Functions} from "../../src/Gateway.sol";
+import {Token} from "../../src/Token.sol";
 import {ParaID, OperatingMode} from "../../src/Types.sol";
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
 import {Verification} from "../../src/Verification.sol";
@@ -12,9 +14,7 @@ import {UD60x18} from "prb/math/src/UD60x18.sol";
 contract MockGateway is Gateway {
     bool public commitmentsAreVerified;
 
-    constructor(address beefyClient, address agentExecutor)
-        Gateway(beefyClient, agentExecutor)
-    {}
+    constructor(address beefyClient, address agentExecutor) Gateway(beefyClient, agentExecutor) {}
 
     function v1_handleAgentExecute_public(bytes calldata params) external {
         this.v1_handleAgentExecute(params);
@@ -58,6 +58,19 @@ contract MockGateway is Gateway {
 
     function setCommitmentsAreVerified(bool value) external {
         commitmentsAreVerified = value;
+    }
+
+    function prank_registerNativeToken(address token) external {
+        Functions.registerNativeToken(token);
+    }
+
+    function prank_registerForeignToken(
+        bytes32 foreignTokenID,
+        string memory name,
+        string memory symbol,
+        uint8 decimals
+    ) external returns (Token) {
+        return Functions.registerForeignToken(foreignTokenID, name, symbol, decimals);
     }
 
     function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof, bool isV2)
