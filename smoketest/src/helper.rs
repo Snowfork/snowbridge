@@ -2,7 +2,7 @@ use crate::{
 	constants::*,
 	contracts::i_gateway_v1 as i_gateway,
 	parachains::{
-		bridgehub::{self, api::runtime_types::snowbridge_core::outbound::OperatingMode},
+		bridgehub::{self, api::runtime_types::snowbridge_outbound_primitives::OperatingMode},
 		relaychain,
 		relaychain::api::runtime_types::{
 			pallet_xcm::pallet::Call as RelaychainPalletXcmCall,

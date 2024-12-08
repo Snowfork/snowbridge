@@ -342,7 +342,7 @@ func fetchMessageProof(
 		return proof, fmt.Errorf("encode params: %w", err)
 	}
 
-	err = api.Client.Call(&proofHex, "state_call", "OutboundQueueApiV2_prove_message", params, blockHash.Hex())
+	err = api.Client.Call(&proofHex, "state_call", "OutboundQueueV2Api_prove_message", params, blockHash.Hex())
 	if err != nil {
 		return proof, fmt.Errorf("call RPC OutboundQueueApi_prove_message(%v, %v): %w", messageIndex, blockHash, err)
 	}
