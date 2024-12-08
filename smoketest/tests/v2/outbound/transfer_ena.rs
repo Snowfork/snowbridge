@@ -37,7 +37,7 @@ mod transfer_ena {
 	};
 	use std::{str::FromStr, sync::Arc, time::Duration};
 	use subxt::OnlineClient;
-	use subxt_signer::{sr25519, sr25519::dev, SecretUri};
+	use subxt_signer::{sr25519, SecretUri};
 
 	#[tokio::test]
 	async fn transfer_ena() {
@@ -61,7 +61,22 @@ mod transfer_ena {
 		let assethub: OnlineClient<AssetHubConfig> =
 			OnlineClient::from_url((*ASSET_HUB_WS_URL).to_string()).await.unwrap();
 
-		let local_fee_amount: u128 = 4_000_000_000;
+		let destination = Location {
+			parents: 2,
+			interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Ethereum {
+				chain_id: ETHEREUM_CHAIN_ID,
+			})]),
+		};
+
+		let beneficiary = Location {
+			parents: 0,
+			interior: Junctions::X1([Junction::AccountKey20 {
+				network: None,
+				key: (*ETHEREUM_RECEIVER).into(),
+			}]),
+		};
+
+		let local_fee_amount: u128 = 800_000_000_000;
 		let local_fee_asset = Asset {
 			id: AssetId(Location { parents: 1, interior: Junctions::Here }),
 			fun: Fungible(local_fee_amount),
@@ -80,45 +95,29 @@ mod transfer_ena {
 			Asset { id: AssetId(asset_location.clone()), fun: Fungible(amount / 2) };
 
 		let assets = vec![
-			Asset { id: AssetId(asset_location.clone()), fun: Fungible(amount) },
 			local_fee_asset.clone(),
+			Asset { id: AssetId(asset_location.clone()), fun: Fungible(amount) },
 		];
-
-		let destination = Location {
-			parents: 2,
-			interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Ethereum {
-				chain_id: ETHEREUM_CHAIN_ID,
-			})]),
-		};
-
-		let beneficiary = Location {
-			parents: 0,
-			interior: Junctions::X1([Junction::AccountKey20 {
-				network: None,
-				key: (*ETHEREUM_RECEIVER).into(),
-			}]),
-		};
 
 		let xcm = VersionedXcm::V5(Xcm(vec![
 			WithdrawAsset(Assets(assets.into())),
-			PayFees { asset: local_fee_asset },
+			PayFees { asset: local_fee_asset.clone() },
 			InitiateTransfer {
 				destination,
 				remote_fees: Some(AssetTransferFilter::ReserveWithdraw(Definite(Assets(
-					vec![remote_fee_asset].into(),
+					vec![remote_fee_asset.clone()].into(),
 				)))),
 				preserve_origin: true,
 				assets: vec![AssetTransferFilter::ReserveWithdraw(Definite(Assets(vec![
-					reserved_asset,
+					reserved_asset.clone(),
 				])))],
 				remote_xcm: Xcm(vec![DepositAsset { assets: Wild(AllCounted(2)), beneficiary }]),
 			},
 		]));
 
-		// let suri = SecretUri::from_str(&SUBSTRATE_KEY).expect("Parse SURI");
-		//
-		// let signer = sr25519::Keypair::from_uri(&suri).expect("valid keypair");
-		let signer = dev::bob();
+		let suri = SecretUri::from_str(&SUBSTRATE_KEY).expect("Parse SURI");
+
+		let signer = sr25519::Keypair::from_uri(&suri).expect("valid keypair");
 
 		let token_transfer_call =
 			TransactionApi.execute(xcm, Weight { ref_time: 8_000_000_000, proof_size: 80_000 });
@@ -129,32 +128,32 @@ mod transfer_ena {
 			.await
 			.expect("call success");
 
-		// let wait_for_blocks = 500;
-		// let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
-		//
-		// let mut transfer_event_found = false;
-		// while let Some(block) = stream.next().await {
-		// 	println!("Polling ethereum block {:?} for transfer event", block.number.unwrap());
-		// 	if let Ok(transfers) =
-		// 		weth.event::<TransferFilter>().at_block_hash(block.hash.unwrap()).query().await
-		// 	{
-		// 		for transfer in transfers {
-		// 			if transfer.src.eq(&agent_src) {
-		// 				println!(
-		// 					"Transfer event found at ethereum block {:?}",
-		// 					block.number.unwrap()
-		// 				);
-		// 				assert_eq!(transfer.src, agent_src.into());
-		// 				assert_eq!(transfer.dst, (*ETHEREUM_RECEIVER).into());
-		// 				assert_eq!(transfer.wad, amount.into());
-		// 				transfer_event_found = true;
-		// 			}
-		// 		}
-		// 	}
-		// 	if transfer_event_found {
-		// 		break
-		// 	}
-		// }
-		// assert!(transfer_event_found);
+		let wait_for_blocks = 500;
+		let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
+
+		let mut transfer_event_found = false;
+		while let Some(block) = stream.next().await {
+			println!("Polling ethereum block {:?} for transfer event", block.number.unwrap());
+			if let Ok(transfers) =
+				weth.event::<TransferFilter>().at_block_hash(block.hash.unwrap()).query().await
+			{
+				for transfer in transfers {
+					if transfer.src.eq(&agent_src) {
+						println!(
+							"Transfer event found at ethereum block {:?}",
+							block.number.unwrap()
+						);
+						assert_eq!(transfer.src, agent_src.into());
+						assert_eq!(transfer.dst, (*ETHEREUM_RECEIVER).into());
+						assert_eq!(transfer.wad, amount.into());
+						transfer_event_found = true;
+					}
+				}
+			}
+			if transfer_event_found {
+				break
+			}
+		}
+		assert!(transfer_event_found);
 	}
 }

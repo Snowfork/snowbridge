@@ -19,7 +19,7 @@ config_relayer() {
     | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     ' \
-        config/parachain-relay.json >$output_dir/parachain-relay-bridge-hub-01.json
+        config/parachain-relay.json >$output_dir/parachain-relay-bridge-hub.json
 
 }
 
@@ -28,14 +28,14 @@ start_relayer() {
 
     # Launch parachain relay
     (
-        : >"$output_dir"/parachain-relay-bridge-hub-01.log
+        : >"$output_dir"/parachain-relay-bridge-hub.log
         while :; do
             echo "Starting parachain-relay at $(date)"
             "${relay_bin}" run parachain \
-                --config "$output_dir/parachain-relay-bridge-hub-01.json" \
+                --config "$output_dir/parachain-relay-bridge-hub.json" \
                 --ethereum.private-key $parachain_relay_primary_gov_eth_key \
                 --substrate.private-key "//ExecutionRelayAssetHub" \
-                >>"$output_dir"/parachain-relay-bridge-hub-01.log 2>&1 || true
+                >>"$output_dir"/parachain-relay-bridge-hub.log 2>&1 || true
             sleep 20
         done
     ) &
