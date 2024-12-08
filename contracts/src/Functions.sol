@@ -104,9 +104,11 @@ library Functions {
         address payable recipient,
         uint128 amount
     ) internal {
-        withdrawNativeToken(executor, agent, weth(), address(this), amount);
-        WETH9(payable(weth())).withdraw(amount);
-        recipient.safeNativeTransfer(amount);
+        bytes memory call = abi.encodeCall(AgentExecutor.transferWeth, (weth(), recipient, amount));
+        (bool success,) = Agent(payable(agent)).invoke(executor, call);
+        if (!success) {
+            revert IGatewayBase.TokenTransferFailed();
+        }
     }
 
     // @dev Transfer Ethereum native token back from polkadot

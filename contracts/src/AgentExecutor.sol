@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.28;
 
+import {WETH9} from "canonical-weth/WETH9.sol";
 import {ParaID} from "./Types.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 
@@ -28,6 +29,13 @@ contract AgentExecutor {
         _transferToken(token, recipient, amount);
     }
 
+    /// @dev Transfer WETH to `recipient`. Only callable via `execute`.
+    function transferWeth(address weth, address recipient, uint128 amount) external {
+        WETH9(payable(weth)).withdraw(amount);
+        payable(recipient).safeNativeTransfer(amount);
+    }
+
+    /// @dev Call contract with Ether value. Only callable via `execute`.
     function callContract(address target, bytes memory data, uint256 value) external {
         bool success = Call.safeCall(target, data, value);
         if (!success) {
@@ -37,7 +45,6 @@ contract AgentExecutor {
 
     function deposit() external payable {}
 
-    /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
     function _transferToken(address token, address recipient, uint128 amount) internal {
         IERC20(token).safeTransfer(recipient, amount);
     }
