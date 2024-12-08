@@ -222,16 +222,9 @@ func (r *Relay) fetchLatestParachainNonce() (uint64, error) {
 	return paraNonce, nil
 }
 
+// Todo: nonce deprecated
 func (r *Relay) fetchEthereumNonce(ctx context.Context) (uint64, error) {
-	opts := bind.CallOpts{
-		Context: ctx,
-	}
-	_, ethOutboundNonce, err := r.gatewayContract.ChannelNoncesOf(&opts, r.config.Source.ChannelID)
-	if err != nil {
-		return 0, fmt.Errorf("fetch Gateway.ChannelNoncesOf(%v): %w", r.config.Source.ChannelID, err)
-	}
-
-	return ethOutboundNonce, nil
+	return 0, nil
 }
 
 const BlocksPerQuery = 4096
@@ -286,7 +279,7 @@ func (r *Relay) findEvents(
 }
 
 func (r *Relay) findEventsWithFilter(opts *bind.FilterOpts, channelID [32]byte, start uint64) (bool, []*contracts.GatewayOutboundMessageAccepted, error) {
-	iter, err := r.gatewayContract.FilterOutboundMessageAccepted(opts, [][32]byte{channelID}, [][32]byte{})
+	iter, err := r.gatewayContract.FilterOutboundMessageAccepted(opts)
 	if err != nil {
 		return false, nil, err
 	}
@@ -409,7 +402,6 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		"blockNumber": ev.Raw.BlockNumber,
 		"txHash":      ev.Raw.TxHash.Hex(),
 		"txIndex":     ev.Raw.TxIndex,
-		"channelID":   types.H256(ev.ChannelID).Hex(),
 	})
 
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)

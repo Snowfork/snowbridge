@@ -134,6 +134,8 @@ struct CallContractParams {
     address target;
     // Call data
     bytes data;
+    // Ether value
+    uint256 value;
 }
 
 enum Network {
