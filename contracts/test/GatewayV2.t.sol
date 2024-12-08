@@ -166,6 +166,17 @@ contract GatewayV2Test is Test {
         return commands;
     }
 
+    function makeUnlockWethCommand(uint128 value) public view returns (CommandV2[] memory) {
+        UnlockNativeTokenParams memory params =
+            UnlockNativeTokenParams({token: address(weth), recipient: relayer, amount: value});
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.UnlockNativeToken, gas: 500_000, payload: payload});
+        return commands;
+    }
+
     /**
      * Message Verification
      */
@@ -305,6 +316,27 @@ contract GatewayV2Test is Test {
         hoax(user1, value);
         IGatewayV2(payable(address(gateway))).v2_sendMessage{value: value}(
             "", new bytes[](0), "", 0.1 ether, 0.4 ether
+        );
+    }
+
+    function testUnlockWethSuccess() public {
+        hoax(assetHubAgent);
+        weth.deposit{value: 1 ether}();
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, true, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: Constants.ASSET_HUB_AGENT_ID,
+                nonce: 1,
+                commands: makeUnlockWethCommand(0.1 ether)
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
         );
     }
 }
