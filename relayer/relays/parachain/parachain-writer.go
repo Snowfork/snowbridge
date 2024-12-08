@@ -15,7 +15,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
-	"github.com/snowfork/snowbridge/relayer/relays/util"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -63,11 +62,6 @@ func (relay *Relay) findEvent(
 
 	done := false
 
-	rewardAddress, err := util.HexStringTo32Bytes(relay.config.RewardAddress)
-	if err != nil {
-		return event, fmt.Errorf("convert to reward address: %w", err)
-	}
-
 	for {
 		var begin uint64
 		if blockNumber < BlocksPerQuery {
@@ -82,7 +76,7 @@ func (relay *Relay) findEvent(
 			Context: ctx,
 		}
 
-		iter, err := relay.ethereumChannelWriter.gateway.FilterInboundMessageDispatched(&opts, []uint64{nonce}, [][32]byte{rewardAddress})
+		iter, err := relay.ethereumChannelWriter.gateway.FilterInboundMessageDispatched(&opts, []uint64{nonce})
 		if err != nil {
 			return event, fmt.Errorf("iter dispatch event: %w", err)
 		}
