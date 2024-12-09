@@ -1014,4 +1014,12 @@ contract GatewayTest is Test {
         bytes memory encodedParams = abi.encode(params);
         MockGateway(address(gateway)).agentExecutePublic(encodedParams);
     }
+
+    function testRegisterForeignTokenAsNativeTokenWillFail() public {
+        testRegisterForeignToken();
+        address dotToken = MockGateway(address(gateway)).tokenAddressOf(dotTokenID);
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        vm.expectRevert(Assets.TokenAlreadyRegistered.selector);
+        IGateway(address(gateway)).registerToken{value: fee}(dotToken);
+    }
 }
