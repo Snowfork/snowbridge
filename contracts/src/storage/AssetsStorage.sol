@@ -19,6 +19,7 @@ library AssetsStorage {
         uint256 registerTokenFee;
         // Foreign token registry by token ID
         mapping(bytes32 foreignID => address) tokenAddressOf;
+        address weth;
         uint8 foreignTokenDecimals;
         // The maximum fee that can be sent to a destination parachain to pay for execution (DOT).
         // Has two functions:
@@ -26,7 +27,6 @@ library AssetsStorage {
         // * Prevents users from mistakenly providing too much fees, which would drain AssetHub's
         //   sovereign account here on Ethereum.
         uint128 maxDestinationFee;
-        address weth;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets");
