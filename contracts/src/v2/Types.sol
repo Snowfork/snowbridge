@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {OperatingMode} from "./../types/Common.sol";
 
@@ -30,12 +30,52 @@ library CommandKind {
     uint8 constant CallContract = 6;
 }
 
-struct Ticket {
+struct Payload {
+    // sender of the message
     address origin;
-    bytes[] assets;
+    Asset[] assets;
     bytes xcm;
     bytes claimer;
-    uint256 reward;
+    // ether value
+    uint128 value;
+    // additional ether value for execution fees
+    uint128 executionFee;
+    // additional ether value for relayer fees
+    uint128 relayerFee;
+}
+
+struct Asset {
+    uint8 kind;
+    bytes data;
+}
+
+library AssetKind {
+    uint8 constant NativeTokenERC20 = 0;
+    uint8 constant ForeignTokenERC20 = 1;
+}
+
+struct AsNativeTokenERC20 {
+    address token;
+    uint128 amount;
+}
+
+struct AsForeignTokenERC20 {
+    bytes32 foreignID;
+    uint128 amount;
+}
+
+function makeNativeAsset(address token, uint128 amount) pure returns (Asset memory) {
+    return Asset({
+        kind: AssetKind.NativeTokenERC20,
+        data: abi.encode(AsNativeTokenERC20({token: token, amount: amount}))
+    });
+}
+
+function makeForeignAsset(bytes32 foreignID, uint128 amount) pure returns (Asset memory) {
+    return Asset({
+        kind: AssetKind.ForeignTokenERC20,
+        data: abi.encode(AsForeignTokenERC20({foreignID: foreignID, amount: amount}))
+    });
 }
 
 // V2 Command Params
@@ -94,4 +134,9 @@ struct CallContractParams {
     address target;
     // Call data
     bytes data;
+}
+
+enum Network {
+    Polkadot,
+    Kusama
 }

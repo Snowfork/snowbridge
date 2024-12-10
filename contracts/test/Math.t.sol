@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
@@ -56,14 +56,14 @@ contract MathTest is Test {
             Log2Test(13, 6144),
             Log2Test(13, 8192),
             Log2Test(14, 8193),
-            Log2Test(14, 12288),
-            Log2Test(14, 16384),
-            Log2Test(15, 16385),
-            Log2Test(15, 24576),
-            Log2Test(15, 32768),
-            Log2Test(16, 32769),
-            Log2Test(16, 49152),
-            Log2Test(16, 65535)
+            Log2Test(14, 12_288),
+            Log2Test(14, 16_384),
+            Log2Test(15, 16_385),
+            Log2Test(15, 24_576),
+            Log2Test(15, 32_768),
+            Log2Test(16, 32_769),
+            Log2Test(16, 49_152),
+            Log2Test(16, 65_535)
         ];
 
         for (uint256 t = 0; t < tests.length; ++t) {

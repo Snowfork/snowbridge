@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
@@ -27,6 +27,7 @@ import {
     IGatewayV1,
     IGatewayV2
 } from "./Types.sol";
+import {Network} from "./v2/Types.sol";
 import {Upgrade} from "./Upgrade.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {IUpgradable} from "./interfaces/IUpgradable.sol";
@@ -66,6 +67,19 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             revert IGatewayBase.Unauthorized();
         }
         _;
+    }
+
+    modifier nonreentrant() {
+        assembly {
+            if tload(0) { revert(0, 0) }
+            tstore(0, 1)
+        }
+        _;
+        // Unlocks the guard, making the pattern composable.
+        // After the function exits, it can be called again, even in the same transaction.
+        assembly {
+            tstore(0, 0)
+        }
     }
 
     constructor(address beefyClient, address agentExecutor) {
@@ -127,7 +141,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         InboundMessageV1 calldata message,
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
-    ) external {
+    ) external nonreentrant {
         uint256 startGas = gasleft();
 
         Channel storage channel = Functions.ensureChannel(message.channelID);
@@ -162,8 +176,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
         // Dispatch message to a handler
         if (message.command == CommandV1.AgentExecute) {
-            try Gateway(this).v1_handleAgentExecute{gas: maxDispatchGas}(message.params)
-            {} catch {
+            try Gateway(this).v1_handleAgentExecute{gas: maxDispatchGas}(message.params) {}
+            catch {
                 success = false;
             }
         } else if (message.command == CommandV1.CreateAgent) {
@@ -176,15 +190,13 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         } else if (message.command == CommandV1.UpdateChannel) {
             success = false;
         } else if (message.command == CommandV1.SetOperatingMode) {
-            try Gateway(this).v1_handleSetOperatingMode{gas: maxDispatchGas}(
-                message.params
-            ) {} catch {
+            try Gateway(this).v1_handleSetOperatingMode{gas: maxDispatchGas}(message.params) {}
+            catch {
                 success = false;
             }
         } else if (message.command == CommandV1.TransferNativeFromAgent) {
-            try Gateway(this).v1_handleTransferNativeFromAgent{gas: maxDispatchGas}(
-                message.params
-            ) {} catch {
+            try Gateway(this).v1_handleTransferNativeFromAgent{gas: maxDispatchGas}(message.params)
+            {} catch {
                 success = false;
             }
         } else if (message.command == CommandV1.Upgrade) {
@@ -193,33 +205,28 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 success = false;
             }
         } else if (message.command == CommandV1.SetTokenTransferFees) {
-            try Gateway(this).v1_handleSetTokenTransferFees{gas: maxDispatchGas}(
-                message.params
-            ) {} catch {
+            try Gateway(this).v1_handleSetTokenTransferFees{gas: maxDispatchGas}(message.params) {}
+            catch {
                 success = false;
             }
         } else if (message.command == CommandV1.SetPricingParameters) {
-            try Gateway(this).v1_handleSetPricingParameters{gas: maxDispatchGas}(
-                message.params
-            ) {} catch {
+            try Gateway(this).v1_handleSetPricingParameters{gas: maxDispatchGas}(message.params) {}
+            catch {
                 success = false;
             }
         } else if (message.command == CommandV1.UnlockNativeToken) {
-            try Gateway(this).v1_handleUnlockNativeToken{gas: maxDispatchGas}(
-                message.params
-            ) {} catch {
+            try Gateway(this).v1_handleUnlockNativeToken{gas: maxDispatchGas}(message.params) {}
+            catch {
                 success = false;
             }
         } else if (message.command == CommandV1.RegisterForeignToken) {
-            try Gateway(this).v1_handleRegisterForeignToken{gas: maxDispatchGas}(
-                message.params
-            ) {} catch {
+            try Gateway(this).v1_handleRegisterForeignToken{gas: maxDispatchGas}(message.params) {}
+            catch {
                 success = false;
             }
         } else if (message.command == CommandV1.MintForeignToken) {
-            try Gateway(this).v1_handleMintForeignToken{gas: maxDispatchGas}(
-                message.params
-            ) {} catch {
+            try Gateway(this).v1_handleMintForeignToken{gas: maxDispatchGas}(message.params) {}
+            catch {
                 success = false;
             }
         }
@@ -231,14 +238,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
         // Add the reward to the refund amount. If the sum is more than the funds available
         // in the channel agent, then reduce the total amount
-        uint256 amount =
-            Math.min(refund + message.reward, address(channel.agent).balance);
+        uint256 amount = Math.min(refund + message.reward, address(channel.agent).balance);
 
         // Do the payment if there funds available in the agent
         if (amount > v1_dustThreshold()) {
-            Functions.withdrawEther(
-                AGENT_EXECUTOR, channel.agent, payable(msg.sender), amount
-            );
+            Functions.withdrawEther(AGENT_EXECUTOR, channel.agent, payable(msg.sender), amount);
         }
 
         emit IGatewayV1.InboundMessageDispatched(
@@ -255,19 +259,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return CoreStorage.layout().mode;
     }
 
-    function channelOperatingModeOf(ChannelID channelID)
-        external
-        view
-        returns (OperatingMode)
-    {
+    function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode) {
         return CallsV1.channelOperatingModeOf(channelID);
     }
 
-    function channelNoncesOf(ChannelID channelID)
-        external
-        view
-        returns (uint64, uint64)
-    {
+    function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64) {
         return CallsV1.channelNoncesOf(channelID);
     }
 
@@ -316,11 +312,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     }
 
     // Total fee for sending a token
-    function quoteSendTokenFee(
-        address token,
-        ParaID destinationChain,
-        uint128 destinationFee
-    ) external view returns (uint256) {
+    function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
+        external
+        view
+        returns (uint256)
+    {
         return CallsV1.quoteSendTokenFee(token, destinationChain, destinationFee);
     }
 
@@ -333,12 +329,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         uint128 amount
     ) external payable {
         CallsV1.sendToken(
-            token,
-            msg.sender,
-            destinationChain,
-            destinationAddress,
-            destinationFee,
-            amount
+            token, msg.sender, destinationChain, destinationAddress, destinationFee, amount
         );
     }
 
@@ -446,7 +437,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof,
         bytes32 rewardAddress
-    ) external {
+    ) external nonreentrant {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
         bytes32 leafHash = keccak256(abi.encode(message));
@@ -472,8 +463,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
     function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {
         for (uint256 i = 0; i < message.commands.length; i++) {
-            if (gasleft() * 63 / 64 < message.commands[i].gas + DISPATCH_OVERHEAD_GAS_V2)
-            {
+            if (gasleft() * 63 / 64 < message.commands[i].gas + DISPATCH_OVERHEAD_GAS_V2) {
                 assembly {
                     invalid()
                 }
@@ -491,15 +481,15 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                     return false;
                 }
             } else if (message.commands[i].kind == CommandKind.UnlockNativeToken) {
-                try Gateway(this).v2_handleUnlockNativeToken{
-                    gas: message.commands[i].gas
-                }(message.commands[i].payload) {} catch {
+                try Gateway(this).v2_handleUnlockNativeToken{gas: message.commands[i].gas}(
+                    message.commands[i].payload
+                ) {} catch {
                     return false;
                 }
             } else if (message.commands[i].kind == CommandKind.RegisterForeignToken) {
-                try Gateway(this).v2_handleRegisterForeignToken{
-                    gas: message.commands[i].gas
-                }(message.commands[i].payload) {} catch {
+                try Gateway(this).v2_handleRegisterForeignToken{gas: message.commands[i].gas}(
+                    message.commands[i].payload
+                ) {} catch {
                     return false;
                 }
             } else if (message.commands[i].kind == CommandKind.MintForeignToken) {
@@ -534,23 +524,22 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     function v2_sendMessage(
         bytes calldata xcm,
         bytes[] calldata assets,
-        bytes calldata claimer
-    ) external payable {
-        CallsV2.sendMessage(xcm, assets, claimer);
+        bytes calldata claimer,
+        uint128 executionFee,
+        uint128 relayerFee
+    ) external payable nonreentrant {
+        CallsV2.sendMessage(xcm, assets, claimer, executionFee, relayerFee);
     }
 
     // See docs for `IGateway.registerToken`
-    function v2_registerToken(address token, uint128 xcmFeeAHP) external payable {
-        CallsV2.registerToken(token, xcmFeeAHP);
-    }
-
-    // See docs for `IGateway.registerTokenOnKusama`
-    function v2_registerTokenOnKusama(
+    function v2_registerToken(
         address token,
-        uint128 xcmFeeAHP,
-        uint128 xcmFeeAHK
-    ) external payable {
-        CallsV2.registerTokenOnKusama(token, xcmFeeAHP, xcmFeeAHK);
+        uint8 network,
+        uint128 executionFee,
+        uint128 relayerFee
+    ) external payable nonreentrant {
+        require(network <= uint8(Network.Kusama), IGatewayV2.InvalidNetwork());
+        CallsV2.registerToken(token, Network(network), executionFee, relayerFee);
     }
 
     /**
@@ -588,10 +577,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     }
 
     // Call an arbitrary contract function
-    function v2_handleCallContract(bytes32 origin, bytes calldata data)
-        external
-        onlySelf
-    {
+    function v2_handleCallContract(bytes32 origin, bytes calldata data) external onlySelf {
         HandlersV2.callContract(origin, AGENT_EXECUTOR, data);
     }
 

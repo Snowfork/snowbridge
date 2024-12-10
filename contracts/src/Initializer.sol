@@ -1,20 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
 
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
-import {
-    OperatingMode,
-    ParaID,
-    TokenInfo,
-    MultiAddress,
-    Channel,
-    ChannelID
-} from "./Types.sol";
+import {OperatingMode, ParaID, TokenInfo, MultiAddress, Channel, ChannelID} from "./Types.sol";
 import {Upgrade} from "./Upgrade.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {IUpgradable} from "./interfaces/IUpgradable.sol";

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
-import {TokenInfo} from "../types/Common.sol";
+import {TokenInfo, TokenInfoFunctions} from "../types/Common.sol";
 import {ParaID} from "../v1/Types.sol";
 
 library AssetsStorage {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {IERC20} from "../interfaces/IERC20.sol";
 
@@ -89,19 +89,14 @@ library HandlersV1 {
 
         address agent = Functions.ensureAgent(params.agentID);
 
-        Functions.withdrawEther(
-            executor, agent, payable(params.recipient), params.amount
-        );
-        emit IGatewayV1.AgentFundsWithdrawn(
-            params.agentID, params.recipient, params.amount
-        );
+        Functions.withdrawEther(executor, agent, payable(params.recipient), params.amount);
+        emit IGatewayV1.AgentFundsWithdrawn(params.agentID, params.recipient, params.amount);
     }
 
     // @dev Set token fees of the gateway
     function setTokenTransferFees(bytes calldata data) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        SetTokenTransferFeesParams memory params =
-            abi.decode(data, (SetTokenTransferFeesParams));
+        SetTokenTransferFeesParams memory params = abi.decode(data, (SetTokenTransferFeesParams));
         $.assetHubCreateAssetFee = params.assetHubCreateAssetFee;
         $.assetHubReserveTransferFee = params.assetHubReserveTransferFee;
         $.registerTokenFee = params.registerTokenFee;
@@ -111,8 +106,7 @@ library HandlersV1 {
     // @dev Set pricing params of the gateway
     function setPricingParameters(bytes calldata data) external {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
-        SetPricingParametersParams memory params =
-            abi.decode(data, (SetPricingParametersParams));
+        SetPricingParametersParams memory params = abi.decode(data, (SetPricingParametersParams));
         pricing.exchangeRate = params.exchangeRate;
         pricing.deliveryCost = params.deliveryCost;
         pricing.multiplier = params.multiplier;
@@ -121,8 +115,7 @@ library HandlersV1 {
 
     // @dev Register a new fungible Polkadot token for an agent
     function registerForeignToken(bytes calldata data) external {
-        RegisterForeignTokenParams memory params =
-            abi.decode(data, (RegisterForeignTokenParams));
+        RegisterForeignTokenParams memory params = abi.decode(data, (RegisterForeignTokenParams));
         Functions.registerForeignToken(
             params.foreignTokenID, params.name, params.symbol, params.decimals
         );
@@ -130,8 +123,7 @@ library HandlersV1 {
 
     // @dev Transfer Ethereum native token back from polkadot
     function unlockNativeToken(address executor, bytes calldata data) external {
-        UnlockNativeTokenParams memory params =
-            abi.decode(data, (UnlockNativeTokenParams));
+        UnlockNativeTokenParams memory params = abi.decode(data, (UnlockNativeTokenParams));
         address agent = Functions.ensureAgent(params.agentID);
         Functions.withdrawNativeToken(
             executor, agent, params.token, params.recipient, params.amount
@@ -141,8 +133,6 @@ library HandlersV1 {
     // @dev Mint foreign token from polkadot
     function mintForeignToken(bytes calldata data) external {
         MintForeignTokenParams memory params = abi.decode(data, (MintForeignTokenParams));
-        Functions.mintForeignToken(
-            params.foreignTokenID, params.recipient, params.amount
-        );
+        Functions.mintForeignToken(params.foreignTokenID, params.recipient, params.amount);
     }
 }
