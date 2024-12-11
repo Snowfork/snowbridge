@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Bits} from "./Bits.sol";
 
@@ -11,14 +11,22 @@ library Bitfield {
      * @dev Constants used to efficiently calculate the hamming weight of a bitfield. See
      * https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation for an explanation of those constants.
      */
-    uint256 internal constant M1 = 0x5555555555555555555555555555555555555555555555555555555555555555;
-    uint256 internal constant M2 = 0x3333333333333333333333333333333333333333333333333333333333333333;
-    uint256 internal constant M4 = 0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f;
-    uint256 internal constant M8 = 0x00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff;
-    uint256 internal constant M16 = 0x0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff;
-    uint256 internal constant M32 = 0x00000000ffffffff00000000ffffffff00000000ffffffff00000000ffffffff;
-    uint256 internal constant M64 = 0x0000000000000000ffffffffffffffff0000000000000000ffffffffffffffff;
-    uint256 internal constant M128 = 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
+    uint256 internal constant M1 =
+        0x5555555555555555555555555555555555555555555555555555555555555555;
+    uint256 internal constant M2 =
+        0x3333333333333333333333333333333333333333333333333333333333333333;
+    uint256 internal constant M4 =
+        0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f;
+    uint256 internal constant M8 =
+        0x00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff;
+    uint256 internal constant M16 =
+        0x0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff;
+    uint256 internal constant M32 =
+        0x00000000ffffffff00000000ffffffff00000000ffffffff00000000ffffffff;
+    uint256 internal constant M64 =
+        0x0000000000000000ffffffffffffffff0000000000000000ffffffffffffffff;
+    uint256 internal constant M128 =
+        0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
 
     uint256 internal constant ONE = uint256(1);
 
@@ -119,7 +127,11 @@ library Bitfield {
         self[element] = self[element].clearBit(uint8(index));
     }
 
-    function makeIndex(uint256 seed, uint256 iteration, uint256 length) internal pure returns (uint256 index) {
+    function makeIndex(uint256 seed, uint256 iteration, uint256 length)
+        internal
+        pure
+        returns (uint256 index)
+    {
         assembly {
             mstore(0x00, seed)
             mstore(0x20, iteration)

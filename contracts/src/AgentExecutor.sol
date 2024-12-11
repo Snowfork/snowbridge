@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
-import {AgentExecuteCommand, ParaID} from "./Types.sol";
+import {WETH9} from "canonical-weth/WETH9.sol";
+import {ParaID} from "./Types.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
+import {Call} from "./utils/Call.sol";
 import {Gateway} from "./Gateway.sol";
 
 /// @title Code which will run within an `Agent` using `delegatecall`.
@@ -27,7 +29,22 @@ contract AgentExecutor {
         _transferToken(token, recipient, amount);
     }
 
-    /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
+    /// @dev Call contract with Ether value. Only callable via `execute`.
+    function callContract(address target, bytes memory data, uint256 value) external {
+        bool success = Call.safeCall(target, data, value);
+        if (!success) {
+            revert();
+        }
+    }
+
+    /// @dev Transfer WETH to `recipient`. Only callable via `execute`.
+    function transferWeth(address weth, address recipient, uint128 amount) external {
+        WETH9(payable(weth)).withdraw(amount);
+        payable(recipient).safeNativeTransfer(amount);
+    }
+
+    function deposit() external payable {}
+
     function _transferToken(address token, address recipient, uint128 amount) internal {
         IERC20(token).safeTransfer(recipient, amount);
     }

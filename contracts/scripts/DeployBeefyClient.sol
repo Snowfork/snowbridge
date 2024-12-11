@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
@@ -18,7 +18,7 @@ contract DeployBeefyClient is Script {
     function readConfig() internal pure returns (Config memory config) {
         // Checkpoint generated using the script `./beefy-checkpoint.js` script in Polkadot-JS.
         config = Config({
-            startBlock: 21087413,
+            startBlock: 21_087_413,
             current: BeefyClient.ValidatorSet({
                 id: 644,
                 length: 297,
