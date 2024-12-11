@@ -16,7 +16,7 @@ deploy_command() {
             -vvv \
             $deploy_script
     else
-        forge script \
+        RUST_LOG=forge forge script \
             --rpc-url $eth_endpoint_http \
             --broadcast \
             -vvv \

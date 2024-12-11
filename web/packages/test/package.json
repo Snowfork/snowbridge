@@ -11,7 +11,7 @@
   "devDependencies": {
     "@polkadot/api": "^12.4.2",
     "@polkadot/types": "^12.4.2",
-    "@polkadot/api-cli": "^0.57.4",
+    "@polkadot/api-cli": "^0.60.1",
     "@polkadot/keyring": "^13.0.2",
     "@polkadot/util": "^13.0.2",
     "@polkadot/util-crypto": "^13.0.2",

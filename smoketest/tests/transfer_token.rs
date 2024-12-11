@@ -8,7 +8,7 @@ use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{
-		i_gateway::IGateway,
+		i_gateway_v1::IGatewayV1,
 		weth9::{TransferFilter, WETH9},
 	},
 	helper::AssetHubConfig,
@@ -44,7 +44,7 @@ async fn transfer_token() {
 	let weth = WETH9::new(weth_addr, ethereum_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = IGateway::new(gateway_addr, ethereum_client.clone());
+	let gateway = IGatewayV1::new(gateway_addr, ethereum_client.clone());
 
 	let agent_src =
 		gateway.agent_of(ASSET_HUB_AGENT_ID).await.expect("could not get agent address");

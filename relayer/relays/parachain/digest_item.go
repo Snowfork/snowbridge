@@ -8,8 +8,8 @@ func ExtractCommitmentFromDigest(digest types.Digest) (*types.H256, error) {
 	for _, digestItem := range digest {
 		if digestItem.IsOther {
 			digestItemRawBytes := digestItem.AsOther
-			// Prefix 0 reserved for snowbridge
-			if digestItemRawBytes[0] == 0 {
+			// Prefix 0 reserved for snowbridge V2
+			if digestItemRawBytes[0] == 1 {
 				var commitment types.H256
 				err := types.DecodeFromBytes(digestItemRawBytes[1:], &commitment)
 				if err != nil {

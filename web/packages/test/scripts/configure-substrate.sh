@@ -78,12 +78,21 @@ set_gateway() {
     send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$transact_call"
 }
 
+set_weth() {
+    echo "Setting weth address"
+    local storage_key=$(echo $WETH_STORAGE_KEY | cut -c3-)
+    local weth=$(echo $WETH_ADDRESS | cut -c3-)
+    local transact_call="0x00040440"$storage_key"50"$weth
+    send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$transact_call"
+}
+
 config_xcm_version() {
     local call="0x1f04020109079edaa80204000000"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 
 configure_substrate() {
+    set_weth
     set_gateway
     fund_accounts
     open_hrmp_channels
