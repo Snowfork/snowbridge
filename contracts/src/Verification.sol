@@ -79,6 +79,9 @@ library Verification {
     /// @dev Enum variant ID for CustomDigestItem::Snowbridge
     bytes1 public constant DIGEST_ITEM_OTHER_SNOWBRIDGE = 0x00;
 
+    /// @dev Enum variant ID for CustomDigestItem::SnowbridgeV2
+    bytes1 public constant DIGEST_ITEM_OTHER_SNOWBRIDGE_V2 = 0x01;
+
     /// @dev Verify the message commitment by applying several proofs
     ///
     /// 1. First check that the commitment is included in the digest items of the parachain header
@@ -104,10 +107,11 @@ library Verification {
         address beefyClient,
         bytes4 encodedParaID,
         bytes32 commitment,
-        Proof calldata proof
+        Proof calldata proof,
+        bool isV2
     ) external view returns (bool) {
         // Verify that parachain header contains the commitment
-        if (!isCommitmentInHeaderDigest(commitment, proof.header)) {
+        if (!isCommitmentInHeaderDigest(commitment, proof.header, isV2)) {
             return false;
         }
 
@@ -132,7 +136,7 @@ library Verification {
     }
 
     // Verify that a message commitment is in the header digest
-    function isCommitmentInHeaderDigest(bytes32 commitment, ParachainHeader calldata header)
+    function isCommitmentInHeaderDigest(bytes32 commitment, ParachainHeader calldata header, bool isV2)
         internal
         pure
         returns (bool)
@@ -142,6 +146,13 @@ library Verification {
                 header.digestItems[i].kind == DIGEST_ITEM_OTHER
                     && header.digestItems[i].data.length == 33
                     && header.digestItems[i].data[0] == DIGEST_ITEM_OTHER_SNOWBRIDGE
+                    && commitment == bytes32(header.digestItems[i].data[1:])
+            ) {
+                return true;
+            }
+            if (
+                isV2 && header.digestItems[i].kind == DIGEST_ITEM_OTHER && header.digestItems[i].data.length == 33
+                    && header.digestItems[i].data[0] == DIGEST_ITEM_OTHER_SNOWBRIDGE_V2
                     && commitment == bytes32(header.digestItems[i].data[1:])
             ) {
                 return true;

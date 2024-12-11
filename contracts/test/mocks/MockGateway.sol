@@ -73,14 +73,14 @@ contract MockGateway is Gateway {
         return Functions.registerForeignToken(foreignTokenID, name, symbol, decimals);
     }
 
-    function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
+    function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof, bool isV2)
         internal
         view
         override
         returns (bool)
     {
         if (BEEFY_CLIENT != address(0)) {
-            return super._verifyCommitment(commitment, proof);
+            return super._verifyCommitment(commitment, proof, isV2);
         } else {
             // for unit tests, verification is set with commitmentsAreVerified
             return commitmentsAreVerified;

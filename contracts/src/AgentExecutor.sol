@@ -30,8 +30,8 @@ contract AgentExecutor {
     }
 
     /// @dev Call contract with Ether value. Only callable via `execute`.
-    function callContract(address target, bytes memory data) external {
-        bool success = Call.safeCall(target, data);
+    function callContract(address target, bytes memory data, uint256 value) external {
+        bool success = Call.safeCall(target, data, value);
         if (!success) {
             revert();
         }
