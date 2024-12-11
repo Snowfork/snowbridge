@@ -174,6 +174,17 @@ contract GatewayV2Test is Test {
         return commands;
     }
 
+    function makeUnlockWethCommand(uint128 value) public view returns (CommandV2[] memory) {
+        UnlockNativeTokenParams memory params =
+            UnlockNativeTokenParams({token: address(weth), recipient: relayer, amount: value});
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.UnlockNativeToken, gas: 500_000, payload: payload});
+        return commands;
+    }
+
     function makeCallContractCommand(uint256 value) public view returns (CommandV2[] memory) {
         bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
         CallContractParams memory params = CallContractParams({
@@ -186,20 +197,6 @@ contract GatewayV2Test is Test {
         CommandV2[] memory commands = new CommandV2[](1);
         commands[0] =
             CommandV2({kind: CommandKind.CallContract, gas: 500_000, payload: payload});
-        return commands;
-    }
-
-    function makeUnlockWethCommand(uint128 value) public view returns (CommandV2[] memory) {
-        UnlockNativeTokenParams memory params = UnlockNativeTokenParams({
-            token: address(weth),
-            recipient: relayer,
-            amount: value
-        });
-        bytes memory payload = abi.encode(params);
-
-        CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] =
-            CommandV2({kind: CommandKind.UnlockNativeToken, gas: 500_000, payload: payload});
         return commands;
     }
 
@@ -345,6 +342,27 @@ contract GatewayV2Test is Test {
         );
     }
 
+    function testUnlockWethSuccess() public {
+        hoax(assetHubAgent);
+        weth.deposit{value: 1 ether}();
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, true, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: Constants.ASSET_HUB_AGENT_ID,
+                nonce: 1,
+                commands: makeUnlockWethCommand(0.1 ether)
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
+        );
+    }
+
     function testEncodeDecodeMessageV2() public {
         UnlockNativeTokenParams memory params = UnlockNativeTokenParams({
             token: 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
@@ -405,27 +423,6 @@ contract GatewayV2Test is Test {
                 origin: Constants.ASSET_HUB_AGENT_ID,
                 nonce: 1,
                 commands: makeCallContractCommand(0.1 ether)
-            }),
-            proof,
-            makeMockProof(),
-            relayerRewardAddress
-        );
-    }
-
-    function testUnlockWethSuccess() public {
-        hoax(assetHubAgent);
-        weth.deposit{value: 1 ether}();
-
-        vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, true, relayerRewardAddress);
-
-        vm.deal(assetHubAgent, 1 ether);
-        hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({
-                origin: Constants.ASSET_HUB_AGENT_ID,
-                nonce: 1,
-                commands: makeUnlockWethCommand(0.1 ether)
             }),
             proof,
             makeMockProof(),

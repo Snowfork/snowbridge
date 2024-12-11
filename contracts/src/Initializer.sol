@@ -47,9 +47,10 @@ library Initializer {
         UD60x18 multiplier;
         /// @dev Optional rescueOperator
         address rescueOperator;
+        /// @dev The WETH address used for wrapping ETH
+        address weth;
         uint8 foreignTokenDecimals;
         uint128 maxDestinationFee;
-        address weth;
     }
 
     function initialize(bytes calldata data) external {

@@ -16,6 +16,7 @@ ignored_error_codes = [
     # tstore
     2394,
 ]
+
 evm_version = 'Cancun'
 
 [profile.production]

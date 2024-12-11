@@ -29,18 +29,18 @@ contract AgentExecutor {
         _transferToken(token, recipient, amount);
     }
 
-    /// @dev Transfer WETH to `recipient`. Only callable via `execute`.
-    function transferWeth(address weth, address recipient, uint128 amount) external {
-        WETH9(payable(weth)).withdraw(amount);
-        payable(recipient).safeNativeTransfer(amount);
-    }
-
     /// @dev Call contract with Ether value. Only callable via `execute`.
     function callContract(address target, bytes memory data, uint256 value) external {
         bool success = Call.safeCall(target, data, value);
         if (!success) {
             revert();
         }
+    }
+
+    /// @dev Transfer WETH to `recipient`. Only callable via `execute`.
+    function transferWeth(address weth, address recipient, uint128 amount) external {
+        WETH9(payable(weth)).withdraw(amount);
+        payable(recipient).safeNativeTransfer(amount);
     }
 
     function deposit() external payable {}

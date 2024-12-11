@@ -176,7 +176,7 @@ library CallsV1 {
     * Internal functions
     */
 
-    // Convert foreign currency to native currency (ROC/KSM/DOT -> ETH)
+    // Convert foreign currency to native currency (WND/PAS/KSM/DOT -> ETH)
     function _convertToNative(UD60x18 exchangeRate, UD60x18 multiplier, UD60x18 amount)
         internal
         view
