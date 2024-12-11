@@ -17,6 +17,8 @@ ignored_error_codes = [
     2394,
 ]
 
+evm_version = 'Cancun'
+
 [profile.production]
 via_ir = true
 
