@@ -15,7 +15,7 @@ import {ParaID} from "../src/Types.sol";
 import {SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
-contract FundAgent is Script {
+contract FundGateway is Script {
     using SafeNativeTransfer for address payable;
     using stdJson for string;
 
@@ -26,17 +26,10 @@ contract FundAgent is Script {
         address deployer = vm.rememberKey(privateKey);
         vm.startBroadcast(deployer);
 
-        uint256 initialDeposit = vm.envUint("BRIDGE_HUB_INITIAL_DEPOSIT");
+        uint256 initialDeposit = vm.envUint("GATEWAY_PROXY_INITIAL_DEPOSIT");
         address gatewayAddress = vm.envAddress("GATEWAY_PROXY_CONTRACT");
 
-        bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");
-        bytes32 assetHubAgentID = vm.envBytes32("ASSET_HUB_AGENT_ID");
-
-        address bridgeHubAgent = IGateway(gatewayAddress).agentOf(bridgeHubAgentID);
-        address assetHubAgent = IGateway(gatewayAddress).agentOf(assetHubAgentID);
-
-        payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
-        payable(assetHubAgent).safeNativeTransfer(initialDeposit);
+        payable(gatewayAddress).safeNativeTransfer(initialDeposit);
 
         vm.stopBroadcast();
     }

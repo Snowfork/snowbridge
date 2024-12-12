@@ -96,15 +96,11 @@ contract DeployLocal is Script {
         // Deploy WETH for testing
         new WETH9();
 
-        // Fund the sovereign account for the BridgeHub parachain. Used to reward relayers
+        // Fund the gateway proxy contract. Used to reward relayers
         // of messages originating from BridgeHub
-        uint256 initialDeposit = vm.envUint("BRIDGE_HUB_INITIAL_DEPOSIT");
+        uint256 initialDeposit = vm.envUint("GATEWAY_PROXY_INITIAL_DEPOSIT");
 
-        address bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
-        address assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
-
-        payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
-        payable(assetHubAgent).safeNativeTransfer(initialDeposit);
+        payable(gateway).safeNativeTransfer(initialDeposit);
 
         // Deploy MockGatewayV2 for testing
         new MockGatewayV2();
