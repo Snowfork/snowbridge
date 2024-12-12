@@ -107,6 +107,7 @@ struct Ticket {
     ParaID dest;
     Costs costs;
     bytes payload;
+    uint128 etherAmount;
 }
 
 struct TokenInfo {

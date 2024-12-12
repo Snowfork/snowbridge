@@ -99,6 +99,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
     error TokenNotRegistered();
+    error TokenAmountTooLow();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
@@ -240,11 +241,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // Add the reward to the refund amount. If the sum is more than the funds available
         // in the channel agent, then reduce the total amount
-        uint256 amount = Math.min(refund + message.reward, address(channel.agent).balance);
+        uint256 amount = Math.min(refund + message.reward, address(this).balance);
 
-        // Do the payment if there funds available in the agent
+        // Do the payment if there funds available in the gateway
         if (amount > _dustThreshold()) {
-            _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
+            payable(msg.sender).safeNativeTransfer(amount);
         }
 
         emit IGateway.InboundMessageDispatched(message.channelID, message.nonce, message.id, success);
@@ -530,18 +531,17 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint256 fee = _calculateFee(ticket.costs);
 
         // Ensure the user has enough funds for this message to be accepted
-        if (msg.value < fee) {
+        uint256 totalEther = fee + ticket.etherAmount;
+        if (msg.value < totalEther) {
             revert FeePaymentToLow();
         }
 
         channel.outboundNonce = channel.outboundNonce + 1;
 
-        // Deposit total fee into agent's contract
-        payable(channel.agent).safeNativeTransfer(fee);
-
+        // The fee is already collected into the gateway contract
         // Reimburse excess fee payment
-        if (msg.value > fee) {
-            payable(msg.sender).safeNativeTransfer(msg.value - fee);
+        if (msg.value > totalEther) {
+            payable(msg.sender).safeNativeTransfer(msg.value - totalEther);
         }
 
         // Generate a unique ID for this message

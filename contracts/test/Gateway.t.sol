@@ -986,7 +986,7 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Assets.TokenNotRegistered.selector);
 
-        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(0x0), destPara, recipientAddress32, 1, 1);
+        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(0x1), destPara, recipientAddress32, 1, 1);
     }
 
     function testSendTokenFromNotMintedAccountWillFail() public {
