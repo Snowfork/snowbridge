@@ -161,4 +161,8 @@ library CallsV2 {
             revert IGatewayV2.ShouldNotReachHere();
         }
     }
+
+    function outboundNonce() external view returns (uint64) {
+        return CoreStorage.layout().outboundNonce;
+    }
 }

@@ -3,7 +3,7 @@ use ethers::core::types::Address;
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{i_gateway_v1 as i_gateway, weth9},
+	contracts::{i_gateway_v2 as i_gateway, weth9},
 	helper::{initial_clients, print_event_log_for_unit_tests},
 	parachains::assethub::api::{
 		foreign_assets::events::Created,
@@ -22,22 +22,20 @@ use snowbridge_smoketest::{
 use subxt::utils::AccountId32;
 
 #[tokio::test]
-async fn register_token() {
+async fn register_token_v2() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
 	let assethub = *(test_clients.asset_hub_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway::IGatewayV1::new(gateway_addr, ethereum_client.clone());
+	let gateway = i_gateway::IGatewayV2::new(gateway_addr, ethereum_client.clone());
 
 	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
-	let fee = gateway.quote_register_token_fee().call().await.unwrap();
-
 	let receipt = gateway
-		.register_token(weth.address())
-		.value(fee)
+		.v_2_register_token(weth.address(), 1_000_000_000u128)
+		.value(3_000_000_000_u128)
 		.send()
 		.await
 		.unwrap()

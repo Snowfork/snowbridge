@@ -25,11 +25,13 @@ const run = async () => {
             let contractName: string = transaction.contractName
             if (contractName) {
                 let contractInfo: ContractInfo = { address: transaction.contractAddress }
+                let contactNameWithoutVersion = contractName.replace(/v\d+$/i, "");
+                let contractPath = path.join(BuildInfoDir, contractName + ".sol", contractName + ".json");
+                if (!fs.existsSync(contractPath)) {
+                    contractPath = path.join(BuildInfoDir, contactNameWithoutVersion + ".sol", contractName + ".json");
+                }
                 let contractBuildingInfo = JSON.parse(
-                    fs.readFileSync(
-                        path.join(BuildInfoDir, contractName + ".sol", contractName + ".json"),
-                        "utf8"
-                    )
+                    fs.readFileSync(contractPath, "utf8")
                 )
                 contractInfo.abi = contractBuildingInfo.abi
                 contracts[contractName] = contractInfo
