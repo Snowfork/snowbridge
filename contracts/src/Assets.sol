@@ -252,7 +252,11 @@ library Assets {
         // NOTE: Explicitly allow a token to be re-registered. This offers resiliency
         // in case a previous registration attempt of the same token failed on the remote side.
         // It means that registration can be retried.
+        // But register a PNA here is not allowed
         TokenInfo storage info = $.tokenRegistry[token];
+        if(info.foreignID != bytes32(0)) {
+            revert TokenAlreadyRegistered();
+        }
         info.isRegistered = true;
 
         ticket.dest = $.assetHubParaID;
