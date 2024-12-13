@@ -901,7 +901,7 @@ contract GatewayTest is Test {
         vm.expectEmit(true, true, false, false);
         emit Transfer(address(0), account1, 1000);
 
-        MockGateway(address(gateway)).mintForeignTokenPublic(abi.encode(params));
+        MockGateway(address(gateway)).mintForeignTokenPublic(assetHubAgent, abi.encode(params));
 
         address dotToken = MockGateway(address(gateway)).tokenAddressOf(dotTokenID);
 
@@ -916,7 +916,16 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Assets.TokenNotRegistered.selector);
 
-        MockGateway(address(gateway)).mintForeignTokenPublic(abi.encode(params));
+        MockGateway(address(gateway)).mintForeignTokenPublic(assetHubAgent, abi.encode(params));
+    }
+
+    function testMintFromParachainOtherThanAssetHubWillFail() public {
+        MintForeignTokenParams memory params =
+            MintForeignTokenParams({foreignTokenID: bytes32(uint256(1)), recipient: account1, amount: 1000});
+
+        vm.expectRevert(Assets.TokenMintFailed.selector);
+
+        MockGateway(address(gateway)).mintForeignTokenPublic(bridgeHubAgent, abi.encode(params));
     }
 
     function testSendRelayTokenToAssetHubWithAddress32() public {

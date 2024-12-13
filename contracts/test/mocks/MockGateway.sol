@@ -81,8 +81,8 @@ contract MockGateway is Gateway {
         this.registerForeignToken(params);
     }
 
-    function mintForeignTokenPublic(bytes calldata params) external {
-        this.mintForeignToken(params);
+    function mintForeignTokenPublic(address agent, bytes calldata params) external {
+        this.mintForeignToken(agent, params);
     }
 
     function transferNativeTokenPublic(bytes calldata params) external {
