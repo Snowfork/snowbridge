@@ -870,8 +870,13 @@ contract GatewayTest is Test {
     }
 
     function testRegisterForeignToken() public {
-        RegisterForeignTokenParams memory params =
-            RegisterForeignTokenParams({foreignTokenID: dotTokenID, name: "DOT", symbol: "DOT", decimals: 10});
+        RegisterForeignTokenParams memory params = RegisterForeignTokenParams({
+            foreignTokenID: dotTokenID,
+            name: "DOT",
+            symbol: "DOT",
+            decimals: 10,
+            agentID: assetHubAgentID
+        });
 
         vm.expectEmit(true, true, false, false);
         emit IGateway.ForeignTokenRegistered(bytes32(uint256(1)), address(0));
@@ -882,8 +887,13 @@ contract GatewayTest is Test {
     function testRegisterForeignTokenDuplicateFail() public {
         testRegisterForeignToken();
 
-        RegisterForeignTokenParams memory params =
-            RegisterForeignTokenParams({foreignTokenID: dotTokenID, name: "DOT", symbol: "DOT", decimals: 10});
+        RegisterForeignTokenParams memory params = RegisterForeignTokenParams({
+            foreignTokenID: dotTokenID,
+            name: "DOT",
+            symbol: "DOT",
+            decimals: 10,
+            agentID: assetHubAgentID
+        });
 
         vm.expectRevert(Assets.TokenAlreadyRegistered.selector);
 
@@ -895,8 +905,12 @@ contract GatewayTest is Test {
 
         uint256 amount = 1000;
 
-        MintForeignTokenParams memory params =
-            MintForeignTokenParams({foreignTokenID: bytes32(uint256(1)), recipient: account1, amount: amount});
+        MintForeignTokenParams memory params = MintForeignTokenParams({
+            foreignTokenID: bytes32(uint256(1)),
+            recipient: account1,
+            amount: amount,
+            agentID: assetHubAgentID
+        });
 
         vm.expectEmit(true, true, false, false);
         emit Transfer(address(0), account1, 1000);
@@ -911,8 +925,12 @@ contract GatewayTest is Test {
     }
 
     function testMintNotRegisteredTokenWillFail() public {
-        MintForeignTokenParams memory params =
-            MintForeignTokenParams({foreignTokenID: bytes32(uint256(1)), recipient: account1, amount: 1000});
+        MintForeignTokenParams memory params = MintForeignTokenParams({
+            foreignTokenID: bytes32(uint256(1)),
+            recipient: account1,
+            amount: 1000,
+            agentID: assetHubAgentID
+        });
 
         vm.expectRevert(Assets.TokenNotRegistered.selector);
 
@@ -998,7 +1016,7 @@ contract GatewayTest is Test {
 
         vm.prank(account1);
 
-        vm.expectRevert(abi.encodeWithSelector(IERC20.InsufficientBalance.selector, account1, 0, 1));
+        vm.expectRevert(abi.encodeWithSelector(Assets.TokenBurnFailed.selector));
 
         IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(dotToken), destPara, recipientAddress32, 1, 1);
     }
