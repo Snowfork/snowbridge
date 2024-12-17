@@ -1136,4 +1136,10 @@ contract GatewayTest is Test {
             address(token), paraID, recipientAddress32, destinationFee, amount
         );
     }
+    
+    function testRegisterTokenWithEthWillReturnInvalidToken() public {
+        uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
+        vm.expectRevert(Assets.InvalidToken.selector);
+        IGateway(address(gateway)).registerToken{value: fee}(address(0));
+    }
 }
