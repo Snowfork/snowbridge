@@ -162,7 +162,7 @@ contract GatewayTest is Test {
 
     function makeLegacyUnlockTokenCommand(bytes32 agentID, address token_, address recipient, uint128 amount)
         public
-        view
+        pure
         returns (Command, bytes memory)
     {
         bytes memory payload = abi.encode(token_, recipient, amount);
@@ -173,7 +173,7 @@ contract GatewayTest is Test {
 
     function makeUnlockTokenCommand(bytes32 agentID, address token_, address recipient, uint128 amount)
         public
-        view
+        pure
         returns (Command, bytes memory)
     {
         TransferNativeTokenParams memory params =
@@ -458,8 +458,7 @@ contract GatewayTest is Test {
         assertEq(relayer.balance, 1 ether);
     }
 
-    // Users should pay fees to send outbound messages
-    function testUserPaysFees() public {
+    function testSendingWethWithFeeSucceeds() public {
         // Create a mock user
         address user = makeAddr("user");
         deal(address(token), user, 1);
@@ -478,6 +477,73 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).sendToken{value: fee}(address(token), ParaID.wrap(0), recipientAddress32, 1, 1);
 
         assertEq(user.balance, 0);
+    }
+
+    function testSendingEthWithAmountAndFeeSucceeds() public {
+        // Create a mock user
+        address user = makeAddr("user");
+        uint128 amount = 1;
+        ParaID paraID = ParaID.wrap(1000);
+
+        uint128 fee = uint128(IGateway(address(gateway)).quoteSendTokenFee(address(0), paraID, 1));
+
+        vm.expectEmit();
+        emit IGateway.TokenSent(address(0), user, paraID, recipientAddress32, amount);
+        vm.expectEmit(true, false, false, false);
+        emit IGateway.OutboundMessageAccepted(paraID.into(), 1, messageID, hex"");
+        hoax(user, amount + fee);
+        IGateway(address(gateway)).sendToken{value: amount + fee}(address(0), paraID, recipientAddress32, 1, amount);
+
+        assertEq(user.balance, 0);
+    }
+
+    function testSendingEthWithAmountFeeAndExtraSucceedsWithRefund() public {
+        // Create a mock user
+        address user = makeAddr("user");
+        uint128 amount = 1 ether;
+        uint128 extra = 2 ether;
+        ParaID paraID = ParaID.wrap(1000);
+
+        uint128 fee = uint128(IGateway(address(gateway)).quoteSendTokenFee(address(0), paraID, 1));
+
+        vm.expectEmit();
+        emit IGateway.TokenSent(address(0), user, paraID, recipientAddress32, amount);
+        vm.expectEmit(true, false, false, false);
+        emit IGateway.OutboundMessageAccepted(paraID.into(), 1, messageID, hex"");
+        hoax(user, amount + fee + extra);
+        IGateway(address(gateway)).sendToken{value: amount + fee + extra}(
+            address(0), paraID, recipientAddress32, 1, amount
+        );
+
+        assertEq(user.balance, extra);
+    }
+
+    function testSendingEthWithoutFeeFails() public {
+        // Create a mock user
+        address user = makeAddr("user");
+        uint128 amount = 1;
+        ParaID paraID = ParaID.wrap(1000);
+
+        uint128 fee = uint128(IGateway(address(gateway)).quoteSendTokenFee(address(0), paraID, 1));
+
+        vm.expectEmit();
+        emit IGateway.TokenSent(address(0), user, paraID, recipientAddress32, amount);
+        vm.expectRevert(Gateway.FeePaymentTooLow.selector);
+        hoax(user, amount + fee);
+        IGateway(address(gateway)).sendToken{value: amount}(address(0), paraID, recipientAddress32, 1, amount);
+    }
+
+    function testSendingEthWithoutAmountFails() public {
+        // Create a mock user
+        address user = makeAddr("user");
+        uint128 amount = 1 ether;
+        ParaID paraID = ParaID.wrap(1000);
+
+        uint128 fee = uint128(IGateway(address(gateway)).quoteSendTokenFee(address(0), paraID, amount));
+
+        vm.expectRevert(Gateway.TokenAmountTooLow.selector);
+        hoax(user, amount + fee);
+        IGateway(address(gateway)).sendToken{value: amount - 1}(address(0), paraID, recipientAddress32, 1, amount);
     }
 
     // User doesn't have enough funds to send message
