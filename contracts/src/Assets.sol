@@ -36,6 +36,7 @@ library Assets {
     error TokenAlreadyRegistered();
     error TokenMintFailed();
     error TokenTransferFailed();
+    error TokenAmountTooLow();
 
     function isTokenRegistered(address token) external view returns (bool) {
         return AssetsStorage.layout().tokenRegistry[token].isRegistered;
