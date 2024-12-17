@@ -88,7 +88,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error InvalidProof();
     error InvalidNonce();
     error NotEnoughGas();
-    error FeePaymentToLow();
+    error FeePaymentTooLow();
     error Unauthorized();
     error Disabled();
     error AgentAlreadyCreated();
@@ -533,7 +533,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Ensure the user has enough funds for this message to be accepted
         uint256 totalEther = fee + ticket.etherAmount;
         if (msg.value < totalEther) {
-            revert FeePaymentToLow();
+            revert FeePaymentTooLow();
         }
 
         channel.outboundNonce = channel.outboundNonce + 1;

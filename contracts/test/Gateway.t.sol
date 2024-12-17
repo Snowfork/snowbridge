@@ -426,7 +426,7 @@ contract GatewayTest is Test {
         hoax(user);
         token.approve(address(gateway), 1);
 
-        vm.expectRevert(Gateway.FeePaymentToLow.selector);
+        vm.expectRevert(Gateway.FeePaymentTooLow.selector);
         hoax(user, 2 ether);
         IGateway(address(gateway)).sendToken{value: 0.002 ether}(
             address(token), ParaID.wrap(0), recipientAddress32, 1, 1
