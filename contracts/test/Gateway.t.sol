@@ -160,6 +160,27 @@ contract GatewayTest is Test {
         return (Command.CreateAgent, abi.encode((keccak256("6666"))));
     }
 
+    function makeLegacyUnlockWethCommand(bytes32 agentID, address token_, address recipient, uint128 amount)
+        public
+        view
+        returns (Command, bytes memory)
+    {
+        bytes memory payload = abi.encode(token_, recipient, amount);
+        AgentExecuteParams memory params =
+            AgentExecuteParams({agentID: agentID, payload: abi.encode(AgentExecuteCommand.TransferToken, payload)});
+        return (Command.AgentExecute, abi.encode(params));
+    }
+
+    function makeUnlockWethCommand(bytes32 agentID, address token_, address recipient, uint128 amount)
+        public
+        view
+        returns (Command, bytes memory)
+    {
+        TransferNativeTokenParams memory params =
+            TransferNativeTokenParams({agentID: agentID, token: token_, recipient: recipient, amount: amount});
+        return (Command.TransferNativeToken, abi.encode(params));
+    }
+
     function makeMockProof() public pure returns (Verification.Proof memory) {
         return Verification.Proof({
             header: Verification.ParachainHeader({
@@ -196,7 +217,7 @@ contract GatewayTest is Test {
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
         // Expect the gateway to emit `InboundMessageDispatched`
-        vm.expectEmit(true, false, false, false);
+        vm.expectEmit();
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
 
         hoax(relayer, 1 ether);
@@ -207,6 +228,68 @@ contract GatewayTest is Test {
         );
     }
 
+    function testLegacyUnlockWethHappyPath() public {
+        address recipient = makeAddr("test_recipeint");
+        uint128 amount = 1;
+
+        hoax(assetHubAgent, amount);
+        token.deposit{value: amount}();
+
+        (Command command, bytes memory params) = makeLegacyUnlockWethCommand(assetHubAgentID, address(token), recipient, amount);
+
+        assertEq(token.balanceOf(assetHubAgent), amount);
+        assertEq(token.balanceOf(recipient), 0);
+
+        // Expect WETH.Transfer event.
+        vm.expectEmit();
+        emit WETH9.Transfer(assetHubAgent, recipient, amount);
+
+        // Expect the gateway to emit `InboundMessageDispatched`
+        vm.expectEmit();
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+
+        assertEq(token.balanceOf(assetHubAgent), 0);
+        assertEq(token.balanceOf(recipient), amount);
+    }
+
+    function testUnlockWethHappyPath() public {
+        address recipient = makeAddr("test_recipeint");
+        uint128 amount = 1;
+        
+        hoax(assetHubAgent, amount);
+        token.deposit{value: amount}();
+
+        (Command command, bytes memory params) = makeUnlockWethCommand(assetHubAgentID, address(token), recipient, amount);
+        
+        assertEq(token.balanceOf(assetHubAgent), amount);
+        assertEq(token.balanceOf(recipient), 0);
+
+        // Expect WETH.Transfer event.
+        vm.expectEmit();
+        emit WETH9.Transfer(assetHubAgent, recipient, amount);
+
+        // Expect the gateway to emit `InboundMessageDispatched`
+        vm.expectEmit(true, false, false, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+
+        assertEq(token.balanceOf(assetHubAgent), 0);
+        assertEq(token.balanceOf(recipient), amount);
+    }
+    
     function testSubmitFailInvalidNonce() public {
         deal(assetHubAgent, 50 ether);
 
