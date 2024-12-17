@@ -191,8 +191,6 @@ contract GatewayTest is Test {
      * Message Verification
      */
     function testSubmitHappyPath() public {
-        deal(assetHubAgent, 50 ether);
-
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
         // Expect the gateway to emit `InboundMessageDispatched`
@@ -208,8 +206,6 @@ contract GatewayTest is Test {
     }
 
     function testSubmitFailInvalidNonce() public {
-        deal(assetHubAgent, 50 ether);
-
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
         hoax(relayer, 1 ether);
@@ -242,8 +238,6 @@ contract GatewayTest is Test {
     }
 
     function testSubmitFailInvalidProof() public {
-        deal(assetHubAgent, 50 ether);
-
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
         MockGateway(address(gateway)).setCommitmentsAreVerified(false);
@@ -262,14 +256,15 @@ contract GatewayTest is Test {
      */
 
     // Message relayer should be rewarded from the agent for a channel
-    function testRelayerRewardedFromAgent() public {
+    function testRelayerRewardedFromGateway() public {
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
         vm.txGasPrice(10 gwei);
         hoax(relayer, 1 ether);
-        deal(assetHubAgent, 50 ether);
+        deal(address(gateway), 50 ether);
 
         uint256 relayerBalanceBefore = address(relayer).balance;
+        uint256 gatewayBalanceBefore = address(address(gateway)).balance;
         uint256 agentBalanceBefore = address(assetHubAgent).balance;
 
         uint256 startGas = gasleft();
@@ -282,19 +277,22 @@ contract GatewayTest is Test {
         uint256 estimatedActualRefundAmount = (startGas - endGas) * tx.gasprice;
         assertLt(estimatedActualRefundAmount, maxRefund);
 
-        // Check that agent balance decreased and relayer balance increases
-        assertLt(address(assetHubAgent).balance, agentBalanceBefore);
+        // Agents do not pay reward+refund so no balance should change.
+        assertEq(address(assetHubAgent).balance, agentBalanceBefore);
+        // Relayer balance has increased
+        assertLt(address(gateway).balance, gatewayBalanceBefore);
+        // Relayer balance has increased
         assertGt(relayer.balance, relayerBalanceBefore);
 
         // The total amount paid to the relayer
-        uint256 totalPaid = agentBalanceBefore - address(assetHubAgent).balance;
+        uint256 totalPaid = gatewayBalanceBefore - address(gateway).balance;
 
         // Since we know that the actual refund amount is less than the max refund,
         // the total amount paid to the relayer is less.
         assertLt(totalPaid, maxRefund + reward);
     }
 
-    // In this case, the agent has no funds to reward the relayer
+    // In this case, the gateway has no funds to reward the relayer
     function testRelayerNotRewarded() public {
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
@@ -772,8 +770,6 @@ contract GatewayTest is Test {
     }
 
     function testCreateAgentWithNotEnoughGas() public {
-        deal(assetHubAgent, 50 ether);
-
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
         hoax(relayer, 1 ether);
