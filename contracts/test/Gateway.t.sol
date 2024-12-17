@@ -23,7 +23,7 @@ import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 import {MultiAddress} from "../src/MultiAddress.sol";
 import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress} from "../src/Types.sol";
 
-import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
+import {SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
 import {PricingStorage} from "../src/storage/PricingStorage.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {TokenLib} from "../src/TokenLib.sol";
@@ -392,6 +392,19 @@ contract GatewayTest is Test {
     /**
      * Fees & Rewards
      */
+
+    // Test that the Gateway Proxy can receive funds to act as a wallet to pay out rewards and refunds
+    function testGatewayProxyCanRecieveFunds() public {
+        uint256 amount = 1 ether;
+        address deployer = makeAddr("deployer");
+        hoax(deployer, amount);
+
+        assertEq(address(gateway).balance, 0);
+
+        SafeNativeTransfer.safeNativeTransfer(payable(gateway), amount);
+
+        assertEq(address(gateway).balance, amount);
+    }
 
     // Message relayer should be rewarded from the agent for a channel
     function testRelayerRewardedFromGateway() public {

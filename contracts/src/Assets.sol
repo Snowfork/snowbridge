@@ -313,8 +313,10 @@ library Assets {
     {
         bytes memory call;
         if (token != address(0)) {
+            // ERC20
             call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
         } else {
+            // Native ETH
             call = abi.encodeCall(AgentExecutor.transferNative, (payable(recipient), amount));
         }
         (bool success,) = Agent(payable(agent)).invoke(executor, call);
