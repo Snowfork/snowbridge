@@ -160,7 +160,7 @@ contract GatewayTest is Test {
         return (Command.CreateAgent, abi.encode((keccak256("6666"))));
     }
 
-    function makeLegacyUnlockWethCommand(bytes32 agentID, address token_, address recipient, uint128 amount)
+    function makeLegacyUnlockTokenCommand(bytes32 agentID, address token_, address recipient, uint128 amount)
         public
         view
         returns (Command, bytes memory)
@@ -171,7 +171,7 @@ contract GatewayTest is Test {
         return (Command.AgentExecute, abi.encode(params));
     }
 
-    function makeUnlockWethCommand(bytes32 agentID, address token_, address recipient, uint128 amount)
+    function makeUnlockTokenCommand(bytes32 agentID, address token_, address recipient, uint128 amount)
         public
         view
         returns (Command, bytes memory)
@@ -233,7 +233,8 @@ contract GatewayTest is Test {
         hoax(assetHubAgent, amount);
         token.deposit{value: amount}();
 
-        (Command command, bytes memory params) = makeLegacyUnlockWethCommand(assetHubAgentID, address(token), recipient, amount);
+        (Command command, bytes memory params) =
+            makeLegacyUnlockTokenCommand(assetHubAgentID, address(token), recipient, amount);
 
         assertEq(token.balanceOf(assetHubAgent), amount);
         assertEq(token.balanceOf(recipient), 0);
@@ -260,12 +261,13 @@ contract GatewayTest is Test {
     function testUnlockWethHappyPath() public {
         address recipient = makeAddr("test_recipeint");
         uint128 amount = 1;
-        
+
         hoax(assetHubAgent, amount);
         token.deposit{value: amount}();
 
-        (Command command, bytes memory params) = makeUnlockWethCommand(assetHubAgentID, address(token), recipient, amount);
-        
+        (Command command, bytes memory params) =
+            makeUnlockTokenCommand(assetHubAgentID, address(token), recipient, amount);
+
         assertEq(token.balanceOf(assetHubAgent), amount);
         assertEq(token.balanceOf(recipient), 0);
 
@@ -287,7 +289,60 @@ contract GatewayTest is Test {
         assertEq(token.balanceOf(assetHubAgent), 0);
         assertEq(token.balanceOf(recipient), amount);
     }
-    
+
+    function testLegacyUnlockEthHappyPath() public {
+        address recipient = makeAddr("test_recipeint");
+        uint128 amount = 1;
+
+        deal(assetHubAgent, amount);
+
+        (Command command, bytes memory params) =
+            makeLegacyUnlockTokenCommand(assetHubAgentID, address(0), recipient, amount);
+
+        assertEq(assetHubAgent.balance, amount);
+        assertEq(recipient.balance, 0);
+
+        // Expect the gateway to emit `InboundMessageDispatched`
+        vm.expectEmit();
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+
+        assertEq(assetHubAgent.balance, 0);
+        assertEq(recipient.balance, amount);
+    }
+
+    function testUnlockEthHappyPath() public {
+        address recipient = makeAddr("test_recipeint");
+        uint128 amount = 1;
+
+        deal(assetHubAgent, amount);
+
+        (Command command, bytes memory params) = makeUnlockTokenCommand(assetHubAgentID, address(0), recipient, amount);
+
+        assertEq(assetHubAgent.balance, amount);
+        assertEq(recipient.balance, 0);
+
+        // Expect the gateway to emit `InboundMessageDispatched`
+        vm.expectEmit(true, false, false, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+
+        assertEq(assetHubAgent.balance, 0);
+        assertEq(recipient.balance, amount);
+    }
+
     function testSubmitFailInvalidNonce() public {
         (Command command, bytes memory params) = makeCreateAgentCommand();
 

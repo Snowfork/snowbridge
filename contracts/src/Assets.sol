@@ -311,7 +311,12 @@ library Assets {
     function transferNativeToken(address executor, address agent, address token, address recipient, uint128 amount)
         external
     {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
+        bytes memory call;
+        if (token != address(0)) {
+            call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
+        } else {
+            call = abi.encodeCall(AgentExecutor.transferNative, (payable(recipient), amount));
+        }
         (bool success,) = Agent(payable(agent)).invoke(executor, call);
         if (!success) {
             revert TokenTransferFailed();
