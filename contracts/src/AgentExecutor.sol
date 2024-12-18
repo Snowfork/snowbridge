@@ -6,6 +6,7 @@ import {AgentExecuteCommand, ParaID} from "./Types.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 import {IERC20} from "./interfaces/IERC20.sol";
+import {IGateway} from "./interfaces/IGateway.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 
 /// @title Code which will run within an `Agent` using `delegatecall`.
@@ -16,9 +17,13 @@ contract AgentExecutor {
 
     /// @dev Transfer ether to `recipient`. Unlike `_transferToken` This logic is not nested within `execute`,
     /// as the gateway needs to control an agent's ether balance directly.
-    ///
     function transferNative(address payable recipient, uint256 amount) external {
         recipient.safeNativeTransfer(amount);
+    }
+
+    /// @dev Transfer ether to Gateway. Used once off for migration purposes. Can be removed after version 1.
+    function transferNativeToGateway(address payable gateway, uint256 amount) external {
+        IGateway(gateway).depositEther{value: amount}();
     }
 
     /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
