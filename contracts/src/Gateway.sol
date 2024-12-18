@@ -531,7 +531,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint256 fee = _calculateFee(ticket.costs);
 
         // Ensure the user has enough funds for this message to be accepted
-        uint256 totalEther = fee + ticket.etherAmount;
+        uint256 totalEther = fee + ticket.value;
         if (msg.value < totalEther) {
             revert FeePaymentTooLow();
         }
@@ -540,7 +540,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // The fee is already collected into the gateway contract
         // Reimburse excess fee payment
-        if (msg.value > totalEther) {
+        if (msg.value > totalEther && (msg.value - totalEther) > _dustThreshold()) {
             payable(msg.sender).safeNativeTransfer(msg.value - totalEther);
         }
 
