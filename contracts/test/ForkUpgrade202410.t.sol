@@ -16,6 +16,7 @@ contract ForkUpgradeTest is Test {
     address private constant GatewayProxy = 0x27ca963C279c93801941e1eB8799c23f407d68e7;
     address private constant BeefyClient = 0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C;
     bytes32 private constant BridgeHubAgent = 0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314;
+    bytes32 private constant AssetHubAgent = 0x81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79;
 
     function setUp() public {
         vm.createSelectFork("https://rpc.tenderly.co/fork/b77e07b8-ad6d-4e83-b5be-30a2001964aa", 20645700);
@@ -33,10 +34,20 @@ contract ForkUpgradeTest is Test {
         UpgradeParams memory params =
             UpgradeParams({impl: address(newLogic), implCodeHash: address(newLogic).codehash, initParams: bytes("")});
 
-        vm.expectEmit(true, false, false, false);
+        Gateway gateway = Gateway(GatewayProxy);
+
+        // Check pre-migration of ETH from Asset Hub agent
+        assertGt(IGateway(GatewayProxy).agentOf(AssetHubAgent).balance, 0);
+        // Check pre-migration of ETH to Gateway
+        assertEq(address(GatewayProxy).balance, 0);
+
+        vm.expectEmit();
+        emit IGateway.EtherDeposited(gateway.agentOf(AssetHubAgent), 587928061927368450);
+
+        vm.expectEmit();
         emit IUpgradable.Upgraded(address(newLogic));
 
-        Gateway(GatewayProxy).upgrade(abi.encode(params));
+        gateway.upgrade(abi.encode(params));
     }
 
     function checkLegacyToken() public {
@@ -60,6 +71,12 @@ contract ForkUpgradeTest is Test {
     }
 
     function testSanityCheck() public {
+        // Check that the version is correctly set.
+        assertEq(IGateway(GatewayProxy).version(), 1);
+        // Check migration of ETH from Asset Hub agent
+        assertEq(IGateway(GatewayProxy).agentOf(AssetHubAgent).balance, 0);
+        // Check migration of ETH to Gateway
+        assertGt(address(GatewayProxy).balance, 0);
         // Check AH channel nonces as expected
         (uint64 inbound, uint64 outbound) = IGateway(GatewayProxy).channelNoncesOf(
             ChannelID.wrap(0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539)
