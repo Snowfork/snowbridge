@@ -29,7 +29,7 @@ contract FundGateway is Script {
         uint256 initialDeposit = vm.envUint("GATEWAY_PROXY_INITIAL_DEPOSIT");
         address gatewayAddress = vm.envAddress("GATEWAY_PROXY_CONTRACT");
 
-        payable(gatewayAddress).safeNativeTransfer(initialDeposit);
+        IGateway(address(gatewayAddress)).depositEther{value: initialDeposit}();
 
         vm.stopBroadcast();
     }
