@@ -100,7 +100,7 @@ contract DeployLocal is Script {
         // of messages originating from BridgeHub
         uint256 initialDeposit = vm.envUint("GATEWAY_PROXY_INITIAL_DEPOSIT");
 
-        payable(gateway).safeNativeTransfer(initialDeposit);
+        IGateway(address(gateway)).depositEther{value: initialDeposit}();
 
         // Deploy MockGatewayV2 for testing
         new MockGatewayV2();
