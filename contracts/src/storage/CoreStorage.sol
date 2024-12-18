@@ -14,6 +14,8 @@ library CoreStorage {
         mapping(bytes32 agentID => address) agents;
         // Agent addresses
         mapping(address agent => bytes32 agentID) agentAddresses;
+        // Version of the Gateway Implementation
+        uint64 version;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.core");

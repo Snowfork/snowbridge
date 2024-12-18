@@ -37,6 +37,9 @@ contract GatewayProxy is IInitializable {
         }
     }
 
-    // Allow the Gateway proxy to receive ether in order to pay out rewards and refunds
-    receive() external payable {}
+    // Prevent users from unwittingly sending ether to the gateway, as these funds
+    // would otherwise be lost forever.
+    receive() external payable {
+        revert NativeCurrencyNotAccepted();
+    }
 }

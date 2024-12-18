@@ -401,7 +401,10 @@ contract GatewayTest is Test {
 
         assertEq(address(gateway).balance, 0);
 
+        vm.expectRevert(GatewayProxy.NativeCurrencyNotAccepted.selector);
         SafeNativeTransfer.safeNativeTransfer(payable(gateway), amount);
+
+        IGateway(address(gateway)).depositEther{value: amount}();
 
         assertEq(address(gateway).balance, amount);
     }

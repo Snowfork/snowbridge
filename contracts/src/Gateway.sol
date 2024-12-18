@@ -281,6 +281,17 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return ERC1967.load();
     }
 
+    function version() public view returns (uint64) {
+        return CoreStorage.layout().version;
+    }
+
+    /**
+     * Fee management
+     */
+    function depositEther() external payable {
+        emit EtherDeposited(msg.sender, msg.value);
+    }
+
     /**
      * Handlers
      */
