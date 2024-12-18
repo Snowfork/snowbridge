@@ -152,14 +152,14 @@ library Assets {
         if (token != address(0)) {
             // ERC20
             _transferToAgent($.assetHubAgent, token, sender, amount);
-            ticket.etherAmount = 0;
+            ticket.value = 0;
         } else {
             // Native ETH
             if (msg.value < amount) {
                 revert TokenAmountTooLow();
             }
             payable($.assetHubAgent).safeNativeTransfer(amount);
-            ticket.etherAmount = amount;
+            ticket.value = amount;
         }
 
         ticket.dest = $.assetHubParaID;
@@ -227,7 +227,7 @@ library Assets {
 
         ticket.dest = $.assetHubParaID;
         ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
-        ticket.etherAmount = 0;
+        ticket.value = 0;
 
         // Construct a message payload
         if (destinationChain == $.assetHubParaID && destinationAddress.isAddress32()) {
@@ -279,7 +279,7 @@ library Assets {
         ticket.dest = $.assetHubParaID;
         ticket.costs = _registerTokenCosts();
         ticket.payload = SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee);
-        ticket.etherAmount = 0;
+        ticket.value = 0;
 
         emit IGateway.TokenRegistrationSent(token);
     }
