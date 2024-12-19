@@ -3,6 +3,7 @@
 pragma solidity 0.8.25;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
+import {ReentrancyGuard} from "openzeppelin/security/ReentrancyGuard.sol";
 import {Verification} from "./Verification.sol";
 
 import {Assets} from "./Assets.sol";
@@ -53,7 +54,7 @@ import {OperatorStorage} from "./storage/OperatorStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
-contract Gateway is IGateway, IInitializable, IUpgradable {
+contract Gateway is IGateway, IInitializable, IUpgradable, ReentrancyGuard {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
@@ -469,7 +470,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         MultiAddress calldata destinationAddress,
         uint128 destinationFee,
         uint128 amount
-    ) external payable {
+    ) external payable nonReentrant {
         Ticket memory ticket = Assets.sendToken(
             token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
         );
