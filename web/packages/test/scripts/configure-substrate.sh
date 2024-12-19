@@ -83,6 +83,13 @@ config_xcm_version() {
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 
+register_native_eth() {
+    # Registers Eth and makes it sufficient
+    # https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:12144#/extrinsics/decode/0x3501020109079edaa80200ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d0104
+    local call="0x3501020109079edaa80200ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d0104"
+    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+}
+
 configure_substrate() {
     set_gateway
     fund_accounts
@@ -90,6 +97,7 @@ configure_substrate() {
     config_xcm_version
     wait_beacon_chain_ready
     config_beacon_checkpoint
+    register_native_eth
 }
 
 if [ -z "${from_start_services:-}" ]; then
