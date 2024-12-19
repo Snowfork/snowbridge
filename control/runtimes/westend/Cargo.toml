@@ -1,0 +1,10 @@
+[package]
+name = "westend-runtime"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+codec = { workspace = true }
+scale-info = { workspace = true }
+serde = { workspace = true }
+subxt= { workspace = true }

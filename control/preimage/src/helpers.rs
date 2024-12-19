@@ -7,9 +7,9 @@ use crate::Context;
 
 use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 
-#[cfg(feature = "polkadot")]
-use crate::relay_runtime::api::runtime_types::xcm::v2::OriginKind;
-use crate::relay_runtime::api::runtime_types::{
+use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
+
+use crate::relay_runtime::runtime_types::{
     pallet_xcm,
     sp_weights::weight_v2::Weight,
     staging_xcm::v3::multilocation::MultiLocation,
@@ -24,8 +24,6 @@ use crate::relay_runtime::api::runtime_types::{
         VersionedLocation, VersionedXcm,
     },
 };
-#[cfg(feature = "rococo")]
-use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
 
 use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 
@@ -172,18 +170,32 @@ pub async fn query_weight_asset_hub(
 
 pub fn utility_force_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
     RelayRuntimeCall::Utility(
-        crate::relay_runtime::api::runtime_types::pallet_utility::pallet::Call::batch_all { calls },
+        crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::batch_all { calls },
     )
 }
 
+#[cfg(any(feature = "westend", feature = "paseo"))]
+pub fn sudo(call: Box<RelayRuntimeCall>) -> RelayRuntimeCall {
+    return RelayRuntimeCall::Sudo(
+        crate::relay_runtime::runtime_types::pallet_sudo::pallet::Call::sudo { call },
+    );
+}
+
 pub fn force_xcm_version() -> AssetHubRuntimeCall {
+    #[cfg(any(feature = "paseo", feature = "polkadot"))]
     use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
         junction::Junction::GlobalConsensus, junction::NetworkId, junctions::Junctions::X1,
         location::Location,
     };
+    #[cfg(feature = "westend")]
+    use crate::asset_hub_runtime::runtime_types::staging_xcm::v5::{
+        junction::Junction::GlobalConsensus, junction::NetworkId, junctions::Junctions::X1,
+        location::Location,
+    };
+    let chain_id = crate::bridge_hub_runtime::CHAIN_ID;
     let location = Box::new(Location {
         parents: 2,
-        interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: 1 })]),
+        interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id })]),
     });
 
     AssetHubRuntimeCall::PolkadotXcm(

@@ -57,29 +57,7 @@ export type ChannelStatusInfo = {
     }
 }
 
-export enum AlarmReason {
-    BeefyStale = "BeefyStale",
-    BeaconStale = "BeaconStale",
-    ToEthereumChannelStale = "ToEthereumChannelStale",
-    ToPolkadotChannelStale = "ToPolkadotChannelStale",
-    AccountBalanceInsufficient = "AccountBalanceInsufficient",
-}
-
 export type Sovereign = { name: string; account: string; balance: bigint; type: SourceType }
-
-export const BlockLatencyThreshold = {
-    // Syncing beefy finality update every 4 hours(2400 blocks) so we set 3000 blocks at most.
-    ToEthereum: 3000,
-    // Syncing beacon finality update every 6.4 minutes(32 blocks) so we set 128 blocks (4 epochs) at most.
-    ToPolkadot: 128,
-}
-
-export const InsufficientBalanceThreshold = {
-    // Minimum as 300 DOT
-    Substrate: 3_000_000_000_000,
-    // Minimum as 0.3 Ether
-    Ethereum: 300_000_000_000_000_000,
-}
 
 export type AllMetrics = {
     name: string
@@ -94,8 +72,8 @@ export const bridgeStatusInfo = async (
     options = {
         polkadotBlockTimeInSeconds: 6,
         ethereumBlockTimeInSeconds: 12,
-        toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
-        toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
+        toPolkadotCheckIntervalInBlock: 120,
+        toEthereumCheckIntervalInBlock: 2400,
     }
 ): Promise<BridgeStatusInfo> => {
     // Beefy status
@@ -194,8 +172,8 @@ export const channelStatusInfo = async (
     context: Context,
     channelId: string,
     options = {
-        toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
-        toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
+        toPolkadotCheckIntervalInBlock: 120,
+        toEthereumCheckIntervalInBlock: 2400,
     }
 ): Promise<ChannelStatusInfo> => {
     const [inbound_nonce_eth, outbound_nonce_eth] =

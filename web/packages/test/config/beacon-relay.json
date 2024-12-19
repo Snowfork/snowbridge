@@ -21,7 +21,8 @@
   "sink": {
     "parachain": {
       "endpoint": "ws://127.0.0.1:11144",
-      "maxWatchedExtrinsics": 8
+      "maxWatchedExtrinsics": 8,
+      "headerRedundancy": 20
     },
     "updateSlotInterval": 30
   }

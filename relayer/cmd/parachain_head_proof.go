@@ -43,12 +43,6 @@ func parachainHeadProofCmd() *cobra.Command {
 	)
 	cmd.MarkFlagRequired("parachain-id")
 
-	cmd.Flags().Uint64(
-		"parachain-block",
-		0,
-		"The parachain block you are trying to prove. i.e. The block containing the message.",
-	)
-	cmd.MarkFlagRequired("parachain-block")
 	return cmd
 }
 
@@ -72,7 +66,8 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 	copy(beefyBlockHash[:], beefyBlockHashHex[0:32])
 
 	relayChainBlock, _ := cmd.Flags().GetUint64("relaychain-block")
-	mmrProof, err := conn.GenerateProofForBlock(relayChainBlock, beefyBlockHash)
+	// magic plus 1 to make the block a leaf index
+	mmrProof, err := conn.GenerateProofForBlock(relayChainBlock+1, beefyBlockHash)
 	if err != nil {
 		log.WithError(err).Error("Cannot connect.")
 		return err
@@ -84,7 +79,6 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 	}).Info("conn.GenerateProofForBlock")
 
 	paraID, _ := cmd.Flags().GetUint32("parachain-id")
-	parachainBlock, _ := cmd.Flags().GetUint64("parachain-block")
 
 	relayChainBlockHash, err := conn.API().RPC.Chain.GetBlockHash(relayChainBlock)
 	if err != nil {
@@ -92,7 +86,7 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	paraHeadsAsSlice, err := conn.FetchParachainHeads(relayChainBlockHash)
+	paraHeadsAsSlice, err := conn.FetchParasHeads(relayChainBlockHash)
 	if err != nil {
 		log.WithError(err).Error("Cannot fetch parachain headers")
 		return err
@@ -116,12 +110,37 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 		"paraId":              paraID,
 		"relayChainBlockHash": relayChainBlockHash.Hex(),
 	}).Info("parachain.CreateParachainMerkleProof")
-
-	merkleProofData, err := parachain.CreateParachainMerkleProof(paraHeadsAsSlice, paraID)
+	numParas := min(parachain.MaxParaHeads, len(paraHeadsAsSlice))
+	merkleProofData, err := parachain.CreateParachainMerkleProof(paraHeadsAsSlice[:numParas], paraID)
 	if err != nil {
 		log.WithError(err).Error("Cannot create merkle proof.")
 		return err
 	}
+
+	if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
+		log.WithFields(log.Fields{
+			"computedMmr": merkleProofData.Root.Hex(),
+			"mmr":         mmrProof.Leaf.ParachainHeads.Hex(),
+		}).Warn("MMR parachain merkle root does not match calculated merkle root. Filtering out parachain heads.")
+
+		paraHeadsAsSlice, err = conn.FilterParachainHeads(paraHeadsAsSlice, relayChainBlockHash)
+		if err != nil {
+			log.WithError(err).Fatal("Filtering out parachain heads failed.")
+		}
+
+		numParas = min(parachain.MaxParaHeads, len(paraHeadsAsSlice))
+		merkleProofData, err = parachain.CreateParachainMerkleProof(paraHeadsAsSlice[:numParas], paraID)
+		if err != nil {
+			log.WithError(err).Fatal("Filtering out parachain heads failed.")
+		}
+		if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
+			log.WithFields(log.Fields{
+				"computedMmr": merkleProofData.Root.Hex(),
+				"mmr":         mmrProof.Leaf.ParachainHeads.Hex(),
+			}).Fatal("MMR parachain merkle root does not match calculated merkle root.")
+		}
+	}
+
 	log.WithFields(log.Fields{
 		"paraHeadsAsSlice": paraHeadsAsSlice,
 		"paraId":           paraID,
@@ -132,7 +151,6 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 		"parachainId":           paraID,
 		"relaychainBlockHash":   relayChainBlockHash.Hex(),
 		"relaychainBlockNumber": relayChainBlock,
-		"parachainBlockNumber":  parachainBlock,
 		"paraHeads":             paraHeadsAsSlice,
 		"parachainHeader":       parachainHeader,
 	}).Info("Generated proof input for parachain block.")

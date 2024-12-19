@@ -25,13 +25,19 @@
   "sink": {
     "parachain": {
       "endpoint": "ws://127.0.0.1:11144",
-      "maxWatchedExtrinsics": 8
-    }
+      "maxWatchedExtrinsics": 8,
+      "headerRedundancy": 20
+    },
+    "ss58Prefix": 1
   },
   "instantVerification": false,
   "schedule": {
     "id": null,
     "totalRelayerCount": 3,
     "sleepInterval": 20
+  },
+  "ofac": {
+    "enabled": false,
+    "apiKey": ""
   }
 }

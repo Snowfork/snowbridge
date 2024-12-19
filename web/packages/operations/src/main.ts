@@ -10,7 +10,10 @@ if (process.argv.length != 3) {
 
 if (process.argv[2] == "start") {
     monitor()
-        .then(() => process.exit(0))
+        .then(() => {
+            console.log("Oneshot monitoring success.")
+            process.exit(0)
+        })
         .catch((error) => {
             console.error("Error:", error)
             process.exit(1)
@@ -18,11 +21,16 @@ if (process.argv[2] == "start") {
 } else if (process.argv[2] == "cron") {
     let interval = parseInt(process.env["SCAN_INTERVAL"] || "") || 30
     cron.schedule(`*/${interval} * * * *`, monitor)
+    console.log("cron task installed for monitoring with interval:" + interval + " (in minutes)")
 } else if (process.argv[2] == "init") {
     initializeAlarms()
-        .then(() => process.exit(0))
+        .then(() => {
+            console.log("Initialize alarm rules for monitoring success.")
+            process.exit(0)
+        })
         .catch((error) => {
             console.error("Error:", error)
             process.exit(1)
         })
+    
 }

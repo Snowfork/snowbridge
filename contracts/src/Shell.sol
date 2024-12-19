@@ -8,6 +8,13 @@ import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {IShell} from "./interfaces/IShell.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
 
+/**
+ * @title Shell
+ * Only used in the initial deployment of the GatewayProxy, which was deployed along
+ * with this Shell as its logic contract. The Shell was then upgraded using a trusted
+ * operator to the full Gateway contract. Currently this code is no longer in use but is
+ * kept around for archival purposes.
+ */
 contract Shell is IShell, IUpgradable, IInitializable {
     address public immutable OPERATOR;
 

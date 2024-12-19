@@ -7,8 +7,7 @@ type PolkadotConfig struct {
 }
 
 type ParachainConfig struct {
-	Endpoint             string `mapstructure:"endpoint"`
-	MaxWatchedExtrinsics int64  `mapstructure:"maxWatchedExtrinsics"`
+	Endpoint string `mapstructure:"endpoint"`
 }
 
 type EthereumConfig struct {
@@ -18,12 +17,14 @@ type EthereumConfig struct {
 	GasLimit  uint64 `mapstructure:"gas-limit"`
 }
 
+type OFACConfig struct {
+	Enabled bool   `mapstructure:"enabled"`
+	ApiKey  string `mapstructure:"apiKey"`
+}
+
 func (p ParachainConfig) Validate() error {
 	if p.Endpoint == "" {
 		return errors.New("[endpoint] is not set")
-	}
-	if p.MaxWatchedExtrinsics == 0 {
-		return errors.New("[maxWatchedExtrinsics] is not set")
 	}
 	return nil
 }
@@ -38,6 +39,13 @@ func (e EthereumConfig) Validate() error {
 func (p PolkadotConfig) Validate() error {
 	if p.Endpoint == "" {
 		return errors.New("[endpoint] config is not set")
+	}
+	return nil
+}
+
+func (o OFACConfig) Validate() error {
+	if o.Enabled && o.ApiKey == "" {
+		return errors.New("OFAC is enabled but no [apiKey] set")
 	}
 	return nil
 }

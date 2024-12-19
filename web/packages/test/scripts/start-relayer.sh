@@ -7,12 +7,16 @@ config_relayer() {
     # Configure beefy relay
     jq \
         --arg k1 "$(address_for BeefyClient)" \
+        --arg k2 "$(address_for GatewayProxy)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg eth_gas_limit $eth_gas_limit \
+        --arg assetHubChannelID $ASSET_HUB_CHANNEL_ID \
         '
       .sink.contracts.BeefyClient = $k1
+    | .sink.contracts.Gateway = $k2
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
+    | ."on-demand-sync"."asset-hub-channel-id" = $assetHubChannelID
     ' \
         config/beefy-relay.json >$output_dir/beefy-relay.json
 

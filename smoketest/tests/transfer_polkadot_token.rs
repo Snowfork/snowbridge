@@ -30,7 +30,7 @@ use subxt_signer::sr25519::dev;
 
 #[tokio::test]
 async fn transfer_polkadot_token() {
-	let ethereum_provider = Provider::<Ws>::connect(ETHEREUM_API)
+	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
 		.await
 		.unwrap()
 		.interval(Duration::from_millis(10u64));
@@ -38,7 +38,7 @@ async fn transfer_polkadot_token() {
 	let ethereum_client = Arc::new(ethereum_provider);
 
 	let assethub: OnlineClient<AssetHubConfig> =
-		OnlineClient::from_url(ASSET_HUB_WS_URL).await.unwrap();
+		OnlineClient::from_url((*ASSET_HUB_WS_URL).to_string()).await.unwrap();
 
 	let amount: u128 = 1_000_000_000;
 	let assets = VersionedAssets::V3(MultiAssets(vec![MultiAsset {

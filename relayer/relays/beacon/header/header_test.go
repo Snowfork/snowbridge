@@ -3,6 +3,7 @@ package header
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/mock"
@@ -15,6 +16,8 @@ import (
 	"testing"
 )
 
+const MaxRedundancy = 20
+
 // Verifies that the closest checkpoint is populated successfully if it is not populated in the first place.
 func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 	settings := config.SpecSettings{
@@ -25,7 +28,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 			Electra: 800000,
 		},
 	}
-	p := protocol.New(settings)
+	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
 	beaconStore := mock.Store{}
 
@@ -86,7 +89,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 			Electra: 800000,
 		},
 	}
-	p := protocol.New(settings)
+	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
 	beaconStore := mock.Store{}
 
@@ -155,7 +158,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 			Electra: 800000,
 		},
 	}
-	p := protocol.New(settings)
+	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
 	beaconStore := mock.Store{}
 
@@ -221,7 +224,7 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 		EpochsPerSyncCommitteePeriod: 256,
 		//DenebForkEpoch:               0,
 	}
-	p := protocol.New(settings)
+	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
 	beaconStore := mock.Store{}
 
@@ -265,7 +268,7 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 		EpochsPerSyncCommitteePeriod: 256,
 		//DenebForkEpoch:               0,
 	}
-	p := protocol.New(settings)
+	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
 	beaconStore := mock.Store{}
 
@@ -332,4 +335,103 @@ func TestShouldUpdate(t *testing.T) {
 		result := h.shouldUpdate(tt.apiSlot, tt.onChainSlot)
 		assert.Equal(t, tt.result, result, "expected %t but found %t", tt.result, result)
 	}
+}
+
+func TestFindLatestCheckPoint(t *testing.T) {
+	settings := config.SpecSettings{
+		SlotsInEpoch:                 4,
+		EpochsPerSyncCommitteePeriod: 2,
+		DenebForkEpoch:               0,
+	}
+	maxRedundancy := uint64(2)
+	p := protocol.New(settings, maxRedundancy)
+	// Total circular array would be 4 * 2 * 2 = 16
+	client := mock.API{}
+	beaconStore := mock.Store{}
+
+	headerIndex5 := common.HexToHash("0xd118e1464716db841f14ac1c3245f2b7900ee6f896ac85362deae3ff90c14c78")
+	headerIndex4 := common.HexToHash("0xe9d993e257b0d7ac775b8a03827209db2c7314a780c24a7fad64fd9fcee529f7")
+	headerIndex3 := common.HexToHash("0x7f2c1240dd714f3d74050638c642f14bf49f541d42f0808b7ae0c188c7edbb08")
+	headerIndex2 := common.HexToHash("0x01eaa6cbb00311f19c84965f3a9e8ddf56dd5443dfa8ea35c3e6d0b6306554b3")
+	headerIndex1 := common.HexToHash("0xa106b85508139ad0417cc521f41943a74908bfedbc6f548b3d1acddf60548493")
+	headerIndex0 := common.HexToHash("0xefef79bf51c3e02c19f9cbe718c6e226ad516153622a500bf783fce2aa8ec7c6")
+	headerIndex15 := common.HexToHash("0x416f890494e218d3cb32ce1ef3bd08e3acccf6e112b66db544cfcc6295bbdc2a")
+	headerIndex14 := common.HexToHash("0x74c4e67ca468722a7c3af52c5f96f4bbdd60b4d237ae7693863dca308e3c354c")
+
+	h := New(
+		&mock.Writer{
+			LastFinalizedState: state.FinalizedHeader{
+				BeaconBlockRoot:       common.Hash{},
+				BeaconSlot:            50,
+				InitialCheckpointRoot: common.Hash{},
+				InitialCheckpointSlot: 0,
+			},
+			LastFinalizedStateIndex: 5,
+			FinalizedBeaconRootByIndex: map[uint32]types.H256{
+				5:  types.H256(headerIndex5),
+				4:  types.H256(headerIndex4),
+				3:  types.H256(headerIndex3),
+				2:  types.H256(headerIndex2),
+				1:  types.H256(headerIndex1),
+				0:  types.H256(headerIndex0),
+				15: types.H256(headerIndex15),
+				14: types.H256(headerIndex14),
+			},
+			FinalizedHeaderStateByBlockRoot: map[types.H256]state.FinalizedHeader{
+				types.H256(headerIndex5): state.FinalizedHeader{
+					BeaconBlockRoot: headerIndex5,
+					BeaconSlot:      50,
+				},
+				types.H256(headerIndex4): state.FinalizedHeader{
+					BeaconBlockRoot: headerIndex4,
+					BeaconSlot:      46,
+				},
+				types.H256(headerIndex3): state.FinalizedHeader{
+					BeaconBlockRoot: headerIndex3,
+					BeaconSlot:      42,
+				},
+				types.H256(headerIndex2): state.FinalizedHeader{
+					BeaconBlockRoot: headerIndex2,
+					BeaconSlot:      38,
+				},
+				types.H256(headerIndex1): state.FinalizedHeader{
+					BeaconBlockRoot: headerIndex1,
+					BeaconSlot:      30,
+				},
+				types.H256(headerIndex0): state.FinalizedHeader{
+					BeaconBlockRoot: headerIndex0,
+					BeaconSlot:      32,
+				},
+				types.H256(headerIndex15): state.FinalizedHeader{
+					BeaconBlockRoot: headerIndex15,
+					BeaconSlot:      20,
+				},
+				types.H256(headerIndex14): state.FinalizedHeader{
+					BeaconBlockRoot: headerIndex14,
+					BeaconSlot:      18,
+				},
+			},
+		},
+		&client,
+		settings,
+		&beaconStore,
+		p,
+		316,
+	)
+
+	// Slot 20 would be usable to prove slot 19
+	header, err := h.findLatestCheckPoint(19)
+	assert.NoError(t, err)
+	assert.Equal(t, headerIndex15, header.BeaconBlockRoot)
+	assert.Equal(t, uint64(20), header.BeaconSlot)
+
+	// No header would be within range to prove slot 4
+	_, err = h.findLatestCheckPoint(4)
+	assert.Error(t, err)
+
+	// Slot 46 would be usable to prove slot 19
+	header, err = h.findLatestCheckPoint(40)
+	assert.NoError(t, err)
+	assert.Equal(t, headerIndex4, header.BeaconBlockRoot)
+	assert.Equal(t, uint64(46), header.BeaconSlot)
 }

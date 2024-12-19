@@ -7,7 +7,7 @@ import {console} from "forge-std/console.sol";
 import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
 import {IGateway} from "../src/interfaces/IGateway.sol";
 import {Gateway} from "../src/Gateway.sol";
-import {GatewayPNA} from "../src/upgrades/polkadot/GatewayPNA.sol";
+import {Gateway202410} from "../src/upgrades/Gateway202410.sol";
 import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {UpgradeParams, SetOperatingModeParams, OperatingMode, RegisterForeignTokenParams} from "../src/Params.sol";
 import {ChannelID, ParaID, OperatingMode, TokenInfo} from "../src/Types.sol";
@@ -27,8 +27,8 @@ contract ForkUpgradeTest is Test {
     function forkUpgrade() public {
         AgentExecutor executor = new AgentExecutor();
 
-        GatewayPNA newLogic =
-            new GatewayPNA(BeefyClient, address(executor), ParaID.wrap(1002), BridgeHubAgent, 10, 20000000000);
+        Gateway202410 newLogic =
+            new Gateway202410(BeefyClient, address(executor), ParaID.wrap(1002), BridgeHubAgent, 10, 20000000000);
 
         UpgradeParams memory params =
             UpgradeParams({impl: address(newLogic), implCodeHash: address(newLogic).codehash, initParams: bytes("")});
@@ -40,12 +40,10 @@ contract ForkUpgradeTest is Test {
     }
 
     function checkLegacyToken() public {
-        TokenInfo memory weth = GatewayPNA(GatewayProxy).tokenInfo(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-        assertEq(weth.isRegistered, true);
-        assertEq(weth.foreignID, bytes32(""));
-        TokenInfo memory myth = GatewayPNA(GatewayProxy).tokenInfo(0xBA41Ddf06B7fFD89D1267b5A93BFeF2424eb2003);
-        assertEq(myth.isRegistered, true);
-        assertEq(myth.foreignID, bytes32(""));
+        assert(IGateway(GatewayProxy).isTokenRegistered(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
+        assertEq(IGateway(GatewayProxy).queryForeignTokenID(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2), bytes32(""));
+        assert(IGateway(GatewayProxy).isTokenRegistered(0xBA41Ddf06B7fFD89D1267b5A93BFeF2424eb2003));
+        assertEq(IGateway(GatewayProxy).queryForeignTokenID(0xBA41Ddf06B7fFD89D1267b5A93BFeF2424eb2003), bytes32(""));
     }
 
     function registerForeignToken() public {
@@ -56,10 +54,9 @@ contract ForkUpgradeTest is Test {
         vm.expectEmit(true, true, false, false);
         emit IGateway.ForeignTokenRegistered(dotId, address(0x0));
 
-        GatewayPNA(GatewayProxy).registerForeignToken(abi.encode(params));
-        TokenInfo memory dot = GatewayPNA(GatewayProxy).tokenInfo(0x70D9d338A6b17957B16836a90192BD8CDAe0b53d);
-        assertEq(dot.isRegistered, true);
-        assertEq(dot.foreignID, dotId);
+        Gateway202410(GatewayProxy).registerForeignToken(abi.encode(params));
+        assert(IGateway(GatewayProxy).isTokenRegistered(0x70D9d338A6b17957B16836a90192BD8CDAe0b53d));
+        assertEq(IGateway(GatewayProxy).queryForeignTokenID(0x70D9d338A6b17957B16836a90192BD8CDAe0b53d), dotId);
     }
 
     function testSanityCheck() public {

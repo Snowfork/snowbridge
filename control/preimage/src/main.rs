@@ -17,6 +17,9 @@ use sp_crypto_hashing::blake2_256;
 use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
 
+#[cfg(any(feature = "westend", feature = "paseo"))]
+use crate::helpers::sudo;
+
 #[derive(Debug, Parser)]
 #[command(name = "snowbridge-preimage", version, about, long_about = None)]
 struct Cli {
@@ -265,7 +268,7 @@ pub enum Format {
 struct Context {
     bridge_hub_api: Box<OnlineClient<PolkadotConfig>>,
     asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
-    relay_api: Box<OnlineClient<PolkadotConfig>>,
+    _relay_api: Box<OnlineClient<PolkadotConfig>>,
 }
 
 #[tokio::main]
@@ -298,7 +301,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let context = Context {
         bridge_hub_api: Box::new(bridge_hub_api),
         asset_hub_api: Box::new(asset_hub_api),
-        relay_api: Box::new(relay_api),
+        _relay_api: Box::new(relay_api),
     };
 
     let call = match &cli.command {
@@ -323,17 +326,27 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
             let call2 =
                 send_xcm_asset_hub(&context, vec![force_xcm_version(), set_ethereum_fee]).await?;
-            utility_force_batch(vec![call1, call2])
+            #[cfg(any(feature = "westend", feature = "paseo"))]
+            let final_call = sudo(Box::new(utility_force_batch(vec![call1, call2])));
+            #[cfg(not(any(feature = "westend", feature = "paseo")))]
+            let final_call = utility_force_batch(vec![call1, call2]);
+            final_call
         }
         Command::UpdateAsset(params) => {
-            send_xcm_asset_hub(
+            let call = send_xcm_asset_hub(
                 &context,
                 vec![
                     commands::make_asset_sufficient(params),
                     commands::force_set_metadata(params),
                 ],
             )
-            .await?
+            .await?;
+
+            #[cfg(any(feature = "westend", feature = "paseo"))]
+            let final_call = sudo(Box::new(call));
+            #[cfg(not(any(feature = "westend", feature = "paseo")))]
+            let final_call = call;
+            final_call
         }
         Command::GatewayOperatingMode(params) => {
             let call = commands::gateway_operating_mode(&params.gateway_operating_mode);

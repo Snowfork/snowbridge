@@ -9,12 +9,12 @@ const monitor = async () => {
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snwobridgeEnv = environment.SNOWBRIDGE_ENV[env]
-    if (snwobridgeEnv === undefined) {
+    const snowbridgeEnv = environment.SNOWBRIDGE_ENV[env]
+    if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const { config, ethChainId } = snwobridgeEnv
+    const { config, ethChainId } = snowbridgeEnv
     if (!config.SUBSCAN_API) throw Error(`Environment ${env} does not support subscan.`)
 
     const ethereumProvider = new AlchemyProvider(ethChainId, process.env.REACT_APP_ALCHEMY_KEY)
