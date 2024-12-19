@@ -123,5 +123,5 @@ async fn transfer_native_eth() {
 	}
 	assert!(transfer_event_found);
 	let balance_after = ethereum_client.get_balance(receiver, None).await.expect("fetch balance");
-	assert_eq!(balance_before, balance_after + amount)
+	assert_eq!(balance_before + amount, balance_after)
 }
