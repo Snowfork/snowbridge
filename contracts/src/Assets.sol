@@ -36,7 +36,6 @@ library Assets {
     error TokenAlreadyRegistered();
     error TokenMintFailed();
     error TokenTransferFailed();
-    error TokenAmountTooLow();
 
     function isTokenRegistered(address token) external view returns (bool) {
         return AssetsStorage.layout().tokenRegistry[token].isRegistered;
@@ -156,7 +155,7 @@ library Assets {
         } else {
             // Native ETH
             if (msg.value < amount) {
-                revert TokenAmountTooLow();
+                revert InvalidAmount();
             }
             payable($.assetHubAgent).safeNativeTransfer(amount);
             ticket.value = amount;
