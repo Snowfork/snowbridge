@@ -99,7 +99,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
     error TokenNotRegistered();
-    error TokenAmountTooLow();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
