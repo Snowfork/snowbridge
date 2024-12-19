@@ -544,7 +544,7 @@ contract GatewayTest is Test {
 
         uint128 fee = uint128(IGateway(address(gateway)).quoteSendTokenFee(address(0), paraID, amount));
 
-        vm.expectRevert(Gateway.TokenAmountTooLow.selector);
+        vm.expectRevert(Assets.InvalidAmount.selector);
         hoax(user, amount + fee);
         IGateway(address(gateway)).sendToken{value: amount - 1}(address(0), paraID, recipientAddress32, 1, amount);
     }
