@@ -28,6 +28,7 @@ import {PricingStorage} from "../src/storage/PricingStorage.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {TokenLib} from "../src/TokenLib.sol";
 import {Token} from "../src/Token.sol";
+import {Attacker} from "./mocks/Attacker.sol";
 
 import {
     UpgradeParams,
@@ -58,7 +59,9 @@ import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
 contract GatewayTest is Test {
+    error NativeTransferFailed();
     // Emitted when token minted/burnt/transfered
+
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     ParaID public bridgeHubParaID = ParaID.wrap(1013);
@@ -107,6 +110,8 @@ contract GatewayTest is Test {
     // tokenID for DOT
     bytes32 public dotTokenID;
 
+    Attacker public attacker;
+
     function setUp() public {
         AgentExecutor executor = new AgentExecutor();
         gatewayLogic = new MockGateway(
@@ -154,6 +159,8 @@ contract GatewayTest is Test {
         recipientAddress20 = multiAddressFromBytes20(bytes20(keccak256("recipient")));
 
         dotTokenID = bytes32(uint256(1));
+
+        attacker = new Attacker(address(gateway));
     }
 
     function makeCreateAgentCommand() public pure returns (Command, bytes memory) {
@@ -1243,5 +1250,26 @@ contract GatewayTest is Test {
         uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         vm.expectRevert(Assets.InvalidToken.selector);
         IGateway(address(gateway)).registerToken{value: fee}(address(0));
+    }
+
+    function testExploitSendingEthWithReentrancyWillFail() public {
+        uint128 amount = 1;
+        uint128 extra = 1;
+        uint128 destinationFee = 1;
+        ParaID paraID = ParaID.wrap(1000);
+        uint128 fee = uint128(IGateway(address(gateway)).quoteSendTokenFee(address(0), paraID, 1));
+        // Fund attacker
+        vm.deal(address(attacker), 1 ether);
+        assertTrue(address(gateway).balance == 0);
+        // vm.expectRevert("ReentrancyGuard: reentrant call");
+        vm.expectRevert(NativeTransferFailed.selector);
+        vm.prank(address(attacker));
+        IGateway(address(gateway)).sendToken{value: amount + fee + extra}(
+            address(0), paraID, recipientAddress32, destinationFee, amount
+        );
+        // console.log("%s:%d", "Attacker's balance", address(attacker).balance);
+        // console.log("%s:%d", "Gateway's balance", address(gateway).balance);
+        // assertTrue(address(attacker).balance < 0.9 ether);
+        // assertTrue(address(gateway).balance == 0.1 ether);
     }
 }
