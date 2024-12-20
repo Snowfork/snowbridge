@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"math/big"
 	"strconv"
 
@@ -150,6 +151,7 @@ type AttestationResponse struct {
 	AggregationBits string                  `json:"aggregation_bits"`
 	Data            AttestationDataResponse `json:"data"`
 	Signature       string                  `json:"signature"`
+	CommitteeBits   string                  `json:"committee_bits,omitempty"`
 }
 
 type SignedVoluntaryExitResponse struct {
@@ -461,7 +463,7 @@ func (s SyncAggregateResponse) ToScale() (scale.SyncAggregate, error) {
 // Because it only returns JSON, we need this interim step where we convert the block JSON to the data
 // types that the FastSSZ lib expects. When Lodestar supports SSZ block response, we can remove all these
 // and directly unmarshal SSZ bytes to state.BeaconBlock.
-func (b BeaconBlockResponse) ToFastSSZ(isDeneb bool) (state.BeaconBlock, error) {
+func (b BeaconBlockResponse) ToFastSSZ(forkVersion protocol.ForkVersion) (state.BeaconBlock, error) {
 	data := b.Data.Message
 
 	slot, err := util.ToUint64(data.Slot)
@@ -519,26 +521,6 @@ func (b BeaconBlockResponse) ToFastSSZ(isDeneb bool) (state.BeaconBlock, error) 
 		}
 
 		proposerSlashings = append(proposerSlashings, proposerSlashingSSZ)
-	}
-
-	attesterSlashings := []*state.AttesterSlashing{}
-	for _, attesterSlashing := range body.AttesterSlashings {
-		attesterSlashingSSZ, err := attesterSlashing.ToFastSSZ()
-		if err != nil {
-			return nil, err
-		}
-
-		attesterSlashings = append(attesterSlashings, attesterSlashingSSZ)
-	}
-
-	attestations := []*state.Attestation{}
-	for _, attestation := range body.Attestations {
-		attestationSSZ, err := attestation.ToFastSSZ()
-		if err != nil {
-			return nil, err
-		}
-
-		attestations = append(attestations, attestationSSZ)
 	}
 
 	deposits := []*state.Deposit{}
@@ -691,7 +673,96 @@ func (b BeaconBlockResponse) ToFastSSZ(isDeneb bool) (state.BeaconBlock, error) 
 		kzgCommitments = append(kzgCommitments, kzgCommitmentSSZ)
 	}
 
-	if isDeneb {
+	if forkVersion == protocol.Electra {
+
+		attesterSlashings := []*state.AttesterSlashingElectra{}
+		for _, attesterSlashing := range body.AttesterSlashings {
+			attesterSlashingSSZ, err := attesterSlashing.ToFastSSZElectra()
+			if err != nil {
+				return nil, err
+			}
+
+			attesterSlashings = append(attesterSlashings, attesterSlashingSSZ)
+		}
+
+		attestations := []*state.AttestationElectra{}
+		for _, attestation := range body.Attestations {
+			attestationSSZ, err := attestation.ToFastSSZElectra()
+			if err != nil {
+				return nil, err
+			}
+
+			attestations = append(attestations, attestationSSZ)
+		}
+
+		return &state.BeaconBlockElectra{
+			Slot:          slot,
+			ProposerIndex: proposerIndex,
+			ParentRoot:    parentRoot,
+			StateRoot:     stateRoot,
+			Body: &state.BeaconBlockBodyElectra{
+				RandaoReveal: randaoReveal,
+				Eth1Data: &state.Eth1Data{
+					DepositRoot:  eth1DepositRoot,
+					DepositCount: eth1DepositCount,
+					BlockHash:    eth1BlockHash,
+				},
+				Graffiti:          graffiti,
+				ProposerSlashings: proposerSlashings,
+				AttesterSlashings: attesterSlashings,
+				Attestations:      attestations,
+				Deposits:          deposits,
+				VoluntaryExits:    voluntaryExits,
+				SyncAggregate: &state.SyncAggregateMainnet{
+					SyncCommitteeBits:      syncCommitteeBits,
+					SyncCommitteeSignature: syncCommitteeSignature,
+				},
+				ExecutionPayload: &state.ExecutionPayloadElectra{
+					ParentHash:    parentHash,
+					FeeRecipient:  feeRecipient,
+					StateRoot:     executionStateRoot,
+					ReceiptsRoot:  receiptsRoot,
+					LogsBloom:     logsBloom,
+					PrevRandao:    prevRando,
+					BlockNumber:   blockNumber,
+					GasLimit:      gasLimit,
+					GasUsed:       gasUsed,
+					Timestamp:     timestamp,
+					ExtraData:     extraData,
+					BaseFeePerGas: baseFeePerGasBytes,
+					BlockHash:     blockHash,
+					Transactions:  transactions,
+					Withdrawals:   withdrawals,
+					BlobGasUsed:   blobGasUsed,
+					ExcessBlobGas: excessBlobGas,
+				},
+				BlsToExecutionChanges: blsExecutionChanges,
+				BlobKzgCommitments:    kzgCommitments,
+			},
+		}, nil
+	}
+
+	attesterSlashings := []*state.AttesterSlashing{}
+	for _, attesterSlashing := range body.AttesterSlashings {
+		attesterSlashingSSZ, err := attesterSlashing.ToFastSSZ()
+		if err != nil {
+			return nil, err
+		}
+
+		attesterSlashings = append(attesterSlashings, attesterSlashingSSZ)
+	}
+
+	attestations := []*state.Attestation{}
+	for _, attestation := range body.Attestations {
+		attestationSSZ, err := attestation.ToFastSSZ()
+		if err != nil {
+			return nil, err
+		}
+
+		attestations = append(attestations, attestationSSZ)
+	}
+
+	if forkVersion == protocol.Deneb {
 		return &state.BeaconBlockDenebMainnet{
 			Slot:          slot,
 			ProposerIndex: proposerIndex,

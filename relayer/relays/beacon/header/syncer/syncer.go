@@ -64,11 +64,13 @@ func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get finalized checkpoint: %w", err)
 	}
 
+	log.WithField("root", checkpoint.FinalizedBlockRoot).Info("found block root")
 	bootstrap, err := s.Client.GetBootstrap(checkpoint.FinalizedBlockRoot)
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get bootstrap: %w", err)
 	}
 
+	log.WithField("slot", bootstrap.Data.Header.Beacon.Slot).Info("found block root")
 	genesis, err := s.Client.GetGenesis()
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get genesis: %w", err)
@@ -295,12 +297,18 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 	if err != nil {
 		return blockRootProof, fmt.Errorf("fetch beacon state: %w", err)
 	}
-	isDeneb := s.protocol.DenebForked(slot)
+
+	forkVersion := s.protocol.ForkVersion(slot)
 
 	blockRootsContainer = &state.BlockRootsContainerMainnet{}
-	if isDeneb {
+	if forkVersion == protocol.Electra {
+		log.Info("found Electra fork")
+		beaconState = &state.BeaconStateElectra{}
+	} else if forkVersion == protocol.Deneb {
+		log.Info("found Deneb fork")
 		beaconState = &state.BeaconStateDenebMainnet{}
 	} else {
+		log.Info("found Capella fork")
 		beaconState = &state.BeaconStateCapellaMainnet{}
 	}
 
@@ -535,7 +543,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 		return update, err
 	}
 
-	sszBlock, err := blockResponse.ToFastSSZ(s.protocol.DenebForked(slot))
+	sszBlock, err := blockResponse.ToFastSSZ(s.protocol.ForkVersion(slot))
 	if err != nil {
 		return update, err
 	}
@@ -556,7 +564,14 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 	}
 
 	var versionedExecutionPayloadHeader scale.VersionedExecutionPayloadHeader
-	if s.protocol.DenebForked(slot) {
+	forkVersion := s.protocol.ForkVersion(slot)
+	if forkVersion == protocol.Electra {
+		executionPayloadScale, err := api.ElectraExecutionPayloadToScale(sszBlock.ExecutionPayloadElectra())
+		if err != nil {
+			return scale.HeaderUpdatePayload{}, err
+		}
+		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Electra: &executionPayloadScale}
+	} else if forkVersion == protocol.Deneb {
 		executionPayloadScale, err := api.DenebExecutionPayloadToScale(sszBlock.ExecutionPayloadDeneb())
 		if err != nil {
 			return scale.HeaderUpdatePayload{}, err
@@ -618,9 +633,10 @@ func (s *Syncer) getBeaconStateAtSlot(slot uint64) (state.BeaconState, error) {
 
 func (s *Syncer) UnmarshalBeaconState(slot uint64, data []byte) (state.BeaconState, error) {
 	var beaconState state.BeaconState
-	isDeneb := s.protocol.DenebForked(slot)
-
-	if isDeneb {
+	forkVersion := s.protocol.ForkVersion(slot)
+	if forkVersion == protocol.Electra {
+		beaconState = &state.BeaconStateElectra{}
+	} else if forkVersion == protocol.Deneb {
 		beaconState = &state.BeaconStateDenebMainnet{}
 	} else {
 		beaconState = &state.BeaconStateCapellaMainnet{}

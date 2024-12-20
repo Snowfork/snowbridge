@@ -20,8 +20,8 @@ type ExecutionPayloadDeneb struct {
 	BlockHash     [32]byte      `ssz-size:"32" json:"block_hash"`
 	Transactions  [][]byte      `ssz-max:"1048576,1073741824" ssz-size:"?,?" json:"transactions"`
 	Withdrawals   []*Withdrawal `ssz-max:"16" json:"withdrawals"`
-	BlobGasUsed   uint64        `json:"blob_gas_used,omitempty"`
-	ExcessBlobGas uint64        `json:"excess_blob_gas,omitempty"`
+	BlobGasUsed   uint64        `json:"blob_gas_used,omitempty"`   // New in Deneb
+	ExcessBlobGas uint64        `json:"excess_blob_gas,omitempty"` // New in Deneb
 }
 
 type ExecutionPayloadHeaderDeneb struct {
@@ -40,8 +40,8 @@ type ExecutionPayloadHeaderDeneb struct {
 	BlockHash        []byte `json:"block_hash" ssz-size:"32"`
 	TransactionsRoot []byte `json:"transactions_root" ssz-size:"32"`
 	WithdrawalsRoot  []byte `json:"withdrawals_root" ssz-size:"32"`
-	BlobGasUsed      uint64 `json:"blob_gas_used,omitempty"`
-	ExcessBlobGas    uint64 `json:"excess_blob_gas,omitempty"`
+	BlobGasUsed      uint64 `json:"blob_gas_used,omitempty"`   // New in Deneb
+	ExcessBlobGas    uint64 `json:"excess_blob_gas,omitempty"` // New in Deneb
 }
 
 type BeaconBlockDenebMainnet struct {
@@ -64,7 +64,7 @@ type BeaconBlockBodyDenebMainnet struct {
 	SyncAggregate         *SyncAggregateMainnet         `json:"sync_aggregate"`
 	ExecutionPayload      *ExecutionPayloadDeneb        `json:"execution_payload"`
 	BlsToExecutionChanges []*SignedBLSToExecutionChange `json:"bls_to_execution_changes,omitempty" ssz-max:"16"`
-	BlobKzgCommitments    [][48]byte                    `json:"blob_kzg_commitments,omitempty" ssz-max:"4096" ssz-size:"?,48"`
+	BlobKzgCommitments    [][48]byte                    `json:"blob_kzg_commitments,omitempty" ssz-max:"4096" ssz-size:"?,48"` // New in Deneb
 }
 
 type BeaconStateDenebMainnet struct {
@@ -112,6 +112,10 @@ func (b *BeaconBlockDenebMainnet) ExecutionPayloadCapella() *ExecutionPayloadCap
 
 func (b *BeaconBlockDenebMainnet) ExecutionPayloadDeneb() *ExecutionPayloadDeneb {
 	return b.Body.ExecutionPayload
+}
+
+func (b *BeaconBlockDenebMainnet) ExecutionPayloadElectra() *ExecutionPayloadElectra {
+	return nil
 }
 
 func (b *BeaconStateDenebMainnet) GetSlot() uint64 {
