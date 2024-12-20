@@ -64,11 +64,13 @@ func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get finalized checkpoint: %w", err)
 	}
 
+	log.WithField("root", checkpoint.FinalizedBlockRoot).Info("found block root")
 	bootstrap, err := s.Client.GetBootstrap(checkpoint.FinalizedBlockRoot)
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get bootstrap: %w", err)
 	}
 
+	log.WithField("slot", bootstrap.Data.Header.Beacon.Slot).Info("found block root")
 	genesis, err := s.Client.GetGenesis()
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get genesis: %w", err)
@@ -300,10 +302,13 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 
 	blockRootsContainer = &state.BlockRootsContainerMainnet{}
 	if forkVersion == protocol.Electra {
+		log.Info("found Electra fork")
 		beaconState = &state.BeaconStateElectra{}
 	} else if forkVersion == protocol.Deneb {
+		log.Info("found Deneb fork")
 		beaconState = &state.BeaconStateDenebMainnet{}
 	} else {
+		log.Info("found Capella fork")
 		beaconState = &state.BeaconStateCapellaMainnet{}
 	}
 

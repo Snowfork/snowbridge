@@ -1192,6 +1192,151 @@ func (_Gateway *GatewayFilterer) ParseChannelUpdated(log types.Log) (*GatewayCha
 	return event, nil
 }
 
+// GatewayForeignTokenRegisteredIterator is returned from FilterForeignTokenRegistered and is used to iterate over the raw logs and unpacked data for ForeignTokenRegistered events raised by the Gateway contract.
+type GatewayForeignTokenRegisteredIterator struct {
+	Event *GatewayForeignTokenRegistered // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *GatewayForeignTokenRegisteredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(GatewayForeignTokenRegistered)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(GatewayForeignTokenRegistered)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *GatewayForeignTokenRegisteredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *GatewayForeignTokenRegisteredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// GatewayForeignTokenRegistered represents a ForeignTokenRegistered event raised by the Gateway contract.
+type GatewayForeignTokenRegistered struct {
+	TokenID [32]byte
+	Token   common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterForeignTokenRegistered is a free log retrieval operation binding the contract event 0x57f58171b8777633d03aff1e7408b96a3d910c93a7ce433a8cb7fb837dc306a6.
+//
+// Solidity: event ForeignTokenRegistered(bytes32 indexed tokenID, address token)
+func (_Gateway *GatewayFilterer) FilterForeignTokenRegistered(opts *bind.FilterOpts, tokenID [][32]byte) (*GatewayForeignTokenRegisteredIterator, error) {
+
+	var tokenIDRule []interface{}
+	for _, tokenIDItem := range tokenID {
+		tokenIDRule = append(tokenIDRule, tokenIDItem)
+	}
+
+	logs, sub, err := _Gateway.contract.FilterLogs(opts, "ForeignTokenRegistered", tokenIDRule)
+	if err != nil {
+		return nil, err
+	}
+	return &GatewayForeignTokenRegisteredIterator{contract: _Gateway.contract, event: "ForeignTokenRegistered", logs: logs, sub: sub}, nil
+}
+
+// WatchForeignTokenRegistered is a free log subscription operation binding the contract event 0x57f58171b8777633d03aff1e7408b96a3d910c93a7ce433a8cb7fb837dc306a6.
+//
+// Solidity: event ForeignTokenRegistered(bytes32 indexed tokenID, address token)
+func (_Gateway *GatewayFilterer) WatchForeignTokenRegistered(opts *bind.WatchOpts, sink chan<- *GatewayForeignTokenRegistered, tokenID [][32]byte) (event.Subscription, error) {
+
+	var tokenIDRule []interface{}
+	for _, tokenIDItem := range tokenID {
+		tokenIDRule = append(tokenIDRule, tokenIDItem)
+	}
+
+	logs, sub, err := _Gateway.contract.WatchLogs(opts, "ForeignTokenRegistered", tokenIDRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(GatewayForeignTokenRegistered)
+				if err := _Gateway.contract.UnpackLog(event, "ForeignTokenRegistered", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseForeignTokenRegistered is a log parse operation binding the contract event 0x57f58171b8777633d03aff1e7408b96a3d910c93a7ce433a8cb7fb837dc306a6.
+//
+// Solidity: event ForeignTokenRegistered(bytes32 indexed tokenID, address token)
+func (_Gateway *GatewayFilterer) ParseForeignTokenRegistered(log types.Log) (*GatewayForeignTokenRegistered, error) {
+	event := new(GatewayForeignTokenRegistered)
+	if err := _Gateway.contract.UnpackLog(event, "ForeignTokenRegistered", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
 // GatewayInboundMessageDispatchedIterator is returned from FilterInboundMessageDispatched and is used to iterate over the raw logs and unpacked data for InboundMessageDispatched events raised by the Gateway contract.
 type GatewayInboundMessageDispatchedIterator struct {
 	Event *GatewayInboundMessageDispatched // Event containing the contract specifics and raw log

@@ -19,13 +19,6 @@ check_tool
 echo "Installing binaries if required"
 install_binary
 
-# 2. start ethereum
-echo "Starting ethereum nodes"
-if [ "$eth_network" == "localhost" ]; then
-  source scripts/deploy-ethereum.sh
-  deploy_ethereum
-fi
-
 # 3. start polkadot
 echo "Starting polkadot nodes"
 source scripts/deploy-polkadot.sh
@@ -44,7 +37,7 @@ configure_substrate
 if [ "$skip_relayer" == "false" ]; then
   # 7. start relayer
   echo "Starting relayers"
-  source scripts/start-relayer.sh
+  source scripts/start-relayer-electra.sh
   deploy_relayer
 fi
 

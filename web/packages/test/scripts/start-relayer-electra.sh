@@ -3,24 +3,6 @@ set -eu
 
 source scripts/set-env.sh
 
-config_relayer() {
-    # Configure beacon relay
-    local deneb_forked_epoch=0
-    local electra_forked_epoch=256
-    if [ "$eth_fast_mode" == "true" ]; then
-        deneb_forked_epoch=0
-    fi
-    jq \
-        --arg beacon_endpoint_http $beacon_endpoint_http \
-        --argjson deneb_forked_epoch $deneb_forked_epoch \
-        '
-      .source.beacon.endpoint = $beacon_endpoint_http
-    | .source.beacon.spec.forkVersions.deneb = $deneb_forked_epoch
-    | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
-    ' \
-        config/beacon-relay.json >$output_dir/beacon-relay.json
-}
-
 start_relayer() {
     # Launch beacon relay
     (
@@ -43,7 +25,7 @@ build_relayer() {
 }
 
 deploy_relayer() {
-    check_tool && build_relayer && config_relayer && start_relayer
+    check_tool && build_relayer && start_relayer
 }
 
 if [ -z "${from_start_services:-}" ]; then

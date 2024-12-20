@@ -3,7 +3,7 @@ set -eux
 
 source scripts/set-env.sh
 HOST=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1')
-export output_electra_dir="$output_dir/electra"
+export output_electra_dir="/tmp/electra"
 
 start_geth() {
     mkdir -p $output_electra_dir
@@ -18,7 +18,7 @@ start_geth() {
     echo "Starting geth local node"
     docker run --rm \
       -v "${output_electra_dir}:/mnt" \
-      docker.io/ethpandaops/geth:master \
+      docker.io/ethpandaops/geth:lightclient-prague-devnet-4 \
       --datadir /mnt/ethereum \
       --state.scheme=hash \
       init /mnt/genesis-mekong.json
@@ -29,7 +29,7 @@ start_geth() {
       -p 8545:8545 \
       -p 8546:8546 \
       --env 'NODE_OPTIONS=--max-old-space-size=8192' \
-      docker.io/ethpandaops/geth:master \
+      docker.io/ethpandaops/geth:lightclient-prague-devnet-4 \
       --networkid 7078815900 \
       --vmdebug \
       --datadir /mnt/ethereum \
@@ -57,7 +57,7 @@ start_geth() {
       --syncmode=full \
       --bootnodes "enode://125d2dddd0dc0d34b526910d49592545a1e4fe25139be9d9e0eed396211dbd37aa0c0a7fa0444c315803d814e743f890529b58b9261289d5303e16477c216b39@157.230.225.158:30303?discport=30303,enode://508bff69cbb852337cfbf3db9e58fe66ec3254e6a3960c0ef266a2ab1ea78e12f101bba51e3d2e066947a0b9b315e5b26009af81584510394c1b87a5908dca7b@137.184.72.127:30303?discport=30303,enode://b273c662dd15148162c23a5c8407d3d5dbb35fb331ae0c1c3a80c6bfa2bbe077683b28c0cd59f7a482efc00a64a09273eb4767a173441a79b833fdf705d331ae@152.42.247.97:30303?discport=30303" \
       --state.scheme=hash \
-      > "$output_dir/geth.log" 2>&1 &
+      > "$output_electra_dir/geth.log" 2>&1 &
 }
 
 start_lodestar() {
@@ -81,7 +81,7 @@ start_lodestar() {
       --jwt-secret /mnt/jwtsecret \
       --checkpointSyncUrl https://checkpoint-sync.mekong.ethpandaops.io \
       --chain.archiveStateEpochFrequency 1 \
-       > "$output_dir/lodestar.log" 2>&1 &
+       > "$output_electra_dir/lodestar.log" 2>&1 &
 }
 
 deploy_local() {

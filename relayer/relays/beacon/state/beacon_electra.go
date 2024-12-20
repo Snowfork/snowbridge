@@ -3,49 +3,43 @@ package state
 import ssz "github.com/ferranbt/fastssz"
 
 type ExecutionPayloadElectra struct {
-	ParentHash            [32]byte                `ssz-size:"32" json:"parent_hash"`
-	FeeRecipient          [20]byte                `ssz-size:"20" json:"fee_recipient"`
-	StateRoot             [32]byte                `ssz-size:"32" json:"state_root"`
-	ReceiptsRoot          [32]byte                `ssz-size:"32" json:"receipts_root"`
-	LogsBloom             [256]byte               `ssz-size:"256" json:"logs_bloom"`
-	PrevRandao            [32]byte                `ssz-size:"32" json:"prev_randao"`
-	BlockNumber           uint64                  `json:"block_number"`
-	GasLimit              uint64                  `json:"gas_limit"`
-	GasUsed               uint64                  `json:"gas_used"`
-	Timestamp             uint64                  `json:"timestamp"`
-	ExtraData             []byte                  `ssz-max:"32" json:"extra_data"`
-	BaseFeePerGas         [32]byte                `ssz-size:"32" json:"base_fee_per_gas"`
-	BlockHash             [32]byte                `ssz-size:"32" json:"block_hash"`
-	Transactions          [][]byte                `ssz-max:"1048576,1073741824" ssz-size:"?,?" json:"transactions"`
-	Withdrawals           []*Withdrawal           `ssz-max:"16" json:"withdrawals"`
-	BlobGasUsed           uint64                  `json:"blob_gas_used,omitempty"`
-	ExcessBlobGas         uint64                  `json:"excess_blob_gas,omitempty"`
-	DepositRequests       []*DepositRequest       `ssz-max:"8192" json:"deposit_requests,omitempty"`    // New in Electra
-	WithdrawalRequests    []*WithdrawalRequest    `ssz-max:"16" json:"withdrawal_requests,omitempty"`   // New in Electra
-	ConsolidationRequests []*ConsolidationRequest `ssz-max:"1" json:"consolidation_requests,omitempty"` // New in Electra
+	ParentHash    [32]byte      `ssz-size:"32" json:"parent_hash"`
+	FeeRecipient  [20]byte      `ssz-size:"20" json:"fee_recipient"`
+	StateRoot     [32]byte      `ssz-size:"32" json:"state_root"`
+	ReceiptsRoot  [32]byte      `ssz-size:"32" json:"receipts_root"`
+	LogsBloom     [256]byte     `ssz-size:"256" json:"logs_bloom"`
+	PrevRandao    [32]byte      `ssz-size:"32" json:"prev_randao"`
+	BlockNumber   uint64        `json:"block_number"`
+	GasLimit      uint64        `json:"gas_limit"`
+	GasUsed       uint64        `json:"gas_used"`
+	Timestamp     uint64        `json:"timestamp"`
+	ExtraData     []byte        `ssz-max:"32" json:"extra_data"`
+	BaseFeePerGas [32]byte      `ssz-size:"32" json:"base_fee_per_gas"`
+	BlockHash     [32]byte      `ssz-size:"32" json:"block_hash"`
+	Transactions  [][]byte      `ssz-max:"1048576,1073741824" ssz-size:"?,?" json:"transactions"`
+	Withdrawals   []*Withdrawal `ssz-max:"16" json:"withdrawals"`
+	BlobGasUsed   uint64        `json:"blob_gas_used,omitempty"`
+	ExcessBlobGas uint64        `json:"excess_blob_gas,omitempty"`
 }
 
 type ExecutionPayloadHeaderElectra struct {
-	ParentHash                []byte `json:"parent_hash" ssz-size:"32"`
-	FeeRecipient              []byte `json:"fee_recipient" ssz-size:"20"`
-	StateRoot                 []byte `json:"state_root" ssz-size:"32"`
-	ReceiptsRoot              []byte `json:"receipts_root" ssz-size:"32"`
-	LogsBloom                 []byte `json:"logs_bloom" ssz-size:"256"`
-	PrevRandao                []byte `json:"prev_randao" ssz-size:"32"`
-	BlockNumber               uint64 `json:"block_number"`
-	GasLimit                  uint64 `json:"gas_limit"`
-	GasUsed                   uint64 `json:"gas_used"`
-	Timestamp                 uint64 `json:"timestamp"`
-	ExtraData                 []byte `json:"extra_data" ssz-max:"32"`
-	BaseFeePerGas             []byte `json:"base_fee_per_gas" ssz-size:"32"`
-	BlockHash                 []byte `json:"block_hash" ssz-size:"32"`
-	TransactionsRoot          []byte `json:"transactions_root" ssz-size:"32"`
-	WithdrawalsRoot           []byte `json:"withdrawals_root" ssz-size:"32"`
-	BlobGasUsed               uint64 `json:"blob_gas_used,omitempty"`
-	ExcessBlobGas             uint64 `json:"excess_blob_gas,omitempty"`
-	DepositRequestsRoot       []byte `json:"deposit_requests_root" ssz-size:"32"`       // New in Electra
-	WithdrawalRequestsRoot    []byte `json:"withdrawal_requests_root" ssz-size:"32"`    // New in Electra
-	ConsolidationRequestsRoot []byte `json:"consolidation_requests_root" ssz-size:"32"` // New in Electra
+	ParentHash       []byte `json:"parent_hash" ssz-size:"32"`
+	FeeRecipient     []byte `json:"fee_recipient" ssz-size:"20"`
+	StateRoot        []byte `json:"state_root" ssz-size:"32"`
+	ReceiptsRoot     []byte `json:"receipts_root" ssz-size:"32"`
+	LogsBloom        []byte `json:"logs_bloom" ssz-size:"256"`
+	PrevRandao       []byte `json:"prev_randao" ssz-size:"32"`
+	BlockNumber      uint64 `json:"block_number"`
+	GasLimit         uint64 `json:"gas_limit"`
+	GasUsed          uint64 `json:"gas_used"`
+	Timestamp        uint64 `json:"timestamp"`
+	ExtraData        []byte `json:"extra_data" ssz-max:"32"`
+	BaseFeePerGas    []byte `json:"base_fee_per_gas" ssz-size:"32"`
+	BlockHash        []byte `json:"block_hash" ssz-size:"32"`
+	TransactionsRoot []byte `json:"transactions_root" ssz-size:"32"`
+	WithdrawalsRoot  []byte `json:"withdrawals_root" ssz-size:"32"`
+	BlobGasUsed      uint64 `json:"blob_gas_used,omitempty"`
+	ExcessBlobGas    uint64 `json:"excess_blob_gas,omitempty"`
 }
 
 type DepositRequestsContainer struct {
