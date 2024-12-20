@@ -105,9 +105,9 @@ type InboundFixture struct {
 
 const (
 	pathToBeaconTestFixtureFiles              = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/tests/fixtures"
-	pathToInboundQueueFixtureTemplate         = "polkadot-sdk/bridges/snowbridge/templates/beacon-fixtures.mustache"
+	pathToInboundQueueFixtureTemplate         = "relayer/templates/beacon-fixtures.mustache"
 	pathToInboundQueueFixtureData             = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures/src/lib.rs"
-	pathToInboundQueueFixtureTestCaseTemplate = "polkadot-sdk/bridges/snowbridge/templates/inbound-fixtures.mustache"
+	pathToInboundQueueFixtureTestCaseTemplate = "relayer/templates/inbound-fixtures.mustache"
 	pathToInboundQueueFixtureTestCaseData     = "polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures/src/%s.rs"
 )
 

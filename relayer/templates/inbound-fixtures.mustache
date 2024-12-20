@@ -24,8 +24,6 @@ pub fn make_{{TestCase}}_message() -> InboundQueueFixture {
                 data: hex!("{{InboundMessage.EventLog.Data}}").into(),
             },
             proof: Proof {
-                block_hash: hex!("{{InboundMessage.Proof.BlockHash}}").into(),
-                tx_index: {{InboundMessage.Proof.TxIndex}},
                 receipt_proof: (vec![
                 {{#InboundMessage.Proof.ReceiptProof.Keys}}
                     hex!("{{.}}").to_vec(),
