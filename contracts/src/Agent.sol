@@ -20,8 +20,7 @@ contract Agent {
     }
 
     /// @dev Agents can receive ether permissionlessly.
-    /// This is important, as agents for top-level parachains also act as sovereign accounts from which message relayers
-    /// are rewarded.
+    /// This is important, as agents are used to lock ether.
     receive() external payable {}
 
     /// @dev Allow the gateway to invoke some code within the context of this agent

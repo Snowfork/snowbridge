@@ -13,6 +13,7 @@ import {CoreStorage} from "./storage/CoreStorage.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 import {ParaID, MultiAddress, Ticket, Costs} from "./Types.sol";
 import {Address} from "./utils/Address.sol";
+import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
 import {Call} from "./utils/Call.sol";
@@ -21,6 +22,7 @@ import {Token} from "./Token.sol";
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
 library Assets {
     using Address for address;
+    using SafeNativeTransfer for address payable;
     using SafeTokenTransferFrom for IERC20;
 
     /* Errors */
@@ -60,7 +62,7 @@ library Assets {
     ) external view returns (Costs memory costs) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
-        if (!info.isRegistered) {
+        if (!info.isRegistered && token != address(0)) {
             revert TokenNotRegistered();
         }
 
@@ -110,15 +112,17 @@ library Assets {
 
         TokenInfo storage info = $.tokenRegistry[token];
 
-        if (!info.isRegistered) {
-            revert TokenNotRegistered();
-        }
-
         if (info.foreignID == bytes32(0)) {
+            if (!info.isRegistered && token != address(0)) {
+                revert TokenNotRegistered();
+            }
             return _sendNativeToken(
                 token, sender, destinationChain, destinationAddress, destinationChainFee, maxDestinationChainFee, amount
             );
         } else {
+            if (!info.isRegistered) {
+                revert TokenNotRegistered();
+            }
             return _sendForeignToken(
                 info.foreignID,
                 token,
@@ -144,7 +148,18 @@ library Assets {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
         // Lock the funds into AssetHub's agent contract
-        _transferToAgent($.assetHubAgent, token, sender, amount);
+        if (token != address(0)) {
+            // ERC20
+            _transferToAgent($.assetHubAgent, token, sender, amount);
+            ticket.value = 0;
+        } else {
+            // Native ETH
+            if (msg.value < amount) {
+                revert InvalidAmount();
+            }
+            payable($.assetHubAgent).safeNativeTransfer(amount);
+            ticket.value = amount;
+        }
 
         ticket.dest = $.assetHubParaID;
         ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
@@ -211,6 +226,7 @@ library Assets {
 
         ticket.dest = $.assetHubParaID;
         ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
+        ticket.value = 0;
 
         // Construct a message payload
         if (destinationChain == $.assetHubParaID && destinationAddress.isAddress32()) {
@@ -254,7 +270,7 @@ library Assets {
         // It means that registration can be retried.
         // But register a PNA here is not allowed
         TokenInfo storage info = $.tokenRegistry[token];
-        if(info.foreignID != bytes32(0)) {
+        if (info.foreignID != bytes32(0)) {
             revert TokenAlreadyRegistered();
         }
         info.isRegistered = true;
@@ -262,6 +278,7 @@ library Assets {
         ticket.dest = $.assetHubParaID;
         ticket.costs = _registerTokenCosts();
         ticket.payload = SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee);
+        ticket.value = 0;
 
         emit IGateway.TokenRegistrationSent(token);
     }
@@ -293,7 +310,14 @@ library Assets {
     function transferNativeToken(address executor, address agent, address token, address recipient, uint128 amount)
         external
     {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
+        bytes memory call;
+        if (token != address(0)) {
+            // ERC20
+            call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
+        } else {
+            // Native ETH
+            call = abi.encodeCall(AgentExecutor.transferNative, (payable(recipient), amount));
+        }
         (bool success,) = Agent(payable(agent)).invoke(executor, call);
         if (!success) {
             revert TokenTransferFailed();
