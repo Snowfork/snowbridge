@@ -65,7 +65,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
-                        address: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
+                        address: "0x774667629726ec1FaBEbCEc0D9139bD1C8f72a23",
                         minimumTransferAmount: 15_000_000_000_000n,
                     },
                 ],
@@ -86,7 +86,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
-                        address: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
+                        address: "0x774667629726ec1FaBEbCEc0D9139bD1C8f72a23",
                         minimumTransferAmount: 15_000_000_000_000n,
                     },
                 ],
@@ -107,7 +107,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
-                        address: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
+                        address: "0x774667629726ec1FaBEbCEc0D9139bD1C8f72a23",
                         minimumTransferAmount: 1n,
                     },
                 ],
@@ -120,8 +120,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ASSET_HUB_URL: "ws://127.0.0.1:12144",
             BRIDGE_HUB_URL: "ws://127.0.0.1:11144",
             PARACHAINS: ["ws://127.0.0.1:13144"],
-            GATEWAY_CONTRACT: "0xEDa338E4dC46038493b885327842fD3E301CaB39",
-            BEEFY_CONTRACT: "0x992B9df075935E522EC7950F37eC8557e86f6fdb",
+            GATEWAY_CONTRACT: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
+            BEEFY_CONTRACT: "0x2ffa5ecdbe006d30397c7636d3e015eee251369f",
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
             PRIMARY_GOVERNANCE_CHANNEL_ID:
