@@ -18,7 +18,7 @@ contract DeployBeefyClient is Script {
     function readConfig() internal pure returns (Config memory config) {
         // Checkpoint generated using the script `./beefy-checkpoint.js` script in Polkadot-JS.
         config = Config({
-            startBlock: 21_087_413,
+            startBlock: 21087413,
             current: BeefyClient.ValidatorSet({
                 id: 644,
                 length: 297,
