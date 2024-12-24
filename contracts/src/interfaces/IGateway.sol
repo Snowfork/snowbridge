@@ -12,14 +12,10 @@ interface IGateway {
      */
 
     // Emitted when inbound message has been dispatched
-    event InboundMessageDispatched(
-        ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bool success
-    );
+    event InboundMessageDispatched(ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bool success);
 
     // Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
-    event OutboundMessageAccepted(
-        ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bytes payload
-    );
+    event OutboundMessageAccepted(ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bytes payload);
 
     // Emitted when an agent has been created for a consensus system on Polkadot
     event AgentCreated(bytes32 agentID, address agent);

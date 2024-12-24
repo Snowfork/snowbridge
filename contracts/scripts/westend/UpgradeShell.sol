@@ -75,11 +75,7 @@ contract UpgradeShell is Script {
 
         IShell shell = IShell(config.gatewayProxy);
 
-        shell.upgrade(
-            address(gatewayLogic),
-            address(gatewayLogic).codehash,
-            abi.encode(config.initializerParams)
-        );
+        shell.upgrade(address(gatewayLogic), address(gatewayLogic).codehash, abi.encode(config.initializerParams));
 
         vm.stopBroadcast();
     }

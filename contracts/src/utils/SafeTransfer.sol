@@ -12,8 +12,7 @@ error NativeTransferFailed();
 library SafeTokenCall {
     function safeCall(IERC20 token, bytes memory callData) internal {
         (bool success, bytes memory returnData) = address(token).call(callData);
-        bool transferred =
-            success && (returnData.length == uint256(0) || abi.decode(returnData, (bool)));
+        bool transferred = success && (returnData.length == uint256(0) || abi.decode(returnData, (bool)));
         if (!transferred || address(token).code.length == 0) {
             revert TokenTransferFailed();
         }

@@ -40,9 +40,7 @@ library Assets {
     }
 
     /// @dev transfer tokens from the sender to the specified agent
-    function _transferToAgent(address agent, address token, address sender, uint128 amount)
-        internal
-    {
+    function _transferToAgent(address agent, address token, address sender, uint128 amount) internal {
         if (!token.isContract()) {
             revert InvalidToken();
         }
@@ -69,11 +67,11 @@ library Assets {
         return _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
     }
 
-    function _sendTokenCosts(
-        ParaID destinationChain,
-        uint128 destinationChainFee,
-        uint128 maxDestinationChainFee
-    ) internal view returns (Costs memory costs) {
+    function _sendTokenCosts(ParaID destinationChain, uint128 destinationChainFee, uint128 maxDestinationChainFee)
+        internal
+        view
+        returns (Costs memory costs)
+    {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.assetHubParaID == destinationChain) {
             costs.foreign = $.assetHubReserveTransferFee;
@@ -118,13 +116,7 @@ library Assets {
 
         if (info.foreignID == bytes32(0)) {
             return _sendNativeToken(
-                token,
-                sender,
-                destinationChain,
-                destinationAddress,
-                destinationChainFee,
-                maxDestinationChainFee,
-                amount
+                token, sender, destinationChain, destinationAddress, destinationChainFee, maxDestinationChainFee, amount
             );
         } else {
             return _sendForeignToken(
@@ -155,8 +147,7 @@ library Assets {
         _transferToAgent($.assetHubAgent, token, sender, amount);
 
         ticket.dest = $.assetHubParaID;
-        ticket.costs =
-            _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
+        ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
 
         // Construct a message payload
         if (destinationChain == $.assetHubParaID) {
@@ -219,8 +210,7 @@ library Assets {
         Token(token).burn(sender, amount);
 
         ticket.dest = $.assetHubParaID;
-        ticket.costs =
-            _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
+        ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
 
         // Construct a message payload
         if (destinationChain == $.assetHubParaID && destinationAddress.isAddress32()) {
@@ -277,12 +267,9 @@ library Assets {
     }
 
     // @dev Register a new fungible Polkadot token for an agent
-    function registerForeignToken(
-        bytes32 foreignTokenID,
-        string memory name,
-        string memory symbol,
-        uint8 decimals
-    ) external {
+    function registerForeignToken(bytes32 foreignTokenID, string memory name, string memory symbol, uint8 decimals)
+        external
+    {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenAddressOf[foreignTokenID] != address(0)) {
             revert TokenAlreadyRegistered();
@@ -297,21 +284,15 @@ library Assets {
     }
 
     // @dev Mint foreign token from Polkadot
-    function mintForeignToken(bytes32 foreignTokenID, address recipient, uint256 amount)
-        external
-    {
+    function mintForeignToken(bytes32 foreignTokenID, address recipient, uint256 amount) external {
         address token = _ensureTokenAddressOf(foreignTokenID);
         Token(token).mint(recipient, amount);
     }
 
     // @dev Transfer ERC20 to `recipient`
-    function transferNativeToken(
-        address executor,
-        address agent,
-        address token,
-        address recipient,
-        uint128 amount
-    ) external {
+    function transferNativeToken(address executor, address agent, address token, address recipient, uint128 amount)
+        external
+    {
         bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
         (bool success,) = Agent(payable(agent)).invoke(executor, call);
         if (!success) {

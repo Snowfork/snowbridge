@@ -20,13 +20,11 @@ library SubstrateMerkleProof {
      * @param proof the array of proofs to help verify the leaf's membership, ordered from leaf to root
      * @return a boolean value representing the success or failure of the operation
      */
-    function verify(
-        bytes32 root,
-        bytes32 leaf,
-        uint256 position,
-        uint256 width,
-        bytes32[] calldata proof
-    ) internal pure returns (bool) {
+    function verify(bytes32 root, bytes32 leaf, uint256 position, uint256 width, bytes32[] calldata proof)
+        internal
+        pure
+        returns (bool)
+    {
         if (position >= width) {
             return false;
         }

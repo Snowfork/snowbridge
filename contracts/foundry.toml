@@ -24,7 +24,3 @@ via_ir = true
 
 [profile.production.etherscan]
 mainnet = { key = "${ETHERSCAN_API_KEY}" }
-
-[fmt]
-number_underscore = "thousands"
-line_length = 99
