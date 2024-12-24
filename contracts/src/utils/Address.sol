@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Axelar Network
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 library Address {
     // Checks whether `account` is a contract

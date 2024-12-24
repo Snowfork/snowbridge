@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
@@ -43,7 +43,11 @@ contract MMRProofTest is Test {
         Fixture memory fix = fixture();
 
         for (uint256 i = 0; i < fix.leaves.length; i++) {
-            assertTrue(wrapper.verifyLeafProof(fix.rootHash, fix.leaves[i], fix.proofs[i].items, fix.proofs[i].order));
+            assertTrue(
+                wrapper.verifyLeafProof(
+                    fix.rootHash, fix.leaves[i], fix.proofs[i].items, fix.proofs[i].order
+                )
+            );
         }
     }
 
@@ -51,6 +55,8 @@ contract MMRProofTest is Test {
         Fixture memory fix = fixture();
 
         vm.expectRevert(MMRProof.ProofSizeExceeded.selector);
-        wrapper.verifyLeafProof(fix.rootHash, fix.leaves[0], new bytes32[](257), fix.proofs[0].order);
+        wrapper.verifyLeafProof(
+            fix.rootHash, fix.leaves[0], new bytes32[](257), fix.proofs[0].order
+        );
     }
 }

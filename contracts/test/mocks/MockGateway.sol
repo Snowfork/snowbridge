@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Gateway} from "../../src/Gateway.sol";
 import {ParaID, OperatingMode} from "../../src/Types.sol";
@@ -20,7 +20,14 @@ contract MockGateway is Gateway {
         uint8 foreignTokenDecimals,
         uint128 maxDestinationFee
     )
-        Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubHubAgentID, foreignTokenDecimals, maxDestinationFee)
+        Gateway(
+            beefyClient,
+            agentExecutor,
+            bridgeHubParaID,
+            bridgeHubHubAgentID,
+            foreignTokenDecimals,
+            maxDestinationFee
+        )
     {}
 
     function agentExecutePublic(bytes calldata params) external {

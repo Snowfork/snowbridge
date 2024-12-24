@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
@@ -108,6 +108,14 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         _;
     }
 
+    modifier nonreentrant() {
+        assembly {
+            if tload(0) { revert(0, 0) }
+            tstore(0, 1)
+        }
+        _;
+    }
+
     constructor(
         address beefyClient,
         address agentExecutor,
@@ -137,7 +145,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         InboundMessage calldata message,
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
-    ) external {
+    ) external nonreentrant {
         uint256 startGas = gasleft();
 
         Channel storage channel = _ensureChannel(message.channelID);
@@ -437,7 +445,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     }
 
     // Register an Ethereum-native token in the gateway and on AssetHub
-    function registerToken(address token) external payable {
+    function registerToken(address token) external payable nonreentrant {
         _submitOutbound(Assets.registerToken(token));
     }
 
@@ -457,7 +465,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         MultiAddress calldata destinationAddress,
         uint128 destinationFee,
         uint128 amount
-    ) external payable {
+    ) external payable nonreentrant {
         Ticket memory ticket = Assets.sendToken(
             token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
         );

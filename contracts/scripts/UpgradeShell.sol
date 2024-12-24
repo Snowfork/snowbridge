@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
@@ -84,7 +84,11 @@ contract UpgradeShell is Script {
 
         IShell shell = IShell(config.gatewayProxy);
 
-        shell.upgrade(address(gatewayLogic), address(gatewayLogic).codehash, abi.encode(config.initializerParams));
+        shell.upgrade(
+            address(gatewayLogic),
+            address(gatewayLogic).codehash,
+            abi.encode(config.initializerParams)
+        );
 
         vm.stopBroadcast();
     }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 library MMRProof {
     error ProofSizeExceeded();
@@ -14,11 +14,12 @@ library MMRProof {
      * @param proof an array of hashes
      * @param proofOrder a bitfield describing the order of each item (left vs right)
      */
-    function verifyLeafProof(bytes32 root, bytes32 leafHash, bytes32[] calldata proof, uint256 proofOrder)
-        internal
-        pure
-        returns (bool)
-    {
+    function verifyLeafProof(
+        bytes32 root,
+        bytes32 leafHash,
+        bytes32[] calldata proof,
+        uint256 proofOrder
+    ) internal pure returns (bool) {
         // Size of the proof is bounded, since `proofOrder` can only contain `MAXIMUM_PROOF_SIZE` orderings.
         if (proof.length > MAXIMUM_PROOF_SIZE) {
             revert ProofSizeExceeded();
@@ -31,7 +32,11 @@ library MMRProof {
         return root == acc;
     }
 
-    function hashPairs(bytes32 x, bytes32 y, uint256 order) internal pure returns (bytes32 value) {
+    function hashPairs(bytes32 x, bytes32 y, uint256 order)
+        internal
+        pure
+        returns (bytes32 value)
+    {
         assembly {
             switch order
             case 0 {

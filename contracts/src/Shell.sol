@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Upgrade} from "./Upgrade.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
@@ -22,7 +22,9 @@ contract Shell is IShell, IUpgradable, IInitializable {
         OPERATOR = _operator;
     }
 
-    function upgrade(address impl, bytes32 implCodeHash, bytes calldata initializerParams) external {
+    function upgrade(address impl, bytes32 implCodeHash, bytes calldata initializerParams)
+        external
+    {
         if (msg.sender != OPERATOR) {
             revert Unauthorized();
         }
