@@ -13,6 +13,7 @@ import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {MockGateway} from "./mocks/MockGateway.sol";
 import {MockGatewayV2} from "./mocks/MockGatewayV2.sol";
+import {ReantrantAttacker} from "./mocks/ReantrantAttacker.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 
 import {AgentExecutor} from "../src/AgentExecutor.sol";
@@ -1021,5 +1022,30 @@ contract GatewayTest is Test {
         uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         vm.expectRevert(Assets.TokenAlreadyRegistered.selector);
         IGateway(address(gateway)).registerToken{value: fee}(dotToken);
+    }
+
+    function testReantrancyGuardReverts() public {
+        testRegisterToken();
+
+        ReantrantAttacker attacker = new ReantrantAttacker(address(gateway), address(token));
+        // Fund attacker
+        deal(address(attacker), 1 ether);
+        deal(address(token), address(attacker), 1);
+
+        uint128 amount = 1;
+        uint128 extra = 1;
+        uint128 destinationFee = 1;
+        ParaID paraID = ParaID.wrap(1000);
+
+        uint128 fee = uint128(IGateway(address(gateway)).quoteSendTokenFee(address(token), paraID, 0));
+
+        hoax(address(attacker));
+        token.approve(address(gateway), 1);
+
+        vm.expectRevert(NativeTransferFailed.selector);
+        hoax(address(attacker));
+        IGateway(address(gateway)).sendToken{value: fee + extra}(
+            address(token), paraID, recipientAddress32, destinationFee, amount
+        );
     }
 }
