@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {ERC1967} from "./utils/ERC1967.sol";
 import {Call} from "./utils/Call.sol";
@@ -12,7 +12,9 @@ import {IUpgradable} from "./interfaces/IUpgradable.sol";
 library Upgrade {
     using Address for address;
 
-    function upgrade(address impl, bytes32 implCodeHash, bytes memory initializerParams) internal {
+    function upgrade(address impl, bytes32 implCodeHash, bytes memory initializerParams)
+        internal
+    {
         // Verify that the implementation is actually a contract
         if (!impl.isContract()) {
             revert IUpgradable.InvalidContract();

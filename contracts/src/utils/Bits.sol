@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 // Code from https://github.com/ethereum/solidity-examples
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 library Bits {
     uint256 internal constant ONE = uint256(1);
@@ -78,7 +78,11 @@ library Bits {
     //  - '0 < numBits <= 256'
     //  - 'startIndex < 256'
     //  - 'numBits + startIndex <= 256'
-    function bits(uint256 self, uint8 startIndex, uint16 numBits) internal pure returns (uint256) {
+    function bits(uint256 self, uint8 startIndex, uint16 numBits)
+        internal
+        pure
+        returns (uint256)
+    {
         require(0 < numBits && startIndex < 256 && startIndex + numBits <= 256, "out of bounds");
         return (self >> startIndex) & (ONES >> (256 - numBits));
     }

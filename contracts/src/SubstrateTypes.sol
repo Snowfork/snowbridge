@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {ParaID} from "./Types.sol";
@@ -71,11 +71,12 @@ library SubstrateTypes {
      * `NativeTokensMessage::Mint`
      */
     // destination is AccountID32 address on AssetHub
-    function SendTokenToAssetHubAddress32(address token, bytes32 recipient, uint128 xcmFee, uint128 amount)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function SendTokenToAssetHubAddress32(
+        address token,
+        bytes32 recipient,
+        uint128 xcmFee,
+        uint128 amount
+    ) internal view returns (bytes memory) {
         return bytes.concat(
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
@@ -134,11 +135,12 @@ library SubstrateTypes {
         );
     }
 
-    function SendForeignTokenToAssetHubAddress32(bytes32 tokenID, bytes32 recipient, uint128 xcmFee, uint128 amount)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function SendForeignTokenToAssetHubAddress32(
+        bytes32 tokenID,
+        bytes32 recipient,
+        uint128 xcmFee,
+        uint128 amount
+    ) internal view returns (bytes memory) {
         return bytes.concat(
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
