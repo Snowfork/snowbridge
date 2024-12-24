@@ -254,7 +254,7 @@ library Assets {
         // It means that registration can be retried.
         // But register a PNA here is not allowed
         TokenInfo storage info = $.tokenRegistry[token];
-        if (info.foreignID != bytes32(0)) {
+        if(info.foreignID != bytes32(0)) {
             revert TokenAlreadyRegistered();
         }
         info.isRegistered = true;

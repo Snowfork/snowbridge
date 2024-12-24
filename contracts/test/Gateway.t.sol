@@ -758,7 +758,7 @@ contract GatewayTest is Test {
         assertEq(uint256(channelMode), 0);
 
         (, uint128 fee) = gw.pricingParameters();
-        assertEq(fee, 10_000_000_000);
+        assertEq(fee, 10000000000);
 
         (uint64 inbound, uint64 outbound) = gw.channelNoncesOf(assetHubParaID.into());
         assertEq(inbound, 0);
@@ -791,7 +791,7 @@ contract GatewayTest is Test {
 
     function testSetTokenFees() public {
         uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
-        assertEq(fee, 5_000_000_000_000_000);
+        assertEq(fee, 5000000000000000);
         // Double the assetHubCreateAssetFee
         MockGateway(address(gateway)).setTokenTransferFeesPublic(
             abi.encode(
@@ -804,7 +804,7 @@ contract GatewayTest is Test {
         );
         fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         // since deliveryCost not changed, so the total fee increased only by 50%
-        assertEq(fee, 7_500_000_000_000_000);
+        assertEq(fee, 7500000000000000);
     }
 
     bytes32 public expectChannelIDBytes = bytes32(0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539);
@@ -817,7 +817,7 @@ contract GatewayTest is Test {
 
     function testSetPricingParameters() public {
         uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
-        assertEq(fee, 5_000_000_000_000_000);
+        assertEq(fee, 5000000000000000);
         // Double both the exchangeRate and multiplier. Should lead to an 4x fee increase
         MockGateway(address(gateway)).setPricingParametersPublic(
             abi.encode(
@@ -830,7 +830,7 @@ contract GatewayTest is Test {
         );
         // Should expect 4x fee increase
         fee = IGateway(address(gateway)).quoteRegisterTokenFee();
-        assertEq(fee, 20_000_000_000_000_001);
+        assertEq(fee, 20000000000000001);
     }
 
     function testSendTokenWithZeroDestinationFee() public {

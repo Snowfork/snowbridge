@@ -18,7 +18,7 @@ contract ForkUpgradeTest is Test {
     bytes32 private constant BridgeHubAgent = 0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314;
 
     function setUp() public {
-        vm.createSelectFork("https://rpc.tenderly.co/fork/b77e07b8-ad6d-4e83-b5be-30a2001964aa", 20_645_700);
+        vm.createSelectFork("https://rpc.tenderly.co/fork/b77e07b8-ad6d-4e83-b5be-30a2001964aa", 20645700);
         vm.allowCheatcodes(GatewayProxy);
         vm.startPrank(GatewayProxy);
         forkUpgrade();
@@ -28,7 +28,7 @@ contract ForkUpgradeTest is Test {
         AgentExecutor executor = new AgentExecutor();
 
         Gateway202410 newLogic =
-            new Gateway202410(BeefyClient, address(executor), ParaID.wrap(1002), BridgeHubAgent, 10, 20_000_000_000);
+            new Gateway202410(BeefyClient, address(executor), ParaID.wrap(1002), BridgeHubAgent, 10, 20000000000);
 
         UpgradeParams memory params =
             UpgradeParams({impl: address(newLogic), implCodeHash: address(newLogic).codehash, initParams: bytes("")});

@@ -38,7 +38,7 @@ contract VerificationTest is Test {
 
         Verification.ParachainHeader memory header = Verification.ParachainHeader({
             parentHash: 0x1df01d40273b074708115135fd7f76801ad4e4f1266a771a037962ee3a03259d,
-            number: 866_538,
+            number: 866538,
             stateRoot: 0x7b2d59d4de7c629b55a9bc9b76d932616f2011a26f09b52da36e070d6a7eee0d,
             extrinsicsRoot: 0x9d1c5d256003f68dda03dc33810a88a61f73791dc7ff92b04232a6b1b4f4b3c0,
             digestItems: digestItems
@@ -67,7 +67,7 @@ contract VerificationTest is Test {
 
         Verification.ParachainHeader memory header = Verification.ParachainHeader({
             parentHash: 0x1df01d40273b074708115135fd7f76801ad4e4f1266a771a037962ee3a03259d,
-            number: 866_538,
+            number: 866538,
             stateRoot: 0x7b2d59d4de7c629b55a9bc9b76d932616f2011a26f09b52da36e070d6a7eee0d,
             extrinsicsRoot: 0x9d1c5d256003f68dda03dc33810a88a61f73791dc7ff92b04232a6b1b4f4b3c0,
             digestItems: digestItems
@@ -98,7 +98,7 @@ contract VerificationTest is Test {
 
         Verification.ParachainHeader memory header = Verification.ParachainHeader({
             parentHash: 0x1df01d40273b074708115135fd7f76801ad4e4f1266a771a037962ee3a03259d,
-            number: 866_538,
+            number: 866538,
             stateRoot: 0x7b2d59d4de7c629b55a9bc9b76d932616f2011a26f09b52da36e070d6a7eee0d,
             extrinsicsRoot: 0x9d1c5d256003f68dda03dc33810a88a61f73791dc7ff92b04232a6b1b4f4b3c0,
             digestItems: digestItems
