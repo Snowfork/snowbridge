@@ -110,10 +110,20 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
     modifier nonreentrant() {
         assembly {
+            // Check if flag is set and if true revert because it means the function is currently executing.
             if tload(0) { revert(0, 0) }
+
+            // Set the flag to mark the the function is currently executing.
             tstore(0, 1)
         }
+
+        // Execute the function here
         _;
+
+        assembly {
+            // Reset the flag as the function has completed executing.
+            tstore(0, 0)
+        }
     }
 
     constructor(
