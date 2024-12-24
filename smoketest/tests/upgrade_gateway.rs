@@ -42,7 +42,7 @@ use subxt::{
 	OnlineClient, PolkadotConfig,
 };
 
-const GATEWAY_V2_ADDRESS: [u8; 20] = hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0");
+const GATEWAY_V2_ADDRESS: [u8; 20] = hex!("f8f7758fbcefd546eaeff7de24aff666b6228e73");
 
 #[tokio::test]
 async fn upgrade_gateway() {
