@@ -29,8 +29,7 @@ contract AgentTest is Test {
     }
 
     function testInvoke() public {
-        (bool success, bytes memory result) =
-            agent.invoke(executor, abi.encodeCall(Executor.foo, ()));
+        (bool success, bytes memory result) = agent.invoke(executor, abi.encodeCall(Executor.foo, ()));
         assertEq(success, true);
         assertEq(result, abi.encode(true));
     }
@@ -45,8 +44,7 @@ contract AgentTest is Test {
     }
 
     function testInvokeFail() public {
-        (bool success, bytes memory result) =
-            agent.invoke(executor, abi.encodeCall(Executor.fail, ()));
+        (bool success, bytes memory result) = agent.invoke(executor, abi.encodeCall(Executor.fail, ()));
         assertEq(success, false);
         assertEq(result, bytes.concat(Executor.Failure.selector));
     }

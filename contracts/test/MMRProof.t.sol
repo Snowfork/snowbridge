@@ -43,11 +43,7 @@ contract MMRProofTest is Test {
         Fixture memory fix = fixture();
 
         for (uint256 i = 0; i < fix.leaves.length; i++) {
-            assertTrue(
-                wrapper.verifyLeafProof(
-                    fix.rootHash, fix.leaves[i], fix.proofs[i].items, fix.proofs[i].order
-                )
-            );
+            assertTrue(wrapper.verifyLeafProof(fix.rootHash, fix.leaves[i], fix.proofs[i].items, fix.proofs[i].order));
         }
     }
 
@@ -55,8 +51,6 @@ contract MMRProofTest is Test {
         Fixture memory fix = fixture();
 
         vm.expectRevert(MMRProof.ProofSizeExceeded.selector);
-        wrapper.verifyLeafProof(
-            fix.rootHash, fix.leaves[0], new bytes32[](257), fix.proofs[0].order
-        );
+        wrapper.verifyLeafProof(fix.rootHash, fix.leaves[0], new bytes32[](257), fix.proofs[0].order);
     }
 }

@@ -6,11 +6,7 @@ import {Uint16Array, createUint16Array} from "../../src/utils/Uint16Array.sol";
 import "forge-std/console.sol";
 
 contract BeefyClientMock is BeefyClient {
-    constructor(
-        uint256 randaoCommitDelay,
-        uint256 randaoCommitExpiration,
-        uint256 minNumRequiredSignatures
-    )
+    constructor(uint256 randaoCommitDelay, uint256 randaoCommitExpiration, uint256 minNumRequiredSignatures)
         BeefyClient(
             randaoCommitDelay,
             randaoCommitExpiration,
@@ -21,11 +17,7 @@ contract BeefyClientMock is BeefyClient {
         )
     {}
 
-    function encodeCommitment_public(Commitment calldata commitment)
-        external
-        pure
-        returns (bytes memory)
-    {
+    function encodeCommitment_public(Commitment calldata commitment) external pure returns (bytes memory) {
         return encodeCommitment(commitment);
     }
 
@@ -68,10 +60,7 @@ contract BeefyClientMock is BeefyClient {
         // Perform the copy
         currentValidatorSet = nextValidatorSet;
 
-        assert(
-            currentValidatorSet.usageCounters.data.length
-                == nextValidatorSet.usageCounters.data.length
-        );
+        assert(currentValidatorSet.usageCounters.data.length == nextValidatorSet.usageCounters.data.length);
         assert(currentValidatorSet.usageCounters.get(799) == 7);
     }
 

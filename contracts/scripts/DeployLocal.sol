@@ -49,9 +49,8 @@ contract DeployLocal is Script {
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
         uint256 randaoCommitExpiration = vm.envUint("RANDAO_COMMIT_EXP");
         uint256 minimumSignatures = vm.envUint("MINIMUM_REQUIRED_SIGNATURES");
-        BeefyClient beefyClient = new BeefyClient(
-            randaoCommitDelay, randaoCommitExpiration, minimumSignatures, startBlock, current, next
-        );
+        BeefyClient beefyClient =
+            new BeefyClient(randaoCommitDelay, randaoCommitExpiration, minimumSignatures, startBlock, current, next);
 
         ParaID bridgeHubParaID = ParaID.wrap(uint32(vm.envUint("BRIDGE_HUB_PARAID")));
         bytes32 bridgeHubAgentID = vm.envBytes32("BRIDGE_HUB_AGENT_ID");

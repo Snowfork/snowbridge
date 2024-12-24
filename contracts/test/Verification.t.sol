@@ -24,11 +24,7 @@ contract VerificationTest is Test {
 
     function testCreateParachainHeaderMerkleLeaf() public {
         Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](3);
-        digestItems[0] = Verification.DigestItem({
-            kind: 6,
-            consensusEngineID: 0x61757261,
-            data: hex"c1f05e0800000000"
-        });
+        digestItems[0] = Verification.DigestItem({kind: 6, consensusEngineID: 0x61757261, data: hex"c1f05e0800000000"});
         digestItems[1] = Verification.DigestItem({
             kind: 4,
             consensusEngineID: 0x52505352,
@@ -66,11 +62,8 @@ contract VerificationTest is Test {
     function testCreateParachainHeaderMerkleFailInvalidHeader() public {
         Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](1);
         // Create an invalid digest item
-        digestItems[0] = Verification.DigestItem({
-            kind: 666,
-            consensusEngineID: 0x61757261,
-            data: hex"c1f05e0800000000"
-        });
+        digestItems[0] =
+            Verification.DigestItem({kind: 666, consensusEngineID: 0x61757261, data: hex"c1f05e0800000000"});
 
         Verification.ParachainHeader memory header = Verification.ParachainHeader({
             parentHash: 0x1df01d40273b074708115135fd7f76801ad4e4f1266a771a037962ee3a03259d,
@@ -86,11 +79,7 @@ contract VerificationTest is Test {
 
     function testIsCommitmentInHeaderDigest() public view {
         Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](4);
-        digestItems[0] = Verification.DigestItem({
-            kind: 6,
-            consensusEngineID: 0x61757261,
-            data: hex"c1f05e0800000000"
-        });
+        digestItems[0] = Verification.DigestItem({kind: 6, consensusEngineID: 0x61757261, data: hex"c1f05e0800000000"});
         digestItems[1] = Verification.DigestItem({
             kind: 4,
             consensusEngineID: 0x52505352,
@@ -116,18 +105,12 @@ contract VerificationTest is Test {
         });
 
         // Digest item at index 2 contains the commitment
-        assert(
-            v.isCommitmentInHeaderDigest(
-                0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c, header
-            )
-        );
+        assert(v.isCommitmentInHeaderDigest(0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c, header));
 
         // Now remove the commitment from the parachain header
         header.digestItems[2] = header.digestItems[3];
         assert(
-            !v.isCommitmentInHeaderDigest(
-                0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c, header
-            )
+            !v.isCommitmentInHeaderDigest(0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c, header)
         );
     }
 }

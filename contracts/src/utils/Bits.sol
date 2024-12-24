@@ -78,11 +78,7 @@ library Bits {
     //  - '0 < numBits <= 256'
     //  - 'startIndex < 256'
     //  - 'numBits + startIndex <= 256'
-    function bits(uint256 self, uint8 startIndex, uint16 numBits)
-        internal
-        pure
-        returns (uint256)
-    {
+    function bits(uint256 self, uint8 startIndex, uint16 numBits) internal pure returns (uint256) {
         require(0 < numBits && startIndex < 256 && startIndex + numBits <= 256, "out of bounds");
         return (self >> startIndex) & (ONES >> (256 - numBits));
     }

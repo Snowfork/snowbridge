@@ -247,11 +247,9 @@ contract BeefyClient {
      * @param bitfield a bitfield claiming which validators have signed the commitment
      * @param proof a proof that a single validator from currentValidatorSet has signed the commitment
      */
-    function submitInitial(
-        Commitment calldata commitment,
-        uint256[] calldata bitfield,
-        ValidatorProof calldata proof
-    ) external {
+    function submitInitial(Commitment calldata commitment, uint256[] calldata bitfield, ValidatorProof calldata proof)
+        external
+    {
         if (commitment.blockNumber <= latestBeefyBlock) {
             revert StaleCommitment();
         }
@@ -260,9 +258,7 @@ contract BeefyClient {
         uint16 signatureUsageCount;
         if (commitment.validatorSetID == currentValidatorSet.id) {
             signatureUsageCount = currentValidatorSet.usageCounters.get(proof.index);
-            currentValidatorSet.usageCounters.set(
-                proof.index, signatureUsageCount.saturatingAdd(1)
-            );
+            currentValidatorSet.usageCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
             vset = currentValidatorSet;
         } else if (commitment.validatorSetID == nextValidatorSet.id) {
             signatureUsageCount = nextValidatorSet.usageCounters.get(proof.index);
@@ -273,10 +269,8 @@ contract BeefyClient {
         }
 
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
-        if (
-            !isValidatorInSet(vset, proof.account, proof.index, proof.proof)
-                || !Bitfield.isSet(bitfield, proof.index)
-        ) {
+        if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof) || !Bitfield.isSet(bitfield, proof.index))
+        {
             revert InvalidValidatorProof();
         }
 
@@ -297,9 +291,7 @@ contract BeefyClient {
             blockNumber: uint64(block.number),
             validatorSetLen: uint32(vset.length),
             numRequiredSignatures: uint32(
-                computeNumRequiredSignatures(
-                    vset.length, signatureUsageCount, minNumRequiredSignatures
-                )
+                computeNumRequiredSignatures(vset.length, signatureUsageCount, minNumRequiredSignatures)
             ),
             prevRandao: 0,
             bitfieldHash: keccak256(abi.encodePacked(bitfield))
@@ -379,9 +371,8 @@ contract BeefyClient {
             if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
                 revert InvalidMMRLeaf();
             }
-            bool leafIsValid = MMRProof.verifyLeafProof(
-                newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
-            );
+            bool leafIsValid =
+                MMRProof.verifyLeafProof(newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder);
             if (!leafIsValid) {
                 revert InvalidMMRLeafProof();
             }
@@ -443,19 +434,13 @@ contract BeefyClient {
         if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
             revert InvalidBitfield();
         }
-        return Bitfield.subsample(
-            ticket.prevRandao, bitfield, ticket.numRequiredSignatures, ticket.validatorSetLen
-        );
+        return Bitfield.subsample(ticket.prevRandao, bitfield, ticket.numRequiredSignatures, ticket.validatorSetLen);
     }
 
     /* Internal Functions */
 
     // Creates a unique ticket ID for a new interactive prover-verifier session
-    function createTicketID(address account, bytes32 commitmentHash)
-        internal
-        pure
-        returns (bytes32 value)
-    {
+    function createTicketID(address account, bytes32 commitmentHash) internal pure returns (bytes32 value) {
         assembly {
             mstore(0x00, account)
             mstore(0x20, commitmentHash)
@@ -540,11 +525,7 @@ contract BeefyClient {
     }
 
     // Ensure that the commitment provides a new MMR root
-    function ensureProvidesMMRRoot(Commitment calldata commitment)
-        internal
-        pure
-        returns (bytes32)
-    {
+    function ensureProvidesMMRRoot(Commitment calldata commitment) internal pure returns (bytes32) {
         for (uint256 i = 0; i < commitment.payload.length; i++) {
             if (commitment.payload[i].payloadID == MMR_ROOT_ID) {
                 if (commitment.payload[i].data.length != 32) {
@@ -557,11 +538,7 @@ contract BeefyClient {
         revert CommitmentNotRelevant();
     }
 
-    function encodeCommitment(Commitment calldata commitment)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function encodeCommitment(Commitment calldata commitment) internal pure returns (bytes memory) {
         return bytes.concat(
             encodeCommitmentPayload(commitment.payload),
             ScaleCodec.encodeU32(commitment.blockNumber),
@@ -569,18 +546,11 @@ contract BeefyClient {
         );
     }
 
-    function encodeCommitmentPayload(PayloadItem[] calldata items)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function encodeCommitmentPayload(PayloadItem[] calldata items) internal pure returns (bytes memory) {
         bytes memory payload = ScaleCodec.checkedEncodeCompactU32(items.length);
         for (uint256 i = 0; i < items.length; i++) {
             payload = bytes.concat(
-                payload,
-                items[i].payloadID,
-                ScaleCodec.checkedEncodeCompactU32(items[i].data.length),
-                items[i].data
+                payload, items[i].payloadID, ScaleCodec.checkedEncodeCompactU32(items[i].data.length), items[i].data
             );
         }
 
@@ -607,12 +577,11 @@ contract BeefyClient {
      * @param proof Merkle proof required for validation of the address
      * @return true if the validator is in the set
      */
-    function isValidatorInSet(
-        ValidatorSetState storage vset,
-        address account,
-        uint256 index,
-        bytes32[] calldata proof
-    ) internal view returns (bool) {
+    function isValidatorInSet(ValidatorSetState storage vset, address account, uint256 index, bytes32[] calldata proof)
+        internal
+        view
+        returns (bool)
+    {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(account));
         return SubstrateMerkleProof.verify(vset.root, hashedLeaf, index, vset.length, proof);
     }
@@ -620,11 +589,10 @@ contract BeefyClient {
     /**
      * @dev Basic validation of a ticket for submitFinal
      */
-    function validateTicket(
-        bytes32 ticketID,
-        Commitment calldata commitment,
-        uint256[] calldata bitfield
-    ) internal view {
+    function validateTicket(bytes32 ticketID, Commitment calldata commitment, uint256[] calldata bitfield)
+        internal
+        view
+    {
         Ticket storage ticket = tickets[ticketID];
 
         if (ticket.blockNumber == 0) {

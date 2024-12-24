@@ -100,12 +100,11 @@ library Verification {
     /// @param commitment The message commitment root expected to be contained within the
     ///                   digest of BridgeHub parachain header.
     /// @param proof The chain of proofs described above
-    function verifyCommitment(
-        address beefyClient,
-        bytes4 encodedParaID,
-        bytes32 commitment,
-        Proof calldata proof
-    ) external view returns (bool) {
+    function verifyCommitment(address beefyClient, bytes4 encodedParaID, bytes32 commitment, Proof calldata proof)
+        external
+        view
+        returns (bool)
+    {
         // Verify that parachain header contains the commitment
         if (!isCommitmentInHeaderDigest(commitment, proof.header)) {
             return false;
@@ -126,9 +125,7 @@ library Verification {
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
 
         // Verify that the MMR leaf is part of the MMR maintained by the BEEFY light client
-        return BeefyClient(beefyClient).verifyMMRLeafProof(
-            leafHash, proof.leafProof, proof.leafProofOrder
-        );
+        return BeefyClient(beefyClient).verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
     }
 
     // Verify that a message commitment is in the header digest
@@ -139,8 +136,7 @@ library Verification {
     {
         for (uint256 i = 0; i < header.digestItems.length; i++) {
             if (
-                header.digestItems[i].kind == DIGEST_ITEM_OTHER
-                    && header.digestItems[i].data.length == 33
+                header.digestItems[i].kind == DIGEST_ITEM_OTHER && header.digestItems[i].data.length == 33
                     && header.digestItems[i].data[0] == DIGEST_ITEM_OTHER_SNOWBRIDGE
                     && commitment == bytes32(header.digestItems[i].data[1:])
             ) {
@@ -152,11 +148,7 @@ library Verification {
 
     // SCALE-Encodes: Vec<DigestItem>
     // Reference: https://github.com/paritytech/substrate/blob/14e0a0b628f9154c5a2c870062c3aac7df8983ed/primitives/runtime/src/generic/digest.rs#L40
-    function encodeDigestItems(DigestItem[] calldata digestItems)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function encodeDigestItems(DigestItem[] calldata digestItems) internal pure returns (bytes memory) {
         // encode all digest items into a buffer
         bytes memory accum = hex"";
         for (uint256 i = 0; i < digestItems.length; i++) {
@@ -166,11 +158,7 @@ library Verification {
         return bytes.concat(ScaleCodec.checkedEncodeCompactU32(digestItems.length), accum);
     }
 
-    function encodeDigestItem(DigestItem calldata digestItem)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function encodeDigestItem(DigestItem calldata digestItem) internal pure returns (bytes memory) {
         if (
             digestItem.kind == DIGEST_ITEM_PRERUNTIME || digestItem.kind == DIGEST_ITEM_CONSENSUS
                 || digestItem.kind == DIGEST_ITEM_SEAL
@@ -233,11 +221,7 @@ library Verification {
 
     // SCALE-encode: MMRLeaf
     // Reference: https://github.com/paritytech/substrate/blob/14e0a0b628f9154c5a2c870062c3aac7df8983ed/primitives/consensus/beefy/src/mmr.rs#L52
-    function createMMRLeaf(MMRLeafPartial memory leaf, bytes32 parachainHeadsRoot)
-        internal
-        pure
-        returns (bytes32)
-    {
+    function createMMRLeaf(MMRLeafPartial memory leaf, bytes32 parachainHeadsRoot) internal pure returns (bytes32) {
         bytes memory encodedLeaf = bytes.concat(
             ScaleCodec.encodeU8(leaf.version),
             ScaleCodec.encodeU32(leaf.parentNumber),

@@ -132,10 +132,7 @@ contract Token is IERC20, IERC20Permit {
      * - the caller must have allowance for ``sender``'s tokens of at least
      * `amount`.
      */
-    function transferFrom(address sender, address recipient, uint256 amount)
-        external
-        returns (bool)
-    {
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool) {
         return token.transferFrom(sender, recipient, amount);
     }
 
@@ -173,15 +170,9 @@ contract Token is IERC20, IERC20Permit {
         return token.decreaseAllowance(spender, subtractedValue);
     }
 
-    function permit(
-        address issuer,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
+    function permit(address issuer, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external
+    {
         token.permit(DOMAIN_SEPARATOR, issuer, spender, value, deadline, v, r, s);
     }
 
