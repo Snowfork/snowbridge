@@ -117,11 +117,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             tstore(0, 1)
         }
 
-        // Execute the function here
+        // Execute the function here.
         _;
 
         assembly {
-            // Reset the flag as the function has completed executing.
+            // Clear the flag as the function has completed execution.
             tstore(0, 0)
         }
     }
