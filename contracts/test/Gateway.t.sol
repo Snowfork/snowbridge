@@ -766,8 +766,7 @@ contract GatewayTest is Test {
 
         deal(assetHubAgent, amount);
 
-        (Command command, bytes memory params) =
-            makeTransferNativeFromCommand(assetHubAgentID, recipient, amount);
+        (Command command, bytes memory params) = makeTransferNativeFromCommand(assetHubAgentID, recipient, amount);
 
         assertEq(address(assetHubAgent).balance, amount);
         assertEq(recipient.balance, 0);
