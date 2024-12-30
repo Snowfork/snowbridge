@@ -1,7 +1,7 @@
 use crate::helpers::calculate_delivery_fee;
 use crate::{
     constants::*, Context, ForceCheckpointArgs, GatewayAddressArgs, GatewayOperatingModeEnum,
-    OperatingModeEnum, PricingParametersArgs, UpdateAssetArgs, UpgradeArgs,
+    OperatingModeEnum, PricingParametersArgs, RegisterEtherArgs, UpdateAssetArgs, UpgradeArgs,
 };
 use alloy_primitives::{utils::format_units, U256};
 use codec::Encode;
@@ -308,4 +308,8 @@ pub fn force_set_metadata(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
         decimals: params.decimals,
         is_frozen: params.is_frozen,
     })
+}
+
+pub fn register_ether(_params: &RegisterEtherArgs) -> AssetHubRuntimeCall {
+    todo!()
 }
