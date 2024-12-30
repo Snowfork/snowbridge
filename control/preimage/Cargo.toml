@@ -43,7 +43,7 @@ bridge-hub-westend-runtime = { path = "../runtimes/bridge-hub-westend", optional
 asset-hub-westend-runtime = { path = "../runtimes/asset-hub-westend", optional = true }
 
 [features]
-default = ["polkadot"]
+default = []
 kusama = []
 polkadot = [
     "polkadot-runtime",
