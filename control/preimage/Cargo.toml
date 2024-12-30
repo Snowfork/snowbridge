@@ -24,10 +24,6 @@ alloy-primitives = "0.6.3"
 snowbridge-beacon-primitives = "0.2.0"
 snowbridge-router-primitives = "0.2.0"
 
-rococo-runtime = { path = "../runtimes/rococo", optional = true }
-bridge-hub-rococo-runtime = { path = "../runtimes/bridge-hub-rococo", optional = true }
-asset-hub-rococo-runtime = { path = "../runtimes/asset-hub-rococo", optional = true }
-
 polkadot-runtime = { path = "../runtimes/polkadot", optional = true }
 bridge-hub-polkadot-runtime = { path = "../runtimes/bridge-hub-polkadot", optional = true }
 asset-hub-polkadot-runtime = { path = "../runtimes/asset-hub-polkadot", optional = true }
@@ -47,12 +43,7 @@ bridge-hub-westend-runtime = { path = "../runtimes/bridge-hub-westend", optional
 asset-hub-westend-runtime = { path = "../runtimes/asset-hub-westend", optional = true }
 
 [features]
-default = []
-rococo = [
-    "rococo-runtime",
-    "asset-hub-rococo-runtime",
-    "bridge-hub-rococo-runtime",
-]
+default = ["polkadot"]
 kusama = []
 polkadot = [
     "polkadot-runtime",
