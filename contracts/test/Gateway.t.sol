@@ -181,7 +181,7 @@ contract GatewayTest is Test {
         return (Command.TransferNativeToken, abi.encode(params));
     }
 
-    function makeTransferNativeFromCommand(bytes32 agentID, address recipient, uint128 amount)
+    function makeTransferNativeFromAgentCommand(bytes32 agentID, address recipient, uint128 amount)
         public
         pure
         returns (Command, bytes memory)
@@ -766,7 +766,7 @@ contract GatewayTest is Test {
 
         deal(assetHubAgent, amount);
 
-        (Command command, bytes memory params) = makeTransferNativeFromCommand(assetHubAgentID, recipient, amount);
+        (Command command, bytes memory params) = makeTransferNativeFromAgentCommand(assetHubAgentID, recipient, amount);
 
         assertEq(address(assetHubAgent).balance, amount);
         assertEq(recipient.balance, 0);
