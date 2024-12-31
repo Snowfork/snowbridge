@@ -337,6 +337,7 @@ pub fn force_set_metadata(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
 }
 
 pub fn register_ether(params: &RegisterEtherArgs) -> (AssetHubRuntimeCall, AssetHubRuntimeCall) {
+    use subxt::utils::AccountId32;
     let chain_id = crate::bridge_hub_runtime::CHAIN_ID;
     #[cfg(feature = "paseo")]
     use asset_hub_paseo_types::*;
@@ -346,7 +347,15 @@ pub fn register_ether(params: &RegisterEtherArgs) -> (AssetHubRuntimeCall, Asset
     use asset_hub_westend_types::*;
 
     let asset_id = get_ether_id(chain_id);
+    let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
 
+    let force_register =
+        AssetHubRuntimeCall::ForeignAssets(pallet_assets::pallet::Call2::force_create {
+            id: asset_id.clone(),
+            min_balance: params.ether_min_balance,
+            is_sufficient: true,
+            owner: MultiAddress::<AccountId32, ()>::Id(owner.into()),
+        });
     let metadata =
         AssetHubRuntimeCall::ForeignAssets(pallet_assets::pallet::Call2::force_set_metadata {
             id: asset_id,
@@ -356,5 +365,5 @@ pub fn register_ether(params: &RegisterEtherArgs) -> (AssetHubRuntimeCall, Asset
             is_frozen: false,
         });
 
-    return (metadata.clone(), metadata);
+    return (force_register, metadata);
 }
