@@ -222,22 +222,22 @@ pub struct TreasuryProposal2024Args {
 
 #[derive(Debug, Args)]
 pub struct RegisterEtherArgs {
-    /// The minimum balance of the Ether asset that users are allowed to hold.
+    /// The minimum balance of the Ether asset that users are allowed to hold
     #[arg(long, value_name = "WEI", value_parser = parse_units_wei, default_value_t = 1u128)]
     ether_min_balance: u128,
     /// Make Ether asset sufficient
     #[arg(long, default_value_t = true)]
     ether_sufficient: bool,
-    /// The Ether asset owner. This should be the Gateway Proxy Address sovereign account.
+    /// The Ether asset owner. This should be the Gateway Proxy Address sovereign account
     #[arg(long, value_name = "ADDRESS", value_parser=parse_hex_bytes32)]
     ether_owner: FixedBytes<32>,
-    /// The asset display name, e.g. Wrapped Ether
+    /// The Ether asset display name
     #[arg(long, value_name = "ASSET_DISPLAY_NAME", default_value_t = String::from("Ether"))]
     ether_name: String,
-    /// The asset symbol, e.g. WETH
+    /// The Ether asset symbol
     #[arg(long, value_name = "ASSET_SYMBOL", default_value_t = String::from("ETH.e"))]
     ether_symbol: String,
-    /// The asset's number of decimal places.
+    /// The Ether asset's number of decimal places
     #[arg(long, value_name = "DECIMALS", default_value_t = 18u8)]
     ether_decimals: u8,
 }
