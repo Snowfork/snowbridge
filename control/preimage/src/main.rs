@@ -27,7 +27,7 @@ struct Cli {
     #[arg(long, value_enum, default_value_t=Format::Hex)]
     format: Format,
 
-    /// Wrap in preimage sudo
+    /// Wrap preimage in a sudo call
     #[cfg(any(feature = "westend", feature = "paseo"))]
     #[arg(long, default_value_t = false)]
     sudo: bool,
@@ -222,8 +222,16 @@ pub struct TreasuryProposal2024Args {
 
 #[derive(Debug, Args)]
 pub struct RegisterEtherArgs {
-    #[arg(long, value_name = "GWEI", value_parser = parse_units_gwei)]
-    min: U128,
+    /// The minimum balance of the Ether asset that users are allowed to hold.
+    #[arg(long, value_name = "WEI", value_parser = parse_units_wei, default_value_t = 1u128)]
+    ether_min_balance: u128,
+    /// Make Ether asset sufficient
+    #[arg(long, default_value_t = true)]
+    ether_sufficient: bool,
+    /// The Ether asset owner. This should be the Gateway Proxy Address sovereign account.
+    #[arg(long, value_name = "ADDRESS", value_parser=parse_hex_bytes32)]
+    ether_owner: FixedBytes<32>,
+    // TODO: name, symbo, decimals
 }
 
 #[derive(Debug, Args)]
@@ -263,6 +271,11 @@ fn parse_units_polkadot(v: &str) -> Result<U128, String> {
     let amount: U256 = amount.into();
     let amount: U128 = amount.to::<U128>();
     Ok(amount)
+}
+
+fn parse_units_wei(v: &str) -> Result<U256, String> {
+    let amount = parse_units(v, "wei").map_err(|e| format!("{e}"))?;
+    Ok(amount.into())
 }
 
 fn parse_units_gwei(v: &str) -> Result<U256, String> {
