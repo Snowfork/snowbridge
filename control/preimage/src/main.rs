@@ -231,7 +231,15 @@ pub struct RegisterEtherArgs {
     /// The Ether asset owner. This should be the Gateway Proxy Address sovereign account.
     #[arg(long, value_name = "ADDRESS", value_parser=parse_hex_bytes32)]
     ether_owner: FixedBytes<32>,
-    // TODO: name, symbo, decimals
+    /// The asset display name, e.g. Wrapped Ether
+    #[arg(long, value_name = "ASSET_DISPLAY_NAME", default_value_t = String::from("Ether"))]
+    ether_name: String,
+    /// The asset symbol, e.g. WETH
+    #[arg(long, value_name = "ASSET_SYMBOL", default_value_t = String::from("ETH.e"))]
+    ether_symbol: String,
+    /// The asset's number of decimal places.
+    #[arg(long, value_name = "DECIMALS", default_value_t = 18u8)]
+    ether_decimals: u8,
 }
 
 #[derive(Debug, Args)]
@@ -353,10 +361,13 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ],
             )
             .await?;
+            let (register_ether_call, set_ether_metadata_call) =
+                commands::register_ether(&params.register_ether);
             let asset_hub_call = send_xcm_asset_hub(
                 &context,
                 vec![
-                    commands::register_ether(&params.register_ether),
+                    register_ether_call,
+                    set_ether_metadata_call,
                     force_xcm_version(),
                     set_ethereum_fee,
                 ],
@@ -438,7 +449,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::TreasuryProposal2024(params) => treasury_commands::treasury_proposal(&params),
         Command::RegisterEther(params) => {
-            send_xcm_asset_hub(&context, vec![commands::register_ether(&params)]).await?
+            let (register_ether_call, set_ether_metadata_call) = commands::register_ether(&params);
+            send_xcm_asset_hub(&context, vec![register_ether_call, set_ether_metadata_call]).await?
         }
     };
 

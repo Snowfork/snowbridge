@@ -31,9 +31,18 @@ use crate::bridge_hub_runtime::RuntimeCall as BridgeHubRuntimeCall;
 #[cfg(feature = "polkadot")]
 pub mod asset_hub_polkadot_types {
     pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
-        junction::Junction::AccountKey20, junction::Junction::GlobalConsensus, junction::NetworkId,
-        junctions::Junctions::X2, location::Location,
+        junction::Junction::AccountKey20,
+        junction::Junction::GlobalConsensus,
+        junction::NetworkId,
+        junctions::Junctions::{X1, X2},
+        location::Location,
     };
+    pub fn get_ether_id(chain_id: u64) -> Location {
+        return Location {
+            parents: 2,
+            interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id })]),
+        };
+    }
     pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> Location {
         return Location {
             parents: 2,
@@ -49,9 +58,17 @@ pub mod asset_hub_polkadot_types {
 pub mod asset_hub_paseo_types {
     pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation;
     pub use crate::asset_hub_runtime::runtime_types::xcm::v3::{
-        junction::Junction::AccountKey20, junction::Junction::GlobalConsensus, junction::NetworkId,
-        junctions::Junctions::X2,
+        junction::Junction::AccountKey20,
+        junction::Junction::GlobalConsensus,
+        junction::NetworkId,
+        junctions::Junctions::{X1, X2},
     };
+    pub fn get_ether_id(chain_id: u64) -> MultiLocation {
+        return MultiLocation {
+            parents: 2,
+            interior: X1(GlobalConsensus(NetworkId::Ethereum { chain_id })),
+        };
+    }
     pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> MultiLocation {
         return MultiLocation {
             parents: 2,
@@ -66,9 +83,18 @@ pub mod asset_hub_paseo_types {
 #[cfg(feature = "westend")]
 pub mod asset_hub_westend_types {
     pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v5::{
-        junction::Junction::AccountKey20, junction::Junction::GlobalConsensus, junction::NetworkId,
-        junctions::Junctions::X2, location::Location,
+        junction::Junction::AccountKey20,
+        junction::Junction::GlobalConsensus,
+        junction::NetworkId,
+        junctions::Junctions::{X1, X2},
+        location::Location,
     };
+    pub fn get_ether_id(chain_id: u64) -> Location {
+        return Location {
+            parents: 2,
+            interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id })]),
+        };
+    }
     pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> Location {
         return Location {
             parents: 2,
@@ -310,6 +336,25 @@ pub fn force_set_metadata(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
     })
 }
 
-pub fn register_ether(_params: &RegisterEtherArgs) -> AssetHubRuntimeCall {
-    todo!()
+pub fn register_ether(params: &RegisterEtherArgs) -> (AssetHubRuntimeCall, AssetHubRuntimeCall) {
+    let chain_id = crate::bridge_hub_runtime::CHAIN_ID;
+    #[cfg(feature = "paseo")]
+    use asset_hub_paseo_types::*;
+    #[cfg(feature = "polkadot")]
+    use asset_hub_polkadot_types::*;
+    #[cfg(feature = "westend")]
+    use asset_hub_westend_types::*;
+
+    let asset_id = get_ether_id(chain_id);
+
+    let metadata =
+        AssetHubRuntimeCall::ForeignAssets(pallet_assets::pallet::Call2::force_set_metadata {
+            id: asset_id,
+            name: params.ether_name.as_bytes().to_vec(),
+            symbol: params.ether_symbol.as_bytes().to_vec(),
+            decimals: params.ether_decimals,
+            is_frozen: false,
+        });
+
+    return (metadata.clone(), metadata);
 }
