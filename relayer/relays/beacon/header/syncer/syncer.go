@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
@@ -59,18 +60,24 @@ type finalizedUpdateContainer struct {
 }
 
 func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
-	checkpoint, err := s.Client.GetFinalizedCheckpoint()
+	retries := 5
+	bootstrap, err := s.getCheckpoint()
 	if err != nil {
-		return scale.BeaconCheckpoint{}, fmt.Errorf("get finalized checkpoint: %w", err)
+		for retries > 0 {
+			retries = retries - 1
+			bootstrap, err = s.getCheckpoint()
+			if err != nil {
+				log.WithError(err).Info("retry bootstrap, sleeping")
+				time.Sleep(10 * time.Second)
+				continue
+			}
+			break
+		}
 	}
-
-	log.WithField("root", checkpoint.FinalizedBlockRoot).Info("found block root")
-	bootstrap, err := s.Client.GetBootstrap(checkpoint.FinalizedBlockRoot)
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get bootstrap: %w", err)
 	}
 
-	log.WithField("slot", bootstrap.Data.Header.Beacon.Slot).Info("found block root")
 	genesis, err := s.Client.GetGenesis()
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get genesis: %w", err)
@@ -99,6 +106,20 @@ func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 		BlockRootsRoot:             blockRootsProof.Leaf,
 		BlockRootsBranch:           blockRootsProof.Proof,
 	}, nil
+}
+
+func (s *Syncer) getCheckpoint() (api.BootstrapResponse, error) {
+	checkpoint, err := s.Client.GetFinalizedCheckpoint()
+	if err != nil {
+		return api.BootstrapResponse{}, fmt.Errorf("get finalized checkpoint: %w", err)
+	}
+
+	bootstrap, err := s.Client.GetBootstrap(checkpoint.FinalizedBlockRoot)
+	if err != nil {
+		return api.BootstrapResponse{}, fmt.Errorf("get bootstrap: %w", err)
+	}
+
+	return bootstrap, err
 }
 
 func (s *Syncer) GetCheckpointFromFile(file string) (scale.BeaconCheckpoint, error) {

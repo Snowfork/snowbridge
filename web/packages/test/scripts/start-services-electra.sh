@@ -19,6 +19,11 @@ check_tool
 echo "Installing binaries if required"
 install_binary
 
+# 2. start ethereum
+echo "Starting ethereum nodes"
+source scripts/deploy-ethereum-mekong.sh
+deploy_ethereum
+
 # 3. start polkadot
 echo "Starting polkadot nodes"
 source scripts/deploy-polkadot.sh
