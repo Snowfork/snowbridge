@@ -47,10 +47,6 @@ contract MockGateway is Gateway {
         this.setOperatingMode(params);
     }
 
-    function transferNativeFromAgentPublic(bytes calldata params) external {
-        this.transferNativeFromAgent(params);
-    }
-
     function setCommitmentsAreVerified(bool value) external {
         commitmentsAreVerified = value;
     }
