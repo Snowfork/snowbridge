@@ -23,14 +23,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	BlockRootGeneralizedIndex            = 37
-	FinalizedCheckpointGeneralizedIndex  = 105
-	CurrentSyncCommitteeGeneralizedIndex = 54
-	NextSyncCommitteeGeneralizedIndex    = 55
-	ExecutionPayloadGeneralizedIndex     = 25
-)
-
 var (
 	ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("sync committee in different sync period")
 	ErrBeaconStateUnavailable                     = errors.New("beacon state object not available yet")
@@ -193,7 +185,7 @@ func (s *Syncer) GetCheckpointAtSlot(slot uint64) (scale.BeaconCheckpoint, error
 
 	_ = stateTree.Hash() // necessary to populate the proof tree values
 
-	proof, err := stateTree.Prove(CurrentSyncCommitteeGeneralizedIndex)
+	proof, err := stateTree.Prove(s.protocol.CurrentSyncCommitteeGeneralizedIndex(uint64(checkpoint.Payload.FinalizedHeader.Slot)))
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get block roof proof: %w", err)
 	}
@@ -345,7 +337,7 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 
 	_ = stateTree.Hash() // necessary to populate the proof tree values
 
-	proof, err := stateTree.Prove(BlockRootGeneralizedIndex)
+	proof, err := stateTree.Prove(s.protocol.BlockRootGeneralizedIndex(slot))
 	if err != nil {
 		return scale.BlockRootProof{}, fmt.Errorf("get block roof proof: %w", err)
 	}
@@ -382,7 +374,7 @@ func (s *Syncer) GetBlockRootsFromState(beaconState state.BeaconState) (scale.Bl
 
 	_ = stateTree.Hash() // necessary to populate the proof tree values
 
-	proof, err := stateTree.Prove(BlockRootGeneralizedIndex)
+	proof, err := stateTree.Prove(s.protocol.BlockRootGeneralizedIndex(beaconState.GetSlot()))
 	if err != nil {
 		return scale.BlockRootProof{}, fmt.Errorf("get block roof proof: %w", err)
 	}
@@ -815,15 +807,15 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 	if err != nil {
 		return update, fmt.Errorf("get state tree: %w", err)
 	}
-	_ = stateTree.Hash() // necessary to populate the proof tree values
-	finalizedHeaderProof, err := stateTree.Prove(FinalizedCheckpointGeneralizedIndex)
+	_ = stateTree.Hash()                                                                                       // necessary to populate the proof tree values
+	finalizedHeaderProof, err := stateTree.Prove(s.protocol.FinalizedCheckpointGeneralizedIndex(attestedSlot)) // TODO Double check slot
 	if err != nil {
 		return update, fmt.Errorf("get finalized header proof: %w", err)
 	}
 
 	var nextSyncCommitteeScale scale.OptionNextSyncCommitteeUpdatePayload
 	if fetchNextSyncCommittee {
-		nextSyncCommitteeProof, err := stateTree.Prove(NextSyncCommitteeGeneralizedIndex)
+		nextSyncCommitteeProof, err := stateTree.Prove(s.protocol.NextSyncCommitteeGeneralizedIndex(attestedSlot))
 		if err != nil {
 			return update, fmt.Errorf("get finalized header proof: %w", err)
 		}
@@ -938,7 +930,7 @@ func (s *Syncer) getExecutionHeaderBranch(block state.BeaconBlock) ([]types.H256
 
 	tree.Hash()
 
-	proof, err := tree.Prove(ExecutionPayloadGeneralizedIndex)
+	proof, err := tree.Prove(s.protocol.ExecutionPayloadGeneralizedIndex(block.GetBeaconSlot()))
 
 	return util.BytesBranchToScale(proof.Hashes), nil
 }

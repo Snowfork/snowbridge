@@ -92,3 +92,38 @@ func (p *Protocol) ForkVersion(slot uint64) ForkVersion {
 	}
 	return Capella
 }
+
+func (p *Protocol) BlockRootGeneralizedIndex(slot uint64) int {
+	if p.ForkVersion(slot) == Electra {
+		return ElectraBlockRootGeneralizedIndex
+	}
+	return AltairBlockRootGeneralizedIndex
+}
+
+func (p *Protocol) FinalizedCheckpointGeneralizedIndex(slot uint64) int {
+	if p.ForkVersion(slot) == Electra {
+		return ElectraFinalizedCheckpointGeneralizedIndex
+	}
+	return AltairFinalizedCheckpointGeneralizedIndex
+}
+
+func (p *Protocol) CurrentSyncCommitteeGeneralizedIndex(slot uint64) int {
+	if p.ForkVersion(slot) == Electra {
+		return ElectraCurrentSyncCommitteeGeneralizedIndex
+	}
+	return AltairCurrentSyncCommitteeGeneralizedIndex
+}
+
+func (p *Protocol) NextSyncCommitteeGeneralizedIndex(slot uint64) int {
+	if p.ForkVersion(slot) == Electra {
+		return ElectraNextSyncCommitteeGeneralizedIndex
+	}
+	return AltairNextSyncCommitteeGeneralizedIndex
+}
+
+func (p *Protocol) ExecutionPayloadGeneralizedIndex(slot uint64) int {
+	if p.ForkVersion(slot) == Electra {
+		return ElectraExecutionPayloadGeneralizedIndex
+	}
+	return AltairExecutionPayloadGeneralizedIndex
+}
