@@ -341,7 +341,6 @@ func TestFindLatestCheckPoint(t *testing.T) {
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 4,
 		EpochsPerSyncCommitteePeriod: 2,
-		DenebForkEpoch:               0,
 	}
 	maxRedundancy := uint64(2)
 	p := protocol.New(settings, maxRedundancy)

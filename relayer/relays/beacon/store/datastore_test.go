@@ -19,14 +19,16 @@ func TestGetBeaconState(t *testing.T) {
 	_ = os.RemoveAll(TestDataStoreFile + BeaconStateDir)
 	_ = os.Remove(TestDataStoreFile + BeaconStoreName)
 
-	store := New(TestDataStoreFile, 100, *protocol.New(config.SpecSettings{
+	specSettings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
 		ForkVersions: config.ForkVersions{
 			Deneb:   0,
 			Electra: 800000,
-		}, MaxRedundancy))
-	}))
+		},
+	}
+	store := New(TestDataStoreFile, 100, *protocol.New(specSettings, MaxRedundancy))
+
 	err := store.Connect()
 	require.NoError(t, err)
 	defer func() {
