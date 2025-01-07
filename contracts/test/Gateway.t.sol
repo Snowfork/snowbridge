@@ -1030,7 +1030,7 @@ contract GatewayTest is Test {
         ReantrantAttacker attacker = new ReantrantAttacker(address(gateway), address(token));
         // Fund attacker
         deal(address(attacker), 1 ether);
-        deal(address(token), address(attacker), 1);
+        deal(address(token), address(attacker), 5);
 
         uint128 amount = 1;
         uint128 extra = 1;
@@ -1040,7 +1040,7 @@ contract GatewayTest is Test {
         uint128 fee = uint128(IGateway(address(gateway)).quoteSendTokenFee(address(token), paraID, 0));
 
         hoax(address(attacker));
-        token.approve(address(gateway), 1);
+        token.approve(address(gateway), 5);
 
         vm.expectRevert(NativeTransferFailed.selector);
         hoax(address(attacker));

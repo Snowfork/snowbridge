@@ -30,6 +30,7 @@ import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {Call} from "./utils/Call.sol";
 import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
+import {ReentrantGuard} from "./utils/ReentrantGuard.sol";
 
 import {
     AgentExecuteParams,
@@ -108,22 +109,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         _;
     }
 
+    // Makes sure that a method is non reentrant.
     modifier nonreentrant() {
-        assembly {
-            // Check if flag is set and if true revert because it means the function is currently executing.
-            if tload(0) { revert(0, 0) }
-
-            // Set the flag to mark the the function is currently executing.
-            tstore(0, 1)
-        }
-
-        // Execute the function here.
+        ReentrantGuard.checkAndSet();
         _;
-
-        assembly {
-            // Clear the flag as the function has completed execution.
-            tstore(0, 0)
-        }
+        ReentrantGuard.clear();
     }
 
     constructor(
