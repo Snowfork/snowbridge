@@ -6,9 +6,9 @@ mkdir -p src/contracts
 
 # Generate Rust bindings for contracts
 forge bind --module --overwrite \
-    --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token' \
-    --bindings-path src/contracts \
-    --root ../contracts
+  --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token|BeefyClient' \
+  --bindings-path src/contracts \
+  --root ../contracts
 
 # Install subxt
 command -v subxt || cargo install subxt-cli \

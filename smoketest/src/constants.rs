@@ -34,6 +34,8 @@ pub const ERC20_DOT_CONTRACT: [u8; 20] = hex!("B8C39CbCe8106c8415472e3AAe88Eb694
 pub const ERC20_DOT_TOKEN_ID: [u8; 32] =
 	hex!("fb3d635c7cb573d1b9e9bff4a64ab4f25190d29b6fd8db94c605a218a23fa9ad");
 
+pub const BEEFY_CLIENT_CONTRACT: [u8; 20] = hex!("2ffA5ecdBe006d30397c7636d3e015EEE251369F");
+
 // Agent for bridge hub parachain 1002
 pub const BRIDGE_HUB_AGENT_ID: [u8; 32] =
 	hex!("03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314");
