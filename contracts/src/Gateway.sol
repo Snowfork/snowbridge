@@ -74,7 +74,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     // Gas used for:
     // 1. Mapping a command id to an implementation function
     // 2. Calling implementation function
-    uint256 DISPATCH_OVERHEAD_GAS = 10_000;
+    uint256 constant DISPATCH_OVERHEAD_GAS = 10_000;
 
     // The maximum fee that can be sent to a destination parachain to pay for execution (DOT).
     // Has two functions:
