@@ -45,7 +45,7 @@
 
                     # ethereum
                     foundry-bin
-                    #go-ethereum Geth 1.14.9 is not in nix flakes yet
+                    go-ethereum
                     # gnupg for forge install
                     gnupg
 
@@ -87,7 +87,7 @@
                     export RUSTUP_HOME=$PWD/.rustup
                     export RUST_NIGHTLY_VERSION=nightly-2024-02-08
                     export PATH=$CARGO_HOME/bin:$PATH
-                    export LODESTAR_VERSION=v1.19.0
+                    export LODESTAR_VERSION=v1.23.1
 
                     eval "$(direnv hook bash)"
 

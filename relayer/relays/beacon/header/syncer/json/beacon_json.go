@@ -295,7 +295,7 @@ func removeLeadingZeroHash(s string) string {
 type VersionedExecutionPayloadHeader struct {
 	Capella *ExecutionPayloadHeaderCapella `json:"Capella,omitempty"`
 	Deneb   *ExecutionPayloadHeaderDeneb   `json:"Deneb,omitempty"`
-	Electra *ExecutionPayloadHeaderElectra `json:"Electra,omitempty"`
+	Electra *ExecutionPayloadHeaderDeneb   `json:"Electra,omitempty"` // Execution payload header does not change in Electra
 }
 
 func (v *VersionedExecutionPayloadHeader) RemoveLeadingZeroHashes() {

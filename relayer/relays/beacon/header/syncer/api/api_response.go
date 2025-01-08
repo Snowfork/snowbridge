@@ -717,7 +717,7 @@ func (b BeaconBlockResponse) ToFastSSZ(forkVersion protocol.ForkVersion) (state.
 					SyncCommitteeBits:      syncCommitteeBits,
 					SyncCommitteeSignature: syncCommitteeSignature,
 				},
-				ExecutionPayload: &state.ExecutionPayloadElectra{
+				ExecutionPayload: &state.ExecutionPayloadDeneb{
 					ParentHash:    parentHash,
 					FeeRecipient:  feeRecipient,
 					StateRoot:     executionStateRoot,
@@ -1114,48 +1114,5 @@ func CapellaExecutionPayloadToScale(e *state.ExecutionPayloadCapella) (scale.Exe
 		BlockHash:        types.NewH256(e.BlockHash[:]),
 		TransactionsRoot: transactionsRoot,
 		WithdrawalsRoot:  withdrawalRoot,
-	}, nil
-}
-
-func CapellaJsonExecutionPayloadHeaderToScale(e *beaconjson.FullExecutionPayloadHeaderJson) (scale.ExecutionPayloadHeaderCapella, error) {
-	var executionPayloadHeader scale.ExecutionPayloadHeaderCapella
-	var baseFeePerGas big.Int
-	baseFeePerGasU64, err := util.ToUint64(e.BaseFeePerGas)
-	if err != nil {
-		return executionPayloadHeader, err
-	}
-	blockNumber, err := util.ToUint64(e.BlockNumber)
-	if err != nil {
-		return executionPayloadHeader, err
-	}
-	baseFeePerGas.SetUint64(baseFeePerGasU64)
-	gasLimit, err := util.ToUint64(e.GasLimit)
-	if err != nil {
-		return executionPayloadHeader, err
-	}
-	gasUsed, err := util.ToUint64(e.GasUsed)
-	if err != nil {
-		return executionPayloadHeader, err
-	}
-	timestamp, err := util.ToUint64(e.Timestamp)
-	if err != nil {
-		return executionPayloadHeader, err
-	}
-	return scale.ExecutionPayloadHeaderCapella{
-		ParentHash:       types.NewH256(common.HexToHash(e.ParentHash).Bytes()),
-		FeeRecipient:     types.NewH160(common.HexToAddress(e.FeeRecipient).Bytes()),
-		StateRoot:        types.NewH256(common.HexToHash(e.StateRoot).Bytes()),
-		ReceiptsRoot:     types.NewH256(common.HexToHash(e.ReceiptsRoot).Bytes()),
-		LogsBloom:        common.Hex2Bytes(e.LogsBloom),
-		PrevRandao:       types.NewH256(common.HexToHash(e.PrevRandao).Bytes()),
-		BlockNumber:      types.NewU64(blockNumber),
-		GasLimit:         types.NewU64(gasLimit),
-		GasUsed:          types.NewU64(gasUsed),
-		Timestamp:        types.NewU64(timestamp),
-		ExtraData:        common.Hex2Bytes(e.ExtraData),
-		BaseFeePerGas:    types.NewU256(baseFeePerGas),
-		BlockHash:        types.NewH256(common.HexToHash(e.ParentHash).Bytes()),
-		TransactionsRoot: types.NewH256(common.HexToHash(e.TransactionsRoot).Bytes()),
-		WithdrawalsRoot:  types.NewH256(common.HexToHash(e.WithdrawalsRoot).Bytes()),
 	}, nil
 }

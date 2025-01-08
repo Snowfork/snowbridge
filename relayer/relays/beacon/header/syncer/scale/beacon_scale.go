@@ -303,7 +303,7 @@ type BeaconState struct {
 type VersionedExecutionPayloadHeader struct {
 	Capella *ExecutionPayloadHeaderCapella
 	Deneb   *ExecutionPayloadHeaderDeneb
-	Electra *ExecutionPayloadHeaderElectra
+	Electra *ExecutionPayloadHeaderDeneb // Did not change in Electra
 }
 
 var (

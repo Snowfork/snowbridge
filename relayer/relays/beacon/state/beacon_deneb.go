@@ -114,10 +114,6 @@ func (b *BeaconBlockDenebMainnet) ExecutionPayloadDeneb() *ExecutionPayloadDeneb
 	return b.Body.ExecutionPayload
 }
 
-func (b *BeaconBlockDenebMainnet) ExecutionPayloadElectra() *ExecutionPayloadElectra {
-	return nil
-}
-
 func (b *BeaconStateDenebMainnet) GetSlot() uint64 {
 	return b.Slot
 }

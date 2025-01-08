@@ -222,7 +222,10 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		//DenebForkEpoch:               0,
+		ForkVersions: config.ForkVersions{
+			Deneb:   0,
+			Electra: 800000,
+		},
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
@@ -266,7 +269,10 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		//DenebForkEpoch:               0,
+		ForkVersions: config.ForkVersions{
+			Deneb:   0,
+			Electra: 800000,
+		},
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}

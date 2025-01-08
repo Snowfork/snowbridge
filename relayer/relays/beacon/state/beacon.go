@@ -187,7 +187,6 @@ type BeaconBlock interface {
 	GetBeaconSlot() uint64
 	ExecutionPayloadCapella() *ExecutionPayloadCapella
 	ExecutionPayloadDeneb() *ExecutionPayloadDeneb
-	ExecutionPayloadElectra() *ExecutionPayloadElectra
 	GetTree() (*ssz.Node, error)
 	GetBlockBodyTree() (*ssz.Node, error)
 }
@@ -297,10 +296,6 @@ func (b *BeaconBlockCapellaMainnet) ExecutionPayloadCapella() *ExecutionPayloadC
 }
 
 func (b *BeaconBlockCapellaMainnet) ExecutionPayloadDeneb() *ExecutionPayloadDeneb {
-	return nil
-}
-
-func (b *BeaconBlockCapellaMainnet) ExecutionPayloadElectra() *ExecutionPayloadElectra {
 	return nil
 }
 
