@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -103,7 +105,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			return fmt.Errorf("scan for sync tasks bounded by BEEFY block %v: %w", beefyBlockNumber, err)
 		}
 
-		err = li.subscribeNewMMRRoots(ctx)
+		err = li.subscribeNewBEEFYEvents(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return nil
@@ -117,7 +119,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (li *BeefyListener) subscribeNewMMRRoots(ctx context.Context) error {
+func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 	headers := make(chan *gethTypes.Header, 5)
 
 	sub, err := li.ethereumConn.Client().SubscribeNewHead(ctx, headers)
@@ -133,16 +135,22 @@ func (li *BeefyListener) subscribeNewMMRRoots(ctx context.Context) error {
 		case err := <-sub.Err():
 			return fmt.Errorf("header subscription: %w", err)
 		case gethheader := <-headers:
+			// TODO: for slashing, we may want to
+			// 1. scan older blocks as well if the latest BEEFY commitment stored on Ethereum doesn't match the commitment at that block # on the relay chain
+			// 2. potentially scan older blocks even if latest BEEFY commitment is sound (honest relayers may have saved the day, but the adversaries should still be slashed)
+			// 3. scan older tickets as well, since they may have optimistically tried their luck on the subsampling without a `submitFinal` call
+			// in all cases, this scan should not go past the slashability horizon, i.e. only be performed where the validators are still bonded
+			// this may also have to query the relay chain for any reported equivocations
 			blockNumber := gethheader.Number.Uint64()
-			contractEvents, err := li.queryBeefyClientEvents(ctx, blockNumber, &blockNumber)
+			contractNewMMRRootEvents, err := li.queryNewMMRRootEvents(ctx, blockNumber, &blockNumber)
 			if err != nil {
 				return fmt.Errorf("query NewMMRRoot event logs in block %v: %w", blockNumber, err)
 			}
 
-			if len(contractEvents) > 0 {
-				log.Info(fmt.Sprintf("Found %d BeefyLightClient.NewMMRRoot events in block %d", len(contractEvents), blockNumber))
+			if len(contractNewMMRRootEvents) > 0 {
+				log.Info(fmt.Sprintf("Found %d BeefyLightClient.NewMMRRoot events in block %d", len(contractNewMMRRootEvents), blockNumber))
 				// Only process the last emitted event in the block
-				event := contractEvents[len(contractEvents)-1]
+				event := contractNewMMRRootEvents[len(contractNewMMRRootEvents)-1]
 				log.WithFields(log.Fields{
 					"beefyBlockNumber":    event.BlockNumber,
 					"ethereumBlockNumber": event.Raw.BlockNumber,
@@ -154,8 +162,102 @@ func (li *BeefyListener) subscribeNewMMRRoots(ctx context.Context) error {
 					return fmt.Errorf("scan for sync tasks bounded by BEEFY block %v: %w", event.BlockNumber, err)
 				}
 			}
+
+			contractNewTicketEvents, err := li.queryNewTicketEvents(ctx, blockNumber, &blockNumber)
+			if err != nil {
+				return fmt.Errorf("query NewTicket event logs in block %v: %w", blockNumber, err)
+			}
+
+			if len(contractNewTicketEvents) > 0 {
+				log.Info(fmt.Sprintf("Found %d BeefyLightClient.NewTicket events in block %d", len(contractNewTicketEvents), blockNumber))
+				// Iterate over all NewTicket events in the block
+				for _, event := range contractNewTicketEvents {
+
+					callData, err := li.getTransactionCallData(ctx, event.Raw.TxHash)
+					if err != nil {
+						return fmt.Errorf("get transaction call data: %w", err)
+					}
+
+					log.WithFields(log.Fields{
+						"beefyBlockNumber":    event.BlockNumber,
+						"ethereumBlockNumber": event.Raw.BlockNumber,
+						"ethereumTxHash":      event.Raw.TxHash.Hex(),
+						"ethereumTxIndex":     event.Raw.TxHash.Hex(),
+						"rawEvent":            event.Raw,
+					}).Info("Witnessed a new Ticket event")
+
+					methodName, decodedParams, err := li.decodeTransactionCallData(callData)
+					if err != nil {
+						log.WithError(err).Warning("Failed to decode transaction call data")
+					}
+					beefyBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(event.BlockNumber)
+					if err != nil {
+						return fmt.Errorf("fetch block hash: %w", err)
+					}
+					mmrRootHash, err := li.relaychainConn.GetMMRRootHash(beefyBlockHash)
+					if err != nil {
+						return fmt.Errorf("retrieve MMR root hash at block %v: %w", beefyBlockHash.Hex(), err)
+					} else {
+						log.WithFields(log.Fields{
+							"method": methodName,
+							// "params": decodedParams,
+							"commitment.payload.data": fmt.Sprintf("%#x", decodedParams["commitment"].(struct {
+								BlockNumber    uint32 `json:"blockNumber"`
+								ValidatorSetID uint64 `json:"validatorSetID"`
+								Payload        []struct {
+									PayloadID [2]uint8 `json:"payloadID"`
+									Data      []uint8  `json:"data"`
+								} `json:"payload"`
+							}).Payload[0].Data),
+							"correspondingMMRRootHash": mmrRootHash.Hex(),
+						}).Info("Decoded transaction call data for NewTicket event")
+					}
+
+					// TODO: should this also invoke a scan? I reckon not, since the scan's purpose in my understanding is to check which parachain messages have to be relayed (stale or new), and an update to the MMR root would necessitate creating proofs against the new MMR root, rather than the old one.
+				}
+			}
 		}
 	}
+}
+
+func (li *BeefyListener) getTransactionCallData(ctx context.Context, txHash common.Hash) ([]byte, error) {
+	// Get the transaction
+	tx, _, err := li.ethereumConn.Client().TransactionByHash(ctx, txHash)
+	if err != nil {
+		return nil, fmt.Errorf("get transaction: %w", err)
+	}
+
+	// Get the input data
+	return tx.Data(), nil
+}
+
+func (li *BeefyListener) decodeTransactionCallData(callData []byte) (string, map[string]interface{}, error) {
+	// Parse the ABI
+	parsedABI, err := abi.JSON(strings.NewReader(contracts.BeefyClientMetaData.ABI))
+	if err != nil {
+		return "", nil, fmt.Errorf("parse ABI: %w", err)
+	}
+
+	// Get the method signature from the first 4 bytes
+	methodSig := callData[:4]
+	method, err := parsedABI.MethodById(methodSig)
+	if err != nil {
+		return "", nil, fmt.Errorf("get method from signature: %w", err)
+	}
+
+	// Decode the parameters
+	params, err := method.Inputs.Unpack(callData[4:])
+	if err != nil {
+		return "", nil, fmt.Errorf("unpack parameters: %w", err)
+	}
+
+	// Convert to map for handling
+	decoded := make(map[string]interface{})
+	for i, param := range params {
+		decoded[method.Inputs[i].Name] = param
+	}
+
+	return method.Name, decoded, nil
 }
 
 func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) error {
@@ -175,8 +277,8 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 	return nil
 }
 
-// queryBeefyClientEvents queries ContractNewMMRRoot events from the BeefyClient contract
-func (li *BeefyListener) queryBeefyClientEvents(
+// queryNewMMRRootEvents queries NewMMRRoot events from the BeefyClient contract
+func (li *BeefyListener) queryNewMMRRootEvents(
 	ctx context.Context, start uint64,
 	end *uint64,
 ) ([]*contracts.BeefyClientNewMMRRoot, error) {
@@ -197,7 +299,33 @@ func (li *BeefyListener) queryBeefyClientEvents(
 			}
 			break
 		}
+		events = append(events, iter.Event)
+	}
 
+	return events, nil
+}
+
+// queryNewTicketEvents queries NewTicket events from the BeefyClient contract
+func (li *BeefyListener) queryNewTicketEvents(
+	ctx context.Context, start uint64,
+	end *uint64,
+) ([]*contracts.BeefyClientNewTicket, error) {
+	var events []*contracts.BeefyClientNewTicket
+	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
+	iter, err := li.beefyClientContract.FilterNewTicket(&filterOps)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		more := iter.Next()
+		if !more {
+			err = iter.Error()
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
 		events = append(events, iter.Event)
 	}
 
