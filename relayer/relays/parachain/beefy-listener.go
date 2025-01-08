@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -186,7 +187,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						"rawEvent":            event.Raw,
 					}).Info("Witnessed a new Ticket event")
 
-					methodName, decodedParams, err := li.decodeTransactionCallData(callData)
+					commitment, _, _, err := li.parseSubmitInitial(callData)
 					if err != nil {
 						log.WithError(err).Warning("Failed to decode transaction call data")
 					}
@@ -199,16 +200,8 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						return fmt.Errorf("retrieve MMR root hash at block %v: %w", beefyBlockHash.Hex(), err)
 					} else {
 						log.WithFields(log.Fields{
-							"method": methodName,
 							// "params": decodedParams,
-							"commitment.payload.data": fmt.Sprintf("%#x", decodedParams["commitment"].(struct {
-								BlockNumber    uint32 `json:"blockNumber"`
-								ValidatorSetID uint64 `json:"validatorSetID"`
-								Payload        []struct {
-									PayloadID [2]uint8 `json:"payloadID"`
-									Data      []uint8  `json:"data"`
-								} `json:"payload"`
-							}).Payload[0].Data),
+							"commitment.payload.data":  commitment.Payload[0].Data,
 							"correspondingMMRRootHash": mmrRootHash.Hex(),
 						}).Info("Decoded transaction call data for NewTicket event")
 					}
@@ -258,6 +251,66 @@ func (li *BeefyListener) decodeTransactionCallData(callData []byte) (string, map
 	}
 
 	return method.Name, decoded, nil
+}
+
+// decodes a submitInitial call
+// TODO: not necessary to parse everything - doing it for now in case something ends up needed & avoid losing time on not finding it.
+// strictly speaking only want to parse the commitment initially to get blocknumber & payload, and then if those do not match the relay chain's canonical payload, parse the validator proof to extract signature and validator who signed it
+func (li *BeefyListener) parseSubmitInitial(callData []byte) (contracts.BeefyClientCommitment, []*big.Int, contracts.BeefyClientValidatorProof, error) {
+	// decode the callData
+	methodName, decoded, err := li.decodeTransactionCallData(callData)
+	if err != nil {
+		return contracts.BeefyClientCommitment{}, nil, contracts.BeefyClientValidatorProof{}, err
+	}
+	if methodName != "submitInitial" {
+		return contracts.BeefyClientCommitment{}, nil, contracts.BeefyClientValidatorProof{}, fmt.Errorf("unexpected method name: %s", methodName)
+	}
+	// Extract the commitment
+	commitmentRaw := decoded["commitment"].(struct {
+		BlockNumber    uint32 `json:"blockNumber"`
+		ValidatorSetID uint64 `json:"validatorSetID"`
+		Payload        []struct {
+			PayloadID [2]uint8 `json:"payloadID"`
+			Data      []uint8  `json:"data"`
+		} `json:"payload"`
+	})
+
+	commitment := contracts.BeefyClientCommitment{
+		BlockNumber:    commitmentRaw.BlockNumber,
+		ValidatorSetID: commitmentRaw.ValidatorSetID,
+		Payload:        make([]contracts.BeefyClientPayloadItem, len(commitmentRaw.Payload)),
+	}
+
+	// Convert payload items
+	for i, p := range commitmentRaw.Payload {
+		commitment.Payload[i] = contracts.BeefyClientPayloadItem{
+			PayloadID: p.PayloadID,
+			Data:      p.Data,
+		}
+	}
+
+	bitfield := decoded["bitfield"].([]*big.Int)
+
+	// Extract validator proof
+	proofRaw := decoded["proof"].(struct {
+		V       uint8          `json:"v"`
+		R       [32]byte       `json:"r"`
+		S       [32]byte       `json:"s"`
+		Index   *big.Int       `json:"index"`
+		Account common.Address `json:"account"`
+		Proof   [][32]byte     `json:"proof"`
+	})
+
+	proof := contracts.BeefyClientValidatorProof{
+		V:       proofRaw.V,
+		R:       proofRaw.R,
+		S:       proofRaw.S,
+		Index:   proofRaw.Index,
+		Account: proofRaw.Account,
+		Proof:   proofRaw.Proof,
+	}
+
+	return commitment, bitfield, proof, nil
 }
 
 func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) error {
