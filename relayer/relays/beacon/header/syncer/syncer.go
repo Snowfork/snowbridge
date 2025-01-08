@@ -315,13 +315,10 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 
 	blockRootsContainer = &state.BlockRootsContainerMainnet{}
 	if forkVersion == protocol.Electra {
-		log.Info("found Electra fork")
 		beaconState = &state.BeaconStateElectra{}
 	} else if forkVersion == protocol.Deneb {
-		log.Info("found Deneb fork")
 		beaconState = &state.BeaconStateDenebMainnet{}
 	} else {
-		log.Info("found Capella fork")
 		beaconState = &state.BeaconStateCapellaMainnet{}
 	}
 
@@ -578,6 +575,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 
 	var versionedExecutionPayloadHeader scale.VersionedExecutionPayloadHeader
 	forkVersion := s.protocol.ForkVersion(slot)
+	// The execution payload did not change in Electra, so we reuse Deneb's version.
 	if forkVersion == protocol.Electra || forkVersion == protocol.Deneb {
 		executionPayloadScale, err := api.DenebExecutionPayloadToScale(sszBlock.ExecutionPayloadDeneb())
 		if err != nil {
@@ -801,8 +799,8 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 	if err != nil {
 		return update, fmt.Errorf("get state tree: %w", err)
 	}
-	_ = stateTree.Hash()                                                                                       // necessary to populate the proof tree values
-	finalizedHeaderProof, err := stateTree.Prove(s.protocol.FinalizedCheckpointGeneralizedIndex(attestedSlot)) // TODO Double check slot
+	_ = stateTree.Hash() // necessary to populate the proof tree values
+	finalizedHeaderProof, err := stateTree.Prove(s.protocol.FinalizedCheckpointGeneralizedIndex(attestedSlot))
 	if err != nil {
 		return update, fmt.Errorf("get finalized header proof: %w", err)
 	}

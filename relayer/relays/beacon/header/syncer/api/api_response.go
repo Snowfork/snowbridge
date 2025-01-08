@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"math/big"
 	"strconv"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
@@ -674,7 +674,6 @@ func (b BeaconBlockResponse) ToFastSSZ(forkVersion protocol.ForkVersion) (state.
 	}
 
 	if forkVersion == protocol.Electra {
-
 		attesterSlashings := []*state.AttesterSlashingElectra{}
 		for _, attesterSlashing := range body.AttesterSlashings {
 			attesterSlashingSSZ, err := attesterSlashing.ToFastSSZElectra()

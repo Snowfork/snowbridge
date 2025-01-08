@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eux
+set -eu
 
 source scripts/set-env.sh
 
@@ -85,7 +85,7 @@ deploy_local() {
     start_geth
 
     echo "Waiting for geth API to be ready"
-    sleep 10
+    sleep 3
 
     # 2. deploy consensus client
     echo "Starting beacon node"
