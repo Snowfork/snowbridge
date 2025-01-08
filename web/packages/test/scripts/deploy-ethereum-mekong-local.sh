@@ -61,8 +61,6 @@ start_geth() {
 
 start_lodestar() {
     echo "Starting lodestar local node"
-
-    echo "Starting lodestar local node"
     local genesisHash=$(curl $eth_endpoint_http \
         -X POST \
         -H 'Content-Type: application/json' \
@@ -76,34 +74,33 @@ start_lodestar() {
         timestamp=$(date -d'+10second' +%s)
     fi
 
-    docker run --rm -m=12g --memory-reservation=8g --cpus 2 \
-      -v "${output_electra_dir}:/mnt" \
-      -p 9596:9596 \
-      --env 'NODE_OPTIONS=--max-old-space-size=8192' \
-      --env 'LODESTAR_PRESET=mainnet' \
-      docker.io/chainsafe/lodestar:v1.23.1 \
-      dev \
-      --genesisValidators 8 \
-      --genesisTime $timestamp \
-      --startValidators "0..7" \
-      --enr.ip6 "127.0.0.1" \
-      --eth1.depositContractDeployBlock=0 \
-      --rest.address "0.0.0.0" \
-      --eth1.providerUrls "http://$HOST:8545" \
-      --execution.urls "http://$HOST:8551" \
-      --dataDir "/mnt/lodestar" \
-      --rest.namespace="*" \
-      --terminal-total-difficulty-override 0 \
-      --genesisEth1Hash $genesisHash \
-      --params.ALTAIR_FORK_EPOCH 0 \
-      --params.BELLATRIX_FORK_EPOCH 0 \
-      --params.CAPELLA_FORK_EPOCH 0 \
-      --params.DENEB_FORK_EPOCH 0 \
-      --params.ELECTRA_FORK_EPOCH 0 \
-      --eth1=true \
-      --jwt-secret /mnt/jwtsecret \
-      --chain.archiveStateEpochFrequency 1 \
-       > "$output_electra_dir/lodestar.log" 2>&1 &
+    export LODESTAR_PRESET="mainnet"
+
+    pushd $root_dir/lodestar
+    ./lodestar --version
+    ./lodestar dev \
+        --genesisValidators 8 \
+        --genesisTime $timestamp \
+        --startValidators "0..7" \
+        --enr.ip6 "127.0.0.1" \
+        --rest.address "0.0.0.0" \
+        --eth1.providerUrls "http://$HOST:8545" \
+        --execution.urls "http://$HOST:8551" \
+        --dataDir "$ethereum_data_dir" \
+        --reset \
+        --terminal-total-difficulty-override 0 \
+        --genesisEth1Hash $genesisHash \
+        --params.ALTAIR_FORK_EPOCH 0 \
+        --params.BELLATRIX_FORK_EPOCH 0 \
+        --params.CAPELLA_FORK_EPOCH 0 \
+        --params.DENEB_FORK_EPOCH 0 \
+        --params.ELECTRA_FORK_EPOCH 0 \
+        --eth1=true \
+        --rest.namespace="*" \
+        --jwt-secret $config_dir/jwtsecret \
+        --chain.archiveStateEpochFrequency 1 \
+        >"$output_dir/lodestar.log" 2>&1 &
+    popd
 }
 
 deploy_local() {

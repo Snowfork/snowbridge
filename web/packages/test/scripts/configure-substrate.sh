@@ -7,7 +7,7 @@ source scripts/xcm-helper.sh
 config_relayer() {
     # Configure beacon relay
     local deneb_forked_epoch=0
-    local electra_forked_epoch=256
+    local electra_forked_epoch=0
     if [ "$eth_fast_mode" == "true" ]; then
         deneb_forked_epoch=0
     fi
