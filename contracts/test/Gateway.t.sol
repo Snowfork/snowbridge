@@ -62,7 +62,7 @@ contract GatewayTest is Test {
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     ParaID public bridgeHubParaID = ParaID.wrap(1013);
-    bytes32 public bridgeHubAgentID = 0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539;
+    bytes32 public bridgeHubAgentID = 0xbc0eb42478cf1d8f1542c986e5e6a513f926c4552d7b7ab6084b97e192c622fa;
     address public bridgeHubAgent;
 
     ParaID public assetHubParaID = ParaID.wrap(1000);
