@@ -187,7 +187,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						"rawEvent":            event.Raw,
 					}).Info("Witnessed a new Ticket event")
 
-					commitment, _, _, err := li.parseSubmitInitial(callData)
+					commitment, _, validatorProof, err := li.parseSubmitInitial(callData)
 					if err != nil {
 						log.WithError(err).Warning("Failed to decode transaction call data")
 					}
@@ -200,9 +200,9 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						return fmt.Errorf("retrieve MMR root hash at block %v: %w", beefyBlockHash.Hex(), err)
 					} else {
 						log.WithFields(log.Fields{
-							// "params": decodedParams,
-							"commitment.payload.data":  commitment.Payload[0].Data,
-							"correspondingMMRRootHash": mmrRootHash.Hex(),
+							"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
+							"proof":                    validatorProof,
+							"correspondingMMRRootHash": mmrRootHash,
 						}).Info("Decoded transaction call data for NewTicket event")
 					}
 
