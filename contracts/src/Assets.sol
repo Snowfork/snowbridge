@@ -11,7 +11,7 @@ import {AssetsStorage, TokenInfo} from "./storage/AssetsStorage.sol";
 import {CoreStorage} from "./storage/CoreStorage.sol";
 
 import {SubstrateTypes} from "./SubstrateTypes.sol";
-import {ParaID, MultiAddress, Ticket, Costs} from "./Types.sol";
+import {ChannelID, ParaID, MultiAddress, Ticket, Costs} from "./Types.sol";
 import {Address} from "./utils/Address.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
@@ -280,9 +280,11 @@ library Assets {
     }
 
     // @dev Mint foreign token from Polkadot
-    function mintForeignToken(address agent, bytes32 foreignTokenID, address recipient, uint256 amount) external {
+    function mintForeignToken(ChannelID channelID, bytes32 foreignTokenID, address recipient, uint256 amount)
+        external
+    {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        if(agent != $.assetHubAgent) {
+        if (channelID != $.assetHubParaID.into()) {
             revert TokenMintFailed();
         }
         address token = _ensureTokenAddressOf(foreignTokenID);
