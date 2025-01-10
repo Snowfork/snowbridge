@@ -62,11 +62,11 @@ contract GatewayTest is Test {
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     ParaID public bridgeHubParaID = ParaID.wrap(1013);
-    bytes32 public bridgeHubAgentID = 0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314;
+    bytes32 public bridgeHubAgentID = 0xbc0eb42478cf1d8f1542c986e5e6a513f926c4552d7b7ab6084b97e192c622fa;
     address public bridgeHubAgent;
 
     ParaID public assetHubParaID = ParaID.wrap(1000);
-    bytes32 public assetHubAgentID = 0x81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79;
+    bytes32 public assetHubAgentID = 0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539;
     address public assetHubAgent;
 
     address public relayer;
@@ -901,7 +901,7 @@ contract GatewayTest is Test {
         vm.expectEmit(true, true, false, false);
         emit Transfer(address(0), account1, 1000);
 
-        MockGateway(address(gateway)).mintForeignTokenPublic(abi.encode(params));
+        MockGateway(address(gateway)).mintForeignTokenPublic(assetHubParaID.into(), abi.encode(params));
 
         address dotToken = MockGateway(address(gateway)).tokenAddressOf(dotTokenID);
 
@@ -916,7 +916,16 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Assets.TokenNotRegistered.selector);
 
-        MockGateway(address(gateway)).mintForeignTokenPublic(abi.encode(params));
+        MockGateway(address(gateway)).mintForeignTokenPublic(assetHubParaID.into(), abi.encode(params));
+    }
+
+    function testMintFromParachainOtherThanAssetHubWillFail() public {
+        MintForeignTokenParams memory params =
+            MintForeignTokenParams({foreignTokenID: bytes32(uint256(1)), recipient: account1, amount: 1000});
+
+        vm.expectRevert(Assets.TokenMintFailed.selector);
+
+        MockGateway(address(gateway)).mintForeignTokenPublic(bridgeHubParaID.into(), abi.encode(params));
     }
 
     function testSendRelayTokenToAssetHubWithAddress32() public {
