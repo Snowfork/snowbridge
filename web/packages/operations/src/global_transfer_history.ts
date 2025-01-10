@@ -1,7 +1,5 @@
 import "dotenv/config"
-import { contextFactory, destroyContext, environment, subscan, historyV2 } from "@snowbridge/api"
-import { BeefyClient__factory, IGateway__factory } from "@snowbridge/contract-types"
-import { AlchemyProvider } from "ethers"
+import { historyV2 } from "@snowbridge/api"
 
 const monitor = async () => {
     const toEthereum = await historyV2.toEthereumHistory()
