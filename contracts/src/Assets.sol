@@ -222,6 +222,7 @@ library Assets {
         } else {
             revert Unsupported();
         }
+        emit IGateway.ForeignTokenBurnt(foreignID, token);
 
         emit IGateway.TokenSent(token, sender, destinationChain, destinationAddress, amount);
     }
@@ -293,6 +294,8 @@ library Assets {
         }
         address token = _ensureTokenAddressOf(foreignTokenID);
         Token(token).mint(recipient, amount);
+
+        emit IGateway.ForeignTokenMinted(foreignTokenID, address(token));
     }
 
     // @dev Transfer ERC20 to `recipient`

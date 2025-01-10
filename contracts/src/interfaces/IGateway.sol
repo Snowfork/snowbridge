@@ -38,6 +38,12 @@ interface IGateway {
     // Emitted when foreign token from polkadot registed
     event ForeignTokenRegistered(bytes32 indexed tokenID, address token);
 
+    // Emitted when foreign token minted
+    event ForeignTokenMinted(bytes32 indexed tokenID, address token);
+
+    // Emitted when foreign token burnt
+    event ForeignTokenBurnt(bytes32 indexed tokenID, address token);
+
     /**
      * Getters
      */
