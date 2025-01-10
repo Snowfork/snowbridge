@@ -19,6 +19,7 @@
     "smokeTest": "npx ts-node src/transfer_token.ts start",
     "transferToPolkadot": "npx ts-node src/transfer_to_polkadot.ts start",
     "transferToEthereum": "npx ts-node src/transfer_to_ethereum.ts start",
+    "history": "npx ts-node src/global_transfer_history.ts",
     "format": "prettier src --write"
   },
   "devDependencies": {
