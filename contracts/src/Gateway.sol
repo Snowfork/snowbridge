@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
@@ -74,7 +74,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     // Gas used for:
     // 1. Mapping a command id to an implementation function
     // 2. Calling implementation function
-    uint256 DISPATCH_OVERHEAD_GAS = 10_000;
+    uint256 constant DISPATCH_OVERHEAD_GAS = 10_000;
 
     // The maximum fee that can be sent to a destination parachain to pay for execution (DOT).
     // Has two functions:
@@ -108,6 +108,24 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         _;
     }
 
+    modifier nonreentrant() {
+        assembly {
+            // Check if flag is set and if true revert because it means the function is currently executing.
+            if tload(0) { revert(0, 0) }
+
+            // Set the flag to mark the the function is currently executing.
+            tstore(0, 1)
+        }
+
+        // Execute the function here.
+        _;
+
+        assembly {
+            // Clear the flag as the function has completed execution.
+            tstore(0, 0)
+        }
+    }
+
     constructor(
         address beefyClient,
         address agentExecutor,
@@ -137,7 +155,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         InboundMessage calldata message,
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
-    ) external {
+    ) external nonreentrant {
         uint256 startGas = gasleft();
 
         Channel storage channel = _ensureChannel(message.channelID);
@@ -437,7 +455,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     }
 
     // Register an Ethereum-native token in the gateway and on AssetHub
-    function registerToken(address token) external payable {
+    function registerToken(address token) external payable nonreentrant {
         _submitOutbound(Assets.registerToken(token));
     }
 
@@ -457,7 +475,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         MultiAddress calldata destinationAddress,
         uint128 destinationFee,
         uint128 amount
-    ) external payable {
+    ) external payable nonreentrant {
         Ticket memory ticket = Assets.sendToken(
             token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
         );
