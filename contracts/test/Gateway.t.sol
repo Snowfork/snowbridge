@@ -24,7 +24,7 @@ import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 import {MultiAddress} from "../src/MultiAddress.sol";
 import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress} from "../src/Types.sol";
 
-import {SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
+import {NativeTransferFailed, SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
 import {PricingStorage} from "../src/storage/PricingStorage.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {TokenLib} from "../src/TokenLib.sol";
