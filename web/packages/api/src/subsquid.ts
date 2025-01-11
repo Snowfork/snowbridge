@@ -54,6 +54,7 @@ export const fetchBridgeHubOutboundMessageAccepted = async (messageID: string) =
             id
             nonce
             blockNumber
+            timestamp
         }   
     }`
     let result = await queryByGraphQL(query)
