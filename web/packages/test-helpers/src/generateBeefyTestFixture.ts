@@ -1,10 +1,10 @@
 import { ValidatorSet, createRandomSubset, readSetBits } from "./helpers"
-import { BigNumber, ethers } from "ethers"
+import { ethers } from "ethers"
 import type { BeefyClient } from "@snowbridge/contract-types"
 import { accounts } from "./wallets"
 import path from "path"
 import fs from "fs"
-const encoder = new ethers.utils.AbiCoder()
+const encoder = new ethers.AbiCoder()
 
 const generateValidatorProof = async (
     bitfieldFile: string,
@@ -15,7 +15,7 @@ const generateValidatorProof = async (
     const testFixture = JSON.parse(fs.readFileSync(bitfieldFile, "utf8"))
     const bitField = encoder.decode(["uint256[]"], testFixture.final.finalBitFieldRaw)[0]
     console.log(bitField)
-    let finalBitfield: BigNumber[] = []
+    let finalBitfield: BigInt[] = []
     for (let i = 0; i < bitField.length; i++) {
         finalBitfield.push(bitField[i])
     }
