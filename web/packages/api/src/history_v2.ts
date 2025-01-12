@@ -6,7 +6,7 @@ import {
     fetchBridgeHubInboundMessageReceived,
     fetchMessageProcessedOnPolkadot,
 } from "./subsquid"
-import { getEventIndex } from "./utils"
+import { forwardedTopicId, getEventIndex } from "./utils"
 
 export enum TransferStatus {
     Pending,
@@ -197,6 +197,7 @@ export const toEthereumHistory = async (): Promise<ToEthereumTransferResult[]> =
     const allTransfers = await fetchToEthereumTransfers()
     const results: ToEthereumTransferResult[] = []
     for (const transfer of allTransfers) {
+        let bridgeHubMessageId = forwardedTopicId(transfer.id)
         const result: ToEthereumTransferResult = {
             id: transfer.id,
             status: TransferStatus.Pending,
@@ -215,9 +216,23 @@ export const toEthereumHistory = async (): Promise<ToEthereumTransferResult[]> =
                 block_num: transfer.blockNumber,
                 block_timestamp: transfer.timestamp,
                 messageId: transfer.id,
-                bridgeHubMessageId: "",
+                bridgeHubMessageId,
                 success: true,
             },
+        }
+        let bridgeHubXcmDelivered = await fetchMessageProcessedOnPolkadot(bridgeHubMessageId)
+        if (bridgeHubXcmDelivered) {
+            result.bridgeHubXcmDelivered = {
+                block_timestamp: bridgeHubXcmDelivered.timestamp,
+                event_index: getEventIndex(bridgeHubXcmDelivered.id),
+                extrinsic_hash: "",
+                siblingParachain: 1000,
+                success: bridgeHubXcmDelivered.success,
+            }
+            if (!result.bridgeHubXcmDelivered.success) {
+                result.status = TransferStatus.Failed
+                continue
+            }
         }
 
         let outboundQueueAccepted = await fetchBridgeHubOutboundMessageAccepted(transfer.id)
