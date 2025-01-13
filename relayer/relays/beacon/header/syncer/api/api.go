@@ -417,7 +417,7 @@ func (b *BeaconClient) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 	res, err := b.httpClient.Do(req)
 	endTime := time.Now()
 	duration := endTime.Sub(startTime)
-	log.WithFields(log.Fields{"startTime": startTime.Format(time.UnixDate), "endTime": endTime.Format(time.UnixDate), "duration": duration.Seconds()}).Warn("beacon state download time")
+	log.WithFields(log.Fields{"startTime": startTime.Format(time.UnixDate), "endTime": endTime.Format(time.UnixDate), "duration": duration.Seconds()}).Info("beacon state download time")
 
 	if err != nil {
 		return data, err
