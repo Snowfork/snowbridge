@@ -4,28 +4,21 @@ set -eu
 source scripts/set-env.sh
 source scripts/xcm-helper.sh
 
-config_relayer() {
+config_beacon_checkpoint() {
     # Configure beacon relay
-    local deneb_forked_epoch=0
-    local electra_forked_epoch=0
-    if [ "$eth_fast_mode" == "true" ]; then
-        deneb_forked_epoch=0
+    local electra_forked_epoch=2000000
+    if [ "$is_electra" == "true" ]; then
+        electra_forked_epoch=0
     fi
     jq \
-        --arg beacon_endpoint_http $beacon_endpoint_http \
-        --argjson deneb_forked_epoch $deneb_forked_epoch \
         --argjson electra_forked_epoch $electra_forked_epoch \
         '
-      .source.beacon.endpoint = $beacon_endpoint_http
-    | .source.beacon.spec.forkVersions.deneb = $deneb_forked_epoch
-    | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
+      .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
     ' \
         config/beacon-relay.json >$output_dir/beacon-relay.json
-}
 
-config_beacon_checkpoint() {
     pushd $root_dir
-    local check_point_hex=$($relay_bin generate-beacon-checkpoint --config $output_dir/beacon-relay.json --export-json)
+    local check_point_hex=$($relay_bin generate-beacon-checkpoint --config $output_dir/beacon-relay.json)
     popd
     local transact_call="0x5200"$check_point_hex
     send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$transact_call" 180000000000 900000
@@ -108,7 +101,6 @@ configure_substrate() {
     open_hrmp_channels
     config_xcm_version
     wait_beacon_chain_ready
-    config_relayer
     config_beacon_checkpoint
 }
 

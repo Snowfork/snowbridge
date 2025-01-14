@@ -101,7 +101,7 @@ type AttestationElectra struct {
 	AggregationBits []byte           `json:"aggregation_bits" ssz:"bitlist" ssz-max:"131072"` // Modified in Electra
 	Data            *AttestationData `json:"data"`
 	Signature       [96]byte         `json:"signature" ssz-size:"96"`
-	CommitteeBits   []byte           `json:"committee_bits" ssz-size:"64"` // New in Electra
+	CommitteeBits   []byte           `json:"committee_bits" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector64" ssz-size:"8"` // New in Electra
 }
 
 type AttesterSlashingElectra struct {
@@ -144,7 +144,7 @@ func (b *BeaconBlockElectra) ExecutionPayloadCapella() *ExecutionPayloadCapella 
 }
 
 func (b *BeaconBlockElectra) ExecutionPayloadDeneb() *ExecutionPayloadDeneb {
-	return nil
+	return b.Body.ExecutionPayload
 }
 
 func (b *BeaconStateElectra) GetSlot() uint64 {

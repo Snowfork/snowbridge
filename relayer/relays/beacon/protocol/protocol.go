@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"encoding/hex"
+	log "github.com/sirupsen/logrus"
 	"strings"
 
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -85,9 +86,11 @@ const (
 func (p *Protocol) ForkVersion(slot uint64) ForkVersion {
 	epoch := p.ComputeEpochAtSlot(slot)
 	if epoch >= p.Settings.ForkVersions.Electra {
+		log.Info("found Electra fork")
 		return Electra
 	}
 	if epoch >= p.Settings.ForkVersions.Deneb {
+		log.Info("found Deneb fork")
 		return Deneb
 	}
 	return Capella

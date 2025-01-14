@@ -8,10 +8,8 @@ start_geth() {
     rm -rf $output_electra_dir
     mkdir -p $output_electra_dir
     mkdir -p $output_electra_dir/ethereum
-    cp config/genesis-mekong-local.json $output_electra_dir
+    cp config/genesis-electra.json $output_electra_dir
     cp config/jwtsecret $output_electra_dir
-    cp config/config.yaml $output_electra_dir
-    cp config/genesis.ssz $output_electra_dir
 
     echo "Test dir: $output_electra_dir"
 
@@ -21,8 +19,7 @@ start_geth() {
       docker.io/ethpandaops/geth:lightclient-prague-devnet-4 \
       --datadir /mnt/ethereum \
       --state.scheme=hash \
-      init /mnt/genesis-mekong-local.json
-    echo "**********************************"
+      init /mnt/genesis-electra.json
     docker run --rm -m=12g --memory-reservation=8g --cpus 2 \
       -v "${output_electra_dir}:/mnt" \
       -p 8551:8551 \

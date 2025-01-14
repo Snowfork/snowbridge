@@ -8,6 +8,8 @@ from_start_services=true
 source scripts/set-env.sh
 source scripts/build-binary.sh
 
+is_electra=true
+
 trap kill_all SIGINT SIGTERM EXIT
 cleanup
 
@@ -21,7 +23,7 @@ install_binary
 
 # 2. start ethereum
 echo "Starting ethereum nodes"
-source scripts/deploy-ethereum-mekong-local.sh
+source scripts/electra-deploy-ethereum.sh
 deploy_ethereum
 
 # 3. start polkadot
@@ -34,6 +36,11 @@ echo "Generate beefy checkpoint"
 source scripts/generate-beefy-checkpoint.sh
 generate_beefy_checkpoint
 
+# 5. deploy contracts
+echo "Deploying ethereum contracts"
+source scripts/deploy-contracts.sh
+deploy_contracts
+
 # 6. config substrate
 echo "Config Substrate"
 source scripts/configure-substrate.sh
@@ -42,7 +49,7 @@ configure_substrate
 if [ "$skip_relayer" == "false" ]; then
   # 7. start relayer
   echo "Starting relayers"
-  source scripts/start-relayer-electra.sh
+  source scripts/start-relayer.sh
   deploy_relayer
 fi
 
