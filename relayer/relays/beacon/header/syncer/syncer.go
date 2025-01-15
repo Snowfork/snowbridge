@@ -543,24 +543,29 @@ func (s *Syncer) GetHeaderUpdateBySlotWithCheckpoint(slot uint64, checkpoint *ca
 
 func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
 	var update scale.HeaderUpdatePayload
-	blockResponse, err := s.Client.GetBeaconBlock(blockRoot)
+	blockBytes, err := s.Client.GetBeaconBlockBytes(blockRoot)
 	if err != nil {
 		return update, fmt.Errorf("fetch block: %w", err)
 	}
-	data := blockResponse.Data.Message
-	slot, err := util.ToUint64(data.Slot)
-	if err != nil {
-		return update, err
-	}
 
-	sszBlock, err := blockResponse.ToFastSSZ(s.protocol.ForkVersion(slot))
-	if err != nil {
-		return update, err
-	}
-
-	header, err := s.Client.GetHeaderBySlot(sszBlock.GetBeaconSlot())
+	header, err := s.Client.GetHeaderByBlockRoot(blockRoot)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("fetch block: %w", err)
+	}
+
+	slot := header.Slot
+
+	var signedBlock state.SignedBeaconBlock
+	forkVersion := s.protocol.ForkVersion(slot)
+	if forkVersion == protocol.Electra {
+		signedBlock = &state.SignedBeaconBlockElectra{}
+	} else {
+		signedBlock = &state.SignedBeaconBlockDeneb{}
+	}
+
+	err = signedBlock.UnmarshalSSZ(blockBytes)
+	if err != nil {
+		return scale.HeaderUpdatePayload{}, fmt.Errorf("unmarshal block ssz: %w", err)
 	}
 
 	beaconHeader, err := header.ToScale()
@@ -568,22 +573,22 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("beacon header to scale: %w", err)
 	}
 
-	executionHeaderBranch, err := s.getExecutionHeaderBranch(sszBlock)
+	beaconBlock := signedBlock.GetBlock()
+	executionHeaderBranch, err := s.getExecutionHeaderBranch(beaconBlock)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, err
 	}
 
 	var versionedExecutionPayloadHeader scale.VersionedExecutionPayloadHeader
-	forkVersion := s.protocol.ForkVersion(slot)
 	// The execution payload did not change in Electra, so we reuse Deneb's version.
 	if forkVersion == protocol.Electra || forkVersion == protocol.Deneb {
-		executionPayloadScale, err := api.DenebExecutionPayloadToScale(sszBlock.ExecutionPayloadDeneb())
+		executionPayloadScale, err := api.DenebExecutionPayloadToScale(beaconBlock.ExecutionPayloadDeneb())
 		if err != nil {
 			return scale.HeaderUpdatePayload{}, err
 		}
 		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
 	} else {
-		executionPayloadScale, err := api.CapellaExecutionPayloadToScale(sszBlock.ExecutionPayloadCapella())
+		executionPayloadScale, err := api.CapellaExecutionPayloadToScale(beaconBlock.ExecutionPayloadCapella())
 		if err != nil {
 			return scale.HeaderUpdatePayload{}, err
 		}
@@ -591,7 +596,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 	}
 
 	// If checkpoint not provided or slot == finalizedSlot there won't be an ancestry proof because the header state in question is also the finalized header
-	if checkpoint == nil || sszBlock.GetBeaconSlot() == checkpoint.Slot {
+	if checkpoint == nil || beaconBlock.GetBeaconSlot() == checkpoint.Slot {
 		return scale.HeaderUpdatePayload{
 			Header: beaconHeader,
 			AncestryProof: scale.OptionAncestryProof{
@@ -602,7 +607,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 		}, nil
 	}
 
-	proofScale, err := s.getBlockHeaderAncestryProof(int(sszBlock.GetBeaconSlot()), blockRoot, checkpoint.BlockRootsTree)
+	proofScale, err := s.getBlockHeaderAncestryProof(int(beaconBlock.GetBeaconSlot()), blockRoot, checkpoint.BlockRootsTree)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, err
 	}

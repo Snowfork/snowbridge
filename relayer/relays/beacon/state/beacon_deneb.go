@@ -44,6 +44,11 @@ type ExecutionPayloadHeaderDeneb struct {
 	ExcessBlobGas    uint64 `json:"excess_blob_gas,omitempty"` // New in Deneb
 }
 
+type SignedBeaconBlockDeneb struct {
+	Message   BeaconBlockDenebMainnet
+	Signature [96]byte `json:"signature,omitempty" ssz-size:"96"`
+}
+
 type BeaconBlockDenebMainnet struct {
 	Slot          uint64                       `json:"slot"`
 	ProposerIndex uint64                       `json:"proposer_index"`
@@ -139,4 +144,7 @@ func (b *BeaconStateDenebMainnet) GetNextSyncCommittee() *SyncCommittee {
 }
 func (b *BeaconStateDenebMainnet) GetCurrentSyncCommittee() *SyncCommittee {
 	return b.CurrentSyncCommittee
+}
+func (b *SignedBeaconBlockDeneb) GetBlock() BeaconBlock {
+	return &b.Message
 }

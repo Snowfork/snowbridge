@@ -191,6 +191,11 @@ type BeaconBlock interface {
 	GetBlockBodyTree() (*ssz.Node, error)
 }
 
+type SignedBeaconBlock interface {
+	UnmarshalSSZ(buf []byte) error
+	GetBlock() BeaconBlock
+}
+
 func (b *BlockRootsContainerMainnet) SetBlockRoots(blockRoots [][]byte) {
 	b.BlockRoots = blockRoots
 }

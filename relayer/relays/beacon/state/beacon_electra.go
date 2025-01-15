@@ -18,7 +18,7 @@ type DepositRequest struct {
 	Pubkey                [48]byte `json:"pubkey" ssz-size:"48"`
 	WithdrawalCredentials [32]byte `ssz-size:"32" json:"withdrawal_credentials"`
 	Amount                uint64   `json:"amount"`
-	Signature             []byte   `json:"signature,omitempty" ssz-size:"96"`
+	Signature             [96]byte `json:"signature,omitempty" ssz-size:"96"`
 	Index                 uint64   `json:"index,omitempty"`
 }
 
@@ -32,6 +32,11 @@ type ConsolidationRequest struct {
 	SourceAddress [20]byte `ssz-size:"20" json:"source_address" `
 	SourcePubkey  [48]byte `ssz-size:"48" json:"source_pubkey"`
 	TargetPubkey  [48]byte `ssz-size:"48" json:"target_pubkey"`
+}
+
+type SignedBeaconBlockElectra struct {
+	Message   BeaconBlockElectra
+	Signature [96]byte `json:"signature,omitempty" ssz-size:"96"`
 }
 
 type BeaconBlockElectra struct {
@@ -55,6 +60,7 @@ type BeaconBlockBodyElectra struct {
 	ExecutionPayload      *ExecutionPayloadDeneb        `json:"execution_payload"`
 	BlsToExecutionChanges []*SignedBLSToExecutionChange `json:"bls_to_execution_changes,omitempty" ssz-max:"16"`
 	BlobKzgCommitments    [][48]byte                    `json:"blob_kzg_commitments,omitempty" ssz-max:"4096" ssz-size:"?,48"`
+	ExecutionRequests     *ExecutionRequests            `json:"execution_requests"` // New in Electra
 }
 
 type BeaconStateElectra struct {
@@ -112,7 +118,7 @@ type AttesterSlashingElectra struct {
 type IndexedAttestationElectra struct {
 	AttestationIndices []uint64         `json:"attesting_indices" ssz-max:"131072"` // Modified in Electra
 	Data               *AttestationData `json:"data"`
-	Signature          []byte           `json:"signature" ssz-size:"96"`
+	Signature          [96]byte         `json:"signature" ssz-size:"96"`
 }
 
 type PendingBalanceDeposit struct {
@@ -129,6 +135,12 @@ type PendingPartialWithdrawal struct {
 type PendingConsolidation struct {
 	SourceIndex uint64 `json:"source_index"`
 	TargetIndex uint64 `json:"target_index"`
+}
+
+type ExecutionRequests struct {
+	Deposits       []*DepositRequest       `json:"deposit_requests,omitempty" ssz-max:"8192"`     // New in Electra
+	Withdrawals    []*WithdrawalRequest    `json:"withdrawals_requests,omitempty" ssz-max:"16"`   // New in Electra
+	Consolidations []*ConsolidationRequest `json:"consolidations_requests,omitempty" ssz-max:"2"` // New in Electra
 }
 
 func (b *BeaconBlockElectra) GetBeaconSlot() uint64 {
@@ -172,4 +184,8 @@ func (b *BeaconStateElectra) GetNextSyncCommittee() *SyncCommittee {
 }
 func (b *BeaconStateElectra) GetCurrentSyncCommittee() *SyncCommittee {
 	return b.CurrentSyncCommittee
+}
+
+func (b *SignedBeaconBlockElectra) GetBlock() BeaconBlock {
+	return &b.Message
 }
