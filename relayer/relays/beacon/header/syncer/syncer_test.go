@@ -250,34 +250,3 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 	attested, err = syncer.FindValidAttestedHeader(32540, 32768)
 	assert.Error(t, err)
 }
-
-func TestExecutionProof(t *testing.T) {
-	syncer := New(api.NewBeaconClient(LocalUrl, LocalUrl), &mock.Store{}, protocol.New(config.SpecSettings{
-		SlotsInEpoch:                 32,
-		EpochsPerSyncCommitteePeriod: 256,
-		ForkVersions: config.ForkVersions{
-			Deneb:   0,
-			Electra: 0,
-		},
-	}, MaxRedundancy))
-
-	//checkpoints, err := syncer.Client.GetFinalizedCheckpoint()
-	//assert.NoError(t, err)
-
-	_, err := syncer.GetHeaderUpdate(common.HexToHash("00426c5d9d3aa9802b68acf154cbe1b3a86147a7fcf2936ba94bfe138ceae36f"), nil)
-	assert.NoError(t, err)
-}
-
-func TestContainers(t *testing.T) {
-	syncer := New(api.NewBeaconClient(LocalUrl, LocalUrl), &mock.Store{}, protocol.New(config.SpecSettings{
-		SlotsInEpoch:                 32,
-		EpochsPerSyncCommitteePeriod: 256,
-		ForkVersions: config.ForkVersions{
-			Deneb:   0,
-			Electra: 0,
-		},
-	}, MaxRedundancy))
-
-	err := syncer.TestExecutionRequest()
-	assert.NoError(t, err)
-}
