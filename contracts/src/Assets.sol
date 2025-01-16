@@ -138,7 +138,7 @@ library Assets {
         }
     }
 
-    // @dev Transfer ERC20(Ethereum-native) tokens to Polkadot
+    // @dev Transfer Ether tokens to Polkadot
     function _sendEther(
         address sender,
         ParaID destinationChain,
