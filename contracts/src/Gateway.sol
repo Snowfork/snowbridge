@@ -556,8 +556,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // The fee is already collected into the gateway contract
         // Reimburse excess fee payment
-        if (msg.value > totalEther && (msg.value - totalEther) > _dustThreshold()) {
-            payable(msg.sender).safeNativeTransfer(msg.value - totalEther);
+        uint256 extraPayment = (msg.value - totalEther);
+        if (extraPayment > _dustThreshold()) {
+            payable(msg.sender).safeNativeTransfer(extraPayment);
         }
 
         // Generate a unique ID for this message
