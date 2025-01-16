@@ -17,6 +17,7 @@ import {
     Command,
     MultiAddress,
     Ticket,
+    TokenInfo,
     Costs,
     AgentExecuteCommand
 } from "./Types.sol";
@@ -699,6 +700,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+        TokenInfo storage nativeEther = assets.tokenRegistry[address(0)];
+        nativeEther.isRegistered = true;
 
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();

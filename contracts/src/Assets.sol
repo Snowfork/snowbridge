@@ -62,7 +62,7 @@ library Assets {
     ) external view returns (Costs memory costs) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
-        if (!info.isRegistered && token != address(0)) {
+        if (!info.isRegistered) {
             revert TokenNotRegistered();
         }
 
