@@ -5,10 +5,10 @@ start=$(date +%s)
 
 from_start_services=true
 
+is_electra=true
+
 source scripts/set-env.sh
 source scripts/build-binary.sh
-
-is_electra=true
 
 trap kill_all SIGINT SIGTERM EXIT
 cleanup

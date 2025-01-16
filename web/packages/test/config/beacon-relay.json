@@ -9,7 +9,7 @@
         "epochsPerSyncCommitteePeriod": 256,
         "forkVersions": {
           "deneb": 0,
-          "electra": 200000
+          "electra": 2000000
         }
       },
       "datastore": {

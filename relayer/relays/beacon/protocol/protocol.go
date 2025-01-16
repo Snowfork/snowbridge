@@ -2,9 +2,9 @@ package protocol
 
 import (
 	"encoding/hex"
-	log "github.com/sirupsen/logrus"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 )
 
@@ -15,6 +15,7 @@ type Protocol struct {
 }
 
 func New(setting config.SpecSettings, headerRedundancy uint64) *Protocol {
+	log.WithField("settings", setting).Info("protocol settings")
 	return &Protocol{
 		Settings:               setting,
 		SlotsPerHistoricalRoot: setting.SlotsInEpoch * setting.EpochsPerSyncCommitteePeriod,
@@ -86,11 +87,9 @@ const (
 func (p *Protocol) ForkVersion(slot uint64) ForkVersion {
 	epoch := p.ComputeEpochAtSlot(slot)
 	if epoch >= p.Settings.ForkVersions.Electra {
-		log.Info("found Electra fork")
 		return Electra
 	}
 	if epoch >= p.Settings.ForkVersions.Deneb {
-		log.Info("found Deneb fork")
 		return Deneb
 	}
 	return Capella

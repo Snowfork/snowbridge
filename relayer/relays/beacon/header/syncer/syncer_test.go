@@ -19,7 +19,6 @@ import (
 )
 
 const TestUrl = "https://lodestar-sepolia.chainsafe.io"
-const LocalUrl = "http://localhost:9596"
 const MaxRedundancy = 20
 
 func newTestRunner() *Syncer {

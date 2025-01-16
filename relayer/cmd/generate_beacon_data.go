@@ -104,9 +104,9 @@ type InboundFixture struct {
 }
 
 const (
-	pathToBeaconTestFixtureFiles              = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/tests/electra"
+	pathToBeaconTestFixtureFiles              = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/tests/fixtures"
 	pathToInboundQueueFixtureTemplate         = "relayer/templates/beacon-fixtures.mustache"
-	pathToInboundQueueFixtureData             = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures/src/electra.rs"
+	pathToInboundQueueFixtureData             = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures/src/lib.rs"
 	pathToInboundQueueFixtureTestCaseTemplate = "relayer/templates/inbound-fixtures.mustache"
 	pathToInboundQueueFixtureTestCaseData     = "polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures/src/%s.rs"
 )
@@ -131,8 +131,6 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-
-		log.WithField("spec", conf.Source.Beacon.Spec).Info("beacon config")
 
 		p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
 		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
@@ -404,7 +402,6 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			for {
 				nextFinalizedUpdateScale, err := s.GetFinalizedUpdate()
 				if err != nil {
-					log.Info("found error")
 					log.Error(err)
 					continue
 				}
