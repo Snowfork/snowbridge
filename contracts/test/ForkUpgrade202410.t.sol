@@ -11,6 +11,7 @@ import {Gateway202410} from "../src/upgrades/Gateway202410.sol";
 import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {UpgradeParams, SetOperatingModeParams, OperatingMode, RegisterForeignTokenParams} from "../src/Params.sol";
 import {ChannelID, ParaID, OperatingMode, TokenInfo} from "../src/Types.sol";
+import {MultiAddress, multiAddressFromBytes32} from "../src/MultiAddress.sol";
 
 contract ForkUpgradeTest is Test {
     address private constant GatewayProxy = 0x27ca963C279c93801941e1eB8799c23f407d68e7;
@@ -70,6 +71,36 @@ contract ForkUpgradeTest is Test {
         assertEq(IGateway(GatewayProxy).queryForeignTokenID(0x70D9d338A6b17957B16836a90192BD8CDAe0b53d), dotId);
     }
 
+    function checkSendingEthWithAmountAndFeeSucceeds() public {
+        // Create a mock user
+        address user = makeAddr("user");
+        uint128 amount = 1;
+        ParaID paraID = ParaID.wrap(1000);
+        MultiAddress memory recipientAddress32 = multiAddressFromBytes32(keccak256("recipient"));
+
+        uint128 fee = uint128(IGateway(GatewayProxy).quoteSendTokenFee(address(0), paraID, 1));
+
+        vm.expectEmit();
+        emit IGateway.TokenSent(address(0), user, paraID, recipientAddress32, amount);
+
+        uint64 nonce = 173;
+        bytes32 messageID = keccak256(abi.encodePacked(paraID.into(), nonce));
+
+        vm.expectEmit();
+        emit IGateway.OutboundMessageAccepted(
+            paraID.into(),
+            nonce,
+            messageID,
+            hex"00010000000000000001000000000000000000000000000000000000000000811085f5b5d1b29598e73ca51de3d712f5d3103ad50e22dc1f4d3ff1559d51150100000000000000000000000000000000ca9a3b000000000000000000000000"
+        );
+
+        deal(user, amount + fee);
+        vm.startPrank(user);
+        IGateway(GatewayProxy).sendToken{value: amount + fee}(address(0), paraID, recipientAddress32, 1, amount);
+
+        assertEq(user.balance, 0);
+    }
+
     function testSanityCheck() public {
         // Check that the version is correctly set.
         assertEq(IGateway(GatewayProxy).version(), 1);
@@ -87,5 +118,7 @@ contract ForkUpgradeTest is Test {
         registerForeignToken();
         // Check legacy ethereum token not affected
         checkLegacyToken();
+        // Check sending of ether works
+        checkSendingEthWithAmountAndFeeSucceeds();
     }
 }
