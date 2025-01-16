@@ -11,8 +11,6 @@ start_geth() {
     cp config/genesis-electra.json $output_electra_dir
     cp config/jwtsecret $output_electra_dir
 
-    echo "Test dir: $output_electra_dir"
-
     echo "Starting geth local node"
     docker run --rm \
       -v "${output_electra_dir}:/mnt" \
