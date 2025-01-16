@@ -229,7 +229,7 @@ pub struct RegisterEtherArgs {
     #[arg(long, value_name = "ASSET_DISPLAY_NAME", default_value_t = String::from("Ether"))]
     ether_name: String,
     /// The Ether asset symbol
-    #[arg(long, value_name = "ASSET_SYMBOL", default_value_t = String::from("ETH.e"))]
+    #[arg(long, value_name = "ASSET_SYMBOL", default_value_t = String::from("ETH"))]
     ether_symbol: String,
     /// The Ether asset's number of decimal places
     #[arg(long, value_name = "DECIMALS", default_value_t = 18u8)]
