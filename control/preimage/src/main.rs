@@ -55,10 +55,12 @@ pub enum Command {
     ForceCheckpoint(ForceCheckpointArgs),
     /// Set the checkpoint for the beacon light client
     HaltBridge(HaltBridgeArgs),
-    /// Treasury proposal
-    TreasuryProposal2024(TreasuryProposal2024Args),
     /// Register Ether
     RegisterEther(RegisterEtherArgs),
+    /// Treasury proposal
+    TreasuryProposal2024(TreasuryProposal2024Args),
+    /// Governance update 202501
+    GovUpdate202501(GovUpdate202501Args),
 }
 
 #[derive(Debug, Args)]
@@ -218,6 +220,14 @@ pub struct TreasuryProposal2024Args {
     /// Beneficiary address
     #[arg(long, value_name = "ADDRESS", value_parser=parse_hex_bytes32)]
     beneficiary: FixedBytes<32>,
+}
+
+#[derive(Debug, Args)]
+pub struct GovUpdate202501Args {
+    #[command(flatten)]
+    pricing_parameters: PricingParametersArgs,
+    #[command(flatten)]
+    register_ether: RegisterEtherArgs,
 }
 
 #[derive(Debug, Args)]
@@ -436,10 +446,34 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 utility_force_batch(vec![call1, call2])
             }
         }
-        Command::TreasuryProposal2024(params) => treasury_commands::treasury_proposal(&params),
         Command::RegisterEther(params) => {
             let (register_ether_call, set_ether_metadata_call) = commands::register_ether(&params);
             send_xcm_asset_hub(&context, vec![register_ether_call, set_ether_metadata_call]).await?
+        }
+        Command::TreasuryProposal2024(params) => treasury_commands::treasury_proposal(&params),
+        Command::GovUpdate202501(GovUpdate202501Args {
+            pricing_parameters,
+            register_ether,
+        }) => {
+            let (set_pricing_parameters, set_ethereum_fee) =
+                commands::pricing_parameters(&context, pricing_parameters).await?;
+
+            let bh_set_pricing_call =
+                send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
+
+            let ah_set_pricing_call = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
+
+            let (register_ether_call, set_ether_metadata_call) =
+                commands::register_ether(&register_ether);
+            let ah_register_ether_call =
+                send_xcm_asset_hub(&context, vec![register_ether_call, set_ether_metadata_call])
+                    .await?;
+
+            utility_force_batch(vec![
+                bh_set_pricing_call,
+                ah_set_pricing_call,
+                ah_register_ether_call,
+            ])
         }
     };
 
