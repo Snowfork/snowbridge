@@ -22,8 +22,8 @@ contract AgentExecutor {
     }
 
     /// @dev Transfer ether to Gateway. Used once off for migration purposes. Can be removed after version 1.
-    function transferNativeToGateway(address payable gateway, uint256 amount) external {
-        IGateway(gateway).depositEther{value: amount}();
+    function transferEtherToGateway(uint256 amount) external {
+        IGateway(msg.sender).depositEther{value: amount}();
     }
 
     /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.

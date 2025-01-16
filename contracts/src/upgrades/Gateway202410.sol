@@ -40,8 +40,7 @@ contract Gateway202410 is Gateway {
 
         // migrate asset hub agent
         address agent = _ensureAgent(hex"81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79");
-        bytes memory call =
-            abi.encodeCall(AgentExecutor.transferNativeToGateway, (payable(address(this)), agent.balance));
+        bytes memory call = abi.encodeCall(AgentExecutor.transferEtherToGateway, (agent.balance));
         _invokeOnAgent(agent, call);
     }
 }
