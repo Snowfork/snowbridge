@@ -556,9 +556,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // The fee is already collected into the gateway contract
         // Reimburse excess fee payment
-        uint256 extraPayment = (msg.value - totalEther);
-        if (extraPayment > _dustThreshold()) {
-            payable(msg.sender).safeNativeTransfer(extraPayment);
+        uint256 excessFee = (msg.value - totalEther);
+        if (excessFee > _dustThreshold()) {
+            payable(msg.sender).safeNativeTransfer(excessFee);
         }
 
         // Generate a unique ID for this message
@@ -701,6 +701,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+        // Register native Ether
         TokenInfo storage nativeEther = assets.tokenRegistry[address(0)];
         nativeEther.isRegistered = true;
 
