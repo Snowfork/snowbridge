@@ -404,7 +404,9 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			for {
 				nextFinalizedUpdateScale, err := s.GetFinalizedUpdate()
 				if err != nil {
-					return fmt.Errorf("get next finalized header update: %w", err)
+					log.Info("found error")
+					log.Error(err)
+					continue
 				}
 				nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
 				nextFinalizedUpdatePeriod := p.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
@@ -418,7 +420,8 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 					// generate nextSyncCommitteeUpdate
 					nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod+1, 0)
 					if err != nil {
-						return fmt.Errorf("get sync committee update: %w", err)
+						log.Error(err)
+						continue
 					}
 					nextSyncCommitteeUpdate := nextSyncCommitteeUpdateScale.Payload.ToJSON()
 					err = writeJSONToFile(nextSyncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "next-sync-committee-update.json"))
