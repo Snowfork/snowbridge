@@ -112,17 +112,15 @@ library Assets {
 
         TokenInfo storage info = $.tokenRegistry[token];
 
+        if (!info.isRegistered) {
+            revert TokenNotRegistered();
+        }
+
         if (info.foreignID == bytes32(0)) {
-            if (!info.isRegistered && token != address(0)) {
-                revert TokenNotRegistered();
-            }
             return _sendNativeToken(
                 token, sender, destinationChain, destinationAddress, destinationChainFee, maxDestinationChainFee, amount
             );
         } else {
-            if (!info.isRegistered) {
-                revert TokenNotRegistered();
-            }
             return _sendForeignToken(
                 info.foreignID,
                 token,
