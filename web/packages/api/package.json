@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/api",
-  "version": "0.1.26-alpha.1",
+  "version": "0.1.26",
   "description": "Snowbridge API client",
   "license": "Apache-2.0",
   "repository": {
