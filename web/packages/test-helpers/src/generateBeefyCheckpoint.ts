@@ -1,5 +1,4 @@
 import { ApiPromise, WsProvider } from "@polkadot/api"
-import { MerkleTree } from "merkletreejs"
 import createKeccakHash from "keccak"
 import { publicKeyConvert } from "secp256k1"
 import type { ValidatorSetId, BeefyId } from "@polkadot/types/interfaces/beefy/types"
@@ -90,19 +89,6 @@ async function generateBeefyCheckpoint() {
 
     fs.writeFileSync(BeefyStateFile, JSON.stringify(beefyCheckpoint, null, 2), "utf8")
     console.log("Beefy state writing to dest file: " + BeefyStateFile)
-}
-
-function hasher(data: Buffer): Buffer {
-    return createKeccakHash("keccak256").update(data).digest()
-}
-
-function createMerkleTree(leaves: Buffer[]) {
-    const leafHashes = leaves.map((value) => hasher(value))
-    const tree = new MerkleTree(leafHashes, hasher, {
-        sortLeaves: false,
-        sortPairs: false,
-    })
-    return tree
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -131,3 +131,10 @@ export const fetchEstimatedDeliveryTime = async (graphqlUrl: string, channelId: 
     let data = await response.json()
     return data?.data
 }
+
+export const getEventIndex = (id: string) => {
+    let parts = id.split("-")
+    let blockNumber = parseInt(parts[0])
+    let eventIndex = parseInt(parts[2])
+    return `${blockNumber}-${eventIndex}`
+}
