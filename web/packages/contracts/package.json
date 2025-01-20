@@ -16,6 +16,6 @@
   "scripts": {
     "build": "cp -R '../../../contracts/src' '../../../contracts/out' '../../../contracts/test' ."
   },
-  "devDependencies": { },
-  "dependencies": { }
+  "devDependencies": {},
+  "dependencies": {}
 }
