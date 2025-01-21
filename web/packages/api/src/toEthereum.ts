@@ -525,7 +525,7 @@ export const send = async (
 
     const assetHubSignedTx = await assetHub.tx.polkadotXcm
         .transferAssets(destination, beneficiary, assets, fee_asset, weight)
-        .signAsync(addressOrPair, { signer: walletSigner })
+        .signAsync(addressOrPair, { signer: walletSigner, withSignedTransaction: true })
 
     let result = await new Promise<{
         blockNumber: number
