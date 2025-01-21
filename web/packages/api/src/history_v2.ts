@@ -1,11 +1,4 @@
-import {
-    fetchToPolkadotTransfers,
-    fetchToEthereumTransfers,
-    fetchBridgeHubOutboundMessageAccepted,
-    fetchEthereumInboundMessageDispatched,
-    fetchBridgeHubInboundMessageReceived,
-    fetchMessageProcessedOnPolkadot,
-} from "./subsquid"
+import { fetchToPolkadotTransfers, fetchToEthereumTransfers } from "./subsquid"
 import { forwardedTopicId, getEventIndex } from "./utils"
 
 export enum TransferStatus {
@@ -158,7 +151,7 @@ export const toPolkadotHistory = async (): Promise<ToPolkadotTransferResult[]> =
                 nonce: outboundMessage.nonce,
             },
         }
-        let inboundMessageReceived = await fetchBridgeHubInboundMessageReceived(result.id)
+        let inboundMessageReceived = outboundMessage.toBridgeHubInboundQueue
         if (inboundMessageReceived) {
             result.inboundMessageReceived = {
                 extrinsic_index: "",
@@ -171,7 +164,7 @@ export const toPolkadotHistory = async (): Promise<ToPolkadotTransferResult[]> =
             }
         }
 
-        const assetHubMessageProcessed = await fetchMessageProcessedOnPolkadot(result.id)
+        const assetHubMessageProcessed = outboundMessage.toAssetHubMessageQueue
         if (assetHubMessageProcessed) {
             result.assetHubMessageProcessed = {
                 extrinsic_hash: "",
@@ -180,7 +173,7 @@ export const toPolkadotHistory = async (): Promise<ToPolkadotTransferResult[]> =
                 success: assetHubMessageProcessed.success,
                 sibling: 0,
             }
-            if (!result.assetHubMessageProcessed.success) {
+            if (!assetHubMessageProcessed.success) {
                 result.status = TransferStatus.Failed
                 continue
             }
@@ -220,7 +213,7 @@ export const toEthereumHistory = async (): Promise<ToEthereumTransferResult[]> =
                 success: true,
             },
         }
-        let bridgeHubXcmDelivered = await fetchMessageProcessedOnPolkadot(bridgeHubMessageId)
+        let bridgeHubXcmDelivered = transfer.toBridgeHubMessageQueue
         if (bridgeHubXcmDelivered) {
             result.bridgeHubXcmDelivered = {
                 block_timestamp: bridgeHubXcmDelivered.timestamp,
@@ -229,13 +222,13 @@ export const toEthereumHistory = async (): Promise<ToEthereumTransferResult[]> =
                 siblingParachain: 1000,
                 success: bridgeHubXcmDelivered.success,
             }
-            if (!result.bridgeHubXcmDelivered.success) {
+            if (!bridgeHubXcmDelivered.success) {
                 result.status = TransferStatus.Failed
                 continue
             }
         }
 
-        let outboundQueueAccepted = await fetchBridgeHubOutboundMessageAccepted(transfer.id)
+        let outboundQueueAccepted = transfer.toBridgeHubOutboundQueue
         if (outboundQueueAccepted) {
             result.bridgeHubMessageQueued = {
                 block_timestamp: outboundQueueAccepted.timestamp,
@@ -244,7 +237,7 @@ export const toEthereumHistory = async (): Promise<ToEthereumTransferResult[]> =
             }
         }
 
-        let ethereumMessageDispatched = await fetchEthereumInboundMessageDispatched(transfer.id)
+        let ethereumMessageDispatched = transfer.toDestination
         if (ethereumMessageDispatched) {
             result.ethereumMessageDispatched = {
                 blockNumber: ethereumMessageDispatched.blockNumber,
@@ -257,7 +250,7 @@ export const toEthereumHistory = async (): Promise<ToEthereumTransferResult[]> =
                 nonce: ethereumMessageDispatched.nonce,
                 success: ethereumMessageDispatched.success,
             }
-            if (!result.ethereumMessageDispatched.success) {
+            if (!ethereumMessageDispatched.success) {
                 result.status = TransferStatus.Failed
                 continue
             }

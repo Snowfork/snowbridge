@@ -6,12 +6,9 @@ export const fetchToPolkadotTransfers = async () => {
             id
             status
             blockNumber
-            bridgedBlockNumber
             channelId
             destinationAddress
-            destinationBlockNumber
             destinationParaId
-            forwardedBlockNumber
             messageId
             nonce
             senderAddress
@@ -19,10 +16,28 @@ export const fetchToPolkadotTransfers = async () => {
             tokenAddress
             txHash
             amount
+            toBridgeHubInboundQueue {
+                id
+                timestamp
+                txHash
+                channelId
+                nonce
+                messageId
+            }
+            toAssetHubMessageQueue {
+                id
+                success
+                timestamp
+            }
+            toDestination {
+                id
+                success
+                timestamp
+            }
         }
     }`
     let result = await queryByGraphQL(query)
-    return result.transferStatusToPolkadots
+    return result?.transferStatusToPolkadots
 }
 
 export const fetchToEthereumTransfers = async () => {
@@ -30,11 +45,8 @@ export const fetchToEthereumTransfers = async () => {
             id
             status
             blockNumber
-            bridgedBlockNumber
             channelId
             destinationAddress
-            destinationBlockNumber
-            forwardedBlockNumber
             messageId
             nonce
             senderAddress
@@ -43,10 +55,34 @@ export const fetchToEthereumTransfers = async () => {
             tokenAddress
             txHash
             amount
+            toAssetHubMessageQueue {
+                id
+                success
+                timestamp
+            }
+            toBridgeHubMessageQueue {
+                id
+                success
+                timestamp
+            }
+            toBridgeHubOutboundQueue {
+                id
+                timestamp
+            }
+            toDestination {
+                id
+                blockNumber
+                timestamp
+                txHash
+                success
+                messageId
+                nonce
+                channelId
+            }
         } 
     }`
     let result = await queryByGraphQL(query)
-    return result.transferStatusToEthereums
+    return result?.transferStatusToEthereums
 }
 
 export const fetchBridgeHubOutboundMessageAccepted = async (messageID: string) => {
