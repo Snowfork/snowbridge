@@ -32,11 +32,11 @@ interface IGateway {
     // Emitted when pricing params updated
     event PricingParametersChanged();
 
-    // Emitted when funds are withdrawn from an agent
-    event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
-
     // Emitted when foreign token from polkadot registed
     event ForeignTokenRegistered(bytes32 indexed tokenID, address token);
+
+    // Emitted when ether is deposited
+    event EtherDeposited(address who, uint256 amount);
 
     /**
      * Getters
@@ -52,6 +52,13 @@ interface IGateway {
     function pricingParameters() external view returns (UD60x18, uint128);
 
     function implementation() external view returns (address);
+
+    function version() external view returns (uint64);
+
+    /**
+     * Fee management
+     */
+    function depositEther() external payable;
 
     /**
      * Messaging

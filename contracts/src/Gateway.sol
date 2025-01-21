@@ -17,6 +17,7 @@ import {
     Command,
     MultiAddress,
     Ticket,
+    TokenInfo,
     Costs,
     AgentExecuteCommand
 } from "./Types.sol";
@@ -38,7 +39,6 @@ import {
     CreateChannelParams,
     UpdateChannelParams,
     SetOperatingModeParams,
-    TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
     SetPricingParametersParams,
     RegisterForeignTokenParams,
@@ -88,7 +88,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error InvalidProof();
     error InvalidNonce();
     error NotEnoughGas();
-    error FeePaymentToLow();
+    error FeePaymentTooLow();
     error Unauthorized();
     error Disabled();
     error AgentAlreadyCreated();
@@ -215,10 +215,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
                 success = false;
             }
         } else if (message.command == Command.TransferNativeFromAgent) {
-            try Gateway(this).transferNativeFromAgent{gas: maxDispatchGas}(message.params) {}
-            catch {
-                success = false;
-            }
+            // Disable this bridge command because now native Ether can be locked in an agent.
+            success = true;
         } else if (message.command == Command.Upgrade) {
             try Gateway(this).upgrade{gas: maxDispatchGas}(message.params) {}
             catch {
@@ -258,11 +256,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // Add the reward to the refund amount. If the sum is more than the funds available
         // in the channel agent, then reduce the total amount
-        uint256 amount = Math.min(refund + message.reward, address(channel.agent).balance);
+        uint256 amount = Math.min(refund + message.reward, address(this).balance);
 
-        // Do the payment if there funds available in the agent
+        // Do the payment if there funds available in the gateway
         if (amount > _dustThreshold()) {
-            _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
+            payable(msg.sender).safeNativeTransfer(amount);
         }
 
         emit IGateway.InboundMessageDispatched(message.channelID, message.nonce, message.id, success);
@@ -296,6 +294,17 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
     function implementation() public view returns (address) {
         return ERC1967.load();
+    }
+
+    function version() public view returns (uint64) {
+        return CoreStorage.layout().version;
+    }
+
+    /**
+     * Fee management
+     */
+    function depositEther() external payable {
+        emit EtherDeposited(msg.sender, msg.value);
     }
 
     /**
@@ -387,16 +396,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         SetOperatingModeParams memory params = abi.decode(data, (SetOperatingModeParams));
         $.mode = params.mode;
         emit OperatingModeChanged(params.mode);
-    }
-
-    // @dev Transfer funds from an agent to a recipient account
-    function transferNativeFromAgent(bytes calldata data) external onlySelf {
-        TransferNativeFromAgentParams memory params = abi.decode(data, (TransferNativeFromAgentParams));
-
-        address agent = _ensureAgent(params.agentID);
-
-        _transferNativeFromAgent(agent, payable(params.recipient), params.amount);
-        emit AgentFundsWithdrawn(params.agentID, params.recipient, params.amount);
     }
 
     // @dev Set token fees of the gateway
@@ -548,18 +547,18 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         uint256 fee = _calculateFee(ticket.costs);
 
         // Ensure the user has enough funds for this message to be accepted
-        if (msg.value < fee) {
-            revert FeePaymentToLow();
+        uint256 totalEther = fee + ticket.value;
+        if (msg.value < totalEther) {
+            revert FeePaymentTooLow();
         }
 
         channel.outboundNonce = channel.outboundNonce + 1;
 
-        // Deposit total fee into agent's contract
-        payable(channel.agent).safeNativeTransfer(fee);
-
+        // The fee is already collected into the gateway contract
         // Reimburse excess fee payment
-        if (msg.value > fee) {
-            payable(msg.sender).safeNativeTransfer(msg.value - fee);
+        uint256 excessFee = (msg.value - totalEther);
+        if (excessFee > _dustThreshold()) {
+            payable(msg.sender).safeNativeTransfer(excessFee);
         }
 
         // Generate a unique ID for this message
@@ -597,12 +596,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     function _invokeOnAgent(address agent, bytes memory data) internal returns (bytes memory) {
         (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(AGENT_EXECUTOR, data));
         return Call.verifyResult(success, returndata);
-    }
-
-    /// @dev Transfer ether from an agent
-    function _transferNativeFromAgent(address agent, address payable recipient, uint256 amount) internal {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
-        _invokeOnAgent(agent, call);
     }
 
     /// @dev Define the dust threshold as the minimum cost to transfer ether between accounts
@@ -708,6 +701,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+        // Register native Ether
+        TokenInfo storage nativeEther = assets.tokenRegistry[address(0)];
+        nativeEther.isRegistered = true;
 
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
