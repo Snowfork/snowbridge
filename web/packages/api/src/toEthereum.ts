@@ -418,7 +418,7 @@ export const send = async (
 
         const parachainSignedTx = await parachainApi.tx.polkadotXcm
             .transferAssets(pDestination, pBeneficiary, pAssets, fee_asset, weight)
-            .signAsync(addressOrPair, { signer: walletSigner })
+            .signAsync(addressOrPair, { signer: walletSigner, withSignedTransaction: true })
 
         pResult = await new Promise<{
             blockNumber: number
