@@ -4,7 +4,8 @@ set -eu
 start=$(date +%s)
 
 from_start_services=true
-is_electra=false
+
+is_electra=true
 
 source scripts/set-env.sh
 source scripts/build-binary.sh
@@ -22,10 +23,8 @@ install_binary
 
 # 2. start ethereum
 echo "Starting ethereum nodes"
-if [ "$eth_network" == "localhost" ]; then
-  source scripts/deploy-ethereum.sh
-  deploy_ethereum
-fi
+source scripts/electra-deploy-ethereum.sh
+deploy_ethereum
 
 # 3. start polkadot
 echo "Starting polkadot nodes"

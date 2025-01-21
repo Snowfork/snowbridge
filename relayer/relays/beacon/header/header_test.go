@@ -23,7 +23,10 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
+		ForkVersions: config.ForkVersions{
+			Deneb:   0,
+			Electra: 800000,
+		},
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
@@ -81,7 +84,10 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
+		ForkVersions: config.ForkVersions{
+			Deneb:   0,
+			Electra: 800000,
+		},
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
@@ -147,7 +153,10 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
+		ForkVersions: config.ForkVersions{
+			Deneb:   0,
+			Electra: 800000,
+		},
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
@@ -213,7 +222,10 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
+		ForkVersions: config.ForkVersions{
+			Deneb:   0,
+			Electra: 800000,
+		},
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
@@ -257,7 +269,10 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
+		ForkVersions: config.ForkVersions{
+			Deneb:   0,
+			Electra: 800000,
+		},
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
@@ -332,7 +347,6 @@ func TestFindLatestCheckPoint(t *testing.T) {
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 4,
 		EpochsPerSyncCommitteePeriod: 2,
-		DenebForkEpoch:               0,
 	}
 	maxRedundancy := uint64(2)
 	p := protocol.New(settings, maxRedundancy)

@@ -105,9 +105,9 @@ type InboundFixture struct {
 
 const (
 	pathToBeaconTestFixtureFiles              = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/tests/fixtures"
-	pathToInboundQueueFixtureTemplate         = "polkadot-sdk/bridges/snowbridge/templates/beacon-fixtures.mustache"
+	pathToInboundQueueFixtureTemplate         = "relayer/templates/beacon-fixtures.mustache"
 	pathToInboundQueueFixtureData             = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures/src/lib.rs"
-	pathToInboundQueueFixtureTestCaseTemplate = "polkadot-sdk/bridges/snowbridge/templates/inbound-fixtures.mustache"
+	pathToInboundQueueFixtureTestCaseTemplate = "relayer/templates/inbound-fixtures.mustache"
 	pathToInboundQueueFixtureTestCaseData     = "polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures/src/%s.rs"
 )
 
@@ -206,7 +206,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
 		s := syncer.New(client, &store, p)
 
-		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
+		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub-0.json")
 
 		if err = viper.ReadInConfig(); err != nil {
 			return err
@@ -402,7 +402,8 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			for {
 				nextFinalizedUpdateScale, err := s.GetFinalizedUpdate()
 				if err != nil {
-					return fmt.Errorf("get next finalized header update: %w", err)
+					log.Error(err)
+					continue
 				}
 				nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
 				nextFinalizedUpdatePeriod := p.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
@@ -416,7 +417,8 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 					// generate nextSyncCommitteeUpdate
 					nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod+1, 0)
 					if err != nil {
-						return fmt.Errorf("get sync committee update: %w", err)
+						log.Error(err)
+						continue
 					}
 					nextSyncCommitteeUpdate := nextSyncCommitteeUpdateScale.Payload.ToJSON()
 					err = writeJSONToFile(nextSyncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "next-sync-committee-update.json"))

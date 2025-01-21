@@ -25,7 +25,6 @@ func newTestRunner() *Syncer {
 	return New(api.NewBeaconClient(TestUrl, TestUrl), &mock.Store{}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
 	}, MaxRedundancy))
 }
 
@@ -110,7 +109,6 @@ func TestGetFinalizedUpdateWithSyncCommitteeUpdateAtSlot(t *testing.T) {
 	}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
 	}, MaxRedundancy))
 
 	// Manually construct a finalized update
@@ -165,7 +163,6 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 	syncer := New(&mockAPI, &mock.Store{}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
 	}, MaxRedundancy))
 
 	attested, err := syncer.FindValidAttestedHeader(8000, 8160)
@@ -195,7 +192,6 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 	syncer = New(&mockAPI, &mock.Store{}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
 	}, MaxRedundancy))
 
 	attested, err = syncer.FindValidAttestedHeader(32576, 32704)
@@ -225,7 +221,6 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 	syncer = New(&mockAPI, &mock.Store{}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
 	}, MaxRedundancy))
 
 	attested, err = syncer.FindValidAttestedHeader(25076, 32736)
@@ -249,7 +244,6 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 	syncer = New(&mockAPI, &mock.Store{}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
 	}, MaxRedundancy))
 
 	attested, err = syncer.FindValidAttestedHeader(32540, 32768)

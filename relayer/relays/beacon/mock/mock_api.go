@@ -53,6 +53,10 @@ func (m *API) GetBeaconBlockBySlot(slot uint64) (api.BeaconBlockResponse, error)
 	return value, nil
 }
 
+func (m *API) GetBeaconBlockBytes(blockRoot common.Hash) ([]byte, error) {
+	return nil, nil
+}
+
 func (m *API) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 	return common.Hash{}, nil
 }
