@@ -15,6 +15,6 @@ contract VerificationWrapper {
         bytes32 commitment,
         Verification.ParachainHeader calldata header
     ) external pure returns (bool) {
-        return Verification.isCommitmentInHeaderDigest(commitment, header);
+        return Verification.isCommitmentInHeaderDigest(commitment, header, false);
     }
 }

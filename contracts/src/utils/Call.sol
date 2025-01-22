@@ -33,14 +33,14 @@ library Call {
      * @param target   Address to call
      * @param data Calldata to pass to the call
      */
-    function safeCall(address target, bytes memory data) internal returns (bool) {
+    function safeCall(address target, bytes memory data, uint256 value) internal returns (bool) {
         bool success;
         assembly {
             success :=
                 call(
                     gas(), // gas
                     target, // recipient
-                    0, // ether value
+                    value, // ether value
                     add(data, 0x20), // inloc
                     mload(data), // inlen
                     0, // outloc
