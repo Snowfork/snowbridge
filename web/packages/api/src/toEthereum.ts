@@ -526,22 +526,8 @@ export const send = async (
 
     const assetHubUnsignedTx = planToTx(plan, assetHub, options);
 
-    console.log('Call: ', assetHubUnsignedTx.toHex())
-    console.log('UTX1: ', assetHubUnsignedTx.toPrimitive())
-    console.log('UTX2: ', assetHubUnsignedTx.inner.toHex())
-    console.log('UTX3: ', assetHubUnsignedTx.toJSON())
-    console.log('UTX4: ', assetHubUnsignedTx.inspect())
-    console.log('UTX4.1: ', assetHubUnsignedTx.toRawType())
-    console.log('UTX5.1: ', u8aToHex(assetHubUnsignedTx.toU8a()))
-    console.log('UTX5: ', u8aToHex(assetHubUnsignedTx.toU8a(false)))
-    console.log('UTX6: ', u8aToHex(assetHubUnsignedTx.toU8a(true)))
-    console.log('Payment: ', (await assetHubUnsignedTx.paymentInfo(addressOrPair, { signer: walletSigner, withSignedTransaction: true})).toHuman())
-    console.log('DryRun: ', (await assetHubUnsignedTx.dryRun(addressOrPair, { signer: walletSigner, withSignedTransaction: true})).toHuman())
-
     const assetHubSignedTx = await assetHubUnsignedTx
         .signAsync(addressOrPair, { signer: walletSigner, withSignedTransaction: true })
-
-    console.log('TX: ',assetHubSignedTx.toHex())
 
     let result = await new Promise<{
         blockNumber: number
