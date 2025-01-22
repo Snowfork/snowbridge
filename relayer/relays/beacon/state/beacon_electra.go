@@ -151,10 +151,6 @@ func (b *BeaconBlockElectra) GetBlockBodyTree() (*ssz.Node, error) {
 	return b.Body.GetTree()
 }
 
-func (b *BeaconBlockElectra) ExecutionPayloadCapella() *ExecutionPayloadCapella {
-	return nil
-}
-
 func (b *BeaconBlockElectra) ExecutionPayloadDeneb() *ExecutionPayloadDeneb {
 	return b.Body.ExecutionPayload
 }

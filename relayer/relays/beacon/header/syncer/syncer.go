@@ -316,10 +316,8 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 	blockRootsContainer = &state.BlockRootsContainerMainnet{}
 	if forkVersion == protocol.Electra {
 		beaconState = &state.BeaconStateElectra{}
-	} else if forkVersion == protocol.Deneb {
-		beaconState = &state.BeaconStateDenebMainnet{}
 	} else {
-		beaconState = &state.BeaconStateCapellaMainnet{}
+		beaconState = &state.BeaconStateDenebMainnet{}
 	}
 
 	err = beaconState.UnmarshalSSZ(data)
@@ -580,20 +578,11 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 	}
 
 	var versionedExecutionPayloadHeader scale.VersionedExecutionPayloadHeader
-	// The execution payload did not change in Electra, so we reuse Deneb's version.
-	if forkVersion == protocol.Electra || forkVersion == protocol.Deneb {
-		executionPayloadScale, err := api.DenebExecutionPayloadToScale(beaconBlock.ExecutionPayloadDeneb())
-		if err != nil {
-			return scale.HeaderUpdatePayload{}, err
-		}
-		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
-	} else {
-		executionPayloadScale, err := api.CapellaExecutionPayloadToScale(beaconBlock.ExecutionPayloadCapella())
-		if err != nil {
-			return scale.HeaderUpdatePayload{}, err
-		}
-		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Capella: &executionPayloadScale}
+	executionPayloadScale, err := api.DenebExecutionPayloadToScale(beaconBlock.ExecutionPayloadDeneb())
+	if err != nil {
+		return scale.HeaderUpdatePayload{}, err
 	}
+	versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
 
 	// If checkpoint not provided or slot == finalizedSlot there won't be an ancestry proof because the header state in question is also the finalized header
 	if checkpoint == nil || beaconBlock.GetBeaconSlot() == checkpoint.Slot {
@@ -646,10 +635,8 @@ func (s *Syncer) UnmarshalBeaconState(slot uint64, data []byte) (state.BeaconSta
 	forkVersion := s.protocol.ForkVersion(slot)
 	if forkVersion == protocol.Electra {
 		beaconState = &state.BeaconStateElectra{}
-	} else if forkVersion == protocol.Deneb {
-		beaconState = &state.BeaconStateDenebMainnet{}
 	} else {
-		beaconState = &state.BeaconStateCapellaMainnet{}
+		beaconState = &state.BeaconStateDenebMainnet{}
 	}
 
 	err := beaconState.UnmarshalSSZ(data)

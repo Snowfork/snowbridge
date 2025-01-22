@@ -2,14 +2,12 @@ package api
 
 import (
 	"fmt"
-	"math/big"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	beaconjson "github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
@@ -387,47 +385,5 @@ func (c CheckpointResponse) ToScale() (scale.Checkpoint, error) {
 	return scale.Checkpoint{
 		Epoch: types.NewU64(epoch),
 		Root:  types.NewH256(common.HexToHash(c.Root).Bytes()),
-	}, nil
-}
-
-func CapellaExecutionPayloadToScale(e *state.ExecutionPayloadCapella) (scale.ExecutionPayloadHeaderCapella, error) {
-	transactionsContainer := state.TransactionsRootContainer{}
-	transactionsContainer.Transactions = e.Transactions
-
-	transactionsRoot, err := transactionsContainer.HashTreeRoot()
-	if err != nil {
-		return scale.ExecutionPayloadHeaderCapella{}, err
-	}
-
-	var withdrawalRoot types.H256
-
-	withdrawalContainer := state.WithdrawalsRootContainerMainnet{}
-	withdrawalContainer.Withdrawals = e.Withdrawals
-	withdrawalRoot, err = withdrawalContainer.HashTreeRoot()
-
-	if err != nil {
-		return scale.ExecutionPayloadHeaderCapella{}, err
-	}
-
-	baseFeePerGas := big.Int{}
-	// Change BaseFeePerGas back from little-endian to big-endian
-	baseFeePerGas.SetBytes(util.ChangeByteOrder(e.BaseFeePerGas[:]))
-
-	return scale.ExecutionPayloadHeaderCapella{
-		ParentHash:       types.NewH256(e.ParentHash[:]),
-		FeeRecipient:     e.FeeRecipient,
-		StateRoot:        types.NewH256(e.StateRoot[:]),
-		ReceiptsRoot:     types.NewH256(e.ReceiptsRoot[:]),
-		LogsBloom:        e.LogsBloom[:],
-		PrevRandao:       types.NewH256(e.PrevRandao[:]),
-		BlockNumber:      types.NewU64(e.BlockNumber),
-		GasLimit:         types.NewU64(e.GasLimit),
-		GasUsed:          types.NewU64(e.GasUsed),
-		Timestamp:        types.NewU64(e.Timestamp),
-		ExtraData:        e.ExtraData,
-		BaseFeePerGas:    types.NewU256(baseFeePerGas),
-		BlockHash:        types.NewH256(e.BlockHash[:]),
-		TransactionsRoot: transactionsRoot,
-		WithdrawalsRoot:  withdrawalRoot,
 	}, nil
 }

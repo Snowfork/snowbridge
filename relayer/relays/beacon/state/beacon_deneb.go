@@ -111,10 +111,6 @@ func (b *BeaconBlockDenebMainnet) GetBlockBodyTree() (*ssz.Node, error) {
 	return b.Body.GetTree()
 }
 
-func (b *BeaconBlockDenebMainnet) ExecutionPayloadCapella() *ExecutionPayloadCapella {
-	return nil
-}
-
 func (b *BeaconBlockDenebMainnet) ExecutionPayloadDeneb() *ExecutionPayloadDeneb {
 	return b.Body.ExecutionPayload
 }

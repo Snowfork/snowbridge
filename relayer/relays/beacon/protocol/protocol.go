@@ -80,7 +80,6 @@ type ForkVersion string
 
 const (
 	Deneb   ForkVersion = "Deneb"
-	Capella ForkVersion = "Capella"
 	Electra ForkVersion = "Electra"
 )
 
@@ -89,10 +88,7 @@ func (p *Protocol) ForkVersion(slot uint64) ForkVersion {
 	if epoch >= p.Settings.ForkVersions.Electra {
 		return Electra
 	}
-	if epoch >= p.Settings.ForkVersions.Deneb {
-		return Deneb
-	}
-	return Capella
+	return Deneb
 }
 
 func (p *Protocol) BlockRootGeneralizedIndex(slot uint64) int {

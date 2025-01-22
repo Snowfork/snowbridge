@@ -83,24 +83,6 @@ type SignedHeader struct {
 	Signature string       `json:"signature"`
 }
 
-type ExecutionPayloadHeaderCapella struct {
-	ParentHash       string `json:"parent_hash"`
-	FeeRecipient     string `json:"fee_recipient"`
-	StateRoot        string `json:"state_root"`
-	ReceiptsRoot     string `json:"receipts_root"`
-	LogsBloom        string `json:"logs_bloom"`
-	PrevRandao       string `json:"prev_randao"`
-	BlockNumber      uint64 `json:"block_number"`
-	GasLimit         uint64 `json:"gas_limit"`
-	GasUsed          uint64 `json:"gas_used"`
-	Timestamp        uint64 `json:"timestamp"`
-	ExtraData        string `json:"extra_data"`
-	BaseFeePerGas    uint64 `json:"base_fee_per_gas"`
-	BlockHash        string `json:"block_hash"`
-	TransactionsRoot string `json:"transactions_root"`
-	WithdrawalsRoot  string `json:"withdrawals_root"`
-}
-
 type CompactExecutionHeader struct {
 	ParentHash   string `json:"parent_hash"`
 	StateRoot    string `json:"state_root"`
@@ -112,19 +94,6 @@ type Eth1Data struct {
 	DepositRoot  string `json:"deposit_root"`
 	DepositCount uint64 `json:"deposit_count"`
 	BlockHash    string `json:"block_hash"`
-}
-
-type BlockBody struct {
-	RandaoReveal      string                        `json:"randao_reveal"`
-	Eth1Data          Eth1Data                      `json:"eth1_data"`
-	Graffiti          string                        `json:"graffiti"`
-	ProposerSlashings []ProposerSlashing            `json:"proposer_slashings"`
-	AttesterSlashings []AttesterSlashing            `json:"attester_slashings"`
-	Attestations      []Attestation                 `json:"attestations"`
-	Deposits          []Deposit                     `json:"deposits"`
-	VoluntaryExits    []VoluntaryExit               `json:"voluntary_exits"`
-	SyncAggregate     SyncAggregate                 `json:"sync_aggregate"`
-	ExecutionPayload  ExecutionPayloadHeaderCapella `json:"execution_payload"`
 }
 
 type HeaderUpdate struct {
@@ -229,19 +198,6 @@ func (d *Deposit) RemoveLeadingZeroHashes() {
 	d.Data.WithdrawalCredentials = removeLeadingZeroHash(d.Data.WithdrawalCredentials)
 }
 
-func (e *ExecutionPayloadHeaderCapella) RemoveLeadingZeroHashes() {
-	e.ParentHash = removeLeadingZeroHash(e.ParentHash)
-	e.FeeRecipient = removeLeadingZeroHash(e.FeeRecipient)
-	e.StateRoot = removeLeadingZeroHash(e.StateRoot)
-	e.ReceiptsRoot = removeLeadingZeroHash(e.ReceiptsRoot)
-	e.LogsBloom = removeLeadingZeroHash(e.LogsBloom)
-	e.PrevRandao = removeLeadingZeroHash(e.PrevRandao)
-	e.ExtraData = removeLeadingZeroHash(e.ExtraData)
-	e.BlockHash = removeLeadingZeroHash(e.BlockHash)
-	e.TransactionsRoot = removeLeadingZeroHash(e.TransactionsRoot)
-	e.WithdrawalsRoot = removeLeadingZeroHash(e.WithdrawalsRoot)
-}
-
 func (i *CheckPoint) RemoveLeadingZeroHashes() {
 	i.Header.RemoveLeadingZeroHashes()
 	i.CurrentSyncCommittee.RemoveLeadingZeroHashes()
@@ -293,14 +249,9 @@ func removeLeadingZeroHash(s string) string {
 }
 
 type VersionedExecutionPayloadHeader struct {
-	Capella *ExecutionPayloadHeaderCapella `json:"Capella,omitempty"`
-	Deneb   *ExecutionPayloadHeaderDeneb   `json:"Deneb,omitempty"`
+	Deneb *ExecutionPayloadHeaderDeneb `json:"Deneb,omitempty"`
 }
 
 func (v *VersionedExecutionPayloadHeader) RemoveLeadingZeroHashes() {
-	if v.Capella != nil {
-		v.Capella.RemoveLeadingZeroHashes()
-	} else if v.Deneb != nil {
-		v.Deneb.RemoveLeadingZeroHashes()
-	}
+	v.Deneb.RemoveLeadingZeroHashes()
 }
