@@ -5,7 +5,6 @@ optimizer_runs = 20000
 via_ir = false
 test = 'test'
 script = 'scripts'
-evm_version = "cancun"
 fs_permissions = [
     { access = "read-write", path = "test/data" },
     { access = "read", path = "./" },
