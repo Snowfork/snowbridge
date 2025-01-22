@@ -434,7 +434,7 @@ export const send = async (
 
     const contract = IGateway__factory.connect(context.config.appContracts.gateway, signer)
 
-    let { tx } = await planToTx(plan, contract, await signer.getAddress())
+    let { tx } = await planToTx(plan, contract)
     const response = await signer.sendTransaction(tx)
     let receipt = await response.wait(confirmations)
 
@@ -951,7 +951,7 @@ export async function* trackSendProgress(
     yield "Transfer complete."
 }
 
-export async function planToTx(plan: SendValidationResult, gateway: IGateway, from: string) {
+export async function planToTx(plan: SendValidationResult, gateway: IGateway) {
     if (!plan.success) {
         throw Error("plan failed")
     }
@@ -964,7 +964,7 @@ export async function planToTx(plan: SendValidationResult, gateway: IGateway, fr
             plan.success.amount,
             {
                 value: plan.success.fee,
-                from
+                from: plan.success.sourceAddress
             }
         ),
         gateway.sendToken.estimateGas(
@@ -975,7 +975,7 @@ export async function planToTx(plan: SendValidationResult, gateway: IGateway, fr
             plan.success.amount,
             {
                 value: plan.success.fee,
-                from
+                from: plan.success.sourceAddress
             }
         )
     ]);
