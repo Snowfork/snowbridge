@@ -36,6 +36,7 @@ type BeaconAPI interface {
 	GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, error)
 	GetBeaconBlockRoot(slot uint64) (common.Hash, error)
 	GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse, error)
+	GetBeaconBlockBytes(blockID common.Hash) ([]byte, error)
 	GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdateResponse, error)
 	GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error)
 	GetBeaconState(stateIdOrSlot string) ([]byte, error)
@@ -417,8 +418,36 @@ func (b *BeaconClient) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 	res, err := b.httpClient.Do(req)
 	endTime := time.Now()
 	duration := endTime.Sub(startTime)
-	log.WithFields(log.Fields{"startTime": startTime.Format(time.UnixDate), "endTime": endTime.Format(time.UnixDate), "duration": duration.Seconds()}).Warn("beacon state download time")
+	log.WithFields(log.Fields{"startTime": startTime.Format(time.UnixDate), "endTime": endTime.Format(time.UnixDate), "duration": duration.Seconds()}).Info("beacon state download time")
 
+	if err != nil {
+		return data, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		if res.StatusCode == 404 {
+			return data, ErrNotFound
+		}
+
+		return data, fmt.Errorf("%s: %d", DoHTTPRequestErrorMessage, res.StatusCode)
+	}
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(res.Body)
+	data = buf.Bytes()
+	return data, nil
+}
+
+func (b *BeaconClient) GetBeaconBlockBytes(blockID common.Hash) ([]byte, error) {
+	var data []byte
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.stateEndpoint, blockID), nil)
+	if err != nil {
+		return data, err
+	}
+
+	req.Header.Add("Accept", "application/octet-stream")
+
+	res, err := b.httpClient.Do(req)
 	if err != nil {
 		return data, err
 	}

@@ -177,59 +177,6 @@ type SignedBLSToExecutionChange struct {
 	Signature []byte
 }
 
-type ExecutionPayloadHeaderCapella struct {
-	ParentHash       types.H256
-	FeeRecipient     types.H160
-	StateRoot        types.H256
-	ReceiptsRoot     types.H256
-	LogsBloom        []byte
-	PrevRandao       types.H256
-	BlockNumber      types.U64
-	GasLimit         types.U64
-	GasUsed          types.U64
-	Timestamp        types.U64
-	ExtraData        []byte
-	BaseFeePerGas    types.U256
-	BlockHash        types.H256
-	TransactionsRoot types.H256
-	WithdrawalsRoot  types.H256
-}
-
-type Body struct {
-	RandaoReveal      []byte
-	Eth1Data          Eth1Data
-	Graffiti          types.H256
-	ProposerSlashings []ProposerSlashing
-	AttesterSlashings []AttesterSlashing
-	Attestations      []Attestation
-	Deposits          []Deposit
-	VoluntaryExits    []SignedVoluntaryExit
-	SyncAggregate     SyncAggregate
-	ExecutionPayload  ExecutionPayloadHeaderCapella
-}
-
-type BodyCapella struct {
-	RandaoReveal          []byte
-	Eth1Data              Eth1Data
-	Graffiti              types.H256
-	ProposerSlashings     []ProposerSlashing
-	AttesterSlashings     []AttesterSlashing
-	Attestations          []Attestation
-	Deposits              []Deposit
-	VoluntaryExits        []SignedVoluntaryExit
-	SyncAggregate         SyncAggregate
-	ExecutionPayload      ExecutionPayloadHeaderCapella
-	BlsToExecutionChanges []*SignedBLSToExecutionChange
-}
-
-type BeaconBlock struct {
-	Slot          types.U64
-	ProposerIndex types.U64
-	ParentRoot    types.H256
-	StateRoot     types.H256
-	Body          Body
-}
-
 type SyncCommittee struct {
 	Pubkeys         [][48]byte
 	AggregatePubkey [48]byte
@@ -301,8 +248,7 @@ type BeaconState struct {
 }
 
 type VersionedExecutionPayloadHeader struct {
-	Capella *ExecutionPayloadHeaderCapella
-	Deneb   *ExecutionPayloadHeaderDeneb
+	Deneb *ExecutionPayloadHeaderDeneb
 }
 
 var (
@@ -311,10 +257,7 @@ var (
 
 func (v VersionedExecutionPayloadHeader) Encode(encoder scale.Encoder) error {
 	var err error
-	if v.Capella != nil {
-		encoder.PushByte(0)
-		err = encoder.Encode(v.Capella)
-	} else if v.Deneb != nil {
+	if v.Deneb != nil {
 		encoder.PushByte(1)
 		err = encoder.Encode(v.Deneb)
 	} else {

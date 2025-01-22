@@ -63,26 +63,6 @@ func (b *BeaconHeader) ToJSON() json.BeaconHeader {
 	}
 }
 
-func (e *ExecutionPayloadHeaderCapella) ToJSON() json.ExecutionPayloadHeaderCapella {
-	return json.ExecutionPayloadHeaderCapella{
-		ParentHash:       e.ParentHash.Hex(),
-		FeeRecipient:     util.BytesToHexString(e.FeeRecipient[:]),
-		StateRoot:        e.StateRoot.Hex(),
-		ReceiptsRoot:     e.ReceiptsRoot.Hex(),
-		LogsBloom:        util.BytesToHexString(e.LogsBloom),
-		PrevRandao:       e.PrevRandao.Hex(),
-		BlockNumber:      uint64(e.BlockNumber),
-		GasLimit:         uint64(e.GasLimit),
-		GasUsed:          uint64(e.GasUsed),
-		Timestamp:        uint64(e.Timestamp),
-		ExtraData:        util.BytesToHexString(e.ExtraData),
-		BaseFeePerGas:    e.BaseFeePerGas.Uint64(),
-		BlockHash:        e.BlockHash.Hex(),
-		TransactionsRoot: e.TransactionsRoot.Hex(),
-		WithdrawalsRoot:  e.WithdrawalsRoot.Hex(),
-	}
-}
-
 func (s *SyncCommittee) ToJSON() json.SyncCommittee {
 	pubkeys := []string{}
 	for _, pubkeyScale := range s.Pubkeys {
@@ -103,11 +83,6 @@ func (s *SyncAggregate) ToJSON() json.SyncAggregate {
 }
 
 func (v *VersionedExecutionPayloadHeader) ToJSON() json.VersionedExecutionPayloadHeader {
-	if v.Deneb != nil {
-		data := v.Deneb.ToJSON()
-		return json.VersionedExecutionPayloadHeader{Deneb: &data}
-	} else {
-		data := v.Capella.ToJSON()
-		return json.VersionedExecutionPayloadHeader{Capella: &data}
-	}
+	data := v.Deneb.ToJSON()
+	return json.VersionedExecutionPayloadHeader{Deneb: &data}
 }
