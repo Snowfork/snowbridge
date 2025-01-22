@@ -12,19 +12,10 @@ zombienet_data_dir="$output_dir/zombienet"
 export PATH="$output_bin_dir:$PATH"
 export polkadot_sdk_dir="${POLKADOT_SDK_DIR:-../polkadot-sdk}"
 
-if [ "$is_electra" == "true" ]; then
-    HOST=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1')
-    eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://$HOST:8545}/${INFURA_PROJECT_ID:-}"
-    eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://$HOST:8546}/${INFURA_PROJECT_ID:-}"
-    eth_writer_endpoint="${ETH_WRITER_ENDPOINT:-http://$HOST:8545}/${INFURA_PROJECT_ID:-}"
-else
-    eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
-    eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://127.0.0.1:8546}/${INFURA_PROJECT_ID:-}"
-    eth_writer_endpoint="${ETH_WRITER_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
-fi
-
 eth_network="${ETH_NETWORK:-localhost}"
-
+eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
+eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://127.0.0.1:8546}/${INFURA_PROJECT_ID:-}"
+eth_writer_endpoint="${ETH_WRITER_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
 eth_gas_limit="${ETH_GAS_LIMIT:-5000000}"
 eth_chain_id="${ETH_NETWORK_ID:-15}"
 eth_fast_mode="${ETH_FAST_MODE:-true}"

@@ -2,32 +2,38 @@
 set -eu
 
 source scripts/set-env.sh
-export output_electra_dir="/tmp/electra"
 
 start_geth() {
-    rm -rf $output_electra_dir
-    mkdir -p $output_electra_dir
-    mkdir -p $output_electra_dir/ethereum
-    cp config/genesis-electra.json $output_electra_dir
-    cp config/jwtsecret $output_electra_dir
+    pushd "$root_dir/.."
+
+    GETH_PATH="go-ethereum-lightclient/build/bin/geth"
+
+    # Install Electra geth binary
+    if [ ! -f "$GETH_PATH" ]; then
+      echo "Local geth binary not found at $GETH_PATH."
+      echo "Cloning and building go-ethereum-lightclient..."
+
+      git clone https://github.com/lightclient/go-ethereum.git go-ethereum-lightclient
+      pushd go-ethereum-lightclient
+      git checkout prague-devnet-4
+      make geth
+
+      ./build/bin/geth version
+
+      popd
+    else
+      echo "Local geth binary already exists at $GETH_PATH. Skipping clone and build."
+    fi
 
     echo "Starting geth local node"
-    docker run --rm \
-      -v "${output_electra_dir}:/mnt" \
-      docker.io/ethpandaops/geth:lightclient-prague-devnet-4 \
-      --datadir /mnt/ethereum \
+    ./go-ethereum-lightclient/build/bin/geth \
+      --datadir "$output_dir/ethereum" \
       --state.scheme=hash \
-      init /mnt/genesis-electra.json
-    docker run --rm -m=12g --memory-reservation=8g --cpus 2 \
-      -v "${output_electra_dir}:/mnt" \
-      -p 8551:8551 \
-      -p 8545:8545 \
-      -p 8546:8546 \
-      --env 'NODE_OPTIONS=--max-old-space-size=8192' \
-      docker.io/ethpandaops/geth:lightclient-prague-devnet-4 \
+      init "$config_dir/genesis-electra.json"
+    ./go-ethereum-lightclient/build/bin/geth \
       --networkid 11155111 \
       --vmdebug \
-      --datadir /mnt/ethereum \
+      --datadir "$output_dir/ethereum" \
       --http \
       --http.api debug,personal,eth,net,web3,txpool,engine \
       --ws --ws.api debug,eth,net,web3 \
@@ -44,14 +50,16 @@ start_geth() {
       --ws.addr 0.0.0.0 \
       --ws.origins "*" \
       --allow-insecure-unlock \
-      --authrpc.jwtsecret mnt/jwtsecret \
+      --authrpc.jwtsecret "$config_dir/jwtsecret" \
       --password /dev/null \
       --rpc.gascap 0 \
       --ws.origins "*" \
       --gcmode archive \
       --syncmode=full \
       --state.scheme=hash \
-      > "$output_electra_dir/geth.log" 2>&1 &
+      > "$output_dir/geth.log" 2>&1 &
+
+      popd
 }
 
 start_lodestar() {
@@ -79,8 +87,8 @@ start_lodestar() {
         --startValidators "0..7" \
         --enr.ip6 "127.0.0.1" \
         --rest.address "0.0.0.0" \
-        --eth1.providerUrls "http://$HOST:8545" \
-        --execution.urls "http://$HOST:8551" \
+        --eth1.providerUrls "http://127.0.0.1:8545" \
+        --execution.urls "http://127.0.0.1:8551" \
         --dataDir "$ethereum_data_dir" \
         --reset \
         --terminal-total-difficulty-override 0 \
