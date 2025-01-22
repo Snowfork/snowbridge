@@ -197,7 +197,7 @@ library Assets {
         emit IGateway.TokenSent(token, sender, destinationChain, destinationAddress, amount);
     }
 
-    // @dev Transfer Ether tokens to Polkadot
+    // @dev Transfer Ether to Polkadot
     function _sendEther(
         address sender,
         ParaID destinationChain,
@@ -208,7 +208,6 @@ library Assets {
     ) internal returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
-        // Lock Native Ether into AssetHub's agent contract
         if (msg.value < amount) {
             revert InvalidAmount();
         }
@@ -226,6 +225,7 @@ library Assets {
         );
         ticket.value = amount;
 
+        // Lock Native Ether into AssetHub's agent contract
         payable($.assetHubAgent).safeNativeTransfer(amount);
     }
 
