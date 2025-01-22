@@ -2,5 +2,4 @@ node_modules
 dist
 tsconfig.tsbuildinfo
 build
-src/bindings
 .env

@@ -5,4 +5,4 @@ packages:
   - "packages/contract-types"
   - "packages/test-helpers"
   - "packages/operations"
-  - "packages/integration/moonbeam"
+  - "packages/integrations/moonbeam"
