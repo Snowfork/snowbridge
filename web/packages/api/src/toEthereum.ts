@@ -7,7 +7,6 @@ import { Context, utils } from "./index"
 import { scanSubstrateEvents, waitForMessageQueuePallet } from "./query"
 import { bridgeStatusInfo } from "./status"
 import { paraIdToChannelId } from "./utils"
-import { ApiPromise } from "@polkadot/api"
 
 export interface WalletSigner {
     address: string
@@ -524,7 +523,7 @@ export const send = async (
         interior: { X1: { AccountKey20: { key: plan.success.beneficiary } } },
     }
 
-    const assetHubUnsignedTx = planToTx(plan, assetHub, options);
+    const assetHubUnsignedTx = planToTx(context, plan, options);
 
     const assetHubSignedTx = await assetHubUnsignedTx
         .signAsync(addressOrPair, { signer: walletSigner, withSignedTransaction: true })
@@ -894,10 +893,12 @@ export async function* trackSendProgress(
     }
 }
 
-export function planToTx(plan: SendValidationResult, assetHub: ApiPromise, options={xcmVersion: 3}) {
+export function planToTx(context: Context, plan: SendValidationResult, options={xcmVersion: 3}) {
     if (!plan.success) {
         throw Error("plan failed")
     }
+    const { polkadot: { api: { assetHub } } } = context;
+
     const fee_asset = 0
     const weight = "Unlimited"
     const versionKey = `V${options.xcmVersion}`

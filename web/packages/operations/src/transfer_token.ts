@@ -81,6 +81,11 @@ const monitor = async () => {
             BigInt(0)
         )
         console.log("Plan:", plan, plan.failure?.errors)
+
+        const {tx, gas} = await toPolkadot.planToTx(context, plan);
+        console.log('Plan tx:', tx)
+        console.log('Plan gas:', gas)
+
         let result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
         console.log("Execute:", result)
         while (true) {
@@ -104,6 +109,13 @@ const monitor = async () => {
             amount
         )
         console.log("Plan:", plan, plan.failure?.errors)
+
+        const assetHubUnsignedTx = toEthereum.planToTx(context, plan);
+        console.log('call: ', assetHubUnsignedTx.inner.toHex())
+        console.log('utx: ', assetHubUnsignedTx.toHex())
+        console.log('payment: ', (await assetHubUnsignedTx.paymentInfo(plan.success?.sourceAddress ?? POLKADOT_ACCOUNT)).toHuman())
+        console.log('dryRun: ', (await assetHubUnsignedTx.dryRun(plan.success?.sourceAddress ?? POLKADOT_ACCOUNT)).toHuman())
+
         const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
         console.log("Execute:", result)
         while (true) {
@@ -128,6 +140,11 @@ const monitor = async () => {
             BigInt(4_000_000_000)
         )
         console.log("Plan:", plan, plan.failure?.errors)
+
+        const {tx, gas} = await toPolkadot.planToTx(context, plan);
+        console.log('Plan tx:', tx)
+        console.log('Plan gas:', gas)
+
         let result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
         console.log("Execute:", result)
         while (true) {
@@ -151,6 +168,13 @@ const monitor = async () => {
             amount
         )
         console.log("Plan:", plan, plan.failure?.errors)
+
+        const assetHubUnsignedTx = toEthereum.planToTx(context, plan);
+        console.log('call: ', assetHubUnsignedTx.inner.toHex())
+        console.log('utx: ', assetHubUnsignedTx.toHex())
+        console.log('payment: ', (await assetHubUnsignedTx.paymentInfo(plan.success?.sourceAddress ?? POLKADOT_ACCOUNT)).toHuman())
+        console.log('dryRun: ', (await assetHubUnsignedTx.dryRun(plan.success?.sourceAddress ?? POLKADOT_ACCOUNT)).toHuman())
+
         const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
         console.log("Execute:", result)
         while (true) {

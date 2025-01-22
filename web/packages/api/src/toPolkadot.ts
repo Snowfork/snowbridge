@@ -416,6 +416,9 @@ export const send = async (
         polkadot: {
             api: { assetHub, bridgeHub },
         },
+        ethereum: {
+            contracts: { gateway }
+        }
     } = context
     const { success } = plan
 
@@ -432,9 +435,7 @@ export const send = async (
         bridgeHub.rpc.chain.getFinalizedHead(),
     ])
 
-    const contract = IGateway__factory.connect(context.config.appContracts.gateway, signer)
-
-    let { tx } = await planToTx(plan, contract)
+    let { tx } = await planToTx(context, plan)
     const response = await signer.sendTransaction(tx)
     let receipt = await response.wait(confirmations)
 
@@ -451,7 +452,7 @@ export const send = async (
     }
     const events: LogDescription[] = []
     receipt.logs.forEach((log) => {
-        let event = contract.interface.parseLog({
+        let event = gateway.interface.parseLog({
             topics: [...log.topics],
             data: log.data,
         })
@@ -951,10 +952,12 @@ export async function* trackSendProgress(
     yield "Transfer complete."
 }
 
-export async function planToTx(plan: SendValidationResult, gateway: IGateway) {
+export async function planToTx(context: Context, plan: SendValidationResult) {
     if (!plan.success) {
         throw Error("plan failed")
     }
+    const { ethereum: { contracts: { gateway }}} = context
+
     const [tx, gas] = await Promise.all([
         gateway.sendToken.populateTransaction(
             plan.success.token,
