@@ -112,7 +112,7 @@ export const executeTransfer = async (
         amount,
     }
     // Fee always in xcDOT, hardcode as 6.5 DOT for now should be enough referenced from https://moonbeam.subscan.io/extrinsic/8501143-6
-    // Todo: calculate the fee amount on demand
+    // Todo: calculate the fee amount on demand reference https://gist.github.com/alistair-singh/4ce9a5eacffe5a900ec91482bc3d48a9#file-at-api-send-ts-L206
     let fee: XCM.AssetAddressInfoStruct = {
         asset: "0xFfFFfFff1FcaCBd218EDc0EbA20Fc2308C778080",
         amount: 65_000_000_000,

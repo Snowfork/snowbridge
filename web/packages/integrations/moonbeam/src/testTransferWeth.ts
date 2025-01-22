@@ -4,7 +4,7 @@ import { ethers } from "ethers"
 import { WsProvider, ApiPromise } from "@polkadot/api"
 
 // XC20 address referenced from the list in https://docs.moonbeam.network/builders/interoperability/xcm/xc20/overview/
-const xc20TokenAddress = "fFffFFFF86829AFE1521AD2296719DF3ACE8DED7"
+const xc20TokenAddress = "0xfFffFFFF86829AFE1521AD2296719DF3ACE8DED7".toLowerCase()
 
 // Todo: should get ERC20 from XC20
 const erc20TokenAddress = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"

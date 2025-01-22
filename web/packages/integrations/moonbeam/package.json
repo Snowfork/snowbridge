@@ -14,7 +14,8 @@
     "rebuild": "pnpm solc && pnpm typechain && tsc",
     "build": "tsc",
     "solc": "solcjs --abi precompiles/*.sol -o build",
-    "typechain": "typechain --target ethers-v6 './build/*.abi' --out-dir src/bindings"
+    "typechain": "typechain --target ethers-v6 './build/*.abi' --out-dir src/bindings",
+    "testTransfer": "npx ts-node src/testTransferWeth.ts start"
   },
   "devDependencies": {
     "@typechain/ethers-v6": "^0.5.1",
