@@ -1,8 +1,9 @@
 import { ApiPromise } from "@polkadot/api"
-import { blake2AsHex } from "@polkadot/util-crypto"
+import { blake2AsHex, xxhashAsHex } from "@polkadot/util-crypto"
 import { BigNumberish, BytesLike, Wallet } from "ethers"
 import { Precompiles_XcmInterface_sol_XCM__factory, XCM } from "./bindings"
-import { numberToHex } from "@polkadot/util"
+import { BN, numberToHex } from "@polkadot/util"
+import { Codec } from "@polkadot/types/types"
 
 // https://github.com/moonbeam-foundation/moonbeam/blob/b2b1bde7ced13aad4bd2928effc415c521fd48cb/runtime/moonbeam/src/precompiles.rs#L281
 const xcmInterfacePrecompile = "0x000000000000000000000000000000000000081A"
@@ -42,6 +43,7 @@ export const executeTransfer = async (
         interior: { X1: [{ AccountKey20: { key: erc20tokenAddress } }] },
     }
 
+    // Reference https://moonbeam.subscan.io/extrinsic/8501143-6
     const customXcm = [
         // Initiate the bridged transfer
         {
@@ -111,11 +113,13 @@ export const executeTransfer = async (
         asset: xc20TokenAddress,
         amount,
     }
-    // Fee always in xcDOT, hardcode as 6.5 DOT for now should be enough referenced from https://moonbeam.subscan.io/extrinsic/8501143-6
-    // Todo: calculate the fee amount on demand reference https://gist.github.com/alistair-singh/4ce9a5eacffe5a900ec91482bc3d48a9#file-at-api-send-ts-L206
+    // Fee always in xcDOT
+    const transfer_bridge_fee: bigint = await getSendFee(assetHubApi)
+    const transfer_assethub_execution_fee = 3500000000n
+    const transfer_fee = (transfer_bridge_fee + transfer_assethub_execution_fee).toString()
     let fee: XCM.AssetAddressInfoStruct = {
         asset: "0xFfFFfFff1FcaCBd218EDc0EbA20Fc2308C778080",
-        amount: 65_000_000_000,
+        amount: transfer_fee,
     }
 
     // This represents (1,X1(Parachain(1000)))
@@ -139,4 +143,17 @@ export const executeTransfer = async (
     ](dest, assets, assetTransferType, remoteFeesIdIndex, feesTransferType, customXcmOnDest)
     await tx.wait()
     console.log(`Transaction receipt: ${tx.hash}`)
+}
+
+const getSendFee = async (
+    assetHub: ApiPromise,
+    options = {
+        defaultFee: 65_000_000_000, //6.5 DOT by default
+    }
+) => {
+    // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
+    const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
+    const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
+    const leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
+    return leFee.eqn(0) ? BigInt(options.defaultFee) : BigInt(leFee.toString())
 }

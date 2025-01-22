@@ -15,7 +15,8 @@
     "rootDir": "src",
     "noEmitOnError": true,
     "skipLibCheck": true,
-    "allowJs": true
+    "allowJs": true,
+    "lib": ["es6", "esnext.bigint"]
   },
   "ts-node": {
     "require": ["tsconfig-paths/register"]
