@@ -8,16 +8,36 @@ import { Codec } from "@polkadot/types/types"
 // https://github.com/moonbeam-foundation/moonbeam/blob/b2b1bde7ced13aad4bd2928effc415c521fd48cb/runtime/moonbeam/src/precompiles.rs#L281
 const xcmInterfacePrecompile = "0x000000000000000000000000000000000000081A"
 const ETH_CHAIN_ID = process.env["ETH_CHAIN_ID"] || 1
+const TokenPairs = [
+    {
+        id: "WETH",
+        address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        xc20Address: "0xfFffFFFF86829AFE1521AD2296719DF3ACE8DED7",
+    },
+    {
+        id: "WBTC",
+        address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+        xc20Address: "0xfFffFFFf1B4Bb1ac5749F73D866FfC91a3432c47",
+    },
+    {
+        id: "wstETH",
+        address: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        xc20Address: "0xFfFFFfFF5D5DEB44BF7278DEE5381BEB24CB6573",
+    },
+]
 
 export const executeTransfer = async (
     signer: Wallet,
     api: ApiPromise,
     assetHubApi: ApiPromise,
     xc20TokenAddress: string,
-    erc20tokenAddress: string,
     amount: BigNumberish,
     beneficiary: string
 ) => {
+    let erc20tokenAddress = getERC20TokenAddress(xc20TokenAddress)
+    if (!erc20tokenAddress) {
+        throw new Error("token not registed")
+    }
     const xcmInterface = Precompiles_XcmInterface_sol_XCM__factory.connect(
         xcmInterfacePrecompile,
         signer
@@ -90,6 +110,7 @@ export const executeTransfer = async (
             setTopic: "0x0000000000000000000000000000000000000000000000000000000000000000",
         },
     ]
+    // Update messageId in setTopic for remote tracing
     const xcmHash = assetHubApi.createType("Xcm", customXcm)
     const sender = await signer.getAddress()
     const [parachainId, accountNextId] = await Promise.all([
@@ -150,10 +171,20 @@ const getSendFee = async (
     options = {
         defaultFee: 65_000_000_000, //6.5 DOT by default
     }
-) => {
+): Promise<bigint> => {
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
     const leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
     return leFee.eqn(0) ? BigInt(options.defaultFee) : BigInt(leFee.toString())
+}
+
+// Todo: From on-chain storage assetManager.assetIdType
+const getERC20TokenAddress = (xc20TokenAddress: string): string => {
+    for (let entry of TokenPairs) {
+        if (entry.xc20Address.toLowerCase() == xc20TokenAddress.toLowerCase()) {
+            return entry.address
+        }
+    }
+    return ""
 }
