@@ -18,6 +18,7 @@ const monitor = async () => {
     if (snwobridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
+    console.log(`Using environment '${env}'`)
 
     const { config } = snwobridgeEnv
 
@@ -115,52 +116,52 @@ const monitor = async () => {
         console.log("Complete:", result)
     }
 
-    console.log("# Ethereum to Penpal")
-    {
-        const plan = await toPolkadot.validateSend(
-            context,
-            ETHEREUM_ACCOUNT,
-            POLKADOT_ACCOUNT_PUBLIC,
-            WETH_CONTRACT,
-            2000,
-            amount,
-            BigInt(4_000_000_000)
-        )
-        console.log("Plan:", plan, plan.failure?.errors)
-        let result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
-        console.log("Execute:", result)
-        while (true) {
-            const { status } = await toPolkadot.trackSendProgressPolling(context, result)
-            if (status !== "pending") {
-                break
-            }
-            await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
-        }
-        console.log("Complete:", result)
-    }
+    //console.log("# Ethereum to Penpal")
+    //{
+    //    const plan = await toPolkadot.validateSend(
+    //        context,
+    //        ETHEREUM_ACCOUNT,
+    //        POLKADOT_ACCOUNT_PUBLIC,
+    //        WETH_CONTRACT,
+    //        2000,
+    //        amount,
+    //        BigInt(4_000_000_000)
+    //    )
+    //    console.log("Plan:", plan, plan.failure?.errors)
+    //    let result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
+    //    console.log("Execute:", result)
+    //    while (true) {
+    //        const { status } = await toPolkadot.trackSendProgressPolling(context, result)
+    //        if (status !== "pending") {
+    //            break
+    //        }
+    //        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+    //    }
+    //    console.log("Complete:", result)
+    //}
 
-    console.log("# Penpal to Ethereum")
-    {
-        const plan = await toEthereum.validateSend(
-            context,
-            POLKADOT_ACCOUNT,
-            2000,
-            ETHEREUM_ACCOUNT_PUBLIC,
-            WETH_CONTRACT,
-            amount
-        )
-        console.log("Plan:", plan, plan.failure?.errors)
-        const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
-        console.log("Execute:", result)
-        while (true) {
-            const { status } = await toEthereum.trackSendProgressPolling(context, result)
-            if (status !== "pending") {
-                break
-            }
-            await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
-        }
-        console.log("Complete:", result)
-    }
+    //console.log("# Penpal to Ethereum")
+    //{
+    //    const plan = await toEthereum.validateSend(
+    //        context,
+    //        POLKADOT_ACCOUNT,
+    //        2000,
+    //        ETHEREUM_ACCOUNT_PUBLIC,
+    //        WETH_CONTRACT,
+    //        amount
+    //    )
+    //    console.log("Plan:", plan, plan.failure?.errors)
+    //    const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
+    //    console.log("Execute:", result)
+    //    while (true) {
+    //        const { status } = await toEthereum.trackSendProgressPolling(context, result)
+    //        if (status !== "pending") {
+    //            break
+    //        }
+    //        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+    //    }
+    //    console.log("Complete:", result)
+    //}
 
     await destroyContext(context)
 }

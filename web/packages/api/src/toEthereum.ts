@@ -7,6 +7,7 @@ import { Context, utils } from "./index"
 import { scanSubstrateEvents, waitForMessageQueuePallet } from "./query"
 import { bridgeStatusInfo } from "./status"
 import { paraIdToChannelId } from "./utils"
+import { ApiPromise } from "@polkadot/api"
 
 export interface WalletSigner {
     address: string
@@ -523,9 +524,24 @@ export const send = async (
         interior: { X1: { AccountKey20: { key: plan.success.beneficiary } } },
     }
 
-    const assetHubSignedTx = await assetHub.tx.polkadotXcm
-        .transferAssets(destination, beneficiary, assets, fee_asset, weight)
+    const assetHubUnsignedTx = planToTx(plan, assetHub, options);
+
+    console.log('Call: ', assetHubUnsignedTx.toHex())
+    console.log('UTX1: ', assetHubUnsignedTx.toPrimitive())
+    console.log('UTX2: ', assetHubUnsignedTx.inner.toHex())
+    console.log('UTX3: ', assetHubUnsignedTx.toJSON())
+    console.log('UTX4: ', assetHubUnsignedTx.inspect())
+    console.log('UTX4.1: ', assetHubUnsignedTx.toRawType())
+    console.log('UTX5.1: ', u8aToHex(assetHubUnsignedTx.toU8a()))
+    console.log('UTX5: ', u8aToHex(assetHubUnsignedTx.toU8a(false)))
+    console.log('UTX6: ', u8aToHex(assetHubUnsignedTx.toU8a(true)))
+    console.log('Payment: ', (await assetHubUnsignedTx.paymentInfo(addressOrPair, { signer: walletSigner, withSignedTransaction: true})).toHuman())
+    console.log('DryRun: ', (await assetHubUnsignedTx.dryRun(addressOrPair, { signer: walletSigner, withSignedTransaction: true})).toHuman())
+
+    const assetHubSignedTx = await assetHubUnsignedTx
         .signAsync(addressOrPair, { signer: walletSigner, withSignedTransaction: true })
+
+    console.log('TX: ',assetHubSignedTx.toHex())
 
     let result = await new Promise<{
         blockNumber: number
@@ -890,4 +906,34 @@ export async function* trackSendProgress(
     } else {
         throw Error("Message was not dispatched on successfully from Gateway.")
     }
+}
+
+export function planToTx(plan: SendValidationResult, assetHub: ApiPromise, options={xcmVersion: 3}) {
+    if (!plan.success) {
+        throw Error("plan failed")
+    }
+    const fee_asset = 0
+    const weight = "Unlimited"
+    const versionKey = `V${options.xcmVersion}`
+    const assets: { [key: string]: any } = {}
+    const transferAsset = {
+        id: { Concrete: plan.success.multiLocation },
+        fun: { Fungible: plan.success.amount },
+    }
+    assets[versionKey] = [transferAsset]
+    const destination: { [key: string]: any } = {}
+    destination[versionKey] = {
+        parents: 2,
+        interior: {
+            X1: { GlobalConsensus: { Ethereum: { chain_id: plan.success.ethereumChainId } } },
+        },
+    }
+    const beneficiary: { [key: string]: any } = {}
+    beneficiary[versionKey] = {
+        parents: 0,
+        interior: { X1: { AccountKey20: { key: plan.success.beneficiary } } },
+    }
+
+    return assetHub.tx.polkadotXcm
+        .transferAssets(destination, beneficiary, assets, fee_asset, weight)
 }

@@ -1,7 +1,7 @@
 import { decodeAddress } from "@polkadot/keyring"
 import { Codec } from "@polkadot/types/types"
 import { u8aToHex } from "@polkadot/util"
-import { IERC20__factory, IGateway__factory, WETH9__factory } from "@snowbridge/contract-types"
+import { IERC20__factory, IGateway, IGateway__factory, WETH9__factory } from "@snowbridge/contract-types"
 import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway"
 import { LogDescription, Signer, TransactionReceipt, ethers } from "ethers"
 import { concatMap, filter, firstValueFrom, lastValueFrom, take, takeWhile, tap } from "rxjs"
@@ -434,6 +434,7 @@ export const send = async (
 
     const contract = IGateway__factory.connect(context.config.appContracts.gateway, signer)
 
+    console.log('TXXXXXX: ', planToTx(plan, context.ethereum.contracts.gateway))
     const response = await contract.sendToken(
         success.token,
         success.destinationParaId,
@@ -981,4 +982,35 @@ export async function* trackSendProgress(
     }
 
     yield "Transfer complete."
+}
+
+
+export async function planToTx(plan: SendValidationResult, gateway: IGateway) {
+    if (!plan.success) {
+        throw Error("plan failed")
+    }
+    const [tx, gas] = await Promise.all([
+        gateway.sendToken.populateTransaction(
+            plan.success.token,
+            plan.success.destinationParaId,
+            plan.success.beneficiaryMultiAddress,
+            plan.success.destinationFee,
+            plan.success.amount,
+            {
+                value: plan.success.fee,
+            }
+        ),
+        gateway.sendToken.estimateGas(
+            plan.success.token,
+            plan.success.destinationParaId,
+            plan.success.beneficiaryMultiAddress,
+            plan.success.destinationFee,
+            plan.success.amount,
+            {
+                value: plan.success.fee,
+            }
+        )
+    ]);
+
+    return { tx, gas }
 }
