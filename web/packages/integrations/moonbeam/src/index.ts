@@ -1,13 +1,15 @@
 import { ApiPromise } from "@polkadot/api"
-import { blake2AsHex, xxhashAsHex } from "@polkadot/util-crypto"
+import { blake2AsHex, decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
 import { BigNumberish, BytesLike, Wallet } from "ethers"
 import { Precompiles_XcmInterface_sol_XCM__factory, XCM } from "./bindings"
-import { BN, numberToHex } from "@polkadot/util"
+import { BN, numberToHex, u8aToHex } from "@polkadot/util"
 import { Codec } from "@polkadot/types/types"
 
 // https://github.com/moonbeam-foundation/moonbeam/blob/b2b1bde7ced13aad4bd2928effc415c521fd48cb/runtime/moonbeam/src/precompiles.rs#L281
 const xcmInterfacePrecompile = "0x000000000000000000000000000000000000081A"
 const ETH_CHAIN_ID = process.env["ETH_CHAIN_ID"] || 1
+const XCDOT = "0xFfFFfFff1FcaCBd218EDc0EbA20Fc2308C778080"
+const ASSET_HUB_PARAID = 1000
 const TokenPairs = [
     {
         id: "WETH",
@@ -26,13 +28,25 @@ const TokenPairs = [
     },
 ]
 
+/**
+ * Transfer Snowbridge ERC20 back to Ethereum
+ * @param signer - The wallet to sign the transaction
+ * @param api - ApiPromise for moonbeam
+ * @param assetHubApi - ApiPromise for assethub
+ * @param xc20TokenAddress - The xc20 address of the token
+ * @param amount - amount of the token
+ * @param beneficiary - The beneficiary address on ethereum
+ * @param claimer - The claimer address is an optional param with the 32 bytes address on AssetHub to deposit into
+ *                  when there is extra fee left or assets trapped
+ */
 export const executeTransfer = async (
     signer: Wallet,
     api: ApiPromise,
     assetHubApi: ApiPromise,
     xc20TokenAddress: string,
     amount: BigNumberish,
-    beneficiary: string
+    beneficiary: string,
+    claimer: string | null
 ) => {
     let erc20tokenAddress = getERC20TokenAddress(xc20TokenAddress)
     if (!erc20tokenAddress) {
@@ -63,8 +77,37 @@ export const executeTransfer = async (
         interior: { X1: [{ AccountKey20: { key: erc20tokenAddress } }] },
     }
 
-    // Reference https://moonbeam.subscan.io/extrinsic/8501143-6
-    const customXcm = [
+    // construct xcm referenced https://moonbeam.subscan.io/extrinsic/8501143-6
+    let setAppendixXcm: any[] = []
+    if (claimer) {
+        // add a `setAppendix` when claimer assigned
+        setAppendixXcm = [
+            {
+                setAppendix: [
+                    {
+                        depositAsset: {
+                            assets: {
+                                Wild: "All",
+                            },
+                            beneficiary: {
+                                parents: 0,
+                                interior: {
+                                    x1: [
+                                        {
+                                            AccountId32: {
+                                                id: u8aToHex(decodeAddress(claimer)),
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+        ]
+    }
+    let customXcm = [
         // Initiate the bridged transfer
         {
             initiateReserveWithdraw: {
@@ -110,7 +153,8 @@ export const executeTransfer = async (
             setTopic: "0x0000000000000000000000000000000000000000000000000000000000000000",
         },
     ]
-    // Update messageId in setTopic for remote tracing
+    customXcm = setAppendixXcm.concat(customXcm)
+    // Generate an unique messageId and set into `setTopic` for remote track
     const xcmHash = assetHubApi.createType("Xcm", customXcm)
     const sender = await signer.getAddress()
     const [parachainId, accountNextId] = await Promise.all([
@@ -123,8 +167,16 @@ export const executeTransfer = async (
         ...xcmHash.toU8a(),
     ])
     const messageId = blake2AsHex(entropy)
-    customXcm[0].initiateReserveWithdraw!.xcm[2].setTopic = messageId
-    customXcm[1].setTopic = messageId
+    if (customXcm.length == 2) {
+        customXcm[0].initiateReserveWithdraw!.xcm[2].setTopic = messageId
+        customXcm[1].setTopic = messageId
+    } else if (customXcm.length == 3) {
+        customXcm[1].initiateReserveWithdraw!.xcm[2].setTopic = messageId
+        customXcm[2].setTopic = messageId
+    } else {
+        throw new Error("invalid xcm")
+    }
+
     const xcmOnDest = assetHubApi.createType("XcmVersionedXcm", {
         V4: customXcm,
     })
@@ -135,30 +187,32 @@ export const executeTransfer = async (
         amount,
     }
     // Fee always in xcDOT
+    // transfer_bridge_fee is the fee to cover the execution cost on ethereum
+    // transfer_assethub_execution_fee is the fee to cover the execution cost on assethub
+    // hardcode as 0.35 DOT should be fair enough, can improve with a dry run call
     const transfer_bridge_fee: bigint = await getSendFee(assetHubApi)
     const transfer_assethub_execution_fee = 3500000000n
     const transfer_fee = (transfer_bridge_fee + transfer_assethub_execution_fee).toString()
     let fee: XCM.AssetAddressInfoStruct = {
-        asset: "0xFfFFfFff1FcaCBd218EDc0EbA20Fc2308C778080",
+        asset: XCDOT,
         amount: transfer_fee,
     }
 
-    // This represents (1,X1(Parachain(1000)))
-    const paraIdInHex = numberToHex(1000, 32)
+    const paraIdInHex = numberToHex(ASSET_HUB_PARAID, 32)
     const parachain_enum_selector = "0x00"
+    // This represents (1,X1(Parachain(1000)))
     let dest: XCM.LocationStruct = {
         parents: 1,
         interior: [parachain_enum_selector + paraIdInHex.slice(2)],
     }
+    // Assets including fee and the ERC20 asset, with fee be the first
+    // 2 represents `DestinationReserve`
     let assets: XCM.AssetAddressInfoStruct[] = [fee, token]
-    // DestinationReserve for the asset
     let assetTransferType: BigNumberish = 2n
-    // Fee as first asset
     let remoteFeesIdIndex: BigNumberish = 0n
-    // DestinationReserve for the fee
     let feesTransferType: BigNumberish = 2n
 
-    /* Execute the custom XCM message */
+    // Execute the custom XCM message with the precompile
     const tx = await xcmInterface[
         "transferAssetsUsingTypeAndThenAddress((uint8,bytes[]),(address,uint256)[],uint8,uint8,uint8,bytes)"
     ](dest, assets, assetTransferType, remoteFeesIdIndex, feesTransferType, customXcmOnDest)
@@ -179,7 +233,8 @@ const getSendFee = async (
     return leFee.eqn(0) ? BigInt(options.defaultFee) : BigInt(leFee.toString())
 }
 
-// Todo: From on-chain storage assetManager.assetIdType
+// Get the ERC20 address from the XC20 through a static map
+// Todo: From on-chain storage `assetManager.assetIdType`
 const getERC20TokenAddress = (xc20TokenAddress: string): string => {
     for (let entry of TokenPairs) {
         if (entry.xc20Address.toLowerCase() == xc20TokenAddress.toLowerCase()) {
