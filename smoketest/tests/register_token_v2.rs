@@ -34,7 +34,7 @@ async fn register_token_v2() {
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
 	let receipt = gateway
-		.v_2_register_token(weth.address(), 1_000_000_000u128)
+		.v_2_register_token(weth.address(), 0, 1_000_000_000u128, 1_500_000_000u128)
 		.value(3_000_000_000_u128)
 		.send()
 		.await

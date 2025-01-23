@@ -140,11 +140,23 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				return fmt.Errorf("get last block number: %w", err)
 			}
 
+			log.WithFields(log.Fields{
+				"blockNumber": blockNumber,
+			}).Info("block number is")
+
 			for _, paraNonce := range paraNonces {
-				events, err := r.findEvents(ctx, blockNumber, paraNonce+1)
+				log.WithFields(log.Fields{
+					"nonce": paraNonce,
+				}).Info("Finding events for nonce")
+				events, err := r.findEvents(ctx, blockNumber, paraNonce)
 				if err != nil {
 					return fmt.Errorf("find events: %w", err)
 				}
+
+				log.WithFields(log.Fields{
+					"events":    events,
+					"paraNonce": paraNonce,
+				}).Info("Found events for nonce")
 
 				for _, ev := range events {
 					err := r.waitAndSend(ctx, ev)
@@ -170,7 +182,7 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 
 	// There is already a valid finalized header on-chain that can prove the message
 	if proof.FinalizedPayload == nil {
-		err := r.writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", inboundMsg)
+		err := r.writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueueV2.submit", inboundMsg)
 		if err != nil {
 			return fmt.Errorf("submit message to inbound queue: %w", err)
 		}
@@ -184,7 +196,7 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 		"message_slot":   proof.HeaderPayload.Header.Slot,
 	}).Debug("Batching finalized header update with message")
 
-	extrinsics := []string{"EthereumBeaconClient.submit", "EthereumInboundQueue.submit"}
+	extrinsics := []string{"EthereumBeaconClient.submit", "EthereumInboundQueueV2.submit"}
 	payloads := []interface{}{proof.FinalizedPayload.Payload, inboundMsg}
 	// Batch the finalized header update with the inbound message
 	err := r.writer.BatchCall(ctx, extrinsics, payloads)
@@ -196,39 +208,33 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 }
 
 func (r *Relay) fetchUnprocessedParachainNonces(latest uint64) ([]uint64, error) {
-	log.WithField("latest", latest).Info("latest nonce is")
 	unprocessedNonces := []uint64{}
-	startKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueue", "NonceBitmap", nil)
-	if err != nil {
-		return unprocessedNonces, fmt.Errorf("create storage key for EthereumInboundQueue.NonceBitmap: %w", err)
-	}
+	latestBucket := latest / 128
 
-	blockHash, err := r.paraconn.API().RPC.Chain.GetBlockHashLatest()
-	if err != nil {
-		return unprocessedNonces, fmt.Errorf("fetch latest parachain block hash: %w", err)
-	}
+	for b := uint64(0); b <= latestBucket; b++ {
+		encodedBucket, _ := types.EncodeToBytes(types.NewU64(b))
+		bucketKey, _ := types.CreateStorageKey(
+			r.paraconn.Metadata(),
+			"EthereumInboundQueueV2",
+			"NonceBitmap",
+			encodedBucket,
+			nil,
+		)
 
-	keys, err := r.paraconn.API().RPC.State.GetKeysPaged(startKey, 100, nil, blockHash)
-	if err != nil {
-		return unprocessedNonces, fmt.Errorf("fetch storage EthereumInboundQueue.NonceBitmap keys: %w", err)
-	}
-	for _, key := range keys {
 		var value types.U128
-		ok, err := r.paraconn.API().RPC.State.GetStorageLatest(key, &value)
+		ok, err := r.paraconn.API().RPC.State.GetStorageLatest(bucketKey, &value)
 		if err != nil {
-			return unprocessedNonces, fmt.Errorf("fetch latest parachain value: %w", err)
-		}
-		if !ok || value.Int.Cmp(big.NewInt(0)) == 0 {
-			continue // Skip empty buckets
+			return nil, fmt.Errorf("failed to read bucket %d: %w", b, err)
 		}
 
-		unprocessedNonces = extractUnprocessedNonces(value, latest)
-
-		if len(unprocessedNonces) > 0 && unprocessedNonces[len(unprocessedNonces)-1] >= latest {
-			break
+		// "Missing" means the chain doesn't store it => it's 0
+		if !ok {
+			value = types.NewU128(*big.NewInt(0))
 		}
 
-		fmt.Printf("Unprocessed nonces for bucket %s: %v\n", key.Hex(), unprocessedNonces)
+		// Now parse bits from value...
+		bucketNonces := extractUnprocessedNonces(value, latest, b)
+		unprocessedNonces = append(unprocessedNonces, bucketNonces...)
 	}
 
 	log.WithFields(logrus.Fields{
@@ -243,15 +249,15 @@ func (r *Relay) isParachainNonceSet(index uint64) (bool, error) {
 	bitPosition := index % 128
 
 	encodedBucket, err := types.EncodeToBytes(types.NewU64(bucket))
-	bucketKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueue", "NonceBitmap", encodedBucket)
+	bucketKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueueV2", "NonceBitmap", encodedBucket)
 	if err != nil {
-		return false, fmt.Errorf("create storage key for EthereumInboundQueue.NonceBitmap: %w", err)
+		return false, fmt.Errorf("create storage key for EthereumInboundQueueV2.NonceBitmap: %w", err)
 	}
 
 	var bucketValue types.U128
 	ok, err := r.paraconn.API().RPC.State.GetStorageLatest(bucketKey, &bucketValue)
 	if err != nil {
-		return false, fmt.Errorf("fetch storage EthereumInboundQueue.NonceBitmap keys: %w", err)
+		return false, fmt.Errorf("fetch storage EthereumInboundQueueV2.NonceBitmap keys: %w", err)
 	}
 	if !ok {
 		return false, fmt.Errorf("bucket does not exist: %w", err)
@@ -265,19 +271,28 @@ func checkBitState(bucketValue types.U128, bitPosition uint64) bool {
 	return new(big.Int).And(bucketValue.Int, mask).Cmp(big.NewInt(0)) != 0
 }
 
-func extractUnprocessedNonces(bitmap types.U128, latest uint64) []uint64 {
+func extractUnprocessedNonces(bitmap types.U128, latest uint64, bucketIndex uint64) []uint64 {
 	var unprocessed []uint64
-	for i := 0; i < 128; i++ {
-		if uint64(i) > latest {
-			break // Stop processing if index exceeds `latest`
-		}
+	// Each bucket covers 128 nonces
+	baseNonce := bucketIndex * 128
 
+	for i := 0; i < 128; i++ {
+		nonce := baseNonce + uint64(i)
+		// Ignore nonce 0 since valid nonces start at 1
+		if nonce < 1 {
+			continue
+		}
+		// If we've passed the latest nonce to consider, stop checking further bits.
+		if nonce > latest {
+			break
+		}
+		// Check if bit `i` is unset (meaning unprocessed).
 		mask := new(big.Int).Lsh(big.NewInt(1), uint(i))
-		bit := new(big.Int).And(bitmap.Int, mask)
-		if bit.Cmp(big.NewInt(0)) == 0 {
-			unprocessed = append(unprocessed, uint64(i))
+		if new(big.Int).And(bitmap.Int, mask).Cmp(big.NewInt(0)) == 0 {
+			unprocessed = append(unprocessed, nonce)
 		}
 	}
+
 	return unprocessed
 }
 
@@ -535,7 +550,13 @@ func (r *Relay) isInFinalizedBlock(ctx context.Context, event *contracts.Gateway
 		return fmt.Errorf("get block header: %w", err)
 	}
 
-	return r.beaconHeader.CheckHeaderFinalized(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
+	err = r.beaconHeader.CheckHeaderFinalized(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
+	if err != nil {
+		log.Info("Message is not in a finalized block")
+	} else {
+		log.Info("Message is in a finalized block")
+	}
+	return err
 }
 
 func (r *Relay) UnprocessedNonces() {
