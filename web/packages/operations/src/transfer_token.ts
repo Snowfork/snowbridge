@@ -114,7 +114,12 @@ const monitor = async () => {
         console.log('call: ', assetHubUnsignedTx.inner.toHex())
         console.log('utx: ', assetHubUnsignedTx.toHex())
         console.log('payment: ', (await assetHubUnsignedTx.paymentInfo(plan.success?.sourceAddress ?? POLKADOT_ACCOUNT)).toHuman())
-        console.log('dryRun: ', (await assetHubUnsignedTx.dryRun(plan.success?.sourceAddress ?? POLKADOT_ACCOUNT)).toHuman())
+        console.log('dryRun: ', (
+            await assetHubUnsignedTx.dryRun(
+                plan.success?.sourceAddress ?? POLKADOT_ACCOUNT_PUBLIC,
+                { signer: POLKADOT_ACCOUNT })
+            ).toHuman()
+        )
 
         const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
         console.log("Execute:", result)
@@ -173,7 +178,12 @@ const monitor = async () => {
         console.log('call: ', assetHubUnsignedTx.inner.toHex())
         console.log('utx: ', assetHubUnsignedTx.toHex())
         console.log('payment: ', (await assetHubUnsignedTx.paymentInfo(plan.success?.sourceAddress ?? POLKADOT_ACCOUNT)).toHuman())
-        console.log('dryRun: ', (await assetHubUnsignedTx.dryRun(plan.success?.sourceAddress ?? POLKADOT_ACCOUNT)).toHuman())
+        console.log('dryRun: ', (
+            await assetHubUnsignedTx.dryRun(
+                plan.success?.sourceAddress ?? POLKADOT_ACCOUNT_PUBLIC,
+                { signer: POLKADOT_ACCOUNT })
+            ).toHuman()
+        )
 
         const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
         console.log("Execute:", result)
