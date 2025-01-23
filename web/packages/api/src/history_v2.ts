@@ -164,7 +164,8 @@ export const toPolkadotHistory = async (): Promise<ToPolkadotTransferResult[]> =
             }
         }
 
-        const assetHubMessageProcessed = outboundMessage.toAssetHubMessageQueue
+        const assetHubMessageProcessed =
+            outboundMessage.toDestination || outboundMessage.toAssetHubMessageQueue
         if (assetHubMessageProcessed) {
             result.assetHubMessageProcessed = {
                 extrinsic_hash: "",
