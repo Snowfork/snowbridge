@@ -7,7 +7,7 @@ import {console} from "forge-std/console.sol";
 import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
 import {IGateway} from "../src/interfaces/IGateway.sol";
 import {Gateway} from "../src/Gateway.sol";
-import {Gateway202410} from "../src/upgrades/Gateway202410.sol";
+import {Gateway202502} from "../src/upgrades/Gateway202502.sol";
 import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {UpgradeParams, SetOperatingModeParams, OperatingMode, RegisterForeignTokenParams} from "../src/Params.sol";
 import {ChannelID, ParaID, OperatingMode, TokenInfo} from "../src/Types.sol";
@@ -29,26 +29,33 @@ contract ForkUpgradeTest is Test {
     function forkUpgrade() public {
         AgentExecutor executor = new AgentExecutor();
 
-        Gateway202410 newLogic =
-            new Gateway202410(BeefyClient, address(executor), ParaID.wrap(1002), BridgeHubAgent, 10, 20000000000);
+        Gateway202502 newLogic =
+            new Gateway202502(BeefyClient, address(executor), ParaID.wrap(1002), BridgeHubAgent, 10, 20000000000);
 
         UpgradeParams memory params =
             UpgradeParams({impl: address(newLogic), implCodeHash: address(newLogic).codehash, initParams: bytes("")});
 
         Gateway gateway = Gateway(GatewayProxy);
 
-        // Check pre-migration of ETH from Asset Hub agent
-        assertGt(IGateway(GatewayProxy).agentOf(AssetHubAgent).balance, 0);
-        // Check pre-migration of ETH to Gateway
-        assertEq(address(GatewayProxy).balance, 0);
-
-        vm.expectEmit();
-        emit IGateway.EtherDeposited(gateway.agentOf(AssetHubAgent), 587928061927368450);
-
         vm.expectEmit();
         emit IUpgradable.Upgraded(address(newLogic));
 
         gateway.upgrade(abi.encode(params));
+    }
+
+    function testSanityCheck() public {
+        // Check AH channel nonces as expected
+        (uint64 inbound, uint64 outbound) = IGateway(GatewayProxy).channelNoncesOf(
+            ChannelID.wrap(0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539)
+        );
+        assertEq(inbound, 13);
+        assertEq(outbound, 172);
+        // Register PNA
+        registerForeignToken();
+        // Check legacy ethereum token not affected
+        checkLegacyToken();
+        // Check sending of ether works
+        checkSendingEthWithAmountAndFeeSucceeds();
     }
 
     function checkLegacyToken() public {
@@ -66,7 +73,7 @@ contract ForkUpgradeTest is Test {
         vm.expectEmit(true, true, false, false);
         emit IGateway.ForeignTokenRegistered(dotId, address(0x0));
 
-        Gateway202410(GatewayProxy).registerForeignToken(abi.encode(params));
+        Gateway202502(GatewayProxy).registerForeignToken(abi.encode(params));
         assert(IGateway(GatewayProxy).isTokenRegistered(0x70D9d338A6b17957B16836a90192BD8CDAe0b53d));
         assertEq(IGateway(GatewayProxy).queryForeignTokenID(0x70D9d338A6b17957B16836a90192BD8CDAe0b53d), dotId);
     }
@@ -99,26 +106,5 @@ contract ForkUpgradeTest is Test {
         IGateway(GatewayProxy).sendToken{value: amount + fee}(address(0), paraID, recipientAddress32, 1, amount);
 
         assertEq(user.balance, 0);
-    }
-
-    function testSanityCheck() public {
-        // Check that the version is correctly set.
-        assertEq(IGateway(GatewayProxy).version(), 1);
-        // Check migration of ETH from Asset Hub agent
-        assertEq(IGateway(GatewayProxy).agentOf(AssetHubAgent).balance, 0);
-        // Check migration of ETH to Gateway
-        assertGt(address(GatewayProxy).balance, 0);
-        // Check AH channel nonces as expected
-        (uint64 inbound, uint64 outbound) = IGateway(GatewayProxy).channelNoncesOf(
-            ChannelID.wrap(0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539)
-        );
-        assertEq(inbound, 13);
-        assertEq(outbound, 172);
-        // Register PNA
-        registerForeignToken();
-        // Check legacy ethereum token not affected
-        checkLegacyToken();
-        // Check sending of ether works
-        checkSendingEthWithAmountAndFeeSucceeds();
     }
 }

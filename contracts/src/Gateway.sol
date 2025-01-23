@@ -296,15 +296,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         return ERC1967.load();
     }
 
-    function version() public view returns (uint64) {
-        return CoreStorage.layout().version;
-    }
-
     /**
      * Fee management
      */
     function depositEther() external payable {
-        emit EtherDeposited(msg.sender, msg.value);
+        emit Deposited(msg.sender, msg.value);
     }
 
     /**
@@ -556,7 +552,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // The fee is already collected into the gateway contract
         // Reimburse excess fee payment
-        uint256 excessFee = (msg.value - totalEther);
+        uint256 excessFee = msg.value - totalEther;
         if (excessFee > _dustThreshold()) {
             payable(msg.sender).safeNativeTransfer(excessFee);
         }
@@ -701,9 +697,10 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+
         // Register native Ether
-        TokenInfo storage nativeEther = assets.tokenRegistry[address(0)];
-        nativeEther.isRegistered = true;
+        TokenInfo storage etherTokenInfo = assets.tokenRegistry[address(0)];
+        etherTokenInfo.isRegistered = true;
 
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();

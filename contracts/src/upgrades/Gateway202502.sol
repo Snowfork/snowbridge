@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 import "../Gateway.sol";
 
 // New `Gateway` logic contract for the `GatewayProxy` deployed on mainnet
-contract Gateway202410 is Gateway {
+contract Gateway202502 is Gateway {
     constructor(
         address beefyClient,
         address agentExecutor,
@@ -31,21 +31,9 @@ contract Gateway202410 is Gateway {
             revert Unauthorized();
         }
 
-        // We expect version 0, deploying version 1.
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-        if ($.version != 0) {
-            revert Unauthorized();
-        }
-        $.version = 1;
-
-        // migrate asset hub agent
-        address agent = _ensureAgent(hex"81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79");
-        bytes memory call = abi.encodeCall(AgentExecutor.transferEtherToGateway, (agent.balance));
-        _invokeOnAgent(agent, call);
-
         // Register native Ether
         AssetsStorage.Layout storage assets = AssetsStorage.layout();
-        TokenInfo storage nativeEther = assets.tokenRegistry[address(0)];
-        nativeEther.isRegistered = true;
+        TokenInfo storage tokenInfo = assets.tokenRegistry[address(0)];
+        tokenInfo.isRegistered = true;
     }
 }

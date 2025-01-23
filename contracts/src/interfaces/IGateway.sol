@@ -36,7 +36,7 @@ interface IGateway {
     event ForeignTokenRegistered(bytes32 indexed tokenID, address token);
 
     // Emitted when ether is deposited
-    event EtherDeposited(address who, uint256 amount);
+    event Deposited(address sender, uint256 amount);
 
     /**
      * Getters
@@ -52,8 +52,6 @@ interface IGateway {
     function pricingParameters() external view returns (UD60x18, uint128);
 
     function implementation() external view returns (address);
-
-    function version() external view returns (uint64);
 
     /**
      * Fee management

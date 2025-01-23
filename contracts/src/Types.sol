@@ -107,6 +107,7 @@ struct Ticket {
     ParaID dest;
     Costs costs;
     bytes payload;
+    // amount of native ether to be sent
     uint128 value;
 }
 
