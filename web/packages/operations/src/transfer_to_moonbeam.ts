@@ -1,5 +1,5 @@
 import "dotenv/config"
-import { executeTransfer } from "./index"
+import { moonbeam } from "@snowbridge/api"
 import { ethers } from "ethers"
 import { WsProvider, ApiPromise } from "@polkadot/api"
 
@@ -13,7 +13,7 @@ const claimer =
     process.env["CLAIMER"] || "0x5628194e9f9ff8bd593f490fcafd033289f393e2ba860c6c51bca39c01091b39"
 
 // The private key of the ethereum signer
-const privateKey = process.env["PRIVATE_KEY"] || "INSERT_YOUR_PRIVATE_KEY"
+const privateKey = process.env["ETHEREUM_KEY"] || "INSERT_YOUR_PRIVATE_KEY"
 
 const ethereumProviderURL = process.env["MOONBEAM_URL"] || "https://rpc.api.moonbeam.network"
 const ASSETHUB_WS_URL = process.env["ASSETHUB_WS_URL"] || "wss://asset-hub-polkadot-rpc.dwellir.com"
@@ -26,9 +26,17 @@ const run = async () => {
     const assetHubApi = await ApiPromise.create({
         provider: new WsProvider(ASSETHUB_WS_URL),
     })
-    // transfer 0.0002 WEth
-    const amount = 200_000_000_000_000
-    await executeTransfer(signer, api, assetHubApi, xc20TokenAddress, amount, beneficiary, claimer)
+    // transfer 0.002 WEth
+    const amount = BigInt(2_000_000_000_000_000)
+    await moonbeam.executeTransferToEthereum(
+        signer,
+        api,
+        assetHubApi,
+        xc20TokenAddress,
+        amount,
+        beneficiary,
+        claimer
+    )
 }
 
 run()

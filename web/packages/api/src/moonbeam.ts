@@ -1,7 +1,6 @@
 import { ApiPromise } from "@polkadot/api"
 import { blake2AsHex, decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
-import { BigNumberish, BytesLike, Wallet } from "ethers"
-import { Precompiles_XcmInterface_sol_XCM__factory, XCM } from "./bindings"
+import { BigNumberish, BytesLike, Contract, Wallet } from "ethers"
 import { BN, numberToHex, u8aToHex } from "@polkadot/util"
 import { Codec } from "@polkadot/types/types"
 
@@ -19,7 +18,7 @@ const TokenPairs = [
     {
         id: "WBTC",
         address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
-        xc20Address: "0xfFffFFFf1B4Bb1ac5749F73D866FfC91a3432c47",
+        xc20Address: "0xfFffFFFf1B4Bb1ac5749F73D866FfC91a34g32c47",
     },
     {
         id: "wstETH",
@@ -39,7 +38,7 @@ const TokenPairs = [
  * @param claimer - The claimer address is an optional param with the 32 bytes address on AssetHub to deposit into
  *                  when there is extra fee left or assets trapped
  */
-export const executeTransfer = async (
+export const executeTransferToEthereum = async (
     signer: Wallet,
     api: ApiPromise,
     assetHubApi: ApiPromise,
@@ -52,10 +51,48 @@ export const executeTransfer = async (
     if (!erc20tokenAddress) {
         throw new Error("token not registed")
     }
-    const xcmInterface = Precompiles_XcmInterface_sol_XCM__factory.connect(
-        xcmInterfacePrecompile,
-        signer
-    )
+    let abi = [
+        {
+            inputs: [
+                {
+                    components: [
+                        { internalType: "uint8", name: "parents", type: "uint8" },
+                        { internalType: "bytes[]", name: "interior", type: "bytes[]" },
+                    ],
+                    internalType: "struct XCM.Location",
+                    name: "dest",
+                    type: "tuple",
+                },
+                {
+                    components: [
+                        { internalType: "address", name: "asset", type: "address" },
+                        { internalType: "uint256", name: "amount", type: "uint256" },
+                    ],
+                    internalType: "struct XCM.AssetAddressInfo[]",
+                    name: "assets",
+                    type: "tuple[]",
+                },
+                {
+                    internalType: "enum XCM.TransferType",
+                    name: "assetsTransferType",
+                    type: "uint8",
+                },
+                { internalType: "uint8", name: "remoteFeesIdIndex", type: "uint8" },
+                {
+                    internalType: "enum XCM.TransferType",
+                    name: "feesTransferType",
+                    type: "uint8",
+                },
+                { internalType: "bytes", name: "customXcmOnDest", type: "bytes" },
+            ],
+            name: "transferAssetsUsingTypeAndThenAddress",
+            outputs: [],
+            stateMutability: "nonpayable",
+            type: "function",
+        },
+    ]
+    const xcmInterfacePrecompile = "0x000000000000000000000000000000000000081A"
+    let xcmInterface = new Contract(xcmInterfacePrecompile, abi, signer)
 
     const BRIDGE_LOCATION = {
         parents: 2,
@@ -182,10 +219,6 @@ export const executeTransfer = async (
     })
     let customXcmOnDest: BytesLike = xcmOnDest.toHex()
 
-    let token: XCM.AssetAddressInfoStruct = {
-        asset: xc20TokenAddress,
-        amount,
-    }
     // Fee always in xcDOT
     // transfer_bridge_fee is the fee to cover the execution cost on ethereum
     // transfer_assethub_execution_fee is the fee to cover the execution cost on assethub
@@ -193,29 +226,26 @@ export const executeTransfer = async (
     const transfer_bridge_fee: bigint = await getSendFee(assetHubApi)
     const transfer_assethub_execution_fee = 3500000000n
     const transfer_fee = (transfer_bridge_fee + transfer_assethub_execution_fee).toString()
-    let fee: XCM.AssetAddressInfoStruct = {
-        asset: XCDOT,
-        amount: transfer_fee,
-    }
-
-    const paraIdInHex = numberToHex(ASSET_HUB_PARAID, 32)
-    const parachain_enum_selector = "0x00"
-    // This represents (1,X1(Parachain(1000)))
-    let dest: XCM.LocationStruct = {
-        parents: 1,
-        interior: [parachain_enum_selector + paraIdInHex.slice(2)],
-    }
-    // Assets including fee and the ERC20 asset, with fee be the first
-    // 2 represents `DestinationReserve`
-    let assets: XCM.AssetAddressInfoStruct[] = [fee, token]
-    let assetTransferType: BigNumberish = 2n
-    let remoteFeesIdIndex: BigNumberish = 0n
-    let feesTransferType: BigNumberish = 2n
 
     // Execute the custom XCM message with the precompile
     const tx = await xcmInterface[
         "transferAssetsUsingTypeAndThenAddress((uint8,bytes[]),(address,uint256)[],uint8,uint8,uint8,bytes)"
-    ](dest, assets, assetTransferType, remoteFeesIdIndex, feesTransferType, customXcmOnDest)
+    ](
+        // This represents (1,X1(Parachain(1000)))
+        [1, ["0x00" + numberToHex(ASSET_HUB_PARAID, 32).slice(2)]],
+        // Assets including fee and the ERC20 asset, with fee be the first
+        [
+            [XCDOT, transfer_fee],
+            [xc20TokenAddress, amount],
+        ],
+        // The TransferType corresponding to asset being sent, 2 represents `DestinationReserve`
+        2,
+        // index for the fee
+        0,
+        // The TransferType corresponding to fee asset
+        2,
+        customXcmOnDest
+    )
     await tx.wait()
     console.log(`Transaction receipt: ${tx.hash}`)
 }
