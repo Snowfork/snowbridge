@@ -26,8 +26,8 @@ const run = async () => {
     const assetHubApi = await ApiPromise.create({
         provider: new WsProvider(ASSETHUB_WS_URL),
     })
-    // transfer 0.002 WEth
-    const amount = BigInt(2_000_000_000_000_000)
+    // transfer 0.0002 WEth
+    const amount = BigInt(200_000_000_000_000)
     await moonbeam.executeTransferToEthereum(
         signer,
         api,

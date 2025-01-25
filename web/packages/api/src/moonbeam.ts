@@ -91,7 +91,6 @@ export const executeTransferToEthereum = async (
             type: "function",
         },
     ]
-    const xcmInterfacePrecompile = "0x000000000000000000000000000000000000081A"
     let xcmInterface = new Contract(xcmInterfacePrecompile, abi, signer)
 
     const BRIDGE_LOCATION = {
@@ -250,7 +249,7 @@ export const executeTransferToEthereum = async (
     console.log(`Transaction receipt: ${tx.hash}`)
 }
 
-const getSendFee = async (
+export const getSendFee = async (
     assetHub: ApiPromise,
     options = {
         defaultFee: 65_000_000_000, //6.5 DOT by default
