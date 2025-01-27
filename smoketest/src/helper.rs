@@ -8,10 +8,14 @@ use crate::{
 			pallet_xcm::pallet::Call as RelaychainPalletXcmCall,
 			sp_weights::weight_v2::Weight as RelaychainWeight,
 			staging_xcm::v3::multilocation::MultiLocation as RelaychainMultiLocation,
+			xcm::v3::multiasset::MultiAsset as RelaychainMultiAsset,
+			xcm::v3::multiasset::AssetId as RelaychainAssetId,
+			xcm::v3::multiasset::Fungibility as RelaychainFungibility,
 			westend_runtime::RuntimeCall as RelaychainRuntimeCall,
 			xcm::{
 				double_encoded::DoubleEncoded as RelaychainDoubleEncoded,
 				v3::{
+					junction::NetworkId as RelaychainNetworkId,
 					junction::Junction as RelaychainJunction,
 					junctions::Junctions as RelaychainJunctions,
 					Instruction as RelaychainInstruction, OriginKind as RelaychainOriginKind,
@@ -38,7 +42,7 @@ use subxt::{
 	events::StaticEvent,
 	ext::sp_core::{sr25519::Pair, Pair as PairT},
 	tx::{PairSigner, Payload},
-	utils::{H160, H256},
+	utils::{H160, H256, AccountId32, MultiAddress},
 	Config, OnlineClient, PolkadotConfig,
 };
 
@@ -273,6 +277,153 @@ pub async fn governance_bridgehub_call_from_relay_chain(
 
 	Ok(())
 }
+
+pub async fn governance_assethub_call_from_relay_chain(
+	who: MultiAddress<AccountId32, ()>,
+	call: Vec<u8>,
+) -> Result<(), Box<dyn std::error::Error>> {
+	let test_clients = initial_clients().await.expect("initialize clients");
+
+	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
+
+	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+
+	let weight = 180000000000;
+	let proof_size = 900000;
+
+	let dest = Box::new(RelaychainVersionedLocation::V3(RelaychainMultiLocation {
+		parents: 0,
+		interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(ASSET_HUB_PARA_ID)),
+	}));
+
+	let message = Box::new(RelaychainVersionedXcm::V3(RelaychainXcm(vec![
+
+		RelaychainInstruction::UnpaidExecution {
+			weight_limit: RelaychainWeightLimit::Unlimited,
+			check_origin: None,
+		},
+		RelaychainInstruction::DescendOrigin(
+			RelaychainJunctions::X1(RelaychainJunction::Parachain(BRIDGE_HUB_PARA_ID))
+		),
+		RelaychainInstruction::DescendOrigin(
+			RelaychainJunctions::X1(RelaychainJunction::PalletInstance(84))
+		),
+		RelaychainInstruction::UniversalOrigin(
+			RelaychainJunction::GlobalConsensus(RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
+		),
+		RelaychainInstruction::Transact {
+			origin_kind: RelaychainOriginKind::SovereignAccount,
+			require_weight_at_most: RelaychainWeight { ref_time: weight, proof_size },
+			call: RelaychainDoubleEncoded { encoded: call },
+		},
+	])));
+
+	let sudo_api = relaychain::api::sudo::calls::TransactionApi;
+	let sudo_call = sudo_api
+		.sudo(RelaychainRuntimeCall::XcmPallet(RelaychainPalletXcmCall::send { dest, message }));
+
+	let result = test_clients
+		.relaychain_client
+		.tx()
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.await
+		.expect("send through sudo call.")
+		.wait_for_finalized_success()
+		.await
+		.expect("sudo call success");
+
+	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
+
+	Ok(())
+}
+
+pub async fn governance_assethub_call_from_relay_chain_sudo_as(
+	who: MultiAddress<AccountId32, ()>,
+	call: Vec<u8>,
+) -> Result<(), Box<dyn std::error::Error>> {
+	let test_clients = initial_clients().await.expect("initialize clients");
+
+	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
+
+	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+
+	let weight = 180000000000;
+	let proof_size = 900000;
+
+	let dest = Box::new(RelaychainVersionedLocation::V3(RelaychainMultiLocation {
+		parents: 0,
+		interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(ASSET_HUB_PARA_ID)),
+	}));
+
+	let message = Box::new(RelaychainVersionedXcm::V3(RelaychainXcm(vec![
+		RelaychainInstruction::BuyExecution {
+			fees: RelaychainMultiAsset {
+				id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
+					parents: 0,
+					interior: RelaychainJunctions::Here,
+				}),
+				fun: RelaychainFungibility::Fungible(7_000_000_000_000_u128),
+			},
+			weight_limit: RelaychainWeightLimit::Limited(RelaychainWeight { ref_time: weight, proof_size }),
+		},
+		RelaychainInstruction::Transact {
+			origin_kind: RelaychainOriginKind::Superuser,
+			require_weight_at_most: RelaychainWeight { ref_time: weight, proof_size },
+			call: RelaychainDoubleEncoded { encoded: call },
+		},
+	])));
+
+	let sudo_api = relaychain::api::sudo::calls::TransactionApi;
+	let sudo_call = sudo_api
+		.sudo_as(who, RelaychainRuntimeCall::XcmPallet(RelaychainPalletXcmCall::send { dest, message }));
+
+	let result = test_clients
+		.relaychain_client
+		.tx()
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.await
+		.expect("send through sudo call.")
+		.wait_for_finalized_success()
+		.await
+		.expect("sudo call success");
+
+	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
+
+	Ok(())
+}
+
+pub async fn fund_account_on_relaychain(
+	who: MultiAddress<AccountId32, ()>,
+) -> Result<(), Box<dyn std::error::Error>> {
+	let test_clients = initial_clients().await.expect("initialize clients");
+
+	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
+	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+
+	let balances_call = relaychain::api::runtime_types::pallet_balances::pallet::Call::force_set_balance {
+		who,
+		new_free: 9_000_000_000_000,
+	};
+
+	let sudo_api = relaychain::api::sudo::calls::TransactionApi;
+	let sudo_call = sudo_api
+		.sudo(RelaychainRuntimeCall::Balances(balances_call));
+
+	let result = test_clients
+		.relaychain_client
+		.tx()
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.await
+		.expect("send through sudo call.")
+		.wait_for_finalized_success()
+		.await
+		.expect("sudo call success");
+
+	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
+
+	Ok(())
+}
+
 
 pub async fn fund_agent(agent_id: [u8; 32]) -> Result<(), Box<dyn std::error::Error>> {
 	let test_clients = initial_clients().await.expect("initialize clients");

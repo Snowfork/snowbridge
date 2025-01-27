@@ -23,6 +23,7 @@ import {Token} from "../Token.sol";
 import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
 import {Constants} from "../Constants.sol";
+import {ScaleCodec} from "../utils/ScaleCodec.sol";
 
 import {
     Payload, OperatingMode, Asset, makeNativeAsset, makeForeignAsset, Network
@@ -67,7 +68,7 @@ library CallsV2 {
         if (network == Network.Polkadot) {
             // Build XCM that executes on AHP only
             xcm = bytes.concat(
-                hex"05100f0004020109079edaa802000b", abi.encodePacked(etherValue), "40100000700b2118417000d00040100000700b211841700010100ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d06030045013500020209079edaa8020300c", abi.encodePacked(token), hex"00ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d010000000000000000000000000000002000"
+                hex"05100f0004020109079edaa80200", ScaleCodec.encodeCompactU128(etherValue), hex"040100000700b2118417000d00040100000700b211841700010100ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d06030045013500020209079edaa8020300", abi.encodePacked(token), hex"00ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d010000000000000000000000000000002000"
             );
         } else if (network == Network.Kusama) {
             // Build XCM that is executed on AHP and forwards another message to AHK

@@ -69,6 +69,8 @@ reset_ethereum="${RESET_ETHEREUM:-true}"
 assethub_sovereign_account="${ASSETHUB_SOVEREIGN_ACCOUNT:-0x7369626ce8030000000000000000000000000000000000000000000000000000}"
 # Account for penpal (Sibling parachain 2000 5Eg2fntJ27qsari4FGrGhrMqKFDRnkNSR6UshkZYBGXmSuC8 in testnet)
 penpal_sovereign_account="${PENPAL_SOVEREIGN_ACCOUNT:-0x7369626cd0070000000000000000000000000000000000000000000000000000}"
+# Account for snowbridge sovereign (5GjRnmh5o3usSYzVmsxBWzHEpvJyHK4tKNPhjpUR3ASrruBy in testnet)
+snowbridge_sovereign_account="${SNOWBRIDGE_SOVEREIGN_ACCOUNT:-0xce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d}"
 # Beacon relay account (//BeaconRelay 5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c in testnet)
 beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cded69dce4a65f027ed3362357605b1687986a}"
 # Execution relay account (//ExecutionRelayAssetHub 5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV in testnet)
@@ -113,7 +115,7 @@ export REMOTE_REWARD="${REMOTE_REWARD:-1000000000000000}"
 export BRIDGE_HUB_INITIAL_DEPOSIT="${ETH_BRIDGE_HUB_INITIAL_DEPOSIT:-10000000000000000000}"
 
 export GATEWAY_STORAGE_KEY="${GATEWAY_STORAGE_KEY:-0xaed97c7854d601808b98ae43079dafb3}"
-export GATEWAY_PROXY_CONTRACT="${GATEWAY_PROXY_CONTRACT:-0x8cf6147918a5cbb672703f879f385036f8793a24}"
+export GATEWAY_PROXY_CONTRACT="${GATEWAY_PROXY_CONTRACT:-0xb8ea8cb425d85536b158d661da1ef0895bb92f1d}"
 
 address_for() {
     jq -r ".contracts.${1}.address" "$output_dir/contracts.json"

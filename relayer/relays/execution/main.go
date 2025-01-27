@@ -212,7 +212,7 @@ func (r *Relay) fetchUnprocessedParachainNonces(latest uint64) ([]uint64, error)
 	latestBucket := latest / 128
 
 	for b := uint64(0); b <= latestBucket; b++ {
-		encodedBucket, _ := types.EncodeToBytes(types.NewU64(b))
+		encodedBucket, err := types.EncodeToBytes(types.NewU128(*big.NewInt(int64(b))))
 		bucketKey, _ := types.CreateStorageKey(
 			r.paraconn.Metadata(),
 			"EthereumInboundQueueV2",
@@ -244,11 +244,14 @@ func (r *Relay) fetchUnprocessedParachainNonces(latest uint64) ([]uint64, error)
 }
 
 func (r *Relay) isParachainNonceSet(index uint64) (bool, error) {
+	log.WithFields(logrus.Fields{
+		"index": index,
+	}).Debug("is parachain nonce set")
 	// Calculate the bucket and bit position
 	bucket := index / 128
 	bitPosition := index % 128
 
-	encodedBucket, err := types.EncodeToBytes(types.NewU64(bucket))
+	encodedBucket, err := types.EncodeToBytes(types.NewU128(*big.NewInt(int64(bucket))))
 	bucketKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueueV2", "NonceBitmap", encodedBucket)
 	if err != nil {
 		return false, fmt.Errorf("create storage key for EthereumInboundQueueV2.NonceBitmap: %w", err)
@@ -256,6 +259,7 @@ func (r *Relay) isParachainNonceSet(index uint64) (bool, error) {
 
 	var bucketValue types.U128
 	ok, err := r.paraconn.API().RPC.State.GetStorageLatest(bucketKey, &bucketValue)
+
 	if err != nil {
 		return false, fmt.Errorf("fetch storage EthereumInboundQueueV2.NonceBitmap keys: %w", err)
 	}
@@ -267,8 +271,17 @@ func (r *Relay) isParachainNonceSet(index uint64) (bool, error) {
 }
 
 func checkBitState(bucketValue types.U128, bitPosition uint64) bool {
+	log.WithFields(logrus.Fields{
+		"bucketValue": bucketValue,
+		"bitPosition": bitPosition,
+	}).Debug("checking bit state")
 	mask := new(big.Int).Lsh(big.NewInt(1), uint(bitPosition)) // Create mask for the bit position
-	return new(big.Int).And(bucketValue.Int, mask).Cmp(big.NewInt(0)) != 0
+	result := new(big.Int).And(bucketValue.Int, mask).Cmp(big.NewInt(0)) != 0
+	log.WithFields(logrus.Fields{
+		"result":      result,
+		"bitPosition": bitPosition,
+	}).Debug("check bit state result")
+	return result
 }
 
 func extractUnprocessedNonces(bitmap types.U128, latest uint64, bucketIndex uint64) []uint64 {
