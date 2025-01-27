@@ -105,8 +105,7 @@ contract GatewayV2Test is Test {
             multiplier: ud60x18(1e18),
             rescueOperator: 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967,
             foreignTokenDecimals: 10,
-            maxDestinationFee: 1e11,
-            weth: address(weth)
+            maxDestinationFee: 1e11
         });
         gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
         MockGateway(address(gateway)).setCommitmentsAreVerified(true);
@@ -187,16 +186,12 @@ contract GatewayV2Test is Test {
 
     function makeCallContractCommand(uint256 value) public view returns (CommandV2[] memory) {
         bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
-        CallContractParams memory params = CallContractParams({
-            target: address(helloWorld),
-            data: data,
-            value: value
-        });
+        CallContractParams memory params =
+            CallContractParams({target: address(helloWorld), data: data, value: value});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] =
-            CommandV2({kind: CommandKind.CallContract, gas: 500_000, payload: payload});
+        commands[0] = CommandV2({kind: CommandKind.CallContract, gas: 500_000, payload: payload});
         return commands;
     }
 
@@ -371,16 +366,10 @@ contract GatewayV2Test is Test {
         });
         bytes memory encoded = abi.encode(params);
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({
-            kind: CommandKind.UnlockNativeToken,
-            gas: 100_000,
-            payload: encoded
-        });
-        InboundMessageV2 memory message = InboundMessageV2({
-            origin: bytes32(uint256(1000)),
-            nonce: 1,
-            commands: commands
-        });
+        commands[0] =
+            CommandV2({kind: CommandKind.UnlockNativeToken, gas: 100_000, payload: encoded});
+        InboundMessageV2 memory message =
+            InboundMessageV2({origin: bytes32(uint256(1000)), nonce: 1, commands: commands});
         bytes memory rawBytes = abi.encode(message);
 
         //From OutboundQueueV2

@@ -8,7 +8,7 @@ The system BridgeHub parachain hosts various bridges to other chains, including 
 
 This [pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/inbound-queue) is responsible for accepting inbound messages from Ethereum. This involves the following:
 
-1. Verifying that message[^1] that was included in the finalized Ethereum execution chain as tracked by our ethereum light client.
+1. Verifying that message[^1] was included in the finalized Ethereum execution chain as tracked by our ethereum light client.
 2. Converting the message to an [XCM](https://wiki.polkadot.network/docs/learn-xcm) script.
 3. Sending the XCM script to the destination parachain.
 

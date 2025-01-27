@@ -13,6 +13,7 @@ import {SubstrateTypes} from "../SubstrateTypes.sol";
 import {MultiAddress} from "../types/Common.sol";
 import {Address} from "../utils/Address.sol";
 import {AgentExecutor} from "../AgentExecutor.sol";
+import {Constants} from "../Constants.sol";
 import {Agent} from "../Agent.sol";
 import {Call} from "../utils/Call.sol";
 import {Token} from "../Token.sol";
@@ -22,6 +23,7 @@ import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
 import {IGatewayV1} from "./IGateway.sol";
 
 import {
+    ChannelID,
     ParaID,
     Ticket,
     Costs,
@@ -131,7 +133,10 @@ library HandlersV1 {
     }
 
     // @dev Mint foreign token from polkadot
-    function mintForeignToken(bytes calldata data) external {
+    function mintForeignToken(ChannelID channelID, bytes calldata data) external {
+        if (channelID != Constants.ASSET_HUB_PARA_ID.into()) {
+            revert IGatewayBase.Unauthorized();
+        }
         MintForeignTokenParams memory params = abi.decode(data, (MintForeignTokenParams));
         Functions.mintForeignToken(params.foreignTokenID, params.recipient, params.amount);
     }

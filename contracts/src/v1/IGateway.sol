@@ -75,6 +75,9 @@ interface IGatewayV1 {
     /// @dev Check whether a token is registered
     function isTokenRegistered(address token) external view returns (bool);
 
+    /// @dev Get token id of an ERC20 contract address.
+    function queryForeignTokenID(address token) external view returns (bytes32);
+
     /// @dev Quote a fee in Ether for registering a token, covering
     /// 1. Delivery costs to BridgeHub
     /// 2. XCM Execution costs on AssetHub

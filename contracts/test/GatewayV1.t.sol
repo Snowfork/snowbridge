@@ -13,6 +13,7 @@ import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {MockGateway} from "./mocks/MockGateway.sol";
 import {MockGatewayV2} from "./mocks/MockGatewayV2.sol";
+import {ReantrantAttacker} from "./mocks/ReantrantAttacker.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 
 import {AgentExecutor} from "../src/AgentExecutor.sol";
@@ -73,6 +74,7 @@ contract GatewayV1Test is Test {
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     ParaID public bridgeHubParaID = ParaID.wrap(1013);
+
     bytes32 public bridgeHubAgentID =
         0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314;
     address public bridgeHubAgent;
@@ -80,6 +82,7 @@ contract GatewayV1Test is Test {
     ParaID public assetHubParaID = ParaID.wrap(1000);
     bytes32 public assetHubAgentID =
         0x81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79;
+
     address public assetHubAgent;
 
     address public relayer;
@@ -132,8 +135,7 @@ contract GatewayV1Test is Test {
             multiplier: multiplier,
             rescueOperator: 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967,
             foreignTokenDecimals: foreignTokenDecimals,
-            maxDestinationFee: maxDestinationFee,
-            weth: address(token)
+            maxDestinationFee: maxDestinationFee
         });
         gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
         MockGateway(address(gateway)).setCommitmentsAreVerified(true);
@@ -893,10 +895,11 @@ contract GatewayV1Test is Test {
         vm.expectEmit(true, true, false, false);
         emit Transfer(address(0), account1, 1000);
 
-        MockGateway(address(gateway)).v1_handleMintForeignToken_public(abi.encode(params));
+        MockGateway(address(gateway)).v1_handleMintForeignToken_public(
+            assetHubParaID.into(), abi.encode(params)
+        );
 
         address dotToken = MockGateway(address(gateway)).tokenAddressOf(dotTokenID);
-
         uint256 balance = Token(dotToken).balanceOf(account1);
 
         assertEq(balance, amount);
@@ -911,7 +914,23 @@ contract GatewayV1Test is Test {
 
         vm.expectRevert(IGatewayBase.TokenNotRegistered.selector);
 
-        MockGateway(address(gateway)).v1_handleMintForeignToken_public(abi.encode(params));
+        MockGateway(address(gateway)).v1_handleMintForeignToken_public(
+            ParaID.wrap(1000).into(), abi.encode(params)
+        );
+    }
+
+    function testMintFromParachainOtherThanAssetHubWillFail() public {
+        MintForeignTokenParams memory params = MintForeignTokenParams({
+            foreignTokenID: bytes32(uint256(1)),
+            recipient: account1,
+            amount: 1000
+        });
+
+        vm.expectRevert(IGatewayBase.Unauthorized.selector);
+
+        MockGateway(address(gateway)).v1_handleMintForeignToken_public(
+            ParaID.wrap(2002).into(), abi.encode(params)
+        );
     }
 
     function testSendRelayTokenToAssetHubWithAddress32() public {
@@ -1024,5 +1043,39 @@ contract GatewayV1Test is Test {
 
         bytes memory encodedParams = abi.encode(params);
         MockGateway(address(gateway)).v1_handleAgentExecute_public(encodedParams);
+    }
+
+    function testRegisterForeignTokenAsNativeTokenWillFail() public {
+        testRegisterForeignToken();
+        address dotToken = MockGateway(address(gateway)).tokenAddressOf(dotTokenID);
+        uint256 fee = IGatewayV1(address(gateway)).quoteRegisterTokenFee();
+        vm.expectRevert(IGatewayBase.TokenAlreadyRegistered.selector);
+        IGatewayV1(address(gateway)).registerToken{value: fee}(dotToken);
+    }
+
+    function testReantrancyGuardReverts() public {
+        testRegisterToken();
+
+        ReantrantAttacker attacker = new ReantrantAttacker(address(gateway), address(token));
+        // Fund attacker
+        deal(address(attacker), 1 ether);
+        deal(address(token), address(attacker), 5);
+
+        uint128 amount = 1;
+        uint128 extra = 1;
+        uint128 destinationFee = 1;
+        ParaID paraID = ParaID.wrap(1000);
+
+        uint128 fee =
+            uint128(IGatewayV1(address(gateway)).quoteSendTokenFee(address(token), paraID, 0));
+
+        hoax(address(attacker));
+        token.approve(address(gateway), 5);
+
+        vm.expectRevert(NativeTransferFailed.selector);
+        hoax(address(attacker));
+        IGatewayV1(address(gateway)).sendToken{value: fee + extra}(
+            address(token), paraID, recipientAddress32(), destinationFee, amount
+        );
     }
 }

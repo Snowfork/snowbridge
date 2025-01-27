@@ -3,7 +3,6 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "./interfaces/IERC20.sol";
-import {WETH9} from "canonical-weth/WETH9.sol";
 import {SafeNativeTransfer, SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
 import {Agent} from "./Agent.sol";
 import {Call} from "./utils/Call.sol";
@@ -94,21 +93,8 @@ library Functions {
         address payable recipient,
         uint256 amount
     ) internal {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
+        bytes memory call = abi.encodeCall(AgentExecutor.transferEther, (recipient, amount));
         invokeOnAgent(agent, executor, call);
-    }
-
-    function withdrawWrappedEther(
-        address executor,
-        address agent,
-        address payable recipient,
-        uint128 amount
-    ) internal {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferWeth, (weth(), recipient, amount));
-        (bool success,) = Agent(payable(agent)).invoke(executor, call);
-        if (!success) {
-            revert IGatewayBase.TokenTransferFailed();
-        }
     }
 
     // @dev Transfer Ethereum native token back from polkadot

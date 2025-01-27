@@ -3,6 +3,7 @@ name: npm-publish
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 env:
   NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
@@ -28,28 +29,16 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "20.x"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
           version: 8
 
-      - name: Build Contracts
-        working-directory: web/packages/contracts
-        run: |
-          pnpm build
-
-      - name: Build Contract Types
-        working-directory: web/packages/contract-types
-        run: |
-          pnpm install
-          pnpm typechain
-          pnpm build
-
-      - name: Build API
-        working-directory: web/packages/api
+      - name: Build
+        working-directory: web
         run: |
           pnpm install
           pnpm build
@@ -68,4 +57,3 @@ jobs:
         working-directory: web/packages/api
         run: |
           pnpm publish --no-git-checks --access public
-      
