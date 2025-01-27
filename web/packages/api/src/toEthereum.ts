@@ -1,5 +1,7 @@
+import { ApiPromise } from "@polkadot/api"
+import { SubmittableExtrinsic, SubmittableExtrinsicFunction } from "@polkadot/api/types"
 import { EventRecord } from "@polkadot/types/interfaces"
-import { Codec, IKeyringPair, Signer } from "@polkadot/types/types"
+import { AnyTuple, Codec, IKeyringPair, ISubmittableResult, Signer } from "@polkadot/types/types"
 import { BN, u8aToHex } from "@polkadot/util"
 import { decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
 import { assetStatusInfo, palletAssetsBalance } from "./assets"
@@ -98,6 +100,91 @@ export const getSendFee = async (
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
     return leFee.eqn(0) ? options.defaultFee : BigInt(leFee.toString())
+}
+
+export type SendTokenTx = {
+    input: {
+        ethereumChainId: bigint;
+        sourceAddress: string;
+        beneficiaryAddress: any;
+        tokenAddress: string;
+        amount: bigint;
+    },
+    computed: {
+        assetLocation: any;
+        sourceAddressHex: `0x${string}`;
+        destination: any;
+        beneficiary: any;
+        assets: any;
+        fee_asset: number;
+        weight: string;
+        extrinsic: SubmittableExtrinsicFunction<"promise", AnyTuple>;
+    },
+    tx: SubmittableExtrinsic<"promise", ISubmittableResult>
+}
+
+export async function createTx(
+    sourceParachain: ApiPromise,
+    ethereumChainId: bigint,
+    sourceAddress: string,
+    beneficiaryAddress: string,
+    tokenAddress: string,
+    amount: bigint,
+): Promise<SendTokenTx> {
+    const assetLocation = {
+        parents: 2,
+        interior: {
+            X2: [
+                { GlobalConsensus: { Ethereum: { chain_id: ethereumChainId } } },
+                { AccountKey20: { key: tokenAddress } },
+            ],
+        },
+    }
+    const sourceAddressHex = u8aToHex(decodeAddress(sourceAddress))
+    const fee_asset = 0
+    const weight = "Unlimited"
+    const versionKey = "V3"
+    const assets: { [key: string]: any } = {}
+    const transferAsset = {
+        id: { Concrete: assetLocation },
+        fun: { Fungible: amount },
+    }
+    assets[versionKey] = [transferAsset]
+    const destination: { [key: string]: any } = {}
+    destination[versionKey] = {
+        parents: 2,
+        interior: {
+            X1: { GlobalConsensus: { Ethereum: { chain_id: ethereumChainId } } },
+        },
+    }
+    const beneficiaryLocation: { [key: string]: any } = {}
+    beneficiaryLocation[versionKey] = {
+        parents: 0,
+        interior: { X1: { AccountKey20: { key: beneficiaryAddress } } },
+    }
+    const extrinsic = sourceParachain.tx.polkadotXcm.transferAssets
+    const tx = extrinsic(destination, beneficiaryLocation, assets, fee_asset, weight)
+
+    return {
+        input: {
+            ethereumChainId,
+            sourceAddress,
+            beneficiaryAddress,
+            amount,
+            tokenAddress,
+        },
+        computed: {
+            assetLocation,
+            sourceAddressHex,
+            destination,
+            beneficiary: beneficiaryLocation,
+            assets,
+            fee_asset,
+            weight,
+            extrinsic
+        },
+        tx
+    }
 }
 
 export const validateSend = async (
@@ -215,7 +302,7 @@ export const validateSend = async (
         })
 
     const bridgeStatus = await bridgeStatusInfo(context);
-    
+
     const bridgeOperational = bridgeStatus.toEthereum.operatingMode.outbound === "Normal"
     const lightClientLatencyIsAcceptable =
         bridgeStatus.toEthereum.latencySeconds < options.acceptableLatencyInSeconds
@@ -523,9 +610,16 @@ export const send = async (
         interior: { X1: { AccountKey20: { key: plan.success.beneficiary } } },
     }
 
-    const assetHubUnsignedTx = planToTx(context, plan, options);
+    const assetHubUnsigned = await createTx(
+        assetHub,
+        plan.success.ethereumChainId,
+        plan.success.sourceAddress,
+        plan.success.beneficiary,
+        plan.success.tokenAddress,
+        plan.success.amount
+    );
 
-    const assetHubSignedTx = await assetHubUnsignedTx
+    const assetHubSignedTx = await assetHubUnsigned.tx
         .signAsync(addressOrPair, { signer: walletSigner, withSignedTransaction: true })
 
     let result = await new Promise<{
@@ -763,7 +857,7 @@ export const trackSendProgressPolling = async (
                 messageID.toLowerCase() === success.messageId?.toLowerCase() &&
                 nonce === success.bridgeHub.nonce &&
                 channelID.toLowerCase() ==
-                    paraIdToChannelId(success.plan.success?.assetHub.paraId ?? 1000).toLowerCase()
+                paraIdToChannelId(success.plan.success?.assetHub.paraId ?? 1000).toLowerCase()
             ) {
                 success.ethereum.transferBlockNumber = blockNumber
                 success.ethereum.transferBlockHash = blockHash
@@ -874,9 +968,9 @@ export async function* trackSendProgress(
                     messageId.toLowerCase() === success.messageId?.toLowerCase() &&
                     nonce === success.bridgeHub.nonce &&
                     channelId.toLowerCase() ==
-                        paraIdToChannelId(
-                            success.plan.success?.assetHub.paraId ?? 1000
-                        ).toLowerCase()
+                    paraIdToChannelId(
+                        success.plan.success?.assetHub.paraId ?? 1000
+                    ).toLowerCase()
                 ) {
                     resolve(dispatchSuccess)
                     gateway.removeListener(InboundMessageDispatched, listener)
@@ -891,36 +985,4 @@ export async function* trackSendProgress(
     } else {
         throw Error("Message was not dispatched on successfully from Gateway.")
     }
-}
-
-export function planToTx(context: Context, plan: SendValidationResult, options={xcmVersion: 3}) {
-    if (!plan.success) {
-        throw Error("plan failed")
-    }
-    const { polkadot: { api: { assetHub } } } = context;
-
-    const fee_asset = 0
-    const weight = "Unlimited"
-    const versionKey = `V${options.xcmVersion}`
-    const assets: { [key: string]: any } = {}
-    const transferAsset = {
-        id: { Concrete: plan.success.multiLocation },
-        fun: { Fungible: plan.success.amount },
-    }
-    assets[versionKey] = [transferAsset]
-    const destination: { [key: string]: any } = {}
-    destination[versionKey] = {
-        parents: 2,
-        interior: {
-            X1: { GlobalConsensus: { Ethereum: { chain_id: plan.success.ethereumChainId } } },
-        },
-    }
-    const beneficiary: { [key: string]: any } = {}
-    beneficiary[versionKey] = {
-        parents: 0,
-        interior: { X1: { AccountKey20: { key: plan.success.beneficiary } } },
-    }
-
-    return assetHub.tx.polkadotXcm
-        .transferAssets(destination, beneficiary, assets, fee_asset, weight)
 }
