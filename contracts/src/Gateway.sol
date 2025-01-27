@@ -88,7 +88,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error InvalidProof();
     error InvalidNonce();
     error NotEnoughGas();
-    error FeePaymentTooLow();
+    error InsufficientEther();
     error Unauthorized();
     error Disabled();
     error AgentAlreadyCreated();
@@ -215,7 +215,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
                 success = false;
             }
         } else if (message.command == Command.TransferNativeFromAgent) {
-            // Disable this bridge command because now native Ether can be locked in an agent.
+            // DISABLED
             success = true;
         } else if (message.command == Command.Upgrade) {
             try Gateway(this).upgrade{gas: maxDispatchGas}(message.params) {}
@@ -542,10 +542,17 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Destination fee always in DOT
         uint256 fee = _calculateFee(ticket.costs);
 
-        // Ensure the user has enough funds for this message to be accepted
+        // Ensure the user has provided enough ether for this message to be accepted.
+        // This includes:
+        // 1. The bridging fee, which is collected in this gateway contract
+        // 2. The ether value being bridged over to Polkadot, which is locked into the AssetHub
+        //    agent contract.
         uint256 totalEther = fee + ticket.value;
         if (msg.value < totalEther) {
-            revert FeePaymentTooLow();
+            revert InsufficientEther();
+        }
+        if (ticket.value > 0) {
+            payable(AssetsStorage.layout().assetHubAgent).safeNativeTransfer(ticket.value);
         }
 
         channel.outboundNonce = channel.outboundNonce + 1;

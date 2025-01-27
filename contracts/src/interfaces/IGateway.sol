@@ -110,7 +110,9 @@ interface IGateway {
         view
         returns (uint256);
 
-    /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
+    /// @dev Send a token to parachain `destinationChain` and deposit into account
+    /// `destinationAddress`. The user can send native Ether by supplying `address(0)` for
+    /// the `token` parameter.
     function sendToken(
         address token,
         ParaID destinationChain,

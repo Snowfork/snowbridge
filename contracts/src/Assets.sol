@@ -110,13 +110,17 @@ library Assets {
     ) external returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
+        if (amount == 0) {
+            revert InvalidAmount();
+        }
+
         TokenInfo storage info = $.tokenRegistry[token];
 
         if (!info.isRegistered) {
             revert TokenNotRegistered();
         }
 
-        if (info.foreignID == bytes32(0)) {
+        if (info.isNativeToken()) {
             return _sendNativeTokenOrEther(
                 token, sender, destinationChain, destinationAddress, destinationChainFee, maxDestinationChainFee, amount
             );
@@ -134,89 +138,6 @@ library Assets {
         }
     }
 
-    function _emitSendNativeTokenTicket(
-        address token,
-        address sender,
-        ParaID assetHubParaID,
-        ParaID destinationChain,
-        MultiAddress calldata destinationAddress,
-        uint128 assetHubReserveTransferFee,
-        uint128 destinationChainFee,
-        uint128 maxDestinationChainFee,
-        uint128 amount
-    ) internal returns (Ticket memory ticket) {
-        ticket.dest = assetHubParaID;
-        ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
-
-        // Construct a message payload
-        if (destinationChain == assetHubParaID) {
-            // The funds will be minted into the receiver's account on AssetHub
-            if (destinationAddress.isAddress32()) {
-                // The receiver has a 32-byte account ID
-                ticket.payload = SubstrateTypes.SendTokenToAssetHubAddress32(
-                    token, destinationAddress.asAddress32(), assetHubReserveTransferFee, amount
-                );
-            } else {
-                // AssetHub does not support 20-byte account IDs
-                revert Unsupported();
-            }
-        } else {
-            if (destinationChainFee == 0) {
-                revert InvalidDestinationFee();
-            }
-            // The funds will be minted into sovereign account of the destination parachain on AssetHub,
-            // and then reserve-transferred to the receiver's account on the destination parachain.
-            if (destinationAddress.isAddress32()) {
-                // The receiver has a 32-byte account ID
-                ticket.payload = SubstrateTypes.SendTokenToAddress32(
-                    token,
-                    destinationChain,
-                    destinationAddress.asAddress32(),
-                    assetHubReserveTransferFee,
-                    destinationChainFee,
-                    amount
-                );
-            } else if (destinationAddress.isAddress20()) {
-                // The receiver has a 20-byte account ID
-                ticket.payload = SubstrateTypes.SendTokenToAddress20(
-                    token,
-                    destinationChain,
-                    destinationAddress.asAddress20(),
-                    assetHubReserveTransferFee,
-                    destinationChainFee,
-                    amount
-                );
-            } else {
-                revert Unsupported();
-            }
-        }
-        emit IGateway.TokenSent(token, sender, destinationChain, destinationAddress, amount);
-    }
-
-    // @dev Transfer Ether to Polkadot
-    function _sendEther(
-        address sender,
-        ParaID destinationChain,
-        MultiAddress calldata destinationAddress,
-        uint128 destinationChainFee,
-        uint128 maxDestinationChainFee,
-        uint128 amount
-    ) internal returns (Ticket memory ticket) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-
-        ticket = _emitSendNativeTokenTicket(
-            address(0),
-            sender,
-            $.assetHubParaID,
-            destinationChain,
-            destinationAddress,
-            $.assetHubReserveTransferFee,
-            destinationChainFee,
-            maxDestinationChainFee,
-            amount
-        );
-    }
-
     // @dev Transfer ERC20(Ethereum-native) tokens to Polkadot
     function _sendNativeTokenOrEther(
         address token,
@@ -232,13 +153,10 @@ library Assets {
         if (token != address(0)) {
             // Lock ERC20
             _transferToAgent($.assetHubAgent, token, sender, amount);
+            ticket.value = 0;
         } else {
-            // Lock Ether
-            if (msg.value < amount) {
-                revert InvalidAmount();
-            }
-            // Lock Ether
-            payable($.assetHubAgent).safeNativeTransfer(amount);
+            // Track the ether to bridge to Polkadot. This will be handled
+            // in `Gateway._submitOutbound`.
             ticket.value = amount;
         }
 

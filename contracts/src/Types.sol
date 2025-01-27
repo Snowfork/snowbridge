@@ -115,3 +115,13 @@ struct TokenInfo {
     bool isRegistered;
     bytes32 foreignID;
 }
+
+using {isNativeToken} for TokenInfo global;
+
+function isNativeToken(TokenInfo storage info) view returns (bool) {
+    return info.foreignID == bytes32(0);
+}
+
+function isForeignToken(TokenInfo storage info) view returns (bool) {
+    return !info.isNativeToken();
+}

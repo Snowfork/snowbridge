@@ -483,6 +483,8 @@ contract GatewayTest is Test {
 
         fee = IGateway(address(gateway)).quoteSendTokenFee(address(token), ParaID.wrap(0), 1);
 
+        uint256 gatewayBeforeBalance = address(gateway).balance;
+
         // Let gateway lock up to 1 tokens
         hoax(user);
         token.approve(address(gateway), 1);
@@ -490,6 +492,7 @@ contract GatewayTest is Test {
         hoax(user, fee);
         IGateway(address(gateway)).sendToken{value: fee}(address(token), ParaID.wrap(0), recipientAddress32, 1, 1);
 
+        assertEq(address(gateway).balance - gatewayBeforeBalance, fee);
         assertEq(user.balance, 0);
     }
 
@@ -500,6 +503,8 @@ contract GatewayTest is Test {
         ParaID paraID = ParaID.wrap(1000);
 
         uint128 fee = uint128(IGateway(address(gateway)).quoteSendTokenFee(address(0), paraID, 1));
+        uint256 gatewayBeforeBalance = address(gateway).balance;
+        uint256 assetHubBeforeBalance = address(assetHubAgent).balance;
 
         vm.expectEmit();
         emit IGateway.TokenSent(address(0), user, paraID, recipientAddress32, amount);
@@ -508,6 +513,8 @@ contract GatewayTest is Test {
         hoax(user, amount + fee);
         IGateway(address(gateway)).sendToken{value: amount + fee}(address(0), paraID, recipientAddress32, 1, amount);
 
+        assertEq(address(gateway).balance - gatewayBeforeBalance, fee);
+        assertEq(address(assetHubAgent).balance - assetHubBeforeBalance, amount);
         assertEq(user.balance, 0);
     }
 
@@ -519,6 +526,8 @@ contract GatewayTest is Test {
         ParaID paraID = ParaID.wrap(1000);
 
         uint128 fee = uint128(IGateway(address(gateway)).quoteSendTokenFee(address(0), paraID, 1));
+        uint256 gatewayBeforeBalance = address(gateway).balance;
+        uint256 assetHubBeforeBalance = address(assetHubAgent).balance;
 
         vm.expectEmit();
         emit IGateway.TokenSent(address(0), user, paraID, recipientAddress32, amount);
@@ -529,10 +538,12 @@ contract GatewayTest is Test {
             address(0), paraID, recipientAddress32, 1, amount
         );
 
+        assertEq(address(gateway).balance - gatewayBeforeBalance, fee);
+        assertEq(address(assetHubAgent).balance - assetHubBeforeBalance, amount);
         assertEq(user.balance, extra);
     }
 
-    function testSendingEthWithoutFeeFails() public {
+    function testSendingEtherWithInsufficientEther1() public {
         // Create a mock user
         address user = makeAddr("user");
         uint128 amount = 1;
@@ -542,12 +553,12 @@ contract GatewayTest is Test {
 
         vm.expectEmit();
         emit IGateway.TokenSent(address(0), user, paraID, recipientAddress32, amount);
-        vm.expectRevert(Gateway.FeePaymentTooLow.selector);
+        vm.expectRevert(Gateway.InsufficientEther.selector);
         hoax(user, amount + fee);
         IGateway(address(gateway)).sendToken{value: amount}(address(0), paraID, recipientAddress32, 1, amount);
     }
 
-    function testSendingEthWithoutAmountFails() public {
+    function testSendingEtherWithInsufficientEther2() public {
         // Create a mock user
         address user = makeAddr("user");
         uint128 amount = 1 ether;
@@ -555,7 +566,7 @@ contract GatewayTest is Test {
 
         uint128 fee = uint128(IGateway(address(gateway)).quoteSendTokenFee(address(0), paraID, amount));
 
-        vm.expectRevert(Assets.InvalidAmount.selector);
+        vm.expectRevert(Gateway.InsufficientEther.selector);
         hoax(user, amount + fee);
         IGateway(address(gateway)).sendToken{value: amount - 1}(address(0), paraID, recipientAddress32, 1, amount);
     }
@@ -574,7 +585,7 @@ contract GatewayTest is Test {
         hoax(user);
         token.approve(address(gateway), 1);
 
-        vm.expectRevert(Gateway.FeePaymentTooLow.selector);
+        vm.expectRevert(Gateway.InsufficientEther.selector);
         hoax(user, 2 ether);
         IGateway(address(gateway)).sendToken{value: 0.002 ether}(
             address(token), ParaID.wrap(0), recipientAddress32, 1, 1
