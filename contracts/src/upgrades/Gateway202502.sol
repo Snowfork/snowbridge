@@ -5,7 +5,7 @@ pragma solidity 0.8.25;
 import "../Gateway.sol";
 
 // New `Gateway` logic contract for the `GatewayProxy` deployed on mainnet
-contract Gateway202410 is Gateway {
+contract Gateway202502 is Gateway {
     constructor(
         address beefyClient,
         address agentExecutor,
@@ -25,10 +25,15 @@ contract Gateway202410 is Gateway {
     {}
 
     // Override parent initializer to prevent re-initialization of storage.
-    function initialize(bytes memory) external view override {
+    function initialize(bytes memory) external override {
         // Ensure that arbitrary users cannot initialize storage in this logic contract.
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();
         }
+
+        // Register native Ether
+        AssetsStorage.Layout storage assets = AssetsStorage.layout();
+        TokenInfo storage tokenInfo = assets.tokenRegistry[address(0)];
+        tokenInfo.isRegistered = true;
     }
 }

@@ -13,6 +13,7 @@ import {CoreStorage} from "./storage/CoreStorage.sol";
 import {SubstrateTypes} from "./SubstrateTypes.sol";
 import {ParaID, MultiAddress, Ticket, Costs} from "./Types.sol";
 import {Address} from "./utils/Address.sol";
+import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
 import {Call} from "./utils/Call.sol";
@@ -21,6 +22,7 @@ import {Token} from "./Token.sol";
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
 library Assets {
     using Address for address;
+    using SafeNativeTransfer for address payable;
     using SafeTokenTransferFrom for IERC20;
 
     /* Errors */
@@ -108,14 +110,18 @@ library Assets {
     ) external returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
+        if (amount == 0) {
+            revert InvalidAmount();
+        }
+
         TokenInfo storage info = $.tokenRegistry[token];
 
         if (!info.isRegistered) {
             revert TokenNotRegistered();
         }
 
-        if (info.foreignID == bytes32(0)) {
-            return _sendNativeToken(
+        if (info.isNativeToken()) {
+            return _sendNativeTokenOrEther(
                 token, sender, destinationChain, destinationAddress, destinationChainFee, maxDestinationChainFee, amount
             );
         } else {
@@ -132,7 +138,8 @@ library Assets {
         }
     }
 
-    function _sendNativeToken(
+    // @dev Transfer ERC20(Ethereum-native) tokens to Polkadot
+    function _sendNativeTokenOrEther(
         address token,
         address sender,
         ParaID destinationChain,
@@ -143,8 +150,15 @@ library Assets {
     ) internal returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
-        // Lock the funds into AssetHub's agent contract
-        _transferToAgent($.assetHubAgent, token, sender, amount);
+        if (token != address(0)) {
+            // Lock ERC20
+            _transferToAgent($.assetHubAgent, token, sender, amount);
+            ticket.value = 0;
+        } else {
+            // Track the ether to bridge to Polkadot. This will be handled
+            // in `Gateway._submitOutbound`.
+            ticket.value = amount;
+        }
 
         ticket.dest = $.assetHubParaID;
         ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
@@ -191,6 +205,7 @@ library Assets {
                 revert Unsupported();
             }
         }
+
         emit IGateway.TokenSent(token, sender, destinationChain, destinationAddress, amount);
     }
 
@@ -211,6 +226,7 @@ library Assets {
 
         ticket.dest = $.assetHubParaID;
         ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee, maxDestinationChainFee);
+        ticket.value = 0;
 
         // Construct a message payload
         if (destinationChain == $.assetHubParaID && destinationAddress.isAddress32()) {
@@ -258,6 +274,7 @@ library Assets {
         ticket.dest = $.assetHubParaID;
         ticket.costs = _registerTokenCosts();
         ticket.payload = SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee);
+        ticket.value = 0;
 
         emit IGateway.TokenRegistrationSent(token);
     }
@@ -289,7 +306,14 @@ library Assets {
     function transferNativeToken(address executor, address agent, address token, address recipient, uint128 amount)
         external
     {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
+        bytes memory call;
+        if (token != address(0)) {
+            // ERC20
+            call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
+        } else {
+            // Native ETH
+            call = abi.encodeCall(AgentExecutor.transferEther, (payable(recipient), amount));
+        }
         (bool success,) = Agent(payable(agent)).invoke(executor, call);
         if (!success) {
             revert TokenTransferFailed();
