@@ -3,14 +3,13 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "../interfaces/IERC20.sol";
-import {WETH9} from "canonical-weth/WETH9.sol";
 
 import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
 import {IGatewayV2} from "./IGateway.sol";
 
 import {SafeNativeTransfer, SafeTokenTransfer} from "../utils/SafeTransfer.sol";
 
-import {AssetsStorage, TokenInfo, TokenInfoFunctions} from "../storage/AssetsStorage.sol";
+import {AssetsStorage, TokenInfo} from "../storage/AssetsStorage.sol";
 import {CoreStorage} from "../storage/CoreStorage.sol";
 import {PricingStorage} from "../storage/PricingStorage.sol";
 import {SubstrateTypes} from "../SubstrateTypes.sol";
@@ -35,7 +34,6 @@ library CallsV2 {
     using Address for address;
     using SafeTokenTransfer for IERC20;
     using SafeNativeTransfer for address payable;
-    using TokenInfoFunctions for TokenInfo;
 
     uint8 public constant MAX_ASSETS = 8;
 
@@ -148,7 +146,7 @@ library CallsV2 {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage tokenInfo = $.tokenRegistry[token];
 
-        require(tokenInfo.exists(), IGatewayBase.TokenNotRegistered());
+        require(tokenInfo.isRegistered, IGatewayBase.TokenNotRegistered());
         require(amount > 0, IGatewayBase.InvalidAmount());
 
         if (tokenInfo.isNative()) {

@@ -15,19 +15,17 @@ contract AgentExecutor {
     using SafeTokenTransfer for IERC20;
     using SafeNativeTransfer for address payable;
 
-    /// @dev Transfer ether to `recipient`. Unlike `_transferToken` This logic is not nested within `execute`,
-    /// as the gateway needs to control an agent's ether balance directly.
-    ///
+    // Transfer ether to `recipient`.
     function transferEther(address payable recipient, uint256 amount) external {
         recipient.safeNativeTransfer(amount);
     }
 
-    /// @dev Transfer ERC20 to `recipient`. Only callable via `execute`.
+    // Transfer ERC20 to `recipient`.
     function transferToken(address token, address recipient, uint128 amount) external {
         IERC20(token).safeTransfer(recipient, amount);
     }
 
-    /// @dev Call contract with Ether value. Only callable via `execute`.
+    // Call contract with Ether value
     function callContract(address target, bytes memory data, uint256 value) external {
         bool success = Call.safeCall(target, data, value);
         if (!success) {
