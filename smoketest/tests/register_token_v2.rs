@@ -4,34 +4,39 @@ use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{i_gateway_v2 as i_gateway, weth9},
-	helper::{initial_clients, print_event_log_for_unit_tests, governance_assethub_call_from_relay_chain, fund_account_on_relaychain},
-	parachains::assethub::api::{
-		foreign_assets::events::Created,
-		runtime_types::{
-			staging_xcm::v5::{
-				junction::{Junction::GlobalConsensus, NetworkId, Junction::{AccountKey20}},
-				junctions::{Junctions::{X1, X2, Here}},
+	helper::{
+		initial_clients, print_event_log_for_unit_tests, snowbridge_assethub_call_from_relay_chain,
+		wait_for_assethub_event, AssetHubConfig,
+	},
+	parachains::{
+		assethub,
+		assethub::api::{
+			asset_conversion::events::{LiquidityAdded, PoolCreated},
+			foreign_assets::events::Created,
+			runtime_types::staging_xcm::v5::{
+				junction::{
+					Junction::{AccountKey20, GlobalConsensus},
+					NetworkId,
+				},
+				junctions::Junctions::{Here, X1, X2},
 				location::Location,
 			},
 		},
 	},
 };
-use snowbridge_smoketest::helper::AssetHubConfig;
 use subxt::{
-	tx::PairSigner,
+	tx::{PairSigner, Payload},
 	utils::{AccountId32, MultiAddress},
 	OnlineClient,
 };
-use snowbridge_smoketest::parachains::assethub::api::asset_conversion::events::{PoolCreated, LiquidityAdded};
-use subxt::tx::Payload;
 
 #[tokio::test]
 async fn register_token_v2() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
-	let mut assethub = *(test_clients.asset_hub_client.clone());
+	let assethub = *(test_clients.asset_hub_client.clone());
 
-	//create_asset_pool(&mut assethub).await;
+	create_asset_pool(&Box::new(assethub.clone())).await;
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = i_gateway::IGatewayV2::new(gateway_addr, ethereum_client.clone());
@@ -76,7 +81,7 @@ async fn register_token_v2() {
 		interior: X2([
 			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
 			AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
-	]),
+		]),
 	};
 	let expected_creator: AccountId32 = SNOWBRIDGE_SOVEREIGN.into();
 	let expected_owner: AccountId32 = SNOWBRIDGE_SOVEREIGN.into();
@@ -101,70 +106,75 @@ async fn register_token_v2() {
 	assert!(created_event_found)
 }
 
-async fn create_asset_pool(asset_hub_client: &mut OnlineClient<AssetHubConfig>) {
-	let foreign_assets_api = snowbridge_smoketest::parachains::assethub::api::foreign_assets::calls::TransactionApi;
+async fn create_asset_pool(asset_hub_client: &Box<OnlineClient<AssetHubConfig>>) {
+	// Check if the pool has been created. The storage lookup for the pool did not work,
+	// so checking if the pool ID has been incremented as an indication that the pool has been
+	// created.
+	let next_id = asset_hub_client
+		.storage()
+		.at_latest()
+		.await
+		.unwrap()
+		.fetch(&assethub::api::storage().asset_conversion().next_pool_asset_id())
+		.await
+		.unwrap();
+
+	if next_id.is_some() && next_id.unwrap() > 0 {
+		println!("Pool has already been created, skipping.");
+		return
+	}
+
+	let foreign_assets_api =
+		snowbridge_smoketest::parachains::assethub::api::foreign_assets::calls::TransactionApi;
 
 	// Mint eth to sovereign account
 	let admin = MultiAddress::Id(SNOWBRIDGE_SOVEREIGN.into());
-	let mut encoded = Vec::new();
+	let mut encoded_mint_call = Vec::new();
 	foreign_assets_api
 		.mint(eth_location(), admin.clone(), 3_500_000_000_000)
-		.encode_call_data_to(&asset_hub_client.metadata(), &mut encoded)
+		.encode_call_data_to(&asset_hub_client.metadata(), &mut encoded_mint_call)
 		.expect("encoded call");
+	snowbridge_assethub_call_from_relay_chain(encoded_mint_call)
+		.await
+		.expect("fund snowbridge sovereign with eth for pool");
 
-	//governance_assethub_call_from_relay_chain(admin.clone(), encoded)
-	//	.await
-	//	.expect("fund snowbridge sovereign with eth for pool");
-
+	// Transfer funds to Ferdie, who will create the pool
 	let ferdie_account: AccountId32 = (*FERDIE_PUBLIC).into();
-	let mut encoded2 = Vec::new();
+	let mut encoded_create_pool_call = Vec::new();
 	foreign_assets_api
 		.transfer(eth_location(), MultiAddress::Id(ferdie_account.clone()), 3_000_000_000_000)
-		.encode_call_data_to(&asset_hub_client.metadata(), &mut encoded2)
+		.encode_call_data_to(&asset_hub_client.metadata(), &mut encoded_create_pool_call)
 		.expect("encoded call");
+	snowbridge_assethub_call_from_relay_chain(encoded_create_pool_call)
+		.await
+		.expect("transfer eth to ferdie");
 
-	//governance_assethub_call_from_relay_chain(admin.clone(), encoded2)
-	//	.await
-	//	.expect("transfer eth to ferdie");
-
-	let create_pool_call = snowbridge_smoketest::parachains::assethub::api::tx().asset_conversion().create_pool(dot_location(), eth_location());
+	// Create the pool
+	let create_pool_call = assethub::api::tx()
+		.asset_conversion()
+		.create_pool(dot_location(), eth_location());
 	let signer: PairSigner<AssetHubConfig, _> = PairSigner::new((*FERDIE).clone());
-	//asset_hub_client
-	//	.tx()
-	//	.sign_and_submit_then_watch_default(&create_pool_call, &signer)
-	//	.await
-	//	.unwrap()
-	//	.wait_for_finalized_success()
-	//	.await
-	//	.expect("pool created");
-//
-	//let wait_for_blocks = (*WAIT_PERIOD) as usize;
-	//let mut blocks = asset_hub_client
-	//	.blocks()
-	//	.subscribe_finalized()
-	//	.await
-	//	.expect("block subscription")
-	//	.take(wait_for_blocks);
-//
-	//let mut pool_event_found = false;
-	//while let Some(Ok(block)) = blocks.next().await {
-	//	println!("Polling assethub block {} for pool created event.", block.number());
-//
-	//	let events = block.events().await.unwrap();
-	//	for _pool_created in events.find::<PoolCreated>() {
-	//		println!("Pool created event found in assethub block {}.", block.number());
-	//		pool_event_found = true;
-	//	}
-	//	if pool_event_found {
-	//		break
-	//	}
-	//}
-	//assert!(pool_event_found);
+	asset_hub_client
+		.tx()
+		.sign_and_submit_then_watch_default(&create_pool_call, &signer)
+		.await
+		.unwrap()
+		.wait_for_finalized_success()
+		.await
+		.expect("pool created");
 
+	wait_for_assethub_event::<PoolCreated>(asset_hub_client).await;
 
-
-	// add liquidity
-	let create_liquidity = snowbridge_smoketest::parachains::assethub::api::tx().asset_conversion().add_liquidity(dot_location(), eth_location(), 1_000_000_000_000, 2_000_000_000_000, 1, 1, ferdie_account);
+	// Add liquidity to the pool.
+	let create_liquidity = assethub::api::tx().asset_conversion().add_liquidity(
+		dot_location(),
+		eth_location(),
+		1_000_000_000_000,
+		2_000_000_000_000,
+		1,
+		1,
+		ferdie_account,
+	);
 	let signer: PairSigner<AssetHubConfig, _> = PairSigner::new((*FERDIE).clone());
 	asset_hub_client
 		.tx()
@@ -175,42 +185,16 @@ async fn create_asset_pool(asset_hub_client: &mut OnlineClient<AssetHubConfig>) 
 		.await
 		.expect("liquidity added");
 
-	let wait_for_blocks_liquidity = (*WAIT_PERIOD) as usize;
-	let mut blocks = asset_hub_client
-		.blocks()
-		.subscribe_finalized()
-		.await
-		.expect("block subscription")
-		.take(wait_for_blocks_liquidity);
-
-	let mut liquidity_event_found = false;
-	while let Some(Ok(block)) = blocks.next().await {
-		println!("Polling assethub block {} for liquidity added event.", block.number());
-
-		let events = block.events().await.unwrap();
-		for _liquidity_event_found in events.find::<LiquidityAdded>() {
-			println!("Liquidity added event found in assethub block {}.", block.number());
-			liquidity_event_found = true;
-		}
-		if liquidity_event_found {
-			break
-		}
-	}
-	assert!(liquidity_event_found)
+	wait_for_assethub_event::<LiquidityAdded>(asset_hub_client).await;
 }
 
 fn eth_location() -> Location {
 	Location {
 		parents: 2,
-		interior: X1([
-			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
-		]),
+		interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID })]),
 	}
 }
 
 fn dot_location() -> Location {
-	Location {
-		parents: 1,
-		interior: Here
-	}
+	Location { parents: 1, interior: Here }
 }
