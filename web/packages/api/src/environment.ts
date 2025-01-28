@@ -86,7 +86,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
-                        address: "0x774667629726ec1fabebcec0d9139bd1c8f72a23",
+                        address: "0x774667629726ec1FaBEbCEc0D9139bD1C8f72a23",
                         minimumTransferAmount: 15_000_000_000_000n,
                     },
                 ],
@@ -107,7 +107,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
-                        address: "0x774667629726ec1fabebcec0d9139bd1c8f72a23",
+                        address: "0x774667629726ec1FaBEbCEc0D9139bD1C8f72a23",
                         minimumTransferAmount: 1n,
                     },
                 ],

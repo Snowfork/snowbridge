@@ -5,6 +5,10 @@ set -xe
 cargo test --no-run
 
 tests=(
+  # Native ETH
+  send_native_eth
+  transfer_native_eth
+
   # ERC20 Tests
   register_token
   send_token
