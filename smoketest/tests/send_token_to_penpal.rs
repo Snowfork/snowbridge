@@ -3,6 +3,8 @@ use ethers::{
 	utils::parse_units,
 };
 use futures::StreamExt;
+use penpal::api::runtime_types as penpalTypes;
+use penpalTypes::penpal_runtime::RuntimeCall as PenpalRuntimeCall;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{i_gateway, weth9},
@@ -23,16 +25,12 @@ use snowbridge_smoketest::{
 	},
 	penpal_helper::PenpalConfig,
 };
+use sp_crypto_hashing::twox_128;
 use subxt::{
 	ext::codec::Encode,
 	tx::PairSigner,
 	utils::{AccountId32, MultiAddress},
 	OnlineClient,
-};
-use sp_crypto_hashing::twox_128;
-use penpal::{api::runtime_types as penpalTypes};
-use penpalTypes::{
-	penpal_runtime::RuntimeCall as PenpalRuntimeCall,
 };
 
 #[tokio::test]
@@ -106,10 +104,7 @@ async fn send_token_to_penpal() {
 		.expect("block subscription")
 		.take(wait_for_blocks);
 
-	let expected_dot_id = Location {
-		parents: 1,
-		interior: Here,
-	};
+	let expected_dot_id = Location { parents: 1, interior: Here };
 	let expected_asset_id = Location {
 		parents: 2,
 		interior: X2([
@@ -226,13 +221,9 @@ async fn ensure_penpal_asset_exists(penpal_client: &mut OnlineClient<PenpalConfi
 
 async fn ensure_dot_asset_exists(penpal_client: &mut OnlineClient<PenpalConfig>) {
 	use penpal::api::runtime_types::staging_xcm::v4::{
-		junctions::Junctions::Here,
-		location::Location,
+		junctions::Junctions::Here, location::Location,
 	};
-	let dot_asset_id = Location {
-		parents: 1,
-		interior: Here,
-	};
+	let dot_asset_id = Location { parents: 1, interior: Here };
 
 	let dot_asset_address = penpal::api::storage().foreign_assets().asset(&dot_asset_id);
 	let result = penpal_client
@@ -265,33 +256,26 @@ async fn ensure_dot_asset_exists(penpal_client: &mut OnlineClient<PenpalConfig>)
 }
 async fn set_reserve_asset_storage(penpal_client: &mut OnlineClient<PenpalConfig>) {
 	use penpal::api::runtime_types::staging_xcm::v4::{
-		junction::{
-			Junction::GlobalConsensus,
-			NetworkId,
-		},
+		junction::{Junction::GlobalConsensus, NetworkId},
 		junctions::Junctions::X1,
 		location::Location,
 	};
 	let storage_key: Vec<u8> = twox_128(b":CustomizableAssetFromSystemAssetHub:").to_vec();
 	let reserve_location: Vec<u8> = Location {
 		parents: 2,
-		interior: X1([
-			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
-		]),
-	}.encode();
+		interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID })]),
+	}
+	.encode();
 
 	println!("setting CustomizableAssetFromSystemAssetHub storage on penpal.");
 	let signer: PairSigner<PenpalConfig, _> = PairSigner::new((*ALICE).clone());
 
-	let items = vec![(
-		storage_key,
-		reserve_location,
-	)];
+	let items = vec![(storage_key, reserve_location)];
 
 	let sudo_call = penpal::api::sudo::calls::TransactionApi::sudo(
 		&penpal::api::sudo::calls::TransactionApi,
 		PenpalRuntimeCall::System(crate::penpalTypes::frame_system::pallet::Call::set_storage {
-			items
+			items,
 		}),
 	);
 	penpal_client
