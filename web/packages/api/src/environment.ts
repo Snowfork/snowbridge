@@ -65,7 +65,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
-                        address: "0x774667629726ec1fabebcec0d9139bd1c8f72a23",
+                        address: "0x774667629726ec1FaBEbCEc0D9139bD1C8f72a23",
                         minimumTransferAmount: 15_000_000_000_000n,
                     },
                 ],
@@ -120,7 +120,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ASSET_HUB_URL: "ws://127.0.0.1:12144",
             BRIDGE_HUB_URL: "ws://127.0.0.1:11144",
             PARACHAINS: ["ws://127.0.0.1:13144"],
-            GATEWAY_CONTRACT: "0x87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d",
+            GATEWAY_CONTRACT: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
             BEEFY_CONTRACT: "0x2ffa5ecdbe006d30397c7636d3e015eee251369f",
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
