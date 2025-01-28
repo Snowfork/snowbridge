@@ -47,8 +47,6 @@ library Initializer {
         UD60x18 multiplier;
         /// @dev Optional rescueOperator
         address rescueOperator;
-        /// @dev The WETH address used for wrapping ETH
-        address weth;
         uint8 foreignTokenDecimals;
         uint128 maxDestinationFee;
     }
@@ -113,7 +111,6 @@ library Initializer {
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
         assets.foreignTokenDecimals = config.foreignTokenDecimals;
         assets.maxDestinationFee = config.maxDestinationFee;
-        assets.weth = config.weth;
 
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();

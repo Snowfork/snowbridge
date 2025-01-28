@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const receiptFetchBatchSize int = 100
+const receiptFetchBatchSize int = 10
 
 // Fetch all receipts for the given block in batches of `receiptFetchBatchSize`
 func GetAllReceipts(ctx context.Context, conn *Connection, block *etypes.Block) (etypes.Receipts, error) {

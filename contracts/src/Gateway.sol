@@ -226,8 +226,9 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 success = false;
             }
         } else if (message.command == CommandV1.MintForeignToken) {
-            try Gateway(this).v1_handleMintForeignToken{gas: maxDispatchGas}(message.params) {}
-            catch {
+            try Gateway(this).v1_handleMintForeignToken{gas: maxDispatchGas}(
+                message.channelID, message.params
+            ) {} catch {
                 success = false;
             }
         }
@@ -302,13 +303,17 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return CallsV1.isTokenRegistered(token);
     }
 
+    function queryForeignTokenID(address token) external view returns (bytes32) {
+        return AssetsStorage.layout().tokenRegistry[token].foreignID;
+    }
+
     // Total fee for registering a token
     function quoteRegisterTokenFee() external view returns (uint256) {
         return CallsV1.quoteRegisterTokenFee();
     }
 
     // Register an Ethereum-native token in the gateway and on AssetHub
-    function registerToken(address token) external payable {
+    function registerToken(address token) external payable nonreentrant {
         CallsV1.registerToken(token);
     }
 
@@ -328,7 +333,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         MultiAddress calldata destinationAddress,
         uint128 destinationFee,
         uint128 amount
-    ) external payable {
+    ) external payable nonreentrant {
         CallsV1.sendToken(
             token, msg.sender, destinationChain, destinationAddress, destinationFee, amount
         );
@@ -389,8 +394,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     }
 
     // @dev Mint foreign token from polkadot
-    function v1_handleMintForeignToken(bytes calldata data) external onlySelf {
-        HandlersV1.mintForeignToken(data);
+    function v1_handleMintForeignToken(ChannelID channelID, bytes calldata data)
+        external
+        onlySelf
+    {
+        HandlersV1.mintForeignToken(channelID, data);
     }
 
     /**

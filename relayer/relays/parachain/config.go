@@ -13,6 +13,7 @@ type Config struct {
 	Sink          SinkConfig     `mapstructure:"sink"`
 	Schedule      ScheduleConfig `mapstructure:"schedule"`
 	RewardAddress string         `mapstructure:"reward-address"`
+	OFAC     config.OFACConfig `mapstructure:"ofac"`
 }
 
 type SourceConfig struct {
@@ -92,6 +93,10 @@ func (c Config) Validate() error {
 	err = c.Schedule.Validate()
 	if err != nil {
 		return fmt.Errorf("relay config: %w", err)
+	}
+	err = c.OFAC.Validate()
+	if err != nil {
+		return fmt.Errorf("ofac config: %w", err)
 	}
 
 	if c.RewardAddress == "" {

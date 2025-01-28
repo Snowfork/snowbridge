@@ -82,8 +82,7 @@ contract DeployLocal is Script {
             multiplier: ud60x18(vm.envUint("FEE_MULTIPLIER")),
             rescueOperator: address(0),
             foreignTokenDecimals: foreignTokenDecimals,
-            maxDestinationFee: maxDestinationFee,
-            weth: weth
+            maxDestinationFee: maxDestinationFee
         });
 
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));

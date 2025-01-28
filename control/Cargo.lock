@@ -477,17 +477,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "asset-hub-rococo-runtime"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-arithmetic 24.0.0",
- "subxt",
-]
-
-[[package]]
 name = "asset-hub-westend-runtime"
 version = "0.1.0"
 dependencies = [
@@ -928,18 +917,6 @@ dependencies = [
 
 [[package]]
 name = "bridge-hub-polkadot-runtime"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "scale-info",
- "serde",
- "snowbridge-beacon-primitives",
- "sp-arithmetic 24.0.0",
- "subxt",
-]
-
-[[package]]
-name = "bridge-hub-rococo-runtime"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
@@ -4683,16 +4660,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rococo-runtime"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "scale-info",
- "serde",
- "subxt",
-]
-
-[[package]]
 name = "ruint"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5682,11 +5649,9 @@ dependencies = [
  "alloy-primitives",
  "asset-hub-paseo-runtime",
  "asset-hub-polkadot-runtime",
- "asset-hub-rococo-runtime",
  "asset-hub-westend-runtime",
  "bridge-hub-paseo-runtime",
  "bridge-hub-polkadot-runtime",
- "bridge-hub-rococo-runtime",
  "bridge-hub-westend-runtime",
  "clap",
  "futures",
@@ -5697,7 +5662,6 @@ dependencies = [
  "paseo-runtime",
  "polkadot-runtime",
  "polkadot-runtime-constants",
- "rococo-runtime",
  "scale-info",
  "serde",
  "serde_json",

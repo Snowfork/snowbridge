@@ -25,14 +25,13 @@ const transfer = async () => {
     const context = await contextFactory({
         ethereum: {
             execution_url: process.env["EXECUTION_NODE_URL"] || config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY || ""),
-            beacon_url: config.BEACON_HTTP_API,
+            beacon_url: process.env["BEACON_NODE_URL"] || config.BEACON_HTTP_API,
         },
         polkadot: {
             url: {
-                bridgeHub: config.BRIDGE_HUB_URL,
-                assetHub: config.ASSET_HUB_URL,
-                relaychain: config.RELAY_CHAIN_URL,
-                parachains: config.PARACHAINS,
+                bridgeHub: process.env["BRIDGE_HUB_URL"] || config.BRIDGE_HUB_URL,
+                assetHub: process.env["ASSET_HUB_URL"] || config.ASSET_HUB_URL,
+                relaychain: process.env["RELAY_CHAIN_URL"] || config.RELAY_CHAIN_URL,
             },
         },
         appContracts: {
