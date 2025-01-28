@@ -173,30 +173,6 @@ export async function createTx(
             from: sourceAddress
         }
     )
-    // const [tx, gas] = await Promise.all([
-    //     gateway.sendToken.populateTransaction(
-    //         tokenAddress,
-    //         destinationParaId,
-    //         beneficiary,
-    //         destinationFee,
-    //         amount,
-    //         {
-    //             value,
-    //             from: sourceAddress
-    //         }
-    //     ),
-    //     gateway.sendToken.estimateGas(
-    //         tokenAddress,
-    //         destinationParaId,
-    //         beneficiary,
-    //         destinationFee,
-    //         amount,
-    //         {
-    //             value,
-    //             from: sourceAddress
-    //         }
-    //     )
-    // ]);
 
     return {
         input: {
