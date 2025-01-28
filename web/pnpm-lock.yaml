@@ -104,6 +104,8 @@ importers:
         specifier: ^5.4.5
         version: 5.5.4
 
+  packages/contracts: {}
+
   packages/operations:
     dependencies:
       '@aws-sdk/client-cloudwatch':

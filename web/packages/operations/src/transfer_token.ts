@@ -1,4 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
+import { Signer } from "@polkadot/types/types"
 import {
     contextFactory,
     destroyContext,
@@ -18,6 +19,7 @@ const monitor = async () => {
     if (snwobridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
+    console.log(`Using environment '${env}'`)
 
     const { config } = snwobridgeEnv
 
@@ -62,7 +64,7 @@ const monitor = async () => {
         const depositResult = await weth9.deposit({ value: amount })
         const depositReceipt = await depositResult.wait()
 
-        const approveResult = await weth9.approve(config.GATEWAY_CONTRACT, amount)
+        const approveResult = await weth9.approve(config.GATEWAY_CONTRACT, amount * 2n)
         const approveReceipt = await approveResult.wait()
 
         console.log('deposit tx', depositReceipt?.hash, 'approve tx', approveReceipt?.hash)
@@ -70,16 +72,34 @@ const monitor = async () => {
 
     console.log("# Ethereum to Asset Hub")
     {
+        const destinationChainId = 1000
+        const destinationFeeInDOT = 0n
+        const totalFee = await toPolkadot.getSendFee(context, WETH_CONTRACT, destinationChainId, destinationFeeInDOT)
+        const { tx } = await toPolkadot.createTx(
+            context.config.appContracts.gateway,
+            ETHEREUM_ACCOUNT_PUBLIC,
+            POLKADOT_ACCOUNT_PUBLIC,
+            WETH_CONTRACT,
+            destinationChainId,
+            amount,
+            totalFee,
+            destinationFeeInDOT,
+        );
+        console.log('Plan tx:', tx)
+        console.log('Plan gas:', await context.ethereum.api.estimateGas(tx))
+        console.log('Plan dry run:', await context.ethereum.api.call(tx))
+
         const plan = await toPolkadot.validateSend(
             context,
             ETHEREUM_ACCOUNT,
             POLKADOT_ACCOUNT_PUBLIC,
             WETH_CONTRACT,
-            1000,
+            destinationChainId,
             amount,
-            BigInt(0)
+            destinationFeeInDOT
         )
         console.log("Plan:", plan, plan.failure?.errors)
+
         let result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
         console.log("Execute:", result)
         while (true) {
@@ -94,6 +114,25 @@ const monitor = async () => {
 
     console.log("# Asset Hub to Ethereum")
     {
+        const assetHubUnsigned = await toEthereum.createTx(
+            context.polkadot.api.assetHub,
+            (await context.ethereum.api.getNetwork()).chainId,
+            POLKADOT_ACCOUNT_PUBLIC,
+            ETHEREUM_ACCOUNT_PUBLIC,
+            WETH_CONTRACT,
+            amount
+        );
+        console.log('call: ', assetHubUnsigned.tx.inner.toHex())
+        console.log('utx: ', assetHubUnsigned.tx.toHex())
+        console.log('payment: ', (await assetHubUnsigned.tx.paymentInfo(POLKADOT_ACCOUNT)).toHuman())
+        console.log('dryRun: ', (
+            await assetHubUnsigned.tx.dryRun(
+                POLKADOT_ACCOUNT,
+                { withSignedTransaction: true }
+            )
+        ).toHuman()
+        )
+
         const plan = await toEthereum.validateSend(
             context,
             POLKADOT_ACCOUNT,
@@ -103,6 +142,7 @@ const monitor = async () => {
             amount
         )
         console.log("Plan:", plan, plan.failure?.errors)
+
         const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
         console.log("Execute:", result)
         while (true) {
@@ -117,16 +157,34 @@ const monitor = async () => {
 
     console.log("# Ethereum to Penpal")
     {
+        const destinationChainId = 2000
+        const destinationFeeInDOT = 4_000_000_000n
+        const totalFee = await toPolkadot.getSendFee(context, WETH_CONTRACT, destinationChainId, destinationFeeInDOT)
+        const { tx } = await toPolkadot.createTx(
+            context.config.appContracts.gateway,
+            ETHEREUM_ACCOUNT_PUBLIC,
+            POLKADOT_ACCOUNT_PUBLIC,
+            WETH_CONTRACT,
+            destinationChainId,
+            amount,
+            totalFee,
+            destinationFeeInDOT,
+        );
+        console.log('Plan tx:', tx)
+        console.log('Plan gas:', await context.ethereum.api.estimateGas(tx))
+        console.log('Plan Dry run:', await context.ethereum.api.call(tx))
+
         const plan = await toPolkadot.validateSend(
             context,
             ETHEREUM_ACCOUNT,
             POLKADOT_ACCOUNT_PUBLIC,
             WETH_CONTRACT,
-            2000,
+            destinationChainId,
             amount,
-            BigInt(4_000_000_000)
+            destinationFeeInDOT
         )
         console.log("Plan:", plan, plan.failure?.errors)
+
         let result = await toPolkadot.send(context, ETHEREUM_ACCOUNT, plan)
         console.log("Execute:", result)
         while (true) {
@@ -141,6 +199,25 @@ const monitor = async () => {
 
     console.log("# Penpal to Ethereum")
     {
+        const assetHubUnsigned = await toEthereum.createTx(
+            context.polkadot.api.assetHub,
+            (await context.ethereum.api.getNetwork()).chainId,
+            POLKADOT_ACCOUNT_PUBLIC,
+            ETHEREUM_ACCOUNT_PUBLIC,
+            WETH_CONTRACT,
+            amount
+        );
+        console.log('call: ', assetHubUnsigned.tx.inner.toHex())
+        console.log('utx: ', assetHubUnsigned.tx.toHex())
+        console.log('payment: ', (await assetHubUnsigned.tx.paymentInfo(POLKADOT_ACCOUNT)).toHuman())
+        console.log('dryRun: ', (
+            await assetHubUnsigned.tx.dryRun(
+                POLKADOT_ACCOUNT,
+                { withSignedTransaction: true }
+            )
+        ).toHuman()
+        )
+
         const plan = await toEthereum.validateSend(
             context,
             POLKADOT_ACCOUNT,
@@ -150,6 +227,7 @@ const monitor = async () => {
             amount
         )
         console.log("Plan:", plan, plan.failure?.errors)
+
         const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
         console.log("Execute:", result)
         while (true) {
