@@ -514,12 +514,7 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		return err
 	}
 
-	destination, err := r.getTransactionDestination(ev)
-	if err != nil {
-		return err
-	}
-
-	banned, err := r.ofac.IsBanned(source, destination)
+	banned, err := r.ofac.IsBanned(source, "")
 	if err != nil {
 		return err
 	}
@@ -627,27 +622,4 @@ func (r *Relay) getTransactionSender(ctx context.Context, ev *contracts.GatewayO
 	}).Debug("extracted sender from transaction")
 
 	return sender.Hex(), nil
-}
-
-func (r *Relay) getTransactionDestination(ev *contracts.GatewayOutboundMessageAccepted) (string, error) {
-	destination, err := parachain.GetDestination(ev.Payload)
-	if err != nil {
-		return "", fmt.Errorf("fetch execution header proof: %w", err)
-	}
-
-	if destination == "" {
-		return "", nil
-	}
-
-	destinationSS58, err := parachain.SS58Encode(destination, r.config.Sink.SS58Prefix)
-	if err != nil {
-		return "", fmt.Errorf("ss58 encode: %w", err)
-	}
-
-	log.WithFields(log.Fields{
-		"destinationSS58": destinationSS58,
-		"destination":     destination,
-	}).Debug("extracted destination from message")
-
-	return destinationSS58, nil
 }
