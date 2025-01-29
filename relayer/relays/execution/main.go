@@ -251,8 +251,8 @@ func (r *Relay) fetchUnprocessedParachainNonces(latest uint64) ([]uint64, error)
 	}
 
 	log.WithFields(logrus.Fields{
-		"unprocessedNonces": unprocessedNonces,
-	}).Debug("unprocessed nonces")
+		"nonces": unprocessedNonces,
+	}).Debug("nonces to be processed")
 	return unprocessedNonces, nil
 }
 
@@ -575,12 +575,10 @@ func (r *Relay) isMessageProcessed(eventNonce uint64) (bool, error) {
 
 	for _, paraNonce := range paraNonces {
 		if eventNonce == paraNonce {
-			log.WithField("nonce", paraNonce).Info("unprocessed message found")
 			return false, nil
 		}
 	}
 
-	log.WithField("nonce", eventNonce).Info("processed message found")
 	return true, nil
 }
 
@@ -593,13 +591,7 @@ func (r *Relay) isInFinalizedBlock(ctx context.Context, event *contracts.Gateway
 		return fmt.Errorf("get block header: %w", err)
 	}
 
-	err = r.beaconHeader.CheckHeaderFinalized(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
-	if err != nil {
-		log.Info("Message is not in a finalized block")
-	} else {
-		log.Info("Message is in a finalized block")
-	}
-	return err
+	return r.beaconHeader.CheckHeaderFinalized(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
 }
 
 func (r *Relay) UnprocessedNonces() {

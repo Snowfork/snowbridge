@@ -87,7 +87,6 @@ async fn send_token_v2() {
 	let claimer = Bytes::from(vec![]);
 	let assets = vec![weth_asset];
 
-	// Lock tokens into vault
 	let receipt = gateway
 		.v_2_send_message(xcm, assets, claimer, execution_fee, relayer_fee)
 		.value(fee)
