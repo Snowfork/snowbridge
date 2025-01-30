@@ -14,7 +14,8 @@ contract BitfieldTest is Test {
     function testBitfieldSubsampling() public {
         BitfieldWrapper bw = new BitfieldWrapper();
 
-        string memory json = vm.readFile(string.concat(vm.projectRoot(), "/test/data/beefy-validator-set.json"));
+        string memory json =
+            vm.readFile(string.concat(vm.projectRoot(), "/test/data/beefy-validator-set.json"));
         uint32 setSize = uint32(json.readUint(".validatorSetSize"));
         uint256[] memory bitSetArray = json.readUintArray(".participants");
 

@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.28;
 
-import {ScaleCodec} from "./utils/ScaleCodec.sol";
-
 using {
     isIndex,
     asIndex,
@@ -24,8 +22,6 @@ enum Kind {
     Address32,
     Address20
 }
-
-error InvalidVariant();
 
 function isIndex(MultiAddress calldata multiAddress) pure returns (bool) {
     return multiAddress.kind == Kind.Index;

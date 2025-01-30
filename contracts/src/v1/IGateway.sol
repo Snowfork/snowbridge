@@ -2,38 +2,35 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.28;
 
-import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress} from "../Types.sol";
+import {MultiAddress} from "../MultiAddress.sol";
+import {OperatingMode, InboundMessage, ParaID, ChannelID} from "./Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
-interface IGateway {
+interface IGatewayV1 {
+    error ChannelAlreadyCreated();
+    error ChannelDoesNotExist();
+    error InvalidChannelUpdate();
+
     /**
      * Events
      */
 
-    // Emitted when inbound message has been dispatched
-    event InboundMessageDispatched(ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bool success);
+    // V1: Emitted when inbound message has been dispatched
+    event InboundMessageDispatched(
+        ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bool success
+    );
 
     // Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
-    event OutboundMessageAccepted(ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bytes payload);
-
-    // Emitted when an agent has been created for a consensus system on Polkadot
-    event AgentCreated(bytes32 agentID, address agent);
-
-    // Emitted when a channel has been created
-    event ChannelCreated(ChannelID indexed channelID);
-
-    // Emitted when a channel has been updated
-    event ChannelUpdated(ChannelID indexed channelID);
-
-    // Emitted when the operating mode is changed
-    event OperatingModeChanged(OperatingMode mode);
+    event OutboundMessageAccepted(
+        ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bytes payload
+    );
 
     // Emitted when pricing params updated
     event PricingParametersChanged();
 
-    // Emitted when foreign token from polkadot registed
-    event ForeignTokenRegistered(bytes32 indexed tokenID, address token);
+    // Emitted when funds are withdrawn from an agent
+    event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
 
     // Emitted when ether is deposited
     event Deposited(address sender, uint256 amount);
@@ -43,15 +40,13 @@ interface IGateway {
      */
     function operatingMode() external view returns (OperatingMode);
 
+    function agentOf(bytes32 agentID) external view returns (address);
+
     function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode);
 
     function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);
 
-    function agentOf(bytes32 agentID) external view returns (address);
-
     function pricingParameters() external view returns (UD60x18, uint128);
-
-    function implementation() external view returns (address);
 
     /**
      * Fee management
@@ -84,9 +79,6 @@ interface IGateway {
         MultiAddress destinationAddress,
         uint128 amount
     );
-
-    /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
-    event TokenRegistrationSent(address token);
 
     /// @dev Check whether a token is registered
     function isTokenRegistered(address token) external view returns (bool);

@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.28;
 
-import {IGateway} from "../../src/interfaces/IGateway.sol";
-import {ParaID, MultiAddress, multiAddressFromBytes32} from "../../src/Types.sol";
+import {IGatewayV1} from "../../src/v1/IGateway.sol";
+import {ParaID} from "../../src/Types.sol";
+import {MultiAddress, multiAddressFromBytes32} from "../../src/MultiAddress.sol";
 import {console} from "forge-std/console.sol";
 
 contract ReantrantAttacker {
     address public owner;
     address token;
-    IGateway targetContract;
+    IGatewayV1 targetContract;
     uint256 targetValue = 0.9 ether;
     uint256 fee;
     ParaID assetHub = ParaID.wrap(1000);
@@ -17,7 +18,7 @@ contract ReantrantAttacker {
     MultiAddress recipientAddress32 = multiAddressFromBytes32(keccak256("recipient"));
 
     constructor(address _targetAddr, address _token) {
-        targetContract = IGateway(_targetAddr);
+        targetContract = IGatewayV1(_targetAddr);
         owner = msg.sender;
         token = _token;
         fee = targetContract.quoteSendTokenFee(_token, assetHub, 0);
@@ -36,6 +37,8 @@ contract ReantrantAttacker {
     }
 
     receive() external payable {
-        targetContract.sendToken{value: amount + fee + extra}(token, assetHub, recipientAddress32, 1, amount);
+        targetContract.sendToken{value: amount + fee + extra}(
+            token, assetHub, recipientAddress32, 1, amount
+        );
     }
 }
