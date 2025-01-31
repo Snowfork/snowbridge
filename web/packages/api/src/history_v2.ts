@@ -1,4 +1,9 @@
-import { fetchToPolkadotTransfers, fetchToEthereumTransfers } from "./subsquid"
+import {
+    fetchToPolkadotTransfers,
+    fetchToEthereumTransfers,
+    fetchToPolkadotTransferById,
+    fetchToEthereumTransferById,
+} from "./subsquid"
 import { forwardedTopicId, getEventIndex } from "./utils"
 
 export enum TransferStatus {
@@ -124,64 +129,134 @@ export type ToEthereumTransferResult = {
     }
 }
 
+const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult => {
+    const result: ToPolkadotTransferResult = {
+        id: transfer.id,
+        status: TransferStatus.Pending,
+        info: {
+            when: new Date(transfer.timestamp),
+            sourceAddress: transfer.senderAddress,
+            beneficiaryAddress: transfer.destinationAddress,
+            tokenAddress: transfer.tokenAddress,
+            destinationParachain: transfer.destinationParaId,
+            destinationFee: "",
+            amount: transfer.amount,
+        },
+        submitted: {
+            blockHash: "",
+            blockNumber: transfer.blockNumber,
+            logIndex: 0,
+            transactionHash: transfer.txHash,
+            transactionIndex: 0,
+            channelId: transfer.channelId,
+            messageId: transfer.messageId,
+            nonce: transfer.nonce,
+        },
+    }
+    let inboundMessageReceived = transfer.toBridgeHubInboundQueue
+    if (inboundMessageReceived) {
+        result.inboundMessageReceived = {
+            extrinsic_index: "",
+            extrinsic_hash: "",
+            event_index: getEventIndex(inboundMessageReceived.id),
+            block_timestamp: inboundMessageReceived.timestamp,
+            messageId: inboundMessageReceived.messageId,
+            channelId: inboundMessageReceived.channelId,
+            nonce: inboundMessageReceived.nonce,
+        }
+    }
+
+    const assetHubMessageProcessed = transfer.toDestination || transfer.toAssetHubMessageQueue
+    if (assetHubMessageProcessed) {
+        result.assetHubMessageProcessed = {
+            extrinsic_hash: "",
+            event_index: getEventIndex(assetHubMessageProcessed.id),
+            block_timestamp: assetHubMessageProcessed.timestamp,
+            success: assetHubMessageProcessed.success,
+            sibling: 0,
+        }
+        result.status = TransferStatus.Complete
+        if (!assetHubMessageProcessed.success) {
+            result.status = TransferStatus.Failed
+        }
+    }
+    return result
+}
+
+const buildToEthereumTransferResult = (transfer: any): ToEthereumTransferResult => {
+    let bridgeHubMessageId = forwardedTopicId(transfer.id)
+    const result: ToEthereumTransferResult = {
+        id: transfer.id,
+        status: TransferStatus.Pending,
+        info: {
+            when: new Date(transfer.timestamp),
+            sourceAddress: transfer.senderAddress,
+            tokenAddress: transfer.tokenAddress,
+            beneficiaryAddress: transfer.destinationAddress,
+            amount: transfer.amount,
+        },
+        submitted: {
+            extrinsic_index: "",
+            extrinsic_hash: transfer.txHash,
+            block_hash: "",
+            account_id: transfer.senderAddress,
+            block_num: transfer.blockNumber,
+            block_timestamp: transfer.timestamp,
+            messageId: transfer.id,
+            bridgeHubMessageId,
+            success: true,
+        },
+    }
+    let bridgeHubXcmDelivered = transfer.toBridgeHubMessageQueue
+    if (bridgeHubXcmDelivered) {
+        result.bridgeHubXcmDelivered = {
+            block_timestamp: bridgeHubXcmDelivered.timestamp,
+            event_index: getEventIndex(bridgeHubXcmDelivered.id),
+            extrinsic_hash: "",
+            siblingParachain: 1000,
+            success: bridgeHubXcmDelivered.success,
+        }
+        if (!bridgeHubXcmDelivered.success) {
+            result.status = TransferStatus.Failed
+            return result
+        }
+    }
+
+    let outboundQueueAccepted = transfer.toBridgeHubOutboundQueue
+    if (outboundQueueAccepted) {
+        result.bridgeHubMessageQueued = {
+            block_timestamp: outboundQueueAccepted.timestamp,
+            event_index: getEventIndex(outboundQueueAccepted.id),
+            extrinsic_hash: "",
+        }
+    }
+
+    let ethereumMessageDispatched = transfer.toDestination
+    if (ethereumMessageDispatched) {
+        result.ethereumMessageDispatched = {
+            blockNumber: ethereumMessageDispatched.blockNumber,
+            blockHash: "",
+            transactionHash: ethereumMessageDispatched.txHash,
+            transactionIndex: 0,
+            logIndex: 0,
+            messageId: ethereumMessageDispatched.messageId,
+            channelId: ethereumMessageDispatched.channelId,
+            nonce: ethereumMessageDispatched.nonce,
+            success: ethereumMessageDispatched.success,
+        }
+        result.status = TransferStatus.Complete
+        if (!ethereumMessageDispatched.success) {
+            result.status = TransferStatus.Failed
+        }
+    }
+    return result
+}
+
 export const toPolkadotHistory = async (): Promise<ToPolkadotTransferResult[]> => {
-    const ethOutboundMessages = await fetchToPolkadotTransfers()
+    const allTransfers = await fetchToPolkadotTransfers()
     const results: ToPolkadotTransferResult[] = []
-    for (const outboundMessage of ethOutboundMessages) {
-        const result: ToPolkadotTransferResult = {
-            id: outboundMessage.id,
-            status: TransferStatus.Pending,
-            info: {
-                when: new Date(outboundMessage.timestamp),
-                sourceAddress: outboundMessage.senderAddress,
-                beneficiaryAddress: outboundMessage.destinationAddress,
-                tokenAddress: outboundMessage.tokenAddress,
-                destinationParachain: outboundMessage.destinationParaId,
-                destinationFee: "",
-                amount: outboundMessage.amount,
-            },
-            submitted: {
-                blockHash: "",
-                blockNumber: outboundMessage.blockNumber,
-                logIndex: 0,
-                transactionHash: outboundMessage.txHash,
-                transactionIndex: 0,
-                channelId: outboundMessage.channelId,
-                messageId: outboundMessage.messageId,
-                nonce: outboundMessage.nonce,
-            },
-        }
-        let inboundMessageReceived = outboundMessage.toBridgeHubInboundQueue
-        if (inboundMessageReceived) {
-            result.inboundMessageReceived = {
-                extrinsic_index: "",
-                extrinsic_hash: "",
-                event_index: getEventIndex(inboundMessageReceived.id),
-                block_timestamp: inboundMessageReceived.timestamp,
-                messageId: inboundMessageReceived.messageId,
-                channelId: inboundMessageReceived.channelId,
-                nonce: inboundMessageReceived.nonce,
-            }
-        }
-
-        const assetHubMessageProcessed =
-            outboundMessage.toDestination || outboundMessage.toAssetHubMessageQueue
-        if (assetHubMessageProcessed) {
-            result.assetHubMessageProcessed = {
-                extrinsic_hash: "",
-                event_index: getEventIndex(assetHubMessageProcessed.id),
-                block_timestamp: assetHubMessageProcessed.timestamp,
-                success: assetHubMessageProcessed.success,
-                sibling: 0,
-            }
-            if (!assetHubMessageProcessed.success) {
-                result.status = TransferStatus.Failed
-                continue
-            }
-
-            result.status = TransferStatus.Complete
-        }
-
+    for (const transfer of allTransfers) {
+        let result = buildToPolkadotTransferResult(transfer)
         results.push(result)
     }
     return results
@@ -191,73 +266,30 @@ export const toEthereumHistory = async (): Promise<ToEthereumTransferResult[]> =
     const allTransfers = await fetchToEthereumTransfers()
     const results: ToEthereumTransferResult[] = []
     for (const transfer of allTransfers) {
-        let bridgeHubMessageId = forwardedTopicId(transfer.id)
-        const result: ToEthereumTransferResult = {
-            id: transfer.id,
-            status: TransferStatus.Pending,
-            info: {
-                when: new Date(transfer.timestamp),
-                sourceAddress: transfer.senderAddress,
-                tokenAddress: transfer.tokenAddress,
-                beneficiaryAddress: transfer.destinationAddress,
-                amount: transfer.amount,
-            },
-            submitted: {
-                extrinsic_index: "",
-                extrinsic_hash: transfer.txHash,
-                block_hash: "",
-                account_id: transfer.senderAddress,
-                block_num: transfer.blockNumber,
-                block_timestamp: transfer.timestamp,
-                messageId: transfer.id,
-                bridgeHubMessageId,
-                success: true,
-            },
-        }
-        let bridgeHubXcmDelivered = transfer.toBridgeHubMessageQueue
-        if (bridgeHubXcmDelivered) {
-            result.bridgeHubXcmDelivered = {
-                block_timestamp: bridgeHubXcmDelivered.timestamp,
-                event_index: getEventIndex(bridgeHubXcmDelivered.id),
-                extrinsic_hash: "",
-                siblingParachain: 1000,
-                success: bridgeHubXcmDelivered.success,
-            }
-            if (!bridgeHubXcmDelivered.success) {
-                result.status = TransferStatus.Failed
-                continue
-            }
-        }
-
-        let outboundQueueAccepted = transfer.toBridgeHubOutboundQueue
-        if (outboundQueueAccepted) {
-            result.bridgeHubMessageQueued = {
-                block_timestamp: outboundQueueAccepted.timestamp,
-                event_index: getEventIndex(outboundQueueAccepted.id),
-                extrinsic_hash: "",
-            }
-        }
-
-        let ethereumMessageDispatched = transfer.toDestination
-        if (ethereumMessageDispatched) {
-            result.ethereumMessageDispatched = {
-                blockNumber: ethereumMessageDispatched.blockNumber,
-                blockHash: "",
-                transactionHash: ethereumMessageDispatched.txHash,
-                transactionIndex: 0,
-                logIndex: 0,
-                messageId: ethereumMessageDispatched.messageId,
-                channelId: ethereumMessageDispatched.channelId,
-                nonce: ethereumMessageDispatched.nonce,
-                success: ethereumMessageDispatched.success,
-            }
-            if (!ethereumMessageDispatched.success) {
-                result.status = TransferStatus.Failed
-                continue
-            }
-            result.status = TransferStatus.Complete
-        }
+        let result = buildToEthereumTransferResult(transfer)
         results.push(result)
     }
     return results
+}
+
+export const toPolkadotTransferById = async (
+    id: string
+): Promise<ToPolkadotTransferResult | undefined> => {
+    const transfers = await fetchToPolkadotTransferById(id)
+    if (transfers?.length > 0) {
+        let result = buildToPolkadotTransferResult(transfers[0])
+        return result
+    }
+    return
+}
+
+export const toEthereumTransferById = async (
+    id: string
+): Promise<ToEthereumTransferResult | undefined> => {
+    const transfers = await fetchToEthereumTransferById(id)
+    if (transfers?.length > 0) {
+        let result = buildToEthereumTransferResult(transfers[0])
+        return result
+    }
+    return
 }
