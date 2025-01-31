@@ -319,7 +319,7 @@ pub async fn deposit_eth(
 				ref_time: weight,
 				proof_size,
 			}),
-		},,
+		},
 		RelaychainInstruction::ReserveAssetDeposited(RelaychainMultiAssets(vec![
 			RelaychainMultiAsset {
 				id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
