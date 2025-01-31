@@ -19,5 +19,7 @@ cargo test --test send_token_to_penpal --release -- --nocapture
 echo "run register token v2"
 cargo test --test register_token_v2 --release -- --nocapture
 echo "run send token v2"
-cargo test --test register_token_v2 --release -- --nocapture
+cargo test --test send_token_v2 --release -- --nocapture
+echo "run send token to penpal v2"
+cargo test --test send_token_to_penpal_v2 --release -- --nocapture
 popd
