@@ -12,11 +12,18 @@ use crate::{
 			xcm::{
 				double_encoded::DoubleEncoded as RelaychainDoubleEncoded,
 				v3::{
-					junction::{Junction as RelaychainJunction, NetworkId as RelaychainNetworkId},
+					junction::{
+						Junction as RelaychainJunction,
+						Junction::AccountId32 as RelaychainAccountId32,
+						NetworkId as RelaychainNetworkId,
+					},
 					junctions::Junctions as RelaychainJunctions,
 					multiasset::{
 						AssetId as RelaychainAssetId, Fungibility as RelaychainFungibility,
 						MultiAsset as RelaychainMultiAsset,
+						MultiAssetFilter as RelaychainMultiAssetFilter,
+						MultiAssets as RelaychainMultiAssets,
+						WildMultiAsset as RelaychainWildMultiAsset,
 					},
 					Instruction as RelaychainInstruction, OriginKind as RelaychainOriginKind,
 					WeightLimit as RelaychainWeightLimit, Xcm as RelaychainXcm,
@@ -345,6 +352,134 @@ pub async fn snowbridge_assethub_call_from_relay_chain(
 			origin_kind: RelaychainOriginKind::SovereignAccount,
 			require_weight_at_most: RelaychainWeight { ref_time: weight, proof_size },
 			call: RelaychainDoubleEncoded { encoded: call },
+		},
+	])));
+
+	let sudo_api = relaychain::api::sudo::calls::TransactionApi;
+	let sudo_call = sudo_api
+		.sudo(RelaychainRuntimeCall::XcmPallet(RelaychainPalletXcmCall::send { dest, message }));
+
+	let result = test_clients
+		.relaychain_client
+		.tx()
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.await
+		.expect("send through sudo call.")
+		.wait_for_finalized_success()
+		.await
+		.expect("sudo call success");
+
+	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
+
+	Ok(())
+}
+
+pub async fn assethub_deposit_eth_on_penpal_call_from_relay_chain(
+) -> Result<(), Box<dyn std::error::Error>> {
+	let test_clients = initial_clients().await.expect("initialize clients");
+
+	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
+
+	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+
+	let weight = 180000000000;
+	let proof_size = 900000;
+
+	let dest = Box::new(RelaychainVersionedLocation::V3(RelaychainMultiLocation {
+		parents: 0,
+		interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(ASSET_HUB_PARA_ID)),
+	}));
+
+	let dot_location = RelaychainMultiLocation { parents: 1, interior: RelaychainJunctions::Here };
+	let eth_location = RelaychainMultiLocation {
+		parents: 2,
+		interior: RelaychainJunctions::X1(RelaychainJunction::GlobalConsensus(
+			RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID },
+		)),
+	};
+
+	let eth_asset: RelaychainMultiAsset = RelaychainMultiAsset {
+		id: RelaychainAssetId::Concrete(eth_location),
+		fun: RelaychainFungibility::Fungible(3_000_000_000_000u128),
+	};
+	let dot_asset: RelaychainMultiAsset = RelaychainMultiAsset {
+		id: RelaychainAssetId::Concrete(dot_location),
+		fun: RelaychainFungibility::Fungible(3_000_000_000_000u128),
+	};
+
+	let account_location: RelaychainMultiLocation = RelaychainMultiLocation {
+		parents: 0,
+		interior: RelaychainJunctions::X1(RelaychainAccountId32 {
+			network: None,
+			id: (*FERDIE_PUBLIC).into(),
+		}),
+	};
+
+	let message = Box::new(RelaychainVersionedXcm::V3(RelaychainXcm(vec![
+		RelaychainInstruction::UnpaidExecution {
+			weight_limit: RelaychainWeightLimit::Unlimited,
+			check_origin: None,
+		},
+		RelaychainInstruction::DescendOrigin(RelaychainJunctions::X1(
+			RelaychainJunction::Parachain(BRIDGE_HUB_PARA_ID),
+		)),
+		RelaychainInstruction::DescendOrigin(RelaychainJunctions::X1(
+			RelaychainJunction::PalletInstance(84),
+		)),
+		RelaychainInstruction::UniversalOrigin(RelaychainJunction::GlobalConsensus(
+			RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID },
+		)),
+		RelaychainInstruction::WithdrawAsset(RelaychainMultiAssets(vec![RelaychainMultiAsset {
+			id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
+				parents: 1,
+				interior: RelaychainJunctions::Here,
+			}),
+			fun: RelaychainFungibility::Fungible(3_000_000_000_000_u128),
+		}])),
+		RelaychainInstruction::ReserveAssetDeposited(RelaychainMultiAssets(vec![
+			RelaychainMultiAsset {
+				id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
+					parents: 2,
+					interior: RelaychainJunctions::X1(RelaychainJunction::GlobalConsensus(
+						RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID },
+					)),
+				}),
+				fun: RelaychainFungibility::Fungible(3_000_000_000_000_u128),
+			},
+		])),
+		RelaychainInstruction::DepositReserveAsset {
+			// Send the token plus some eth for execution fees
+			assets: RelaychainMultiAssetFilter::Definite(RelaychainMultiAssets(vec![
+				dot_asset, eth_asset,
+			])),
+			// Penpal
+			dest: RelaychainMultiLocation {
+				parents: 1,
+				interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(PENPAL_PARA_ID)),
+			},
+			xcm: RelaychainXcm(vec![
+				// Pay fees on Penpal.
+				RelaychainInstruction::BuyExecution {
+					fees: RelaychainMultiAsset {
+						id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
+							parents: 1,
+							interior: RelaychainJunctions::Here,
+						}),
+						fun: RelaychainFungibility::Fungible(2_000_000_000_000_u128),
+					},
+					weight_limit: RelaychainWeightLimit::Limited(RelaychainWeight {
+						ref_time: weight,
+						proof_size,
+					}),
+				},
+				// Deposit assets to beneficiary.
+				RelaychainInstruction::DepositAsset {
+					assets: RelaychainMultiAssetFilter::Wild(RelaychainWildMultiAsset::AllCounted(
+						2,
+					)),
+					beneficiary: account_location,
+				},
+			]),
 		},
 	])));
 

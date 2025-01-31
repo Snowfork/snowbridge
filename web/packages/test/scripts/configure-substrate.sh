@@ -31,6 +31,7 @@ fund_accounts() {
     transfer_local_balance "$bridgehub_ws_url" "//Alice" "$execution_relayer_penpal_pub_key" 100000000000000
     transfer_local_balance "$assethub_ws_url" "//Alice" "$penpal_sovereign_account" 100000000000000
     transfer_local_balance "$assethub_ws_url" "//Alice" "$snowbridge_sovereign_account" 100000000000000
+    transfer_local_balance "$penpal_ws_url" "//Alice" "0x1cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c" 100000000000000 # Ferdie ED on penpal
 }
 
 register_native_eth() {
