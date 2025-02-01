@@ -1,6 +1,6 @@
 use crate::{
 	constants::*,
-	contracts::i_gateway,
+	contracts::i_gateway_v1 as i_gateway,
 	parachains::{
 		bridgehub::{self, api::runtime_types::snowbridge_core::outbound::v1::OperatingMode},
 		relaychain,
@@ -12,8 +12,19 @@ use crate::{
 			xcm::{
 				double_encoded::DoubleEncoded as RelaychainDoubleEncoded,
 				v3::{
-					junction::Junction as RelaychainJunction,
+					junction::{
+						Junction as RelaychainJunction,
+						Junction::AccountId32 as RelaychainAccountId32,
+						NetworkId as RelaychainNetworkId,
+					},
 					junctions::Junctions as RelaychainJunctions,
+					multiasset::{
+						AssetId as RelaychainAssetId, Fungibility as RelaychainFungibility,
+						MultiAsset as RelaychainMultiAsset,
+						MultiAssetFilter as RelaychainMultiAssetFilter,
+						MultiAssets as RelaychainMultiAssets,
+						WildMultiAsset as RelaychainWildMultiAsset,
+					},
 					Instruction as RelaychainInstruction, OriginKind as RelaychainOriginKind,
 					WeightLimit as RelaychainWeightLimit, Xcm as RelaychainXcm,
 				},
@@ -36,9 +47,9 @@ use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
 	config::DefaultExtrinsicParams,
 	events::StaticEvent,
-	ext::sp_core::{sr25519::Pair, Pair as PairT, H160},
+	ext::sp_core::{sr25519::Pair, Pair as PairT},
 	tx::{PairSigner, Payload},
-	utils::H256,
+	utils::{AccountId32, MultiAddress, H160, H256},
 	Config, OnlineClient, PolkadotConfig,
 };
 
@@ -125,9 +136,41 @@ pub async fn wait_for_bridgehub_event<Ev: StaticEvent>(
 	assert!(substrate_event_found);
 }
 
+pub async fn wait_for_assethub_event<Ev: StaticEvent>(
+	asset_hub_client: &Box<OnlineClient<AssetHubConfig>>,
+) {
+	let mut blocks = asset_hub_client
+		.blocks()
+		.subscribe_finalized()
+		.await
+		.expect("block subscription")
+		.take(5);
+
+	let mut substrate_event_found = false;
+	while let Some(Ok(block)) = blocks.next().await {
+		println!("Polling assethub block {} for expected event.", block.number());
+		let events = block.events().await.expect("read block events");
+		for event in events.find::<Ev>() {
+			let _ = event.expect("expect upgrade");
+			println!(
+				"Event found at assethub block {}: {}::{}",
+				block.number(),
+				<Ev as StaticEvent>::PALLET,
+				<Ev as StaticEvent>::EVENT,
+			);
+			substrate_event_found = true;
+			break
+		}
+		if substrate_event_found {
+			break
+		}
+	}
+	assert!(substrate_event_found);
+}
+
 pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Provider<Ws>>>) {
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway::IGateway::new(gateway_addr, (*ethereum_client).deref().clone());
+	let gateway = i_gateway::IGatewayV1::new(gateway_addr, (*ethereum_client).deref().clone());
 
 	let wait_for_blocks = 500;
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
@@ -274,11 +317,256 @@ pub async fn governance_bridgehub_call_from_relay_chain(
 	Ok(())
 }
 
+pub async fn snowbridge_assethub_call_from_relay_chain(
+	call: Vec<u8>,
+) -> Result<(), Box<dyn std::error::Error>> {
+	let test_clients = initial_clients().await.expect("initialize clients");
+
+	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
+
+	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+
+	let weight = 180000000000;
+	let proof_size = 900000;
+
+	let dest = Box::new(RelaychainVersionedLocation::V3(RelaychainMultiLocation {
+		parents: 0,
+		interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(ASSET_HUB_PARA_ID)),
+	}));
+
+	let message = Box::new(RelaychainVersionedXcm::V3(RelaychainXcm(vec![
+		RelaychainInstruction::UnpaidExecution {
+			weight_limit: RelaychainWeightLimit::Unlimited,
+			check_origin: None,
+		},
+		RelaychainInstruction::DescendOrigin(RelaychainJunctions::X1(
+			RelaychainJunction::Parachain(BRIDGE_HUB_PARA_ID),
+		)),
+		RelaychainInstruction::DescendOrigin(RelaychainJunctions::X1(
+			RelaychainJunction::PalletInstance(84),
+		)),
+		RelaychainInstruction::UniversalOrigin(RelaychainJunction::GlobalConsensus(
+			RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID },
+		)),
+		RelaychainInstruction::Transact {
+			origin_kind: RelaychainOriginKind::SovereignAccount,
+			require_weight_at_most: RelaychainWeight { ref_time: weight, proof_size },
+			call: RelaychainDoubleEncoded { encoded: call },
+		},
+	])));
+
+	let sudo_api = relaychain::api::sudo::calls::TransactionApi;
+	let sudo_call = sudo_api
+		.sudo(RelaychainRuntimeCall::XcmPallet(RelaychainPalletXcmCall::send { dest, message }));
+
+	let result = test_clients
+		.relaychain_client
+		.tx()
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.await
+		.expect("send through sudo call.")
+		.wait_for_finalized_success()
+		.await
+		.expect("sudo call success");
+
+	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
+
+	Ok(())
+}
+
+pub async fn assethub_deposit_eth_on_penpal_call_from_relay_chain(
+) -> Result<(), Box<dyn std::error::Error>> {
+	let test_clients = initial_clients().await.expect("initialize clients");
+
+	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
+
+	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+
+	let weight = 180000000000;
+	let proof_size = 900000;
+
+	let dest = Box::new(RelaychainVersionedLocation::V3(RelaychainMultiLocation {
+		parents: 0,
+		interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(ASSET_HUB_PARA_ID)),
+	}));
+
+	let dot_location = RelaychainMultiLocation { parents: 1, interior: RelaychainJunctions::Here };
+	let eth_location = RelaychainMultiLocation {
+		parents: 2,
+		interior: RelaychainJunctions::X1(RelaychainJunction::GlobalConsensus(
+			RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID },
+		)),
+	};
+
+	let eth_asset: RelaychainMultiAsset = RelaychainMultiAsset {
+		id: RelaychainAssetId::Concrete(eth_location),
+		fun: RelaychainFungibility::Fungible(3_000_000_000_000u128),
+	};
+	let dot_asset: RelaychainMultiAsset = RelaychainMultiAsset {
+		id: RelaychainAssetId::Concrete(dot_location),
+		fun: RelaychainFungibility::Fungible(3_000_000_000_000u128),
+	};
+
+	let account_location: RelaychainMultiLocation = RelaychainMultiLocation {
+		parents: 0,
+		interior: RelaychainJunctions::X1(RelaychainAccountId32 {
+			network: None,
+			id: (*FERDIE_PUBLIC).into(),
+		}),
+	};
+
+	let message = Box::new(RelaychainVersionedXcm::V3(RelaychainXcm(vec![
+		RelaychainInstruction::UnpaidExecution {
+			weight_limit: RelaychainWeightLimit::Unlimited,
+			check_origin: None,
+		},
+		RelaychainInstruction::DescendOrigin(RelaychainJunctions::X1(
+			RelaychainJunction::Parachain(BRIDGE_HUB_PARA_ID),
+		)),
+		RelaychainInstruction::DescendOrigin(RelaychainJunctions::X1(
+			RelaychainJunction::PalletInstance(84),
+		)),
+		RelaychainInstruction::UniversalOrigin(RelaychainJunction::GlobalConsensus(
+			RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID },
+		)),
+		RelaychainInstruction::WithdrawAsset(RelaychainMultiAssets(vec![RelaychainMultiAsset {
+			id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
+				parents: 1,
+				interior: RelaychainJunctions::Here,
+			}),
+			fun: RelaychainFungibility::Fungible(3_000_000_000_000_u128),
+		}])),
+		RelaychainInstruction::ReserveAssetDeposited(RelaychainMultiAssets(vec![
+			RelaychainMultiAsset {
+				id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
+					parents: 2,
+					interior: RelaychainJunctions::X1(RelaychainJunction::GlobalConsensus(
+						RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID },
+					)),
+				}),
+				fun: RelaychainFungibility::Fungible(3_000_000_000_000_u128),
+			},
+		])),
+		RelaychainInstruction::DepositReserveAsset {
+			// Send the token plus some eth for execution fees
+			assets: RelaychainMultiAssetFilter::Definite(RelaychainMultiAssets(vec![
+				dot_asset, eth_asset,
+			])),
+			// Penpal
+			dest: RelaychainMultiLocation {
+				parents: 1,
+				interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(PENPAL_PARA_ID)),
+			},
+			xcm: RelaychainXcm(vec![
+				// Pay fees on Penpal.
+				RelaychainInstruction::BuyExecution {
+					fees: RelaychainMultiAsset {
+						id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
+							parents: 1,
+							interior: RelaychainJunctions::Here,
+						}),
+						fun: RelaychainFungibility::Fungible(2_000_000_000_000_u128),
+					},
+					weight_limit: RelaychainWeightLimit::Limited(RelaychainWeight {
+						ref_time: weight,
+						proof_size,
+					}),
+				},
+				// Deposit assets to beneficiary.
+				RelaychainInstruction::DepositAsset {
+					assets: RelaychainMultiAssetFilter::Wild(RelaychainWildMultiAsset::AllCounted(
+						2,
+					)),
+					beneficiary: account_location,
+				},
+			]),
+		},
+	])));
+
+	let sudo_api = relaychain::api::sudo::calls::TransactionApi;
+	let sudo_call = sudo_api
+		.sudo(RelaychainRuntimeCall::XcmPallet(RelaychainPalletXcmCall::send { dest, message }));
+
+	let result = test_clients
+		.relaychain_client
+		.tx()
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.await
+		.expect("send through sudo call.")
+		.wait_for_finalized_success()
+		.await
+		.expect("sudo call success");
+
+	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
+
+	Ok(())
+}
+
+pub async fn governance_assethub_call_from_relay_chain_sudo_as(
+	who: MultiAddress<AccountId32, ()>,
+	call: Vec<u8>,
+) -> Result<(), Box<dyn std::error::Error>> {
+	let test_clients = initial_clients().await.expect("initialize clients");
+
+	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
+
+	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+
+	let weight = 180000000000;
+	let proof_size = 900000;
+
+	let dest = Box::new(RelaychainVersionedLocation::V3(RelaychainMultiLocation {
+		parents: 0,
+		interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(ASSET_HUB_PARA_ID)),
+	}));
+
+	let message = Box::new(RelaychainVersionedXcm::V3(RelaychainXcm(vec![
+		RelaychainInstruction::BuyExecution {
+			fees: RelaychainMultiAsset {
+				id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
+					parents: 0,
+					interior: RelaychainJunctions::Here,
+				}),
+				fun: RelaychainFungibility::Fungible(7_000_000_000_000_u128),
+			},
+			weight_limit: RelaychainWeightLimit::Limited(RelaychainWeight {
+				ref_time: weight,
+				proof_size,
+			}),
+		},
+		RelaychainInstruction::Transact {
+			origin_kind: RelaychainOriginKind::Superuser,
+			require_weight_at_most: RelaychainWeight { ref_time: weight, proof_size },
+			call: RelaychainDoubleEncoded { encoded: call },
+		},
+	])));
+
+	let sudo_api = relaychain::api::sudo::calls::TransactionApi;
+	let sudo_call = sudo_api.sudo_as(
+		who,
+		RelaychainRuntimeCall::XcmPallet(RelaychainPalletXcmCall::send { dest, message }),
+	);
+
+	let result = test_clients
+		.relaychain_client
+		.tx()
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.await
+		.expect("send through sudo call.")
+		.wait_for_finalized_success()
+		.await
+		.expect("sudo call success");
+
+	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
+
+	Ok(())
+}
+
 pub async fn fund_agent(agent_id: [u8; 32]) -> Result<(), Box<dyn std::error::Error>> {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let ethereum_client = *(test_clients.ethereum_client.clone());
-	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
+	let gateway = i_gateway::IGatewayV1::new(gateway_addr, ethereum_client.clone());
 	let agent_address = gateway.agent_of(agent_id).await.expect("find agent");
 
 	println!("agent address {}", hex::encode(agent_address));
