@@ -276,6 +276,14 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return Functions.ensureAgent(agentID);
     }
 
+    function outboundNonce()
+        external
+        view
+        returns (uint64)
+    {
+        return CallsV2.outboundNonce();
+    }
+
     function pricingParameters() external view returns (UD60x18, uint128) {
         return CallsV1.pricingParameters();
     }
@@ -511,17 +519,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             }
         }
         return true;
-    }
-
-    // See docs for `IGateway.registerToken`
-    function v2_registerToken(
-        address token,
-        uint8 network,
-        uint128 executionFee,
-        uint128 relayerFee
-    ) external payable nonreentrant {
-        require(network <= uint8(Network.Kusama), IGatewayV2.InvalidNetwork());
-        CallsV2.registerToken(token, Network(network), executionFee, relayerFee);
     }
 
     function v2_isDispatched(uint64 nonce) external view returns (bool) {
