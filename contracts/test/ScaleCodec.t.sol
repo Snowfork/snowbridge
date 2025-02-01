@@ -52,4 +52,8 @@ contract ScaleCodecTest is Test {
         vm.expectRevert(ScaleCodec.UnsupportedCompactEncoding.selector);
         ScaleCodec.checkedEncodeCompactU32(uint256(type(uint32).max) + 1);
     }
+
+    function testEncodeCompactU128() public {
+        assertEq(ScaleCodec.encodeCompactU128(9000000000000), hex"0b0090cd792f08");
+    }
 }

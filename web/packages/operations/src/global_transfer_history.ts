@@ -1,3 +1,4 @@
+import "dotenv/config"
 import { contextFactory, destroyContext, environment, subscan, history } from "@snowbridge/api"
 import { BeefyClient__factory, IGateway__factory } from "@snowbridge/contract-types"
 import { AlchemyProvider } from "ethers"
@@ -5,7 +6,7 @@ import { AlchemyProvider } from "ethers"
 const monitor = async () => {
     const subscanKey = process.env.REACT_APP_SUBSCAN_KEY ?? ""
 
-    let env = "rococo_sepolia"
+    let env = "westend_sepolia"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }

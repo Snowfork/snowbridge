@@ -22,9 +22,9 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(run.Command())
 	rootCmd.AddCommand(getBlockCmd())
-	//rootCmd.AddCommand(fetchMessagesCmd())
 	rootCmd.AddCommand(subBeefyCmd())
 	rootCmd.AddCommand(scanBeefyCmd())
+	rootCmd.AddCommand(scanSingleBeefyBlockCmd())
 	rootCmd.AddCommand(leafCmd())
 	rootCmd.AddCommand(basicChannelLeafProofCmd())
 	rootCmd.AddCommand(parachainHeadProofCmd())
@@ -36,7 +36,6 @@ func init() {
 	rootCmd.AddCommand(storeBeaconStateCmd())
 	rootCmd.AddCommand(importBeaconStateCmd())
 	rootCmd.AddCommand(listBeaconStateCmd())
-	rootCmd.AddCommand(syncBeefyCommitmentCmd())
 }
 
 func Execute() {

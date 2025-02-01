@@ -196,10 +196,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 success = false;
             }
         } else if (message.command == CommandV1.TransferNativeFromAgent) {
-            try Gateway(this).v1_handleTransferNativeFromAgent{gas: maxDispatchGas}(message.params)
-            {} catch {
-                success = false;
-            }
+            // DISABLED
+            success = true;
         } else if (message.command == CommandV1.Upgrade) {
             try Gateway(this).v1_handleUpgrade{gas: maxDispatchGas}(message.params) {}
             catch {
@@ -226,8 +224,9 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 success = false;
             }
         } else if (message.command == CommandV1.MintForeignToken) {
-            try Gateway(this).v1_handleMintForeignToken{gas: maxDispatchGas}(message.params) {}
-            catch {
+            try Gateway(this).v1_handleMintForeignToken{gas: maxDispatchGas}(
+                message.channelID, message.params
+            ) {} catch {
                 success = false;
             }
         }
@@ -239,11 +238,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
         // Add the reward to the refund amount. If the sum is more than the funds available
         // in the channel agent, then reduce the total amount
-        uint256 amount = Math.min(refund + message.reward, address(channel.agent).balance);
+        uint256 amount = Math.min(refund + message.reward, address(this).balance);
 
-        // Do the payment if there funds available in the agent
-        if (amount > v1_dustThreshold()) {
-            Functions.withdrawEther(AGENT_EXECUTOR, channel.agent, payable(msg.sender), amount);
+        // Do the payment if there funds available in the gateway
+        if (amount > Functions.dustThreshold()) {
+            payable(msg.sender).safeNativeTransfer(amount);
         }
 
         emit IGatewayV1.InboundMessageDispatched(
@@ -277,6 +276,14 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return Functions.ensureAgent(agentID);
     }
 
+    function outboundNonce()
+        external
+        view
+        returns (uint64)
+    {
+        return CallsV2.outboundNonce();
+    }
+
     function pricingParameters() external view returns (UD60x18, uint128) {
         return CallsV1.pricingParameters();
     }
@@ -294,13 +301,21 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return CallsV1.isTokenRegistered(token);
     }
 
+    function depositEther() external payable {
+        emit Deposited(msg.sender, msg.value);
+    }
+
+    function queryForeignTokenID(address token) external view returns (bytes32) {
+        return AssetsStorage.layout().tokenRegistry[token].foreignID;
+    }
+
     // Total fee for registering a token
     function quoteRegisterTokenFee() external view returns (uint256) {
         return CallsV1.quoteRegisterTokenFee();
     }
 
     // Register an Ethereum-native token in the gateway and on AssetHub
-    function registerToken(address token) external payable {
+    function registerToken(address token) external payable nonreentrant {
         CallsV1.registerToken(token);
     }
 
@@ -320,7 +335,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         MultiAddress calldata destinationAddress,
         uint128 destinationFee,
         uint128 amount
-    ) external payable {
+    ) external payable nonreentrant {
         CallsV1.sendToken(
             token, msg.sender, destinationChain, destinationAddress, destinationFee, amount
         );
@@ -381,8 +396,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     }
 
     // @dev Mint foreign token from polkadot
-    function v1_handleMintForeignToken(bytes calldata data) external onlySelf {
-        HandlersV1.mintForeignToken(data);
+    function v1_handleMintForeignToken(ChannelID channelID, bytes calldata data)
+        external
+        onlySelf
+    {
+        HandlersV1.mintForeignToken(channelID, data);
     }
 
     /**
@@ -402,11 +420,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     // Reference: Ethereum Yellow Paper
     function v1_transactionBaseGas() internal pure returns (uint256) {
         return 21_000 + 14_698 + (msg.data.length * 16);
-    }
-
-    /// @dev Define the dust threshold as the minimum cost to transfer ether between accounts
-    function v1_dustThreshold() internal view returns (uint256) {
-        return 21_000 * tx.gasprice;
     }
 
     /*

@@ -6,6 +6,7 @@ import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 
+import {IGatewayV1} from "../src/v1/IGateway.sol";
 import {IGatewayV2} from "../src/v2/IGateway.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Gateway} from "../src/Gateway.sol";
@@ -69,9 +70,6 @@ contract DeployLocal is Script {
             defaultOperatingMode = OperatingMode.Normal;
         }
 
-        // Deploy WETH for testing
-        address weth = address(new WETH9());
-
         Initializer.Config memory config = Initializer.Config({
             mode: defaultOperatingMode,
             deliveryCost: uint128(vm.envUint("DELIVERY_COST")),
@@ -82,22 +80,17 @@ contract DeployLocal is Script {
             multiplier: ud60x18(vm.envUint("FEE_MULTIPLIER")),
             rescueOperator: address(0),
             foreignTokenDecimals: foreignTokenDecimals,
-            maxDestinationFee: maxDestinationFee,
-            weth: weth
+            maxDestinationFee: maxDestinationFee
         });
 
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
 
-        // Fund the sovereign account for the BridgeHub parachain. Used to reward relayers
-        // of messages originating from BridgeHub
-        uint256 initialDeposit = vm.envUint("BRIDGE_HUB_INITIAL_DEPOSIT");
+        // Deploy WETH for testing
+        new WETH9();
 
-        address bridgeHubAgent =
-            IGatewayV2(address(gateway)).agentOf(Constants.BRIDGE_HUB_AGENT_ID);
-        address assetHubAgent = IGatewayV2(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID);
-
-        payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
-        payable(assetHubAgent).safeNativeTransfer(initialDeposit);
+        // Fund the gateway proxy contract. Used to reward relayers
+        uint256 initialDeposit = vm.envUint("GATEWAY_PROXY_INITIAL_DEPOSIT");
+        IGatewayV1(address(gateway)).depositEther{value: initialDeposit}();
 
         // Deploy MockGatewayV2 for testing
         new MockGatewayV2();

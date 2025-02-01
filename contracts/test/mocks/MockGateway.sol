@@ -4,7 +4,8 @@ pragma solidity 0.8.28;
 import {Gateway} from "../../src/Gateway.sol";
 import {Functions} from "../../src/Gateway.sol";
 import {Token} from "../../src/Token.sol";
-import {ParaID, OperatingMode} from "../../src/Types.sol";
+import {ChannelID, ParaID, OperatingMode} from "../../src/Types.sol";
+
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
 import {Verification} from "../../src/Verification.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
@@ -52,8 +53,10 @@ contract MockGateway is Gateway {
         this.v1_handleRegisterForeignToken(params);
     }
 
-    function v1_handleMintForeignToken_public(bytes calldata params) external {
-        this.v1_handleMintForeignToken(params);
+    function v1_handleMintForeignToken_public(ChannelID channelID, bytes calldata params)
+        external
+    {
+        this.v1_handleMintForeignToken(channelID, params);
     }
 
     function setCommitmentsAreVerified(bool value) external {

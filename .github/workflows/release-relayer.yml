@@ -35,7 +35,7 @@ jobs:
         run: >
           go install github.com/magefile/mage@v1.15.0 && 
           go install github.com/ferranbt/fastssz/sszgen@v0.1.3 &&
-          go install github.com/ethereum/go-ethereum/cmd/abigen@v1.13.15
+          go install github.com/ethereum/go-ethereum/cmd/abigen@v1.14.8
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -95,6 +95,16 @@ jobs:
         id: build_changelog
         uses: mikepenz/release-changelog-builder-action@v4
         with:
+          configurationJson: |
+            {
+              "template": "#{{CHANGELOG}}\n\n<details>\n</details>",
+              "categories": [
+                {
+                    "title": "## Relayer Changes",
+                    "labels": ["Component: Relayer"]
+                }
+              ]
+            }
           fromTag: ${{ steps.new_version.outputs.from_tag }}
           toTag: ${{ steps.create_tag.outputs.tag }}
 

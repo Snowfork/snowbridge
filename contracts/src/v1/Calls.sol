@@ -28,12 +28,12 @@ import {
 } from "./Types.sol";
 import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
 import {IGatewayV1} from "./IGateway.sol";
-
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
 library CallsV1 {
     using Address for address;
+    using SafeNativeTransfer for address payable;
     using SafeTokenTransferFrom for IERC20;
     using SafeNativeTransfer for address payable;
 
@@ -84,7 +84,8 @@ library CallsV1 {
         Ticket memory ticket = Ticket({
             dest: $.assetHubParaID,
             costs: _registerTokenCosts(),
-            payload: SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee)
+            payload: SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee),
+            value: 0
         });
 
         emit IGatewayBase.TokenRegistrationSent(token);
@@ -106,15 +107,19 @@ library CallsV1 {
     ) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
+        if (amount == 0) {
+            revert InvalidAmount();
+        }
+
         TokenInfo storage info = $.tokenRegistry[token];
 
         if (!info.isRegistered) {
             revert TokenNotRegistered();
         }
 
-        if (info.foreignID == bytes32(0)) {
+        if (info.isNative()) {
             _submitOutbound(
-                _sendNativeToken(
+                _sendNativeTokenOrEther(
                     token,
                     sender,
                     destinationChain,
@@ -217,19 +222,25 @@ library CallsV1 {
         // Destination fee always in DOT
         uint256 fee = _calculateFee(ticket.costs);
 
-        // Ensure the user has enough funds for this message to be accepted
-        if (msg.value < fee) {
-            revert FeePaymentToLow();
+        // Ensure the user has provided enough ether for this message to be accepted.
+        // This includes:
+        // 1. The bridging fee, which is collected in this gateway contract
+        // 2. The ether value being bridged over to Polkadot, which is locked into the AssetHub
+        //    agent contract.
+        uint256 totalRequiredEther = fee + ticket.value;
+        if (msg.value < totalRequiredEther) {
+            revert IGatewayBase.InsufficientEther();
+        }
+        if (ticket.value > 0) {
+            payable(AssetsStorage.layout().assetHubAgent).safeNativeTransfer(ticket.value);
         }
 
         channel.outboundNonce = channel.outboundNonce + 1;
 
-        // Deposit total fee into agent's contract
-        payable(channel.agent).safeNativeTransfer(fee);
-
         // Reimburse excess fee payment
-        if (msg.value > fee) {
-            payable(msg.sender).safeNativeTransfer(msg.value - fee);
+        uint256 excessFee = msg.value - totalRequiredEther;
+        if (excessFee > Functions.dustThreshold()) {
+            payable(msg.sender).safeNativeTransfer(excessFee);
         }
 
         // Generate a unique ID for this message
@@ -274,7 +285,7 @@ library CallsV1 {
         costs.native = 0;
     }
 
-    function _sendNativeToken(
+    function _sendNativeTokenOrEther(
         address token,
         address sender,
         ParaID destinationChain,
@@ -284,8 +295,15 @@ library CallsV1 {
     ) internal returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
-        // Lock the funds into AssetHub's agent contract
-        Functions.transferToAgent($.assetHubAgent, token, sender, amount);
+        if (token != address(0)) {
+            // Lock ERC20
+            Functions.transferToAgent($.assetHubAgent, token, sender, amount);
+            ticket.value = 0;
+        } else {
+            // Track the ether to bridge to Polkadot. This will be handled
+            // in `Gateway._submitOutbound`.
+            ticket.value = amount;
+        }
 
         ticket.dest = $.assetHubParaID;
         ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee);
@@ -332,6 +350,7 @@ library CallsV1 {
                 revert Unsupported();
             }
         }
+
         emit IGatewayV1.TokenSent(token, sender, destinationChain, destinationAddress, amount);
     }
 
@@ -351,6 +370,7 @@ library CallsV1 {
 
         ticket.dest = $.assetHubParaID;
         ticket.costs = _sendTokenCosts(destinationChain, destinationChainFee);
+        ticket.value = 0;
 
         // Construct a message payload
         if (destinationChain == $.assetHubParaID && destinationAddress.isAddress32()) {

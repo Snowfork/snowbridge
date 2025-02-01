@@ -21,16 +21,12 @@ struct TokenInfo {
     bytes32 foreignID;
 }
 
-library TokenInfoFunctions {
-    function exists(TokenInfo storage self) internal view returns (bool) {
-        return self.isRegistered;
-    }
+using {isNative, isForeign} for TokenInfo global;
 
-    function isNative(TokenInfo storage self) internal view returns (bool) {
-        return self.foreignID == bytes32(0);
-    }
+function isNative(TokenInfo storage self) view returns (bool) {
+    return self.foreignID == bytes32(0);
+}
 
-    function isForeign(TokenInfo storage self) internal view returns (bool) {
-        return self.foreignID != bytes32(0);
-    }
+function isForeign(TokenInfo storage self) view returns (bool) {
+    return !isNative(self);
 }

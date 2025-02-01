@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.28;
 
-import {TokenInfo, TokenInfoFunctions} from "../types/Common.sol";
+import {TokenInfo} from "../types/Common.sol";
 import {ParaID} from "../v1/Types.sol";
 
 library AssetsStorage {
@@ -19,7 +19,6 @@ library AssetsStorage {
         uint256 registerTokenFee;
         // Foreign token registry by token ID
         mapping(bytes32 foreignID => address) tokenAddressOf;
-        address weth;
         uint8 foreignTokenDecimals;
         // The maximum fee that can be sent to a destination parachain to pay for execution (DOT).
         // Has two functions:

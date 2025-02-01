@@ -17,6 +17,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
+	"github.com/snowfork/snowbridge/relayer/ofac"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -43,6 +44,8 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 	ethereumConnWriter := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
 	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
 
+	ofacClient := ofac.New(config.OFAC.Enabled, config.OFAC.ApiKey)
+
 	// channel for messages from beefy listener to ethereum writer
 	var tasks = make(chan *Task, 1)
 
@@ -62,6 +65,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 		ethereumConnBeefy,
 		relaychainConn,
 		parachainConn,
+		ofacClient,
 		tasks,
 	)
 
@@ -119,7 +123,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return fmt.Errorf("unable to connect to ethereum: beefy: %w", err)
 	}
 
-	err = relay.relaychainConn.Connect(ctx)
+	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
 	if err != nil {
 		return err
 	}

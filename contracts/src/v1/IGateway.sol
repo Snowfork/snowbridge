@@ -32,6 +32,9 @@ interface IGatewayV1 {
     // Emitted when funds are withdrawn from an agent
     event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
 
+    // Emitted when ether is deposited
+    event Deposited(address sender, uint256 amount);
+
     /**
      * Getters
      */
@@ -44,6 +47,11 @@ interface IGatewayV1 {
     function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64);
 
     function pricingParameters() external view returns (UD60x18, uint128);
+
+    /**
+     * Fee management
+     */
+    function depositEther() external payable;
 
     /**
      * Messaging
@@ -75,6 +83,9 @@ interface IGatewayV1 {
     /// @dev Check whether a token is registered
     function isTokenRegistered(address token) external view returns (bool);
 
+    /// @dev Get token id of an ERC20 contract address.
+    function queryForeignTokenID(address token) external view returns (bytes32);
+
     /// @dev Quote a fee in Ether for registering a token, covering
     /// 1. Delivery costs to BridgeHub
     /// 2. XCM Execution costs on AssetHub
@@ -91,7 +102,9 @@ interface IGatewayV1 {
         view
         returns (uint256);
 
-    /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
+    /// @dev Send a token to parachain `destinationChain` and deposit into account
+    /// `destinationAddress`. The user can send native Ether by supplying `address(0)` for
+    /// the `token` parameter.
     function sendToken(
         address token,
         ParaID destinationChain,

@@ -2,9 +2,7 @@
   "source": {
     "polkadot": {
       "endpoint": "ws://127.0.0.1:9944"
-    },
-    "fast-forward-depth": 20,
-    "update-period": 0
+    }
   },
   "sink": {
     "ethereum": {
@@ -13,7 +11,14 @@
     },
     "descendants-until-final": 3,
     "contracts": {
-      "BeefyClient": null
+      "BeefyClient": null,
+      "Gateway": null
     }
+  },
+  "on-demand-sync": {
+    "asset-hub-channel-id": "0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539",
+    "max-tokens": 5,
+    "refill-amount": 1,
+    "refill-period": 3600
   }
 }

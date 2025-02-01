@@ -7,8 +7,7 @@
       "endpoint": "ws://127.0.0.1:9944"
     },
     "parachain": {
-      "endpoint": "ws://127.0.0.1:11144",
-      "maxWatchedExtrinsics": 8
+      "endpoint": "ws://127.0.0.1:11144"
     },
     "contracts": {
       "BeefyClient": null,
@@ -42,6 +41,10 @@
     "id": 0,
     "totalRelayerCount": 1,
     "sleepInterval": 45
+  },
+  "ofac": {
+    "enabled": false,
+    "apiKey": ""
   },
   "reward-address": "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 }

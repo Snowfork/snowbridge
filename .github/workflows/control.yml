@@ -1,0 +1,62 @@
+name: control
+
+on:
+  push:
+    paths:
+      - "control/**"
+    branches:
+      - main
+  pull_request:
+    paths:
+      - "control/**"
+
+jobs:
+  control:
+    runs-on: snowbridge-runner
+    env:
+      CARGO_INCREMENTAL: 0
+      RUST_BACKTRACE: 1
+      RUSTFLAGS: -C debuginfo=1
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 2
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - uses: cachix/install-nix-action@v22
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Rust
+        run: |
+          nix develop -c sh -c '
+            echo "Installing Rust nightly toolchain"
+            rustup default stable
+            rustup target add wasm32-unknown-unknown
+            rustup component add rust-src
+            rustup install --profile minimal $RUST_NIGHTLY_VERSION
+            rustup component add --toolchain $RUST_NIGHTLY_VERSION rustfmt
+            rustup show
+          '
+
+      - name: Build Paseo
+        run: |
+          nix develop -c sh -c 'cd control && cargo build --features paseo'
+
+      - name: Build Polkadot
+        run: |
+          nix develop -c sh -c 'cd control && cargo build --features polkadot'
+
+      - name: Build Westend
+        run: |
+          nix develop -c sh -c 'cd control && cargo build --features westend'
+

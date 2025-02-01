@@ -123,6 +123,75 @@ library ScaleCodec {
         }
     }
 
+    function encodeCompactU128(uint128 value) internal pure returns (bytes memory) {
+        // 1) up to 2^6 - 1
+        if (value <= 63) {
+            // single byte = (value << 2)
+            // (lowest two bits = 00)
+            return abi.encodePacked(uint8(value << 2));
+        }
+
+        // 2) up to 2^14 - 1
+        if (value <= 0x3FFF) {
+            // two bytes = (value << 2) + 0x01
+            // (lowest two bits = 01)
+            uint16 encoded = uint16(value << 2) | 0x01;
+            // We must store it in little-endian
+            return abi.encodePacked(reverse16(encoded));
+        }
+
+        // 3) up to 2^30 - 1
+        if (value <= 0x3FFF_FFFF) {
+            // four bytes = (value << 2) + 0x02
+            // (lowest two bits = 10)
+            uint32 encoded = (uint32(value) << 2) | 0x02;
+            return abi.encodePacked(reverse32(encoded));
+        }
+
+        // 4) otherwise
+        // big integer => prefix + little-endian bytes (no leading zeros)
+        // prefix = 0x03 + ((numValueBytes - 4) << 2)
+        //   where numValueBytes is how many bytes needed to represent `value`.
+        bytes memory littleEndian = _toLittleEndianNoLeadingZeros(value);
+        uint8 len = uint8(littleEndian.length); // # of bytes needed
+
+        // Substrate: prefix's lower 2 bits = 0b11,
+        // the remaining upper bits = (len - 4).
+        // Combined: prefix = 0x03 + ((len - 4) << 2).
+        uint8 prefix = ((len - 4) << 2) | 0x03;
+
+        // Concatenate prefix + actual bytes
+        return abi.encodePacked(prefix, littleEndian);
+    }
+
+    // Convert `value` into a little-endian byte array with no leading zeros.
+    // (Leading zeros in LE = trailing zeros in big-endian.)
+    function _toLittleEndianNoLeadingZeros(uint128 value) private pure returns (bytes memory) {
+        // Even if value=0, that case is handled above in smaller branches,
+        // but let's just handle it gracefully anyway:
+        if (value == 0) {
+            return hex"00";
+        }
+        // Temporarily build up to 16 bytes in a buffer.
+        bytes memory buf = new bytes(16);
+        uint128 current = value;
+        uint8 i = 0;
+        while (current != 0) {
+            buf[i] = bytes1(uint8(current & 0xFF));
+            current >>= 8;
+            unchecked {
+                i++;
+            }
+        }
+        // i is now the actual number of bytes used
+        // Copy them into a new array of the correct size
+        bytes memory out = new bytes(i);
+        for (uint8 j = 0; j < i; j++) {
+            out[j] = buf[j];
+        }
+        return out;
+    }
+
     function checkedEncodeCompactU32(uint256 value) internal pure returns (bytes memory) {
         if (value > type(uint32).max) {
             revert UnsupportedCompactEncoding();

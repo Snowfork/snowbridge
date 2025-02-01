@@ -98,6 +98,7 @@ struct Ticket {
     ParaID dest;
     Costs costs;
     bytes payload;
+    uint128 value;
 }
 
 // Payload for AgentExecute

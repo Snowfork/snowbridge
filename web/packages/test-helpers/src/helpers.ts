@@ -1,15 +1,11 @@
-import rlp from "rlp"
-
-import { keccakFromHexString, keccak } from "ethereumjs-util"
 import { MerkleTree } from "merkletreejs"
-import { ethers, Event, Wallet } from "ethers"
+import { ethers, keccak256, Wallet, BaseWallet, getBytes } from "ethers"
 import _ from "lodash"
 import secp256k1 from "secp256k1"
 import seedrandom from "seedrandom"
-import { keccak256, entropyToMnemonic } from "ethers/lib/utils"
 import type { BeefyClient } from "@snowbridge/contract-types"
 
-let readSetBits = (bitfield: ethers.BigNumber[]): number[] => {
+let readSetBits = (bitfield: BigInt[]): number[] => {
     let bits = bitfield
         .map((i) => {
             let bf = BigInt(i.toString()).toString(2).split("")
@@ -33,20 +29,16 @@ let readSetBits = (bitfield: ethers.BigNumber[]): number[] => {
     return indices
 }
 
-let encodeLog = (log: Event) => {
-    return rlp.encode([log.address, log.topics, log.data]).toString("hex")
-}
-
 class ValidatorSet {
-    wallets: Wallet[]
+    wallets: BaseWallet[]
     id: number
     root: string
     length: number
     proofs: string[][]
 
     constructor(id: number, length: number, privateKeys?: string[]) {
-        let wallets: Wallet[] = [],
-            wallet: Wallet,
+        let wallets: BaseWallet[] = [],
+            wallet: BaseWallet,
             randomSet = true
         if (privateKeys && privateKeys.length) {
             length = privateKeys.length
@@ -54,8 +46,8 @@ class ValidatorSet {
         }
         for (let i = 0; i < length; i++) {
             if (randomSet) {
-                wallet = ethers.Wallet.fromMnemonic(
-                    entropyToMnemonic(keccak256(Buffer.from(`${i}`)))
+                wallet = Wallet.fromPhrase(
+                    ethers.Mnemonic.entropyToPhrase(keccak256(Buffer.from(`${i}`)))
                 )
             } else {
                 wallet = new ethers.Wallet(privateKeys![i])
@@ -63,8 +55,8 @@ class ValidatorSet {
             wallets.push(wallet)
         }
 
-        let leaves = wallets.map((w) => keccakFromHexString(w.address))
-        let tree = new MerkleTree(leaves, keccak, {
+        let leaves = wallets.map((w) => keccak256(w.address))
+        let tree = new MerkleTree(leaves, keccak256, {
             sortLeaves: false,
             sortPairs: false,
         })
@@ -78,10 +70,7 @@ class ValidatorSet {
 
     createSignatureProof(index: number, commitmentHash: string): BeefyClient.ValidatorProofStruct {
         let wallet = this.wallets[index]
-        let signature = secp256k1.ecdsaSign(
-            ethers.utils.arrayify(commitmentHash),
-            ethers.utils.arrayify(wallet.privateKey)
-        )
+        let signature = secp256k1.ecdsaSign(getBytes(commitmentHash), getBytes(wallet.privateKey))
 
         let buf = new Uint8Array(signature.signature.buffer)
         let r = buf.slice(0, 32)
@@ -108,4 +97,4 @@ function createRandomSubset(population: number, size: number) {
     return { participants, absentees }
 }
 
-export { encodeLog, createRandomSubset, ValidatorSet, readSetBits }
+export { createRandomSubset, ValidatorSet, readSetBits }
