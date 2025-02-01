@@ -266,7 +266,7 @@ export const queryByGraphQL = async (query: string) => {
 ```
 curl -H 'Content-Type: application/json' \
 -X POST -d \
-'{ "query": "query { transferStatusToPolkadots(limit: 5, orderBy: blockNumber_DESC) { txHash status channelId destinationAddress messageId nonce senderAddress timestamp tokenAddress amount} }" }' \
+'{ "query": "query { transferStatusToPolkadots(where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) { txHash status channelId destinationAddress messageId nonce senderAddress timestamp tokenAddress amount} }" }' \
 $graphqlApiUrl --no-progress-meter | jq "."
 ```
 
@@ -341,7 +341,7 @@ export const fetchToPolkadotTransferById = async (id: string) => {
 ```
 curl -H 'Content-Type: application/json' \
 -X POST -d \
-'{ "query": "query { transferStatusToEthereums(limit: 5, orderBy: blockNumber_DESC) { txHash status channelId destinationAddress messageId nonce senderAddress timestamp tokenAddress amount} }" }' \
+'{ "query": "query { transferStatusToEthereums(where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) { txHash status channelId destinationAddress messageId nonce senderAddress timestamp tokenAddress amount} }" }' \
 $graphqlApiUrl --no-progress-meter | jq "."
 ```
 
