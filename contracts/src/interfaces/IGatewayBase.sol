@@ -18,7 +18,7 @@ interface IGatewayBase {
     error InvalidProof();
     error InvalidNonce();
     error NotEnoughGas();
-    error FeePaymentToLow();
+    error InsufficientEther();
     error Unauthorized();
     error Disabled();
     error AgentAlreadyCreated();

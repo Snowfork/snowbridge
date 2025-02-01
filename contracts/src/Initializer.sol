@@ -112,6 +112,9 @@ library Initializer {
         assets.foreignTokenDecimals = config.foreignTokenDecimals;
         assets.maxDestinationFee = config.maxDestinationFee;
 
+        TokenInfo storage etherTokenInfo = assets.tokenRegistry[address(0)];
+        etherTokenInfo.isRegistered = true;
+
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
         operatorStorage.operator = config.rescueOperator;

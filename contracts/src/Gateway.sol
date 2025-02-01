@@ -196,10 +196,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 success = false;
             }
         } else if (message.command == CommandV1.TransferNativeFromAgent) {
-            try Gateway(this).v1_handleTransferNativeFromAgent{gas: maxDispatchGas}(message.params)
-            {} catch {
-                success = false;
-            }
+            // DISABLED
+            success = true;
         } else if (message.command == CommandV1.Upgrade) {
             try Gateway(this).v1_handleUpgrade{gas: maxDispatchGas}(message.params) {}
             catch {
@@ -240,11 +238,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
         // Add the reward to the refund amount. If the sum is more than the funds available
         // in the channel agent, then reduce the total amount
-        uint256 amount = Math.min(refund + message.reward, address(channel.agent).balance);
+        uint256 amount = Math.min(refund + message.reward, address(this).balance);
 
-        // Do the payment if there funds available in the agent
-        if (amount > v1_dustThreshold()) {
-            Functions.withdrawEther(AGENT_EXECUTOR, channel.agent, payable(msg.sender), amount);
+        // Do the payment if there funds available in the gateway
+        if (amount > Functions.dustThreshold()) {
+            payable(msg.sender).safeNativeTransfer(amount);
         }
 
         emit IGatewayV1.InboundMessageDispatched(
@@ -278,14 +276,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return Functions.ensureAgent(agentID);
     }
 
-    function outboundNonce()
-        external
-        view
-        returns (uint64)
-    {
-        return CallsV2.outboundNonce();
-    }
-
     function pricingParameters() external view returns (UD60x18, uint128) {
         return CallsV1.pricingParameters();
     }
@@ -301,6 +291,10 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         returns (bool)
     {
         return CallsV1.isTokenRegistered(token);
+    }
+
+    function depositEther() external payable {
+        emit Deposited(msg.sender, msg.value);
     }
 
     function queryForeignTokenID(address token) external view returns (bytes32) {
@@ -420,11 +414,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return 21_000 + 14_698 + (msg.data.length * 16);
     }
 
-    /// @dev Define the dust threshold as the minimum cost to transfer ether between accounts
-    function v1_dustThreshold() internal view returns (uint256) {
-        return 21_000 * tx.gasprice;
-    }
-
     /*
     *     _____   __________ .___         ________
     *    /  _  \  \______   \|   | ___  __\_____  \
@@ -522,6 +511,17 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             }
         }
         return true;
+    }
+
+    // See docs for `IGateway.registerToken`
+    function v2_registerToken(
+        address token,
+        uint8 network,
+        uint128 executionFee,
+        uint128 relayerFee
+    ) external payable nonreentrant {
+        require(network <= uint8(Network.Kusama), IGatewayV2.InvalidNetwork());
+        CallsV2.registerToken(token, Network(network), executionFee, relayerFee);
     }
 
     function v2_isDispatched(uint64 nonce) external view returns (bool) {

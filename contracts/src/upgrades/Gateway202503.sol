@@ -5,15 +5,8 @@ pragma solidity 0.8.28;
 import "../Gateway.sol";
 
 // New `Gateway` logic contract for the `GatewayProxy` deployed on mainnet
-contract Gateway202410 is Gateway {
-    constructor(
-        address beefyClient,
-        address agentExecutor,
-        ParaID bridgeHubParaID,
-        bytes32 bridgeHubAgentID,
-        uint8 foreignTokenDecimals,
-        uint128 destinationMaxTransferFee
-    ) Gateway(beefyClient, agentExecutor) {}
+contract Gateway202503 is Gateway {
+    constructor(address beefyClient, address agentExecutor) Gateway(beefyClient, agentExecutor) {}
 
     // Override parent initializer to prevent re-initialization of storage.
     function initialize(bytes memory) external view override {

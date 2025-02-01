@@ -11,7 +11,7 @@ import {AgentExecutor} from "./AgentExecutor.sol";
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 import {Token} from "./Token.sol";
-import {TokenInfo, TokenInfoFunctions} from "./types/Common.sol";
+import {TokenInfo} from "./types/Common.sol";
 import {ChannelID, Channel} from "./v1/Types.sol";
 import {IGatewayBase} from "./interfaces/IGatewayBase.sol";
 import {IGatewayV1} from "./v1/IGateway.sol";
@@ -22,17 +22,11 @@ library Functions {
     using Address for address;
     using SafeNativeTransfer for address payable;
     using SafeTokenTransferFrom for IERC20;
-    using TokenInfoFunctions for TokenInfo;
 
     error AgentDoesNotExist();
     error InvalidToken();
     error InvalidAmount();
     error ChannelDoesNotExist();
-
-    function weth() internal view returns (address) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        return $.weth;
-    }
 
     function ensureAgent(bytes32 agentID) internal view returns (address agent) {
         agent = CoreStorage.layout().agents[agentID];
@@ -119,10 +113,10 @@ library Functions {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
 
-        if (info.exists() && info.isForeign()) {
-            // Prevent registration of foreign tokens as native tokens
+        if (info.isRegistered && info.isForeign()) {
+            // Prevent re-registration of foreign tokens as native tokens
             revert IGatewayBase.TokenAlreadyRegistered();
-        } else if (!info.exists()) {
+        } else if (!info.isRegistered) {
             info.isRegistered = true;
         }
     }
@@ -153,6 +147,10 @@ library Functions {
     {
         address token = _ensureTokenAddressOf(foreignTokenID);
         Token(token).mint(recipient, amount);
+    }
+
+    function dustThreshold() internal view returns (uint256) {
+        return 21_000 * tx.gasprice;
     }
 
     // @dev Get token address by tokenID
