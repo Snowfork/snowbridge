@@ -21,6 +21,8 @@ interface IGatewayV2 {
 
     function outboundNonce() external view returns (uint64);
 
+    function isRelayed(uint64 nonce) external view returns (bool);
+
     /**
      * Events
      */

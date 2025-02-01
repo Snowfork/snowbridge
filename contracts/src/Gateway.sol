@@ -526,6 +526,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return true;
     }
 
+    function isRelayed(uint64 nonce) external view returns (bool) {
+        CoreStorage.Layout storage $ = CoreStorage.layout();
+        return $.inboundNonce.get(nonce);
+    }
+
     function v2_isDispatched(uint64 nonce) external view returns (bool) {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         return $.inboundNonce.get(nonce);
