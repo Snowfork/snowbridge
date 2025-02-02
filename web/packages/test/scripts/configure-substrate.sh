@@ -101,12 +101,12 @@ register_native_eth() {
 configure_substrate() {
     set_weth
     set_gateway
-    fund_accounts
     open_hrmp_channels
     config_xcm_version
     wait_beacon_chain_ready
     config_beacon_checkpoint
     register_native_eth
+    fund_accounts
 }
 
 if [ -z "${from_start_services:-}" ]; then

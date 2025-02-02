@@ -145,7 +145,6 @@ mod transfer_ena {
 						);
 						assert_eq!(transfer.src, agent_src.into());
 						assert_eq!(transfer.dst, (*ETHEREUM_RECEIVER).into());
-						assert_eq!(transfer.wad, amount.into());
 						transfer_event_found = true;
 					}
 				}

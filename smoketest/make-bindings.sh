@@ -23,6 +23,7 @@ if [ "$polkadot_network" == "westend" ]; then
   subxt codegen --url wss://westend-bridge-hub-rpc.polkadot.io >src/parachains/bridgehub.rs
   subxt codegen --url wss://westend-asset-hub-rpc.polkadot.io >src/parachains/assethub.rs
   subxt codegen --url wss://westend-rpc.polkadot.io >src/parachains/relaychain.rs
+  subxt codegen --url wss://westend-penpal-rpc.polkadot.io >src/parachains/penpal.rs
 else
   if ! lsof -Pi :11144 -sTCP:LISTEN -t >/dev/null; then
       echo "substrate nodes not running, please start with the e2e setup and rerun this script"
@@ -35,7 +36,7 @@ else
   --derive-for-type staging_xcm::v5::asset::AssetId=Clone,recursive \
   --derive-for-type staging_xcm::v5::asset::Assets=Clone,recursive
   subxt codegen --url ws://localhost:9944 >src/parachains/relaychain.rs
+  subxt codegen --url ws://localhost:13144 >src/parachains/penpal.rs
 fi
-subxt codegen --url ws://localhost:13144 >src/parachains/penpal.rs
 
 
