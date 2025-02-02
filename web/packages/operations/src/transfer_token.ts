@@ -1,14 +1,14 @@
 import { Keyring } from "@polkadot/keyring"
-import { Signer } from "@polkadot/types/types"
 import {
-    contextFactory,
-    destroyContext,
+    Context,
     environment,
     toEthereum,
     toPolkadot,
 } from "@snowbridge/api"
 import { WETH9__factory } from "@snowbridge/contract-types"
 import { Wallet } from "ethers"
+import { cryptoWaitReady } from '@polkadot/util-crypto';
+
 
 const monitor = async () => {
     let env = "local_e2e"
@@ -22,19 +22,18 @@ const monitor = async () => {
     console.log(`Using environment '${env}'`)
 
     const { config } = snwobridgeEnv
+    await cryptoWaitReady()
 
-    const context = await contextFactory({
+    const context = new Context({
         ethereum: {
             execution_url: config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY || ""),
             beacon_url: config.BEACON_HTTP_API,
         },
         polkadot: {
-            url: {
-                bridgeHub: config.BRIDGE_HUB_URL,
-                assetHub: config.ASSET_HUB_URL,
-                relaychain: config.RELAY_CHAIN_URL,
-                parachains: config.PARACHAINS,
-            },
+            assetHubParaId: config.ASSET_HUB_PARAID,
+            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
+            relaychain: config.RELAY_CHAIN_URL,
+            parachains: config.PARACHAINS,
         },
         appContracts: {
             gateway: config.GATEWAY_CONTRACT,
@@ -45,7 +44,7 @@ const monitor = async () => {
 
     const ETHEREUM_ACCOUNT = new Wallet(
         "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
-        context.ethereum.api
+        context.ethereum()
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri("//Ferdie")
@@ -86,8 +85,8 @@ const monitor = async () => {
             destinationFeeInDOT,
         );
         console.log('Plan tx:', tx)
-        console.log('Plan gas:', await context.ethereum.api.estimateGas(tx))
-        console.log('Plan dry run:', await context.ethereum.api.call(tx))
+        console.log('Plan gas:', await context.ethereum().estimateGas(tx))
+        console.log('Plan dry run:', await context.ethereum().call(tx))
 
         const plan = await toPolkadot.validateSend(
             context,
@@ -115,8 +114,8 @@ const monitor = async () => {
     console.log("# Asset Hub to Ethereum")
     {
         const assetHubUnsigned = await toEthereum.createTx(
-            context.polkadot.api.assetHub,
-            (await context.ethereum.api.getNetwork()).chainId,
+            await context.assetHub(),
+            (await context.ethereum().getNetwork()).chainId,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
             WETH_CONTRACT,
@@ -171,8 +170,8 @@ const monitor = async () => {
             destinationFeeInDOT,
         );
         console.log('Plan tx:', tx)
-        console.log('Plan gas:', await context.ethereum.api.estimateGas(tx))
-        console.log('Plan Dry run:', await context.ethereum.api.call(tx))
+        console.log('Plan gas:', await context.ethereum().estimateGas(tx))
+        console.log('Plan Dry run:', await context.ethereum().call(tx))
 
         const plan = await toPolkadot.validateSend(
             context,
@@ -200,8 +199,8 @@ const monitor = async () => {
     console.log("# Penpal to Ethereum")
     {
         const assetHubUnsigned = await toEthereum.createTx(
-            context.polkadot.api.assetHub,
-            (await context.ethereum.api.getNetwork()).chainId,
+            await context.assetHub(),
+            (await context.ethereum().getNetwork()).chainId,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
             WETH_CONTRACT,
@@ -228,7 +227,7 @@ const monitor = async () => {
         )
         console.log("Plan:", plan, plan.failure?.errors)
 
-        const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
+        const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan, { sourceParachainFee: 15_000_000_000n })
         console.log("Execute:", result)
         while (true) {
             const { status } = await toEthereum.trackSendProgressPolling(context, result)
@@ -240,7 +239,7 @@ const monitor = async () => {
         console.log("Complete:", result)
     }
 
-    await destroyContext(context)
+    context.destroyContext()
 }
 
 monitor()
