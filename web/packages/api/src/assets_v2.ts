@@ -3,6 +3,8 @@ import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api";
 import { isFunction } from '@polkadot/util';
 import { SnowbridgeEnvironment } from "./environment";
 import { Context } from "./index";
+import { buildERC20DestinationXcm } from "./xcmBuilder";
+import { IGateway__factory } from "@snowbridge/contract-types";
 
 function isSnowbridgeAsset(location: any, chainId: number) {
     return location.parents === 2 && location.interior.x2 !== undefined && location.interior.x2[0].globalConsensus.ethereum.chainId === chainId
@@ -15,53 +17,54 @@ export type ERC20Metadata = {
     decimals: number
 }
 
+const ERC20_METADATA_ABI = [
+    {
+        type: "function",
+        name: "decimals",
+        inputs: [],
+        outputs: [
+            {
+                name: "",
+                type: "uint8",
+                internalType: "uint8",
+            },
+        ],
+        stateMutability: "view",
+    },
+    {
+        type: "function",
+        name: "name",
+        inputs: [],
+        outputs: [
+            {
+                name: "",
+                type: "string",
+                internalType: "string",
+            },
+        ],
+        stateMutability: "view",
+    },
+    {
+        type: "function",
+        name: "symbol",
+        inputs: [],
+        outputs: [
+            {
+                name: "",
+                type: "string",
+                internalType: "string",
+            },
+        ],
+        stateMutability: "view",
+    },
+
+]
+
 async function assetErc20Metadata(
     provider: AbstractProvider,
     token: string
 ): Promise<ERC20Metadata> {
-    const erc20MetadataABI = [
-        {
-            type: "function",
-            name: "decimals",
-            inputs: [],
-            outputs: [
-                {
-                    name: "",
-                    type: "uint8",
-                    internalType: "uint8",
-                },
-            ],
-            stateMutability: "view",
-        },
-        {
-            type: "function",
-            name: "name",
-            inputs: [],
-            outputs: [
-                {
-                    name: "",
-                    type: "string",
-                    internalType: "string",
-                },
-            ],
-            stateMutability: "view",
-        },
-        {
-            type: "function",
-            name: "symbol",
-            inputs: [],
-            outputs: [
-                {
-                    name: "",
-                    type: "string",
-                    internalType: "string",
-                },
-            ],
-            stateMutability: "view",
-        },
-
-    ]
-    const erc20Metadata = new Contract(token, erc20MetadataABI, provider)
+    const erc20Metadata = new Contract(token, ERC20_METADATA_ABI, provider)
     const [name, symbol, decimals] = await Promise.all([
         erc20Metadata.name(),
         erc20Metadata.symbol(),
@@ -82,12 +85,13 @@ export type EthereumChain = {
     xcTokenMap?: XC20TokenMap
 }
 
+export type AccountType = "AccountId20" | "AccountId32"
 export type ChainProperties = {
     tokenSymbols: string
     tokenDecimals: number
     ss58Format: number
     isEthereum: boolean
-    accountType: "AccountId20" | "AccountId32"
+    accountType: AccountType
     evmChainId?: number
     name: string
     specName: string
@@ -190,62 +194,19 @@ async function chainProperties(provider: ApiPromise): Promise<ChainProperties> {
     }
 }
 
-async function calculateDestinationFee(provider: ApiPromise, ethChainId: number, padFeePercentage?: bigint) {
-    const destinationXcm = provider.createType('XcmVersionedXcm',
-        {
-            v4: [
-                {
-                    reserveAssetDeposited: [
-                        {
-                            id: { parents: 1, interior: "Here" },
-                            fun: {
-                                Fungible: "340282366920938463463374607431768211455",
-                            },
-                        },
-                        {
-                            id: {
-                                parents: 2,
-                                interior: {
-                                    X2: [
-                                        { GlobalConsensus: { Ethereum: { chain_id: ethChainId } } },
-                                        { AccountKey20: { key: "0x0000000000000000000000000000000000000000" } },
-                                    ],
-                                },
-                            },
-                            fun: {
-                                Fungible: "340282366920938463463374607431768211455",
-                            },
-                        }
-                    ]
-                },
-                { clearOrigin: null },
-                {
-                    buyExecution: {
-                        fees: {
-                            id: { parents: 1, interior: "Here" },
-                            fun: {
-                                Fungible: "340282366920938463463374607431768211455",
-                            },
-                        },
-                        weightLimit: "Unlimited",
-                    }
-                },
-                {
-                    depositAsset: {
-                        assets: {
-                            wild: {
-                                allCounted: 2,
-                            },
-                        },
-                        beneficiary: {
-                            parents: 0,
-                            interior: { x1: [{ accountId32: { id: "0x0000000000000000000000000000000000000000000000000000000000000000" } }] },
-                        },
-                    }
-                },
-                { setTopic: "0x0000000000000000000000000000000000000000000000000000000000000000", }
-            ]
-        })
+async function calculateDestinationFee(provider: ApiPromise, accountType: AccountType, ethChainId: number, padFeePercentage?: bigint) {
+    const destinationXcm = buildERC20DestinationXcm(
+        provider.registry,
+        ethChainId,
+        "0x0000000000000000000000000000000000000000",
+        340282366920938463463374607431768211455n,
+        340282366920938463463374607431768211455n,
+        accountType === "AccountId32"
+            ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+            : "0x0000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+    )
+
     const weight = (await provider.call.xcmPaymentApi.queryXcmWeight(destinationXcm)).toPrimitive() as any
     if (!weight.ok) {
         throw Error(`Can not query XCM Weight.`)
@@ -259,9 +220,9 @@ async function calculateDestinationFee(provider: ApiPromise, ethChainId: number,
         throw Error(`Can not convert weight to fee in DOT.`)
     }
     const result = BigInt(feeInDot.ok.toString())
-    
+
     // return fee padded by 15% unless another percentage is specified
-    return result * (100n+(padFeePercentage ?? 15n))/100n
+    return result * (100n + (padFeePercentage ?? 15n)) / 100n
 }
 
 async function indexParachain(
@@ -397,7 +358,7 @@ async function indexParachain(
     let destinationFeeInDOT = 0n
     if (parachainId !== assetHubParaId) {
         if (hasXcmPaymentApi) {
-            destinationFeeInDOT = await calculateDestinationFee(provider, ethChainId)
+            destinationFeeInDOT = await calculateDestinationFee(provider, info.accountType, ethChainId)
         } else {
             if (!(parachainIdKey in destinationFeeOverrides)) {
                 throw Error(`Parachain ${parachainId} cannot fetch the destination fee and needs a fee override.`)
@@ -436,9 +397,13 @@ async function indexEthChain(
     if (chainId == ethChainId) {
         // Asset Hub and get meta data
         const assetHub = parachains[assetHubParaId.toString()]
+        const gateway = IGateway__factory.connect(gatewayAddress, provider)
+
         const assets: ERC20MetadataMap = {}
-        // TODO: Check if tokens are actually registered via gateway
         for (const token in assetHub.assets) {
+            if (!await gateway.isTokenRegistered(token)) {
+                console.warn(`Token ${token} is not registered with the gateway.`)
+            }
             const asset = await assetErc20Metadata(provider, token)
             assets[token] = asset
         }

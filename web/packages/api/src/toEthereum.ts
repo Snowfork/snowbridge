@@ -482,7 +482,6 @@ export const send = async (
 
     let pResult = undefined
     if (plan.success.sourceParachain) {
-        // TODO: Support orml xtokens
         let parachainApi = await context.parachain(plan.success.sourceParachain.paraId)
         const dotLocation = parachainApi.createType("StagingXcmV3MultiLocation", {
             parents: 1,

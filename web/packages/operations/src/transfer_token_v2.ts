@@ -8,6 +8,7 @@ import {
 import { WETH9__factory } from "@snowbridge/contract-types"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from '@polkadot/util-crypto';
+import { Provider } from "@ethersproject/providers";
 
 const monitor = async () => {
     let env = "local_e2e"
@@ -65,21 +66,21 @@ const monitor = async () => {
         (t) => t.id === "WETH"
     )!.address
 
-    //console.log("# Deposit and Approve WETH")
-    //{
-    //    const weth9 = WETH9__factory.connect(WETH_CONTRACT, ETHEREUM_ACCOUNT)
-    //    const depositResult = await weth9.deposit({ value: amount })
-    //    const depositReceipt = await depositResult.wait()
+    console.log("# Deposit and Approve WETH")
+    {
+        const weth9 = WETH9__factory.connect(WETH_CONTRACT, ETHEREUM_ACCOUNT)
+        const depositResult = await weth9.deposit({ value: amount })
+        const depositReceipt = await depositResult.wait()
 
-    //    const approveResult = await weth9.approve(config.GATEWAY_CONTRACT, amount * 2n)
-    //    const approveReceipt = await approveResult.wait()
+        const approveResult = await weth9.approve(config.GATEWAY_CONTRACT, amount * 2n)
+        const approveReceipt = await approveResult.wait()
 
-    //    console.log('deposit tx', depositReceipt?.hash, 'approve tx', approveReceipt?.hash)
-    //}
+        console.log('deposit tx', depositReceipt?.hash, 'approve tx', approveReceipt?.hash)
+    }
 
     console.log("Ethereum to Asset Hub")
     {
-        const destinationChainId = 1000
+        const destinationChainId: number = 1000
         const deliveryFee = await toPolkadotV2.getDeliveryFee(context.gateway(), registry, WETH_CONTRACT, destinationChainId)
         const transfer = await toPolkadotV2.createTransfer(
             registry,
@@ -90,7 +91,20 @@ const monitor = async () => {
             amount,
             deliveryFee,
         );
-        const { tx, computed: { totalValue }} = transfer
+        const validation = await toPolkadotV2.validateTransfer({
+            ethereum: context.ethereum(),
+            gateway: context.gateway(),
+            bridgeHub: await context.bridgeHub(),
+            assetHub: await context.assetHub(),
+            destParachain: (destinationChainId !== 1000) ? await context.parachain(destinationChainId) : undefined
+        }, transfer)
+        console.log('validation result', validation)
+
+        if (validation.logs.find(l => l.kind == toPolkadotV2.ValidationKind.Error)) {
+            throw Error(`validation has one of more errors.`)
+        }
+
+        const { tx, computed: { totalValue } } = transfer
         const estimatedGas = await context.ethereum().estimateGas(tx)
         const feeData = await context.ethereum().getFeeData()
         const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
@@ -103,13 +117,69 @@ const monitor = async () => {
         console.log('ether sent:', formatEther(totalValue - deliveryFee))
         console.log('dry run:', await context.ethereum().call(tx))
 
+        console.log('Submitting...')
+        const response = await ETHEREUM_ACCOUNT.sendTransaction(tx)
+        const receipt = await response.wait(1)
+        if (!receipt) {
+            throw Error(`Transaction ${response.hash} not included.`)
+        }
+        const message = toPolkadotV2.getMessageReceipt(receipt)
+        if (!message) {
+            throw Error(`Transaction ${receipt.hash} did not emit a message.`)
+        }
+        console.log('Success message', message)
+    }
+
+    console.log("Ethereum to Penpal")
+    {
+        const destinationChainId: number = 2000
+        const deliveryFee = await toPolkadotV2.getDeliveryFee(context.gateway(), registry, WETH_CONTRACT, destinationChainId)
+        const transfer = await toPolkadotV2.createTransfer(
+            registry,
+            ETHEREUM_ACCOUNT_PUBLIC,
+            POLKADOT_ACCOUNT_PUBLIC,
+            WETH_CONTRACT,
+            destinationChainId,
+            amount,
+            deliveryFee,
+        );
         const validation = await toPolkadotV2.validateTransfer({
             ethereum: context.ethereum(),
             gateway: context.gateway(),
             bridgeHub: await context.bridgeHub(),
             assetHub: await context.assetHub(),
+            destParachain: (destinationChainId !== 1000) ? await context.parachain(destinationChainId) : undefined
         }, transfer)
         console.log('validation result', validation)
+
+        if (validation.logs.find(l => l.kind == toPolkadotV2.ValidationKind.Error)) {
+            throw Error(`validation has one of more errors.`)
+        }
+
+        const { tx, computed: { totalValue } } = transfer
+        const estimatedGas = await context.ethereum().estimateGas(tx)
+        const feeData = await context.ethereum().getFeeData()
+        const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
+        console.log('tx:', tx)
+        console.log('feeData:', feeData.toJSON())
+        console.log('gas:', estimatedGas)
+        console.log('delivery cost:', formatEther(deliveryFee))
+        console.log('execution cost:', formatEther(executionFee))
+        console.log('total cost:', formatEther(deliveryFee + executionFee))
+        console.log('ether sent:', formatEther(totalValue - deliveryFee))
+        console.log('dry run:', await context.ethereum().call(tx))
+
+        console.log('Submitting...')
+        const response = await ETHEREUM_ACCOUNT.sendTransaction(tx)
+        const receipt = await response.wait(1)
+        if (!receipt) {
+            throw Error(`Transaction ${response.hash} not included.`)
+        }
+        const message = toPolkadotV2.getMessageReceipt(receipt)
+        if (!message) {
+            throw Error(`Transaction ${receipt.hash} did not emit a message.`)
+        }
+        console.log('Success message', message)
     }
 
     context.destroyContext()
