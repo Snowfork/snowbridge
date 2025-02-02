@@ -219,16 +219,16 @@ func (relay *OnDemandRelay) fetchLatestParachainNonce(_ context.Context) (uint64
 }
 
 func (relay *OnDemandRelay) fetchEthereumNonce(ctx context.Context) (uint64, error) {
-	// opts := bind.CallOpts{
-	// 	Context: ctx,
-	// }
-	// ethInboundNonce, _, err := relay.gatewayContract.ChannelNoncesOf(&opts, relay.assetHubChannelID)
-	// if err != nil {
-	// 	return 0, fmt.Errorf(
-	// 		"fetch Gateway.ChannelNoncesOf(%v): %w",
-	// 		Hex(relay.assetHubChannelID[:]), err,
-	// 	)
-	// }
+	//opts := bind.CallOpts{
+	//	Context: ctx,
+	//}
+	//ethInboundNonce, _, err := relay.gatewayContract.ChannelNoncesOf(&opts, relay.assetHubChannelID)
+	//if err != nil {
+	//	return 0, fmt.Errorf(
+	//		"fetch Gateway.ChannelNoncesOf(%v): %w",
+	//		Hex(relay.assetHubChannelID[:]), err,
+	//	)
+	//}
 
 	return 0, nil
 }

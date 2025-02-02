@@ -183,7 +183,7 @@ func (relay *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayInboundMe
 		return fmt.Errorf("write to parachain: %w", err)
 	}
 
-	logger.Info("inbound message executed successfully")
+	logger.Info("v2 inbound message executed successfully")
 
 	return nil
 }

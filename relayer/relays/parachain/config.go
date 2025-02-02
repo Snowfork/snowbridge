@@ -9,11 +9,11 @@ import (
 )
 
 type Config struct {
-	Source        SourceConfig      `mapstructure:"source"`
-	Sink          SinkConfig        `mapstructure:"sink"`
-	Schedule      ScheduleConfig    `mapstructure:"schedule"`
-	OFAC          config.OFACConfig `mapstructure:"ofac"`
-	RewardAddress string            `mapstructure:"reward-address"`
+	Source        SourceConfig   `mapstructure:"source"`
+	Sink          SinkConfig     `mapstructure:"sink"`
+	Schedule      ScheduleConfig `mapstructure:"schedule"`
+	RewardAddress string         `mapstructure:"reward-address"`
+	OFAC     config.OFACConfig `mapstructure:"ofac"`
 }
 
 type SourceConfig struct {
