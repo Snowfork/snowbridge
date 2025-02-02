@@ -1,4 +1,4 @@
-import { AbstractProvider, Contract, ethers } from "ethers";
+import { AbstractProvider, Contract, ethers, WeiPerEther } from "ethers";
 import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api";
 import { isFunction } from '@polkadot/util';
 import { SnowbridgeEnvironment } from "./environment";
@@ -98,13 +98,14 @@ export type Parachain = {
     parachainId: number
     info: ChainProperties
     features: {
-        hasCorrectPalletXcm: boolean
+        hasPalletXcm: boolean
         hasDryRunApi: boolean
         hasTxPaymentApi: boolean
         hasXcmPaymentApi: boolean
         hasDryRunRpc: boolean
     },
     assets: AssetMap
+    destinationFeeInDOT: bigint
     xcDOT?: string
 }
 
@@ -126,6 +127,8 @@ interface PrecompileMap { [chainId: string]: `0x${string}` }
 
 interface AssetOverrideMap { [paraId: string]: Asset[] }
 
+interface FeeOverrideMap { [paraId: string]: bigint }
+
 export type RegistryOptions = {
     gatewayAddress: string
     ethChainId: number
@@ -137,6 +140,7 @@ export type RegistryOptions = {
     bridgeHub: string | ApiPromise
     precompiles?: PrecompileMap
     assetOverrides?: AssetOverrideMap
+    destinationFeeOverrides?: FeeOverrideMap
 }
 
 export type AssetRegistry = {
@@ -186,10 +190,86 @@ async function chainProperties(provider: ApiPromise): Promise<ChainProperties> {
     }
 }
 
+async function calculateDestinationFee(provider: ApiPromise, ethChainId: number, padFeePercentage?: bigint) {
+    const destinationXcm = provider.createType('XcmVersionedXcm',
+        {
+            v4: [
+                {
+                    reserveAssetDeposited: [
+                        {
+                            id: { parents: 1, interior: "Here" },
+                            fun: {
+                                Fungible: "340282366920938463463374607431768211455",
+                            },
+                        },
+                        {
+                            id: {
+                                parents: 2,
+                                interior: {
+                                    X2: [
+                                        { GlobalConsensus: { Ethereum: { chain_id: ethChainId } } },
+                                        { AccountKey20: { key: "0x0000000000000000000000000000000000000000" } },
+                                    ],
+                                },
+                            },
+                            fun: {
+                                Fungible: "340282366920938463463374607431768211455",
+                            },
+                        }
+                    ]
+                },
+                { clearOrigin: null },
+                {
+                    buyExecution: {
+                        fees: {
+                            id: { parents: 1, interior: "Here" },
+                            fun: {
+                                Fungible: "340282366920938463463374607431768211455",
+                            },
+                        },
+                        weightLimit: "Unlimited",
+                    }
+                },
+                {
+                    depositAsset: {
+                        assets: {
+                            wild: {
+                                allCounted: 2,
+                            },
+                        },
+                        beneficiary: {
+                            parents: 0,
+                            interior: { x1: [{ accountId32: { id: "0x0000000000000000000000000000000000000000000000000000000000000000" } }] },
+                        },
+                    }
+                },
+                { setTopic: "0x0000000000000000000000000000000000000000000000000000000000000000", }
+            ]
+        })
+    const weight = (await provider.call.xcmPaymentApi.queryXcmWeight(destinationXcm)).toPrimitive() as any
+    if (!weight.ok) {
+        throw Error(`Can not query XCM Weight.`)
+    }
+
+    const feeInDot = (await provider.call.xcmPaymentApi.queryWeightToAssetFee(
+        weight.ok,
+        { v4: { parents: 1, interior: "Here" } }
+    )).toPrimitive() as any
+    if (!feeInDot.ok) {
+        throw Error(`Can not convert weight to fee in DOT.`)
+    }
+    const result = BigInt(feeInDot.ok.toString())
+    
+    // return fee padded by 15% unless another percentage is specified
+    return result * (100n+(padFeePercentage ?? 15n))/100n
+}
+
 async function indexParachain(
     provider: ApiPromise,
     ethChainId: number,
-    assetOverrides: AssetOverrideMap
+    assetHubParaId: number,
+    assetOverrides: AssetOverrideMap,
+    destinationFeeOverrides: FeeOverrideMap,
 ): Promise<Parachain> {
     const info = await chainProperties(provider)
     const assets: AssetMap = {}
@@ -306,17 +386,30 @@ async function indexParachain(
         throw Error(`Cannot discover assets for ${info.specName} (parachain ${parachainId}). Please add a handler for that runtime or add overrides.`)
     }
 
-    const hasCorrectPalletXcm = isFunction(provider.tx.polkadotXcm.transferAssetsUsingTypeAndThen);
+    const hasPalletXcm = isFunction(provider.tx.polkadotXcm.transferAssetsUsingTypeAndThen);
     const hasDryRunRpc = isFunction(provider.rpc.system?.dryRun)
     const hasDryRunApi = isFunction(provider.call.dryRunApi?.dryRunCall) && isFunction(provider.call.dryRunApi?.dryRunXcm)
     const hasTxPaymentApi = isFunction(provider.call.transactionPaymentApi?.queryInfo)
-    const hasXcmPaymentApi = isFunction(provider.call.xcmPaymentApi?.queryXcmWeight) 
-        && isFunction(provider.call.xcmPaymentApi?.queryDeliveryFee)
+    const hasXcmPaymentApi = isFunction(provider.call.xcmPaymentApi?.queryXcmWeight)
+        && isFunction(provider.call.xcmPaymentApi?.queryDeliveryFees)
         && isFunction(provider.call.xcmPaymentApi?.queryWeightToAssetFee)
+
+    let destinationFeeInDOT = 0n
+    if (parachainId !== assetHubParaId) {
+        if (hasXcmPaymentApi) {
+            destinationFeeInDOT = await calculateDestinationFee(provider, ethChainId)
+        } else {
+            if (!(parachainIdKey in destinationFeeOverrides)) {
+                throw Error(`Parachain ${parachainId} cannot fetch the destination fee and needs a fee override.`)
+            }
+            destinationFeeInDOT = destinationFeeOverrides[parachainIdKey]
+        }
+    }
+
     return {
         parachainId,
         features: {
-            hasCorrectPalletXcm,
+            hasPalletXcm,
             hasDryRunApi,
             hasTxPaymentApi,
             hasDryRunRpc,
@@ -324,7 +417,8 @@ async function indexParachain(
         },
         info,
         xcDOT,
-        assets
+        assets,
+        destinationFeeInDOT,
     }
 }
 
@@ -343,6 +437,7 @@ async function indexEthChain(
         // Asset Hub and get meta data
         const assetHub = parachains[assetHubParaId.toString()]
         const assets: ERC20MetadataMap = {}
+        // TODO: Check if tokens are actually registered via gateway
         for (const token in assetHub.assets) {
             const asset = await assetErc20Metadata(provider, token)
             assets[token] = asset
@@ -406,7 +501,8 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         relaychain,
         bridgeHub,
         precompiles,
-        assetOverrides
+        assetOverrides,
+        destinationFeeOverrides
     } = options
 
     let relayInfo: ChainProperties
@@ -455,7 +551,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         } else {
             provider = parachain
         }
-        const para = await indexParachain(provider, ethChainId, assetOverrides ?? {})
+        const para = await indexParachain(provider, ethChainId, assetHubParaId, assetOverrides ?? {}, destinationFeeOverrides ?? {})
         paras[para.parachainId.toString()] = para;
 
         if (typeof parachain === "string") {
@@ -482,7 +578,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
             provider.destroy()
         }
     }
-    if(!(ethChainId in ethChains)) {
+    if (!(ethChainId in ethChains)) {
         throw Error(`Cannot find ethereum chain ${ethChainId} in the list of ethereum chains.`)
     }
 

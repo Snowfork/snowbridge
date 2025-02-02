@@ -1,6 +1,8 @@
 import { Context } from "./index"
 import { fetchBeaconSlot, fetchFinalityUpdate, fetchEstimatedDeliveryTime } from "./utils"
 import { Relayer, SourceType } from "./environment"
+import { ApiPromise } from "@polkadot/api"
+import { IGateway } from "@snowbridge/contract-types"
 
 export type OperatingMode = "Normal" | "Halted"
 export type BridgeStatusInfo = {
@@ -65,6 +67,40 @@ export type AllMetrics = {
     channels: ChannelStatusInfo[]
     sovereigns: Sovereign[]
     relayers: Relayer[]
+}
+
+export type OperationStatus = {
+    toEthereum: {
+        outbound: OperatingMode;
+    };
+    toPolkadot: {
+        beacon: OperatingMode;
+        inbound: OperatingMode;
+        outbound: OperatingMode;
+    };
+}
+export async function getOperatingStatus({ gateway, bridgeHub }: { gateway: IGateway, bridgeHub: ApiPromise }): Promise<OperationStatus> {
+    const ethereumOperatingMode = await gateway.operatingMode()
+    const beaconOperatingMode = (
+        await bridgeHub.query.ethereumBeaconClient.operatingMode()
+    ).toPrimitive()
+    const inboundOperatingMode = (
+        await bridgeHub.query.ethereumInboundQueue.operatingMode()
+    ).toPrimitive()
+    const outboundOperatingMode = (
+        await bridgeHub.query.ethereumOutboundQueue.operatingMode()
+    ).toPrimitive()
+
+    return {
+        toEthereum: {
+            outbound: outboundOperatingMode as OperatingMode,
+        },
+        toPolkadot: {
+            beacon: beaconOperatingMode as OperatingMode,
+            inbound: inboundOperatingMode as OperatingMode,
+            outbound: ethereumOperatingMode === 0n ? "Normal" : ("Halted" as OperatingMode),
+        }
+    }
 }
 
 export const bridgeStatusInfo = async (
@@ -137,22 +173,11 @@ export const bridgeStatusInfo = async (
     )
 
     // Operating mode
-    const ethereumOperatingMode = await gateway.operatingMode()
-    const beaconOperatingMode = (
-        await bridgeHub.query.ethereumBeaconClient.operatingMode()
-    ).toPrimitive()
-    const inboundOperatingMode = (
-        await bridgeHub.query.ethereumInboundQueue.operatingMode()
-    ).toPrimitive()
-    const outboundOperatingMode = (
-        await bridgeHub.query.ethereumOutboundQueue.operatingMode()
-    ).toPrimitive()
+    const op = await getOperatingStatus({ gateway, bridgeHub })
 
     return {
         toEthereum: {
-            operatingMode: {
-                outbound: outboundOperatingMode as OperatingMode,
-            },
+            operatingMode: op.toEthereum,
             latestPolkadotBlockOnEthereum: latestBeefyBlock,
             latestPolkadotBlock: latestPolkadotBlock,
             blockLatency: beefyBlockLatency,
@@ -160,11 +185,7 @@ export const bridgeStatusInfo = async (
             previousPolkadotBlockOnEthereum: previousBeefyBlock,
         },
         toPolkadot: {
-            operatingMode: {
-                beacon: beaconOperatingMode as OperatingMode,
-                inbound: inboundOperatingMode as OperatingMode,
-                outbound: ethereumOperatingMode === 0n ? "Normal" : ("Halted" as OperatingMode),
-            },
+            operatingMode: op.toPolkadot,
             latestBeaconSlotOnPolkadot: latestBeaconBlockOnPolkadot,
             latestBeaconSlotAttested: latestFinalizedBeaconBlock.attested_slot,
             latestBeaconSlotFinalized: latestFinalizedBeaconBlock.finalized_slot,

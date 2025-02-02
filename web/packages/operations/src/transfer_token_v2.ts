@@ -80,8 +80,7 @@ const monitor = async () => {
     console.log("Ethereum to Asset Hub")
     {
         const destinationChainId = 1000
-        const destinationFeeInDOT = 0n
-        const deliveryFee = await toPolkadotV2.getDeliveryFee(context, WETH_CONTRACT, destinationChainId, destinationFeeInDOT)
+        const deliveryFee = await toPolkadotV2.getDeliveryFee(context.gateway(), registry, WETH_CONTRACT, destinationChainId)
         const transfer = await toPolkadotV2.createTransfer(
             registry,
             ETHEREUM_ACCOUNT_PUBLIC,
@@ -90,9 +89,8 @@ const monitor = async () => {
             destinationChainId,
             amount,
             deliveryFee,
-            destinationFeeInDOT,
         );
-        const { tx } = transfer
+        const { tx, computed: { totalValue }} = transfer
         const estimatedGas = await context.ethereum().estimateGas(tx)
         const feeData = await context.ethereum().getFeeData()
         const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
@@ -101,11 +99,17 @@ const monitor = async () => {
         console.log('gas:', estimatedGas)
         console.log('delivery cost:', formatEther(deliveryFee))
         console.log('execution cost:', formatEther(executionFee))
-        console.log('total cost:', formatEther(deliveryFee+executionFee))
+        console.log('total cost:', formatEther(deliveryFee + executionFee))
+        console.log('ether sent:', formatEther(totalValue - deliveryFee))
         console.log('dry run:', await context.ethereum().call(tx))
 
-        await toPolkadotV2.validateTransfer(transfer)
-
+        const validation = await toPolkadotV2.validateTransfer({
+            ethereum: context.ethereum(),
+            gateway: context.gateway(),
+            bridgeHub: await context.bridgeHub(),
+            assetHub: await context.assetHub(),
+        }, transfer)
+        console.log('validation result', validation)
     }
 
     context.destroyContext()
