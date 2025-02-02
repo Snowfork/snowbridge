@@ -109,20 +109,20 @@ func (s *Scanner) findTasks(
 // or some fee estimation api
 func (s *Scanner) filterTasks(
 	ctx context.Context,
-	pendingNonces []PendingOrder,
+	pendingOrders []PendingOrder,
 ) ([]*Task, error) {
 
 	var tasks []*Task
 
-	for _, pending := range pendingNonces {
+	for _, order := range pendingOrders {
 
-		isRelayed, err := s.isNonceRelayed(ctx, uint64(pending.Nonce))
+		isRelayed, err := s.isNonceRelayed(ctx, uint64(order.Nonce))
 		if err != nil {
 			return nil, fmt.Errorf("check nonce relayed: %w", err)
 		}
 		if isRelayed {
 			log.WithFields(log.Fields{
-				"nonce": uint64(pending.Nonce),
+				"nonce": uint64(order.Nonce),
 			}).Debug("already relayed, just skip")
 			continue
 		}
@@ -132,7 +132,7 @@ func (s *Scanner) filterTasks(
 			return nil, fmt.Errorf("create storage key: %w", err)
 		}
 
-		currentBlockNumber := uint64(pending.BlockNumber)
+		currentBlockNumber := uint64(order.BlockNumber)
 
 		log.WithFields(log.Fields{
 			"blockNumber": currentBlockNumber,

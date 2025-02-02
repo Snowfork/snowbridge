@@ -15,6 +15,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -29,10 +30,18 @@ func (relay *Relay) startDeliverProof(ctx context.Context, eg *errgroup.Group) e
 				if err != nil {
 					return fmt.Errorf("find undelivered order: %w", err)
 				}
+				rewardAddress, err := util.HexStringTo32Bytes(relay.config.RewardAddress)
+				if err != nil {
+					return fmt.Errorf("convert to reward address: %w", err)
+				}
 				for _, order := range orders {
 					event, err := relay.findEvent(ctx, order.Nonce)
 					if err != nil {
 						return fmt.Errorf("find event GatewayInboundMessageDispatched: %w", err)
+					}
+					if event.RewardAddress != rewardAddress {
+						log.Info("order is not from the current relayer, just ignore")
+						continue
 					}
 					err = relay.doSubmit(ctx, event)
 					if err != nil {
@@ -45,7 +54,6 @@ func (relay *Relay) startDeliverProof(ctx context.Context, eg *errgroup.Group) e
 	return nil
 }
 
-// Todo: Improve scan algorithm
 func (relay *Relay) findEvent(
 	ctx context.Context,
 	nonce uint64,
