@@ -3,9 +3,13 @@ package parachain
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
@@ -108,20 +112,20 @@ func (s *Scanner) findTasks(
 // or some fee estimation api
 func (s *Scanner) filterTasks(
 	ctx context.Context,
-	pendingNonces []PendingOrder,
+	pendingOrders []PendingOrder,
 ) ([]*Task, error) {
 
 	var tasks []*Task
 
-	for _, pending := range pendingNonces {
+	for _, order := range pendingOrders {
 
-		isRelayed, err := s.isNonceRelayed(ctx, uint64(pending.Nonce))
+		isRelayed, err := s.isNonceRelayed(ctx, uint64(order.Nonce))
 		if err != nil {
 			return nil, fmt.Errorf("check nonce relayed: %w", err)
 		}
 		if isRelayed {
 			log.WithFields(log.Fields{
-				"nonce": uint64(pending.Nonce),
+				"nonce": uint64(order.Nonce),
 			}).Debug("already relayed, just skip")
 			continue
 		}
@@ -131,7 +135,7 @@ func (s *Scanner) filterTasks(
 			return nil, fmt.Errorf("create storage key: %w", err)
 		}
 
-		currentBlockNumber := uint64(pending.BlockNumber)
+		currentBlockNumber := uint64(order.BlockNumber)
 
 		log.WithFields(log.Fields{
 			"blockNumber": currentBlockNumber,
@@ -168,6 +172,18 @@ func (s *Scanner) filterTasks(
 		for i := uint64(0); i < n.Uint64(); i++ {
 			m := OutboundQueueMessage{}
 			err = decoder.Decode(&m)
+			if err != nil {
+				return nil, fmt.Errorf("decode message error: %w", err)
+			}
+			isBanned, err := s.IsBanned(m)
+			if err != nil {
+				log.WithError(err).Fatal("error checking banned address found")
+				return nil, fmt.Errorf("banned check: %w", err)
+			}
+			if isBanned {
+				log.Fatal("banned address found")
+				return nil, errors.New("banned address found")
+			}
 			messages = append(messages, m)
 		}
 
@@ -344,7 +360,7 @@ func fetchMessageProof(
 		return proof, fmt.Errorf("encode params: %w", err)
 	}
 
-	err = api.Client.Call(&proofHex, "state_call", "OutboundQueueApiV2_prove_message", params, blockHash.Hex())
+	err = api.Client.Call(&proofHex, "state_call", "OutboundQueueV2Api_prove_message", params, blockHash.Hex())
 	if err != nil {
 		return proof, fmt.Errorf("call RPC OutboundQueueApi_prove_message(%v, %v): %w", messageIndex, blockHash, err)
 	}
@@ -420,6 +436,83 @@ func (s *Scanner) findOrderUndelivered(
 			undeliveredOrders = append(undeliveredOrders, &undeliveredOrder)
 		}
 	}
-
 	return undeliveredOrders, nil
+}
+
+func (s *Scanner) IsBanned(m OutboundQueueMessage) (bool, error) {
+	destinations, err := GetDestinations(m)
+	if err != nil {
+		return true, err
+	}
+	var isBanned bool
+	for _, destination := range destinations {
+		isBanned, err = s.ofac.IsBanned("", destination)
+		if isBanned || err != nil {
+			return true, err
+		}
+	}
+	return false, nil
+}
+
+func GetDestinations(message OutboundQueueMessage) ([]string, error) {
+	var destinations []string
+	log.WithFields(log.Fields{
+		"commands": message.Commands,
+	}).Debug("Checking message for OFAC")
+
+	address := ""
+
+	bytes32Ty, _ := abi.NewType("bytes32", "", nil)
+	addressTy, _ := abi.NewType("address", "", nil)
+	uint256Ty, _ := abi.NewType("uint256", "", nil)
+	for _, command := range message.Commands {
+		switch command.Kind {
+		case 2:
+			log.Debug("Unlock native token")
+
+			uintTy, _ := abi.NewType("uint256", "", nil)
+			transferTokenArgument := abi.Arguments{
+				{Type: addressTy},
+				{Type: addressTy},
+				{Type: uintTy},
+			}
+			decodedTransferToken, err := transferTokenArgument.Unpack(command.Params)
+			if err != nil {
+				return destinations, err
+			}
+			if len(decodedTransferToken) < 3 {
+				return destinations, errors.New("decode transfer token command")
+			}
+
+			addressValue := decodedTransferToken[1].(common.Address)
+			address = addressValue.String()
+		case 4:
+			log.Debug("Found MintForeignToken message")
+
+			arguments := abi.Arguments{
+				{Type: bytes32Ty},
+				{Type: addressTy},
+				{Type: uint256Ty},
+			}
+
+			decodedMessage, err := arguments.Unpack(command.Params)
+			if err != nil {
+				return destinations, fmt.Errorf("unpack tuple: %w", err)
+			}
+			if len(decodedMessage) < 3 {
+				return destinations, fmt.Errorf("decoded message not found")
+			}
+
+			addressValue := decodedMessage[1].(common.Address)
+			address = addressValue.String()
+		}
+
+		destination := strings.ToLower(address)
+
+		log.WithField("destination", destination).Debug("extracted destination from message")
+
+		destinations = append(destinations, destination)
+	}
+
+	return destinations, nil
 }

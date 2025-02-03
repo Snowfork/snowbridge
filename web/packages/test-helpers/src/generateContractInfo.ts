@@ -23,15 +23,20 @@ const run = async () => {
     for (let transaction of deploymentInfo.transactions) {
         if (transaction.transactionType === "CREATE") {
             let contractName: string = transaction.contractName
+            let contractAlias = contractName
             if (contractName) {
-                let contractInfo: ContractInfo = { address: transaction.contractAddress }
-                let contactNameWithoutVersion = contractName.replace(/v\d+$/i, "");
-                let contractPath = path.join(BuildInfoDir, contractName + ".sol", contractName + ".json");
-                if (!fs.existsSync(contractPath)) {
-                    contractPath = path.join(BuildInfoDir, contactNameWithoutVersion + ".sol", contractName + ".json");
+                if (contractAlias == "CallsV1" || contractAlias == "CallsV2") {
+                    contractName = "Calls"
                 }
+                if (contractAlias == "HandlersV1" || contractAlias == "HandlersV2") {
+                    contractName = "Handlers"
+                }
+                let contractInfo: ContractInfo = { address: transaction.contractAddress }
                 let contractBuildingInfo = JSON.parse(
-                    fs.readFileSync(contractPath, "utf8")
+                    fs.readFileSync(
+                        path.join(BuildInfoDir, contractName + ".sol", contractAlias + ".json"),
+                        "utf8"
+                    )
                 )
                 contractInfo.abi = contractBuildingInfo.abi
                 contracts[contractName] = contractInfo

@@ -13,11 +13,11 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 
+	"github.com/snowfork/snowbridge/relayer/ofac"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
-	"github.com/snowfork/snowbridge/relayer/ofac"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -145,10 +145,10 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	//err = relay.startDeliverProof(ctx, eg)
-	//if err != nil {
-	//	return err
-	//}
+	err = relay.startDeliverProof(ctx, eg)
+	if err != nil {
+		return err
+	}
 
 	log.Info("Current relay's ID:", relay.config.Schedule.ID)
 

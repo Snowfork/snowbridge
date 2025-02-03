@@ -43,6 +43,7 @@ deploy_contracts
 
 # 6. config substrate
 echo "Config Substrate"
+sleep 30
 source scripts/configure-substrate.sh
 configure_substrate
 

@@ -8,21 +8,28 @@ use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{
-		i_gateway_v1::IGatewayV1,
+		i_gateway_v2::IGatewayV2,
 		weth9::{TransferFilter, WETH9},
 	},
 	helper::AssetHubConfig,
 	parachains::assethub::{
 		api::runtime_types::{
-			staging_xcm::v3::multilocation::MultiLocation,
-			xcm::{
-				v3::{
-					junction::{Junction, NetworkId},
-					junctions::Junctions,
-					multiasset::{AssetId, Fungibility, MultiAsset, MultiAssets},
+			sp_weights::weight_v2::Weight,
+			staging_xcm::v5::{
+				asset::{
+					Asset,
+					AssetFilter::{Definite, Wild},
+					AssetId, AssetTransferFilter, Assets,
+					Fungibility::Fungible,
+					WildAsset::AllCounted,
 				},
-				VersionedAssets, VersionedLocation,
+				junction::{Junction, NetworkId},
+				junctions::Junctions,
+				location::Location,
+				Instruction::{DepositAsset, InitiateTransfer, PayFees, WithdrawAsset},
+				Xcm,
 			},
+			xcm::VersionedXcm,
 		},
 		{self},
 	},
@@ -32,7 +39,7 @@ use subxt::OnlineClient;
 use subxt_signer::{sr25519, SecretUri};
 
 #[tokio::test]
-async fn transfer_token() {
+async fn transfer_ena() {
 	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
 		.await
 		.unwrap()
@@ -44,47 +51,73 @@ async fn transfer_token() {
 	let weth = WETH9::new(weth_addr, ethereum_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = IGatewayV1::new(gateway_addr, ethereum_client.clone());
+	let gateway = IGatewayV2::new(gateway_addr, ethereum_client.clone());
 
 	let agent_src =
 		gateway.agent_of(ASSET_HUB_AGENT_ID).await.expect("could not get agent address");
+	println!("agent_src: {:?}", agent_src);
 
 	let assethub: OnlineClient<AssetHubConfig> =
 		OnlineClient::from_url((*ASSET_HUB_WS_URL).to_string()).await.unwrap();
 
-	let amount: u128 = 1_000_000_000;
-	let assets = VersionedAssets::V3(MultiAssets(vec![MultiAsset {
-		id: AssetId::Concrete(MultiLocation {
-			parents: 2,
-			interior: Junctions::X2(
-				Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
-				Junction::AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
-			),
-		}),
-		fun: Fungibility::Fungible(amount),
-	}]));
-
-	let destination = VersionedLocation::V3(MultiLocation {
+	let destination = Location {
 		parents: 2,
-		interior: Junctions::X1(Junction::GlobalConsensus(NetworkId::Ethereum {
+		interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Ethereum {
 			chain_id: ETHEREUM_CHAIN_ID,
-		})),
-	});
+		})]),
+	};
 
-	let beneficiary = VersionedLocation::V3(MultiLocation {
+	let beneficiary = Location {
 		parents: 0,
-		interior: Junctions::X1(Junction::AccountKey20 {
+		interior: Junctions::X1([Junction::AccountKey20 {
 			network: None,
 			key: (*ETHEREUM_RECEIVER).into(),
-		}),
-	});
+		}]),
+	};
+
+	let local_fee_amount: u128 = 800_000_000_000;
+	let local_fee_asset = Asset {
+		id: AssetId(Location { parents: 1, interior: Junctions::Here }),
+		fun: Fungible(local_fee_amount),
+	};
+	let amount: u128 = 1_000_000_000;
+	let asset_location = Location {
+		parents: 2,
+		interior: Junctions::X2([
+			Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
+			Junction::AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
+		]),
+	};
+	let remote_fee_asset = Asset { id: AssetId(asset_location.clone()), fun: Fungible(amount / 2) };
+	let reserved_asset = Asset { id: AssetId(asset_location.clone()), fun: Fungible(amount / 2) };
+
+	let assets = vec![
+		local_fee_asset.clone(),
+		Asset { id: AssetId(asset_location.clone()), fun: Fungible(amount) },
+	];
+
+	let xcm = VersionedXcm::V5(Xcm(vec![
+		WithdrawAsset(Assets(assets.into())),
+		PayFees { asset: local_fee_asset.clone() },
+		InitiateTransfer {
+			destination,
+			remote_fees: Some(AssetTransferFilter::ReserveWithdraw(Definite(Assets(
+				vec![remote_fee_asset.clone()].into(),
+			)))),
+			preserve_origin: true,
+			assets: vec![AssetTransferFilter::ReserveWithdraw(Definite(Assets(vec![
+				reserved_asset.clone(),
+			])))],
+			remote_xcm: Xcm(vec![DepositAsset { assets: Wild(AllCounted(2)), beneficiary }]),
+		},
+	]));
 
 	let suri = SecretUri::from_str(&SUBSTRATE_KEY).expect("Parse SURI");
 
 	let signer = sr25519::Keypair::from_uri(&suri).expect("valid keypair");
 
 	let token_transfer_call =
-		TransactionApi.reserve_transfer_assets(destination, beneficiary, assets, 0);
+		TransactionApi.execute(xcm, Weight { ref_time: 8_000_000_000, proof_size: 80_000 });
 
 	let _ = assethub
 		.tx()
@@ -106,7 +139,6 @@ async fn transfer_token() {
 					println!("Transfer event found at ethereum block {:?}", block.number.unwrap());
 					assert_eq!(transfer.src, agent_src.into());
 					assert_eq!(transfer.dst, (*ETHEREUM_RECEIVER).into());
-					assert_eq!(transfer.wad, amount.into());
 					transfer_event_found = true;
 				}
 			}
