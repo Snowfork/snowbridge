@@ -24,6 +24,13 @@ export function erc20Location(ethChainId: number, tokenAddress: string) {
     }
 }
 
+export function erc20LocationReanchored(tokenAddress: string) {
+    return {
+        parents: 0,
+        interior: { X1: [{ AccountKey20: { key: tokenAddress } }] },
+    }
+}
+
 export function buildERC20DestinationXcm(
     registry: Registry,
     ethChainId: number,
@@ -311,6 +318,74 @@ export function buildERC20ParachainDestination(
             ]
         }
     )
+}
+
+export function buildERC20TransferFromSource(ethChainId: number, sourceAccount: string, beneficiary: string, tokenAddress: string, topic: string) {
+    return [
+        // Error Handling, return everything to sender on Asset hub
+        {
+          setAppendix: [
+            {
+              depositAsset: {
+                assets: {
+                  Wild: "All",
+                },
+                beneficiary: {
+                  parents: 0,
+                  interior: {
+                    x1: [{
+                      AccountId32: { id: sourceAccount },
+                    }],
+                  },
+                },
+              },
+            },
+          ],
+        },
+        // Initiate the bridged transfer
+        {
+          initiateReserveWithdraw: {
+            assets: {
+              Wild: {
+                AllOf: { id: erc20Location(ethChainId, tokenAddress), fun: "Fungible" },
+              },
+            },
+            reserve: bridgeLocation(ethChainId),
+            xcm: [
+              {
+                buyExecution: {
+                  fees: {
+                    id: erc20LocationReanchored(tokenAddress), // CAUTION: Must use reanchored locations.
+                    fun: {
+                      Fungible: "1", // Offering 1 unit as fee, but it is returned to the destination address.
+                    },
+                  },
+                  weight_limit: "Unlimited",
+                },
+              },
+              {
+                depositAsset: {
+                  assets: {
+                    Wild: {
+                      AllCounted: 1,
+                    },
+                  },
+                  beneficiary: {
+                    parents: 0,
+                    interior: { x1: [{ AccountKey20: { key: beneficiary } }] },
+                  },
+                },
+              },
+              {
+                setTopic: topic
+              },
+            ],
+          },
+        },
+        {
+          setTopic: topic
+        },
+      ];
 }
 
 export function buildERC20AssetHubPassthrough() {

@@ -3,7 +3,7 @@ import { SubmittableExtrinsic } from "@polkadot/api/types";
 import { Codec, ISubmittableResult } from "@polkadot/types/types";
 import { BN, isHex, u8aToHex } from "@polkadot/util";
 import { decodeAddress, xxhashAsHex } from "@polkadot/util-crypto";
-import { bridgeLocation, buildERC20AssetHubPassthrough, erc20Location } from "./xcmBuilder";
+import { bridgeLocation, buildERC20AssetHubPassthrough, buildERC20TransferFromSource, DOT_LOCATION, erc20Location } from "./xcmBuilder";
 import { Asset, AssetRegistry, ERC20Metadata, getDotBalance, getNativeBalance, getParachainId, getTokenBalance, Parachain } from "./assets_v2";
 import { getOperatingStatus } from "./status";
 import { IGateway } from "@snowbridge/contract-types";
@@ -53,7 +53,7 @@ export async function createTransfer(
     if (sourceParaId === assetHubParaId) {
         tx = createERC20AssetHubTx(parachain, ethChainId, tokenAddress, beneficiaryAccount, amount)
     } else {
-        tx = createERC20SourceParachainTx(parachain, ethChainId, tokenAddress, beneficiaryAccount, amount)
+        tx = createERC20SourceParachainTx(parachain, ethChainId, sourceAccountHex, tokenAddress, beneficiaryAccount, amount)
     }
 
     return {
@@ -256,11 +256,29 @@ function createERC20AssetHubTx(
 function createERC20SourceParachainTx(
     parachain: ApiPromise,
     ethChainId: number,
+    sourceAccount: string,
     tokenAddress: string,
     beneficiaryAccount: string,
     amount: bigint
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
-    throw Error()
+    const assetLocation = erc20Location(ethChainId, tokenAddress)
+    const assets = {
+        v4: [
+            {
+                id: assetLocation,
+                fun: { Fungible: amount },
+            }
+        ]
+    }
+    const destination = { v4: bridgeLocation(ethChainId) }
+
+    const feeAsset = {
+        v4: DOT_LOCATION
+    }
+    const customXcm = {
+        v4: buildERC20TransferFromSource(ethChainId, sourceAccount, beneficiaryAccount, tokenAddress, "0x0000000000000000000000000000000000000000000000000000000000000000")
+    }
+    return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(destination, assets, "DestinationReserve", feeAsset,  "DestinationReserve", customXcm, "Unlimited")
 }
 
 async function dryRunOnSourceParachain(source: ApiPromise, transfer: Transfer) {
