@@ -214,6 +214,7 @@ start_relayer() {
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay-bridge-hub-01.json" \
                 --ethereum.private-key $parachain_relay_primary_gov_eth_key \
+                --substrate.private-key "//Bob" \
                 >>"$output_dir"/parachain-relay-bridge-hub-01.log 2>&1 || true
             sleep 20
         done
@@ -227,6 +228,7 @@ start_relayer() {
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay-bridge-hub-02.json" \
                 --ethereum.private-key $parachain_relay_secondary_gov_eth_key \
+                --substrate.private-key "//Bob" \
                 >>"$output_dir"/parachain-relay-bridge-hub-02.log 2>&1 || true
             sleep 20
         done
@@ -240,6 +242,7 @@ start_relayer() {
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay-asset-hub-0.json" \
                 --ethereum.private-key $parachain_relay_assethub_eth_key \
+                --substrate.private-key "//Bob" \
                 >>"$output_dir"/parachain-relay-asset-hub-0.log 2>&1 || true
             sleep 20
         done
@@ -253,6 +256,7 @@ start_relayer() {
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay-asset-hub-1.json" \
                 --ethereum.private-key $parachain_relay_primary_gov_eth_key \
+                --substrate.private-key "//Bob" \
                 >>"$output_dir"/parachain-relay-asset-hub-1.log 2>&1 || true
             sleep 20
         done
@@ -266,6 +270,7 @@ start_relayer() {
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay-asset-hub-2.json" \
                 --ethereum.private-key $parachain_relay_secondary_gov_eth_key \
+                --substrate.private-key "//Bob" \
                 >>"$output_dir"/parachain-relay-asset-hub-2.log 2>&1 || true
             sleep 20
         done
@@ -279,6 +284,7 @@ start_relayer() {
             "${relay_bin}" run parachain \
                 --config "$output_dir/parachain-relay-penpal.json" \
                 --ethereum.private-key $parachain_relay_penpal_eth_key \
+                --substrate.private-key "//Bob" \
                 >>"$output_dir"/parachain-relay-penpal.log 2>&1 || true
             sleep 20
         done
