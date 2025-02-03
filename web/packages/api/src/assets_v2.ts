@@ -3,7 +3,7 @@ import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api";
 import { isFunction } from '@polkadot/util';
 import { SnowbridgeEnvironment } from "./environment";
 import { Context } from "./index";
-import { buildERC20DestinationXcm, DOT_LOCATION, erc20Location } from "./xcmBuilder";
+import { buildParachainERC20ReceivedXcmOnDestination, DOT_LOCATION, erc20Location } from "./xcmBuilder";
 import { IGateway__factory } from "@snowbridge/contract-types";
 
 export type ERC20Metadata = {
@@ -343,19 +343,7 @@ async function chainProperties(provider: ApiPromise): Promise<ChainProperties> {
     }
 }
 
-async function calculateDestinationFee(provider: ApiPromise, accountType: AccountType, ethChainId: number, padFeePercentage?: bigint) {
-    const destinationXcm = buildERC20DestinationXcm(
-        provider.registry,
-        ethChainId,
-        "0x0000000000000000000000000000000000000000",
-        340282366920938463463374607431768211455n,
-        340282366920938463463374607431768211455n,
-        accountType === "AccountId32"
-            ? "0x0000000000000000000000000000000000000000000000000000000000000000"
-            : "0x0000000000000000000000000000000000000000",
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-    )
-
+export async function calculateDestinationFee(provider: ApiPromise, destinationXcm: any, padFeePercentage?: bigint) {
     const weight = (await provider.call.xcmPaymentApi.queryXcmWeight(destinationXcm)).toPrimitive() as any
     if (!weight.ok) {
         throw Error(`Can not query XCM Weight.`)
@@ -522,7 +510,18 @@ async function indexParachain(
     let destinationFeeInDOT = 0n
     if (parachainId !== assetHubParaId) {
         if (hasXcmPaymentApi) {
-            destinationFeeInDOT = await calculateDestinationFee(provider, info.accountType, ethChainId)
+            const destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
+                provider.registry,
+                ethChainId,
+                "0x0000000000000000000000000000000000000000",
+                340282366920938463463374607431768211455n,
+                340282366920938463463374607431768211455n,
+                info.accountType === "AccountId32"
+                    ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+                    : "0x0000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            destinationFeeInDOT = await calculateDestinationFee(provider, destinationXcm)
         } else {
             if (!(parachainIdKey in destinationFeeOverrides)) {
                 throw Error(`Parachain ${parachainId} cannot fetch the destination fee and needs a fee override.`)

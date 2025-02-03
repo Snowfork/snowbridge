@@ -5,7 +5,7 @@ import { IERC20__factory, IGateway, IGateway__factory } from "@snowbridge/contra
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "./assets_v2";
 import { getOperatingStatus, OperationStatus } from "./status";
 import { ApiPromise } from "@polkadot/api";
-import { buildERC20AssetHubDestination, buildERC20ParachainDestination } from "./xcmBuilder";
+import { buildAssetHubERC20ReceivedXcm, buildParachainERC20ReceivedXcmOnAssetHub } from "./xcmBuilder";
 
 export type Transfer = {
     input: {
@@ -61,6 +61,10 @@ export type FeeInfo = {
     totalTxCost: bigint
 }
 
+export type DeliveryFee = {
+    deliveryFeeInWei: bigint
+}
+
 export type Validation = {
     logs: ValidationLog[]
     data: {
@@ -91,9 +95,11 @@ export type MessageReceipt = {
     messageId: string
 }
 
-export async function getDeliveryFee(gateway: IGateway, registry: AssetRegistry, tokenAddress: string, destinationParaId: number): Promise<bigint> {
+export async function getDeliveryFee(gateway: IGateway, registry: AssetRegistry, tokenAddress: string, destinationParaId: number): Promise<DeliveryFee> {
     const { destParachain } = resolveInputs(registry, tokenAddress, destinationParaId)
-    return await gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destParachain.destinationFeeInDOT)
+    return {
+        deliveryFeeInWei: await gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destParachain.destinationFeeInDOT)
+    }
 }
 
 export async function createTransfer(
@@ -103,14 +109,14 @@ export async function createTransfer(
     tokenAddress: string,
     destinationParaId: number,
     amount: bigint,
-    deliveryFeeInWei: bigint,
+    fee: DeliveryFee,
 ): Promise<Transfer> {
     const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } = resolveInputs(registry, tokenAddress, destinationParaId)
     const minimalBalance = ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
         ? ahAssetMetadata.minimumBalance : destAssetMetadata.minimumBalance
 
     let { address: beneficiary, hexAddress: beneficiaryAddressHex } = beneficiaryMultiAddress(beneficiaryAccount)
-    const value = deliveryFeeInWei
+    const value = fee.deliveryFeeInWei
     const ifce = IGateway__factory.createInterface()
     const con = new Contract(registry.gatewayAddress, ifce);
     const tx = await con.getFunction("sendToken").populateTransaction(
@@ -133,7 +139,7 @@ export async function createTransfer(
             tokenAddress,
             destinationParaId,
             amount,
-            deliveryFeeInWei,
+            deliveryFeeInWei: fee.deliveryFeeInWei,
         }, computed: {
             gatewayAddress: registry.gatewayAddress,
             beneficiaryAddressHex,
@@ -318,7 +324,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
     const bridgeHubLocation = { v4: { parents: 1, interior: { x1: [{ parachain: registry.bridgeHubParaId }] } } }
     let xcm: any
     if (destinationParaId !== registry.assetHubParaId) {
-        xcm = buildERC20ParachainDestination(
+        xcm = buildParachainERC20ReceivedXcmOnAssetHub(
             assetHub.registry,
             registry.ethChainId,
             tokenAddress,
@@ -331,7 +337,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
         )
     }
     else {
-        xcm = buildERC20AssetHubDestination(
+        xcm = buildAssetHubERC20ReceivedXcm(
             assetHub.registry,
             registry.ethChainId,
             tokenAddress,
@@ -348,6 +354,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
 
     const resultPrimitive = result.toPrimitive() as any
     const resultHuman = result.toHuman() as any
+console.log('XXXXXXXXX', resultHuman)
 
     return {
         success: resultPrimitive.ok?.executionResult?.complete !== undefined,
@@ -366,6 +373,7 @@ async function dryRunDestination(destination: ApiPromise, transfer: Transfer, xc
 
     const resultPrimitive = result.toPrimitive() as any
     const resultHuman = result.toHuman() as any
+console.log('XXXXXXXXX', resultHuman)
 
     return {
         success: resultPrimitive.ok?.executionResult?.complete !== undefined,

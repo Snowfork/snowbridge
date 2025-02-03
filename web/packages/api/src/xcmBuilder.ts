@@ -31,7 +31,7 @@ export function erc20LocationReanchored(tokenAddress: string) {
     }
 }
 
-export function buildERC20DestinationXcm(
+export function buildParachainERC20ReceivedXcmOnDestination(
     registry: Registry,
     ethChainId: number,
     tokenAddress: string,
@@ -103,7 +103,7 @@ export function buildERC20DestinationXcm(
         })
 }
 
-export function buildERC20AssetHubDestination(
+export function buildAssetHubERC20ReceivedXcm(
     registry: Registry,
     ethChainId: number,
     tokenAddress: string,
@@ -186,7 +186,7 @@ export function buildERC20AssetHubDestination(
     )
 }
 
-export function buildERC20ParachainDestination(
+export function buildParachainERC20ReceivedXcmOnAssetHub(
     registry: Registry,
     ethChainId: number,
     tokenAddress: string,
@@ -320,74 +320,147 @@ export function buildERC20ParachainDestination(
     )
 }
 
-export function buildERC20TransferFromSource(ethChainId: number, sourceAccount: string, beneficiary: string, tokenAddress: string, topic: string) {
+function buildAssetHubXcmFromParachain(
+    ethChainId: number,
+    sourceAccount: string,
+    beneficiary: string,
+    tokenAddress: string,
+    topic: string
+) {
+    let { hexAddress, address: { kind } } = beneficiaryMultiAddress(sourceAccount)
+    let sourceAccountLocation;
+    switch (kind) {
+        case 1:
+            // 32 byte addresses
+            sourceAccountLocation = { accountId32: { id: hexAddress } }
+            break;
+        case 2:
+            // 20 byte addresses
+            sourceAccountLocation = { accountKey20: { key: hexAddress } }
+            break;
+        default:
+            throw Error(`Could not parse source address ${sourceAccount}`)
+    }
     return [
         // Error Handling, return everything to sender on Asset hub
         {
-          setAppendix: [
-            {
-              depositAsset: {
-                assets: {
-                  Wild: "All",
+            setAppendix: [
+                {
+                    depositAsset: {
+                        assets: {
+                            Wild: "All",
+                        },
+                        beneficiary: {
+                            parents: 0,
+                            interior: {
+                                x1: [{ sourceAccountLocation }],
+                            },
+                        },
+                    },
                 },
-                beneficiary: {
-                  parents: 0,
-                  interior: {
-                    x1: [{
-                      AccountId32: { id: sourceAccount },
-                    }],
-                  },
-                },
-              },
-            },
-          ],
+            ],
         },
         // Initiate the bridged transfer
         {
-          initiateReserveWithdraw: {
-            assets: {
-              Wild: {
-                AllOf: { id: erc20Location(ethChainId, tokenAddress), fun: "Fungible" },
-              },
-            },
-            reserve: bridgeLocation(ethChainId),
-            xcm: [
-              {
-                buyExecution: {
-                  fees: {
-                    id: erc20LocationReanchored(tokenAddress), // CAUTION: Must use reanchored locations.
-                    fun: {
-                      Fungible: "1", // Offering 1 unit as fee, but it is returned to the destination address.
-                    },
-                  },
-                  weight_limit: "Unlimited",
-                },
-              },
-              {
-                depositAsset: {
-                  assets: {
+            initiateReserveWithdraw: {
+                assets: {
                     Wild: {
-                      AllCounted: 1,
+                        AllOf: { id: erc20Location(ethChainId, tokenAddress), fun: "Fungible" },
                     },
-                  },
-                  beneficiary: {
-                    parents: 0,
-                    interior: { x1: [{ AccountKey20: { key: beneficiary } }] },
-                  },
                 },
-              },
-              {
-                setTopic: topic
-              },
-            ],
-          },
+                reserve: bridgeLocation(ethChainId),
+                xcm: [
+                    {
+                        buyExecution: {
+                            fees: {
+                                id: erc20LocationReanchored(tokenAddress), // CAUTION: Must use reanchored locations.
+                                fun: {
+                                    Fungible: "1", // Offering 1 unit as fee, but it is returned to the beneficiary address.
+                                },
+                            },
+                            weight_limit: "Unlimited",
+                        },
+                    },
+                    {
+                        depositAsset: {
+                            assets: {
+                                Wild: {
+                                    AllCounted: 1,
+                                },
+                            },
+                            beneficiary: {
+                                parents: 0,
+                                interior: { x1: [{ AccountKey20: { key: beneficiary } }] },
+                            },
+                        },
+                    },
+                    {
+                        setTopic: topic
+                    },
+                ],
+            },
         },
         {
-          setTopic: topic
+            setTopic: topic
         },
-      ];
+    ]
 }
 
-export function buildERC20AssetHubPassthrough() {
-    throw Error()
+export function buildAssetHubERC20TransferFromParachain(
+    registry: Registry,
+    ethChainId: number,
+    sourceAccount: string,
+    beneficiary: string,
+    tokenAddress: string,
+    topic: string
+) {
+    registry.createType('XcmVersionedXcm',
+        {
+            v4: buildAssetHubXcmFromParachain(ethChainId, sourceAccount, beneficiary, tokenAddress, topic)
+        });
+}
+
+export function buildResultXcmAssetHubERC20TransferFromParachain(
+    registry: Registry,
+    ethChainId: number,
+    sourceAccount: string,
+    beneficiary: string,
+    tokenAddress: string,
+    topic: string,
+    transferAmount: bigint,
+    destinationFeeInDot: bigint
+) {
+    return registry.createType('XcmVersionedXcm', {
+        v4: [
+            {
+                withdrawAsset: [
+                    {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: destinationFeeInDot,
+                        },
+                    },
+                    {
+                        id: erc20Location(ethChainId, tokenAddress),
+                        fun: {
+                            Fungible: transferAmount,
+                        },
+                    }
+                ]
+            },
+            { clearOrigin: null },
+            {
+                buyExecution: {
+                    fees: {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: destinationFeeInDot,
+                        },
+                    },
+                    weightLimit: "Unlimited",
+                }
+            },
+            ...buildAssetHubXcmFromParachain(ethChainId, sourceAccount, beneficiary, tokenAddress, topic)
+        ]
+    })
 }
