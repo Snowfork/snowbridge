@@ -25,9 +25,9 @@ export type Transfer = {
         tokenErcMetadata: ERC20Metadata
         ahAssetMetadata: Asset
         destAssetMetadata: Asset
-        minimalBalance: bigint
         destParachain: Parachain
         destinationFeeInDOT: bigint
+        minimalBalance: bigint
     },
     tx: ContractTransaction
 }
@@ -83,6 +83,12 @@ interface Connections {
     bridgeHub: ApiPromise
     assetHub: ApiPromise
     destParachain?: ApiPromise
+}
+
+export type MessageReceipt = {
+    channelId: string
+    nonce: bigint
+    messageId: string
 }
 
 export async function getDeliveryFee(gateway: IGateway, registry: AssetRegistry, tokenAddress: string, destinationParaId: number): Promise<bigint> {
@@ -251,12 +257,6 @@ export async function validateTransfer(connections: Connections, transfer: Trans
     }
 }
 
-export type MessageReceipt = {
-    channelId: string
-    nonce: bigint
-    messageId: string
-}
-
 export async function getMessageReceipt(receipt: TransactionReceipt): Promise<MessageReceipt | null> {
     const events: LogDescription[] = []
     const gatewayInterface = IGateway__factory.createInterface()
@@ -289,7 +289,6 @@ async function erc20Balance(ethereum: AbstractProvider, tokenAddress: string, ow
         gatewayAllowance,
     }
 }
-
 
 function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinationParaId: number) {
     const tokenErcMetadata = registry.ethereumChains[registry.ethChainId.toString()].assets[tokenAddress.toLowerCase()];
@@ -368,9 +367,8 @@ async function dryRunDestination(destination: ApiPromise, transfer: Transfer, xc
     const resultPrimitive = result.toPrimitive() as any
     const resultHuman = result.toHuman() as any
 
-    const a = {
+    return {
         success: resultPrimitive.ok?.executionResult?.complete !== undefined,
         errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
     }
-    return a
 }

@@ -1,22 +1,28 @@
 import { Registry } from "@polkadot/types/types";
 import { beneficiaryMultiAddress } from "./utils";
 
-const DOT_LOCATION = { parents: 1, interior: "Here" }
+export const DOT_LOCATION = { parents: 1, interior: "Here" }
 
 const ethereumNetwork = (ethChainId: number) => ({ GlobalConsensus: { Ethereum: { chain_id: ethChainId } } })
-const erc20Location = (ethChainId: number, tokenAddress: string) => ({
-    parents: 2,
-    interior: {
-        X2: [
-            ethereumNetwork(ethChainId),
-            { AccountKey20: { key: tokenAddress } },
-        ],
-    },
-})
-const bridgeLocation = (ethChainId: number) => ({
-    parents: 2,
-    interior: { x1: [ethereumNetwork(ethChainId)] },
-})
+
+export function bridgeLocation(ethChainId: number) {
+    return {
+        parents: 2,
+        interior: { x1: [ethereumNetwork(ethChainId)] },
+    }
+}
+
+export function erc20Location(ethChainId: number, tokenAddress: string) {
+    return {
+        parents: 2,
+        interior: {
+            X2: [
+                ethereumNetwork(ethChainId),
+                { AccountKey20: { key: tokenAddress } },
+            ],
+        },
+    }
+}
 
 export function buildERC20DestinationXcm(
     registry: Registry,
@@ -305,4 +311,8 @@ export function buildERC20ParachainDestination(
             ]
         }
     )
+}
+
+export function buildERC20AssetHubPassthrough() {
+    throw Error()
 }
