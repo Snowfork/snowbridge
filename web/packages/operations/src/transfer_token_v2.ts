@@ -21,7 +21,7 @@ const monitor = async () => {
     }
     console.log(`Using environment '${env}'`)
 
-    const { ethChainId, config } = snwobridgeEnv
+    const { config } = snwobridgeEnv
     await cryptoWaitReady()
 
     const context = new Context({
@@ -41,10 +41,13 @@ const monitor = async () => {
         },
     })
 
-
-    // Contains the list of all token and parachain metadata in order to send tokens.
-    // It may take some build but does not change often so it is safe to cache for 12 hours.
-    //const registry = await assetsV2.buildRegistry(assetsV2.fromEnvironment(snwobridgeEnv))
+    // Step 0. Build the Asset Registry. The registry contains the list of all token and parachain metadata in order to send tokens.
+    // It may take some build but does not change often so it is safe to cache for 12 hours and shipped with your dapp as static data.
+    //
+    // The registry can be build from a snowbridge environment or snowbridge coutntext.
+    //      const registry = await assetsV2.buildRegistry(assetsV2.fromEnvironment(snwobridgeEnv))
+    // If your dapp does not use the snowbridge environment or context you can always build it manually by
+    // specifying RegistryOptions for only the parachains you care about.
     const registry = await assetsV2.buildRegistry(await assetsV2.fromContext(context))
 
     console.log("Asset Registry:", JSON.stringify(registry, (_, value) => typeof value === "bigint" ? String(value) : value, 2))
@@ -80,7 +83,10 @@ const monitor = async () => {
     console.log("Ethereum to Asset Hub")
     {
         const destinationChainId: number = 1000
+        // Step 1. Get the delivery fee for the transaction
         const fee = await toPolkadotV2.getDeliveryFee(context.gateway(), registry, WETH_CONTRACT, destinationChainId)
+
+        // Step 2. Create a transfer tx
         const transfer = await toPolkadotV2.createTransfer(
             registry,
             ETHEREUM_ACCOUNT_PUBLIC,
@@ -90,6 +96,8 @@ const monitor = async () => {
             amount,
             fee,
         );
+
+        // Step 3. Validate the transaction.
         const validation = await toPolkadotV2.validateTransfer({
             ethereum: context.ethereum(),
             gateway: context.gateway(),
@@ -99,14 +107,17 @@ const monitor = async () => {
         }, transfer)
         console.log('validation result', validation)
 
+        // Step 4. Check validation logs for errors
         if (validation.logs.find(l => l.kind == toPolkadotV2.ValidationKind.Error)) {
             throw Error(`validation has one of more errors.`)
         }
 
+        // Step 5. Estimate the cost of the execution cost of the transaction
         const { tx, computed: { totalValue } } = transfer
         const estimatedGas = await context.ethereum().estimateGas(tx)
         const feeData = await context.ethereum().getFeeData()
         const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
+
         console.log('tx:', tx)
         console.log('feeData:', feeData.toJSON())
         console.log('gas:', estimatedGas)
@@ -116,12 +127,14 @@ const monitor = async () => {
         console.log('ether sent:', formatEther(totalValue - fee.deliveryFeeInWei))
         console.log('dry run:', await context.ethereum().call(tx))
 
-        console.log('Submitting...')
+        // Step 6. Submit the transaction
         const response = await ETHEREUM_ACCOUNT.sendTransaction(tx)
         const receipt = await response.wait(1)
         if (!receipt) {
             throw Error(`Transaction ${response.hash} not included.`)
         }
+
+        // Step 7. Get the message reciept for tracking purposes
         const message = await toPolkadotV2.getMessageReceipt(receipt)
         if (!message) {
             throw Error(`Transaction ${receipt.hash} did not emit a message.`)
@@ -132,7 +145,10 @@ const monitor = async () => {
     console.log("Asset Hub to Ethereum")
     {
         const sourceParaId = 2000
+        // Step 1. Get the delivery fee for the transaction
         const fee = await toEthereumV2.getDeliveryFee(await context.assetHub(), registry)
+
+        // Step 2. Create a transfer tx
         const transfer = await toEthereumV2.createTransfer(
             await context.parachain(sourceParaId),
             registry,
@@ -142,6 +158,8 @@ const monitor = async () => {
             amount,
             fee,
         );
+
+        // Step 3. Estimate the cost of the execution cost of the transaction
         console.log('call: ', transfer.tx.inner.toHex())
         console.log('utx: ', transfer.tx.toHex())
         const feePayment = (await transfer.tx.paymentInfo(POLKADOT_ACCOUNT, { withSignedTransaction: true })).toPrimitive() as any
@@ -156,6 +174,8 @@ const monitor = async () => {
             )
         ).toHuman()
         )
+
+        // Step 4. Validate the transaction.
         const validation = await toEthereumV2.validateTransfer({
             sourceParachain: await context.parachain(sourceParaId),
             assetHub: await context.assetHub(),
@@ -164,11 +184,12 @@ const monitor = async () => {
         }, transfer)
         console.log('validation result', validation)
 
+        // Step 5. Check validation logs for errors
         if (validation.logs.find(l => l.kind == toPolkadotV2.ValidationKind.Error)) {
             throw Error(`validation has one of more errors.`)
         }
 
-        console.log('Submitting...')
+        // Step 6. Submit transaction and get receipt for tracking
         const response = await toEthereumV2.signAndSend(
             await context.parachain(sourceParaId),
             transfer,
@@ -184,7 +205,10 @@ const monitor = async () => {
     console.log("Ethereum to Penpal")
     {
         const destinationChainId: number = 2000
+        // Step 1. Get the delivery fee for the transaction
         const fee = await toPolkadotV2.getDeliveryFee(context.gateway(), registry, WETH_CONTRACT, destinationChainId)
+
+        // Step 2. Create a transfer tx
         const transfer = await toPolkadotV2.createTransfer(
             registry,
             ETHEREUM_ACCOUNT_PUBLIC,
@@ -194,6 +218,8 @@ const monitor = async () => {
             amount,
             fee,
         );
+
+        // Step 3. Validate the transaction.
         const validation = await toPolkadotV2.validateTransfer({
             ethereum: context.ethereum(),
             gateway: context.gateway(),
@@ -203,10 +229,12 @@ const monitor = async () => {
         }, transfer)
         console.log('validation result', validation)
 
+        // Step 4. Check validation logs for errors
         if (validation.logs.find(l => l.kind == toPolkadotV2.ValidationKind.Error)) {
             throw Error(`validation has one of more errors.`)
         }
 
+        // Step 5. Estimate the cost of the execution cost of the transaction
         const { tx, computed: { totalValue } } = transfer
         const estimatedGas = await context.ethereum().estimateGas(tx)
         const feeData = await context.ethereum().getFeeData()
@@ -221,12 +249,14 @@ const monitor = async () => {
         console.log('ether sent:', formatEther(totalValue - fee.deliveryFeeInWei))
         console.log('dry run:', await context.ethereum().call(tx))
 
-        console.log('Submitting...')
+        // Step 6. Submit the transaction
         const response = await ETHEREUM_ACCOUNT.sendTransaction(tx)
         const receipt = await response.wait(1)
         if (!receipt) {
             throw Error(`Transaction ${response.hash} not included.`)
         }
+
+        // Step 7. Get the message reciept for tracking purposes
         const message = await toPolkadotV2.getMessageReceipt(receipt)
         if (!message) {
             throw Error(`Transaction ${receipt.hash} did not emit a message.`)
@@ -237,7 +267,10 @@ const monitor = async () => {
     console.log("Penpal to Ethereum")
     {
         const sourceParaId = 2000
+        // Step 1. Get the delivery fee for the transaction
         const fee = await toEthereumV2.getDeliveryFee(await context.assetHub(), registry)
+
+        // Step 2. Create a transfer tx
         const transfer = await toEthereumV2.createTransfer(
             await context.parachain(sourceParaId),
             registry,
@@ -247,6 +280,8 @@ const monitor = async () => {
             amount,
             fee,
         );
+
+        // Step 3. Estimate the cost of the execution cost of the transaction
         console.log('call: ', transfer.tx.inner.toHex())
         console.log('utx: ', transfer.tx.toHex())
         const feePayment = (await transfer.tx.paymentInfo(POLKADOT_ACCOUNT, { withSignedTransaction: true })).toPrimitive() as any
@@ -261,6 +296,8 @@ const monitor = async () => {
             )
         ).toHuman()
         )
+
+        // Step 4. Validate the transaction.
         const validation = await toEthereumV2.validateTransfer({
             sourceParachain: await context.parachain(sourceParaId),
             assetHub: await context.assetHub(),
@@ -269,11 +306,12 @@ const monitor = async () => {
         }, transfer)
         console.log('validation result', validation)
 
+        // Step 5. Check validation logs for errors
         if (validation.logs.find(l => l.kind == toPolkadotV2.ValidationKind.Error)) {
             throw Error(`validation has one of more errors.`)
         }
 
-        console.log('Submitting...')
+        // Step 6. Submit transaction and get receipt for tracking
         const response = await toEthereumV2.signAndSend(
             await context.parachain(sourceParaId),
             transfer,
