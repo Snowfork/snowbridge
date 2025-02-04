@@ -8,18 +8,18 @@ import {
     IGateway__factory,
 } from "@snowbridge/contract-types"
 
+interface Parachains { [paraId: string]: ApiPromise }
+
 interface Config {
     ethereum: {
         execution_url: string | AbstractProvider
         beacon_url: string
     }
     polkadot: {
-        url: {
-            bridgeHub: string
-            assetHub: string
-            relaychain: string
-            parachains?: string[]
-        }
+        relaychain: string
+        assetHubParaId: number
+        bridgeHubParaId: number
+        parachains: { [paraId: string]: string }
     }
     appContracts: {
         gateway: string
@@ -28,150 +28,135 @@ interface Config {
     graphqlApiUrl?: string
 }
 
-interface AppContracts {
-    gateway: IGateway
-    beefyClient: BeefyClient
-}
-
 export class Context {
     config: Config
-    ethereum: EthereumContext
-    polkadot: PolkadotContext
 
-    constructor(config: Config, ethereum: EthereumContext, polkadot: PolkadotContext) {
+    // Ethereum
+    #ethereum?: AbstractProvider
+    #gateway?: IGateway
+    #beefyClient?: BeefyClient
+
+    // Substrate
+    #parachains: Parachains
+    #relaychain?: ApiPromise
+
+    constructor(config: Config) {
         this.config = config
-        this.ethereum = ethereum
-        this.polkadot = polkadot
+        this.#parachains = {}
     }
-}
 
-class EthereumContext {
-    api: AbstractProvider
-    contracts: AppContracts
-
-    constructor(api: AbstractProvider, contracts: AppContracts) {
-        this.api = api
-        this.contracts = contracts
-    }
-}
-
-type Parachains = { [paraId: number]: ApiPromise }
-
-class PolkadotContext {
-    api: {
-        relaychain: ApiPromise
-        assetHub: ApiPromise
-        bridgeHub: ApiPromise
-        parachains: Parachains
-    }
-    constructor(
-        relaychain: ApiPromise,
-        assetHub: ApiPromise,
-        bridgeHub: ApiPromise,
-        parachains: Parachains
-    ) {
-        this.api = {
-            relaychain: relaychain,
-            assetHub: assetHub,
-            bridgeHub: bridgeHub,
-            parachains: parachains,
+    async relaychain(): Promise<ApiPromise> {
+        if (this.#relaychain) {
+            return this.#relaychain
         }
+        const url = this.config.polkadot.relaychain
+        this.#relaychain = await ApiPromise.create({
+            provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
+        })
+        return this.#relaychain
     }
-}
 
-export const contextFactory = async (config: Config): Promise<Context> => {
-    let ethApi: AbstractProvider
-    if (typeof config.ethereum.execution_url === "string") {
-        if (config.ethereum.execution_url.startsWith("http")) {
-            ethApi = new JsonRpcProvider(config.ethereum.execution_url)
+    assetHub(): Promise<ApiPromise> {
+        return this.parachain(this.config.polkadot.assetHubParaId)
+    }
+
+    bridgeHub(): Promise<ApiPromise> {
+        return this.parachain(this.config.polkadot.bridgeHubParaId)
+    }
+
+    hasParachain(paraId: number): boolean {
+        return paraId.toString() in this.config.polkadot.parachains
+    }
+
+    parachains(): number[] {
+        return Object.keys(this.config.polkadot.parachains).map((key) => Number(key))
+    }
+
+    async parachain(paraId: number): Promise<ApiPromise> {
+        const paraIdKey = paraId.toString()
+        if (paraIdKey in this.#parachains) {
+            return this.#parachains[paraIdKey]
+        }
+        const { parachains } = this.config.polkadot
+        if (paraIdKey in parachains) {
+            const url = parachains[paraIdKey]
+            const api = await ApiPromise.create({
+                provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
+            })
+            const onChainParaId = (
+                await api.query.parachainInfo.parachainId()
+            ).toPrimitive() as number
+            if(onChainParaId !== paraId) {
+                console.warn(
+                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`
+                )
+            }
+            this.#parachains[onChainParaId] = api
+            return this.#parachains[onChainParaId]
         } else {
-            ethApi = new WebSocketProvider(config.ethereum.execution_url)
+            throw Error(`Parachain id ${paraId} not in the list of parachain urls.`)
         }
-    } else {
-        ethApi = config.ethereum.execution_url
     }
 
-    const parasConnect: Promise<{ paraId: number; api: ApiPromise }>[] = []
-    for (const parachain of config.polkadot.url.parachains ?? []) {
-        parasConnect.push(addParachainConnection(parachain))
-    }
-
-    const [relaychainApi, assetHubApi, bridgeHubApi] = await Promise.all([
-        ApiPromise.create({
-            provider: config.polkadot.url.relaychain.startsWith("http")
-                ? new HttpProvider(config.polkadot.url.relaychain)
-                : new WsProvider(config.polkadot.url.relaychain),
-        }),
-        ApiPromise.create({
-            provider: config.polkadot.url.assetHub.startsWith("http")
-                ? new HttpProvider(config.polkadot.url.assetHub)
-                : new WsProvider(config.polkadot.url.assetHub),
-        }),
-        ApiPromise.create({
-            provider: config.polkadot.url.bridgeHub.startsWith("http")
-                ? new HttpProvider(config.polkadot.url.bridgeHub)
-                : new WsProvider(config.polkadot.url.bridgeHub),
-        }),
-    ])
-
-    const paras = await Promise.all(parasConnect)
-    const parachains: Parachains = {}
-    for (const { paraId, api } of paras) {
-        if (paraId in parachains) {
-            throw new Error(`${paraId} already added.`)
+    ethereum(): AbstractProvider {
+        if (this.#ethereum) {
+            return this.#ethereum
         }
-        parachains[paraId] = api
+
+        const { config } = this
+
+        if (typeof config.ethereum.execution_url === "string") {
+            if (config.ethereum.execution_url.startsWith("http")) {
+                this.#ethereum = new JsonRpcProvider(config.ethereum.execution_url)
+            } else {
+                this.#ethereum = new WebSocketProvider(config.ethereum.execution_url)
+            }
+        } else {
+            this.#ethereum = this.config.ethereum.execution_url as AbstractProvider
+        }
+
+        return this.#ethereum
     }
 
-    const gatewayAddr = config.appContracts.gateway
-    const beefyAddr = config.appContracts.beefy
-
-    const appContracts: AppContracts = {
-        //TODO: Get gateway address from bridgehub
-        gateway: IGateway__factory.connect(gatewayAddr, ethApi),
-        //TODO: Get beefy client from gateway
-        beefyClient: BeefyClient__factory.connect(beefyAddr, ethApi),
+    gateway(): IGateway {
+        if (this.#gateway) {
+            return this.#gateway
+        }
+        return IGateway__factory.connect(this.config.appContracts.gateway, this.ethereum())
+    }
+    beefyClient(): BeefyClient {
+        if (this.#beefyClient) {
+            return this.#beefyClient
+        }
+        return BeefyClient__factory.connect(this.config.appContracts.beefy, this.ethereum())
     }
 
-    const ethCtx = new EthereumContext(ethApi, appContracts)
-    const polCtx = new PolkadotContext(relaychainApi, assetHubApi, bridgeHubApi, parachains)
+    async destroyContext(): Promise<void> {
+        // clean up etheruem
+        if (typeof this.config.ethereum.execution_url === "string" && this.#ethereum) {
+            await this.beefyClient().removeAllListeners()
+            await this.gateway().removeAllListeners()
+            this.ethereum().destroy()
+        }
+        // clean up polkadot
+        if (this.#relaychain) {
+            await this.#relaychain.disconnect()
+        }
 
-    const context = new Context(config, ethCtx, polCtx)
-    await Promise.all(parasConnect)
-    return context
-}
-
-export const addParachainConnection = async (url: string) => {
-    const api = await ApiPromise.create({
-        provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
-    })
-    const paraId = (await api.query.parachainInfo.parachainId()).toPrimitive() as number
-    console.log(`${url} added with parachain id: ${paraId}`)
-    return { paraId, api }
-}
-
-export const destroyContext = async (context: Context): Promise<void> => {
-    // clean up etheruem
-    await context.ethereum.contracts.beefyClient.removeAllListeners()
-    await context.ethereum.contracts.gateway.removeAllListeners()
-    if (typeof context.config.ethereum.execution_url === "string") {
-        context.ethereum.api.destroy()
-    }
-    // clean up polkadot
-    await context.polkadot.api.relaychain.disconnect()
-    await context.polkadot.api.bridgeHub.disconnect()
-    await context.polkadot.api.assetHub.disconnect()
-
-    for (const paraId of Object.keys(context.polkadot.api.parachains)) {
-        await context.polkadot.api.parachains[Number(paraId)].disconnect()
+        for (const paraId of Object.keys(this.#parachains)) {
+            await this.#parachains[Number(paraId)].disconnect()
+        }
     }
 }
 
 export * as toPolkadot from "./toPolkadot"
+export * as toPolkadotV2 from "./toPolkadot_v2"
 export * as toEthereum from "./toEthereum"
+export * as toEthereumV2 from "./toEthereum_v2"
 export * as utils from "./utils"
 export * as status from "./status"
 export * as assets from "./assets"
+export * as assetsV2 from "./assets_v2"
 export * as environment from "./environment"
 export * as subscan from "./subscan"
 export * as history from "./history"
