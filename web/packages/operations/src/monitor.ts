@@ -1,6 +1,6 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
-import { contextFactory, destroyContext, environment, status, utils } from "@snowbridge/api"
+import { Context, environment, status, utils } from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
 import { BlockLatencyThreshold } from "./alarm"
 
@@ -18,17 +18,21 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const infuraKey = process.env.REACT_APP_INFURA_KEY || ""
 
-    const context = await contextFactory({
+    const parachains: { [paraId: string]: string } = {}
+    parachains[config.BRIDGE_HUB_PARAID.toString()] =
+        process.env["BRIDGE_HUB_URL"] ?? config.PARACHAINS[config.BRIDGE_HUB_PARAID.toString()]
+    parachains[config.ASSET_HUB_PARAID.toString()] =
+        process.env["ASSET_HUB_URL"] ?? config.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
+    const context = new Context({
         ethereum: {
             execution_url: process.env["EXECUTION_NODE_URL"] || config.ETHEREUM_API(infuraKey),
             beacon_url: process.env["BEACON_NODE_URL"] || config.BEACON_HTTP_API,
         },
         polkadot: {
-            url: {
-                bridgeHub: process.env["BRIDGE_HUB_URL"] || config.BRIDGE_HUB_URL,
-                assetHub: process.env["ASSET_HUB_URL"] || config.ASSET_HUB_URL,
-                relaychain: process.env["RELAY_CHAIN_URL"] || config.RELAY_CHAIN_URL,
-            },
+            assetHubParaId: config.ASSET_HUB_PARAID,
+            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
+            parachains: parachains,
+            relaychain: process.env["RELAY_CHAIN_URL"] || config.RELAY_CHAIN_URL,
         },
         appContracts: {
             gateway: config.GATEWAY_CONTRACT,
@@ -45,7 +49,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     })
     console.log("Bridge Status:", bridgeStatus)
 
-    const assethub = await status.channelStatusInfo(
+    const assethubChannelStatus = await status.channelStatusInfo(
         context,
         utils.paraIdToChannelId(config.ASSET_HUB_PARAID),
         {
@@ -53,8 +57,8 @@ export const monitor = async (): Promise<status.AllMetrics> => {
             toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
         }
     )
-    assethub.name = status.ChannelKind.AssetHub
-    console.log("Asset Hub Channel:", assethub)
+    assethubChannelStatus.name = status.ChannelKind.AssetHub
+    console.log("Asset Hub Channel:", assethubChannelStatus)
 
     const primaryGov = await status.channelStatusInfo(
         context,
@@ -78,10 +82,12 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     secondaryGov.name = status.ChannelKind.Secondary
     console.log("Secondary Governance Channel:", secondaryGov)
 
+    const [assetHub, bridgeHub] = await Promise.all([context.assetHub(), context.bridgeHub()])
+
     let assetHubSovereign = BigInt(
         (
             (
-                await context.polkadot.api.bridgeHub.query.system.account(
+                await bridgeHub.query.system.account(
                     utils.paraIdToSovereignAccount("sibl", config.ASSET_HUB_PARAID)
                 )
             ).toPrimitive() as any
@@ -89,16 +95,16 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     )
     console.log("Asset Hub Sovereign balance on bridgehub:", assetHubSovereign)
 
-    let assetHubAgentBalance = await context.ethereum.api.getBalance(
-        await context.ethereum.contracts.gateway.agentOf(
-            utils.paraIdToAgentId(context.polkadot.api.bridgeHub.registry, config.ASSET_HUB_PARAID)
+    let assetHubAgentBalance = await context.ethereum().getBalance(
+        await context.gateway().agentOf(
+            utils.paraIdToAgentId(bridgeHub.registry, config.ASSET_HUB_PARAID)
         )
     )
     console.log("Asset Hub Agent balance:", assetHubAgentBalance)
 
     const bridgeHubAgentId = u8aToHex(blake2AsU8a("0x00", 256))
-    let bridgeHubAgentBalance = await context.ethereum.api.getBalance(
-        await context.ethereum.contracts.gateway.agentOf(bridgeHubAgentId)
+    let bridgeHubAgentBalance = await context.ethereum().getBalance(
+        await context.gateway().agentOf(bridgeHubAgentId)
     )
     console.log("Bridge Hub Agent balance:", bridgeHubAgentBalance)
 
@@ -108,13 +114,13 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         let balance = 0n
         switch (relayer.type) {
             case "ethereum":
-                balance = await context.ethereum.api.getBalance(relayer.account)
+                balance = await context.ethereum().getBalance(relayer.account)
                 break
             case "substrate":
                 balance = BigInt(
                     (
                         (
-                            await context.polkadot.api.bridgeHub.query.system.account(
+                            await bridgeHub.query.system.account(
                                 relayer.account
                             )
                         ).toPrimitive() as any
@@ -127,7 +133,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         relayers.push(relayer)
     }
 
-    const channels = [assethub, primaryGov, secondaryGov]
+    const channels = [assethubChannelStatus, primaryGov, secondaryGov]
 
     let sovereigns: status.Sovereign[] = [
         {
@@ -139,7 +145,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         {
             name: "AssetHubAgent",
             account: utils.paraIdToAgentId(
-                context.polkadot.api.bridgeHub.registry,
+                bridgeHub.registry,
                 config.ASSET_HUB_PARAID
             ),
             balance: assetHubAgentBalance,
@@ -157,7 +163,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     await sendMetrics(allMetrics)
 
-    await destroyContext(context)
+    await context.destroyContext()
 
     return allMetrics
 }
