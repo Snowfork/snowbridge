@@ -76,12 +76,24 @@ async fn malicious_payload() {
 	let init_signature = malicious_signatures[0].clone();
 	println!("init_signature: {:?}", init_signature);
 
+	let init_signature_bytes = init_signature.as_slice();
+	let mut r = [0u8; 32];
+	let mut s = [0u8; 32];
+	r.copy_from_slice(&init_signature_bytes[0..32]);
+	s.copy_from_slice(&init_signature_bytes[32..64]);
+	let v = init_signature_bytes[64];
+	let v = match v {
+		0 => 27,
+		1 => 28,
+		_ => 0,
+	};
+
 	let bitfield: Vec<U256> = vec![U256::one(), U256::one(), U256::one(), U256::zero()];
 
 	let proof = ValidatorProof {
-		v: 0,
-		r: [0; 32],
-		s: [0; 32],
+		v,
+		r,
+		s,
 		index: U256::zero(),
 		// hardcoded 0th validator account
 		account: H160::from_str("fd4de54fb46fb25358323c12484dea951da5db48").expect("valid address"),
@@ -100,9 +112,9 @@ async fn malicious_payload() {
 
 	let call = beefy_client.submit_initial(commitment, bitfield, proof);
 	let result = call.send().await;
-	// verify: error is `ECDSA: invalid signature`
+	// verify: error is `InvalidSignature` (selector 0x8baa579f)
 	assert_eq!(
 		result.err().unwrap().as_revert().expect("is revert error"),
-		&Bytes::from_hex("0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001845434453413a20696e76616c6964207369676e61747572650000000000000000").unwrap()
+		&Bytes::from_hex("0x8baa579f").unwrap()
 	);
 }
