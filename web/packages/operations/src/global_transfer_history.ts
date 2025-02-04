@@ -21,7 +21,7 @@ const monitor = async () => {
     const ethereumProvider = new AlchemyProvider(ethChainId, process.env.REACT_APP_ALCHEMY_KEY)
     const context = new Context({
         ethereum: {
-            execution_url: config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY || ""),
+            execution_url: ethereumProvider,
             beacon_url: config.BEACON_HTTP_API,
         },
         polkadot: {
