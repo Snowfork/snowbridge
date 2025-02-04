@@ -58,8 +58,6 @@ const monitor = async () => {
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri("//Ferdie")
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
-    //const POLKADOT_ACCOUNT2 = polkadot_keyring.addFromUri("//NewAccount")
-    //const POLKADOT_ACCOUNT_PUBLIC2 = POLKADOT_ACCOUNT2.address
 
     const amount = 10n
 
