@@ -3,8 +3,6 @@ use ethers::{
 	utils::parse_units,
 };
 use futures::StreamExt;
-use penpal::api::runtime_types as penpalTypes;
-use penpalTypes::penpal_runtime::RuntimeCall as PenpalRuntimeCall;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{i_gateway, weth9},
@@ -25,12 +23,16 @@ use snowbridge_smoketest::{
 	},
 	penpal_helper::PenpalConfig,
 };
-use sp_crypto_hashing::twox_128;
 use subxt::{
 	ext::codec::Encode,
 	tx::PairSigner,
 	utils::{AccountId32, MultiAddress},
 	OnlineClient,
+};
+use sp_crypto_hashing::twox_128;
+use penpal::{api::runtime_types as penpalTypes};
+use penpalTypes::{
+	penpal_runtime::RuntimeCall as PenpalRuntimeCall,
 };
 
 #[tokio::test]
@@ -104,7 +106,10 @@ async fn send_token_to_penpal() {
 		.expect("block subscription")
 		.take(wait_for_blocks);
 
-	let expected_dot_id = Location { parents: 1, interior: Here };
+	let expected_dot_id = Location {
+		parents: 1,
+		interior: Here,
+	};
 	let expected_asset_id = Location {
 		parents: 2,
 		interior: X2([
@@ -173,7 +178,7 @@ async fn send_token_to_penpal() {
 }
 
 async fn ensure_penpal_asset_exists(penpal_client: &mut OnlineClient<PenpalConfig>) {
-	use penpal::api::runtime_types::staging_xcm::v5::{
+	use penpal::api::runtime_types::staging_xcm::v4::{
 		junction::{
 			Junction::{AccountKey20, GlobalConsensus},
 			NetworkId,
@@ -206,19 +211,12 @@ async fn ensure_penpal_asset_exists(penpal_client: &mut OnlineClient<PenpalConfi
 
 	println!("creating WETH on penpal.");
 	let admin = MultiAddress::Id(ASSET_HUB_SOVEREIGN.into());
-	let signer: PairSigner<PenpalConfig, _> = PairSigner::new((*ALICE).clone());
+	let signer: PairSigner<PenpalConfig, _> = PairSigner::new((*FERDIE).clone());
 
-	let sudo_call = penpal::api::tx().sudo().sudo(PenpalRuntimeCall::ForeignAssets(
-		crate::penpalTypes::pallet_assets::pallet::Call2::force_create {
-			id: penpal_asset_id,
-			owner: admin.clone(),
-			is_sufficient: true,
-			min_balance: 1,
-		},
-	));
+	let create_asset_call = penpal::api::tx().foreign_assets().create(penpal_asset_id, admin, 1);
 	penpal_client
 		.tx()
-		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.sign_and_submit_then_watch_default(&create_asset_call, &signer)
 		.await
 		.unwrap()
 		.wait_for_finalized_success()
@@ -227,10 +225,14 @@ async fn ensure_penpal_asset_exists(penpal_client: &mut OnlineClient<PenpalConfi
 }
 
 async fn ensure_dot_asset_exists(penpal_client: &mut OnlineClient<PenpalConfig>) {
-	use penpal::api::runtime_types::staging_xcm::v5::{
-		junctions::Junctions::Here, location::Location,
+	use penpal::api::runtime_types::staging_xcm::v4::{
+		junctions::Junctions::Here,
+		location::Location,
 	};
-	let dot_asset_id = Location { parents: 1, interior: Here };
+	let dot_asset_id = Location {
+		parents: 1,
+		interior: Here,
+	};
 
 	let dot_asset_address = penpal::api::storage().foreign_assets().asset(&dot_asset_id);
 	let result = penpal_client
@@ -249,48 +251,47 @@ async fn ensure_dot_asset_exists(penpal_client: &mut OnlineClient<PenpalConfig>)
 
 	println!("creating DOT on penpal.");
 	let admin = MultiAddress::Id(ASSET_HUB_SOVEREIGN.into());
-	let signer: PairSigner<PenpalConfig, _> = PairSigner::new((*ALICE).clone());
+	let signer: PairSigner<PenpalConfig, _> = PairSigner::new((*FERDIE).clone());
 
-	let sudo_call = penpal::api::tx().sudo().sudo(PenpalRuntimeCall::ForeignAssets(
-		crate::penpalTypes::pallet_assets::pallet::Call2::force_create {
-			id: dot_asset_id,
-			owner: admin.clone(),
-			is_sufficient: true,
-			min_balance: 1,
-		},
-	));
+	let create_asset_call = penpal::api::tx().foreign_assets().create(dot_asset_id, admin, 1);
 	penpal_client
 		.tx()
-		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.sign_and_submit_then_watch_default(&create_asset_call, &signer)
 		.await
 		.unwrap()
 		.wait_for_finalized_success()
 		.await
 		.expect("asset created");
 }
-
 async fn set_reserve_asset_storage(penpal_client: &mut OnlineClient<PenpalConfig>) {
 	use penpal::api::runtime_types::staging_xcm::v4::{
-		junction::{Junction::GlobalConsensus, NetworkId},
+		junction::{
+			Junction::GlobalConsensus,
+			NetworkId,
+		},
 		junctions::Junctions::X1,
 		location::Location,
 	};
 	let storage_key: Vec<u8> = twox_128(b":CustomizableAssetFromSystemAssetHub:").to_vec();
 	let reserve_location: Vec<u8> = Location {
 		parents: 2,
-		interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID })]),
-	}
-	.encode();
+		interior: X1([
+			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
+		]),
+	}.encode();
 
 	println!("setting CustomizableAssetFromSystemAssetHub storage on penpal.");
 	let signer: PairSigner<PenpalConfig, _> = PairSigner::new((*ALICE).clone());
 
-	let items = vec![(storage_key, reserve_location)];
+	let items = vec![(
+		storage_key,
+		reserve_location,
+	)];
 
 	let sudo_call = penpal::api::sudo::calls::TransactionApi::sudo(
 		&penpal::api::sudo::calls::TransactionApi,
 		PenpalRuntimeCall::System(crate::penpalTypes::frame_system::pallet::Call::set_storage {
-			items,
+			items
 		}),
 	);
 	penpal_client
