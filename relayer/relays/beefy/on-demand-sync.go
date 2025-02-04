@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
@@ -220,18 +219,18 @@ func (relay *OnDemandRelay) fetchLatestParachainNonce(_ context.Context) (uint64
 }
 
 func (relay *OnDemandRelay) fetchEthereumNonce(ctx context.Context) (uint64, error) {
-	opts := bind.CallOpts{
-		Context: ctx,
-	}
-	ethInboundNonce, _, err := relay.gatewayContract.ChannelNoncesOf(&opts, relay.assetHubChannelID)
-	if err != nil {
-		return 0, fmt.Errorf(
-			"fetch Gateway.ChannelNoncesOf(%v): %w",
-			Hex(relay.assetHubChannelID[:]), err,
-		)
-	}
+	//opts := bind.CallOpts{
+	//	Context: ctx,
+	//}
+	//ethInboundNonce, _, err := relay.gatewayContract.ChannelNoncesOf(&opts, relay.assetHubChannelID)
+	//if err != nil {
+	//	return 0, fmt.Errorf(
+	//		"fetch Gateway.ChannelNoncesOf(%v): %w",
+	//		Hex(relay.assetHubChannelID[:]), err,
+	//	)
+	//}
 
-	return ethInboundNonce, nil
+	return 0, nil
 }
 
 func (relay *OnDemandRelay) sync(ctx context.Context, blockNumber uint64) error {

@@ -1,5 +1,5 @@
 use snowbridge_smoketest::{
-	contracts::i_gateway::ForeignTokenRegisteredFilter,
+	contracts::i_gateway_base::ForeignTokenRegisteredFilter,
 	helper::*,
 	parachains::{
 		bridgehub,

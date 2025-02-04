@@ -12,7 +12,9 @@ import {IUpgradable} from "./interfaces/IUpgradable.sol";
 library Upgrade {
     using Address for address;
 
-    function upgrade(address impl, bytes32 implCodeHash, bytes memory initializerParams) internal {
+    function upgrade(address impl, bytes32 implCodeHash, bytes memory initializerParams)
+        external
+    {
         // Verify that the implementation is actually a contract
         if (!impl.isContract()) {
             revert IUpgradable.InvalidContract();

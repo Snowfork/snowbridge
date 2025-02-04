@@ -10,4 +10,6 @@ interface IUpgradable {
 
     // The implementation contract was upgraded
     event Upgraded(address indexed implementation);
+
+    function implementation() external view returns (address);
 }

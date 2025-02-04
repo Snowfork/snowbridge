@@ -2,7 +2,7 @@ use ethers::{core::types::Address, prelude::U256, utils::parse_units};
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::i_gateway,
+	contracts::i_gateway_v1,
 	helper::{initial_clients, print_event_log_for_unit_tests},
 	parachains::assethub::api::balances::events::Minted,
 };
@@ -15,7 +15,7 @@ async fn send_polkadot_token() {
 	let assethub = *(test_clients.asset_hub_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
+	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, ethereum_client.clone());
 
 	let token: Address = ERC20_DOT_CONTRACT.into();
 
@@ -28,7 +28,7 @@ async fn send_polkadot_token() {
 		.send_token(
 			token,
 			ASSET_HUB_PARA_ID,
-			i_gateway::MultiAddress { kind: 1, data: (*BOB_PUBLIC).into() },
+			i_gateway_v1::MultiAddress { kind: 1, data: (*BOB_PUBLIC).into() },
 			destination_fee,
 			amount,
 		)
