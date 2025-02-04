@@ -4,7 +4,8 @@
     inputs = {
         nixpkgs.url = "nixpkgs/nixos-unstable";
         flake-utils.url  = "github:numtide/flake-utils";
-        foundry.url = "github:shazow/foundry.nix/monthly";
+        # pin to 2024-09-03 monthly
+        foundry.url = "github:shazow/foundry.nix?rev=671672bd60a0d2e5f6757638fdf27e806df755a4";
     };
 
     outputs = { self, nixpkgs, flake-utils, foundry }:
