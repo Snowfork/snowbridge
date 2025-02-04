@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use codec::Encode;
 use ethers::{abi::Address, core::types::U256, prelude::*};
@@ -83,15 +83,26 @@ async fn malicious_payload() {
 		r: [0; 32],
 		s: [0; 32],
 		index: U256::zero(),
-		account: H160::zero(),
-		proof: vec![[0; 32]],
+		// hardcoded 0th validator account
+		account: H160::from_str("fd4de54fb46fb25358323c12484dea951da5db48").expect("valid address"),
+		// hardcoded 0th validator merkle proof proof in static authority set
+		proof: vec![
+			[
+				5, 120, 92, 249, 72, 54, 128, 155, 50, 161, 184, 237, 9, 152, 81, 248, 77, 238, 54,
+				114, 159, 19, 59, 166, 156, 6, 153, 35, 145, 193, 253, 220,
+			],
+			[
+				169, 40, 149, 147, 19, 125, 50, 4, 149, 113, 52, 71, 100, 184, 239, 180, 111, 163,
+				176, 168, 111, 129, 204, 149, 156, 13, 30, 206, 185, 9, 38, 134,
+			],
+		],
 	};
 
 	let call = beefy_client.submit_initial(commitment, bitfield, proof);
 	let result = call.send().await;
-	// verify: error is `InvalidValidatorProof` (selector 0xe00153fa)
+	// verify: error is `ECDSA: invalid signature`
 	assert_eq!(
 		result.err().unwrap().as_revert().expect("is revert error"),
-		&Bytes::from_hex("e00153fa").unwrap()
+		&Bytes::from_hex("0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001845434453413a20696e76616c6964207369676e61747572650000000000000000").unwrap()
 	);
 }
