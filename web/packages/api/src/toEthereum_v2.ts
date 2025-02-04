@@ -1,13 +1,13 @@
 import { ApiPromise } from "@polkadot/api";
-import { SubmittableExtrinsic } from "@polkadot/api/types";
+import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types";
 import { Codec, ISubmittableResult } from "@polkadot/types/types";
-import { BN, isHex, u8aToHex } from "@polkadot/util";
-import { decodeAddress, xxhashAsHex } from "@polkadot/util-crypto";
-import { bridgeLocation, buildResultXcmAssetHubERC20TransferFromParachain, buildAssetHubERC20TransferFromParachain, DOT_LOCATION, erc20Location } from "./xcmBuilder";
+import { BN, hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util";
+import { blake2AsHex, decodeAddress, xxhashAsHex } from "@polkadot/util-crypto";
+import { bridgeLocation, buildResultXcmAssetHubERC20TransferFromParachain, buildAssetHubERC20TransferFromParachain, DOT_LOCATION, erc20Location, parahchainLocation } from "./xcmBuilder";
 import { Asset, AssetRegistry, calculateDestinationFee, ERC20Metadata, getDotBalance, getNativeBalance, getParachainId, getTokenBalance, Parachain } from "./assets_v2";
 import { getOperatingStatus } from "./status";
 import { IGateway } from "@snowbridge/contract-types";
-import { CallDryRunEffects, XcmDryRunApiError } from "@polkadot/types/interfaces";
+import { CallDryRunEffects, EventRecord, XcmDryRunApiError } from "@polkadot/types/interfaces";
 import { Result } from "@polkadot/types";
 
 export type Transfer = {
@@ -26,6 +26,7 @@ export type Transfer = {
         ahAssetMetadata: Asset
         sourceAssetMetadata: Asset
         sourceParachain: Parachain
+        messageId?: string
     },
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>
 }
@@ -46,20 +47,33 @@ export async function createTransfer(
     fee: DeliveryFee,
 ): Promise<Transfer> {
     const { ethChainId, assetHubParaId } = registry
-    const sourceParaId = await getParachainId(parachain)
 
     let sourceAccountHex = sourceAccount
     if (!isHex(sourceAccountHex)) {
         sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
     }
 
+    const sourceParaId = await getParachainId(parachain)
     const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
 
+    let messageId: string | undefined
     let tx: SubmittableExtrinsic<"promise", ISubmittableResult>;
     if (sourceParaId === assetHubParaId) {
         tx = createERC20AssetHubTx(parachain, ethChainId, tokenAddress, beneficiaryAccount, amount)
     } else {
-        tx = createERC20SourceParachainTx(parachain, ethChainId, sourceAccountHex, tokenAddress, beneficiaryAccount, amount, fee.totalFeeInDot)
+        const [accountNextId] = await Promise.all([
+            parachain.rpc.system.accountNextIndex(sourceAccountHex),
+        ]);
+        const entropy = new Uint8Array([
+            ...stringToU8a(sourceParaId.toString()),
+            ...hexToU8a(sourceAccountHex),
+            ...accountNextId.toU8a(),
+            ...hexToU8a(tokenAddress),
+            ...stringToU8a(beneficiaryAccount),
+            ...stringToU8a(amount.toString()),
+        ]);
+        messageId = blake2AsHex(entropy);
+        tx = createERC20SourceParachainTx(parachain, ethChainId, assetHubParaId, sourceAccountHex, tokenAddress, beneficiaryAccount, amount, fee.totalFeeInDot, messageId)
     }
 
     return {
@@ -77,7 +91,8 @@ export async function createTransfer(
             tokenErcMetadata,
             sourceParachain,
             ahAssetMetadata,
-            sourceAssetMetadata
+            sourceAssetMetadata,
+            messageId,
         },
         tx
     }
@@ -238,9 +253,68 @@ export async function validateTransfer(connections: Connections, transfer: Trans
     }
 }
 
-export function getMessageReceipt(transfer: Transfer) {
-    // TODO: return messageId
-    throw Error()
+export type MessageReceipt = {
+    blockNumber: number
+    blockHash: string
+    txIndex: number
+    txHash: string
+    success: boolean
+    events: EventRecord[]
+    dispatchError?: any
+    messageId?: string
+}
+
+export async function signAndSend(parachain: ApiPromise, transfer: Transfer, account: AddressOrPair, options: Partial<SignerOptions>): Promise<MessageReceipt> {
+    const result = await new Promise<MessageReceipt>((resolve, reject) => {
+        try {
+            transfer.tx.signAndSend(account, options, (c) => {
+                if (c.isError) {
+                    console.error(c)
+                    reject(c.internalError || c.dispatchError || c)
+                }
+                if (c.isInBlock) {
+                    console.log('aaaaaaaaa', c)
+                    const result = {
+                        txHash: u8aToHex(c.txHash),
+                        txIndex: c.txIndex || 0,
+                        blockNumber: Number((c as any).blockNumber),
+                        blockHash: "",
+                        events: c.events,
+                    }
+                    for (const e of c.events) {
+                        if (parachain.events.system.ExtrinsicFailed.is(e.event)) {
+                            resolve({
+                                ...result,
+                                success: false,
+                                dispatchError: (e.event.data.toHuman(true) as any)
+                                    ?.dispatchError,
+                            })
+                        }
+
+                        if (parachain.events.polkadotXcm.Sent.is(e.event)) {
+                            resolve({
+                                ...result,
+                                success: true,
+                                messageId: (e.event.data.toPrimitive() as any)[3],
+                            })
+                        }
+                    }
+                    resolve({
+                        ...result,
+                        success: false,
+                    })
+                }
+            })
+        } catch (e) {
+            console.error(e)
+            reject(e)
+        }
+    })
+
+    result.blockHash = u8aToHex(await parachain.rpc.chain.getBlockHash(result.blockNumber))
+    result.messageId = transfer.computed.messageId ?? result.messageId
+
+    return result
 }
 
 function resolveInputs(registry: AssetRegistry, tokenAddress: string, sourceParaId: number) {
@@ -294,30 +368,32 @@ function createERC20AssetHubTx(
 function createERC20SourceParachainTx(
     parachain: ApiPromise,
     ethChainId: number,
+    assetHubParaId: number,
     sourceAccount: string,
     tokenAddress: string,
     beneficiaryAccount: string,
     amount: bigint,
-    totalFeeInDot: bigint
+    totalFeeInDot: bigint,
+    messageId: string
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     const assets = {
         v4: [
             {
+                id: DOT_LOCATION,
+                fun: { Fungible: totalFeeInDot },
+            },
+            {
                 id: erc20Location(ethChainId, tokenAddress),
                 fun: { Fungible: amount },
             },
-            {
-                id: DOT_LOCATION,
-                fun: { Fungible: totalFeeInDot },
-            }
         ]
     }
-    const destination = { v4: bridgeLocation(ethChainId) }
+    const destination = { v4: parahchainLocation(assetHubParaId) }
 
     const feeAsset = {
         v4: DOT_LOCATION
     }
-    const customXcm = buildAssetHubERC20TransferFromParachain(parachain.registry, ethChainId, sourceAccount, beneficiaryAccount, tokenAddress, "0x0000000000000000000000000000000000000000000000000000000000000000")
+    const customXcm = buildAssetHubERC20TransferFromParachain(parachain.registry, ethChainId, sourceAccount, beneficiaryAccount, tokenAddress, messageId)
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(destination, assets, "DestinationReserve", feeAsset, "DestinationReserve", customXcm, "Unlimited")
 }
 

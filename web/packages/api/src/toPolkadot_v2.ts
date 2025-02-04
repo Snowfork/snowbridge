@@ -354,7 +354,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
 
     const resultPrimitive = result.toPrimitive() as any
     const resultHuman = result.toHuman() as any
-console.log('XXXXXXXXX', resultHuman)
+    console.log('XXXXXXXXX', resultHuman)
 
     return {
         success: resultPrimitive.ok?.executionResult?.complete !== undefined,
@@ -373,7 +373,7 @@ async function dryRunDestination(destination: ApiPromise, transfer: Transfer, xc
 
     const resultPrimitive = result.toPrimitive() as any
     const resultHuman = result.toHuman() as any
-console.log('XXXXXXXXX', resultHuman)
+    console.log('XXXXXXXXX', resultHuman)
 
     return {
         success: resultPrimitive.ok?.executionResult?.complete !== undefined,
