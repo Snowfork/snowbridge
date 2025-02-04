@@ -93,6 +93,8 @@ export type MessageReceipt = {
     channelId: string
     nonce: bigint
     messageId: string
+    blockNumber: number
+    blockHash: string
 }
 
 export async function getDeliveryFee(gateway: IGateway, registry: AssetRegistry, tokenAddress: string, destinationParaId: number): Promise<DeliveryFee> {
@@ -275,12 +277,15 @@ export async function getMessageReceipt(receipt: TransactionReceipt): Promise<Me
             events.push(event)
         }
     })
+
     const messageAccepted = events.find((log) => log.name === "OutboundMessageAccepted")
     if (!messageAccepted) return null
     return {
         channelId: String(messageAccepted.args[0]),
         nonce: BigInt(messageAccepted.args[1]),
         messageId: String(messageAccepted.args[2]),
+        blockNumber: receipt.blockNumber,
+        blockHash: receipt.blockHash,
     }
 }
 
@@ -354,7 +359,6 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
 
     const resultPrimitive = result.toPrimitive() as any
     const resultHuman = result.toHuman() as any
-    console.log('XXXXXXXXX', resultHuman)
 
     return {
         success: resultPrimitive.ok?.executionResult?.complete !== undefined,
@@ -373,7 +377,6 @@ async function dryRunDestination(destination: ApiPromise, transfer: Transfer, xc
 
     const resultPrimitive = result.toPrimitive() as any
     const resultHuman = result.toHuman() as any
-    console.log('XXXXXXXXX', resultHuman)
 
     return {
         success: resultPrimitive.ok?.executionResult?.complete !== undefined,

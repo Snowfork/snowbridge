@@ -273,7 +273,6 @@ export async function signAndSend(parachain: ApiPromise, transfer: Transfer, acc
                     reject(c.internalError || c.dispatchError || c)
                 }
                 if (c.isInBlock) {
-                    console.log('aaaaaaaaa', c)
                     const result = {
                         txHash: u8aToHex(c.txHash),
                         txIndex: c.txIndex || 0,
