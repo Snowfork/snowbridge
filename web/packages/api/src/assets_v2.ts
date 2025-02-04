@@ -1,4 +1,4 @@
-import { AbstractProvider, Contract, ethers, WeiPerEther } from "ethers";
+import { AbstractProvider, Contract, ethers } from "ethers";
 import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api";
 import { isFunction } from '@polkadot/util';
 import { SnowbridgeEnvironment } from "./environment";
