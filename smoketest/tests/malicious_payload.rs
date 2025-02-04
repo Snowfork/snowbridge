@@ -12,19 +12,42 @@ use snowbridge_smoketest::{
 	helper::initialize_wallet,
 };
 use sp_consensus_beefy;
+use sp_core::ByteArray;
 use sp_crypto_hashing::keccak_256;
-use subxt::ext::sp_core::{ecdsa::Pair, hexdisplay::AsBytesRef, Pair as PairT};
+use subxt::{
+	client::OfflineClientT,
+	ext::sp_core::{ecdsa::Pair, hexdisplay::AsBytesRef, Pair as PairT},
+	OnlineClient, PolkadotConfig,
+};
+
+// TODO: replace
+#[subxt::subxt(runtime_metadata_path = "./polkadot_relaychain_metadata.scale")]
+pub mod polkadot {}
 
 #[tokio::test]
 async fn malicious_payload() {
 	let ethereum_client = Arc::new(initialize_wallet().await.expect("initialize wallet"));
 
+	let relaychain_client: OnlineClient<PolkadotConfig> =
+		OnlineClient::from_url((*RELAY_CHAIN_WS_URL).to_string())
+			.await
+			.expect("can not connect to relaychain");
+
+	let validator_set_id_query = polkadot::storage().beefy().validator_set_id();
+	let validator_set_id = relaychain_client
+		.storage()
+		.at_latest()
+		.await
+		.expect("can not connect to relaychain")
+		.fetch(&validator_set_id_query)
+		.await
+		.expect("runtime query failed")
+		.expect("validator set is not Some");
 	let beefy_client_addr: Address = BEEFY_CLIENT_CONTRACT.into();
 	let beefy_client = BeefyClient::new(beefy_client_addr, ethereum_client.clone());
 
 	let payload = vec![PayloadItem { payload_id: [0, 0], data: Bytes::new() }];
-	let commitment =
-		Commitment { payload: payload.clone(), block_number: 50000, validator_set_id: 0 };
+	let commitment = Commitment { payload: payload.clone(), block_number: 50000, validator_set_id };
 
 	let malicious_suris = vec!["//Westend01", "//Westend02", "//Westend03"];
 	let malicious_authorities =
@@ -66,9 +89,9 @@ async fn malicious_payload() {
 
 	let call = beefy_client.submit_initial(commitment, bitfield, proof);
 	let result = call.send().await;
-	// verify: error is `InvalidCommitment` (selector 0xc06789fa)
+	// verify: error is `InvalidValidatorProof` (selector 0xe00153fa)
 	assert_eq!(
 		result.err().unwrap().as_revert().expect("is revert error"),
-		&Bytes::from_hex("c06789fa").unwrap()
+		&Bytes::from_hex("e00153fa").unwrap()
 	);
 }
