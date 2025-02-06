@@ -42,7 +42,11 @@ export const assetStatusInfo = async (
     tokenAddress: string,
     ownerAddress?: string
 ) => {
-    const [assetHub, ethereum, gateway] = await Promise.all([context.assetHub(), context.ethereum(), context.gateway()])
+    const [assetHub, ethereum, gateway] = await Promise.all([
+        context.assetHub(),
+        context.ethereum(),
+        context.gateway(),
+    ])
 
     let [ethereumNetwork, isTokenRegistered] = await Promise.all([
         ethereum.getNetwork(),
@@ -63,18 +67,19 @@ export const assetStatusInfo = async (
     let ownerBalance = BigInt(0)
     let tokenGatewayAllowance = BigInt(0)
     let isValidERC20 = true
-    try {
-        const erc20balance = await assetErc20Balance(
-            context,
-            tokenAddress,
-            ownerAddress ?? "0x0000000000000000000000000000000000000000"
-        )
-        ownerBalance = erc20balance.balance
-        tokenGatewayAllowance = erc20balance.gatewayAllowance
-    } catch {
-        isValidERC20 = false
+    if (tokenAddress != "0x0000000000000000000000000000000000000000") {
+        try {
+            const erc20balance = await assetErc20Balance(
+                context,
+                tokenAddress,
+                ownerAddress ?? "0x0000000000000000000000000000000000000000"
+            )
+            ownerBalance = erc20balance.balance
+            tokenGatewayAllowance = erc20balance.gatewayAllowance
+        } catch {
+            isValidERC20 = false
+        }
     }
-
     return {
         ethereumChainId,
         multiLocation,

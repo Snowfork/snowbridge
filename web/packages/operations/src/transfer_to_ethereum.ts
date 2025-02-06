@@ -1,12 +1,9 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
-import {
-    Context,
-    environment,
-    toEthereum,
-} from "@snowbridge/api"
+import { Context, environment, toEthereum } from "@snowbridge/api"
 import { Wallet } from "ethers"
 import cron from "node-cron"
+import { cryptoWaitReady } from "@polkadot/util-crypto"
 
 const transfer = async () => {
     let env = "local_e2e"
@@ -17,7 +14,7 @@ const transfer = async () => {
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
-
+    await cryptoWaitReady()
     const { config } = snowbridgeEnv
 
     const parachains: { [paraId: string]: string } = {}
@@ -27,7 +24,9 @@ const transfer = async () => {
         process.env["ASSET_HUB_URL"] ?? config.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
     const context = new Context({
         ethereum: {
-            execution_url: process.env["EXECUTION_NODE_URL"] || config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY || ""),
+            execution_url:
+                process.env["EXECUTION_NODE_URL"] ||
+                config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY || ""),
             beacon_url: process.env["BEACON_NODE_URL"] || config.BEACON_HTTP_API,
         },
         polkadot: {
@@ -44,17 +43,22 @@ const transfer = async () => {
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        process.env["ETHEREUM_KEY"] || "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
+        process.env["ETHEREUM_KEY"] ||
+            "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
         context.ethereum()
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
-    const POLKADOT_ACCOUNT = process.env["SUBSTRATE_KEY"] ? polkadot_keyring.addFromUri(process.env["SUBSTRATE_KEY"]) : polkadot_keyring.addFromUri("//Ferdie")
+    const POLKADOT_ACCOUNT = process.env["SUBSTRATE_KEY"]
+        ? polkadot_keyring.addFromUri(process.env["SUBSTRATE_KEY"])
+        : polkadot_keyring.addFromUri("//Ferdie")
 
-    const amount = 2_000_000_000_000n
+    const amount = 1_000_000_000_000n
 
-    const WETH_CONTRACT = snowbridgeEnv.locations[0].erc20tokensReceivable.find(
-        (t) => t.id === "WETH"
-    )!.address
+    // const WETH_CONTRACT = snowbridgeEnv.locations[0].erc20tokensReceivable.find(
+    //     (t) => t.id === "WETH"
+    // )!.address
+
+    const WETH_CONTRACT = "0x0000000000000000000000000000000000000000"
 
     console.log("# Asset Hub to Ethereum")
     {
