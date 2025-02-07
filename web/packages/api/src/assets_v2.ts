@@ -273,6 +273,11 @@ export async function getLocationBalance(provider: ApiPromise, specName: string,
             const accountData = (await provider.query.tokens.accounts(account, assetId)).toPrimitive() as any
             return BigInt(accountData?.free ?? 0n)
         }
+        case "mythos":
+        case "muse": {
+            console.log(`${specName} does not support DOT, returning 0.`)
+            return 0n
+        }
         case "moonriver":
         case "moonbeam": {
             const assetId = (await provider.query.assetManager.assetIdType(location)).toPrimitive()
