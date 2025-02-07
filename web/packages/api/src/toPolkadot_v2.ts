@@ -162,7 +162,7 @@ export async function validateTransfer(connections: Connections, transfer: Trans
     const { tx } = transfer
     const { ethereum, gateway, bridgeHub, assetHub, destParachain: destParachainApi } = connections
     const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
-    const { totalValue, minimalBalance, destParachain } = transfer.computed
+    const { totalValue, minimalBalance, destParachain, destAssetMetadata, ahAssetMetadata } = transfer.computed
 
     const logs: ValidationLog[] = []
     if (amount < minimalBalance) {
@@ -221,34 +221,45 @@ export async function validateTransfer(connections: Connections, transfer: Trans
 
     let destinationParachainDryRunError: string | undefined
     if (destinationParaId !== registry.assetHubParaId) {
+        // TODO: Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
         if (!destParachainApi) {
             logs.push({ kind: ValidationKind.Warning, reason: ValidationReason.NoDestinationParachainConnection, message: 'The destination paracahain connection was not supplied. Transaction success cannot be confirmed.' })
-        } else if (destParachain.features.hasDryRunApi) {
-            if (!destinationXcm) {
-                logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.' })
-            }
-            const [location, xcm] = destinationXcm
-            if (xcm.length !== 1) {
-                logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.' })
-            }
-            const forwardedToCorrectDestination =
-                location.v4.parents === 1 &&
-                location.v4.interior.x1.length === 1 &&
-                location.v4.interior.x1[0].parachain === destinationParaId
-            if (!forwardedToCorrectDestination) {
-                logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did produced an XCM to be forwarded to an incorrect parachain.' })
-            }
-            const {
-                success: dryRunDestinationSuccess,
-                errorMessage: destMessage,
-            } = await dryRunDestination(destParachainApi, transfer, xcm[0])
-            if (!dryRunDestinationSuccess) {
-                logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on destination parachain failed.' })
-            }
-            destinationParachainDryRunError = destMessage
         } else {
-            logs.push({ kind: ValidationKind.Warning, reason: ValidationReason.DryRunNotSupportedOnDestination, message: 'The destination paracahain does not support dry running of XCM. Transaction success cannot be confirmed.' })
+            if (!destAssetMetadata.isSufficient) {
+                // TODO: Check acocunt created
+            }
+            if (destParachain.features.hasDryRunApi) {
+                if (!destinationXcm) {
+                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.' })
+                }
+                const [location, xcm] = destinationXcm
+                if (xcm.length !== 1) {
+                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.' })
+                }
+                const forwardedToCorrectDestination =
+                    location.v4.parents === 1 &&
+                    location.v4.interior.x1.length === 1 &&
+                    location.v4.interior.x1[0].parachain === destinationParaId
+                if (!forwardedToCorrectDestination) {
+                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did produced an XCM to be forwarded to an incorrect parachain.' })
+                }
+                const {
+                    success: dryRunDestinationSuccess,
+                    errorMessage: destMessage,
+                } = await dryRunDestination(destParachainApi, transfer, xcm[0])
+                if (!dryRunDestinationSuccess) {
+                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on destination parachain failed.' })
+                }
+                destinationParachainDryRunError = destMessage
+            } else {
+                logs.push({ kind: ValidationKind.Warning, reason: ValidationReason.DryRunNotSupportedOnDestination, message: 'The destination paracahain does not support dry running of XCM. Transaction success cannot be confirmed.' })
+            }
         }
+    } else {
+        if (!ahAssetMetadata.isSufficient) {
+            // TODO: Check acocunt created
+        }
+        // TODO: Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
     }
 
     return {
