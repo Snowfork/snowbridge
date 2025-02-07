@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 /// @title An agent contract that acts on behalf of a consensus system on Polkadot
 /// @dev Instances of this contract act as an agents for arbitrary consensus systems on Polkadot. These consensus systems
@@ -20,8 +20,7 @@ contract Agent {
     }
 
     /// @dev Agents can receive ether permissionlessly.
-    /// This is important, as agents for top-level parachains also act as sovereign accounts from which message relayers
-    /// are rewarded.
+    /// This is important, as agents are used to lock ether.
     receive() external payable {}
 
     /// @dev Allow the gateway to invoke some code within the context of this agent

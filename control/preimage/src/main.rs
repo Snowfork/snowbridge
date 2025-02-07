@@ -27,6 +27,11 @@ struct Cli {
     #[arg(long, value_enum, default_value_t=Format::Hex)]
     format: Format,
 
+    /// Wrap preimage in a sudo call
+    #[cfg(any(feature = "westend", feature = "paseo"))]
+    #[arg(long, default_value_t = false)]
+    sudo: bool,
+
     #[command(flatten)]
     api_endpoints: ApiEndpoints,
 
@@ -50,9 +55,14 @@ pub enum Command {
     ForceCheckpoint(ForceCheckpointArgs),
     /// Set the checkpoint for the beacon light client
     HaltBridge(HaltBridgeArgs),
+    /// Register Ether
+    RegisterEther(RegisterEtherArgs),
     /// Treasury proposal
     TreasuryProposal2024(TreasuryProposal2024Args),
+    /// Governance update 202501
+    GovUpdate202501(GovUpdate202501Args),
 }
+
 #[derive(Debug, Args)]
 pub struct InitializeArgs {
     #[command(flatten)]
@@ -63,6 +73,8 @@ pub struct InitializeArgs {
     force_checkpoint: ForceCheckpointArgs,
     #[command(flatten)]
     gateway_address: GatewayAddressArgs,
+    #[command(flatten)]
+    register_ether: RegisterEtherArgs,
 }
 
 #[derive(Debug, Args)]
@@ -211,6 +223,30 @@ pub struct TreasuryProposal2024Args {
 }
 
 #[derive(Debug, Args)]
+pub struct GovUpdate202501Args {
+    #[command(flatten)]
+    pricing_parameters: PricingParametersArgs,
+    #[command(flatten)]
+    register_ether: RegisterEtherArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct RegisterEtherArgs {
+    /// The minimum balance of the Ether asset that users are allowed to hold
+    #[arg(long, value_name = "WEI", default_value_t = 1u128)]
+    ether_min_balance: u128,
+    /// The Ether asset display name
+    #[arg(long, value_name = "ASSET_DISPLAY_NAME", default_value_t = String::from("Ether"))]
+    ether_name: String,
+    /// The Ether asset symbol
+    #[arg(long, value_name = "ASSET_SYMBOL", default_value_t = String::from("ETH"))]
+    ether_symbol: String,
+    /// The Ether asset's number of decimal places
+    #[arg(long, value_name = "DECIMALS", default_value_t = 18u8)]
+    ether_decimals: u8,
+}
+
+#[derive(Debug, Args)]
 pub struct ApiEndpoints {
     #[arg(long, value_name = "URL")]
     bridge_hub_api: Option<String>,
@@ -312,7 +348,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         Command::Initialize(params) => {
             let (set_pricing_parameters, set_ethereum_fee) =
                 commands::pricing_parameters(&context, &params.pricing_parameters).await?;
-            let call1 = send_xcm_bridge_hub(
+            let bridge_hub_call = send_xcm_bridge_hub(
                 &context,
                 vec![
                     commands::set_gateway_address(&params.gateway_address),
@@ -324,29 +360,29 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ],
             )
             .await?;
-            let call2 =
-                send_xcm_asset_hub(&context, vec![force_xcm_version(), set_ethereum_fee]).await?;
-            #[cfg(any(feature = "westend", feature = "paseo"))]
-            let final_call = sudo(Box::new(utility_force_batch(vec![call1, call2])));
-            #[cfg(not(any(feature = "westend", feature = "paseo")))]
-            let final_call = utility_force_batch(vec![call1, call2]);
-            final_call
+            let (register_ether_call, set_ether_metadata_call) =
+                commands::register_ether(&params.register_ether);
+            let asset_hub_call = send_xcm_asset_hub(
+                &context,
+                vec![
+                    register_ether_call,
+                    set_ether_metadata_call,
+                    force_xcm_version(),
+                    set_ethereum_fee,
+                ],
+            )
+            .await?;
+            utility_force_batch(vec![bridge_hub_call, asset_hub_call])
         }
         Command::UpdateAsset(params) => {
-            let call = send_xcm_asset_hub(
+            send_xcm_asset_hub(
                 &context,
                 vec![
                     commands::make_asset_sufficient(params),
                     commands::force_set_metadata(params),
                 ],
             )
-            .await?;
-
-            #[cfg(any(feature = "westend", feature = "paseo"))]
-            let final_call = sudo(Box::new(call));
-            #[cfg(not(any(feature = "westend", feature = "paseo")))]
-            let final_call = call;
-            final_call
+            .await?
         }
         Command::GatewayOperatingMode(params) => {
             let call = commands::gateway_operating_mode(&params.gateway_operating_mode);
@@ -359,9 +395,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         Command::PricingParameters(params) => {
             let (set_pricing_parameters, set_ethereum_fee) =
                 commands::pricing_parameters(&context, params).await?;
-            let call1 = send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
-            let call2 = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
-            utility_force_batch(vec![call1, call2])
+            let bridge_hub_call =
+                send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
+            let asset_hub_call = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
+            utility_force_batch(vec![bridge_hub_call, asset_hub_call])
         }
         Command::HaltBridge(params) => {
             let mut bh_calls = vec![];
@@ -409,10 +446,43 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 utility_force_batch(vec![call1, call2])
             }
         }
+        Command::RegisterEther(params) => {
+            let (register_ether_call, set_ether_metadata_call) = commands::register_ether(&params);
+            send_xcm_asset_hub(&context, vec![register_ether_call, set_ether_metadata_call]).await?
+        }
         Command::TreasuryProposal2024(params) => treasury_commands::treasury_proposal(&params),
+        Command::GovUpdate202501(GovUpdate202501Args {
+            pricing_parameters,
+            register_ether,
+        }) => {
+            let (set_pricing_parameters, set_ethereum_fee) =
+                commands::pricing_parameters(&context, pricing_parameters).await?;
+
+            let bh_set_pricing_call =
+                send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
+
+            let ah_set_pricing_call = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
+
+            let (register_ether_call, set_ether_metadata_call) =
+                commands::register_ether(&register_ether);
+            let ah_register_ether_call =
+                send_xcm_asset_hub(&context, vec![register_ether_call, set_ether_metadata_call])
+                    .await?;
+
+            utility_force_batch(vec![
+                bh_set_pricing_call,
+                ah_set_pricing_call,
+                ah_register_ether_call,
+            ])
+        }
     };
 
-    let preimage = call.encode();
+    #[cfg(any(feature = "westend", feature = "paseo"))]
+    let final_call = if cli.sudo { sudo(Box::new(call)) } else { call };
+    #[cfg(not(any(feature = "westend", feature = "paseo")))]
+    let final_call = call;
+
+    let preimage = final_call.encode();
 
     generate_chopsticks_script(&preimage, "chopsticks-execute-upgrade.js".into())?;
 

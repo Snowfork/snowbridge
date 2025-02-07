@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress} from "../Types.sol";
 import {Verification} from "../Verification.sol";
@@ -32,11 +32,11 @@ interface IGateway {
     // Emitted when pricing params updated
     event PricingParametersChanged();
 
-    // Emitted when funds are withdrawn from an agent
-    event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
-
     // Emitted when foreign token from polkadot registed
     event ForeignTokenRegistered(bytes32 indexed tokenID, address token);
+
+    // Emitted when ether is deposited
+    event Deposited(address sender, uint256 amount);
 
     /**
      * Getters
@@ -52,6 +52,11 @@ interface IGateway {
     function pricingParameters() external view returns (UD60x18, uint128);
 
     function implementation() external view returns (address);
+
+    /**
+     * Fee management
+     */
+    function depositEther() external payable;
 
     /**
      * Messaging
@@ -105,7 +110,9 @@ interface IGateway {
         view
         returns (uint256);
 
-    /// @dev Send ERC20 tokens to parachain `destinationChain` and deposit into account `destinationAddress`
+    /// @dev Send a token to parachain `destinationChain` and deposit into account
+    /// `destinationAddress`. The user can send native Ether by supplying `address(0)` for
+    /// the `token` parameter.
     function sendToken(
         address token,
         ParaID destinationChain,

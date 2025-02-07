@@ -42,22 +42,24 @@ export const assetStatusInfo = async (
     tokenAddress: string,
     ownerAddress?: string
 ) => {
+    const [assetHub, ethereum, gateway] = await Promise.all([context.assetHub(), context.ethereum(), context.gateway()])
+
     let [ethereumNetwork, isTokenRegistered] = await Promise.all([
-        context.ethereum.api.getNetwork(),
-        context.ethereum.contracts.gateway.isTokenRegistered(tokenAddress),
+        ethereum.getNetwork(),
+        gateway.isTokenRegistered(tokenAddress),
     ])
 
     const ethereumChainId = ethereumNetwork.chainId
     const multiLocation = erc20TokenToAssetLocation(
-        context.polkadot.api.assetHub.registry,
+        assetHub.registry,
         ethereumChainId,
         tokenAddress
     )
     const foreignAsset = (
-        await context.polkadot.api.assetHub.query.foreignAssets.asset(multiLocation)
+        await assetHub.query.foreignAssets.asset(multiLocation)
     ).toPrimitive() as { status: "Live" }
 
-    const tokenContract = IERC20__factory.connect(tokenAddress, context.ethereum.api)
+    const tokenContract = IERC20__factory.connect(tokenAddress, ethereum)
     let ownerBalance = BigInt(0)
     let tokenGatewayAllowance = BigInt(0)
     let isValidERC20 = true
@@ -94,11 +96,13 @@ export const assetErc20Balance = async (
     balance: bigint
     gatewayAllowance: bigint
 }> => {
-    const tokenContract = IERC20__factory.connect(token, context.ethereum.api)
-    const gateway = await context.ethereum.contracts.gateway.getAddress()
+    const [ethereum, gateway] = await Promise.all([context.ethereum(), context.gateway()])
+
+    const tokenContract = IERC20__factory.connect(token, ethereum)
+    const gatewayAddress = await gateway.getAddress()
     const [balance, gatewayAllowance] = await Promise.all([
         tokenContract.balanceOf(owner),
-        tokenContract.allowance(owner, gateway),
+        tokenContract.allowance(owner, gatewayAddress),
     ])
     return {
         balance,
@@ -116,7 +120,7 @@ export const assetErc20Metadata = async (
     context: Context,
     tokenAddress: string
 ): Promise<ERC20Metadata> => {
-    const tokenMetadata = IERC20Metadata__factory.connect(tokenAddress, context.ethereum.api)
+    const tokenMetadata = IERC20Metadata__factory.connect(tokenAddress, await context.ethereum())
     const [name, symbol, decimals] = await Promise.all([
         tokenMetadata.name(),
         tokenMetadata.symbol(),

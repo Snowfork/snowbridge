@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Gateway} from "../../src/Gateway.sol";
-import {ParaID, OperatingMode} from "../../src/Types.sol";
+import {ChannelID, ParaID, OperatingMode} from "../../src/Types.sol";
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
 import {Verification} from "../../src/Verification.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
@@ -47,10 +47,6 @@ contract MockGateway is Gateway {
         this.setOperatingMode(params);
     }
 
-    function transferNativeFromAgentPublic(bytes calldata params) external {
-        this.transferNativeFromAgent(params);
-    }
-
     function setCommitmentsAreVerified(bool value) external {
         commitmentsAreVerified = value;
     }
@@ -81,8 +77,8 @@ contract MockGateway is Gateway {
         this.registerForeignToken(params);
     }
 
-    function mintForeignTokenPublic(bytes calldata params) external {
-        this.mintForeignToken(params);
+    function mintForeignTokenPublic(ChannelID channelID, bytes calldata params) external {
+        this.mintForeignToken(channelID, params);
     }
 
     function transferNativeTokenPublic(bytes calldata params) external {

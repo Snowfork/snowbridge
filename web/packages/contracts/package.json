@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/contracts",
-  "version": "0.1.25",
+  "version": "0.1.31",
   "description": "Snowbridge contract source and abi.",
   "license": "Apache-2.0",
   "repository": {
@@ -16,6 +16,6 @@
   "scripts": {
     "build": "cp -R '../../../contracts/src' '../../../contracts/out' '../../../contracts/test' ."
   },
-  "devDependencies": { },
-  "dependencies": { }
+  "devDependencies": {},
+  "dependencies": {}
 }

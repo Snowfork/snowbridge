@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
@@ -17,6 +17,7 @@ import {
     Command,
     MultiAddress,
     Ticket,
+    TokenInfo,
     Costs,
     AgentExecuteCommand
 } from "./Types.sol";
@@ -38,7 +39,6 @@ import {
     CreateChannelParams,
     UpdateChannelParams,
     SetOperatingModeParams,
-    TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
     SetPricingParametersParams,
     RegisterForeignTokenParams,
@@ -74,7 +74,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     // Gas used for:
     // 1. Mapping a command id to an implementation function
     // 2. Calling implementation function
-    uint256 DISPATCH_OVERHEAD_GAS = 10_000;
+    uint256 constant DISPATCH_OVERHEAD_GAS = 10_000;
 
     // The maximum fee that can be sent to a destination parachain to pay for execution (DOT).
     // Has two functions:
@@ -88,7 +88,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     error InvalidProof();
     error InvalidNonce();
     error NotEnoughGas();
-    error FeePaymentToLow();
+    error InsufficientEther();
     error Unauthorized();
     error Disabled();
     error AgentAlreadyCreated();
@@ -106,6 +106,24 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             revert Unauthorized();
         }
         _;
+    }
+
+    modifier nonreentrant() {
+        assembly {
+            // Check if flag is set and if true revert because it means the function is currently executing.
+            if tload(0) { revert(0, 0) }
+
+            // Set the flag to mark the the function is currently executing.
+            tstore(0, 1)
+        }
+
+        // Execute the function here.
+        _;
+
+        assembly {
+            // Clear the flag as the function has completed execution.
+            tstore(0, 0)
+        }
     }
 
     constructor(
@@ -137,7 +155,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         InboundMessage calldata message,
         bytes32[] calldata leafProof,
         Verification.Proof calldata headerProof
-    ) external {
+    ) external nonreentrant {
         uint256 startGas = gasleft();
 
         Channel storage channel = _ensureChannel(message.channelID);
@@ -197,10 +215,8 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
                 success = false;
             }
         } else if (message.command == Command.TransferNativeFromAgent) {
-            try Gateway(this).transferNativeFromAgent{gas: maxDispatchGas}(message.params) {}
-            catch {
-                success = false;
-            }
+            // DISABLED
+            success = true;
         } else if (message.command == Command.Upgrade) {
             try Gateway(this).upgrade{gas: maxDispatchGas}(message.params) {}
             catch {
@@ -227,7 +243,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
                 success = false;
             }
         } else if (message.command == Command.MintForeignToken) {
-            try Gateway(this).mintForeignToken{gas: maxDispatchGas}(message.params) {}
+            try Gateway(this).mintForeignToken{gas: maxDispatchGas}(message.channelID, message.params) {}
             catch {
                 success = false;
             }
@@ -240,11 +256,11 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
         // Add the reward to the refund amount. If the sum is more than the funds available
         // in the channel agent, then reduce the total amount
-        uint256 amount = Math.min(refund + message.reward, address(channel.agent).balance);
+        uint256 amount = Math.min(refund + message.reward, address(this).balance);
 
-        // Do the payment if there funds available in the agent
+        // Do the payment if there funds available in the gateway
         if (amount > _dustThreshold()) {
-            _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
+            payable(msg.sender).safeNativeTransfer(amount);
         }
 
         emit IGateway.InboundMessageDispatched(message.channelID, message.nonce, message.id, success);
@@ -278,6 +294,13 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
 
     function implementation() public view returns (address) {
         return ERC1967.load();
+    }
+
+    /**
+     * Fee management
+     */
+    function depositEther() external payable {
+        emit Deposited(msg.sender, msg.value);
     }
 
     /**
@@ -371,16 +394,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         emit OperatingModeChanged(params.mode);
     }
 
-    // @dev Transfer funds from an agent to a recipient account
-    function transferNativeFromAgent(bytes calldata data) external onlySelf {
-        TransferNativeFromAgentParams memory params = abi.decode(data, (TransferNativeFromAgentParams));
-
-        address agent = _ensureAgent(params.agentID);
-
-        _transferNativeFromAgent(agent, payable(params.recipient), params.amount);
-        emit AgentFundsWithdrawn(params.agentID, params.recipient, params.amount);
-    }
-
     // @dev Set token fees of the gateway
     function setTokenTransferFees(bytes calldata data) external onlySelf {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
@@ -411,9 +424,9 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     }
 
     // @dev Mint foreign token from polkadot
-    function mintForeignToken(bytes calldata data) external onlySelf {
+    function mintForeignToken(ChannelID channelID, bytes calldata data) external onlySelf {
         MintForeignTokenParams memory params = abi.decode(data, (MintForeignTokenParams));
-        Assets.mintForeignToken(params.foreignTokenID, params.recipient, params.amount);
+        Assets.mintForeignToken(channelID, params.foreignTokenID, params.recipient, params.amount);
     }
 
     // @dev Transfer Ethereum native token back from polkadot
@@ -437,7 +450,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     }
 
     // Register an Ethereum-native token in the gateway and on AssetHub
-    function registerToken(address token) external payable {
+    function registerToken(address token) external payable nonreentrant {
         _submitOutbound(Assets.registerToken(token));
     }
 
@@ -457,7 +470,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         MultiAddress calldata destinationAddress,
         uint128 destinationFee,
         uint128 amount
-    ) external payable {
+    ) external payable nonreentrant {
         Ticket memory ticket = Assets.sendToken(
             token, msg.sender, destinationChain, destinationAddress, destinationFee, MAX_DESTINATION_FEE, amount
         );
@@ -529,19 +542,26 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Destination fee always in DOT
         uint256 fee = _calculateFee(ticket.costs);
 
-        // Ensure the user has enough funds for this message to be accepted
-        if (msg.value < fee) {
-            revert FeePaymentToLow();
+        // Ensure the user has provided enough ether for this message to be accepted.
+        // This includes:
+        // 1. The bridging fee, which is collected in this gateway contract
+        // 2. The ether value being bridged over to Polkadot, which is locked into the AssetHub
+        //    agent contract.
+        uint256 totalEther = fee + ticket.value;
+        if (msg.value < totalEther) {
+            revert InsufficientEther();
+        }
+        if (ticket.value > 0) {
+            payable(AssetsStorage.layout().assetHubAgent).safeNativeTransfer(ticket.value);
         }
 
         channel.outboundNonce = channel.outboundNonce + 1;
 
-        // Deposit total fee into agent's contract
-        payable(channel.agent).safeNativeTransfer(fee);
-
+        // The fee is already collected into the gateway contract
         // Reimburse excess fee payment
-        if (msg.value > fee) {
-            payable(msg.sender).safeNativeTransfer(msg.value - fee);
+        uint256 excessFee = msg.value - totalEther;
+        if (excessFee > _dustThreshold()) {
+            payable(msg.sender).safeNativeTransfer(excessFee);
         }
 
         // Generate a unique ID for this message
@@ -579,12 +599,6 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
     function _invokeOnAgent(address agent, bytes memory data) internal returns (bytes memory) {
         (bool success, bytes memory returndata) = (Agent(payable(agent)).invoke(AGENT_EXECUTOR, data));
         return Call.verifyResult(success, returndata);
-    }
-
-    /// @dev Transfer ether from an agent
-    function _transferNativeFromAgent(address agent, address payable recipient, uint256 amount) internal {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
-        _invokeOnAgent(agent, call);
     }
 
     /// @dev Define the dust threshold as the minimum cost to transfer ether between accounts
@@ -690,6 +704,10 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
+
+        // Register native Ether
+        TokenInfo storage etherTokenInfo = assets.tokenRegistry[address(0)];
+        etherTokenInfo.isRegistered = true;
 
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();

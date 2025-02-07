@@ -1,5 +1,7 @@
+import { ApiPromise } from "@polkadot/api"
+import { SubmittableExtrinsic, SubmittableExtrinsicFunction } from "@polkadot/api/types"
 import { EventRecord } from "@polkadot/types/interfaces"
-import { Codec, IKeyringPair, Signer } from "@polkadot/types/types"
+import { AnyTuple, Codec, IKeyringPair, ISubmittableResult, Signer } from "@polkadot/types/types"
 import { BN, u8aToHex } from "@polkadot/util"
 import { decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
 import { assetStatusInfo, palletAssetsBalance } from "./assets"
@@ -88,16 +90,97 @@ export const getSendFee = async (
         defaultFee: 2_750_872_500_000n,
     }
 ) => {
-    const {
-        polkadot: {
-            api: { assetHub },
-        },
-    } = context
+    const assetHub = await context.assetHub()
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
     return leFee.eqn(0) ? options.defaultFee : BigInt(leFee.toString())
+}
+
+export type SendTokenTx = {
+    input: {
+        ethereumChainId: bigint;
+        sourceAddress: string;
+        beneficiaryAddress: any;
+        tokenAddress: string;
+        amount: bigint;
+    },
+    computed: {
+        assetLocation: any;
+        sourceAddressHex: `0x${string}`;
+        destination: any;
+        beneficiary: any;
+        assets: any;
+        fee_asset: number;
+        weight: string;
+        extrinsic: SubmittableExtrinsicFunction<"promise", AnyTuple>;
+    },
+    tx: SubmittableExtrinsic<"promise", ISubmittableResult>
+}
+
+export async function createTx(
+    sourceParachain: ApiPromise,
+    ethereumChainId: bigint,
+    sourceAddress: string,
+    beneficiaryAddress: string,
+    tokenAddress: string,
+    amount: bigint,
+): Promise<SendTokenTx> {
+    const assetLocation = {
+        parents: 2,
+        interior: {
+            X2: [
+                { GlobalConsensus: { Ethereum: { chain_id: ethereumChainId } } },
+                { AccountKey20: { key: tokenAddress } },
+            ],
+        },
+    }
+    const sourceAddressHex = u8aToHex(decodeAddress(sourceAddress))
+    const fee_asset = 0
+    const weight = "Unlimited"
+    const versionKey = "V3"
+    const assets: { [key: string]: any } = {}
+    const transferAsset = {
+        id: { Concrete: assetLocation },
+        fun: { Fungible: amount },
+    }
+    assets[versionKey] = [transferAsset]
+    const destination: { [key: string]: any } = {}
+    destination[versionKey] = {
+        parents: 2,
+        interior: {
+            X1: { GlobalConsensus: { Ethereum: { chain_id: ethereumChainId } } },
+        },
+    }
+    const beneficiaryLocation: { [key: string]: any } = {}
+    beneficiaryLocation[versionKey] = {
+        parents: 0,
+        interior: { X1: { AccountKey20: { key: beneficiaryAddress } } },
+    }
+    const extrinsic = sourceParachain.tx.polkadotXcm.transferAssets
+    const tx = extrinsic(destination, beneficiaryLocation, assets, fee_asset, weight)
+
+    return {
+        input: {
+            ethereumChainId,
+            sourceAddress,
+            beneficiaryAddress,
+            amount,
+            tokenAddress,
+        },
+        computed: {
+            assetLocation,
+            sourceAddressHex,
+            destination,
+            beneficiary: beneficiaryLocation,
+            assets,
+            fee_asset,
+            weight,
+            extrinsic
+        },
+        tx
+    }
 }
 
 export const validateSend = async (
@@ -110,12 +193,11 @@ export const validateSend = async (
     validateOptions: Partial<IValidateOptions> = {}
 ): Promise<SendValidationResult> => {
     const options = { ...ValidateOptionDefaults, ...validateOptions }
-    const {
-        polkadot: {
-            api: { assetHub, bridgeHub, relaychain, parachains },
-        },
-    } = context
-
+    const [assetHub, bridgeHub, relaychain] = await Promise.all([
+        context.assetHub(),
+        context.bridgeHub(),
+        context.relaychain(),
+    ])
     const errors: SendValidationError[] = []
 
     const [assetHubHead, assetHubParaId, bridgeHubHead, bridgeHubParaId, relaychainHead] =
@@ -156,9 +238,9 @@ export const validateSend = async (
     let assetBalance = 0n
     let hasAsset = false
     if (parachainKnownToContext && sourceParachainId != assetHubParaIdDecoded) {
-        parachainKnownToContext = sourceParachainId in parachains
-        parachainHasPalletXcm =
-            parachains[sourceParachainId].tx.polkadotXcm.transferAssets !== undefined
+        parachainKnownToContext = context.hasParachain(sourceParachainId)
+        const sourceParachainApi = await context.parachain(sourceParachainId)
+        parachainHasPalletXcm = sourceParachainApi.tx.polkadotXcm.transferAssets !== undefined
         let [hrmpChannel, sourceParachainHead] = await Promise.all([
             relaychain.query.hrmp.hrmpChannels({
                 sender: sourceParachainId,
@@ -174,7 +256,7 @@ export const validateSend = async (
         if (foreignAssetExists) {
             assetBalance =
                 (await palletAssetsBalance(
-                    parachains[sourceParachainId],
+                    sourceParachainApi,
                     assetInfo.multiLocation,
                     signer.address,
                     "foreignAssets"
@@ -215,7 +297,7 @@ export const validateSend = async (
         })
 
     const bridgeStatus = await bridgeStatusInfo(context);
-    
+
     const bridgeOperational = bridgeStatus.toEthereum.operatingMode.outbound === "Normal"
     const lightClientLatencyIsAcceptable =
         bridgeStatus.toEthereum.latencySeconds < options.acceptableLatencyInSeconds
@@ -349,22 +431,31 @@ export type SendResult = {
     }
 }
 
+export interface ISendOptions {
+    xcmVersion: number,
+    sourceParachainFee: bigint,
+    scanBlocks: number,
+}
+
+const SendOptionDefaults: ISendOptions = {
+    xcmVersion: 3,
+    sourceParachainFee: 10_000_000_000n,
+    scanBlocks: 100,
+}
 export const send = async (
     context: Context,
     signer: WalletOrKeypair,
     plan: SendValidationResult,
-    options = {
-        xcmVersion: 3,
-        sourceParachainFee: 10_000_000_000n,
-        scanBlocks: 100,
-    }
+    sendOptions: Partial<ISendOptions> = {}
 ): Promise<SendResult> => {
-    const {
-        polkadot: {
-            api: { assetHub, bridgeHub, parachains, relaychain },
-        },
-        ethereum,
-    } = context
+    const options = { ...SendOptionDefaults, ...sendOptions }
+    const [assetHub, bridgeHub, ethereum, relaychain] = await Promise.all([
+        context.assetHub(),
+        context.bridgeHub(),
+        context.ethereum(),
+        context.relaychain()
+    ])
+
     if (!plan.success) {
         throw Error("plan failed")
     }
@@ -391,8 +482,7 @@ export const send = async (
 
     let pResult = undefined
     if (plan.success.sourceParachain) {
-        // TODO: Support orml xtokens
-        let parachainApi = parachains[plan.success.sourceParachain.paraId]
+        let parachainApi = await context.parachain(plan.success.sourceParachain.paraId)
         const dotLocation = parachainApi.createType("StagingXcmV3MultiLocation", {
             parents: 1,
             interior: "Here",
@@ -418,7 +508,7 @@ export const send = async (
 
         const parachainSignedTx = await parachainApi.tx.polkadotXcm
             .transferAssets(pDestination, pBeneficiary, pAssets, fee_asset, weight)
-            .signAsync(addressOrPair, { signer: walletSigner })
+            .signAsync(addressOrPair, { signer: walletSigner, withSignedTransaction: true })
 
         pResult = await new Promise<{
             blockNumber: number
@@ -504,7 +594,7 @@ export const send = async (
 
     const [bridgeHubHead, ethereumHead, relaychainHead] = await Promise.all([
         bridgeHub.rpc.chain.getFinalizedHead(),
-        ethereum.api.getBlock("finalized"),
+        ethereum.getBlock("finalized"),
         relaychain.rpc.chain.getFinalizedHead(),
     ])
 
@@ -523,9 +613,17 @@ export const send = async (
         interior: { X1: { AccountKey20: { key: plan.success.beneficiary } } },
     }
 
-    const assetHubSignedTx = await assetHub.tx.polkadotXcm
-        .transferAssets(destination, beneficiary, assets, fee_asset, weight)
-        .signAsync(addressOrPair, { signer: walletSigner })
+    const assetHubUnsigned = await createTx(
+        assetHub,
+        plan.success.ethereumChainId,
+        plan.success.sourceAddress,
+        plan.success.beneficiary,
+        plan.success.tokenAddress,
+        plan.success.amount
+    );
+
+    const assetHubSignedTx = await assetHubUnsigned.tx
+        .signAsync(addressOrPair, { signer: walletSigner, withSignedTransaction: true })
 
     let result = await new Promise<{
         blockNumber: number
@@ -623,15 +721,13 @@ export const trackSendProgressPolling = async (
         scanBlocks: 600,
     }
 ): Promise<{ status: "success" | "pending"; result: SendResult }> => {
-    const {
-        polkadot: {
-            api: { relaychain, bridgeHub },
-        },
-        ethereum,
-        ethereum: {
-            contracts: { beefyClient, gateway },
-        },
-    } = context
+    const [bridgeHub, ethereum, relaychain, beefyClient, gateway] = await Promise.all([
+        context.bridgeHub(),
+        context.ethereum(),
+        context.relaychain(),
+        context.beefyClient(),
+        context.gateway(),
+    ])
     const { success } = result
 
     if (result.failure || !success || !success.plan.success) {
@@ -645,9 +741,9 @@ export const trackSendProgressPolling = async (
                     await bridgeHub.rpc.chain.getHeader(success.bridgeHub.submittedAtHash)
                 ).number.toNumber() + 1,
             ethereumBeefyClient:
-                (await ethereum.api.getBlock(success.ethereum.submittedAtHash))?.number ?? 0 + 1,
+                (await ethereum.getBlock(success.ethereum.submittedAtHash))?.number ?? 0 + 1,
             ethereumMessageDispatched:
-                (await ethereum.api.getBlock(success.ethereum.submittedAtHash))?.number ?? 0 + 1,
+                (await ethereum.getBlock(success.ethereum.submittedAtHash))?.number ?? 0 + 1,
         }
     }
 
@@ -701,7 +797,7 @@ export const trackSendProgressPolling = async (
         const NewMMRRootEvent = beefyClient.getEvent("NewMMRRoot")
 
         const from = success.polling.ethereumBeefyClient
-        let to = (await ethereum.api.getBlockNumber()) ?? 0
+        let to = (await ethereum.getBlockNumber()) ?? 0
         if (from - to > options.scanBlocks) {
             to = from + options.scanBlocks
         }
@@ -743,7 +839,7 @@ export const trackSendProgressPolling = async (
         const InboundMessageDispatched = gateway.getEvent("InboundMessageDispatched")
 
         const from = success.polling.ethereumMessageDispatched
-        let to = (await ethereum.api.getBlockNumber()) ?? 0
+        let to = (await ethereum.getBlockNumber()) ?? 0
         if (from - to > options.scanBlocks) {
             to = from + options.scanBlocks
         }
@@ -762,7 +858,7 @@ export const trackSendProgressPolling = async (
                 messageID.toLowerCase() === success.messageId?.toLowerCase() &&
                 nonce === success.bridgeHub.nonce &&
                 channelID.toLowerCase() ==
-                    paraIdToChannelId(success.plan.success?.assetHub.paraId ?? 1000).toLowerCase()
+                paraIdToChannelId(success.plan.success?.assetHub.paraId ?? 1000).toLowerCase()
             ) {
                 success.ethereum.transferBlockNumber = blockNumber
                 success.ethereum.transferBlockHash = blockHash
@@ -787,15 +883,13 @@ export async function* trackSendProgress(
         scanBlocks: 200,
     }
 ): AsyncGenerator<string> {
-    const {
-        polkadot: {
-            api: { relaychain, bridgeHub },
-        },
-        ethereum,
-        ethereum: {
-            contracts: { beefyClient, gateway },
-        },
-    } = context
+    const [bridgeHub, ethereum, relaychain, beefyClient, gateway] = await Promise.all([
+        context.bridgeHub(),
+        context.ethereum(),
+        context.relaychain(),
+        context.beefyClient(),
+        context.gateway(),
+    ])
     const { success } = result
 
     if (result.failure || !success || !success.plan.success) {
@@ -856,7 +950,7 @@ export async function* trackSendProgress(
             }
             beefyClient.on(NewMMRRootEvent, listener)
         })
-        success.ethereum.beefyBlockNumber = await ethereum.api.getBlockNumber()
+        success.ethereum.beefyBlockNumber = await ethereum.getBlockNumber()
     }
 
     yield `Included in BEEFY Light client block ${success.ethereum.beefyBlockNumber}. Waiting for message to be delivered.`
@@ -873,9 +967,9 @@ export async function* trackSendProgress(
                     messageId.toLowerCase() === success.messageId?.toLowerCase() &&
                     nonce === success.bridgeHub.nonce &&
                     channelId.toLowerCase() ==
-                        paraIdToChannelId(
-                            success.plan.success?.assetHub.paraId ?? 1000
-                        ).toLowerCase()
+                    paraIdToChannelId(
+                        success.plan.success?.assetHub.paraId ?? 1000
+                    ).toLowerCase()
                 ) {
                     resolve(dispatchSuccess)
                     gateway.removeListener(InboundMessageDispatched, listener)
@@ -883,7 +977,7 @@ export async function* trackSendProgress(
             }
             gateway.on(InboundMessageDispatched, listener)
         })
-        success.ethereum.transferBlockNumber = await ethereum.api.getBlockNumber()
+        success.ethereum.transferBlockNumber = await ethereum.getBlockNumber()
     }
     if (success.ethereum.messageDispatchSuccess) {
         yield `Transfer complete in Ethereum block ${success.ethereum.transferBlockNumber}.`

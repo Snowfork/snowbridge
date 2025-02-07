@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {
     MultiAddress, multiAddressFromUint32, multiAddressFromBytes32, multiAddressFromBytes20
@@ -107,9 +107,21 @@ struct Ticket {
     ParaID dest;
     Costs costs;
     bytes payload;
+    // amount of native ether to be sent
+    uint128 value;
 }
 
 struct TokenInfo {
     bool isRegistered;
     bytes32 foreignID;
+}
+
+using {isNativeToken} for TokenInfo global;
+
+function isNativeToken(TokenInfo storage info) view returns (bool) {
+    return info.foreignID == bytes32(0);
+}
+
+function isForeignToken(TokenInfo storage info) view returns (bool) {
+    return !info.isNativeToken();
 }
