@@ -41,6 +41,29 @@ const monitor = async () => {
         },
     })
 
+    let overrides = {}
+    if(env === "polkadot_mainnet") {
+        // Add override for mythos token and add precompile for moonbeam
+        overrides = {
+            precompiles: { "2004": "0x000000000000000000000000000000000000081A" },
+            destinationFeeOverrides: {
+                "3369": 500_000_000n
+            },
+            assetOverrides: {
+                "3369": [
+                    {
+                        token: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003".toLowerCase(),
+                        name: "Mythos",
+                        minimumBalance: 10_000_000_000_000_000n,
+                        symbol: "MYTH",
+                        decimals: 18,
+                        isSufficient: true,
+                    }
+                ]
+            }
+        }
+    }
+
     // Step 0. Build the Asset Registry. The registry contains the list of all token and parachain metadata in order to send tokens.
     // It may take some build but does not change often so it is safe to cache for 12 hours and shipped with your dapp as static data.
     //
@@ -48,14 +71,17 @@ const monitor = async () => {
     //      const registry = await assetsV2.buildRegistry(assetsV2.fromEnvironment(snwobridgeEnv))
     // If your dapp does not use the snowbridge environment or context you can always build it manually by
     // specifying RegistryOptions for only the parachains you care about.
-    const registry = await assetsV2.buildRegistry(await assetsV2.fromContext(context))
+    const registry = await assetsV2.buildRegistry({
+        ...await assetsV2.fromContext(context),
+        ...overrides
+    })
 
     console.log("Asset Registry:", JSON.stringify(registry, (_, value) => typeof value === "bigint" ? String(value) : value, 2))
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
+        process.env.ETH_PRIVATE_KEY ?? "your key goes here",
         context.ethereum()
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
@@ -144,7 +170,7 @@ const monitor = async () => {
 
     console.log("Asset Hub to Ethereum")
     {
-        const sourceParaId = 2000
+        const sourceParaId = 1000
         // Step 1. Get the delivery fee for the transaction
         const fee = await toEthereumV2.getDeliveryFee(await context.assetHub(), registry)
 

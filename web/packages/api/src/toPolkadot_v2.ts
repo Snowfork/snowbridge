@@ -360,10 +360,12 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
     const resultPrimitive = result.toPrimitive() as any
     const resultHuman = result.toHuman() as any
 
+    const destinationXcmsLength = resultPrimitive.ok.forwardedXcms.length
+    const destinationXcm = destinationXcmsLength > 0 ? resultPrimitive.ok.forwardedXcms[destinationXcmsLength-1] : undefined
     return {
         success: resultPrimitive.ok?.executionResult?.complete !== undefined,
         errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
-        destinationXcm: resultPrimitive.ok.forwardedXcms.length > 0 ? resultPrimitive.ok.forwardedXcms[0] : undefined
+        destinationXcm,
     }
 }
 
