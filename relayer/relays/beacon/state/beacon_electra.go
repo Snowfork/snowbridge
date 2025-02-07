@@ -22,6 +22,14 @@ type DepositRequest struct {
 	Index                 uint64   `json:"index,omitempty"`
 }
 
+type PendingDeposit struct {
+	Pubkey                [48]byte `json:"pubkey" ssz-size:"48"`
+	WithdrawalCredentials [32]byte `ssz-size:"32" json:"withdrawal_credentials"`
+	Amount                uint64   `json:"amount"`
+	Signature             [96]byte `json:"signature,omitempty" ssz-size:"96"`
+	Index                 uint64   `json:"index,omitempty"`
+}
+
 type WithdrawalRequest struct {
 	SourceAddress   [20]byte `ssz-size:"20" json:"source_address" `
 	ValidatorPubkey [48]byte `ssz-size:"48" json:"validator_pubkey"`
@@ -98,7 +106,7 @@ type BeaconStateElectra struct {
 	EarliestExitEpoch             uint64                       `json:"earliest_exit_epoch,omitempty"`                             // New in Electra
 	ConsolidationBalanceToConsume uint64                       `json:"consolidation_balance_to_consume,omitempty"`                // New in Electra
 	EarliestConsolidationEpoch    uint64                       `json:"earliest_consolidation_epoch,omitempty"`                    // New in Electra
-	PendingBalanceDeposits        []*PendingBalanceDeposit     `json:"pending_balance_deposits,omitempty" ssz-max:"134217728"`    // New in Electra
+	PendingDeposits               []*PendingDeposit            `json:"pending_deposits,omitempty" ssz-max:"134217728"`            // New in Electra
 	PendingPartialWithdrawals     []*PendingPartialWithdrawal  `json:"pending_partial_withdrawals,omitempty" ssz-max:"134217728"` // New in Electra
 	PendingConsolidations         []*PendingConsolidation      `json:"pending_consolidations,omitempty" ssz-max:"262144"`         // New in Electra
 }
@@ -119,11 +127,6 @@ type IndexedAttestationElectra struct {
 	AttestationIndices []uint64         `json:"attesting_indices" ssz-max:"131072"` // Modified in Electra
 	Data               *AttestationData `json:"data"`
 	Signature          [96]byte         `json:"signature" ssz-size:"96"`
-}
-
-type PendingBalanceDeposit struct {
-	Index  uint64 `json:"index"`
-	Amount uint64 `json:"amount"`
 }
 
 type PendingPartialWithdrawal struct {

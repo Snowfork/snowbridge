@@ -160,6 +160,8 @@ func (s *Syncer) GetCheckpointAtSlot(slot uint64) (scale.BeaconCheckpoint, error
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get finalized update at slot: %w", err)
 	}
+	// In case the update returns a different finalized update that requested (missed blocks, etc)
+	slot = uint64(checkpoint.Payload.FinalizedHeader.Slot)
 
 	genesis, err := s.Client.GetGenesis()
 	if err != nil {
