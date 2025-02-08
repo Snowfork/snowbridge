@@ -54,6 +54,8 @@ async fn malicious_payload() {
 	let beefy_client = BeefyClient::new(beefy_client_addr, ethereum_client.clone());
 
 	let payload = vec![PayloadItem { payload_id: [0, 0], data: Bytes::new() }];
+	let commitment =
+		Commitment { payload: payload.clone(), block_number: block_number + 10, validator_set_id };
 	let malicious_suris = vec!["//Westend04", "//Westend01", "//Westend02"];
 
 	let malicious_authorities =
@@ -85,24 +87,6 @@ async fn malicious_payload() {
 		"malicious_signatures: {:?}",
 		malicious_signatures.iter().map(|sig| sig.to_raw_vec()).collect::<Vec<_>>()
 	);
-	let signer_index = 2;
-
-	let init_signature = malicious_signatures[signer_index].clone();
-	println!("init_signature: {:?}", init_signature);
-
-	let init_signature_bytes = init_signature.as_slice();
-	let mut r = [0u8; 32];
-	let mut s = [0u8; 32];
-	r.copy_from_slice(&init_signature_bytes[0..32]);
-	s.copy_from_slice(&init_signature_bytes[32..64]);
-
-	// For legacy format, convert 0/1 to 27/28
-	let v_raw = init_signature_bytes[64];
-	let v = match v_raw {
-		0 => 27,
-		1 => 28,
-		_ => panic!("v can only be 0 or 1"),
-	};
 
 	let bitfield: Vec<U256> = vec![U256::from_little_endian(&[0b0111])];
 
@@ -130,18 +114,33 @@ async fn malicious_payload() {
 		[keccak_validator_secp256k1_bytes[2], keccak01],
 	];
 
-	let proof = ValidatorProof {
-		v,
-		r,
-		s,
-		index: U256::from_little_endian(&[signer_index.try_into().unwrap()]),
-		// hardcoded 0th validator account
-		account: H160::from_slice(&validator_secp256k1_bytes[signer_index]),
-		// hardcoded 0th validator merkle proof proof in static authority set
-		proof: validator_proofs[signer_index].to_vec(),
-	};
+	for signer_index in 0..=2 {
+		let init_signature_bytes = malicious_signatures[signer_index].as_slice();
+		let mut r = [0u8; 32];
+		let mut s = [0u8; 32];
+		r.copy_from_slice(&init_signature_bytes[0..32]);
+		s.copy_from_slice(&init_signature_bytes[32..64]);
 
-	let call = beefy_client.submit_initial(commitment, bitfield, proof);
-	let result = call.send().await;
-	assert!(result.is_ok());
+		// For legacy format, convert 0/1 to 27/28
+		let v_raw = init_signature_bytes[64];
+		let v = match v_raw {
+			0 => 27,
+			1 => 28,
+			_ => panic!("v can only be 0 or 1"),
+		};
+		let proof = ValidatorProof {
+			v,
+			r,
+			s,
+			index: U256::from_little_endian(&[signer_index.try_into().unwrap()]),
+			account: H160::from_slice(&validator_secp256k1_bytes[signer_index]),
+			proof: validator_proofs[signer_index].to_vec(),
+		};
+
+		let call = beefy_client.submit_initial(commitment.clone(), bitfield.clone(), proof);
+		let result = call.send().await;
+
+		assert!(result.is_ok());
+		tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
+	}
 }
