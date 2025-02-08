@@ -12,7 +12,7 @@ use snowbridge_smoketest::{
 	helper::initialize_wallet,
 };
 use sp_consensus_beefy;
-use sp_core::ByteArray;
+use sp_core::{hex2array, ByteArray};
 use sp_crypto_hashing::keccak_256;
 use subxt::{
 	client::OfflineClientT,
@@ -97,24 +97,39 @@ async fn malicious_payload() {
 
 	let bitfield: Vec<U256> = vec![U256::one(), U256::one(), U256::one(), U256::zero()];
 
+	let validator_secp256k1_bytes = vec![
+		hex2array!("fd4de54fb46fb25358323c12484dea951da5db48"),
+		hex2array!("96fade2050ee5b75c01964e556b49a7c53de0bc5"),
+		hex2array!("054426fc7aab50156c0dfcdcd607e7045cc58d9e"),
+		hex2array!("a601c19ad010f21031f7317f08b4f0046db6ce2a"),
+	];
+
+	let keccak_validator_secp256k1_bytes: Vec<[u8; 32]> =
+		validator_secp256k1_bytes.iter().map(|key| keccak_256(key)).collect();
+
+	let keccak01 = keccak_256(
+		&[keccak_validator_secp256k1_bytes[0], keccak_validator_secp256k1_bytes[1]].concat(),
+	);
+	let keccak23 = keccak_256(
+		&[keccak_validator_secp256k1_bytes[2], keccak_validator_secp256k1_bytes[3]].concat(),
+	);
+
+	let validator_proofs = [
+		[keccak_validator_secp256k1_bytes[1], keccak23],
+		[keccak_validator_secp256k1_bytes[0], keccak23],
+		[keccak_validator_secp256k1_bytes[3], keccak01],
+		[keccak_validator_secp256k1_bytes[2], keccak01],
+	];
+
 	let proof = ValidatorProof {
 		v,
 		r,
 		s,
 		index: U256::zero(),
 		// hardcoded 0th validator account
-		account: H160::from_str("fd4de54fb46fb25358323c12484dea951da5db48").expect("valid address"),
+		account: H160::from_slice(&validator_secp256k1_bytes[0]),
 		// hardcoded 0th validator merkle proof proof in static authority set
-		proof: vec![
-			[
-				5, 120, 92, 249, 72, 54, 128, 155, 50, 161, 184, 237, 9, 152, 81, 248, 77, 238, 54,
-				114, 159, 19, 59, 166, 156, 6, 153, 35, 145, 193, 253, 220,
-			],
-			[
-				169, 40, 149, 147, 19, 125, 50, 4, 149, 113, 52, 71, 100, 184, 239, 180, 111, 163,
-				176, 168, 111, 129, 204, 149, 156, 13, 30, 206, 185, 9, 38, 134,
-			],
-		],
+		proof: validator_proofs[0].to_vec(),
 	};
 
 	let call = beefy_client.submit_initial(commitment, bitfield, proof);
