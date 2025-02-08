@@ -43,11 +43,18 @@ async fn malicious_payload() {
 		.await
 		.expect("runtime query failed")
 		.expect("validator set is not Some");
+	let block_number = relaychain_client
+		.blocks()
+		.at_latest()
+		.await
+		.expect("can not connect to relaychain")
+		.number();
+
 	let beefy_client_addr: Address = BEEFY_CLIENT_CONTRACT.into();
 	let beefy_client = BeefyClient::new(beefy_client_addr, ethereum_client.clone());
 
 	let payload = vec![PayloadItem { payload_id: [0, 0], data: Bytes::new() }];
-	let commitment = Commitment { payload: payload.clone(), block_number: 50000, validator_set_id };
+	let commitment = Commitment { payload: payload.clone(), block_number, validator_set_id };
 
 	let malicious_suris = vec!["//Westend01", "//Westend02", "//Westend03", "//Westend04"];
 	let malicious_authorities =
