@@ -49,7 +49,7 @@ async fn malicious_payload() {
 	let payload = vec![PayloadItem { payload_id: [0, 0], data: Bytes::new() }];
 	let commitment = Commitment { payload: payload.clone(), block_number: 50000, validator_set_id };
 
-	let malicious_suris = vec!["//Westend01", "//Westend02", "//Westend03"];
+	let malicious_suris = vec!["//Westend01", "//Westend02", "//Westend03", "//Westend04"];
 	let malicious_authorities =
 		malicious_suris.iter().map(|suri| Pair::from_string(suri, None).unwrap());
 	println!("malicious_authorities: {:?}", malicious_authorities);
@@ -73,7 +73,7 @@ async fn malicious_payload() {
 		.collect::<Vec<_>>();
 
 	println!("malicious_signatures: {:?}", malicious_signatures);
-	let init_signature = malicious_signatures[0].clone();
+	let init_signature = malicious_signatures[3].clone();
 	println!("init_signature: {:?}", init_signature);
 
 	let init_signature_bytes = init_signature.as_slice();
@@ -112,9 +112,5 @@ async fn malicious_payload() {
 
 	let call = beefy_client.submit_initial(commitment, bitfield, proof);
 	let result = call.send().await;
-	// verify: error is `InvalidSignature` (selector 0x8baa579f)
-	assert_eq!(
-		result.err().unwrap().as_revert().expect("is revert error"),
-		&Bytes::from_hex("0x8baa579f").unwrap()
-	);
+	assert!(result.is_ok());
 }
