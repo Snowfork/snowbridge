@@ -54,12 +54,14 @@ async fn malicious_payload() {
 	let beefy_client = BeefyClient::new(beefy_client_addr, ethereum_client.clone());
 
 	let payload = vec![PayloadItem { payload_id: [0, 0], data: Bytes::new() }];
-	let commitment = Commitment { payload: payload.clone(), block_number, validator_set_id };
+	let malicious_suris = vec!["//Westend04", "//Westend01", "//Westend02"];
 
-	let malicious_suris = vec!["//Westend01", "//Westend02", "//Westend03", "//Westend04"];
 	let malicious_authorities =
 		malicious_suris.iter().map(|suri| Pair::from_string(suri, None).unwrap());
-	println!("malicious_authorities: {:?}", malicious_authorities);
+	println!(
+		"malicious_authorities: {:?}",
+		malicious_authorities.clone().map(|auth| auth.public()).collect::<Vec<_>>()
+	);
 
 	let sp_payload = sp_consensus_beefy::Payload::from_single_entry(
 		payload[0].payload_id,
@@ -79,8 +81,13 @@ async fn malicious_payload() {
 		.map(|pair| pair.sign_prehashed(hashed_commitment))
 		.collect::<Vec<_>>();
 
-	println!("malicious_signatures: {:?}", malicious_signatures);
-	let init_signature = malicious_signatures[3].clone();
+	println!(
+		"malicious_signatures: {:?}",
+		malicious_signatures.iter().map(|sig| sig.to_raw_vec()).collect::<Vec<_>>()
+	);
+	let signer_index = 2;
+
+	let init_signature = malicious_signatures[signer_index].clone();
 	println!("init_signature: {:?}", init_signature);
 
 	let init_signature_bytes = init_signature.as_slice();
@@ -97,7 +104,7 @@ async fn malicious_payload() {
 		_ => panic!("v can only be 0 or 1"),
 	};
 
-	let bitfield: Vec<U256> = vec![U256::from_little_endian(&[0b1110])];
+	let bitfield: Vec<U256> = vec![U256::from_little_endian(&[0b0111])];
 
 	let validator_secp256k1_bytes = vec![
 		hex2array!("fd4de54fb46fb25358323c12484dea951da5db48"),
@@ -127,11 +134,11 @@ async fn malicious_payload() {
 		v,
 		r,
 		s,
-		index: U256::zero(),
+		index: U256::from_little_endian(&[signer_index.try_into().unwrap()]),
 		// hardcoded 0th validator account
-		account: H160::from_slice(&validator_secp256k1_bytes[0]),
+		account: H160::from_slice(&validator_secp256k1_bytes[signer_index]),
 		// hardcoded 0th validator merkle proof proof in static authority set
-		proof: validator_proofs[0].to_vec(),
+		proof: validator_proofs[signer_index].to_vec(),
 	};
 
 	let call = beefy_client.submit_initial(commitment, bitfield, proof);
