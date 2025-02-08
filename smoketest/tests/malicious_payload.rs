@@ -88,14 +88,16 @@ async fn malicious_payload() {
 	let mut s = [0u8; 32];
 	r.copy_from_slice(&init_signature_bytes[0..32]);
 	s.copy_from_slice(&init_signature_bytes[32..64]);
-	let v = init_signature_bytes[64];
-	let v = match v {
+
+	// For legacy format, convert 0/1 to 27/28
+	let v_raw = init_signature_bytes[64];
+	let v = match v_raw {
 		0 => 27,
 		1 => 28,
-		_ => 0,
+		_ => panic!("v can only be 0 or 1"),
 	};
 
-	let bitfield: Vec<U256> = vec![U256::one(), U256::one(), U256::one(), U256::zero()];
+	let bitfield: Vec<U256> = vec![U256::from_little_endian(&[0b1110])];
 
 	let validator_secp256k1_bytes = vec![
 		hex2array!("fd4de54fb46fb25358323c12484dea951da5db48"),
