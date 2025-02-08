@@ -373,8 +373,13 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
 
     const destinationXcmsLength = resultPrimitive.ok.forwardedXcms.length
     const destinationXcm = destinationXcmsLength > 0 ? resultPrimitive.ok.forwardedXcms[destinationXcmsLength-1] : undefined
+
+    const success = resultPrimitive.ok?.executionResult?.complete !== undefined
+    if(!success) {
+        console.error("Error during dry run on asset hub:", JSON.stringify(resultHuman, null, 2))
+    }
     return {
-        success: resultPrimitive.ok?.executionResult?.complete !== undefined,
+        success,
         errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
         destinationXcm,
     }
@@ -391,8 +396,13 @@ async function dryRunDestination(destination: ApiPromise, transfer: Transfer, xc
     const resultPrimitive = result.toPrimitive() as any
     const resultHuman = result.toHuman() as any
 
+    const success = resultPrimitive.ok?.executionResult?.complete !== undefined
+
+    if(!success) {
+        console.error("Error during dry run on source parachain:", JSON.stringify(resultHuman, null, 2))
+    }
     return {
-        success: resultPrimitive.ok?.executionResult?.complete !== undefined,
+        success,
         errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
     }
 }

@@ -201,19 +201,21 @@ export async function validateTransfer(connections: Connections, transfer: Trans
         }
     } else {
         logs.push({ kind: ValidationKind.Warning, reason: ValidationReason.DryRunApiNotAvailable, message: 'Source parachain can not dry run call. Cannot verify success.' })
-        const dryRunResultAssetHub = await dryRunAssetHub(assetHub, sourceParaId, buildResultXcmAssetHubERC20TransferFromParachain(
-            sourceParachain.registry,
-            registry.ethChainId,
-            sourceAccountHex,
-            beneficiaryAccount,
-            tokenAddress,
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            amount,
-            fee.totalFeeInDot,
-        ))
-        if (!dryRunResultAssetHub.success) {
-            logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run failed on Asset Hub.' })
-            assetHubDryRunError = dryRunResultAssetHub.errorMessage
+        if (sourceParaId !== registry.assetHubParaId) {
+            const dryRunResultAssetHub = await dryRunAssetHub(assetHub, sourceParaId, buildResultXcmAssetHubERC20TransferFromParachain(
+                sourceParachain.registry,
+                registry.ethChainId,
+                sourceAccountHex,
+                beneficiaryAccount,
+                tokenAddress,
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                amount,
+                fee.totalFeeInDot,
+            ))
+            if (!dryRunResultAssetHub.success) {
+                logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run failed on Asset Hub.' })
+                assetHubDryRunError = dryRunResultAssetHub.errorMessage
+            }
         }
     }
 
@@ -221,7 +223,7 @@ export async function validateTransfer(connections: Connections, transfer: Trans
     const sourceExecutionFee = paymentInfo['partialFee'].toBigInt()
 
     if (sourceParaId === registry.assetHubParaId) {
-        if ((sourceExecutionFee + fee.totalFeeInDot) > (dotBalance)) {
+        if ((sourceExecutionFee + fee.assetHubFeeInDot) > (dotBalance)) {
             logs.push({ kind: ValidationKind.Error, reason: ValidationReason.InsufficientDotFee, message: 'Insufficient DOT balance to submit transaction on the source parachain.' })
         }
     }
@@ -403,7 +405,10 @@ async function dryRunOnSourceParachain(source: ApiPromise, transfer: Transfer) {
         origin,
         transfer.tx,
     ))
-    const success = result.isOk && result.asOk.executionResult.isOk && result.asOk.forwardedXcms.length === 1
+    const success = result.isOk && result.asOk.executionResult.isOk && result.asOk.forwardedXcms.length >= 1
+    if (!success) {
+        console.error("Error during dry run on source parachain:", JSON.stringify(result.toHuman(), null, 2))
+    }
     return {
         success,
         error: result.isOk && result.asOk.executionResult.isErr ? result.asOk.executionResult.asErr.toJSON() : undefined,
@@ -422,8 +427,12 @@ async function dryRunAssetHub(assetHub: ApiPromise, parachainId: number, xcm: an
     const resultPrimitive = result.toPrimitive() as any
     const resultHuman = result.toHuman() as any
 
+    const success = resultPrimitive.ok?.executionResult?.complete !== undefined
+    if (!success) {
+        console.error("Error during dry run on asset hub:", JSON.stringify(result.toHuman(), null, 2))
+    }
     return {
-        success: resultPrimitive.ok?.executionResult?.complete !== undefined,
+        success,
         errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
     }
 }

@@ -275,7 +275,7 @@ export async function getLocationBalance(provider: ApiPromise, specName: string,
         }
         case "mythos":
         case "muse": {
-            console.log(`${specName} does not support DOT, returning 0.`)
+            console.warn(`${specName} does not support DOT, returning 0.`)
             return 0n
         }
         case "moonriver":
@@ -363,8 +363,9 @@ export async function calculateDestinationFee(provider: ApiPromise, destinationX
     }
     const result = BigInt(feeInDot.ok.toString())
 
-    // return fee padded by 15% unless another percentage is specified
-    return result * (100n + (padFeePercentage ?? 15n)) / 100n
+    // return fee padded by 100% unless another percentage is specified
+    // TODO: Drop to 15% once 2409 is released
+    return result * (100n + (padFeePercentage ?? 100n)) / 100n
 }
 
 async function indexParachainAssets(provider: ApiPromise, ethChainId: number, specName: string) {
