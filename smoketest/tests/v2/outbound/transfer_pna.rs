@@ -72,12 +72,11 @@ async fn transfer_pna() {
 
 	const TOKEN_AMOUNT: u128 = 100_000_000_000;
 
-	let weth_asset_location: Location = Location {
+	let fee_asset_location: Location = Location {
 		parents: 2,
-		interior: Junctions::X2([
-			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
-			AccountKey20 { network: None, key: *WETH_CONTRACT },
-		]),
+		interior: Junctions::X1([GlobalConsensus(NetworkId::Ethereum {
+			chain_id: ETHEREUM_CHAIN_ID,
+		})]),
 	};
 
 	let local_fee_asset = Asset {
@@ -85,7 +84,7 @@ async fn transfer_pna() {
 		fun: Fungible(local_fee_amount),
 	};
 	let remote_fee_asset =
-		Asset { id: AssetId(weth_asset_location), fun: Fungible(remote_fee_amount) };
+		Asset { id: AssetId(fee_asset_location), fun: Fungible(remote_fee_amount) };
 
 	let assets = vec![
 		Asset {

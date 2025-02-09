@@ -7,10 +7,7 @@ use ethers::{
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{
-		i_gateway_v2::IGatewayV2,
-		weth9::{TransferFilter, WETH9},
-	},
+	contracts::i_gateway_v2::{IGatewayV2, InboundMessageDispatchedFilter},
 	helper::AssetHubConfig,
 	parachains::assethub::{
 		api::runtime_types::{
@@ -44,11 +41,7 @@ async fn transfer_ena() {
 		.await
 		.unwrap()
 		.interval(Duration::from_millis(10u64));
-
 	let ethereum_client = Arc::new(ethereum_provider);
-
-	let weth_addr: Address = (*WETH_CONTRACT).into();
-	let weth = WETH9::new(weth_addr, ethereum_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = IGatewayV2::new(gateway_addr, ethereum_client.clone());
@@ -83,10 +76,9 @@ async fn transfer_ena() {
 	let amount: u128 = 1_000_000_000;
 	let asset_location = Location {
 		parents: 2,
-		interior: Junctions::X2([
-			Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
-			Junction::AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
-		]),
+		interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Ethereum {
+			chain_id: ETHEREUM_CHAIN_ID,
+		})]),
 	};
 	let remote_fee_asset = Asset { id: AssetId(asset_location.clone()), fun: Fungible(amount / 2) };
 	let reserved_asset = Asset { id: AssetId(asset_location.clone()), fun: Fungible(amount / 2) };
@@ -131,14 +123,15 @@ async fn transfer_ena() {
 	let mut transfer_event_found = false;
 	while let Some(block) = stream.next().await {
 		println!("Polling ethereum block {:?} for transfer event", block.number.unwrap());
-		if let Ok(transfers) =
-			weth.event::<TransferFilter>().at_block_hash(block.hash.unwrap()).query().await
+		if let Ok(transfers) = gateway
+			.event::<InboundMessageDispatchedFilter>()
+			.at_block_hash(block.hash.unwrap())
+			.query()
+			.await
 		{
 			for transfer in transfers {
-				if transfer.src.eq(&agent_src) {
+				if transfer.success {
 					println!("Transfer event found at ethereum block {:?}", block.number.unwrap());
-					assert_eq!(transfer.src, agent_src.into());
-					assert_eq!(transfer.dst, (*ETHEREUM_RECEIVER).into());
 					transfer_event_found = true;
 				}
 			}

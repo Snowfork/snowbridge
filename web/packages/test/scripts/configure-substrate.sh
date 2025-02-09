@@ -24,14 +24,9 @@ wait_beacon_chain_ready() {
 
 fund_accounts() {
     echo "Funding substrate accounts"
-    transfer_local_balance "$bridgehub_ws_url" "//Alice" "$assethub_sovereign_account" 100000000000000
-    transfer_local_balance "$bridgehub_ws_url" "//Alice" "$penpal_sovereign_account" 100000000000000
-    transfer_local_balance "$bridgehub_ws_url" "//Alice" "$beacon_relayer_pub_key" 100000000000000
-    transfer_local_balance "$bridgehub_ws_url" "//Alice" "$execution_relayer_assethub_pub_key" 100000000000000
-    transfer_local_balance "$bridgehub_ws_url" "//Alice" "$execution_relayer_penpal_pub_key" 100000000000000
-    transfer_local_balance "$assethub_ws_url" "//Alice" "$penpal_sovereign_account" 100000000000000
-    transfer_local_balance "$assethub_ws_url" "//Alice" "$snowbridge_sovereign_account" 100000000000000
-    transfer_local_balance "$penpal_ws_url" "//Alice" "0x1cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c" 100000000000000 # Ferdie ED on penpal
+    pushd ../test-helpers
+    pnpm batchTransfer
+    popd
 }
 
 register_native_eth() {
@@ -87,14 +82,6 @@ set_gateway() {
     send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$transact_call"
 }
 
-set_weth() {
-    echo "Setting weth address"
-    local storage_key=$(echo $WETH_STORAGE_KEY | cut -c3-)
-    local weth=$(echo $WETH_ADDRESS | cut -c3-)
-    local transact_call="0x00040440"$storage_key"50"$weth
-    send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$transact_call"
-}
-
 config_xcm_version() {
     local call="0x1f04020109079edaa80204000000"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
@@ -108,13 +95,12 @@ register_native_eth() {
 }
 
 configure_substrate() {
-    set_weth
     set_gateway
     open_hrmp_channels
     config_xcm_version
+    register_native_eth
     wait_beacon_chain_ready
     config_beacon_checkpoint
-    register_native_eth
     fund_accounts
 }
 

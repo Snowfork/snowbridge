@@ -5,7 +5,7 @@ export contract_dir="$root_dir/contracts"
 test_helpers_dir="$web_dir/packages/test-helpers"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
-export output_dir="${OUTPUT_DIR:-/tmp/snowbridge}"
+export output_dir="${OUTPUT_DIR:-/tmp/snowbridge-v2}"
 export output_bin_dir="$output_dir/bin"
 ethereum_data_dir="$output_dir/ethereum"
 zombienet_data_dir="$output_dir/zombienet"
@@ -117,9 +117,6 @@ export GATEWAY_PROXY_INITIAL_DEPOSIT="${GATEWAY_PROXY_INITIAL_DEPOSIT:-100000000
 
 export GATEWAY_STORAGE_KEY="${GATEWAY_STORAGE_KEY:-0xaed97c7854d601808b98ae43079dafb3}"
 export GATEWAY_PROXY_CONTRACT="${GATEWAY_PROXY_CONTRACT:-0xb1185ede04202fe62d38f5db72f71e38ff3e8305}"
-
-export WETH_STORAGE_KEY="${WETH_STORAGE_KEY:-0x36f2f46ef8ffc0cc013470f259488ca1}"
-export WETH_ADDRESS="${WETH_ADDRESS:-0xb8ea8cb425d85536b158d661da1ef0895bb92f1d}"
 
 address_for() {
     jq -r ".contracts.${1}.address" "$output_dir/contracts.json"
