@@ -62,7 +62,7 @@ async fn malicious_payload() {
 		.call()
 		.await
 		.expect("beefy client initialized");
-	let payload = vec![PayloadItem { payload_id: [0, 0], data: Bytes::new() }];
+	let payload = vec![PayloadItem { payload_id: [109, 104], data: Bytes::new() }];
 	let commitment =
 		Commitment { payload: payload.clone(), block_number: block_number + 10, validator_set_id };
 
@@ -221,9 +221,9 @@ async fn malicious_payload() {
 	let result = call.send().await;
 	println!("{:?}", result);
 
-	// verify: error is `CommitmentNotRelevant` (selector 0x484ab7df)
+	// verify: error is `InvalidMMRRootLength` (selector 0x7df9c486)
 	assert_eq!(
 		result.as_ref().err().unwrap().as_revert().expect("is revert error"),
-		&Bytes::from_str("0x484ab7df").unwrap()
+		&Bytes::from_str("0x7df9c486").unwrap()
 	);
 }
