@@ -1,13 +1,12 @@
-use std::{str::FromStr, sync::Arc};
+use std::{str::FromStr, sync::Arc, time::Duration};
 
 use codec::Encode;
 use ethers::{abi::Address, core::types::U256, prelude::*};
-use hex::FromHex;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{
 		beefy_client::{BeefyClient, Commitment, PayloadItem},
-		shared_types::ValidatorProof,
+		shared_types::{Mmrleaf, ValidatorProof},
 	},
 	helper::initialize_wallet,
 };
@@ -26,7 +25,12 @@ pub mod westend {}
 
 #[tokio::test]
 async fn malicious_payload() {
-	let ethereum_client = Arc::new(initialize_wallet().await.expect("initialize wallet"));
+	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
+		.await
+		.unwrap()
+		.interval(Duration::from_millis(10u64));
+	let ethereum_client = Arc::new(ethereum_provider);
+	let ethereum_signed_client = Arc::new(initialize_wallet().await.expect("initialize wallet"));
 
 	let relaychain_client: OnlineClient<PolkadotConfig> =
 		OnlineClient::from_url((*RELAY_CHAIN_WS_URL).to_string())
@@ -51,11 +55,17 @@ async fn malicious_payload() {
 		.number();
 
 	let beefy_client_addr: Address = BEEFY_CLIENT_CONTRACT.into();
-	let beefy_client = BeefyClient::new(beefy_client_addr, ethereum_client.clone());
+	let beefy_client = BeefyClient::new(beefy_client_addr, ethereum_signed_client.clone());
 
+	let randao_delay = beefy_client
+		.randao_commit_delay()
+		.call()
+		.await
+		.expect("beefy client initialized");
 	let payload = vec![PayloadItem { payload_id: [0, 0], data: Bytes::new() }];
 	let commitment =
 		Commitment { payload: payload.clone(), block_number: block_number + 10, validator_set_id };
+
 	let malicious_suris = vec!["//Westend04", "//Westend01", "//Westend02"];
 
 	let malicious_authorities =
@@ -106,6 +116,7 @@ async fn malicious_payload() {
 	let keccak23 = keccak_256(
 		&[keccak_validator_secp256k1_bytes[2], keccak_validator_secp256k1_bytes[3]].concat(),
 	);
+	let validator_set_root = keccak_256(&[keccak01, keccak23].concat());
 
 	let validator_proofs = [
 		[keccak_validator_secp256k1_bytes[1], keccak23],
@@ -114,10 +125,11 @@ async fn malicious_payload() {
 		[keccak_validator_secp256k1_bytes[2], keccak01],
 	];
 
-	for signer_index in 0..=2 {
+	let mut r = [0u8; 32];
+	let mut s = [0u8; 32];
+
+	for signer_index in 0..=0 {
 		let init_signature_bytes = malicious_signatures[signer_index].as_slice();
-		let mut r = [0u8; 32];
-		let mut s = [0u8; 32];
 		r.copy_from_slice(&init_signature_bytes[0..32]);
 		s.copy_from_slice(&init_signature_bytes[32..64]);
 
@@ -143,4 +155,75 @@ async fn malicious_payload() {
 		assert!(result.is_ok());
 		tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
 	}
+
+	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(3);
+
+	while let Some(_block) = stream.next().await {}
+
+	let call = beefy_client.commit_prev_randao(*hashed_commitment);
+	let result = call.send().await.expect("commit valid");
+	println!("{:?}", result);
+
+	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(1);
+	while let Some(_block) = stream.next().await {}
+
+	let call = beefy_client.create_final_bitfield(*hashed_commitment, bitfield);
+	let bitfield = call.call().await.expect("commit valid");
+
+	assert_eq!(bitfield.len(), 1);
+	let chosen_malicious_proofs = malicious_signatures
+		.iter()
+		.enumerate()
+		.filter(|(i, _)| bitfield[0].bit(*i))
+		.map(|(i, sig)| {
+			//TODO: deduplicate with init sig
+			let sig_bytes = sig.as_slice();
+
+			r.copy_from_slice(&sig_bytes[0..32]);
+			s.copy_from_slice(&sig_bytes[32..64]);
+
+			let v_raw = sig_bytes[64];
+			let v = match v_raw {
+				0 => 27,
+				1 => 28,
+				_ => panic!("v can only be 0 or 1"),
+			};
+
+			ValidatorProof {
+				v,
+				r,
+				s,
+				index: U256::from_little_endian(&[i.try_into().unwrap()]),
+				account: H160::from_slice(&validator_secp256k1_bytes[i]),
+				proof: validator_proofs[i].to_vec(),
+			}
+		})
+		.collect::<Vec<_>>();
+
+	let mmr_leaf = Mmrleaf {
+		version: 0,
+		parent_number: 0,
+		parent_hash: [0; 32],
+		next_authority_set_id: validator_set_id + 1,
+		next_authority_set_len: 4,
+		next_authority_set_root: validator_set_root,
+		parachain_heads_root: [0; 32],
+	};
+
+	let call = beefy_client.submit_final(
+		commitment,
+		bitfield,
+		chosen_malicious_proofs,
+		mmr_leaf,
+		vec![],
+		U256::zero(),
+	);
+	let result = call.send().await;
+	println!("{:?}", result);
+
+	// verify: error is `CommitmentNotRelevant` (selector 0x484ab7df)
+	assert_eq!(
+		result.as_ref().err().unwrap().as_revert().expect("is revert error"),
+		&Bytes::from_str("0x484ab7df").unwrap()
+	);
 }
