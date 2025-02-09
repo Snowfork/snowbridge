@@ -21,8 +21,8 @@ use subxt::{
 };
 
 // TODO: replace
-#[subxt::subxt(runtime_metadata_path = "./polkadot_relaychain_metadata.scale")]
-pub mod polkadot {}
+#[subxt::subxt(runtime_metadata_path = "./westend_relaychain_metadata.scale")]
+pub mod westend {}
 
 #[tokio::test]
 async fn malicious_payload() {
@@ -33,7 +33,7 @@ async fn malicious_payload() {
 			.await
 			.expect("can not connect to relaychain");
 
-	let validator_set_id_query = polkadot::storage().beefy().validator_set_id();
+	let validator_set_id_query = westend::storage().beefy().validator_set_id();
 	let validator_set_id = relaychain_client
 		.storage()
 		.at_latest()
