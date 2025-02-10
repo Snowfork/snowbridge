@@ -123,18 +123,6 @@ const monitor = async () => {
 
     console.log("Asset Registry:", JSON.stringify(registry, (_, value) => typeof value === "bigint" ? String(value) : value, 2))
 
-    const polkadot_keyring = new Keyring({ type: "sr25519" })
-
-    const ETHEREUM_ACCOUNT = new Wallet(
-        process.env.ETH_PRIVATE_KEY ?? "your key goes here",
-        context.ethereum()
-    )
-    const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
-    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri("//Ferdie")
-    const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
-
-    const amount = 10n
-
     const WETH_CONTRACT = snwobridgeEnv.locations[0].erc20tokensReceivable.find(
         (t) => t.id === "WETH"
     )!.address
