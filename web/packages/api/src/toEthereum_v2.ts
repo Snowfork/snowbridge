@@ -223,7 +223,7 @@ export async function validateTransfer(connections: Connections, transfer: Trans
     const sourceExecutionFee = paymentInfo['partialFee'].toBigInt()
 
     if (sourceParaId === registry.assetHubParaId) {
-        if ((sourceExecutionFee + fee.assetHubFeeInDot) > (dotBalance)) {
+        if ((sourceExecutionFee + fee.deliveryFeeInDot) > (dotBalance)) {
             logs.push({ kind: ValidationKind.Error, reason: ValidationReason.InsufficientDotFee, message: 'Insufficient DOT balance to submit transaction on the source parachain.' })
         }
     }
