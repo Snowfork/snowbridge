@@ -160,7 +160,7 @@ export async function createTransfer(
     }
 }
 
-async function validateAccount(parachain: ApiPromise, specName: string, beneficiaryAddress: string, ethChainId: number, tokenAddress: string, maxConsumers: number = 63) {
+async function validateAccount(parachain: ApiPromise, specName: string, beneficiaryAddress: string, ethChainId: number, tokenAddress: string, maxConsumers?: bigint) {
     // Check if the acocunt is created
     const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
         getNativeAccount(parachain, beneficiaryAddress),
@@ -168,7 +168,7 @@ async function validateAccount(parachain: ApiPromise, specName: string, benefici
     ]);
     return {
         accountExists: !(beneficiaryAccount.consumers === 0n && beneficiaryAccount.providers === 0n && beneficiaryAccount.sufficients === 0n),
-        accountMaxConumers: beneficiaryAccount.consumers >= maxConsumers && beneficiaryTokenBalance === 0n
+        accountMaxConumers: beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n
     }
 }
 
