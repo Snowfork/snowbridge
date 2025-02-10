@@ -5,7 +5,6 @@ import { SnowbridgeEnvironment } from "./environment";
 import { Context } from "./index";
 import { buildParachainERC20ReceivedXcmOnDestination, DOT_LOCATION, erc20Location } from "./xcmBuilder";
 import { IGateway__factory } from "@snowbridge/contract-types";
-import { balances } from "@polkadot/types/interfaces/definitions";
 
 export type ERC20Metadata = {
     token: string
