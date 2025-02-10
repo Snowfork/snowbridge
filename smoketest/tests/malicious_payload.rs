@@ -19,9 +19,6 @@ use subxt::{
 	OnlineClient, PolkadotConfig,
 };
 
-// TODO: replace
-#[subxt::subxt(runtime_metadata_path = "./westend_relaychain_metadata.scale")]
-pub mod westend {}
 
 #[tokio::test]
 async fn malicious_payload() {
@@ -32,37 +29,29 @@ async fn malicious_payload() {
 	let ethereum_client = Arc::new(ethereum_provider);
 	let ethereum_signed_client = Arc::new(initialize_wallet().await.expect("initialize wallet"));
 
-	let relaychain_client: OnlineClient<PolkadotConfig> =
-		OnlineClient::from_url((*RELAY_CHAIN_WS_URL).to_string())
-			.await
-			.expect("can not connect to relaychain");
-
-	let validator_set_id_query = westend::storage().beefy().validator_set_id();
-	let validator_set_id = relaychain_client
-		.storage()
-		.at_latest()
-		.await
-		.expect("can not connect to relaychain")
-		.fetch(&validator_set_id_query)
-		.await
-		.expect("runtime query failed")
-		.expect("validator set is not Some");
-	let block_number = relaychain_client
-		.blocks()
-		.at_latest()
-		.await
-		.expect("can not connect to relaychain")
-		.number();
 
 	let beefy_client_addr: Address = BEEFY_CLIENT_CONTRACT.into();
 	let beefy_client = BeefyClient::new(beefy_client_addr, ethereum_signed_client.clone());
+
+	let current_validator_set = beefy_client
+		.current_validator_set()
+		.call()
+		.await
+		.expect("beefy client initialized");
+
+	let block_number = beefy_client
+		.latest_beefy_block()
+		.call()
+		.await
+		.expect("beefy client initialized");
+
+	println!("block_number: {:?}", block_number);
 
 	let call = beefy_client.latest_mmr_root();
 	let current_mmr_root = call.call().await.expect("commit valid");
 	println!("current mmr root: {:?}", current_mmr_root);
 	if current_mmr_root == [0u8; 32] {
-		println!("BEEFY client already has malicious mmr payload - skipping test");
-		return;
+		println!("NOTE: BEEFY client already has malicious mmr payload");
 	}
 
 	let randao_delay = beefy_client
@@ -72,8 +61,11 @@ async fn malicious_payload() {
 		.expect("beefy client initialized");
 	let payload =
 		vec![PayloadItem { payload_id: [109, 104], data: Bytes::from_static(&[0u8; 32]) }];
-	let commitment =
-		Commitment { payload: payload.clone(), block_number: block_number + 10, validator_set_id };
+	let commitment = Commitment {
+		payload: payload.clone(),
+		block_number: (block_number as u32) + 10,
+		validator_set_id: (current_validator_set.0 as u64),
+	};
 
 	let malicious_suris = vec!["//Westend04", "//Westend01", "//Westend02"];
 
@@ -213,7 +205,7 @@ async fn malicious_payload() {
 		version: 0,
 		parent_number: 0,
 		parent_hash: [0; 32],
-		next_authority_set_id: validator_set_id + 1,
+		next_authority_set_id: (current_validator_set.0 as u64) + 1,
 		next_authority_set_len: 4,
 		next_authority_set_root: validator_set_root,
 		parachain_heads_root: [0; 32],
