@@ -57,12 +57,21 @@ async fn malicious_payload() {
 	let beefy_client_addr: Address = BEEFY_CLIENT_CONTRACT.into();
 	let beefy_client = BeefyClient::new(beefy_client_addr, ethereum_signed_client.clone());
 
+	let call = beefy_client.latest_mmr_root();
+	let current_mmr_root = call.call().await.expect("commit valid");
+	println!("current mmr root: {:?}", current_mmr_root);
+	if current_mmr_root == [0u8; 32] {
+		println!("BEEFY client already has malicious mmr payload - skipping test");
+		return;
+	}
+
 	let randao_delay = beefy_client
 		.randao_commit_delay()
 		.call()
 		.await
 		.expect("beefy client initialized");
-	let payload = vec![PayloadItem { payload_id: [109, 104], data: Bytes::new() }];
+	let payload =
+		vec![PayloadItem { payload_id: [109, 104], data: Bytes::from_static(&[0u8; 32]) }];
 	let commitment =
 		Commitment { payload: payload.clone(), block_number: block_number + 10, validator_set_id };
 
@@ -220,10 +229,6 @@ async fn malicious_payload() {
 	);
 	let result = call.send().await;
 	println!("{:?}", result);
+	assert!(result.is_ok());
 
-	// verify: error is `InvalidMMRRootLength` (selector 0x7df9c486)
-	assert_eq!(
-		result.as_ref().err().unwrap().as_revert().expect("is revert error"),
-		&Bytes::from_str("0x7df9c486").unwrap()
-	);
 }
