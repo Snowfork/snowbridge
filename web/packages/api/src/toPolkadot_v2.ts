@@ -1,8 +1,8 @@
 import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway";
 import { AbstractProvider, Contract, ContractTransaction, FeeData, LogDescription, TransactionReceipt } from "ethers";
-import { beneficiaryMultiAddress } from "./utils";
+import { beneficiaryMultiAddress, paraIdToSovereignAccount } from "./utils";
 import { IERC20__factory, IGateway, IGateway__factory } from "@snowbridge/contract-types";
-import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "./assets_v2";
+import { Asset, AssetRegistry, ERC20Metadata, getNativeAccount, getTokenBalance, Parachain } from "./assets_v2";
 import { getOperatingStatus, OperationStatus } from "./status";
 import { ApiPromise } from "@polkadot/api";
 import { buildAssetHubERC20ReceivedXcm, buildParachainERC20ReceivedXcmOnAssetHub } from "./xcmBuilder";
@@ -46,6 +46,8 @@ export enum ValidationReason {
     DryRunNotSupportedOnDestination,
     NoDestinationParachainConnection,
     DryRunFailed,
+    MaxConsumersReached,
+    AccountDoesNotExist
 }
 
 export type ValidationLog = {
@@ -158,11 +160,23 @@ export async function createTransfer(
     }
 }
 
+async function validateAccount(parachain: ApiPromise, specName: string, beneficiaryAddress: string, ethChainId: number, tokenAddress: string, maxConsumers?: bigint) {
+    // Check if the acocunt is created
+    const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
+        getNativeAccount(parachain, beneficiaryAddress),
+        getTokenBalance(parachain, specName, beneficiaryAddress, ethChainId, tokenAddress),
+    ]);
+    return {
+        accountExists: !(beneficiaryAccount.consumers === 0n && beneficiaryAccount.providers === 0n && beneficiaryAccount.sufficients === 0n),
+        accountMaxConumers: beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n
+    }
+}
+
 export async function validateTransfer(connections: Connections, transfer: Transfer): Promise<Validation> {
     const { tx } = transfer
     const { ethereum, gateway, bridgeHub, assetHub, destParachain: destParachainApi } = connections
     const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
-    const { totalValue, minimalBalance, destParachain } = transfer.computed
+    const { totalValue, minimalBalance, destParachain, destAssetMetadata, ahAssetMetadata, beneficiaryAddressHex } = transfer.computed
 
     const logs: ValidationLog[] = []
     if (amount < minimalBalance) {
@@ -221,33 +235,66 @@ export async function validateTransfer(connections: Connections, transfer: Trans
 
     let destinationParachainDryRunError: string | undefined
     if (destinationParaId !== registry.assetHubParaId) {
+        // Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
+        if (!ahAssetMetadata.isSufficient) {
+            const sovereignAccountId = paraIdToSovereignAccount("sibl", destinationParaId)
+            const { accountMaxConumers, accountExists } = await validateAccount(assetHub, ahParachain.info.specName, sovereignAccountId, registry.ethChainId, tokenAddress)
+
+            if (!accountExists) {
+                logs.push({ kind: ValidationKind.Error, reason: ValidationReason.MaxConsumersReached, message: 'Sovereign account does not exist on Asset Hub.' })
+            }
+            if (accountMaxConumers) {
+                logs.push({ kind: ValidationKind.Error, reason: ValidationReason.MaxConsumersReached, message: 'Sovereign account for destination parachain has reached the max consumer limit on Asset Hub.' })
+            }
+        }
         if (!destParachainApi) {
             logs.push({ kind: ValidationKind.Warning, reason: ValidationReason.NoDestinationParachainConnection, message: 'The destination paracahain connection was not supplied. Transaction success cannot be confirmed.' })
-        } else if (destParachain.features.hasDryRunApi) {
-            if (!destinationXcm) {
-                logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.' })
-            }
-            const [location, xcm] = destinationXcm
-            if (xcm.length !== 1) {
-                logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.' })
-            }
-            const forwardedToCorrectDestination =
-                location.v4.parents === 1 &&
-                location.v4.interior.x1.length === 1 &&
-                location.v4.interior.x1[0].parachain === destinationParaId
-            if (!forwardedToCorrectDestination) {
-                logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did produced an XCM to be forwarded to an incorrect parachain.' })
-            }
-            const {
-                success: dryRunDestinationSuccess,
-                errorMessage: destMessage,
-            } = await dryRunDestination(destParachainApi, transfer, xcm[0])
-            if (!dryRunDestinationSuccess) {
-                logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on destination parachain failed.' })
-            }
-            destinationParachainDryRunError = destMessage
         } else {
-            logs.push({ kind: ValidationKind.Warning, reason: ValidationReason.DryRunNotSupportedOnDestination, message: 'The destination paracahain does not support dry running of XCM. Transaction success cannot be confirmed.' })
+            if (!destAssetMetadata.isSufficient) {
+                // Check if the acocunt is created
+                const { accountMaxConumers, accountExists } = await validateAccount(destParachainApi, destParachain.info.specName, beneficiaryAddressHex, registry.ethChainId, tokenAddress)
+                if (accountMaxConumers) {
+                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.MaxConsumersReached, message: 'Beneficiary account has reached the max consumer limit on the destination chain.' })
+                }
+                if (!accountExists) {
+                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.AccountDoesNotExist, message: 'Beneficiary account does not exist on the destination chain.' })
+                }
+            }
+            if (destParachain.features.hasDryRunApi) {
+                if (!destinationXcm) {
+                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.' })
+                }
+                const [location, xcm] = destinationXcm
+                if (xcm.length !== 1) {
+                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.' })
+                }
+                const forwardedToCorrectDestination =
+                    location.v4.parents === 1 &&
+                    location.v4.interior.x1.length === 1 &&
+                    location.v4.interior.x1[0].parachain === destinationParaId
+                if (!forwardedToCorrectDestination) {
+                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did produced an XCM to be forwarded to an incorrect parachain.' })
+                }
+                const {
+                    success: dryRunDestinationSuccess,
+                    errorMessage: destMessage,
+                } = await dryRunDestination(destParachainApi, transfer, xcm[0])
+                if (!dryRunDestinationSuccess) {
+                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on destination parachain failed.' })
+                }
+                destinationParachainDryRunError = destMessage
+            } else {
+                logs.push({ kind: ValidationKind.Warning, reason: ValidationReason.DryRunNotSupportedOnDestination, message: 'The destination paracahain does not support dry running of XCM. Transaction success cannot be confirmed.' })
+            }
+        }
+    } else {
+        const { accountMaxConumers, accountExists } = await validateAccount(assetHub, ahParachain.info.specName, beneficiaryAddressHex, registry.ethChainId, tokenAddress)
+
+        if (accountMaxConumers) {
+            logs.push({ kind: ValidationKind.Error, reason: ValidationReason.MaxConsumersReached, message: 'Beneficiary account has reached the max consumer limit on Asset Hub.' })
+        }
+        if (!accountExists) {
+            logs.push({ kind: ValidationKind.Error, reason: ValidationReason.AccountDoesNotExist, message: 'Beneficiary account does not exist on Asset Hub.' })
         }
     }
 
@@ -361,9 +408,14 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
     const resultHuman = result.toHuman() as any
 
     const destinationXcmsLength = resultPrimitive.ok.forwardedXcms.length
-    const destinationXcm = destinationXcmsLength > 0 ? resultPrimitive.ok.forwardedXcms[destinationXcmsLength-1] : undefined
+    const destinationXcm = destinationXcmsLength > 0 ? resultPrimitive.ok.forwardedXcms[destinationXcmsLength - 1] : undefined
+
+    const success = resultPrimitive.ok?.executionResult?.complete !== undefined
+    if (!success) {
+        console.error("Error during dry run on asset hub:", JSON.stringify(resultHuman, null, 2))
+    }
     return {
-        success: resultPrimitive.ok?.executionResult?.complete !== undefined,
+        success,
         errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
         destinationXcm,
     }
@@ -380,8 +432,13 @@ async function dryRunDestination(destination: ApiPromise, transfer: Transfer, xc
     const resultPrimitive = result.toPrimitive() as any
     const resultHuman = result.toHuman() as any
 
+    const success = resultPrimitive.ok?.executionResult?.complete !== undefined
+
+    if (!success) {
+        console.error("Error during dry run on source parachain:", JSON.stringify(resultHuman, null, 2))
+    }
     return {
-        success: resultPrimitive.ok?.executionResult?.complete !== undefined,
+        success,
         errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
     }
 }

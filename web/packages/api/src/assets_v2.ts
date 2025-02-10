@@ -24,6 +24,18 @@ export type EthereumChain = {
 
 export type AccountType = "AccountId20" | "AccountId32"
 
+export type SubstrateAccount = {
+    nonce: bigint
+    consumers: bigint
+    providers: bigint
+    sufficients: bigint
+    data: {
+        free: bigint
+        reserved: bigint
+        frozen: bigint
+    }
+}
+
 export type ChainProperties = {
     tokenSymbols: string
     tokenDecimals: number
@@ -239,9 +251,24 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
     }
 }
 
-export async function getNativeBalance(provider: ApiPromise, account: string): Promise<bigint> {
+export async function getNativeAccount(provider: ApiPromise, account: string): Promise<SubstrateAccount> {
     const accountData = (await provider.query.system.account(account)).toPrimitive() as any
-    return BigInt(accountData.data.free)
+    return {
+        nonce: BigInt(accountData.nonce),
+        consumers: BigInt(accountData.consumers),
+        providers: BigInt(accountData.providers),
+        sufficients: BigInt(accountData.sufficients),
+        data: {
+            free: BigInt(accountData.data.free),
+            reserved: BigInt(accountData.data.reserved),
+            frozen: BigInt(accountData.data.frozen),
+        }
+    }
+}
+
+export async function getNativeBalance(provider: ApiPromise, account: string): Promise<bigint> {
+    const accountData = await getNativeAccount(provider, account)
+    return accountData.data.free
 }
 
 export async function getLocationBalance(provider: ApiPromise, specName: string, location: any, account: string): Promise<bigint> {
@@ -275,7 +302,7 @@ export async function getLocationBalance(provider: ApiPromise, specName: string,
         }
         case "mythos":
         case "muse": {
-            console.log(`${specName} does not support DOT, returning 0.`)
+            console.warn(`${specName} does not support DOT, returning 0.`)
             return 0n
         }
         case "moonriver":
@@ -312,7 +339,6 @@ export async function getParachainId(parachain: ApiPromise): Promise<number> {
     const sourceParachainEncoded = await parachain.query.parachainInfo.parachainId();
     return Number(sourceParachainEncoded.toPrimitive())
 }
-
 
 async function chainProperties(provider: ApiPromise): Promise<ChainProperties> {
     const [properties, name] = await Promise.all([provider.rpc.system.properties(), provider.rpc.system.chain()])
@@ -363,8 +389,9 @@ export async function calculateDestinationFee(provider: ApiPromise, destinationX
     }
     const result = BigInt(feeInDot.ok.toString())
 
-    // return fee padded by 15% unless another percentage is specified
-    return result * (100n + (padFeePercentage ?? 15n)) / 100n
+    // return fee padded by 100% unless another percentage is specified
+    // TODO: Drop to 15% once 2409 is released
+    return result * (100n + (padFeePercentage ?? 100n)) / 100n
 }
 
 async function indexParachainAssets(provider: ApiPromise, ethChainId: number, specName: string) {
