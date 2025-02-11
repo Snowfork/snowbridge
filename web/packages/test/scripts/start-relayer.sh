@@ -26,7 +26,6 @@ config_relayer() {
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg eth_writer_endpoint $eth_writer_endpoint \
-        --arg channelID $PRIMARY_GOVERNANCE_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
       .source.contracts.Gateway = $k1
@@ -35,7 +34,6 @@ config_relayer() {
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
-    | .source."channel-id" = $channelID
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay-bridge-hub-01.json
 
@@ -45,7 +43,6 @@ config_relayer() {
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg eth_writer_endpoint $eth_writer_endpoint \
-        --arg channelID $SECONDARY_GOVERNANCE_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
       .source.contracts.Gateway = $k1
@@ -54,7 +51,6 @@ config_relayer() {
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
-    | .source."channel-id" = $channelID
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay-bridge-hub-02.json
 
@@ -64,7 +60,6 @@ config_relayer() {
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg eth_writer_endpoint $eth_writer_endpoint \
-        --arg channelID $ASSET_HUB_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
       .source.contracts.Gateway = $k1
@@ -73,7 +68,6 @@ config_relayer() {
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
-    | .source."channel-id" = $channelID
     | .schedule.id = 0
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay-asset-hub-0.json
@@ -84,7 +78,6 @@ config_relayer() {
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg eth_writer_endpoint $eth_writer_endpoint \
-        --arg channelID $ASSET_HUB_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
       .source.contracts.Gateway = $k1
@@ -93,7 +86,6 @@ config_relayer() {
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
-    | .source."channel-id" = $channelID
     | .schedule.id = 1
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay-asset-hub-1.json
@@ -104,7 +96,6 @@ config_relayer() {
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg eth_writer_endpoint $eth_writer_endpoint \
-        --arg channelID $ASSET_HUB_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
       .source.contracts.Gateway = $k1
@@ -113,7 +104,6 @@ config_relayer() {
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
-    | .source."channel-id" = $channelID
     | .schedule.id = 2
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay-asset-hub-2.json
@@ -124,7 +114,6 @@ config_relayer() {
         --arg k2 "$(address_for BeefyClient)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg eth_writer_endpoint $eth_writer_endpoint \
-        --arg channelID $PENPAL_CHANNEL_ID \
         --arg eth_gas_limit $eth_gas_limit \
         '
       .source.contracts.Gateway = $k1
@@ -133,7 +122,6 @@ config_relayer() {
     | .source.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum.endpoint = $eth_writer_endpoint
     | .sink.ethereum."gas-limit" = $eth_gas_limit
-    | .source."channel-id" = $channelID
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay-penpal.json
 
