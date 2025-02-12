@@ -235,19 +235,26 @@ export function fromEnvironment({ config, ethChainId }: SnowbridgeEnvironment): 
 
 export async function fromContext(context: Context): Promise<RegistryOptions> {
     const { assetHubParaId, bridgeHubParaId } = context.config.polkadot
-    return {
-        assetHubParaId,
-        bridgeHubParaId,
-        bridgeHub: await context.bridgeHub(),
-        relaychain: await context.relaychain(),
-        ethChainId: Number((await context.ethereum().getNetwork()).chainId),
-        gatewayAddress: await context.gateway().getAddress(),
-        ethchains: [context.ethereum()],
-        parachains: await Promise.all(
+    const [bridgeHub, relaychain, network, gatewayAddress, parachains] = await Promise.all([
+        context.bridgeHub(),
+        context.relaychain(),
+        context.ethereum().getNetwork(),
+        context.gateway().getAddress(),
+        Promise.all(
             context.parachains()
                 .filter(paraId => paraId !== context.config.polkadot.bridgeHubParaId)
                 .map(paraId => context.parachain(paraId))
         ),
+    ])
+    return {
+        assetHubParaId,
+        bridgeHubParaId,
+        bridgeHub,
+        relaychain,
+        ethChainId: Number(network.chainId),
+        gatewayAddress,
+        ethchains: [context.ethereum()],
+        parachains
     }
 }
 
@@ -426,6 +433,10 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
             const entries = await provider.query.foreignAssets.asset.entries()
             for (const [key, value] of entries) {
                 const location: any = key.args.at(0)?.toJSON()
+                if(!location) {
+                    console.warn(`Could not convert ${key.toHuman()} to location for ${specName}.`)
+                    continue
+                }
                 if (!isSnowbridgeAsset(location, ethChainId)) { continue }
 
                 const asset: any = value.toJSON()

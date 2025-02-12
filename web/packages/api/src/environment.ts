@@ -180,7 +180,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 id: "ethereum",
                 name: "Ethereum",
                 type: "ethereum",
-                destinationIds: ["assethub"],
+                destinationIds: ["assethub", "muse"],
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
@@ -220,6 +220,27 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     },
                 ],
             },
+            {
+                id: "muse",
+                name: "Muse",
+                type: "substrate",
+                destinationIds: [],
+                paraInfo: {
+                    paraId: 3369,
+                    destinationFeeDOT: 200_000_000_000n,
+                    skipExistentialDepositCheck: true,
+                    addressType: "20byte",
+                    decimals: 18,
+                    maxConsumers: 16,
+                },
+                erc20tokensReceivable: [
+                    {
+                        id: "MUSE",
+                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
+                        minimumTransferAmount: 10_000_000_000_000_000n,
+                    },
+                ],
+            },
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
@@ -228,6 +249,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             PARACHAINS: {
                 "1000": "wss://asset-hub-paseo-rpc.dwellir.com",
                 "1002": "wss://bridge-hub-paseo.dotters.network",
+                "3369": "wss://paseo-muse-rpc.polkadot.io"
             },
             GATEWAY_CONTRACT: "0x5a84b15B618beEE6F6285F6bd2bA20a08673e473",
             BEEFY_CONTRACT: "0xE7388f953f50d377D131350490156dB649E5DC10",

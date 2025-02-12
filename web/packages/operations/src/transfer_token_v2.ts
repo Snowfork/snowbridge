@@ -87,26 +87,50 @@ const monitor = async () => {
     const amount = 15000000000000n
 
     let overrides = {}
-    if (env === "polkadot_mainnet") {
-        // Add override for mythos token and add precompile for moonbeam
-        overrides = {
-            precompiles: { "2004": "0x000000000000000000000000000000000000081A" },
-            destinationFeeOverrides: {
-                "3369": 500_000_000n
-            },
-            assetOverrides: {
-                "3369": [
-                    {
-                        token: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003".toLowerCase(),
-                        name: "Mythos",
-                        minimumBalance: 10_000_000_000_000_000n,
-                        symbol: "MYTH",
-                        decimals: 18,
-                        isSufficient: true,
-                    }
-                ]
+    switch (env) {
+        case "paseo_sepolia": {
+            // Add override for mythos token and add precompile for moonbeam
+            overrides = {
+                destinationFeeOverrides: {
+                    "3369": 200_000_000_000n
+                },
+                assetOverrides: {
+                    "3369": [
+                        {
+                            token: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee".toLowerCase(),
+                            name: "Muse",
+                            minimumBalance: 10_000_000_000_000_000n,
+                            symbol: "MUSE",
+                            decimals: 18,
+                            isSufficient: true,
+                        }
+                    ]
+                }
             }
         }
+            break;
+        case "polkadot_mainnet": {
+            // Add override for mythos token and add precompile for moonbeam
+            overrides = {
+                precompiles: { "2004": "0x000000000000000000000000000000000000081A" },
+                destinationFeeOverrides: {
+                    "3369": 500_000_000n
+                },
+                assetOverrides: {
+                    "3369": [
+                        {
+                            token: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003".toLowerCase(),
+                            name: "Mythos",
+                            minimumBalance: 10_000_000_000_000_000n,
+                            symbol: "MYTH",
+                            decimals: 18,
+                            isSufficient: true,
+                        }
+                    ]
+                }
+            }
+        }
+            break;
     }
 
     // Step 0. Build the Asset Registry. The registry contains the list of all token and parachain metadata in order to send tokens.
@@ -116,7 +140,7 @@ const monitor = async () => {
     //      const registry = await assetsV2.buildRegistry(assetsV2.fromEnvironment(snwobridgeEnv))
     // If your dapp does not use the snowbridge environment or context you can always build it manually by
     // specifying RegistryOptions for only the parachains you care about.
-    const registry = await cache("registry.json", async () => await assetsV2.buildRegistry({
+    const registry = await cache(`.${env}.registry.json`, async () => await assetsV2.buildRegistry({
         ...await assetsV2.fromContext(context),
         ...overrides
     }))
@@ -256,7 +280,7 @@ const monitor = async () => {
             { withSignedTransaction: true }
         )
         if (!response) {
-           throw Error(`Transaction ${response} not included.`)
+            throw Error(`Transaction ${response} not included.`)
         }
         console.log('Success message', response.messageId)
     }
@@ -378,7 +402,7 @@ const monitor = async () => {
             { withSignedTransaction: true }
         )
         if (!response) {
-           throw Error(`Transaction ${response} not included.`)
+            throw Error(`Transaction ${response} not included.`)
         }
         console.log('Success message', response.messageId)
     }
