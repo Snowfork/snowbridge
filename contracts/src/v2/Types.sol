@@ -50,7 +50,9 @@ struct Xcm {
 }
 
 library XcmKind {
+    /// SCALE-encoded raw bytes for `VersionedXcm`
     uint8 constant Raw = 0;
+    /// Create a new asset in the ForeignAssets pallet of AssetHub
     uint8 constant CreateAsset = 1;
 }
 
