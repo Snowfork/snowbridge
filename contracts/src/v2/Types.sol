@@ -34,7 +34,7 @@ struct Payload {
     // sender of the message
     address origin;
     Asset[] assets;
-    bytes xcm;
+    Xcm xcm;
     bytes claimer;
     // ether value
     uint128 value;
@@ -42,6 +42,32 @@ struct Payload {
     uint128 executionFee;
     // additional ether value for relayer fees
     uint128 relayerFee;
+}
+
+struct Xcm {
+    uint8 kind;
+    bytes data;
+}
+
+library XcmKind {
+    uint8 constant Raw = 0;
+    uint8 constant CreateAsset = 1;
+}
+
+struct AsCreateAsset {
+    address token;
+    uint8 network;
+}
+
+function makeRawXCM(bytes memory xcm) pure returns (Xcm memory) {
+    return Xcm({kind: XcmKind.Raw, data: xcm});
+}
+
+function makeCreateAssetXCM(address token, Network network) pure returns (Xcm memory) {
+    return Xcm({
+        kind: XcmKind.CreateAsset,
+        data: abi.encode(AsCreateAsset({token: token, network: uint8(network)}))
+    });
 }
 
 struct Asset {

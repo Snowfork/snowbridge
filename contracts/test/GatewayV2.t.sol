@@ -47,7 +47,9 @@ import {
     Payload,
     Asset,
     makeNativeAsset,
-    makeForeignAsset
+    makeForeignAsset,
+    Xcm,
+    makeRawXCM
 } from "../src/v2/Types.sol";
 
 import {
@@ -301,7 +303,7 @@ contract GatewayV2Test is Test {
             Payload({
                 origin: user1,
                 assets: outputAssets,
-                xcm: "",
+                xcm: makeRawXCM(""),
                 claimer: "",
                 value: 0.5 ether,
                 executionFee: 0.1 ether,
