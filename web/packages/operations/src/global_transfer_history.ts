@@ -1,7 +1,7 @@
 import "dotenv/config"
 import { environment, subscan, history, Context } from "@snowbridge/api"
 import { BeefyClient__factory, IGateway__factory } from "@snowbridge/contract-types"
-import { AlchemyProvider } from "ethers"
+import { AbstractProvider, AlchemyProvider } from "ethers"
 
 const monitor = async () => {
     const subscanKey = process.env.REACT_APP_SUBSCAN_KEY ?? ""
@@ -19,9 +19,15 @@ const monitor = async () => {
     if (!config.SUBSCAN_API) throw Error(`Environment ${env} does not support subscan.`)
 
     const ethereumProvider = new AlchemyProvider(ethChainId, process.env.REACT_APP_ALCHEMY_KEY)
+    const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
+    const ethChains: { [ethChainId: string]: string | AbstractProvider } = {}
+    Object.keys(config.ETHEREUM_CHAINS)
+        .forEach(ethChainId => ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
+    ethChains[ethChainId.toString()] = ethereumProvider
     const context = new Context({
         ethereum: {
-            execution_url: ethereumProvider,
+            ethChainId,
+            ethChains,
             beacon_url: config.BEACON_HTTP_API,
         },
         polkadot: {

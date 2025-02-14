@@ -226,7 +226,7 @@ export function fromEnvironment({ config, ethChainId }: SnowbridgeEnvironment): 
         relaychain: config.RELAY_CHAIN_URL,
         ethChainId,
         gatewayAddress: config.GATEWAY_CONTRACT,
-        ethchains: [config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY ?? "")],
+        ethchains: [config.ETHEREUM_CHAINS[ethChainId.toString()](process.env.REACT_APP_INFURA_KEY ?? "")],
         parachains: Object.keys(config.PARACHAINS)
             .filter(paraId => paraId !== config.BRIDGE_HUB_PARAID.toString())
             .map(paraId => config.PARACHAINS[paraId]),
@@ -314,7 +314,7 @@ export async function getLocationBalance(provider: ApiPromise, specName: string,
         }
         case "moonriver":
         case "moonbeam": {
-            const assetId = (await provider.query.assetManager.assetIdType(location)).toPrimitive()
+            const assetId = (await provider.query.assetManager.assetTypeId({ xcm: location })).toPrimitive()
             if (!assetId) {
                 throw Error(`DOT not registered for spec ${specName}.`)
             }
@@ -433,7 +433,7 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
             const entries = await provider.query.foreignAssets.asset.entries()
             for (const [key, value] of entries) {
                 const location: any = key.args.at(0)?.toJSON()
-                if(!location) {
+                if (!location) {
                     console.warn(`Could not convert ${key.toHuman()} to location for ${specName}.`)
                     continue
                 }
@@ -572,7 +572,6 @@ async function indexParachain(
             destinationFeeInDOT = destinationFeeOverrides[parachainIdKey]
         }
     }
-
     return {
         parachainId,
         features: {
@@ -607,6 +606,9 @@ async function indexEthChain(
 
         const assets: ERC20MetadataMap = {}
         for (const token in assetHub.assets) {
+            if (token === "0x0000000000000000000000000000000000000000") {
+                continue;
+            }
             if (!await gateway.isTokenRegistered(token)) {
                 console.warn(`Token ${token} is not registered with the gateway.`)
             }

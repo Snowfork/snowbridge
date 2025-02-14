@@ -1,6 +1,6 @@
 export type Config = {
     BEACON_HTTP_API: string
-    ETHEREUM_API: (secret: string) => string
+    ETHEREUM_CHAINS: { [chain: string]: (secret: string) => string }
     RELAY_CHAIN_URL: string
     GATEWAY_CONTRACT: string
     BEEFY_CONTRACT: string
@@ -113,7 +113,9 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         ],
         config: {
             BEACON_HTTP_API: "http://127.0.0.1:9596",
-            ETHEREUM_API: () => "ws://127.0.0.1:8546",
+            ETHEREUM_CHAINS: {
+                "11155111": () => "ws://127.0.0.1:8546"
+            },
             RELAY_CHAIN_URL: "ws://127.0.0.1:9944",
             PARACHAINS: {
                 "1000": "ws://127.0.0.1:12144",
@@ -244,7 +246,9 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
-            ETHEREUM_API: (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`,
+            ETHEREUM_CHAINS: {
+                "11155111": (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`
+            },
             RELAY_CHAIN_URL: "wss://paseo-rpc.dwellir.com",
             PARACHAINS: {
                 "1000": "wss://asset-hub-paseo-rpc.dwellir.com",
@@ -491,7 +495,10 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-mainnet.chainsafe.io",
-            ETHEREUM_API: (key) => `https://eth-mainnet.g.alchemy.com/v2/${key}`,
+            ETHEREUM_CHAINS: {
+                "1": (key) => `https://eth-mainnet.g.alchemy.com/v2/${key}`,
+                "1284": () => "https://moonbeam.drpc.org",
+            },
             RELAY_CHAIN_URL: "https://polkadot-rpc.dwellir.com",
             PARACHAINS: {
                 "1000": "wss://asset-hub-polkadot-rpc.dwellir.com",
@@ -499,6 +506,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 "3369": "https://polkadot-mythos-rpc.polkadot.io",
                 "2034": "wss://hydration-rpc.n.dwellir.com",
                 "2030": "wss://bifrost-polkadot-rpc.dwellir.com",
+                "2004": "wss://moonbeam-rpc.n.dwellir.com",
             },
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
             BEEFY_CONTRACT: "0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C",
@@ -589,7 +597,9 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
-            ETHEREUM_API: (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`,
+            ETHEREUM_CHAINS: {
+                "11155111": (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`
+            },
             RELAY_CHAIN_URL: "https://westend-rpc.polkadot.io",
             PARACHAINS: {
                 "1000": "wss://westend-asset-hub-rpc.polkadot.io",

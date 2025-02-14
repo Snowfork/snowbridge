@@ -9,10 +9,12 @@ import {
 } from "@snowbridge/contract-types"
 
 interface Parachains { [paraId: string]: ApiPromise }
+interface EthereumChains { [ethChainId: string]: AbstractProvider }
 
 interface Config {
     ethereum: {
-        execution_url: string | AbstractProvider
+        ethChainId: number
+        ethChains: { [ethChainId: string]: string | AbstractProvider }
         beacon_url: string
     }
     polkadot: {
@@ -32,7 +34,7 @@ export class Context {
     config: Config
 
     // Ethereum
-    #ethereum?: AbstractProvider
+    #ethChains: EthereumChains
     #gateway?: IGateway
     #beefyClient?: BeefyClient
 
@@ -43,6 +45,7 @@ export class Context {
     constructor(config: Config) {
         this.config = config
         this.#parachains = {}
+        this.#ethChains = {}
     }
 
     async relaychain(): Promise<ApiPromise> {
@@ -68,8 +71,16 @@ export class Context {
         return paraId.toString() in this.config.polkadot.parachains
     }
 
+    hasEthChain(ethChainId: number): boolean {
+        return ethChainId.toString() in this.config.ethereum.ethChains
+    }
+
     parachains(): number[] {
         return Object.keys(this.config.polkadot.parachains).map((key) => Number(key))
+    }
+
+    ethChains(): number[] {
+        return Object.keys(this.config.ethereum.ethChainId).map((key) => Number(key))
     }
 
     async parachain(paraId: number): Promise<ApiPromise> {
@@ -86,7 +97,7 @@ export class Context {
             const onChainParaId = (
                 await api.query.parachainInfo.parachainId()
             ).toPrimitive() as number
-            if(onChainParaId !== paraId) {
+            if (onChainParaId !== paraId) {
                 console.warn(
                     `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`
                 )
@@ -98,24 +109,34 @@ export class Context {
         }
     }
 
-    ethereum(): AbstractProvider {
-        if (this.#ethereum) {
-            return this.#ethereum
+    ethChain(ethChainId: number): AbstractProvider {
+        const ethChainKey = ethChainId.toString()
+        if (ethChainKey in this.#ethChains) {
+            return this.#ethChains[ethChainKey]
         }
 
-        const { config } = this
-
-        if (typeof config.ethereum.execution_url === "string") {
-            if (config.ethereum.execution_url.startsWith("http")) {
-                this.#ethereum = new JsonRpcProvider(config.ethereum.execution_url)
+        const { ethChains } = this.config.ethereum
+        if (ethChainKey in ethChains) {
+            const url = ethChains[ethChainKey]
+            let provider: AbstractProvider;
+            if (typeof url === "string") {
+                if (url.startsWith("http")) {
+                    provider = new JsonRpcProvider(url)
+                } else {
+                    provider = new WebSocketProvider(url)
+                }
             } else {
-                this.#ethereum = new WebSocketProvider(config.ethereum.execution_url)
+                provider = url as AbstractProvider
             }
+            this.#ethChains[ethChainKey] = provider
+            return provider
         } else {
-            this.#ethereum = this.config.ethereum.execution_url as AbstractProvider
+            throw Error(`Ethereum chain id ${ethChains} not in the list of ethereum urls.`)
         }
+    }
 
-        return this.#ethereum
+    ethereum(): AbstractProvider {
+        return this.ethChain(this.config.ethereum.ethChainId)
     }
 
     gateway(): IGateway {
@@ -124,6 +145,7 @@ export class Context {
         }
         return IGateway__factory.connect(this.config.appContracts.gateway, this.ethereum())
     }
+
     beefyClient(): BeefyClient {
         if (this.#beefyClient) {
             return this.#beefyClient
@@ -132,11 +154,15 @@ export class Context {
     }
 
     async destroyContext(): Promise<void> {
+        // clean up contract listeners
+        if (this.#beefyClient) await this.beefyClient().removeAllListeners()
+        if (this.#gateway) await this.gateway().removeAllListeners()
+
         // clean up etheruem
-        if (typeof this.config.ethereum.execution_url === "string" && this.#ethereum) {
-            await this.beefyClient().removeAllListeners()
-            await this.gateway().removeAllListeners()
-            this.ethereum().destroy()
+        for (const ethChainKey of Object.keys(this.config.ethereum.ethChains)) {
+            if (typeof this.config.ethereum.ethChains[ethChainKey] === "string" && this.#ethChains[ethChainKey]) {
+                this.#ethChains[ethChainKey].destroy()
+            }
         }
         // clean up polkadot
         if (this.#relaychain) {

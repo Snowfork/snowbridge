@@ -6,7 +6,7 @@ import {
     toPolkadot,
 } from "@snowbridge/api"
 import { WETH9__factory } from "@snowbridge/contract-types"
-import { Wallet } from "ethers"
+import { AbstractProvider, Wallet } from "ethers"
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 
 
@@ -21,12 +21,17 @@ const monitor = async () => {
     }
     console.log(`Using environment '${env}'`)
 
-    const { config } = snwobridgeEnv
+    const { config, ethChainId } = snwobridgeEnv
     await cryptoWaitReady()
 
+    const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
+    const ethChains: { [ethChainId: string]: string | AbstractProvider } = {}
+    Object.keys(config.ETHEREUM_CHAINS)
+        .forEach(ethChainId => ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
     const context = new Context({
         ethereum: {
-            execution_url: config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY || ""),
+            ethChainId,
+            ethChains,
             beacon_url: config.BEACON_HTTP_API,
         },
         polkadot: {
