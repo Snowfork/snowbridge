@@ -78,12 +78,6 @@ const monitor = async () => {
         },
     })
 
-    const moonbeam = (await context.parachain(2004))
-    const type = moonbeam.createType('MoonbeamRuntimeXcmConfigAssetType', { xcm: { parents: 1, interior: { here: null } } })
-    console.log('XXXXXX', type.toHuman())
-    const assetId = (await (await context.parachain(2004)).query.assetManager.assetTypeId(type)).toPrimitive()
-    console.log('XXXXXXX', assetId)
-
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
