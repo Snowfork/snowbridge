@@ -5,4 +5,5 @@ pub mod helper;
 pub mod helper_v2;
 pub mod parachains;
 pub mod penpal_helper;
+pub mod types;
 pub mod xcm;

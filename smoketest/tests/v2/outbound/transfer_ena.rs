@@ -1,14 +1,13 @@
 use assethub::api::polkadot_xcm::calls::TransactionApi;
 use ethers::{
-	prelude::Middleware,
 	providers::{Provider, Ws},
 	types::Address,
 };
-use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::i_gateway_v2::{IGatewayV2, InboundMessageDispatchedFilter},
 	helper::AssetHubConfig,
+	helper_v2::wait_for_ethereum_event_v2,
 	parachains::assethub::{
 		api::runtime_types::{
 			sp_weights::weight_v2::Weight,
@@ -117,28 +116,5 @@ async fn transfer_ena() {
 		.await
 		.expect("call success");
 
-	let wait_for_blocks = 500;
-	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
-
-	let mut transfer_event_found = false;
-	while let Some(block) = stream.next().await {
-		println!("Polling ethereum block {:?} for transfer event", block.number.unwrap());
-		if let Ok(transfers) = gateway
-			.event::<InboundMessageDispatchedFilter>()
-			.at_block_hash(block.hash.unwrap())
-			.query()
-			.await
-		{
-			for transfer in transfers {
-				if transfer.success {
-					println!("Transfer event found at ethereum block {:?}", block.number.unwrap());
-					transfer_event_found = true;
-				}
-			}
-		}
-		if transfer_event_found {
-			break
-		}
-	}
-	assert!(transfer_event_found);
+	wait_for_ethereum_event_v2::<InboundMessageDispatchedFilter>(&Box::new(ethereum_client)).await;
 }

@@ -119,7 +119,7 @@ pub async fn wait_for_bridgehub_event<Ev: StaticEvent>(
 		.subscribe_finalized()
 		.await
 		.expect("block subscription")
-		.take(5);
+		.take(500);
 
 	let mut substrate_event_found = false;
 	while let Some(Ok(block)) = blocks.next().await {
@@ -226,11 +226,12 @@ pub async fn get_balance(
 pub async fn fund_account(
 	client: &Box<Arc<SignerMiddleware<Provider<Http>, LocalWallet>>>,
 	address_to: Address,
+	amount: u128,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let tx = TransactionRequest::new()
 		.to(address_to)
 		.from(client.address())
-		.value(U256::from(ethers::utils::parse_ether(1)?));
+		.value(U256::from(amount));
 	let tx = client.send_transaction(tx, None).await?.await?;
 	assert_eq!(tx.clone().unwrap().status.unwrap().as_u64(), 1u64);
 	println!("receipt: {:#?}", hex::encode(tx.unwrap().transaction_hash));
@@ -345,7 +346,7 @@ pub async fn snowbridge_assethub_call_from_relay_chain(
 			RelaychainJunction::Parachain(BRIDGE_HUB_PARA_ID),
 		)),
 		RelaychainInstruction::DescendOrigin(RelaychainJunctions::X1(
-			RelaychainJunction::PalletInstance(84),
+			RelaychainJunction::PalletInstance(91),
 		)),
 		RelaychainInstruction::UniversalOrigin(RelaychainJunction::GlobalConsensus(
 			RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID },
@@ -564,7 +565,10 @@ pub async fn governance_assethub_call_from_relay_chain_sudo_as(
 	Ok(())
 }
 
-pub async fn fund_agent(agent_id: [u8; 32]) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn fund_agent(
+	agent_id: [u8; 32],
+	amount: u128,
+) -> Result<(), Box<dyn std::error::Error>> {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let ethereum_client = *(test_clients.ethereum_client.clone());
@@ -573,7 +577,7 @@ pub async fn fund_agent(agent_id: [u8; 32]) -> Result<(), Box<dyn std::error::Er
 
 	println!("agent address {}", hex::encode(agent_address));
 
-	fund_account(&test_clients.ethereum_signed_client, agent_address)
+	fund_account(&test_clients.ethereum_signed_client, agent_address, amount)
 		.await
 		.expect("fund account");
 	Ok(())
