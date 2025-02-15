@@ -80,7 +80,7 @@ export class Context {
     }
 
     ethChains(): number[] {
-        return Object.keys(this.config.ethereum.ethChainId).map((key) => Number(key))
+        return Object.keys(this.config.ethereum.ethChains).map((key) => Number(key))
     }
 
     async parachain(paraId: number): Promise<ApiPromise> {

@@ -497,7 +497,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             BEACON_HTTP_API: "https://lodestar-mainnet.chainsafe.io",
             ETHEREUM_CHAINS: {
                 "1": (key) => `https://eth-mainnet.g.alchemy.com/v2/${key}`,
-                "1284": () => "https://moonbeam.drpc.org",
+                "1284": () => "https://rpc.api.moonbeam.network",
             },
             RELAY_CHAIN_URL: "https://polkadot-rpc.dwellir.com",
             PARACHAINS: {
