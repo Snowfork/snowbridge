@@ -218,7 +218,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
     }
 }
 
-export function fromEnvironment({ config, ethChainId }: SnowbridgeEnvironment): RegistryOptions {
+export function fromEnvironment({ config, ethChainId }: SnowbridgeEnvironment, ethereumApiKey?: string): RegistryOptions {
     return {
         assetHubParaId: config.ASSET_HUB_PARAID,
         bridgeHubParaId: config.BRIDGE_HUB_PARAID,
@@ -226,7 +226,7 @@ export function fromEnvironment({ config, ethChainId }: SnowbridgeEnvironment): 
         relaychain: config.RELAY_CHAIN_URL,
         ethChainId,
         gatewayAddress: config.GATEWAY_CONTRACT,
-        ethchains: [config.ETHEREUM_CHAINS[ethChainId.toString()](process.env.REACT_APP_INFURA_KEY ?? "")],
+        ethchains: Object.values(config.ETHEREUM_CHAINS).map(x => x(ethereumApiKey ?? "")),
         parachains: Object.keys(config.PARACHAINS)
             .filter(paraId => paraId !== config.BRIDGE_HUB_PARAID.toString())
             .map(paraId => config.PARACHAINS[paraId]),
@@ -253,7 +253,7 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
         relaychain,
         ethChainId: Number(network.chainId),
         gatewayAddress,
-        ethchains: [context.ethereum()],
+        ethchains: context.ethChains().map(ethChainId => context.ethChain(ethChainId)),
         parachains
     }
 }
