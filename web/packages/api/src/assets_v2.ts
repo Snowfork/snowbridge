@@ -114,6 +114,23 @@ interface XC20TokenMap { [xc20: string]: string }
 
 interface ERC20MetadataMap { [token: string]: ERC20Metadata }
 
+export type SourceType = "substrate" | "ethereum"
+
+export type Path = {
+    type: SourceType;
+    id: string;
+    source: number;
+    destination: number;
+    asset: string;
+}
+
+export type Source = {
+    type: SourceType;
+    id: string;
+    source: number;
+    destinations: { [destination: string]: string[] }
+}
+
 export async function buildRegistry(options: RegistryOptions): Promise<AssetRegistry> {
     const {
         parachains,
@@ -216,6 +233,41 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         ethereumChains: ethChains,
         parachains: paras,
     }
+}
+
+export function getTransferLocations(registry: AssetRegistry, filter: (path: Path) => boolean): Source[] {
+    const ethChain = registry.ethereumChains[registry.ethChainId]
+    const parachains = Object.keys(registry.parachains)
+        .filter(p => p !== registry.bridgeHubParaId.toString())
+        .map(p => registry.parachains[p])
+
+    const locations: Path[] = []
+    for (const parachain of parachains) {
+        const sourceAssets = Object.keys(ethChain.assets)
+        const destinationAssets = Object.keys(parachain.assets)
+        const commonAssets = new Set(sourceAssets.filter(sa => destinationAssets.find(da => da === sa)))
+        for (const asset of commonAssets) {
+            const p1: Path = { type: "ethereum", id: "ethereum", source: ethChain.chainId, destination: parachain.parachainId, asset }
+            if (filter(p1)) { locations.push(p1) }
+            const p2: Path = { type: "substrate", id: parachain.info.specName , source: parachain.parachainId, destination: ethChain.chainId, asset }
+            if (filter(p2)) { locations.push(p2) }
+        }
+    }
+    const results: Source[] = []
+    for (const location of locations) {
+        let source = results.find(s => s.type === location.type && s.id === location.id && s.source === location.source)
+        if (!source) {
+            source = { type: location.type, id: location.id, source: location.source, destinations: {} }
+            results.push(source)
+        }
+        let destination: string[] = source.destinations[location.destination]
+        if (!destination) {
+            destination = []
+            source.destinations[location.destination] = destination
+        }
+        destination.push(location.asset)
+    }
+    return results
 }
 
 export function fromEnvironment({ config, ethChainId }: SnowbridgeEnvironment, ethereumApiKey?: string): RegistryOptions {
