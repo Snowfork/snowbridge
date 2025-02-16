@@ -564,6 +564,7 @@ async function indexParachain(
                     : "0x0000000000000000000000000000000000000000",
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
+            // TODO: This needs to happen before each transaction.
             destinationFeeInDOT = await calculateDestinationFee(provider, destinationXcm)
         } else {
             if (!(parachainIdKey in destinationFeeOverrides)) {
