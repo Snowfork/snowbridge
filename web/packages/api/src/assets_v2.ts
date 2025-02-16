@@ -635,13 +635,13 @@ async function indexEthChain(
         if (!evmParachainChain) {
             throw Error(`Could not find evm chain ${chainId} in the list of parachains.`)
         }
-        const xc20TokenMap: XC20TokenMap = {}
+        const xcTokenMap: XC20TokenMap = {}
         const assets: ERC20MetadataMap = {}
         for (const token in evmParachainChain.assets) {
             const xc20 = evmParachainChain.assets[token].xc20
             if (!xc20) { continue }
             const asset = await assetErc20Metadata(provider, xc20.toLowerCase())
-            xc20TokenMap[token] = xc20
+            xcTokenMap[token] = xc20
             assets[xc20] = asset
         }
         const paraId = evmParachainChain.parachainId.toString()
@@ -659,7 +659,7 @@ async function indexEthChain(
         assets[evmParachainChain.xcDOT] = xc20DOTAsset
 
         return {
-            chainId, evmParachainId: evmParachainChain.parachainId, assets, precompile, xcDOT: evmParachainChain.xcDOT
+            chainId, evmParachainId: evmParachainChain.parachainId, assets, precompile, xcDOT: evmParachainChain.xcDOT, xcTokenMap
         }
     }
 }
