@@ -15,6 +15,7 @@ export type ERC20Metadata = {
 
 export type EthereumChain = {
     chainId: number
+    id: string
     evmParachainId?: number
     assets: ERC20MetadataMap
     precompile?: `0x${string}`
@@ -651,6 +652,7 @@ async function indexEthChain(
 ): Promise<EthereumChain> {
     const network = await provider.getNetwork()
     const chainId = Number(network.chainId)
+    const id = network.name !== "unknown" ? network.name : undefined
 
     if (chainId == ethChainId) {
         // Asset Hub and get meta data
@@ -672,7 +674,7 @@ async function indexEthChain(
             throw Error(`Could not fetch code for gatway address ${gatewayAddress} on ethereum chain ${chainId}.`)
         }
         return {
-            chainId, assets
+            chainId, assets, id: id ?? `chain_${chainId}`
         }
     } else {
         let evmParachainChain: Parachain | undefined;
@@ -711,7 +713,7 @@ async function indexEthChain(
         assets[evmParachainChain.xcDOT] = xc20DOTAsset
 
         return {
-            chainId, evmParachainId: evmParachainChain.parachainId, assets, precompile, xcDOT: evmParachainChain.xcDOT, xcTokenMap
+            chainId, evmParachainId: evmParachainChain.parachainId, assets, precompile, xcDOT: evmParachainChain.xcDOT, xcTokenMap, id: id ?? evmParachainChain.info.specName
         }
     }
 }
