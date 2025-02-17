@@ -15,7 +15,7 @@ const monitor = async () => {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const { config, ethChainId } = snowbridgeEnv
+    const { config, ethChainId, name } = snowbridgeEnv
     if (!config.SUBSCAN_API) throw Error(`Environment ${env} does not support subscan.`)
 
     const ethereumProvider = new AlchemyProvider(ethChainId, process.env.REACT_APP_ALCHEMY_KEY)
@@ -25,6 +25,7 @@ const monitor = async () => {
         .forEach(ethChainId => ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
     ethChains[ethChainId.toString()] = ethereumProvider
     const context = new Context({
+        environment: name,
         ethereum: {
             ethChainId,
             ethChains,

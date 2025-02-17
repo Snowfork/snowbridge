@@ -12,6 +12,7 @@ interface Parachains { [paraId: string]: ApiPromise }
 interface EthereumChains { [ethChainId: string]: AbstractProvider }
 
 interface Config {
+    environment: string
     ethereum: {
         ethChainId: number
         ethChains: { [ethChainId: string]: string | AbstractProvider }

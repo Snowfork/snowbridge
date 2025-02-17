@@ -75,6 +75,7 @@ export type Asset = {
 }
 
 export type RegistryOptions = {
+    environment: string
     gatewayAddress: string
     ethChainId: number
     assetHubParaId: number
@@ -89,16 +90,17 @@ export type RegistryOptions = {
 }
 
 export type AssetRegistry = {
-    gatewayAddress: string;
-    ethChainId: number;
-    assetHubParaId: number;
-    bridgeHubParaId: number;
-    relaychain: ChainProperties;
-    bridgeHub: ChainProperties;
+    environment: string
+    gatewayAddress: string
+    ethChainId: number
+    assetHubParaId: number
+    bridgeHubParaId: number
+    relaychain: ChainProperties
+    bridgeHub: ChainProperties
     ethereumChains: {
-        [chainId: string]: EthereumChain;
-    };
-    parachains: ParachainMap;
+        [chainId: string]: EthereumChain
+    }
+    parachains: ParachainMap
 }
 
 interface AssetMap { [token: string]: Asset }
@@ -134,6 +136,7 @@ export type Source = {
 
 export async function buildRegistry(options: RegistryOptions): Promise<AssetRegistry> {
     const {
+        environment,
         parachains,
         ethchains,
         ethChainId,
@@ -225,6 +228,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
     }
 
     return {
+        environment,
         ethChainId,
         gatewayAddress,
         assetHubParaId,
@@ -236,11 +240,13 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
     }
 }
 
-export function getTransferLocations(registry: AssetRegistry, filter: (path: Path) => boolean): Source[] {
+export function getTransferLocations(registry: AssetRegistry, filter?: (path: Path) => boolean): Source[] {
     const ethChain = registry.ethereumChains[registry.ethChainId]
     const parachains = Object.keys(registry.parachains)
         .filter(p => p !== registry.bridgeHubParaId.toString())
         .map(p => registry.parachains[p])
+
+    const pathFilter = filter ?? defaultPathFilter(registry.environment)
 
     const locations: Path[] = []
     for (const parachain of parachains) {
@@ -249,9 +255,9 @@ export function getTransferLocations(registry: AssetRegistry, filter: (path: Pat
         const commonAssets = new Set(sourceAssets.filter(sa => destinationAssets.find(da => da === sa)))
         for (const asset of commonAssets) {
             const p1: Path = { type: "ethereum", id: "ethereum", source: ethChain.chainId, destination: parachain.parachainId, asset }
-            if (filter(p1)) { locations.push(p1) }
-            const p2: Path = { type: "substrate", id: parachain.info.specName , source: parachain.parachainId, destination: ethChain.chainId, asset }
-            if (filter(p2)) { locations.push(p2) }
+            if (pathFilter(p1)) { locations.push(p1) }
+            const p2: Path = { type: "substrate", id: parachain.info.specName, source: parachain.parachainId, destination: ethChain.chainId, asset }
+            if (pathFilter(p2)) { locations.push(p2) }
         }
     }
     const results: Source[] = []
@@ -271,8 +277,9 @@ export function getTransferLocations(registry: AssetRegistry, filter: (path: Pat
     return results
 }
 
-export function fromEnvironment({ config, ethChainId }: SnowbridgeEnvironment, ethereumApiKey?: string): RegistryOptions {
-    return {
+export function fromEnvironment({ name, config, ethChainId }: SnowbridgeEnvironment, ethereumApiKey?: string): RegistryOptions {
+    const result: RegistryOptions = {
+        environment: name,
         assetHubParaId: config.ASSET_HUB_PARAID,
         bridgeHubParaId: config.BRIDGE_HUB_PARAID,
         bridgeHub: config.PARACHAINS[config.BRIDGE_HUB_PARAID.toString()],
@@ -284,6 +291,8 @@ export function fromEnvironment({ config, ethChainId }: SnowbridgeEnvironment, e
             .filter(paraId => paraId !== config.BRIDGE_HUB_PARAID.toString())
             .map(paraId => config.PARACHAINS[paraId]),
     }
+    addOverrides(name, result)
+    return result
 }
 
 export async function fromContext(context: Context): Promise<RegistryOptions> {
@@ -299,7 +308,8 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
                 .map(paraId => context.parachain(paraId))
         ),
     ])
-    return {
+    const result: RegistryOptions = {
+        environment: context.config.environment,
         assetHubParaId,
         bridgeHubParaId,
         bridgeHub,
@@ -309,6 +319,8 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
         ethchains: context.ethChains().map(ethChainId => context.ethChain(ethChainId)),
         parachains
     }
+    addOverrides(context.config.environment, result)
+    return result
 }
 
 export async function getNativeAccount(provider: ApiPromise, account: string): Promise<SubstrateAccount> {
@@ -400,6 +412,26 @@ export async function getParachainId(parachain: ApiPromise): Promise<number> {
     return Number(sourceParachainEncoded.toPrimitive())
 }
 
+export async function calculateDestinationFee(provider: ApiPromise, destinationXcm: any, padFeePercentage?: bigint) {
+    const weight = (await provider.call.xcmPaymentApi.queryXcmWeight(destinationXcm)).toPrimitive() as any
+    if (!weight.ok) {
+        throw Error(`Can not query XCM Weight.`)
+    }
+
+    const feeInDot = (await provider.call.xcmPaymentApi.queryWeightToAssetFee(
+        weight.ok,
+        { v4: { parents: 1, interior: "Here" } }
+    )).toPrimitive() as any
+    if (!feeInDot.ok) {
+        throw Error(`Can not convert weight to fee in DOT.`)
+    }
+    const result = BigInt(feeInDot.ok.toString())
+
+    // return fee padded by 100% unless another percentage is specified
+    // TODO: Drop to 15% once 2409 is released
+    return result * (100n + (padFeePercentage ?? 100n)) / 100n
+}
+
 async function chainProperties(provider: ApiPromise): Promise<ChainProperties> {
     const [properties, name] = await Promise.all([provider.rpc.system.properties(), provider.rpc.system.chain()])
     const tokenSymbols = properties.tokenSymbol.unwrapOrDefault().at(0)?.toString()
@@ -432,26 +464,6 @@ async function chainProperties(provider: ApiPromise): Promise<ChainProperties> {
         specName,
         specVersion,
     }
-}
-
-export async function calculateDestinationFee(provider: ApiPromise, destinationXcm: any, padFeePercentage?: bigint) {
-    const weight = (await provider.call.xcmPaymentApi.queryXcmWeight(destinationXcm)).toPrimitive() as any
-    if (!weight.ok) {
-        throw Error(`Can not query XCM Weight.`)
-    }
-
-    const feeInDot = (await provider.call.xcmPaymentApi.queryWeightToAssetFee(
-        weight.ok,
-        { v4: { parents: 1, interior: "Here" } }
-    )).toPrimitive() as any
-    if (!feeInDot.ok) {
-        throw Error(`Can not convert weight to fee in DOT.`)
-    }
-    const result = BigInt(feeInDot.ok.toString())
-
-    // return fee padded by 100% unless another percentage is specified
-    // TODO: Drop to 15% once 2409 is released
-    return result * (100n + (padFeePercentage ?? 100n)) / 100n
 }
 
 async function indexParachainAssets(provider: ApiPromise, ethChainId: number, specName: string) {
@@ -776,4 +788,79 @@ async function assetErc20Metadata(
 
 function isSnowbridgeAsset(location: any, chainId: number) {
     return location.parents === 2 && location.interior.x2 !== undefined && location.interior.x2[0].globalConsensus.ethereum.chainId === chainId
+}
+
+function addOverrides(envName: string, result: RegistryOptions) {
+    switch (envName) {
+        case "paseo_sepolia": {
+            // Add override for mythos token and add precompile for moonbeam
+            result.destinationFeeOverrides = {
+                "3369": 200_000_000_000n
+            }
+            result.assetOverrides = {
+                "3369": [
+                    {
+                        token: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee".toLowerCase(),
+                        name: "Muse",
+                        minimumBalance: 10_000_000_000_000_000n,
+                        symbol: "MUSE",
+                        decimals: 18,
+                        isSufficient: true,
+                    }
+                ]
+            }
+            break;
+        }
+        case "polkadot_mainnet": {
+            // Add override for mythos token and add precompile for moonbeam
+            result.precompiles = { "2004": "0x000000000000000000000000000000000000081A" }
+            result.destinationFeeOverrides = {
+                "3369": 500_000_000n
+            }
+            result.assetOverrides = {
+                "3369": [
+                    {
+                        token: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003".toLowerCase(),
+                        name: "Mythos",
+                        minimumBalance: 10_000_000_000_000_000n,
+                        symbol: "MYTH",
+                        decimals: 18,
+                        isSufficient: true,
+                    }
+                ]
+            }
+            break;
+        }
+    }
+}
+
+function defaultPathFilter(envName: string): (_: Path) => boolean {
+    switch (envName) {
+        case "paseo_sepolia":
+            return (path: Path) => {
+                // Disallow MUSE to any location but 3369
+                if (
+                    path.asset === "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee" &&
+                    path.destination !== 3369
+                ) {
+                    return false
+                }
+                return true
+            }
+        case "polkadot_mainnet":
+            return (path: Path) => {
+
+                // Disallow MYTH to any location but 3369
+                if (
+                    path.asset === "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003" &&
+                    path.destination !== 3369
+                ) {
+                    return false
+                }
+                return true
+            };
+
+        default:
+            return (_: Path) => true
+    }
 }

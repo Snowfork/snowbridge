@@ -31,6 +31,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     if (process.env["EXECUTION_NODE_URL"]) { ethChains[ethChainId.toString()] = process.env["EXECUTION_NODE_URL"] }
 
     const context = new Context({
+        environment: name,
         ethereum: {
             ethChainId,
             ethChains,

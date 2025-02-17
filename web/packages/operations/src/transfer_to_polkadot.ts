@@ -16,7 +16,7 @@ const transfer = async () => {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const { config, ethChainId } = snowbridgeEnv
+    const { config, ethChainId, name } = snowbridgeEnv
     await cryptoWaitReady()
 
     const parachains: { [paraId: string]: string } = {}
@@ -31,6 +31,7 @@ const transfer = async () => {
     if (process.env["EXECUTION_NODE_URL"]) { ethChains[ethChainId.toString()] = process.env["EXECUTION_NODE_URL"] }
 
     const context = new Context({
+        environment: name,
         ethereum: {
             ethChainId,
             ethChains,

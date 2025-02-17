@@ -21,7 +21,7 @@ const monitor = async () => {
     }
     console.log(`Using environment '${env}'`)
 
-    const { config, ethChainId } = snwobridgeEnv
+    const { config, ethChainId, name } = snwobridgeEnv
     await cryptoWaitReady()
 
     const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
@@ -29,6 +29,7 @@ const monitor = async () => {
     Object.keys(config.ETHEREUM_CHAINS)
         .forEach(ethChainId => ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
     const context = new Context({
+        environment: name,
         ethereum: {
             ethChainId,
             ethChains,
