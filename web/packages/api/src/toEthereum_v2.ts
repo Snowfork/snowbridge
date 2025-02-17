@@ -98,7 +98,7 @@ export async function createTransfer(
     }
 }
 
-export async function getDeliveryFee(assetHub: ApiPromise, registry: AssetRegistry, defaultFee?: bigint): Promise<DeliveryFee> {
+export async function getDeliveryFee(assetHub: ApiPromise, parachain: number, registry: AssetRegistry, defaultFee?: bigint): Promise<DeliveryFee> {
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
@@ -113,18 +113,21 @@ export async function getDeliveryFee(assetHub: ApiPromise, registry: AssetRegist
         deliveryFeeInDot = BigInt(leFee.toString())
     }
 
-    const assetHubFeeInDot = await calculateDestinationFee(assetHub,
-        buildResultXcmAssetHubERC20TransferFromParachain(
-            assetHub.registry,
-            registry.ethChainId,
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            340282366920938463463374607431768211455n,
-            340282366920938463463374607431768211455n,
+    let assetHubFeeInDot = 0n
+    if (parachain !== registry.assetHubParaId) {
+        assetHubFeeInDot = await calculateDestinationFee(assetHub,
+            buildResultXcmAssetHubERC20TransferFromParachain(
+                assetHub.registry,
+                registry.ethChainId,
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                340282366920938463463374607431768211455n,
+                340282366920938463463374607431768211455n,
+            )
         )
-    )
+    }
 
     return {
         deliveryFeeInDot,

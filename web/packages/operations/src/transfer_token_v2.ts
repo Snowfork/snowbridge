@@ -145,11 +145,14 @@ const monitor = async () => {
     //      const registry = await assetsV2.buildRegistry(assetsV2.fromEnvironment(snwobridgeEnv))
     // If your dapp does not use the snowbridge environment or context you can always build it manually by
     // specifying RegistryOptions for only the parachains you care about.
+
+
+    console.log('A',(await context.ethChain(1).getNetwork()).toJSON())
+    console.log('B',(await context.ethChain(1284).getNetwork()).toJSON())
     const registry = await cache(`.${env}.registry.json`, async () => await assetsV2.buildRegistry({
         ...await assetsV2.fromContext(context),
         ...overrides
     }))
-
     console.log("Asset Registry:", JSON.stringify(registry, (_, value) => typeof value === "bigint" ? String(value) : value, 2))
 
     const WETH_CONTRACT = snwobridgeEnv.locations[0].erc20tokensReceivable.find(
@@ -234,7 +237,7 @@ const monitor = async () => {
     {
         const sourceParaId = 1000
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toEthereumV2.getDeliveryFee(await context.assetHub(), registry)
+        const fee = await toEthereumV2.getDeliveryFee(await context.assetHub(), sourceParaId, registry)
 
         // Step 2. Create a transfer tx
         const transfer = await toEthereumV2.createTransfer(
@@ -356,7 +359,7 @@ const monitor = async () => {
     {
         const sourceParaId = 2000
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toEthereumV2.getDeliveryFee(await context.assetHub(), registry)
+        const fee = await toEthereumV2.getDeliveryFee(await context.assetHub(), sourceParaId, registry)
 
         // Step 2. Create a transfer tx
         const transfer = await toEthereumV2.createTransfer(
