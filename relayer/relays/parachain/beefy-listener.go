@@ -215,6 +215,11 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 							}).Warning("MMR root hash does NOT match the commitment payload")
 							// TODO: get the required state to prove the equivocation from the signature
 
+							log.Info("schedule ID", li.scheduleConfig.ID)
+							if li.scheduleConfig.ID != 0 {
+								log.Info("testing: only submitting from relayer 0 - skipping")
+								return nil
+							}
 							meta, err := li.relaychainConn.API().RPC.State.GetMetadataLatest()
 							if err != nil {
 								return fmt.Errorf("get metadata: %w", err)
