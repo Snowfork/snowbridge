@@ -4,11 +4,13 @@ use ethers::{
 	types::Address,
 };
 use snowbridge_smoketest::{
+	asset_hub_helper::{eth_location, mint_token_to},
 	constants::*,
 	contracts::i_gateway_v2::{IGatewayV2, InboundMessageDispatchedFilter},
-	helper::AssetHubConfig,
+	helper::{initial_clients, AssetHubConfig},
 	helper_v2::wait_for_ethereum_event_v2,
 	parachains::assethub::{
+		self,
 		api::runtime_types::{
 			sp_weights::weight_v2::Weight,
 			staging_xcm::v5::{
@@ -27,15 +29,17 @@ use snowbridge_smoketest::{
 			},
 			xcm::VersionedXcm,
 		},
-		{self},
 	},
 };
 use std::{str::FromStr, sync::Arc, time::Duration};
 use subxt::OnlineClient;
 use subxt_signer::{sr25519, SecretUri};
 
+const INITIAL_FUND: u128 = 3_000_000_000_000;
+
 #[tokio::test]
 async fn transfer_ena() {
+	let test_clients = initial_clients().await.expect("initialize clients");
 	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
 		.await
 		.unwrap()
@@ -106,6 +110,15 @@ async fn transfer_ena() {
 	let suri = SecretUri::from_str(&SUBSTRATE_KEY).expect("Parse SURI");
 
 	let signer = sr25519::Keypair::from_uri(&suri).expect("valid keypair");
+
+	// Mint ether to sender to pay fees
+	mint_token_to(
+		&test_clients.asset_hub_client,
+		eth_location(),
+		signer.public_key().0,
+		INITIAL_FUND,
+	)
+	.await;
 
 	let token_transfer_call =
 		TransactionApi.execute(xcm, Weight { ref_time: 8_000_000_000, proof_size: 80_000 });
