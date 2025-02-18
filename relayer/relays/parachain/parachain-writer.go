@@ -204,7 +204,7 @@ func (relay *Relay) writeToParachain(ctx context.Context, proof scale.ProofPaylo
 		"Proof":    inboundMsg.Proof,
 	}).Debug("Generated message from Ethereum log")
 
-	err := relay.parachainWriter.WriteToParachainAndWatch(ctx, "EthereumOutboundQueueV2.submit_delivery_proof", inboundMsg)
+	err := relay.parachainWriter.WriteToParachainAndWatch(ctx, "EthereumOutboundQueueV2.submit_delivery_receipt", inboundMsg)
 	if err != nil {
 		return fmt.Errorf("submit message to outbound queue v2: %w", err)
 	}

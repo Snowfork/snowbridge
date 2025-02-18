@@ -1,18 +1,16 @@
 use assethub::api::polkadot_xcm::calls::TransactionApi;
 use ethers::{
-	prelude::Middleware,
 	providers::{Provider, Ws},
 	types::Address,
 };
-use futures::StreamExt;
 use snowbridge_smoketest::{
+	asset_hub_helper::{eth_location, mint_token_to},
 	constants::*,
-	contracts::{
-		i_gateway_v2::IGatewayV2,
-		weth9::{TransferFilter, WETH9},
-	},
-	helper::AssetHubConfig,
+	contracts::i_gateway_v2::{IGatewayV2, InboundMessageDispatchedFilter},
+	helper::{initial_clients, AssetHubConfig},
+	helper_v2::wait_for_ethereum_event_v2,
 	parachains::assethub::{
+		self,
 		api::runtime_types::{
 			sp_weights::weight_v2::Weight,
 			staging_xcm::v5::{
@@ -31,24 +29,22 @@ use snowbridge_smoketest::{
 			},
 			xcm::VersionedXcm,
 		},
-		{self},
 	},
 };
 use std::{str::FromStr, sync::Arc, time::Duration};
 use subxt::OnlineClient;
 use subxt_signer::{sr25519, SecretUri};
 
+const INITIAL_FUND: u128 = 3_000_000_000_000;
+
 #[tokio::test]
 async fn transfer_ena() {
+	let test_clients = initial_clients().await.expect("initialize clients");
 	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
 		.await
 		.unwrap()
 		.interval(Duration::from_millis(10u64));
-
 	let ethereum_client = Arc::new(ethereum_provider);
-
-	let weth_addr: Address = (*WETH_CONTRACT).into();
-	let weth = WETH9::new(weth_addr, ethereum_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = IGatewayV2::new(gateway_addr, ethereum_client.clone());
@@ -83,10 +79,9 @@ async fn transfer_ena() {
 	let amount: u128 = 1_000_000_000;
 	let asset_location = Location {
 		parents: 2,
-		interior: Junctions::X2([
-			Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
-			Junction::AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
-		]),
+		interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Ethereum {
+			chain_id: ETHEREUM_CHAIN_ID,
+		})]),
 	};
 	let remote_fee_asset = Asset { id: AssetId(asset_location.clone()), fun: Fungible(amount / 2) };
 	let reserved_asset = Asset { id: AssetId(asset_location.clone()), fun: Fungible(amount / 2) };
@@ -116,6 +111,15 @@ async fn transfer_ena() {
 
 	let signer = sr25519::Keypair::from_uri(&suri).expect("valid keypair");
 
+	// Mint ether to sender to pay fees
+	mint_token_to(
+		&test_clients.asset_hub_client,
+		eth_location(),
+		signer.public_key().0,
+		INITIAL_FUND,
+	)
+	.await;
+
 	let token_transfer_call =
 		TransactionApi.execute(xcm, Weight { ref_time: 8_000_000_000, proof_size: 80_000 });
 
@@ -125,27 +129,5 @@ async fn transfer_ena() {
 		.await
 		.expect("call success");
 
-	let wait_for_blocks = 500;
-	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
-
-	let mut transfer_event_found = false;
-	while let Some(block) = stream.next().await {
-		println!("Polling ethereum block {:?} for transfer event", block.number.unwrap());
-		if let Ok(transfers) =
-			weth.event::<TransferFilter>().at_block_hash(block.hash.unwrap()).query().await
-		{
-			for transfer in transfers {
-				if transfer.src.eq(&agent_src) {
-					println!("Transfer event found at ethereum block {:?}", block.number.unwrap());
-					assert_eq!(transfer.src, agent_src.into());
-					assert_eq!(transfer.dst, (*ETHEREUM_RECEIVER).into());
-					transfer_event_found = true;
-				}
-			}
-		}
-		if transfer_event_found {
-			break
-		}
-	}
-	assert!(transfer_event_found);
+	wait_for_ethereum_event_v2::<InboundMessageDispatchedFilter>(&Box::new(ethereum_client)).await;
 }

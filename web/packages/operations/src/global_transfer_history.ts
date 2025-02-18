@@ -1,6 +1,9 @@
 import "dotenv/config"
 import { contextFactory, destroyContext, environment, subscan, history } from "@snowbridge/api"
-import { BeefyClient__factory, IGateway__factory } from "@snowbridge/contract-types"
+import {
+    BeefyClient__factory,
+    IGatewayV1__factory as IGateway__factory,
+} from "@snowbridge/contract-types"
 import { AlchemyProvider } from "ethers"
 
 const monitor = async () => {

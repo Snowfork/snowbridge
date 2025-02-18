@@ -6,7 +6,7 @@ mkdir -p src/contracts
 
 # Generate Rust bindings for contracts
 forge bind --module --overwrite --ethers\
-    --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token' \
+    --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token|HelloWorld' \
     --bindings-path src/contracts \
     --root ../contracts
 

@@ -1,7 +1,11 @@
 import { decodeAddress } from "@polkadot/keyring"
 import { Codec } from "@polkadot/types/types"
 import { u8aToHex } from "@polkadot/util"
-import { IERC20__factory, IGateway__factory, WETH9__factory } from "@snowbridge/contract-types"
+import {
+    IERC20__factory,
+    IGatewayV1__factory as IGateway__factory,
+    WETH9__factory,
+} from "@snowbridge/contract-types"
 import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway"
 import { LogDescription, Signer, TransactionReceipt, ethers } from "ethers"
 import { concatMap, filter, firstValueFrom, lastValueFrom, take, takeWhile, tap } from "rxjs"

@@ -32,7 +32,7 @@ pub fn weth_location() -> Location {
 	}
 }
 
-fn eth_location() -> Location {
+pub fn eth_location() -> Location {
 	Location {
 		parents: 2,
 		interior: Junctions::X1([GlobalConsensus(NetworkId::Ethereum {
@@ -41,7 +41,7 @@ fn eth_location() -> Location {
 	}
 }
 
-fn dot_location() -> Location {
+pub fn dot_location() -> Location {
 	Location { parents: 1, interior: Here }
 }
 
@@ -141,4 +141,25 @@ pub async fn create_asset_pool(asset_hub_client: &Box<OnlineClient<AssetHubConfi
 		.expect("liquidity added");
 
 	wait_for_assethub_event::<LiquidityAdded>(asset_hub_client).await;
+}
+
+pub async fn mint_token_to(
+	asset_hub_client: &Box<OnlineClient<AssetHubConfig>>,
+	token: Location,
+	who: [u8; 32],
+	amount: u128,
+) {
+	let foreign_assets_api =
+		crate::parachains::assethub::api::foreign_assets::calls::TransactionApi;
+
+	// Mint eth to sovereign account
+	let beneficiary = MultiAddress::Id(who.into());
+	let mut encoded_mint_call = Vec::new();
+	foreign_assets_api
+		.mint(token, beneficiary, amount)
+		.encode_call_data_to(&asset_hub_client.metadata(), &mut encoded_mint_call)
+		.expect("encoded call");
+	snowbridge_assethub_call_from_relay_chain(encoded_mint_call)
+		.await
+		.expect("fund snowbridge sovereign with eth for pool");
 }

@@ -1,0 +1,159 @@
+use assethub::api::polkadot_xcm::calls::TransactionApi;
+use codec::Encode;
+use ethers::abi::{Abi, Token};
+use hex_literal::hex;
+use snowbridge_smoketest::{
+	asset_hub_helper::{eth_location, mint_token_to},
+	constants::*,
+	contracts::hello_world::{HelloWorld, SaidHelloFilter},
+	helper::{initial_clients, AssetHubConfig},
+	helper_v2::{fund_agent_v2, get_agent_address, wait_for_ethereum_event_v2},
+	parachains::assethub::{
+		self,
+		api::runtime_types::{
+			sp_weights::weight_v2::Weight,
+			staging_xcm::v5::{
+				asset::{
+					Asset,
+					AssetFilter::{Definite, Wild},
+					AssetId, AssetTransferFilter, Assets,
+					Fungibility::Fungible,
+					WildAsset::AllCounted,
+				},
+				junction::{Junction, NetworkId},
+				junctions::Junctions,
+				location::Location,
+				Instruction::{DepositAsset, InitiateTransfer, PayFees, Transact, WithdrawAsset},
+				Xcm,
+			},
+			xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedXcm},
+		},
+	},
+	types::ContractCall,
+};
+use std::str::FromStr;
+use subxt::OnlineClient;
+use subxt_signer::{
+	sr25519::{self},
+	SecretUri,
+};
+
+const INITIAL_FUND: u128 = 3_000_000_000_000;
+const INITIAL_FUND_IN_ETHER: u128 = 1_000_000_000_000_000;
+const HELLO_WORLD_CONTRACT: [u8; 20] = hex!("8cf6147918a5cbb672703f879f385036f8793a24");
+
+const AGENT_ID: [u8; 32] = hex!("fa2d646322a1c6db25dd004f44f14f3d39a9556bed9655f372942a84a5b3d93b");
+
+#[tokio::test]
+async fn agent_transact() {
+	let test_clients = initial_clients().await.expect("initialize clients");
+	let ethereum_client = test_clients.ethereum_client;
+
+	// Initial fund for the AH agent
+	fund_agent_v2(ASSET_HUB_AGENT_ID, INITIAL_FUND_IN_ETHER)
+		.await
+		.expect("fund the agent");
+
+	// Initial fund for the user agent
+	let agent_address = get_agent_address(&ethereum_client, AGENT_ID).await.expect("find agent");
+	println!("agent address {}", hex::encode(agent_address));
+	fund_agent_v2(AGENT_ID, INITIAL_FUND_IN_ETHER).await.expect("fund the agent");
+
+	let suri = SecretUri::from_str(&SUBSTRATE_KEY).expect("Parse SURI");
+	let signer = sr25519::Keypair::from_uri(&suri).expect("valid keypair");
+
+	// Mint ether to sender to pay fees
+	mint_token_to(
+		&test_clients.asset_hub_client,
+		eth_location(),
+		signer.public_key().0,
+		INITIAL_FUND,
+	)
+	.await;
+
+	let hello_world = HelloWorld::new(HELLO_WORLD_CONTRACT, *ethereum_client.clone());
+	let contract_abi: Abi = hello_world.abi().clone();
+	let function = contract_abi.function("sayHello").unwrap();
+	let encoded_data = function.encode_input(&[Token::String("Hello!".to_string())]).unwrap();
+
+	println!("data is {}", hex::encode(encoded_data.clone()));
+
+	let transact_info = ContractCall::V1 {
+		target: HELLO_WORLD_CONTRACT,
+		calldata: encoded_data,
+		gas: 80000,
+		value: 1_000_000_000,
+	};
+
+	let assethub: OnlineClient<AssetHubConfig> =
+		OnlineClient::from_url((*ASSET_HUB_WS_URL).to_string()).await.unwrap();
+
+	let destination = Location {
+		parents: 2,
+		interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Ethereum {
+			chain_id: ETHEREUM_CHAIN_ID,
+		})]),
+	};
+
+	let beneficiary = Location {
+		parents: 0,
+		interior: Junctions::X1([Junction::AccountKey20 {
+			network: None,
+			key: agent_address.into(),
+		}]),
+	};
+
+	let local_fee_amount: u128 = 800_000_000_000;
+	let local_fee_asset = Asset {
+		id: AssetId(Location { parents: 1, interior: Junctions::Here }),
+		fun: Fungible(local_fee_amount),
+	};
+	let amount: u128 = 4_000_000_000;
+	let asset_location = Location {
+		parents: 2,
+		interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Ethereum {
+			chain_id: ETHEREUM_CHAIN_ID,
+		})]),
+	};
+	let remote_fee_asset = Asset { id: AssetId(asset_location.clone()), fun: Fungible(amount / 2) };
+	let reserved_asset = Asset { id: AssetId(asset_location.clone()), fun: Fungible(amount / 2) };
+
+	let assets = vec![
+		local_fee_asset.clone(),
+		Asset { id: AssetId(asset_location.clone()), fun: Fungible(amount) },
+	];
+
+	let xcm = VersionedXcm::V5(Xcm(vec![
+		WithdrawAsset(Assets(assets.into())),
+		PayFees { asset: local_fee_asset.clone() },
+		InitiateTransfer {
+			destination,
+			remote_fees: Some(AssetTransferFilter::ReserveWithdraw(Definite(Assets(
+				vec![remote_fee_asset.clone()].into(),
+			)))),
+			preserve_origin: true,
+			assets: vec![AssetTransferFilter::ReserveWithdraw(Definite(Assets(vec![
+				reserved_asset.clone(),
+			])))],
+			remote_xcm: Xcm(vec![
+				DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
+				Transact {
+					origin_kind: OriginKind::SovereignAccount,
+					fallback_max_weight: None,
+					call: DoubleEncoded { encoded: transact_info.encode() },
+				},
+			]),
+		},
+	]));
+
+	let transact_call =
+		TransactionApi.execute(xcm, Weight { ref_time: 8_000_000_000, proof_size: 80_000 });
+
+	let _ = assethub
+		.tx()
+		.sign_and_submit_then_watch_default(&transact_call, &signer)
+		.await
+		.expect("call success");
+
+	wait_for_ethereum_event_v2::<SaidHelloFilter>(&ethereum_client).await;
+}
