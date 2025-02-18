@@ -126,36 +126,47 @@ async fn malicious_payload() {
 		[keccak_validator_secp256k1_bytes[2], keccak01],
 	];
 
+	println!("validator proofs: {:?}", validator_proofs);
+
 	let mut r = [0u8; 32];
 	let mut s = [0u8; 32];
 
-	for signer_index in 0..=0 {
-		let init_signature_bytes = malicious_signatures[signer_index].as_slice();
-		r.copy_from_slice(&init_signature_bytes[0..32]);
-		s.copy_from_slice(&init_signature_bytes[32..64]);
+	let signer_index = 0;
 
-		// For legacy format, convert 0/1 to 27/28
-		let v_raw = init_signature_bytes[64];
-		let v = match v_raw {
-			0 => 27,
-			1 => 28,
-			_ => panic!("v can only be 0 or 1"),
-		};
-		let proof = ValidatorProof {
-			v,
-			r,
-			s,
-			index: U256::from_little_endian(&[signer_index.try_into().unwrap()]),
-			account: H160::from_slice(&validator_secp256k1_bytes[signer_index]),
-			proof: validator_proofs[signer_index].to_vec(),
-		};
+	let init_signature_bytes = malicious_signatures[signer_index].as_slice();
+	r.copy_from_slice(&init_signature_bytes[0..32]);
+	s.copy_from_slice(&init_signature_bytes[32..64]);
 
-		let call = beefy_client.submit_initial(commitment.clone(), bitfield.clone(), proof);
-		let result = call.send().await;
+	// For legacy format, convert 0/1 to 27/28
+	let v_raw = init_signature_bytes[64];
+	let v = match v_raw {
+		0 => 27,
+		1 => 28,
+		_ => panic!("v can only be 0 or 1"),
+	};
 
-		assert!(result.is_ok());
-		tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
+	println!("r: {:?}, s: {:?}, v: {:?}", r, s, v);
+
+	let proof = ValidatorProof {
+		v,
+		r,
+		s,
+		index: U256::from_little_endian(&[signer_index.try_into().unwrap()]),
+		account: H160::from_slice(&validator_secp256k1_bytes[signer_index]),
+		proof: validator_proofs[signer_index].to_vec(),
+	};
+
+	let call = beefy_client.submit_initial(commitment.clone(), bitfield.clone(), proof);
+	let result = call.send().await;
+
+	println!("{:?}", result);
+	if result.is_ok() {
+		println!("success!");
+	} else {
+		println!("{:?}", result.as_ref().err().unwrap().as_revert().expect("is revert error"));
 	}
+	assert!(result.is_ok());
+	tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
 
 	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(3);
 
@@ -170,6 +181,7 @@ async fn malicious_payload() {
 
 	let call = beefy_client.create_final_bitfield(*hashed_commitment, bitfield);
 	let bitfield = call.call().await.expect("commit valid");
+	println!("final bitfield: {:?}", result);
 
 	assert_eq!(bitfield.len(), 1);
 	let chosen_malicious_proofs = malicious_signatures
