@@ -63,7 +63,7 @@ async fn malicious_payload() {
 		vec![PayloadItem { payload_id: [109, 104], data: Bytes::from_static(&[0u8; 32]) }];
 	let commitment = Commitment {
 		payload: payload.clone(),
-		block_number: (block_number as u32) + 10,
+		block_number: (block_number as u32) + 1000,
 		validator_set_id: (current_validator_set.0 as u64),
 	};
 

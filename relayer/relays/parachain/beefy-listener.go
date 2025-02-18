@@ -193,139 +193,163 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						log.WithError(err).Warning("Failed to decode transaction call data")
 					}
 					// TODO: handle tickets submitted for future blocks
-					beefyBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(event.BlockNumber)
+					latestHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
 					if err != nil {
-						return fmt.Errorf("fetch block hash: %w", err)
+						return fmt.Errorf("get finalized head: %w", err)
 					}
-					mmrRootHash, err := li.relaychainConn.GetMMRRootHash(beefyBlockHash)
+
+					latestBlock, err := li.relaychainConn.API().RPC.Chain.GetBlock(latestHash)
 					if err != nil {
-						return fmt.Errorf("retrieve MMR root hash at block %v: %w", beefyBlockHash.Hex(), err)
-					} else {
+						return fmt.Errorf("get block: %w", err)
+					}
+					latestBlockNumber := uint64(latestBlock.Block.Header.Number)
+
+					if event.BlockNumber > uint64(latestBlockNumber) {
 						log.WithFields(log.Fields{
-							"commitment":               commitment,
-							"bitfield":                 bitfield,
-							"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
-							"proof":                    validatorProof,
-							"correspondingMMRRootHash": mmrRootHash,
-						}).Info("Decoded transaction call data for NewTicket event")
-						if mmrRootHash != types.NewHash(commitment.Payload[0].Data) {
+							"commitment.payload.data": fmt.Sprintf("%#x", commitment.Payload[0].Data),
+							"proof":                   validatorProof,
+							"latestBlock":             latestBlockNumber,
+						}).Warning("Detected submitInitial for future block")
+
+						log.Info("schedule ID", li.scheduleConfig.ID)
+						if li.scheduleConfig.ID != 0 {
+							log.Info("testing: only submitting from relayer 0 - skipping")
+							return nil
+						}
+
+						meta, err := li.relaychainConn.API().RPC.State.GetMetadataLatest()
+						if err != nil {
+							return fmt.Errorf("get metadata: %w", err)
+						}
+
+						signer := signature.KeyringPair{
+							URI:       "//Bob",
+							PublicKey: []byte{0x8e, 0xaf, 0x04, 0x15, 0x16, 0x87, 0x73, 0x63, 0x26, 0xc9, 0xfe, 0xa1, 0x7e, 0x25, 0xfc, 0x52, 0x87, 0x61, 0x36, 0x93, 0xc9, 0x12, 0x90, 0x9c, 0xb2, 0x26, 0xaa, 0x47, 0x94, 0xf2, 0x6a, 0x48}, //nolint:lll
+							Address:   "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+						}
+						key, err := types.CreateStorageKey(meta, "System", "Account", signer.PublicKey)
+						if err != nil {
+							return fmt.Errorf("create storage key: %w", err)
+						}
+
+						var accountInfo types.AccountInfo
+						ok, err := li.relaychainConn.API().RPC.State.GetStorageLatest(key, &accountInfo)
+						if err != nil || !ok {
+							return fmt.Errorf("get storage latest: %w", err)
+						}
+
+						nonce := uint64(accountInfo.Nonce)
+						log.Info("Nonce: ", nonce)
+
+						// extrinsicName := "Beefy.report_future_block_voting"
+						// extrinsicName := "System.remark"
+						extrinsicName := "Balances.burn"
+						payload := []interface{}{types.NewUCompact(big.NewInt(int64(nonce))), types.NewBool(true)}
+						// payload := []interface{}{types.NewBytes([]byte("Equivocation report"))}
+						c, err := types.NewCall(meta, extrinsicName, payload...)
+						if err != nil {
+							return fmt.Errorf("create call: %w", err)
+						}
+
+						latestHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
+						if err != nil {
+							return fmt.Errorf("get finalized head: %w", err)
+						}
+
+						latestBlock, err := li.relaychainConn.API().RPC.Chain.GetBlock(latestHash)
+						if err != nil {
+							return fmt.Errorf("get block: %w", err)
+						}
+
+						ext := types.NewExtrinsic(c)
+						// TODO: check if applicable here
+						era := parachain.NewMortalEra(uint64(latestBlock.Block.Header.Number))
+
+						genesisHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(0)
+						if err != nil {
+							return fmt.Errorf("get block hash: %w", err)
+						}
+
+						rv, err := li.relaychainConn.API().RPC.State.GetRuntimeVersionLatest()
+						if err != nil {
+							return fmt.Errorf("get runtime version: %w", err)
+						}
+
+						o := types.SignatureOptions{
+							BlockHash:          latestHash,
+							Era:                era,
+							GenesisHash:        genesisHash,
+							Nonce:              types.NewUCompactFromUInt(uint64(nonce)),
+							SpecVersion:        rv.SpecVersion,
+							Tip:                types.NewUCompactFromUInt(0),
+							TransactionVersion: rv.TransactionVersion,
+						}
+
+						err = ext.Sign(signer, o)
+						if err != nil {
+							return fmt.Errorf("sign extrinsic: %w", err)
+						}
+						log.Info("Extrinsic: ", ext)
+						// ext.Sign(signature.TestKeyringPairAlice, o)
+
+						// Send the extrinsic
+						// sub, err := li.relaychainConn.API().RPC.Author.SubmitAndWatchExtrinsic(ext)
+						res, err := li.relaychainConn.API().RPC.Author.SubmitExtrinsic(ext)
+						if err != nil {
+							log.Error("Failed to submit extrinsic: ", err, res)
+						} else {
+							log.Info("Extrinsic submitted: ", res)
+							// for {
+							// 	status := <-sub.Chan()
+							// 	fmt.Printf("Transaction status: %#v\n", status)
+
+							// 	if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
+							// 		sub.Unsubscribe()
+							// 		log.WithFields(log.Fields{
+							// 			"nonce":  ext.Signature.Nonce,
+							// 			"status": status,
+							// 		}).Error("Extrinsic removed from the transaction pool")
+							// 		return fmt.Errorf("extrinsic removed from the transaction pool")
+							// 	}
+
+							// 	if status.IsInBlock {
+							// 		log.Info("Completed at block hash ", status.AsInBlock.Hex())
+							// 	}
+							// 	if status.IsFinalized {
+							// 		log.Info("Finalized at block hash ", status.AsFinalized.Hex())
+							// 		sub.Unsubscribe()
+							// 		break
+							// 	}
+							// }
+						}
+						log.Info("equivocation report complete")
+
+					} else {
+						beefyBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(event.BlockNumber)
+						if err != nil {
+							return fmt.Errorf("fetch block hash: %w", err)
+						}
+						mmrRootHash, err := li.relaychainConn.GetMMRRootHash(beefyBlockHash)
+						if err != nil {
+							return fmt.Errorf("retrieve MMR root hash at block %v: %w", beefyBlockHash.Hex(), err)
+						} else {
 							log.WithFields(log.Fields{
+								"commitment":               commitment,
+								"bitfield":                 bitfield,
 								"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
 								"proof":                    validatorProof,
 								"correspondingMMRRootHash": mmrRootHash,
-							}).Warning("MMR root hash does NOT match the commitment payload")
-							// TODO: get the required state to prove the equivocation from the signature
-
-							log.Info("schedule ID", li.scheduleConfig.ID)
-							if li.scheduleConfig.ID != 0 {
-								log.Info("testing: only submitting from relayer 0 - skipping")
-								return nil
-							}
-							meta, err := li.relaychainConn.API().RPC.State.GetMetadataLatest()
-							if err != nil {
-								return fmt.Errorf("get metadata: %w", err)
-							}
-
-							signer := signature.KeyringPair{
-								URI:       "//Bob",
-								PublicKey: []byte{0x8e, 0xaf, 0x04, 0x15, 0x16, 0x87, 0x73, 0x63, 0x26, 0xc9, 0xfe, 0xa1, 0x7e, 0x25, 0xfc, 0x52, 0x87, 0x61, 0x36, 0x93, 0xc9, 0x12, 0x90, 0x9c, 0xb2, 0x26, 0xaa, 0x47, 0x94, 0xf2, 0x6a, 0x48}, //nolint:lll
-								Address:   "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
-							}
-							key, err := types.CreateStorageKey(meta, "System", "Account", signer.PublicKey)
-							if err != nil {
-								return fmt.Errorf("create storage key: %w", err)
-							}
-
-							var accountInfo types.AccountInfo
-							ok, err := li.relaychainConn.API().RPC.State.GetStorageLatest(key, &accountInfo)
-							if err != nil || !ok {
-								return fmt.Errorf("get storage latest: %w", err)
-							}
-
-							nonce := uint64(accountInfo.Nonce)
-							log.Info("Nonce: ", nonce)
-
-							// extrinsicName := "Beefy.set_new_genesis"
-							extrinsicName := "Balances.burn"
-							payload := []interface{}{types.NewUCompact(big.NewInt(int64(nonce))), types.NewBool(true)}
-							c, err := types.NewCall(meta, extrinsicName, payload...)
-							if err != nil {
-								return fmt.Errorf("create call: %w", err)
-							}
-
-							latestHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
-							if err != nil {
-								return fmt.Errorf("get finalized head: %w", err)
-							}
-
-							latestBlock, err := li.relaychainConn.API().RPC.Chain.GetBlock(latestHash)
-							if err != nil {
-								return fmt.Errorf("get block: %w", err)
-							}
-
-							ext := types.NewExtrinsic(c)
-							// TODO: check if applicable here
-							era := parachain.NewMortalEra(uint64(latestBlock.Block.Header.Number))
-
-							genesisHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(0)
-							if err != nil {
-								return fmt.Errorf("get block hash: %w", err)
-							}
-
-							rv, err := li.relaychainConn.API().RPC.State.GetRuntimeVersionLatest()
-							if err != nil {
-								return fmt.Errorf("get runtime version: %w", err)
-							}
-
-							o := types.SignatureOptions{
-								BlockHash:          latestHash,
-								Era:                era,
-								GenesisHash:        genesisHash,
-								Nonce:              types.NewUCompactFromUInt(uint64(nonce)),
-								SpecVersion:        rv.SpecVersion,
-								Tip:                types.NewUCompactFromUInt(0),
-								TransactionVersion: rv.TransactionVersion,
-							}
-
-							err = ext.Sign(signer, o)
-							if err != nil {
-								return fmt.Errorf("sign extrinsic: %w", err)
-							}
-							log.Info("Extrinsic: ", ext)
-							// ext.Sign(signature.TestKeyringPairAlice, o)
-
-							// Send the extrinsic
-							res, err := li.relaychainConn.API().RPC.Author.SubmitExtrinsic(ext)
-							if err != nil {
-								log.Error("Failed to submit extrinsic: ", err, res)
+							}).Info("Decoded transaction call data for NewTicket event")
+							if mmrRootHash != types.NewHash(commitment.Payload[0].Data) {
+								log.WithFields(log.Fields{
+									"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
+									"proof":                    validatorProof,
+									"correspondingMMRRootHash": mmrRootHash,
+								}).Warning("MMR root hash does NOT match the commitment payload")
+								// TODO: get the required state to prove the equivocation from the signature
 							} else {
-								log.Info("Extrinsic submitted: ", res)
-								// for {
-								// 	status := <-sub.Chan()
-								// 	fmt.Printf("Transaction status: %#v\n", status)
-
-								// 	if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
-								// 		sub.Unsubscribe()
-								// 		log.WithFields(log.Fields{
-								// 			"nonce":  ext.Signature.Nonce,
-								// 			"status": status,
-								// 		}).Error("Extrinsic removed from the transaction pool")
-								// 		return fmt.Errorf("extrinsic removed from the transaction pool")
-								// 	}
-
-								// 	if status.IsInBlock {
-								// 		log.Info("Completed at block hash ", status.AsInBlock.Hex())
-								// 	}
-								// 	if status.IsFinalized {
-								// 		log.Info("Finalized at block hash ", status.AsFinalized.Hex())
-								// 		sub.Unsubscribe()
-								// 		break
-								// 	}
-								// }
+								log.Info("MMR root hash DOES match the commitment payload")
 							}
-							log.Info("equivocation report complete")
-						} else {
-							log.Info("MMR root hash DOES match the commitment payload")
 						}
 					}
 
