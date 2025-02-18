@@ -201,7 +201,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						return fmt.Errorf("retrieve MMR root hash at block %v: %w", beefyBlockHash.Hex(), err)
 					} else {
 						log.WithFields(log.Fields{
-							"commitment": commitment,
+							"commitment":               commitment,
 							"bitfield":                 bitfield,
 							"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
 							"proof":                    validatorProof,
@@ -252,7 +252,8 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 								return fmt.Errorf("get runtime version: %w", err)
 							}
 
-							key, err := types.CreateStorageKey(meta, "System", "Account", signature.TestKeyringPairAlice.PublicKey)
+							signer := signature.TestKeyringPairAlice
+							key, err := types.CreateStorageKey(meta, "System", "Account", signer.PublicKey)
 							if err != nil {
 								return fmt.Errorf("create storage key: %w", err)
 							}
@@ -267,17 +268,16 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 							log.Info("Nonce: ", nonce)
 
 							o := types.SignatureOptions{
-								BlockHash:   latestHash,
-								Era:         era,
-								GenesisHash: genesisHash,
-								// Nonce:              types.NewUCompactFromUInt(uint64(li.nonce)),
+								BlockHash:          latestHash,
+								Era:                era,
+								GenesisHash:        genesisHash,
 								Nonce:              types.NewUCompactFromUInt(uint64(nonce)),
 								SpecVersion:        rv.SpecVersion,
 								Tip:                types.NewUCompactFromUInt(0),
 								TransactionVersion: rv.TransactionVersion,
 							}
 
-							err = ext.Sign(signature.TestKeyringPairAlice, o)
+							err = ext.Sign(signer, o)
 							if err != nil {
 								return fmt.Errorf("sign extrinsic: %w", err)
 							}
@@ -287,19 +287,32 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 							// Send the extrinsic
 							sub, err := li.relaychainConn.API().RPC.Author.SubmitAndWatchExtrinsic(ext)
 							if err != nil {
-								return fmt.Errorf("submit extrinsic: %w", err)
-							}
+								log.Error("Failed to submit extrinsic: ", err)
+							} else {
+								for {
+									status := <-sub.Chan()
+									fmt.Printf("Transaction status: %#v\n", status)
 
-							for {
-								status := <-sub.Chan()
-								fmt.Printf("Transaction status: %#v\n", status)
+									if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
+										sub.Unsubscribe()
+										log.WithFields(log.Fields{
+											"nonce":  ext.Signature.Nonce,
+											"status": status,
+										}).Error("Extrinsic removed from the transaction pool")
+										return fmt.Errorf("extrinsic removed from the transaction pool")
+									}
 
-								if status.IsInBlock {
-									fmt.Printf("Completed at block hash: %#x\n", status.AsInBlock)
-									return nil
+									if status.IsInBlock {
+										log.Info("Completed at block hash ", status.AsInBlock.Hex())
+									}
+									if status.IsFinalized {
+										log.Info("Finalized at block hash ", status.AsFinalized.Hex())
+										sub.Unsubscribe()
+										break
+									}
 								}
 							}
-
+							log.Info("equivocation report complete")
 						} else {
 							log.Info("MMR root hash DOES match the commitment payload")
 						}
