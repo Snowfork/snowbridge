@@ -14,6 +14,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -206,6 +207,102 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 							"proof":                    validatorProof,
 							"correspondingMMRRootHash": mmrRootHash,
 						}).Info("Decoded transaction call data for NewTicket event")
+						if mmrRootHash != types.NewHash(commitment.Payload[0].Data) {
+							log.WithFields(log.Fields{
+								"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
+								"proof":                    validatorProof,
+								"correspondingMMRRootHash": mmrRootHash,
+							}).Warning("MMR root hash does NOT match the commitment payload")
+							// TODO: get the required state to prove the equivocation from the signature
+
+							meta, err := li.relaychainConn.API().RPC.State.GetMetadataLatest()
+							if err != nil {
+								return fmt.Errorf("get metadata: %w", err)
+							}
+
+							// extrinsicName := "Beefy.set_new_genesis"
+							extrinsicName := "Balances.burn"
+							payload := []interface{}{types.NewUCompact(big.NewInt(2)), types.NewBool(true)}
+							c, err := types.NewCall(meta, extrinsicName, payload...)
+							if err != nil {
+								return fmt.Errorf("create call: %w", err)
+							}
+
+							latestHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
+							if err != nil {
+								return fmt.Errorf("get finalized head: %w", err)
+							}
+
+							latestBlock, err := li.relaychainConn.API().RPC.Chain.GetBlock(latestHash)
+							if err != nil {
+								return fmt.Errorf("get block: %w", err)
+							}
+
+							ext := types.NewExtrinsic(c)
+							// TODO: check if applicable here
+							era := parachain.NewMortalEra(uint64(latestBlock.Block.Header.Number))
+
+							genesisHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(0)
+							if err != nil {
+								return fmt.Errorf("get block hash: %w", err)
+							}
+
+							rv, err := li.relaychainConn.API().RPC.State.GetRuntimeVersionLatest()
+							if err != nil {
+								return fmt.Errorf("get runtime version: %w", err)
+							}
+
+							key, err := types.CreateStorageKey(meta, "System", "Account", signature.TestKeyringPairAlice.PublicKey)
+							if err != nil {
+								return fmt.Errorf("create storage key: %w", err)
+							}
+
+							var accountInfo types.AccountInfo
+							ok, err := li.relaychainConn.API().RPC.State.GetStorageLatest(key, &accountInfo)
+							if err != nil || !ok {
+								return fmt.Errorf("get storage latest: %w", err)
+							}
+
+							nonce := uint64(accountInfo.Nonce)
+							log.Info("Nonce: ", nonce)
+
+							o := types.SignatureOptions{
+								BlockHash:   latestHash,
+								Era:         era,
+								GenesisHash: genesisHash,
+								// Nonce:              types.NewUCompactFromUInt(uint64(li.nonce)),
+								Nonce:              types.NewUCompactFromUInt(uint64(nonce)),
+								SpecVersion:        rv.SpecVersion,
+								Tip:                types.NewUCompactFromUInt(0),
+								TransactionVersion: rv.TransactionVersion,
+							}
+
+							err = ext.Sign(signature.TestKeyringPairAlice, o)
+							if err != nil {
+								return fmt.Errorf("sign extrinsic: %w", err)
+							}
+							log.Info("Extrinsic: ", ext)
+							// ext.Sign(signature.TestKeyringPairAlice, o)
+
+							// Send the extrinsic
+							sub, err := li.relaychainConn.API().RPC.Author.SubmitAndWatchExtrinsic(ext)
+							if err != nil {
+								return fmt.Errorf("submit extrinsic: %w", err)
+							}
+
+							for {
+								status := <-sub.Chan()
+								fmt.Printf("Transaction status: %#v\n", status)
+
+								if status.IsInBlock {
+									fmt.Printf("Completed at block hash: %#x\n", status.AsInBlock)
+									return nil
+								}
+							}
+
+						} else {
+							log.Info("MMR root hash DOES match the commitment payload")
+						}
 					}
 
 					// TODO: should this also invoke a scan? I reckon not, since the scan's purpose in my understanding is to check which parachain messages have to be relayed (stale or new), and an update to the MMR root would necessitate creating proofs against the new MMR root, rather than the old one.
