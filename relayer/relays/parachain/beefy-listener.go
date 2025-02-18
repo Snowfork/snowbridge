@@ -192,6 +192,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 					if err != nil {
 						log.WithError(err).Warning("Failed to decode transaction call data")
 					}
+					// TODO: handle tickets submitted for future blocks
 					beefyBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(event.BlockNumber)
 					if err != nil {
 						return fmt.Errorf("fetch block hash: %w", err)
