@@ -71,7 +71,6 @@ library TokenLib {
         if (account == address(0)) {
             revert IERC20.InvalidAccount();
         }
-
         _update(token, account, address(0), amount);
     }
 
@@ -91,15 +90,13 @@ library TokenLib {
      * - `spender` cannot be the zero address.
      */
     function approve(Token storage token, address owner, address spender, uint256 amount) external returns (bool) {
-        _approve(token, owner, spender, amount);
+        _approve(token, owner, spender, amount, true);
         return true;
     }
 
     /**
      * @dev See {IERC20-transferFrom}.
      *
-     * Emits an {Approval} event indicating the updated allowance. This is not
-     * required by the EIP. See the note at the beginning of {ERC20}.
      *
      * Requirements:
      *
@@ -108,23 +105,12 @@ library TokenLib {
      * - the caller must have allowance for ``sender``'s tokens of at least
      * `amount`.
      */
-    function transferFrom(Token storage token, address sender, address recipient, uint256 amount)
+    function transferFrom(Token storage token, address owner, address recipient, uint256 amount)
         external
         returns (bool)
     {
-        uint256 _allowance = token.allowance[sender][msg.sender];
-
-        if (_allowance != type(uint256).max) {
-            if (_allowance < amount) {
-                revert IERC20.InsufficientAllowance(msg.sender, _allowance, amount);
-            }
-            unchecked {
-                _approve(token, sender, msg.sender, _allowance - amount);
-            }
-        }
-
-        _transfer(token, sender, recipient, amount);
-
+        _spendAllowance(token, owner, msg.sender, amount);
+        _transfer(token, owner, recipient, amount);
         return true;
     }
 
@@ -143,7 +129,7 @@ library TokenLib {
     function increaseAllowance(Token storage token, address spender, uint256 addedValue) external returns (bool) {
         uint256 _allowance = token.allowance[msg.sender][spender];
         if (_allowance != type(uint256).max) {
-            _approve(token, msg.sender, spender, _allowance + addedValue);
+            _approve(token, msg.sender, spender, _allowance + addedValue, true);
         }
         return true;
     }
@@ -162,14 +148,14 @@ library TokenLib {
      * - `spender` must have allowance for the caller of at least
      * `subtractedValue`.
      */
-    function decreaseAllowance(Token storage token, address spender, uint256 subtractedValue) external returns (bool) {
-        uint256 _allowance = token.allowance[msg.sender][spender];
-        if (_allowance != type(uint256).max) {
-            if (_allowance < subtractedValue) {
-                revert IERC20.InsufficientAllowance(msg.sender, _allowance, subtractedValue);
+    function decreaseAllowance(Token storage token, address spender, uint256 value) external returns (bool) {
+        uint256 allowance = token.allowance[msg.sender][spender];
+        if (allowance != type(uint256).max) {
+            if (allowance < value) {
+                revert IERC20.InsufficientAllowance(msg.sender, allowance, value);
             }
             unchecked {
-                _approve(token, msg.sender, spender, _allowance - subtractedValue);
+                _approve(token, msg.sender, spender, allowance - value, true);
             }
         }
         return true;
@@ -207,7 +193,7 @@ library TokenLib {
         if (recoveredAddress != issuer) revert IERC20Permit.InvalidSignature();
 
         // _approve will revert if issuer is address(0x0)
-        _approve(token, issuer, spender, value);
+        _approve(token, issuer, spender, value, true);
     }
 
     /**
@@ -228,8 +214,31 @@ library TokenLib {
         if (sender == address(0) || recipient == address(0)) {
             revert IERC20.InvalidAccount();
         }
-
         _update(token, sender, recipient, amount);
+    }
+
+    /**
+     * @dev Updates `owner` s allowance for `spender` based on spent `value`.
+     *
+     * Does not update the allowance value in case of infinite allowance.
+     * Revert if not enough allowance is available.
+     *
+     * Does not emit an {Approval} event.
+     */
+    function _spendAllowance(Token storage token, address owner, address spender, uint256 value)
+        internal
+        returns (bool)
+    {
+        uint256 allowance = token.allowance[owner][spender];
+        if (allowance != type(uint256).max) {
+            if (allowance < value) {
+                revert IERC20.InsufficientAllowance(spender, allowance, value);
+            }
+            unchecked {
+                _approve(token, owner, spender, allowance - value, false);
+            }
+        }
+        return true;
     }
 
     /**
@@ -245,13 +254,16 @@ library TokenLib {
      * - `owner` cannot be the zero address.
      * - `spender` cannot be the zero address.
      */
-    function _approve(Token storage token, address owner, address spender, uint256 amount) internal {
+    function _approve(Token storage token, address owner, address spender, uint256 amount, bool emitEvent) internal {
         if (owner == address(0) || spender == address(0)) {
             revert IERC20.InvalidAccount();
         }
 
         token.allowance[owner][spender] = amount;
-        emit IERC20.Approval(owner, spender, amount);
+
+        if (emitEvent) {
+            emit IERC20.Approval(owner, spender, amount);
+        }
     }
 
     /**

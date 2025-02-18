@@ -8,6 +8,8 @@ import {IERC20} from "../src/interfaces/IERC20.sol";
 import {Token} from "../src/Token.sol";
 import {TokenLib} from "../src/TokenLib.sol";
 
+// See https://mirror.xyz/horsefacts.eth/Jex2YVaO65dda6zEyfM_-DXlXhOWCAoSpOx5PLocYgw for invariant testing
+
 contract TokenTest is Test {
     function setUp() public {}
 
@@ -131,7 +133,10 @@ contract TokenTest is Test {
         assertEq(token.balanceOf(receiver), initialReceiverBalance + transferAmount);
 
         // Verify allowance is reduced
-        assertEq(token.allowance(owner, spender), initialAllowance - transferAmount);
+
+        if (allowanceAmount < type(uint256).max) {
+            assertEq(token.allowance(owner, spender), initialAllowance - transferAmount);
+        }
 
         // Verify total supply remains unchanged
         assertEq(token.totalSupply(), initialTotalSupply);
