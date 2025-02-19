@@ -295,18 +295,27 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
             })
         }
     }
+    let indexerStale = false
     for (let status of metrics.indexerStatus) {
         metricData.push({
-            MetricName: AlarmReason.IndexServiceStale.toString(),
+            MetricName: "IndexerLatency",
             Dimensions: [
                 {
                     Name: "ChainName",
                     Value: status.chain,
                 },
             ],
-            Value: Number(status.latency > IndexerLatencyThreshold),
+            Value: Number(status.latency),
         })
+        indexerStale = status.latency > IndexerLatencyThreshold
+        if (indexerStale) {
+            break
+        }
     }
+    metricData.push({
+        MetricName: AlarmReason.IndexServiceStale.toString(),
+        Value: Number(indexerStale),
+    })
     const command = new PutMetricDataCommand({
         MetricData: metricData,
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + metrics.name,
