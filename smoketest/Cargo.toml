@@ -20,5 +20,6 @@ subxt-signer = { version = "0.37.0" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", default-features = false, features = ["abigen", "ws", "rustls"] }
 lazy_static = "1.4.0"
 sp-crypto-hashing = "0.1.0"
-sp-consensus-beefy = "*"
-sp-core = "*"
+sp-consensus-beefy = "22.1"
+sp-application-crypto = "38.0.0"
+sp-core = "34.0.0"

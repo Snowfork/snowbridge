@@ -96,7 +96,7 @@ async fn malicious_payload() {
 
 	println!(
 		"malicious_signatures: {:?}",
-		malicious_signatures.iter().map(|sig| sig.to_raw_vec()).collect::<Vec<_>>()
+		malicious_signatures,
 	);
 
 	let bitfield: Vec<U256> = vec![U256::from_little_endian(&[0b0111])];
@@ -133,7 +133,8 @@ async fn malicious_payload() {
 
 	let signer_index = 0;
 
-	let init_signature_bytes = malicious_signatures[signer_index].as_slice();
+	let init_signature_bytes = malicious_signatures[signer_index].0.as_slice();
+
 	r.copy_from_slice(&init_signature_bytes[0..32]);
 	s.copy_from_slice(&init_signature_bytes[32..64]);
 
@@ -190,7 +191,7 @@ async fn malicious_payload() {
 		.filter(|(i, _)| bitfield[0].bit(*i))
 		.map(|(i, sig)| {
 			//TODO: deduplicate with init sig
-			let sig_bytes = sig.as_slice();
+			let sig_bytes = sig.0.as_slice();
 
 			r.copy_from_slice(&sig_bytes[0..32]);
 			s.copy_from_slice(&sig_bytes[32..64]);
