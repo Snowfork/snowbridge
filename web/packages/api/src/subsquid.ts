@@ -427,12 +427,20 @@ $graphqlApiUrl --no-progress-meter | jq "."
 
 {
   "data": {
-    "toEthereumElapse": {
-      "elapse": 7521.195804
-    },
-    "toPolkadotElapse": {
-      "elapse": 1197.827338
-    }
+    "latestBlocks": [
+      {
+        "height": 8245566,
+        "name": "assethub"
+      },
+      {
+        "height": 4561260,
+        "name": "bridgehub"
+      },
+      {
+        "height": 21878012,
+        "name": "ethereum"
+      }
+    ]
   }
 }
 **/
