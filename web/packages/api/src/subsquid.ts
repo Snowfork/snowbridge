@@ -416,3 +416,31 @@ export const fetchToEthereumTransferById = async (id: string) => {
     let result = await queryByGraphQL(query)
     return result?.transferStatusToEthereums
 }
+
+/**
+ * Query the recent synced blockes on multiple chains
+
+curl -H 'Content-Type: application/json' \
+-X POST -d \
+'{ "query": "query { latestBlocks { height name } }" }' \
+$graphqlApiUrl --no-progress-meter | jq "."
+
+{
+  "data": {
+    "toEthereumElapse": {
+      "elapse": 7521.195804
+    },
+    "toPolkadotElapse": {
+      "elapse": 1197.827338
+    }
+  }
+}
+**/
+export const fetchLatestBlocksSynced = async () => {
+    let query = `query { latestBlocks {
+                    height
+                    name
+                }}`
+    let result = await queryByGraphQL(query)
+    return result
+}
