@@ -295,7 +295,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
             })
         }
     }
-    for (let status of metrics.indexer) {
+    for (let status of metrics.indexerStatus) {
         metricData.push({
             MetricName: AlarmReason.IndexServiceStale.toString(),
             Dimensions: [

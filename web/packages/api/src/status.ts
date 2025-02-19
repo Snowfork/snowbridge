@@ -62,13 +62,18 @@ export type ChannelStatusInfo = {
 
 export type Sovereign = { name: string; account: string; balance: bigint; type: SourceType }
 
+export type IndexerServiceStatusInfo = {
+    chain: string
+    latency: number
+}
+
 export type AllMetrics = {
     name: string
     bridgeStatus: BridgeStatusInfo
     channels: ChannelStatusInfo[]
     sovereigns: Sovereign[]
     relayers: Relayer[]
-    indexer: IndexerServiceStatusInfo[]
+    indexerStatus: IndexerServiceStatusInfo[]
 }
 
 export type OperationStatus = {
@@ -280,9 +285,4 @@ export const channelStatusInfo = async (
             ),
         },
     }
-}
-
-export type IndexerServiceStatusInfo = {
-    chain: string
-    latency: number
 }

@@ -157,27 +157,27 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         },
     ]
 
-    let indexer: status.IndexerServiceStatusInfo[] = []
+    let indexerInfos: status.IndexerServiceStatusInfo[] = []
     const latestBlockOfAH = (await assetHub.query.system.number()).toPrimitive() as number
     const latestBlockOfBH = (await bridgeHub.query.system.number()).toPrimitive() as number
     const latestBlockOfEth = await ethereum.getBlockNumber()
 
     const chains = await subsquid.fetchLatestBlocksSynced()
     for (let chain of chains?.latestBlocks) {
-        let status: status.IndexerServiceStatusInfo = {
+        let info: status.IndexerServiceStatusInfo = {
             chain: chain.name,
             latency: 0,
         }
         if (chain.name == "assethub") {
-            status.latency = latestBlockOfAH - chain.height
+            info.latency = latestBlockOfAH - chain.height
         } else if (chain.name == "bridgehub") {
-            status.latency = latestBlockOfBH - chain.height
+            info.latency = latestBlockOfBH - chain.height
         } else if (chain.name == "ethereum") {
-            status.latency = latestBlockOfEth - chain.height
+            info.latency = latestBlockOfEth - chain.height
         }
-        indexer.push(status)
+        indexerInfos.push(info)
     }
-    console.log("Indexer service:", indexer)
+    console.log("Indexer service status:", indexerInfos)
 
     const allMetrics: status.AllMetrics = {
         name,
@@ -185,7 +185,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         channels,
         relayers,
         sovereigns,
-        indexer,
+        indexerStatus: indexerInfos,
     }
 
     await sendMetrics(allMetrics)
