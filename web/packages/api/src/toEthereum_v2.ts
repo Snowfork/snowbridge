@@ -31,7 +31,7 @@ export type Transfer = {
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>
 }
 
-type DeliveryFee = {
+export type DeliveryFee = {
     deliveryFeeInDot: bigint
     assetHubFeeInDot: bigint
     totalFeeInDot: bigint
