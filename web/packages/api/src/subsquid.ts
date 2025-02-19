@@ -1,4 +1,6 @@
-const graphqlApiUrl = process.env["GRAPHQL_API_URL"] || "https://data.snowbridge.network/graphql"
+const graphqlApiUrl =
+    process.env["GRAPHQL_API_URL"] ||
+    "https://snowbridge.squids.live/snowbridge-subsquid@v2/api/graphql"
 const graphqlQuerySize = process.env["GRAPHQL_QUERY_SIZE"] || "100"
 
 /**
