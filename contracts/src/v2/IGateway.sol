@@ -91,4 +91,7 @@ interface IGatewayV2 {
 
     /// @dev Check whether a token is registered
     function isTokenRegistered(address token) external view returns (bool);
+
+    // Create an agent for a remote location identified by `id`
+    function createAgent(bytes32 id) external;
 }

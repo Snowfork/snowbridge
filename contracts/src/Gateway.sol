@@ -596,4 +596,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     function initialize(bytes calldata data) external virtual {
         Initializer.initialize(data);
     }
+
+    function createAgent(bytes32 id) external {
+        HandlersV2.createAgent(id);
+    }
 }
