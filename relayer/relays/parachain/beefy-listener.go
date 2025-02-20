@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
@@ -22,6 +23,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"github.com/snowfork/snowbridge/relayer/ofac"
 
@@ -244,8 +246,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						log.Info("Nonce: ", nonce)
 
 						extrinsicName := "Beefy.report_future_block_voting"
-						// extrinsicName := "System.remark"
-						// payload := []interface{}{types.NewBytes([]byte("Equivocation report"))}
+						// call: c805
 						// build payload for equivocation proof
 						payload1 := append([]byte{0x04}, commitment.Payload[0].PayloadID[:]...)
 						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
@@ -268,17 +269,33 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						log.Info("payload1: vset ", commitment.ValidatorSetID)
 						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
 						// id
-						offenderPubKey, err := hex.DecodeString("0219725ea37c1ba847df115846b349e9ba898a20cc73459085ab22b81830ddff2b")
-						payload1 = append(payload1, offenderPubKey[:]...)
-						log.Info("payload1: vid ", offenderPubKey)
-						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-						// signature
+						commitmentBytes, err := types.EncodeToBytes(commitment)
+						if err != nil {
+							return fmt.Errorf("Errored generate commitment hash: %w", err)
+						}
+
+						commitmentHash := (&keccak.Keccak256{}).Hash(commitmentBytes)
+						log.Info("payload1: commitmentHash: ", commitmentHash)
 						var offenderSig []byte
 						offenderSig = append(validatorProof.R[:], validatorProof.S[:]...)
-						offenderSig = append(offenderSig, validatorProof.V)
+
+						if validatorProof.V == 27 || validatorProof.V == 28 {
+							offenderSig = append(offenderSig, validatorProof.V-27)
+						} else {
+							return fmt.Errorf("Invalid V value")
+						}
+
+						offenderPubKey, err := crypto.SigToPub(commitmentHash[:], offenderSig[:])
+						if err != nil {
+							return fmt.Errorf("Errored recover pubkey: %w", err)
+						}
+						payload1 = append(payload1, crypto.CompressPubkey(offenderPubKey)...)
+						log.Info("payload1: offenderPubKey ", fmt.Sprintf("%x", crypto.CompressPubkey(offenderPubKey)))
+						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+						// signature
 						payload1 = append(payload1, offenderSig[:]...)
 						log.Info("payload1: signature ", offenderSig)
-						log.Info("payload1: signature hex", fmt.Sprintf("%x", offenderSig))
+						log.Info("payload1: signature hex ", fmt.Sprintf("%x", offenderSig))
 						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
 
 						log.Info("calling api")
