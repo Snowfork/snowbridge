@@ -523,7 +523,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 ASSET_HUB_URL: "https://assethub-polkadot.api.subscan.io",
                 BRIDGE_HUB_URL: "https://bridgehub-polkadot.api.subscan.io",
             },
-            GRAPHQL_API_URL: "https://data.snowbridge.network/graphql",
+            GRAPHQL_API_URL: "https://snowbridge.squids.live/snowbridge-subsquid@v2/api/graphql",
         },
     },
     westend_sepolia: {

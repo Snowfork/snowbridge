@@ -1,4 +1,6 @@
-const graphqlApiUrl = process.env["GRAPHQL_API_URL"] || "https://data.snowbridge.network/graphql"
+const graphqlApiUrl =
+    process.env["GRAPHQL_API_URL"] ||
+    "https://snowbridge.squids.live/snowbridge-subsquid@v2/api/graphql"
 const graphqlQuerySize = process.env["GRAPHQL_QUERY_SIZE"] || "100"
 
 /**
@@ -415,4 +417,40 @@ export const fetchToEthereumTransferById = async (id: string) => {
     }`
     let result = await queryByGraphQL(query)
     return result?.transferStatusToEthereums
+}
+
+/**
+ * Query the recent synced blockes on multiple chains
+
+curl -H 'Content-Type: application/json' \
+-X POST -d \
+'{ "query": "query { latestBlocks { height name } }" }' \
+$graphqlApiUrl --no-progress-meter | jq "."
+
+{
+  "data": {
+    "latestBlocks": [
+      {
+        "height": 8245566,
+        "name": "assethub"
+      },
+      {
+        "height": 4561260,
+        "name": "bridgehub"
+      },
+      {
+        "height": 21878012,
+        "name": "ethereum"
+      }
+    ]
+  }
+}
+**/
+export const fetchLatestBlocksSynced = async () => {
+    let query = `query { latestBlocks {
+                    height
+                    name
+                }}`
+    let result = await queryByGraphQL(query)
+    return result
 }
