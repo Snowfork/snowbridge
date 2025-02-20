@@ -1,7 +1,8 @@
-use std::{str::FromStr, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
-use codec::Encode;
+use codec::{DecodeAll, Encode};
 use ethers::{abi::Address, core::types::U256, prelude::*};
+
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{
@@ -9,16 +10,34 @@ use snowbridge_smoketest::{
 		shared_types::{Mmrleaf, ValidatorProof},
 	},
 	helper::initialize_wallet,
+	parachains::relaychain::{
+		self,
+		api::{
+			beefy_mmr_leaf::storage::types::beefy_authorities,
+			runtime_apis::{beefy_api, beefy_mmr_api},
+			runtime_types::{
+				sp_consensus_beefy::{
+					commitment::Commitment as spCommitment,
+					ecdsa_crypto::{Public, Signature},
+					payload::Payload,
+					FutureBlockVotingProof, VoteMessage,
+				},
+				sp_session::MembershipProof,
+			},
+		},
+	},
 };
+use subxt_signer::sr25519::dev;
+
 use sp_consensus_beefy;
-use sp_core::{hex2array, ByteArray};
+// use sp_consensus_beefy::ecdsa_crypto::Pair as PairT3;
+use sp_core::{ecdsa::Pair, hex2array, Pair as PairT};
 use sp_crypto_hashing::keccak_256;
 use subxt::{
-	client::OfflineClientT,
-	ext::sp_core::{ecdsa::Pair, hexdisplay::AsBytesRef, Pair as PairT},
-	OnlineClient, PolkadotConfig,
+	client::OfflineClientT, ext::sp_core::hexdisplay::AsBytesRef, OnlineClient, PolkadotConfig,
 };
 
+// const GATEWAY_V2_ADDRESS: [u8; 20] = hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0");
 
 #[tokio::test]
 async fn malicious_payload() {
@@ -29,6 +48,10 @@ async fn malicious_payload() {
 	let ethereum_client = Arc::new(ethereum_provider);
 	let ethereum_signed_client = Arc::new(initialize_wallet().await.expect("initialize wallet"));
 
+	let relaychain_client: OnlineClient<PolkadotConfig> =
+		OnlineClient::from_url((*RELAY_CHAIN_WS_URL).to_string())
+			.await
+			.expect("can not connect to relaychain");
 
 	let beefy_client_addr: Address = BEEFY_CLIENT_CONTRACT.into();
 	let beefy_client = BeefyClient::new(beefy_client_addr, ethereum_signed_client.clone());
@@ -85,6 +108,7 @@ async fn malicious_payload() {
 		block_number: commitment.block_number,
 		validator_set_id: commitment.validator_set_id,
 	};
+	println!("sp_commitment: {:?}", sp_commitment);
 	let encoded_commitment = sp_commitment.encode();
 	println!("encoded commitment: {:?}", encoded_commitment);
 	let hashed_commitment = &keccak_256(encoded_commitment.as_bytes_ref());
@@ -95,8 +119,9 @@ async fn malicious_payload() {
 		.collect::<Vec<_>>();
 
 	println!(
-		"malicious_signatures: {:?}",
+		"malicious_signatures: {:?}, raw: {:?}",
 		malicious_signatures,
+		malicious_signatures.iter().map(|sig| sig.0).collect::<Vec<_>>()
 	);
 
 	let bitfield: Vec<U256> = vec![U256::from_little_endian(&[0b0111])];
@@ -134,6 +159,7 @@ async fn malicious_payload() {
 	let signer_index = 0;
 
 	let init_signature_bytes = malicious_signatures[signer_index].0.as_slice();
+	let malicious_authority: Pair = Pair::from_string(malicious_suris[signer_index], None).unwrap();
 
 	r.copy_from_slice(&init_signature_bytes[0..32]);
 	s.copy_from_slice(&init_signature_bytes[32..64]);
@@ -235,4 +261,68 @@ async fn malicious_payload() {
 	// let result = call.send().await;
 	// println!("{:?}", result);
 	// assert!(result.is_ok());
+	// return
+
+	let beefy_storage_api = relaychain::api::beefy::storage::StorageApi;
+	let validator_set_id = beefy_storage_api.validator_set_id();
+	println!("validator_set_id: {:?}", validator_set_id);
+
+	let proof_query = beefy_api::BeefyApi::generate_key_ownership_proof(
+		&beefy_api::BeefyApi,
+		0,
+		Public { 0: malicious_authority.public().0 },
+	);
+
+	let key_ownership_proof_bytes = relaychain_client
+		.runtime_api()
+		.at_latest()
+		.await
+		.expect("can not connect to relaychain")
+		.call(proof_query)
+		.await
+		.expect("runtime query failed")
+		.expect("validator set is not Some");
+	println!("{:?}", key_ownership_proof_bytes.0);
+
+	let key_ownership_proof =
+		MembershipProof::decode_all(&mut key_ownership_proof_bytes.0.as_slice()).unwrap();
+
+	println!("{:?}", key_ownership_proof);
+
+	let equivocation_proof = FutureBlockVotingProof {
+		vote: VoteMessage {
+			commitment: spCommitment {
+				block_number: sp_commitment.block_number,
+				payload: Payload(vec![(payload[0].payload_id, payload[0].data.to_vec())]),
+				validator_set_id: sp_commitment.validator_set_id,
+			},
+			id: Public { 0: malicious_authority.public().0 },
+			signature: Signature(malicious_signatures[signer_index].0),
+		},
+	};
+
+	let report = relaychain::api::tx()
+		.beefy()
+		.report_future_block_voting(equivocation_proof, key_ownership_proof);
+
+	let events = relaychain_client
+		.tx()
+		.sign_and_submit_then_watch_default(&report, &dev::alice())
+		.await
+		.expect("submit report")
+		.wait_for_finalized_success()
+		.await
+		.expect("finalized");
+
+	events.find::<relaychain::api::offences::events::Offence>().for_each(|event| {
+		println!("offence event: {event:?}");
+	});
+	events
+		.find::<relaychain::api::staking::events::SlashReported>()
+		.for_each(|event| {
+			println!("slash report event: {event:?}");
+		});
+	events.find::<relaychain::api::staking::events::Slashed>().for_each(|event| {
+		println!("slashed event: {event:?}");
+	});
 }
