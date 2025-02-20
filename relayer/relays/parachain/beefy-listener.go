@@ -319,7 +319,11 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						var keyOwnershipProofRaw string
 						callName := "BeefyApi_generate_key_ownership_proof"
 						// TODO: not used in `BeefyApi_generate_key_ownership_proof`, but nonetheless should get session number that validator set was last active for with `beefy_set_id_session`
-						keyOwnershipProofPayload := "0x" + "0000000000000000" + fmt.Sprintf("%x", offenderPubKeyCompressed)
+						sessionDummy, err := types.EncodeToBytes(uint64(0))
+						if err != nil {
+							return err
+						}
+						keyOwnershipProofPayload := "0x" + fmt.Sprintf("%x", sessionDummy) + fmt.Sprintf("%x", offenderPubKeyCompressed)
 						log.Info("DEBUG: kopPayload: ", keyOwnershipProofPayload)
 						// TODO: call at correct block hash
 						err = li.relaychainConn.API().Client.Call(&keyOwnershipProofRaw, "state_call", callName, keyOwnershipProofPayload)
