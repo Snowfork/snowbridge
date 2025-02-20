@@ -2,6 +2,8 @@ package parachain
 
 import (
 	"context"
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -241,16 +243,71 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						nonce := uint64(accountInfo.Nonce)
 						log.Info("Nonce: ", nonce)
 
-						// extrinsicName := "Beefy.report_future_block_voting"
+						extrinsicName := "Beefy.report_future_block_voting"
 						// extrinsicName := "System.remark"
-						extrinsicName := "Balances.burn"
-						payload := []interface{}{types.NewUCompact(big.NewInt(int64(nonce))), types.NewBool(true)}
 						// payload := []interface{}{types.NewBytes([]byte("Equivocation report"))}
+						// build payload for equivocation proof
+						payload1 := append([]byte{0x04}, commitment.Payload[0].PayloadID[:]...)
+						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+						// commitment
+						payload1 = append(payload1, 0x80)
+						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+						payload1 = append(payload1, commitment.Payload[0].Data...)
+						log.Info("payload1: data ", fmt.Sprintf("%x", commitment.Payload[0].Data))
+						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+						// block number
+						blockNumberBytes := make([]byte, 4)
+						binary.LittleEndian.PutUint32(blockNumberBytes, commitment.BlockNumber)
+						log.Info("payload1: block ", commitment.BlockNumber)
+						payload1 = append(payload1, blockNumberBytes...)
+						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+						// validator set id
+						validatorSetBytes := make([]byte, 8)
+						binary.LittleEndian.PutUint64(validatorSetBytes, commitment.ValidatorSetID)
+						payload1 = append(payload1, validatorSetBytes...)
+						log.Info("payload1: vset ", commitment.ValidatorSetID)
+						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+						// id
+						offenderPubKey, err := hex.DecodeString("0219725ea37c1ba847df115846b349e9ba898a20cc73459085ab22b81830ddff2b")
+						payload1 = append(payload1, offenderPubKey[:]...)
+						log.Info("payload1: vid ", offenderPubKey)
+						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+						// signature
+						var offenderSig []byte
+						offenderSig = append(validatorProof.R[:], validatorProof.S[:]...)
+						offenderSig = append(offenderSig, validatorProof.V)
+						payload1 = append(payload1, offenderSig[:]...)
+						log.Info("payload1: signature ", offenderSig)
+						log.Info("payload1: signature hex", fmt.Sprintf("%x", offenderSig))
+						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+
+						log.Info("calling api")
+						var keyOwnershipProofRaw string
+						callName := "BeefyApi_generate_key_ownership_proof"
+						err = li.relaychainConn.API().Client.Call(&keyOwnershipProofRaw, "state_call", callName, "0x00000000000000000219725ea37c1ba847df115846b349e9ba898a20cc73459085ab22b81830ddff2b")
+						if err != nil || !ok {
+							return fmt.Errorf("generate key owner proof: %w", err)
+						}
+						log.Info("return: ", keyOwnershipProofRaw)
+
+						keyOwnershipProof, err := hex.DecodeString(keyOwnershipProofRaw[2:])
+						if err != nil || !ok {
+							return fmt.Errorf("decode proof: %w", err)
+						}
+						payload2 := keyOwnershipProof[3:]
+						log.Info("stripped proof: ", payload2)
+						log.Info("stripped proof hex: ", fmt.Sprintf("%x", payload2))
+						// payload := []interface{}{types.NewBytes(payload1), types.NewBytes(payload2)}
+						// combine payload1 and payload2
+						payload := []interface{}{types.NewBytes(append(payload1, payload2...))}
+						log.Info("payload: ", fmt.Sprintf("%x", payload))
 						c, err := types.NewCall(meta, extrinsicName, payload...)
 						if err != nil {
 							return fmt.Errorf("create call: %w", err)
 						}
 
+						//TODO: merge with prior query for finalized head
+						// ---
 						latestHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
 						if err != nil {
 							return fmt.Errorf("get finalized head: %w", err)
@@ -260,6 +317,8 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						if err != nil {
 							return fmt.Errorf("get block: %w", err)
 						}
+						// ---
+						//
 
 						ext := types.NewExtrinsic(c)
 						// TODO: check if applicable here
@@ -293,34 +352,34 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						// ext.Sign(signature.TestKeyringPairAlice, o)
 
 						// Send the extrinsic
-						// sub, err := li.relaychainConn.API().RPC.Author.SubmitAndWatchExtrinsic(ext)
-						res, err := li.relaychainConn.API().RPC.Author.SubmitExtrinsic(ext)
+						sub, err := li.relaychainConn.API().RPC.Author.SubmitAndWatchExtrinsic(ext)
+						// res, err := li.relaychainConn.API().RPC.Author.SubmitExtrinsic(ext)
 						if err != nil {
-							log.Error("Failed to submit extrinsic: ", err, res)
+							log.Error("Failed to submit extrinsic: ", err, sub)
 						} else {
-							log.Info("Extrinsic submitted: ", res)
-							// for {
-							// 	status := <-sub.Chan()
-							// 	fmt.Printf("Transaction status: %#v\n", status)
+							// log.Info("Extrinsic submitted: ", res)
+							for {
+								status := <-sub.Chan()
+								fmt.Printf("Transaction status: %#v\n", status)
 
-							// 	if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
-							// 		sub.Unsubscribe()
-							// 		log.WithFields(log.Fields{
-							// 			"nonce":  ext.Signature.Nonce,
-							// 			"status": status,
-							// 		}).Error("Extrinsic removed from the transaction pool")
-							// 		return fmt.Errorf("extrinsic removed from the transaction pool")
-							// 	}
+								if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
+									sub.Unsubscribe()
+									log.WithFields(log.Fields{
+										"nonce":  ext.Signature.Nonce,
+										"status": status,
+									}).Error("Extrinsic removed from the transaction pool")
+									return fmt.Errorf("extrinsic removed from the transaction pool")
+								}
 
-							// 	if status.IsInBlock {
-							// 		log.Info("Completed at block hash ", status.AsInBlock.Hex())
-							// 	}
-							// 	if status.IsFinalized {
-							// 		log.Info("Finalized at block hash ", status.AsFinalized.Hex())
-							// 		sub.Unsubscribe()
-							// 		break
-							// 	}
-							// }
+								if status.IsInBlock {
+									log.Info("Completed at block hash ", status.AsInBlock.Hex())
+								}
+								if status.IsFinalized {
+									log.Info("Finalized at block hash ", status.AsFinalized.Hex())
+									sub.Unsubscribe()
+									break
+								}
+							}
 						}
 						log.Info("equivocation report complete")
 
@@ -352,7 +411,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 							}
 						}
 					}
-
 					// TODO: should this also invoke a scan? I reckon not, since the scan's purpose in my understanding is to check which parachain messages have to be relayed (stale or new), and an update to the MMR root would necessitate creating proofs against the new MMR root, rather than the old one.
 				}
 			}
