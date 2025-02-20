@@ -285,7 +285,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						}
 						commitmentBytes := append(commitmentPayloadBytes, commitmentBlockNumberBytes...)
 						commitmentBytes = append(commitmentBytes, commitmentValidatorSetIdBytes...)
-
 						log.Info("DEBUG encoded commitment: ", commitmentBytes)
 
 						commitmentHash := (&keccak.Keccak256{}).Hash(commitmentBytes)
@@ -325,8 +324,89 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						}
 						keyOwnershipProofPayload := "0x" + fmt.Sprintf("%x", sessionDummy) + fmt.Sprintf("%x", offenderPubKeyCompressed)
 						log.Info("DEBUG: kopPayload: ", keyOwnershipProofPayload)
-						// TODO: call at correct block hash
-						err = li.relaychainConn.API().Client.Call(&keyOwnershipProofRaw, "state_call", callName, keyOwnershipProofPayload)
+
+						//TODO: merge with prior query for finalized head
+						// ---
+						latestHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
+						if err != nil {
+							return fmt.Errorf("get finalized head: %w", err)
+						}
+
+						latestBlock, err := li.relaychainConn.API().RPC.Chain.GetBlock(latestHash)
+						if err != nil {
+							return fmt.Errorf("get block: %w", err)
+						}
+						// ---
+						//
+
+						// encodedVID, err := types.EncodeToBytes(types.NewOption(commitment.ValidatorSetID))
+						encodedVID, err := types.EncodeToBytes(commitment.ValidatorSetID)
+						if err != nil {
+							return err
+						}
+						log.Info("DEBUG encoded: ", encodedVID)
+						setIdSessionKey, err := types.CreateStorageKey(meta, "Beefy", "SetIdSession", encodedVID)
+						if err != nil {
+							return err
+						}
+						log.Info("DEBUG storage key:", setIdSessionKey)
+						encodedSessionKey, err := types.EncodeToBytes(setIdSessionKey)
+						log.Info("DEBUG storage key:", setIdSessionKey.Hex())
+						var offenderSession uint32
+						ok, err = li.relaychainConn.API().RPC.State.GetStorage(setIdSessionKey, &offenderSession, latestHash)
+
+						if err != nil {
+							return err
+						}
+						if !ok {
+							return fmt.Errorf("DEBUG: No value for SetIdSession key: %x", encodedSessionKey)
+						}
+						log.Info("DEBUG setIdSession: ", offenderSession)
+
+						currentEpochIndexKey, err := types.CreateStorageKey(meta, "Babe", "EpochIndex", nil)
+						if err != nil {
+							return err
+						}
+						var currentSession uint32
+						ok, err = li.relaychainConn.API().RPC.State.GetStorage(currentEpochIndexKey, &currentSession, latestHash)
+						if err != nil {
+							return err
+						}
+						if !ok {
+							return fmt.Errorf("DEBUG: No value for SetIdSession key: %x", currentEpochIndexKey.Hex())
+						}
+						log.Info("DEBUG currentSession: ", currentSession)
+
+						// if offenderSession != currentSession {
+						// epochDurationKey, err := types.CreateStorageKey(meta, "Babe", "EpochDuration")
+						// if err != nil {
+						// 	return err
+						// }
+						// var epochDuration uint64
+
+						// ok, err = li.relaychainConn.API().RPC.State.GetStorage(epochDurationKey, &epochDuration, latestHash)
+						// if err != nil {
+						// 	return err
+						// }
+						// if !ok {
+						// 	return fmt.Errorf("DEBUG: No value for Epoch key: %x", epochDurationKey.Hex())
+						// }
+						// log.Info("DEBUG epochDuration: ", epochDuration)
+						// TODO: hardcoded atm, and also fragile since slots can be skipped
+						epochDuration := uint64(20)
+						// TODO: handle if offender claims to be in nextSession
+						blockInOffenderSession := latestBlockNumber - epochDuration*uint64(currentSession-offenderSession)
+
+						// a block in offender's session - only used for getting key ownership proof
+						offenderSessionBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(blockInOffenderSession)
+						if err != nil {
+							return err
+						}
+						log.Info("DEBUG offender session block: ", offenderSessionBlockHash.Hex())
+						// }
+
+						err = li.relaychainConn.API().Client.Call(&keyOwnershipProofRaw, "state_call", callName, keyOwnershipProofPayload, offenderSessionBlockHash.Hex())
+
 						if err != nil || !ok {
 							return fmt.Errorf("generate key owner proof: %w", err)
 						}
@@ -347,20 +427,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						if err != nil {
 							return fmt.Errorf("create call: %w", err)
 						}
-
-						//TODO: merge with prior query for finalized head
-						// ---
-						latestHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
-						if err != nil {
-							return fmt.Errorf("get finalized head: %w", err)
-						}
-
-						latestBlock, err := li.relaychainConn.API().RPC.Chain.GetBlock(latestHash)
-						if err != nil {
-							return fmt.Errorf("get block: %w", err)
-						}
-						// ---
-						//
 
 						ext := types.NewExtrinsic(c)
 						// TODO: check if applicable here
