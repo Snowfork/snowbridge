@@ -269,13 +269,28 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						log.Info("payload1: vset ", commitment.ValidatorSetID)
 						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
 						// id
-						commitmentBytes, err := types.EncodeToBytes(commitment)
+						log.Info("DEBUG commitment: ", commitment)
+						// encode the commitment, but in the canonical sequence: Payload, BlockNumber, ValidatorSetID
+						commitmentPayloadBytes, err := types.EncodeToBytes(commitment.Payload)
 						if err != nil {
-							return fmt.Errorf("Errored generate commitment hash: %w", err)
+							return fmt.Errorf("Errored encode commitment: %w", err)
 						}
+						commitmentBlockNumberBytes, err := types.EncodeToBytes(commitment.BlockNumber)
+						if err != nil {
+							return fmt.Errorf("Errored encode commitment: %w", err)
+						}
+						commitmentValidatorSetIdBytes, err := types.EncodeToBytes(commitment.ValidatorSetID)
+						if err != nil {
+							return fmt.Errorf("Errored encode commitment: %w", err)
+						}
+						commitmentBytes := append(commitmentPayloadBytes, commitmentBlockNumberBytes...)
+						commitmentBytes = append(commitmentBytes, commitmentValidatorSetIdBytes...)
+
+						log.Info("DEBUG encoded commitment: ", commitmentBytes)
 
 						commitmentHash := (&keccak.Keccak256{}).Hash(commitmentBytes)
 						log.Info("payload1: commitmentHash: ", commitmentHash)
+						log.Info("payload1: commitmentHash: ", fmt.Sprintf("%x", commitmentHash))
 						var offenderSig []byte
 						offenderSig = append(validatorProof.R[:], validatorProof.S[:]...)
 
@@ -289,6 +304,18 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						if err != nil {
 							return fmt.Errorf("Errored recover pubkey: %w", err)
 						}
+
+						extKey, err := hex.DecodeString(strings.Replace("0x0219725ea37c1ba847df115846b349e9ba898a20cc73459085ab22b81830ddff2b", "0x", "", 1))
+						if err != nil {
+							return err
+						}
+						extKeyDecomp, err := crypto.DecompressPubkey(extKey)
+						if err != nil {
+							return err
+						}
+						log.Info("DEBUG extKeyDecomp: ", extKeyDecomp)
+						log.Info("DEBUG KeyDecomp: ", offenderPubKey)
+
 						payload1 = append(payload1, crypto.CompressPubkey(offenderPubKey)...)
 						log.Info("payload1: offenderPubKey ", fmt.Sprintf("%x", crypto.CompressPubkey(offenderPubKey)))
 						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
