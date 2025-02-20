@@ -304,20 +304,10 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						if err != nil {
 							return fmt.Errorf("Errored recover pubkey: %w", err)
 						}
+						offenderPubKeyCompressed := crypto.CompressPubkey(offenderPubKey)
 
-						extKey, err := hex.DecodeString(strings.Replace("0x0219725ea37c1ba847df115846b349e9ba898a20cc73459085ab22b81830ddff2b", "0x", "", 1))
-						if err != nil {
-							return err
-						}
-						extKeyDecomp, err := crypto.DecompressPubkey(extKey)
-						if err != nil {
-							return err
-						}
-						log.Info("DEBUG extKeyDecomp: ", extKeyDecomp)
-						log.Info("DEBUG KeyDecomp: ", offenderPubKey)
-
-						payload1 = append(payload1, crypto.CompressPubkey(offenderPubKey)...)
-						log.Info("payload1: offenderPubKey ", fmt.Sprintf("%x", crypto.CompressPubkey(offenderPubKey)))
+						payload1 = append(payload1, offenderPubKeyCompressed...)
+						log.Info("payload1: offenderPubKey ", fmt.Sprintf("%x", offenderPubKeyCompressed))
 						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
 						// signature
 						payload1 = append(payload1, offenderSig[:]...)
@@ -328,7 +318,11 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						log.Info("calling api")
 						var keyOwnershipProofRaw string
 						callName := "BeefyApi_generate_key_ownership_proof"
-						err = li.relaychainConn.API().Client.Call(&keyOwnershipProofRaw, "state_call", callName, "0x00000000000000000219725ea37c1ba847df115846b349e9ba898a20cc73459085ab22b81830ddff2b")
+						// TODO: not used in `BeefyApi_generate_key_ownership_proof`, but nonetheless should get session number that validator set was last active for with `beefy_set_id_session`
+						keyOwnershipProofPayload := "0x" + "0000000000000000" + fmt.Sprintf("%x", offenderPubKeyCompressed)
+						log.Info("DEBUG: kopPayload: ", keyOwnershipProofPayload)
+						// TODO: call at correct block hash
+						err = li.relaychainConn.API().Client.Call(&keyOwnershipProofRaw, "state_call", callName, keyOwnershipProofPayload)
 						if err != nil || !ok {
 							return fmt.Errorf("generate key owner proof: %w", err)
 						}
