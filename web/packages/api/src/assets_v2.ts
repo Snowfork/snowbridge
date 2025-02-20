@@ -60,7 +60,8 @@ export type Parachain = {
         hasDryRunRpc: boolean
     },
     assets: AssetMap
-    destinationFeeInDOT: bigint
+    estimatedExecutionFeeDOT: bigint
+    estimatedDeliveryFeeDOT: bigint
     xcDOT?: string
 }
 
@@ -186,23 +187,41 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         }
     }
 
-    const paras: ParachainMap = {}
+    const providers: { [paraIdKey: string]: { parachainId: number, provider: ApiPromise, managed: boolean } } = {}
     for (const parachain of parachains) {
         let provider: ApiPromise;
+        let managed = false
         if (typeof parachain === "string") {
             provider = await ApiPromise.create({
                 provider: parachain.startsWith("http") ? new HttpProvider(parachain) : new WsProvider(parachain),
             })
+            managed = true
         } else {
             provider = parachain
         }
-        const para = await indexParachain(provider, ethChainId, assetHubParaId, assetOverrides ?? {}, destinationFeeOverrides ?? {})
-        paras[para.parachainId.toString()] = para;
-
-        if (typeof parachain === "string") {
-            await provider.disconnect()
-        }
+        const parachainId = await getParachainId(provider)
+        providers[parachainId.toString()] = { parachainId, provider, managed }
     }
+
+    const paras: ParachainMap = {}
+    for (const parachainIdKey of Object.keys(providers)) {
+        const { parachainId, provider } = providers[parachainIdKey]
+        const para = await indexParachain(
+            provider,
+            providers[assetHubParaId.toString()].provider,
+            ethChainId,
+            parachainId,
+            assetHubParaId,
+            assetOverrides ?? {},
+            destinationFeeOverrides ?? {})
+        paras[parachainId.toString()] = para;
+    }
+
+    for (const parachainIdKey of Object.keys(providers)) {
+        if (providers[parachainIdKey].managed)
+            await providers[parachainIdKey].provider.disconnect()
+    }
+
     if (!(assetHubParaId.toString() in paras)) {
         throw Error(`Could not resolve asset hub para id ${assetHubParaId} in the list of parachains provided.`)
     }
@@ -412,7 +431,7 @@ export async function getParachainId(parachain: ApiPromise): Promise<number> {
     return Number(sourceParachainEncoded.toPrimitive())
 }
 
-export async function calculateDestinationFee(provider: ApiPromise, destinationXcm: any, padFeePercentage?: bigint) {
+export async function calculateDestinationFee(provider: ApiPromise, destinationXcm: any) {
     const weight = (await provider.call.xcmPaymentApi.queryXcmWeight(destinationXcm)).toPrimitive() as any
     if (!weight.ok) {
         throw Error(`Can not query XCM Weight.`)
@@ -425,11 +444,39 @@ export async function calculateDestinationFee(provider: ApiPromise, destinationX
     if (!feeInDot.ok) {
         throw Error(`Can not convert weight to fee in DOT.`)
     }
-    const result = BigInt(feeInDot.ok.toString())
+    const executionFee = BigInt(feeInDot.ok.toString())
 
-    // return fee padded by 100% unless another percentage is specified
-    // TODO: Drop to 15% once 2409 is released
-    return result * (100n + (padFeePercentage ?? 100n)) / 100n
+    return executionFee
+}
+
+export async function calculateDeliveryFee(provider: ApiPromise, parachainId: number, destinationXcm: any) {
+    const result = (await provider.call.xcmPaymentApi.queryDeliveryFees(
+        { v4: { parents: 1, interior: { x1: [{ parachain: parachainId }] } } },
+        destinationXcm)).toPrimitive() as any
+    if (!result.ok) {
+        throw Error(`Can not query XCM Weight.`)
+    }
+    let dotAsset = undefined
+    for (const asset of result.ok.v4) {
+        if (asset.id.parents === 1 && asset.id.interior.here === null) {
+            dotAsset = asset
+        }
+    }
+    if (!dotAsset) {
+        console.info('Could not find DOT in result', result)
+        throw Error(`Can not query XCM Weight.`)
+    }
+
+    const deliveryFee = BigInt(dotAsset.fun.fungible.toString())
+
+    return deliveryFee
+}
+
+export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
+    if (padPercent < 0 || padPercent > 100) {
+        throw Error(`padPercent ${padPercent} not in range of 0 to 100.`)
+    }
+    return fee * ((100n + padPercent) / 100n)
 }
 
 async function chainProperties(provider: ApiPromise): Promise<ChainProperties> {
@@ -579,14 +626,15 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
 
 async function indexParachain(
     provider: ApiPromise,
+    assetHub: ApiPromise,
     ethChainId: number,
+    parachainId: number,
     assetHubParaId: number,
     assetOverrides: AssetOverrideMap,
     destinationFeeOverrides: FeeOverrideMap,
 ): Promise<Parachain> {
     const info = await chainProperties(provider)
 
-    const parachainId = await getParachainId(provider)
     const { assets, xcDOT } = await indexParachainAssets(provider, ethChainId, info.specName)
     const parachainIdKey = parachainId.toString()
     if (parachainIdKey in assetOverrides) {
@@ -615,27 +663,28 @@ async function indexParachain(
         await getNativeBalance(provider, "0x0000000000000000000000000000000000000000")
     }
 
-    let destinationFeeInDOT = 0n
+    let estimatedExecutionFeeDOT = 0n
+    let estimatedDeliveryFeeDOT = 0n
     if (parachainId !== assetHubParaId) {
+        const destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
+            provider.registry,
+            ethChainId,
+            "0x0000000000000000000000000000000000000000",
+            340282366920938463463374607431768211455n,
+            340282366920938463463374607431768211455n,
+            info.accountType === "AccountId32"
+                ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+                : "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+        )
+        estimatedDeliveryFeeDOT = await calculateDeliveryFee(assetHub, parachainId, destinationXcm)
         if (hasXcmPaymentApi) {
-            const destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
-                provider.registry,
-                ethChainId,
-                "0x0000000000000000000000000000000000000000",
-                340282366920938463463374607431768211455n,
-                340282366920938463463374607431768211455n,
-                info.accountType === "AccountId32"
-                    ? "0x0000000000000000000000000000000000000000000000000000000000000000"
-                    : "0x0000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            // TODO: This needs to happen before each transaction.
-            destinationFeeInDOT = await calculateDestinationFee(provider, destinationXcm)
+            estimatedExecutionFeeDOT = await calculateDestinationFee(provider, destinationXcm)
         } else {
             if (!(parachainIdKey in destinationFeeOverrides)) {
                 throw Error(`Parachain ${parachainId} cannot fetch the destination fee and needs a fee override.`)
             }
-            destinationFeeInDOT = destinationFeeOverrides[parachainIdKey]
+            estimatedExecutionFeeDOT = destinationFeeOverrides[parachainIdKey]
         }
     }
     return {
@@ -650,7 +699,8 @@ async function indexParachain(
         info,
         xcDOT,
         assets,
-        destinationFeeInDOT,
+        estimatedExecutionFeeDOT,
+        estimatedDeliveryFeeDOT,
     }
 }
 

@@ -3,9 +3,9 @@ import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/ap
 import { Codec, ISubmittableResult } from "@polkadot/types/types";
 import { BN, hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util";
 import { blake2AsHex, decodeAddress, xxhashAsHex } from "@polkadot/util-crypto";
-import { bridgeLocation, buildResultXcmAssetHubERC20TransferFromParachain, buildAssetHubERC20TransferFromParachain, DOT_LOCATION, erc20Location, parahchainLocation } from "./xcmBuilder";
-import { Asset, AssetRegistry, calculateDestinationFee, ERC20Metadata, getDotBalance, getNativeBalance, getParachainId, getTokenBalance, Parachain } from "./assets_v2";
-import { getOperatingStatus } from "./status";
+import { bridgeLocation, buildResultXcmAssetHubERC20TransferFromParachain, buildAssetHubERC20TransferFromParachain, DOT_LOCATION, erc20Location, parahchainLocation, buildParachainERC20ReceivedXcmOnDestination } from "./xcmBuilder";
+import { Asset, AssetRegistry, calculateDestinationFee, ERC20Metadata, getDotBalance, getNativeBalance, getParachainId, getTokenBalance, padFeeByPercentage, Parachain } from "./assets_v2";
+import { getOperatingStatus, OperationStatus } from "./status";
 import { IGateway } from "@snowbridge/contract-types";
 import { CallDryRunEffects, EventRecord, XcmDryRunApiError } from "@polkadot/types/interfaces";
 import { Result } from "@polkadot/types";
@@ -32,8 +32,11 @@ export type Transfer = {
 }
 
 export type DeliveryFee = {
-    deliveryFeeInDot: bigint
-    assetHubFeeInDot: bigint
+    snowbridgeDeliveryFeeDOT: bigint
+    bridgeHubDeliveryFeeDOT: bigint
+    assetHubExecutionFeeDOT: bigint
+    returnToSenderExecutionFeeDOT: bigint
+    returnToSenderDeliveryFeeDOT: bigint
     totalFeeInDot: bigint
 }
 
@@ -73,7 +76,7 @@ export async function createTransfer(
             ...stringToU8a(amount.toString()),
         ]);
         messageId = blake2AsHex(entropy);
-        tx = createERC20SourceParachainTx(parachain, ethChainId, assetHubParaId, sourceAccountHex, tokenAddress, beneficiaryAccount, amount, fee.totalFeeInDot, messageId)
+        tx = createERC20SourceParachainTx(parachain, ethChainId, assetHubParaId, sourceAccountHex, tokenAddress, beneficiaryAccount, amount, fee.totalFeeInDot, messageId, sourceParaId, fee.returnToSenderExecutionFeeDOT)
     }
 
     return {
@@ -98,24 +101,30 @@ export async function createTransfer(
     }
 }
 
-export async function getDeliveryFee(assetHub: ApiPromise, parachain: number, registry: AssetRegistry, defaultFee?: bigint): Promise<DeliveryFee> {
+export async function getDeliveryFee(assetHub: ApiPromise, parachain: number, registry: AssetRegistry, padPercentage?: bigint, defaultFee?: bigint): Promise<DeliveryFee> {
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
+    const feePadPercentage = padPercentage ?? 33n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
 
-    let deliveryFeeInDot = 0n
+    let snowbridgeDeliveryFeeDOT = 0n
     if (leFee.eqn(0)) {
         console.warn("Asset Hub onchain BridgeHubEthereumBaseFee not set. Using default fee.")
-        deliveryFeeInDot = defaultFee ?? 2_750_872_500_000n
+        snowbridgeDeliveryFeeDOT = defaultFee ?? 2_750_872_500_000n
     }
     else {
-        deliveryFeeInDot = BigInt(leFee.toString())
+        snowbridgeDeliveryFeeDOT = BigInt(leFee.toString())
     }
 
-    let assetHubFeeInDot = 0n
+    let assetHubExecutionFeeDOT = 0n
+    let returnToSenderExecutionFeeDOT = 0n;
+    let returnToSenderDeliveryFeeDOT = 0n;
+    const bridgeHubDeliveryFeeDOT = registry.parachains[registry.bridgeHubParaId].estimatedDeliveryFeeDOT 
     if (parachain !== registry.assetHubParaId) {
-        assetHubFeeInDot = await calculateDestinationFee(assetHub,
+        returnToSenderExecutionFeeDOT = padFeeByPercentage(registry.parachains[parachain].estimatedExecutionFeeDOT, feePadPercentage)
+        returnToSenderDeliveryFeeDOT = registry.parachains[parachain].estimatedDeliveryFeeDOT 
+        assetHubExecutionFeeDOT = padFeeByPercentage(await calculateDestinationFee(assetHub,
             buildResultXcmAssetHubERC20TransferFromParachain(
                 assetHub.registry,
                 registry.ethChainId,
@@ -125,14 +134,20 @@ export async function getDeliveryFee(assetHub: ApiPromise, parachain: number, re
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
                 340282366920938463463374607431768211455n,
                 340282366920938463463374607431768211455n,
+                340282366920938463463374607431768211455n,
+                parachain,
+                340282366920938463463374607431768211455n,
             )
-        )
+        ), feePadPercentage)
     }
 
     return {
-        deliveryFeeInDot,
-        assetHubFeeInDot,
-        totalFeeInDot: deliveryFeeInDot + assetHubFeeInDot
+        snowbridgeDeliveryFeeDOT,
+        assetHubExecutionFeeDOT,
+        bridgeHubDeliveryFeeDOT,
+        returnToSenderDeliveryFeeDOT,
+        returnToSenderExecutionFeeDOT,
+        totalFeeInDot: snowbridgeDeliveryFeeDOT + assetHubExecutionFeeDOT + returnToSenderExecutionFeeDOT + returnToSenderDeliveryFeeDOT + bridgeHubDeliveryFeeDOT
     }
 }
 
@@ -163,7 +178,22 @@ export type ValidationLog = {
     message: string
 }
 
-export async function validateTransfer(connections: Connections, transfer: Transfer) {
+export type ValidationResult = {
+    logs: ValidationLog[]
+    success: boolean
+    data: {
+        bridgeStatus: OperationStatus
+        nativeBalance: bigint
+        dotBalance: bigint
+        sourceExecutionFee: bigint
+        tokenBalance: bigint
+        sourceDryRunError: any
+        assetHubDryRunError: any
+    };
+    transfer: Transfer
+}
+
+export async function validateTransfer(connections: Connections, transfer: Transfer): Promise<ValidationResult> {
     const { sourceParachain, gateway, bridgeHub, assetHub } = connections
     const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
     const { sourceAccountHex, sourceParaId, sourceParachain: source } = transfer.computed
@@ -214,6 +244,9 @@ export async function validateTransfer(connections: Connections, transfer: Trans
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
                 amount,
                 fee.totalFeeInDot,
+                fee.assetHubExecutionFeeDOT,
+                sourceParaId,
+                fee.returnToSenderExecutionFeeDOT
             ))
             if (!dryRunResultAssetHub.success) {
                 logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run failed on Asset Hub.' })
@@ -226,7 +259,7 @@ export async function validateTransfer(connections: Connections, transfer: Trans
     const sourceExecutionFee = paymentInfo['partialFee'].toBigInt()
 
     if (sourceParaId === registry.assetHubParaId) {
-        if ((sourceExecutionFee + fee.deliveryFeeInDot) > (dotBalance)) {
+        if ((sourceExecutionFee + fee.totalFeeInDot) > (dotBalance)) {
             logs.push({ kind: ValidationKind.Error, reason: ValidationReason.InsufficientDotFee, message: 'Insufficient DOT balance to submit transaction on the source parachain.' })
         }
     }
@@ -243,8 +276,11 @@ export async function validateTransfer(connections: Connections, transfer: Trans
         logs.push({ kind: ValidationKind.Error, reason: ValidationReason.BridgeStatusNotOperational, message: 'Bridge operations have been paused by onchain governance.' })
     }
 
+    const success = logs.find(l => l.kind === ValidationKind.Error) === undefined
+
     return {
         logs,
+        success,
         data: {
             bridgeStatus,
             nativeBalance,
@@ -378,7 +414,9 @@ function createERC20SourceParachainTx(
     beneficiaryAccount: string,
     amount: bigint,
     totalFeeInDot: bigint,
-    messageId: string
+    messageId: string,
+    sourceParaId: number,
+    returnToSenderFeeInDOT: bigint,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     const assets = {
         v4: [
@@ -397,7 +435,7 @@ function createERC20SourceParachainTx(
     const feeAsset = {
         v4: DOT_LOCATION
     }
-    const customXcm = buildAssetHubERC20TransferFromParachain(parachain.registry, ethChainId, sourceAccount, beneficiaryAccount, tokenAddress, messageId)
+    const customXcm = buildAssetHubERC20TransferFromParachain(parachain.registry, ethChainId, sourceAccount, beneficiaryAccount, tokenAddress, messageId, sourceParaId, returnToSenderFeeInDOT)
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(destination, assets, "DestinationReserve", feeAsset, "DestinationReserve", customXcm, "Unlimited")
 }
 
@@ -415,8 +453,8 @@ async function dryRunOnSourceParachain(source: ApiPromise, transfer: Transfer) {
     return {
         success,
         error: result.isOk && result.asOk.executionResult.isErr ? result.asOk.executionResult.asErr.toJSON() : undefined,
-        destination: success ? result.asOk.forwardedXcms[0][0] : undefined,
-        xcm: success ? result.asOk.forwardedXcms[0][1][0] : undefined,
+        destination: success ? result.asOk.forwardedXcms[result.asOk.forwardedXcms.length - 1][0] : undefined,
+        xcm: success ? result.asOk.forwardedXcms[result.asOk.forwardedXcms.length - 1][1][0] : undefined,
     }
 }
 
@@ -432,7 +470,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, parachainId: number, xcm: an
 
     const success = resultPrimitive.ok?.executionResult?.complete !== undefined
     if (!success) {
-        console.error("Error during dry run on asset hub:", JSON.stringify(result.toHuman(), null, 2))
+        console.error("Error during dry run on asset hub:", xcm.toHuman(), JSON.stringify(result.toHuman(), null, 2))
     }
     return {
         success,

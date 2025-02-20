@@ -332,7 +332,9 @@ function buildAssetHubXcmFromParachain(
     sourceAccount: string,
     beneficiary: string,
     tokenAddress: string,
-    topic: string
+    topic: string,
+    sourceParachainId: number,
+    destinationFeeInDOT: bigint,
 ) {
     let { hexAddress, address: { kind } } = beneficiaryMultiAddress(sourceAccount)
     let sourceAccountLocation;
@@ -349,21 +351,41 @@ function buildAssetHubXcmFromParachain(
             throw Error(`Could not parse source address ${sourceAccount}`)
     }
     return [
-        // Error Handling, return everything to sender on Asset hub
+        // Error Handling, return everything to sender on source parachain
         {
             setAppendix: [
                 {
-                    depositAsset: {
+                    depositReserveAsset: {
                         assets: {
-                            Wild: "All",
+                            wild: "All",
                         },
-                        beneficiary: {
-                            parents: 0,
-                            interior: {
-                                x1: [sourceAccountLocation],
+                        dest: { parents: 1, interior: { x1: [{ parachain: sourceParachainId }] } },
+                        xcm: [
+                            {
+                                buyExecution: {
+                                    fees: {
+                                        id: DOT_LOCATION,
+                                        fun: {
+                                            fungible: destinationFeeInDOT,
+                                        },
+                                    },
+                                    weightLimit: "Unlimited",
+                                }
                             },
-                        },
-                    },
+                            {
+                                depositAsset: {
+                                    assets: {
+                                        wild: "All",
+                                    },
+                                    beneficiary: {
+                                        parents: 0,
+                                        interior: { x1: [sourceAccountLocation] },
+                                    },
+                                }
+                            },
+                            { setTopic: topic }
+                        ]
+                    }
                 },
             ],
         },
@@ -419,11 +441,13 @@ export function buildAssetHubERC20TransferFromParachain(
     sourceAccount: string,
     beneficiary: string,
     tokenAddress: string,
-    topic: string
+    topic: string,
+    sourceParachainId: number,
+    returnToSenderFeeInDOT: bigint,
 ) {
     return registry.createType('XcmVersionedXcm',
         {
-            v4: buildAssetHubXcmFromParachain(ethChainId, sourceAccount, beneficiary, tokenAddress, topic)
+            v4: buildAssetHubXcmFromParachain(ethChainId, sourceAccount, beneficiary, tokenAddress, topic, sourceParachainId, returnToSenderFeeInDOT)
         });
 }
 
@@ -435,7 +459,10 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
     tokenAddress: string,
     topic: string,
     transferAmount: bigint,
-    destinationFeeInDot: bigint
+    totalFeeInDot: bigint,
+    destinationFeeInDot: bigint,
+    sourceParachainId: number,
+    returnToSenderFeeInDOT: bigint,
 ) {
     return registry.createType('XcmVersionedXcm', {
         v4: [
@@ -444,7 +471,7 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
                     {
                         id: DOT_LOCATION,
                         fun: {
-                            Fungible: destinationFeeInDot,
+                            Fungible: totalFeeInDot,
                         },
                     },
                     {
@@ -467,7 +494,7 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
                     weightLimit: "Unlimited",
                 }
             },
-            ...buildAssetHubXcmFromParachain(ethChainId, sourceAccount, beneficiary, tokenAddress, topic)
+            ...buildAssetHubXcmFromParachain(ethChainId, sourceAccount, beneficiary, tokenAddress, topic, sourceParachainId, returnToSenderFeeInDOT)
         ]
     })
 }

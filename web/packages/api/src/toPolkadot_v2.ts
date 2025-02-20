@@ -2,10 +2,10 @@ import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway";
 import { AbstractProvider, Contract, ContractTransaction, FeeData, LogDescription, TransactionReceipt } from "ethers";
 import { beneficiaryMultiAddress, paraIdToSovereignAccount } from "./utils";
 import { IERC20__factory, IGateway, IGateway__factory } from "@snowbridge/contract-types";
-import { Asset, AssetRegistry, ERC20Metadata, getNativeAccount, getTokenBalance, Parachain } from "./assets_v2";
+import { Asset, AssetRegistry, calculateDeliveryFee, calculateDestinationFee, ERC20Metadata, getNativeAccount, getTokenBalance, padFeeByPercentage, Parachain } from "./assets_v2";
 import { getOperatingStatus, OperationStatus } from "./status";
 import { ApiPromise } from "@polkadot/api";
-import { buildAssetHubERC20ReceivedXcm, buildParachainERC20ReceivedXcmOnAssetHub } from "./xcmBuilder";
+import { buildAssetHubERC20ReceivedXcm, buildParachainERC20ReceivedXcmOnAssetHub, buildParachainERC20ReceivedXcmOnDestination } from "./xcmBuilder";
 
 export type Transfer = {
     input: {
@@ -64,11 +64,14 @@ export type FeeInfo = {
 }
 
 export type DeliveryFee = {
-    deliveryFeeInWei: bigint
+    destinationDeliveryFeeDOT: bigint
+    destinationExecutionFeeDOT: bigint
+    totalFeeInWei: bigint
 }
 
-export type Validation = {
+export type ValidationResult = {
     logs: ValidationLog[]
+    success: boolean
     data: {
         etherBalance: bigint
         tokenBalance: {
@@ -80,7 +83,7 @@ export type Validation = {
         assetHubDryRunError?: string
         destinationParachainDryRunError?: string
     };
-    transfer: Transfer;
+    transfer: Transfer
 }
 
 interface Connections {
@@ -99,10 +102,47 @@ export type MessageReceipt = {
     blockHash: string
 }
 
-export async function getDeliveryFee(gateway: IGateway, registry: AssetRegistry, tokenAddress: string, destinationParaId: number): Promise<DeliveryFee> {
+export async function getDeliveryFee(
+    connections: { gateway: IGateway, assetHub: ApiPromise, destination: ApiPromise },
+    registry: AssetRegistry,
+    tokenAddress: string,
+    destinationParaId: number,
+    paddFeeByPercentage?: bigint
+): Promise<DeliveryFee> {
+    const { gateway, assetHub, destination } = connections
     const { destParachain } = resolveInputs(registry, tokenAddress, destinationParaId)
+
+    let destinationDeliveryFeeDOT = 0n
+    let destinationExecutionFeeDOT = 0n
+    if (destinationParaId !== registry.assetHubParaId) {
+        const destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
+            destination.registry,
+            registry.ethChainId,
+            "0x0000000000000000000000000000000000000000",
+            340282366920938463463374607431768211455n,
+            340282366920938463463374607431768211455n,
+            destParachain.info.accountType === "AccountId32"
+                ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+                : "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+        )
+        destinationDeliveryFeeDOT = await calculateDeliveryFee(assetHub, destinationParaId, destinationXcm)
+        if (destParachain.features.hasXcmPaymentApi) {
+            destinationExecutionFeeDOT = await calculateDestinationFee(destination, destinationXcm)
+        } else {
+            console.warn(`Parachain ${destinationParaId} does not support payment apis. Using an estimated fee.`)
+            destinationExecutionFeeDOT = destParachain.estimatedExecutionFeeDOT
+        }
+    }
+    const totalFeeInDOT = destinationExecutionFeeDOT + destinationDeliveryFeeDOT
     return {
-        deliveryFeeInWei: await gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destParachain.destinationFeeInDOT)
+        destinationExecutionFeeDOT,
+        destinationDeliveryFeeDOT,
+        totalFeeInWei: await gateway.quoteSendTokenFee(
+            tokenAddress,
+            destinationParaId,
+            padFeeByPercentage(totalFeeInDOT, paddFeeByPercentage ?? 33n)
+        )
     }
 }
 
@@ -120,14 +160,16 @@ export async function createTransfer(
         ? ahAssetMetadata.minimumBalance : destAssetMetadata.minimumBalance
 
     let { address: beneficiary, hexAddress: beneficiaryAddressHex } = beneficiaryMultiAddress(beneficiaryAccount)
-    const value = fee.deliveryFeeInWei
+    const value = fee.totalFeeInWei
     const ifce = IGateway__factory.createInterface()
     const con = new Contract(registry.gatewayAddress, ifce);
+
+    const destinationFeeInDOT = destParachain.estimatedExecutionFeeDOT + destParachain.estimatedDeliveryFeeDOT
     const tx = await con.getFunction("sendToken").populateTransaction(
         tokenAddress,
         destinationParaId,
         beneficiary,
-        destParachain.destinationFeeInDOT,
+        destinationFeeInDOT,
         amount,
         {
             value,
@@ -143,7 +185,7 @@ export async function createTransfer(
             tokenAddress,
             destinationParaId,
             amount,
-            deliveryFeeInWei: fee.deliveryFeeInWei,
+            deliveryFeeInWei: fee.totalFeeInWei,
         }, computed: {
             gatewayAddress: registry.gatewayAddress,
             beneficiaryAddressHex,
@@ -154,7 +196,7 @@ export async function createTransfer(
             destAssetMetadata,
             minimalBalance,
             destParachain,
-            destinationFeeInDOT: destParachain.destinationFeeInDOT
+            destinationFeeInDOT,
         },
         tx,
     }
@@ -172,7 +214,7 @@ async function validateAccount(parachain: ApiPromise, specName: string, benefici
     }
 }
 
-export async function validateTransfer(connections: Connections, transfer: Transfer): Promise<Validation> {
+export async function validateTransfer(connections: Connections, transfer: Transfer): Promise<ValidationResult> {
     const { tx } = transfer
     const { ethereum, gateway, bridgeHub, assetHub, destParachain: destParachainApi } = connections
     const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
@@ -298,8 +340,11 @@ export async function validateTransfer(connections: Connections, transfer: Trans
         }
     }
 
+    const success = logs.find(l => l.kind === ValidationKind.Error) === undefined
+
     return {
         logs,
+        success,
         data: {
             etherBalance,
             tokenBalance,
