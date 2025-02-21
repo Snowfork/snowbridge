@@ -724,6 +724,7 @@ async function indexEthChain(
         const assets: ERC20MetadataMap = {}
         for (const token in assetHub.assets) {
             if (token === "0x0000000000000000000000000000000000000000") {
+                // TODO: Support Native Ether
                 continue;
             }
             if (!await gateway.isTokenRegistered(token)) {
@@ -775,7 +776,13 @@ async function indexEthChain(
         assets[evmParachainChain.xcDOT] = xc20DOTAsset
 
         return {
-            chainId, evmParachainId: evmParachainChain.parachainId, assets, precompile, xcDOT: evmParachainChain.xcDOT, xcTokenMap, id: id ?? evmParachainChain.info.specName
+            chainId,
+            evmParachainId: evmParachainChain.parachainId,
+            assets,
+            precompile,
+            xcDOT: evmParachainChain.xcDOT,
+            xcTokenMap,
+            id: id ?? `evm_${evmParachainChain.info.specName}`
         }
     }
 }
