@@ -1,5 +1,4 @@
 use snowbridge_smoketest::{
-	asset_hub_helper::{eth_location, mint_token_to},
 	contracts::i_gateway_base::ForeignTokenRegisteredFilter,
 	helper::*,
 	helper_v2::wait_for_ethereum_event_v2,
@@ -12,25 +11,12 @@ use snowbridge_smoketest::{
 		bridgehub::api::ethereum_system_v2::events::RegisterToken,
 	},
 };
-use subxt_signer::sr25519::dev;
-
-const INITIAL_FUND: u128 = 3_000_000_000_000;
-const FEE: u128 = 1_000_000_000;
+use subxt::tx::Payload;
 
 #[tokio::test]
 async fn register_pna() {
 	let test_clients = initial_clients().await.expect("initialize clients");
-	let signer = dev::bob();
-
-	// Mint ether to sender to pay fees
-	mint_token_to(
-		&test_clients.asset_hub_client,
-		eth_location(),
-		signer.public_key().0,
-		INITIAL_FUND,
-	)
-	.await;
-
+	let asset_hub_client = test_clients.asset_hub_client;
 	type Junctions = runtime_types::staging_xcm::v4::junctions::Junctions;
 	let asset = VersionedLocation::V4(runtime_types::staging_xcm::v4::location::Location {
 		parents: 1,
@@ -61,14 +47,15 @@ async fn register_pna() {
 	let ethereum_system_frontend_api =
 		assethub::api::snowbridge_system_frontend::calls::TransactionApi;
 
-	let call = ethereum_system_frontend_api.register_token(asset, metadata, FEE);
+	let mut encoded_call = Vec::new();
+	ethereum_system_frontend_api
+		.register_token(asset, metadata)
+		.encode_call_data_to(&asset_hub_client.metadata(), &mut encoded_call)
+		.expect("encoded call");
 
-	let _ = test_clients
-		.asset_hub_client
-		.tx()
-		.sign_and_submit_then_watch_default(&call, &signer)
+	governance_assethub_call_from_relay_chain(encoded_call)
 		.await
-		.expect("call success");
+		.expect("register pna");
 
 	wait_for_bridgehub_event::<RegisterToken>(&test_clients.bridge_hub_client).await;
 
