@@ -15,7 +15,7 @@ export type Transfer = {
         tokenAddress: string
         destinationParaId: number
         amount: bigint
-        deliveryFeeInWei: bigint
+        fee: DeliveryFee
     },
     computed: {
         gatewayAddress: string
@@ -164,12 +164,12 @@ export async function createTransfer(
     const ifce = IGateway__factory.createInterface()
     const con = new Contract(registry.gatewayAddress, ifce);
 
-    const destinationFeeInDOT = destParachain.estimatedExecutionFeeDOT + destParachain.estimatedDeliveryFeeDOT
+    const totalFeeDot = fee.destinationDeliveryFeeDOT + fee.destinationExecutionFeeDOT
     const tx = await con.getFunction("sendToken").populateTransaction(
         tokenAddress,
         destinationParaId,
         beneficiary,
-        destinationFeeInDOT,
+        totalFeeDot,
         amount,
         {
             value,
@@ -185,7 +185,7 @@ export async function createTransfer(
             tokenAddress,
             destinationParaId,
             amount,
-            deliveryFeeInWei: fee.totalFeeInWei,
+            fee,
         }, computed: {
             gatewayAddress: registry.gatewayAddress,
             beneficiaryAddressHex,
@@ -196,7 +196,7 @@ export async function createTransfer(
             destAssetMetadata,
             minimalBalance,
             destParachain,
-            destinationFeeInDOT,
+            destinationFeeInDOT: totalFeeDot,
         },
         tx,
     }
