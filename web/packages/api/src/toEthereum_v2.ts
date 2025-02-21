@@ -102,13 +102,13 @@ export async function createTransfer(
 }
 
 export async function getDeliveryFee(
-    connections: { assetHub: ApiPromise, destination: ApiPromise },
+    connections: { assetHub: ApiPromise, source: ApiPromise },
     parachain: number,
     registry: AssetRegistry,
     padPercentage?: bigint,
     defaultFee?: bigint
 ): Promise<DeliveryFee> {
-    const { assetHub, destination } = connections
+    const { assetHub, source } = connections
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
     const feePadPercentage = padPercentage ?? 33n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
@@ -154,7 +154,7 @@ export async function getDeliveryFee(
         )
         returnToSenderDeliveryFeeDOT = await calculateDeliveryFee(assetHub, parachain, returnToSenderXcm)
         if (registry.parachains[parachain].features.hasDryRunApi) {
-            returnToSenderExecutionFeeDOT = padFeeByPercentage(await calculateDestinationFee(destination, returnToSenderXcm), feePadPercentage)
+            returnToSenderExecutionFeeDOT = padFeeByPercentage(await calculateDestinationFee(source, returnToSenderXcm), feePadPercentage)
         } else {
             console.warn(`Parachain ${parachain} does not support payment apis. Using an estimated fee.`)
             returnToSenderExecutionFeeDOT = padFeeByPercentage(registry.parachains[parachain].estimatedExecutionFeeDOT, feePadPercentage)

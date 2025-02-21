@@ -126,7 +126,11 @@ const monitor = async () => {
     {
         const destinationChainId: number = 1000
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toPolkadotV2.getDeliveryFee(context.gateway(), registry, WETH_CONTRACT, destinationChainId)
+        const fee = await toPolkadotV2.getDeliveryFee({
+            gateway: context.gateway(),
+            assetHub: await context.assetHub(),
+            destination: await context.parachain(destinationChainId)
+        }, registry, WETH_CONTRACT, destinationChainId)
 
         // Step 2. Create a transfer tx
         const transfer = await toPolkadotV2.createTransfer(
@@ -163,10 +167,10 @@ const monitor = async () => {
         console.log('tx:', tx)
         console.log('feeData:', feeData.toJSON())
         console.log('gas:', estimatedGas)
-        console.log('delivery cost:', formatEther(fee.deliveryFeeInWei))
+        console.log('delivery cost:', formatEther(fee.totalFeeInWei))
         console.log('execution cost:', formatEther(executionFee))
-        console.log('total cost:', formatEther(fee.deliveryFeeInWei + executionFee))
-        console.log('ether sent:', formatEther(totalValue - fee.deliveryFeeInWei))
+        console.log('total cost:', formatEther(fee.totalFeeInWei + executionFee))
+        console.log('ether sent:', formatEther(totalValue - fee.totalFeeInWei))
         console.log('dry run:', await context.ethereum().call(tx))
 
         // Step 6. Submit the transaction
@@ -188,7 +192,7 @@ const monitor = async () => {
     {
         const sourceParaId = 1000
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toEthereumV2.getDeliveryFee(await context.assetHub(), sourceParaId, registry)
+        const fee = await toEthereumV2.getDeliveryFee({ assetHub: await context.assetHub(), source: await context.parachain(sourceParaId) }, sourceParaId, registry)
 
         // Step 2. Create a transfer tx
         const transfer = await toEthereumV2.createTransfer(
@@ -248,7 +252,11 @@ const monitor = async () => {
     {
         const destinationChainId: number = 2000
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toPolkadotV2.getDeliveryFee(context.gateway(), registry, WETH_CONTRACT, destinationChainId)
+        const fee = await toPolkadotV2.getDeliveryFee({
+            gateway: context.gateway(),
+            assetHub: await context.assetHub(),
+            destination: await context.parachain(destinationChainId)
+        }, registry, WETH_CONTRACT, destinationChainId)
 
         // Step 2. Create a transfer tx
         const transfer = await toPolkadotV2.createTransfer(
@@ -285,10 +293,10 @@ const monitor = async () => {
         console.log('tx:', tx)
         console.log('feeData:', feeData.toJSON())
         console.log('gas:', estimatedGas)
-        console.log('delivery cost:', formatEther(fee.deliveryFeeInWei))
+        console.log('delivery cost:', formatEther(fee.totalFeeInWei))
         console.log('execution cost:', formatEther(executionFee))
-        console.log('total cost:', formatEther(fee.deliveryFeeInWei + executionFee))
-        console.log('ether sent:', formatEther(totalValue - fee.deliveryFeeInWei))
+        console.log('total cost:', formatEther(fee.totalFeeInWei + executionFee))
+        console.log('ether sent:', formatEther(totalValue - fee.totalFeeInWei))
         console.log('dry run:', await context.ethereum().call(tx))
 
         // Step 6. Submit the transaction
@@ -310,7 +318,10 @@ const monitor = async () => {
     {
         const sourceParaId = 2000
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toEthereumV2.getDeliveryFee(await context.assetHub(), sourceParaId, registry)
+        const fee = await toEthereumV2.getDeliveryFee({
+            assetHub: await context.assetHub(),
+            source: await context.parachain(sourceParaId)
+        }, sourceParaId, registry)
 
         // Step 2. Create a transfer tx
         const transfer = await toEthereumV2.createTransfer(
