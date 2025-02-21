@@ -68,6 +68,19 @@ contract TokenTest is Test {
         assertEq(token.allowance(address(this), account), initialAmount + addedAmount);
     }
 
+    function testFuzz_decreaseAllowance(address account, uint256 initialAmount, uint256 subtractedAmount) public {
+        vm.assume(account != address(0));
+        vm.assume(initialAmount > 0 && subtractedAmount > 0 && initialAmount >= subtractedAmount);
+
+        Token token = new Token("", "", 18);
+
+        token.approve(account, initialAmount);
+
+        assertEq(token.allowance(address(this), account), initialAmount);
+        assertTrue(token.decreaseAllowance(account, subtractedAmount));
+        assertEq(token.allowance(address(this), account), initialAmount - subtractedAmount);
+    }
+
     function testFuzz_transferCorrectlyUpdatesBalances(
         address sender,
         address receiver,
@@ -109,6 +122,7 @@ contract TokenTest is Test {
         vm.assume(mintAmount > 0 && allowanceAmount > 0 && transferAmount > 0);
         vm.assume(mintAmount >= transferAmount);
         vm.assume(allowanceAmount >= transferAmount);
+        vm.assume(allowanceAmount < type(uint256).max);
 
         Token token = new Token("", "", 18);
 
@@ -133,10 +147,7 @@ contract TokenTest is Test {
         assertEq(token.balanceOf(receiver), initialReceiverBalance + transferAmount);
 
         // Verify allowance is reduced
-
-        if (allowanceAmount < type(uint256).max) {
-            assertEq(token.allowance(owner, spender), initialAllowance - transferAmount);
-        }
+        assertEq(token.allowance(owner, spender), initialAllowance - transferAmount);
 
         // Verify total supply remains unchanged
         assertEq(token.totalSupply(), initialTotalSupply);
@@ -177,5 +188,25 @@ contract TokenTest is Test {
 
         // Verify allowance remains unchanged for max approval
         assertEq(token.allowance(owner, spender), type(uint256).max);
+    }
+
+    function test_transferFromToZeroAddressReverts() public {
+        Token token = new Token("Test", "TST", 18);
+
+        address owner = makeAddr("owner");
+        address spender = makeAddr("spender");
+        uint256 amount = 100;
+
+        // Mint tokens to owner
+        token.mint(owner, amount);
+
+        // Approve spender
+        vm.prank(owner);
+        token.approve(spender, amount);
+
+        // Attempt transfer to zero address should revert
+        vm.prank(spender);
+        vm.expectRevert(IERC20.InvalidAccount.selector);
+        token.transferFrom(owner, address(0), amount);
     }
 }

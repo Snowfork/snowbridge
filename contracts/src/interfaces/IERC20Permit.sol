@@ -5,6 +5,7 @@
 pragma solidity 0.8.28;
 
 interface IERC20Permit {
+    error Unauthorized();
     error PermitExpired();
     error InvalidS();
     error InvalidV();

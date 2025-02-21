@@ -31,10 +31,10 @@ import {TokenLib} from "./TokenLib.sol";
 contract Token is IERC20, IERC20Permit {
     using TokenLib for TokenLib.Token;
 
-    address public immutable GATEWAY;
     bytes32 public immutable DOMAIN_SEPARATOR;
     uint8 public immutable decimals;
 
+    address internal owner;
     string public name;
     string public symbol;
     TokenLib.Token token;
@@ -48,10 +48,10 @@ contract Token is IERC20, IERC20Permit {
         name = _name;
         symbol = _symbol;
         decimals = _decimals;
-        GATEWAY = msg.sender;
+        owner = msg.sender;
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
-                TokenLib.DOMAIN_TYPE_SIGNATURE_HASH,
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256(bytes(_name)),
                 keccak256(bytes("1")),
                 block.chainid,
@@ -60,114 +60,35 @@ contract Token is IERC20, IERC20Permit {
         );
     }
 
-    modifier onlyGateway() {
-        if (msg.sender != GATEWAY) {
+    modifier onlyOwner() {
+        if (msg.sender != owner) {
             revert Unauthorized();
         }
         _;
     }
 
-    /**
-     * @dev Creates `amount` tokens and assigns them to `account`, increasing
-     * the total supply. Can only be called by the owner.
-     *
-     * Emits a {Transfer} event with `from` set to the zero address.
-     *
-     * Requirements:
-     *
-     * - `account` cannot be the zero address.
-     */
-    function mint(address account, uint256 amount) external onlyGateway {
+    function setOwner(address newOwner) external onlyOwner {
+        owner = newOwner;
+    }
+
+    function mint(address account, uint256 amount) external onlyOwner {
         token.mint(account, amount);
     }
 
-    /**
-     * @dev Destroys `amount` tokens from the account.
-     */
-    function burn(address account, uint256 amount) external onlyGateway {
+    function burn(address account, uint256 amount) external onlyOwner {
         token.burn(account, amount);
     }
 
-    /**
-     * @dev See {IERC20-transfer}.
-     *
-     * Requirements:
-     *
-     * - `recipient` cannot be the zero address.
-     * - the caller must have a balance of at least `amount`.
-     */
     function transfer(address recipient, uint256 amount) external returns (bool) {
-        return token.transfer(msg.sender, recipient, amount);
+        return token.transfer(recipient, amount);
     }
 
-    /**
-     * @dev See {IERC20-approve}.
-     *
-     * NOTE: Prefer the {increaseAllowance} and {decreaseAllowance} methods, as
-     * they aren't vulnerable to the frontrunning attack described here:
-     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-     * See {IERC20-approve}.
-     *
-     * NOTE: If `amount` is the maximum `uint256`, the allowance is not updated on
-     * `transferFrom`. This is semantically equivalent to an infinite approval.
-     *
-     * Requirements:
-     *
-     * - `spender` cannot be the zero address.
-     */
     function approve(address spender, uint256 amount) external returns (bool) {
-        return token.approve(msg.sender, spender, amount);
+        return token.approve(spender, amount);
     }
 
-    /**
-     * @dev See {IERC20-transferFrom}.
-     *
-     * Emits an {Approval} event indicating the updated allowance. This is not
-     * required by the EIP. See the note at the beginning of {ERC20}.
-     *
-     * Requirements:
-     *
-     * - `sender` and `recipient` cannot be the zero address.
-     * - `sender` must have a balance of at least `amount`.
-     * - the caller must have allowance for ``sender``'s tokens of at least
-     * `amount`.
-     */
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool) {
         return token.transferFrom(sender, recipient, amount);
-    }
-
-    /**
-     * @dev Atomically increases the allowance granted to `spender` by the caller.
-     *
-     * This is an alternative to {approve} that can be used as a mitigation for
-     * problems described in {IERC20-approve}.
-     *
-     * Emits an {Approval} event indicating the updated allowance.
-     *
-     * Requirements:
-     *
-     * - `spender` cannot be the zero address.
-     */
-    function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
-        return token.increaseAllowance(spender, addedValue);
-    }
-
-    /**
-     * @dev Atomically decreases the allowance granted to `spender` by the caller.
-     *
-     * This is an alternative to {approve} that can be used as a mitigation for
-     * problems described in {IERC20-approve}.
-     *
-     * Emits an {Approval} event indicating the updated allowance.
-     *
-     * Requirements:
-     *
-     * - `spender` cannot be the zero address.
-     * - `spender` must have allowance for the caller of at least
-     * `subtractedValue`.
-     */
-    function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
-        return token.decreaseAllowance(spender, subtractedValue);
     }
 
     function permit(address issuer, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
