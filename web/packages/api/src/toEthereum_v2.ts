@@ -7,7 +7,7 @@ import { bridgeLocation, buildResultXcmAssetHubERC20TransferFromParachain, build
 import { Asset, AssetRegistry, calculateDeliveryFee, calculateDestinationFee, ERC20Metadata, getDotBalance, getNativeBalance, getParachainId, getTokenBalance, padFeeByPercentage, Parachain } from "./assets_v2";
 import { getOperatingStatus, OperationStatus } from "./status";
 import { IGateway } from "@snowbridge/contract-types";
-import { CallDryRunEffects, EventRecord, XcmDryRunApiError } from "@polkadot/types/interfaces";
+import { CallDryRunEffects, EventRecord, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces";
 import { Result } from "@polkadot/types";
 
 export type Transfer = {
@@ -236,17 +236,17 @@ export async function validateTransfer(connections: Connections, transfer: Trans
     let assetHubDryRunError;
     if (source.features.hasDryRunApi) {
         // do the dry run, get the forwarded xcm and dry run that
-        const dryRunSource = await dryRunOnSourceParachain(sourceParachain, transfer)
+        const dryRunSource = await dryRunOnSourceParachain(sourceParachain, registry.assetHubParaId, registry.bridgeHubParaId, transfer)
         if (!dryRunSource.success) {
             logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run call on source failed.' })
             sourceDryRunError = dryRunSource.error
         }
 
         if (dryRunSource.success && sourceParaId !== registry.assetHubParaId) {
-            if (!dryRunSource.xcm) {
+            if (!dryRunSource.assetHubForwarded) {
                 logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run call did not provide a forwared xcm.' })
             } else {
-                const dryRunResultAssetHub = await dryRunAssetHub(assetHub, sourceParaId, dryRunSource.xcm)
+                const dryRunResultAssetHub = await dryRunAssetHub(assetHub, sourceParaId, registry.bridgeHubParaId, dryRunSource.assetHubForwarded[1][0])
                 if (!dryRunResultAssetHub.success) {
                     logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run failed on Asset Hub.' })
                     assetHubDryRunError = dryRunResultAssetHub.errorMessage
@@ -256,7 +256,7 @@ export async function validateTransfer(connections: Connections, transfer: Trans
     } else {
         logs.push({ kind: ValidationKind.Warning, reason: ValidationReason.DryRunApiNotAvailable, message: 'Source parachain can not dry run call. Cannot verify success.' })
         if (sourceParaId !== registry.assetHubParaId) {
-            const dryRunResultAssetHub = await dryRunAssetHub(assetHub, sourceParaId, buildResultXcmAssetHubERC20TransferFromParachain(
+            const dryRunResultAssetHub = await dryRunAssetHub(assetHub, sourceParaId, registry.bridgeHubParaId, buildResultXcmAssetHubERC20TransferFromParachain(
                 sourceParachain.registry,
                 registry.ethChainId,
                 sourceAccountHex,
@@ -460,28 +460,46 @@ function createERC20SourceParachainTx(
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(destination, assets, "DestinationReserve", feeAsset, "DestinationReserve", customXcm, "Unlimited")
 }
 
-async function dryRunOnSourceParachain(source: ApiPromise, transfer: Transfer) {
+async function dryRunOnSourceParachain(source: ApiPromise, assetHubParaId: number, bridgeHubParaId: number, transfer: Transfer) {
     const { sourceAccount } = transfer.input
     const origin = { system: { signed: sourceAccount } }
     const result = (await source.call.dryRunApi.dryRunCall<Result<CallDryRunEffects, XcmDryRunApiError>>(
         origin,
         transfer.tx,
     ))
-    const success = result.isOk && result.asOk.executionResult.isOk && result.asOk.forwardedXcms.length >= 1
+
+    let assetHubForwarded;
+    let bridgeHubForwarded;
+    const success = result.isOk && result.asOk.executionResult.isOk
     if (!success) {
-        console.error("Error during dry run on source parachain:", JSON.stringify(result.toHuman(), null, 2))
+        console.error("Error during dry run on source parachain:", transfer, result.toHuman())
+    } else {
+        bridgeHubForwarded = result.asOk.forwardedXcms.find(x => {
+            return x[0].isV4
+                && x[0].asV4.parents.toNumber() === 1
+                && x[0].asV4.interior.isX1
+                && x[0].asV4.interior.asX1[0].isParachain
+                && x[0].asV4.interior.asX1[0].asParachain.toNumber() === bridgeHubParaId
+        })
+        assetHubForwarded = result.asOk.forwardedXcms.find(x => {
+            return x[0].isV4
+                && x[0].asV4.parents.toNumber() === 1
+                && x[0].asV4.interior.isX1
+                && x[0].asV4.interior.asX1[0].isParachain
+                && x[0].asV4.interior.asX1[0].asParachain.toNumber() === assetHubParaId
+        })
     }
     return {
-        success,
+        success: success && (bridgeHubForwarded || assetHubForwarded),
         error: result.isOk && result.asOk.executionResult.isErr ? result.asOk.executionResult.asErr.toJSON() : undefined,
-        destination: success ? result.asOk.forwardedXcms[result.asOk.forwardedXcms.length - 1][0] : undefined,
-        xcm: success ? result.asOk.forwardedXcms[result.asOk.forwardedXcms.length - 1][1][0] : undefined,
+        assetHubForwarded,
+        bridgeHubForwarded,
     }
 }
 
-async function dryRunAssetHub(assetHub: ApiPromise, parachainId: number, xcm: any) {
+async function dryRunAssetHub(assetHub: ApiPromise, parachainId: number, bridgeHubParaId: number, xcm: any) {
     const sourceParachain = { v4: { parents: 1, interior: { x1: [{ parachain: parachainId }] } } }
-    const result = (await assetHub.call.dryRunApi.dryRunXcm(
+    const result = (await assetHub.call.dryRunApi.dryRunXcm<Result<XcmDryRunEffects, XcmDryRunApiError>>(
         sourceParachain,
         xcm
     ))
@@ -489,12 +507,31 @@ async function dryRunAssetHub(assetHub: ApiPromise, parachainId: number, xcm: an
     const resultPrimitive = result.toPrimitive() as any
     const resultHuman = result.toHuman() as any
 
-    const success = resultPrimitive.ok?.executionResult?.complete !== undefined
+    const success = result.isOk && result.asOk.executionResult.isComplete
+    let sourceParachainForwarded;
+    let bridgeHubForwarded;
     if (!success) {
-        console.error("Error during dry run on asset hub:", xcm.toHuman(), JSON.stringify(result.toHuman(), null, 2))
+        console.error("Error during dry run on asset hub:", xcm.toHuman(), result.toHuman())
+    } else {
+        bridgeHubForwarded = result.asOk.forwardedXcms.find(x => {
+            return x[0].isV4
+                && x[0].asV4.parents.toNumber() === 1
+                && x[0].asV4.interior.isX1
+                && x[0].asV4.interior.asX1[0].isParachain
+                && x[0].asV4.interior.asX1[0].asParachain.toNumber() === bridgeHubParaId
+        })
+        sourceParachainForwarded = result.asOk.forwardedXcms.find(x => {
+            return x[0].isV4
+                && x[0].asV4.parents.toNumber() === 1
+                && x[0].asV4.interior.isX1
+                && x[0].asV4.interior.asX1[0].isParachain
+                && x[0].asV4.interior.asX1[0].asParachain.toNumber() === parachainId
+        })
     }
     return {
-        success,
+        success: success && bridgeHubForwarded,
+        sourceParachainForwarded,
+        bridgeHubForwarded,
         errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
     }
 }
