@@ -4,7 +4,7 @@ import { Codec, ISubmittableResult } from "@polkadot/types/types";
 import { BN, hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util";
 import { blake2AsHex, decodeAddress, xxhashAsHex } from "@polkadot/util-crypto";
 import { bridgeLocation, buildResultXcmAssetHubERC20TransferFromParachain, buildAssetHubERC20TransferFromParachain, DOT_LOCATION, erc20Location, parahchainLocation, buildParachainERC20ReceivedXcmOnDestination } from "./xcmBuilder";
-import { Asset, AssetRegistry, calculateDestinationFee, ERC20Metadata, getDotBalance, getNativeBalance, getParachainId, getTokenBalance, padFeeByPercentage, Parachain } from "./assets_v2";
+import { Asset, AssetRegistry, calculateDeliveryFee, calculateDestinationFee, ERC20Metadata, getDotBalance, getNativeBalance, getParachainId, getTokenBalance, padFeeByPercentage, Parachain } from "./assets_v2";
 import { getOperatingStatus, OperationStatus } from "./status";
 import { IGateway } from "@snowbridge/contract-types";
 import { CallDryRunEffects, EventRecord, XcmDryRunApiError } from "@polkadot/types/interfaces";
@@ -101,7 +101,14 @@ export async function createTransfer(
     }
 }
 
-export async function getDeliveryFee(assetHub: ApiPromise, parachain: number, registry: AssetRegistry, padPercentage?: bigint, defaultFee?: bigint): Promise<DeliveryFee> {
+export async function getDeliveryFee(
+    connections: { assetHub: ApiPromise, destination: ApiPromise },
+    parachain: number,
+    registry: AssetRegistry,
+    padPercentage?: bigint,
+    defaultFee?: bigint
+): Promise<DeliveryFee> {
+    const { assetHub, destination } = connections
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
     const feePadPercentage = padPercentage ?? 33n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
@@ -117,28 +124,42 @@ export async function getDeliveryFee(assetHub: ApiPromise, parachain: number, re
         snowbridgeDeliveryFeeDOT = BigInt(leFee.toString())
     }
 
+    const xcm = buildResultXcmAssetHubERC20TransferFromParachain(
+        assetHub.registry,
+        registry.ethChainId,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        340282366920938463463374607431768211455n,
+        340282366920938463463374607431768211455n,
+        340282366920938463463374607431768211455n,
+        parachain,
+        340282366920938463463374607431768211455n,
+    )
+
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n;
     let returnToSenderDeliveryFeeDOT = 0n;
-    const bridgeHubDeliveryFeeDOT = registry.parachains[registry.bridgeHubParaId].estimatedDeliveryFeeDOT 
+    const bridgeHubDeliveryFeeDOT = await calculateDeliveryFee(assetHub, registry.bridgeHubParaId, xcm)
     if (parachain !== registry.assetHubParaId) {
-        returnToSenderExecutionFeeDOT = padFeeByPercentage(registry.parachains[parachain].estimatedExecutionFeeDOT, feePadPercentage)
-        returnToSenderDeliveryFeeDOT = registry.parachains[parachain].estimatedDeliveryFeeDOT 
-        assetHubExecutionFeeDOT = padFeeByPercentage(await calculateDestinationFee(assetHub,
-            buildResultXcmAssetHubERC20TransferFromParachain(
-                assetHub.registry,
-                registry.ethChainId,
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                340282366920938463463374607431768211455n,
-                340282366920938463463374607431768211455n,
-                340282366920938463463374607431768211455n,
-                parachain,
-                340282366920938463463374607431768211455n,
-            )
-        ), feePadPercentage)
+        const returnToSenderXcm = buildParachainERC20ReceivedXcmOnDestination(
+            assetHub.registry,
+            registry.ethChainId,
+            "0x0000000000000000000000000000000000000000",
+            340282366920938463463374607431768211455n,
+            340282366920938463463374607431768211455n,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        )
+        returnToSenderDeliveryFeeDOT = await calculateDeliveryFee(assetHub, parachain, returnToSenderXcm)
+        if (registry.parachains[parachain].features.hasDryRunApi) {
+            returnToSenderExecutionFeeDOT = padFeeByPercentage(await calculateDestinationFee(destination, returnToSenderXcm), feePadPercentage)
+        } else {
+            console.warn(`Parachain ${parachain} does not support payment apis. Using an estimated fee.`)
+            returnToSenderExecutionFeeDOT = padFeeByPercentage(registry.parachains[parachain].estimatedExecutionFeeDOT, feePadPercentage)
+        }
+        assetHubExecutionFeeDOT = padFeeByPercentage(await calculateDestinationFee(assetHub, xcm), feePadPercentage)
     }
 
     return {
