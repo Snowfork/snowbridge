@@ -131,9 +131,18 @@ export type Path = {
 export type Source = {
     type: SourceType;
     id: string;
-    source: number;
+    key: string;
     destinations: { [destination: string]: string[] }
 }
+
+export type TransferLocation = {
+    id: string;
+    name: string;
+    key: string;
+    type: SourceType;
+    parachain?: Parachain;
+    ethChain?: EthereumChain;
+};
 
 export async function buildRegistry(options: RegistryOptions): Promise<AssetRegistry> {
     const {
@@ -259,6 +268,50 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
     }
 }
 
+export function getEthereumTransferLocation(registry: AssetRegistry, ethChain: EthereumChain): TransferLocation {
+    if (!ethChain.evmParachainId) {
+        return {
+            id: "ethereum",
+            name: "Ethereum",
+            type: "ethereum",
+            key: ethChain.chainId.toString(),
+            ethChain,
+        };
+    } else {
+        const evmChain = registry.parachains[ethChain.evmParachainId];
+        return {
+            id: ethChain.id,
+            name: `${evmChain.info.name} (EVM)`,
+            key: ethChain.chainId.toString(),
+            type: "ethereum",
+            ethChain,
+            parachain: evmChain,
+        };
+    }
+}
+
+export function getSubstrateTransferLocation(parachain: Parachain): TransferLocation {
+    return {
+        id: parachain.info.specName,
+        name: parachain.info.name,
+        key: parachain.parachainId.toString(),
+        type: "substrate",
+        parachain,
+    };
+}
+
+export function getTransferLocation(
+    registry: AssetRegistry,
+    sourceType: string,
+    sourceKey: string,
+): TransferLocation {
+    if (sourceType === "ethereum") {
+        return getEthereumTransferLocation(registry, registry.ethereumChains[sourceKey])
+    } else {
+        return getSubstrateTransferLocation(registry.parachains[sourceKey])
+    }
+}
+
 export function getTransferLocations(registry: AssetRegistry, filter?: (path: Path) => boolean): Source[] {
     const ethChain = registry.ethereumChains[registry.ethChainId]
     const parachains = Object.keys(registry.parachains)
@@ -281,9 +334,9 @@ export function getTransferLocations(registry: AssetRegistry, filter?: (path: Pa
     }
     const results: Source[] = []
     for (const location of locations) {
-        let source = results.find(s => s.type === location.type && s.id === location.id && s.source === location.source)
+        let source = results.find(s => s.type === location.type && s.id === location.id && s.key === location.source.toString())
         if (!source) {
-            source = { type: location.type, id: location.id, source: location.source, destinations: {} }
+            source = { type: location.type, id: location.id, key: location.source.toString(), destinations: {} }
             results.push(source)
         }
         let destination: string[] = source.destinations[location.destination]

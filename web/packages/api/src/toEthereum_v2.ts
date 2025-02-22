@@ -153,7 +153,7 @@ export async function getDeliveryFee(
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
         returnToSenderDeliveryFeeDOT = await calculateDeliveryFee(assetHub, parachain, returnToSenderXcm)
-        if (registry.parachains[parachain].features.hasDryRunApi) {
+        if (registry.parachains[parachain].features.hasXcmPaymentApi) {
             returnToSenderExecutionFeeDOT = padFeeByPercentage(await calculateDestinationFee(source, returnToSenderXcm), feePadPercentage)
         } else {
             console.warn(`Parachain ${parachain} does not support payment apis. Using an estimated fee.`)
