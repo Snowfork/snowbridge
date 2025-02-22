@@ -6,16 +6,9 @@ pragma solidity 0.8.28;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IERC20Permit} from "./interfaces/IERC20Permit.sol";
+import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 
 library TokenLib {
-    // keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')
-    bytes32 internal constant DOMAIN_TYPE_SIGNATURE_HASH =
-        bytes32(0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f);
-
-    // keccak256('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)')
-    bytes32 internal constant PERMIT_SIGNATURE_HASH =
-        bytes32(0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9);
-
     struct Token {
         mapping(address account => uint256) balance;
         mapping(address account => mapping(address spender => uint256)) allowance;
@@ -24,7 +17,7 @@ library TokenLib {
     }
 
     function mint(Token storage token, address account, uint256 amount) external {
-        require(account != address(0), IERC20.InvalidReceiver(account));
+        require(account != address(0), IERC20.InvalidReceiver(address(0)));
         _update(token, address(0), account, amount);
     }
 
@@ -54,7 +47,7 @@ library TokenLib {
 
     function permit(
         Token storage token,
-        bytes32 domainSeparator,
+        string storage tokenName,
         address issuer,
         address spender,
         uint256 value,
@@ -64,15 +57,11 @@ library TokenLib {
         bytes32 s
     ) external {
         require(block.timestamp <= deadline, IERC20Permit.PermitExpired());
-        require(
-            uint256(s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, IERC20Permit.InvalidS()
-        );
-        require(v == 27 || v == 28, IERC20Permit.InvalidV());
 
         bytes32 digest = keccak256(
             abi.encodePacked(
-                "\x19\x01",
-                domainSeparator,
+                hex"1901",
+                _domainSeparator(tokenName),
                 keccak256(
                     abi.encode(
                         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
@@ -86,11 +75,26 @@ library TokenLib {
             )
         );
 
-        address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), IERC20Permit.Unauthorized());
+        address signatory = ECDSA.recover(digest, v, r, s);
         require(signatory == issuer, IERC20Permit.InvalidSignature());
 
         _approve(token, issuer, spender, value, true);
+    }
+
+    function domainSeparator(string storage name) external view returns (bytes32) {
+        return _domainSeparator(name);
+    }
+
+    function _domainSeparator(string storage name) internal view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes(name)),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(this)
+            )
+        );
     }
 
     function _transfer(Token storage token, address sender, address recipient, uint256 amount) internal {
