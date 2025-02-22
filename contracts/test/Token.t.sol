@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
 import {IERC20} from "../src/interfaces/IERC20.sol";
+import {IERC20Permit} from "../src/interfaces/IERC20Permit.sol";
 import {Token} from "../src/Token.sol";
 import {TokenLib} from "../src/TokenLib.sol";
 
@@ -52,33 +53,6 @@ contract TokenTest is Test {
 
         assertTrue(token.approve(account, amount));
         assertEq(token.allowance(address(this), account), amount);
-    }
-
-    function testFuzz_increaseAllowance(address account, uint256 initialAmount, uint256 addedAmount) public {
-        vm.assume(account != address(0));
-        vm.assume(initialAmount <= type(uint256).max / 2);
-        vm.assume(addedAmount <= type(uint256).max / 2);
-
-        Token token = new Token("", "", 18);
-
-        token.approve(account, initialAmount);
-
-        assertEq(token.allowance(address(this), account), initialAmount);
-        assertTrue(token.increaseAllowance(account, addedAmount));
-        assertEq(token.allowance(address(this), account), initialAmount + addedAmount);
-    }
-
-    function testFuzz_decreaseAllowance(address account, uint256 initialAmount, uint256 subtractedAmount) public {
-        vm.assume(account != address(0));
-        vm.assume(initialAmount > 0 && subtractedAmount > 0 && initialAmount >= subtractedAmount);
-
-        Token token = new Token("", "", 18);
-
-        token.approve(account, initialAmount);
-
-        assertEq(token.allowance(address(this), account), initialAmount);
-        assertTrue(token.decreaseAllowance(account, subtractedAmount));
-        assertEq(token.allowance(address(this), account), initialAmount - subtractedAmount);
     }
 
     function testFuzz_transferCorrectlyUpdatesBalances(
@@ -206,7 +180,169 @@ contract TokenTest is Test {
 
         // Attempt transfer to zero address should revert
         vm.prank(spender);
-        vm.expectRevert(IERC20.InvalidAccount.selector);
+        vm.expectRevert(abi.encodeWithSelector(IERC20.InvalidReceiver.selector, address(0)));
         token.transferFrom(owner, address(0), amount);
+    }
+
+    function testPermit() public {
+        Token token = new Token("Test Token", "TEST", 18);
+
+        // Setup accounts
+        uint256 ownerPrivateKey = 0x1234;
+        address owner = vm.addr(ownerPrivateKey);
+        address spender = makeAddr("spender");
+
+        // Permit parameters
+        uint256 value = 1000;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        // Calculate permit digest
+        bytes32 PERMIT_TYPEHASH =
+            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+
+        bytes32 structHash =
+            keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, token.nonces(owner), deadline));
+
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
+
+        // Sign the digest
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
+
+        // Initial checks
+        assertEq(token.allowance(owner, spender), 0);
+        assertEq(token.nonces(owner), 0);
+
+        // Execute permit
+        token.permit(owner, spender, value, deadline, v, r, s);
+
+        // Verify results
+        assertEq(token.allowance(owner, spender), value);
+        assertEq(token.nonces(owner), 1);
+    }
+
+    function testPermitExpired() public {
+        Token token = new Token("Test Token", "TEST", 18);
+
+        // Setup accounts
+        uint256 ownerPrivateKey = 0x1234;
+        address owner = vm.addr(ownerPrivateKey);
+        address spender = makeAddr("spender");
+
+        // Permit parameters with expired deadline
+        uint256 value = 1000;
+        uint256 deadline = block.timestamp - 1;
+
+        // Calculate permit digest
+        bytes32 PERMIT_TYPEHASH =
+            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+
+        bytes32 structHash =
+            keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, token.nonces(owner), deadline));
+
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
+
+        // Sign the digest
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
+
+        // Expect revert due to expired deadline
+        vm.expectRevert(IERC20Permit.PermitExpired.selector);
+        token.permit(owner, spender, value, deadline, v, r, s);
+    }
+
+    function testPermitInvalidSignature() public {
+        Token token = new Token("Test Token", "TEST", 18);
+
+        // Setup accounts
+        uint256 ownerPrivateKey = 0x1234;
+        uint256 wrongPrivateKey = 0x5678;
+        address owner = vm.addr(ownerPrivateKey);
+        address spender = makeAddr("spender");
+
+        // Permit parameters
+        uint256 value = 1000;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        // Calculate permit digest
+        bytes32 PERMIT_TYPEHASH =
+            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+
+        bytes32 structHash =
+            keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, token.nonces(owner), deadline));
+
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
+
+        // Sign with wrong private key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(wrongPrivateKey, digest);
+
+        // Expect revert due to invalid signature
+        vm.expectRevert(IERC20Permit.InvalidSignature.selector);
+        token.permit(owner, spender, value, deadline, v, r, s);
+    }
+
+    function testMintAndBurnAfterOwnerChange() public {
+        Token token = new Token("Test Token", "TEST", 18);
+
+        // Setup accounts
+        address newOwner = makeAddr("newOwner");
+        address user = makeAddr("user");
+
+        // Initial owner (address(this)) can mint and burn
+        token.mint(user, 1000);
+        assertEq(token.balanceOf(user), 1000);
+
+        token.burn(user, 500);
+        assertEq(token.balanceOf(user), 500);
+
+        // Change owner
+        token.setOwner(newOwner);
+        assertEq(token.owner(), newOwner);
+
+        // Original owner should no longer be able to mint or burn
+        vm.expectRevert(Token.Unauthorized.selector);
+        token.mint(user, 1000);
+
+        vm.expectRevert(Token.Unauthorized.selector);
+        token.burn(user, 100);
+
+        // New owner should be able to mint and burn
+        vm.prank(newOwner);
+        token.mint(user, 1000);
+        assertEq(token.balanceOf(user), 1500);
+
+        vm.prank(newOwner);
+        token.burn(user, 500);
+        assertEq(token.balanceOf(user), 1000);
+
+        // Random user should not be able to mint or burn
+        vm.prank(makeAddr("random"));
+        vm.expectRevert(Token.Unauthorized.selector);
+        token.mint(user, 1000);
+
+        vm.prank(makeAddr("random"));
+        vm.expectRevert(Token.Unauthorized.selector);
+        token.burn(user, 100);
+    }
+
+    function testSetOwnerOnlyOwner() public {
+        Token token = new Token("Test Token", "TEST", 18);
+        address newOwner = makeAddr("newOwner");
+
+        // Random address cannot set owner
+        vm.prank(makeAddr("random"));
+        vm.expectRevert(Token.Unauthorized.selector);
+        token.setOwner(newOwner);
+
+        // Current owner can set new owner
+        token.setOwner(newOwner);
+        assertEq(token.owner(), newOwner);
+
+        // Original owner can no longer set new owner
+        vm.expectRevert(Token.Unauthorized.selector);
+        token.setOwner(address(this));
+
+        // New owner can set another owner
+        vm.prank(newOwner);
+        token.setOwner(address(1234));
+        assertEq(token.owner(), address(1234));
     }
 }
