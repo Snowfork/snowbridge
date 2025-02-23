@@ -18,24 +18,20 @@ export type TransferInfo = {
     beneficiaryAddress: string
     tokenAddress: string
     destinationParachain?: number
-    destinationFee?: string
     amount: string
 }
 
 export type ToPolkadotTransferResult = {
+    sourceType: "ethereum"
     id: string
     status: TransferStatus
     info: TransferInfo
     submitted: {
-        blockHash: string
         blockNumber: number
-        logIndex: number
         transactionHash: string
-        transactionIndex: number
         channelId: string
         messageId: string
         nonce: number
-        parentBeaconSlot?: number
     }
     beaconClientIncluded?: {
         extrinsic_index: string
@@ -46,8 +42,6 @@ export type ToPolkadotTransferResult = {
         beaconBlockHash: string
     }
     inboundMessageReceived?: {
-        extrinsic_index: string
-        extrinsic_hash: string
         event_index: string
         block_timestamp: number
         messageId: string
@@ -55,35 +49,28 @@ export type ToPolkadotTransferResult = {
         nonce: number
     }
     assetHubMessageProcessed?: {
-        extrinsic_hash: string
         event_index: string
         block_timestamp: number
         success: boolean
-        sibling: number
     }
 }
 
 export type ToEthereumTransferResult = {
+    sourceType: "substrate"
     id: string
     status: TransferStatus
     info: TransferInfo
     submitted: {
-        extrinsic_index: string
+        sourceParachainId: number
         extrinsic_hash: string
-        block_hash: string
         account_id: string
         block_num: number
         block_timestamp: number
         messageId: string
         bridgeHubMessageId: string
         success: boolean
-        relayChain?: {
-            block_hash: string
-            block_num: number
-        }
     }
     bridgeHubXcmDelivered?: {
-        extrinsic_hash: string
         event_index: string
         block_timestamp: number
         siblingParachain: number
@@ -97,7 +84,6 @@ export type ToEthereumTransferResult = {
         success: boolean
     }
     bridgeHubMessageQueued?: {
-        extrinsic_hash: string
         event_index: string
         block_timestamp: number
     }
@@ -118,10 +104,7 @@ export type ToEthereumTransferResult = {
     }
     ethereumMessageDispatched?: {
         blockNumber: number
-        blockHash: string
         transactionHash: string
-        transactionIndex: number
-        logIndex: number
         messageId: string
         channelId: string
         nonce: number
@@ -131,6 +114,7 @@ export type ToEthereumTransferResult = {
 
 const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult => {
     const result: ToPolkadotTransferResult = {
+        sourceType: "ethereum",
         id: transfer.id,
         status: TransferStatus.Pending,
         info: {
@@ -139,15 +123,11 @@ const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult 
             beneficiaryAddress: transfer.destinationAddress,
             tokenAddress: transfer.tokenAddress,
             destinationParachain: transfer.destinationParaId,
-            destinationFee: "",
             amount: transfer.amount,
         },
         submitted: {
-            blockHash: "",
             blockNumber: transfer.blockNumber,
-            logIndex: 0,
             transactionHash: transfer.txHash,
-            transactionIndex: 0,
             channelId: transfer.channelId,
             messageId: transfer.messageId,
             nonce: transfer.nonce,
@@ -156,8 +136,6 @@ const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult 
     let inboundMessageReceived = transfer.toBridgeHubInboundQueue
     if (inboundMessageReceived) {
         result.inboundMessageReceived = {
-            extrinsic_index: "",
-            extrinsic_hash: "",
             event_index: getEventIndex(inboundMessageReceived.id),
             block_timestamp: inboundMessageReceived.timestamp,
             messageId: inboundMessageReceived.messageId,
@@ -169,11 +147,9 @@ const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult 
     const assetHubMessageProcessed = transfer.toDestination || transfer.toAssetHubMessageQueue
     if (assetHubMessageProcessed) {
         result.assetHubMessageProcessed = {
-            extrinsic_hash: "",
             event_index: getEventIndex(assetHubMessageProcessed.id),
             block_timestamp: assetHubMessageProcessed.timestamp,
             success: assetHubMessageProcessed.success,
-            sibling: 0,
         }
         result.status = TransferStatus.Complete
         if (!assetHubMessageProcessed.success) {
@@ -186,6 +162,7 @@ const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult 
 const buildToEthereumTransferResult = (transfer: any): ToEthereumTransferResult => {
     let bridgeHubMessageId = forwardedTopicId(transfer.id)
     const result: ToEthereumTransferResult = {
+        sourceType: "substrate",
         id: transfer.id,
         status: TransferStatus.Pending,
         info: {
@@ -196,9 +173,8 @@ const buildToEthereumTransferResult = (transfer: any): ToEthereumTransferResult 
             amount: transfer.amount,
         },
         submitted: {
-            extrinsic_index: "",
+            sourceParachainId: transfer.sourceParaId,
             extrinsic_hash: transfer.txHash,
-            block_hash: "",
             account_id: transfer.senderAddress,
             block_num: transfer.blockNumber,
             block_timestamp: transfer.timestamp,
@@ -212,7 +188,6 @@ const buildToEthereumTransferResult = (transfer: any): ToEthereumTransferResult 
         result.bridgeHubXcmDelivered = {
             block_timestamp: bridgeHubXcmDelivered.timestamp,
             event_index: getEventIndex(bridgeHubXcmDelivered.id),
-            extrinsic_hash: "",
             siblingParachain: 1000,
             success: bridgeHubXcmDelivered.success,
         }
@@ -227,7 +202,6 @@ const buildToEthereumTransferResult = (transfer: any): ToEthereumTransferResult 
         result.bridgeHubMessageQueued = {
             block_timestamp: outboundQueueAccepted.timestamp,
             event_index: getEventIndex(outboundQueueAccepted.id),
-            extrinsic_hash: "",
         }
     }
 
@@ -235,10 +209,7 @@ const buildToEthereumTransferResult = (transfer: any): ToEthereumTransferResult 
     if (ethereumMessageDispatched) {
         result.ethereumMessageDispatched = {
             blockNumber: ethereumMessageDispatched.blockNumber,
-            blockHash: "",
             transactionHash: ethereumMessageDispatched.txHash,
-            transactionIndex: 0,
-            logIndex: 0,
             messageId: ethereumMessageDispatched.messageId,
             channelId: ethereumMessageDispatched.channelId,
             nonce: ethereumMessageDispatched.nonce,

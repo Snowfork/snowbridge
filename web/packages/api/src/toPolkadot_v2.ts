@@ -18,7 +18,7 @@ export type Transfer = {
         destinationParaId: number
         amount: bigint
         fee: DeliveryFee
-    },
+    }
     computed: {
         gatewayAddress: string
         beneficiaryAddressHex: string
@@ -30,12 +30,13 @@ export type Transfer = {
         destParachain: Parachain
         destinationFeeInDOT: bigint
         minimalBalance: bigint
-    },
+    }
     tx: ContractTransaction
 }
 
 export enum ValidationKind {
-    Warning, Error
+    Warning,
+    Error,
 }
 
 export enum ValidationReason {
@@ -49,7 +50,7 @@ export enum ValidationReason {
     NoDestinationParachainConnection,
     DryRunFailed,
     MaxConsumersReached,
-    AccountDoesNotExist
+    AccountDoesNotExist,
 }
 
 export type ValidationLog = {
@@ -79,12 +80,12 @@ export type ValidationResult = {
         tokenBalance: {
             balance: bigint
             gatewayAllowance: bigint
-        };
+        }
         feeInfo?: FeeInfo
         bridgeStatus: OperationStatus
         assetHubDryRunError?: string
         destinationParachainDryRunError?: string
-    };
+    }
     transfer: Transfer
 }
 
@@ -102,10 +103,12 @@ export type MessageReceipt = {
     messageId: string
     blockNumber: number
     blockHash: string
+    txHash: string
+    txIndex: number
 }
 
 export async function getDeliveryFee(
-    connections: { gateway: IGateway, assetHub: ApiPromise, destination: ApiPromise },
+    connections: { gateway: IGateway; assetHub: ApiPromise; destination: ApiPromise },
     registry: AssetRegistry,
     tokenAddress: string,
     destinationParaId: number,
@@ -126,13 +129,19 @@ export async function getDeliveryFee(
             destParachain.info.accountType === "AccountId32"
                 ? "0x0000000000000000000000000000000000000000000000000000000000000000"
                 : "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
-        destinationDeliveryFeeDOT = await calculateDeliveryFee(assetHub, destinationParaId, destinationXcm)
+        destinationDeliveryFeeDOT = await calculateDeliveryFee(
+            assetHub,
+            destinationParaId,
+            destinationXcm
+        )
         if (destParachain.features.hasXcmPaymentApi) {
             destinationExecutionFeeDOT = await calculateDestinationFee(destination, destinationXcm)
         } else {
-            console.warn(`Parachain ${destinationParaId} does not support payment apis. Using an estimated fee.`)
+            console.warn(
+                `Parachain ${destinationParaId} does not support payment apis. Using an estimated fee.`
+            )
             destinationExecutionFeeDOT = destParachain.estimatedExecutionFeeDOT
         }
     }
@@ -144,7 +153,7 @@ export async function getDeliveryFee(
             tokenAddress,
             destinationParaId,
             padFeeByPercentage(totalFeeInDOT, paddFeeByPercentage ?? 33n)
-        )
+        ),
     }
 }
 
@@ -188,7 +197,8 @@ export async function createTransfer(
             destinationParaId,
             amount,
             fee,
-        }, computed: {
+        },
+        computed: {
             gatewayAddress: registry.gatewayAddress,
             beneficiaryAddressHex,
             beneficiaryMultiAddress: beneficiary,
@@ -376,6 +386,8 @@ export async function getMessageReceipt(receipt: TransactionReceipt): Promise<Me
         messageId: String(messageAccepted.args[2]),
         blockNumber: receipt.blockNumber,
         blockHash: receipt.blockHash,
+        txHash: receipt.hash,
+        txIndex: receipt.index,
     }
 }
 
