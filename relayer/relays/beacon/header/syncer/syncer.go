@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
@@ -20,14 +21,6 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
-)
-
-const (
-	BlockRootGeneralizedIndex            = 37
-	FinalizedCheckpointGeneralizedIndex  = 105
-	CurrentSyncCommitteeGeneralizedIndex = 54
-	NextSyncCommitteeGeneralizedIndex    = 55
-	ExecutionPayloadGeneralizedIndex     = 25
 )
 
 var (
@@ -59,12 +52,20 @@ type finalizedUpdateContainer struct {
 }
 
 func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
-	checkpoint, err := s.Client.GetFinalizedCheckpoint()
+	retries := 5
+	bootstrap, err := s.getCheckpoint()
 	if err != nil {
-		return scale.BeaconCheckpoint{}, fmt.Errorf("get finalized checkpoint: %w", err)
+		for retries > 0 {
+			retries = retries - 1
+			bootstrap, err = s.getCheckpoint()
+			if err != nil {
+				log.WithError(err).Info("retry bootstrap, sleeping")
+				time.Sleep(10 * time.Second)
+				continue
+			}
+			break
+		}
 	}
-
-	bootstrap, err := s.Client.GetBootstrap(checkpoint.FinalizedBlockRoot)
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get bootstrap: %w", err)
 	}
@@ -97,6 +98,20 @@ func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
 		BlockRootsRoot:             blockRootsProof.Leaf,
 		BlockRootsBranch:           blockRootsProof.Proof,
 	}, nil
+}
+
+func (s *Syncer) getCheckpoint() (api.BootstrapResponse, error) {
+	checkpoint, err := s.Client.GetFinalizedCheckpoint()
+	if err != nil {
+		return api.BootstrapResponse{}, fmt.Errorf("get finalized checkpoint: %w", err)
+	}
+
+	bootstrap, err := s.Client.GetBootstrap(checkpoint.FinalizedBlockRoot)
+	if err != nil {
+		return api.BootstrapResponse{}, fmt.Errorf("get bootstrap: %w", err)
+	}
+
+	return bootstrap, err
 }
 
 func (s *Syncer) GetCheckpointFromFile(file string) (scale.BeaconCheckpoint, error) {
@@ -145,6 +160,8 @@ func (s *Syncer) GetCheckpointAtSlot(slot uint64) (scale.BeaconCheckpoint, error
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get finalized update at slot: %w", err)
 	}
+	// In case the update returns a different finalized update that requested (missed blocks, etc)
+	slot = uint64(checkpoint.Payload.FinalizedHeader.Slot)
 
 	genesis, err := s.Client.GetGenesis()
 	if err != nil {
@@ -170,7 +187,7 @@ func (s *Syncer) GetCheckpointAtSlot(slot uint64) (scale.BeaconCheckpoint, error
 
 	_ = stateTree.Hash() // necessary to populate the proof tree values
 
-	proof, err := stateTree.Prove(CurrentSyncCommitteeGeneralizedIndex)
+	proof, err := stateTree.Prove(s.protocol.CurrentSyncCommitteeGeneralizedIndex(uint64(checkpoint.Payload.FinalizedHeader.Slot)))
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get block roof proof: %w", err)
 	}
@@ -295,13 +312,14 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 	if err != nil {
 		return blockRootProof, fmt.Errorf("fetch beacon state: %w", err)
 	}
-	isDeneb := s.protocol.DenebForked(slot)
+
+	forkVersion := s.protocol.ForkVersion(slot)
 
 	blockRootsContainer = &state.BlockRootsContainerMainnet{}
-	if isDeneb {
-		beaconState = &state.BeaconStateDenebMainnet{}
+	if forkVersion == protocol.Electra {
+		beaconState = &state.BeaconStateElectra{}
 	} else {
-		beaconState = &state.BeaconStateCapellaMainnet{}
+		beaconState = &state.BeaconStateDenebMainnet{}
 	}
 
 	err = beaconState.UnmarshalSSZ(data)
@@ -316,7 +334,7 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 
 	_ = stateTree.Hash() // necessary to populate the proof tree values
 
-	proof, err := stateTree.Prove(BlockRootGeneralizedIndex)
+	proof, err := stateTree.Prove(s.protocol.BlockRootGeneralizedIndex(slot))
 	if err != nil {
 		return scale.BlockRootProof{}, fmt.Errorf("get block roof proof: %w", err)
 	}
@@ -353,7 +371,7 @@ func (s *Syncer) GetBlockRootsFromState(beaconState state.BeaconState) (scale.Bl
 
 	_ = stateTree.Hash() // necessary to populate the proof tree values
 
-	proof, err := stateTree.Prove(BlockRootGeneralizedIndex)
+	proof, err := stateTree.Prove(s.protocol.BlockRootGeneralizedIndex(beaconState.GetSlot()))
 	if err != nil {
 		return scale.BlockRootProof{}, fmt.Errorf("get block roof proof: %w", err)
 	}
@@ -525,24 +543,29 @@ func (s *Syncer) GetHeaderUpdateBySlotWithCheckpoint(slot uint64, checkpoint *ca
 
 func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof) (scale.HeaderUpdatePayload, error) {
 	var update scale.HeaderUpdatePayload
-	blockResponse, err := s.Client.GetBeaconBlock(blockRoot)
+	blockBytes, err := s.Client.GetBeaconBlockBytes(blockRoot)
 	if err != nil {
 		return update, fmt.Errorf("fetch block: %w", err)
 	}
-	data := blockResponse.Data.Message
-	slot, err := util.ToUint64(data.Slot)
-	if err != nil {
-		return update, err
-	}
 
-	sszBlock, err := blockResponse.ToFastSSZ(s.protocol.DenebForked(slot))
-	if err != nil {
-		return update, err
-	}
-
-	header, err := s.Client.GetHeaderBySlot(sszBlock.GetBeaconSlot())
+	header, err := s.Client.GetHeaderByBlockRoot(blockRoot)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("fetch block: %w", err)
+	}
+
+	slot := header.Slot
+
+	var signedBlock state.SignedBeaconBlock
+	forkVersion := s.protocol.ForkVersion(slot)
+	if forkVersion == protocol.Electra {
+		signedBlock = &state.SignedBeaconBlockElectra{}
+	} else {
+		signedBlock = &state.SignedBeaconBlockDeneb{}
+	}
+
+	err = signedBlock.UnmarshalSSZ(blockBytes)
+	if err != nil {
+		return scale.HeaderUpdatePayload{}, fmt.Errorf("unmarshal block ssz: %w", err)
 	}
 
 	beaconHeader, err := header.ToScale()
@@ -550,28 +573,21 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 		return scale.HeaderUpdatePayload{}, fmt.Errorf("beacon header to scale: %w", err)
 	}
 
-	executionHeaderBranch, err := s.getExecutionHeaderBranch(sszBlock)
+	beaconBlock := signedBlock.GetBlock()
+	executionHeaderBranch, err := s.getExecutionHeaderBranch(beaconBlock)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, err
 	}
 
 	var versionedExecutionPayloadHeader scale.VersionedExecutionPayloadHeader
-	if s.protocol.DenebForked(slot) {
-		executionPayloadScale, err := api.DenebExecutionPayloadToScale(sszBlock.ExecutionPayloadDeneb())
-		if err != nil {
-			return scale.HeaderUpdatePayload{}, err
-		}
-		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
-	} else {
-		executionPayloadScale, err := api.CapellaExecutionPayloadToScale(sszBlock.ExecutionPayloadCapella())
-		if err != nil {
-			return scale.HeaderUpdatePayload{}, err
-		}
-		versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Capella: &executionPayloadScale}
+	executionPayloadScale, err := api.DenebExecutionPayloadToScale(beaconBlock.ExecutionPayloadDeneb())
+	if err != nil {
+		return scale.HeaderUpdatePayload{}, err
 	}
+	versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
 
 	// If checkpoint not provided or slot == finalizedSlot there won't be an ancestry proof because the header state in question is also the finalized header
-	if checkpoint == nil || sszBlock.GetBeaconSlot() == checkpoint.Slot {
+	if checkpoint == nil || beaconBlock.GetBeaconSlot() == checkpoint.Slot {
 		return scale.HeaderUpdatePayload{
 			Header: beaconHeader,
 			AncestryProof: scale.OptionAncestryProof{
@@ -582,7 +598,7 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 		}, nil
 	}
 
-	proofScale, err := s.getBlockHeaderAncestryProof(int(sszBlock.GetBeaconSlot()), blockRoot, checkpoint.BlockRootsTree)
+	proofScale, err := s.getBlockHeaderAncestryProof(int(beaconBlock.GetBeaconSlot()), blockRoot, checkpoint.BlockRootsTree)
 	if err != nil {
 		return scale.HeaderUpdatePayload{}, err
 	}
@@ -618,12 +634,11 @@ func (s *Syncer) getBeaconStateAtSlot(slot uint64) (state.BeaconState, error) {
 
 func (s *Syncer) UnmarshalBeaconState(slot uint64, data []byte) (state.BeaconState, error) {
 	var beaconState state.BeaconState
-	isDeneb := s.protocol.DenebForked(slot)
-
-	if isDeneb {
-		beaconState = &state.BeaconStateDenebMainnet{}
+	forkVersion := s.protocol.ForkVersion(slot)
+	if forkVersion == protocol.Electra {
+		beaconState = &state.BeaconStateElectra{}
 	} else {
-		beaconState = &state.BeaconStateCapellaMainnet{}
+		beaconState = &state.BeaconStateDenebMainnet{}
 	}
 
 	err := beaconState.UnmarshalSSZ(data)
@@ -779,14 +794,14 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 		return update, fmt.Errorf("get state tree: %w", err)
 	}
 	_ = stateTree.Hash() // necessary to populate the proof tree values
-	finalizedHeaderProof, err := stateTree.Prove(FinalizedCheckpointGeneralizedIndex)
+	finalizedHeaderProof, err := stateTree.Prove(s.protocol.FinalizedCheckpointGeneralizedIndex(attestedSlot))
 	if err != nil {
 		return update, fmt.Errorf("get finalized header proof: %w", err)
 	}
 
 	var nextSyncCommitteeScale scale.OptionNextSyncCommitteeUpdatePayload
 	if fetchNextSyncCommittee {
-		nextSyncCommitteeProof, err := stateTree.Prove(NextSyncCommitteeGeneralizedIndex)
+		nextSyncCommitteeProof, err := stateTree.Prove(s.protocol.NextSyncCommitteeGeneralizedIndex(attestedSlot))
 		if err != nil {
 			return update, fmt.Errorf("get finalized header proof: %w", err)
 		}
@@ -901,7 +916,7 @@ func (s *Syncer) getExecutionHeaderBranch(block state.BeaconBlock) ([]types.H256
 
 	tree.Hash()
 
-	proof, err := tree.Prove(ExecutionPayloadGeneralizedIndex)
+	proof, err := tree.Prove(s.protocol.ExecutionPayloadGeneralizedIndex(block.GetBeaconSlot()))
 
 	return util.BytesBranchToScale(proof.Hashes), nil
 }
