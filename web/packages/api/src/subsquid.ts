@@ -39,7 +39,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
 ]
  **/
 export const fetchToPolkadotTransfers = async () => {
-    let query = `query { transferStatusToPolkadots(limit: ${graphqlQuerySize}, orderBy: blockNumber_DESC) {
+    let query = `query { transferStatusToPolkadots(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC) {
             id
             status
             blockNumber
@@ -120,7 +120,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
 ]
  **/
 export const fetchToEthereumTransfers = async () => {
-    let query = `query { transferStatusToEthereums(limit: ${graphqlQuerySize}, orderBy: blockNumber_DESC) {
+    let query = `query { transferStatusToEthereums(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC) {
             id
             status
             blockNumber
