@@ -32,7 +32,6 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           working-directory: contracts
-          slug: snowfork/snowbridge
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           flags: solidity
