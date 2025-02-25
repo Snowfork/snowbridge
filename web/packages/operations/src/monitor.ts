@@ -1,6 +1,6 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
-import { Context, environment, status, utils } from "@snowbridge/api"
+import { Context, environment, status, utils, subsquid } from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
 import { BlockLatencyThreshold } from "./alarm"
 
@@ -82,7 +82,11 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     secondaryGov.name = status.ChannelKind.Secondary
     console.log("Secondary Governance Channel:", secondaryGov)
 
-    const [assetHub, bridgeHub] = await Promise.all([context.assetHub(), context.bridgeHub()])
+    const [assetHub, bridgeHub, ethereum] = await Promise.all([
+        context.assetHub(),
+        context.bridgeHub(),
+        context.ethereum(),
+    ])
 
     let assetHubSovereign = BigInt(
         (
@@ -95,17 +99,19 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     )
     console.log("Asset Hub Sovereign balance on bridgehub:", assetHubSovereign)
 
-    let assetHubAgentBalance = await context.ethereum().getBalance(
-        await context.gateway().agentOf(
-            utils.paraIdToAgentId(bridgeHub.registry, config.ASSET_HUB_PARAID)
+    let assetHubAgentBalance = await context
+        .ethereum()
+        .getBalance(
+            await context
+                .gateway()
+                .agentOf(utils.paraIdToAgentId(bridgeHub.registry, config.ASSET_HUB_PARAID))
         )
-    )
     console.log("Asset Hub Agent balance:", assetHubAgentBalance)
 
     const bridgeHubAgentId = u8aToHex(blake2AsU8a("0x00", 256))
-    let bridgeHubAgentBalance = await context.ethereum().getBalance(
-        await context.gateway().agentOf(bridgeHubAgentId)
-    )
+    let bridgeHubAgentBalance = await context
+        .ethereum()
+        .getBalance(await context.gateway().agentOf(bridgeHubAgentId))
     console.log("Bridge Hub Agent balance:", bridgeHubAgentBalance)
 
     console.log("Relayers:")
@@ -118,13 +124,8 @@ export const monitor = async (): Promise<status.AllMetrics> => {
                 break
             case "substrate":
                 balance = BigInt(
-                    (
-                        (
-                            await bridgeHub.query.system.account(
-                                relayer.account
-                            )
-                        ).toPrimitive() as any
-                    ).data.free
+                    ((await bridgeHub.query.system.account(relayer.account)).toPrimitive() as any)
+                        .data.free
                 )
                 break
         }
@@ -144,10 +145,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         },
         {
             name: "AssetHubAgent",
-            account: utils.paraIdToAgentId(
-                bridgeHub.registry,
-                config.ASSET_HUB_PARAID
-            ),
+            account: utils.paraIdToAgentId(bridgeHub.registry, config.ASSET_HUB_PARAID),
             balance: assetHubAgentBalance,
             type: "ethereum",
         },
@@ -159,7 +157,36 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         },
     ]
 
-    const allMetrics: status.AllMetrics = { name, bridgeStatus, channels, relayers, sovereigns }
+    let indexerInfos: status.IndexerServiceStatusInfo[] = []
+    const latestBlockOfAH = (await assetHub.query.system.number()).toPrimitive() as number
+    const latestBlockOfBH = (await bridgeHub.query.system.number()).toPrimitive() as number
+    const latestBlockOfEth = await ethereum.getBlockNumber()
+
+    const chains = await subsquid.fetchLatestBlocksSynced()
+    for (let chain of chains?.latestBlocks) {
+        let info: status.IndexerServiceStatusInfo = {
+            chain: chain.name,
+            latency: 0,
+        }
+        if (chain.name == "assethub") {
+            info.latency = latestBlockOfAH - chain.height
+        } else if (chain.name == "bridgehub") {
+            info.latency = latestBlockOfBH - chain.height
+        } else if (chain.name == "ethereum") {
+            info.latency = latestBlockOfEth - chain.height
+        }
+        indexerInfos.push(info)
+    }
+    console.log("Indexer service status:", indexerInfos)
+
+    const allMetrics: status.AllMetrics = {
+        name,
+        bridgeStatus,
+        channels,
+        relayers,
+        sovereigns,
+        indexerStatus: indexerInfos,
+    }
 
     await sendMetrics(allMetrics)
 

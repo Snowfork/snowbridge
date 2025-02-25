@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 )
 
@@ -14,6 +15,7 @@ type Protocol struct {
 }
 
 func New(setting config.SpecSettings, headerRedundancy uint64) *Protocol {
+	log.WithField("settings", setting).Info("protocol settings")
 	return &Protocol{
 		Settings:               setting,
 		SlotsPerHistoricalRoot: setting.SlotsInEpoch * setting.EpochsPerSyncCommitteePeriod,
@@ -44,10 +46,6 @@ func (p *Protocol) CalculateNextCheckpointSlot(slot uint64) uint64 {
 	return (syncPeriod + 1) * p.Settings.SlotsInEpoch * p.Settings.EpochsPerSyncCommitteePeriod
 }
 
-func (p *Protocol) DenebForked(slot uint64) bool {
-	return p.ComputeEpochAtSlot(slot) >= p.Settings.DenebForkEpoch
-}
-
 func (p *Protocol) SyncPeriodLength() uint64 {
 	return p.Settings.SlotsInEpoch * p.Settings.EpochsPerSyncCommitteePeriod
 }
@@ -75,4 +73,55 @@ func (p *Protocol) SyncCommitteeSuperMajority(syncCommitteeHex string) (bool, er
 		return false, nil
 	}
 	return true, nil
+}
+
+// ForkVersion is a custom type for Ethereum fork versions.
+type ForkVersion string
+
+const (
+	Deneb   ForkVersion = "Deneb"
+	Electra ForkVersion = "Electra"
+)
+
+func (p *Protocol) ForkVersion(slot uint64) ForkVersion {
+	epoch := p.ComputeEpochAtSlot(slot)
+	if epoch >= p.Settings.ForkVersions.Electra {
+		return Electra
+	}
+	return Deneb
+}
+
+func (p *Protocol) BlockRootGeneralizedIndex(slot uint64) int {
+	if p.ForkVersion(slot) == Electra {
+		return ElectraBlockRootGeneralizedIndex
+	}
+	return AltairBlockRootGeneralizedIndex
+}
+
+func (p *Protocol) FinalizedCheckpointGeneralizedIndex(slot uint64) int {
+	if p.ForkVersion(slot) == Electra {
+		return ElectraFinalizedCheckpointGeneralizedIndex
+	}
+	return AltairFinalizedCheckpointGeneralizedIndex
+}
+
+func (p *Protocol) CurrentSyncCommitteeGeneralizedIndex(slot uint64) int {
+	if p.ForkVersion(slot) == Electra {
+		return ElectraCurrentSyncCommitteeGeneralizedIndex
+	}
+	return AltairCurrentSyncCommitteeGeneralizedIndex
+}
+
+func (p *Protocol) NextSyncCommitteeGeneralizedIndex(slot uint64) int {
+	if p.ForkVersion(slot) == Electra {
+		return ElectraNextSyncCommitteeGeneralizedIndex
+	}
+	return AltairNextSyncCommitteeGeneralizedIndex
+}
+
+func (p *Protocol) ExecutionPayloadGeneralizedIndex(slot uint64) int {
+	if p.ForkVersion(slot) == Electra {
+		return ElectraExecutionPayloadGeneralizedIndex
+	}
+	return AltairExecutionPayloadGeneralizedIndex
 }
