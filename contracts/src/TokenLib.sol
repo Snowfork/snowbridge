@@ -143,7 +143,7 @@ library TokenLib {
 
         if (to == address(0)) {
             unchecked {
-                // Overflow not possible: value <= totalSupply or value <= fromBalance <= totalSupply
+                // Overflow not possible: value <= totalSupply or value <= fromBalance <= totalSupply.
                 token.totalSupply -= value;
             }
         } else {
