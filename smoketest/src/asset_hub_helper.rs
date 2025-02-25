@@ -83,6 +83,7 @@ pub async fn create_asset_pool(asset_hub_client: &Box<OnlineClient<AssetHubConfi
 		crate::parachains::assethub::api::foreign_assets::calls::TransactionApi;
 
 	// Mint eth to sovereign account
+	println!("Minting eth to Snowbridge sovereign.");
 	let admin = MultiAddress::Id(SNOWBRIDGE_SOVEREIGN.into());
 	let mut encoded_mint_call = Vec::new();
 	foreign_assets_api
@@ -94,6 +95,7 @@ pub async fn create_asset_pool(asset_hub_client: &Box<OnlineClient<AssetHubConfi
 		.expect("fund snowbridge sovereign with eth for pool");
 
 	// Transfer funds to Ferdie, who will create the pool
+	println!("Transferring funds to Ferdie to create the pool.");
 	let ferdie_account: AccountId32 = (*FERDIE_PUBLIC).into();
 	let mut encoded_create_pool_call = Vec::new();
 	foreign_assets_api
@@ -105,6 +107,7 @@ pub async fn create_asset_pool(asset_hub_client: &Box<OnlineClient<AssetHubConfi
 		.expect("transfer eth to ferdie");
 
 	// Create the pool
+	println!("Creating the pool.");
 	let create_pool_call = assethub::api::tx()
 		.asset_conversion()
 		.create_pool(dot_location(), eth_location());
@@ -118,9 +121,10 @@ pub async fn create_asset_pool(asset_hub_client: &Box<OnlineClient<AssetHubConfi
 		.await
 		.expect("pool created");
 
-	wait_for_assethub_event::<PoolCreated>(asset_hub_client).await;
+	//wait_for_assethub_event::<PoolCreated>(asset_hub_client).await;
 
 	// Add liquidity to the pool.
+	println!("Adding liquidity.");
 	let create_liquidity = assethub::api::tx().asset_conversion().add_liquidity(
 		dot_location(),
 		eth_location(),
@@ -140,5 +144,5 @@ pub async fn create_asset_pool(asset_hub_client: &Box<OnlineClient<AssetHubConfi
 		.await
 		.expect("liquidity added");
 
-	wait_for_assethub_event::<LiquidityAdded>(asset_hub_client).await;
+	//wait_for_assethub_event::<LiquidityAdded>(asset_hub_client).await;
 }
