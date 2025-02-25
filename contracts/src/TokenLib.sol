@@ -143,12 +143,12 @@ library TokenLib {
 
         if (to == address(0)) {
             unchecked {
-                // Overflow not possible: value <= totalSupply or value <= fromBalance <= totalSupply.
+                // Overflow not possible: value <= totalSupply or value <= fromBalance <= totalSupply
                 token.totalSupply -= value;
             }
         } else {
             unchecked {
-                // Overflow not possible: balance + value is at most totalSupply, which we know fits into a uint256.
+                // Overflow not possible: balance + value is at most totalSupply, which we know fits into a uint256
                 token.balance[to] += value;
             }
         }
