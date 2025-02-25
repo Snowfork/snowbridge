@@ -540,12 +540,15 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     // See docs for `IGateway.registerToken`
     function v2_registerToken(
         address token,
+        bytes calldata name,
+        bytes calldata symbol,
+        uint8 decimals,
         uint8 network,
         uint128 executionFee,
         uint128 relayerFee
     ) external payable nonreentrant {
         require(network <= uint8(Network.Kusama), IGatewayV2.InvalidNetwork());
-        CallsV2.registerToken(token, Network(network), executionFee, relayerFee);
+        CallsV2.registerToken(token, name, symbol, decimals, Network(network), executionFee, relayerFee);
     }
 
     /**

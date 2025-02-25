@@ -59,6 +59,9 @@ library CallsV2 {
     // Refer to `IGateway.registerToken` for documentation
     function registerToken(
         address token,
+        bytes memory name,
+        bytes memory symbol,
+        uint8 decimals,
         Network network,
         uint128 executionFee,
         uint128 relayerFee
@@ -66,7 +69,7 @@ library CallsV2 {
         require(msg.value <= type(uint128).max, IGatewayV2.ExceededMaximumValue());
         require(msg.value >= executionFee + relayerFee, IGatewayV2.InsufficientValue());
 
-        Xcm memory xcm = makeCreateAssetXCM(token, network);
+        Xcm memory xcm = makeCreateAssetXCM(token, name, symbol, decimals, network);
 
         Functions.registerNativeToken(token);
 

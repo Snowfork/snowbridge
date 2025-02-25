@@ -58,6 +58,9 @@ library XcmKind {
 
 struct AsCreateAsset {
     address token;
+    bytes name;
+    bytes symbol;
+    uint8 decimals;
     uint8 network;
 }
 
@@ -65,10 +68,10 @@ function makeRawXCM(bytes memory xcm) pure returns (Xcm memory) {
     return Xcm({kind: XcmKind.Raw, data: xcm});
 }
 
-function makeCreateAssetXCM(address token, Network network) pure returns (Xcm memory) {
+function makeCreateAssetXCM(address token, bytes memory name, bytes memory symbol, uint8 decimals, Network network) pure returns (Xcm memory) {
     return Xcm({
         kind: XcmKind.CreateAsset,
-        data: abi.encode(AsCreateAsset({token: token, network: uint8(network)}))
+        data: abi.encode(AsCreateAsset({token: token, name: name, symbol: symbol, decimals: decimals, network: uint8(network)}))
     });
 }
 
