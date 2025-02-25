@@ -5,21 +5,23 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "./interfaces/IERC20.sol";
+import {IERC20Metadata} from "./interfaces/IERC20Metadata.sol";
 import {IERC20Permit} from "./interfaces/IERC20Permit.sol";
 import {TokenLib} from "./TokenLib.sol";
 
 /**
  * @dev Implementation of the {IERC20} interface.
  */
-contract Token is IERC20, IERC20Permit {
+contract Token is IERC20, IERC20Metadata, IERC20Permit {
     using TokenLib for TokenLib.Token;
 
+    address public immutable gateway;
     uint8 public immutable decimals;
 
-    address public owner;
     string public name;
     string public symbol;
-    TokenLib.Token token;
+
+    TokenLib.Token internal token;
 
     error Unauthorized();
 
@@ -30,25 +32,21 @@ contract Token is IERC20, IERC20Permit {
         name = _name;
         symbol = _symbol;
         decimals = _decimals;
-        owner = msg.sender;
+        gateway = msg.sender;
     }
 
-    modifier onlyOwner() {
-        if (msg.sender != owner) {
+    modifier onlyGateway() {
+        if (msg.sender != gateway) {
             revert Unauthorized();
         }
         _;
     }
 
-    function setOwner(address newOwner) external onlyOwner {
-        owner = newOwner;
-    }
-
-    function mint(address account, uint256 amount) external onlyOwner {
+    function mint(address account, uint256 amount) external onlyGateway {
         token.mint(account, amount);
     }
 
-    function burn(address account, uint256 amount) external onlyOwner {
+    function burn(address account, uint256 amount) external onlyGateway {
         token.burn(account, amount);
     }
 

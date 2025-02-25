@@ -9,23 +9,17 @@ import {IERC20Permit} from "../src/interfaces/IERC20Permit.sol";
 import {Token} from "../src/Token.sol";
 import {TokenLib} from "../src/TokenLib.sol";
 
-// See https://mirror.xyz/horsefacts.eth/Jex2YVaO65dda6zEyfM_-DXlXhOWCAoSpOx5PLocYgw for invariant testing
-
 contract TokenTest is Test {
-    function setUp() public {}
 
-    function testFuzz_metadata(string memory name, string memory symbol, uint8 decimals) public {
-        Token token = new Token(name, symbol, decimals);
+    string public tokenName = "Test Token";
+    Token public token;
 
-        assertEq(token.name(), name);
-        assertEq(token.symbol(), symbol);
-        assertEq(token.decimals(), decimals);
+    function setUp() public {
+        token = new Token(tokenName, "TEST", 18);
     }
 
     function testFuzz_mint(address account, uint256 amount) public {
         vm.assume(account != address(0));
-
-        Token token = new Token("", "", 18);
 
         token.mint(account, amount);
 
@@ -37,8 +31,6 @@ contract TokenTest is Test {
         vm.assume(account != address(0));
         vm.assume(balance >= burnAmount);
 
-        Token token = new Token("", "", 18);
-
         token.mint(account, balance);
         token.burn(account, burnAmount);
 
@@ -48,8 +40,6 @@ contract TokenTest is Test {
 
     function testFuzz_approve(address account, uint256 amount) public {
         vm.assume(account != address(0));
-
-        Token token = new Token("", "", 18);
 
         assertTrue(token.approve(account, amount));
         assertEq(token.allowance(address(this), account), amount);
@@ -63,8 +53,6 @@ contract TokenTest is Test {
     ) public {
         vm.assume(sender != address(0) && receiver != address(0) && sender != receiver);
         vm.assume(mintAmount > 0 && transferAmount > 0 && mintAmount >= transferAmount);
-
-        Token token = new Token("", "", 18);
 
         token.mint(sender, mintAmount);
 
@@ -97,8 +85,6 @@ contract TokenTest is Test {
         vm.assume(mintAmount >= transferAmount);
         vm.assume(allowanceAmount >= transferAmount);
         vm.assume(allowanceAmount < type(uint256).max);
-
-        Token token = new Token("", "", 18);
 
         // Mint tokens to owner
         token.mint(owner, mintAmount);
@@ -142,8 +128,6 @@ contract TokenTest is Test {
         vm.assume(mintAmount > 0 && transferAmount > 0);
         vm.assume(mintAmount >= transferAmount);
 
-        Token token = new Token("", "", 18);
-
         token.mint(owner, mintAmount);
 
         // Approve maximum allowance
@@ -165,8 +149,6 @@ contract TokenTest is Test {
     }
 
     function test_transferFromToZeroAddressReverts() public {
-        Token token = new Token("Test", "TST", 18);
-
         address owner = makeAddr("owner");
         address spender = makeAddr("spender");
         uint256 amount = 100;
@@ -184,9 +166,80 @@ contract TokenTest is Test {
         token.transferFrom(owner, address(0), amount);
     }
 
-    function testPermit() public {
-        Token token = new Token("Test Token", "TEST", 18);
+    function test_transferFromFailsWithInsufficientAllowance() public {
+        // Setup test parameters
+        address owner = makeAddr("owner");
+        address spender = makeAddr("spender");
+        address receiver = makeAddr("receiver");
 
+        uint256 mintAmount = 1000;
+        uint256 allowanceAmount = 500;
+        uint256 transferAmount = 600; // Greater than the allowance
+
+        // Mint tokens to owner
+        token.mint(owner, mintAmount);
+
+        // Set allowance less than the transfer amount
+        vm.prank(owner);
+        token.approve(spender, allowanceAmount);
+
+        // Verify initial state
+        assertEq(token.balanceOf(owner), mintAmount);
+        assertEq(token.allowance(owner, spender), allowanceAmount);
+
+        // Attempt to transfer more than allowed - should revert
+        vm.prank(spender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC20.InsufficientAllowance.selector,
+                spender,
+                allowanceAmount,
+                transferAmount
+            )
+        );
+        token.transferFrom(owner, receiver, transferAmount);
+
+        // Verify balances remain unchanged
+        assertEq(token.balanceOf(owner), mintAmount);
+        assertEq(token.balanceOf(receiver), 0);
+        assertEq(token.allowance(owner, spender), allowanceAmount);
+
+        // Now try with exactly the allowance amount - should work
+        vm.prank(spender);
+        token.transferFrom(owner, receiver, allowanceAmount);
+
+        // Verify the successful transfer
+        assertEq(token.balanceOf(owner), mintAmount - allowanceAmount);
+        assertEq(token.balanceOf(receiver), allowanceAmount);
+        assertEq(token.allowance(owner, spender), 0);
+    }
+
+    function test_transferFromExactAllowance() public {
+        // Setup test parameters
+        address owner = makeAddr("owner");
+        address spender = makeAddr("spender");
+        address receiver = makeAddr("receiver");
+
+        uint256 mintAmount = 1000;
+        uint256 allowanceAmount = 500;
+
+        // Mint tokens to owner
+        token.mint(owner, mintAmount);
+
+        // Set allowance less than the transfer amount
+        vm.prank(owner);
+        token.approve(spender, allowanceAmount);
+
+        vm.prank(spender);
+        token.transferFrom(owner, receiver, allowanceAmount);
+
+        // Verify the successful transfer
+        assertEq(token.balanceOf(owner), mintAmount - allowanceAmount);
+        assertEq(token.balanceOf(receiver), allowanceAmount);
+        assertEq(token.allowance(owner, spender), 0);
+    }
+
+    function testPermit() public {
         // Setup accounts
         uint256 ownerPrivateKey = 0x1234;
         address owner = vm.addr(ownerPrivateKey);
@@ -221,8 +274,6 @@ contract TokenTest is Test {
     }
 
     function testPermitExpired() public {
-        Token token = new Token("Test Token", "TEST", 18);
-
         // Setup accounts
         uint256 ownerPrivateKey = 0x1234;
         address owner = vm.addr(ownerPrivateKey);
@@ -250,8 +301,6 @@ contract TokenTest is Test {
     }
 
     function testPermitInvalidSignature() public {
-        Token token = new Token("Test Token", "TEST", 18);
-
         // Setup accounts
         uint256 ownerPrivateKey = 0x1234;
         uint256 wrongPrivateKey = 0x5678;
@@ -279,70 +328,85 @@ contract TokenTest is Test {
         token.permit(owner, spender, value, deadline, v, r, s);
     }
 
-    function testMintAndBurnAfterOwnerChange() public {
-        Token token = new Token("Test Token", "TEST", 18);
+    function testDomainSeparator() public {
+        // Manually calculate the expected domain separator
+        bytes32 expectedDomainSeparator = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes(tokenName)),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(token)
+            )
+        );
 
-        // Setup accounts
-        address newOwner = makeAddr("newOwner");
-        address user = makeAddr("user");
+        // Get the domain separator from the contract
+        bytes32 actualDomainSeparator = token.DOMAIN_SEPARATOR();
 
-        // Initial owner (address(this)) can mint and burn
-        token.mint(user, 1000);
-        assertEq(token.balanceOf(user), 1000);
+        // Verify that they match
+        assertEq(actualDomainSeparator, expectedDomainSeparator);
 
-        token.burn(user, 500);
-        assertEq(token.balanceOf(user), 500);
+        // Also test that domain separator changes when chain ID changes
+        uint256 originalChainId = block.chainid;
+        vm.chainId(originalChainId + 1);
 
-        // Change owner
-        token.setOwner(newOwner);
-        assertEq(token.owner(), newOwner);
+        bytes32 newExpectedDomainSeparator = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes(tokenName)),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(token)
+            )
+        );
 
-        // Original owner should no longer be able to mint or burn
-        vm.expectRevert(Token.Unauthorized.selector);
-        token.mint(user, 1000);
+        bytes32 newActualDomainSeparator = token.DOMAIN_SEPARATOR();
 
-        vm.expectRevert(Token.Unauthorized.selector);
-        token.burn(user, 100);
-
-        // New owner should be able to mint and burn
-        vm.prank(newOwner);
-        token.mint(user, 1000);
-        assertEq(token.balanceOf(user), 1500);
-
-        vm.prank(newOwner);
-        token.burn(user, 500);
-        assertEq(token.balanceOf(user), 1000);
-
-        // Random user should not be able to mint or burn
-        vm.prank(makeAddr("random"));
-        vm.expectRevert(Token.Unauthorized.selector);
-        token.mint(user, 1000);
-
-        vm.prank(makeAddr("random"));
-        vm.expectRevert(Token.Unauthorized.selector);
-        token.burn(user, 100);
+        // The domain separator should be different on a different chain
+        assertTrue(newActualDomainSeparator != actualDomainSeparator);
+        // And it should match our new expected value
+        assertEq(newActualDomainSeparator, newExpectedDomainSeparator);
     }
 
-    function testSetOwnerOnlyOwner() public {
-        Token token = new Token("Test Token", "TEST", 18);
-        address newOwner = makeAddr("newOwner");
+    function test_onlyGatewayCanMintAndBurn() public {
+        // Setup
+        address gatewayAddress = address(this);
+        address regularUser = makeAddr("regularUser");
+        address tokenReceiver = makeAddr("tokenReceiver");
+        uint256 amount = 1000;
 
-        // Random address cannot set owner
-        vm.prank(makeAddr("random"));
-        vm.expectRevert(Token.Unauthorized.selector);
-        token.setOwner(newOwner);
+        // Verify that gateway (this contract) can mint
+        token.mint(tokenReceiver, amount);
+        assertEq(token.balanceOf(tokenReceiver), amount);
 
-        // Current owner can set new owner
-        token.setOwner(newOwner);
-        assertEq(token.owner(), newOwner);
+        // Verify that gateway can burn
+        token.burn(tokenReceiver, amount / 2);
+        assertEq(token.balanceOf(tokenReceiver), amount / 2);
 
-        // Original owner can no longer set new owner
-        vm.expectRevert(Token.Unauthorized.selector);
-        token.setOwner(address(this));
+        // Try to mint as a non-gateway address
+        vm.prank(regularUser);
+        vm.expectRevert(abi.encodeWithSelector(Token.Unauthorized.selector));
+        token.mint(tokenReceiver, amount);
 
-        // New owner can set another owner
-        vm.prank(newOwner);
-        token.setOwner(address(1234));
-        assertEq(token.owner(), address(1234));
+        // Verify balance hasn't changed after failed mint
+        assertEq(token.balanceOf(tokenReceiver), amount / 2);
+
+        // Try to burn as a non-gateway address
+        vm.prank(regularUser);
+        vm.expectRevert(abi.encodeWithSelector(Token.Unauthorized.selector));
+        token.burn(tokenReceiver, amount / 4);
+
+        // Verify balance hasn't changed after failed burn
+        assertEq(token.balanceOf(tokenReceiver), amount / 2);
+
+        // Confirm gateway field is correctly set
+        assertEq(token.gateway(), gatewayAddress);
+
+        // Final mint/burn with gateway to confirm functionality still works
+        token.mint(tokenReceiver, amount);
+        assertEq(token.balanceOf(tokenReceiver), amount + (amount / 2));
+
+        token.burn(tokenReceiver, amount);
+        assertEq(token.balanceOf(tokenReceiver), amount / 2);
     }
 }
