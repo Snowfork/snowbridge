@@ -76,17 +76,11 @@ interface IGatewayV2 {
     //
     // Params:
     //   * `token` (address): address of a token.
-    //   * `name` (bytes): Display name of the token, e.g. Wrapper Ether
-    //   * `symbol` (bytes): Token symbol, e.g. WETH
-    //   * `decimals` (uint8): Token precision decimals, e.g. 18
     //   * `network` (uint8): Polkadot=0; Kusama=1
     //   * `executionFee`: Amount of ether to pay for execution on AssetHub.
     //   * `relayerFee`: Amount of ether to pay for relayer incentivation.
     function v2_registerToken(
         address token,
-        bytes calldata name,
-        bytes calldata symbol,
-        uint8 decimals,
         uint8 network,
         uint128 executionFee,
         uint128 relayerFee
