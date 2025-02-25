@@ -53,12 +53,18 @@ const monitor = async () => {
     }
     console.log(`Using environment '${env}'`)
 
-    const { config } = snwobridgeEnv
+    const { name, config, ethChainId } = snwobridgeEnv
     await cryptoWaitReady()
 
+    const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
+    const ethChains: { [ethChainId: string]: string } = {}
+    Object.keys(config.ETHEREUM_CHAINS)
+        .forEach(ethChainId => ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
     const context = new Context({
+        environment: name,
         ethereum: {
-            execution_url: config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY || ""),
+            ethChainId,
+            ethChains,
             beacon_url: config.BEACON_HTTP_API,
         },
         polkadot: {
@@ -86,29 +92,6 @@ const monitor = async () => {
     console.log('eth', ETHEREUM_ACCOUNT_PUBLIC, 'sub', POLKADOT_ACCOUNT_PUBLIC)
     const amount = 15000000000000n
 
-    let overrides = {}
-    if (env === "polkadot_mainnet") {
-        // Add override for mythos token and add precompile for moonbeam
-        overrides = {
-            precompiles: { "2004": "0x000000000000000000000000000000000000081A" },
-            destinationFeeOverrides: {
-                "3369": 500_000_000n
-            },
-            assetOverrides: {
-                "3369": [
-                    {
-                        token: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003".toLowerCase(),
-                        name: "Mythos",
-                        minimumBalance: 10_000_000_000_000_000n,
-                        symbol: "MYTH",
-                        decimals: 18,
-                        isSufficient: true,
-                    }
-                ]
-            }
-        }
-    }
-
     // Step 0. Build the Asset Registry. The registry contains the list of all token and parachain metadata in order to send tokens.
     // It may take some build but does not change often so it is safe to cache for 12 hours and shipped with your dapp as static data.
     //
@@ -116,11 +99,11 @@ const monitor = async () => {
     //      const registry = await assetsV2.buildRegistry(assetsV2.fromEnvironment(snwobridgeEnv))
     // If your dapp does not use the snowbridge environment or context you can always build it manually by
     // specifying RegistryOptions for only the parachains you care about.
-    const registry = await cache("registry.json", async () => await assetsV2.buildRegistry({
-        ...await assetsV2.fromContext(context),
-        ...overrides
-    }))
 
+
+    const registry = await cache(`.${env}.registry.json`, async () => await assetsV2.buildRegistry(
+        await assetsV2.fromContext(context),
+    ))
     console.log("Asset Registry:", JSON.stringify(registry, (_, value) => typeof value === "bigint" ? String(value) : value, 2))
 
     const WETH_CONTRACT = snwobridgeEnv.locations[0].erc20tokensReceivable.find(
@@ -143,7 +126,11 @@ const monitor = async () => {
     {
         const destinationChainId: number = 1000
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toPolkadotV2.getDeliveryFee(context.gateway(), registry, WETH_CONTRACT, destinationChainId)
+        const fee = await toPolkadotV2.getDeliveryFee({
+            gateway: context.gateway(),
+            assetHub: await context.assetHub(),
+            destination: await context.parachain(destinationChainId)
+        }, registry, WETH_CONTRACT, destinationChainId)
 
         // Step 2. Create a transfer tx
         const transfer = await toPolkadotV2.createTransfer(
@@ -180,10 +167,10 @@ const monitor = async () => {
         console.log('tx:', tx)
         console.log('feeData:', feeData.toJSON())
         console.log('gas:', estimatedGas)
-        console.log('delivery cost:', formatEther(fee.deliveryFeeInWei))
+        console.log('delivery cost:', formatEther(fee.totalFeeInWei))
         console.log('execution cost:', formatEther(executionFee))
-        console.log('total cost:', formatEther(fee.deliveryFeeInWei + executionFee))
-        console.log('ether sent:', formatEther(totalValue - fee.deliveryFeeInWei))
+        console.log('total cost:', formatEther(fee.totalFeeInWei + executionFee))
+        console.log('ether sent:', formatEther(totalValue - fee.totalFeeInWei))
         console.log('dry run:', await context.ethereum().call(tx))
 
         // Step 6. Submit the transaction
@@ -205,7 +192,7 @@ const monitor = async () => {
     {
         const sourceParaId = 1000
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toEthereumV2.getDeliveryFee(await context.assetHub(), registry)
+        const fee = await toEthereumV2.getDeliveryFee({ assetHub: await context.assetHub(), source: await context.parachain(sourceParaId) }, sourceParaId, registry)
 
         // Step 2. Create a transfer tx
         const transfer = await toEthereumV2.createTransfer(
@@ -256,7 +243,7 @@ const monitor = async () => {
             { withSignedTransaction: true }
         )
         if (!response) {
-           throw Error(`Transaction ${response} not included.`)
+            throw Error(`Transaction ${response} not included.`)
         }
         console.log('Success message', response.messageId)
     }
@@ -265,7 +252,11 @@ const monitor = async () => {
     {
         const destinationChainId: number = 2000
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toPolkadotV2.getDeliveryFee(context.gateway(), registry, WETH_CONTRACT, destinationChainId)
+        const fee = await toPolkadotV2.getDeliveryFee({
+            gateway: context.gateway(),
+            assetHub: await context.assetHub(),
+            destination: await context.parachain(destinationChainId)
+        }, registry, WETH_CONTRACT, destinationChainId)
 
         // Step 2. Create a transfer tx
         const transfer = await toPolkadotV2.createTransfer(
@@ -302,10 +293,10 @@ const monitor = async () => {
         console.log('tx:', tx)
         console.log('feeData:', feeData.toJSON())
         console.log('gas:', estimatedGas)
-        console.log('delivery cost:', formatEther(fee.deliveryFeeInWei))
+        console.log('delivery cost:', formatEther(fee.totalFeeInWei))
         console.log('execution cost:', formatEther(executionFee))
-        console.log('total cost:', formatEther(fee.deliveryFeeInWei + executionFee))
-        console.log('ether sent:', formatEther(totalValue - fee.deliveryFeeInWei))
+        console.log('total cost:', formatEther(fee.totalFeeInWei + executionFee))
+        console.log('ether sent:', formatEther(totalValue - fee.totalFeeInWei))
         console.log('dry run:', await context.ethereum().call(tx))
 
         // Step 6. Submit the transaction
@@ -327,7 +318,10 @@ const monitor = async () => {
     {
         const sourceParaId = 2000
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toEthereumV2.getDeliveryFee(await context.assetHub(), registry)
+        const fee = await toEthereumV2.getDeliveryFee({
+            assetHub: await context.assetHub(),
+            source: await context.parachain(sourceParaId)
+        }, sourceParaId, registry)
 
         // Step 2. Create a transfer tx
         const transfer = await toEthereumV2.createTransfer(
@@ -378,7 +372,7 @@ const monitor = async () => {
             { withSignedTransaction: true }
         )
         if (!response) {
-           throw Error(`Transaction ${response} not included.`)
+            throw Error(`Transaction ${response} not included.`)
         }
         console.log('Success message', response.messageId)
     }

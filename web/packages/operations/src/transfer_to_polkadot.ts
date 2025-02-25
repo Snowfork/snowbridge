@@ -2,7 +2,7 @@ import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
 import { Context, environment, toPolkadot } from "@snowbridge/api"
 import { WETH9__factory } from "@snowbridge/contract-types"
-import { Wallet } from "ethers"
+import { AbstractProvider, Wallet } from "ethers"
 import cron from "node-cron"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 
@@ -16,7 +16,7 @@ const transfer = async () => {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const { config } = snowbridgeEnv
+    const { config, ethChainId, name } = snowbridgeEnv
     await cryptoWaitReady()
 
     const parachains: { [paraId: string]: string } = {}
@@ -24,11 +24,17 @@ const transfer = async () => {
         process.env["BRIDGE_HUB_URL"] ?? config.PARACHAINS[config.BRIDGE_HUB_PARAID.toString()]
     parachains[config.ASSET_HUB_PARAID.toString()] =
         process.env["ASSET_HUB_URL"] ?? config.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
+
+    const ethChains: { [ethChainId: string]: string | AbstractProvider } = {}
+    Object.keys(config.ETHEREUM_CHAINS)
+        .forEach(ethChainId => ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](process.env.REACT_APP_INFURA_KEY || ""))
+    if (process.env["EXECUTION_NODE_URL"]) { ethChains[ethChainId.toString()] = process.env["EXECUTION_NODE_URL"] }
+
     const context = new Context({
+        environment: name,
         ethereum: {
-            execution_url:
-                process.env["EXECUTION_NODE_URL"] ||
-                config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY || ""),
+            ethChainId,
+            ethChains,
             beacon_url: process.env["BEACON_NODE_URL"] || config.BEACON_HTTP_API,
         },
         polkadot: {

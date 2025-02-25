@@ -15,6 +15,7 @@ export type ERC20Metadata = {
 
 export type EthereumChain = {
     chainId: number
+    id: string
     evmParachainId?: number
     assets: ERC20MetadataMap
     precompile?: `0x${string}`
@@ -59,7 +60,8 @@ export type Parachain = {
         hasDryRunRpc: boolean
     },
     assets: AssetMap
-    destinationFeeInDOT: bigint
+    estimatedExecutionFeeDOT: bigint
+    estimatedDeliveryFeeDOT: bigint
     xcDOT?: string
 }
 
@@ -74,6 +76,7 @@ export type Asset = {
 }
 
 export type RegistryOptions = {
+    environment: string
     gatewayAddress: string
     ethChainId: number
     assetHubParaId: number
@@ -88,16 +91,17 @@ export type RegistryOptions = {
 }
 
 export type AssetRegistry = {
-    gatewayAddress: string;
-    ethChainId: number;
-    assetHubParaId: number;
-    bridgeHubParaId: number;
-    relaychain: ChainProperties;
-    bridgeHub: ChainProperties;
+    environment: string
+    gatewayAddress: string
+    ethChainId: number
+    assetHubParaId: number
+    bridgeHubParaId: number
+    relaychain: ChainProperties
+    bridgeHub: ChainProperties
     ethereumChains: {
-        [chainId: string]: EthereumChain;
-    };
-    parachains: ParachainMap;
+        [chainId: string]: EthereumChain
+    }
+    parachains: ParachainMap
 }
 
 interface AssetMap { [token: string]: Asset }
@@ -114,8 +118,35 @@ interface XC20TokenMap { [xc20: string]: string }
 
 interface ERC20MetadataMap { [token: string]: ERC20Metadata }
 
+export type SourceType = "substrate" | "ethereum"
+
+export type Path = {
+    type: SourceType;
+    id: string;
+    source: number;
+    destination: number;
+    asset: string;
+}
+
+export type Source = {
+    type: SourceType;
+    id: string;
+    key: string;
+    destinations: { [destination: string]: string[] }
+}
+
+export type TransferLocation = {
+    id: string;
+    name: string;
+    key: string;
+    type: SourceType;
+    parachain?: Parachain;
+    ethChain?: EthereumChain;
+};
+
 export async function buildRegistry(options: RegistryOptions): Promise<AssetRegistry> {
     const {
+        environment,
         parachains,
         ethchains,
         ethChainId,
@@ -165,23 +196,41 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         }
     }
 
-    const paras: ParachainMap = {}
+    const providers: { [paraIdKey: string]: { parachainId: number, provider: ApiPromise, managed: boolean } } = {}
     for (const parachain of parachains) {
         let provider: ApiPromise;
+        let managed = false
         if (typeof parachain === "string") {
             provider = await ApiPromise.create({
                 provider: parachain.startsWith("http") ? new HttpProvider(parachain) : new WsProvider(parachain),
             })
+            managed = true
         } else {
             provider = parachain
         }
-        const para = await indexParachain(provider, ethChainId, assetHubParaId, assetOverrides ?? {}, destinationFeeOverrides ?? {})
-        paras[para.parachainId.toString()] = para;
-
-        if (typeof parachain === "string") {
-            await provider.disconnect()
-        }
+        const parachainId = await getParachainId(provider)
+        providers[parachainId.toString()] = { parachainId, provider, managed }
     }
+
+    const paras: ParachainMap = {}
+    for (const parachainIdKey of Object.keys(providers)) {
+        const { parachainId, provider } = providers[parachainIdKey]
+        const para = await indexParachain(
+            provider,
+            providers[assetHubParaId.toString()].provider,
+            ethChainId,
+            parachainId,
+            assetHubParaId,
+            assetOverrides ?? {},
+            destinationFeeOverrides ?? {})
+        paras[parachainId.toString()] = para;
+    }
+
+    for (const parachainIdKey of Object.keys(providers)) {
+        if (providers[parachainIdKey].managed)
+            await providers[parachainIdKey].provider.disconnect()
+    }
+
     if (!(assetHubParaId.toString() in paras)) {
         throw Error(`Could not resolve asset hub para id ${assetHubParaId} in the list of parachains provided.`)
     }
@@ -207,6 +256,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
     }
 
     return {
+        environment,
         ethChainId,
         gatewayAddress,
         assetHubParaId,
@@ -218,37 +268,131 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
     }
 }
 
-export function fromEnvironment({ config, ethChainId }: SnowbridgeEnvironment): RegistryOptions {
+export function getEthereumTransferLocation(registry: AssetRegistry, ethChain: EthereumChain): TransferLocation {
+    if (!ethChain.evmParachainId) {
+        return {
+            id: "ethereum",
+            name: "Ethereum",
+            type: "ethereum",
+            key: ethChain.chainId.toString(),
+            ethChain,
+        };
+    } else {
+        const evmChain = registry.parachains[ethChain.evmParachainId];
+        return {
+            id: ethChain.id,
+            name: `${evmChain.info.name} (EVM)`,
+            key: ethChain.chainId.toString(),
+            type: "ethereum",
+            ethChain,
+            parachain: evmChain,
+        };
+    }
+}
+
+export function getSubstrateTransferLocation(parachain: Parachain): TransferLocation {
     return {
+        id: parachain.info.specName,
+        name: parachain.info.name,
+        key: parachain.parachainId.toString(),
+        type: "substrate",
+        parachain,
+    };
+}
+
+export function getTransferLocation(
+    registry: AssetRegistry,
+    sourceType: string,
+    sourceKey: string,
+): TransferLocation {
+    if (sourceType === "ethereum") {
+        return getEthereumTransferLocation(registry, registry.ethereumChains[sourceKey])
+    } else {
+        return getSubstrateTransferLocation(registry.parachains[sourceKey])
+    }
+}
+
+export function getTransferLocations(registry: AssetRegistry, filter?: (path: Path) => boolean): Source[] {
+    const ethChain = registry.ethereumChains[registry.ethChainId]
+    const parachains = Object.keys(registry.parachains)
+        .filter(p => p !== registry.bridgeHubParaId.toString())
+        .map(p => registry.parachains[p])
+
+    const pathFilter = filter ?? defaultPathFilter(registry.environment)
+
+    const locations: Path[] = []
+    for (const parachain of parachains) {
+        const sourceAssets = Object.keys(ethChain.assets)
+        const destinationAssets = Object.keys(parachain.assets)
+        const commonAssets = new Set(sourceAssets.filter(sa => destinationAssets.find(da => da === sa)))
+        for (const asset of commonAssets) {
+            const p1: Path = { type: "ethereum", id: "ethereum", source: ethChain.chainId, destination: parachain.parachainId, asset }
+            if (pathFilter(p1)) { locations.push(p1) }
+            const p2: Path = { type: "substrate", id: parachain.info.specName, source: parachain.parachainId, destination: ethChain.chainId, asset }
+            if (pathFilter(p2)) { locations.push(p2) }
+        }
+    }
+    const results: Source[] = []
+    for (const location of locations) {
+        let source = results.find(s => s.type === location.type && s.id === location.id && s.key === location.source.toString())
+        if (!source) {
+            source = { type: location.type, id: location.id, key: location.source.toString(), destinations: {} }
+            results.push(source)
+        }
+        let destination: string[] = source.destinations[location.destination]
+        if (!destination) {
+            destination = []
+            source.destinations[location.destination] = destination
+        }
+        destination.push(location.asset)
+    }
+    return results
+}
+
+export function fromEnvironment({ name, config, ethChainId }: SnowbridgeEnvironment, ethereumApiKey?: string): RegistryOptions {
+    const result: RegistryOptions = {
+        environment: name,
         assetHubParaId: config.ASSET_HUB_PARAID,
         bridgeHubParaId: config.BRIDGE_HUB_PARAID,
         bridgeHub: config.PARACHAINS[config.BRIDGE_HUB_PARAID.toString()],
         relaychain: config.RELAY_CHAIN_URL,
         ethChainId,
         gatewayAddress: config.GATEWAY_CONTRACT,
-        ethchains: [config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY ?? "")],
+        ethchains: Object.values(config.ETHEREUM_CHAINS).map(x => x(ethereumApiKey ?? "")),
         parachains: Object.keys(config.PARACHAINS)
             .filter(paraId => paraId !== config.BRIDGE_HUB_PARAID.toString())
             .map(paraId => config.PARACHAINS[paraId]),
     }
+    addOverrides(name, result)
+    return result
 }
 
 export async function fromContext(context: Context): Promise<RegistryOptions> {
     const { assetHubParaId, bridgeHubParaId } = context.config.polkadot
-    return {
-        assetHubParaId,
-        bridgeHubParaId,
-        bridgeHub: await context.bridgeHub(),
-        relaychain: await context.relaychain(),
-        ethChainId: Number((await context.ethereum().getNetwork()).chainId),
-        gatewayAddress: await context.gateway().getAddress(),
-        ethchains: [context.ethereum()],
-        parachains: await Promise.all(
+    const [bridgeHub, relaychain, network, gatewayAddress, parachains] = await Promise.all([
+        context.bridgeHub(),
+        context.relaychain(),
+        context.ethereum().getNetwork(),
+        context.gateway().getAddress(),
+        Promise.all(
             context.parachains()
                 .filter(paraId => paraId !== context.config.polkadot.bridgeHubParaId)
                 .map(paraId => context.parachain(paraId))
         ),
+    ])
+    const result: RegistryOptions = {
+        environment: context.config.environment,
+        assetHubParaId,
+        bridgeHubParaId,
+        bridgeHub,
+        relaychain,
+        ethChainId: Number(network.chainId),
+        gatewayAddress,
+        ethchains: context.ethChains().map(ethChainId => context.ethChain(ethChainId)),
+        parachains
     }
+    addOverrides(context.config.environment, result)
+    return result
 }
 
 export async function getNativeAccount(provider: ApiPromise, account: string): Promise<SubstrateAccount> {
@@ -307,7 +451,7 @@ export async function getLocationBalance(provider: ApiPromise, specName: string,
         }
         case "moonriver":
         case "moonbeam": {
-            const assetId = (await provider.query.assetManager.assetIdType(location)).toPrimitive()
+            const assetId = (await provider.query.assetManager.assetTypeId({ xcm: location })).toPrimitive()
             if (!assetId) {
                 throw Error(`DOT not registered for spec ${specName}.`)
             }
@@ -338,6 +482,54 @@ export function getTokenBalance(provider: ApiPromise, specName: string, account:
 export async function getParachainId(parachain: ApiPromise): Promise<number> {
     const sourceParachainEncoded = await parachain.query.parachainInfo.parachainId();
     return Number(sourceParachainEncoded.toPrimitive())
+}
+
+export async function calculateDestinationFee(provider: ApiPromise, destinationXcm: any) {
+    const weight = (await provider.call.xcmPaymentApi.queryXcmWeight(destinationXcm)).toPrimitive() as any
+    if (!weight.ok) {
+        throw Error(`Can not query XCM Weight.`)
+    }
+
+    const feeInDot = (await provider.call.xcmPaymentApi.queryWeightToAssetFee(
+        weight.ok,
+        { v4: { parents: 1, interior: "Here" } }
+    )).toPrimitive() as any
+    if (!feeInDot.ok) {
+        throw Error(`Can not convert weight to fee in DOT.`)
+    }
+    const executionFee = BigInt(feeInDot.ok.toString())
+
+    return executionFee
+}
+
+export async function calculateDeliveryFee(provider: ApiPromise, parachainId: number, destinationXcm: any) {
+    const result = (await provider.call.xcmPaymentApi.queryDeliveryFees(
+        { v4: { parents: 1, interior: { x1: [{ parachain: parachainId }] } } },
+        destinationXcm)).toPrimitive() as any
+    if (!result.ok) {
+        throw Error(`Can not query XCM Weight.`)
+    }
+    let dotAsset = undefined
+    for (const asset of result.ok.v4) {
+        if (asset.id.parents === 1 && asset.id.interior.here === null) {
+            dotAsset = asset
+        }
+    }
+    if (!dotAsset) {
+        console.info('Could not find DOT in result', result)
+        throw Error(`Can not query XCM Weight.`)
+    }
+
+    const deliveryFee = BigInt(dotAsset.fun.fungible.toString())
+
+    return deliveryFee
+}
+
+export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
+    if (padPercent < 0 || padPercent > 100) {
+        throw Error(`padPercent ${padPercent} not in range of 0 to 100.`)
+    }
+    return fee * ((100n + padPercent) / 100n)
 }
 
 async function chainProperties(provider: ApiPromise): Promise<ChainProperties> {
@@ -374,26 +566,6 @@ async function chainProperties(provider: ApiPromise): Promise<ChainProperties> {
     }
 }
 
-export async function calculateDestinationFee(provider: ApiPromise, destinationXcm: any, padFeePercentage?: bigint) {
-    const weight = (await provider.call.xcmPaymentApi.queryXcmWeight(destinationXcm)).toPrimitive() as any
-    if (!weight.ok) {
-        throw Error(`Can not query XCM Weight.`)
-    }
-
-    const feeInDot = (await provider.call.xcmPaymentApi.queryWeightToAssetFee(
-        weight.ok,
-        { v4: { parents: 1, interior: "Here" } }
-    )).toPrimitive() as any
-    if (!feeInDot.ok) {
-        throw Error(`Can not convert weight to fee in DOT.`)
-    }
-    const result = BigInt(feeInDot.ok.toString())
-
-    // return fee padded by 100% unless another percentage is specified
-    // TODO: Drop to 15% once 2409 is released
-    return result * (100n + (padFeePercentage ?? 100n)) / 100n
-}
-
 async function indexParachainAssets(provider: ApiPromise, ethChainId: number, specName: string) {
     const assets: AssetMap = {}
     let xcDOT: string | undefined
@@ -426,6 +598,10 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
             const entries = await provider.query.foreignAssets.asset.entries()
             for (const [key, value] of entries) {
                 const location: any = key.args.at(0)?.toJSON()
+                if (!location) {
+                    console.warn(`Could not convert ${key.toHuman()} to location for ${specName}.`)
+                    continue
+                }
                 if (!isSnowbridgeAsset(location, ethChainId)) { continue }
 
                 const asset: any = value.toJSON()
@@ -503,14 +679,15 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
 
 async function indexParachain(
     provider: ApiPromise,
+    assetHub: ApiPromise,
     ethChainId: number,
+    parachainId: number,
     assetHubParaId: number,
     assetOverrides: AssetOverrideMap,
     destinationFeeOverrides: FeeOverrideMap,
 ): Promise<Parachain> {
     const info = await chainProperties(provider)
 
-    const parachainId = await getParachainId(provider)
     const { assets, xcDOT } = await indexParachainAssets(provider, ethChainId, info.specName)
     const parachainIdKey = parachainId.toString()
     if (parachainIdKey in assetOverrides) {
@@ -539,29 +716,30 @@ async function indexParachain(
         await getNativeBalance(provider, "0x0000000000000000000000000000000000000000")
     }
 
-    let destinationFeeInDOT = 0n
+    let estimatedExecutionFeeDOT = 0n
+    let estimatedDeliveryFeeDOT = 0n
     if (parachainId !== assetHubParaId) {
+        const destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
+            provider.registry,
+            ethChainId,
+            "0x0000000000000000000000000000000000000000",
+            340282366920938463463374607431768211455n,
+            340282366920938463463374607431768211455n,
+            info.accountType === "AccountId32"
+                ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+                : "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+        )
+        estimatedDeliveryFeeDOT = await calculateDeliveryFee(assetHub, parachainId, destinationXcm)
         if (hasXcmPaymentApi) {
-            const destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
-                provider.registry,
-                ethChainId,
-                "0x0000000000000000000000000000000000000000",
-                340282366920938463463374607431768211455n,
-                340282366920938463463374607431768211455n,
-                info.accountType === "AccountId32"
-                    ? "0x0000000000000000000000000000000000000000000000000000000000000000"
-                    : "0x0000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            destinationFeeInDOT = await calculateDestinationFee(provider, destinationXcm)
+            estimatedExecutionFeeDOT = await calculateDestinationFee(provider, destinationXcm)
         } else {
             if (!(parachainIdKey in destinationFeeOverrides)) {
                 throw Error(`Parachain ${parachainId} cannot fetch the destination fee and needs a fee override.`)
             }
-            destinationFeeInDOT = destinationFeeOverrides[parachainIdKey]
+            estimatedExecutionFeeDOT = destinationFeeOverrides[parachainIdKey]
         }
     }
-
     return {
         parachainId,
         features: {
@@ -574,7 +752,8 @@ async function indexParachain(
         info,
         xcDOT,
         assets,
-        destinationFeeInDOT,
+        estimatedExecutionFeeDOT,
+        estimatedDeliveryFeeDOT,
     }
 }
 
@@ -588,6 +767,7 @@ async function indexEthChain(
 ): Promise<EthereumChain> {
     const network = await provider.getNetwork()
     const chainId = Number(network.chainId)
+    const id = network.name !== "unknown" ? network.name : undefined
 
     if (chainId == ethChainId) {
         // Asset Hub and get meta data
@@ -596,6 +776,10 @@ async function indexEthChain(
 
         const assets: ERC20MetadataMap = {}
         for (const token in assetHub.assets) {
+            if (token === "0x0000000000000000000000000000000000000000") {
+                // TODO: Support Native Ether
+                continue;
+            }
             if (!await gateway.isTokenRegistered(token)) {
                 console.warn(`Token ${token} is not registered with the gateway.`)
             }
@@ -606,7 +790,7 @@ async function indexEthChain(
             throw Error(`Could not fetch code for gatway address ${gatewayAddress} on ethereum chain ${chainId}.`)
         }
         return {
-            chainId, assets
+            chainId, assets, id: id ?? `chain_${chainId}`
         }
     } else {
         let evmParachainChain: Parachain | undefined;
@@ -621,13 +805,13 @@ async function indexEthChain(
         if (!evmParachainChain) {
             throw Error(`Could not find evm chain ${chainId} in the list of parachains.`)
         }
-        const xc20TokenMap: XC20TokenMap = {}
+        const xcTokenMap: XC20TokenMap = {}
         const assets: ERC20MetadataMap = {}
         for (const token in evmParachainChain.assets) {
             const xc20 = evmParachainChain.assets[token].xc20
             if (!xc20) { continue }
             const asset = await assetErc20Metadata(provider, xc20.toLowerCase())
-            xc20TokenMap[token] = xc20
+            xcTokenMap[token] = xc20
             assets[xc20] = asset
         }
         const paraId = evmParachainChain.parachainId.toString()
@@ -645,7 +829,13 @@ async function indexEthChain(
         assets[evmParachainChain.xcDOT] = xc20DOTAsset
 
         return {
-            chainId, evmParachainId: evmParachainChain.parachainId, assets, precompile, xcDOT: evmParachainChain.xcDOT
+            chainId,
+            evmParachainId: evmParachainChain.parachainId,
+            assets,
+            precompile,
+            xcDOT: evmParachainChain.xcDOT,
+            xcTokenMap,
+            id: id ?? `evm_${evmParachainChain.info.specName}`
         }
     }
 }
@@ -708,4 +898,79 @@ async function assetErc20Metadata(
 
 function isSnowbridgeAsset(location: any, chainId: number) {
     return location.parents === 2 && location.interior.x2 !== undefined && location.interior.x2[0].globalConsensus.ethereum.chainId === chainId
+}
+
+function addOverrides(envName: string, result: RegistryOptions) {
+    switch (envName) {
+        case "paseo_sepolia": {
+            // Add override for mythos token and add precompile for moonbeam
+            result.destinationFeeOverrides = {
+                "3369": 200_000_000_000n
+            }
+            result.assetOverrides = {
+                "3369": [
+                    {
+                        token: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee".toLowerCase(),
+                        name: "Muse",
+                        minimumBalance: 10_000_000_000_000_000n,
+                        symbol: "MUSE",
+                        decimals: 18,
+                        isSufficient: true,
+                    }
+                ]
+            }
+            break;
+        }
+        case "polkadot_mainnet": {
+            // Add override for mythos token and add precompile for moonbeam
+            result.precompiles = { "2004": "0x000000000000000000000000000000000000081A" }
+            result.destinationFeeOverrides = {
+                "3369": 100_000_000n
+            }
+            result.assetOverrides = {
+                "3369": [
+                    {
+                        token: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003".toLowerCase(),
+                        name: "Mythos",
+                        minimumBalance: 10_000_000_000_000_000n,
+                        symbol: "MYTH",
+                        decimals: 18,
+                        isSufficient: true,
+                    }
+                ]
+            }
+            break;
+        }
+    }
+}
+
+function defaultPathFilter(envName: string): (_: Path) => boolean {
+    switch (envName) {
+        case "paseo_sepolia":
+            return (path: Path) => {
+                // Disallow MUSE to any location but 3369
+                if (
+                    path.asset === "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee" &&
+                    path.destination !== 3369
+                ) {
+                    return false
+                }
+                return true
+            }
+        case "polkadot_mainnet":
+            return (path: Path) => {
+
+                // Disallow MYTH to any location but 3369
+                if (
+                    path.asset === "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003" &&
+                    path.destination !== 3369
+                ) {
+                    return false
+                }
+                return true
+            };
+
+        default:
+            return (_: Path) => true
+    }
 }
