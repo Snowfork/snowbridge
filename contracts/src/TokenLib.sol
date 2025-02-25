@@ -136,7 +136,7 @@ library TokenLib {
             uint256 fromBalance = token.balance[from];
             require(fromBalance >= value, IERC20.InsufficientBalance(from, fromBalance, value));
             unchecked {
-                // Overflow not possible: value <= fromBalance <= totalSupply.
+                // Overflow not possible: value <= fromBalance <= totalSupply
                 token.balance[from] = fromBalance - value;
             }
         }
