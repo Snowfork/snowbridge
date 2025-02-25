@@ -27,10 +27,11 @@ jobs:
         run: forge test
       - name: Coverage
         working-directory: contracts
-        run: forge coverage --report=lcov --via-ir
+        run: forge coverage --report=lcov
       - name: Upload coverage reports to Codecov with GitHub Action
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           working-directory: contracts
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           flags: solidity
