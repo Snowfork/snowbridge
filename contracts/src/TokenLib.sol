@@ -148,7 +148,7 @@ library TokenLib {
             }
         } else {
             unchecked {
-                // Overflow not possible: balance + value is at most totalSupply, which we know fits into a uint256
+                // Overflow not possible: balance + value is at most totalSupply, which we know fits into a uint256.
                 token.balance[to] += value;
             }
         }
