@@ -169,7 +169,12 @@ contract GatewayV2Test is Test {
 
     function makeMockCommand() public pure returns (CommandV2[] memory) {
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({kind: CommandKind.CreateAgent, gas: 500_000, payload: ""});
+        SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[0] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params)
+        });
         return commands;
     }
 

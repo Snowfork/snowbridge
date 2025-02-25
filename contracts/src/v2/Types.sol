@@ -26,7 +26,6 @@ library CommandKind {
     uint8 constant UnlockNativeToken = 2;
     uint8 constant RegisterForeignToken = 3;
     uint8 constant MintForeignToken = 4;
-    uint8 constant CreateAgent = 5;
     uint8 constant CallContract = 6;
 }
 
