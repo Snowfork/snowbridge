@@ -50,8 +50,16 @@ export type ToPolkadotTransferResult = {
     }
     assetHubMessageProcessed?: {
         event_index: string
-        block_timestamp: number
+        block_timestamp: string
         success: boolean
+    }
+    destinationReceived?: {
+        paraId: number
+        success: boolean
+        messageId: string
+        event_index: string
+        block_timestamp: string
+        blockNumber: number
     }
 }
 
@@ -144,15 +152,29 @@ const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult 
         }
     }
 
-    const assetHubMessageProcessed = transfer.toDestination || transfer.toAssetHubMessageQueue
-    if (assetHubMessageProcessed) {
+    if (transfer.toAssetHubMessageQueue) {
         result.assetHubMessageProcessed = {
-            event_index: getEventIndex(assetHubMessageProcessed.id),
-            block_timestamp: assetHubMessageProcessed.timestamp,
-            success: assetHubMessageProcessed.success,
+            event_index: getEventIndex(transfer.toAssetHubMessageQueue.id),
+            block_timestamp: transfer.toAssetHubMessageQueue.timestamp,
+            success: transfer.toAssetHubMessageQueue.success,
         }
         result.status = TransferStatus.Complete
-        if (!assetHubMessageProcessed.success) {
+        if (!transfer.toAssetHubMessageQueue.success) {
+            result.status = TransferStatus.Failed
+        }
+    }
+    
+    if (transfer.toDestination) {
+        result.destinationReceived = {
+            event_index: getEventIndex(transfer.toDestination.id),
+            block_timestamp: transfer.toDestination.timestamp,
+            blockNumber: transfer.toDestination.blockNumber,
+            paraId: transfer.toDestination.paraId,
+            messageId: transfer.toDestination.messageId,
+            success: transfer.toDestination.success,
+        }
+        result.status = TransferStatus.Complete
+        if (!transfer.toDestination.success) {
             result.status = TransferStatus.Failed
         }
     }

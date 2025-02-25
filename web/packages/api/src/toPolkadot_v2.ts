@@ -137,12 +137,12 @@ export async function getDeliveryFee(
             destinationXcm
         )
         if (destParachain.features.hasXcmPaymentApi) {
-            destinationExecutionFeeDOT = await calculateDestinationFee(destination, destinationXcm)
+            destinationExecutionFeeDOT = padFeeByPercentage(await calculateDestinationFee(destination, destinationXcm), paddFeeByPercentage ?? 33n)
         } else {
             console.warn(
-                `Parachain ${destinationParaId} does not support payment apis. Using an estimated fee.`
+                `Parachain ${destinationParaId} does not support payment apis. Using a high estimated fee.`
             )
-            destinationExecutionFeeDOT = destParachain.estimatedExecutionFeeDOT
+            destinationExecutionFeeDOT = padFeeByPercentage(destParachain.estimatedExecutionFeeDOT, 100n)
         }
     }
     const totalFeeInDOT = destinationExecutionFeeDOT + destinationDeliveryFeeDOT
@@ -152,7 +152,7 @@ export async function getDeliveryFee(
         totalFeeInWei: await gateway.quoteSendTokenFee(
             tokenAddress,
             destinationParaId,
-            padFeeByPercentage(totalFeeInDOT, paddFeeByPercentage ?? 33n)
+            totalFeeInDOT
         ),
     }
 }

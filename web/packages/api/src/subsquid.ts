@@ -68,8 +68,12 @@ export const fetchToPolkadotTransfers = async () => {
             }
             toDestination {
                 id
-                success
+                eventId
+                messageId
                 timestamp
+                blockNumber
+                paraId
+                success
             }
         }
     }`
@@ -326,8 +330,12 @@ export const fetchToPolkadotTransferById = async (id: string) => {
             }
             toDestination {
                 id
-                success
+                eventId
+                messageId
                 timestamp
+                blockNumber
+                paraId
+                success
             }
         }
     }`
