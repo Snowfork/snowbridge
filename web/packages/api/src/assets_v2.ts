@@ -925,7 +925,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
             // Add override for mythos token and add precompile for moonbeam
             result.precompiles = { "2004": "0x000000000000000000000000000000000000081A" }
             result.destinationFeeOverrides = {
-                "3369": 250_000_000n
+                "3369": 100_000_000n
             }
             result.assetOverrides = {
                 "3369": [
