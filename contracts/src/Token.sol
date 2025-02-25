@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Axelar Network
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 
 pragma solidity 0.8.28;
