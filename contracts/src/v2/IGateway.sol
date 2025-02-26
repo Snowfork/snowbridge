@@ -86,6 +86,9 @@ interface IGatewayV2 {
         uint128 relayerFee
     ) external payable;
 
+    // Create an agent for a remote location identified by `id`
+    function v2_createAgent(bytes32 id) external;
+
     // Check if an inbound message was previously accepted and dispatched
     function v2_isDispatched(uint64 nonce) external view returns (bool);
 

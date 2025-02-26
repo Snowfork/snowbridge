@@ -43,6 +43,9 @@ pub const ASSET_HUB_AGENT_ID: [u8; 32] =
 // Agent for penpal parachain 2000
 pub const SIBLING_AGENT_ID: [u8; 32] =
 	hex!("5097ee1101e90c3aadb882858c59a22108668021ec81bce9f4930155e5c21e59");
+// Agent for Bob on AH
+pub const ASSET_HUB_BOB_AGENT_ID: [u8; 32] =
+	hex!("fa2d646322a1c6db25dd004f44f14f3d39a9556bed9655f372942a84a5b3d93b");
 
 pub const ASSET_HUB_SOVEREIGN: [u8; 32] =
 	hex!("7369626ce8030000000000000000000000000000000000000000000000000000");

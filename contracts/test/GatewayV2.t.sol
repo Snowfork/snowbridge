@@ -169,7 +169,12 @@ contract GatewayV2Test is Test {
 
     function makeMockCommand() public pure returns (CommandV2[] memory) {
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({kind: CommandKind.CreateAgent, gas: 500_000, payload: ""});
+        SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[0] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params)
+        });
         return commands;
     }
 
@@ -417,5 +422,12 @@ contract GatewayV2Test is Test {
             makeMockProof(),
             relayerRewardAddress
         );
+    }
+
+    function testCreateAgent() public {
+        bytes32 origin = bytes32(uint256(1));
+        vm.expectEmit(true, false, false, false);
+        emit IGatewayBase.AgentCreated(origin, address(0x0));
+        IGatewayV2(payable(address(gateway))).v2_createAgent(origin);
     }
 }

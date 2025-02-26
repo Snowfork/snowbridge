@@ -42,8 +42,6 @@ const INITIAL_FUND: u128 = 3_000_000_000_000;
 const INITIAL_FUND_IN_ETHER: u128 = 1_000_000_000_000_000;
 const HELLO_WORLD_CONTRACT: [u8; 20] = hex!("8cf6147918a5cbb672703f879f385036f8793a24");
 
-const AGENT_ID: [u8; 32] = hex!("fa2d646322a1c6db25dd004f44f14f3d39a9556bed9655f372942a84a5b3d93b");
-
 #[tokio::test]
 async fn agent_transact() {
 	let test_clients = initial_clients().await.expect("initialize clients");
@@ -55,9 +53,13 @@ async fn agent_transact() {
 		.expect("fund the agent");
 
 	// Initial fund for the user agent
-	let agent_address = get_agent_address(&ethereum_client, AGENT_ID).await.expect("find agent");
+	let agent_address = get_agent_address(&ethereum_client, ASSET_HUB_BOB_AGENT_ID)
+		.await
+		.expect("find agent");
 	println!("agent address {}", hex::encode(agent_address));
-	fund_agent_v2(AGENT_ID, INITIAL_FUND_IN_ETHER).await.expect("fund the agent");
+	fund_agent_v2(ASSET_HUB_BOB_AGENT_ID, INITIAL_FUND_IN_ETHER)
+		.await
+		.expect("fund the agent");
 
 	let suri = SecretUri::from_str(&SUBSTRATE_KEY).expect("Parse SURI");
 	let signer = sr25519::Keypair::from_uri(&suri).expect("valid keypair");
