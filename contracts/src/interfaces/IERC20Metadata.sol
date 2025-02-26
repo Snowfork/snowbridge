@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 OpenZeppelin
 // SPDX-FileCopyrightText: 2024 Snowfork <hello@snowfork.com>
 

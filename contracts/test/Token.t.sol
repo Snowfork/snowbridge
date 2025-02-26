@@ -409,4 +409,60 @@ contract TokenTest is Test {
         token.burn(tokenReceiver, amount);
         assertEq(token.balanceOf(tokenReceiver), amount / 2);
     }
+
+    function test_zeroValueTransfersAreAllowed() public {
+        // Setup
+        address sender = makeAddr("sender");
+        address receiver = makeAddr("receiver");
+        uint256 initialBalance = 1000;
+
+        // Mint some tokens to sender
+        token.mint(sender, initialBalance);
+
+        // Check initial balances
+        assertEq(token.balanceOf(sender), initialBalance);
+        assertEq(token.balanceOf(receiver), 0);
+
+        // Test zero-value transfer using transfer()
+        vm.prank(sender);
+
+        // Expect a Transfer event with value 0
+        vm.expectEmit(true, true, false, true);
+        emit IERC20.Transfer(sender, receiver, 0);
+
+        bool transferSuccess = token.transfer(receiver, 0);
+
+        // Verify transfer succeeded
+        assertTrue(transferSuccess, "Zero-value transfer should succeed");
+
+        // Verify balances remain unchanged
+        assertEq(token.balanceOf(sender), initialBalance, "Sender balance should not change");
+        assertEq(token.balanceOf(receiver), 0, "Receiver balance should not change");
+
+        // Test zero-value transferFrom()
+        // First approve spender
+        address spender = makeAddr("spender");
+
+        vm.prank(sender);
+        token.approve(spender, initialBalance);
+
+        // Perform zero-value transferFrom
+        vm.prank(spender);
+
+        // Expect a Transfer event with value 0
+        vm.expectEmit(true, true, false, true);
+        emit IERC20.Transfer(sender, receiver, 0);
+
+        bool transferFromSuccess = token.transferFrom(sender, receiver, 0);
+
+        // Verify transferFrom succeeded
+        assertTrue(transferFromSuccess, "Zero-value transferFrom should succeed");
+
+        // Verify balances still remain unchanged
+        assertEq(token.balanceOf(sender), initialBalance, "Sender balance should not change");
+        assertEq(token.balanceOf(receiver), 0, "Receiver balance should not change");
+
+        // Verify allowance was not affected by zero transfer
+        assertEq(token.allowance(sender, spender), initialBalance, "Allowance should not change for zero-value transfer");
+    }
 }

@@ -1,6 +1,5 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Axelar Network
-// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 Snowfork <hello@snowfork.com>
 
 pragma solidity 0.8.28;
 
@@ -9,6 +8,13 @@ import {IERC20Permit} from "./interfaces/IERC20Permit.sol";
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 
 library TokenLib {
+
+    /// The EIP-712 typehash for the contract's domain
+    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+
+    /// The EIP-712 typehash for the permit struct used by the contract
+    bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+
     struct Token {
         mapping(address account => uint256) balance;
         mapping(address account => mapping(address spender => uint256)) allowance;
@@ -64,7 +70,7 @@ library TokenLib {
                 _domainSeparator(tokenName),
                 keccak256(
                     abi.encode(
-                        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                        PERMIT_TYPEHASH,
                         issuer,
                         spender,
                         value,
@@ -88,7 +94,7 @@ library TokenLib {
     function _domainSeparator(string storage name) internal view returns (bytes32) {
         return keccak256(
             abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                DOMAIN_TYPEHASH,
                 keccak256(bytes(name)),
                 keccak256(bytes("1")),
                 block.chainid,
