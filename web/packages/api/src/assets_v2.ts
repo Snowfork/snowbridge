@@ -197,60 +197,73 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
     }
 
     const providers: { [paraIdKey: string]: { parachainId: number, provider: ApiPromise, managed: boolean } } = {}
-    for (const parachain of parachains) {
-        let provider: ApiPromise;
-        let managed = false
-        if (typeof parachain === "string") {
-            provider = await ApiPromise.create({
-                provider: parachain.startsWith("http") ? new HttpProvider(parachain) : new WsProvider(parachain),
-            })
-            managed = true
-        } else {
-            provider = parachain
-        }
-        const parachainId = await getParachainId(provider)
+    for (const { parachainId, provider, managed } of await Promise.all(
+        parachains.map(async parachain => {
+            let provider: ApiPromise;
+            let managed = false
+            if (typeof parachain === "string") {
+                provider = await ApiPromise.create({
+                    provider: parachain.startsWith("http") ? new HttpProvider(parachain) : new WsProvider(parachain),
+                })
+                managed = true
+            } else {
+                provider = parachain
+            }
+            const parachainId = await getParachainId(provider)
+            return { parachainId, provider, managed }
+        })
+    )) {
         providers[parachainId.toString()] = { parachainId, provider, managed }
     }
 
     const paras: ParachainMap = {}
-    for (const parachainIdKey of Object.keys(providers)) {
-        const { parachainId, provider } = providers[parachainIdKey]
-        const para = await indexParachain(
-            provider,
-            providers[assetHubParaId.toString()].provider,
-            ethChainId,
-            parachainId,
-            assetHubParaId,
-            assetOverrides ?? {},
-            destinationFeeOverrides ?? {})
+    for (const { parachainId, para } of await Promise.all(
+        Object.keys(providers).map(async parachainIdKey => {
+            const { parachainId, provider } = providers[parachainIdKey]
+            const para = await indexParachain(
+                provider,
+                providers[assetHubParaId.toString()].provider,
+                ethChainId,
+                parachainId,
+                assetHubParaId,
+                assetOverrides ?? {},
+                destinationFeeOverrides ?? {})
+            return { parachainId, para }
+        })
+    )) {
         paras[parachainId.toString()] = para;
     }
 
-    for (const parachainIdKey of Object.keys(providers)) {
-        if (providers[parachainIdKey].managed)
-            await providers[parachainIdKey].provider.disconnect()
-    }
+    await Promise.all(
+        Object.keys(providers)
+            .filter(parachainKey => providers[parachainKey].managed)
+            .map(async parachainKey => await providers[parachainKey].provider.disconnect())
+    )
 
     if (!(assetHubParaId.toString() in paras)) {
         throw Error(`Could not resolve asset hub para id ${assetHubParaId} in the list of parachains provided.`)
     }
 
     const ethChains: { [chainId: string]: EthereumChain } = {}
-    for (const ethChain of ethchains) {
-        let provider: AbstractProvider;
-        if (typeof ethChain === "string") {
-            provider = ethers.getDefaultProvider(ethChain)
-        } else {
-            provider = ethChain
-        }
+    for (const ethChainInfo of await Promise.all(
+        ethchains.map(async ethChain => {
+            let provider: AbstractProvider;
+            if (typeof ethChain === "string") {
+                provider = ethers.getDefaultProvider(ethChain)
+            } else {
+                provider = ethChain
+            }
+            const ethChainInfo = await indexEthChain(provider, ethChainId, gatewayAddress, assetHubParaId, paras, precompiles ?? {})
 
-        const ethChainInfo = await indexEthChain(provider, ethChainId, gatewayAddress, assetHubParaId, paras, precompiles ?? {})
+            if (typeof ethChain === "string") {
+                provider.destroy()
+            }
+            return ethChainInfo
+        })
+    )) {
         ethChains[ethChainInfo.chainId.toString()] = ethChainInfo;
-
-        if (typeof ethChain === "string") {
-            provider.destroy()
-        }
     }
+
     if (!(ethChainId in ethChains)) {
         throw Error(`Cannot find ethereum chain ${ethChainId} in the list of ethereum chains.`)
     }
