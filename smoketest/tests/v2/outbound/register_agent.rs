@@ -8,7 +8,7 @@ async fn register_agent() {
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = i_gateway::IGatewayV2::new(gateway_addr, ethereum_client.clone());
 	gateway
-		.create_agent(ASSET_HUB_BOB_AGENT_ID)
+		.v2_createAgent(ASSET_HUB_BOB_AGENT_ID)
 		.send()
 		.await
 		.unwrap()
