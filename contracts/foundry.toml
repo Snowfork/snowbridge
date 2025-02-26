@@ -18,7 +18,6 @@ ignored_error_codes = [
 ]
 
 evm_version = 'Cancun'
-allow_internal_expect_revert = true
 
 [profile.production]
 via_ir = true
