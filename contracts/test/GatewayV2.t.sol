@@ -428,6 +428,6 @@ contract GatewayV2Test is Test {
         bytes32 origin = bytes32(uint256(1));
         vm.expectEmit(true, false, false, false);
         emit IGatewayBase.AgentCreated(origin, address(0x0));
-        IGatewayV2(payable(address(gateway))).createAgent(origin);
+        IGatewayV2(payable(address(gateway))).v2_createAgent(origin);
     }
 }

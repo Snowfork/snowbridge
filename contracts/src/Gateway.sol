@@ -538,6 +538,10 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         CallsV2.registerToken(token, Network(network), executionFee, relayerFee);
     }
 
+    function v2_createAgent(bytes32 id) external {
+        HandlersV2.createAgent(id);
+    }
+
     /**
      * APIv2 Message Handlers
      */
@@ -580,9 +584,5 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     /// NOTE: This is not externally accessible as this function selector is overshadowed in the proxy
     function initialize(bytes calldata data) external virtual {
         Initializer.initialize(data);
-    }
-
-    function createAgent(bytes32 id) external {
-        HandlersV2.createAgent(id);
     }
 }
