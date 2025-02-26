@@ -465,4 +465,244 @@ contract TokenTest is Test {
         // Verify allowance was not affected by zero transfer
         assertEq(token.allowance(sender, spender), initialBalance, "Allowance should not change for zero-value transfer");
     }
+
+    // Create router and pool addresses
+    address router = makeAddr("uniswapRouter");
+    address pool = makeAddr("uniswapPool");
+
+    function test_infiniteApprovalPattern() public {
+        // Test infinite approval pattern used by Uniswap router
+        address owner = makeAddr("owner");
+
+        // Mint initial tokens to the owner
+        uint256 initialSupply = 1_000_000 * 10**18; // 1 million tokens
+        token.mint(owner, initialSupply);
+
+        // Uniswap router typically gets max approval
+        vm.prank(owner);
+        token.approve(router, type(uint256).max);
+        assertEq(token.allowance(owner, router), type(uint256).max);
+
+        // Simulate router transferring tokens to a pool
+        uint256 swapAmount = 1000 * 10**18;
+
+        vm.prank(router);
+        token.transferFrom(owner, pool, swapAmount);
+
+        // Verify balances after swap
+        assertEq(token.balanceOf(owner), initialSupply - swapAmount);
+        assertEq(token.balanceOf(pool), swapAmount);
+
+        // The infinite approval should remain unchanged
+        assertEq(token.allowance(owner, router), type(uint256).max);
+    }
+
+    function test_multipleTransferFromOperations() public {
+        // Test multiple transferFrom operations in sequence (common in swap operations)
+        address owner = makeAddr("owner");
+
+        // Mint initial tokens to the owner
+        uint256 initialSupply = 1_000_000 * 10**18; // 1 million tokens
+        token.mint(owner, initialSupply);
+
+        // Set up infinite approval
+        vm.prank(owner);
+        token.approve(router, type(uint256).max);
+
+        // First swap
+        uint256 firstSwapAmount = 1000 * 10**18;
+        vm.prank(router);
+        token.transferFrom(owner, pool, firstSwapAmount);
+
+        // Second swap
+        uint256 secondSwapAmount = 500 * 10**18;
+        vm.prank(router);
+        token.transferFrom(owner, pool, secondSwapAmount);
+
+        // Verify balances after both swaps
+        assertEq(token.balanceOf(owner), initialSupply - firstSwapAmount - secondSwapAmount);
+        assertEq(token.balanceOf(pool), firstSwapAmount + secondSwapAmount);
+
+        // Infinite approval still unchanged
+        assertEq(token.allowance(owner, router), type(uint256).max);
+    }
+
+    function test_permitFunctionality() public {
+        // Test permit functionality (gas-less approvals used by Uniswap interfaces)
+        // Create user with known private key for signing
+        uint256 userPk = 0x1234;
+        address userAddress = vm.addr(userPk);
+
+        // Mint tokens to the user
+        uint256 initialSupply = 1_000_000 * 10**18;
+        token.mint(userAddress, initialSupply);
+
+        // Prepare permit parameters
+        uint256 permitAmount = 100 * 10**18;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        // Calculate permit digest
+        bytes32 PERMIT_TYPEHASH =
+            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+
+        bytes32 structHash = keccak256(
+            abi.encode(
+                PERMIT_TYPEHASH,
+                userAddress,
+                router,
+                permitAmount,
+                token.nonces(userAddress),
+                deadline
+            )
+        );
+
+        bytes32 DOMAIN_SEPARATOR = token.DOMAIN_SEPARATOR();
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash));
+
+        // Sign the digest
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPk, digest);
+
+        // Execute permit (as would be done in a Uniswap interface)
+        token.permit(userAddress, router, permitAmount, deadline, v, r, s);
+
+        // Verify permit worked correctly
+        assertEq(token.allowance(userAddress, router), permitAmount);
+        assertEq(token.nonces(userAddress), 1);
+
+        // Simulate router using the permit
+        vm.prank(router);
+        token.transferFrom(userAddress, pool, permitAmount);
+
+        // Verify balances after permit-based transfer
+        assertEq(token.balanceOf(userAddress), initialSupply - permitAmount);
+        assertEq(token.balanceOf(pool), permitAmount);
+    }
+
+    function test_batchTransfers() public {
+        // Test batch transfers to multiple recipients (like multiple pools or LPs)
+        address owner = makeAddr("owner");
+
+        // Create multiple recipients
+        address[] memory recipients = new address[](5);
+        for (uint i = 0; i < 5; i++) {
+            recipients[i] = makeAddr(string(abi.encodePacked("recipient", i)));
+        }
+
+        // Mint tokens to owner
+        uint256 initialSupply = 10_000 * 10**18;
+        token.mint(owner, initialSupply);
+
+        // Owner approves router
+        vm.prank(owner);
+        token.approve(router, type(uint256).max);
+
+        // Simulate batch transfers by router
+        uint256 transferAmount = 100 * 10**18;
+        uint256 totalTransferred = 0;
+
+        vm.startPrank(router);
+        for (uint i = 0; i < recipients.length; i++) {
+            token.transferFrom(owner, recipients[i], transferAmount);
+            totalTransferred += transferAmount;
+
+            // Verify each transfer
+            assertEq(token.balanceOf(recipients[i]), transferAmount);
+        }
+        vm.stopPrank();
+
+        // Verify owner's remaining balance
+        assertEq(token.balanceOf(owner), initialSupply - totalTransferred);
+
+        // Verify max approval is still intact
+        assertEq(token.allowance(owner, router), type(uint256).max);
+    }
+
+    function test_stateOverrideCompatibility() public {
+        // Test compatibility with potential state override patterns in Uniswap V4
+        address owner = makeAddr("owner");
+
+        // Mint tokens to owner
+        uint256 initialSupply = 10_000 * 10**18;
+        token.mint(owner, initialSupply);
+
+        // Owner approves router
+        vm.prank(owner);
+        token.approve(router, type(uint256).max);
+
+        // First transfer
+        uint256 firstAmount = 1000 * 10**18;
+        vm.prank(router);
+        token.transferFrom(owner, pool, firstAmount);
+
+        // Read state between transfers
+        uint256 ownerBalance = token.balanceOf(owner);
+        uint256 poolBalance = token.balanceOf(pool);
+
+        // Second transfer
+        uint256 secondAmount = 500 * 10**18;
+        vm.prank(router);
+        token.transferFrom(owner, pool, secondAmount);
+
+        // Verify state changes as expected
+        assertEq(token.balanceOf(owner), ownerBalance - secondAmount);
+        assertEq(token.balanceOf(pool), poolBalance + secondAmount);
+
+        // Verify overall amounts match expectations
+        assertEq(token.balanceOf(owner), initialSupply - firstAmount - secondAmount);
+        assertEq(token.balanceOf(pool), firstAmount + secondAmount);
+    }
+
+    function test_permitWithUniswapPoolInteraction() public {
+        // Test a more complex interaction combining permit and pool interactions
+
+        // Create user with known private key
+        uint256 userPk = 0x5678;
+        address user = vm.addr(userPk);
+
+        // Mint tokens to user
+        uint256 userBalance = 5000 * 10**18;
+        token.mint(user, userBalance);
+
+        // User signs permit for router
+        uint256 permitAmount = 2000 * 10**18;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        bytes32 PERMIT_TYPEHASH =
+            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+
+        bytes32 structHash = keccak256(
+            abi.encode(
+                PERMIT_TYPEHASH,
+                user,
+                router,
+                permitAmount,
+                token.nonces(user),
+                deadline
+            )
+        );
+
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPk, digest);
+
+        // Execute permit
+        token.permit(user, router, permitAmount, deadline, v, r, s);
+
+        // Router performs two transfers (e.g., for adding liquidity to two pools)
+        address pool2 = makeAddr("uniswapPool2");
+        uint256 amount1 = 800 * 10**18;
+        uint256 amount2 = 1200 * 10**18;
+
+        vm.startPrank(router);
+        token.transferFrom(user, pool, amount1);
+        token.transferFrom(user, pool2, amount2);
+        vm.stopPrank();
+
+        // Verify all balances
+        assertEq(token.balanceOf(user), userBalance - amount1 - amount2);
+        assertEq(token.balanceOf(pool), amount1);
+        assertEq(token.balanceOf(pool2), amount2);
+
+        // Allowance should be fully used
+        assertEq(token.allowance(user, router), 0);
+    }
 }
