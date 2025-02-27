@@ -56,33 +56,33 @@ pub mod asset_hub_polkadot_types {
 
 #[cfg(feature = "paseo")]
 pub mod asset_hub_paseo_types {
-    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation;
-    pub use crate::asset_hub_runtime::runtime_types::xcm::v3::{
+    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
         junction::Junction::AccountKey20,
         junction::Junction::GlobalConsensus,
         junction::NetworkId,
         junctions::Junctions::{X1, X2},
+        location::Location,
     };
-    pub fn get_ether_id(chain_id: u64) -> MultiLocation {
-        return MultiLocation {
+    pub fn get_ether_id(chain_id: u64) -> Location {
+        return Location {
             parents: 2,
-            interior: X1(GlobalConsensus(NetworkId::Ethereum { chain_id })),
+            interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id })]),
         };
     }
-    pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> MultiLocation {
-        return MultiLocation {
+    pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> Location {
+        return Location {
             parents: 2,
-            interior: X2(
+            interior: X2([
                 GlobalConsensus(NetworkId::Ethereum { chain_id }),
                 AccountKey20 { network: None, key },
-            ),
+            ]),
         };
     }
 }
 
 #[cfg(feature = "westend")]
 pub mod asset_hub_westend_types {
-    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v5::{
+    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
         junction::Junction::AccountKey20,
         junction::Junction::GlobalConsensus,
         junction::NetworkId,
@@ -149,21 +149,12 @@ pub fn outbound_queue_operating_mode(param: &OperatingModeEnum) -> BridgeHubRunt
 }
 
 pub fn upgrade(params: &UpgradeArgs) -> BridgeHubRuntimeCall {
-    let initializer = if params.initializer {
-        Some((
-            params.initializer_params.as_ref().unwrap().clone(),
-            params.initializer_gas.unwrap(),
-        ))
-    } else {
-        None
-    };
-
     BridgeHubRuntimeCall::EthereumSystem(snowbridge_pallet_system::pallet::Call::upgrade {
         impl_address: params.logic_address.into_array().into(),
         impl_code_hash: params.logic_code_hash.0.into(),
-        initializer: initializer.map(|(params, gas)| Initializer {
-            params: params.into(),
-            maximum_required_gas: gas,
+        initializer: Some(Initializer {
+            params: params.initializer_params.clone().into(),
+            maximum_required_gas: params.initializer_gas,
         }),
     })
 }

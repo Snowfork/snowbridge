@@ -112,17 +112,13 @@ pub struct UpgradeArgs {
     #[arg(long, value_name = "HASH", value_parser=parse_hex_bytes32)]
     logic_code_hash: FixedBytes<32>,
 
-    /// Initialize the logic contract
-    #[arg(long, requires_all=["initializer_params", "initializer_gas"])]
-    initializer: bool,
-
     /// ABI-encoded params to pass to initializer
-    #[arg(long, requires = "initializer", value_name = "BYTES", value_parser=parse_hex_bytes)]
-    initializer_params: Option<Bytes>,
+    #[arg(long, value_name = "BYTES", value_parser=parse_hex_bytes)]
+    initializer_params: Bytes,
 
     /// Maximum gas required by the initializer
-    #[arg(long, requires = "initializer", value_name = "GAS")]
-    initializer_gas: Option<u64>,
+    #[arg(long, value_name = "GAS")]
+    initializer_gas: u64,
 }
 
 #[derive(Debug, Args)]
