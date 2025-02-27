@@ -405,7 +405,7 @@ contract GatewayTest is Test {
      */
 
     // Test that the Gateway Proxy can receive funds to act as a wallet to pay out rewards and refunds
-    function testGatewayProxyCanRecieveFunds() public {
+    function testGatewayProxyCanReceiveFunds() public {
         uint256 amount = 1 ether;
         address deployer = makeAddr("deployer");
         hoax(deployer, amount);
@@ -987,6 +987,9 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Gateway.Unauthorized.selector);
         Gateway(address(gateway)).upgrade("");
+
+        vm.expectRevert(Gateway.Unauthorized.selector);
+        Gateway(address(gateway)).mintForeignToken(ParaID.wrap(3042).into(), "");
     }
 
     function testGetters() public {
