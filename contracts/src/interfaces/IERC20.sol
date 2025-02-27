@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Axelar Network
-// SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+// SPDX-FileCopyrightText: 2025 Snowfork <hello@snowfork.com>
 
 pragma solidity 0.8.28;
 
@@ -8,7 +8,10 @@ pragma solidity 0.8.28;
  * @dev Interface of the ERC20 standard as defined in the EIP.
  */
 interface IERC20 {
-    error InvalidAccount();
+    error InvalidSender(address);
+    error InvalidReceiver(address);
+    error InvalidSpender(address);
+    error InvalidApprover(address);
     error InsufficientBalance(address sender, uint256 balance, uint256 needed);
     error InsufficientAllowance(address spender, uint256 allowance, uint256 needed);
 
