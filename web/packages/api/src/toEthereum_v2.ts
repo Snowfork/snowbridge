@@ -509,6 +509,7 @@ export async function validateTransferEvm(
         logs.push({ kind: ValidationKind.Error, reason: ValidationReason.InsufficientTokenBalance, message: 'Insufficient token balance to submit transaction.' })
     }
 
+    // Create a mock tx that calls the substrate extrinsic on pallet-xcm with the same parameters so that we can dry run.
     const mockTx = createERC20SourceParachainTx(sourceParachain, registry.ethChainId, registry.assetHubParaId, sourceAccountHex, tokenAddress, beneficiaryAccount, amount, fee.totalFeeInDot, messageId, sourceParaId, fee.returnToSenderExecutionFeeDOT)
 
     let sourceDryRunError;
