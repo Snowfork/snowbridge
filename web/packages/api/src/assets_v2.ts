@@ -936,7 +936,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
         }
         case "polkadot_mainnet": {
             // Add override for mythos token and add precompile for moonbeam
-            result.precompiles = { "2004": "0x000000000000000000000000000000000000081A" }
+            result.precompiles = { "2004": "0x000000000000000000000000000000000000081a" }
             result.destinationFeeOverrides = {
                 "3369": 100_000_000n
             }
