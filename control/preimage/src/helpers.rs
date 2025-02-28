@@ -7,26 +7,28 @@ use crate::Context;
 
 use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 
-use crate::relay_runtime::runtime_types::xcm::v3::OriginKind;
-
 use crate::relay_runtime::runtime_types::{
     pallet_xcm,
     sp_weights::weight_v2::Weight,
-    staging_xcm::v3::multilocation::MultiLocation,
+    xcm::double_encoded::DoubleEncoded,
+    xcm::v3::{
+    	OriginKind,
+    	MaybeErrorCode,
+     	WeightLimit,
+    },
     xcm::{
-        double_encoded::DoubleEncoded,
-        v3::{
-            junction::Junction,
-            junctions::Junctions,
-            Instruction::{self, *},
-            MaybeErrorCode, WeightLimit, Xcm,
-        },
         VersionedLocation, VersionedXcm,
+    },
+    staging_xcm::v4::{
+       	location::Location,
+        junction::Junction,
+        junctions::Junctions,
+        Instruction::{self, *},
+        Xcm,
     },
 };
 
 use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
-
 use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
 
 use sp_arithmetic::helpers_128bit::multiply_by_rational_with_rounding;
@@ -35,14 +37,14 @@ use sp_arithmetic::per_things::Rounding;
 const MAX_REF_TIME: u128 = 500_000_000_000 - 1;
 const MAX_PROOF_SIZE: u128 = 3 * 1024 * 1024 - 1;
 
-// Increase call weight by 50% as a buffer in case the chain is upgraded with new weights
+// Increase call weight by 100% as a buffer in case the chain is upgraded with new weights
 // while the proposal is still in flight.
 pub fn increase_weight(ref_time: &mut u64, proof_size: &mut u64) {
-    let _ref_time = multiply_by_rational_with_rounding(*ref_time as u128, 3, 2, Rounding::Up)
+    let _ref_time = multiply_by_rational_with_rounding(*ref_time as u128, 2, 1, Rounding::Up)
         .expect("overflow")
         .min(MAX_REF_TIME);
     let _proof_size =
-        multiply_by_rational_with_rounding(*proof_size as u128, 125, 100, Rounding::Up)
+        multiply_by_rational_with_rounding(*proof_size as u128, 2, 1, Rounding::Up)
             .expect("overflow")
             .min(MAX_PROOF_SIZE);
 
@@ -83,11 +85,11 @@ pub async fn send_xcm_bridge_hub(
     }
 
     let call = RelayRuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
-        dest: Box::new(VersionedLocation::V3(MultiLocation {
+        dest: Box::new(VersionedLocation::V4(Location {
             parents: 0,
-            interior: Junctions::X1(Junction::Parachain(BRIDGE_HUB_ID)),
+            interior: Junctions::X1([Junction::Parachain(BRIDGE_HUB_ID)]),
         })),
-        message: Box::new(VersionedXcm::V3(Xcm(instructions))),
+        message: Box::new(VersionedXcm::V4(Xcm(instructions))),
     });
 
     Ok(call)
@@ -126,11 +128,11 @@ pub async fn send_xcm_asset_hub(
     }
 
     let call = RelayRuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
-        dest: Box::new(VersionedLocation::V3(MultiLocation {
+        dest: Box::new(VersionedLocation::V4(Location {
             parents: 0,
-            interior: Junctions::X1(Junction::Parachain(ASSET_HUB_ID)),
+            interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
         })),
-        message: Box::new(VersionedXcm::V3(Xcm(instructions))),
+        message: Box::new(VersionedXcm::V4(Xcm(instructions))),
     });
 
     Ok(call)
