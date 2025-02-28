@@ -1,14 +1,13 @@
 use assethub::api::polkadot_xcm::calls::TransactionApi;
-use ethers::{
-	providers::{Provider, Ws},
-	types::Address,
-};
+use codec::Encode;
+use ethers::abi::{Abi, Token};
+use hex_literal::hex;
 use snowbridge_smoketest::{
 	asset_hub_helper::{eth_location, mint_token_to},
 	constants::*,
-	contracts::i_gateway_v2::{IGatewayV2, InboundMessageDispatchedFilter},
+	contracts::hello_world::{HelloWorld, SaidHelloFilter},
 	helper::{initial_clients, AssetHubConfig},
-	helper_v2::wait_for_ethereum_event_v2,
+	helper_v2::{fund_agent_v2, get_agent_address, wait_for_ethereum_event_v2},
 	parachains::assethub::{
 		self,
 		api::runtime_types::{
@@ -24,34 +23,69 @@ use snowbridge_smoketest::{
 				junction::{Junction, NetworkId},
 				junctions::Junctions,
 				location::Location,
-				Instruction::{DepositAsset, InitiateTransfer, PayFees, WithdrawAsset},
+				Instruction::{DepositAsset, InitiateTransfer, PayFees, Transact, WithdrawAsset},
 				Xcm,
 			},
-			xcm::VersionedXcm,
+			xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedXcm},
 		},
 	},
+	types::ContractCall,
 };
-use std::{str::FromStr, sync::Arc, time::Duration};
+use std::str::FromStr;
 use subxt::OnlineClient;
-use subxt_signer::{sr25519, SecretUri};
+use subxt_signer::{
+	sr25519::{self},
+	SecretUri,
+};
 
 const INITIAL_FUND: u128 = 3_000_000_000_000;
+const INITIAL_FUND_IN_ETHER: u128 = 1_000_000_000_000_000;
+const HELLO_WORLD_CONTRACT: [u8; 20] = hex!("8cf6147918a5cbb672703f879f385036f8793a24");
 
 #[tokio::test]
-async fn transfer_ena() {
+async fn agent_transact() {
 	let test_clients = initial_clients().await.expect("initialize clients");
-	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
+	let ethereum_client = test_clients.ethereum_client;
+
+	// Initial fund for the AH agent
+	fund_agent_v2(ASSET_HUB_AGENT_ID, INITIAL_FUND_IN_ETHER)
 		.await
-		.unwrap()
-		.interval(Duration::from_millis(10u64));
-	let ethereum_client = Arc::new(ethereum_provider);
+		.expect("fund the agent");
 
-	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = IGatewayV2::new(gateway_addr, ethereum_client.clone());
+	// Initial fund for the user agent
+	let agent_address = get_agent_address(&ethereum_client, ASSET_HUB_BOB_AGENT_ID)
+		.await
+		.expect("find agent");
+	println!("agent address {}", hex::encode(agent_address));
+	fund_agent_v2(ASSET_HUB_BOB_AGENT_ID, INITIAL_FUND_IN_ETHER)
+		.await
+		.expect("fund the agent");
 
-	let agent_src =
-		gateway.agent_of(ASSET_HUB_AGENT_ID).await.expect("could not get agent address");
-	println!("agent_src: {:?}", agent_src);
+	let suri = SecretUri::from_str(&SUBSTRATE_KEY).expect("Parse SURI");
+	let signer = sr25519::Keypair::from_uri(&suri).expect("valid keypair");
+
+	// Mint ether to sender to pay fees
+	mint_token_to(
+		&test_clients.asset_hub_client,
+		eth_location(),
+		signer.public_key().0,
+		INITIAL_FUND,
+	)
+	.await;
+
+	let hello_world = HelloWorld::new(HELLO_WORLD_CONTRACT, *ethereum_client.clone());
+	let contract_abi: Abi = hello_world.abi().clone();
+	let function = contract_abi.function("sayHello").unwrap();
+	let encoded_data = function.encode_input(&[Token::String("Hello!".to_string())]).unwrap();
+
+	println!("data is {}", hex::encode(encoded_data.clone()));
+
+	let transact_info = ContractCall::V1 {
+		target: HELLO_WORLD_CONTRACT,
+		calldata: encoded_data,
+		gas: 80000,
+		value: 1_000_000_000,
+	};
 
 	let assethub: OnlineClient<AssetHubConfig> =
 		OnlineClient::from_url((*ASSET_HUB_WS_URL).to_string()).await.unwrap();
@@ -67,7 +101,7 @@ async fn transfer_ena() {
 		parents: 0,
 		interior: Junctions::X1([Junction::AccountKey20 {
 			network: None,
-			key: (*ETHEREUM_RECEIVER).into(),
+			key: agent_address.into(),
 		}]),
 	};
 
@@ -76,7 +110,7 @@ async fn transfer_ena() {
 		id: AssetId(Location { parents: 1, interior: Junctions::Here }),
 		fun: Fungible(local_fee_amount),
 	};
-	let amount: u128 = 1_000_000_000;
+	let amount: u128 = 4_000_000_000;
 	let asset_location = Location {
 		parents: 2,
 		interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Ethereum {
@@ -103,31 +137,25 @@ async fn transfer_ena() {
 			assets: vec![AssetTransferFilter::ReserveWithdraw(Definite(Assets(vec![
 				reserved_asset.clone(),
 			])))],
-			remote_xcm: Xcm(vec![DepositAsset { assets: Wild(AllCounted(2)), beneficiary }]),
+			remote_xcm: Xcm(vec![
+				DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
+				Transact {
+					origin_kind: OriginKind::SovereignAccount,
+					fallback_max_weight: None,
+					call: DoubleEncoded { encoded: transact_info.encode() },
+				},
+			]),
 		},
 	]));
 
-	let suri = SecretUri::from_str(&SUBSTRATE_KEY).expect("Parse SURI");
-
-	let signer = sr25519::Keypair::from_uri(&suri).expect("valid keypair");
-
-	// Mint ether to sender to pay fees
-	mint_token_to(
-		&test_clients.asset_hub_client,
-		eth_location(),
-		signer.public_key().0,
-		INITIAL_FUND,
-	)
-	.await;
-
-	let token_transfer_call =
+	let transact_call =
 		TransactionApi.execute(xcm, Weight { ref_time: 8_000_000_000, proof_size: 80_000 });
 
 	let _ = assethub
 		.tx()
-		.sign_and_submit_then_watch_default(&token_transfer_call, &signer)
+		.sign_and_submit_then_watch_default(&transact_call, &signer)
 		.await
 		.expect("call success");
 
-	wait_for_ethereum_event_v2::<InboundMessageDispatchedFilter>(&Box::new(ethereum_client)).await;
+	wait_for_ethereum_event_v2::<SaidHelloFilter>(&ethereum_client).await;
 }

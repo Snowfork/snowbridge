@@ -1,14 +1,10 @@
 use assethub::api::polkadot_xcm::calls::TransactionApi;
-use ethers::{
-	prelude::Middleware,
-	providers::{Provider, Ws},
-	types::Address,
-};
-use futures::StreamExt;
 use snowbridge_smoketest::{
+	asset_hub_helper::{eth_location, mint_token_to},
 	constants::*,
-	contracts::{token, token::TransferFilter},
-	helper::AssetHubConfig,
+	contracts::token::TransferFilter,
+	helper::{initial_clients, AssetHubConfig},
+	helper_v2::wait_for_ethereum_event_v2,
 	parachains::assethub::{
 		api::runtime_types::{
 			sp_weights::weight_v2::Weight,
@@ -34,21 +30,31 @@ use snowbridge_smoketest::{
 		{self},
 	},
 };
-use std::{sync::Arc, time::Duration};
+use std::str::FromStr;
 use subxt::OnlineClient;
-use subxt_signer::sr25519::dev;
+use subxt_signer::{
+	sr25519::{self},
+	SecretUri,
+};
 
+const INITIAL_FUND: u128 = 3_000_000_000_000;
 #[tokio::test]
 async fn transfer_pna() {
-	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
-		.await
-		.unwrap()
-		.interval(Duration::from_millis(10u64));
+	let test_clients = initial_clients().await.expect("initialize clients");
+	let suri = SecretUri::from_str(&SUBSTRATE_KEY).expect("Parse SURI");
+	let signer = sr25519::Keypair::from_uri(&suri).expect("valid keypair");
+	// Mint ether to sender to pay fees
+	mint_token_to(
+		&test_clients.asset_hub_client,
+		eth_location(),
+		signer.public_key().0,
+		INITIAL_FUND,
+	)
+	.await;
 
-	let ethereum_client = Arc::new(ethereum_provider);
+	let ethereum_client = *test_clients.ethereum_client;
 
-	let assethub: OnlineClient<AssetHubConfig> =
-		OnlineClient::from_url((*ASSET_HUB_WS_URL).to_string()).await.unwrap();
+	let assethub: OnlineClient<AssetHubConfig> = *test_clients.asset_hub_client;
 
 	let destination = Location {
 		parents: 2,
@@ -72,12 +78,11 @@ async fn transfer_pna() {
 
 	const TOKEN_AMOUNT: u128 = 100_000_000_000;
 
-	let weth_asset_location: Location = Location {
+	let fee_asset_location: Location = Location {
 		parents: 2,
-		interior: Junctions::X2([
-			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
-			AccountKey20 { network: None, key: *WETH_CONTRACT },
-		]),
+		interior: Junctions::X1([GlobalConsensus(NetworkId::Ethereum {
+			chain_id: ETHEREUM_CHAIN_ID,
+		})]),
 	};
 
 	let local_fee_asset = Asset {
@@ -85,7 +90,7 @@ async fn transfer_pna() {
 		fun: Fungible(local_fee_amount),
 	};
 	let remote_fee_asset =
-		Asset { id: AssetId(weth_asset_location), fun: Fungible(remote_fee_amount) };
+		Asset { id: AssetId(fee_asset_location), fun: Fungible(remote_fee_amount) };
 
 	let assets = vec![
 		Asset {
@@ -112,8 +117,6 @@ async fn transfer_pna() {
 		},
 	]));
 
-	let signer = dev::bob();
-
 	let token_transfer_call =
 		TransactionApi.execute(xcm, Weight { ref_time: 8_000_000_000, proof_size: 80_000 });
 
@@ -123,32 +126,5 @@ async fn transfer_pna() {
 		.await
 		.expect("call success");
 
-	let erc20_dot_address: Address = ERC20_DOT_CONTRACT.into();
-	let erc20_dot = token::Token::new(erc20_dot_address, ethereum_client.clone());
-
-	let wait_for_blocks = 500;
-	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
-
-	let mut transfer_event_found = false;
-	while let Some(block) = stream.next().await {
-		println!("Polling ethereum block {:?} for transfer event", block.number.unwrap());
-		if let Ok(transfers) = erc20_dot
-			.event::<TransferFilter>()
-			.at_block_hash(block.hash.unwrap())
-			.query()
-			.await
-		{
-			for transfer in transfers {
-				println!("Transfer event found at ethereum block {:?}", block.number.unwrap());
-				println!("from {:?}", transfer.from);
-				println!("to {:?}", transfer.to);
-				assert_eq!(transfer.value, TOKEN_AMOUNT.into());
-				transfer_event_found = true;
-			}
-		}
-		if transfer_event_found {
-			break
-		}
-	}
-	assert!(transfer_event_found);
+	wait_for_ethereum_event_v2::<TransferFilter>(&Box::new(ethereum_client)).await;
 }

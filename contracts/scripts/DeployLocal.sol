@@ -19,6 +19,7 @@ import {Initializer} from "../src/Initializer.sol";
 import {SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
+import {HelloWorld} from "../test/mocks/HelloWorld.sol";
 
 contract DeployLocal is Script {
     using SafeNativeTransfer for address payable;
@@ -87,6 +88,9 @@ contract DeployLocal is Script {
 
         // Deploy WETH for testing
         new WETH9();
+
+        // For testing call contract
+        new HelloWorld();
 
         // Fund the gateway proxy contract. Used to reward relayers
         uint256 initialDeposit = vm.envUint("GATEWAY_PROXY_INITIAL_DEPOSIT");

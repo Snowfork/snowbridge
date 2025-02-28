@@ -46,6 +46,7 @@ contract ScaleCodecTest is Test {
         assertEq(ScaleCodec.encodeCompactU32(type(uint32).max), hex"03ffffffff");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testCheckedEncodeCompactU32() public {
         assertEq(ScaleCodec.checkedEncodeCompactU32(type(uint32).max), hex"03ffffffff");
 

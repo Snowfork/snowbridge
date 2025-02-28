@@ -119,7 +119,7 @@ pub async fn wait_for_bridgehub_event<Ev: StaticEvent>(
 		.subscribe_finalized()
 		.await
 		.expect("block subscription")
-		.take(5);
+		.take(500);
 
 	let mut substrate_event_found = false;
 	while let Some(Ok(block)) = blocks.next().await {
@@ -226,11 +226,12 @@ pub async fn get_balance(
 pub async fn fund_account(
 	client: &Box<Arc<SignerMiddleware<Provider<Http>, LocalWallet>>>,
 	address_to: Address,
+	amount: u128,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let tx = TransactionRequest::new()
 		.to(address_to)
 		.from(client.address())
-		.value(U256::from(ethers::utils::parse_ether(1)?));
+		.value(U256::from(amount));
 	let tx = client.send_transaction(tx, None).await?.await?;
 	assert_eq!(tx.clone().unwrap().status.unwrap().as_u64(), 1u64);
 	println!("receipt: {:#?}", hex::encode(tx.unwrap().transaction_hash));
@@ -564,7 +565,10 @@ pub async fn governance_assethub_call_from_relay_chain_sudo_as(
 	Ok(())
 }
 
-pub async fn fund_agent(agent_id: [u8; 32]) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn fund_agent(
+	agent_id: [u8; 32],
+	amount: u128,
+) -> Result<(), Box<dyn std::error::Error>> {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let ethereum_client = *(test_clients.ethereum_client.clone());
@@ -573,7 +577,7 @@ pub async fn fund_agent(agent_id: [u8; 32]) -> Result<(), Box<dyn std::error::Er
 
 	println!("agent address {}", hex::encode(agent_address));
 
-	fund_account(&test_clients.ethereum_signed_client, agent_address)
+	fund_account(&test_clients.ethereum_signed_client, agent_address, amount)
 		.await
 		.expect("fund account");
 	Ok(())
@@ -591,4 +595,51 @@ pub fn print_event_log_for_unit_tests(log: &Log) {
 	println!("	data: hex!(\"{}\").into(),", hex::encode(&log.data));
 
 	println!("}}")
+}
+
+pub async fn governance_assethub_call_from_relay_chain(
+	call: Vec<u8>,
+) -> Result<(), Box<dyn std::error::Error>> {
+	let test_clients = initial_clients().await.expect("initialize clients");
+
+	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
+
+	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+
+	let weight = 180000000000;
+	let proof_size = 900000;
+
+	let dest = Box::new(RelaychainVersionedLocation::V3(RelaychainMultiLocation {
+		parents: 0,
+		interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(ASSET_HUB_PARA_ID)),
+	}));
+	let message = Box::new(RelaychainVersionedXcm::V3(RelaychainXcm(vec![
+		RelaychainInstruction::UnpaidExecution {
+			weight_limit: RelaychainWeightLimit::Unlimited,
+			check_origin: None,
+		},
+		RelaychainInstruction::Transact {
+			origin_kind: RelaychainOriginKind::Superuser,
+			require_weight_at_most: RelaychainWeight { ref_time: weight, proof_size },
+			call: RelaychainDoubleEncoded { encoded: call },
+		},
+	])));
+
+	let sudo_api = relaychain::api::sudo::calls::TransactionApi;
+	let sudo_call = sudo_api
+		.sudo(RelaychainRuntimeCall::XcmPallet(RelaychainPalletXcmCall::send { dest, message }));
+
+	let result = test_clients
+		.relaychain_client
+		.tx()
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.await
+		.expect("send through sudo call.")
+		.wait_for_finalized_success()
+		.await
+		.expect("sudo call success");
+
+	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
+
+	Ok(())
 }

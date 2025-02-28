@@ -276,11 +276,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return Functions.ensureAgent(agentID);
     }
 
-    function outboundNonce()
-        external
-        view
-        returns (uint64)
-    {
+    function outboundNonce() external view returns (uint64) {
         return CallsV2.outboundNonce();
     }
 
@@ -504,12 +500,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 ) {} catch {
                     return false;
                 }
-            } else if (message.commands[i].kind == CommandKind.CreateAgent) {
-                try Gateway(this).v2_handleCreateAgent{gas: message.commands[i].gas}(
-                    message.origin
-                ) {} catch {
-                    return false;
-                }
             } else if (message.commands[i].kind == CommandKind.CallContract) {
                 try Gateway(this).v2_handleCallContract{gas: message.commands[i].gas}(
                     message.origin, message.commands[i].payload
@@ -548,6 +538,10 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         CallsV2.registerToken(token, Network(network), executionFee, relayerFee);
     }
 
+    function v2_createAgent(bytes32 id) external {
+        HandlersV2.createAgent(id);
+    }
+
     /**
      * APIv2 Message Handlers
      */
@@ -575,11 +569,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     // Mint foreign token from polkadot
     function v2_handleMintForeignToken(bytes calldata data) external onlySelf {
         HandlersV2.mintForeignToken(data);
-    }
-
-    // Create an agent for a Polkadot origin
-    function v2_handleCreateAgent(bytes32 origin) external onlySelf {
-        HandlersV2.createAgent(origin);
     }
 
     // Call an arbitrary contract function

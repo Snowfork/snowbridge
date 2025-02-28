@@ -4,8 +4,8 @@ import { AbstractProvider, JsonRpcProvider, WebSocketProvider } from "ethers"
 import {
     BeefyClient,
     BeefyClient__factory,
-    IGateway,
-    IGateway__factory,
+    IGatewayV1 as IGateway,
+    IGatewayV1__factory as IGateway__factory,
 } from "@snowbridge/contract-types"
 
 interface Config {
