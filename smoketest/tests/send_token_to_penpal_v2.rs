@@ -109,10 +109,9 @@ async fn send_token_to_penpal_v2() {
 			SetTopic(H256::random().into()),
 		]),
 	}]));
-	let encoded_xcm = message.encode();
 
-	let xcm = Bytes::from(encoded_xcm);
-	let claimer = Bytes::from(vec![]);
+	let xcm = Bytes::from(message.encode());
+	let claimer = Bytes::from(beneficiary().encode());
 	let assets = vec![weth_asset];
 
 	let receipt = gateway
