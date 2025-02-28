@@ -166,6 +166,5 @@ struct CallContractParams {
 }
 
 enum Network {
-    Polkadot,
-    Kusama
+    Polkadot
 }
