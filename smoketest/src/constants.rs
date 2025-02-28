@@ -54,6 +54,8 @@ pub const SNOWBRIDGE_SOVEREIGN: [u8; 32] =
 pub const PENPAL_SOVEREIGN: [u8; 32] =
 	hex!("7369626cd0070000000000000000000000000000000000000000000000000000");
 
+pub const INBOUND_QUEUE_PALLET_INDEX_V2: u8 = 91;
+
 lazy_static! {
 	// SS58: 5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL
 	pub static ref ALICE: Pair = Pair::from_string("//Alice", None)

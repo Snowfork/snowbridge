@@ -72,11 +72,11 @@ interface IGatewayV2 {
         uint128 relayerFee
     ) external payable;
 
-    // Register Ethereum-native token on either Polkadot or Kusama
+    // Register Ethereum-native token on Polkadot.
     //
     // Params:
     //   * `token` (address): address of a token.
-    //   * `network` (uint8): Polkadot=0; Kusama=1
+    //   * `network` (uint8): Polkadot=0. Kusama may be added later - it is not supported yet.
     //   * `executionFee`: Amount of ether to pay for execution on AssetHub.
     //   * `relayerFee`: Amount of ether to pay for relayer incentivation.
     function v2_registerToken(

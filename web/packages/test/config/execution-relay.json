@@ -33,7 +33,7 @@
   "instantVerification": false,
   "schedule": {
     "id": null,
-    "totalRelayerCount": 3,
+    "totalRelayerCount": 1,
     "sleepInterval": 20
   },
   "ofac": {

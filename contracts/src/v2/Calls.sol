@@ -22,10 +22,17 @@ import {Token} from "../Token.sol";
 import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
 import {Constants} from "../Constants.sol";
-import {ScaleCodec} from "../utils/ScaleCodec.sol";
 
 import {
-    Payload, OperatingMode, Asset, makeNativeAsset, makeForeignAsset, Network
+    Payload,
+    OperatingMode,
+    Asset,
+    makeNativeAsset,
+    makeForeignAsset,
+    Network,
+    Xcm,
+    makeRawXCM,
+    makeCreateAssetXCM
 } from "./Types.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
@@ -46,7 +53,7 @@ library CallsV2 {
         uint128 executionFee,
         uint128 relayerFee
     ) external {
-        _sendMessage(msg.sender, xcm, assets, claimer, executionFee, relayerFee);
+        _sendMessage(msg.sender, makeRawXCM(xcm), assets, claimer, executionFee, relayerFee);
     }
 
     // Refer to `IGateway.registerToken` for documentation
@@ -56,28 +63,13 @@ library CallsV2 {
         uint128 executionFee,
         uint128 relayerFee
     ) internal {
-        // Build XCM for token registration on AHP and possibly AHK
-        bytes memory xcm;
-
         require(msg.value <= type(uint128).max, IGatewayV2.ExceededMaximumValue());
         require(msg.value >= executionFee + relayerFee, IGatewayV2.InsufficientValue());
-        uint128 etherValue = uint128(msg.value) - executionFee - relayerFee;
 
-        if (network == Network.Polkadot) {
-            // Build XCM that executes on AHP only
-            xcm = bytes.concat(
-                hex"05100f0004020109079edaa80200", ScaleCodec.encodeCompactU128(etherValue), hex"040100000700b2118417000d00040100000700b211841700010100ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d06030045013500020209079edaa8020300", abi.encodePacked(token), hex"00ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d010000000000000000000000000000002000"
-            );
-        } else if (network == Network.Kusama) {
-            // Build XCM that is executed on AHP and forwards another message to AHK
-            xcm = bytes.concat(
-                hex"deadbeef", abi.encodePacked(token), hex"deadbeef", abi.encodePacked(etherValue)
-            );
-        } else {
-            revert IGatewayV2.ShouldNotReachHere();
-        }
+        Xcm memory xcm = makeCreateAssetXCM(token, network);
 
         Functions.registerNativeToken(token);
+
         _sendMessage(address(this), xcm, new bytes[](0), "", executionFee, relayerFee);
     }
 
@@ -87,7 +79,7 @@ library CallsV2 {
 
     function _sendMessage(
         address origin,
-        bytes memory xcm,
+        Xcm memory xcm,
         bytes[] memory assets,
         bytes memory claimer,
         uint128 executionFee,

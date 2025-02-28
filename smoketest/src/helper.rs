@@ -346,7 +346,7 @@ pub async fn snowbridge_assethub_call_from_relay_chain(
 			RelaychainJunction::Parachain(BRIDGE_HUB_PARA_ID),
 		)),
 		RelaychainInstruction::DescendOrigin(RelaychainJunctions::X1(
-			RelaychainJunction::PalletInstance(91),
+			RelaychainJunction::PalletInstance(INBOUND_QUEUE_PALLET_INDEX_V2),
 		)),
 		RelaychainInstruction::UniversalOrigin(RelaychainJunction::GlobalConsensus(
 			RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID },
@@ -427,7 +427,7 @@ pub async fn assethub_deposit_eth_on_penpal_call_from_relay_chain(
 			RelaychainJunction::Parachain(BRIDGE_HUB_PARA_ID),
 		)),
 		RelaychainInstruction::DescendOrigin(RelaychainJunctions::X1(
-			RelaychainJunction::PalletInstance(84),
+			RelaychainJunction::PalletInstance(INBOUND_QUEUE_PALLET_INDEX_V2),
 		)),
 		RelaychainInstruction::UniversalOrigin(RelaychainJunction::GlobalConsensus(
 			RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID },

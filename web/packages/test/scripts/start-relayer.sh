@@ -63,7 +63,7 @@ config_relayer() {
     | .source."channel-id" = $channelID
     | .schedule.id = 0
     ' \
-        config/execution-relay.json >$output_dir/execution-relay-asset-hub-0.json
+        config/execution-relay.json >$output_dir/execution-relay-v2.json
 }
 
 start_relayer() {
@@ -114,7 +114,7 @@ start_relayer() {
         while :; do
             echo "Starting execution relay at $(date)"
             "${relay_bin}" run execution \
-                --config $output_dir/execution-relay-asset-hub-0.json \
+                --config $output_dir/execution-relay-v2.json \
                 --substrate.private-key "//ExecutionRelayAssetHub" \
                 >>"$output_dir"/execution-relay-v2.log 2>&1 || true
             sleep 20
