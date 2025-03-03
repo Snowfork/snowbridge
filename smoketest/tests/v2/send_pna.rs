@@ -100,6 +100,7 @@ async fn send_pna() {
 		for event in events.find::<Minted>() {
 			let minted = event.unwrap();
 			assert_eq!(minted.who, expected_owner);
+			assert_eq!(minted.amount, amount);
 			event_found = true;
 		}
 		if event_found {
