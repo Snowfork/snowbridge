@@ -11,7 +11,7 @@ use snowbridge_smoketest::{
 use subxt::utils::AccountId32;
 
 #[tokio::test]
-async fn register_token_v2() {
+async fn register_ena() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
 	let assethub = *(test_clients.asset_hub_client.clone());

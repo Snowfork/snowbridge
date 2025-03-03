@@ -41,7 +41,7 @@ use subxt::{
 };
 
 #[tokio::test]
-async fn send_token_to_penpal_v2() {
+async fn send_ena_to_penpal() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
 	let assethub_client = *(test_clients.asset_hub_client.clone());
@@ -109,10 +109,9 @@ async fn send_token_to_penpal_v2() {
 			SetTopic(H256::random().into()),
 		]),
 	}]));
-	let encoded_xcm = message.encode();
 
-	let xcm = Bytes::from(encoded_xcm);
-	let claimer = Bytes::from(vec![]);
+	let xcm = Bytes::from(message.encode());
+	let claimer = Bytes::from(beneficiary().encode());
 	let assets = vec![weth_asset];
 
 	let receipt = gateway
