@@ -1,6 +1,6 @@
 use crate::{
 	constants::*,
-	contracts::i_gateway_v2 as i_gateway,
+	contracts::{i_gateway_v1, i_gateway_v2 as i_gateway},
 	helper::{fund_account, initial_clients},
 };
 use ethers::{
@@ -65,6 +65,15 @@ pub async fn get_agent_address(
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = i_gateway::IGatewayV2::new(gateway_addr, (*ethereum_client).deref().clone());
 	let agent_address = gateway.agent_of(agent_id).await.expect("find agent");
-
 	Ok(agent_address)
+}
+
+pub async fn get_token_address(
+	ethereum_client: &Box<Arc<Provider<Ws>>>,
+	token_id: [u8; 32],
+) -> Result<Address, Box<dyn std::error::Error>> {
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
+	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, (*ethereum_client).deref().clone());
+	let token_address = gateway.token_address_of(token_id).await.expect("find token");
+	Ok(token_address)
 }
