@@ -343,6 +343,10 @@ export function getTransferLocations(registry: AssetRegistry, filter?: (path: Pa
             if (pathFilter(p1)) { locations.push(p1) }
             const p2: Path = { type: "substrate", id: parachain.info.specName, source: parachain.parachainId, destination: ethChain.chainId, asset }
             if (pathFilter(p2)) { locations.push(p2) }
+            if(parachain.info.evmChainId && registry.ethereumChains[parachain.info.evmChainId]) {
+                const p3: Path = { type: "ethereum", id: `${parachain.info.specName}_evm`, source: parachain.info.evmChainId, destination: ethChain.chainId, asset }
+                if (pathFilter(p3)) { locations.push(p3) }
+            }
         }
     }
     const results: Source[] = []
