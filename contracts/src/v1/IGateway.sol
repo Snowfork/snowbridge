@@ -112,4 +112,7 @@ interface IGatewayV1 {
         uint128 destinationFee,
         uint128 amount
     ) external payable;
+
+    /// @dev Get token address by tokenID
+    function tokenAddressOf(bytes32 tokenID) external view returns (address);
 }

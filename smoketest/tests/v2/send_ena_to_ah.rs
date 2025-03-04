@@ -30,7 +30,7 @@ use snowbridge_smoketest::{
 use subxt::{ext::codec::Encode, utils::AccountId32 as AccountId32Substrate};
 
 #[tokio::test]
-async fn send_token_v2() {
+async fn send_ena_to_ah() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
 	let assethub = *(test_clients.asset_hub_client.clone());

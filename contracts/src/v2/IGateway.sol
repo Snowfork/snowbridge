@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 import {MultiAddress} from "../MultiAddress.sol";
 import {OperatingMode, InboundMessage, Payload} from "./Types.sol";
 import {Verification} from "../Verification.sol";
-import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 interface IGatewayV2 {
     error ShouldNotReachHere();
