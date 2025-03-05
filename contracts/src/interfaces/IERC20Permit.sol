@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2023 Axelar Network
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 
@@ -6,6 +6,8 @@ pragma solidity 0.8.28;
 
 interface IERC20Permit {
     error PermitExpired();
+    error InvalidS();
+    error InvalidV();
     error InvalidSignature();
 
     function DOMAIN_SEPARATOR() external view returns (bytes32);
