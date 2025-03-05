@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 OpenZeppelin
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 // Code from https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/Math.sol
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 /**
  * @dev Standard math utilities missing in the Solidity language.

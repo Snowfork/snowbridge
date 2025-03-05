@@ -1,9 +1,7 @@
 export type Config = {
     BEACON_HTTP_API: string
-    ETHEREUM_API: (secret: string) => string
+    ETHEREUM_CHAINS: { [chain: string]: (secret: string) => string }
     RELAY_CHAIN_URL: string
-    ASSET_HUB_URL: string
-    BRIDGE_HUB_URL: string
     GATEWAY_CONTRACT: string
     BEEFY_CONTRACT: string
     ASSET_HUB_PARAID: number
@@ -11,7 +9,7 @@ export type Config = {
     PRIMARY_GOVERNANCE_CHANNEL_ID: string
     SECONDARY_GOVERNANCE_CHANNEL_ID: string
     RELAYERS: Relayer[]
-    PARACHAINS: string[]
+    PARACHAINS: { [paraId: string]: string }
     SUBSCAN_API?: {
         RELAY_CHAIN_URL: string
         ASSET_HUB_URL: string
@@ -65,7 +63,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
-                        address: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
+                        address: "0x774667629726ec1FaBEbCEc0D9139bD1C8f72a23",
                         minimumTransferAmount: 15_000_000_000_000n,
                     },
                 ],
@@ -86,7 +84,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
-                        address: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
+                        address: "0x774667629726ec1FaBEbCEc0D9139bD1C8f72a23",
                         minimumTransferAmount: 15_000_000_000_000n,
                     },
                 ],
@@ -107,7 +105,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 erc20tokensReceivable: [
                     {
                         id: "WETH",
-                        address: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
+                        address: "0x774667629726ec1FaBEbCEc0D9139bD1C8f72a23",
                         minimumTransferAmount: 1n,
                     },
                 ],
@@ -115,13 +113,17 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         ],
         config: {
             BEACON_HTTP_API: "http://127.0.0.1:9596",
-            ETHEREUM_API: () => "ws://127.0.0.1:8546",
+            ETHEREUM_CHAINS: {
+                "11155111": () => "ws://127.0.0.1:8546"
+            },
             RELAY_CHAIN_URL: "ws://127.0.0.1:9944",
-            ASSET_HUB_URL: "ws://127.0.0.1:12144",
-            BRIDGE_HUB_URL: "ws://127.0.0.1:11144",
-            PARACHAINS: ["ws://127.0.0.1:13144"],
-            GATEWAY_CONTRACT: "0xEDa338E4dC46038493b885327842fD3E301CaB39",
-            BEEFY_CONTRACT: "0x992B9df075935E522EC7950F37eC8557e86f6fdb",
+            PARACHAINS: {
+                "1000": "ws://127.0.0.1:12144",
+                "1002": "ws://127.0.0.1:11144",
+                "2000": "ws://127.0.0.1:13144",
+            },
+            GATEWAY_CONTRACT: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
+            BEEFY_CONTRACT: "0x2ffa5ecdbe006d30397c7636d3e015eee251369f",
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
             PRIMARY_GOVERNANCE_CHANNEL_ID:
@@ -172,8 +174,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ],
         },
     },
-    rococo_sepolia: {
-        name: "rococo_sepolia",
+    paseo_sepolia: {
+        name: "paseo_sepolia",
         ethChainId: 11155111,
         locations: [
             {
@@ -188,13 +190,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         minimumTransferAmount: 15_000_000_000_000n,
                     },
                     {
-                        id: "vETH",
-                        address: "0xc3d088842dcf02c13699f936bb83dfbbc6f721ab",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "MUSE",
-                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
+                        id: "PILT",
+                        address: "0x99E743964C036bc28931Fb564817db428Aa7f752",
                         minimumTransferAmount: 1n,
                     },
                 ],
@@ -209,7 +206,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     destinationFeeDOT: 0n,
                     skipExistentialDepositCheck: false,
                     addressType: "32byte",
-                    decimals: 12,
+                    decimals: 10,
                     maxConsumers: 16,
                 },
                 erc20tokensReceivable: [
@@ -219,13 +216,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         minimumTransferAmount: 15_000_000_000_000n,
                     },
                     {
-                        id: "vETH",
-                        address: "0xc3d088842dcf02c13699f936bb83dfbbc6f721ab",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "MUSE",
-                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
+                        id: "PILT",
+                        address: "0x99E743964C036bc28931Fb564817db428Aa7f752",
                         minimumTransferAmount: 1n,
                     },
                 ],
@@ -254,15 +246,19 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
-            ETHEREUM_API: (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`,
-            RELAY_CHAIN_URL: "https://rococo-rpc.polkadot.io",
-            ASSET_HUB_URL: "wss://rococo-asset-hub-rpc.polkadot.io",
-            BRIDGE_HUB_URL: "https://rococo-bridge-hub-rpc.polkadot.io",
-            PARACHAINS: ["https://rococo-muse-rpc.polkadot.io"],
-            GATEWAY_CONTRACT: "0x5b4909ce6ca82d2ce23bd46738953c7959e710cd",
-            BEEFY_CONTRACT: "0x27e5e17ac995d3d720c311e1e9560e28f5855fb1",
+            ETHEREUM_CHAINS: {
+                "11155111": (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`
+            },
+            RELAY_CHAIN_URL: "wss://paseo-rpc.dwellir.com",
+            PARACHAINS: {
+                "1000": "wss://asset-hub-paseo-rpc.dwellir.com",
+                "1002": "wss://bridge-hub-paseo.dotters.network",
+                "3369": "wss://paseo-muse-rpc.polkadot.io"
+            },
+            GATEWAY_CONTRACT: "0x5a84b15B618beEE6F6285F6bd2bA20a08673e473",
+            BEEFY_CONTRACT: "0xE7388f953f50d377D131350490156dB649E5DC10",
             ASSET_HUB_PARAID: 1000,
-            BRIDGE_HUB_PARAID: 1013,
+            BRIDGE_HUB_PARAID: 1002,
             PRIMARY_GOVERNANCE_CHANNEL_ID:
                 "0x0000000000000000000000000000000000000000000000000000000000000001",
             SECONDARY_GOVERNANCE_CHANNEL_ID:
@@ -270,39 +266,39 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             RELAYERS: [
                 {
                     name: "beacon",
-                    account: "5FyC9GkHhiAYjMtddwVNc2gx8wBjH9gpMKWbQ1QVXmmJtr8M",
+                    account: "5E4Hf7LzHE4W3jabjLWSP8p8RzEa9ednwRivFEwYAprzpgwc",
                     type: "substrate",
                 },
                 {
                     name: "beefy",
-                    account: "0xF061685F2B729b89a7A5966B3ab9aee15269e8FE",
+                    account: "0xc189De708158e75E5C88C0ABfA5F9a26C71F54D1",
                     type: "ethereum",
                 },
                 {
                     name: "parachain-primary-gov",
-                    account: "0xE3f4e40E0dB2F828e248dB2790958035BaB1a4B5",
+                    account: "0x4BBa8c0e87242897521Ba598d327bE8280032609",
                     type: "ethereum",
                 },
                 {
                     name: "parachain-secondary-gov",
-                    account: "0x71429d3B9d68557C2F49e42e12B9cf7edAADCe3D",
+                    account: "0x4BBa8c0e87242897521Ba598d327bE8280032609",
                     type: "ethereum",
                 },
                 {
                     name: "execution-assethub",
-                    account: "5GeLu5rPcaoZ2RVDbhX8DKJt8NxnKn6DvvjfuhnwTZyYRY59",
+                    account: "5HT2ysqEg6SXghQ3NGXp1VWT22hhj48Um8UAwk6Udg8ZCEv8",
                     type: "substrate",
                 },
                 {
                     name: "parachain-assethub",
-                    account: "0x0b65d43d159f1C40Bad7768fd59667E3104a2ECE",
+                    account: "0x4BBa8c0e87242897521Ba598d327bE8280032609",
                     type: "ethereum",
                 },
             ],
             SUBSCAN_API: {
-                RELAY_CHAIN_URL: "https://rococo.api.subscan.io",
-                ASSET_HUB_URL: "https://assethub-rococo.api.subscan.io",
-                BRIDGE_HUB_URL: "https://bridgehub-rococo.api.subscan.io",
+                RELAY_CHAIN_URL: "https://paseo.api.subscan.io/",
+                ASSET_HUB_URL: "https://assethub-paseo.api.subscan.io",
+                BRIDGE_HUB_URL: "https://bridgehub-paseo.api.subscan.io",
             },
         },
     },
@@ -364,6 +360,16 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     {
                         id: "DAI",
                         address: "0x6b175474e89094c44da98b954eedeac495271d0f",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "KILT",
+                        address: "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "AAVE",
+                        address: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
                         minimumTransferAmount: 1n,
                     },
                 ],
@@ -432,6 +438,16 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         address: "0x6b175474e89094c44da98b954eedeac495271d0f",
                         minimumTransferAmount: 1n,
                     },
+                    {
+                        id: "KILT",
+                        address: "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "AAVE",
+                        address: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                        minimumTransferAmount: 1n,
+                    },
                 ],
             },
             {
@@ -479,11 +495,19 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         ],
         config: {
             BEACON_HTTP_API: "https://lodestar-mainnet.chainsafe.io",
-            ETHEREUM_API: (key) => `https://eth-mainnet.g.alchemy.com/v2/${key}`,
+            ETHEREUM_CHAINS: {
+                "1": (key) => `https://eth-mainnet.g.alchemy.com/v2/${key}`,
+                "1284": () => "https://rpc.api.moonbeam.network",
+            },
             RELAY_CHAIN_URL: "https://polkadot-rpc.dwellir.com",
-            ASSET_HUB_URL: "wss://asset-hub-polkadot-rpc.dwellir.com",
-            BRIDGE_HUB_URL: "https://bridge-hub-polkadot-rpc.dwellir.com",
-            PARACHAINS: ["https://polkadot-mythos-rpc.polkadot.io"],
+            PARACHAINS: {
+                "1000": "wss://asset-hub-polkadot-rpc.dwellir.com",
+                "1002": "https://bridge-hub-polkadot-rpc.dwellir.com",
+                "3369": "https://polkadot-mythos-rpc.polkadot.io",
+                "2034": "wss://hydration-rpc.n.dwellir.com",
+                "2030": "wss://bifrost-polkadot-rpc.dwellir.com",
+                "2004": "wss://moonbeam-rpc.n.dwellir.com",
+            },
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
             BEEFY_CONTRACT: "0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C",
             ASSET_HUB_PARAID: 1000,
@@ -529,7 +553,103 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 ASSET_HUB_URL: "https://assethub-polkadot.api.subscan.io",
                 BRIDGE_HUB_URL: "https://bridgehub-polkadot.api.subscan.io",
             },
-            GRAPHQL_API_URL: "https://data.snowbridge.network/graphql",
+            GRAPHQL_API_URL: "https://snowbridge.squids.live/snowbridge-subsquid@v2/api/graphql",
+        },
+    },
+    westend_sepolia: {
+        name: "westend_sepolia",
+        ethChainId: 11155111,
+        locations: [
+            {
+                id: "ethereum",
+                name: "Ethereum",
+                type: "ethereum",
+                destinationIds: ["assethub"],
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                        minimumTransferAmount: 1_000_000_000_000n,
+                    },
+                ],
+            },
+            {
+                id: "assethub",
+                name: "Asset Hub",
+                type: "substrate",
+                destinationIds: ["ethereum"],
+                paraInfo: {
+                    paraId: 1000,
+                    destinationFeeDOT: 0n,
+                    skipExistentialDepositCheck: false,
+                    addressType: "32byte",
+                    decimals: 12,
+                    maxConsumers: 16,
+                },
+                erc20tokensReceivable: [
+                    {
+                        id: "WETH",
+                        address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                        minimumTransferAmount: 15_000_000_000_000n,
+                    },
+                ],
+            },
+        ],
+        config: {
+            BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
+            ETHEREUM_CHAINS: {
+                "11155111": (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`
+            },
+            RELAY_CHAIN_URL: "https://westend-rpc.polkadot.io",
+            PARACHAINS: {
+                "1000": "wss://westend-asset-hub-rpc.polkadot.io",
+                "1002": "https://westend-bridge-hub-rpc.polkadot.io",
+            },
+            GATEWAY_CONTRACT: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
+            BEEFY_CONTRACT: "0x6DFaD3D73A28c48E4F4c616ECda80885b415283a",
+            ASSET_HUB_PARAID: 1000,
+            BRIDGE_HUB_PARAID: 1002,
+            PRIMARY_GOVERNANCE_CHANNEL_ID:
+                "0x0000000000000000000000000000000000000000000000000000000000000001",
+            SECONDARY_GOVERNANCE_CHANNEL_ID:
+                "0x0000000000000000000000000000000000000000000000000000000000000002",
+            RELAYERS: [
+                {
+                    name: "beacon",
+                    account: "5E4Hf7LzHE4W3jabjLWSP8p8RzEa9ednwRivFEwYAprzpgwc",
+                    type: "substrate",
+                },
+                {
+                    name: "beefy",
+                    account: "0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd",
+                    type: "ethereum",
+                },
+                {
+                    name: "parachain-primary-gov",
+                    account: "0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd",
+                    type: "ethereum",
+                },
+                {
+                    name: "parachain-secondary-gov",
+                    account: "0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd",
+                    type: "ethereum",
+                },
+                {
+                    name: "execution-assethub",
+                    account: "5E4Hf7LzHE4W3jabjLWSP8p8RzEa9ednwRivFEwYAprzpgwc",
+                    type: "substrate",
+                },
+                {
+                    name: "parachain-assethub",
+                    account: "0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd",
+                    type: "ethereum",
+                },
+            ],
+            SUBSCAN_API: {
+                RELAY_CHAIN_URL: "https://westend.api.subscan.io",
+                ASSET_HUB_URL: "https://assethub-westend.api.subscan.io",
+                BRIDGE_HUB_URL: "https://bridgehub-westend.api.subscan.io",
+            },
         },
     },
 }

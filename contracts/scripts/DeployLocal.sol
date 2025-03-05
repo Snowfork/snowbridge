@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
@@ -96,15 +96,11 @@ contract DeployLocal is Script {
         // Deploy WETH for testing
         new WETH9();
 
-        // Fund the sovereign account for the BridgeHub parachain. Used to reward relayers
+        // Fund the gateway proxy contract. Used to reward relayers
         // of messages originating from BridgeHub
-        uint256 initialDeposit = vm.envUint("BRIDGE_HUB_INITIAL_DEPOSIT");
+        uint256 initialDeposit = vm.envUint("GATEWAY_PROXY_INITIAL_DEPOSIT");
 
-        address bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
-        address assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
-
-        payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
-        payable(assetHubAgent).safeNativeTransfer(initialDeposit);
+        IGateway(address(gateway)).depositEther{value: initialDeposit}();
 
         // Deploy MockGatewayV2 for testing
         new MockGatewayV2();

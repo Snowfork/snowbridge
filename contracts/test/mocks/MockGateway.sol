@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Gateway} from "../../src/Gateway.sol";
-import {ParaID, OperatingMode} from "../../src/Types.sol";
+import {ChannelID, ParaID, OperatingMode} from "../../src/Types.sol";
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
 import {Verification} from "../../src/Verification.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
@@ -20,14 +20,7 @@ contract MockGateway is Gateway {
         uint8 foreignTokenDecimals,
         uint128 maxDestinationFee
     )
-        Gateway(
-            beefyClient,
-            agentExecutor,
-            bridgeHubParaID,
-            bridgeHubHubAgentID,
-            foreignTokenDecimals,
-            maxDestinationFee
-        )
+        Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubHubAgentID, foreignTokenDecimals, maxDestinationFee)
     {}
 
     function agentExecutePublic(bytes calldata params) external {
@@ -54,10 +47,6 @@ contract MockGateway is Gateway {
         this.setOperatingMode(params);
     }
 
-    function transferNativeFromAgentPublic(bytes calldata params) external {
-        this.transferNativeFromAgent(params);
-    }
-
     function setCommitmentsAreVerified(bool value) external {
         commitmentsAreVerified = value;
     }
@@ -82,5 +71,17 @@ contract MockGateway is Gateway {
 
     function setPricingParametersPublic(bytes calldata params) external {
         this.setPricingParameters(params);
+    }
+
+    function registerForeignTokenPublic(bytes calldata params) external {
+        this.registerForeignToken(params);
+    }
+
+    function mintForeignTokenPublic(ChannelID channelID, bytes calldata params) external {
+        this.mintForeignToken(channelID, params);
+    }
+
+    function transferNativeTokenPublic(bytes calldata params) external {
+        this.transferNativeToken(params);
     }
 }

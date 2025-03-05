@@ -118,16 +118,9 @@ export const fetchFinalityUpdate = async (
     }
 }
 
-export const fetchEstimatedDeliveryTime = async (graphqlUrl: string, channelId: string) => {
-    let response = await fetch(graphqlUrl, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            query: `query { toEthereumElapse(channelId:"${channelId}") { elapse } toPolkadotElapse(channelId:"${channelId}") { elapse } }`,
-        }),
-    })
-    let data = await response.json()
-    return data?.data
+export const getEventIndex = (id: string) => {
+    let parts = id.split("-")
+    let blockNumber = parseInt(parts[0])
+    let eventIndex = parseInt(parts[2])
+    return `${blockNumber}-${eventIndex}`
 }

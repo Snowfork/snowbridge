@@ -19,13 +19,13 @@ import (
 )
 
 const TestUrl = "https://lodestar-sepolia.chainsafe.io"
+const MaxRedundancy = 20
 
 func newTestRunner() *Syncer {
 	return New(api.NewBeaconClient(TestUrl, TestUrl), &mock.Store{}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
-	}))
+	}, MaxRedundancy))
 }
 
 // Verifies that the Lodestar provided finalized endpoint matches the manually constructed finalized endpoint
@@ -109,8 +109,7 @@ func TestGetFinalizedUpdateWithSyncCommitteeUpdateAtSlot(t *testing.T) {
 	}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
-	}))
+	}, MaxRedundancy))
 
 	// Manually construct a finalized update
 	manualUpdate, err := syncer.GetFinalizedUpdateAtAttestedSlot(129, 0, true)
@@ -164,8 +163,7 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 	syncer := New(&mockAPI, &mock.Store{}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
-	}))
+	}, MaxRedundancy))
 
 	attested, err := syncer.FindValidAttestedHeader(8000, 8160)
 	assert.NoError(t, err)
@@ -194,8 +192,7 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 	syncer = New(&mockAPI, &mock.Store{}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
-	}))
+	}, MaxRedundancy))
 
 	attested, err = syncer.FindValidAttestedHeader(32576, 32704)
 	assert.NoError(t, err)
@@ -224,8 +221,7 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 	syncer = New(&mockAPI, &mock.Store{}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
-	}))
+	}, MaxRedundancy))
 
 	attested, err = syncer.FindValidAttestedHeader(25076, 32736)
 	assert.NoError(t, err)
@@ -248,8 +244,7 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 	syncer = New(&mockAPI, &mock.Store{}, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		DenebForkEpoch:               0,
-	}))
+	}, MaxRedundancy))
 
 	attested, err = syncer.FindValidAttestedHeader(32540, 32768)
 	assert.Error(t, err)

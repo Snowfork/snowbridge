@@ -49,7 +49,7 @@ func listBeaconState(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	p := protocol.New(conf.Source.Beacon.Spec)
+	p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
 	store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 
 	err = store.Connect()

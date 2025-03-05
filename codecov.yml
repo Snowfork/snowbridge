@@ -3,7 +3,7 @@ coverage:
     project: off
     patch: off
 github_checks:
-    annotations: false
+  annotations: false
 ignore:
   - "contracts/test/mocks"
   - "contracts/src/utils"
@@ -15,3 +15,5 @@ flags:
     paths:
       - contracts
     carryforward: true
+fixes:
+  - "::contracts/"

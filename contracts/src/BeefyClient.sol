@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
@@ -292,7 +292,7 @@ contract BeefyClient {
             validatorSetLen: uint32(vset.length),
             numRequiredSignatures: uint32(
                 computeNumRequiredSignatures(vset.length, signatureUsageCount, minNumRequiredSignatures)
-                ),
+            ),
             prevRandao: 0,
             bitfieldHash: keccak256(abi.encodePacked(bitfield))
         });

@@ -71,7 +71,7 @@ func importBeaconState(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("open finalized state file: %w", err)
 	}
 
-	p := protocol.New(conf.Source.Beacon.Spec)
+	p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
 	store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 	beaconClient := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
 	syncer := syncer.New(beaconClient, &store, p)
@@ -92,7 +92,7 @@ func importBeaconState(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("read finalized state data from file: %w", err)
 	}
 
-	afterDenebFork := (conf.Source.Beacon.Spec.DenebForkEpoch + 1) * 32
+	afterDenebFork := (conf.Source.Beacon.Spec.ForkVersions.Deneb + 1) * 32
 
 	attestedState, err := syncer.UnmarshalBeaconState(afterDenebFork, attestedData)
 	if err != nil {

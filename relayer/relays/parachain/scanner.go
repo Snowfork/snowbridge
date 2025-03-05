@@ -3,7 +3,12 @@ package parachain
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"reflect"
+	"strings"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 
@@ -16,6 +21,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
+	"github.com/snowfork/snowbridge/relayer/ofac"
 )
 
 type Scanner struct {
@@ -24,6 +30,7 @@ type Scanner struct {
 	relayConn *relaychain.Connection
 	paraConn  *parachain.Connection
 	paraID    uint32
+	ofac      *ofac.OFAC
 	tasks     chan<- *Task
 }
 
@@ -116,7 +123,10 @@ func (s *Scanner) findTasks(
 		return nil, err
 	}
 
-	s.gatherProofInputs(tasks)
+	err = s.gatherProofInputs(tasks)
+	if err != nil {
+		return nil, fmt.Errorf("gather proof input: %w", err)
+	}
 
 	return tasks, nil
 }
@@ -186,6 +196,15 @@ func (s *Scanner) findTasksImpl(
 			if err != nil {
 				return nil, fmt.Errorf("decode message error: %w", err)
 			}
+			isBanned, err := s.IsBanned(m)
+			if err != nil {
+				log.WithError(err).Fatal("error checking banned address found")
+				return nil, fmt.Errorf("banned check: %w", err)
+			}
+			if isBanned {
+				log.Fatal("banned address found")
+				return nil, errors.New("banned address found")
+			}
 			messages = append(messages, m)
 		}
 
@@ -253,7 +272,7 @@ func (s *Scanner) gatherProofInputs(
 			return fmt.Errorf("fetch relaychain block hash: %w", err)
 		}
 
-		parachainHeads, err := s.relayConn.FetchParachainHeads(relayBlockHash)
+		parachainHeads, err := s.relayConn.FetchParasHeads(relayBlockHash)
 		if err != nil {
 			return fmt.Errorf("fetch parachain heads: %w", err)
 		}
@@ -261,6 +280,7 @@ func (s *Scanner) gatherProofInputs(
 		task.ProofInput = &ProofInput{
 			ParaID:           s.paraID,
 			RelayBlockNumber: relayBlockNumber,
+			RelayBlockHash:   relayBlockHash,
 			ParaHeads:        parachainHeads,
 		}
 	}
@@ -462,4 +482,164 @@ func (s *Scanner) findLatestNonce(ctx context.Context) (uint64, error) {
 		return 0, fmt.Errorf("fetch nonce from gateway contract for channelID '%v': %w", s.config.ChannelID, err)
 	}
 	return ethInboundNonce, err
+}
+
+func (s *Scanner) IsBanned(m OutboundQueueMessage) (bool, error) {
+	destination, err := GetDestination(m)
+	if err != nil {
+		return true, err
+	}
+
+	return s.ofac.IsBanned("", destination) // TODO the source will be fetched from Subscan in a follow-up PR
+}
+
+func GetDestination(message OutboundQueueMessage) (string, error) {
+	log.WithFields(log.Fields{
+		"command": message.Command,
+		"params":  common.Bytes2Hex(message.Params),
+	}).Debug("Checking message for OFAC")
+
+	address := ""
+
+	bytes32Ty, err := abi.NewType("bytes32", "", nil)
+	if err != nil {
+		return "", err
+	}
+	addressTy, err := abi.NewType("address", "", nil)
+	if err != nil {
+		return "", err
+	}
+	uint256Ty, err := abi.NewType("uint256", "", nil)
+
+	switch message.Command {
+	case 0:
+		log.Debug("Found AgentExecute message")
+
+		uintTy, err := abi.NewType("uint256", "", nil)
+		if err != nil {
+			return "", err
+		}
+		bytesTy, err := abi.NewType("bytes", "", nil)
+		if err != nil {
+			return "", err
+		}
+		tupleTy, err := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+			{Name: "AgentId", Type: "bytes32"},
+			{Name: "Command", Type: "bytes"},
+		})
+		if err != nil {
+			return "", err
+		}
+
+		tupleArgument := abi.Arguments{
+			{Type: tupleTy},
+		}
+		commandArgument := abi.Arguments{
+			{Type: uintTy},
+			{Type: bytesTy},
+		}
+		transferTokenArgument := abi.Arguments{
+			{Type: addressTy},
+			{Type: addressTy},
+			{Type: uintTy},
+		}
+
+		// Decode the ABI-encoded byte payload
+		decodedTuple, err := tupleArgument.Unpack(message.Params)
+		if err != nil {
+			return "", fmt.Errorf("unpack tuple: %w", err)
+		}
+		if len(decodedTuple) < 1 {
+			return "", fmt.Errorf("decoded tuple not found")
+		}
+
+		tuple := reflect.ValueOf(decodedTuple[0])
+		commandBytes := tuple.FieldByName("Command").Bytes()
+
+		decodedCommand, err := commandArgument.Unpack(commandBytes)
+		if err != nil {
+			return "", fmt.Errorf("unpack command: %w", err)
+		}
+		if len(decodedCommand) < 2 {
+			return "", errors.New("decoded command not found")
+		}
+
+		decodedTransferToken, err := transferTokenArgument.Unpack(decodedCommand[1].([]byte))
+		if err != nil {
+			return "", err
+		}
+		if len(decodedTransferToken) < 3 {
+			return "", errors.New("decode transfer token command")
+		}
+
+		addressValue := decodedTransferToken[1].(common.Address)
+		address = addressValue.String()
+	case 6:
+		log.Debug("Found TransferNativeFromAgent message")
+
+		if err != nil {
+			return "", err
+		}
+		arguments := abi.Arguments{
+			{Type: bytes32Ty},
+			{Type: addressTy},
+			{Type: uint256Ty},
+		}
+
+		decodedMessage, err := arguments.Unpack(message.Params)
+		if err != nil {
+			return "", fmt.Errorf("unpack tuple: %w", err)
+		}
+		if len(decodedMessage) < 3 {
+			return "", fmt.Errorf("decoded message not found")
+		}
+
+		addressValue := decodedMessage[1].(common.Address)
+		address = addressValue.String()
+	case 9:
+		log.Debug("Found TransferNativeToken message")
+
+		arguments := abi.Arguments{
+			{Type: bytes32Ty},
+			{Type: addressTy},
+			{Type: addressTy},
+			{Type: uint256Ty},
+		}
+
+		decodedMessage, err := arguments.Unpack(message.Params)
+		if err != nil {
+			return "", fmt.Errorf("unpack tuple: %w", err)
+		}
+		if len(decodedMessage) < 4 {
+			return "", fmt.Errorf("decoded message not found")
+		}
+
+		addressValue := decodedMessage[2].(common.Address)
+		address = addressValue.String()
+	case 11:
+		log.Debug("Found MintForeignToken message")
+
+		arguments := abi.Arguments{
+			{Type: bytes32Ty},
+			{Type: addressTy},
+			{Type: uint256Ty},
+		}
+
+		decodedMessage, err := arguments.Unpack(message.Params)
+		if err != nil {
+			return "", fmt.Errorf("unpack tuple: %w", err)
+		}
+		if len(decodedMessage) < 3 {
+			return "", fmt.Errorf("decoded message not found")
+		}
+
+		addressValue := decodedMessage[1].(common.Address)
+		address = addressValue.String()
+	}
+
+	destination := strings.ToLower(address)
+
+	log.WithField("destination", destination).Debug("extracted destination from message")
+
+	return destination, nil
 }

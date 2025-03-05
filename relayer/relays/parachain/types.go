@@ -28,6 +28,8 @@ type ProofInput struct {
 	ParaID uint32
 	// Relay chain block number in which our parachain head was included
 	RelayBlockNumber uint64
+	// Relay chain block hash in which our parachain head was included
+	RelayBlockHash types.Hash
 	// All included paraheads in RelayBlockNumber
 	ParaHeads []relaychain.ParaHead
 }

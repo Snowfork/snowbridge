@@ -83,7 +83,7 @@ func generateInboundFixtureCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("beacon-config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
-	cmd.Flags().String("execution-config", "/tmp/snowbridge/execution-relay-asset-hub.json", "Path to the beacon relay config")
+	cmd.Flags().String("execution-config", "/tmp/snowbridge/execution-relay-asset-hub-0.json", "Path to the beacon relay config")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	cmd.Flags().String("test_case", "register_token", "Inbound test case")
 	return cmd
@@ -105,9 +105,9 @@ type InboundFixture struct {
 
 const (
 	pathToBeaconTestFixtureFiles              = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/tests/fixtures"
-	pathToInboundQueueFixtureTemplate         = "polkadot-sdk/bridges/snowbridge/templates/beacon-fixtures.mustache"
+	pathToInboundQueueFixtureTemplate         = "relayer/templates/beacon-fixtures.mustache"
 	pathToInboundQueueFixtureData             = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures/src/lib.rs"
-	pathToInboundQueueFixtureTestCaseTemplate = "polkadot-sdk/bridges/snowbridge/templates/inbound-fixtures.mustache"
+	pathToInboundQueueFixtureTestCaseTemplate = "relayer/templates/inbound-fixtures.mustache"
 	pathToInboundQueueFixtureTestCaseData     = "polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures/src/%s.rs"
 )
 
@@ -132,7 +132,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		p := protocol.New(conf.Source.Beacon.Spec)
+		p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
 		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 		store.Connect()
 		defer store.Close()
@@ -193,7 +193,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		p := protocol.New(conf.Source.Beacon.Spec)
+		p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
 
 		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 		err = store.Connect()
@@ -206,7 +206,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
 		s := syncer.New(client, &store, p)
 
-		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub.json")
+		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub-0.json")
 
 		if err = viper.ReadInConfig(); err != nil {
 			return err
@@ -390,19 +390,23 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		log.WithFields(log.Fields{
 			"location": pathToInboundQueueFixtureData,
 		}).Info("writing result file")
-		err = writeRawDataFile(fmt.Sprintf("%s", pathToInboundQueueFixtureData), rendered)
+		err = writeRawDataFile(pathToInboundQueueFixtureData, rendered)
 		if err != nil {
 			return err
 		}
 
 		// Generate test fixture in next period (require waiting a long time)
 		waitUntilNextPeriod, err := cmd.Flags().GetBool("wait_until_next_period")
+		if err != nil {
+			return fmt.Errorf("could not parse flag wait_until_next_period: %w", err)
+		}
 		if waitUntilNextPeriod {
 			log.Info("waiting finalized_update in next period (5 hours later), be patient and wait...")
 			for {
 				nextFinalizedUpdateScale, err := s.GetFinalizedUpdate()
 				if err != nil {
-					return fmt.Errorf("get next finalized header update: %w", err)
+					log.Error(err)
+					continue
 				}
 				nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
 				nextFinalizedUpdatePeriod := p.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
@@ -416,7 +420,8 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 					// generate nextSyncCommitteeUpdate
 					nextSyncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod+1, 0)
 					if err != nil {
-						return fmt.Errorf("get sync committee update: %w", err)
+						log.Error(err)
+						continue
 					}
 					nextSyncCommitteeUpdate := nextSyncCommitteeUpdateScale.Payload.ToJSON()
 					err = writeJSONToFile(nextSyncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "next-sync-committee-update.json"))
@@ -504,7 +509,7 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 		}
 		log.WithFields(log.Fields{"endpoint": conf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
 
-		p := protocol.New(conf.Source.Beacon.Spec)
+		p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
 
 		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
 		store.Connect()
@@ -533,11 +538,6 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		log.WithError(err).Error("error generating beacon execution update")
 	}
-
-	return nil
-}
-
-func generateInboundTestFixture(ctx context.Context, beaconEndpoint string) error {
 
 	return nil
 }
@@ -613,6 +613,9 @@ func getBeaconBlockContainingExecutionHeader(s syncer.Syncer, messageBlockNumber
 		log.WithField("beaconHeaderSlot", beaconHeaderSlot).Info("getting beacon block by slot")
 
 		beaconBlock, blockNumber, err = getBeaconBlockAndBlockNumber(s, beaconHeaderSlot)
+		if err != nil {
+			return api.BeaconBlockResponse{}, 0, err
+		}
 	}
 
 	return beaconBlock, blockNumber, nil
@@ -695,7 +698,7 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
-		p := protocol.New(beaconConf.Source.Beacon.Spec)
+		p := protocol.New(beaconConf.Source.Beacon.Spec, beaconConf.Sink.Parachain.HeaderRedundancy)
 
 		store := store.New(beaconConf.Source.Beacon.DataStore.Location, beaconConf.Source.Beacon.DataStore.MaxEntries, *p)
 		store.Connect()
@@ -813,7 +816,7 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		if testCase != "register_token" && testCase != "send_token" && testCase != "send_token_to_penpal" {
+		if testCase != "register_token" && testCase != "send_token" && testCase != "send_token_to_penpal" && testCase != "send_native_eth" {
 			return fmt.Errorf("invalid test case: %s", testCase)
 		}
 
@@ -830,7 +833,7 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		pathToInboundQueueFixtureTestCaseData := fmt.Sprintf(pathToInboundQueueFixtureTestCaseData, testCase)
-		err = writeRawDataFile(fmt.Sprintf("%s", pathToInboundQueueFixtureTestCaseData), rendered)
+		err = writeRawDataFile(pathToInboundQueueFixtureTestCaseData, rendered)
 		if err != nil {
 			return err
 		}

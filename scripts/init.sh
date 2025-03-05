@@ -2,15 +2,19 @@
 
 set -eux
 
-echo "Checkout polkadot-sdk Snowfork fork"
+echo "Checkout polkadot-sdk"
 pushd ..
-  if [ ! -d "polkadot-sdk" ]; then
-    git clone https://github.com/Snowfork/polkadot-sdk.git
-    cd snowbridge && ln -sf ../polkadot-sdk polkadot-sdk
+  if [[ -d polkadot-sdk ]] && (cd polkadot-sdk && git rev-parse --is-inside-work-tree > /dev/null 2>&1); then
+     echo "polkadot-sdk already exists"
+  else
+    repoURL="${POLKADOT_SDK_REPO:-https://github.com/paritytech/polkadot-sdk.git}"
+
+    git clone "$repoURL" polkadot-sdk
+
+    pushd polkadot-sdk
+      git pull origin master
+    popd
   fi
-  pushd  polkadot-sdk
-    git fetch && git checkout snowbridge
-  popd
 popd
 
 echo "Checkout lodestar Snowfork fork"
@@ -34,6 +38,7 @@ rustup default stable
 rustup target add wasm32-unknown-unknown
 rustup install --profile minimal $RUST_NIGHTLY_VERSION
 rustup component add --toolchain $RUST_NIGHTLY_VERSION rustfmt
+rustup component add --toolchain stable rust-src
 rustup show
 
 echo "Installing sszgen"

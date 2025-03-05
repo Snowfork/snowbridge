@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
@@ -41,6 +41,7 @@ contract ScaleCodecTest is Test {
         assertEq(ScaleCodec.encodeCompactU32(type(uint32).max), hex"03ffffffff");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testCheckedEncodeCompactU32() public {
         assertEq(ScaleCodec.checkedEncodeCompactU32(type(uint32).max), hex"03ffffffff");
 

@@ -3,6 +3,7 @@ package parachain
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
+	"github.com/snowfork/snowbridge/relayer/ofac"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -33,6 +35,8 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	ethereumConnWriter := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
 	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
 
+	ofacClient := ofac.New(config.OFAC.Enabled, config.OFAC.ApiKey)
+
 	// channel for messages from beefy listener to ethereum writer
 	var tasks = make(chan *Task, 1)
 
@@ -51,6 +55,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 		ethereumConnBeefy,
 		relaychainConn,
 		parachainConn,
+		ofacClient,
 		tasks,
 	)
 
@@ -66,7 +71,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 }
 
 func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
-	err := relay.parachainConn.Connect(ctx)
+	err := relay.parachainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
 	if err != nil {
 		return err
 	}
@@ -81,7 +86,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return fmt.Errorf("unable to connect to ethereum: beefy: %w", err)
 	}
 
-	err = relay.relaychainConn.Connect(ctx)
+	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
 	if err != nil {
 		return err
 	}

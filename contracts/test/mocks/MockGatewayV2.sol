@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 
@@ -19,7 +19,7 @@ library AdditionalStorage {
 }
 
 // Used to test upgrades.
-contract MockGatewayV2 is IInitializable  {
+contract MockGatewayV2 is IInitializable {
     // Reinitialize gateway with some additional storage fields
     function initialize(bytes memory params) external {
         AdditionalStorage.Layout storage $ = AdditionalStorage.layout();

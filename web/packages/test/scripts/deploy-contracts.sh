@@ -18,7 +18,6 @@ deploy_command() {
     else
         forge script \
             --rpc-url $eth_endpoint_http \
-            --legacy \
             --broadcast \
             -vvv \
             $deploy_script

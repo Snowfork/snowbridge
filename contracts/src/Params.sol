@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {ChannelID, OperatingMode} from "./Types.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
@@ -81,4 +81,38 @@ struct SetPricingParametersParams {
     uint128 deliveryCost;
     /// @dev Fee multiplier
     UD60x18 multiplier;
+}
+
+// Payload for RegisterForeignToken
+struct RegisterForeignTokenParams {
+    /// @dev The token ID (hash of stable location id of token)
+    bytes32 foreignTokenID;
+    /// @dev The name of the token
+    string name;
+    /// @dev The symbol of the token
+    string symbol;
+    /// @dev The decimal of the token
+    uint8 decimals;
+}
+
+// Payload for MintForeignToken
+struct MintForeignTokenParams {
+    /// @dev The token ID
+    bytes32 foreignTokenID;
+    /// @dev The address of the recipient
+    address recipient;
+    /// @dev The amount to mint with
+    uint256 amount;
+}
+
+// Payload for TransferToken
+struct TransferNativeTokenParams {
+    /// @dev The agent ID of the consensus system
+    bytes32 agentID;
+    /// @dev The token address
+    address token;
+    /// @dev The address of the recipient
+    address recipient;
+    /// @dev The amount to mint with
+    uint128 amount;
 }

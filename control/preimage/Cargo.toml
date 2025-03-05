@@ -24,29 +24,39 @@ alloy-primitives = "0.6.3"
 snowbridge-beacon-primitives = "0.2.0"
 snowbridge-router-primitives = "0.2.0"
 
-rococo-runtime = { path = "../runtimes/rococo", optional = true }
-bridge-hub-rococo-runtime = { path = "../runtimes/bridge-hub-rococo", optional = true }
-asset-hub-rococo-runtime = { path = "../runtimes/asset-hub-rococo", optional = true }
-
 polkadot-runtime = { path = "../runtimes/polkadot", optional = true }
 bridge-hub-polkadot-runtime = { path = "../runtimes/bridge-hub-polkadot", optional = true }
 asset-hub-polkadot-runtime = { path = "../runtimes/asset-hub-polkadot", optional = true }
+
+paseo-runtime = { path = "../runtimes/paseo", optional = true }
+bridge-hub-paseo-runtime = { path = "../runtimes/bridge-hub-paseo", optional = true }
+asset-hub-paseo-runtime = { path = "../runtimes/asset-hub-paseo", optional = true }
+
 polkadot-runtime-constants = "3.0.0"
 
 serde_json = "1.0.114"
 sp-crypto-hashing = "0.1.0"
 handlebars = "5.1.2"
 
+westend-runtime = { path = "../runtimes/westend", optional = true }
+bridge-hub-westend-runtime = { path = "../runtimes/bridge-hub-westend", optional = true }
+asset-hub-westend-runtime = { path = "../runtimes/asset-hub-westend", optional = true }
+
 [features]
-default = ["polkadot"]
-rococo = [
-    "rococo-runtime",
-    "asset-hub-rococo-runtime",
-    "bridge-hub-rococo-runtime",
-]
+default = []
 kusama = []
 polkadot = [
     "polkadot-runtime",
     "asset-hub-polkadot-runtime",
     "bridge-hub-polkadot-runtime",
+]
+westend = [
+    "westend-runtime",
+    "asset-hub-westend-runtime",
+    "bridge-hub-westend-runtime",
+]
+paseo = [
+    "paseo-runtime",
+    "asset-hub-paseo-runtime",
+    "bridge-hub-paseo-runtime",
 ]

@@ -21,7 +21,7 @@ use subxt::tx::Payload;
 async fn set_pricing_params() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 
-	let gateway_addr: Address = GATEWAY_PROXY_CONTRACT.into();
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let ethereum_client = *(test_clients.ethereum_client.clone());
 	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
 	let params = gateway.pricing_parameters().await.expect("get fees");

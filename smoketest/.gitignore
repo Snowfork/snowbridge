@@ -16,3 +16,4 @@ src/parachains/bridgehub.rs
 src/parachains/penpal.rs
 src/parachains/relaychain.rs
 src/contracts
+.envrc

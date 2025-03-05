@@ -3,7 +3,8 @@ module.exports = {
     {
       name: "monitor",
       node_args: "--require=dotenv/config",
-      script: "./dist/src/cron.js",
+      script: "./dist/src/main.js",
+      args: "cron",
     },
   ],
 };

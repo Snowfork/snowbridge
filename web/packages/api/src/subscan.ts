@@ -50,12 +50,12 @@ export const createApi = (baseUrl: string, apiKey: string, options = { limit: 1 
             redirect: "follow",
         }
 
-        if (rateLimit.retryAfter !== null && rateLimit.retryAfter > 0) {
-            console.log("Being rate limited", rateLimit)
+        if (rateLimit.remaining === 0 && rateLimit.retryAfter !== null && rateLimit.retryAfter > 0) {
+            console.log("Being rate limited: retryAfter", rateLimit)
             await sleepMs(rateLimit.retryAfter * 1000)
         }
         if (rateLimit.remaining === 0 && rateLimit.reset !== null && rateLimit.reset > 0) {
-            console.log("Being rate limited", rateLimit)
+            console.log("Being rate limited: reset", rateLimit)
             await sleepMs(rateLimit.reset * 1000)
         }
 
@@ -152,6 +152,11 @@ export const fetchEvents = async <T>(
         }
 
         for (const { event_index, params } of paramsResponse.json.data) {
+            if (params === undefined) {
+                console.warn("Event does not have any params", event_index)
+                continue;
+            }
+
             const event = map.get(event_index)
             const transform = await filterMap(event, params)
             if (transform === null) {

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {TokenInfo, ParaID} from "../Types.sol";
 
 library AssetsStorage {
     struct Layout {
+        // Native token registry by token address
         mapping(address token => TokenInfo) tokenRegistry;
         address assetHubAgent;
         ParaID assetHubParaID;
@@ -15,6 +16,8 @@ library AssetsStorage {
         uint128 assetHubReserveTransferFee;
         // Extra fee for registering a token, to discourage spamming (Ether)
         uint256 registerTokenFee;
+        // Foreign token registry by token ID
+        mapping(bytes32 foreignID => address) tokenAddressOf;
     }
 
     bytes32 internal constant SLOT = keccak256("org.snowbridge.storage.assets");
