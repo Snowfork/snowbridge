@@ -1,5 +1,5 @@
 import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway";
-import { AbstractProvider, Contract, ContractTransaction, FeeData, LogDescription, TransactionReceipt } from "ethers";
+import { AbstractProvider, Contract, ContractTransaction, FeeData, LogDescription, parseUnits, TransactionReceipt } from "ethers";
 import { beneficiaryMultiAddress, paraIdToSovereignAccount } from "./utils";
 import { IERC20__factory, IGateway, IGateway__factory } from "@snowbridge/contract-types";
 import { Asset, AssetRegistry, calculateDeliveryFee, calculateDestinationFee, ERC20Metadata, getNativeAccount, getTokenBalance, padFeeByPercentage, Parachain } from "./assets_v2";
@@ -431,7 +431,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
     const bridgeHubLocation = { v4: { parents: 1, interior: { x1: [{ parachain: registry.bridgeHubParaId }] } } }
     let xcm: any
     //  taken from chopsticks and based on our exchange rate calculation.
-    const baseFee = 1_000_000_000n
+    const baseFee = parseUnits("0.1", transfer.input.registry.relaychain.tokenDecimals)
     const assetHubFee = baseFee + transfer.input.fee.destinationDeliveryFeeDOT + transfer.input.fee.destinationExecutionFeeDOT
     if (destinationParaId !== registry.assetHubParaId) {
         xcm = buildParachainERC20ReceivedXcmOnAssetHub(
