@@ -20,6 +20,7 @@ struct Command {
     bytes payload;
 }
 
+// Command IDs
 library CommandKind {
     uint8 constant Upgrade = 0;
     uint8 constant SetOperatingMode = 1;
@@ -29,6 +30,7 @@ library CommandKind {
     uint8 constant CallContract = 5;
 }
 
+// Payload for outbound messages destined for Polkadot
 struct Payload {
     // sender of the message
     address origin;
@@ -45,6 +47,7 @@ struct Payload {
 
 struct Xcm {
     uint8 kind;
+    // ABI-encoded xcm variant
     bytes data;
 }
 
@@ -55,6 +58,7 @@ library XcmKind {
     uint8 constant CreateAsset = 1;
 }
 
+// Format of ABI-encoded Xcm.data when Xcm.kind == XcmKind.CreateAsset
 struct AsCreateAsset {
     address token;
     uint8 network;
@@ -81,11 +85,13 @@ library AssetKind {
     uint8 constant ForeignTokenERC20 = 1;
 }
 
+// Format of Asset.data when Asset.kind == AssetKind.NativeTokenERC20
 struct AsNativeTokenERC20 {
     address token;
     uint128 amount;
 }
 
+// Format of Asset.data when Asset.kind == AssetKind.ForeignTokenERC20
 struct AsForeignTokenERC20 {
     bytes32 foreignID;
     uint128 amount;
