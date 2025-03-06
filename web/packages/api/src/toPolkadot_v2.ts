@@ -304,22 +304,10 @@ export async function validateTransfer(connections: Connections, transfer: Trans
         if (!destParachainApi) {
             logs.push({ kind: ValidationKind.Warning, reason: ValidationReason.NoDestinationParachainConnection, message: 'The destination paracahain connection was not supplied. Transaction success cannot be confirmed.' })
         } else {
-            if (!destAssetMetadata.isSufficient) {
-                // Check if the acocunt is created
-                const { accountMaxConumers, accountExists } = await validateAccount(destParachainApi, destParachain.info.specName, beneficiaryAddressHex, registry.ethChainId, tokenAddress)
-                if (accountMaxConumers) {
-                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.MaxConsumersReached, message: 'Beneficiary account has reached the max consumer limit on the destination chain.' })
-                }
-                if (!accountExists) {
-                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.AccountDoesNotExist, message: 'Beneficiary account does not exist on the destination chain.' })
-                }
-            }
             if (destParachain.features.hasDryRunApi) {
                 if (!forwardedDestination) {
                     logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.' })
                 } else {
-
-                    const location = forwardedDestination[0]
                     const xcm = forwardedDestination[1]
                     if (xcm.length !== 1) {
                         logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.' })
@@ -335,6 +323,21 @@ export async function validateTransfer(connections: Connections, transfer: Trans
                 }
             } else {
                 logs.push({ kind: ValidationKind.Warning, reason: ValidationReason.DryRunNotSupportedOnDestination, message: 'The destination paracahain does not support dry running of XCM. Transaction success cannot be confirmed.' })
+            }
+            if (!destAssetMetadata.isSufficient &&
+                (
+                    (destParachain.features.hasDryRunApi && destinationParachainDryRunError)
+                    || (!destParachain.features.hasDryRunApi)
+                )
+            ) {
+                // Check if the acocunt is created
+                const { accountMaxConumers, accountExists } = await validateAccount(destParachainApi, destParachain.info.specName, beneficiaryAddressHex, registry.ethChainId, tokenAddress)
+                if (accountMaxConumers) {
+                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.MaxConsumersReached, message: 'Beneficiary account has reached the max consumer limit on the destination chain.' })
+                }
+                if (!accountExists) {
+                    logs.push({ kind: ValidationKind.Error, reason: ValidationReason.AccountDoesNotExist, message: 'Beneficiary account does not exist on the destination chain.' })
+                }
             }
         }
     } else {
