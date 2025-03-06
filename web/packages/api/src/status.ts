@@ -254,7 +254,11 @@ export const channelStatusInfo = async (
     ).toPrimitive() as number
 
     let estimatedDeliveryTime: any
-    if (context.config.graphqlApiUrl) {
+    if (
+        context.config.graphqlApiUrl &&
+        channelId.toLowerCase() ==
+            "0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539"
+    ) {
         try {
             estimatedDeliveryTime = await fetchEstimatedDeliveryTime(channelId)
         } catch (e: any) {
