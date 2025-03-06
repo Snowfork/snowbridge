@@ -758,9 +758,10 @@ export const trackSendProgressPolling = async (
                 let eventData = event.event.toPrimitive().data
                 if (
                     bridgeHub.events.ethereumOutboundQueue.MessageAccepted.is(event.event) &&
-                    eventData[0].toLowerCase() === success?.messageId?.toLowerCase()
+                    eventData[0].toLowerCase() === paraIdToChannelId(success.plan.success?.assetHub.paraId ?? 1000).toLowerCase() &&
+                    eventData[1].toLowerCase() === success?.messageId?.toLowerCase()
                 ) {
-                    success.bridgeHub.nonce = BigInt(eventData[1])
+                    success.bridgeHub.nonce = BigInt(eventData[2])
                     success.bridgeHub.extrinsicSuccess = true
                     success.bridgeHub.messageAcceptedAtHash = blockHash.toHex()
                     return true
@@ -857,8 +858,8 @@ export const trackSendProgressPolling = async (
             if (
                 messageID.toLowerCase() === success.messageId?.toLowerCase() &&
                 nonce === success.bridgeHub.nonce &&
-                channelID.toLowerCase() ==
-                paraIdToChannelId(success.plan.success?.assetHub.paraId ?? 1000).toLowerCase()
+                channelID.toLowerCase() ===
+                    paraIdToChannelId(success.plan.success?.assetHub.paraId ?? 1000).toLowerCase()
             ) {
                 success.ethereum.transferBlockNumber = blockNumber
                 success.ethereum.transferBlockHash = blockHash
