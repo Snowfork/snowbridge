@@ -206,13 +206,15 @@ contract GatewayV2Test is Test {
      * Message Verification
      */
     function testSubmitHappyPath() public {
+        bytes32 topic = keccak256("topic");
+
         // Expect the gateway to emit `InboundMessageDispatched`
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
 
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({origin: keccak256("666"), nonce: 1, commands: makeMockCommand()}),
+            InboundMessageV2({origin: keccak256("666"), nonce: 1, topic: topic, commands: makeMockCommand()}),
             proof,
             makeMockProof(),
             relayerRewardAddress
@@ -220,8 +222,10 @@ contract GatewayV2Test is Test {
     }
 
     function testSubmitFailInvalidNonce() public {
+        bytes32 topic = keccak256("topic");
+
         InboundMessageV2 memory message =
-            InboundMessageV2({origin: keccak256("666"), nonce: 1, commands: makeMockCommand()});
+            InboundMessageV2({origin: keccak256("666"), nonce: 1, topic: topic, commands: makeMockCommand()});
 
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway)).v2_submit(
@@ -236,8 +240,10 @@ contract GatewayV2Test is Test {
     }
 
     function testSubmitFailInvalidProof() public {
+        bytes32 topic = keccak256("topic");
+
         InboundMessageV2 memory message =
-            InboundMessageV2({origin: keccak256("666"), nonce: 1, commands: makeMockCommand()});
+            InboundMessageV2({origin: keccak256("666"), nonce: 1, topic: topic, commands: makeMockCommand()});
 
         MockGateway(address(gateway)).setCommitmentsAreVerified(false);
         vm.expectRevert(IGatewayBase.InvalidProof.selector);
@@ -345,11 +351,13 @@ contract GatewayV2Test is Test {
     }
 
     function testUnlockWethSuccess() public {
+        bytes32 topic = keccak256("topic");
+
         hoax(assetHubAgent);
         weth.deposit{value: 1 ether}();
 
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
@@ -357,6 +365,7 @@ contract GatewayV2Test is Test {
             InboundMessageV2({
                 origin: Constants.ASSET_HUB_AGENT_ID,
                 nonce: 1,
+                topic: topic,
                 commands: makeUnlockWethCommand(0.1 ether)
             }),
             proof,
@@ -366,6 +375,8 @@ contract GatewayV2Test is Test {
     }
 
     function testEncodeDecodeMessageV2() public {
+        bytes32 topic = keccak256("topic");
+
         UnlockNativeTokenParams memory params = UnlockNativeTokenParams({
             token: 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
             recipient: 0xEDa338E4dC46038493b885327842fD3E301CaB39,
@@ -376,7 +387,7 @@ contract GatewayV2Test is Test {
         commands[0] =
             CommandV2({kind: CommandKind.UnlockNativeToken, gas: 100_000, payload: encoded});
         InboundMessageV2 memory message =
-            InboundMessageV2({origin: bytes32(uint256(1000)), nonce: 1, commands: commands});
+            InboundMessageV2({origin: bytes32(uint256(1000)), nonce: 1, topic: topic, commands: commands});
         bytes memory rawBytes = abi.encode(message);
 
         //From OutboundQueueV2
@@ -409,8 +420,10 @@ contract GatewayV2Test is Test {
     }
 
     function testAgentCallContractSuccess() public {
+        bytes32 topic = keccak256("topic");
+
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
@@ -418,6 +431,7 @@ contract GatewayV2Test is Test {
             InboundMessageV2({
                 origin: Constants.ASSET_HUB_AGENT_ID,
                 nonce: 1,
+                topic: topic,
                 commands: makeCallContractCommand(0.1 ether)
             }),
             proof,
