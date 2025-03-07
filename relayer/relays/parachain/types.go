@@ -87,6 +87,7 @@ func NewMerkleProof(rawProof RawMerkleProof) (MerkleProof, error) {
 type OutboundQueueMessage struct {
 	Origin   types.H256
 	Nonce    types.U64
+	Topic    types.H256
 	Commands []CommandWrapper
 }
 
@@ -112,6 +113,7 @@ func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
 	return contracts.InboundMessage{
 		Origin:   m.Origin,
 		Nonce:    uint64(m.Nonce),
+		Topic:    m.Topic,
 		Commands: commands,
 	}
 }

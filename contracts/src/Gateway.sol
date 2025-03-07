@@ -460,7 +460,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
         bool success = v2_dispatch(message);
 
-        emit IGatewayV2.InboundMessageDispatched(message.nonce, success, rewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(message.nonce, message.topic, success, rewardAddress);
     }
 
     function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {
