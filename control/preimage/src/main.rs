@@ -13,6 +13,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
 use constants::{ASSET_HUB_API, BRIDGE_HUB_API, POLKADOT_DECIMALS, POLKADOT_SYMBOL, RELAY_API};
 use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_force_batch};
+use hex_literal::hex;
 use sp_crypto_hashing::blake2_256;
 use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
@@ -61,6 +62,8 @@ pub enum Command {
     TreasuryProposal2024(TreasuryProposal2024Args),
     /// Governance update 202501
     GovUpdate202501(GovUpdate202501Args),
+    /// Register PNA
+    GovUpdate202503,
 }
 
 #[derive(Debug, Args)]
@@ -240,6 +243,18 @@ pub struct RegisterEtherArgs {
     /// The Ether asset's number of decimal places
     #[arg(long, value_name = "DECIMALS", default_value_t = 18u8)]
     ether_decimals: u8,
+}
+
+#[derive(Debug)]
+pub struct RegisterPolkadotNativeAssetArgs {
+    /// The Asset location
+    location: commands::BridgeHubVersionedLocationType,
+    /// The Asset display name
+    name: &'static str,
+    /// The Asset symbol
+    symbol: &'static str,
+    /// The Asset number of decimal places
+    decimals: u8,
 }
 
 #[derive(Debug, Args)]
@@ -470,6 +485,13 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ah_set_pricing_call,
                 ah_register_ether_call,
             ])
+        }
+        Command::GovUpdate202503 => {
+            #[cfg(not(feature = "polkadot"))]
+            panic!("Update only for polkadot");
+
+            let reg_call = send_xcm_bridge_hub(&context, commands::token_registrations()).await?;
+            reg_call
         }
     };
 
