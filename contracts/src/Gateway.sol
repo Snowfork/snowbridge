@@ -7,7 +7,6 @@ import {Verification} from "./Verification.sol";
 import {Initializer} from "./Initializer.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
-import {MultiAddress} from "./MultiAddress.sol";
 import {IGatewayBase} from "./interfaces/IGatewayBase.sol";
 import {
     OperatingMode,
@@ -15,6 +14,7 @@ import {
     TokenInfo,
     Channel,
     ChannelID,
+    MultiAddress,
     InboundMessageV1,
     CommandV1,
     InboundMessageV2,
@@ -50,15 +50,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     using Address for address;
     using SafeNativeTransfer for address payable;
 
+    // Address of the code to be run within `Agent.sol` using delegatecall
     address public immutable AGENT_EXECUTOR;
 
-    // Verification state
+    // Consensus client for Polkadot
     address public immutable BEEFY_CLIENT;
-
-    // BridgeHub
-    ParaID internal immutable BRIDGE_HUB_PARA_ID;
-    bytes4 internal immutable BRIDGE_HUB_PARA_ID_ENCODED;
-    bytes32 internal immutable BRIDGE_HUB_AGENT_ID;
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
@@ -68,9 +64,12 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         _;
     }
 
+    // Makes functions nonreentrant
     modifier nonreentrant() {
         assembly {
-            if tload(0) { revert(0, 0) }
+            if tload(0) {
+                revert(0, 0)
+            }
             tstore(0, 1)
         }
         _;
@@ -127,7 +126,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     // Gas used for:
     // 1. Mapping a command id to an implementation function
     // 2. Calling implementation function
-    uint256 DISPATCH_OVERHEAD_GAS_V1 = 10_000;
+    uint256 constant DISPATCH_OVERHEAD_GAS_V1 = 10_000;
 
     /**
      * APIv1 External API

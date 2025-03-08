@@ -21,11 +21,6 @@ import {Agent} from "../src/Agent.sol";
 import {Verification} from "../src/Verification.sol";
 import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 import {
-    MultiAddress,
-    multiAddressFromBytes32,
-    multiAddressFromBytes20
-} from "../src/MultiAddress.sol";
-import {
     Channel,
     InboundMessageV1,
     OperatingMode,
@@ -65,6 +60,12 @@ import {
     ParaID,
     Command
 } from "../src/v1/Types.sol";
+
+import {
+    MultiAddress,
+    multiAddressFromBytes32,
+    multiAddressFromBytes20
+} from "../src/v1/MultiAddress.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";

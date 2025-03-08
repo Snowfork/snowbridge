@@ -10,7 +10,6 @@ import {AssetsStorage, TokenInfo} from "../storage/AssetsStorage.sol";
 import {CoreStorage} from "../storage/CoreStorage.sol";
 import {PricingStorage} from "../storage/PricingStorage.sol";
 import {SubstrateTypes} from "../SubstrateTypes.sol";
-import {MultiAddress} from "../types/Common.sol";
 import {Address} from "../utils/Address.sol";
 import {AgentExecutor} from "../AgentExecutor.sol";
 import {Constants} from "../Constants.sol";
@@ -21,6 +20,8 @@ import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
 import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
 import {IGatewayV1} from "./IGateway.sol";
+
+import {MultiAddress} from "./MultiAddress.sol";
 
 import {
     ChannelID,

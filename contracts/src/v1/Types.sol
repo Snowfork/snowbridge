@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.28;
 
-import {MultiAddress, TokenInfo, OperatingMode} from "../types/Common.sol";
+import {TokenInfo, OperatingMode} from "../types/Common.sol";
+import {MultiAddress} from "./MultiAddress.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 type ParaID is uint32;

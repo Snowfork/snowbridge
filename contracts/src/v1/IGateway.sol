@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.28;
 
-import {MultiAddress} from "../MultiAddress.sol";
+import {MultiAddress} from "./MultiAddress.sol";
 import {OperatingMode, InboundMessage, ParaID, ChannelID} from "./Types.sol";
 import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";

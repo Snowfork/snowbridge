@@ -103,10 +103,7 @@ library Functions {
         uint128 amount
     ) internal {
         bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
-        (bool success,) = Agent(payable(agent)).invoke(executor, call);
-        if (!success) {
-            revert IGatewayBase.TokenTransferFailed();
-        }
+        invokeOnAgent(agent, executor, call);
     }
 
     function registerNativeToken(address token) internal {

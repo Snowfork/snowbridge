@@ -21,11 +21,6 @@ import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {Agent} from "../src/Agent.sol";
 import {Verification} from "../src/Verification.sol";
 import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
-import {
-    MultiAddress,
-    multiAddressFromBytes32,
-    multiAddressFromBytes20
-} from "../src/MultiAddress.sol";
 import {OperatingMode, ParaID, CommandV2, CommandKind, InboundMessageV2} from "../src/Types.sol";
 
 import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
@@ -135,14 +130,6 @@ contract GatewayV2Test is Test {
         dotTokenID = bytes32(uint256(1));
 
         helloWorld = new HelloWorld();
-    }
-
-    function recipientAddress32() internal pure returns (MultiAddress memory) {
-        return multiAddressFromBytes32(keccak256("recipient"));
-    }
-
-    function recipientAddress20() internal pure returns (MultiAddress memory) {
-        return multiAddressFromBytes20(bytes20(keccak256("recipient")));
     }
 
     function makeMockProof() public pure returns (Verification.Proof memory) {

@@ -2,14 +2,15 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.28;
 
-import {MultiAddress, TokenInfo, OperatingMode} from "./types/Common.sol";
+import {TokenInfo, OperatingMode} from "./types/Common.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 import {
     ParaID,
     ChannelID,
     Channel,
     InboundMessage as InboundMessageV1,
-    Command as CommandV1
+    Command as CommandV1,
+    MultiAddress
 } from "./v1/Types.sol";
 import {CallsV1} from "./v1/Calls.sol";
 import {HandlersV1} from "./v1/Handlers.sol";
