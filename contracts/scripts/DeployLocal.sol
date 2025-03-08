@@ -79,7 +79,6 @@ contract DeployLocal is Script {
             assetHubReserveTransferFee: uint128(vm.envUint("RESERVE_TRANSFER_FEE")),
             exchangeRate: ud60x18(vm.envUint("EXCHANGE_RATE")),
             multiplier: ud60x18(vm.envUint("FEE_MULTIPLIER")),
-            rescueOperator: address(0),
             foreignTokenDecimals: foreignTokenDecimals,
             maxDestinationFee: maxDestinationFee
         });

@@ -21,7 +21,6 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
-import {OperatorStorage} from "./storage/OperatorStorage.sol";
 
 import {Constants} from "./Constants.sol";
 
@@ -45,8 +44,6 @@ library Initializer {
         uint256 registerTokenFee;
         /// @dev Fee multiplier
         UD60x18 multiplier;
-        /// @dev Optional rescueOperator
-        address rescueOperator;
         uint8 foreignTokenDecimals;
         uint128 maxDestinationFee;
     }
@@ -114,9 +111,5 @@ library Initializer {
 
         TokenInfo storage etherTokenInfo = assets.tokenRegistry[address(0)];
         etherTokenInfo.isRegistered = true;
-
-        // Initialize operator storage
-        OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
-        operatorStorage.operator = config.rescueOperator;
     }
 }

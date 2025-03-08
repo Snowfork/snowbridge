@@ -105,7 +105,6 @@ contract GatewayV2Test is Test {
             assetHubReserveTransferFee: 1e10,
             exchangeRate: ud60x18(0.0025e18),
             multiplier: ud60x18(1e18),
-            rescueOperator: 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967,
             foreignTokenDecimals: 10,
             maxDestinationFee: 1e11
         });

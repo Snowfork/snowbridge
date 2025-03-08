@@ -133,7 +133,6 @@ contract GatewayV1Test is Test {
             assetHubReserveTransferFee: sendTokenFee,
             exchangeRate: exchangeRate,
             multiplier: multiplier,
-            rescueOperator: 0x4B8a782D4F03ffcB7CE1e95C5cfe5BFCb2C8e967,
             foreignTokenDecimals: foreignTokenDecimals,
             maxDestinationFee: maxDestinationFee
         });
