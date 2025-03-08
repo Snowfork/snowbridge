@@ -457,13 +457,16 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             revert IGatewayBase.InvalidProof();
         }
 
+        // Dispatch the message payload
         bool success = v2_dispatch(message);
 
         emit IGatewayV2.InboundMessageDispatched(message.nonce, message.topic, success, rewardAddress);
     }
 
+    // Dispatch all the commands within a message payload
     function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {
         for (uint256 i = 0; i < message.commands.length; i++) {
+            // check that there is enough gas to forward to the command handler
             if (gasleft() * 63 / 64 < message.commands[i].gas + DISPATCH_OVERHEAD_GAS_V2) {
                 assembly {
                     invalid()
@@ -579,8 +582,31 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
      * Upgrades
      */
 
-    /// @dev Initialize storage in the gateway
-    /// NOTE: This is not externally accessible as this function selector is overshadowed in the proxy
+    /// Initialize storage within the `GatewayProxy` contract using this initializer.
+    ///
+    /// This initializer cannot be called externally via the proxy as the function selector
+    /// is overshadowed in the proxy.
+    ///
+    /// This implementation is only intended to initialize storage for initial deployments
+    /// of the `GatewayProxy` contract to transient or long-lived testnets.
+    ///
+    /// The `GatewayProxy` deployed to Ethereum mainnet already has its storage initialized.
+    /// When its logic contract needs to upgraded, a new logic contract should be developed
+    /// that inherits from this base `Gateway` contract. Particularly, the `initialize` function
+    /// must be overriden to ensure selective initialization of storage fields relevant
+    /// to the upgrade.
+    ///
+    /// ```solidity
+    /// contract Gateway202508 is Gateway {
+    ///     function initialize(bytes calldata data) external override {
+    ///         if (ERC1967.load() == address(0)) {
+    ///             revert Unauthorized();
+    ///         }
+    ///         # Initialization routines here...
+    ///     }
+    /// }
+    /// ```
+    ///
     function initialize(bytes calldata data) external virtual {
         Initializer.initialize(data);
     }

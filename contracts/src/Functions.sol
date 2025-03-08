@@ -28,6 +28,7 @@ library Functions {
     error InvalidAmount();
     error ChannelDoesNotExist();
 
+    /// Looks up an agent contract address, failing if no such mapping exists
     function ensureAgent(bytes32 agentID) internal view returns (address agent) {
         agent = CoreStorage.layout().agents[agentID];
         if (agent == address(0)) {
@@ -68,6 +69,8 @@ library Functions {
         IERC20(token).safeTransferFrom(sender, agent, amount);
     }
 
+    /// Creates a new agent contract to act as a proxy for the remote location
+    /// identified by `origin`.
     function createAgent(bytes32 origin) internal {
         CoreStorage.Layout storage core = CoreStorage.layout();
         address agent = core.agents[origin];
@@ -121,6 +124,7 @@ library Functions {
         }
     }
 
+    /// Creates a new wrapped ERC20 token for a foreign token
     function registerForeignToken(
         bytes32 foreignTokenID,
         string memory name,
