@@ -35,10 +35,28 @@ To update the runtime code binding, run the following commands:
 
 You can update runtimes manually with the following commands:
 
+Polkadot:
+
 ```shell
 subxt metadata --url wss://polkadot-rpc.dwellir.com -f bytes -o runtimes/polkadot/polkadot-metadata.bin
 subxt metadata --url wss://bridge-hub-polkadot-rpc.dwellir.com -f bytes -o runtimes/bridge-hub-polkadot/bridge-hub-metadata.bin
 subxt metadata --url wss://asset-hub-polkadot-rpc.dwellir.com -f bytes -o runtimes/asset-hub-polkadot/asset-hub-metadata.bin
+```
+
+Paseo:
+
+```
+subxt metadata --url wss://paseo-rpc.dwellir.com -f bytes -o runtimes/paseo/polkadot-metadata.bin
+subxt metadata --url wss://asset-hub-paseo-rpc.dwellir.com -f bytes -o runtimes/asset-hub-paseo/asset-hub-metadata.bin
+subxt metadata --url wss://sys.ibp.network/bridgehub-paseo -f bytes -o runtimes/bridge-hub-paseo/bridge-hub-metadata.bin
+```
+
+Westend:
+
+```
+subxt metadata --url wss://westend.public.curie.radiumblock.co/ws -f bytes -o runtimes/westend/polkadot-metadata.bin
+subxt metadata --url wss://asset-hub-westend-rpc.dwellir.com -f bytes -o runtimes/asset-hub-westend/asset-hub-metadata.bin
+subxt metadata --url wss://bridge-hub-westend-rpc.dwellir.com -f bytes -o runtimes/bridge-hub-westend/bridge-hub-metadata.bin
 ```
 
 To update Westend/Paseo bindings, replace the chain name in the command, e.g. replace `runtimes/polkadot/polkadot-metadata.bin`

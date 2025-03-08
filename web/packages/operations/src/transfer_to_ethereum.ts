@@ -1,13 +1,9 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
-import {
-    contextFactory,
-    destroyContext,
-    environment,
-    toEthereum,
-} from "@snowbridge/api"
-import { Wallet } from "ethers"
+import { Context, environment, toEthereum } from "@snowbridge/api"
+import { AbstractProvider, Wallet } from "ethers"
 import cron from "node-cron"
+import { cryptoWaitReady } from "@polkadot/util-crypto"
 
 const transfer = async () => {
     let env = "local_e2e"
@@ -19,19 +15,32 @@ const transfer = async () => {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const { config } = snowbridgeEnv
+    const { config, ethChainId, name } = snowbridgeEnv
+    await cryptoWaitReady()
 
-    const context = await contextFactory({
+    const parachains: { [paraId: string]: string } = {}
+    parachains[config.BRIDGE_HUB_PARAID.toString()] =
+        process.env["BRIDGE_HUB_URL"] ?? config.PARACHAINS[config.BRIDGE_HUB_PARAID.toString()]
+    parachains[config.ASSET_HUB_PARAID.toString()] =
+        process.env["ASSET_HUB_URL"] ?? config.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
+
+    const ethChains: { [ethChainId: string]: string | AbstractProvider } = {}
+    Object.keys(config.ETHEREUM_CHAINS)
+        .forEach(ethChainId => ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](process.env.REACT_APP_INFURA_KEY || ""))
+    if (process.env["EXECUTION_NODE_URL"]) { ethChains[ethChainId.toString()] = process.env["EXECUTION_NODE_URL"] }
+
+    const context = new Context({
+        environment: name,
         ethereum: {
-            execution_url: process.env["EXECUTION_NODE_URL"] || config.ETHEREUM_API(process.env.REACT_APP_INFURA_KEY || ""),
+            ethChainId,
+            ethChains,
             beacon_url: process.env["BEACON_NODE_URL"] || config.BEACON_HTTP_API,
         },
         polkadot: {
-            url: {
-                bridgeHub: process.env["BRIDGE_HUB_URL"] || config.BRIDGE_HUB_URL,
-                assetHub: process.env["ASSET_HUB_URL"] || config.ASSET_HUB_URL,
-                relaychain: process.env["RELAY_CHAIN_URL"] || config.RELAY_CHAIN_URL,
-            },
+            assetHubParaId: config.ASSET_HUB_PARAID,
+            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
+            parachains: parachains,
+            relaychain: process.env["RELAY_CHAIN_URL"] || config.RELAY_CHAIN_URL,
         },
         appContracts: {
             gateway: config.GATEWAY_CONTRACT,
@@ -41,11 +50,13 @@ const transfer = async () => {
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        process.env["ETHEREUM_KEY"] || "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
-        context.ethereum.api
+        process.env["ETHEREUM_KEY"] || "your_key_here",
+        context.ethereum()
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
-    const POLKADOT_ACCOUNT = process.env["SUBSTRATE_KEY"]?polkadot_keyring.addFromUri(process.env["SUBSTRATE_KEY"]):polkadot_keyring.addFromUri("//Ferdie")
+    const POLKADOT_ACCOUNT = process.env["SUBSTRATE_KEY"]
+        ? polkadot_keyring.addFromUri(process.env["SUBSTRATE_KEY"])
+        : polkadot_keyring.addFromUri("//Ferdie")
 
     const amount = 2_000_000_000_000n
 
@@ -67,7 +78,7 @@ const transfer = async () => {
         const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan)
         console.log("Execute:", result)
     }
-    await destroyContext(context)
+    await context.destroyContext()
 }
 
 if (process.argv.length != 3) {

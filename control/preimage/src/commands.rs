@@ -149,21 +149,12 @@ pub fn outbound_queue_operating_mode(param: &OperatingModeEnum) -> BridgeHubRunt
 }
 
 pub fn upgrade(params: &UpgradeArgs) -> BridgeHubRuntimeCall {
-    let initializer = if params.initializer {
-        Some((
-            params.initializer_params.as_ref().unwrap().clone(),
-            params.initializer_gas.unwrap(),
-        ))
-    } else {
-        None
-    };
-
     BridgeHubRuntimeCall::EthereumSystem(snowbridge_pallet_system::pallet::Call::upgrade {
         impl_address: params.logic_address.into_array().into(),
         impl_code_hash: params.logic_code_hash.0.into(),
-        initializer: initializer.map(|(params, gas)| Initializer {
-            params: params.into(),
-            maximum_required_gas: gas,
+        initializer: Some(Initializer {
+            params: params.initializer_params.clone().into(),
+            maximum_required_gas: params.initializer_gas,
         }),
     })
 }

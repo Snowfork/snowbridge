@@ -1,6 +1,6 @@
-# Operations Scripts
+# Monitoring service
 
-Scripts for operating the bridge with metrics sent to cloudwatch and alarms integration with pagerduty.
+Scripts in place to monitor the bridge, sending metrics to CloudWatch, with alarms integrated into PagerDuty for real-time notifications.
 
 ## Env configuration
 
@@ -37,6 +37,13 @@ pnpm cron
 ### Install as dameon service with PM2
 
 ```
-pm2 start ecosystem.config.js --only monitor
+pm2 start ecosystem.config.js --only monitor --time
 ```
 
+# Tranfers on Westend
+
+We run the transfer on a daily basis to preemptively ensure that the bridge transfer won’t break.
+
+```
+pm2 start westend-ecosystem.config.js --only westend-transferToPolkadot,westend-transferToEthereum
+```

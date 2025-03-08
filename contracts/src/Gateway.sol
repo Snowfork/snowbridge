@@ -196,7 +196,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 success = false;
             }
         } else if (message.command == CommandV1.TransferNativeFromAgent) {
-            // DISABLED
+            // DEPRECATED
             success = true;
         } else if (message.command == CommandV1.Upgrade) {
             try Gateway(this).v1_handleUpgrade{gas: maxDispatchGas}(message.params) {}
@@ -237,7 +237,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         uint256 refund = gasUsed * Math.min(tx.gasprice, message.maxFeePerGas);
 
         // Add the reward to the refund amount. If the sum is more than the funds available
-        // in the channel agent, then reduce the total amount
+        // in the gateway, then reduce the total amount
         uint256 amount = Math.min(refund + message.reward, address(this).balance);
 
         // Do the payment if there funds available in the gateway

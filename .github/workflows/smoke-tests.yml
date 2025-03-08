@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   schedule:
     # Runs at 8:00 AM every day
-    - cron: '0 8 * * *'
+    - cron: "0 8 * * *"
 
 jobs:
   smoketests:
@@ -63,12 +63,12 @@ jobs:
           ./scripts/run-smoketests.sh'
         continue-on-error: true
       - name: Save start-services log file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: start-services.log
           path: "${{ env.LOG_DIR }}/start-services.log"
       - name: Save beacon-relay log file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: beacon-relay.log
           path: "${{ env.OUTPUT_DIR }}/beacon-relay.log"

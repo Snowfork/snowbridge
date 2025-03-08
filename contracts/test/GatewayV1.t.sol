@@ -1021,6 +1021,15 @@ contract GatewayV1Test is Test {
 
         vm.expectRevert(IGatewayBase.Unauthorized.selector);
         Gateway(address(gateway)).v1_handleTransferNativeFromAgent("");
+
+        vm.expectRevert(IGatewayBase.Unauthorized.selector);
+        Gateway(address(gateway)).v1_handleSetOperatingMode("");
+
+        vm.expectRevert(IGatewayBase.Unauthorized.selector);
+        Gateway(address(gateway)).v1_handleUpgrade("");
+
+        vm.expectRevert(IGatewayBase.Unauthorized.selector);
+        Gateway(address(gateway)).v1_handleMintForeignToken(ParaID.wrap(3042).into(), "");
     }
 
     function testGetters() public {
