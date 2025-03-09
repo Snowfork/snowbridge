@@ -6,36 +6,23 @@ import {IERC20} from "../interfaces/IERC20.sol";
 
 import {SafeTokenTransferFrom} from "../utils/SafeTransfer.sol";
 
-import {AssetsStorage, TokenInfo} from "../storage/AssetsStorage.sol";
+import {AssetsStorage} from "../storage/AssetsStorage.sol";
 import {CoreStorage} from "../storage/CoreStorage.sol";
 import {PricingStorage} from "../storage/PricingStorage.sol";
-import {SubstrateTypes} from "../SubstrateTypes.sol";
 import {Address} from "../utils/Address.sol";
 import {AgentExecutor} from "../AgentExecutor.sol";
 import {Constants} from "../Constants.sol";
-import {Agent} from "../Agent.sol";
-import {Call} from "../utils/Call.sol";
-import {Token} from "../Token.sol";
 import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
 import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
 import {IGatewayV1} from "./IGateway.sol";
 
-import {MultiAddress} from "./MultiAddress.sol";
-
 import {
     ChannelID,
-    ParaID,
-    Ticket,
-    Costs,
     AgentExecuteCommand,
     AgentExecuteParams,
-    CreateAgentParams,
-    CreateChannelParams,
-    UpdateChannelParams,
     UpgradeParams,
     SetOperatingModeParams,
-    TransferNativeFromAgentParams,
     SetTokenTransferFeesParams,
     SetPricingParametersParams,
     UnlockNativeTokenParams,
@@ -47,6 +34,11 @@ library HandlersV1 {
     using Address for address;
     using SafeTokenTransferFrom for IERC20;
 
+    // @dev Release Ethereum-native tokens received back from polkadot
+    //
+    // DEPRECATED: Use `HandlersV1.unlockNativeToken` instead. Kept for
+    // legacy compatibility reasons, in case the gateway has to process a message
+    // in the older format.
     function agentExecute(address executor, bytes calldata data) external {
         AgentExecuteParams memory params = abi.decode(data, (AgentExecuteParams));
 
@@ -69,12 +61,6 @@ library HandlersV1 {
         }
     }
 
-    /// @dev Create an agent for a consensus system on Polkadot
-    function createAgent(bytes calldata data) external {
-        CreateAgentParams memory params = abi.decode(data, (CreateAgentParams));
-        Functions.createAgent(params.agentID);
-    }
-
     /// @dev Perform an upgrade of the gateway
     function upgrade(bytes calldata data) external {
         UpgradeParams memory params = abi.decode(data, (UpgradeParams));
@@ -87,17 +73,6 @@ library HandlersV1 {
         SetOperatingModeParams memory params = abi.decode(data, (SetOperatingModeParams));
         $.mode = params.mode;
         emit IGatewayBase.OperatingModeChanged(params.mode);
-    }
-
-    // @dev Transfer funds from an agent to a recipient account
-    function transferNativeFromAgent(address executor, bytes calldata data) external {
-        TransferNativeFromAgentParams memory params =
-            abi.decode(data, (TransferNativeFromAgentParams));
-
-        address agent = Functions.ensureAgent(params.agentID);
-
-        Functions.withdrawEther(executor, agent, payable(params.recipient), params.amount);
-        emit IGatewayV1.AgentFundsWithdrawn(params.agentID, params.recipient, params.amount);
     }
 
     // @dev Set token fees of the gateway
@@ -128,7 +103,7 @@ library HandlersV1 {
         );
     }
 
-    // @dev Transfer Ethereum native token back from polkadot
+    // @dev Release Ethereum-native tokens received back from polkadot
     function unlockNativeToken(address executor, bytes calldata data) external {
         UnlockNativeTokenParams memory params = abi.decode(data, (UnlockNativeTokenParams));
         address agent = Functions.ensureAgent(params.agentID);

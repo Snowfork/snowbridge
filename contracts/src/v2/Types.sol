@@ -24,45 +24,57 @@ struct Command {
 
 // Command IDs
 library CommandKind {
+    // Upgrade the Gateway implementation contract
     uint8 constant Upgrade = 0;
+    // Set the operating mode for outbound messaging in the Gateway
     uint8 constant SetOperatingMode = 1;
+    // Unlock native ERC20 and transfer to recipient
     uint8 constant UnlockNativeToken = 2;
+    // Register a foreign token
     uint8 constant RegisterForeignToken = 3;
+    // Mint foreign tokens
     uint8 constant MintForeignToken = 4;
+    // Call an arbitrary solidity contract
     uint8 constant CallContract = 5;
 }
 
 // Payload for outbound messages destined for Polkadot
 struct Payload {
-    // sender of the message
+    // Sender of the message
     address origin;
+    // Asset transfer instructions
     Asset[] assets;
+    // XCM Message
     Xcm xcm;
+    // SCALE-encoded location of claimer who can claim trapped assets on AssetHub
     bytes claimer;
-    // ether value
+    // Ether value not reserved for fees
     uint128 value;
-    // additional ether value for execution fees
+    // Ether value reserved for execution fees on AH
     uint128 executionFee;
-    // additional ether value for relayer fees
+    // Ether value reserved for relayer incentives
     uint128 relayerFee;
 }
 
 struct Xcm {
+    // Variant ID
     uint8 kind;
     // ABI-encoded xcm variant
     bytes data;
 }
 
 library XcmKind {
-    /// SCALE-encoded raw bytes for `VersionedXcm`
+    // SCALE-encoded raw bytes for `VersionedXcm`
     uint8 constant Raw = 0;
-    /// Create a new asset in the ForeignAssets pallet of AssetHub
+    // Create a new asset in the ForeignAssets pallet of AH
     uint8 constant CreateAsset = 1;
 }
 
 // Format of ABI-encoded Xcm.data when Xcm.kind == XcmKind.CreateAsset
 struct AsCreateAsset {
+    // Token address
     address token;
+    // Polkadot network to create the asset in
     uint8 network;
 }
 

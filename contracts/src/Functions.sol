@@ -83,7 +83,7 @@ library Functions {
         }
     }
 
-    /// @dev Transfer ether from an agent
+    /// @dev Withdraw ether from an agent and transfer to a recipient
     function withdrawEther(
         address executor,
         address agent,
@@ -94,7 +94,7 @@ library Functions {
         invokeOnAgent(agent, executor, call);
     }
 
-    // @dev Transfer Ethereum native token back from polkadot
+    // @dev Withdraw Ethereum-native tokens from an agent and transfer to a recipient
     function withdrawNativeToken(
         address executor,
         address agent,

@@ -21,20 +21,12 @@ contract MockGateway is Gateway {
         this.v1_handleAgentExecute(params);
     }
 
-    function v1_handleCreateAgent_public(bytes calldata params) external {
-        this.v1_handleCreateAgent(params);
-    }
-
     function v1_handleUpgrade_public(bytes calldata params) external {
         this.v1_handleUpgrade(params);
     }
 
     function v1_handleSetOperatingMode_public(bytes calldata params) external {
         this.v1_handleSetOperatingMode(params);
-    }
-
-    function v1_handleTransferNativeFromAgent_public(bytes calldata params) external {
-        this.v1_handleTransferNativeFromAgent(params);
     }
 
     function v1_handleSetTokenTransferFees_public(bytes calldata params) external {

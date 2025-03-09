@@ -179,23 +179,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             catch {
                 success = false;
             }
-        } else if (message.command == CommandV1.CreateAgent) {
-            try Gateway(this).v1_handleCreateAgent{gas: maxDispatchGas}(message.params) {}
-            catch {
-                success = false;
-            }
-        } else if (message.command == CommandV1.CreateChannel) {
-            success = false;
-        } else if (message.command == CommandV1.UpdateChannel) {
-            success = false;
         } else if (message.command == CommandV1.SetOperatingMode) {
             try Gateway(this).v1_handleSetOperatingMode{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
             }
-        } else if (message.command == CommandV1.TransferNativeFromAgent) {
-            // DEPRECATED
-            success = true;
         } else if (message.command == CommandV1.Upgrade) {
             try Gateway(this).v1_handleUpgrade{gas: maxDispatchGas}(message.params) {}
             catch {
@@ -227,6 +215,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             ) {} catch {
                 success = false;
             }
+        } else {
+            success = false;
         }
 
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
@@ -349,11 +339,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         HandlersV1.agentExecute(AGENT_EXECUTOR, data);
     }
 
-    /// @dev Create an agent for a consensus system on Polkadot
-    function v1_handleCreateAgent(bytes calldata data) external onlySelf {
-        HandlersV1.createAgent(data);
-    }
-
     /// @dev Perform an upgrade of the gateway
     function v1_handleUpgrade(bytes calldata data) external onlySelf {
         HandlersV1.upgrade(data);
@@ -362,11 +347,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     // @dev Set the operating mode of the gateway
     function v1_handleSetOperatingMode(bytes calldata data) external onlySelf {
         HandlersV1.setOperatingMode(data);
-    }
-
-    // @dev Transfer funds from an agent to a recipient account
-    function v1_handleTransferNativeFromAgent(bytes calldata data) external onlySelf {
-        HandlersV1.transferNativeFromAgent(AGENT_EXECUTOR, data);
     }
 
     // @dev Set token fees of the gateway

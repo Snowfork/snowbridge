@@ -69,13 +69,9 @@ struct InboundMessage {
 
 /// @dev Messages from Polkadot take the form of these commands.
 enum Command {
-    AgentExecute,
+    AgentExecute, // Deprecated in favour of UnlockNativeToken
     Upgrade,
-    CreateAgent,
-    CreateChannel,
-    UpdateChannel,
     SetOperatingMode,
-    TransferNativeFromAgent,
     SetTokenTransferFees,
     SetPricingParameters,
     UnlockNativeToken,
@@ -83,6 +79,7 @@ enum Command {
     MintForeignToken
 }
 
+// Deprecated
 enum AgentExecuteCommand {
     TransferToken
 }
@@ -102,34 +99,10 @@ struct Ticket {
     uint128 value;
 }
 
-// Payload for AgentExecute
+// Payload for AgentExecute. Deprecated
 struct AgentExecuteParams {
     bytes32 agentID;
     bytes payload;
-}
-
-// Payload for CreateAgent
-struct CreateAgentParams {
-    /// @dev The agent ID of the consensus system
-    bytes32 agentID;
-}
-
-// Payload for CreateChannel
-struct CreateChannelParams {
-    /// @dev The channel ID
-    ChannelID channelID;
-    /// @dev The agent ID
-    bytes32 agentID;
-    /// @dev Initial operating mode
-    OperatingMode mode;
-}
-
-// Payload for UpdateChannel
-struct UpdateChannelParams {
-    /// @dev The parachain used to identify the channel to update
-    ChannelID channelID;
-    /// @dev The new operating mode
-    OperatingMode mode;
 }
 
 // Payload for Upgrade
@@ -148,16 +121,6 @@ struct UpgradeParams {
 struct SetOperatingModeParams {
     /// @dev The new operating mode
     OperatingMode mode;
-}
-
-// Payload for TransferNativeFromAgent
-struct TransferNativeFromAgentParams {
-    /// @dev The ID of the agent to transfer funds from
-    bytes32 agentID;
-    /// @dev The recipient of the funds
-    address recipient;
-    /// @dev The amount to transfer
-    uint256 amount;
 }
 
 // Payload for SetTokenTransferFees
