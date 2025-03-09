@@ -264,10 +264,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return Functions.ensureAgent(agentID);
     }
 
-    function outboundNonce() external view returns (uint64) {
-        return CallsV2.outboundNonce();
-    }
-
     function pricingParameters() external view returns (UD60x18, uint128) {
         return CallsV1.pricingParameters();
     }
@@ -406,7 +402,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     *          \/                                 \/
     */
 
-    uint256 public constant DISPATCH_OVERHEAD_GAS_V2 = 32_000;
+    /// Overhead in selecting the dispatch handler for an arbitrary command
+    uint256 internal constant DISPATCH_OVERHEAD_GAS_V2 = 24_000;
 
     /// @dev Submit a message from Polkadot for verification and dispatch
     /// @param message A message produced by the OutboundQueue pallet on BridgeHub
@@ -447,10 +444,83 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         );
     }
 
+    function v2_outboundNonce() external view returns (uint64) {
+        return CallsV2.outboundNonce();
+    }
+
+    function v2_isDispatched(uint64 nonce) external view returns (bool) {
+        return CoreStorage.layout().inboundNonce.get(nonce);
+    }
+
+    // See docs for `IGateway.sendMessage`
+    function v2_sendMessage(
+        bytes calldata xcm,
+        bytes[] calldata assets,
+        bytes calldata claimer,
+        uint128 executionFee,
+        uint128 relayerFee
+    ) external payable nonreentrant {
+        CallsV2.sendMessage(xcm, assets, claimer, executionFee, relayerFee);
+    }
+
+    // See docs for `IGateway.v2_registerToken`
+    function v2_registerToken(
+        address token,
+        uint8 network,
+        uint128 executionFee,
+        uint128 relayerFee
+    ) external payable nonreentrant {
+        require(network == uint8(Network.Polkadot), IGatewayV2.InvalidNetwork());
+        CallsV2.registerToken(token, Network(network), executionFee, relayerFee);
+    }
+
+    // See docs for `IGateway.v2_createAgent`
+    function v2_createAgent(bytes32 id) external {
+        CallsV2.createAgent(id);
+    }
+
+    /**
+     * APIv2 Message Handlers
+     */
+
+    //  Perform an upgrade of the gateway
+    function v2_handleUpgrade(bytes calldata data) external onlySelf {
+        HandlersV2.upgrade(data);
+    }
+
+    // Set the operating mode of the gateway
+    function v2_handleSetOperatingMode(bytes calldata data) external onlySelf {
+        HandlersV2.setOperatingMode(data);
+    }
+
+    // Unlock Native token
+    function v2_handleUnlockNativeToken(bytes calldata data) external onlySelf {
+        HandlersV2.unlockNativeToken(AGENT_EXECUTOR, data);
+    }
+
+    // Mint foreign token from polkadot
+    function v2_handleRegisterForeignToken(bytes calldata data) external onlySelf {
+        HandlersV2.registerForeignToken(data);
+    }
+
+    // Mint foreign token from polkadot
+    function v2_handleMintForeignToken(bytes calldata data) external onlySelf {
+        HandlersV2.mintForeignToken(data);
+    }
+
+    // Call an arbitrary contract function
+    function v2_handleCallContract(bytes32 origin, bytes calldata data) external onlySelf {
+        HandlersV2.callContract(origin, AGENT_EXECUTOR, data);
+    }
+
+    /**
+     * APIv2 Internal functions
+     */
+
     // Dispatch all the commands within a message payload
     function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {
         for (uint256 i = 0; i < message.commands.length; i++) {
-            // check that there is enough gas to forward to the command handler
+            // check that there is enough gas available to forward to the command handler
             if (gasleft() * 63 / 64 < message.commands[i].gas + DISPATCH_OVERHEAD_GAS_V2) {
                 assembly {
                     invalid()
@@ -495,71 +565,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             }
         }
         return true;
-    }
-
-    function v2_isDispatched(uint64 nonce) external view returns (bool) {
-        CoreStorage.Layout storage $ = CoreStorage.layout();
-        return $.inboundNonce.get(nonce);
-    }
-
-    // See docs for `IGateway.sendMessage`
-    function v2_sendMessage(
-        bytes calldata xcm,
-        bytes[] calldata assets,
-        bytes calldata claimer,
-        uint128 executionFee,
-        uint128 relayerFee
-    ) external payable nonreentrant {
-        CallsV2.sendMessage(xcm, assets, claimer, executionFee, relayerFee);
-    }
-
-    // See docs for `IGateway.registerToken`
-    function v2_registerToken(
-        address token,
-        uint8 network,
-        uint128 executionFee,
-        uint128 relayerFee
-    ) external payable nonreentrant {
-        require(network <= uint8(Network.Polkadot), IGatewayV2.InvalidNetwork());
-        CallsV2.registerToken(token, Network(network), executionFee, relayerFee);
-    }
-
-    function v2_createAgent(bytes32 id) external {
-        HandlersV2.createAgent(id);
-    }
-
-    /**
-     * APIv2 Message Handlers
-     */
-
-    //  Perform an upgrade of the gateway
-    function v2_handleUpgrade(bytes calldata data) external onlySelf {
-        HandlersV2.upgrade(data);
-    }
-
-    // Set the operating mode of the gateway
-    function v2_handleSetOperatingMode(bytes calldata data) external onlySelf {
-        HandlersV2.setOperatingMode(data);
-    }
-
-    // Unlock Native token
-    function v2_handleUnlockNativeToken(bytes calldata data) external onlySelf {
-        HandlersV2.unlockNativeToken(AGENT_EXECUTOR, data);
-    }
-
-    // Mint foreign token from polkadot
-    function v2_handleRegisterForeignToken(bytes calldata data) external onlySelf {
-        HandlersV2.registerForeignToken(data);
-    }
-
-    // Mint foreign token from polkadot
-    function v2_handleMintForeignToken(bytes calldata data) external onlySelf {
-        HandlersV2.mintForeignToken(data);
-    }
-
-    // Call an arbitrary contract function
-    function v2_handleCallContract(bytes32 origin, bytes calldata data) external onlySelf {
-        HandlersV2.callContract(origin, AGENT_EXECUTOR, data);
     }
 
     /**

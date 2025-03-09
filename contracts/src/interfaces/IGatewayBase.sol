@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 
 import {OperatingMode} from "../types/Common.sol";
 
+/// Base interface for Gateway
 interface IGatewayBase {
     error InvalidToken();
     error InvalidAmount();
@@ -21,19 +22,10 @@ interface IGatewayBase {
     error InsufficientEther();
     error Unauthorized();
     error Disabled();
-    error AgentAlreadyCreated();
     error AgentExecutionFailed(bytes returndata);
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
     error AlreadyInitialized();
-    error TooManyAssets();
-
-    /**
-     * Getters
-     */
-
-    // Emitted when an agent has been created for a consensus system on Polkadot
-    event AgentCreated(bytes32 agentID, address agent);
 
     // Emitted when the operating mode is changed
     event OperatingModeChanged(OperatingMode mode);

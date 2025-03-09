@@ -8,7 +8,6 @@ import {Verification} from "../Verification.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 interface IGatewayV1 {
-    error ChannelAlreadyCreated();
     error ChannelDoesNotExist();
     error InvalidChannelUpdate();
 

@@ -18,6 +18,7 @@ import {IGatewayV1} from "./v1/IGateway.sol";
 import {IGatewayV2} from "./v2/IGateway.sol";
 import {OperatingMode} from "./types/Common.sol";
 
+// Common functionality that is shared between V1 and V2
 library Functions {
     using Address for address;
     using SafeNativeTransfer for address payable;
@@ -67,20 +68,6 @@ library Functions {
         }
 
         IERC20(token).safeTransferFrom(sender, agent, amount);
-    }
-
-    /// Creates a new agent contract to act as a proxy for the remote location
-    /// identified by `origin`.
-    function createAgent(bytes32 origin) internal {
-        CoreStorage.Layout storage core = CoreStorage.layout();
-        address agent = core.agents[origin];
-        if (agent == address(0)) {
-            agent = address(new Agent(origin));
-            core.agents[origin] = agent;
-            emit IGatewayBase.AgentCreated(origin, agent);
-        } else {
-            revert IGatewayBase.AgentAlreadyCreated();
-        }
     }
 
     /// @dev Withdraw ether from an agent and transfer to a recipient

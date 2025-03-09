@@ -6,32 +6,35 @@ import {OperatingMode, InboundMessage, Payload} from "./Types.sol";
 import {Verification} from "../Verification.sol";
 
 interface IGatewayV2 {
+    error AgentAlreadyExists();
     error ShouldNotReachHere();
     error InvalidNetwork();
     error InvalidAsset();
     error InvalidFee();
     error InsufficientValue();
     error ExceededMaximumValue();
+    error TooManyAssets();
 
+    /// Return the current operating mode for outbound messaging
     function operatingMode() external view returns (OperatingMode);
 
+    /// Return the address of the agent contract registered for `agentId`.
     function agentOf(bytes32 agentID) external view returns (address);
-
-    function outboundNonce() external view returns (uint64);
 
     /**
      * Events
      */
 
-    // V2: Emitted when inbound message has been dispatched
+    /// Emitted when an agent has been created for a consensus system on Polkadot
+    event AgentCreated(bytes32 agentID, address agent);
+
+    /// Emitted when inbound message has been dispatched
     event InboundMessageDispatched(
         uint64 indexed nonce, bytes32 topic, bool success, bytes32 rewardAddress
     );
 
-    // v2 Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
+    /// Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
     event OutboundMessageAccepted(uint64 nonce, Payload payload);
-
-    // V2
 
     // Submit a message for verification and dispatch
     function v2_submit(
@@ -86,10 +89,14 @@ interface IGatewayV2 {
         uint128 relayerFee
     ) external payable;
 
-    // Create an agent for a remote location identified by `id`
+    /// @dev Creates a new agent contract to act as a proxy for the remote location
+    ///      identified by `id`
     function v2_createAgent(bytes32 id) external;
 
-    // Check if an inbound message was previously accepted and dispatched
+    /// @dev Return the current outbound nonce.
+    function v2_outboundNonce() external view returns (uint64);
+
+    /// @dev Check if an inbound message was previously accepted and dispatched
     function v2_isDispatched(uint64 nonce) external view returns (bool);
 
     /// @dev Check whether a token is registered

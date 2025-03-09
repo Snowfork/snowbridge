@@ -446,7 +446,17 @@ contract GatewayV2Test is Test {
     function testCreateAgent() public {
         bytes32 origin = bytes32(uint256(1));
         vm.expectEmit(true, false, false, false);
-        emit IGatewayBase.AgentCreated(origin, address(0x0));
+        emit IGatewayV2.AgentCreated(origin, address(0x0));
+        IGatewayV2(payable(address(gateway))).v2_createAgent(origin);
+    }
+
+    function testCreateAgentFailsIfAlreadyExists() public {
+        bytes32 origin = bytes32(uint256(1));
+        vm.expectEmit(true, false, false, false);
+        emit IGatewayV2.AgentCreated(origin, address(0x0));
+        IGatewayV2(payable(address(gateway))).v2_createAgent(origin);
+
+        vm.expectRevert(IGatewayV2.AgentAlreadyExists.selector);
         IGatewayV2(payable(address(gateway))).v2_createAgent(origin);
     }
 }

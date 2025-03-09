@@ -32,10 +32,6 @@ library HandlersV2 {
     using Address for address;
     using SafeTokenTransferFrom for IERC20;
 
-    function createAgent(bytes32 origin) external {
-        Functions.createAgent(origin);
-    }
-
     function upgrade(bytes calldata data) external {
         UpgradeParams memory params = abi.decode(data, (UpgradeParams));
         Upgrade.upgrade(params.impl, params.implCodeHash, params.initParams);

@@ -55,7 +55,6 @@ library CallsV1 {
     error Unauthorized();
     error Disabled();
     error AgentAlreadyCreated();
-    error ChannelAlreadyCreated();
     error ChannelDoesNotExist();
     error InvalidChannelUpdate();
     error AgentExecutionFailed(bytes returndata);

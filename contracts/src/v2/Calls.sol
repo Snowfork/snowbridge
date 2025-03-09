@@ -44,7 +44,20 @@ library CallsV2 {
 
     uint8 public constant MAX_ASSETS = 8;
 
-    // Refer to `IGateway.sendMessage` for documentation
+    // Refer to `IGateway.v2_createAgent` for documentation
+    function createAgent(bytes32 id) external {
+        CoreStorage.Layout storage core = CoreStorage.layout();
+        address agent = core.agents[id];
+        if (agent == address(0)) {
+            agent = address(new Agent(id));
+            core.agents[id] = agent;
+            emit IGatewayV2.AgentCreated(id, agent);
+        } else {
+            revert IGatewayV2.AgentAlreadyExists();
+        }
+    }
+
+    // Refer to `IGateway.v2_sendMessage` for documentation
     function sendMessage(
         bytes calldata xcm,
         bytes[] calldata assets,
@@ -55,7 +68,7 @@ library CallsV2 {
         _sendMessage(msg.sender, makeRawXCM(xcm), assets, claimer, executionFee, relayerFee);
     }
 
-    // Refer to `IGateway.registerToken` for documentation
+    // Refer to `IGateway.v2_registerToken` for documentation
     function registerToken(
         address token,
         Network network,
@@ -92,7 +105,7 @@ library CallsV2 {
         address assetHubAgent = Functions.ensureAgent(Constants.ASSET_HUB_AGENT_ID);
         payable(assetHubAgent).safeNativeTransfer(msg.value);
 
-        require(assets.length <= MAX_ASSETS, IGatewayBase.TooManyAssets());
+        require(assets.length <= MAX_ASSETS, IGatewayV2.TooManyAssets());
         Asset[] memory preparedAssets = new Asset[](assets.length);
         for (uint256 i = 0; i < assets.length; i++) {
             preparedAssets[i] = _handleAsset(assets[i]);
