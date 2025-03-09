@@ -405,13 +405,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     /// Overhead in selecting the dispatch handler for an arbitrary command
     uint256 internal constant DISPATCH_OVERHEAD_GAS_V2 = 24_000;
 
-    /// @dev Submit a message from Polkadot for verification and dispatch
-    /// @param message A message produced by the OutboundQueue pallet on BridgeHub
-    /// @param leafProof A message proof used to verify that the message is in the merkle tree
-    ///        committed by the OutboundQueue pallet
-    /// @param headerProof A proof that the commitment is included in parachain header that was
-    ///        finalized by BEEFY.
-    /// @param rewardAddress Account on BH to credit delivery rewards
     function v2_submit(
         InboundMessageV2 calldata message,
         bytes32[] calldata leafProof,
@@ -452,7 +445,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return CoreStorage.layout().inboundNonce.get(nonce);
     }
 
-    // See docs for `IGateway.sendMessage`
+    // See docs for `IGateway.v2_sendMessage`
     function v2_sendMessage(
         bytes calldata xcm,
         bytes[] calldata assets,
@@ -517,7 +510,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
      * APIv2 Internal functions
      */
 
-    // Dispatch all the commands within a message payload
+    // Dispatch all the commands within the batch of commands in the message payload. If a single
+    // command fails, dispatches of subsequent commands are aborted.
     function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {
         for (uint256 i = 0; i < message.commands.length; i++) {
             // check that there is enough gas available to forward to the command handler
@@ -562,6 +556,9 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 ) {} catch {
                     return false;
                 }
+            } else {
+                // Unknown command
+                return false;
             }
         }
         return true;

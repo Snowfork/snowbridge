@@ -36,7 +36,14 @@ interface IGatewayV2 {
     /// Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
     event OutboundMessageAccepted(uint64 nonce, Payload payload);
 
-    // Submit a message for verification and dispatch
+    /// @dev Submit a message from Polkadot for verification and dispatch
+    /// @param message A message produced by the OutboundQueue pallet on BridgeHub
+    /// @param leafProof A message proof used to verify that the message is in the merkle tree
+    ///        committed by the OutboundQueue pallet
+    /// @param headerProof A proof that the commitment is included in parachain header that was
+    ///        finalized by BEEFY.
+    /// @param rewardAddress An `AccountId` on BridgeHub that can claim rewards for relaying
+    ///        this message, after the relayer has submitted a delivery receipt back to BridgeHub.
     function v2_submit(
         InboundMessage calldata message,
         bytes32[] calldata leafProof,
