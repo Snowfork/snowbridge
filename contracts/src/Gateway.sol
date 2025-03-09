@@ -67,9 +67,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     // Makes functions nonreentrant
     modifier nonreentrant() {
         assembly {
-            if tload(0) {
-                revert(0, 0)
-            }
+            if tload(0) { revert(0, 0) }
             tstore(0, 1)
         }
         _;
@@ -439,7 +437,9 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         // Dispatch the message payload
         bool success = v2_dispatch(message);
 
-        emit IGatewayV2.InboundMessageDispatched(message.nonce, message.topic, success, rewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(
+            message.nonce, message.topic, success, rewardAddress
+        );
     }
 
     // Dispatch all the commands within a message payload

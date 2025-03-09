@@ -55,6 +55,6 @@ contract ScaleCodecTest is Test {
     }
 
     function testEncodeCompactU128() public {
-        assertEq(ScaleCodec.encodeCompactU128(9000000000000), hex"0b0090cd792f08");
+        assertEq(ScaleCodec.encodeCompactU128(9_000_000_000_000), hex"0b0090cd792f08");
     }
 }

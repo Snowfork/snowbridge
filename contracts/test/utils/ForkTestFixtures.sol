@@ -9,8 +9,16 @@ import {console} from "forge-std/console.sol";
 import {IUpgradable} from "../../src/interfaces/IUpgradable.sol";
 import {Verification} from "../../src/Verification.sol";
 import {
-    UpgradeParams, SetOperatingModeParams, OperatingMode, RegisterForeignTokenParams,
-    ChannelID, ParaID, OperatingMode, InboundMessage, Command, TokenInfo
+    UpgradeParams,
+    SetOperatingModeParams,
+    OperatingMode,
+    RegisterForeignTokenParams,
+    ChannelID,
+    ParaID,
+    OperatingMode,
+    InboundMessage,
+    Command,
+    TokenInfo
 } from "../../src/v1/Types.sol";
 
 struct SubmitMessageFixture {
@@ -22,10 +30,14 @@ struct SubmitMessageFixture {
 library ForkTestFixtures {
     using stdJson for string;
 
-    Vm constant public vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+    Vm public constant vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     // Make mock proofs for the upgrade message
-    function makeMockProofs() internal pure returns (bytes32[] memory, Verification.Proof memory) {
+    function makeMockProofs()
+        internal
+        pure
+        returns (bytes32[] memory, Verification.Proof memory)
+    {
         bytes32[] memory proof1 = new bytes32[](1);
         proof1[0] = bytes32(0x2f9ee6cfdf244060dc28aa46347c5219e303fc95062dd672b4e406ca5c29764b);
 
@@ -53,7 +65,10 @@ library ForkTestFixtures {
     }
 
     // Create a fixture from real-world mainnet transactions
-    function makeSubmitMessageFixture(string memory fixturePath) internal returns (SubmitMessageFixture memory) {
+    function makeSubmitMessageFixture(string memory fixturePath)
+        internal
+        returns (SubmitMessageFixture memory)
+    {
         // Read the test data
         string memory data = vm.readFile(string.concat(vm.projectRoot(), fixturePath));
 
@@ -85,9 +100,15 @@ library ForkTestFixtures {
             version: uint8(data.readUint(".input.headerProof.leafPartial.version")),
             parentNumber: uint32(data.readUint(".input.headerProof.leafPartial.parentNumber")),
             parentHash: data.readBytes32(".input.headerProof.leafPartial.parentHash"),
-            nextAuthoritySetID: uint64(data.readUint(".input.headerProof.leafPartial.nextAuthoritySetID")),
-            nextAuthoritySetLen: uint32(data.readUint(".input.headerProof.leafPartial.nextAuthoritySetLen")),
-            nextAuthoritySetRoot: data.readBytes32(".input.headerProof.leafPartial.nextAuthoritySetRoot")
+            nextAuthoritySetID: uint64(
+                data.readUint(".input.headerProof.leafPartial.nextAuthoritySetID")
+            ),
+            nextAuthoritySetLen: uint32(
+                data.readUint(".input.headerProof.leafPartial.nextAuthoritySetLen")
+            ),
+            nextAuthoritySetRoot: data.readBytes32(
+                ".input.headerProof.leafPartial.nextAuthoritySetRoot"
+            )
         });
 
         Verification.Proof memory headerProof = Verification.Proof({
@@ -113,7 +134,10 @@ library ForkTestFixtures {
         uint256 kind;
     }
 
-    function parseParachainHeader(string memory data) internal returns (Verification.ParachainHeader memory) {
+    function parseParachainHeader(string memory data)
+        internal
+        returns (Verification.ParachainHeader memory)
+    {
         bytes32 parentHash = data.readBytes32(".input.headerProof.header.parentHash");
         uint32 number = uint32(data.readUint(".input.headerProof.header.number"));
         bytes32 stateRoot = data.readBytes32(".input.headerProof.header.stateRoot");
@@ -141,9 +165,12 @@ library ForkTestFixtures {
         });
     }
 
-    function parseDigestItems(bytes memory digestItems) internal pure returns (DigestItem[] memory) {
+    function parseDigestItems(bytes memory digestItems)
+        internal
+        pure
+        returns (DigestItem[] memory)
+    {
         (DigestItem[] memory items) = abi.decode(digestItems, (DigestItem[]));
         return items;
     }
-
 }

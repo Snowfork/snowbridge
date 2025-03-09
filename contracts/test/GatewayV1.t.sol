@@ -227,7 +227,6 @@ contract GatewayV1Test is Test {
     /**
      * Message Verification
      */
-
     function testLegacyUnlockWethHappyPath() public {
         address recipient = makeAddr("test_recipeint");
         uint128 amount = 1;

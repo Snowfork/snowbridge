@@ -136,11 +136,11 @@ library Verification {
     }
 
     // Verify that a message commitment is in the header digest
-    function isCommitmentInHeaderDigest(bytes32 commitment, ParachainHeader calldata header, bool isV2)
-        internal
-        pure
-        returns (bool)
-    {
+    function isCommitmentInHeaderDigest(
+        bytes32 commitment,
+        ParachainHeader calldata header,
+        bool isV2
+    ) internal pure returns (bool) {
         for (uint256 i = 0; i < header.digestItems.length; i++) {
             if (
                 header.digestItems[i].kind == DIGEST_ITEM_OTHER
@@ -151,7 +151,8 @@ library Verification {
                 return true;
             }
             if (
-                isV2 && header.digestItems[i].kind == DIGEST_ITEM_OTHER && header.digestItems[i].data.length == 33
+                isV2 && header.digestItems[i].kind == DIGEST_ITEM_OTHER
+                    && header.digestItems[i].data.length == 33
                     && header.digestItems[i].data[0] == DIGEST_ITEM_OTHER_SNOWBRIDGE_V2
                     && commitment == bytes32(header.digestItems[i].data[1:])
             ) {

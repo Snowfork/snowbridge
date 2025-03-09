@@ -8,12 +8,15 @@ import {IERC20Permit} from "./interfaces/IERC20Permit.sol";
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 
 library TokenLib {
-
     /// The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 public constant DOMAIN_TYPEHASH = keccak256(
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+    );
 
     /// The EIP-712 typehash for the permit struct used by the contract
-    bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    bytes32 public constant PERMIT_TYPEHASH = keccak256(
+        "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+    );
 
     struct Token {
         mapping(address account => uint256) balance;
@@ -32,12 +35,18 @@ library TokenLib {
         _update(token, account, address(0), amount);
     }
 
-    function approve(Token storage token, address spender, uint256 amount) external returns (bool) {
+    function approve(Token storage token, address spender, uint256 amount)
+        external
+        returns (bool)
+    {
         _approve(token, msg.sender, spender, amount, true);
         return true;
     }
 
-    function transfer(Token storage token, address recipient, uint256 amount) external returns (bool) {
+    function transfer(Token storage token, address recipient, uint256 amount)
+        external
+        returns (bool)
+    {
         _transfer(token, msg.sender, recipient, amount);
         return true;
     }
@@ -70,12 +79,7 @@ library TokenLib {
                 _domainSeparator(tokenName),
                 keccak256(
                     abi.encode(
-                        PERMIT_TYPEHASH,
-                        issuer,
-                        spender,
-                        value,
-                        token.nonces[issuer]++,
-                        deadline
+                        PERMIT_TYPEHASH, issuer, spender, value, token.nonces[issuer]++, deadline
                     )
                 )
             )
@@ -103,7 +107,9 @@ library TokenLib {
         );
     }
 
-    function _transfer(Token storage token, address sender, address recipient, uint256 amount) internal {
+    function _transfer(Token storage token, address sender, address recipient, uint256 amount)
+        internal
+    {
         require(sender != address(0), IERC20.InvalidSender(address(0)));
         require(recipient != address(0), IERC20.InvalidReceiver(address(0)));
         _update(token, sender, recipient, amount);
@@ -123,7 +129,13 @@ library TokenLib {
         return true;
     }
 
-    function _approve(Token storage token, address owner, address spender, uint256 amount, bool emitEvent) internal {
+    function _approve(
+        Token storage token,
+        address owner,
+        address spender,
+        uint256 amount,
+        bool emitEvent
+    ) internal {
         require(owner != address(0), IERC20.InvalidApprover(address(0)));
         require(spender != address(0), IERC20.InvalidSpender(address(0)));
 

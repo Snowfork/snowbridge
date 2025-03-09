@@ -7,9 +7,7 @@ contract HelloWorld {
     error Unauthorized();
 
     function sayHello(string memory _text) public payable {
-        string memory fullMessage = string(
-            abi.encodePacked("Hello there, ", _text)
-        );
+        string memory fullMessage = string(abi.encodePacked("Hello there, ", _text));
         emit SaidHello(fullMessage);
     }
 
