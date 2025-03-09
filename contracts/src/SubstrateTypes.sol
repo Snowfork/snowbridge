@@ -12,7 +12,8 @@ library SubstrateTypes {
     error UnsupportedCompactEncoding();
 
     /**
-     * @dev Encodes `MultiAddress::Id`: https://crates.parity.io/sp_runtime/enum.MultiAddress.html#variant.Id
+     * @dev Encodes `MultiAddress::Id`:
+     *         https://crates.parity.io/sp_runtime/enum.MultiAddress.html#variant.Id
      * @return bytes SCALE-encoded bytes
      */
     // solhint-disable-next-line func-name-mixedcase
@@ -34,7 +35,8 @@ library SubstrateTypes {
     }
 
     /**
-     * @dev Encodes `Option::None`: https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
+     * @dev Encodes `Option::None`:
+     *         https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
      * @return bytes SCALE-encoded bytes
      */
     // solhint-disable-next-line func-name-mixedcase

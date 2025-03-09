@@ -132,8 +132,10 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
     /// @dev Submit a message from Polkadot for verification and dispatch
     /// @param message A message produced by the OutboundQueue pallet on BridgeHub
-    /// @param leafProof A message proof used to verify that the message is in the merkle tree committed by the OutboundQueue pallet
-    /// @param headerProof A proof that the commitment is included in parachain header that was finalized by BEEFY.
+    /// @param leafProof A message proof used to verify that the message is in the merkle tree
+    ///        committed by the OutboundQueue pallet.
+    /// @param headerProof A proof that the commitment is included in parachain header that was
+    ///        finalized by BEEFY.
     function submitV1(
         InboundMessageV1 calldata message,
         bytes32[] calldata leafProof,
@@ -149,8 +151,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         }
 
         // Increment nonce for origin.
-        // This also prevents the re-entrancy case in which a malicious party tries to re-enter by calling `submitInbound`
-        // again with the same (message, leafProof, headerProof) arguments.
+        // This also prevents the re-entrancy case in which a malicious party tries to re-enter by
+        // calling `submitInbound` again with the same (message, leafProof, headerProof) arguments.
         channel.inboundNonce++;
 
         // Produce the commitment (message root) by applying the leaf proof to the message leaf
@@ -379,15 +381,16 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
      * APIv1 Internal functions
      */
 
-    // Best-effort attempt at estimating the base gas use of `submitInbound` transaction, outside the block of
-    // code that is metered.
+    // Best-effort attempt at estimating the base gas use of `submitInbound` transaction, outside
+    // the block of code that is metered.
     // This includes:
     // * Cost paid for every transaction: 21000 gas
     // * Cost of calldata: Zero byte = 4 gas, Non-zero byte = 16 gas
     // * Cost of code inside submitInitial that is not metered: 14_698
     //
-    // The major cost of calldata are the merkle proofs, which should dominate anything else (including the message payload)
-    // Since the merkle proofs are hashes, they are much more likely to be composed of more non-zero bytes than zero bytes.
+    // The major cost of calldata are the merkle proofs, which should dominate anything else
+    // (including the message payload) Since the merkle proofs are hashes, they are much more
+    // likely to be composed of more non-zero bytes than zero bytes.
     //
     // Reference: Ethereum Yellow Paper
     function v1_transactionBaseGas() internal pure returns (uint256) {
@@ -407,8 +410,10 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
     /// @dev Submit a message from Polkadot for verification and dispatch
     /// @param message A message produced by the OutboundQueue pallet on BridgeHub
-    /// @param leafProof A message proof used to verify that the message is in the merkle tree committed by the OutboundQueue pallet
-    /// @param headerProof A proof that the commitment is included in parachain header that was finalized by BEEFY.
+    /// @param leafProof A message proof used to verify that the message is in the merkle tree
+    ///        committed by the OutboundQueue pallet
+    /// @param headerProof A proof that the commitment is included in parachain header that was
+    ///        finalized by BEEFY.
     /// @param rewardAddress Account on BH to credit delivery rewards
     function v2_submit(
         InboundMessageV2 calldata message,

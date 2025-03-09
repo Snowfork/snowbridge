@@ -324,8 +324,9 @@ library CallsV1 {
             if (destinationChainFee == 0) {
                 revert InvalidDestinationFee();
             }
-            // The funds will be minted into sovereign account of the destination parachain on AssetHub,
-            // and then reserve-transferred to the receiver's account on the destination parachain.
+            // The funds will be minted into sovereign account of the destination parachain on
+            // AssetHub, and then reserve-transferred to the receiver's account on the destination
+            // parachain.
             if (destinationAddress.isAddress32()) {
                 // The receiver has a 32-byte account ID
                 ticket.payload = SubstrateTypes.SendTokenToAddress32(
