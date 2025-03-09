@@ -193,6 +193,20 @@ contract GatewayV2Test is Test {
         return commands;
     }
 
+    function makeMintForeignTokenCommand(bytes32 id, address recipient, uint128 amount)
+        public
+        pure
+        returns (CommandV2[] memory)
+    {
+        MintForeignTokenParams memory params = MintForeignTokenParams(id, recipient, amount);
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.MintForeignToken, gas: 100_000, payload: payload});
+        return commands;
+    }
+
     function makeCallContractCommand(uint256 value) public view returns (CommandV2[] memory) {
         bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
         CallContractParams memory params =
@@ -389,55 +403,6 @@ contract GatewayV2Test is Test {
         );
     }
 
-    function testEncodeDecodeMessageV2() public {
-        bytes32 topic = bytes32(uint256(1));
-
-        UnlockNativeTokenParams memory params = UnlockNativeTokenParams({
-            token: 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
-            recipient: 0xEDa338E4dC46038493b885327842fD3E301CaB39,
-            amount: 1_000_000
-        });
-        bytes memory encoded = abi.encode(params);
-        CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] =
-            CommandV2({kind: CommandKind.UnlockNativeToken, gas: 100_000, payload: encoded});
-        InboundMessageV2 memory message = InboundMessageV2({
-            origin: bytes32(uint256(1000)),
-            nonce: 1,
-            topic: topic,
-            commands: commands
-        });
-        bytes memory rawBytes = abi.encode(message);
-
-        //From OutboundQueueV2
-        bytes memory data = abi.encodePacked(
-            hex"000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000003e800000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000186a000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000060000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000000000000000000000000eda338e4dc46038493b885327842fd3e301cab3900000000000000000000000000000000000000000000000000000000000f4240"
-        );
-        assertEq(data, rawBytes);
-        InboundMessageV2 memory result = abi.decode(data, (InboundMessageV2));
-        assertEq(result.nonce, 1);
-        assertEq(result.commands.length, 1);
-    }
-
-    function testSubmitRegisterPNA() public {
-        //From Relayer V2
-        bytes memory data = abi.encodePacked(
-            hex"000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000003e80000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000124f80000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        );
-        InboundMessageV2 memory message = abi.decode(data, (InboundMessageV2));
-        assertEq(message.nonce, 1);
-        assertEq(message.commands.length, 1);
-        hoax(relayer, 1 ether);
-        vm.expectEmit(true, false, false, false);
-        emit IGatewayBase.ForeignTokenRegistered(
-            bytes32(0x0000000000000000000000000000000000000000000000000000000000000001),
-            address(0x7ff9C67c93D9f7318219faacB5c619a773AFeF6A)
-        );
-        IGatewayV2(address(gateway)).v2_submit(
-            message, proof, makeMockProof(), relayerRewardAddress
-        );
-    }
-
     function testRegisterForeignToken() public {
         bytes32 topic = keccak256("topic");
 
@@ -455,6 +420,33 @@ contract GatewayV2Test is Test {
                 nonce: 1,
                 topic: topic,
                 commands: makeRegisterForeignTokenCommand(keccak256("DOT"), "DOT", "DOT", 10)
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
+        );
+    }
+
+    function testMintForeignToken() public {
+        testRegisterForeignToken();
+
+        address recipient = makeAddr("recipient");
+        bytes32 topic = keccak256("topic");
+
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(0), recipient, 100);
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(2, topic, true, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: keccak256("origin"),
+                nonce: 2,
+                topic: topic,
+                commands: makeMintForeignTokenCommand(keccak256("DOT"), recipient, 100)
             }),
             proof,
             makeMockProof(),
