@@ -177,6 +177,22 @@ contract GatewayV2Test is Test {
         return commands;
     }
 
+    function makeRegisterForeignTokenCommand(
+        bytes32 id,
+        string memory name,
+        string memory symbol,
+        uint8 decimals
+    ) public pure returns (CommandV2[] memory) {
+        RegisterForeignTokenParams memory params =
+            RegisterForeignTokenParams(id, name, symbol, decimals);
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.RegisterForeignToken, gas: 1_200_000, payload: payload});
+        return commands;
+    }
+
     function makeCallContractCommand(uint256 value) public view returns (CommandV2[] memory) {
         bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
         CallContractParams memory params =
@@ -419,6 +435,30 @@ contract GatewayV2Test is Test {
         );
         IGatewayV2(address(gateway)).v2_submit(
             message, proof, makeMockProof(), relayerRewardAddress
+        );
+    }
+
+    function testRegisterForeignToken() public {
+        bytes32 topic = keccak256("topic");
+
+        vm.expectEmit(false, false, false, false);
+        emit IGatewayBase.ForeignTokenRegistered(keccak256("DOT"), address(0));
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: keccak256("origin"),
+                nonce: 1,
+                topic: topic,
+                commands: makeRegisterForeignTokenCommand(keccak256("DOT"), "DOT", "DOT", 10)
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
         );
     }
 
