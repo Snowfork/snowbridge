@@ -7,6 +7,7 @@ import {Gateway} from "../src//Gateway.sol";
 import {ParaID} from "../src//Types.sol";
 import {Script} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
+import {console} from "forge-std/console.sol";
 
 contract DeployLocalGatewayLogic is Script {
     using stdJson for string;
@@ -28,7 +29,7 @@ contract DeployLocalGatewayLogic is Script {
 
         AgentExecutor executor = new AgentExecutor();
 
-        new Gateway(
+        Gateway gatewayLogic = new Gateway(
             address(beefyClient),
             address(executor),
             bridgeHubParaID,
@@ -36,6 +37,10 @@ contract DeployLocalGatewayLogic is Script {
             foreignTokenDecimals,
             maxDestinationFee
         );
+
+        console.log("Gateway contract address: %s", address(gatewayLogic));
+        console.log("Gateway contract codehash:");
+        console.logBytes32(address(gatewayLogic).codehash);
 
         vm.stopBroadcast();
     }
