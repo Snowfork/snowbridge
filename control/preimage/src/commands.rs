@@ -1,4 +1,4 @@
-use crate::helpers::{calculate_delivery_fee, send_xcm_bridge_hub};
+use crate::helpers::calculate_delivery_fee;
 use crate::{
     constants::*, Context, ForceCheckpointArgs, GatewayAddressArgs, GatewayOperatingModeEnum,
     OperatingModeEnum, PricingParametersArgs, RegisterEtherArgs, RegisterPolkadotNativeAssetArgs,
@@ -364,7 +364,6 @@ pub fn register_ether(params: &RegisterEtherArgs) -> (AssetHubRuntimeCall, Asset
     return (force_register, metadata);
 }
 
-#[cfg(feature = "polkadot")]
 pub fn register_polkadot_native_asset(
     args: RegisterPolkadotNativeAssetArgs,
 ) -> BridgeHubRuntimeCall {
@@ -387,193 +386,196 @@ pub fn register_polkadot_native_asset(
 }
 
 pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
+    #[cfg(feature = "polkadot")]
     use bridge_hub_polkadot_runtime::runtime_types::staging_xcm::v4::{
         junction::Junction::*, junction::NetworkId::*, junctions::Junctions::*, location::Location,
     };
-
-    vec![
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: Here,
+    if cfg!(feature = "polkadot") {
+        vec![
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: Here,
+                }),
+                name: "Polkadot",
+                symbol: "DOT",
+                decimals: 10u8,
             }),
-            name: "Polkadot",
-            symbol: "DOT",
-            decimals: 10u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 2,
-                interior: X1([GlobalConsensus(Kusama)]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 2,
+                    interior: X1([GlobalConsensus(Kusama)]),
+                }),
+                name: "Kusama",
+                symbol: "KSM",
+                decimals: 12u8,
             }),
-            name: "Kusama",
-            symbol: "KSM",
-            decimals: 12u8,
-        }),
-        /*
-         * Parachains
-         */
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X2([Parachain(2004), PalletInstance(10)]),
+            /*
+             * Parachains
+             */
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X2([Parachain(2004), PalletInstance(10)]),
+                }),
+                name: "Glimmer",
+                symbol: "GLMR",
+                decimals: 18u8,
             }),
-            name: "Glimmer",
-            symbol: "GLMR",
-            decimals: 18u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X1([Parachain(2011)]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X1([Parachain(2011)]),
+                }),
+                name: "Equilibrium",
+                symbol: "EQ",
+                decimals: 9u8,
             }),
-            name: "Equilibrium",
-            symbol: "EQ",
-            decimals: 9u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X2([
-                    Parachain(2011),
-                    GeneralKey {
-                        length: 3,
-                        data: hex!(
-                            "6571640000000000000000000000000000000000000000000000000000000000"
-                        ),
-                    },
-                ]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X2([
+                        Parachain(2011),
+                        GeneralKey {
+                            length: 3,
+                            data: hex!(
+                                "6571640000000000000000000000000000000000000000000000000000000000"
+                            ),
+                        },
+                    ]),
+                }),
+                name: "Equilibrium Dollar",
+                symbol: "EQD",
+                decimals: 9u8,
             }),
-            name: "Equilibrium Dollar",
-            symbol: "EQD",
-            decimals: 9u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X2([
-                    Parachain(2030),
-                    GeneralKey {
-                        length: 2,
-                        data: hex!(
-                            "0001000000000000000000000000000000000000000000000000000000000000"
-                        ),
-                    },
-                ]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X2([
+                        Parachain(2030),
+                        GeneralKey {
+                            length: 2,
+                            data: hex!(
+                                "0001000000000000000000000000000000000000000000000000000000000000"
+                            ),
+                        },
+                    ]),
+                }),
+                name: "Bifrost Native Token",
+                symbol: "BNC",
+                decimals: 12u8,
             }),
-            name: "Bifrost Native Token",
-            symbol: "BNC",
-            decimals: 12u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X2([
-                    Parachain(2030),
-                    GeneralKey {
-                        length: 2,
-                        data: hex!(
-                            "0900000000000000000000000000000000000000000000000000000000000000"
-                        ),
-                    },
-                ]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X2([
+                        Parachain(2030),
+                        GeneralKey {
+                            length: 2,
+                            data: hex!(
+                                "0900000000000000000000000000000000000000000000000000000000000000"
+                            ),
+                        },
+                    ]),
+                }),
+                name: "Voucher DOT",
+                symbol: "vDOT",
+                decimals: 10u8,
             }),
-            name: "Voucher DOT",
-            symbol: "vDOT",
-            decimals: 10u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X2([Parachain(2034), GeneralIndex(0)]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X2([Parachain(2034), GeneralIndex(0)]),
+                }),
+                name: "Hydration",
+                symbol: "HDX",
+                decimals: 12u8,
             }),
-            name: "Hydration",
-            symbol: "HDX",
-            decimals: 12u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X1([Parachain(2039)]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X1([Parachain(2039)]),
+                }),
+                name: "Integritee TEER",
+                symbol: "TEER",
+                decimals: 12u8,
             }),
-            name: "Integritee TEER",
-            symbol: "TEER",
-            decimals: 12u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X1([Parachain(2051)]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X1([Parachain(2051)]),
+                }),
+                name: "Ajuna Polkadot AJUN",
+                symbol: "AJUN",
+                decimals: 12u8,
             }),
-            name: "Ajuna Polkadot AJUN",
-            symbol: "AJUN",
-            decimals: 12u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X1([Parachain(3344)]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X1([Parachain(3344)]),
+                }),
+                name: "Polimec",
+                symbol: "PLMC",
+                decimals: 10u8,
             }),
-            name: "Polimec",
-            symbol: "PLMC",
-            decimals: 10u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X1([Parachain(3370)]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X1([Parachain(3370)]),
+                }),
+                name: "LAOS",
+                symbol: "LAOS",
+                decimals: 18u8,
             }),
-            name: "LAOS",
-            symbol: "LAOS",
-            decimals: 18u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X1([Parachain(2086)]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X1([Parachain(2086)]),
+                }),
+                name: "KILT Spiritnet",
+                symbol: "KILT",
+                decimals: 15u8,
             }),
-            name: "KILT Spiritnet",
-            symbol: "KILT",
-            decimals: 15u8,
-        }),
-        /*
-         * Meme coins
-         */
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(30)]),
+            /*
+             * Meme coins
+             */
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(30)]),
+                }),
+                name: "DED",
+                symbol: "DED",
+                decimals: 10u8,
             }),
-            name: "DED",
-            symbol: "DED",
-            decimals: 10u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(23)]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(23)]),
+                }),
+                name: "PINK",
+                symbol: "PINK",
+                decimals: 10u8,
             }),
-            name: "PINK",
-            symbol: "PINK",
-            decimals: 10u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(86)]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(86)]),
+                }),
+                name: "Kolkadot",
+                symbol: "KOL",
+                decimals: 12u8,
             }),
-            name: "Kolkadot",
-            symbol: "KOL",
-            decimals: 12u8,
-        }),
-        register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
-            location: BridgeHubVersionedLocationType::V4(Location {
-                parents: 1,
-                interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(31337)]),
+            register_polkadot_native_asset(RegisterPolkadotNativeAssetArgs {
+                location: BridgeHubVersionedLocationType::V4(Location {
+                    parents: 1,
+                    interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(31337)]),
+                }),
+                name: "GAVUN WUD",
+                symbol: "WUD",
+                decimals: 10u8,
             }),
-            name: "GAVUN WUD",
-            symbol: "WUD",
-            decimals: 10u8,
-        }),
-    ]
+        ]
+    } else if () {
+    }
 }
