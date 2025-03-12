@@ -10,7 +10,6 @@ import (
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
@@ -25,9 +24,16 @@ type Message struct {
 	Proof    Proof
 }
 
+type HeaderUpdateProof interface {
+	ToJSON() json.HeaderUpdate
+	HasAncestryProof() bool
+	GetAncestryProofValue() (hasValue bool, finalizedBlockRoot string)
+	GetHeader() json.BeaconHeader
+}
+
 type Proof struct {
 	ReceiptProof   *ProofData
-	ExecutionProof scale.HeaderUpdatePayload
+	ExecutionProof HeaderUpdateProof
 }
 
 type ProofData struct {
@@ -36,8 +42,10 @@ type ProofData struct {
 }
 
 type MessageJSON struct {
-	EventLog EventLogJSON `json:"event_log"`
-	Proof    ProofJSON    `json:"proof"`
+	EventLog        EventLogJSON      `json:"event_log"`
+	Proof           ProofJSON         `json:"proof"`
+	FinalizedHeader json.BeaconHeader `json:"finalized_header"`
+	BlockRootsRoot  string            `json:"block_roots_root"`
 }
 
 type EventLogJSON struct {
@@ -76,7 +84,7 @@ func (p *ProofData) Delete(_ []byte) error {
 }
 
 func (m Message) ToJSON() MessageJSON {
-	return MessageJSON{
+	messageJSON := MessageJSON{
 		EventLog: EventLogJSON{
 			Address: m.EventLog.Address.Hex(),
 			Topics:  util.ScaleBranchToString(m.EventLog.Topics),
@@ -90,6 +98,7 @@ func (m Message) ToJSON() MessageJSON {
 			ExecutionProof: m.Proof.ExecutionProof.ToJSON(),
 		},
 	}
+	return messageJSON
 }
 
 func (m *MessageJSON) RemoveLeadingZeroHashes() {

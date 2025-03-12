@@ -8,6 +8,7 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 )
 
@@ -72,6 +73,21 @@ type HeaderUpdatePayload struct {
 	ExecutionBranch []types.H256
 }
 
+func (h HeaderUpdatePayload) HasAncestryProof() bool {
+	return h.AncestryProof.HasValue
+}
+
+func (h HeaderUpdatePayload) GetAncestryProofValue() (hasValue bool, finalizedBlockRoot string) {
+	if !h.AncestryProof.HasValue {
+		return false, ""
+	}
+	return true, h.AncestryProof.Value.FinalizedBlockRoot.Hex()
+}
+
+func (h HeaderUpdatePayload) GetHeader() json.BeaconHeader {
+	return h.Header.ToJSON()
+}
+
 type OptionAncestryProof struct {
 	HasValue bool
 	Value    AncestryProof
@@ -88,6 +104,27 @@ func (o OptionAncestryProof) Encode(encoder scale.Encoder) error {
 
 func (o *OptionAncestryProof) Decode(decoder scale.Decoder) error {
 	return decoder.DecodeOption(&o.HasValue, &o.Value)
+}
+
+func (o OptionAncestryProof) ToJSON() json.HeaderUpdate {
+	if !o.HasValue {
+		return json.HeaderUpdate{}
+	}
+	
+	return json.HeaderUpdate{
+		AncestryProof: &json.AncestryProof{
+			HeaderBranch:       convertH256SliceToStringSlice(o.Value.HeaderBranch),
+			FinalizedBlockRoot: o.Value.FinalizedBlockRoot.Hex(),
+		},
+	}
+}
+
+func convertH256SliceToStringSlice(hashes []types.H256) []string {
+	result := make([]string, len(hashes))
+	for i, hash := range hashes {
+		result[i] = hash.Hex()
+	}
+	return result
 }
 
 type BeaconHeader struct {

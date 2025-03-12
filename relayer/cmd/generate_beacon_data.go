@@ -40,7 +40,7 @@ func generateBeaconFixtureCmd() *cobra.Command {
 		RunE:  generateBeaconTestFixture,
 	}
 
-	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
+	cmd.Flags().String("config", "/tmp/snowbridge-v2/beacon-relay.json", "Path to the beacon relay config")
 	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	return cmd
@@ -82,8 +82,8 @@ func generateInboundFixtureCmd() *cobra.Command {
 		RunE:  generateInboundFixture,
 	}
 
-	cmd.Flags().String("beacon-config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
-	cmd.Flags().String("execution-config", "/tmp/snowbridge/execution-relay-asset-hub-0.json", "Path to the beacon relay config")
+	cmd.Flags().String("beacon-config", "/tmp/snowbridge-v2/beacon-relay.json", "Path to the beacon relay config")
+	cmd.Flags().String("execution-config", "/tmp/snowbridge-v2/execution-relay-v2.json", "Path to the beacon relay config")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	cmd.Flags().String("test_case", "register_token", "Inbound test case")
 	return cmd
@@ -104,11 +104,11 @@ type InboundFixture struct {
 }
 
 const (
-	pathToBeaconTestFixtureFiles              = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/tests/fixtures"
+	pathToBeaconTestFixtureFiles              = "../polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/tests/fixtures"
 	pathToInboundQueueFixtureTemplate         = "relayer/templates/beacon-fixtures.mustache"
-	pathToInboundQueueFixtureData             = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures/src/lib.rs"
+	pathToInboundQueueFixtureData             = "../polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures/src/lib.rs"
 	pathToInboundQueueFixtureTestCaseTemplate = "relayer/templates/inbound-fixtures.mustache"
-	pathToInboundQueueFixtureTestCaseData     = "polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures/src/%s.rs"
+	pathToInboundQueueFixtureTestCaseData     = "../polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures/src/%s.rs"
 )
 
 // Only print the hex encoded call as output of this command
@@ -206,7 +206,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
 		s := syncer.New(client, &store, p)
 
-		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub-0.json")
+		viper.SetConfigFile("/tmp/snowbridge-v2/execution-relay-v2.json")
 
 		if err = viper.ReadInConfig(); err != nil {
 			return err
@@ -332,6 +332,8 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		log.WithField("blockNumber", blockNumber).Info("found beacon block by slot")
 
 		messageJSON := inboundMessage.ToJSON()
+		messageJSON.BlockRootsRoot = finalizedUpdateAfterMessage.Payload.BlockRootsRoot.Hex()
+		messageJSON.FinalizedHeader = finalizedUpdateAfterMessage.Payload.FinalizedHeader.ToJSON()
 
 		err = writeJSONToFile(headerUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "execution-proof.json"))
 		if err != nil {
