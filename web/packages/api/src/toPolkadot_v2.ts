@@ -2,7 +2,7 @@ import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway";
 import { AbstractProvider, Contract, ContractTransaction, FeeData, LogDescription, parseUnits, TransactionReceipt } from "ethers";
 import { beneficiaryMultiAddress, paraIdToSovereignAccount } from "./utils";
 import { IERC20__factory, IGateway, IGateway__factory } from "@snowbridge/contract-types";
-import { Asset, AssetRegistry, calculateDeliveryFee, calculateDestinationFee, ERC20Metadata, getNativeAccount, getTokenBalance, padFeeByPercentage, Parachain } from "./assets_v2";
+import { Asset, AssetRegistry, calculateDeliveryFee, calculateDestinationFee, ERC20Metadata, ETHER_TOKEN_ADDRESS, getNativeAccount, getTokenBalance, padFeeByPercentage, Parachain } from "./assets_v2";
 import { getOperatingStatus, OperationStatus } from "./status";
 import { ApiPromise } from "@polkadot/api";
 import { buildAssetHubERC20ReceivedXcm, buildParachainERC20ReceivedXcmOnAssetHub, buildParachainERC20ReceivedXcmOnDestination } from "./xcmBuilder";
@@ -171,7 +171,10 @@ export async function createTransfer(
         ? ahAssetMetadata.minimumBalance : destAssetMetadata.minimumBalance
 
     let { address: beneficiary, hexAddress: beneficiaryAddressHex } = beneficiaryMultiAddress(beneficiaryAccount)
-    const value = fee.totalFeeInWei
+    let value = fee.totalFeeInWei
+    if (tokenAddress === ETHER_TOKEN_ADDRESS) {
+        value += amount
+    }
     const ifce = IGateway__factory.createInterface()
     const con = new Contract(registry.gatewayAddress, ifce);
 
@@ -236,10 +239,19 @@ export async function validateTransfer(connections: Connections, transfer: Trans
     if (amount < minimalBalance) {
         logs.push({ kind: ValidationKind.Error, reason: ValidationReason.MinimumAmountValidation, message: 'The amount transfered is less than the minimum amount.' })
     }
-    const [etherBalance, tokenBalance] = await Promise.all([
-        ethereum.getBalance(sourceAccount),
-        erc20Balance(ethereum, tokenAddress, sourceAccount, registry.gatewayAddress),
-    ])
+    const etherBalance = await ethereum.getBalance(sourceAccount)
+
+    let tokenBalance: { balance: bigint; gatewayAllowance: bigint; };
+    if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
+        tokenBalance = await erc20Balance(ethereum, tokenAddress, sourceAccount, registry.gatewayAddress)
+    } else {
+        tokenBalance = {
+            balance: etherBalance,
+            // u128 max
+            gatewayAllowance: 340282366920938463463374607431768211455n
+        }
+    }
+
     if (tokenBalance.gatewayAllowance < amount) {
         logs.push({ kind: ValidationKind.Error, reason: ValidationReason.GatewaySpenderLimitReached, message: 'The Snowbridge gateway contract needs to approved as a spender for this token and amount.' })
     }

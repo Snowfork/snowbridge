@@ -106,9 +106,10 @@ const monitor = async () => {
     ))
     console.log("Asset Registry:", JSON.stringify(registry, (_, value) => typeof value === "bigint" ? String(value) : value, 2))
 
-    const WETH_CONTRACT = snwobridgeEnv.locations[0].erc20tokensReceivable.find(
-        (t) => t.id === "WETH"
-    )!.address
+    const assets = registry.ethereumChains[registry.ethChainId].assets;
+    const WETH_CONTRACT = Object.keys(assets).map(t=> assets[t]).find(
+        (asset) => asset.symbol === "WETH"
+    )!.token
 
     console.log("# Deposit and Approve WETH")
     {
