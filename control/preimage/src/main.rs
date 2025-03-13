@@ -62,7 +62,7 @@ pub enum Command {
     /// Governance update 202501
     GovUpdate202501(GovUpdate202501Args),
     /// Register PNA
-    GovUpdate202503,
+    RegisterPnaBatch202503,
 }
 
 #[derive(Debug, Args)]
@@ -242,18 +242,6 @@ pub struct RegisterEtherArgs {
     /// The Ether asset's number of decimal places
     #[arg(long, value_name = "DECIMALS", default_value_t = 18u8)]
     ether_decimals: u8,
-}
-
-#[derive(Debug)]
-pub struct RegisterPolkadotNativeAssetArgs {
-    /// The Asset location
-    location: commands::BridgeHubVersionedLocationType,
-    /// The Asset display name
-    name: &'static str,
-    /// The Asset symbol
-    symbol: &'static str,
-    /// The Asset number of decimal places
-    decimals: u8,
 }
 
 #[derive(Debug, Args)]
@@ -485,12 +473,16 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ah_register_ether_call,
             ])
         }
-        Command::GovUpdate202503 => {
+        Command::RegisterPnaBatch202503 => {
             #[cfg(not(feature = "polkadot"))]
             panic!("Update only for polkadot");
 
-            let reg_call = send_xcm_bridge_hub(&context, commands::token_registrations()).await?;
-            reg_call
+            #[cfg(feature = "polkadot")]
+            {
+                let reg_call =
+                    send_xcm_bridge_hub(&context, commands::token_registrations()).await?;
+                reg_call
+            }
         }
     };
 
