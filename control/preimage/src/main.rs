@@ -475,7 +475,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::RegisterPnaBatch202503 => {
             #[cfg(not(feature = "polkadot"))]
-            panic!("Update only for polkadot");
+            panic!("RegisterPnaBatch202503 only for polkadot");
 
             #[cfg(feature = "polkadot")]
             {

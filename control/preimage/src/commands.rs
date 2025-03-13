@@ -362,7 +362,7 @@ pub fn register_ether(params: &RegisterEtherArgs) -> (AssetHubRuntimeCall, Asset
 }
 
 #[cfg(feature = "polkadot")]
-pub fn register_polkadot_native_asset(
+fn register_polkadot_native_asset(
     location: crate::bridge_hub_runtime::runtime_types::xcm::VersionedLocation,
     name: &'static str,
     symbol: &'static str,
