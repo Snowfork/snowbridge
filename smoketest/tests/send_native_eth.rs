@@ -5,7 +5,7 @@ use ethers::{
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::i_gateway,
+	contracts::i_gateway_v1 as i_gateway,
 	helper::{initial_clients, print_event_log_for_unit_tests},
 	parachains::assethub::api::{
 		foreign_assets::events::Issued,
@@ -27,7 +27,7 @@ async fn send_native_eth() {
 	let assethub = *(test_clients.asset_hub_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
+	let gateway = i_gateway::IGatewayV1::new(gateway_addr, ethereum_client.clone());
 
 	let eth_address: Address = [0; 20].into();
 

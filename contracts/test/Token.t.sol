@@ -10,7 +10,6 @@ import {Token} from "../src/Token.sol";
 import {TokenLib} from "../src/TokenLib.sol";
 
 contract TokenTest is Test {
-
     string public tokenName = "Test Token";
     Token public token;
 
@@ -191,10 +190,7 @@ contract TokenTest is Test {
         vm.prank(spender);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IERC20.InsufficientAllowance.selector,
-                spender,
-                allowanceAmount,
-                transferAmount
+                IERC20.InsufficientAllowance.selector, spender, allowanceAmount, transferAmount
             )
         );
         token.transferFrom(owner, receiver, transferAmount);
@@ -250,13 +246,16 @@ contract TokenTest is Test {
         uint256 deadline = block.timestamp + 1 hours;
 
         // Calculate permit digest
-        bytes32 PERMIT_TYPEHASH =
-            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+        bytes32 PERMIT_TYPEHASH = keccak256(
+            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+        );
 
-        bytes32 structHash =
-            keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, token.nonces(owner), deadline));
+        bytes32 structHash = keccak256(
+            abi.encode(PERMIT_TYPEHASH, owner, spender, value, token.nonces(owner), deadline)
+        );
 
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
+        bytes32 digest =
+            keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
 
         // Sign the digest
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
@@ -284,13 +283,16 @@ contract TokenTest is Test {
         uint256 deadline = block.timestamp - 1;
 
         // Calculate permit digest
-        bytes32 PERMIT_TYPEHASH =
-            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+        bytes32 PERMIT_TYPEHASH = keccak256(
+            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+        );
 
-        bytes32 structHash =
-            keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, token.nonces(owner), deadline));
+        bytes32 structHash = keccak256(
+            abi.encode(PERMIT_TYPEHASH, owner, spender, value, token.nonces(owner), deadline)
+        );
 
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
+        bytes32 digest =
+            keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
 
         // Sign the digest
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
@@ -312,13 +314,16 @@ contract TokenTest is Test {
         uint256 deadline = block.timestamp + 1 hours;
 
         // Calculate permit digest
-        bytes32 PERMIT_TYPEHASH =
-            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+        bytes32 PERMIT_TYPEHASH = keccak256(
+            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+        );
 
-        bytes32 structHash =
-            keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, token.nonces(owner), deadline));
+        bytes32 structHash = keccak256(
+            abi.encode(PERMIT_TYPEHASH, owner, spender, value, token.nonces(owner), deadline)
+        );
 
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
+        bytes32 digest =
+            keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
 
         // Sign with wrong private key
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(wrongPrivateKey, digest);
@@ -332,7 +337,9 @@ contract TokenTest is Test {
         // Manually calculate the expected domain separator
         bytes32 expectedDomainSeparator = keccak256(
             abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+                ),
                 keccak256(bytes(tokenName)),
                 keccak256(bytes("1")),
                 block.chainid,
@@ -352,7 +359,9 @@ contract TokenTest is Test {
 
         bytes32 newExpectedDomainSeparator = keccak256(
             abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+                ),
                 keccak256(bytes(tokenName)),
                 keccak256(bytes("1")),
                 block.chainid,
@@ -463,7 +472,11 @@ contract TokenTest is Test {
         assertEq(token.balanceOf(receiver), 0, "Receiver balance should not change");
 
         // Verify allowance was not affected by zero transfer
-        assertEq(token.allowance(sender, spender), initialBalance, "Allowance should not change for zero-value transfer");
+        assertEq(
+            token.allowance(sender, spender),
+            initialBalance,
+            "Allowance should not change for zero-value transfer"
+        );
     }
 
     // Create router and pool addresses
@@ -475,7 +488,7 @@ contract TokenTest is Test {
         address owner = makeAddr("owner");
 
         // Mint initial tokens to the owner
-        uint256 initialSupply = 1_000_000 * 10**18; // 1 million tokens
+        uint256 initialSupply = 1_000_000 * 10 ** 18; // 1 million tokens
         token.mint(owner, initialSupply);
 
         // Uniswap router typically gets max approval
@@ -484,7 +497,7 @@ contract TokenTest is Test {
         assertEq(token.allowance(owner, router), type(uint256).max);
 
         // Simulate router transferring tokens to a pool
-        uint256 swapAmount = 1000 * 10**18;
+        uint256 swapAmount = 1000 * 10 ** 18;
 
         vm.prank(router);
         token.transferFrom(owner, pool, swapAmount);
@@ -502,7 +515,7 @@ contract TokenTest is Test {
         address owner = makeAddr("owner");
 
         // Mint initial tokens to the owner
-        uint256 initialSupply = 1_000_000 * 10**18; // 1 million tokens
+        uint256 initialSupply = 1_000_000 * 10 ** 18; // 1 million tokens
         token.mint(owner, initialSupply);
 
         // Set up infinite approval
@@ -510,12 +523,12 @@ contract TokenTest is Test {
         token.approve(router, type(uint256).max);
 
         // First swap
-        uint256 firstSwapAmount = 1000 * 10**18;
+        uint256 firstSwapAmount = 1000 * 10 ** 18;
         vm.prank(router);
         token.transferFrom(owner, pool, firstSwapAmount);
 
         // Second swap
-        uint256 secondSwapAmount = 500 * 10**18;
+        uint256 secondSwapAmount = 500 * 10 ** 18;
         vm.prank(router);
         token.transferFrom(owner, pool, secondSwapAmount);
 
@@ -534,16 +547,17 @@ contract TokenTest is Test {
         address userAddress = vm.addr(userPk);
 
         // Mint tokens to the user
-        uint256 initialSupply = 1_000_000 * 10**18;
+        uint256 initialSupply = 1_000_000 * 10 ** 18;
         token.mint(userAddress, initialSupply);
 
         // Prepare permit parameters
-        uint256 permitAmount = 100 * 10**18;
+        uint256 permitAmount = 100 * 10 ** 18;
         uint256 deadline = block.timestamp + 1 hours;
 
         // Calculate permit digest
-        bytes32 PERMIT_TYPEHASH =
-            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+        bytes32 PERMIT_TYPEHASH = keccak256(
+            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+        );
 
         bytes32 structHash = keccak256(
             abi.encode(
@@ -584,12 +598,12 @@ contract TokenTest is Test {
 
         // Create multiple recipients
         address[] memory recipients = new address[](5);
-        for (uint i = 0; i < 5; i++) {
+        for (uint256 i = 0; i < 5; i++) {
             recipients[i] = makeAddr(string(abi.encodePacked("recipient", i)));
         }
 
         // Mint tokens to owner
-        uint256 initialSupply = 10_000 * 10**18;
+        uint256 initialSupply = 10_000 * 10 ** 18;
         token.mint(owner, initialSupply);
 
         // Owner approves router
@@ -597,11 +611,11 @@ contract TokenTest is Test {
         token.approve(router, type(uint256).max);
 
         // Simulate batch transfers by router
-        uint256 transferAmount = 100 * 10**18;
+        uint256 transferAmount = 100 * 10 ** 18;
         uint256 totalTransferred = 0;
 
         vm.startPrank(router);
-        for (uint i = 0; i < recipients.length; i++) {
+        for (uint256 i = 0; i < recipients.length; i++) {
             token.transferFrom(owner, recipients[i], transferAmount);
             totalTransferred += transferAmount;
 
@@ -622,7 +636,7 @@ contract TokenTest is Test {
         address owner = makeAddr("owner");
 
         // Mint tokens to owner
-        uint256 initialSupply = 10_000 * 10**18;
+        uint256 initialSupply = 10_000 * 10 ** 18;
         token.mint(owner, initialSupply);
 
         // Owner approves router
@@ -630,7 +644,7 @@ contract TokenTest is Test {
         token.approve(router, type(uint256).max);
 
         // First transfer
-        uint256 firstAmount = 1000 * 10**18;
+        uint256 firstAmount = 1000 * 10 ** 18;
         vm.prank(router);
         token.transferFrom(owner, pool, firstAmount);
 
@@ -639,7 +653,7 @@ contract TokenTest is Test {
         uint256 poolBalance = token.balanceOf(pool);
 
         // Second transfer
-        uint256 secondAmount = 500 * 10**18;
+        uint256 secondAmount = 500 * 10 ** 18;
         vm.prank(router);
         token.transferFrom(owner, pool, secondAmount);
 
@@ -660,28 +674,23 @@ contract TokenTest is Test {
         address user = vm.addr(userPk);
 
         // Mint tokens to user
-        uint256 userBalance = 5000 * 10**18;
+        uint256 userBalance = 5000 * 10 ** 18;
         token.mint(user, userBalance);
 
         // User signs permit for router
-        uint256 permitAmount = 2000 * 10**18;
+        uint256 permitAmount = 2000 * 10 ** 18;
         uint256 deadline = block.timestamp + 1 hours;
 
-        bytes32 PERMIT_TYPEHASH =
-            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
-
-        bytes32 structHash = keccak256(
-            abi.encode(
-                PERMIT_TYPEHASH,
-                user,
-                router,
-                permitAmount,
-                token.nonces(user),
-                deadline
-            )
+        bytes32 PERMIT_TYPEHASH = keccak256(
+            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
         );
 
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
+        bytes32 structHash = keccak256(
+            abi.encode(PERMIT_TYPEHASH, user, router, permitAmount, token.nonces(user), deadline)
+        );
+
+        bytes32 digest =
+            keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPk, digest);
 
         // Execute permit
@@ -689,8 +698,8 @@ contract TokenTest is Test {
 
         // Router performs two transfers (e.g., for adding liquidity to two pools)
         address pool2 = makeAddr("uniswapPool2");
-        uint256 amount1 = 800 * 10**18;
-        uint256 amount2 = 1200 * 10**18;
+        uint256 amount1 = 800 * 10 ** 18;
+        uint256 amount2 = 1200 * 10 ** 18;
 
         vm.startPrank(router);
         token.transferFrom(user, pool, amount1);

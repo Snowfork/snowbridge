@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
-
-import {IGateway} from "../src/interfaces/IGateway.sol";
+import {IGatewayV1} from "../src/v1/IGateway.sol";
+import {IGatewayV2} from "../src/v2/IGateway.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {Agent} from "../src/Agent.sol";
@@ -29,7 +29,7 @@ contract FundGateway is Script {
         uint256 initialDeposit = vm.envUint("GATEWAY_PROXY_INITIAL_DEPOSIT");
         address gatewayAddress = vm.envAddress("GATEWAY_PROXY_CONTRACT");
 
-        IGateway(address(gatewayAddress)).depositEther{value: initialDeposit}();
+        IGatewayV1(address(gatewayAddress)).depositEther{value: initialDeposit}();
 
         vm.stopBroadcast();
     }

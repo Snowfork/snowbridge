@@ -20,7 +20,8 @@ contract GatewayProxy is IInitializable {
         Call.verifyResult(success, returndata);
     }
 
-    // Prevent fallback() from calling `IInitializable.initialize(bytes)` on the implementation contract
+    // Prevent fallback() from calling `IInitializable.initialize(bytes)` on the implementation
+    // contract
     function initialize(bytes calldata) external pure {
         revert Unauthorized();
     }

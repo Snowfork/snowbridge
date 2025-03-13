@@ -1,6 +1,9 @@
 import "dotenv/config"
 import { environment, subscan, history, Context } from "@snowbridge/api"
-import { BeefyClient__factory, IGateway__factory } from "@snowbridge/contract-types"
+import {
+    BeefyClient__factory,
+    IGatewayV2__factory as IGateway__factory,
+} from "@snowbridge/contract-types"
 import { AbstractProvider, AlchemyProvider } from "ethers"
 
 const monitor = async () => {
@@ -21,8 +24,10 @@ const monitor = async () => {
     const ethereumProvider = new AlchemyProvider(ethChainId, process.env.REACT_APP_ALCHEMY_KEY)
     const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
     const ethChains: { [ethChainId: string]: string | AbstractProvider } = {}
-    Object.keys(config.ETHEREUM_CHAINS)
-        .forEach(ethChainId => ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
+    Object.keys(config.ETHEREUM_CHAINS).forEach(
+        (ethChainId) =>
+            (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey)),
+    )
     ethChains[ethChainId.toString()] = ethereumProvider
     const context = new Context({
         environment: name,
@@ -98,7 +103,7 @@ const monitor = async () => {
             ethChainId,
             assetHubParaId,
             beefyClient,
-            gateway
+            gateway,
         ),
         await history.toPolkadotHistory(
             assetHubScan,
@@ -121,7 +126,7 @@ const monitor = async () => {
             bridgeHubParaId,
             gateway,
             ethereumProvider,
-            beacon_url
+            beacon_url,
         ),
     ]
 

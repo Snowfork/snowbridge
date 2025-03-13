@@ -57,7 +57,10 @@ contract Token is IERC20, IERC20Metadata, IERC20Permit {
         return token.approve(spender, amount);
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount)
+        external
+        returns (bool)
+    {
         return token.transferFrom(sender, recipient, amount);
     }
 
@@ -79,9 +82,15 @@ contract Token is IERC20, IERC20Metadata, IERC20Permit {
         return TokenLib.domainSeparator(name);
     }
 
-    function permit(address issuer, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        external
-    {
+    function permit(
+        address issuer,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
         token.permit(name, issuer, spender, value, deadline, v, r, s);
     }
 
