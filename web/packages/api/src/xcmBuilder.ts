@@ -1,5 +1,6 @@
 import { Registry } from "@polkadot/types/types";
 import { beneficiaryMultiAddress } from "./utils";
+import { ETHER_TOKEN_ADDRESS } from "./assets_v2";
 
 export const DOT_LOCATION = { parents: 1, interior: { here: null } }
 
@@ -20,6 +21,9 @@ export function parahchainLocation(paraId: number) {
 }
 
 export function erc20Location(ethChainId: number, tokenAddress: string) {
+    if(tokenAddress === ETHER_TOKEN_ADDRESS) {
+        return bridgeLocation(ethChainId)
+    }
     return {
         parents: 2,
         interior: {
@@ -32,6 +36,12 @@ export function erc20Location(ethChainId: number, tokenAddress: string) {
 }
 
 export function erc20LocationReanchored(tokenAddress: string) {
+    if(tokenAddress === ETHER_TOKEN_ADDRESS) {
+        return {
+            parents: 0,
+            interior: { here: null },
+        }
+    }
     return {
         parents: 0,
         interior: { X1: [{ AccountKey20: { key: tokenAddress } }] },
