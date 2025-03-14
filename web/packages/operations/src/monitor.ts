@@ -171,7 +171,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     const latestBlockOfBH = (await bridgeHub.query.system.number()).toPrimitive() as number
     const latestBlockOfEth = await ethereum.getBlockNumber()
 
-    const chains = await subsquid.fetchLatestBlocksSynced()
+    const chains = await subsquid.fetchLatestBlocksSynced(context.config.graphqlApiUrl ?? snowbridgeEnv.config.GRAPHQL_API_URL!)
     for (let chain of chains?.latestBlocks) {
         let info: status.IndexerServiceStatusInfo = {
             chain: chain.name,
