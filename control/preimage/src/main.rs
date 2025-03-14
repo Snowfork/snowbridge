@@ -61,6 +61,8 @@ pub enum Command {
     TreasuryProposal2024(TreasuryProposal2024Args),
     /// Governance update 202501
     GovUpdate202501(GovUpdate202501Args),
+    /// Reinitialize bridge
+    ReinitializeBridge(ReinitializeBridgeArgs),
 }
 
 #[derive(Debug, Args)]
@@ -112,13 +114,17 @@ pub struct UpgradeArgs {
     #[arg(long, value_name = "HASH", value_parser=parse_hex_bytes32)]
     logic_code_hash: FixedBytes<32>,
 
+    /// Initialize the logic contract
+    #[arg(long, requires_all=["initializer_params", "initializer_gas"])]
+    initializer: bool,
+
     /// ABI-encoded params to pass to initializer
-    #[arg(long, value_name = "BYTES", value_parser=parse_hex_bytes)]
-    initializer_params: Bytes,
+    #[arg(long, requires = "initializer", value_name = "BYTES", value_parser=parse_hex_bytes)]
+    initializer_params: Option<Bytes>,
 
     /// Maximum gas required by the initializer
-    #[arg(long, value_name = "GAS")]
-    initializer_gas: u64,
+    #[arg(long, requires = "initializer", value_name = "GAS")]
+    initializer_gas: Option<u64>,
 }
 
 #[derive(Debug, Args)]
@@ -243,6 +249,16 @@ pub struct RegisterEtherArgs {
 }
 
 #[derive(Debug, Args)]
+pub struct ReinitializeBridgeArgs {
+    #[arg(long, value_name = "FILE")]
+    pub checkpoint: PathBuf,
+    #[command(flatten)]
+    register_ether: RegisterEtherArgs,
+    #[command(flatten)]
+    gateway_address: GatewayAddressArgs,
+}
+
+#[derive(Debug, Args)]
 pub struct ApiEndpoints {
     #[arg(long, value_name = "URL")]
     bridge_hub_api: Option<String>,
@@ -318,14 +334,14 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             .bridge_hub_api
             .unwrap_or(BRIDGE_HUB_API.to_owned()),
     )
-    .await?;
+        .await?;
 
     let asset_hub_api: OnlineClient<PolkadotConfig> = OnlineClient::from_url(
         cli.api_endpoints
             .asset_hub_api
             .unwrap_or(ASSET_HUB_API.to_owned()),
     )
-    .await?;
+        .await?;
 
     let relay_api: OnlineClient<PolkadotConfig> =
         OnlineClient::from_url(cli.api_endpoints.relay_api.unwrap_or(RELAY_API.to_owned())).await?;
@@ -355,7 +371,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                     commands::force_checkpoint(&params.force_checkpoint),
                 ],
             )
-            .await?;
+                .await?;
             let (register_ether_call, set_ether_metadata_call) =
                 commands::register_ether(&params.register_ether);
             let asset_hub_call = send_xcm_asset_hub(
@@ -367,7 +383,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                     set_ethereum_fee,
                 ],
             )
-            .await?;
+                .await?;
             utility_force_batch(vec![bridge_hub_call, asset_hub_call])
         }
         Command::UpdateAsset(params) => {
@@ -378,7 +394,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                     commands::force_set_metadata(params),
                 ],
             )
-            .await?
+                .await?
         }
         Command::GatewayOperatingMode(params) => {
             let call = commands::gateway_operating_mode(&params.gateway_operating_mode);
@@ -448,9 +464,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::TreasuryProposal2024(params) => treasury_commands::treasury_proposal(&params),
         Command::GovUpdate202501(GovUpdate202501Args {
-            pricing_parameters,
-            register_ether,
-        }) => {
+                                     pricing_parameters,
+                                     register_ether,
+                                 }) => {
             let (set_pricing_parameters, set_ethereum_fee) =
                 commands::pricing_parameters(&context, pricing_parameters).await?;
 
@@ -470,6 +486,33 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ah_set_pricing_call,
                 ah_register_ether_call,
             ])
+        },
+        Command::ReinitializeBridge(params) => {
+            let force_checkpoint_call = commands::force_checkpoint(&ForceCheckpointArgs{
+                checkpoint: params.checkpoint.clone(),
+            });
+            let gateway_address_call = commands::set_gateway_address(&params.gateway_address);
+            let inbound_nonce_call = commands::set_inbound_nonce();
+            let outbound_nonce_call = commands::set_outbound_nonce();
+            let (register_ether_call, set_ether_metadata_call) =
+                commands::register_ether(&params.register_ether);
+
+            let bridge_hub_call = send_xcm_bridge_hub(&context, vec![
+                force_checkpoint_call,
+                gateway_address_call,
+                inbound_nonce_call,
+                outbound_nonce_call,
+            ]).await?;
+
+            let asset_hub_call = send_xcm_asset_hub(
+                &context,
+                vec![
+                    register_ether_call,
+                    set_ether_metadata_call,
+                ],
+            )
+                .await?;
+            utility_force_batch(vec![bridge_hub_call, asset_hub_call])
         }
     };
 
