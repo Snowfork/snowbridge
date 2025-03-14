@@ -27,6 +27,10 @@ use crate::bridge_hub_runtime::runtime_types::{
     snowbridge_pallet_outbound_queue, snowbridge_pallet_system,
 };
 use crate::bridge_hub_runtime::RuntimeCall as BridgeHubRuntimeCall;
+use hex_literal::hex;
+use sp_crypto_hashing::twox_64;
+
+const ASSET_HUB_CHANNEL_ID: [u8; 32] = hex!("c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539");
 
 #[cfg(feature = "polkadot")]
 pub mod asset_hub_polkadot_types {
@@ -149,12 +153,21 @@ pub fn outbound_queue_operating_mode(param: &OperatingModeEnum) -> BridgeHubRunt
 }
 
 pub fn upgrade(params: &UpgradeArgs) -> BridgeHubRuntimeCall {
+    let initializer = if params.initializer {
+        Some((
+            params.initializer_params.as_ref().unwrap().clone(),
+            params.initializer_gas.unwrap(),
+        ))
+    } else {
+        None
+    };
+
     BridgeHubRuntimeCall::EthereumSystem(snowbridge_pallet_system::pallet::Call::upgrade {
         impl_address: params.logic_address.into_array().into(),
         impl_code_hash: params.logic_code_hash.0.into(),
-        initializer: Some(Initializer {
-            params: params.initializer_params.clone().into(),
-            maximum_required_gas: params.initializer_gas,
+        initializer: initializer.map(|(params, gas)| Initializer {
+            params: params.into(),
+            maximum_required_gas: gas,
         }),
     })
 }
@@ -258,6 +271,41 @@ pub fn set_assethub_fee(fee: u128) -> AssetHubRuntimeCall {
             items: vec![(
                 asset_hub_outbound_fee_storage_key,
                 asset_hub_outbound_fee_encoded,
+            )],
+        },
+    )
+}
+
+pub fn set_inbound_nonce() -> BridgeHubRuntimeCall {
+    set_nonce("EthereumInboundQueue")
+}
+
+pub fn set_outbound_nonce() -> BridgeHubRuntimeCall {
+    set_nonce("EthereumOutboundQueue")
+}
+
+fn set_nonce(pallet_name: &str) -> BridgeHubRuntimeCall {
+    let new_nonce: Vec<u8> = 0u64.encode();
+
+    let mut key = Vec::new();
+    let pallet_prefix = pallet_name.as_bytes();
+    key.extend_from_slice(&twox_128(&pallet_prefix));
+
+    let storage_prefix = b"Nonce";
+    key.extend_from_slice(&twox_128(storage_prefix));
+
+    let encoded_id = ASSET_HUB_CHANNEL_ID.encode();
+    let hash_id_64 = twox_64(&encoded_id);
+    key.extend_from_slice(&hash_id_64);
+    key.extend_from_slice(&encoded_id);
+
+    println!("nonce key for {}: 0x{}", pallet_name, hex::encode(&key));
+
+    BridgeHubRuntimeCall::System(
+        crate::bridge_hub_runtime::runtime_types::frame_system::pallet::Call::set_storage {
+            items: vec![(
+                key,
+                new_nonce,
             )],
         },
     )
