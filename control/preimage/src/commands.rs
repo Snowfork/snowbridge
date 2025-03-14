@@ -539,6 +539,41 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             "KILT",
             15u8,
         ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2006)]),
+            }),
+            "Astar",
+            "ASTR",
+            18u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X2([
+                    Parachain(2006),
+                    GeneralKey {
+                        length: 2,
+                        data: hex!(
+                            "0001000000000000000000000000000000000000000000000000000000000000"
+                        ),
+                    },
+                ]),
+            }),
+            "Centrifuge",
+            "CFG",
+            18u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2101)]),
+            }),
+            "Subsocial",
+            "SUB",
+            10u8,
+        ),
         /*
          * Meme coins
          */
