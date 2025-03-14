@@ -1,8 +1,3 @@
-const graphqlApiUrl =
-    process.env["GRAPHQL_API_URL"] ||
-    "https://snowbridge.squids.live/snowbridge-subsquid@v2/api/graphql"
-const graphqlQuerySize = process.env["GRAPHQL_QUERY_SIZE"] || "100"
-
 /**
  * Query the recent transfers from Ethereum to Polkadot
 
@@ -40,7 +35,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
       ...
 ]
  **/
-export const fetchToPolkadotTransfers = async () => {
+export const fetchToPolkadotTransfers = async (graphqlApiUrl: string, graphqlQuerySize: number) => {
     let query = `query { transferStatusToPolkadots(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC) {
             id
             status
@@ -79,7 +74,7 @@ export const fetchToPolkadotTransfers = async () => {
             }
         }
     }`
-    let result = await queryByGraphQL(query)
+    let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.transferStatusToPolkadots
 }
 
@@ -121,7 +116,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
       ...
 ]
  **/
-export const fetchToEthereumTransfers = async () => {
+export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQuerySize: number) => {
     let query = `query { transferStatusToEthereums(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC) {
             id
             status
@@ -162,11 +157,11 @@ export const fetchToEthereumTransfers = async () => {
             }
         } 
     }`
-    let result = await queryByGraphQL(query)
+    let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.transferStatusToEthereums
 }
 
-const fetchBridgeHubOutboundMessageAccepted = async (messageID: string) => {
+const fetchBridgeHubOutboundMessageAccepted = async (graphqlApiUrl: string, messageID: string) => {
     let query = `query { outboundMessageAcceptedOnBridgeHubs(where: {messageId_eq:"${messageID}"}) {
             id
             nonce
@@ -174,11 +169,11 @@ const fetchBridgeHubOutboundMessageAccepted = async (messageID: string) => {
             timestamp
         }   
     }`
-    let result = await queryByGraphQL(query)
+    let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.outboundMessageAcceptedOnBridgeHubs[0]
 }
 
-const fetchEthereumInboundMessageDispatched = async (messageID: string) => {
+const fetchEthereumInboundMessageDispatched = async (graphqlApiUrl: string, messageID: string) => {
     let query = `query {inboundMessageDispatchedOnEthereums(where: {messageId_eq: "${messageID}"}) {
             id
             channelId
@@ -190,11 +185,11 @@ const fetchEthereumInboundMessageDispatched = async (messageID: string) => {
             txHash
         }
     }`
-    let result = await queryByGraphQL(query)
+    let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.inboundMessageDispatchedOnEthereums[0]
 }
 
-const fetchBridgeHubInboundMessageReceived = async (messageID: string) => {
+const fetchBridgeHubInboundMessageReceived = async (graphqlApiUrl: string, messageID: string) => {
     let query = `query { inboundMessageReceivedOnBridgeHubs(where: {messageId_eq:"${messageID}"}) {
             id
             channelId
@@ -204,11 +199,11 @@ const fetchBridgeHubInboundMessageReceived = async (messageID: string) => {
             timestamp
         }   
     }`
-    let result = await queryByGraphQL(query)
+    let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.inboundMessageReceivedOnBridgeHubs[0]
 }
 
-const fetchMessageProcessedOnPolkadot = async (messageID: string) => {
+const fetchMessageProcessedOnPolkadot = async (graphqlApiUrl: string, messageID: string) => {
     let query = `query { messageProcessedOnPolkadots(where: {messageId_eq:"${messageID}"}) {
             id
             blockNumber
@@ -218,7 +213,7 @@ const fetchMessageProcessedOnPolkadot = async (messageID: string) => {
             success
         }   
     }`
-    let result = await queryByGraphQL(query)
+    let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.messageProcessedOnPolkadots[0]
 }
 
@@ -243,16 +238,16 @@ $graphqlApiUrl --no-progress-meter | jq "."
   }
 }
 **/
-export const fetchEstimatedDeliveryTime = async (channelId: string) => {
+export const fetchEstimatedDeliveryTime = async (graphqlApiUrl: string, channelId: string) => {
     let query = `query { toEthereumElapse(channelId:"${channelId}") { elapse } toPolkadotElapse(channelId:"${channelId}") { elapse } }`
-    let result = await queryByGraphQL(query)
+    let result = await queryByGraphQL(graphqlApiUrl, query)
     return result
 }
 
 /**
  * Query with a raw graphql
  **/
-export const queryByGraphQL = async (query: string) => {
+export const queryByGraphQL = async (graphqlApiUrl: string, query: string) => {
     let response = await fetch(graphqlApiUrl, {
         method: "POST",
         headers: {
@@ -302,7 +297,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
       }
 ]
  **/
-export const fetchToPolkadotTransferById = async (id: string) => {
+export const fetchToPolkadotTransferById = async (graphqlApiUrl: string, id: string) => {
     let query = `query { transferStatusToPolkadots(where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) {
             id
             status
@@ -341,7 +336,7 @@ export const fetchToPolkadotTransferById = async (id: string) => {
             }
         }
     }`
-    let result = await queryByGraphQL(query)
+    let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.transferStatusToPolkadots
 }
 
@@ -382,7 +377,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
       }
 ]
  **/
-export const fetchToEthereumTransferById = async (id: string) => {
+export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: string) => {
     let query = `query { transferStatusToEthereums(where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) {
             id
             status
@@ -423,7 +418,7 @@ export const fetchToEthereumTransferById = async (id: string) => {
             }
         } 
     }`
-    let result = await queryByGraphQL(query)
+    let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.transferStatusToEthereums
 }
 
@@ -454,11 +449,11 @@ $graphqlApiUrl --no-progress-meter | jq "."
   }
 }
 **/
-export const fetchLatestBlocksSynced = async () => {
+export const fetchLatestBlocksSynced = async (graphqlApiUrl: string) => {
     let query = `query { latestBlocks {
                     height
                     name
                 }}`
-    let result = await queryByGraphQL(query)
+    let result = await queryByGraphQL(graphqlApiUrl, query)
     return result
 }
