@@ -1,15 +1,15 @@
 {
   "source": {
     "beacon": {
-      "endpoint": "http://127.0.0.1:9596",
-      "stateEndpoint": "http://127.0.0.1:9596",
+      "endpoint": "https://lodestar-sepolia.chainsafe.io",
+      "stateEndpoint": "https://lodestar-sepolia.chainsafe.io",
       "spec": {
         "syncCommitteeSize": 512,
         "slotsInEpoch": 32,
         "epochsPerSyncCommitteePeriod": 256,
         "forkVersions": {
-          "deneb": 0,
-          "electra": 2000000
+          "deneb": 132608,
+          "electra": 222464
         }
       },
       "datastore": {
@@ -27,3 +27,4 @@
     "updateSlotInterval": 30
   }
 }
+
