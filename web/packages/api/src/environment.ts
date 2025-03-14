@@ -10,11 +10,6 @@ export type Config = {
     SECONDARY_GOVERNANCE_CHANNEL_ID: string
     RELAYERS: Relayer[]
     PARACHAINS: { [paraId: string]: string }
-    SUBSCAN_API?: {
-        RELAY_CHAIN_URL: string
-        ASSET_HUB_URL: string
-        BRIDGE_HUB_URL: string
-    }
     GRAPHQL_API_URL?: string
 }
 
@@ -114,7 +109,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         config: {
             BEACON_HTTP_API: "http://127.0.0.1:9596",
             ETHEREUM_CHAINS: {
-                "11155111": () => "ws://127.0.0.1:8546"
+                "11155111": () => "ws://127.0.0.1:8546",
             },
             RELAY_CHAIN_URL: "ws://127.0.0.1:9944",
             PARACHAINS: {
@@ -247,13 +242,13 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
             ETHEREUM_CHAINS: {
-                "11155111": (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`
+                "11155111": (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`,
             },
             RELAY_CHAIN_URL: "wss://paseo-rpc.dwellir.com",
             PARACHAINS: {
                 "1000": "wss://asset-hub-paseo-rpc.dwellir.com",
                 "1002": "wss://bridge-hub-paseo.dotters.network",
-                "3369": "wss://paseo-muse-rpc.polkadot.io"
+                "3369": "wss://paseo-muse-rpc.polkadot.io",
             },
             GATEWAY_CONTRACT: "0x5a84b15B618beEE6F6285F6bd2bA20a08673e473",
             BEEFY_CONTRACT: "0xE7388f953f50d377D131350490156dB649E5DC10",
@@ -295,11 +290,6 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     type: "ethereum",
                 },
             ],
-            SUBSCAN_API: {
-                RELAY_CHAIN_URL: "https://paseo.api.subscan.io/",
-                ASSET_HUB_URL: "https://assethub-paseo.api.subscan.io",
-                BRIDGE_HUB_URL: "https://bridgehub-paseo.api.subscan.io",
-            },
         },
     },
     polkadot_mainnet: {
@@ -548,12 +538,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     type: "ethereum",
                 },
             ],
-            SUBSCAN_API: {
-                RELAY_CHAIN_URL: "https://polkadot.api.subscan.io",
-                ASSET_HUB_URL: "https://assethub-polkadot.api.subscan.io",
-                BRIDGE_HUB_URL: "https://bridgehub-polkadot.api.subscan.io",
-            },
-            GRAPHQL_API_URL: "https://snowbridge.squids.live/snowbridge-subsquid@v2/api/graphql",
+            GRAPHQL_API_URL:
+                "https://snowbridge.squids.live/snowbridge-subsquid-polkadot@v1/api/graphql",
         },
     },
     westend_sepolia: {
@@ -598,7 +584,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
             ETHEREUM_CHAINS: {
-                "11155111": (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`
+                "11155111": (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`,
             },
             RELAY_CHAIN_URL: "https://westend-rpc.polkadot.io",
             PARACHAINS: {
@@ -645,11 +631,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     type: "ethereum",
                 },
             ],
-            SUBSCAN_API: {
-                RELAY_CHAIN_URL: "https://westend.api.subscan.io",
-                ASSET_HUB_URL: "https://assethub-westend.api.subscan.io",
-                BRIDGE_HUB_URL: "https://bridgehub-westend.api.subscan.io",
-            },
+            GRAPHQL_API_URL:
+                "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
         },
     },
 }
