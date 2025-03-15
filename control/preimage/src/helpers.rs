@@ -10,26 +10,20 @@ use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 use crate::relay_runtime::runtime_types::{
     pallet_xcm,
     sp_weights::weight_v2::Weight,
-    xcm::double_encoded::DoubleEncoded,
-    xcm::v3::{
-    	OriginKind,
-    	MaybeErrorCode,
-     	WeightLimit,
-    },
-    xcm::{
-        VersionedLocation, VersionedXcm,
-    },
     staging_xcm::v4::{
-       	location::Location,
         junction::Junction,
         junctions::Junctions,
+        location::Location,
         Instruction::{self, *},
         Xcm,
     },
+    xcm::double_encoded::DoubleEncoded,
+    xcm::v3::{MaybeErrorCode, OriginKind, WeightLimit},
+    xcm::{VersionedLocation, VersionedXcm},
 };
 
-use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
+use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 
 use sp_arithmetic::helpers_128bit::multiply_by_rational_with_rounding;
 use sp_arithmetic::per_things::Rounding;
@@ -43,10 +37,9 @@ pub fn increase_weight(ref_time: &mut u64, proof_size: &mut u64) {
     let _ref_time = multiply_by_rational_with_rounding(*ref_time as u128, 2, 1, Rounding::Up)
         .expect("overflow")
         .min(MAX_REF_TIME);
-    let _proof_size =
-        multiply_by_rational_with_rounding(*proof_size as u128, 2, 1, Rounding::Up)
-            .expect("overflow")
-            .min(MAX_PROOF_SIZE);
+    let _proof_size = multiply_by_rational_with_rounding(*proof_size as u128, 2, 1, Rounding::Up)
+        .expect("overflow")
+        .min(MAX_PROOF_SIZE);
 
     *ref_time = _ref_time.try_into().expect("overflow");
     *proof_size = _proof_size.try_into().expect("overflow");
