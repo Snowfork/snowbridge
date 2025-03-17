@@ -32,5 +32,4 @@ if (process.argv[2] == "start") {
             console.error("Error:", error)
             process.exit(1)
         })
-    
 }
