@@ -352,7 +352,7 @@ export async function validateTransfer(connections: Connections, transfer: Trans
                 }
             }
         }
-    } else if(!dryRunAhSuccess) {
+    } else if(!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
         const { accountMaxConumers, accountExists } = await validateAccount(assetHub, ahParachain.info.specName, beneficiaryAddressHex, registry.ethChainId, tokenAddress)
 
         if (accountMaxConumers) {
