@@ -397,7 +397,7 @@ export async function validateTransfer(
     let destinationParachainDryRunError: string | undefined
     if (destinationParaId !== registry.assetHubParaId) {
         // Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
-        if (!ahAssetMetadata.isSufficient) {
+        if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
             const sovereignAccountId = paraIdToSovereignAccount("sibl", destinationParaId)
             const { accountMaxConumers, accountExists } = await validateAccount(
                 assetHub,
@@ -498,14 +498,8 @@ export async function validateTransfer(
                 }
             }
         }
-    } else {
-        const { accountMaxConumers, accountExists } = await validateAccount(
-            assetHub,
-            ahParachain.info.specName,
-            beneficiaryAddressHex,
-            registry.ethChainId,
-            tokenAddress
-        )
+    } else if(!dryRunAhSuccess) {
+        const { accountMaxConumers, accountExists } = await validateAccount(assetHub, ahParachain.info.specName, beneficiaryAddressHex, registry.ethChainId, tokenAddress)
 
         if (accountMaxConumers) {
             logs.push({
