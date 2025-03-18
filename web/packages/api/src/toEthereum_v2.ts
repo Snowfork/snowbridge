@@ -168,7 +168,14 @@ export async function createTransfer(
     let messageId: string | undefined
     let tx: SubmittableExtrinsic<"promise", ISubmittableResult>
     if (sourceParaId === assetHubParaId) {
-        tx = createERC20AssetHubTx(parachain, ethChainId, tokenAddress, beneficiaryAccount, amount)
+        tx = createERC20AssetHubTx(
+            parachain,
+            ethChainId,
+            tokenAddress,
+            beneficiaryAccount,
+            amount,
+            ahAssetMetadata
+        )
     } else {
         messageId = await buildMessageId(
             parachain,
@@ -364,11 +371,19 @@ export async function getDeliveryFee(
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
     let returnToSenderDeliveryFeeDOT = 0n
-    const bridgeHubDeliveryFeeDOT = await calculateDeliveryFee(
-        assetHub,
-        registry.bridgeHubParaId,
-        xcm
-    )
+    // Todo: confirm why AssetHub Westend does not support payment apis
+    // 0.1 DOT as workaround
+    let bridgeHubDeliveryFeeDOT =
+        registry.parachains[registry.assetHubParaId].estimatedDeliveryFeeDOT || 1_000_000_000n
+    try {
+        bridgeHubDeliveryFeeDOT = await calculateDeliveryFee(
+            assetHub,
+            registry.bridgeHubParaId,
+            xcm
+        )
+    } catch (e) {
+        console.warn(`Asset Hub does not support payment apis. Error.`, e)
+    }
     if (parachain !== registry.assetHubParaId) {
         const returnToSenderXcm = buildParachainERC20ReceivedXcmOnDestination(
             assetHub.registry,
@@ -489,13 +504,16 @@ export async function validateTransfer(
     const [nativeBalance, dotBalance, tokenBalance] = await Promise.all([
         getNativeBalance(sourceParachain, sourceAccountHex),
         getDotBalance(sourceParachain, source.info.specName, sourceAccountHex),
-        getTokenBalance(
-            sourceParachain,
-            source.info.specName,
-            sourceAccountHex,
-            registry.ethChainId,
-            tokenAddress
-        ),
+        transfer.computed.ahAssetMetadata.location?.parents == DOT_LOCATION.parents &&
+        transfer.computed.ahAssetMetadata.location?.interior == DOT_LOCATION.interior
+            ? getNativeBalance(sourceParachain, sourceAccountHex)
+            : getTokenBalance(
+                  sourceParachain,
+                  source.info.specName,
+                  sourceAccountHex,
+                  registry.ethChainId,
+                  tokenAddress
+              ),
     ])
 
     if (amount > tokenBalance) {
@@ -999,9 +1017,14 @@ function createERC20AssetHubTx(
     ethChainId: number,
     tokenAddress: string,
     beneficiaryAccount: string,
-    amount: bigint
+    amount: bigint,
+    asset: Asset
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
-    const assetLocation = erc20Location(ethChainId, tokenAddress)
+    let assetLocation = erc20Location(ethChainId, tokenAddress)
+    // Asset with location not null for PNA
+    if (asset.location) {
+        assetLocation = asset.location
+    }
     const assets = {
         v4: [
             {

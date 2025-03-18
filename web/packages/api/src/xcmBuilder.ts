@@ -2,7 +2,7 @@ import { Registry } from "@polkadot/types/types"
 import { beneficiaryMultiAddress } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 
-export const DOT_LOCATION = { parents: 1, interior: { here: null } }
+export const DOT_LOCATION = { parents: 1, interior: "Here" }
 
 const ethereumNetwork = (ethChainId: number) => ({
     GlobalConsensus: { Ethereum: { chain_id: ethChainId } },

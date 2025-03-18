@@ -77,6 +77,7 @@ export type Asset = {
     decimals: number
     isSufficient: boolean
     xc20?: string
+    location?: any
 }
 
 export type RegistryOptions = {
@@ -1156,6 +1157,21 @@ function addOverrides(envName: string, result: RegistryOptions) {
                 ],
             }
             break
+        }
+        case "westend_sepolia": {
+            result.assetOverrides = {
+                "1000": [
+                    {
+                        token: "0xF50fb50d65C8C1f6c72E4D8397c984933AfC8F7e".toLowerCase(),
+                        name: "WND",
+                        minimumBalance: 1n,
+                        symbol: "WND",
+                        decimals: 18,
+                        isSufficient: true,
+                        location: DOT_LOCATION,
+                    },
+                ],
+            }
         }
     }
 }
