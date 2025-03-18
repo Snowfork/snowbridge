@@ -574,6 +574,84 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             "SUB",
             10u8,
         ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2035)]),
+            }),
+            "Phala Token",
+            "PHA",
+            12u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X2([
+                    Parachain(2012),
+                    GeneralKey {
+                        length: 4,
+                        data: hex!(
+                            "5041524100000000000000000000000000000000000000000000000000000000"
+                        ),
+                    },
+                ]),
+            }),
+            "Parallel",
+            "PARA",
+            12u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2008)]),
+            }),
+            "Crust Parachain Native Token",
+            "CRU",
+            12u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2104)]),
+            }),
+            "Manta",
+            "MANTA",
+            18u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X2([
+                    Parachain(2000),
+                    GeneralKey {
+                        length: 2,
+                        data: hex!(
+                            "0000000000000000000000000000000000000000000000000000000000000000"
+                        ),
+                    },
+                ]),
+            }),
+            "Acala",
+            "ACA",
+            12u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X2([
+                    Parachain(2000),
+                    GeneralKey {
+                        length: 2,
+                        data: hex!(
+                            "0003000000000000000000000000000000000000000000000000000000000000"
+                        ),
+                    },
+                ]),
+            }),
+            "Liquid DOT",
+            "LDOT",
+            10u8,
+        ),
         /*
          * Meme coins
          */
