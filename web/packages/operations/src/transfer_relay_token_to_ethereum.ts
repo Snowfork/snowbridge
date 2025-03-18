@@ -173,22 +173,22 @@ const transfer = async () => {
         )
         console.log("validation result", validation)
 
-        //     // Step 5. Check validation logs for errors
-        //     if (validation.logs.find((l) => l.kind == toPolkadotV2.ValidationKind.Error)) {
-        //         throw Error(`validation has one of more errors.`)
-        //     }
+        // Step 5. Check validation logs for errors
+        if (validation.logs.find((l) => l.kind == toEthereumV2.ValidationKind.Error)) {
+            throw Error(`validation has one of more errors.`)
+        }
 
-        //     // Step 6. Submit transaction and get receipt for tracking
-        //     const response = await toEthereumV2.signAndSend(
-        //         await context.parachain(sourceParaId),
-        //         transfer,
-        //         POLKADOT_ACCOUNT,
-        //         { withSignedTransaction: true }
-        //     )
-        //     if (!response) {
-        //         throw Error(`Transaction ${response} not included.`)
-        //     }
-        //     console.log("Success message", response.messageId)
+        // Step 6. Submit transaction and get receipt for tracking
+        const response = await toEthereumV2.signAndSend(
+            await context.parachain(sourceParaId),
+            transfer,
+            POLKADOT_ACCOUNT,
+            { withSignedTransaction: true }
+        )
+        if (!response) {
+            throw Error(`Transaction ${response} not included.`)
+        }
+        console.log("Success message", response.messageId)
     }
 
     context.destroyContext()

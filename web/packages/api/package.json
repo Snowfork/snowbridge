@@ -8,7 +8,7 @@
     "url": "https://github.com/Snowfork/snowbridge.git",
     "directory": "web/packages/api"
   },
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
