@@ -37,6 +37,7 @@ pub mod asset_hub_polkadot_types {
         junctions::Junctions::{X1, X2},
         location::Location,
     };
+
     pub fn get_ether_id(chain_id: u64) -> Location {
         return Location {
             parents: 2,
@@ -56,21 +57,22 @@ pub mod asset_hub_polkadot_types {
 
 #[cfg(feature = "paseo")]
 pub mod asset_hub_paseo_types {
-    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation;
+    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation as Location;
     pub use crate::asset_hub_runtime::runtime_types::xcm::v3::{
         junction::Junction::AccountKey20,
         junction::Junction::GlobalConsensus,
         junction::NetworkId,
         junctions::Junctions::{X1, X2},
     };
-    pub fn get_ether_id(chain_id: u64) -> MultiLocation {
-        return MultiLocation {
+
+    pub fn get_ether_id(chain_id: u64) -> Location {
+        return Location {
             parents: 2,
             interior: X1(GlobalConsensus(NetworkId::Ethereum { chain_id })),
         };
     }
-    pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> MultiLocation {
-        return MultiLocation {
+    pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> Location {
+        return Location {
             parents: 2,
             interior: X2(
                 GlobalConsensus(NetworkId::Ethereum { chain_id }),
@@ -357,4 +359,337 @@ pub fn register_ether(params: &RegisterEtherArgs) -> (AssetHubRuntimeCall, Asset
         });
 
     return (force_register, metadata);
+}
+
+#[cfg(feature = "polkadot")]
+fn register_polkadot_native_asset(
+    location: crate::bridge_hub_runtime::runtime_types::xcm::VersionedLocation,
+    name: &'static str,
+    symbol: &'static str,
+    decimals: u8,
+) -> BridgeHubRuntimeCall {
+    use crate::bridge_hub_runtime::runtime_types::{bounded_collections, snowbridge_core};
+
+    let call = BridgeHubRuntimeCall::EthereumSystem(
+        snowbridge_pallet_system::pallet::Call::register_token {
+            location: location.into(),
+            metadata: snowbridge_core::AssetMetadata {
+                name: bounded_collections::bounded_vec::BoundedVec(name.as_bytes().to_vec()),
+                symbol: bounded_collections::bounded_vec::BoundedVec(symbol.as_bytes().to_vec()),
+                decimals,
+            },
+        },
+    );
+
+    return call;
+}
+
+#[cfg(feature = "polkadot")]
+pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
+    use crate::bridge_hub_runtime::runtime_types::{
+        staging_xcm::v4::{
+            junction::Junction::*, junction::NetworkId::*, junctions::Junctions::*,
+            location::Location,
+        },
+        xcm::VersionedLocation,
+    };
+    use hex_literal::hex;
+    return vec![
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: Here,
+            }),
+            "Polkadot",
+            "DOT",
+            10u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 2,
+                interior: X1([GlobalConsensus(Kusama)]),
+            }),
+            "Kusama",
+            "KSM",
+            12u8,
+        ),
+        /*
+         * Parachains
+         */
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X2([Parachain(2004), PalletInstance(10)]),
+            }),
+            "Glimmer",
+            "GLMR",
+            18u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2011)]),
+            }),
+            "Equilibrium",
+            "EQ",
+            9u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X2([
+                    Parachain(2011),
+                    GeneralKey {
+                        length: 3,
+                        data: hex!(
+                            "6571640000000000000000000000000000000000000000000000000000000000"
+                        ),
+                    },
+                ]),
+            }),
+            "Equilibrium Dollar",
+            "EQD",
+            9u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X2([
+                    Parachain(2030),
+                    GeneralKey {
+                        length: 2,
+                        data: hex!(
+                            "0001000000000000000000000000000000000000000000000000000000000000"
+                        ),
+                    },
+                ]),
+            }),
+            "Bifrost Native Token",
+            "BNC",
+            12u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X2([
+                    Parachain(2030),
+                    GeneralKey {
+                        length: 2,
+                        data: hex!(
+                            "0900000000000000000000000000000000000000000000000000000000000000"
+                        ),
+                    },
+                ]),
+            }),
+            "Voucher DOT",
+            "vDOT",
+            10u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X2([Parachain(2034), GeneralIndex(0)]),
+            }),
+            "Hydration",
+            "HDX",
+            12u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2039)]),
+            }),
+            "Integritee TEER",
+            "TEER",
+            12u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2051)]),
+            }),
+            "Ajuna Polkadot AJUN",
+            "AJUN",
+            12u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(3344)]),
+            }),
+            "Polimec",
+            "PLMC",
+            10u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(3370)]),
+            }),
+            "LAOS",
+            "LAOS",
+            18u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2086)]),
+            }),
+            "KILT Spiritnet",
+            "KILT",
+            15u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2006)]),
+            }),
+            "Astar",
+            "ASTR",
+            18u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X2([
+                    Parachain(2031),
+                    GeneralKey {
+                        length: 2,
+                        data: hex!(
+                            "0001000000000000000000000000000000000000000000000000000000000000"
+                        ),
+                    },
+                ]),
+            }),
+            "Centrifuge",
+            "CFG",
+            18u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2101)]),
+            }),
+            "Subsocial",
+            "SUB",
+            10u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2035)]),
+            }),
+            "Phala Token",
+            "PHA",
+            12u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X2([
+                    Parachain(2012),
+                    GeneralKey {
+                        length: 4,
+                        data: hex!(
+                            "5041524100000000000000000000000000000000000000000000000000000000"
+                        ),
+                    },
+                ]),
+            }),
+            "Parallel",
+            "PARA",
+            12u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2008)]),
+            }),
+            "Crust Parachain Native Token",
+            "CRU",
+            12u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X1([Parachain(2104)]),
+            }),
+            "Manta",
+            "MANTA",
+            18u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X2([
+                    Parachain(2000),
+                    GeneralKey {
+                        length: 2,
+                        data: hex!(
+                            "0000000000000000000000000000000000000000000000000000000000000000"
+                        ),
+                    },
+                ]),
+            }),
+            "Acala",
+            "ACA",
+            12u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X2([
+                    Parachain(2000),
+                    GeneralKey {
+                        length: 2,
+                        data: hex!(
+                            "0003000000000000000000000000000000000000000000000000000000000000"
+                        ),
+                    },
+                ]),
+            }),
+            "Liquid DOT",
+            "LDOT",
+            10u8,
+        ),
+        /*
+         * Meme coins
+         */
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(30)]),
+            }),
+            "DED",
+            "DED",
+            10u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(23)]),
+            }),
+            "PINK",
+            "PINK",
+            10u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(86)]),
+            }),
+            "Kolkadot",
+            "KOL",
+            12u8,
+        ),
+        register_polkadot_native_asset(
+            VersionedLocation::V4(Location {
+                parents: 1,
+                interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(31337)]),
+            }),
+            "GAVUN WUD",
+            "WUD",
+            10u8,
+        ),
+    ];
 }
