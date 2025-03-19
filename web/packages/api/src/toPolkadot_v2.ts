@@ -314,7 +314,7 @@ export async function validateTransfer(
         }
     }
 
-    if (tokenBalance.gatewayAllowance < amount) {
+    if (tokenBalance.gatewayAllowance < amount && !ahAssetMetadata.location) {
         logs.push({
             kind: ValidationKind.Error,
             reason: ValidationReason.GatewaySpenderLimitReached,
@@ -372,26 +372,27 @@ export async function validateTransfer(
 
     // Check if asset can be received on asset hub (dry run)
     const ahParachain = registry.parachains[registry.assetHubParaId]
+    let dryRunAhSuccess, forwardedDestination, assetHubDryRunError
     if (!ahParachain.features.hasDryRunApi) {
         logs.push({
-            kind: ValidationKind.Error,
+            kind: ValidationKind.Warning,
             reason: ValidationReason.DryRunNotSupportedOnDestination,
             message:
                 "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
         })
-    }
-    // build asset hub packet and dryRun
-    const {
-        success: dryRunAhSuccess,
-        errorMessage: assetHubDryRunError,
-        forwardedDestination,
-    } = await dryRunAssetHub(assetHub, transfer)
-    if (!dryRunAhSuccess) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.DryRunFailed,
-            message: "Dry run on Asset Hub failed.",
-        })
+    } else {
+        // build asset hub packet and dryRun
+        let result = await dryRunAssetHub(assetHub, transfer)
+        dryRunAhSuccess = result.success
+        assetHubDryRunError = result.errorMessage
+        forwardedDestination = result.forwardedDestination
+        if (!dryRunAhSuccess) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.DryRunFailed,
+                message: "Dry run on Asset Hub failed.",
+            })
+        }
     }
 
     let destinationParachainDryRunError: string | undefined

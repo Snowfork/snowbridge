@@ -15,6 +15,7 @@ export type ERC20Metadata = {
     name: string
     symbol: string
     decimals: number
+    foreignId?: string
 }
 
 export type EthereumChain = {
