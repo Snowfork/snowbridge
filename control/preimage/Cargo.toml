@@ -55,8 +55,4 @@ westend = [
     "asset-hub-westend-runtime",
     "bridge-hub-westend-runtime",
 ]
-paseo = [
-    "paseo-runtime",
-    "asset-hub-paseo-runtime",
-    "bridge-hub-paseo-runtime",
-]
+paseo = ["paseo-runtime", "asset-hub-paseo-runtime", "bridge-hub-paseo-runtime"]
