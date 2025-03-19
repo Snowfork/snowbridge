@@ -9,7 +9,11 @@ import {
     TransactionReceipt,
 } from "ethers"
 import { beneficiaryMultiAddress, paraIdToSovereignAccount } from "./utils"
-import { IERC20__factory, IGateway, IGateway__factory } from "@snowbridge/contract-types"
+import {
+    IERC20__factory,
+    IGatewayV1 as IGateway,
+    IGatewayV1__factory as IGateway__factory,
+} from "@snowbridge/contract-types"
 import {
     Asset,
     AssetRegistry,

@@ -27,7 +27,7 @@ import {
     Parachain,
 } from "./assets_v2"
 import { getOperatingStatus, OperationStatus } from "./status"
-import { IGateway } from "@snowbridge/contract-types"
+import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
 import {
     CallDryRunEffects,
     EventRecord,

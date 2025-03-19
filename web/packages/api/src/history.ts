@@ -1,7 +1,7 @@
 import { fetchBeaconSlot, paraIdToChannelId } from "./utils"
 import { SubscanApi, fetchEvents, fetchExtrinsics } from "./subscan"
 import { forwardedTopicId } from "./utils"
-import { BeefyClient, IGateway } from "@snowbridge/contract-types"
+import { BeefyClient, IGatewayV1 as IGateway } from "@snowbridge/contract-types"
 import { AbstractProvider } from "ethers"
 
 export enum TransferStatus {
@@ -442,7 +442,7 @@ export const toEthereumHistory = async (
         }
 
         const ethereumMessageDispatched = allInboundMessages.find(
-            (ev) =>
+            (ev: any) =>
                 ev.data.channelId === result.bridgeHubChannelDelivered?.channelId &&
                 ev.data.messageId === result.submitted.messageId &&
                 ev.data.nonce === result.bridgeHubMessageAccepted?.nonce
@@ -583,7 +583,7 @@ const getEthInboundMessagesDispatched = async (
 ) => {
     const InboundMessageDispatched = gateway.getEvent("InboundMessageDispatched")
     const inboundMessages = await gateway.queryFilter(InboundMessageDispatched, fromBlock, toBlock)
-    return inboundMessages.map((im) => {
+    return inboundMessages.map((im: any) => {
         return {
             blockNumber: im.blockNumber,
             blockHash: im.blockHash,

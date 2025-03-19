@@ -8,7 +8,7 @@ import {
     DOT_LOCATION,
     erc20Location,
 } from "./xcmBuilder"
-import { IGateway__factory } from "@snowbridge/contract-types"
+import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 
 export type ERC20Metadata = {
     token: string
