@@ -375,14 +375,13 @@ export async function getDeliveryFee(
     // 0.1 DOT as workaround
     let bridgeHubDeliveryFeeDOT =
         registry.parachains[registry.assetHubParaId].estimatedDeliveryFeeDOT || 1_000_000_000n
-    try {
+    const ahParachain = registry.parachains[registry.assetHubParaId]
+    if (ahParachain.features.hasXcmPaymentApi) {
         bridgeHubDeliveryFeeDOT = await calculateDeliveryFee(
             assetHub,
             registry.bridgeHubParaId,
             xcm
         )
-    } catch (e) {
-        console.warn(`Asset Hub does not support payment apis. Error.`, e)
     }
     if (parachain !== registry.assetHubParaId) {
         const returnToSenderXcm = buildParachainERC20ReceivedXcmOnDestination(
@@ -504,6 +503,7 @@ export async function validateTransfer(
     const [nativeBalance, dotBalance, tokenBalance] = await Promise.all([
         getNativeBalance(sourceParachain, sourceAccountHex),
         getDotBalance(sourceParachain, source.info.specName, sourceAccountHex),
+        // Get the token balance. The exception here is falling back to the native balance for DOT.
         transfer.computed.ahAssetMetadata.location?.parents == DOT_LOCATION.parents &&
         transfer.computed.ahAssetMetadata.location?.interior == DOT_LOCATION.interior
             ? getNativeBalance(sourceParachain, sourceAccountHex)
@@ -1020,11 +1020,8 @@ function createERC20AssetHubTx(
     amount: bigint,
     asset: Asset
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
-    let assetLocation = erc20Location(ethChainId, tokenAddress)
     // Asset with location not null for PNA
-    if (asset.location) {
-        assetLocation = asset.location
-    }
+    let assetLocation = asset.location || erc20Location(ethChainId, tokenAddress)
     const assets = {
         v4: [
             {
