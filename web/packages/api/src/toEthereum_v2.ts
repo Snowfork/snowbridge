@@ -371,8 +371,6 @@ export async function getDeliveryFee(
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
     let returnToSenderDeliveryFeeDOT = 0n
-    // Todo: confirm why AssetHub Westend does not support payment apis
-    // 0.1 DOT as workaround
     let bridgeHubDeliveryFeeDOT =
         registry.parachains[registry.assetHubParaId].estimatedDeliveryFeeDOT || 1_000_000_000n
     const ahParachain = registry.parachains[registry.assetHubParaId]

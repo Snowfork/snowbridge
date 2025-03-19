@@ -56,10 +56,10 @@
       "parachainId": 1000,
       "features": {
         "hasPalletXcm": true,
-        "hasDryRunApi": false,
+        "hasDryRunApi": true,
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
-        "hasXcmPaymentApi": false
+        "hasXcmPaymentApi": true
       },
       "info": {
         "tokenSymbols": "WND",
