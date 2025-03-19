@@ -971,7 +971,7 @@ async function indexEthChain(
                     decimals: assetHub.assets[token].decimals,
                 }
             } else {
-                assets[token] = await assetErc20Metadata(provider, token)
+                assets[token] = await assetErc20Metadata(provider, token, gatewayAddress)
             }
         }
         if ((await provider.getCode(gatewayAddress)) === undefined) {
@@ -1084,7 +1084,8 @@ const ERC20_METADATA_ABI = [
 
 async function assetErc20Metadata(
     provider: AbstractProvider,
-    token: string
+    token: string,
+    gateway?: string
 ): Promise<ERC20Metadata> {
     const erc20Metadata = new Contract(token, ERC20_METADATA_ABI, provider)
     const [name, symbol, decimals] = await Promise.all([
@@ -1092,7 +1093,20 @@ async function assetErc20Metadata(
         erc20Metadata.symbol(),
         erc20Metadata.decimals(),
     ])
-    return { token, name: String(name), symbol: String(symbol), decimals: Number(decimals) }
+    let metadata: any = {
+        token,
+        name: String(name),
+        symbol: String(symbol),
+        decimals: Number(decimals),
+    }
+    if (gateway) {
+        let gatewayCon = IGateway__factory.connect(gateway, provider)
+        let tokenId = await gatewayCon.queryForeignTokenID(token)
+        if (tokenId != "0x0000000000000000000000000000000000000000000000000000000000000000") {
+            metadata.foreignId = tokenId
+        }
+    }
+    return metadata
 }
 
 function getTokenFromLocation(location: any, chainId: number) {

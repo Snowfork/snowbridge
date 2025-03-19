@@ -44,7 +44,8 @@
           "token": "0xf50fb50d65c8c1f6c72e4d8397c984933afc8f7e",
           "name": "WND",
           "symbol": "WND",
-          "decimals": 12
+          "decimals": 12,
+          "foreignId": "0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7"
         }
       },
       "id": "sepolia"
