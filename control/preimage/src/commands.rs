@@ -552,7 +552,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             VersionedLocation::V4(Location {
                 parents: 1,
                 interior: X2([
-                    Parachain(2006),
+                    Parachain(2031),
                     GeneralKey {
                         length: 2,
                         data: hex!(
