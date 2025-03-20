@@ -326,7 +326,7 @@ func (r *Relay) fetchEthereumNonce(ctx context.Context) (uint64, error) {
 	opts := bind.CallOpts{
 		Context: ctx,
 	}
-	ethOutboundNonce, err := r.gatewayContract.OutboundNonce(&opts)
+	ethOutboundNonce, err := r.gatewayContract.V2OutboundNonce(&opts)
 	if err != nil {
 		return 0, fmt.Errorf("fetch Gateway.OutboundNonce: %w", err)
 	}
