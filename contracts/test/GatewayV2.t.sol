@@ -226,7 +226,7 @@ contract GatewayV2Test is Test {
 
         // Expect the gateway to emit `InboundMessageDispatched`
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(1, true, relayerRewardAddress);
 
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway)).v2_submit(
@@ -386,7 +386,7 @@ contract GatewayV2Test is Test {
         weth.deposit{value: 1 ether}();
 
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(1, true, relayerRewardAddress);
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
@@ -410,7 +410,7 @@ contract GatewayV2Test is Test {
         emit IGatewayBase.ForeignTokenRegistered(keccak256("DOT"), address(0));
 
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(1, true, relayerRewardAddress);
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
@@ -437,7 +437,7 @@ contract GatewayV2Test is Test {
         emit IERC20.Transfer(address(0), recipient, 100);
 
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(2, topic, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(2, true, relayerRewardAddress);
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
@@ -458,7 +458,7 @@ contract GatewayV2Test is Test {
         bytes32 topic = keccak256("topic");
 
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(1, true, relayerRewardAddress);
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);

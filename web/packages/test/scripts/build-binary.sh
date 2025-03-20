@@ -4,6 +4,7 @@ set -eu
 source scripts/set-env.sh
 
 build_binaries() {
+    pushd $root_dir
     pushd $polkadot_sdk_dir
 
     local features=''
@@ -32,6 +33,7 @@ build_binaries() {
     cargo build --release --locked -p polkadot-parachain-bin --bin polkadot-parachain $features
     cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
 
+    popd
     popd
 }
 
