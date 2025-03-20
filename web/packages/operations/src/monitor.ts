@@ -26,9 +26,13 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         process.env["ASSET_HUB_URL"] ?? config.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
 
     const ethChains: { [ethChainId: string]: string | AbstractProvider } = {}
-    Object.keys(config.ETHEREUM_CHAINS)
-        .forEach(ethChainId => ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](infuraKey))
-    if (process.env["EXECUTION_NODE_URL"]) { ethChains[ethChainId.toString()] = process.env["EXECUTION_NODE_URL"] }
+    Object.keys(config.ETHEREUM_CHAINS).forEach(
+        (ethChainId) =>
+            (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](infuraKey))
+    )
+    if (process.env["EXECUTION_NODE_URL"]) {
+        ethChains[ethChainId.toString()] = process.env["EXECUTION_NODE_URL"]
+    }
 
     const context = new Context({
         environment: name,
