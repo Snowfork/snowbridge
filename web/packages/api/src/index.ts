@@ -8,8 +8,12 @@ import {
     IGatewayV1__factory as IGateway__factory,
 } from "@snowbridge/contract-types"
 
-interface Parachains { [paraId: string]: ApiPromise }
-interface EthereumChains { [ethChainId: string]: AbstractProvider }
+interface Parachains {
+    [paraId: string]: ApiPromise
+}
+interface EthereumChains {
+    [ethChainId: string]: AbstractProvider
+}
 
 interface Config {
     environment: string
@@ -121,7 +125,7 @@ export class Context {
         const { ethChains } = this.config.ethereum
         if (ethChainKey in ethChains) {
             const url = ethChains[ethChainKey]
-            let provider: AbstractProvider;
+            let provider: AbstractProvider
             if (typeof url === "string") {
                 if (url.startsWith("http")) {
                     provider = new JsonRpcProvider(url)
@@ -163,7 +167,10 @@ export class Context {
 
         // clean up etheruem
         for (const ethChainKey of Object.keys(this.config.ethereum.ethChains)) {
-            if (typeof this.config.ethereum.ethChains[ethChainKey] === "string" && this.#ethChains[ethChainKey]) {
+            if (
+                typeof this.config.ethereum.ethChains[ethChainKey] === "string" &&
+                this.#ethChains[ethChainKey]
+            ) {
                 this.#ethChains[ethChainKey].destroy()
             }
         }

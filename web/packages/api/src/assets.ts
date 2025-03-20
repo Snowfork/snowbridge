@@ -42,7 +42,11 @@ export const assetStatusInfo = async (
     tokenAddress: string,
     ownerAddress?: string
 ) => {
-    const [assetHub, ethereum, gateway] = await Promise.all([context.assetHub(), context.ethereum(), context.gateway()])
+    const [assetHub, ethereum, gateway] = await Promise.all([
+        context.assetHub(),
+        context.ethereum(),
+        context.gateway(),
+    ])
 
     let [ethereumNetwork, isTokenRegistered] = await Promise.all([
         ethereum.getNetwork(),
