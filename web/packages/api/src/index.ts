@@ -55,6 +55,7 @@ export class Context {
         }
         const url = this.config.polkadot.relaychain
         this.#relaychain = await ApiPromise.create({
+            noInitWarn: true,
             provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
         })
         return this.#relaychain
@@ -93,6 +94,7 @@ export class Context {
         if (paraIdKey in parachains) {
             const url = parachains[paraIdKey]
             const api = await ApiPromise.create({
+                noInitWarn: true,
                 provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
             })
             const onChainParaId = (
@@ -132,7 +134,7 @@ export class Context {
             this.#ethChains[ethChainKey] = provider
             return provider
         } else {
-            throw Error(`Ethereum chain id ${ethChains} not in the list of ethereum urls.`)
+            throw Error(`Ethereum chain id ${ethChainKey} not in the list of ethereum urls.`)
         }
     }
 

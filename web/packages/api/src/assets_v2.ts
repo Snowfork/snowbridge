@@ -144,6 +144,8 @@ export type TransferLocation = {
     ethChain?: EthereumChain;
 };
 
+export const ETHER_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000"
+
 export async function buildRegistry(options: RegistryOptions): Promise<AssetRegistry> {
     const {
         environment,
@@ -165,6 +167,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         let provider: ApiPromise;
         if (typeof relaychain === "string") {
             provider = await ApiPromise.create({
+                noInitWarn: true,
                 provider: relaychain.startsWith("http") ? new HttpProvider(relaychain) : new WsProvider(relaychain),
             })
         } else {
@@ -183,6 +186,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         let provider: ApiPromise;
         if (typeof bridgeHub === "string") {
             provider = await ApiPromise.create({
+                noInitWarn: true,
                 provider: bridgeHub.startsWith("http") ? new HttpProvider(bridgeHub) : new WsProvider(bridgeHub),
             })
         } else {
@@ -203,6 +207,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
             let managed = false
             if (typeof parachain === "string") {
                 provider = await ApiPromise.create({
+                    noInitWarn: true,
                     provider: parachain.startsWith("http") ? new HttpProvider(parachain) : new WsProvider(parachain),
                 })
                 managed = true
@@ -592,11 +597,12 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
             const entries = await provider.query.assetRegistry.assetLocations.entries()
             for (const [id, value] of entries) {
                 const location: any = value.toJSON()
-                if (!isSnowbridgeAsset(location, ethChainId)) { continue }
+                const token = getTokenFromLocation(location, ethChainId)
+                if (!token) { continue }
 
                 const assetId = Number(id.args.at(0)?.toString())
                 const asset: any = (await provider.query.assetRegistry.assets(assetId)).toPrimitive()
-                const token = String(location.interior.x2[1].accountKey20.key.toLowerCase())
+
                 assets[token] = {
                     token,
                     name: String(asset.name ?? ""),
@@ -619,11 +625,12 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
                     console.warn(`Could not convert ${key.toHuman()} to location for ${specName}.`)
                     continue
                 }
-                if (!isSnowbridgeAsset(location, ethChainId)) { continue }
+                const token = getTokenFromLocation(location, ethChainId)
+                if (!token) { continue }
 
                 const asset: any = value.toJSON()
                 const assetMetadata: any = (await provider.query.foreignAssets.metadata(location)).toPrimitive()
-                const token = String(location.interior.x2[1].accountKey20.key.toLowerCase())
+
                 assets[token] = {
                     token,
                     name: String(assetMetadata.name),
@@ -641,11 +648,12 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
             const entries = await provider.query.assetRegistry.currencyIdToLocations.entries()
             for (const [key, value] of entries) {
                 const location: any = value.toJSON()
-                if (!isSnowbridgeAsset(location, ethChainId)) { continue }
+                const token = getTokenFromLocation(location, ethChainId)
+                if (!token) { continue }
 
                 const assetId: any = key.args.at(0)
                 const asset: any = (await provider.query.assetRegistry.currencyMetadatas(assetId)).toPrimitive()
-                const token = String(location.interior.x2[1].accountKey20.key.toLowerCase())
+
                 assets[token] = {
                     token,
                     name: String(asset.name),
@@ -669,12 +677,12 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
                 if (location.parents === 1 && location.interior.here !== undefined) {
                     xcDOT = '0xffffffff' + xc20
                 }
-
-                if (!isSnowbridgeAsset(location, ethChainId)) { continue }
+                const token = getTokenFromLocation(location, ethChainId)
+                if (!token) { continue }
 
                 const asset: any = (await provider.query.assets.asset(assetId)).toPrimitive()
                 const metadata: any = (await provider.query.assets.metadata(assetId)).toPrimitive()
-                const token = String(location.interior.x2[1].accountKey20.key.toLowerCase())
+
                 assets[token] = {
                     token,
                     name: String(metadata.name),
@@ -793,15 +801,19 @@ async function indexEthChain(
 
         const assets: ERC20MetadataMap = {}
         for (const token in assetHub.assets) {
-            if (token === "0x0000000000000000000000000000000000000000") {
-                // TODO: Support Native Ether
-                continue;
-            }
             if (!await gateway.isTokenRegistered(token)) {
                 console.warn(`Token ${token} is not registered with the gateway.`)
             }
-            const asset = await assetErc20Metadata(provider, token)
-            assets[token] = asset
+            if(token === ETHER_TOKEN_ADDRESS) {
+                assets[token] = {
+                    token: assetHub.assets[token].token,
+                    name: assetHub.assets[token].name,
+                    symbol: assetHub.assets[token].symbol,
+                    decimals: assetHub.assets[token].decimals,
+                }
+            } else {
+                assets[token] = await assetErc20Metadata(provider, token)
+            }
         }
         if (await provider.getCode(gatewayAddress) === undefined) {
             throw Error(`Could not fetch code for gatway address ${gatewayAddress} on ethereum chain ${chainId}.`)
@@ -913,8 +925,20 @@ async function assetErc20Metadata(
     return { token, name: String(name), symbol: String(symbol), decimals: Number(decimals) }
 }
 
-function isSnowbridgeAsset(location: any, chainId: number) {
-    return location.parents === 2 && location.interior.x2 !== undefined && location.interior.x2[0].globalConsensus.ethereum.chainId === chainId
+function getTokenFromLocation(location: any, chainId: number) {
+    const interior = location.interior.x1 ?? location.interior.x2;
+    if(location.parents === 2) {
+     if(location.interior.x1 && location.interior.x1[0]?.globalConsensus?.ethereum?.chainId === chainId) {
+        return ETHER_TOKEN_ADDRESS;
+     }
+     if(location.interior.x2 && location.interior.x2[0]?.globalConsensus?.ethereum?.chainId === chainId && location.interior.x2[1].accountKey20) {
+        const token = String(location.interior.x2[1].accountKey20.key.toLowerCase());
+        if(token !== ETHER_TOKEN_ADDRESS) {
+            return token
+        }
+     }
+    }
+    return undefined;
 }
 
 function addOverrides(envName: string, result: RegistryOptions) {
@@ -976,7 +1000,10 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
             }
         case "polkadot_mainnet":
             return (path: Path) => {
-
+                // Disallow LDO token on mainnet. Transfer Gas is too high
+                if(path.asset === "0x5a98fcbea516cf06857215779fd812ca3bef1b32") {
+                    return false
+                }
                 // Disallow MYTH to any location but 3369
                 if (
                     path.asset === "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003" &&
