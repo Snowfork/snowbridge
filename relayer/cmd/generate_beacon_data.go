@@ -262,7 +262,6 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		log.Info("created sync committee update file")
 
 		// get inbound message data start
-		channelID := executionConfig.Source.ChannelID
 		address := common.HexToAddress(executionConfig.Source.Contracts.Gateway)
 		gatewayContract, err := contracts.NewGateway(address, ethconn.Client())
 		if err != nil {
@@ -272,7 +271,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		event, err := getEthereumEvent(ctx, gatewayContract, channelID, nonce)
+		event, err := getEthereumEvent(ctx, gatewayContract, nonce)
 		if err != nil {
 			return err
 		}
@@ -542,7 +541,7 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func getEthereumEvent(ctx context.Context, gatewayContract *contracts.Gateway, channelID executionConf.ChannelID, nonce uint32) (*contracts.GatewayOutboundMessageAccepted, error) {
+func getEthereumEvent(ctx context.Context, gatewayContract *contracts.Gateway, nonce uint32) (*contracts.GatewayOutboundMessageAccepted, error) {
 	maxBlockNumber := uint64(10000)
 
 	opts := bind.FilterOpts{
@@ -734,7 +733,6 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		// get inbound message data start
-		channelID := executionConf.Source.ChannelID
 		address := common.HexToAddress(executionConf.Source.Contracts.Gateway)
 		gatewayContract, err := contracts.NewGateway(address, ethconn.Client())
 		if err != nil {
@@ -744,7 +742,7 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		event, err := getEthereumEvent(ctx, gatewayContract, channelID, nonce)
+		event, err := getEthereumEvent(ctx, gatewayContract, nonce)
 		if err != nil {
 			return err
 		}
