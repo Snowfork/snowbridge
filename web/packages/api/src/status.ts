@@ -260,7 +260,7 @@ export const channelStatusInfo = async (
             "0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539"
     ) {
         try {
-            estimatedDeliveryTime = await fetchEstimatedDeliveryTime(channelId)
+            estimatedDeliveryTime = await fetchEstimatedDeliveryTime(context.config.graphqlApiUrl, channelId)
         } catch (e: any) {
             console.error("estimate api error:" + e.message)
         }
