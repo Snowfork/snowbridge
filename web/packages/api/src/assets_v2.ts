@@ -78,7 +78,12 @@ export type Asset = {
     decimals: number
     isSufficient: boolean
     xc20?: string
+    // Location on source Parachain
     location?: any
+    // Location reanchored on AH
+    locationOnAH?: any
+    // Location reanchored on Ethereum
+    locationOnEthereum?: any
 }
 
 export type RegistryOptions = {
@@ -612,9 +617,15 @@ export function getTokenBalance(
     specName: string,
     account: string,
     ethChainId: number,
-    tokenAddress: string
+    tokenAddress: string,
+    asset?: Asset
 ) {
-    return getLocationBalance(provider, specName, erc20Location(ethChainId, tokenAddress), account)
+    return getLocationBalance(
+        provider,
+        specName,
+        asset?.location || erc20Location(ethChainId, tokenAddress),
+        account
+    )
 }
 
 export async function getParachainId(parachain: ApiPromise): Promise<number> {

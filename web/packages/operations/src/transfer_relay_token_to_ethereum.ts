@@ -128,7 +128,8 @@ const transfer = async () => {
         const fee = await toEthereumV2.getDeliveryFee(
             { assetHub: await context.assetHub(), source: await context.parachain(sourceParaId) },
             sourceParaId,
-            registry
+            registry,
+            WND_CONTRACT
         )
 
         // Step 2. Create a transfer tx

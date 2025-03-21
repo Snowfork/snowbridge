@@ -1,6 +1,6 @@
 import { Registry } from "@polkadot/types/types"
 import { beneficiaryMultiAddress } from "./utils"
-import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { Asset, ETHER_TOKEN_ADDRESS } from "./assets_v2"
 
 export const DOT_LOCATION = { parents: 1, interior: "Here" }
 
@@ -527,5 +527,238 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
                 returnToSenderFeeInDOT
             ),
         ],
+    })
+}
+
+export function buildResultXcmAssetHubPNATransferFromParachain(
+    registry: Registry,
+    ethChainId: number,
+    asset: Asset,
+    sourceAccount: string,
+    beneficiary: string,
+    topic: string,
+    transferAmount: bigint,
+    totalFeeInDot: bigint,
+    destinationFeeInDot: bigint,
+    sourceParachainId: number,
+    returnToSenderFeeInDOT: bigint
+) {
+    return registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                withdrawAsset: [
+                    {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: totalFeeInDot,
+                        },
+                    },
+                ],
+            },
+            {
+                buyExecution: {
+                    fees: {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: destinationFeeInDot,
+                        },
+                    },
+                    weightLimit: "Unlimited",
+                },
+            },
+            {
+                receiveTeleportedAsset: [
+                    {
+                        id: asset.locationOnAH,
+                        fun: {
+                            Fungible: transferAmount,
+                        },
+                    },
+                ],
+            },
+            { clearOrigin: null },
+            ...buildAssetHubXcmForPNAFromParachain(
+                ethChainId,
+                sourceAccount,
+                beneficiary,
+                asset,
+                topic,
+                sourceParachainId,
+                returnToSenderFeeInDOT
+            ),
+        ],
+    })
+}
+
+function buildAssetHubXcmForPNAFromParachain(
+    ethChainId: number,
+    sourceAccount: string,
+    beneficiary: string,
+    asset: Asset,
+    topic: string,
+    sourceParachainId: number,
+    destinationFeeInDOT: bigint
+) {
+    let {
+        hexAddress,
+        address: { kind },
+    } = beneficiaryMultiAddress(sourceAccount)
+    let sourceAccountLocation
+    switch (kind) {
+        case 1:
+            // 32 byte addresses
+            sourceAccountLocation = { accountId32: { id: hexAddress } }
+            break
+        case 2:
+            // 20 byte addresses
+            sourceAccountLocation = { accountKey20: { key: hexAddress } }
+            break
+        default:
+            throw Error(`Could not parse source address ${sourceAccount}`)
+    }
+    return [
+        // Initiate the bridged transfer
+        {
+            depositReserveAsset: {
+                assets: {
+                    Wild: {
+                        AllOf: { id: asset.locationOnAH, fun: "Fungible" },
+                    },
+                },
+                dest: bridgeLocation(ethChainId),
+                xcm: [
+                    {
+                        buyExecution: {
+                            fees: {
+                                id: asset.locationOnEthereum, // CAUTION: Must use reanchored locations.
+                                fun: {
+                                    Fungible: "1", // Offering 1 unit as fee, but it is returned to the beneficiary address.
+                                },
+                            },
+                            weight_limit: "Unlimited",
+                        },
+                    },
+                    {
+                        depositAsset: {
+                            assets: {
+                                Wild: {
+                                    AllCounted: 1,
+                                },
+                            },
+                            beneficiary: {
+                                parents: 0,
+                                interior: { x1: [{ AccountKey20: { key: beneficiary } }] },
+                            },
+                        },
+                    },
+                    {
+                        setTopic: topic,
+                    },
+                ],
+            },
+        },
+        {
+            setTopic: topic,
+        },
+    ]
+}
+
+export function buildParachainPNAReceivedXcmOnDestination(
+    registry: Registry,
+    asset: Asset,
+    transferAmount: bigint,
+    feeInDot: bigint,
+    beneficiary: string,
+    topic: string
+) {
+    let {
+        hexAddress,
+        address: { kind },
+    } = beneficiaryMultiAddress(beneficiary)
+    let beneficiaryLocation
+    switch (kind) {
+        case 1:
+            // 32 byte addresses
+            beneficiaryLocation = { accountId32: { id: hexAddress } }
+            break
+        case 2:
+            // 20 byte addresses
+            beneficiaryLocation = { accountKey20: { key: hexAddress } }
+            break
+        default:
+            throw Error(`Could not parse beneficiary address ${beneficiary}`)
+    }
+    return registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                reserveAssetDeposited: [
+                    {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: feeInDot,
+                        },
+                    },
+                ],
+            },
+            {
+                buyExecution: {
+                    fees: {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: feeInDot,
+                        },
+                    },
+                    weightLimit: "Unlimited",
+                },
+            },
+            {
+                receiveTeleportedAsset: [
+                    {
+                        id: asset.location,
+                        fun: {
+                            Fungible: transferAmount,
+                        },
+                    },
+                ],
+            },
+            { clearOrigin: null },
+            {
+                depositAsset: {
+                    assets: {
+                        wild: {
+                            allCounted: 2,
+                        },
+                    },
+                    beneficiary: {
+                        parents: 0,
+                        interior: { x1: [beneficiaryLocation] },
+                    },
+                },
+            },
+            { setTopic: topic },
+        ],
+    })
+}
+
+export function buildAssetHubPNATransferFromParachain(
+    registry: Registry,
+    ethChainId: number,
+    sourceAccount: string,
+    beneficiary: string,
+    asset: Asset,
+    topic: string,
+    sourceParachainId: number,
+    returnToSenderFeeInDOT: bigint
+) {
+    return registry.createType("XcmVersionedXcm", {
+        v4: buildAssetHubXcmForPNAFromParachain(
+            ethChainId,
+            sourceAccount,
+            beneficiary,
+            asset,
+            topic,
+            sourceParachainId,
+            returnToSenderFeeInDOT
+        ),
     })
 }
