@@ -29,7 +29,9 @@ interface IGatewayV2 {
     event AgentCreated(bytes32 agentID, address agent);
 
     /// Emitted when inbound message has been dispatched
-    event InboundMessageDispatched(uint64 indexed nonce, bool success, bytes32 rewardAddress);
+    event InboundMessageDispatched(
+        uint64 indexed nonce, bytes32 topic, bool success, bytes32 rewardAddress
+    );
 
     /// Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
     event OutboundMessageAccepted(uint64 nonce, Payload payload);
