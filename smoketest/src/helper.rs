@@ -2,9 +2,6 @@ use crate::{
 	constants::*,
 	contracts::i_gateway_v1 as i_gateway,
 	parachains::{
-		bridgehub::{
-			self, api::runtime_types::snowbridge_outbound_queue_primitives::OperatingMode,
-		},
 		relaychain,
 		relaychain::api::runtime_types::{
 			pallet_xcm::pallet::Call as RelaychainPalletXcmCall,
@@ -50,8 +47,8 @@ use subxt::{
 	config::DefaultExtrinsicParams,
 	events::StaticEvent,
 	ext::sp_core::{sr25519::Pair, Pair as PairT},
-	tx::{PairSigner, Payload},
-	utils::{AccountId32, MultiAddress, H160, H256},
+	tx::PairSigner,
+	utils::{AccountId32, MultiAddress, H256},
 	Config, OnlineClient, PolkadotConfig,
 };
 
@@ -236,41 +233,6 @@ pub async fn fund_account(
 	assert_eq!(tx.clone().unwrap().status.unwrap().as_u64(), 1u64);
 	println!("receipt: {:#?}", hex::encode(tx.unwrap().transaction_hash));
 	Ok(())
-}
-
-pub async fn construct_create_agent_call(
-	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let mut encoded = Vec::new();
-	bridgehub::api::ethereum_system::calls::TransactionApi
-		.create_agent()
-		.encode_call_data_to(&bridge_hub_client.metadata(), &mut encoded)?;
-
-	Ok(encoded)
-}
-
-pub async fn construct_create_channel_call(
-	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let mut encoded = Vec::new();
-	bridgehub::api::ethereum_system::calls::TransactionApi
-		.create_channel(OperatingMode::Normal)
-		.encode_call_data_to(&bridge_hub_client.metadata(), &mut encoded)?;
-
-	Ok(encoded)
-}
-
-pub async fn construct_transfer_native_from_agent_call(
-	bridge_hub_client: &Box<OnlineClient<PolkadotConfig>>,
-	recipient: H160,
-	amount: u128,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let mut encoded = Vec::new();
-	bridgehub::api::ethereum_system::calls::TransactionApi
-		.transfer_native_from_agent(recipient, amount)
-		.encode_call_data_to(&bridge_hub_client.metadata(), &mut encoded)?;
-
-	Ok(encoded)
 }
 
 pub async fn governance_bridgehub_call_from_relay_chain(
