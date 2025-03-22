@@ -26,8 +26,11 @@ import { getOperatingStatus, OperationStatus } from "./status"
 import { ApiPromise } from "@polkadot/api"
 import {
     buildAssetHubERC20ReceivedXcm,
+    buildAssetHubPNAReceivedXcm,
     buildParachainERC20ReceivedXcmOnAssetHub,
     buildParachainERC20ReceivedXcmOnDestination,
+    buildParachainPNAReceivedXcmOnAssetHub,
+    buildParachainPNAReceivedXcmOnDestination,
 } from "./xcmBuilder"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
@@ -138,22 +141,41 @@ export async function getDeliveryFee(
     paddFeeByPercentage?: bigint
 ): Promise<DeliveryFee> {
     const { gateway, assetHub, destination } = connections
-    const { destParachain } = resolveInputs(registry, tokenAddress, destinationParaId)
+    const { destParachain, destAssetMetadata } = resolveInputs(
+        registry,
+        tokenAddress,
+        destinationParaId
+    )
 
     let destinationDeliveryFeeDOT = 0n
     let destinationExecutionFeeDOT = 0n
     if (destinationParaId !== registry.assetHubParaId) {
-        const destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
-            destination.registry,
-            registry.ethChainId,
-            "0x0000000000000000000000000000000000000000",
-            340282366920938463463374607431768211455n,
-            340282366920938463463374607431768211455n,
-            destParachain.info.accountType === "AccountId32"
-                ? "0x0000000000000000000000000000000000000000000000000000000000000000"
-                : "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        )
+        let destinationXcm: any
+        if (destAssetMetadata.location) {
+            destinationXcm = buildParachainPNAReceivedXcmOnDestination(
+                destination.registry,
+                destAssetMetadata,
+                340282366920938463463374607431768211455n,
+                340282366920938463463374607431768211455n,
+                destParachain.info.accountType === "AccountId32"
+                    ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+                    : "0x0000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000"
+            )
+        } else {
+            destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
+                destination.registry,
+                registry.ethChainId,
+                "0x0000000000000000000000000000000000000000",
+                340282366920938463463374607431768211455n,
+                340282366920938463463374607431768211455n,
+                destParachain.info.accountType === "AccountId32"
+                    ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+                    : "0x0000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000"
+            )
+        }
+
         destinationDeliveryFeeDOT = await calculateDeliveryFee(
             assetHub,
             destinationParaId,
@@ -314,7 +336,7 @@ export async function validateTransfer(
         }
     }
 
-    if (tokenBalance.gatewayAllowance < amount && !ahAssetMetadata.location) {
+    if (tokenBalance.gatewayAllowance < amount && !destAssetMetadata.location) {
         logs.push({
             kind: ValidationKind.Error,
             reason: ValidationReason.GatewaySpenderLimitReached,
@@ -614,7 +636,7 @@ function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinatio
 
 async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
     const { registry, amount, tokenAddress, beneficiaryAccount, destinationParaId } = transfer.input
-    const { destinationFeeInDOT } = transfer.computed
+    const { destinationFeeInDOT, destAssetMetadata } = transfer.computed
     const bridgeHubLocation = {
         v4: { parents: 1, interior: { x1: [{ parachain: registry.bridgeHubParaId }] } },
     }
@@ -626,27 +648,53 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
         transfer.input.fee.destinationDeliveryFeeDOT +
         transfer.input.fee.destinationExecutionFeeDOT
     if (destinationParaId !== registry.assetHubParaId) {
-        xcm = buildParachainERC20ReceivedXcmOnAssetHub(
-            assetHub.registry,
-            registry.ethChainId,
-            tokenAddress,
-            destinationParaId,
-            amount,
-            assetHubFee,
-            destinationFeeInDOT,
-            beneficiaryAccount,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        )
+        if (destAssetMetadata.location) {
+            xcm = buildParachainPNAReceivedXcmOnAssetHub(
+                assetHub.registry,
+                registry.ethChainId,
+                destAssetMetadata,
+                destinationParaId,
+                amount,
+                assetHubFee,
+                destinationFeeInDOT,
+                beneficiaryAccount,
+                "0x0000000000000000000000000000000000000000000000000000000000000000"
+            )
+        } else {
+            xcm = buildParachainERC20ReceivedXcmOnAssetHub(
+                assetHub.registry,
+                registry.ethChainId,
+                tokenAddress,
+                destinationParaId,
+                amount,
+                assetHubFee,
+                destinationFeeInDOT,
+                beneficiaryAccount,
+                "0x0000000000000000000000000000000000000000000000000000000000000000"
+            )
+        }
     } else {
-        xcm = buildAssetHubERC20ReceivedXcm(
-            assetHub.registry,
-            registry.ethChainId,
-            tokenAddress,
-            amount,
-            assetHubFee,
-            beneficiaryAccount,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        )
+        if (destAssetMetadata.location) {
+            xcm = buildAssetHubPNAReceivedXcm(
+                assetHub.registry,
+                registry.ethChainId,
+                destAssetMetadata,
+                amount,
+                assetHubFee,
+                beneficiaryAccount,
+                "0x0000000000000000000000000000000000000000000000000000000000000000"
+            )
+        } else {
+            xcm = buildAssetHubERC20ReceivedXcm(
+                assetHub.registry,
+                registry.ethChainId,
+                tokenAddress,
+                amount,
+                assetHubFee,
+                beneficiaryAccount,
+                "0x0000000000000000000000000000000000000000000000000000000000000000"
+            )
+        }
     }
     const result = await assetHub.call.dryRunApi.dryRunXcm<
         Result<XcmDryRunEffects, XcmDryRunApiError>
