@@ -15,6 +15,7 @@ export type ERC20Metadata = {
     name: string
     symbol: string
     decimals: number
+    foreignId?: string
 }
 
 export type EthereumChain = {
@@ -77,6 +78,12 @@ export type Asset = {
     decimals: number
     isSufficient: boolean
     xc20?: string
+    // Location on source Parachain
+    location?: any
+    // Location reanchored on AH
+    locationOnAH?: any
+    // Location reanchored on Ethereum
+    locationOnEthereum?: any
 }
 
 export type RegistryOptions = {
@@ -610,9 +617,15 @@ export function getTokenBalance(
     specName: string,
     account: string,
     ethChainId: number,
-    tokenAddress: string
+    tokenAddress: string,
+    asset?: Asset
 ) {
-    return getLocationBalance(provider, specName, erc20Location(ethChainId, tokenAddress), account)
+    return getLocationBalance(
+        provider,
+        specName,
+        asset?.location || erc20Location(ethChainId, tokenAddress),
+        account
+    )
 }
 
 export async function getParachainId(parachain: ApiPromise): Promise<number> {
@@ -969,7 +982,7 @@ async function indexEthChain(
                     decimals: assetHub.assets[token].decimals,
                 }
             } else {
-                assets[token] = await assetErc20Metadata(provider, token)
+                assets[token] = await assetErc20Metadata(provider, token, gatewayAddress)
             }
         }
         if ((await provider.getCode(gatewayAddress)) === undefined) {
@@ -1082,7 +1095,8 @@ const ERC20_METADATA_ABI = [
 
 async function assetErc20Metadata(
     provider: AbstractProvider,
-    token: string
+    token: string,
+    gateway?: string
 ): Promise<ERC20Metadata> {
     const erc20Metadata = new Contract(token, ERC20_METADATA_ABI, provider)
     const [name, symbol, decimals] = await Promise.all([
@@ -1090,7 +1104,20 @@ async function assetErc20Metadata(
         erc20Metadata.symbol(),
         erc20Metadata.decimals(),
     ])
-    return { token, name: String(name), symbol: String(symbol), decimals: Number(decimals) }
+    let metadata: any = {
+        token,
+        name: String(name),
+        symbol: String(symbol),
+        decimals: Number(decimals),
+    }
+    if (gateway) {
+        let gatewayCon = IGateway__factory.connect(gateway, provider)
+        let tokenId = await gatewayCon.queryForeignTokenID(token)
+        if (tokenId != "0x0000000000000000000000000000000000000000000000000000000000000000") {
+            metadata.foreignId = tokenId
+        }
+    }
+    return metadata
 }
 
 function getTokenFromLocation(location: any, chainId: number) {
@@ -1156,6 +1183,21 @@ function addOverrides(envName: string, result: RegistryOptions) {
                 ],
             }
             break
+        }
+        case "westend_sepolia": {
+            result.assetOverrides = {
+                "1000": [
+                    {
+                        token: "0xF50fb50d65C8C1f6c72E4D8397c984933AfC8F7e".toLowerCase(),
+                        name: "WND",
+                        minimumBalance: 1n,
+                        symbol: "WND",
+                        decimals: 18,
+                        isSufficient: true,
+                        location: DOT_LOCATION,
+                    },
+                ],
+            }
         }
     }
 }

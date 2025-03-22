@@ -588,7 +588,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             },
             RELAY_CHAIN_URL: "https://westend-rpc.polkadot.io",
             PARACHAINS: {
-                "1000": "wss://westend-asset-hub-rpc.polkadot.io",
+                "1000": "https://asset-hub-westend.dotters.network",
                 "1002": "https://westend-bridge-hub-rpc.polkadot.io",
             },
             GATEWAY_CONTRACT: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
