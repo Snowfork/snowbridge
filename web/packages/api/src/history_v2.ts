@@ -163,7 +163,7 @@ const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult 
             result.status = TransferStatus.Failed
         }
     }
-    
+
     if (transfer.toDestination) {
         result.destinationReceived = {
             event_index: getEventIndex(transfer.toDestination.id),

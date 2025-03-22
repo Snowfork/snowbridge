@@ -1,14 +1,8 @@
 import { Keyring } from "@polkadot/keyring"
-import {
-    Context,
-    environment,
-    toEthereum,
-    toPolkadot,
-} from "@snowbridge/api"
+import { Context, environment, toEthereum, toPolkadot } from "@snowbridge/api"
 import { WETH9__factory } from "@snowbridge/contract-types"
 import { AbstractProvider, Wallet } from "ethers"
-import { cryptoWaitReady } from '@polkadot/util-crypto';
-
+import { cryptoWaitReady } from "@polkadot/util-crypto"
 
 const monitor = async () => {
     let env = "local_e2e"
@@ -26,8 +20,10 @@ const monitor = async () => {
 
     const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
     const ethChains: { [ethChainId: string]: string | AbstractProvider } = {}
-    Object.keys(config.ETHEREUM_CHAINS)
-        .forEach(ethChainId => ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
+    Object.keys(config.ETHEREUM_CHAINS).forEach(
+        (ethChainId) =>
+            (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
+    )
     const context = new Context({
         environment: name,
         ethereum: {
@@ -72,14 +68,19 @@ const monitor = async () => {
         const approveResult = await weth9.approve(config.GATEWAY_CONTRACT, amount * 2n)
         const approveReceipt = await approveResult.wait()
 
-        console.log('deposit tx', depositReceipt?.hash, 'approve tx', approveReceipt?.hash)
+        console.log("deposit tx", depositReceipt?.hash, "approve tx", approveReceipt?.hash)
     }
 
     console.log("# Ethereum to Asset Hub")
     {
         const destinationChainId = 1000
         const destinationFeeInDOT = 0n
-        const totalFee = await toPolkadot.getSendFee(context, WETH_CONTRACT, destinationChainId, destinationFeeInDOT)
+        const totalFee = await toPolkadot.getSendFee(
+            context,
+            WETH_CONTRACT,
+            destinationChainId,
+            destinationFeeInDOT
+        )
         const { tx } = await toPolkadot.createTx(
             context.config.appContracts.gateway,
             ETHEREUM_ACCOUNT_PUBLIC,
@@ -88,11 +89,11 @@ const monitor = async () => {
             destinationChainId,
             amount,
             totalFee,
-            destinationFeeInDOT,
-        );
-        console.log('Plan tx:', tx)
-        console.log('Plan gas:', await context.ethereum().estimateGas(tx))
-        console.log('Plan dry run:', await context.ethereum().call(tx))
+            destinationFeeInDOT
+        )
+        console.log("Plan tx:", tx)
+        console.log("Plan gas:", await context.ethereum().estimateGas(tx))
+        console.log("Plan dry run:", await context.ethereum().call(tx))
 
         const plan = await toPolkadot.validateSend(
             context,
@@ -121,21 +122,25 @@ const monitor = async () => {
     {
         const assetHubUnsigned = await toEthereum.createTx(
             await context.assetHub(),
-            (await context.ethereum().getNetwork()).chainId,
+            (
+                await context.ethereum().getNetwork()
+            ).chainId,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
             WETH_CONTRACT,
             amount
-        );
-        console.log('call: ', assetHubUnsigned.tx.inner.toHex())
-        console.log('utx: ', assetHubUnsigned.tx.toHex())
-        console.log('payment: ', (await assetHubUnsigned.tx.paymentInfo(POLKADOT_ACCOUNT)).toHuman())
-        console.log('dryRun: ', (
-            await assetHubUnsigned.tx.dryRun(
-                POLKADOT_ACCOUNT,
-                { withSignedTransaction: true }
-            )
-        ).toHuman()
+        )
+        console.log("call: ", assetHubUnsigned.tx.inner.toHex())
+        console.log("utx: ", assetHubUnsigned.tx.toHex())
+        console.log(
+            "payment: ",
+            (await assetHubUnsigned.tx.paymentInfo(POLKADOT_ACCOUNT)).toHuman()
+        )
+        console.log(
+            "dryRun: ",
+            (
+                await assetHubUnsigned.tx.dryRun(POLKADOT_ACCOUNT, { withSignedTransaction: true })
+            ).toHuman()
         )
 
         const plan = await toEthereum.validateSend(
@@ -164,7 +169,12 @@ const monitor = async () => {
     {
         const destinationChainId = 2000
         const destinationFeeInDOT = 4_000_000_000n
-        const totalFee = await toPolkadot.getSendFee(context, WETH_CONTRACT, destinationChainId, destinationFeeInDOT)
+        const totalFee = await toPolkadot.getSendFee(
+            context,
+            WETH_CONTRACT,
+            destinationChainId,
+            destinationFeeInDOT
+        )
         const { tx } = await toPolkadot.createTx(
             context.config.appContracts.gateway,
             ETHEREUM_ACCOUNT_PUBLIC,
@@ -173,11 +183,11 @@ const monitor = async () => {
             destinationChainId,
             amount,
             totalFee,
-            destinationFeeInDOT,
-        );
-        console.log('Plan tx:', tx)
-        console.log('Plan gas:', await context.ethereum().estimateGas(tx))
-        console.log('Plan Dry run:', await context.ethereum().call(tx))
+            destinationFeeInDOT
+        )
+        console.log("Plan tx:", tx)
+        console.log("Plan gas:", await context.ethereum().estimateGas(tx))
+        console.log("Plan Dry run:", await context.ethereum().call(tx))
 
         const plan = await toPolkadot.validateSend(
             context,
@@ -206,21 +216,25 @@ const monitor = async () => {
     {
         const assetHubUnsigned = await toEthereum.createTx(
             await context.assetHub(),
-            (await context.ethereum().getNetwork()).chainId,
+            (
+                await context.ethereum().getNetwork()
+            ).chainId,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
             WETH_CONTRACT,
             amount
-        );
-        console.log('call: ', assetHubUnsigned.tx.inner.toHex())
-        console.log('utx: ', assetHubUnsigned.tx.toHex())
-        console.log('payment: ', (await assetHubUnsigned.tx.paymentInfo(POLKADOT_ACCOUNT)).toHuman())
-        console.log('dryRun: ', (
-            await assetHubUnsigned.tx.dryRun(
-                POLKADOT_ACCOUNT,
-                { withSignedTransaction: true }
-            )
-        ).toHuman()
+        )
+        console.log("call: ", assetHubUnsigned.tx.inner.toHex())
+        console.log("utx: ", assetHubUnsigned.tx.toHex())
+        console.log(
+            "payment: ",
+            (await assetHubUnsigned.tx.paymentInfo(POLKADOT_ACCOUNT)).toHuman()
+        )
+        console.log(
+            "dryRun: ",
+            (
+                await assetHubUnsigned.tx.dryRun(POLKADOT_ACCOUNT, { withSignedTransaction: true })
+            ).toHuman()
         )
 
         const plan = await toEthereum.validateSend(
@@ -233,7 +247,9 @@ const monitor = async () => {
         )
         console.log("Plan:", plan, plan.failure?.errors)
 
-        const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan, { sourceParachainFee: 15_000_000_000n })
+        const result = await toEthereum.send(context, POLKADOT_ACCOUNT, plan, {
+            sourceParachainFee: 15_000_000_000n,
+        })
         console.log("Execute:", result)
         while (true) {
             const { status } = await toEthereum.trackSendProgressPolling(context, result)

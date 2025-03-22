@@ -127,9 +127,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		case <-ctx.Done():
 			return nil
 		case <-time.After(60 * time.Second):
-			log.WithFields(log.Fields{
-				"channelId": r.config.Source.ChannelID,
-			}).Info("Polling Nonces")
+			log.Info("Polling Nonces")
 
 			ethNonce, err := r.fetchEthereumNonce(ctx)
 			if err != nil {
@@ -142,7 +140,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 			}
 
 			log.WithFields(log.Fields{
-				"channelId":           types.H256(r.config.Source.ChannelID).Hex(),
 				"paraNonces":          paraNonces,
 				"ethNonce":            ethNonce,
 				"instantVerification": r.config.InstantVerification,

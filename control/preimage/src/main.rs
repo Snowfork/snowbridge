@@ -61,6 +61,8 @@ pub enum Command {
     TreasuryProposal2024(TreasuryProposal2024Args),
     /// Governance update 202501
     GovUpdate202501(GovUpdate202501Args),
+    /// Register PNA
+    RegisterPnaBatch202503,
 }
 
 #[derive(Debug, Args)]
@@ -470,6 +472,17 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ah_set_pricing_call,
                 ah_register_ether_call,
             ])
+        }
+        Command::RegisterPnaBatch202503 => {
+            #[cfg(not(feature = "polkadot"))]
+            panic!("RegisterPnaBatch202503 only for polkadot runtime.");
+
+            #[cfg(feature = "polkadot")]
+            {
+                let reg_call =
+                    send_xcm_bridge_hub(&context, commands::token_registrations()).await?;
+                reg_call
+            }
         }
     };
 
