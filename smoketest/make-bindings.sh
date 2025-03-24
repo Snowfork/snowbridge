@@ -2,6 +2,7 @@
 
 set -eu
 
+rm -rf src/contracts
 mkdir -p src/contracts
 
 # Generate Rust bindings for contracts
