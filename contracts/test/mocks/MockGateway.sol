@@ -4,7 +4,8 @@ pragma solidity 0.8.28;
 import {Gateway} from "../../src/Gateway.sol";
 import {ChannelID, ParaID, OperatingMode} from "../../src/Types.sol";
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
-import {Verification} from "../../src/Verification.sol";
+import {ParachainVerification} from "../../src/ParachainVerification.sol";
+import {BeefyVerification} from "../../src/BeefyVerification.sol";
 import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 
 import {UD60x18} from "prb/math/src/UD60x18.sol";
@@ -51,14 +52,23 @@ contract MockGateway is Gateway {
         commitmentsAreVerified = value;
     }
 
-    function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
+    function _buildHeadersRoot(bytes32, ParachainVerification.Proof calldata)
+        internal
+        pure
+        override
+        returns (bytes32)
+    {
+        return bytes32(0);
+    }
+
+    function _verifyBeefyProof(bytes32 parachainHeadersRoot, BeefyVerification.Proof calldata beefyProof)
         internal
         view
         override
         returns (bool)
     {
         if (BEEFY_CLIENT != address(0)) {
-            return super._verifyCommitment(commitment, proof);
+            return super._verifyBeefyProof(parachainHeadersRoot, beefyProof);
         } else {
             // for unit tests, verification is set with commitmentsAreVerified
             return commitmentsAreVerified;

@@ -7,9 +7,8 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {console} from "forge-std/console.sol";
 
 import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
-import {IGateway} from "../src/interfaces/IGateway.sol";
-import {Verification} from "../src/Verification.sol";
-import {Gateway} from "../src/Gateway.sol";
+import {IGateway} from "../src/upgrades/IGateway20250324.sol";
+import {Verification} from "../src/upgrades/Verification20250324.sol";
 import {Gateway202502} from "../src/upgrades/Gateway202502.sol";
 import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {UpgradeParams, SetOperatingModeParams, OperatingMode, RegisterForeignTokenParams} from "../src/Params.sol";
@@ -23,15 +22,19 @@ contract ForkUpgradeTest is Test {
     address private constant VERIFICATION_ADDR = 0x515c0817005b2F3383B7D8837d6DCc15c0d71C56;
     bytes32 private constant BRIDGE_HUB_AGENT_ID = 0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314;
 
-    ChannelID constant internal PRIMARY_GOVERNANCE_CHANNEL = ChannelID.wrap(0x0000000000000000000000000000000000000000000000000000000000000001);
-    ChannelID constant internal SECONDARY_GOVERNANCE_CHANNEL = ChannelID.wrap(0x0000000000000000000000000000000000000000000000000000000000000002);
+    ChannelID internal constant PRIMARY_GOVERNANCE_CHANNEL =
+        ChannelID.wrap(0x0000000000000000000000000000000000000000000000000000000000000001);
+    ChannelID internal constant SECONDARY_GOVERNANCE_CHANNEL =
+        ChannelID.wrap(0x0000000000000000000000000000000000000000000000000000000000000002);
 
     uint256 mainnetForkBlock21945142;
     uint256 mainnetForkBlock21960630;
 
     function setUp() public {
-        mainnetForkBlock21945142 = vm.createFork("https://rpc.tenderly.co/fork/cdff755d-46fc-47e2-8a9d-b1269fa86e72", 21945142);
-        mainnetForkBlock21960630 = vm.createFork("https://rpc.tenderly.co/fork/f0404b3b-e58f-4429-88b6-ea87414be30c", 21960630);
+        mainnetForkBlock21945142 =
+            vm.createFork("https://rpc.tenderly.co/fork/cdff755d-46fc-47e2-8a9d-b1269fa86e72", 21945142);
+        mainnetForkBlock21960630 =
+            vm.createFork("https://rpc.tenderly.co/fork/f0404b3b-e58f-4429-88b6-ea87414be30c", 21960630);
     }
 
     // Submit a cross-chain message to the upgraded Gateway, using a real-world data
@@ -55,11 +58,8 @@ contract ForkUpgradeTest is Test {
         );
 
         // Prepare upgrade command
-        UpgradeParams memory params = UpgradeParams({
-            impl: address(newLogic),
-            implCodeHash: address(newLogic).codehash,
-            initParams: bytes("")
-        });
+        UpgradeParams memory params =
+            UpgradeParams({impl: address(newLogic), implCodeHash: address(newLogic).codehash, initParams: bytes("")});
 
         (bytes32[] memory proof1, Verification.Proof memory proof2) = ForkTestFixtures.makeMockProofs();
         (uint64 nonce,) = IGateway(GATEWAY_PROXY).channelNoncesOf(PRIMARY_GOVERNANCE_CHANNEL);
@@ -83,26 +83,20 @@ contract ForkUpgradeTest is Test {
             proof2
         );
 
-        SubmitMessageFixture memory fixture = ForkTestFixtures.makeSubmitMessageFixture("/test/data/mainnet-gateway-submitv1.json");
+        SubmitMessageFixture memory fixture =
+            ForkTestFixtures.makeSubmitMessageFixture("/test/data/mainnet-gateway-submitv1.json");
 
         // Expect the gateway to emit InboundMessageDispatched event
         vm.expectEmit(true, true, true, true);
         emit IGateway.InboundMessageDispatched(
-            fixture.message.channelID,
-            fixture.message.nonce,
-            fixture.message.id,
-            true
+            fixture.message.channelID, fixture.message.nonce, fixture.message.id, true
         );
 
         address relayer = makeAddr("relayer");
         vm.deal(relayer, 10 ether);
 
         vm.prank(relayer);
-        IGateway(address(GATEWAY_PROXY)).submitV1(
-            fixture.message,
-            fixture.leafProof,
-            fixture.headerProof
-        );
+        IGateway(address(GATEWAY_PROXY)).submitV1(fixture.message, fixture.leafProof, fixture.headerProof);
     }
 
     // Test the upgrade with the new gateway implementation contract: 0x4a4559CCD9195C3CABBd4Da00854A434E8dd2Ea3

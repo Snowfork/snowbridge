@@ -3,8 +3,7 @@
 pragma solidity 0.8.28;
 
 import {OperatingMode, InboundMessage, ParaID, ChannelID, MultiAddress} from "../Types.sol";
-import {ParachainVerification} from "../ParachainVerification.sol";
-import {BeefyVerification} from "../BeefyVerification.sol";
+import {Verification} from "../upgrades/Verification20250324.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 interface IGateway {
@@ -66,9 +65,8 @@ interface IGateway {
     // Submit a message from a Polkadot network
     function submitV1(
         InboundMessage calldata message,
-        bytes32[] calldata messageProof,
-        ParachainVerification.Proof calldata headerProof,
-        BeefyVerification.Proof calldata beefyProof
+        bytes32[] calldata leafProof,
+        Verification.Proof calldata headerProof
     ) external;
 
     /**

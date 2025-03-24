@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.28;
 
-import "../../Gateway.sol";
+import "../Gateway20250324.sol";
 
 // New `Gateway` logic contract with updated Token contract
 contract Gateway20250311 is Gateway {

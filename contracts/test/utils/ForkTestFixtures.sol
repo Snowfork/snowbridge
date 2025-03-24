@@ -7,7 +7,7 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {console} from "forge-std/console.sol";
 
 import {IUpgradable} from "../../src/interfaces/IUpgradable.sol";
-import {Verification} from "../../src/Verification.sol";
+import {Verification} from "../../src/upgrades/Verification20250324.sol";
 import {UpgradeParams, SetOperatingModeParams, OperatingMode, RegisterForeignTokenParams} from "../../src/Params.sol";
 import {ChannelID, ParaID, OperatingMode, InboundMessage, Command, TokenInfo} from "../../src/Types.sol";
 
@@ -20,7 +20,7 @@ struct SubmitMessageFixture {
 library ForkTestFixtures {
     using stdJson for string;
 
-    Vm constant public vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+    Vm public constant vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     // Make mock proofs for the upgrade message
     function makeMockProofs() internal pure returns (bytes32[] memory, Verification.Proof memory) {
@@ -96,11 +96,8 @@ library ForkTestFixtures {
             leafProofOrder: uint256(data.readUint(".input.headerProof.leafProofOrder"))
         });
 
-        SubmitMessageFixture memory fixture = SubmitMessageFixture({
-            message: message,
-            leafProof: leafProof,
-            headerProof: headerProof
-        });
+        SubmitMessageFixture memory fixture =
+            SubmitMessageFixture({message: message, leafProof: leafProof, headerProof: headerProof});
 
         return fixture;
     }
@@ -143,5 +140,4 @@ library ForkTestFixtures {
         (DigestItem[] memory items) = abi.decode(digestItems, (DigestItem[]));
         return items;
     }
-
 }

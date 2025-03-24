@@ -18,7 +18,8 @@ import {GatewayProxy} from "../src/GatewayProxy.sol";
 
 import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {Agent} from "../src/Agent.sol";
-import {Verification} from "../src/Verification.sol";
+import {ParachainVerification} from "../src/ParachainVerification.sol";
+import {BeefyVerification} from "../src/BeefyVerification.sol";
 import {Assets} from "../src/Assets.sol";
 import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 import {MultiAddress} from "../src/MultiAddress.sol";
@@ -192,17 +193,22 @@ contract GatewayTest is Test {
         return (Command.TransferNativeFromAgent, abi.encode(params));
     }
 
-    function makeMockProof() public pure returns (Verification.Proof memory) {
-        return Verification.Proof({
-            header: Verification.ParachainHeader({
+    function makeMockHeaderProof() public pure returns (ParachainVerification.Proof memory) {
+        return ParachainVerification.Proof({
+            header: ParachainVerification.ParachainHeader({
                 parentHash: bytes32(0),
                 number: 0,
                 stateRoot: bytes32(0),
                 extrinsicsRoot: bytes32(0),
-                digestItems: new Verification.DigestItem[](0)
+                digestItems: new ParachainVerification.DigestItem[](0)
             }),
-            headProof: Verification.HeadProof({pos: 0, width: 0, proof: new bytes32[](0)}),
-            leafPartial: Verification.MMRLeafPartial({
+            headProof: ParachainVerification.HeadProof({pos: 0, width: 0, proof: new bytes32[](0)})
+        });
+    }
+
+    function makeMockBeefyProof() public pure returns (BeefyVerification.Proof memory) {
+        return BeefyVerification.Proof({
+            leafPartial: BeefyVerification.MMRLeafPartial({
                 version: 0,
                 parentNumber: 0,
                 parentHash: bytes32(0),
@@ -233,7 +239,8 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
-            makeMockProof()
+            makeMockHeaderProof(),
+            makeMockBeefyProof()
         );
     }
 
@@ -262,7 +269,8 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
-            makeMockProof()
+            makeMockHeaderProof(),
+            makeMockBeefyProof()
         );
 
         assertEq(token.balanceOf(assetHubAgent), 0);
@@ -294,7 +302,8 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
-            makeMockProof()
+            makeMockHeaderProof(),
+            makeMockBeefyProof()
         );
 
         assertEq(token.balanceOf(assetHubAgent), 0);
@@ -321,7 +330,8 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
-            makeMockProof()
+            makeMockHeaderProof(),
+            makeMockBeefyProof()
         );
 
         assertEq(assetHubAgent.balance, 0);
@@ -347,7 +357,8 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
-            makeMockProof()
+            makeMockHeaderProof(),
+            makeMockBeefyProof()
         );
 
         assertEq(assetHubAgent.balance, 0);
@@ -361,7 +372,8 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
-            makeMockProof()
+            makeMockHeaderProof(),
+            makeMockBeefyProof()
         );
 
         // try to replay the message
@@ -370,7 +382,8 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
-            makeMockProof()
+            makeMockHeaderProof(),
+            makeMockBeefyProof()
         );
     }
 
@@ -382,7 +395,8 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitV1(
             InboundMessage(ParaID.wrap(42).into(), 1, command, "", maxDispatchGas, maxRefund, reward, messageID),
             proof,
-            makeMockProof()
+            makeMockHeaderProof(),
+            makeMockBeefyProof()
         );
     }
 
@@ -396,7 +410,8 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
-            makeMockProof()
+            makeMockHeaderProof(),
+            makeMockBeefyProof()
         );
     }
 
@@ -436,7 +451,8 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
-            makeMockProof()
+            makeMockHeaderProof(),
+            makeMockBeefyProof()
         );
         uint256 endGas = gasleft();
         uint256 estimatedActualRefundAmount = (startGas - endGas) * tx.gasprice;
@@ -465,7 +481,8 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
-            makeMockProof()
+            makeMockHeaderProof(),
+            makeMockBeefyProof()
         );
 
         assertEq(address(assetHubAgent).balance, 0 ether);
@@ -791,7 +808,8 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
-            makeMockProof()
+            makeMockHeaderProof(),
+            makeMockBeefyProof()
         );
 
         assertEq(address(assetHubAgent).balance, amount);
@@ -1027,7 +1045,8 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, 1, maxRefund, reward, messageID),
             proof,
-            makeMockProof()
+            makeMockHeaderProof(),
+            makeMockBeefyProof()
         );
     }
 
