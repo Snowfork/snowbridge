@@ -1,0 +1,131 @@
+{
+  "environment": "local_e2e",
+  "ethChainId": 11155111,
+  "gatewayAddress": "0xb1185ede04202fe62d38f5db72f71e38ff3e8305",
+  "assetHubParaId": 1000,
+  "bridgeHubParaId": 1002,
+  "relaychain": {
+    "tokenSymbols": "undefined",
+    "tokenDecimals": null,
+    "ss58Format": 42,
+    "isEthereum": false,
+    "accountType": "AccountId32",
+    "name": "Westend Local Testnet",
+    "specName": "westend",
+    "specVersion": 1017001
+  },
+  "bridgeHub": {
+    "tokenSymbols": "WND",
+    "tokenDecimals": 12,
+    "ss58Format": 42,
+    "isEthereum": false,
+    "accountType": "AccountId32",
+    "name": "Westend BridgeHub Local",
+    "specName": "bridge-hub-westend",
+    "specVersion": 1017001
+  },
+  "ethereumChains": {
+    "11155111": {
+      "chainId": 11155111,
+      "assets": {
+        "0x0000000000000000000000000000000000000000": {
+          "token": "0x0000000000000000000000000000000000000000",
+          "name": "",
+          "symbol": "",
+          "decimals": 0
+        },
+        "0xb8ea8cb425d85536b158d661da1ef0895bb92f1d": {
+          "token": "0xb8ea8cb425d85536b158d661da1ef0895bb92f1d",
+          "name": "Wrapped Ether",
+          "symbol": "WETH",
+          "decimals": 18
+        },
+        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
+          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
+          "name": "wnd\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001",
+          "symbol": "wnd\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001",
+          "decimals": 12,
+          "foreignId": "0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7"
+        }
+      },
+      "id": "sepolia"
+    }
+  },
+  "parachains": {
+    "1000": {
+      "parachainId": 1000,
+      "features": {
+        "hasPalletXcm": true,
+        "hasDryRunApi": true,
+        "hasTxPaymentApi": true,
+        "hasDryRunRpc": true,
+        "hasXcmPaymentApi": true
+      },
+      "info": {
+        "tokenSymbols": "WND",
+        "tokenDecimals": 12,
+        "ss58Format": 42,
+        "isEthereum": false,
+        "accountType": "AccountId32",
+        "name": "Westend Asset Hub Local",
+        "specName": "westmint",
+        "specVersion": 1017007
+      },
+      "assets": {
+        "0x0000000000000000000000000000000000000000": {
+          "token": "0x0000000000000000000000000000000000000000",
+          "name": "",
+          "minimumBalance": "bigint:1",
+          "symbol": "",
+          "decimals": 0,
+          "isSufficient": true
+        },
+        "0xb8ea8cb425d85536b158d661da1ef0895bb92f1d": {
+          "token": "0xb8ea8cb425d85536b158d661da1ef0895bb92f1d",
+          "name": "",
+          "minimumBalance": "bigint:1",
+          "symbol": "",
+          "decimals": 0,
+          "isSufficient": false
+        },
+        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
+          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
+          "name": "WND",
+          "minimumBalance": "bigint:1",
+          "symbol": "WND",
+          "decimals": 18,
+          "isSufficient": true,
+          "location": {
+            "parents": 1,
+            "interior": "Here"
+          }
+        }
+      },
+      "estimatedExecutionFeeDOT": "bigint:0",
+      "estimatedDeliveryFeeDOT": "bigint:0"
+    },
+    "2000": {
+      "parachainId": 2000,
+      "features": {
+        "hasPalletXcm": true,
+        "hasDryRunApi": true,
+        "hasTxPaymentApi": true,
+        "hasDryRunRpc": true,
+        "hasXcmPaymentApi": true
+      },
+      "info": {
+        "tokenSymbols": "undefined",
+        "tokenDecimals": null,
+        "ss58Format": 42,
+        "isEthereum": false,
+        "accountType": "AccountId32",
+        "name": "Penpal Parachain",
+        "specName": "penpal-parachain",
+        "specVersion": 1
+      },
+      "assets": {},
+      "estimatedExecutionFeeDOT": "bigint:3276800000",
+      "estimatedDeliveryFeeDOT": "bigint:31450000000"
+    }
+  }
+}

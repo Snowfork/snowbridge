@@ -641,13 +641,19 @@ export async function calculateDestinationFee(provider: ApiPromise, destinationX
         throw Error(`Can not query XCM Weight.`)
     }
 
-    const feeInDot = (
+    let feeInDot: any
+    feeInDot = (
         await provider.call.xcmPaymentApi.queryWeightToAssetFee(weight.ok, {
             v4: { parents: 1, interior: "Here" },
         })
     ).toPrimitive() as any
     if (!feeInDot.ok) {
-        throw Error(`Can not convert weight to fee in DOT.`)
+        feeInDot = (
+            await provider.call.xcmPaymentApi.queryWeightToAssetFee(weight.ok, {
+                v5: { parents: 1, interior: "Here" },
+            })
+        ).toPrimitive() as any
+        if (!feeInDot.ok) throw Error(`Can not convert weight to fee in DOT.`)
     }
     const executionFee = BigInt(feeInDot.ok.toString())
 
@@ -878,7 +884,7 @@ async function indexParachain(
     }
 
     if (Object.keys(assets).length === 0) {
-        throw Error(
+        console.warn(
             `Cannot discover assets for ${info.specName} (parachain ${parachainId}). Please add a handler for that runtime or add overrides.`
         )
     }
@@ -1198,6 +1204,23 @@ function addOverrides(envName: string, result: RegistryOptions) {
                     },
                 ],
             }
+            break
+        }
+        case "local_e2e": {
+            result.assetOverrides = {
+                "1000": [
+                    {
+                        token: "0xDe45448Ca2d57797c0BEC0ee15A1E42334744219".toLowerCase(),
+                        name: "WND",
+                        minimumBalance: 1n,
+                        symbol: "WND",
+                        decimals: 18,
+                        isSufficient: true,
+                        location: DOT_LOCATION,
+                    },
+                ],
+            }
+            break
         }
     }
 }
