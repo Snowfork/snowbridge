@@ -119,7 +119,10 @@ const transfer = async () => {
     )
 
     const assets = registry.ethereumChains[registry.ethChainId].assets
-    const WND_CONTRACT = "0xF50fb50d65C8C1f6c72E4D8397c984933AfC8F7e"
+
+    const WND_CONTRACT = Object.values(assets).find((t) =>
+        t.name.toLowerCase().startsWith("wnd")
+    )!.token
 
     console.log("Asset Hub to Ethereum")
     {
