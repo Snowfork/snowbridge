@@ -126,7 +126,7 @@ const transfer = async () => {
 
     console.log("Penpal to Ethereum")
     {
-        const sourceParaId = 1000
+        const sourceParaId = 2000
         // Step 1. Get the delivery fee for the transaction
         const fee = await toEthereumV2.getDeliveryFee(
             { assetHub: await context.assetHub(), source: await context.parachain(sourceParaId) },

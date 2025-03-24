@@ -84,6 +84,7 @@ export type Asset = {
     locationOnAH?: any
     // Location reanchored on Ethereum
     locationOnEthereum?: any
+    assetId?: number
 }
 
 export type RegistryOptions = {
@@ -533,7 +534,8 @@ export async function getLocationBalance(
     provider: ApiPromise,
     specName: string,
     location: any,
-    account: string
+    account: string,
+    assetId?: number
 ): Promise<bigint> {
     switch (specName) {
         case "basilisk":
@@ -549,7 +551,19 @@ export async function getLocationBalance(
             ).toPrimitive() as any
             return BigInt(accountData?.free ?? 0n)
         }
-        case "penpal-parachain":
+        case "penpal-parachain": {
+            let accountData: any
+            if (assetId) {
+                accountData = (
+                    await provider.query.assets.account(assetId, account)
+                ).toPrimitive() as any
+            } else {
+                accountData = (
+                    await provider.query.foreignAssets.account(location, account)
+                ).toPrimitive() as any
+            }
+            return BigInt(accountData?.balance ?? 0n)
+        }
         case "asset-hub-paseo":
         case "westmint":
         case "statemint": {
@@ -624,7 +638,8 @@ export function getTokenBalance(
         provider,
         specName,
         asset?.location || erc20Location(ethChainId, tokenAddress),
-        account
+        account,
+        asset?.assetId
     )
 }
 
@@ -1245,6 +1260,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         symbol: "pal-2",
                         decimals: 18,
                         isSufficient: true,
+                        assetId: 2,
                         location: {
                             parents: 0,
                             interior: { x2: [{ palletInstance: 50 }, { generalIndex: 2 }] },

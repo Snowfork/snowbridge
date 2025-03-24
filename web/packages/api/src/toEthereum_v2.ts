@@ -564,22 +564,26 @@ export async function validateTransfer(
 
     const logs: ValidationLog[] = []
 
-    const [nativeBalance, dotBalance, tokenBalance] = await Promise.all([
+    const [nativeBalance, dotBalance] = await Promise.all([
         getNativeBalance(sourceParachain, sourceAccountHex),
         getDotBalance(sourceParachain, source.info.specName, sourceAccountHex),
-        // Fetch the token balance, except in the case of DOT, where it falls back to the native balance.
+    ])
+    let tokenBalance: any
+    if (
         transfer.computed.ahAssetMetadata.location?.parents == DOT_LOCATION.parents &&
         transfer.computed.ahAssetMetadata.location?.interior == DOT_LOCATION.interior
-            ? getNativeBalance(sourceParachain, sourceAccountHex)
-            : getTokenBalance(
-                  sourceParachain,
-                  source.info.specName,
-                  sourceAccountHex,
-                  registry.ethChainId,
-                  tokenAddress,
-                  sourceAssetMetadata
-              ),
-    ])
+    ) {
+        tokenBalance = await getNativeBalance(sourceParachain, sourceAccountHex)
+    } else {
+        tokenBalance = await getTokenBalance(
+            sourceParachain,
+            source.info.specName,
+            sourceAccountHex,
+            registry.ethChainId,
+            tokenAddress,
+            sourceAssetMetadata
+        )
+    }
 
     if (amount > tokenBalance) {
         logs.push({
@@ -1322,12 +1326,12 @@ function createPNASourceParachainTx(
     const assets = {
         v4: [
             {
-                id: DOT_LOCATION,
-                fun: { Fungible: totalFeeInDot },
-            },
-            {
                 id: asset.location,
                 fun: { Fungible: amount },
+            },
+            {
+                id: DOT_LOCATION,
+                fun: { Fungible: totalFeeInDot },
             },
         ],
     }

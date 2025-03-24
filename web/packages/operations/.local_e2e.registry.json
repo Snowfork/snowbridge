@@ -148,6 +148,7 @@
           "symbol": "pal-2",
           "decimals": 18,
           "isSufficient": true,
+          "assetId": 2,
           "location": {
             "parents": 0,
             "interior": {
