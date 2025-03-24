@@ -1211,12 +1211,70 @@ function addOverrides(envName: string, result: RegistryOptions) {
                 "1000": [
                     {
                         token: "0xDe45448Ca2d57797c0BEC0ee15A1E42334744219".toLowerCase(),
-                        name: "WND",
+                        name: "wnd",
                         minimumBalance: 1n,
-                        symbol: "WND",
+                        symbol: "wnd",
                         decimals: 18,
                         isSufficient: true,
                         location: DOT_LOCATION,
+                    },
+                    {
+                        token: "0xD8597EB7eF761E3315623EdFEe9DEfcBACd72e8b".toLowerCase(),
+                        name: "pal-2",
+                        minimumBalance: 1n,
+                        symbol: "pal-2",
+                        decimals: 18,
+                        isSufficient: true,
+                        location: {
+                            parents: 1,
+                            interior: {
+                                x3: [
+                                    { parachain: 2000 },
+                                    { palletInstance: 50 },
+                                    { generalIndex: 2 },
+                                ],
+                            },
+                        },
+                    },
+                ],
+                "2000": [
+                    {
+                        token: "0xD8597EB7eF761E3315623EdFEe9DEfcBACd72e8b".toLowerCase(),
+                        name: "pal-2",
+                        minimumBalance: 1n,
+                        symbol: "pal-2",
+                        decimals: 18,
+                        isSufficient: true,
+                        location: {
+                            parents: 0,
+                            interior: { x2: [{ palletInstance: 50 }, { generalIndex: 2 }] },
+                        },
+                        locationOnAH: {
+                            parents: 1,
+                            interior: {
+                                x3: [
+                                    { parachain: 2000 },
+                                    { palletInstance: 50 },
+                                    { generalIndex: 2 },
+                                ],
+                            },
+                        },
+                        locationOnEthereum: {
+                            parents: 1,
+                            interior: {
+                                x4: [
+                                    {
+                                        globalConsensus: {
+                                            byGenesis:
+                                                "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e",
+                                        },
+                                    },
+                                    { parachain: 2000 },
+                                    { palletInstance: 50 },
+                                    { generalIndex: 2 },
+                                ],
+                            },
+                        },
                     },
                 ],
             }

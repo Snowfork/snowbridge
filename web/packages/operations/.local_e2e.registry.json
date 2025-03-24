@@ -34,18 +34,19 @@
           "symbol": "",
           "decimals": 0
         },
-        "0xb8ea8cb425d85536b158d661da1ef0895bb92f1d": {
-          "token": "0xb8ea8cb425d85536b158d661da1ef0895bb92f1d",
-          "name": "Wrapped Ether",
-          "symbol": "WETH",
-          "decimals": 18
-        },
         "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
           "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
-          "name": "wnd\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001",
-          "symbol": "wnd\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001",
+          "name": "wnd",
+          "symbol": "wnd",
           "decimals": 12,
           "foreignId": "0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7"
+        },
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
+          "name": "pal-2",
+          "symbol": "pal-2",
+          "decimals": 12,
+          "foreignId": "0x17444ededa61bdbfcb1e5c39b2aed47f73b8970b65bbb0574c0a0ab1b0c99279"
         }
       },
       "id": "sepolia"
@@ -80,24 +81,40 @@
           "decimals": 0,
           "isSufficient": true
         },
-        "0xb8ea8cb425d85536b158d661da1ef0895bb92f1d": {
-          "token": "0xb8ea8cb425d85536b158d661da1ef0895bb92f1d",
-          "name": "",
-          "minimumBalance": "bigint:1",
-          "symbol": "",
-          "decimals": 0,
-          "isSufficient": false
-        },
         "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
           "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
-          "name": "WND",
+          "name": "wnd",
           "minimumBalance": "bigint:1",
-          "symbol": "WND",
+          "symbol": "wnd",
           "decimals": 18,
           "isSufficient": true,
           "location": {
             "parents": 1,
             "interior": "Here"
+          }
+        },
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
+          "name": "pal-2",
+          "minimumBalance": "bigint:1",
+          "symbol": "pal-2",
+          "decimals": 18,
+          "isSufficient": true,
+          "location": {
+            "parents": 1,
+            "interior": {
+              "x3": [
+                {
+                  "parachain": 2000
+                },
+                {
+                  "palletInstance": 50
+                },
+                {
+                  "generalIndex": 2
+                }
+              ]
+            }
           }
         }
       },
@@ -123,7 +140,66 @@
         "specName": "penpal-parachain",
         "specVersion": 1
       },
-      "assets": {},
+      "assets": {
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
+          "name": "pal-2",
+          "minimumBalance": "bigint:1",
+          "symbol": "pal-2",
+          "decimals": 18,
+          "isSufficient": true,
+          "location": {
+            "parents": 0,
+            "interior": {
+              "x2": [
+                {
+                  "palletInstance": 50
+                },
+                {
+                  "generalIndex": 2
+                }
+              ]
+            }
+          },
+          "locationOnAH": {
+            "parents": 1,
+            "interior": {
+              "x3": [
+                {
+                  "parachain": 2000
+                },
+                {
+                  "palletInstance": 50
+                },
+                {
+                  "generalIndex": 2
+                }
+              ]
+            }
+          },
+          "locationOnEthereum": {
+            "parents": 1,
+            "interior": {
+              "x4": [
+                {
+                  "globalConsensus": {
+                    "byGenesis": "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
+                  }
+                },
+                {
+                  "parachain": 2000
+                },
+                {
+                  "palletInstance": 50
+                },
+                {
+                  "generalIndex": 2
+                }
+              ]
+            }
+          }
+        }
+      },
       "estimatedExecutionFeeDOT": "bigint:3276800000",
       "estimatedDeliveryFeeDOT": "bigint:31450000000"
     }

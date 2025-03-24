@@ -120,7 +120,7 @@ const transfer = async () => {
 
     const assets = registry.ethereumChains[registry.ethChainId].assets
     const TOKEN_CONTRACT = Object.values(assets).find((t) =>
-        t.name.toLowerCase().startsWith("wnd")
+        t.name.toLowerCase().startsWith("pal")
     )!.token
 
     console.log("Ethereum to Asset Hub")

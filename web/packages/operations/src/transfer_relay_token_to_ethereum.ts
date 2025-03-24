@@ -120,7 +120,7 @@ const transfer = async () => {
 
     const assets = registry.ethereumChains[registry.ethChainId].assets
 
-    const WND_CONTRACT = Object.values(assets).find((t) =>
+    const TOKEN_CONTRACT = Object.values(assets).find((t) =>
         t.name.toLowerCase().startsWith("wnd")
     )!.token
 
@@ -132,7 +132,7 @@ const transfer = async () => {
             { assetHub: await context.assetHub(), source: await context.parachain(sourceParaId) },
             sourceParaId,
             registry,
-            WND_CONTRACT
+            TOKEN_CONTRACT
         )
 
         // Step 2. Create a transfer tx
@@ -141,7 +141,7 @@ const transfer = async () => {
             registry,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
-            WND_CONTRACT,
+            TOKEN_CONTRACT,
             amount,
             fee
         )

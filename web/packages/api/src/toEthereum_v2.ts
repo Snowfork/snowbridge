@@ -408,6 +408,7 @@ export async function getDeliveryFee(
             340282366920938463463374607431768211455n
         )
     }
+    console.log("xcm on asset hub for pna transfer from 3rd parachain:", xcm.toHuman())
 
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
@@ -431,7 +432,7 @@ export async function getDeliveryFee(
         let returnToSenderXcm: any
         if (sourceAssetMetadata.location) {
             returnToSenderXcm = buildParachainPNAReceivedXcmOnDestination(
-                assetHub.registry,
+                source.registry,
                 sourceAssetMetadata,
                 340282366920938463463374607431768211455n,
                 340282366920938463463374607431768211455n,
@@ -440,7 +441,7 @@ export async function getDeliveryFee(
             )
         } else {
             returnToSenderXcm = buildParachainERC20ReceivedXcmOnDestination(
-                assetHub.registry,
+                source.registry,
                 registry.ethChainId,
                 "0x0000000000000000000000000000000000000000",
                 340282366920938463463374607431768211455n,
@@ -449,6 +450,7 @@ export async function getDeliveryFee(
                 "0x0000000000000000000000000000000000000000000000000000000000000000"
             )
         }
+        console.log("xcm received on 3rd parachain for pna transfer:", returnToSenderXcm.toHuman())
 
         returnToSenderDeliveryFeeDOT = await calculateDeliveryFee(
             assetHub,
@@ -1344,6 +1346,7 @@ function createPNASourceParachainTx(
         sourceParaId,
         returnToSenderFeeInDOT
     )
+    console.log("custom xcm for pna transfer from 3rd parachain:" + customXcm.toPrimitive())
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
         assets,
