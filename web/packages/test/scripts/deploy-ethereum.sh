@@ -53,7 +53,7 @@ start_lodestar() {
 
         export LODESTAR_PRESET="mainnet"
 
-        pushd $root_dir/lodestar
+        pushd $root_dir/../lodestar
         ./lodestar dev \
             --genesisValidators 8 \
             --genesisTime $timestamp \

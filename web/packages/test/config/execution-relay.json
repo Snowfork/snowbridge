@@ -19,7 +19,7 @@
         }
       },
       "datastore": {
-        "location": "/tmp/snowbridge/beaconstore",
+        "location": "/tmp/snowbridge-v2/beaconstore",
         "maxEntries": 100
       }
     }
