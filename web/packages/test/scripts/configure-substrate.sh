@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -eu
 
+is_electra=false
+
 source scripts/set-env.sh
 source scripts/xcm-helper.sh
 
@@ -111,9 +113,9 @@ configure_substrate() {
     open_hrmp_channels
     config_xcm_version
     register_native_eth
+    fund_accounts
     wait_beacon_chain_ready
     config_beacon_checkpoint
-    fund_accounts
 }
 
 if [ -z "${from_start_services:-}" ]; then
