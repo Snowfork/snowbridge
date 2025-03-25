@@ -42,6 +42,8 @@ fund_accounts() {
     transfer_local_balance "$bridgehub_ws_url" "//Alice" "$execution_relayer_assethub_pub_key" 100000000000000
     transfer_local_balance "$bridgehub_ws_url" "//Alice" "$execution_relayer_penpal_pub_key" 100000000000000
     transfer_local_balance "$assethub_ws_url" "//Alice" "$penpal_sovereign_account" 100000000000000
+    transfer_local_balance "$penpal_ws_url" "//Alice" "$assethub_sovereign_account" 1000000000000
+    transfer_local_balance "$penpal_ws_url" "//Alice" "$checking_account" 1000000000000
 }
 
 open_hrmp_channel() {
@@ -102,14 +104,34 @@ register_native_eth() {
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 
+register_penpal_local_asset() {
+    local call='0x3501010300411f0432050800d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d0104'
+    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+}
+
+register_asset_on_asset_hub() {
+    register_native_eth
+    register_penpal_local_asset
+}
+
+register_asset_on_bridge_hub() {
+    # register WND
+    local call='0x530a0401000c776e640c776e640c'
+    send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$call"
+    # register PAL-2
+    local call='0x530a04010300411f043205081470616c2d321470616c2d320c'
+    send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$call"
+}
+
 configure_substrate() {
     set_gateway
     fund_accounts
     open_hrmp_channels
     config_xcm_version
+    register_asset_on_asset_hub
+    register_asset_on_bridge_hub
     wait_beacon_chain_ready
     config_beacon_checkpoint
-    register_native_eth
 }
 
 if [ -z "${from_start_services:-}" ]; then
