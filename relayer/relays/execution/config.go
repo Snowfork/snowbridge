@@ -38,7 +38,6 @@ func (r ScheduleConfig) Validate() error {
 type SourceConfig struct {
 	Ethereum  config.EthereumConfig   `mapstructure:"ethereum"`
 	Contracts ContractsConfig         `mapstructure:"contracts"`
-	ChannelID ChannelID               `mapstructure:"channel-id"`
 	Beacon    beaconconf.BeaconConfig `mapstructure:"beacon"`
 }
 
@@ -61,9 +60,6 @@ func (c Config) Validate() error {
 	err = c.Sink.Parachain.Validate()
 	if err != nil {
 		return fmt.Errorf("parachain config validation: %w", err)
-	}
-	if c.Source.ChannelID == [32]byte{} {
-		return fmt.Errorf("source setting [channel-id] is not set")
 	}
 	if c.Source.Contracts.Gateway == "" {
 		return fmt.Errorf("source setting [gateway] is not set")

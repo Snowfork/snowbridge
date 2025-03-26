@@ -3,7 +3,7 @@ import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
 import { fetchEstimatedDeliveryTime } from "./subsquid"
 import { Relayer, SourceType } from "./environment"
 import { ApiPromise } from "@polkadot/api"
-import { IGateway } from "@snowbridge/contract-types"
+import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
 
 export type OperatingMode = "Normal" | "Halted"
 export type BridgeStatusInfo = {
