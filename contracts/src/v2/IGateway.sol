@@ -3,7 +3,8 @@
 pragma solidity 0.8.28;
 
 import {OperatingMode, InboundMessage, Payload} from "./Types.sol";
-import {Verification} from "../Verification.sol";
+import {ParachainVerification} from "../ParachainVerification.sol";
+import {BeefyVerification} from "../BeefyVerification.sol";
 
 interface IGatewayV2 {
     error AgentAlreadyExists();
@@ -36,18 +37,21 @@ interface IGatewayV2 {
     /// Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
     event OutboundMessageAccepted(uint64 nonce, Payload payload);
 
-    /// @dev Submit a message from Polkadot for verification and dispatch
-    /// @param message A message produced by the OutboundQueue pallet on BridgeHub
-    /// @param leafProof A message proof used to verify that the message is in the merkle tree
-    ///        committed by the OutboundQueue pallet
-    /// @param headerProof A proof that the commitment is included in parachain header that was
-    ///        finalized by BEEFY.
+    /// @dev Submit a message from the Substrate chain for verification and dispatch
+    /// @param message A message produced by the OutboundQueue pallet on the Substrate chain
+    /// @param messageProof A message proof used to verify that the message is in the merkle
+    ///        tree committed by the OutboundQueue pallet
+    /// @param headerProof A proof that the commitment is included in parachain header that
+    ///        is part of the parachain headers root in a BEEFY MMR leaf
+    /// @param beefyProof A proof that the there is a BEEFY MMR leaf that includes the parachain
+    ///        headers root in the latest finalized BEEFY MMR root
     /// @param rewardAddress An `AccountId` on BridgeHub that can claim rewards for relaying
     ///        this message, after the relayer has submitted a delivery receipt back to BridgeHub.
     function v2_submit(
         InboundMessage calldata message,
-        bytes32[] calldata leafProof,
-        Verification.Proof calldata headerProof,
+        bytes32[] calldata messageProof,
+        ParachainVerification.Proof calldata headerProof,
+        BeefyVerification.Proof calldata beefyProof,
         bytes32 rewardAddress
     ) external;
 

@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
+import {ParachainVerification} from "./ParachainVerification.sol";
+import {BeefyVerification} from "./BeefyVerification.sol";
 import {Initializer} from "./Initializer.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
@@ -84,13 +86,13 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     }
 
     /*
-    *     _________
-    *     \_   ___ \   ____    _____    _____    ____    ____
-    *     /    \  \/  /  _ \  /     \  /     \  /  _ \  /    \
-    *     \     \____(  <_> )|  Y Y  \|  Y Y  \(  <_> )|   |  \
-    *      \______  / \____/ |__|_|  /|__|_|  / \____/ |___|  /
-    *             \/               \/       \/              \/
-    */
+     *     _____   __________ .___          ____
+     *    /  _  \  \______   \|   | ___  __/_   |
+     *   /  /_\  \  |     ___/|   | \  \/ / |   |
+     *  /    |    \ |    |    |   |  \   /  |   |
+     *  \____|__  / |____|    |___|   \_/   |___|
+     *          \/
+     */
 
     // Verify that a message commitment is considered finalized by our BEEFY light client.
     function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof, bool isV2)
@@ -107,15 +109,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             isV2
         );
     }
-
-    /*
-    *     _____   __________ .___          ____
-    *    /  _  \  \______   \|   | ___  __/_   |
-    *   /  /_\  \  |     ___/|   | \  \/ / |   |
-    *  /    |    \ |    |    |   |  \   /  |   |
-    *  \____|__  / |____|    |___|   \_/   |___|
-    *          \/
-    */
 
     /**
      * APIv1 Constants
@@ -407,13 +400,12 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
     function v2_submit(
         InboundMessageV2 calldata message,
-        bytes32[] calldata leafProof,
-        Verification.Proof calldata headerProof,
+        bytes32[] calldata messageProof,
+        ParachainVerification.Proof calldata headerProof,
+        BeefyVerification.Proof calldata beefyProof,
         bytes32 rewardAddress
     ) external nonreentrant {
         CoreStorage.Layout storage $ = CoreStorage.layout();
-
-        bytes32 leafHash = keccak256(abi.encode(message));
 
         if ($.inboundNonce.get(message.nonce)) {
             revert IGatewayBase.InvalidNonce();
@@ -421,12 +413,16 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
         $.inboundNonce.set(message.nonce);
 
-        // Produce the commitment (message root) by applying the leaf proof to the message leaf
-        bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
-
-        // Verify that the commitment is included in a parachain header finalized by BEEFY.
-        if (!_verifyCommitment(commitment, headerProof, true)) {
-            revert IGatewayBase.InvalidProof();
+        // Verify the message proof in three steps:
+        // 1. Produce the commitment (message root) by applying the leaf proof to the message leaf
+        // 2. Produce the parachain headers root that would be part of the `leafExtra` field of the MMR leaf
+        // 3. Verify that the parachain headers root is part of an MMR leaf included in the latest finalized BEEFY MMR root
+        {
+            bytes32 commitment = _buildMessageCommitment(message, messageProof);
+            bytes32 parachainHeadersRoot = _buildHeadersRoot(commitment, headerProof);
+            if (!_verifyBeefyProof(parachainHeadersRoot, beefyProof)) {
+                revert InvalidProof();
+            }
         }
 
         // Dispatch the message payload
@@ -595,5 +591,33 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     ///
     function initialize(bytes calldata data) external virtual {
         Initializer.initialize(data);
+    }
+
+    function _buildMessageCommitment(InboundMessageV2 calldata message, bytes32[] calldata proof)
+        internal
+        pure
+        virtual
+        returns (bytes32)
+    {
+        bytes32 leafHash = keccak256(abi.encode(message));
+        return MerkleProof.processProof(proof, leafHash);
+    }
+
+    function _buildHeadersRoot(
+        bytes32 messageCommitment,
+        ParachainVerification.Proof calldata headerProof
+    ) internal view virtual returns (bytes32) {
+        return ParachainVerification.processProof(
+            ScaleCodec.encodeU32(uint32(ParaID.unwrap(Constants.BRIDGE_HUB_PARA_ID))),
+            messageCommitment,
+            headerProof
+        );
+    }
+
+    function _verifyBeefyProof(
+        bytes32 parachainHeadersRoot,
+        BeefyVerification.Proof calldata beefyProof
+    ) internal view virtual returns (bool) {
+        return BeefyVerification.verifyBeefyMMRLeaf(BEEFY_CLIENT, parachainHeadersRoot, beefyProof);
     }
 }

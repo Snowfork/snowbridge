@@ -20,6 +20,8 @@ import {Token} from "../src/Token.sol";
 import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {Agent} from "../src/Agent.sol";
 import {Verification} from "../src/Verification.sol";
+import {ParachainVerification} from "../src/ParachainVerification.sol";
+import {BeefyVerification} from "../src/BeefyVerification.sol";
 import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 import {OperatingMode, ParaID, CommandV2, CommandKind, InboundMessageV2} from "../src/Types.sol";
 
@@ -132,17 +134,22 @@ contract GatewayV2Test is Test {
         helloWorld = new HelloWorld();
     }
 
-    function makeMockProof() public pure returns (Verification.Proof memory) {
-        return Verification.Proof({
-            header: Verification.ParachainHeader({
+    function makeMockHeaderProof() public pure returns (ParachainVerification.Proof memory) {
+        return ParachainVerification.Proof({
+            header: ParachainVerification.ParachainHeader({
                 parentHash: bytes32(0),
                 number: 0,
                 stateRoot: bytes32(0),
                 extrinsicsRoot: bytes32(0),
-                digestItems: new Verification.DigestItem[](0)
+                digestItems: new ParachainVerification.DigestItem[](0)
             }),
-            headProof: Verification.HeadProof({pos: 0, width: 0, proof: new bytes32[](0)}),
-            leafPartial: Verification.MMRLeafPartial({
+            headProof: ParachainVerification.HeadProof({pos: 0, width: 0, proof: new bytes32[](0)})
+        });
+    }
+
+    function makeMockBeefyProof() public pure returns (BeefyVerification.Proof memory) {
+        return BeefyVerification.Proof({
+            leafPartial: BeefyVerification.MMRLeafPartial({
                 version: 0,
                 parentNumber: 0,
                 parentHash: bytes32(0),
@@ -237,7 +244,8 @@ contract GatewayV2Test is Test {
                 commands: makeMockCommand()
             }),
             proof,
-            makeMockProof(),
+            makeMockHeaderProof(),
+            makeMockBeefyProof(),
             relayerRewardAddress
         );
     }
@@ -254,13 +262,13 @@ contract GatewayV2Test is Test {
 
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway)).v2_submit(
-            message, proof, makeMockProof(), relayerRewardAddress
+            message, proof, makeMockHeaderProof(), makeMockBeefyProof(), relayerRewardAddress
         );
 
         vm.expectRevert(IGatewayBase.InvalidNonce.selector);
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway)).v2_submit(
-            message, proof, makeMockProof(), relayerRewardAddress
+            message, proof, makeMockHeaderProof(), makeMockBeefyProof(), relayerRewardAddress
         );
     }
 
@@ -279,7 +287,7 @@ contract GatewayV2Test is Test {
 
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway)).v2_submit(
-            message, proof, makeMockProof(), relayerRewardAddress
+            message, proof, makeMockHeaderProof(), makeMockBeefyProof(), relayerRewardAddress
         );
     }
 
@@ -398,7 +406,8 @@ contract GatewayV2Test is Test {
                 commands: makeUnlockWethCommand(0.1 ether)
             }),
             proof,
-            makeMockProof(),
+            makeMockHeaderProof(),
+            makeMockBeefyProof(),
             relayerRewardAddress
         );
     }
@@ -422,7 +431,8 @@ contract GatewayV2Test is Test {
                 commands: makeRegisterForeignTokenCommand(keccak256("DOT"), "DOT", "DOT", 10)
             }),
             proof,
-            makeMockProof(),
+            makeMockHeaderProof(),
+            makeMockBeefyProof(),
             relayerRewardAddress
         );
     }
@@ -449,7 +459,8 @@ contract GatewayV2Test is Test {
                 commands: makeMintForeignTokenCommand(keccak256("DOT"), recipient, 100)
             }),
             proof,
-            makeMockProof(),
+            makeMockHeaderProof(),
+            makeMockBeefyProof(),
             relayerRewardAddress
         );
     }
@@ -470,7 +481,8 @@ contract GatewayV2Test is Test {
                 commands: makeCallContractCommand(0.1 ether)
             }),
             proof,
-            makeMockProof(),
+            makeMockHeaderProof(),
+            makeMockBeefyProof(),
             relayerRewardAddress
         );
     }
