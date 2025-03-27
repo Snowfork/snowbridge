@@ -1,4 +1,15 @@
+# Fork Info
+
+This is a fork of the Snowbridge project (docs below).
+
+## Branching Strategy
+
+- `main` follows and should always match the `main` branch of the Snowbridge repo.
+- `v2` follows and should always match the `v2` branch of the Snowbridge repo. Once [this PR](https://github.com/Snowfork/snowbridge/pull/1371) is merged, this branch will be removed and only `main` will be used to follow the Snowbridge repo.
+- `solochain` is the default branch, and the one with all the custom changes made for Snowbridge to work with a Substrate solochain instead of the BridgeHub parachain in Polkadot. PRs with new features and changes should be made to this branch.
+
 # Snowbridge
+
 [![codecov](https://codecov.io/gh/Snowfork/snowbridge/branch/main/graph/badge.svg?token=9hvgSws4rN)](https://codecov.io/gh/Snowfork/snowbridge)
 ![GitHub](https://img.shields.io/github/license/Snowfork/snowbridge)
 
@@ -55,6 +66,7 @@ nix develop
 ```
 
 Also make sure to run this initialization script once:
+
 ```sh
 scripts/init.sh
 ```
@@ -93,6 +105,7 @@ direnv allow
 
 Sometimes we would like to upgrade rust toolchain. First update `polkadot-sdk/rust-toolchain.toml` as required and then
 update `flake.lock` running
+
 ```sh
 nix flake lock --update-input rust-overlay
 ```
@@ -102,6 +115,7 @@ nix flake lock --update-input rust-overlay
 Check the contents of all `.envrc` files.
 
 Remove untracked files:
+
 ```sh
 git clean -idx
 ```
@@ -109,15 +123,19 @@ git clean -idx
 Ensure that the current Rust toolchain is the one selected in `scripts/init.sh`.
 
 Ensure submodules are up-to-date:
+
 ```sh
 git submodule update
 ```
 
 Check untracked files & directories:
+
 ```sh
 git clean -ndx | awk '{print $3}'
 ```
+
 After removing `node_modules` directories (eg. with `git clean above`), clear the pnpm cache:
+
 ```sh
 pnpm store prune
 ```
@@ -125,6 +143,7 @@ pnpm store prune
 Check Nix config in `~/.config/nix/nix.conf`.
 
 Run a pure developer shell (note that this removes access to your local tools):
+
 ```sh
 nix develop -i --pure-eval
 ```
