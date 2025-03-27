@@ -439,13 +439,13 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
     // See docs for `IGateway.v2_sendMessage`
     function v2_sendMessage(
-        bytes calldata xcm,
+        bytes calldata message,
         bytes[] calldata assets,
         bytes calldata claimer,
         uint128 executionFee,
         uint128 relayerFee
     ) external payable nonreentrant {
-        CallsV2.sendMessage(xcm, assets, claimer, executionFee, relayerFee);
+        CallsV2.sendMessage(message, assets, claimer, executionFee, relayerFee);
     }
 
     // See docs for `IGateway.v2_registerToken`
@@ -455,7 +455,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         uint128 executionFee,
         uint128 relayerFee
     ) external payable nonreentrant {
-        require(network == uint8(Network.Polkadot), IGatewayV2.InvalidNetwork());
+        require(network == uint8(Network.Solochain), IGatewayV2.InvalidNetwork());
         CallsV2.registerToken(token, Network(network), executionFee, relayerFee);
     }
 

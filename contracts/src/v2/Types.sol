@@ -10,7 +10,7 @@ struct InboundMessage {
     bytes32 origin;
     // Message nonce
     uint64 nonce;
-    // XCM Topic
+    // Topic
     bytes32 topic;
     // Commands
     Command[] commands;
@@ -44,8 +44,8 @@ struct Payload {
     address origin;
     // Asset transfer instructions
     Asset[] assets;
-    // XCM Message
-    Xcm xcm;
+    // Actual Message
+    Message message;
     // SCALE-encoded location of claimer who can claim trapped assets on AssetHub
     bytes claimer;
     // Ether value not reserved for fees
@@ -56,35 +56,36 @@ struct Payload {
     uint128 relayerFee;
 }
 
-struct Xcm {
+struct Message {
     // Variant ID
     uint8 kind;
-    // ABI-encoded xcm variant
+    // SCALE-encoded message
     bytes data;
 }
 
-library XcmKind {
-    // SCALE-encoded raw bytes for `VersionedXcm`
+library MessageKind {
+    // SCALE-encoded raw bytes to be interpreted by the Substrate chain
+    // For example, as a SCALE-encoded `VersionedXcm`
     uint8 constant Raw = 0;
     // Create a new asset in the ForeignAssets pallet of AH
     uint8 constant CreateAsset = 1;
 }
 
-// Format of ABI-encoded Xcm.data when Xcm.kind == XcmKind.CreateAsset
+// Format of Message.data when Message.kind == MessageKind.CreateAsset
 struct AsCreateAsset {
     // Token address
     address token;
-    // Polkadot network to create the asset in
+    // Network to create the asset in
     uint8 network;
 }
 
-function makeRawXCM(bytes memory xcm) pure returns (Xcm memory) {
-    return Xcm({kind: XcmKind.Raw, data: xcm});
+function makeRawMessage(bytes memory message) pure returns (Message memory) {
+    return Message({kind: MessageKind.Raw, data: message});
 }
 
-function makeCreateAssetXCM(address token, Network network) pure returns (Xcm memory) {
-    return Xcm({
-        kind: XcmKind.CreateAsset,
+function makeCreateAssetMessage(address token, Network network) pure returns (Message memory) {
+    return Message({
+        kind: MessageKind.CreateAsset,
         data: abi.encode(AsCreateAsset({token: token, network: uint8(network)}))
     });
 }
@@ -186,5 +187,5 @@ struct CallContractParams {
 }
 
 enum Network {
-    Polkadot
+    Solochain
 }

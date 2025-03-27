@@ -29,9 +29,9 @@ import {
     makeNativeAsset,
     makeForeignAsset,
     Network,
-    Xcm,
-    makeRawXCM,
-    makeCreateAssetXCM
+    Message,
+    makeRawMessage,
+    makeCreateAssetMessage
 } from "./Types.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
@@ -59,13 +59,15 @@ library CallsV2 {
 
     // Refer to `IGateway.v2_sendMessage` for documentation
     function sendMessage(
-        bytes calldata xcm,
+        bytes calldata message,
         bytes[] calldata assets,
         bytes calldata claimer,
         uint128 executionFee,
         uint128 relayerFee
     ) external {
-        _sendMessage(msg.sender, makeRawXCM(xcm), assets, claimer, executionFee, relayerFee);
+        _sendMessage(
+            msg.sender, makeRawMessage(message), assets, claimer, executionFee, relayerFee
+        );
     }
 
     // Refer to `IGateway.v2_registerToken` for documentation
@@ -78,11 +80,11 @@ library CallsV2 {
         require(msg.value <= type(uint128).max, IGatewayV2.ExceededMaximumValue());
         require(msg.value >= executionFee + relayerFee, IGatewayV2.InsufficientValue());
 
-        Xcm memory xcm = makeCreateAssetXCM(token, network);
+        Message memory message = makeCreateAssetMessage(token, network);
 
         Functions.registerNativeToken(token);
 
-        _sendMessage(address(this), xcm, new bytes[](0), "", executionFee, relayerFee);
+        _sendMessage(address(this), message, new bytes[](0), "", executionFee, relayerFee);
     }
 
     /*
@@ -91,7 +93,7 @@ library CallsV2 {
 
     function _sendMessage(
         address origin,
-        Xcm memory xcm,
+        Message memory message,
         bytes[] memory assets,
         bytes memory claimer,
         uint128 executionFee,
@@ -117,7 +119,7 @@ library CallsV2 {
         Payload memory payload = Payload({
             origin: origin,
             assets: preparedAssets,
-            xcm: xcm,
+            message: message,
             claimer: claimer,
             value: uint128(msg.value) - executionFee - relayerFee,
             executionFee: executionFee,
