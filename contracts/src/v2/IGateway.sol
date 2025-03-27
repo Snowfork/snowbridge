@@ -41,16 +41,13 @@ interface IGatewayV2 {
     /// @param message A message produced by the OutboundQueue pallet on the Substrate chain
     /// @param messageProof A message proof used to verify that the message is in the merkle
     ///        tree committed by the OutboundQueue pallet
-    /// @param headerProof A proof that the commitment is included in parachain header that
-    ///        is part of the parachain headers root in a BEEFY MMR leaf
-    /// @param beefyProof A proof that the there is a BEEFY MMR leaf that includes the parachain
-    ///        headers root in the latest finalized BEEFY MMR root
+    /// @param beefyProof A proof that the there is a BEEFY MMR leaf that includes the message
+    ///        commitment in the latest finalized BEEFY MMR root
     /// @param rewardAddress An `AccountId` on BridgeHub that can claim rewards for relaying
     ///        this message, after the relayer has submitted a delivery receipt back to BridgeHub.
     function v2_submit(
         InboundMessage calldata message,
         bytes32[] calldata messageProof,
-        ParachainVerification.Proof calldata headerProof,
         BeefyVerification.Proof calldata beefyProof,
         bytes32 rewardAddress
     ) external;

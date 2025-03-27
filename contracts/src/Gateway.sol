@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
-import {ParachainVerification} from "./ParachainVerification.sol";
 import {BeefyVerification} from "./BeefyVerification.sol";
 import {Initializer} from "./Initializer.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
@@ -401,7 +400,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     function v2_submit(
         InboundMessageV2 calldata message,
         bytes32[] calldata messageProof,
-        ParachainVerification.Proof calldata headerProof,
         BeefyVerification.Proof calldata beefyProof,
         bytes32 rewardAddress
     ) external nonreentrant {
@@ -413,14 +411,12 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
         $.inboundNonce.set(message.nonce);
 
-        // Verify the message proof in three steps:
+        // Verify the message proof in two steps:
         // 1. Produce the commitment (message root) by applying the leaf proof to the message leaf
-        // 2. Produce the parachain headers root that would be part of the `leafExtra` field of the MMR leaf
-        // 3. Verify that the parachain headers root is part of an MMR leaf included in the latest finalized BEEFY MMR root
+        // 2. Verify that the commitment is part of an MMR leaf included in the latest finalized BEEFY MMR root
         {
             bytes32 commitment = _buildMessageCommitment(message, messageProof);
-            bytes32 parachainHeadersRoot = _buildHeadersRoot(commitment, headerProof);
-            if (!_verifyBeefyProof(parachainHeadersRoot, beefyProof)) {
+            if (!_verifyBeefyProof(commitment, beefyProof)) {
                 revert InvalidProof();
             }
         }
@@ -575,7 +571,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     /// The `GatewayProxy` deployed to Ethereum mainnet already has its storage initialized.
     /// When its logic contract needs to upgraded, a new logic contract should be developed
     /// that inherits from this base `Gateway` contract. Particularly, the `initialize` function
-    /// must be overriden to ensure selective initialization of storage fields relevant
+    /// must be overridden to ensure selective initialization of storage fields relevant
     /// to the upgrade.
     ///
     /// ```solidity
@@ -603,21 +599,12 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return MerkleProof.processProof(proof, leafHash);
     }
 
-    function _buildHeadersRoot(
-        bytes32 messageCommitment,
-        ParachainVerification.Proof calldata headerProof
-    ) internal view virtual returns (bytes32) {
-        return ParachainVerification.processProof(
-            ScaleCodec.encodeU32(uint32(ParaID.unwrap(Constants.BRIDGE_HUB_PARA_ID))),
-            messageCommitment,
-            headerProof
-        );
-    }
-
-    function _verifyBeefyProof(
-        bytes32 parachainHeadersRoot,
-        BeefyVerification.Proof calldata beefyProof
-    ) internal view virtual returns (bool) {
-        return BeefyVerification.verifyBeefyMMRLeaf(BEEFY_CLIENT, parachainHeadersRoot, beefyProof);
+    function _verifyBeefyProof(bytes32 extraField, BeefyVerification.Proof calldata beefyProof)
+        internal
+        view
+        virtual
+        returns (bool)
+    {
+        return BeefyVerification.verifyBeefyMMRLeaf(BEEFY_CLIENT, extraField, beefyProof);
     }
 }

@@ -84,15 +84,6 @@ contract MockGateway is Gateway {
         }
     }
 
-    function _buildHeadersRoot(bytes32, ParachainVerification.Proof calldata)
-        internal
-        pure
-        override
-        returns (bytes32)
-    {
-        return bytes32(0);
-    }
-
     function _verifyBeefyProof(
         bytes32 parachainHeadersRoot,
         BeefyVerification.Proof calldata beefyProof
