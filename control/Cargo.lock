@@ -665,6 +665,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
 
 [[package]]
+name = "asset-hub-kusama-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic 24.0.0",
+ "subxt",
+]
+
+[[package]]
 name = "asset-hub-paseo-runtime"
 version = "0.1.0"
 dependencies = [
@@ -1371,6 +1382,18 @@ dependencies = [
  "sp-runtime 39.0.5",
  "sp-std 14.0.0",
  "staging-xcm 14.2.0",
+]
+
+[[package]]
+name = "bridge-hub-kusama-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "snowbridge-beacon-primitives 0.2.0",
+ "sp-arithmetic 24.0.0",
+ "subxt",
 ]
 
 [[package]]
@@ -4568,6 +4591,16 @@ checksum = "3e1b8590eb6148af2ea2d75f38e7d29f5ca970d5a4df456b3ef19b8b415d0264"
 dependencies = [
  "primitive-types 0.13.1",
  "tiny-keccak",
+]
+
+[[package]]
+name = "kusama-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "subxt",
 ]
 
 [[package]]
@@ -10447,9 +10480,11 @@ name = "snowbridge-preimage"
 version = "0.1.0"
 dependencies = [
  "alloy-primitives 0.6.3",
+ "asset-hub-kusama-runtime",
  "asset-hub-paseo-runtime",
  "asset-hub-polkadot-runtime",
  "asset-hub-westend-runtime",
+ "bridge-hub-kusama-runtime",
  "bridge-hub-paseo-runtime",
  "bridge-hub-polkadot-runtime",
  "bridge-hub-westend-runtime",
@@ -10458,6 +10493,7 @@ dependencies = [
  "handlebars",
  "hex",
  "hex-literal",
+ "kusama-runtime",
  "parity-scale-codec",
  "paseo-runtime",
  "polkadot-runtime",
