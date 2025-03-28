@@ -34,13 +34,13 @@ $ pnpm start
 pnpm cron
 ```
 
-### Install as dameon service with PM2
+### Install as daemon service with PM2
 
 ```
 pm2 start ecosystem.config.js --only monitor --time
 ```
 
-# Tranfers on Westend
+# Transfers on Westend
 
 We run the transfer on a daily basis to preemptively ensure that the bridge transfer won’t break.
 
