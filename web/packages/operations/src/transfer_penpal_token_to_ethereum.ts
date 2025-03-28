@@ -1,11 +1,10 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment, toEthereumV2, assetsV2 } from "@snowbridge/api"
-import cron from "node-cron"
+import { Context, environment, assetsV2, toEthereumV2 } from "@snowbridge/api"
+import { formatUnits, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { readFile, writeFile } from "fs/promises"
 import { existsSync } from "fs"
-import { formatUnits, Wallet } from "ethers"
 
 function cache<T>(filePath: string, generator: () => T | Promise<T>): Promise<T> {
     return (async () => {
@@ -96,7 +95,7 @@ const transfer = async () => {
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
-    const amount = 15_000_000_000_000n
+    const amount = 1000000000n
 
     // Step 0. Build the Asset Registry. The registry contains the list of all token and parachain metadata in order to send tokens.
     // It may take some build but does not change often so it is safe to cache for 12 hours and shipped with your dapp as static data.
@@ -120,19 +119,20 @@ const transfer = async () => {
     )
 
     const assets = registry.ethereumChains[registry.ethChainId].assets
-    const WETH_CONTRACT = Object.keys(assets)
-        .map((t) => assets[t])
-        .find((asset) => asset.symbol === "WETH")!.token
 
-    console.log("Asset Hub to Ethereum")
+    const TOKEN_CONTRACT = Object.values(assets).find((t) =>
+        t.name.toLowerCase().startsWith("pal")
+    )!.token
+
+    console.log("Penpal to Ethereum")
     {
-        const sourceParaId = 1000
+        const sourceParaId = 2000
         // Step 1. Get the delivery fee for the transaction
         const fee = await toEthereumV2.getDeliveryFee(
             { assetHub: await context.assetHub(), source: await context.parachain(sourceParaId) },
             sourceParaId,
             registry,
-            WETH_CONTRACT
+            TOKEN_CONTRACT
         )
 
         // Step 2. Create a transfer tx
@@ -141,7 +141,7 @@ const transfer = async () => {
             registry,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
-            WETH_CONTRACT,
+            TOKEN_CONTRACT,
             amount,
             fee
         )
@@ -194,22 +194,13 @@ const transfer = async () => {
         }
         console.log("Success message", response.messageId)
     }
-    await context.destroyContext()
+
+    context.destroyContext()
 }
 
-if (process.argv.length != 3) {
-    console.error("Expected one argument with Enum from `start|cron`")
-    process.exit(1)
-}
-
-if (process.argv[2] == "start") {
-    transfer()
-        .then(() => process.exit(0))
-        .catch((error) => {
-            console.error("Error:", error)
-            process.exit(1)
-        })
-} else if (process.argv[2] == "cron") {
-    console.log("running cronjob")
-    cron.schedule(process.env["CRON_EXPRESSION"] || "0 0 * * *", transfer)
-}
+transfer()
+    .then(() => process.exit(0))
+    .catch((error) => {
+        console.error("Error:", error)
+        process.exit(1)
+    })

@@ -117,8 +117,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 "1002": "ws://127.0.0.1:11144",
                 "2000": "ws://127.0.0.1:13144",
             },
-            GATEWAY_CONTRACT: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
-            BEEFY_CONTRACT: "0x2ffa5ecdbe006d30397c7636d3e015eee251369f",
+            GATEWAY_CONTRACT: "0xb1185ede04202fe62d38f5db72f71e38ff3e8305",
+            BEEFY_CONTRACT: "0x83428c7db9815f482a39a1715684dcf755021997",
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
             PRIMARY_GOVERNANCE_CHANNEL_ID:
@@ -588,7 +588,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             },
             RELAY_CHAIN_URL: "https://westend-rpc.polkadot.io",
             PARACHAINS: {
-                "1000": "wss://westend-asset-hub-rpc.polkadot.io",
+                "1000": "https://asset-hub-westend.dotters.network",
                 "1002": "https://westend-bridge-hub-rpc.polkadot.io",
             },
             GATEWAY_CONTRACT: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",

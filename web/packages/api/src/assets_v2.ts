@@ -15,6 +15,7 @@ export type ERC20Metadata = {
     name: string
     symbol: string
     decimals: number
+    foreignId?: string
 }
 
 export type EthereumChain = {
@@ -77,6 +78,13 @@ export type Asset = {
     decimals: number
     isSufficient: boolean
     xc20?: string
+    // Location on source Parachain
+    location?: any
+    // Location reanchored on AH
+    locationOnAH?: any
+    // Location reanchored on Ethereum
+    locationOnEthereum?: any
+    assetId?: number
 }
 
 export type RegistryOptions = {
@@ -526,7 +534,8 @@ export async function getLocationBalance(
     provider: ApiPromise,
     specName: string,
     location: any,
-    account: string
+    account: string,
+    assetId?: number
 ): Promise<bigint> {
     switch (specName) {
         case "basilisk":
@@ -542,7 +551,19 @@ export async function getLocationBalance(
             ).toPrimitive() as any
             return BigInt(accountData?.free ?? 0n)
         }
-        case "penpal-parachain":
+        case "penpal-parachain": {
+            let accountData: any
+            if (assetId) {
+                accountData = (
+                    await provider.query.assets.account(assetId, account)
+                ).toPrimitive() as any
+            } else {
+                accountData = (
+                    await provider.query.foreignAssets.account(location, account)
+                ).toPrimitive() as any
+            }
+            return BigInt(accountData?.balance ?? 0n)
+        }
         case "asset-hub-paseo":
         case "westmint":
         case "statemint": {
@@ -610,9 +631,16 @@ export function getTokenBalance(
     specName: string,
     account: string,
     ethChainId: number,
-    tokenAddress: string
+    tokenAddress: string,
+    asset?: Asset
 ) {
-    return getLocationBalance(provider, specName, erc20Location(ethChainId, tokenAddress), account)
+    return getLocationBalance(
+        provider,
+        specName,
+        asset?.location || erc20Location(ethChainId, tokenAddress),
+        account,
+        asset?.assetId
+    )
 }
 
 export async function getParachainId(parachain: ApiPromise): Promise<number> {
@@ -628,13 +656,19 @@ export async function calculateDestinationFee(provider: ApiPromise, destinationX
         throw Error(`Can not query XCM Weight.`)
     }
 
-    const feeInDot = (
+    let feeInDot: any
+    feeInDot = (
         await provider.call.xcmPaymentApi.queryWeightToAssetFee(weight.ok, {
             v4: { parents: 1, interior: "Here" },
         })
     ).toPrimitive() as any
     if (!feeInDot.ok) {
-        throw Error(`Can not convert weight to fee in DOT.`)
+        feeInDot = (
+            await provider.call.xcmPaymentApi.queryWeightToAssetFee(weight.ok, {
+                v5: { parents: 1, interior: "Here" },
+            })
+        ).toPrimitive() as any
+        if (!feeInDot.ok) throw Error(`Can not convert weight to fee in DOT.`)
     }
     const executionFee = BigInt(feeInDot.ok.toString())
 
@@ -865,7 +899,7 @@ async function indexParachain(
     }
 
     if (Object.keys(assets).length === 0) {
-        throw Error(
+        console.warn(
             `Cannot discover assets for ${info.specName} (parachain ${parachainId}). Please add a handler for that runtime or add overrides.`
         )
     }
@@ -969,7 +1003,7 @@ async function indexEthChain(
                     decimals: assetHub.assets[token].decimals,
                 }
             } else {
-                assets[token] = await assetErc20Metadata(provider, token)
+                assets[token] = await assetErc20Metadata(provider, token, gatewayAddress)
             }
         }
         if ((await provider.getCode(gatewayAddress)) === undefined) {
@@ -1082,7 +1116,8 @@ const ERC20_METADATA_ABI = [
 
 async function assetErc20Metadata(
     provider: AbstractProvider,
-    token: string
+    token: string,
+    gateway?: string
 ): Promise<ERC20Metadata> {
     const erc20Metadata = new Contract(token, ERC20_METADATA_ABI, provider)
     const [name, symbol, decimals] = await Promise.all([
@@ -1090,7 +1125,20 @@ async function assetErc20Metadata(
         erc20Metadata.symbol(),
         erc20Metadata.decimals(),
     ])
-    return { token, name: String(name), symbol: String(symbol), decimals: Number(decimals) }
+    let metadata: any = {
+        token,
+        name: String(name),
+        symbol: String(symbol),
+        decimals: Number(decimals),
+    }
+    if (gateway) {
+        let gatewayCon = IGateway__factory.connect(gateway, provider)
+        let tokenId = await gatewayCon.queryForeignTokenID(token)
+        if (tokenId != "0x0000000000000000000000000000000000000000000000000000000000000000") {
+            metadata.foreignId = tokenId
+        }
+    }
+    return metadata
 }
 
 function getTokenFromLocation(location: any, chainId: number) {
@@ -1152,6 +1200,97 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         symbol: "MYTH",
                         decimals: 18,
                         isSufficient: true,
+                    },
+                ],
+            }
+            break
+        }
+        case "westend_sepolia": {
+            result.assetOverrides = {
+                "1000": [
+                    {
+                        token: "0xF50fb50d65C8C1f6c72E4D8397c984933AfC8F7e".toLowerCase(),
+                        name: "WND",
+                        minimumBalance: 1n,
+                        symbol: "WND",
+                        decimals: 18,
+                        isSufficient: true,
+                        location: DOT_LOCATION,
+                    },
+                ],
+            }
+            break
+        }
+        case "local_e2e": {
+            result.assetOverrides = {
+                "1000": [
+                    {
+                        token: "0xDe45448Ca2d57797c0BEC0ee15A1E42334744219".toLowerCase(),
+                        name: "wnd",
+                        minimumBalance: 1n,
+                        symbol: "wnd",
+                        decimals: 18,
+                        isSufficient: true,
+                        location: DOT_LOCATION,
+                    },
+                    {
+                        token: "0xD8597EB7eF761E3315623EdFEe9DEfcBACd72e8b".toLowerCase(),
+                        name: "pal-2",
+                        minimumBalance: 1n,
+                        symbol: "pal-2",
+                        decimals: 18,
+                        isSufficient: true,
+                        location: {
+                            parents: 1,
+                            interior: {
+                                x3: [
+                                    { parachain: 2000 },
+                                    { palletInstance: 50 },
+                                    { generalIndex: 2 },
+                                ],
+                            },
+                        },
+                    },
+                ],
+                "2000": [
+                    {
+                        token: "0xD8597EB7eF761E3315623EdFEe9DEfcBACd72e8b".toLowerCase(),
+                        name: "pal-2",
+                        minimumBalance: 1n,
+                        symbol: "pal-2",
+                        decimals: 18,
+                        isSufficient: true,
+                        assetId: 2,
+                        location: {
+                            parents: 0,
+                            interior: { x2: [{ palletInstance: 50 }, { generalIndex: 2 }] },
+                        },
+                        locationOnAH: {
+                            parents: 1,
+                            interior: {
+                                x3: [
+                                    { parachain: 2000 },
+                                    { palletInstance: 50 },
+                                    { generalIndex: 2 },
+                                ],
+                            },
+                        },
+                        locationOnEthereum: {
+                            parents: 1,
+                            interior: {
+                                x4: [
+                                    {
+                                        globalConsensus: {
+                                            byGenesis:
+                                                "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e",
+                                        },
+                                    },
+                                    { parachain: 2000 },
+                                    { palletInstance: 50 },
+                                    { generalIndex: 2 },
+                                ],
+                            },
+                        },
                     },
                 ],
             }
