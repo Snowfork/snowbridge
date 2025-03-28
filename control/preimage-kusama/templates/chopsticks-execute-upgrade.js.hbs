@@ -1,0 +1,44 @@
+/* eslint-disable no-use-before-define */
+
+let blockNumber = (await api.rpc.chain.getHeader()).number.toNumber();
+
+let storage = {
+  Preimage: {
+    PreimageFor: [[[["{{preimage.hash}}", {{preimage.size}}]], "{{preimage.bytes}}"]],
+    StatusFor: [
+      [
+        ["{{preimage.hash}}"],
+        {
+          Requested: {
+            count: 1,
+            len: {{preimage.size}},
+          },
+        },
+      ],
+    ],
+  },
+  Scheduler: {
+    Agenda: [
+      [
+        [blockNumber + 1],
+        [
+          {
+            call: {
+              Lookup: {
+                hash: "{{preimage.hash}}",
+                len: {{preimage.size}},
+              },
+            },
+            origin: {
+              system: "Root",
+            },
+          },
+        ],
+      ],
+    ],
+  },
+};
+
+await api.rpc("dev_setStorage", storage);
+
+await api.rpc("dev_newBlock", { count: 2 });
