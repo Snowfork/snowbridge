@@ -1,8 +1,8 @@
 module github.com/snowfork/snowbridge/relayer
 
-go 1.21
+go 1.23.0
 
-toolchain go1.21.10
+toolchain go1.23.2
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.27.2
