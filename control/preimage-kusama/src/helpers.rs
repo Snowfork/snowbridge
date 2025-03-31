@@ -1,10 +1,8 @@
 use codec::Encode;
-use subxt::{utils::H160, utils::H256, OnlineClient, PolkadotConfig};
+use subxt::{OnlineClient, PolkadotConfig};
 
-use crate::constants::{ASSET_HUB_ID, BRIDGE_HUB_ID};
+use crate::constants::ASSET_HUB_ID;
 use crate::Context;
-
-use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 
 use crate::relay_runtime::runtime_types::{
     pallet_xcm,
@@ -22,12 +20,11 @@ use crate::relay_runtime::runtime_types::{
 };
 
 use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
-use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
+// Using the correct path for kusama runtime types
+use crate::relay_runtime::runtime_types::staging_kusama_runtime::RuntimeCall as RelayRuntimeCall;
 
 use sp_arithmetic::helpers_128bit::multiply_by_rational_with_rounding;
 use sp_arithmetic::per_things::Rounding;
-use sp_arithmetic::per_things::Rounding;
-use xcm_builder::GlobalConsensusParachainConvertsFor;
 
 const MAX_REF_TIME: u128 = 500_000_000_000 - 1;
 const MAX_PROOF_SIZE: u128 = 3 * 1024 * 1024 - 1;
@@ -89,22 +86,6 @@ pub async fn send_xcm_asset_hub(
     Ok(call)
 }
 
-pub async fn query_weight_bridge_hub(
-    api: &OnlineClient<PolkadotConfig>,
-    call: BridgeHubRuntimeCall,
-) -> Result<(u64, u64), Box<dyn std::error::Error>> {
-    let runtime_api_call = bridge_hub_runtime::apis()
-        .transaction_payment_call_api()
-        .query_call_info(call, 0);
-    let call_info = api
-        .runtime_api()
-        .at_latest()
-        .await?
-        .call(runtime_api_call)
-        .await?;
-    Ok((call_info.weight.ref_time, call_info.weight.proof_size))
-}
-
 pub async fn query_weight_asset_hub(
     api: &OnlineClient<PolkadotConfig>,
     call: AssetHubRuntimeCall,
@@ -119,10 +100,4 @@ pub async fn query_weight_asset_hub(
         .call(runtime_api_call)
         .await?;
     Ok((call_info.weight.ref_time, call_info.weight.proof_size))
-}
-
-pub fn utility_force_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
-    RelayRuntimeCall::Utility(
-        crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::batch_all { calls },
-    )
 }

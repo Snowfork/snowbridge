@@ -299,6 +299,9 @@ pub fn make_asset_sufficient(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
     use asset_hub_westend_types::*;
     let asset_id = get_asset_id(chain_id, params.contract_id.into_array().into());
     let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
+
+    println!("ethereum owner: {:?}", MultiAddress::<AccountId32, ()>::Id(owner.into()));
+
     AssetHubRuntimeCall::ForeignAssets(pallet_assets::pallet::Call2::force_asset_status {
         id: asset_id,
         owner: MultiAddress::<AccountId32, ()>::Id(owner.into()),
