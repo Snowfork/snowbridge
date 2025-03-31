@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "chopsticks",
     "runtimes/polkadot",
     "runtimes/bridge-hub-polkadot",
     "runtimes/asset-hub-polkadot",

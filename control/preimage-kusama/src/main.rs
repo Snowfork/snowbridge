@@ -1,12 +1,11 @@
 mod asset_hub_runtime;
-mod chopsticks;
 mod commands;
 mod constants;
 mod helpers;
 mod relay_runtime;
 mod xcm_helper;
 
-use chopsticks::generate_chopsticks_script;
+use snowbridge_preimage_chopsticks::generate_chopsticks_script;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
 use constants::{ASSET_HUB_API, RELAY_API};

@@ -10498,7 +10498,6 @@ dependencies = [
  "bridge-hub-westend-runtime",
  "clap",
  "futures",
- "handlebars",
  "hex",
  "hex-literal",
  "kusama-runtime",
@@ -10510,12 +10509,25 @@ dependencies = [
  "serde",
  "serde_json",
  "snowbridge-beacon-primitives 0.2.0",
+ "snowbridge-preimage-chopsticks",
  "snowbridge-router-primitives 0.2.0",
  "sp-arithmetic 24.0.0",
  "sp-crypto-hashing",
  "subxt",
  "tokio",
  "westend-runtime",
+]
+
+[[package]]
+name = "snowbridge-preimage-chopsticks"
+version = "0.1.0"
+dependencies = [
+ "handlebars",
+ "hex",
+ "parity-scale-codec",
+ "serde",
+ "serde_json",
+ "sp-crypto-hashing",
 ]
 
 [[package]]
@@ -10528,7 +10540,6 @@ dependencies = [
  "clap",
  "frame-support 38.2.0",
  "futures",
- "handlebars",
  "hex",
  "hex-literal",
  "kusama-runtime",
@@ -10536,8 +10547,8 @@ dependencies = [
  "polkadot-runtime-constants",
  "scale-info",
  "serde",
- "serde_json",
  "snowbridge-beacon-primitives 0.10.0",
+ "snowbridge-preimage-chopsticks",
  "snowbridge-router-primitives 0.16.1",
  "sp-arithmetic 26.0.0",
  "sp-core 34.0.0",

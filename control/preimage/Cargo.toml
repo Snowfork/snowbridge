@@ -38,13 +38,14 @@ asset-hub-paseo-runtime = { path = "../runtimes/asset-hub-paseo", optional = tru
 
 polkadot-runtime-constants = "3.0.0"
 
-serde_json = "1.0.114"
 sp-crypto-hashing = "0.1.0"
-handlebars = "5.1.2"
 
 westend-runtime = { path = "../runtimes/westend", optional = true }
 bridge-hub-westend-runtime = { path = "../runtimes/bridge-hub-westend", optional = true }
 asset-hub-westend-runtime = { path = "../runtimes/asset-hub-westend", optional = true }
+snowbridge-preimage-chopsticks = { path = "../chopsticks" }
+
+serde_json = "1.0.114"
 
 [features]
 default = []
