@@ -428,32 +428,6 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
         register_polkadot_native_asset(
             VersionedLocation::V4(Location {
                 parents: 1,
-                interior: X1([Parachain(2011)]),
-            }),
-            "Equilibrium",
-            "EQ",
-            9u8,
-        ),
-        register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
-                parents: 1,
-                interior: X2([
-                    Parachain(2011),
-                    GeneralKey {
-                        length: 3,
-                        data: hex!(
-                            "6571640000000000000000000000000000000000000000000000000000000000"
-                        ),
-                    },
-                ]),
-            }),
-            "Equilibrium Dollar",
-            "EQD",
-            9u8,
-        ),
-        register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
-                parents: 1,
                 interior: X2([
                     Parachain(2030),
                     GeneralKey {
