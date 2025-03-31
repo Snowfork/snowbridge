@@ -502,7 +502,7 @@ export async function validateTransfer(
                 }
             }
         }
-    } else if(!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
+    } else if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
         const { accountMaxConumers, accountExists } = await validateAccount(
             assetHub,
             ahParachain.info.specName,
