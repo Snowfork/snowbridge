@@ -18,5 +18,17 @@ module.exports = {
       script: "./dist/src/transfer_to_ethereum.js",
       args: "cron",
     },
+    {
+      name: "westend-transferWndToEthereum",
+      node_args: "--require=dotenv/config",
+      script: "./dist/src/transfer_relay_token_to_ethereum.js",
+      args: "cron",
+    },
+    {
+      name: "westend-transferWndToPolkadot",
+      node_args: "--require=dotenv/config",
+      script: "./dist/src/transfer_relay_token_to_polkadot.js",
+      args: "cron",
+    },
   ],
 };

@@ -5,6 +5,7 @@ import { Wallet, formatEther } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { readFile, writeFile } from "fs/promises"
 import { existsSync } from "fs"
+import cron from "node-cron"
 
 function cache<T>(filePath: string, generator: () => T | Promise<T>): Promise<T> {
     return (async () => {
@@ -206,9 +207,19 @@ const transfer = async () => {
     context.destroyContext()
 }
 
-transfer()
-    .then(() => process.exit(0))
-    .catch((error) => {
-        console.error("Error:", error)
-        process.exit(1)
-    })
+if (process.argv.length != 3) {
+    console.error("Expected one argument with Enum from `start|cron`")
+    process.exit(1)
+}
+
+if (process.argv[2] == "start") {
+    transfer()
+        .then(() => process.exit(0))
+        .catch((error) => {
+            console.error("Error:", error)
+            process.exit(1)
+        })
+} else if (process.argv[2] == "cron") {
+    console.log("running cronjob")
+    cron.schedule(process.env["CRON_EXPRESSION"] || "0 1 * * *", transfer)
+}

@@ -22,8 +22,8 @@
     "historyV2": "npx ts-node src/global_transfer_history_v2.ts",
     "format": "prettier src --write",
     "reindex": "npx ts-node src/index_meta_data.ts",
-    "transferRelayTokenToEthereum": "npx ts-node src/transfer_relay_token_to_ethereum.ts",
-    "transferRelayTokenToPolkadot": "npx ts-node src/transfer_relay_token_to_polkadot.ts",
+    "transferRelayTokenToEthereum": "npx ts-node src/transfer_relay_token_to_ethereum.ts start",
+    "transferRelayTokenToPolkadot": "npx ts-node src/transfer_relay_token_to_polkadot.ts start",
     "transferPenpalTokenToEthereum": "npx ts-node src/transfer_penpal_token_to_ethereum.ts",
     "transferPenpalTokenToPolkadot": "npx ts-node src/transfer_penpal_token_to_polkadot.ts"
   },
