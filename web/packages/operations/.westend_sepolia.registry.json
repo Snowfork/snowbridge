@@ -30,9 +30,9 @@
       "assets": {
         "0x0000000000000000000000000000000000000000": {
           "token": "0x0000000000000000000000000000000000000000",
-          "name": "",
-          "symbol": "",
-          "decimals": 0
+          "name": "Ether",
+          "symbol": "Ether",
+          "decimals": 18
         },
         "0xfff9976782d46cc05630d1f6ebab18b2324d6b14": {
           "token": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
@@ -74,10 +74,10 @@
       "assets": {
         "0x0000000000000000000000000000000000000000": {
           "token": "0x0000000000000000000000000000000000000000",
-          "name": "",
+          "name": "Ether",
           "minimumBalance": "bigint:15000",
-          "symbol": "",
-          "decimals": 0,
+          "symbol": "Ether",
+          "decimals": 18,
           "isSufficient": true
         },
         "0xfff9976782d46cc05630d1f6ebab18b2324d6b14": {
