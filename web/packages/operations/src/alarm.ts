@@ -75,6 +75,10 @@ export const IndexerLatencyThreshold = process.env["IndexerLatencyThreshold"]
     ? parseInt(process.env["IndexerLatencyThreshold"])
     : 150
 
+export const ScanInterval = process.env["SCAN_INTERVAL"]
+    ? parseInt(process.env["SCAN_INTERVAL"])
+    : 900
+
 export const sendMetrics = async (metrics: status.AllMetrics) => {
     let client = new CloudWatchClient({})
     let metricData = []
@@ -354,7 +358,7 @@ export const initializeAlarms = async () => {
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             EvaluationPeriods: AlarmEvaluationConfiguration.ToEthereumStale.EvaluationPeriods,
-            Period: 1800,
+            Period: ScanInterval,
             DatapointsToAlarm: AlarmEvaluationConfiguration.ToEthereumStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
         })
@@ -368,7 +372,7 @@ export const initializeAlarms = async () => {
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             EvaluationPeriods: AlarmEvaluationConfiguration.ToPolkadotStale.EvaluationPeriods,
-            Period: 1800,
+            Period: ScanInterval,
             DatapointsToAlarm: AlarmEvaluationConfiguration.ToPolkadotStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
         })
@@ -382,7 +386,7 @@ export const initializeAlarms = async () => {
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             EvaluationPeriods: AlarmEvaluationConfiguration.ToEthereumStale.EvaluationPeriods,
-            Period: 1800,
+            Period: ScanInterval,
             DatapointsToAlarm: AlarmEvaluationConfiguration.ToEthereumStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
         })
@@ -396,7 +400,7 @@ export const initializeAlarms = async () => {
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             EvaluationPeriods: AlarmEvaluationConfiguration.ToPolkadotStale.EvaluationPeriods,
-            Period: 1800,
+            Period: ScanInterval,
             DatapointsToAlarm: AlarmEvaluationConfiguration.ToPolkadotStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
         })
@@ -409,8 +413,8 @@ export const initializeAlarms = async () => {
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_ATTACKED_SNS_TOPIC],
-            EvaluationPeriods: 1,
-            Period: 1800,
+            EvaluationPeriods: 3,
+            Period: ScanInterval,
             ...alarmCommandSharedInput,
         })
     )
@@ -422,8 +426,8 @@ export const initializeAlarms = async () => {
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_ATTACKED_SNS_TOPIC],
-            EvaluationPeriods: 1,
-            Period: 1800,
+            EvaluationPeriods: 3,
+            Period: ScanInterval,
             ...alarmCommandSharedInput,
         })
     )
@@ -469,8 +473,8 @@ export const initializeAlarms = async () => {
         Statistic: "Average",
         ComparisonOperator: "GreaterThanThreshold",
         AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
-        EvaluationPeriods: 2,
-        Period: 1800,
+        EvaluationPeriods: 3,
+        Period: ScanInterval,
         ...alarmCommandSharedInput,
     })
     await client.send(accountBalanceAlarm)
@@ -483,8 +487,8 @@ export const initializeAlarms = async () => {
         Statistic: "Average",
         ComparisonOperator: "GreaterThanThreshold",
         AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-        EvaluationPeriods: 3,
-        Period: 1800,
+        EvaluationPeriods: 4,
+        Period: ScanInterval,
         ...alarmCommandSharedInput,
     })
     await client.send(indexerAlarm)
