@@ -31,10 +31,10 @@ export enum AlarmReason {
 }
 
 export const InsufficientBalanceThreshold = {
-    // Minimum as 300 DOT
+    // Minimum as 100 DOT
     Substrate: process.env["SubstrateBalanceThreshold"]
         ? parseInt(process.env["SubstrateBalanceThreshold"])
-        : 3_000_000_000_000,
+        : 1_000_000_000_000,
     // Minimum as 0.3 Ether
     Ethereum: process.env["EthereumBalanceThreshold"]
         ? parseInt(process.env["EthereumBalanceThreshold"])
@@ -56,18 +56,18 @@ export const AlarmEvaluationConfiguration = {
     ToEthereumStale: {
         EvaluationPeriods: process.env["ToEthereumEvaluationPeriods"]
             ? parseInt(process.env["ToEthereumEvaluationPeriods"])
-            : 12,
+            : 18,
         DatapointsToAlarm: process.env["ToEthereumDatapointsToAlarm"]
             ? parseInt(process.env["ToEthereumDatapointsToAlarm"])
-            : 10,
+            : 15,
     },
     ToPolkadotStale: {
         EvaluationPeriods: process.env["ToPolkadotEvaluationPeriods"]
             ? parseInt(process.env["ToPolkadotEvaluationPeriods"])
-            : 8,
+            : 12,
         DatapointsToAlarm: process.env["ToPolkadotDatapointsToAlarm"]
             ? parseInt(process.env["ToPolkadotDatapointsToAlarm"])
-            : 6,
+            : 10,
     },
 }
 
