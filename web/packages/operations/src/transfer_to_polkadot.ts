@@ -1,51 +1,15 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment, toPolkadotV2, assetsV2 } from "@snowbridge/api"
-import { WETH9__factory } from "@snowbridge/contract-types"
+import { Context, environment, toPolkadotV2 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
-import cron from "node-cron"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import { readFile, writeFile } from "fs/promises"
-import { existsSync } from "fs"
+import { fetchRegistry } from "./registry"
 
-function cache<T>(filePath: string, generator: () => T | Promise<T>): Promise<T> {
-    return (async () => {
-        if (existsSync(filePath)) {
-            // Read and parse existing cache file
-            const data = await readFile(filePath)
-            return JSON.parse(data.toString("utf-8"), (key, value) => {
-                if (
-                    typeof value === "string" &&
-                    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)
-                ) {
-                    return new Date(value)
-                }
-                if (typeof value === "string" && /^bigint:\d+$/.test(value)) {
-                    return BigInt(value.slice(7))
-                }
-                return value
-            }) as T
-        }
-
-        // Generate new data and cache it
-        const result = await generator()
-        const json = JSON.stringify(
-            result,
-            (key, value) => {
-                if (typeof value === "bigint") {
-                    return `bigint:${value.toString()}`
-                }
-                return value
-            },
-            2
-        )
-
-        await writeFile(filePath, json)
-        return result
-    })()
-}
-
-const transfer = async () => {
+export const transferToPolkadot = async (
+    destinationChainId: number,
+    symbol: string,
+    amount: bigint
+) => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
@@ -98,41 +62,15 @@ const transfer = async () => {
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
-    const amount = 15_000_000_000_000n
-
-    const registry = await cache(
-        `.${env}.registry.json`,
-        async () => await assetsV2.buildRegistry(await assetsV2.fromContext(context))
-    )
-    console.log(
-        "Asset Registry:",
-        JSON.stringify(
-            registry,
-            (_, value) => (typeof value === "bigint" ? String(value) : value),
-            2
-        )
-    )
+    const registry = await fetchRegistry(env, context)
 
     const assets = registry.ethereumChains[registry.ethChainId].assets
-    const WETH_CONTRACT = Object.keys(assets)
+    const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
-        .find((asset) => asset.symbol === "WETH")!.token
-
-    console.log("# Deposit and Approve WETH")
-    {
-        const weth9 = WETH9__factory.connect(WETH_CONTRACT, ETHEREUM_ACCOUNT)
-        const depositResult = await weth9.deposit({ value: amount })
-        const depositReceipt = await depositResult.wait()
-
-        const approveResult = await weth9.approve(config.GATEWAY_CONTRACT, amount)
-        const approveReceipt = await approveResult.wait()
-
-        console.log("deposit tx", depositReceipt?.hash, "approve tx", approveReceipt?.hash)
-    }
+        .find((asset) => asset.symbol === symbol)!.token
 
     console.log("# Ethereum to Asset Hub")
     {
-        const destinationChainId: number = 1000
         // Step 1. Get the delivery fee for the transaction
         const fee = await toPolkadotV2.getDeliveryFee(
             {
@@ -141,7 +79,7 @@ const transfer = async () => {
                 destination: await context.parachain(destinationChainId),
             },
             registry,
-            WETH_CONTRACT,
+            TOKEN_CONTRACT,
             destinationChainId
         )
 
@@ -150,7 +88,7 @@ const transfer = async () => {
             registry,
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,
-            WETH_CONTRACT,
+            TOKEN_CONTRACT,
             destinationChainId,
             amount,
             fee
@@ -210,21 +148,4 @@ const transfer = async () => {
         console.log("Success message", message.messageId)
     }
     await context.destroyContext()
-}
-
-if (process.argv.length != 3) {
-    console.error("Expected one argument with Enum from `start|cron`")
-    process.exit(1)
-}
-
-if (process.argv[2] == "start") {
-    transfer()
-        .then(() => process.exit(0))
-        .catch((error) => {
-            console.error("Error:", error)
-            process.exit(1)
-        })
-} else if (process.argv[2] == "cron") {
-    console.log("running cronjob")
-    cron.schedule(process.env["CRON_EXPRESSION"] || "0 0 * * *", transfer)
 }

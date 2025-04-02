@@ -1,9 +1,9 @@
 import "dotenv/config"
 import cron from "node-cron"
-import { transferToPolkadot } from "./transfer_to_polkadot"
+import { transferToEthereum } from "./transfer_to_ethereum"
 
 const transfer = async () => {
-    await transferToPolkadot(1000, "WND", 100_000_000n)
+    await transferToEthereum(1000, "WETH", 1_000_000_000_000n)
 }
 
 if (process.argv.length != 3) {
@@ -20,5 +20,5 @@ if (process.argv[2] == "start") {
         })
 } else if (process.argv[2] == "cron") {
     console.log("running cronjob")
-    cron.schedule(process.env["TRANSFER_RELAY_TOKEN_CRON_EXPRESSION"] || "0 1 * * *", transfer)
+    cron.schedule(process.env["CRON_EXPRESSION"] || "0 0 * * *", transfer)
 }

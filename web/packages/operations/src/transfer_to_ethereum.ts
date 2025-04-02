@@ -1,50 +1,11 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
 import { Context, environment, toEthereumV2, assetsV2 } from "@snowbridge/api"
-import cron from "node-cron"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import { readFile, writeFile } from "fs/promises"
-import { existsSync } from "fs"
 import { formatUnits, Wallet } from "ethers"
+import { fetchRegistry } from "./registry"
 
-function cache<T>(filePath: string, generator: () => T | Promise<T>): Promise<T> {
-    return (async () => {
-        if (existsSync(filePath)) {
-            // Read and parse existing cache file
-            const data = await readFile(filePath)
-            return JSON.parse(data.toString("utf-8"), (key, value) => {
-                if (
-                    typeof value === "string" &&
-                    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)
-                ) {
-                    return new Date(value)
-                }
-                if (typeof value === "string" && /^bigint:\d+$/.test(value)) {
-                    return BigInt(value.slice(7))
-                }
-                return value
-            }) as T
-        }
-
-        // Generate new data and cache it
-        const result = await generator()
-        const json = JSON.stringify(
-            result,
-            (key, value) => {
-                if (typeof value === "bigint") {
-                    return `bigint:${value.toString()}`
-                }
-                return value
-            },
-            2
-        )
-
-        await writeFile(filePath, json)
-        return result
-    })()
-}
-
-const transfer = async () => {
+export const transferToEthereum = async (sourceParaId: number, symbol: string, amount: bigint) => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
@@ -96,43 +57,22 @@ const transfer = async () => {
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
-    const amount = 15_000_000_000_000n
 
-    // Step 0. Build the Asset Registry. The registry contains the list of all token and parachain metadata in order to send tokens.
-    // It may take some build but does not change often so it is safe to cache for 12 hours and shipped with your dapp as static data.
-    //
-    // The registry can be build from a snowbridge environment or snowbridge coutntext.
-    //      const registry = await assetsV2.buildRegistry(assetsV2.fromEnvironment(snwobridgeEnv))
-    // If your dapp does not use the snowbridge environment or context you can always build it manually by
-    // specifying RegistryOptions for only the parachains you care about.
-
-    const registry = await cache(
-        `.${env}.registry.json`,
-        async () => await assetsV2.buildRegistry(await assetsV2.fromContext(context))
-    )
-    console.log(
-        "Asset Registry:",
-        JSON.stringify(
-            registry,
-            (_, value) => (typeof value === "bigint" ? String(value) : value),
-            2
-        )
-    )
+    const registry = await fetchRegistry(env, context)
 
     const assets = registry.ethereumChains[registry.ethChainId].assets
-    const WETH_CONTRACT = Object.keys(assets)
+    const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
-        .find((asset) => asset.symbol === "WETH")!.token
+        .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))!.token
 
     console.log("Asset Hub to Ethereum")
     {
-        const sourceParaId = 1000
         // Step 1. Get the delivery fee for the transaction
         const fee = await toEthereumV2.getDeliveryFee(
             { assetHub: await context.assetHub(), source: await context.parachain(sourceParaId) },
             sourceParaId,
             registry,
-            WETH_CONTRACT
+            TOKEN_CONTRACT
         )
 
         // Step 2. Create a transfer tx
@@ -141,7 +81,7 @@ const transfer = async () => {
             registry,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
-            WETH_CONTRACT,
+            TOKEN_CONTRACT,
             amount,
             fee
         )
@@ -195,21 +135,4 @@ const transfer = async () => {
         console.log("Success message", response.messageId)
     }
     await context.destroyContext()
-}
-
-if (process.argv.length != 3) {
-    console.error("Expected one argument with Enum from `start|cron`")
-    process.exit(1)
-}
-
-if (process.argv[2] == "start") {
-    transfer()
-        .then(() => process.exit(0))
-        .catch((error) => {
-            console.error("Error:", error)
-            process.exit(1)
-        })
-} else if (process.argv[2] == "cron") {
-    console.log("running cronjob")
-    cron.schedule(process.env["CRON_EXPRESSION"] || "0 0 * * *", transfer)
 }
