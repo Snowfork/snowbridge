@@ -74,7 +74,7 @@ set_slot_time() {
 
 build_lodestar() {
     if [ "$rebuild_lodestar" == "true" ]; then
-        pushd $root_dir/lodestar
+        pushd $root_dir/../lodestar
         if [ "$eth_fast_mode" == "true" ]; then
             set_slot_time 1
         else
@@ -85,6 +85,13 @@ build_lodestar() {
     fi
 }
 
+build_web_packages() {
+    pushd $root_dir/web
+    pnpm install
+    pnpm build
+    popd
+}
+
 install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
@@ -92,6 +99,7 @@ install_binary() {
     build_binaries
     build_contracts
     build_relayer
+    build_web_packages
 }
 
 if [ -z "${from_start_services:-}" ]; then
