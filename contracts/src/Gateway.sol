@@ -68,6 +68,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     modifier nonreentrant() {
         assembly {
             if tload(0) { revert(0, 0) }
+
+            // Set the flag to mark the function is currently executing.
             tstore(0, 1)
         }
         _;
