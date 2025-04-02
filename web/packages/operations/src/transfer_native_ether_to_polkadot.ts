@@ -6,7 +6,6 @@ import cron from "node-cron"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { readFile, writeFile } from "fs/promises"
 import { existsSync } from "fs"
-import { Big } from "big.js"
 
 function cache<T>(filePath: string, generator: () => T | Promise<T>): Promise<T> {
     return (async () => {
