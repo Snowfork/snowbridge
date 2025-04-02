@@ -96,7 +96,7 @@ const transfer = async () => {
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
-    const amount = 10_000_000_000_000n
+    const amount = 1_000_000_000_000n
 
     // Step 0. Build the Asset Registry. The registry contains the list of all token and parachain metadata in order to send tokens.
     // It may take some build but does not change often so it is safe to cache for 12 hours and shipped with your dapp as static data.

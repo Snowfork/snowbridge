@@ -97,7 +97,7 @@ const transfer = async () => {
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
-    const amount = 15_000_000_000_000n
+    const amount = 10_000_000_000_000n
 
     const registry = await cache(
         `.${env}.registry.json`,
