@@ -14,6 +14,8 @@ import {
     buildResultXcmAssetHubPNATransferFromParachain,
     buildParachainPNAReceivedXcmOnDestination,
     buildAssetHubPNATransferFromParachain,
+    buildExportXcmForPNA,
+    buildExportXcmForERC20,
 } from "./xcmBuilder"
 import {
     Asset,
@@ -375,7 +377,7 @@ export async function getDeliveryFee(
     const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
         resolveInputs(registry, tokenAddress, parachain)
 
-    let xcm: any
+    let xcm: any, forwardedXcm: any
 
     if (sourceAssetMetadata.location) {
         xcm = buildResultXcmAssetHubPNATransferFromParachain(
@@ -389,6 +391,16 @@ export async function getDeliveryFee(
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n
+        )
+        forwardedXcm = buildExportXcmForPNA(
+            assetHub.registry,
+            registry.ethChainId,
+            sourceAssetMetadata.locationOnEthereum,
+            "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            340282366920938463463374607431768211455n,
+            340282366920938463463374607431768211455n,
+            1000
         )
     } else {
         xcm = buildResultXcmAssetHubERC20TransferFromParachain(
@@ -404,7 +416,18 @@ export async function getDeliveryFee(
             parachain,
             340282366920938463463374607431768211455n
         )
+        forwardedXcm = buildExportXcmForERC20(
+            assetHub.registry,
+            registry.ethChainId,
+            tokenAddress,
+            "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            340282366920938463463374607431768211455n,
+            340282366920938463463374607431768211455n,
+            1000
+        )
     }
+    console.log("xcm forwarded to BH:", forwardedXcm.toHuman())
 
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
@@ -413,15 +436,10 @@ export async function getDeliveryFee(
         registry.parachains[registry.assetHubParaId].estimatedDeliveryFeeDOT || 1_000_000_000n
     const ahParachain = registry.parachains[registry.assetHubParaId]
     if (ahParachain.features.hasXcmPaymentApi) {
-        // Todo: Seems incorrect--the XCM here is the one executed on AH,
-        // whereas what we need is the one executed on BH, which should contain `ExportMessage`.
-        // Though we can use dryRunXcm on AH to get the forwared XCM, I prefer not to.
-        // Since the delivery fee is dertermined solely by the size of the blob, not by the content of the XCM,
-        // I don't think it's worthwhile to introduce such complexity here.
         bridgeHubDeliveryFeeDOT = await calculateDeliveryFee(
             assetHub,
             registry.bridgeHubParaId,
-            xcm
+            forwardedXcm
         )
     }
     if (parachain !== registry.assetHubParaId) {
