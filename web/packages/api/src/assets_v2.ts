@@ -538,7 +538,7 @@ export async function getLocationBalance(
     specName: string,
     location: any,
     account: string,
-    assetId?: string
+    assetId?: any
 ): Promise<bigint> {
     switch (specName) {
         case "basilisk":
@@ -597,11 +597,14 @@ export async function getLocationBalance(
         }
         case "moonriver":
         case "moonbeam": {
-            const assetId = (
-                await provider.query.assetManager.assetTypeId({ xcm: location })
-            ).toPrimitive()
+            // For PNA, use assetId directly; for ENA, query assetId from Multilocation
             if (!assetId) {
-                throw Error(`DOT not registered for spec ${specName}.`)
+                assetId = (
+                    await provider.query.assetManager.assetTypeId({ xcm: location })
+                ).toPrimitive()
+                if (!assetId) {
+                    throw Error(`Asset not registered for spec ${specName}.`)
+                }
             }
             const accountData = (
                 await provider.query.assets.account(assetId, account)
