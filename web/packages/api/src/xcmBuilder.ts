@@ -1,6 +1,6 @@
 import { Registry } from "@polkadot/types/types"
 import { beneficiaryMultiAddress } from "./utils"
-import { Asset, ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 
 export const DOT_LOCATION = { parents: 1, interior: "Here" }
 
@@ -533,15 +533,14 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
 export function buildResultXcmAssetHubPNATransferFromParachain(
     registry: Registry,
     ethChainId: number,
-    asset: Asset,
+    assetLocationOnAH: any,
+    assetLocationOnEthereum: any,
     sourceAccount: string,
     beneficiary: string,
     topic: string,
     transferAmount: bigint,
     totalFeeInDot: bigint,
-    destinationFeeInDot: bigint,
-    sourceParachainId: number,
-    returnToSenderFeeInDOT: bigint
+    destinationFeeInDot: bigint
 ) {
     return registry.createType("XcmVersionedXcm", {
         v4: [
@@ -569,7 +568,7 @@ export function buildResultXcmAssetHubPNATransferFromParachain(
             {
                 receiveTeleportedAsset: [
                     {
-                        id: asset.locationOnAH,
+                        id: assetLocationOnAH,
                         fun: {
                             Fungible: transferAmount,
                         },
@@ -581,10 +580,9 @@ export function buildResultXcmAssetHubPNATransferFromParachain(
                 ethChainId,
                 sourceAccount,
                 beneficiary,
-                asset,
-                topic,
-                sourceParachainId,
-                returnToSenderFeeInDOT
+                assetLocationOnAH,
+                assetLocationOnEthereum,
+                topic
             ),
         ],
     })
@@ -594,10 +592,9 @@ function buildAssetHubXcmForPNAFromParachain(
     ethChainId: number,
     sourceAccount: string,
     beneficiary: string,
-    asset: Asset,
-    topic: string,
-    sourceParachainId: number,
-    destinationFeeInDOT: bigint
+    assetLocationOnAH: any,
+    assetLocationOnEthereum: any,
+    topic: string
 ) {
     let {
         hexAddress,
@@ -622,7 +619,7 @@ function buildAssetHubXcmForPNAFromParachain(
             depositReserveAsset: {
                 assets: {
                     Wild: {
-                        AllOf: { id: asset.locationOnAH, fun: "Fungible" },
+                        AllOf: { id: assetLocationOnAH, fun: "Fungible" },
                     },
                 },
                 dest: bridgeLocation(ethChainId),
@@ -630,7 +627,7 @@ function buildAssetHubXcmForPNAFromParachain(
                     {
                         buyExecution: {
                             fees: {
-                                id: asset.locationOnEthereum, // CAUTION: Must use reanchored locations.
+                                id: assetLocationOnEthereum, // CAUTION: Must use reanchored locations.
                                 fun: {
                                     Fungible: "1", // Offering 1 unit as fee, but it is returned to the beneficiary address.
                                 },
@@ -665,7 +662,7 @@ function buildAssetHubXcmForPNAFromParachain(
 
 export function buildParachainPNAReceivedXcmOnDestination(
     registry: Registry,
-    asset: Asset,
+    assetLocation: any,
     transferAmount: bigint,
     feeInDot: bigint,
     beneficiary: string,
@@ -714,7 +711,7 @@ export function buildParachainPNAReceivedXcmOnDestination(
             {
                 receiveTeleportedAsset: [
                     {
-                        id: asset.location,
+                        id: assetLocation,
                         fun: {
                             Fungible: transferAmount,
                         },
@@ -745,20 +742,18 @@ export function buildAssetHubPNATransferFromParachain(
     ethChainId: number,
     sourceAccount: string,
     beneficiary: string,
-    asset: Asset,
-    topic: string,
-    sourceParachainId: number,
-    returnToSenderFeeInDOT: bigint
+    assetLocationOnAH: any,
+    assetLocationOnEthereum: any,
+    topic: string
 ) {
     return registry.createType("XcmVersionedXcm", {
         v4: buildAssetHubXcmForPNAFromParachain(
             ethChainId,
             sourceAccount,
             beneficiary,
-            asset,
-            topic,
-            sourceParachainId,
-            returnToSenderFeeInDOT
+            assetLocationOnAH,
+            assetLocationOnEthereum,
+            topic
         ),
     })
 }
@@ -766,7 +761,7 @@ export function buildAssetHubPNATransferFromParachain(
 export function buildParachainPNAReceivedXcmOnAssetHub(
     registry: Registry,
     ethChainId: number,
-    asset: Asset,
+    assetLocationOnAH: any,
     destinationParaId: number,
     transferAmount: bigint,
     totalFeeInDot: bigint,
@@ -823,7 +818,7 @@ export function buildParachainPNAReceivedXcmOnAssetHub(
             {
                 withdrawAsset: [
                     {
-                        id: asset.locationOnAH,
+                        id: assetLocationOnAH,
                         fun: {
                             Fungible: transferAmount,
                         },
@@ -860,7 +855,7 @@ export function buildParachainPNAReceivedXcmOnAssetHub(
                     assets: {
                         definite: [
                             {
-                                id: asset.locationOnAH,
+                                id: assetLocationOnAH,
                                 fun: {
                                     Fungible: transferAmount,
                                 },
@@ -905,7 +900,7 @@ export function buildParachainPNAReceivedXcmOnAssetHub(
 export function buildAssetHubPNAReceivedXcm(
     registry: Registry,
     ethChainId: number,
-    asset: Asset,
+    assetLocation: any,
     transferAmount: bigint,
     feeInDot: bigint,
     beneficiary: string,
@@ -960,7 +955,7 @@ export function buildAssetHubPNAReceivedXcm(
             {
                 withdrawAsset: [
                     {
-                        id: asset.location,
+                        id: assetLocation,
                         fun: {
                             Fungible: transferAmount,
                         },

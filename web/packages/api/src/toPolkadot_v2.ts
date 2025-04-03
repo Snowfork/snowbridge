@@ -154,7 +154,7 @@ export async function getDeliveryFee(
         if (destAssetMetadata.location) {
             destinationXcm = buildParachainPNAReceivedXcmOnDestination(
                 destination.registry,
-                destAssetMetadata,
+                destAssetMetadata.location,
                 340282366920938463463374607431768211455n,
                 340282366920938463463374607431768211455n,
                 destParachain.info.accountType === "AccountId32"
@@ -521,7 +521,7 @@ export async function validateTransfer(
                 }
             }
         }
-    } else if(!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
+    } else if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
         const { accountMaxConumers, accountExists } = await validateAccount(
             assetHub,
             ahParachain.info.specName,
@@ -652,7 +652,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
             xcm = buildParachainPNAReceivedXcmOnAssetHub(
                 assetHub.registry,
                 registry.ethChainId,
-                destAssetMetadata,
+                destAssetMetadata.locationOnAH,
                 destinationParaId,
                 amount,
                 assetHubFee,
@@ -678,7 +678,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
             xcm = buildAssetHubPNAReceivedXcm(
                 assetHub.registry,
                 registry.ethChainId,
-                destAssetMetadata,
+                destAssetMetadata.location,
                 amount,
                 assetHubFee,
                 beneficiaryAccount,

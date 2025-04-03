@@ -198,9 +198,7 @@ export async function createTransfer(
                 beneficiaryAccount,
                 amount,
                 fee.totalFeeInDot,
-                messageId,
-                sourceParaId,
-                fee.returnToSenderExecutionFeeDOT
+                messageId
             )
         } else {
             tx = createERC20SourceParachainTx(
@@ -383,14 +381,13 @@ export async function getDeliveryFee(
         xcm = buildResultXcmAssetHubPNATransferFromParachain(
             assetHub.registry,
             registry.ethChainId,
-            sourceAssetMetadata,
+            sourceAssetMetadata.locationOnAH,
+            sourceAssetMetadata.locationOnEthereum,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
-            340282366920938463463374607431768211455n,
-            parachain,
             340282366920938463463374607431768211455n
         )
     } else {
@@ -433,7 +430,7 @@ export async function getDeliveryFee(
         if (sourceAssetMetadata.location) {
             returnToSenderXcm = buildParachainPNAReceivedXcmOnDestination(
                 source.registry,
-                sourceAssetMetadata,
+                sourceAssetMetadata.location,
                 340282366920938463463374607431768211455n,
                 340282366920938463463374607431768211455n,
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -653,15 +650,14 @@ export async function validateTransfer(
                     buildResultXcmAssetHubPNATransferFromParachain(
                         sourceParachain.registry,
                         registry.ethChainId,
-                        sourceAssetMetadata,
+                        sourceAssetMetadata.locationOnAH,
+                        sourceAssetMetadata.locationOnEthereum,
                         sourceAccountHex,
                         beneficiaryAccount,
                         "0x0000000000000000000000000000000000000000000000000000000000000000",
                         amount,
                         fee.totalFeeInDot,
-                        fee.assetHubExecutionFeeDOT,
-                        sourceParaId,
-                        fee.returnToSenderExecutionFeeDOT
+                        fee.assetHubExecutionFeeDOT
                     )
                 )
             } else {
@@ -1319,9 +1315,7 @@ function createPNASourceParachainTx(
     beneficiaryAccount: string,
     amount: bigint,
     totalFeeInDot: bigint,
-    messageId: string,
-    sourceParaId: number,
-    returnToSenderFeeInDOT: bigint
+    messageId: string
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     const assets = {
         v4: [
@@ -1345,10 +1339,9 @@ function createPNASourceParachainTx(
         ethChainId,
         sourceAccount,
         beneficiaryAccount,
-        asset,
-        messageId,
-        sourceParaId,
-        returnToSenderFeeInDOT
+        asset.locationOnAH,
+        asset.locationOnEthereum,
+        messageId
     )
     console.log("custom xcm for pna transfer from 3rd parachain:" + customXcm.toPrimitive())
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
