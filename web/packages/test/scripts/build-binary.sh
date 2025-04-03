@@ -62,15 +62,15 @@ build_latest_relayer() {
 }
 
 build_relayers_v1_v2() {
-    pushd $root_dir
-    # Check for uncommitted changes in relayer directory
-    if [[ -n $(git status --porcelain relayer) ]]; then
-        echo  $(git status --porcelain relayer)
-        echo "Error: Uncommitted changes detected in the relayer directory. Please commit or stash them before running this script."
-        exit 1
-    fi
+    pushd "$root_dir"
+
+    # Backup relayer directory
+    BACKUP_DIR=$(mktemp -d -t relayer-backup-XXXXXX)
+    echo "Backing up relayer directory to $BACKUP_DIR"
+    cp -r "$relay_dir" "$BACKUP_DIR/"
 
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
     # Build current version
     echo "Building relayer v2"
     checkout_build_and_copy "$CURRENT_BRANCH" "snowbridge-relay-v2"
@@ -79,8 +79,12 @@ build_relayers_v1_v2() {
     echo "Building relayer v1"
     checkout_build_and_copy "snowbridge-v1" "snowbridge-relay-v1"
 
-    # Reset relayer directory to current branch
-    git checkout "$CURRENT_BRANCH" -- relayer
+    # Restore original relayer directory
+    echo "Restoring original relayer directory from backup"
+    rm -rf "$relay_dir"
+    mv "$BACKUP_DIR/$(basename "$relay_dir")" "$relay_dir"
+    rm -rf "$BACKUP_DIR"
+
     popd
 }
 
@@ -90,6 +94,9 @@ checkout_build_and_copy() {
     BINARY_NAME=$2
 
     pushd $root_dir
+
+    rm -rf "$relay_dir"
+
     echo "Checking out relayer directory from branch: $BRANCH"
     git checkout "$BRANCH" -- "relayer"
 
