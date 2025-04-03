@@ -3,7 +3,7 @@ import cron from "node-cron"
 import { transferToPolkadot } from "./transfer_to_polkadot"
 
 const transfer = async () => {
-    await transferToPolkadot(1000, "WND", 100_000_000n)
+    await transferToPolkadot(1000, "Ether", 10_000_000_000_000n)
 }
 
 if (process.argv.length != 3) {
@@ -20,5 +20,5 @@ if (process.argv[2] == "start") {
         })
 } else if (process.argv[2] == "cron") {
     console.log("running cronjob")
-    cron.schedule(process.env["TRANSFER_RELAY_TOKEN_CRON_EXPRESSION"] || "0 1 * * *", transfer)
+    cron.schedule(process.env["TRANSFER_ETHER_CRON_EXPRESSION"] || "0 0 * * *", transfer)
 }

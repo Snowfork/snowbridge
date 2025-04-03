@@ -495,7 +495,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 "1002": "https://bridge-hub-polkadot-rpc.dwellir.com",
                 "3369": "https://polkadot-mythos-rpc.polkadot.io",
                 "2034": "wss://hydration-rpc.n.dwellir.com",
-                "2030": "wss://bifrost-polkadot-rpc.dwellir.com",
+                "2030": "wss://bifrost-polkadot.ibp.network",
                 "2004": "wss://moonbeam-rpc.n.dwellir.com",
             },
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",

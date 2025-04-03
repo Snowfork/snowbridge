@@ -4,3 +4,4 @@ dist
 config
 .env.*
 !.env.example
+*.registry.json
