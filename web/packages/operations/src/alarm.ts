@@ -413,7 +413,7 @@ export const initializeAlarms = async () => {
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_ATTACKED_SNS_TOPIC],
-            EvaluationPeriods: 3,
+            EvaluationPeriods: 6,
             Period: ScanInterval,
             ...alarmCommandSharedInput,
         })
@@ -426,7 +426,7 @@ export const initializeAlarms = async () => {
             Statistic: "Average",
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_ATTACKED_SNS_TOPIC],
-            EvaluationPeriods: 3,
+            EvaluationPeriods: 6,
             Period: ScanInterval,
             ...alarmCommandSharedInput,
         })
@@ -473,7 +473,7 @@ export const initializeAlarms = async () => {
         Statistic: "Average",
         ComparisonOperator: "GreaterThanThreshold",
         AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
-        EvaluationPeriods: 3,
+        EvaluationPeriods: 6,
         Period: ScanInterval,
         ...alarmCommandSharedInput,
     })
@@ -487,7 +487,7 @@ export const initializeAlarms = async () => {
         Statistic: "Average",
         ComparisonOperator: "GreaterThanThreshold",
         AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-        EvaluationPeriods: 4,
+        EvaluationPeriods: 6,
         Period: ScanInterval,
         ...alarmCommandSharedInput,
     })
