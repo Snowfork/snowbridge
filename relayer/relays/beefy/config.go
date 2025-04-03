@@ -29,6 +29,8 @@ type ContractsConfig struct {
 }
 
 type OnDemandSyncConfig struct {
+	// ID of the AssetHub channel
+	AssetHubChannelID string `mapstructure:"asset-hub-channel-id"`
 	// Maximum number of tokens available to consume
 	MaxTokens uint64 `mapstructure:"max-tokens"`
 	// Number of tokens added each `RefillPeriod`
@@ -54,6 +56,9 @@ func (c Config) Validate() error {
 	}
 	if c.Sink.Contracts.Gateway == "" {
 		return fmt.Errorf("sink contracts setting [Gateway] is not set")
+	}
+	if c.OnDemandSync.AssetHubChannelID == "" {
+		return fmt.Errorf("`on-demand-sync.asset-hub-channel-id` not set")
 	}
 	if c.OnDemandSync.MaxTokens == 0 {
 		return fmt.Errorf("`on-demand-sync.max-tokens` not set")

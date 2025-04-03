@@ -5,15 +5,15 @@
 
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-	types::deneb, AncestryProof, BeaconHeader, ExecutionProof, VersionedExecutionPayloadHeader,
+types::deneb, AncestryProof, BeaconHeader, ExecutionProof, VersionedExecutionPayloadHeader,
 };
-use snowbridge_verification_primitives::{EventFixture, EventProof, Log, Proof};
+use snowbridge_core::inbound::{InboundQueueFixture, Log, Message, Proof};
 use sp_core::U256;
 use sp_std::vec;
 
-pub fn make_{{TestCase}}_message() -> EventFixture {
-    EventFixture {
-        event: EventProof {
+pub fn make_{{TestCase}}_message() -> InboundQueueFixture {
+    InboundQueueFixture {
+        message: Message {
             event_log: 	Log {
                 address: hex!("{{InboundMessage.EventLog.Address}}").into(),
                 topics: vec![

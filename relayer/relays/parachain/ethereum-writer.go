@@ -17,7 +17,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
-	"github.com/snowfork/snowbridge/relayer/relays/util"
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 
@@ -25,26 +24,23 @@ import (
 )
 
 type EthereumWriter struct {
-	config      *SinkConfig
-	conn        *ethereum.Connection
-	gateway     *contracts.Gateway
-	tasks       <-chan *Task
-	gatewayABI  abi.ABI
-	relayConfig *Config
+	config     *SinkConfig
+	conn       *ethereum.Connection
+	gateway    *contracts.Gateway
+	tasks      <-chan *Task
+	gatewayABI abi.ABI
 }
 
 func NewEthereumWriter(
 	config *SinkConfig,
 	conn *ethereum.Connection,
 	tasks <-chan *Task,
-	relayConfig *Config,
 ) (*EthereumWriter, error) {
 	return &EthereumWriter{
-		config:      config,
-		conn:        conn,
-		gateway:     nil,
-		tasks:       tasks,
-		relayConfig: relayConfig,
+		config:  config,
+		conn:    conn,
+		gateway: nil,
+		tasks:   tasks,
 	}, nil
 }
 
@@ -147,13 +143,8 @@ func (wr *EthereumWriter) WriteChannel(
 		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 
-	rewardAddress, err := util.HexStringTo32Bytes(wr.relayConfig.RewardAddress)
-	if err != nil {
-		return fmt.Errorf("convert to reward address: %w", err)
-	}
-
-	tx, err := wr.gateway.V2Submit(
-		options, message, commitmentProof.Proof.InnerHashes, verificationProof, rewardAddress,
+	tx, err := wr.gateway.SubmitV1(
+		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
 	)
 	if err != nil {
 		return fmt.Errorf("send transaction Gateway.submit: %w", err)
@@ -192,8 +183,9 @@ func (wr *EthereumWriter) WriteChannel(
 				return fmt.Errorf("unpack event log: %w", err)
 			}
 			log.WithFields(log.Fields{
-				"nonce":   holder.Nonce,
-				"success": holder.Success,
+				"channelID": Hex(holder.ChannelID[:]),
+				"nonce":     holder.Nonce,
+				"success":   holder.Success,
 			}).Info("Message dispatched")
 		}
 	}

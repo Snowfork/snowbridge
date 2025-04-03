@@ -165,7 +165,7 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 	}
 	for _, task := range tasks {
 		paraNonce := (*task.MessageProofs)[0].Message.Nonce
-		waitingPeriod := (uint64(paraNonce) + li.scheduleConfig.TotalRelayerCount - li.scheduleConfig.ID) % li.scheduleConfig.TotalRelayerCount
+		waitingPeriod := (paraNonce + li.scheduleConfig.TotalRelayerCount - li.scheduleConfig.ID) % li.scheduleConfig.TotalRelayerCount
 		err = li.waitAndSend(ctx, task, waitingPeriod)
 		if err != nil {
 			return fmt.Errorf("wait task for nonce %d: %w", paraNonce, err)
@@ -331,11 +331,11 @@ func (li *BeefyListener) waitAndSend(ctx context.Context, task *Task, waitingPer
 	var cnt uint64
 	var err error
 	for {
-		isRelayed, err := li.scanner.isNonceRelayed(ctx, uint64(paraNonce))
+		ethInboundNonce, err := li.scanner.findLatestNonce(ctx)
 		if err != nil {
 			return err
 		}
-		if isRelayed {
+		if ethInboundNonce >= paraNonce {
 			log.Info(fmt.Sprintf("nonce %d picked up by another relayer, just skip", paraNonce))
 			return nil
 		}

@@ -73,7 +73,7 @@ build_relayers_v1_v2() {
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
     # Build current version
     echo "Building relayer v2"
-    checkout_build_and_copy "$CURRENT_BRANCH" "snowbridge-relay"
+    checkout_build_and_copy "$CURRENT_BRANCH" "snowbridge-relay-v2"
 
     # Build snowbridge-v1 branch version
     echo "Building relayer v1"
@@ -138,7 +138,6 @@ install_binary() {
     build_lodestar
     build_binaries
     build_contracts
-    build_relayer
     build_web_packages
     if [ "$snowbridge_v1_v2" = true ]; then
         build_relayers_v1_v2
