@@ -405,7 +405,6 @@ export async function getDeliveryFee(
             340282366920938463463374607431768211455n
         )
     }
-    console.log("xcm on asset hub for pna transfer from 3rd parachain:", xcm.toHuman())
 
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
@@ -447,7 +446,6 @@ export async function getDeliveryFee(
                 "0x0000000000000000000000000000000000000000000000000000000000000000"
             )
         }
-        console.log("xcm received on 3rd parachain for pna transfer:", returnToSenderXcm.toHuman())
 
         returnToSenderDeliveryFeeDOT = await calculateDeliveryFee(
             assetHub,
@@ -1045,7 +1043,6 @@ export async function getMessageReceipt(
             e.phase.asApplyExtrinsic.toNumber() === eventTx.phase.asApplyExtrinsic.toNumber()
     )
 
-    console.log()
     for (const e of matchedEvents) {
         const data = e.event.data
         if (sourceParachain.events.system.ExtrinsicFailed.is(e.event)) {
@@ -1343,7 +1340,7 @@ function createPNASourceParachainTx(
         asset.locationOnEthereum,
         messageId
     )
-    console.log("custom xcm for pna transfer from 3rd parachain:" + customXcm.toPrimitive())
+
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
         assets,
