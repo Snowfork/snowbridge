@@ -586,10 +586,10 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ETHEREUM_CHAINS: {
                 "11155111": (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`,
             },
-            RELAY_CHAIN_URL: "https://westend-rpc.polkadot.io",
+            RELAY_CHAIN_URL: "wss://westend-rpc.dwellir.com",
             PARACHAINS: {
-                "1000": "https://asset-hub-westend.dotters.network",
-                "1002": "https://westend-bridge-hub-rpc.polkadot.io",
+                "1000": "wss://asset-hub-westend-rpc.dwellir.com",
+                "1002": "wss://bridge-hub-westend-rpc.dwellir.com",
             },
             GATEWAY_CONTRACT: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
             BEEFY_CONTRACT: "0x6DFaD3D73A28c48E4F4c616ECda80885b415283a",
