@@ -113,7 +113,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
             // Check if flag is set and if true revert because it means the function is currently executing.
             if tload(0) { revert(0, 0) }
 
-            // Set the flag to mark the the function is currently executing.
+            // Set the flag to mark the function is currently executing.
             tstore(0, 1)
         }
 
