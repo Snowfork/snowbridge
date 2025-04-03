@@ -643,7 +643,7 @@ export function getTokenBalance(
     return getLocationBalance(
         provider,
         specName,
-        asset?.location || erc20Location(ethChainId, tokenAddress),
+        asset?.location ?? erc20Location(ethChainId, tokenAddress),
         account,
         asset?.assetId
     )
