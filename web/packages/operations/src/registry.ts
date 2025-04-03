@@ -42,7 +42,7 @@ function cache<T>(filePath: string, generator: () => T | Promise<T>): Promise<T>
 // Build the Asset Registry. The registry contains the list of all token and parachain metadata in order to send tokens.
 // It may take some build but does not change often so it is safe to cache for 12 hours and shipped with your dapp as static data.
 //
-// The registry can be build from a snowbridge environment or snowbridge coutntext.
+// The registry can be build from a snowbridge environment or snowbridge context.
 //      const registry = await assetsV2.buildRegistry(assetsV2.fromEnvironment(snwobridgeEnv))
 // If your dapp does not use the snowbridge environment or context you can always build it manually by
 // specifying RegistryOptions for only the parachains you care about.
