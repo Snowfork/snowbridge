@@ -3,7 +3,7 @@
 pragma solidity 0.8.28;
 
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
-import {ParaID} from "./Types.sol";
+import {ParaID} from "./v1/Types.sol";
 
 /**
  * @title SCALE encoders for common Substrate types
@@ -12,11 +12,12 @@ library SubstrateTypes {
     error UnsupportedCompactEncoding();
 
     /**
-     * @dev Encodes `MultiAddress::Id`: https://crates.parity.io/sp_runtime/enum.MultiAddress.html#variant.Id
+     * @dev Encodes `MultiAddress::Id`:
+     *         https://crates.parity.io/sp_runtime/enum.MultiAddress.html#variant.Id
      * @return bytes SCALE-encoded bytes
      */
     // solhint-disable-next-line func-name-mixedcase
-    function MultiAddressWithID(bytes32 account) internal pure returns (bytes memory) {
+    function MultiAddressID(bytes32 account) internal pure returns (bytes memory) {
         return bytes.concat(hex"00", account);
     }
 
@@ -34,7 +35,8 @@ library SubstrateTypes {
     }
 
     /**
-     * @dev Encodes `Option::None`: https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
+     * @dev Encodes `Option::None`:
+     *         https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
      * @return bytes SCALE-encoded bytes
      */
     // solhint-disable-next-line func-name-mixedcase
@@ -48,6 +50,15 @@ library SubstrateTypes {
             return hex"00";
         } else {
             return bytes.concat(bytes1(0x01), ScaleCodec.encodeU32(uint32(ParaID.unwrap(v))));
+        }
+    }
+
+    // solhint-disable-next-line func-name-mixedcase
+    function OptionVecU8(bytes memory v) internal pure returns (bytes memory) {
+        if (v.length == 0) {
+            return hex"00";
+        } else {
+            return bytes.concat(bytes1(0x01), VecU8(v));
         }
     }
 
@@ -71,11 +82,12 @@ library SubstrateTypes {
      * `NativeTokensMessage::Mint`
      */
     // destination is AccountID32 address on AssetHub
-    function SendTokenToAssetHubAddress32(address token, bytes32 recipient, uint128 xcmFee, uint128 amount)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function SendTokenToAssetHubAddress32(
+        address token,
+        bytes32 recipient,
+        uint128 xcmFee,
+        uint128 amount
+    ) internal view returns (bytes memory) {
         return bytes.concat(
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
@@ -134,11 +146,12 @@ library SubstrateTypes {
         );
     }
 
-    function SendForeignTokenToAssetHubAddress32(bytes32 tokenID, bytes32 recipient, uint128 xcmFee, uint128 amount)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function SendForeignTokenToAssetHubAddress32(
+        bytes32 tokenID,
+        bytes32 recipient,
+        uint128 xcmFee,
+        uint128 amount
+    ) internal view returns (bytes memory) {
         return bytes.concat(
             bytes1(0x00),
             ScaleCodec.encodeU64(uint64(block.chainid)),
