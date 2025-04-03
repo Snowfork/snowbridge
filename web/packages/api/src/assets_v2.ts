@@ -84,7 +84,10 @@ export type Asset = {
     locationOnAH?: any
     // Location reanchored on Ethereum
     locationOnEthereum?: any
-    assetId?: number
+    // For chains that use `Assets` pallet to manage local assets
+    // the asset_id is normally represented as u32, but on Moonbeam,
+    // it is u128, so use string here to avoid overflow
+    assetId?: string
 }
 
 export type RegistryOptions = {
@@ -535,7 +538,7 @@ export async function getLocationBalance(
     specName: string,
     location: any,
     account: string,
-    assetId?: number
+    assetId?: string
 ): Promise<bigint> {
     switch (specName) {
         case "basilisk":
@@ -1260,7 +1263,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         symbol: "pal-2",
                         decimals: 18,
                         isSufficient: true,
-                        assetId: 2,
+                        assetId: "2",
                         location: {
                             parents: 0,
                             interior: { x2: [{ palletInstance: 50 }, { generalIndex: 2 }] },
