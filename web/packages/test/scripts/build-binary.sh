@@ -134,8 +134,11 @@ build_lodestar() {
 
 build_web_packages() {
     pushd $root_dir/web
+    echo "PNPM VERSION"
     pnpm --version
+    echo "INSTALLING WEB PACKAGES"
     pnpm install
+    echo "BUILDING PNPM PACKAGES"
     pnpm build
     popd
 }
@@ -143,8 +146,8 @@ build_web_packages() {
 install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
-    build_lodestar
-    build_binaries
+    #build_lodestar
+    #build_binaries
     build_contracts
     build_web_packages
     if [ "$snowbridge_v1_v2" = true ]; then
@@ -152,6 +155,7 @@ install_binary() {
     else
         build_latest_relayer
     fi
+    echo "BINARIES DONE"
 }
 
 if [ -z "${from_start_services:-}" ]; then
