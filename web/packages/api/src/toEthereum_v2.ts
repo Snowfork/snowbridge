@@ -1207,9 +1207,17 @@ async function dryRunOnSourceParachain(
     sourceAccount: string
 ) {
     const origin = { system: { signed: sourceAccount } }
-    const result = await source.call.dryRunApi.dryRunCall<
-        Result<CallDryRunEffects, XcmDryRunApiError>
-    >(origin, tx.inner.toHex(), 4)
+    // For compatibility
+    let result
+    try {
+        result = await source.call.dryRunApi.dryRunCall<
+            Result<CallDryRunEffects, XcmDryRunApiError>
+        >(origin, tx.inner.toHex(), 4)
+    } catch {
+        result = await source.call.dryRunApi.dryRunCall<
+            Result<CallDryRunEffects, XcmDryRunApiError>
+        >(origin, tx.inner.toHex())
+    }
 
     let assetHubForwarded
     let bridgeHubForwarded
