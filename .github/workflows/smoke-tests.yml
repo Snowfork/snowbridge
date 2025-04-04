@@ -37,7 +37,7 @@ jobs:
         run: echo "POLKADOT_SDK_DIR=./polkadot-sdk" >> $GITHUB_ENV
       - name: Create directories
         run: mkdir -p $OUTPUT_DIR &&  mkdir -p $LOG_DIR
-      - uses: actions/cache@v1
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
