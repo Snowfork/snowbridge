@@ -1,11 +1,8 @@
 name: release-monitor
 
 on:
-  push:
-    paths:
-      - "web/**"
-    branches:
-      - main
+  release:
+    types: [published]
   workflow_dispatch:
 
 env:
