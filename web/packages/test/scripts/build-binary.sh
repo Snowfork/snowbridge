@@ -139,7 +139,19 @@ build_web_packages() {
     echo "INSTALLING WEB PACKAGES"
     pnpm install
     echo "BUILDING PNPM PACKAGES"
-    pnpm build
+    pnpm --filter @snowbridge/contracts build
+    cd packages/contracts/out
+    ls
+    cd -
+    pnpm --filter @snowbridge/contract-types build
+    cd packages/contract-types
+    ls
+    cd IGateway.sol
+    ls
+    cd ..
+    cd ..
+    cd ..
+    pnpm --filter @snowbridge/api build
     popd
 }
 
