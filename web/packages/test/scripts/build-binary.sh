@@ -73,7 +73,9 @@ build_relayers_v1_v2() {
 
     # Build current version
     echo "Building relayer v2"
-    checkout_build_and_copy "$CURRENT_BRANCH" "snowbridge-relay-v2"
+    mage -d "$relay_dir" build
+    echo "Copying binary to output directory"
+    cp $relay_bin "$output_bin_dir/snowbridge-relay-v2"
 
     # Build snowbridge-v1 branch version
     echo "Building relayer v1"
