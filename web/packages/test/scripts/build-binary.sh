@@ -52,13 +52,6 @@ build_contracts() {
     echo "Building contracts"
     pushd $root_dir/contracts
     forge build
-    cd out
-    forge --version
-    echo "Check IGateway contracts"
-    cd IGateway.sol
-    ls
-    cd ..
-    cd ..
     popd
 }
 
@@ -141,24 +134,8 @@ build_lodestar() {
 
 build_web_packages() {
     pushd $root_dir/web
-    echo "PNPM VERSION"
-    pnpm --version
-    echo "INSTALLING WEB PACKAGES"
     pnpm install
-    echo "BUILDING PNPM PACKAGES"
-    pnpm --filter @snowbridge/contracts build
-    cd packages/contracts/out/IGateway.sol
-    ls
-    cd -
-    pnpm --filter @snowbridge/contract-types build
-    cd packages/contract-types/src
-    ls
-    cd IGateway.sol
-    ls
-    cd ..
-    cd ..
-    cd ..
-    pnpm --filter @snowbridge/api build
+    pnpm build
     popd
 }
 
@@ -174,7 +151,6 @@ install_binary() {
     else
         build_latest_relayer
     fi
-    echo "BINARIES DONE"
 }
 
 if [ -z "${from_start_services:-}" ]; then
