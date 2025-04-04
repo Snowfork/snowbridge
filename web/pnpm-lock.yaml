@@ -84,6 +84,9 @@ importers:
 
   packages/contract-types:
     dependencies:
+      '@snowbridge/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       ethers:
         specifier: ^6.13.5
         version: 6.13.5

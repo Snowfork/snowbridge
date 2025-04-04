@@ -3,16 +3,9 @@
 set -eux
 
 echo "Checkout lodestar"
-pushd ..
-  if [ ! -d "lodestar" ]; then
-    git clone https://github.com/ChainSafe/lodestar
-  fi
-  if [ ! -L "snowbridge/lodestar" ]; then
-    (cd snowbridge && ln -sf ../lodestar lodestar)
-  fi
-  pushd lodestar
-    git fetch && git checkout $LODESTAR_VERSION
-  popd
+git clone https://github.com/ChainSafe/lodestar
+pushd lodestar
+  git fetch && git checkout $LODESTAR_VERSION
 popd
 
 echo "Setting up git hooks"

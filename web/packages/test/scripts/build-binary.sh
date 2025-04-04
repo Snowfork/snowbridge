@@ -55,10 +55,64 @@ build_contracts() {
     popd
 }
 
-build_relayer() {
-    echo "Building relayer"
+build_latest_relayer() {
+    echo "Building latest relayer"
     mage -d "$relay_dir" build
     cp $relay_bin "$output_bin_dir"
+}
+
+build_relayers_v1_v2() {
+    pushd "$root_dir"
+
+    # Backup relayer directory
+    RELAYER_BACKUP_DIR=$(mktemp -d -t relayer-backup-XXXXXX)
+    echo "Backing up relayer directory to $RELAYER_BACKUP_DIR"
+    cp -r "$relay_dir" "$RELAYER_BACKUP_DIR/"
+    # Backup contracts directory
+    CONTRACTS_BACKUP_DIR=$(mktemp -d -t contracts-backup-XXXXXX)
+    echo "Backing up contracts directory to $CONTRACTS_BACKUP_DIR"
+    cp -r "$root_dir/contracts" "$CONTRACTS_BACKUP_DIR/"
+
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+    # Build current version
+    echo "Building relayer v2"
+    mage -d "$relay_dir" build
+    echo "Copying binary to output directory"
+    cp $relay_bin "$output_bin_dir/snowbridge-relay-v2"
+
+    # Build snowbridge-v1 branch version
+    echo "Building relayer v1"
+    rm -rf "$root_dir/contracts"
+    rm -rf "$relay_dir"
+
+    BRANCH="snowbridge-v1"
+
+    echo "Checking out relayer directory from branch: $BRANCH"
+    git fetch origin $BRANCH
+    git checkout FETCH_HEAD -- relayer
+    git checkout FETCH_HEAD -- contracts
+
+    echo "Building v1 contracts: $BRANCH"
+    build_contracts
+
+    echo "Building relayer from branch: $BRANCH"
+    mage -d "$relay_dir" build
+
+    echo "Copying binary to output directory"
+    cp $relay_bin "$output_bin_dir/snowbridge-relay-v1"
+
+    # Restore original relayer and contracts directory
+    echo "Restoring original relayer and contracts directory from backup"
+    rm -rf "$relay_dir"
+    mv "$RELAYER_BACKUP_DIR/$(basename "$relay_dir")" "$relay_dir"
+    rm -rf "$RELAYER_BACKUP_DIR"
+
+    rm -rf "$root_dir/contracts"
+    mv "$CONTRACTS_BACKUP_DIR/contracts" "$root_dir/contracts"
+    rm -rf "$CONTRACTS_BACKUP_DIR"
+
+    popd
 }
 
 set_slot_time() {
@@ -95,10 +149,14 @@ build_web_packages() {
 install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
-    build_lodestar
-    build_binaries
-    build_contracts
-    build_relayer
+    #build_lodestar
+    #build_binaries
+    if [ "$snowbridge_v1_v2" = true ]; then
+        build_relayers_v1_v2
+    else
+        build_contracts
+        build_latest_relayer
+    fi
     build_web_packages
 }
 

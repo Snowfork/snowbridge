@@ -73,7 +73,7 @@ pub async fn create_asset_pool(asset_hub_client: &Box<OnlineClient<AssetHubConfi
 
 	if next_id.is_some() && next_id.unwrap() > 0 {
 		println!("Pool has already been created, skipping.");
-		return
+		return;
 	}
 
 	let foreign_assets_api =

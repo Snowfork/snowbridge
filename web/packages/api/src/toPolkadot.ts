@@ -6,7 +6,7 @@ import {
     IGatewayV1__factory as IGateway__factory,
     WETH9__factory,
 } from "@snowbridge/contract-types"
-import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway"
+import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway.sol/IGatewayV1"
 import {
     Contract,
     ContractTransaction,

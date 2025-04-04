@@ -5,6 +5,9 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
+    "@snowbridge/contract-types": {
+      "dependsOn": ["^build", "contracts#build"]
+    },
     "test": {
       "dependsOn": ["build"],
       "outputs": [],
