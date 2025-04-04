@@ -73,7 +73,7 @@ async fn register_ena() {
 			created_event_found = true;
 		}
 		if created_event_found {
-			break
+			break;
 		}
 	}
 	assert!(created_event_found)

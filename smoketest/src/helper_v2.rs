@@ -33,11 +33,11 @@ pub async fn wait_for_ethereum_event_v2<Ev: EthEvent>(ethereum_client: &Box<Arc<
 			for _ in events {
 				println!("Event found at ethereum block {:?}", block.number.unwrap());
 				ethereum_event_found = true;
-				break
+				break;
 			}
 		}
 		if ethereum_event_found {
-			break
+			break;
 		}
 	}
 	assert!(ethereum_event_found);

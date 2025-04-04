@@ -112,7 +112,7 @@ async fn transfer_token() {
 			}
 		}
 		if transfer_event_found {
-			break
+			break;
 		}
 	}
 	assert!(transfer_event_found);

@@ -4,7 +4,10 @@ use ethers::{
 };
 use futures::StreamExt;
 use penpal::api::runtime_types as penpalTypes;
-use penpalTypes::penpal_runtime::RuntimeCall as PenpalRuntimeCall;
+use snowbridge_smoketest::penpal_helper::dot_location;
+use snowbridge_smoketest::penpal_helper::ensure_penpal_asset_exists;
+use snowbridge_smoketest::penpal_helper::set_reserve_asset_storage;
+use snowbridge_smoketest::penpal_helper::weth_location;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{i_gateway, weth9},
@@ -25,13 +28,7 @@ use snowbridge_smoketest::{
 	},
 	penpal_helper::PenpalConfig,
 };
-use sp_crypto_hashing::twox_128;
-use subxt::{
-	ext::codec::Encode,
-	tx::PairSigner,
-	utils::{AccountId32, MultiAddress},
-	OnlineClient,
-};
+use subxt::{ext::codec::Encode, utils::AccountId32, OnlineClient};
 
 #[tokio::test]
 async fn send_token_to_penpal() {
@@ -136,7 +133,7 @@ async fn send_token_to_penpal() {
 			issued_event_found = true;
 		}
 		if issued_event_found {
-			break
+			break;
 		}
 	}
 	assert!(issued_event_found);
@@ -173,7 +170,7 @@ async fn send_token_to_penpal() {
 			}
 		}
 		if issued_event_found && issued_fee_event_found {
-			break
+			break;
 		}
 	}
 	assert!(issued_event_found);
