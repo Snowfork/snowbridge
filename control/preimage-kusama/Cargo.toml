@@ -1,0 +1,42 @@
+[package]
+name = "snowbridge-preimage-kusama"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+futures = "0.3.30"
+tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread", "time"] }
+codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false }
+scale-info = { version = "2.9.0", default-features = false, features = [
+    "derive",
+] }
+hex-literal = { version = "0.4.1" }
+
+clap = { version = "4.5.1", features = ["derive"] }
+
+hex = "0.4.3"
+subxt = { workspace = true }
+serde = { version = "1.0.197", features = ["derive"] }
+sp-arithmetic = "26.0.0"
+alloy-primitives = "0.6.3"
+frame-support = "38.2.0"
+sp-core = "34.0.0"
+snowbridge-beacon-primitives = "0.10.0"
+snowbridge-router-primitives = "0.16.1"
+xcm-builder = { version = "17.0.3", package = "staging-xcm-builder" }
+xcm = { version = "14.2.0", package = "staging-xcm" }
+xcm-executor = { version = "17.0.1", package = "staging-xcm-executor" }
+
+kusama-runtime = { path = "../runtimes/kusama" }
+bridge-hub-kusama-runtime = { path = "../runtimes/bridge-hub-kusama" }
+asset-hub-kusama-runtime = { path = "../runtimes/asset-hub-kusama" }
+snowbridge-preimage-chopsticks = { path = "../chopsticks" }
+
+polkadot-runtime-constants = "3.0.0"
+
+sp-crypto-hashing = "0.1.0"
+
+[features]
+default = []
