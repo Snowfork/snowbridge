@@ -134,6 +134,7 @@ build_lodestar() {
 
 build_web_packages() {
     pushd $root_dir/web
+    pnpm --version
     pnpm install
     pnpm build
     popd
