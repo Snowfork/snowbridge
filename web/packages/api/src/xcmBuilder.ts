@@ -290,20 +290,9 @@ export function buildParachainERC20ReceivedXcmOnAssetHub(
             {
                 depositReserveAsset: {
                     assets: {
-                        definite: [
-                            {
-                                id: DOT_LOCATION,
-                                fun: {
-                                    Fungible: destinationFeeInDot,
-                                },
-                            },
-                            {
-                                id: erc20Location(ethChainId, tokenAddress),
-                                fun: {
-                                    Fungible: transferAmount,
-                                },
-                            },
-                        ],
+                        wild: {
+                            AllCounted: 2,
+                        },
                     },
                     dest: { parents: 1, interior: { x1: [{ parachain: destinationParaId }] } },
                     xcm: [
