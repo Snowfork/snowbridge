@@ -1218,6 +1218,72 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         isSufficient: true,
                         location: DOT_LOCATION,
                     },
+                    {
+                        token: "0x196C20DA81Fbc324EcdF55501e95Ce9f0bD84d14".toLowerCase(),
+                        name: "KUSAMA",
+                        minimumBalance: 3_333_333n,
+                        symbol: "KSM",
+                        decimals: 12,
+                        isSufficient: true,
+                        location: {
+                            parents: 2,
+                            interior: {
+                                x1: [
+                                    {
+                                        globalConsensus: "kusama",
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                    {
+                        token: "0x21FaB0eA070F162180447881D5873Cf3d57200d6".toLowerCase(),
+                        name: "Kolkadot",
+                        minimumBalance: 1n,
+                        symbol: "KOL",
+                        decimals: 12,
+                        isSufficient: false,
+                        location: {
+                            parents: 0,
+                            interior: { X2: [{ palletInstance: 50, generalIndex: 86 }] },
+                        },
+                    },
+                    {
+                        token: "0x92262680A8d6636bbA9bFFDf484c274cA2de6400".toLowerCase(),
+                        name: "DED",
+                        minimumBalance: 1n,
+                        symbol: "DED",
+                        decimals: 10,
+                        isSufficient: false,
+                        location: {
+                            parents: 0,
+                            interior: { X2: [{ palletInstance: 50, generalIndex: 30 }] },
+                        },
+                    },
+                    {
+                        token: "0xa37B046782518A80e2E69056009FBD0431d36E50".toLowerCase(),
+                        name: "PINK",
+                        minimumBalance: 1n,
+                        symbol: "PINK",
+                        decimals: 10,
+                        isSufficient: false,
+                        location: {
+                            parents: 0,
+                            interior: { X2: [{ palletInstance: 50, generalIndex: 23 }] },
+                        },
+                    },
+                    {
+                        token: "0x5FDcD48F09FB67de3D202cd854B372AEC1100ED5".toLowerCase(),
+                        name: "GAVUN WUD",
+                        minimumBalance: 1n,
+                        symbol: "WUD",
+                        decimals: 10,
+                        isSufficient: false,
+                        location: {
+                            parents: 0,
+                            interior: { X2: [{ palletInstance: 50, generalIndex: 31337 }] },
+                        },
+                    },
                 ],
             }
             break
