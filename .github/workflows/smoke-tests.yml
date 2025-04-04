@@ -3,11 +3,8 @@ name: smoke-tests
 on:
   push:
     branches:
-      - main
+      - test-relayers-v1-v2-together
   workflow_dispatch:
-  schedule:
-    # Runs at 8:00 AM every day
-    - cron: "0 8 * * *"
 
 jobs:
   smoketests:
