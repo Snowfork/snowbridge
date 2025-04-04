@@ -100,8 +100,8 @@ checkout_build_and_copy() {
     rm -rf "$relay_dir"
 
     echo "Checking out relayer directory from branch: $BRANCH"
-    git fetch $BRANCH
-    git checkout "$BRANCH" -- "relayer"
+    git fetch origin
+    git checkout "origin/$BRANCH" -- relayer
 
     echo "Building relayer from branch: $BRANCH"
     mage -d "$relay_dir" build
