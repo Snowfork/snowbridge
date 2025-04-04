@@ -50,8 +50,15 @@ check_local_changes() {
 
 build_contracts() {
     echo "Building contracts"
+    forge --version
     pushd $root_dir/contracts
     forge build
+    cd out
+    echo "Check IGateway contracts"
+    cd IGateway.sol
+    ls
+    cd ..
+    cd ..
     popd
 }
 
