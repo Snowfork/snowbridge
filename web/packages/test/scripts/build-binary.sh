@@ -65,9 +65,13 @@ build_relayers_v1_v2() {
     pushd "$root_dir"
 
     # Backup relayer directory
-    BACKUP_DIR=$(mktemp -d -t relayer-backup-XXXXXX)
-    echo "Backing up relayer directory to $BACKUP_DIR"
-    cp -r "$relay_dir" "$BACKUP_DIR/"
+    RELAYER_BACKUP_DIR=$(mktemp -d -t relayer-backup-XXXXXX)
+    echo "Backing up relayer directory to $RELAYER_BACKUP_DIR"
+    cp -r "$relay_dir" "$RELAYER_BACKUP_DIR/"
+    # Backup contracts directory
+    CONTRACTS_BACKUP_DIR=$(mktemp -d -t contracts-backup-XXXXXX)
+    echo "Backing up contracts directory to $CONTRACTS_BACKUP_DIR"
+    cp -r "$root_dir/contracts" "$CONTRACTS_BACKUP_DIR/"
 
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
@@ -79,35 +83,35 @@ build_relayers_v1_v2() {
 
     # Build snowbridge-v1 branch version
     echo "Building relayer v1"
-    checkout_build_and_copy "snowbridge-v1" "snowbridge-relay-v1"
-
-    # Restore original relayer directory
-    echo "Restoring original relayer directory from backup"
+    rm -rf "$root_dir/contracts"
     rm -rf "$relay_dir"
-    mv "$BACKUP_DIR/$(basename "$relay_dir")" "$relay_dir"
-    rm -rf "$BACKUP_DIR"
 
-    popd
-}
-
-# Function to checkout, build relayer, and copy binary
-checkout_build_and_copy() {
-    BRANCH=$1
-    BINARY_NAME=$2
-
-    pushd $root_dir
-
-    rm -rf "$relay_dir"
+    BRANCH="snowbridge-v1"
 
     echo "Checking out relayer directory from branch: $BRANCH"
     git fetch origin $BRANCH
     git checkout FETCH_HEAD -- relayer
+    git checkout FETCH_HEAD -- contracts
+
+    echo "Building v1 contracts: $BRANCH"
+    build_contracts
 
     echo "Building relayer from branch: $BRANCH"
     mage -d "$relay_dir" build
 
     echo "Copying binary to output directory"
-    cp $relay_bin "$output_bin_dir/$BINARY_NAME"
+    cp $relay_bin "$output_bin_dir/snowbridge-relay-v1"
+
+    # Restore original relayer and contracts directory
+    echo "Restoring original relayer and contracts directory from backup"
+    rm -rf "$relay_dir"
+    mv "$RELAYER_BACKUP_DIR/$(basename "$relay_dir")" "$relay_dir"
+    rm -rf "$RELAYER_BACKUP_DIR"
+
+    rm -rf "$root_dir/contracts"
+    mv "$CONTRACTS_BACKUP_DIR/contracts" "$root_dir/contracts"
+    rm -rf "$CONTRACTS_BACKUP_DIR"
+
     popd
 }
 
@@ -147,13 +151,13 @@ install_binary() {
     mkdir -p $output_bin_dir
     #build_lodestar
     #build_binaries
-    build_contracts
-    build_web_packages
     if [ "$snowbridge_v1_v2" = true ]; then
         build_relayers_v1_v2
     else
+        build_contracts
         build_latest_relayer
     fi
+    build_web_packages
 }
 
 if [ -z "${from_start_services:-}" ]; then
