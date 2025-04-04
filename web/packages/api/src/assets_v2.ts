@@ -1231,7 +1231,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
             result.assetOverrides = {
                 "1000": [
                     {
-                        token: "0xDe45448Ca2d57797c0BEC0ee15A1E42334744219".toLowerCase(),
+                        token: "0xB8C39CbCe8106c8415472e3AAe88Eb694Cc70B57".toLowerCase(),
                         name: "wnd",
                         minimumBalance: 1n,
                         symbol: "wnd",
@@ -1240,7 +1240,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         location: DOT_LOCATION,
                     },
                     {
-                        token: "0xD8597EB7eF761E3315623EdFEe9DEfcBACd72e8b".toLowerCase(),
+                        token: "0x44Cf1D0Db863BBC053098E33e92d02802dDb926a".toLowerCase(),
                         name: "pal-2",
                         minimumBalance: 1n,
                         symbol: "pal-2",
@@ -1260,7 +1260,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
                 ],
                 "2000": [
                     {
-                        token: "0xD8597EB7eF761E3315623EdFEe9DEfcBACd72e8b".toLowerCase(),
+                        token: "0x44Cf1D0Db863BBC053098E33e92d02802dDb926a".toLowerCase(),
                         name: "pal-2",
                         minimumBalance: 1n,
                         symbol: "pal-2",
