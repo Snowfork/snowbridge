@@ -28,8 +28,8 @@ echo "run send ENA to penpal v2"
 cargo test --test v2 --release -- --test send_ena_to_penal --nocapture
 echo "run transfer ENA v2"
 cargo test --test v2 --release -- --test transfer_ena --nocapture
-echo "run send PNA v2"
-cargo test --test v2 --release -- --test send_pna --nocapture
 echo "run transfer PNA v2"
 cargo test --test v2 --release -- --test transfer_pna --nocapture
+echo "run send PNA v2"
+cargo test --test v2 --release -- --test send_pna --nocapture
 popd
