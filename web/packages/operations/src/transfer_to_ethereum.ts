@@ -1,4 +1,3 @@
-import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
 import { Context, environment, toEthereumV2, assetsV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"

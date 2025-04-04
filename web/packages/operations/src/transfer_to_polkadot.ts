@@ -1,4 +1,3 @@
-import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
 import { Context, environment, toPolkadotV2 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
@@ -67,7 +66,7 @@ export const transferToPolkadot = async (
     const assets = registry.ethereumChains[registry.ethChainId].assets
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
-        .find((asset) => asset.symbol === symbol)!.token
+        .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))!.token
 
     console.log("# Ethereum to Asset Hub")
     {
