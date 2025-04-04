@@ -1208,6 +1208,17 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         isSufficient: true,
                     },
                 ],
+                "1000": [
+                    {
+                        token: "0x196C20DA81Fbc324EcdF55501e95Ce9f0bD84d14".toLowerCase(),
+                        name: "DOT",
+                        minimumBalance: 100_000_000n,
+                        symbol: "DOT",
+                        decimals: 10,
+                        isSufficient: true,
+                        location: DOT_LOCATION,
+                    },
+                ],
             }
             break
         }
