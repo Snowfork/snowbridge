@@ -69,7 +69,7 @@ func ScanBeefyFn(cmd *cobra.Command, _ []string) error {
 				if !ok {
 					return nil
 				}
-				logrus.WithField("commitment", commitment).Info("scanned commitment")
+				logrus.WithField("block", commitment.Proof.Blockhash).Info("scanned commitment")
 			}
 		}
 	})
