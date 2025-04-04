@@ -132,19 +132,21 @@ export const transferToPolkadot = async (
         console.log("ether sent:", formatEther(totalValue - fee.totalFeeInWei))
         console.log("dry run:", await context.ethereum().call(tx))
 
-        // Step 6. Submit the transaction
-        const response = await ETHEREUM_ACCOUNT.sendTransaction(tx)
-        const receipt = await response.wait(1)
-        if (!receipt) {
-            throw Error(`Transaction ${response.hash} not included.`)
-        }
+        if (process.env["DRY_RUN"] != "true") {
+            // Step 6. Submit the transaction
+            const response = await ETHEREUM_ACCOUNT.sendTransaction(tx)
+            const receipt = await response.wait(1)
+            if (!receipt) {
+                throw Error(`Transaction ${response.hash} not included.`)
+            }
 
-        // Step 7. Get the message reciept for tracking purposes
-        const message = await toPolkadotV2.getMessageReceipt(receipt)
-        if (!message) {
-            throw Error(`Transaction ${receipt.hash} did not emit a message.`)
+            // Step 7. Get the message reciept for tracking purposes
+            const message = await toPolkadotV2.getMessageReceipt(receipt)
+            if (!message) {
+                throw Error(`Transaction ${receipt.hash} did not emit a message.`)
+            }
+            console.log("Success message", message.messageId)
         }
-        console.log("Success message", message.messageId)
     }
     await context.destroyContext()
 }
