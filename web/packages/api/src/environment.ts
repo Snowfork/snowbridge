@@ -117,7 +117,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 "1002": "ws://127.0.0.1:11144",
                 "2000": "ws://127.0.0.1:13144",
             },
-            GATEWAY_CONTRACT: "0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d",
+            GATEWAY_CONTRACT: "0x87d1f7fdfee7f651fabc8bfcb6e086c278b77a7d",
             BEEFY_CONTRACT: "0x2ffa5ecdbe006d30397c7636d3e015eee251369f",
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
@@ -586,10 +586,10 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ETHEREUM_CHAINS: {
                 "11155111": (key) => `https://eth-sepolia.g.alchemy.com/v2/${key}`,
             },
-            RELAY_CHAIN_URL: "https://westend-rpc.polkadot.io",
+            RELAY_CHAIN_URL: "wss://westend-rpc.dwellir.com",
             PARACHAINS: {
-                "1000": "wss://westend-asset-hub-rpc.polkadot.io",
-                "1002": "https://westend-bridge-hub-rpc.polkadot.io",
+                "1000": "wss://asset-hub-westend-rpc.dwellir.com",
+                "1002": "wss://bridge-hub-westend-rpc.dwellir.com",
             },
             GATEWAY_CONTRACT: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
             BEEFY_CONTRACT: "0x6DFaD3D73A28c48E4F4c616ECda80885b415283a",

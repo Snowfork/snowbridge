@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -eu
 
+is_electra=false
 source scripts/set-env.sh
 
 config_relayer() {
