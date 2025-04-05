@@ -173,6 +173,7 @@ export async function createTransfer(
     let messageId: string | undefined
     let tx: SubmittableExtrinsic<"promise", ISubmittableResult>
     if (sourceParaId === assetHubParaId) {
+        // For both PNA and ENA
         tx = createAssetHubTx(
             parachain,
             ethChainId,
@@ -582,7 +583,9 @@ export async function validateTransfer(
         getDotBalance(sourceParachain, source.info.specName, sourceAccountHex),
     ])
     let tokenBalance: any
+    // For DOT on AH, get it from the native balance pallet.
     if (
+        sourceParaId == registry.assetHubParaId &&
         transfer.computed.ahAssetMetadata.location?.parents == DOT_LOCATION.parents &&
         transfer.computed.ahAssetMetadata.location?.interior == DOT_LOCATION.interior
     ) {
@@ -1207,7 +1210,7 @@ async function dryRunOnSourceParachain(
     sourceAccount: string
 ) {
     const origin = { system: { signed: sourceAccount } }
-    // For compatibility
+    // To ensure compatibility, dryRunCall includes the version parameter in XCMv5.
     let result
     try {
         result = await source.call.dryRunApi.dryRunCall<

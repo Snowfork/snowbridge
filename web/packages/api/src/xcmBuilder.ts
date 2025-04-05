@@ -289,6 +289,8 @@ export function buildParachainERC20ReceivedXcmOnAssetHub(
             },
             {
                 depositReserveAsset: {
+                    // Should use `AllCounted` here. Reference:
+                    // https://github.com/paritytech/polkadot-sdk/blob/f5de39196e8c30de4bc47a2d46b1a0fe1e9aaee0/bridges/snowbridge/primitives/inbound-queue/src/v1.rs#L357-L359
                     assets: {
                         wild: {
                             AllCounted: 2,

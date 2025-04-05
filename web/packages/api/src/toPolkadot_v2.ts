@@ -336,6 +336,7 @@ export async function validateTransfer(
         }
     }
 
+    // PNA is controlled by Gateway, so no allowance is needed.
     if (tokenBalance.gatewayAllowance < amount && !destAssetMetadata.location) {
         logs.push({
             kind: ValidationKind.Error,

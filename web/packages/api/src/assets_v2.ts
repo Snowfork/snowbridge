@@ -597,7 +597,7 @@ export async function getLocationBalance(
         }
         case "moonriver":
         case "moonbeam": {
-            // For PNA, use assetId directly; for ENA, query assetId from Multilocation
+            // For PNA, use assetId directly; for ENA, query assetId by Multilocation
             if (!assetId) {
                 assetId = (
                     await provider.query.assetManager.assetTypeId({ xcm: location })
@@ -668,6 +668,7 @@ export async function calculateDestinationFee(provider: ApiPromise, destinationX
             v4: { parents: 1, interior: "Here" },
         })
     ).toPrimitive() as any
+    // For compatibility with Westend, which has XCMV5 enabled.
     if (!feeInDot.ok) {
         feeInDot = (
             await provider.call.xcmPaymentApi.queryWeightToAssetFee(weight.ok, {
