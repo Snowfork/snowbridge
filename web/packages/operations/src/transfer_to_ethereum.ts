@@ -62,7 +62,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     const assets = registry.ethereumChains[registry.ethChainId].assets
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
-        .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))!.token
+        .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
 
     console.log("Asset Hub to Ethereum")
     {
@@ -71,7 +71,8 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
             { assetHub: await context.assetHub(), source: await context.parachain(sourceParaId) },
             sourceParaId,
             registry,
-            TOKEN_CONTRACT
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            TOKEN_CONTRACT!
         )
 
         // Step 2. Create a transfer tx
@@ -80,7 +81,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
             registry,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
-            TOKEN_CONTRACT,
+            TOKEN_CONTRACT!,
             amount,
             fee
         )

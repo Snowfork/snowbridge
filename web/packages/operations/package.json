@@ -20,14 +20,17 @@
     "historyV2": "npx ts-node src/global_transfer_history_v2.ts",
     "format": "prettier src --write",
     "buildTokenRegistry": "npx ts-node src/index_meta_data.ts",
-    "transferWEthToPolkadot": "npx ts-node src/transfer_weth_to_polkadot.ts start",
-    "transferWEthToEthereum": "npx ts-node src/transfer_weth_to_ethereum.ts start",
+    "registerWEth": "npx ts-node src/register_weth.ts",
+    "transferWEthToAH": "npx ts-node src/transfer_weth_to_ah.ts",
+    "transferWEthFromAH": "npx ts-node src/transfer_weth_from_ah.ts",
+    "transferWEthToPenpal": "npx ts-node src/transfer_weth_to_penpal",
+    "transferWEthFromPenpal": "npx ts-node src/transfer_weth_from_penpal",
+    "transferEtherToAH": "npx ts-node src/transfer_ether_to_ah.ts start",
+    "transferEtherFromAH": "npx ts-node src/transfer_ether_from_ah.ts start",
     "transferRelayTokenToEthereum": "npx ts-node src/transfer_relay_token_to_ethereum.ts start",
-    "transferRelayTokenToPolkadot": "npx ts-node src/transfer_relay_token_to_polkadot.ts start",
-    "transferNativeEtherToPolkadot": "npx ts-node src/transfer_native_ether_to_polkadot.ts start",
-    "transferNativeEtherToEthereum": "npx ts-node src/transfer_native_ether_to_ethereum.ts start",
+    "transferRelayTokenToAH": "npx ts-node src/transfer_relay_token_to_ah.ts start",
     "transferPenpalTokenToEthereum": "npx ts-node src/transfer_penpal_token_to_ethereum.ts",
-    "transferPenpalTokenToPolkadot": "npx ts-node src/transfer_penpal_token_to_polkadot.ts"
+    "transferPenpalTokenToAH": "npx ts-node src/transfer_penpal_token_to_ah.ts"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.62.0",

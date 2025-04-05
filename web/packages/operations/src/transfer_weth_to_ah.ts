@@ -2,7 +2,6 @@ import "dotenv/config"
 import { Context, environment } from "@snowbridge/api"
 import { WETH9__factory } from "@snowbridge/contract-types"
 import { Wallet } from "ethers"
-import cron from "node-cron"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { transferToPolkadot } from "./transfer_to_polkadot"
 import { fetchRegistry } from "./registry"
@@ -58,11 +57,12 @@ const transfer = async () => {
     const assets = registry.ethereumChains[registry.ethChainId].assets
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
-        .find((asset) => asset.symbol === "WETH")!.token
+        .find((asset) => asset.symbol === "WETH")?.token
 
     console.log("# Deposit and Approve WETH")
     {
-        const weth9 = WETH9__factory.connect(TOKEN_CONTRACT, ETHEREUM_ACCOUNT)
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const weth9 = WETH9__factory.connect(TOKEN_CONTRACT!, ETHEREUM_ACCOUNT)
         const depositResult = await weth9.deposit({ value: amount })
         const depositReceipt = await depositResult.wait()
 
@@ -75,19 +75,9 @@ const transfer = async () => {
     await transferToPolkadot(1000, "WETH", amount)
 }
 
-if (process.argv.length != 3) {
-    console.error("Expected one argument with Enum from `start|cron`")
-    process.exit(1)
-}
-
-if (process.argv[2] == "start") {
-    transfer()
-        .then(() => process.exit(0))
-        .catch((error) => {
-            console.error("Error:", error)
-            process.exit(1)
-        })
-} else if (process.argv[2] == "cron") {
-    console.log("running cronjob")
-    cron.schedule(process.env["CRON_EXPRESSION"] || "0 0 * * *", transfer)
-}
+transfer()
+    .then(() => process.exit(0))
+    .catch((error) => {
+        console.error("Error:", error)
+        process.exit(1)
+    })

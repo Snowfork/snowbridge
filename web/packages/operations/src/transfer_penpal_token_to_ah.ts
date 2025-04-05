@@ -2,7 +2,7 @@ import "dotenv/config"
 import { transferToPolkadot } from "./transfer_to_polkadot"
 
 const transfer = async () => {
-    await transferToPolkadot(2000, "pal", 100_000_000n)
+    await transferToPolkadot(1000, "pal", 100_000_000n)
 }
 
 transfer()
