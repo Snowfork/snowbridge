@@ -554,7 +554,10 @@ export async function getLocationBalance(
             ).toPrimitive() as any
             return BigInt(accountData?.free ?? 0n)
         }
-        case "penpal-parachain": {
+        case "penpal-parachain":
+        case "asset-hub-paseo":
+        case "westmint":
+        case "statemint": {
             let accountData: any
             if (assetId) {
                 accountData = (
@@ -565,15 +568,6 @@ export async function getLocationBalance(
                     await provider.query.foreignAssets.account(location, account)
                 ).toPrimitive() as any
             }
-            return BigInt(accountData?.balance ?? 0n)
-        }
-        case "asset-hub-paseo":
-        case "westmint":
-        case "statemint": {
-            const assetId = location
-            const accountData = (
-                await provider.query.foreignAssets.account(assetId, account)
-            ).toPrimitive() as any
             return BigInt(accountData?.balance ?? 0n)
         }
         case "bifrost":
@@ -1246,8 +1240,9 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         isSufficient: false,
                         location: {
                             parents: 0,
-                            interior: { X2: [{ palletInstance: 50, generalIndex: 86 }] },
+                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 86 }] },
                         },
+                        assetId: "86",
                     },
                     {
                         token: "0x92262680A8d6636bbA9bFFDf484c274cA2de6400".toLowerCase(),
@@ -1258,8 +1253,9 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         isSufficient: false,
                         location: {
                             parents: 0,
-                            interior: { X2: [{ palletInstance: 50, generalIndex: 30 }] },
+                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 30 }] },
                         },
+                        assetId: "30",
                     },
                     {
                         token: "0xa37B046782518A80e2E69056009FBD0431d36E50".toLowerCase(),
@@ -1270,8 +1266,9 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         isSufficient: false,
                         location: {
                             parents: 0,
-                            interior: { X2: [{ palletInstance: 50, generalIndex: 23 }] },
+                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 23 }] },
                         },
+                        assetId: "23",
                     },
                     {
                         token: "0x5FDcD48F09FB67de3D202cd854B372AEC1100ED5".toLowerCase(),
@@ -1282,8 +1279,9 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         isSufficient: false,
                         location: {
                             parents: 0,
-                            interior: { X2: [{ palletInstance: 50, generalIndex: 31337 }] },
+                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 31337 }] },
                         },
+                        assetId: "31337",
                     },
                 ],
             }
