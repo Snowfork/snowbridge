@@ -1220,7 +1220,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         location: DOT_LOCATION,
                     },
                     {
-                        token: "0x196C20DA81Fbc324EcdF55501e95Ce9f0bD84d14".toLowerCase(),
+                        token: "0x12bbfDc9e813614eEf8Dc8A2560b0EfBeaf7C2AB".toLowerCase(),
                         name: "KUSAMA",
                         minimumBalance: 3_333_333n,
                         symbol: "KSM",
