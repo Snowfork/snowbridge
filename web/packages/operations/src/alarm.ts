@@ -45,7 +45,7 @@ export const BlockLatencyThreshold = {
     // Syncing beefy finality update every 4 hours(1200 ethereum blocks), leave some buffer here
     ToEthereum: process.env["BlockLatencyToEthereum"]
         ? parseInt(process.env["BlockLatencyToEthereum"])
-        : 1800,
+        : 2400,
     // Syncing beacon finality update every 6.4 minutes(64 substrate blocks), leave some buffer here
     ToPolkadot: process.env["BlockLatencyToPolkadot"]
         ? parseInt(process.env["BlockLatencyToPolkadot"])
