@@ -1231,7 +1231,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
                             interior: {
                                 x1: [
                                     {
-                                        globalConsensus: "kusama",
+                                        globalConsensus: "Kusama",
                                     },
                                 ],
                             },

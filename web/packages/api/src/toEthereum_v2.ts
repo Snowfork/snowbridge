@@ -173,15 +173,25 @@ export async function createTransfer(
     let messageId: string | undefined
     let tx: SubmittableExtrinsic<"promise", ISubmittableResult>
     if (sourceParaId === assetHubParaId) {
-        // For both PNA and ENA
-        tx = createAssetHubTx(
-            parachain,
-            ethChainId,
-            tokenAddress,
-            beneficiaryAccount,
-            amount,
-            ahAssetMetadata
-        )
+        // For PNA from foreign consensus
+        if (ahAssetMetadata.location?.parents == 2) {
+            tx = createAssetHubTxForPNAFromForeignConsensus(
+                parachain,
+                ethChainId,
+                beneficiaryAccount,
+                amount,
+                ahAssetMetadata
+            )
+        } else {
+            tx = createAssetHubTx(
+                parachain,
+                ethChainId,
+                tokenAddress,
+                beneficiaryAccount,
+                amount,
+                ahAssetMetadata
+            )
+        }
     } else {
         messageId = await buildMessageId(
             parachain,
@@ -1376,6 +1386,53 @@ function createPNASourceParachainTx(
         "Teleport",
         feeAsset,
         "DestinationReserve",
+        customXcm,
+        "Unlimited"
+    )
+}
+
+function createAssetHubTxForPNAFromForeignConsensus(
+    parachain: ApiPromise,
+    ethChainId: number,
+    beneficiaryAccount: string,
+    amount: bigint,
+    asset: Asset
+): SubmittableExtrinsic<"promise", ISubmittableResult> {
+    const assets = {
+        v4: [
+            {
+                id: asset.location,
+                fun: { Fungible: amount },
+            },
+        ],
+    }
+    const feeAsset = {
+        v4: asset.location,
+    }
+    const destination = { v4: bridgeLocation(ethChainId) }
+    let customXcm = parachain.registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                depositAsset: {
+                    assets: {
+                        Wild: {
+                            AllCounted: 1,
+                        },
+                    },
+                    beneficiary: {
+                        parents: 0,
+                        interior: { x1: [{ accountKey20: { key: beneficiaryAccount } }] },
+                    },
+                },
+            },
+        ],
+    })
+    return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
+        destination,
+        assets,
+        "LocalReserve",
+        feeAsset,
+        "LocalReserve",
         customXcm,
         "Unlimited"
     )
