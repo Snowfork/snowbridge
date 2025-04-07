@@ -276,12 +276,20 @@ async function validateAccount(
     beneficiaryAddress: string,
     ethChainId: number,
     tokenAddress: string,
+    assetMetadata?: Asset,
     maxConsumers?: bigint
 ) {
     // Check if the acocunt is created
     const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
         getNativeAccount(parachain, beneficiaryAddress),
-        getTokenBalance(parachain, specName, beneficiaryAddress, ethChainId, tokenAddress),
+        getTokenBalance(
+            parachain,
+            specName,
+            beneficiaryAddress,
+            ethChainId,
+            tokenAddress,
+            assetMetadata
+        ),
     ])
     return {
         accountExists: !(
@@ -428,7 +436,8 @@ export async function validateTransfer(
                 ahParachain.info.specName,
                 sovereignAccountId,
                 registry.ethChainId,
-                tokenAddress
+                tokenAddress,
+                ahAssetMetadata
             )
 
             if (!accountExists) {
@@ -503,7 +512,8 @@ export async function validateTransfer(
                     destParachain.info.specName,
                     beneficiaryAddressHex,
                     registry.ethChainId,
-                    tokenAddress
+                    tokenAddress,
+                    destAssetMetadata
                 )
                 if (accountMaxConumers) {
                     logs.push({
@@ -528,7 +538,8 @@ export async function validateTransfer(
             ahParachain.info.specName,
             beneficiaryAddressHex,
             registry.ethChainId,
-            tokenAddress
+            tokenAddress,
+            ahAssetMetadata
         )
 
         if (accountMaxConumers) {
