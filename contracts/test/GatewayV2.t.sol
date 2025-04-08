@@ -491,4 +491,128 @@ contract GatewayV2Test is Test {
         vm.expectRevert(IGatewayV2.AgentAlreadyExists.selector);
         IGatewayV2(payable(address(gateway))).v2_createAgent(origin);
     }
+
+    function testCommandBatchAtomicity() public {
+        testRegisterForeignToken();
+
+        bytes32 topic = keccak256("topic");
+        bytes32 dotTokenID = keccak256("DOT");
+        address recipient = makeAddr("recipient");
+
+        // Get the token address for DOT that was registered in testRegisterForeignToken
+        address dotTokenAddress = IGatewayV2(address(gateway)).tokenAddressOf(dotTokenID);
+        Token dotToken = Token(dotTokenAddress);
+
+        // Check initial token supply and recipient balance
+        uint256 initialTotalSupply = dotToken.totalSupply();
+        uint256 initialRecipientBalance = dotToken.balanceOf(recipient);
+        assertEq(initialRecipientBalance, 0, "Initial recipient balance should be 0");
+
+        // Create a batch of commands where:
+        // 1. First command mints DOT tokens to the recipient (should succeed)
+        // 2. Second command contains an unknown command kind (should fail)
+        CommandV2[] memory commands = new CommandV2[](2);
+
+        // First command: Mint tokens (valid)
+        MintForeignTokenParams memory mintParams = MintForeignTokenParams(dotTokenID, recipient, 100);
+        commands[0] = CommandV2({
+            kind: CommandKind.MintForeignToken,
+            gas: 100_000,
+            payload: abi.encode(mintParams)
+        });
+
+        // Second command: Invalid command kind
+        commands[1] = CommandV2({
+            kind: CommandKind(255), // Using 255 as an invalid command kind
+            gas: 100_000,
+            payload: bytes("invalid")
+        });
+
+        // Execute the batch and expect failure
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(3, topic, false, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: keccak256("origin"),
+                nonce: 3, // Use a new nonce
+                topic: topic,
+                commands: commands
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
+        );
+
+        // Verify that no state change occurred (the mint operation should have been rolled back)
+        uint256 finalTotalSupply = dotToken.totalSupply();
+        uint256 finalRecipientBalance = dotToken.balanceOf(recipient);
+
+        assertEq(finalTotalSupply, initialTotalSupply, "Total supply should not change");
+        assertEq(finalRecipientBalance, initialRecipientBalance, "Recipient balance should not change");
+    }
+
+    // Test to verify that multiple commands in a batch are executed atomically
+    function testCommandBatchAtomicSuccess() public {
+        // Setup: Register a foreign token (DOT) that we'll use to test state changes
+        testRegisterForeignToken();
+
+        bytes32 topic = keccak256("topic");
+        bytes32 dotTokenID = keccak256("DOT");
+        address recipient1 = makeAddr("recipient1");
+        address recipient2 = makeAddr("recipient2");
+
+        // Get the token address for DOT that was registered in testRegisterForeignToken
+        address dotTokenAddress = IGatewayV2(address(gateway)).tokenAddressOf(dotTokenID);
+        Token dotToken = Token(dotTokenAddress);
+
+        // Check initial balances
+        uint256 initialTotalSupply = dotToken.totalSupply();
+        assertEq(dotToken.balanceOf(recipient1), 0, "Initial recipient1 balance should be 0");
+        assertEq(dotToken.balanceOf(recipient2), 0, "Initial recipient2 balance should be 0");
+
+        // Create a batch with multiple valid commands
+        CommandV2[] memory commands = new CommandV2[](2);
+
+        // First command: Mint tokens to recipient1
+        MintForeignTokenParams memory mintParams1 = MintForeignTokenParams(dotTokenID, recipient1, 100);
+        commands[0] = CommandV2({
+            kind: CommandKind.MintForeignToken,
+            gas: 100_000,
+            payload: abi.encode(mintParams1)
+        });
+
+        // Second command: Mint tokens to recipient2
+        MintForeignTokenParams memory mintParams2 = MintForeignTokenParams(dotTokenID, recipient2, 200);
+        commands[1] = CommandV2({
+            kind: CommandKind.MintForeignToken,
+            gas: 100_000,
+            payload: abi.encode(mintParams2)
+        });
+
+        // Execute the batch and expect success
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(3, topic, true, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: keccak256("origin"),
+                nonce: 3, // Use a new nonce
+                topic: topic,
+                commands: commands
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
+        );
+
+        // Verify that both state changes occurred
+        uint256 finalTotalSupply = dotToken.totalSupply();
+
+        assertEq(finalTotalSupply, initialTotalSupply + 300, "Total supply should increase by 300");
+        assertEq(dotToken.balanceOf(recipient1), 100, "Recipient1 should have 100 tokens");
+        assertEq(dotToken.balanceOf(recipient2), 200, "Recipient2 should have 200 tokens");
+    }
 }

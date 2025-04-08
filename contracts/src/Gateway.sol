@@ -512,58 +512,47 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
      * APIv2 Internal functions
      */
 
-    // Dispatch all the commands within the batch of commands in the message payload. If a single
-    // command fails, dispatches of subsequent commands are aborted.
+    // Dispatch all the commands within the batch of commands in the message payload.
+    // All commands are executed atomically - if any command fails, the entire batch is reverted.
     function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {
+        // Use a try/catch block around the entire batch execution to ensure atomicity
+        try this.v2_dispatchBatch(message) {
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    // Helper function to execute all commands in a batch.
+    // This function will revert if any command fails, ensuring atomicity.
+    function v2_dispatchBatch(InboundMessageV2 calldata message) external onlySelf {
         for (uint256 i = 0; i < message.commands.length; i++) {
-            // check that there is enough gas available to forward to the command handler
+            // Check that there is enough gas available to forward to the command handler
             if (gasleft() * 63 / 64 < message.commands[i].gas + DISPATCH_OVERHEAD_GAS_V2) {
                 assembly {
                     invalid()
                 }
             }
+
             if (message.commands[i].kind == CommandKind.Upgrade) {
-                try Gateway(this).v2_handleUpgrade{gas: message.commands[i].gas}(
-                    message.commands[i].payload
-                ) {} catch {
-                    return false;
-                }
+                this.v2_handleUpgrade{gas: message.commands[i].gas}(message.commands[i].payload);
             } else if (message.commands[i].kind == CommandKind.SetOperatingMode) {
-                try Gateway(this).v2_handleSetOperatingMode{gas: message.commands[i].gas}(
-                    message.commands[i].payload
-                ) {} catch {
-                    return false;
-                }
+                this.v2_handleSetOperatingMode{gas: message.commands[i].gas}(message.commands[i].payload);
             } else if (message.commands[i].kind == CommandKind.UnlockNativeToken) {
-                try Gateway(this).v2_handleUnlockNativeToken{gas: message.commands[i].gas}(
-                    message.commands[i].payload
-                ) {} catch {
-                    return false;
-                }
+                this.v2_handleUnlockNativeToken{gas: message.commands[i].gas}(message.commands[i].payload);
             } else if (message.commands[i].kind == CommandKind.RegisterForeignToken) {
-                try Gateway(this).v2_handleRegisterForeignToken{gas: message.commands[i].gas}(
-                    message.commands[i].payload
-                ) {} catch {
-                    return false;
-                }
+                this.v2_handleRegisterForeignToken{gas: message.commands[i].gas}(message.commands[i].payload);
             } else if (message.commands[i].kind == CommandKind.MintForeignToken) {
-                try Gateway(this).v2_handleMintForeignToken{gas: message.commands[i].gas}(
-                    message.commands[i].payload
-                ) {} catch {
-                    return false;
-                }
+                this.v2_handleMintForeignToken{gas: message.commands[i].gas}(message.commands[i].payload);
             } else if (message.commands[i].kind == CommandKind.CallContract) {
-                try Gateway(this).v2_handleCallContract{gas: message.commands[i].gas}(
+                this.v2_handleCallContract{gas: message.commands[i].gas}(
                     message.origin, message.commands[i].payload
-                ) {} catch {
-                    return false;
-                }
+                );
             } else {
-                // Unknown command
-                return false;
+                // Unknown command - revert the entire batch
+                revert IGatewayV2.UnknownCommand();
             }
         }
-        return true;
     }
 
     /**
