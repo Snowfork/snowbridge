@@ -106,6 +106,10 @@ library CallsV2 {
         payable(assetHubAgent).safeNativeTransfer(msg.value);
 
         require(assets.length <= MAX_ASSETS, IGatewayV2.TooManyAssets());
+
+        // Check for duplicate assets
+        _checkDuplicateAssets(assets);
+
         Asset[] memory preparedAssets = new Asset[](assets.length);
         for (uint256 i = 0; i < assets.length; i++) {
             preparedAssets[i] = _handleAsset(assets[i]);
@@ -167,5 +171,53 @@ library CallsV2 {
 
     function outboundNonce() external view returns (uint64) {
         return CoreStorage.layout().outboundNonce;
+    }
+
+    /// @dev Checks for duplicate assets in the provided array and reverts if any are found
+    /// @param assets Array of encoded asset data
+    function _checkDuplicateAssets(bytes[] memory assets) internal pure {
+        if (assets.length > 1) {
+            // Create mappings to track seen assets
+            mapping(address => bool) memory seenNativeTokens;
+            mapping(bytes32 => bool) memory seenForeignTokens;
+            
+            for (uint256 i = 0; i < assets.length; i++) {
+                uint8 assetKind;
+                
+                // Extract the asset kind from the encoded data
+                assembly {
+                    // Get the first byte to determine asset kind
+                    let assetData := mload(add(add(assets, 32), mul(i, 32)))
+                    assetKind := byte(31, mload(add(assetData, 32)))
+                }
+                
+                if (assetKind == 0) { // Native ERC20 token
+                    // Decode the token address
+                    (, address token,) = abi.decode(assets[i], (uint8, address, uint128));
+                    
+                    // Check if this token has already been processed
+                    if (seenNativeTokens[token]) {
+                        revert IGatewayV2.DuplicateAsset();
+                    }
+                    
+                    // Mark this token as seen
+                    seenNativeTokens[token] = true;
+                } 
+                else if (assetKind == 1) { // Foreign ERC20 token
+                    // Decode the foreign token ID
+                    (, bytes32 foreignID,) = abi.decode(assets[i], (uint8, bytes32, uint128));
+                    
+                    // Check if this foreign token has already been processed
+                    if (seenForeignTokens[foreignID]) {
+                        revert IGatewayV2.DuplicateAsset();
+                    }
+                    
+                    // Mark this foreign token as seen
+                    seenForeignTokens[foreignID] = true;
+                }
+                // If an unknown asset kind is encountered, it will be handled by
+                // _handleAsset which will revert with InvalidAsset error
+            }
+        }
     }
 }

@@ -378,6 +378,88 @@ contract GatewayV2Test is Test {
             "", new bytes[](0), "", 0.1 ether, 0.4 ether
         );
     }
+    
+    function testSendMessageFailsWithDuplicateNativeAssets() public {
+        // Create a token
+        address token = address(new WETH9());
+        
+        // Register token
+        MockGateway(address(gateway)).prank_registerNativeToken(token);
+        
+        // Fund account
+        hoax(user1);
+        WETH9(payable(token)).deposit{value: 2 ether}();
+        
+        // Approve gateway to spend tokens
+        hoax(user1);
+        IERC20(token).approve(address(gateway), 2 ether);
+        
+        // Create assets array with duplicate token
+        bytes[] memory assets = new bytes[](2);
+        assets[0] = abi.encode(0, token, uint128(1 ether)); // First instance of token
+        assets[1] = abi.encode(0, token, uint128(1 ether)); // Second instance of same token (duplicate)
+        
+        // Expect revert due to duplicate asset
+        vm.expectRevert(IGatewayV2.DuplicateAsset.selector);
+        hoax(user1);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
+            "", assets, "", 0.1 ether, 0.4 ether
+        );
+    }
+    
+    function testSendMessageFailsWithDuplicateForeignAssets() public {
+        // Create a foreign token ID
+        bytes32 foreignTokenId = keccak256("DOT");
+        
+        // Create assets array with duplicate foreign token IDs
+        bytes[] memory assets = new bytes[](2);
+        assets[0] = abi.encode(1, foreignTokenId, uint128(1 ether)); // First instance of foreign token
+        assets[1] = abi.encode(1, foreignTokenId, uint128(1 ether)); // Second instance of same foreign token (duplicate)
+        
+        // Expect revert due to duplicate asset
+        vm.expectRevert(IGatewayV2.DuplicateAsset.selector);
+        hoax(user1);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
+            "", assets, "", 0.1 ether, 0.4 ether
+        );
+    }
+    
+    function testSendMessageWithMultipleUniqueAssets() public {
+        // Create two different tokens
+        address token1 = address(new WETH9());
+        address token2 = address(new WETH9());
+        
+        // Register tokens
+        MockGateway(address(gateway)).prank_registerNativeToken(token1);
+        MockGateway(address(gateway)).prank_registerNativeToken(token2);
+        
+        // Fund account
+        hoax(user1);
+        WETH9(payable(token1)).deposit{value: 1 ether}();
+        hoax(user1);
+        WETH9(payable(token2)).deposit{value: 1 ether}();
+        
+        // Approve gateway to spend tokens
+        hoax(user1);
+        IERC20(token1).approve(address(gateway), 1 ether);
+        hoax(user1);
+        IERC20(token2).approve(address(gateway), 1 ether);
+        
+        // Create assets array with different tokens (no duplicates)
+        bytes[] memory assets = new bytes[](2);
+        assets[0] = abi.encode(0, token1, uint128(0.5 ether));
+        assets[1] = abi.encode(0, token2, uint128(0.5 ether));
+        
+        // This should succeed as there are no duplicate assets
+        hoax(user1);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
+            "", assets, "", 0.1 ether, 0.4 ether
+        );
+        
+        // Verify tokens were transferred to the agent
+        assertEq(IERC20(token1).balanceOf(assetHubAgent), 0.5 ether);
+        assertEq(IERC20(token2).balanceOf(assetHubAgent), 0.5 ether);
+    }
 
     function testUnlockWethSuccess() public {
         bytes32 topic = keccak256("topic");

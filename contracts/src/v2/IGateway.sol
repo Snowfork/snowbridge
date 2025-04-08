@@ -14,6 +14,7 @@ interface IGatewayV2 {
     error InsufficientValue();
     error ExceededMaximumValue();
     error TooManyAssets();
+    error DuplicateAsset();
 
     /// Return the current operating mode for outbound messaging
     function operatingMode() external view returns (OperatingMode);
