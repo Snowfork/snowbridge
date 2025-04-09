@@ -518,9 +518,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         for (uint256 i = 0; i < message.commands.length; i++) {
             // check that there is enough gas available to forward to the command handler
             if (gasleft() * 63 / 64 < message.commands[i].gas + DISPATCH_OVERHEAD_GAS_V2) {
-                assembly {
-                    invalid()
-                }
+                revert IGatewayBase.NotEnoughGas();
             }
             if (message.commands[i].kind == CommandKind.Upgrade) {
                 try Gateway(this).v2_handleUpgrade{gas: message.commands[i].gas}(
