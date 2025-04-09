@@ -2,21 +2,10 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.28;
 
-import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
-import {Verification} from "./Verification.sol";
-
 import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
 import {OperatingMode, ParaID, TokenInfo, Channel, ChannelID} from "./Types.sol";
-import {Upgrade} from "./Upgrade.sol";
-import {IInitializable} from "./interfaces/IInitializable.sol";
-import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
-import {Address} from "./utils/Address.sol";
-import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
-import {Call} from "./utils/Call.sol";
-import {Math} from "./utils/Math.sol";
-import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
 import {PricingStorage} from "./storage/PricingStorage.sol";

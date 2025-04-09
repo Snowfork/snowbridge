@@ -6,12 +6,10 @@ import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
 import {Initializer} from "./Initializer.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
-import {Agent} from "./Agent.sol";
 import {IGatewayBase} from "./interfaces/IGatewayBase.sol";
 import {
     OperatingMode,
     ParaID,
-    TokenInfo,
     Channel,
     ChannelID,
     MultiAddress,
@@ -34,7 +32,6 @@ import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
 import {Address} from "./utils/Address.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
-import {Call} from "./utils/Call.sol";
 import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {Functions} from "./Functions.sol";
