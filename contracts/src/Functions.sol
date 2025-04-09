@@ -94,9 +94,6 @@ library Functions {
     }
 
     function registerNativeToken(address token) internal {
-        // NOTE: Explicitly allow a native token to be re-registered. This offers resiliency
-        // in case a previous registration attempt of the same token failed on the remote side.
-        // It means that registration can be retried.
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
 
