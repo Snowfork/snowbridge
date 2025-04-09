@@ -132,6 +132,11 @@ library Bitfield {
         pure
         returns (uint256 index)
     {
+        // Handle case where length is 0 to prevent infinite loop in subsample
+        if (length == 0) {
+            return 0;
+        }
+        
         assembly {
             mstore(0x00, seed)
             mstore(0x20, iteration)
