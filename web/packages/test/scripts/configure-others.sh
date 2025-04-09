@@ -11,10 +11,10 @@ config_ah() {
 
 register_weth_on_ah() {
     # register token
-    local call='0x3501020209079edaa8020300774667629726ec1fabebcec0d9139bd1c8f72a2300ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d0104'
+    local call='0x3501020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d00ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d0104'
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
     # set metadata
-    local call='0x3513020209079edaa8020300774667629726ec1fabebcec0d9139bd1c8f72a23105745544810574554481200'
+    local call='0x3513020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d105745544810574554481200'
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 
@@ -63,10 +63,10 @@ config_bridge_on_penpal() {
 
 register_weth_on_penpal() {
     # register weth
-    local call='0x3301020209079edaa8020300774667629726ec1fabebcec0d9139bd1c8f72a2300ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d0104'
+    local call='0x3301020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d00ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d0104'
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
     # set weth meta data
-    local call='0x3313020209079edaa8020300774667629726ec1fabebcec0d9139bd1c8f72a23105745544810574554481200'
+    local call='0x3313020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d105745544810574554481200'
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
 }
 

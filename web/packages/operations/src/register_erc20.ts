@@ -1,6 +1,6 @@
 import { Keyring } from "@polkadot/keyring"
 import { Context, environment } from "@snowbridge/api"
-import { IGateway__factory } from "@snowbridge/contract-types"
+import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 import { AbstractProvider, Contract, ethers, LogDescription, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 
