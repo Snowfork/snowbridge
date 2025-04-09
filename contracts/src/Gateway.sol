@@ -415,11 +415,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     ) external nonreentrant {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
-        bytes32 leafHash = keccak256(abi.encode(message));
-
         if ($.inboundNonce.get(message.nonce)) {
             revert IGatewayBase.InvalidNonce();
         }
+
+        bytes32 leafHash = keccak256(abi.encode(message));
 
         $.inboundNonce.set(message.nonce);
 
