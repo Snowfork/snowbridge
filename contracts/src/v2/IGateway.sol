@@ -108,4 +108,7 @@ interface IGatewayV2 {
 
     /// @dev Check whether a token is registered
     function isTokenRegistered(address token) external view returns (bool);
+
+    /// @dev Return the max inbound nonce.
+    function v2_inboundNonce() external view returns (uint64);
 }

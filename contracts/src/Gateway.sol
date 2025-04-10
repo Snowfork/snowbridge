@@ -422,6 +422,9 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         }
 
         $.inboundNonce.set(message.nonce);
+        if (message.nonce > $.maxInboundNonce) {
+            $.maxInboundNonce = message.nonce;
+        }
 
         // Produce the commitment (message root) by applying the leaf proof to the message leaf
         bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
@@ -506,6 +509,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     // Call an arbitrary contract function
     function v2_handleCallContract(bytes32 origin, bytes calldata data) external onlySelf {
         HandlersV2.callContract(origin, AGENT_EXECUTOR, data);
+    }
+
+    /// @dev Return the max inbound nonce.
+    function v2_inboundNonce() external view returns (uint64) {
+        return CoreStorage.layout().maxInboundNonce;
     }
 
     /**

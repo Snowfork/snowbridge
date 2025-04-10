@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
@@ -185,44 +187,44 @@ func (relay *OnDemandRelay) queryNonces(ctx context.Context) (uint64, uint64, er
 }
 
 func (relay *OnDemandRelay) fetchLatestParachainNonce(_ context.Context) (uint64, error) {
-	// paraNonceKey, err := types.CreateStorageKey(
-	// 	relay.parachainConn.Metadata(), "EthereumOutboundQueue", "Nonce",
-	// 	relay.assetHubChannelID[:], nil,
-	// )
-	// if err != nil {
-	// 	return 0, fmt.Errorf(
-	// 		"create storage key for EthereumOutboundQueue.Nonce(%v): %w",
-	// 		Hex(relay.assetHubChannelID[:]), err,
-	// 	)
-	// }
-	// var paraOutboundNonce uint64
-	// ok, err := relay.parachainConn.API().RPC.State.GetStorageLatest(paraNonceKey, &paraOutboundNonce)
-	// if err != nil {
-	// 	return 0, fmt.Errorf(
-	// 		"fetch storage EthereumOutboundQueue.Nonce(%v): %w",
-	// 		Hex(relay.assetHubChannelID[:]), err,
-	// 	)
-	// }
-	// if !ok {
-	// 	paraOutboundNonce = 0
-	// }
+	paraNonceKey, err := types.CreateStorageKey(
+		relay.parachainConn.Metadata(), "EthereumOutboundQueueV2", "Nonce",
+		nil,
+	)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"create storage key for EthereumOutboundQueueV2.Nonce: %w",
+			err,
+		)
+	}
+	var paraOutboundNonce uint64
+	ok, err := relay.parachainConn.API().RPC.State.GetStorageLatest(paraNonceKey, &paraOutboundNonce)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"fetch storage EthereumOutboundQueue.Nonce: %w",
+			err,
+		)
+	}
+	if !ok {
+		paraOutboundNonce = 0
+	}
 
-	return 0, nil
+	return paraOutboundNonce, nil
 }
 
 func (relay *OnDemandRelay) fetchEthereumNonce(ctx context.Context) (uint64, error) {
-	//opts := bind.CallOpts{
-	//	Context: ctx,
-	//}
-	//ethInboundNonce, _, err := relay.gatewayContract.ChannelNoncesOf(&opts, relay.assetHubChannelID)
-	//if err != nil {
-	//	return 0, fmt.Errorf(
-	//		"fetch Gateway.ChannelNoncesOf(%v): %w",
-	//		Hex(relay.assetHubChannelID[:]), err,
-	//	)
-	//}
+	opts := bind.CallOpts{
+		Context: ctx,
+	}
+	ethInboundNonce, err := relay.gatewayContract.V2InboundNonce(&opts)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"fetch Gateway.ChannelNoncesOf: %w",
+			err,
+		)
+	}
 
-	return 0, nil
+	return ethInboundNonce, nil
 }
 
 func (relay *OnDemandRelay) sync(ctx context.Context, blockNumber uint64) error {

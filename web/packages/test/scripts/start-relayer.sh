@@ -79,6 +79,19 @@ start_relayer() {
             sleep 20
         done
     ) &
+    # Launch beefy on demand relay
+    (
+        : >"$output_dir"/on-demand-beefy-relay.log
+        while :; do
+            echo "Starting on demand beefy relay at $(date)"
+            "${relay_bin}" run beefy \
+                --config "$output_dir/beefy-relay.json" \
+                --ethereum.private-key $beefy_relay_eth_key \
+                --on-demand \
+                >>"$output_dir"/on-demand-beefy-relay.log 2>&1 || true
+            sleep 20
+        done
+    ) &
 
     # Launch parachain relay
     (

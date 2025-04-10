@@ -15,6 +15,7 @@ library CoreStorage {
         mapping(bytes32 agentID => address) agents;
         // V2
         SparseBitmap inboundNonce;
+        uint64 maxInboundNonce;
         uint64 outboundNonce;
     }
 
