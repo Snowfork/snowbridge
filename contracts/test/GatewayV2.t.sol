@@ -491,4 +491,20 @@ contract GatewayV2Test is Test {
         vm.expectRevert(IGatewayV2.AgentAlreadyExists.selector);
         IGatewayV2(payable(address(gateway))).v2_createAgent(origin);
     }
+
+    function testRegisterNativeTokenValidatesAddress() public {
+        // Try to register a non-contract address (EOA)
+        address nonContractAddress = makeAddr("nonContractAddress");
+
+        // Expect the function to revert with InvalidToken error
+        vm.expectRevert(IGatewayBase.InvalidToken.selector);
+        MockGateway(address(gateway)).prank_registerNativeToken(nonContractAddress);
+
+        // Verify that a valid token contract can be registered
+        address validTokenContract = address(new WETH9());
+        MockGateway(address(gateway)).prank_registerNativeToken(validTokenContract);
+
+        // Verify the token is registered
+        assertTrue(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
+    }
 }
