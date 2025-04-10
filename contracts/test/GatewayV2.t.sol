@@ -285,7 +285,7 @@ contract GatewayV2Test is Test {
 
     function testSubmitFailNotEnoughGas() public {
         bytes32 topic = keccak256("topic");
-        
+
         // Create a command with very high gas requirement
         CommandV2[] memory commands = new CommandV2[](1);
         SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
@@ -305,8 +305,8 @@ contract GatewayV2Test is Test {
         // Limit the gas for this test to ensure we hit the NotEnoughGas error
         uint256 gasLimit = 100_000;
         vm.deal(relayer, 1 ether);
-        
-        vm.expectRevert(IGatewayBase.NotEnoughGas.selector);
+
+        vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
         vm.prank(relayer);
         IGatewayV2(address(gateway)).v2_submit{gas: gasLimit}(
             message, proof, makeMockProof(), relayerRewardAddress
