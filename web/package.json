@@ -7,7 +7,7 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "build": "turbo run build",
+    "build": "turbo run build --concurrency=1 --no-cache",
     "test": "turbo run test",
     "lint": "turbo run lint",
     "format": "turbo run format",
