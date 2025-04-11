@@ -148,8 +148,8 @@ build_web_packages() {
 install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
-    #build_lodestar
-    #build_binaries
+    build_lodestar
+    build_binaries
     if [ "$snowbridge_v1_v2" = true ]; then
         build_relayers_v1_v2
     else
