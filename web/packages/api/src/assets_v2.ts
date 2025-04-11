@@ -1204,7 +1204,6 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                         || path.asset === "0x6b175474e89094c44da98b954eedeac495271d0f" // DAI
                     ) && (
                         path.destination === 2034 // Hydration
-                        || path.destination === 1000 // Asset Hub
                         || path.destination === 2004 // Moonbeam
                     )
                 ) {
