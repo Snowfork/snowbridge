@@ -86,7 +86,7 @@ async fn transfer_native_eth() {
 		.expect("call success")
 		.wait_for_finalized_success()
 		.await
-		.expect("sucessful call");
+		.expect("successful call");
 
 	let message_id = events
 		.find_first::<Sent>()
