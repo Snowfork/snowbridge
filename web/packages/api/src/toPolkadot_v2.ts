@@ -1,4 +1,4 @@
-import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway"
+import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway.sol/IGatewayV1"
 import {
     AbstractProvider,
     Contract,
