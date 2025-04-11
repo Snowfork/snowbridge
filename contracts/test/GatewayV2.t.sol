@@ -283,6 +283,36 @@ contract GatewayV2Test is Test {
         );
     }
 
+    function testSubmitFailNotEnoughGas() public {
+        bytes32 topic = keccak256("topic");
+
+        // Create a command with very high gas requirement
+        CommandV2[] memory commands = new CommandV2[](1);
+        SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[0] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 30_000_000, // Extremely high gas value
+            payload: abi.encode(params)
+        });
+
+        InboundMessageV2 memory message = InboundMessageV2({
+            origin: keccak256("666"),
+            nonce: 2, // Use a different nonce from other tests
+            topic: topic,
+            commands: commands
+        });
+
+        // Limit the gas for this test to ensure we hit the NotEnoughGas error
+        uint256 gasLimit = 100_000;
+        vm.deal(relayer, 1 ether);
+
+        vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
+        vm.prank(relayer);
+        IGatewayV2(address(gateway)).v2_submit{gas: gasLimit}(
+            message, proof, makeMockProof(), relayerRewardAddress
+        );
+    }
+
     function mockNativeTokenForSend(address user, uint128 amount)
         internal
         returns (address, bytes memory, Asset memory)
