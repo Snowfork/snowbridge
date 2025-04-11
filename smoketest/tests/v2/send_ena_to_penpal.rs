@@ -165,7 +165,7 @@ async fn send_ena_to_penpal() {
 			}
 		}
 		if issued_event_found && issued_fee_event_found {
-			break
+			break;
 		}
 	}
 	assert!(issued_event_found);
@@ -203,7 +203,7 @@ async fn send_ena_to_penpal() {
 			}
 		}
 		if issued_event_found && issued_fee_event_found {
-			break
+			break;
 		}
 	}
 	assert!(issued_event_found);

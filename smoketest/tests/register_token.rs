@@ -85,13 +85,13 @@ async fn register_token() {
 		for created in events.find::<Created>() {
 			println!("Created event found in assethub block {}.", block.number());
 			let created = created.unwrap();
-			// assert_eq!(created.asset_id.encode(), expected_asset_id.encode());
+			assert_eq!(created.asset_id.encode(), expected_asset_id.encode());
 			assert_eq!(created.creator, expected_creator);
 			assert_eq!(created.owner, expected_owner);
 			created_event_found = true;
 		}
 		if created_event_found {
-			break
+			break;
 		}
 	}
 	assert!(created_event_found)

@@ -17,7 +17,10 @@ use snowbridge_smoketest::{
 	parachains::{
 		bridgehub::{
 			self,
-			api::{ethereum_system, runtime_types::snowbridge_core::outbound::v1::Initializer},
+			api::{
+				ethereum_system,
+				runtime_types::snowbridge_outbound_queue_primitives::v1::message::Initializer,
+			},
 		},
 		relaychain,
 		relaychain::api::runtime_types::{
@@ -74,11 +77,14 @@ async fn upgrade_gateway() {
 
 	let ethereum_system_api = bridgehub::api::ethereum_system::calls::TransactionApi;
 
+	let binding = new_impl.address();
+	let address_bytes = binding.as_bytes();
+	let substrate_address = subxt::utils::H160::from_slice(address_bytes);
 	// The upgrade call
 	let mut encoded = Vec::new();
 	ethereum_system_api
 		.upgrade(
-			new_impl.address(),
+			substrate_address,
 			new_impl_code_hash.into(),
 			Some(Initializer {
 				params: new_impl_initializer_params,
