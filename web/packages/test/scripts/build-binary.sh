@@ -103,6 +103,9 @@ checkout_build_and_copy() {
     git fetch origin $BRANCH
     git checkout FETCH_HEAD -- relayer
 
+    echo "Fixing contract bindings."
+    cp generate.go_v1 relayer/generate.go
+
     echo "Building relayer from branch: $BRANCH"
     mage -d "$relay_dir" build
 
