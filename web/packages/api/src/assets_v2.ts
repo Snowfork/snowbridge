@@ -1094,11 +1094,18 @@ async function assetErc20Metadata(
 }
 
 function getTokenFromLocation(location: any, chainId: number) {
-    const interior = location.interior.x1 ?? location.interior.x2
     if (location.parents === 2) {
+        // New XCM multi-location format. x1 is an array.
         if (
             location.interior.x1 &&
             location.interior.x1[0]?.globalConsensus?.ethereum?.chainId === chainId
+        ) {
+            return ETHER_TOKEN_ADDRESS
+        }
+        // Old XCM multi-location format. x1 is not an array.
+        if (
+            location.interior.x1 &&
+            location.interior.x1.globalConsensus?.ethereum?.chainId === chainId
         ) {
             return ETHER_TOKEN_ADDRESS
         }
@@ -1183,6 +1190,23 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 if (
                     path.asset === "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003" &&
                     path.destination !== 3369
+                ) {
+                    return false
+                }
+
+                // Disable stable coins in the UI from Ethereum to Polkadot
+                if (
+                    (
+                        path.asset === "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" // USDC
+                        || path.asset === "0xdac17f958d2ee523a2206206994597c13d831ec7" // USDT
+                        || path.asset === "0x9d39a5de30e57443bff2a8307a4256c8797a3497" // Staked USDe
+                        || path.asset === "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd" // Savings USD
+                        || path.asset === "0x6b175474e89094c44da98b954eedeac495271d0f" // DAI
+                    ) && (
+                        path.destination === 2034 // Hydration
+                        || path.destination === 1000 // Asset Hub
+                        || path.destination === 2004 // Moonbeam
+                    )
                 ) {
                     return false
                 }
