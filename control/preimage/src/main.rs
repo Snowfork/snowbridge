@@ -200,7 +200,7 @@ pub struct HaltBridgeArgs {
     /// Halt the Ethereum Outbound Queue, blocking message from AH to BH.
     #[arg(long, value_name = "HALT_OUTBOUND_QUEUE")]
     outbound_queue: bool,
-    /// Halt the Ethereum client, blocking consensus updates to the ligth client.
+    /// Halt the Ethereum client, blocking consensus updates to the light client.
     #[arg(long, value_name = "HALT_ETHEREUM_CLIENT")]
     ethereum_client: bool,
     /// Set the AH to Ethereum fee to a high amount, effectively blocking messages from AH ->
