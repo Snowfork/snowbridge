@@ -67,9 +67,6 @@ library CallsV2 {
         uint128 executionFee,
         uint128 relayerFee
     ) internal {
-        require(msg.value <= type(uint128).max, IGatewayV2.ExceededMaximumValue());
-        require(msg.value >= executionFee + relayerFee, IGatewayV2.InsufficientValue());
-
         Xcm memory xcm = makeCreateAssetXCM(token, network);
 
         Functions.registerNativeToken(token);
