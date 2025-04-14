@@ -10,7 +10,7 @@ interface IGatewayV2 {
     error ShouldNotReachHere();
     error InvalidNetwork();
     error InvalidAsset();
-    error InvalidFee();
+    error InsufficientGasLimit();
     error InsufficientValue();
     error ExceededMaximumValue();
     error TooManyAssets();

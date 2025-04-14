@@ -12,16 +12,6 @@ library SubstrateTypes {
     error UnsupportedCompactEncoding();
 
     /**
-     * @dev Encodes `MultiAddress::Id`:
-     *         https://crates.parity.io/sp_runtime/enum.MultiAddress.html#variant.Id
-     * @return bytes SCALE-encoded bytes
-     */
-    // solhint-disable-next-line func-name-mixedcase
-    function MultiAddressID(bytes32 account) internal pure returns (bytes memory) {
-        return bytes.concat(hex"00", account);
-    }
-
-    /**
      * @dev Encodes `H160`: https://crates.parity.io/sp_core/struct.H160.html
      * @return bytes SCALE-encoded bytes
      */
@@ -42,24 +32,6 @@ library SubstrateTypes {
     // solhint-disable-next-line func-name-mixedcase
     function None() internal pure returns (bytes memory) {
         return hex"00";
-    }
-
-    // solhint-disable-next-line func-name-mixedcase
-    function OptionParaID(ParaID v) internal pure returns (bytes memory) {
-        if (ParaID.unwrap(v) == 0) {
-            return hex"00";
-        } else {
-            return bytes.concat(bytes1(0x01), ScaleCodec.encodeU32(uint32(ParaID.unwrap(v))));
-        }
-    }
-
-    // solhint-disable-next-line func-name-mixedcase
-    function OptionVecU8(bytes memory v) internal pure returns (bytes memory) {
-        if (v.length == 0) {
-            return hex"00";
-        } else {
-            return bytes.concat(bytes1(0x01), VecU8(v));
-        }
     }
 
     /**

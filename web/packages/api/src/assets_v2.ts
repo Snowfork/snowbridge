@@ -15,6 +15,7 @@ export type ERC20Metadata = {
     name: string
     symbol: string
     decimals: number
+    foreignId?: string
 }
 
 export type EthereumChain = {
@@ -77,6 +78,16 @@ export type Asset = {
     decimals: number
     isSufficient: boolean
     xc20?: string
+    // Location on source Parachain
+    location?: any
+    // Location reanchored on AH
+    locationOnAH?: any
+    // Location reanchored on Ethereum
+    locationOnEthereum?: any
+    // For chains that use `Assets` pallet to manage local assets
+    // the asset_id is normally represented as u32, but on Moonbeam,
+    // it is u128, so use string here to avoid overflow
+    assetId?: string
 }
 
 export type RegistryOptions = {
@@ -526,7 +537,8 @@ export async function getLocationBalance(
     provider: ApiPromise,
     specName: string,
     location: any,
-    account: string
+    account: string,
+    assetId?: any
 ): Promise<bigint> {
     switch (specName) {
         case "basilisk":
@@ -546,10 +558,16 @@ export async function getLocationBalance(
         case "asset-hub-paseo":
         case "westmint":
         case "statemint": {
-            const assetId = location
-            const accountData = (
-                await provider.query.foreignAssets.account(assetId, account)
-            ).toPrimitive() as any
+            let accountData: any
+            if (assetId) {
+                accountData = (
+                    await provider.query.assets.account(assetId, account)
+                ).toPrimitive() as any
+            } else {
+                accountData = (
+                    await provider.query.foreignAssets.account(location, account)
+                ).toPrimitive() as any
+            }
             return BigInt(accountData?.balance ?? 0n)
         }
         case "bifrost":
@@ -573,11 +591,14 @@ export async function getLocationBalance(
         }
         case "moonriver":
         case "moonbeam": {
-            const assetId = (
-                await provider.query.assetManager.assetTypeId({ xcm: location })
-            ).toPrimitive()
+            // For PNA, use assetId directly; for ENA, query assetId by Multilocation
             if (!assetId) {
-                throw Error(`DOT not registered for spec ${specName}.`)
+                assetId = (
+                    await provider.query.assetManager.assetTypeId({ xcm: location })
+                ).toPrimitive()
+                if (!assetId) {
+                    throw Error(`Asset not registered for spec ${specName}.`)
+                }
             }
             const accountData = (
                 await provider.query.assets.account(assetId, account)
@@ -610,9 +631,16 @@ export function getTokenBalance(
     specName: string,
     account: string,
     ethChainId: number,
-    tokenAddress: string
+    tokenAddress: string,
+    asset?: Asset
 ) {
-    return getLocationBalance(provider, specName, erc20Location(ethChainId, tokenAddress), account)
+    return getLocationBalance(
+        provider,
+        specName,
+        asset?.location ?? erc20Location(ethChainId, tokenAddress),
+        account,
+        asset?.assetId
+    )
 }
 
 export async function getParachainId(parachain: ApiPromise): Promise<number> {
@@ -628,13 +656,20 @@ export async function calculateDestinationFee(provider: ApiPromise, destinationX
         throw Error(`Can not query XCM Weight.`)
     }
 
-    const feeInDot = (
+    let feeInDot: any
+    feeInDot = (
         await provider.call.xcmPaymentApi.queryWeightToAssetFee(weight.ok, {
             v4: { parents: 1, interior: "Here" },
         })
     ).toPrimitive() as any
+    // For compatibility with Westend, which has XCMV5 enabled.
     if (!feeInDot.ok) {
-        throw Error(`Can not convert weight to fee in DOT.`)
+        feeInDot = (
+            await provider.call.xcmPaymentApi.queryWeightToAssetFee(weight.ok, {
+                v5: { parents: 1, interior: "Here" },
+            })
+        ).toPrimitive() as any
+        if (!feeInDot.ok) throw Error(`Can not convert weight to fee in DOT.`)
     }
     const executionFee = BigInt(feeInDot.ok.toString())
 
@@ -865,7 +900,7 @@ async function indexParachain(
     }
 
     if (Object.keys(assets).length === 0) {
-        throw Error(
+        console.warn(
             `Cannot discover assets for ${info.specName} (parachain ${parachainId}). Please add a handler for that runtime or add overrides.`
         )
     }
@@ -969,7 +1004,7 @@ async function indexEthChain(
                     decimals: assetHub.assets[token].decimals,
                 }
             } else {
-                assets[token] = await assetErc20Metadata(provider, token)
+                assets[token] = await assetErc20Metadata(provider, token, gatewayAddress)
             }
         }
         if ((await provider.getCode(gatewayAddress)) === undefined) {
@@ -1082,7 +1117,8 @@ const ERC20_METADATA_ABI = [
 
 async function assetErc20Metadata(
     provider: AbstractProvider,
-    token: string
+    token: string,
+    gateway?: string
 ): Promise<ERC20Metadata> {
     const erc20Metadata = new Contract(token, ERC20_METADATA_ABI, provider)
     const [name, symbol, decimals] = await Promise.all([
@@ -1090,15 +1126,35 @@ async function assetErc20Metadata(
         erc20Metadata.symbol(),
         erc20Metadata.decimals(),
     ])
-    return { token, name: String(name), symbol: String(symbol), decimals: Number(decimals) }
+    let metadata: any = {
+        token,
+        name: String(name),
+        symbol: String(symbol),
+        decimals: Number(decimals),
+    }
+    if (gateway) {
+        let gatewayCon = IGateway__factory.connect(gateway, provider)
+        let tokenId = await gatewayCon.queryForeignTokenID(token)
+        if (tokenId != "0x0000000000000000000000000000000000000000000000000000000000000000") {
+            metadata.foreignId = tokenId
+        }
+    }
+    return metadata
 }
 
 function getTokenFromLocation(location: any, chainId: number) {
-    const interior = location.interior.x1 ?? location.interior.x2
     if (location.parents === 2) {
+        // New XCM multi-location format. x1 is an array.
         if (
             location.interior.x1 &&
             location.interior.x1[0]?.globalConsensus?.ethereum?.chainId === chainId
+        ) {
+            return ETHER_TOKEN_ADDRESS
+        }
+        // Old XCM multi-location format. x1 is not an array.
+        if (
+            location.interior.x1 &&
+            location.interior.x1.globalConsensus?.ethereum?.chainId === chainId
         ) {
             return ETHER_TOKEN_ADDRESS
         }
@@ -1154,6 +1210,178 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         isSufficient: true,
                     },
                 ],
+                "1000": [
+                    {
+                        token: "0x196C20DA81Fbc324EcdF55501e95Ce9f0bD84d14".toLowerCase(),
+                        name: "DOT",
+                        minimumBalance: 100_000_000n,
+                        symbol: "DOT",
+                        decimals: 10,
+                        isSufficient: true,
+                        location: DOT_LOCATION,
+                    },
+                    {
+                        token: "0x12bbfDc9e813614eEf8Dc8A2560b0EfBeaf7C2AB".toLowerCase(),
+                        name: "KUSAMA",
+                        minimumBalance: 3_333_333n,
+                        symbol: "KSM",
+                        decimals: 12,
+                        isSufficient: true,
+                        location: {
+                            parents: 2,
+                            interior: {
+                                x1: [
+                                    {
+                                        globalConsensus: "Kusama",
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                    {
+                        token: "0x21FaB0eA070F162180447881D5873Cf3d57200d6".toLowerCase(),
+                        name: "Kolkadot",
+                        minimumBalance: 1n,
+                        symbol: "KOL",
+                        decimals: 12,
+                        isSufficient: false,
+                        location: {
+                            parents: 0,
+                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 86 }] },
+                        },
+                        assetId: "86",
+                    },
+                    {
+                        token: "0x92262680A8d6636bbA9bFFDf484c274cA2de6400".toLowerCase(),
+                        name: "DED",
+                        minimumBalance: 1n,
+                        symbol: "DED",
+                        decimals: 10,
+                        isSufficient: false,
+                        location: {
+                            parents: 0,
+                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 30 }] },
+                        },
+                        assetId: "30",
+                    },
+                    {
+                        token: "0xa37B046782518A80e2E69056009FBD0431d36E50".toLowerCase(),
+                        name: "PINK",
+                        minimumBalance: 1n,
+                        symbol: "PINK",
+                        decimals: 10,
+                        isSufficient: false,
+                        location: {
+                            parents: 0,
+                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 23 }] },
+                        },
+                        assetId: "23",
+                    },
+                    {
+                        token: "0x5FDcD48F09FB67de3D202cd854B372AEC1100ED5".toLowerCase(),
+                        name: "GAVUN WUD",
+                        minimumBalance: 1n,
+                        symbol: "WUD",
+                        decimals: 10,
+                        isSufficient: false,
+                        location: {
+                            parents: 0,
+                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 31337 }] },
+                        },
+                        assetId: "31337",
+                    },
+                ],
+            }
+            break
+        }
+        case "westend_sepolia": {
+            result.assetOverrides = {
+                "1000": [
+                    {
+                        token: "0xF50fb50d65C8C1f6c72E4D8397c984933AfC8F7e".toLowerCase(),
+                        name: "WND",
+                        minimumBalance: 1n,
+                        symbol: "WND",
+                        decimals: 18,
+                        isSufficient: true,
+                        location: DOT_LOCATION,
+                    },
+                ],
+            }
+            break
+        }
+        case "local_e2e": {
+            result.assetOverrides = {
+                "1000": [
+                    {
+                        token: "0xDe45448Ca2d57797c0BEC0ee15A1E42334744219".toLowerCase(),
+                        name: "wnd",
+                        minimumBalance: 1n,
+                        symbol: "wnd",
+                        decimals: 18,
+                        isSufficient: true,
+                        location: DOT_LOCATION,
+                    },
+                    {
+                        token: "0xD8597EB7eF761E3315623EdFEe9DEfcBACd72e8b".toLowerCase(),
+                        name: "pal-2",
+                        minimumBalance: 1n,
+                        symbol: "pal-2",
+                        decimals: 18,
+                        isSufficient: true,
+                        location: {
+                            parents: 1,
+                            interior: {
+                                x3: [
+                                    { parachain: 2000 },
+                                    { palletInstance: 50 },
+                                    { generalIndex: 2 },
+                                ],
+                            },
+                        },
+                    },
+                ],
+                "2000": [
+                    {
+                        token: "0xD8597EB7eF761E3315623EdFEe9DEfcBACd72e8b".toLowerCase(),
+                        name: "pal-2",
+                        minimumBalance: 1n,
+                        symbol: "pal-2",
+                        decimals: 18,
+                        isSufficient: true,
+                        assetId: "2",
+                        location: {
+                            parents: 0,
+                            interior: { x2: [{ palletInstance: 50 }, { generalIndex: 2 }] },
+                        },
+                        locationOnAH: {
+                            parents: 1,
+                            interior: {
+                                x3: [
+                                    { parachain: 2000 },
+                                    { palletInstance: 50 },
+                                    { generalIndex: 2 },
+                                ],
+                            },
+                        },
+                        locationOnEthereum: {
+                            parents: 1,
+                            interior: {
+                                x4: [
+                                    {
+                                        globalConsensus: {
+                                            byGenesis:
+                                                "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e",
+                                        },
+                                    },
+                                    { parachain: 2000 },
+                                    { palletInstance: 50 },
+                                    { generalIndex: 2 },
+                                ],
+                            },
+                        },
+                    },
+                ],
             }
             break
         }
@@ -1183,6 +1411,21 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 if (
                     path.asset === "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003" &&
                     path.destination !== 3369
+                ) {
+                    return false
+                }
+
+                // Disable stable coins in the UI from Ethereum to Polkadot
+                if (
+                    (
+                        path.asset === "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" // USDC
+                        || path.asset === "0xdac17f958d2ee523a2206206994597c13d831ec7" // USDT
+                        || path.asset === "0x9d39a5de30e57443bff2a8307a4256c8797a3497" // Staked USDe
+                        || path.asset === "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd" // Savings USD
+                        || path.asset === "0x6b175474e89094c44da98b954eedeac495271d0f" // DAI
+                    ) && (
+                        path.destination === 2034 // Hydration
+                    )
                 ) {
                     return false
                 }

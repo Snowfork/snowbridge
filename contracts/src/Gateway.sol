@@ -6,12 +6,10 @@ import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
 import {Initializer} from "./Initializer.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
-import {Agent} from "./Agent.sol";
 import {IGatewayBase} from "./interfaces/IGatewayBase.sol";
 import {
     OperatingMode,
     ParaID,
-    TokenInfo,
     Channel,
     ChannelID,
     MultiAddress,
@@ -34,7 +32,6 @@ import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
 import {Address} from "./utils/Address.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
-import {Call} from "./utils/Call.sol";
 import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {Functions} from "./Functions.sol";
@@ -415,11 +412,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     ) external nonreentrant {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
-        bytes32 leafHash = keccak256(abi.encode(message));
-
         if ($.inboundNonce.get(message.nonce)) {
             revert IGatewayBase.InvalidNonce();
         }
+
+        bytes32 leafHash = keccak256(abi.encode(message));
 
         $.inboundNonce.set(message.nonce);
 
@@ -518,9 +515,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         for (uint256 i = 0; i < message.commands.length; i++) {
             // check that there is enough gas available to forward to the command handler
             if (gasleft() * 63 / 64 < message.commands[i].gas + DISPATCH_OVERHEAD_GAS_V2) {
-                assembly {
-                    invalid()
-                }
+                revert IGatewayV2.InsufficientGasLimit();
             }
             if (message.commands[i].kind == CommandKind.Upgrade) {
                 try Gateway(this).v2_handleUpgrade{gas: message.commands[i].gas}(

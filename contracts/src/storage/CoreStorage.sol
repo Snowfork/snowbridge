@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.28;
 
-import {Channel, OperatingMode, ChannelID, ParaID} from "../v1/Types.sol";
+import {Channel, OperatingMode, ChannelID} from "../v1/Types.sol";
 import {SparseBitmap} from "../utils/SparseBitmap.sol";
 
 library CoreStorage {

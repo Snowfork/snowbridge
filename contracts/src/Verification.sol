@@ -115,12 +115,12 @@ library Verification {
             return false;
         }
 
-        // Compute the merkle leaf hash of our parachain
-        bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(encodedParaID, proof.header);
-
         if (proof.headProof.pos >= proof.headProof.width) {
             return false;
         }
+
+        // Compute the merkle leaf hash of our parachain
+        bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(encodedParaID, proof.header);
 
         // Compute the merkle root hash of all parachain heads
         bytes32 parachainHeadsRoot = SubstrateMerkleProof.computeRoot(
