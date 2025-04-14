@@ -91,7 +91,7 @@ async fn register_token() {
 			created_event_found = true;
 		}
 		if created_event_found {
-			break;
+			break
 		}
 	}
 	assert!(created_event_found)

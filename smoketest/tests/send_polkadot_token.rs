@@ -76,7 +76,7 @@ async fn send_polkadot_token() {
 			event_found = true;
 		}
 		if event_found {
-			break;
+			break
 		}
 	}
 	assert!(event_found)

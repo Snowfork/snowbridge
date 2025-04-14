@@ -118,7 +118,7 @@ async fn transfer_native_eth() {
 			}
 		}
 		if transfer_event_found {
-			break;
+			break
 		}
 	}
 	assert!(transfer_event_found);

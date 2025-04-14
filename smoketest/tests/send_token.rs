@@ -120,7 +120,7 @@ async fn send_token() {
 			issued_event_found = true;
 		}
 		if issued_event_found {
-			break;
+			break
 		}
 	}
 	assert!(issued_event_found)

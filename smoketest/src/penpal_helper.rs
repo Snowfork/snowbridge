@@ -156,7 +156,7 @@ pub async fn create_asset_pool(
 
 	if next_id.is_some() && next_id.unwrap() > 0 {
 		println!("Pool has already been created, skipping.");
-		return;
+		return
 	}
 
 	println!("minting eth on assethub and send to penpal to use for pools");
@@ -225,7 +225,7 @@ pub async fn ensure_penpal_asset_exists(
 
 	if result.is_some() {
 		println!("asset {:?} exists on penpal.", asset);
-		return;
+		return
 	}
 
 	println!("creating asset {:?} on penpal.", asset);
@@ -379,10 +379,10 @@ pub async fn wait_for_penpal_event<Ev: StaticEvent>(
 				<Ev as StaticEvent>::EVENT,
 			);
 			substrate_event_found = true;
-			break;
+			break
 		}
 		if substrate_event_found {
-			break;
+			break
 		}
 	}
 	assert!(substrate_event_found);

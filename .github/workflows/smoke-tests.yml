@@ -3,8 +3,11 @@ name: smoke-tests
 on:
   push:
     branches:
-      - test-relayers-v1-v2-together
+      - main
   workflow_dispatch:
+  schedule:
+    # Runs at 8:00 AM every day
+    - cron: "0 8 * * *"
 
 jobs:
   smoketests:
@@ -19,7 +22,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: snowfork/snowbridge
-          ref: test-relayers-v1-v2-together
+          ref: main
       - run: rm -rf polkadot-sdk
       - uses: actions/checkout@v2
         with:

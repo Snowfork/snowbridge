@@ -99,7 +99,7 @@ async fn transact_e2p() {
 			remark_event_found = true;
 		}
 		if remark_event_found {
-			break;
+			break
 		}
 	}
 	assert!(remark_event_found);

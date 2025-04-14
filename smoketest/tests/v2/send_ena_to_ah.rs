@@ -157,7 +157,7 @@ async fn send_ena_to_ah() {
 			}
 		}
 		if event_count >= 2 {
-			break;
+			break
 		}
 	}
 	assert!(issued_weth_event_found);

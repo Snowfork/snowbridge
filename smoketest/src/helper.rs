@@ -126,10 +126,10 @@ pub async fn wait_for_bridgehub_event<Ev: StaticEvent>(
 			let _ = event.expect("expect upgrade");
 			println!("Event found at bridgehub block {}.", block.number());
 			substrate_event_found = true;
-			break;
+			break
 		}
 		if substrate_event_found {
-			break;
+			break
 		}
 	}
 	assert!(substrate_event_found);
@@ -158,10 +158,10 @@ pub async fn wait_for_assethub_event<Ev: StaticEvent>(
 				<Ev as StaticEvent>::EVENT,
 			);
 			substrate_event_found = true;
-			break;
+			break
 		}
 		if substrate_event_found {
-			break;
+			break
 		}
 	}
 	assert!(substrate_event_found);
@@ -181,11 +181,11 @@ pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Pro
 			for _ in events {
 				println!("Event found at ethereum block {:?}", block.number.unwrap());
 				ethereum_event_found = true;
-				break;
+				break
 			}
 		}
 		if ethereum_event_found {
-			break;
+			break
 		}
 	}
 	assert!(ethereum_event_found);

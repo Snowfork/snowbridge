@@ -96,7 +96,7 @@ async fn transfer_polkadot_token() {
 			}
 		}
 		if transfer_event_found {
-			break;
+			break
 		}
 	}
 	assert!(transfer_event_found);
