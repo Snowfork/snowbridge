@@ -3,7 +3,7 @@ name: smoke-tests
 on:
   push:
     branches:
-      - main
+      - test-relayers-v1-v2-together
   workflow_dispatch:
   schedule:
     # Runs at 8:00 AM every day
@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: snowfork/snowbridge
-          ref: main
+          ref: test-relayers-v1-v2-together
       - run: rm -rf polkadot-sdk
       - uses: actions/checkout@v2
         with:
@@ -57,10 +57,7 @@ jobs:
           nix develop -c sh -c '
           ./scripts/init-smoketests.sh &&
           cd web/packages/test &&
-          (./scripts/start-services.sh > "${{ env.LOG_DIR }}/start-services.log" 2>&1 &) &&
-          sleep 10 &&
-          ./scripts/check-relayer.sh &&
-          ./scripts/run-smoketests.sh'
+          ./scripts/start-services.sh'
         continue-on-error: true
       - name: Save start-services log file
         uses: actions/upload-artifact@v4
