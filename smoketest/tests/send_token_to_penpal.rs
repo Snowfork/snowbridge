@@ -10,7 +10,7 @@ use snowbridge_smoketest::penpal_helper::set_reserve_asset_storage;
 use snowbridge_smoketest::penpal_helper::weth_location;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{i_gateway, weth9},
+	contracts::{i_gateway_v1, weth9},
 	helper::initial_clients,
 	parachains::{
 		assethub::api::{
@@ -40,7 +40,7 @@ async fn send_token_to_penpal() {
 		.expect("can not connect to penpal parachain");
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
+	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, ethereum_client.clone());
 
 	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
@@ -85,7 +85,7 @@ async fn send_token_to_penpal() {
 		.send_token(
 			weth.address(),
 			PENPAL_PARA_ID,
-			i_gateway::MultiAddress { kind: 1, data: (*FERDIE_PUBLIC).into() },
+			i_gateway_v1::MultiAddress { kind: 1, data: (*FERDIE_PUBLIC).into() },
 			4_000_000_000,
 			amount,
 		)
