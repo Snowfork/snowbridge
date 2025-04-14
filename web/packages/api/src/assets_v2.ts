@@ -1290,6 +1290,18 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         },
                         assetId: "31337",
                     },
+                    {
+                        token: "0x769916A66fDAC0E3D57363129caac59386ea622B".toLowerCase(),
+                        name: "Integritee TEER",
+                        minimumBalance: 1n,
+                        symbol: "TEER",
+                        decimals: 12,
+                        isSufficient: false,
+                        location: {
+                            parents: 1,
+                            interior: { X1: [{ parachain: 2039 }] },
+                        },
+                    },
                 ],
             }
             break
