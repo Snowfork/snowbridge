@@ -149,7 +149,7 @@ install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
     build_lodestar
-    #build_binaries
+    build_binaries
     build_contracts
     if [ "$snowbridge_v1_v2" = true ]; then
         echo "Building relayers v1 and v2"
