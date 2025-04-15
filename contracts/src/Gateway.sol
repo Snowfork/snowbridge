@@ -576,7 +576,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     /// The `GatewayProxy` deployed to Ethereum mainnet already has its storage initialized.
     /// When its logic contract needs to upgraded, a new logic contract should be developed
     /// that inherits from this base `Gateway` contract. Particularly, the `initialize` function
-    /// must be overriden to ensure selective initialization of storage fields relevant
+    /// must be overridden to ensure selective initialization of storage fields relevant
     /// to the upgrade.
     ///
     /// ```solidity
