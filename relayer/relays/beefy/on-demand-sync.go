@@ -1,6 +1,7 @@
 package beefy
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -83,33 +85,62 @@ func (relay *OnDemandRelay) Start(ctx context.Context) error {
 	relay.tokenBucket.Start(ctx)
 
 	for {
-		sleep(ctx, time.Minute*1)
 		log.Info("Starting check")
+		sleep(ctx, time.Second*10)
 
-		paraNonce, ethNonce, err := relay.queryNonces(ctx)
+		paraNonce, err := relay.fetchLatestNonce(ctx)
+
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return nil
 			}
-			log.WithError(err).Error("Query nonces")
+			log.WithError(err).Error("Query latest parachain nonce")
 			continue
 		}
 
 		log.WithFields(log.Fields{
 			"paraNonce": paraNonce,
-			"ethNonce":  ethNonce,
-		}).Info("Nonces checked")
+		}).Info("Nonce checked")
 
-		if paraNonce > ethNonce {
-
-			// Check if we are rate-limited
-			if !relay.tokenBucket.TryConsume(1) {
-				log.Info("Rate-limit exceeded")
-				continue
+		relayed, err := relay.isNonceRelayed(ctx, paraNonce)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
 			}
+			log.Error(fmt.Errorf("Check nonce relayed: %d, %w", paraNonce, err))
+			continue
+		}
+		if relayed {
+			continue
+		}
 
-			log.Info("Performing sync")
+		paraBlock, err := relay.fetchParachainBlockByNonce(ctx, paraNonce)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			log.Error(fmt.Errorf("fetch paraBlock of the nonce: %d, %w", paraNonce, err))
+			continue
+		}
 
+		inclusionBlock, err := relay.fetchRelaychainInclusionBlock(paraBlock)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			log.Error(fmt.Errorf("fetch relayBlock of the nonce: %d, paraBlock: %d, error: %w", paraNonce, paraBlock, err))
+			continue
+		}
+
+		log.WithFields(log.Fields{
+			"paraNonce":  paraNonce,
+			"paraBlock":  paraBlock,
+			"relayBlock": inclusionBlock,
+		}).Info("find relaychain block which includes the parachain order")
+
+		var header *types.Header
+
+		for {
 			beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
@@ -118,8 +149,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context) error {
 				log.WithError(err).Error("Fetch latest beefy block hash")
 				continue
 			}
-
-			header, err := relay.relaychainConn.API().RPC.Chain.GetHeader(beefyBlockHash)
+			header, err = relay.relaychainConn.API().RPC.Chain.GetHeader(beefyBlockHash)
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
 					return nil
@@ -127,41 +157,54 @@ func (relay *OnDemandRelay) Start(ctx context.Context) error {
 				log.WithError(err).Error("Fetch latest beefy block header")
 				continue
 			}
-
-			err = relay.sync(ctx, uint64(header.Number))
-			if err != nil {
-				if errors.Is(err, context.Canceled) {
-					return nil
-				}
-				log.WithError(err).Error("Sync failed")
-				continue
+			if uint64(header.Number) > inclusionBlock {
+				break
 			}
-
-			log.Info("Sync completed")
-
-			relay.waitUntilMessagesSynced(ctx, paraNonce)
+			time.Sleep(10 * time.Second)
 		}
+
+		// Check if we are rate-limited
+		if !relay.tokenBucket.TryConsume(1) {
+			log.Info("Rate-limit exceeded")
+			continue
+		}
+
+		log.Info("Performing sync")
+
+		err = relay.sync(ctx, uint64(header.Number))
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			log.WithError(err).Error("Sync failed")
+			continue
+		}
+
+		log.Info("Sync completed")
+
+		relay.waitUntilMessagesSynced(ctx, paraNonce)
 	}
 }
 
 func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, paraNonce uint64) {
-	sleep(ctx, time.Minute*10)
+	waitingTime := 0
 	for {
-		ethNonce, err := relay.fetchEthereumNonce(ctx)
+		log.Info(fmt.Sprintf("waiting for nonce %d picked by parachain relayer", paraNonce))
+		relayed, err := relay.isNonceRelayed(ctx, paraNonce)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return
 			}
-			log.WithError(err).Error("fetch latest ethereum nonce")
-			sleep(ctx, time.Minute*1)
+			log.WithError(err).Error("check nonce relayed")
 			continue
 		}
+		waitingTime++
 
-		if ethNonce >= paraNonce {
-			return
+		if relayed || waitingTime > 10 {
+			break
 		}
+		time.Sleep(10 * time.Second)
 	}
-
 }
 
 func sleep(ctx context.Context, d time.Duration) {
@@ -172,21 +215,7 @@ func sleep(ctx context.Context, d time.Duration) {
 	}
 }
 
-func (relay *OnDemandRelay) queryNonces(ctx context.Context) (uint64, uint64, error) {
-	paraNonce, err := relay.fetchLatestParachainNonce(ctx)
-	if err != nil {
-		return 0, 0, fmt.Errorf("fetch latest parachain nonce: %w", err)
-	}
-
-	ethNonce, err := relay.fetchEthereumNonce(ctx)
-	if err != nil {
-		return 0, 0, fmt.Errorf("fetch latest ethereum nonce: %w", err)
-	}
-
-	return paraNonce, ethNonce, nil
-}
-
-func (relay *OnDemandRelay) fetchLatestParachainNonce(_ context.Context) (uint64, error) {
+func (relay *OnDemandRelay) fetchLatestNonce(_ context.Context) (uint64, error) {
 	paraNonceKey, err := types.CreateStorageKey(
 		relay.parachainConn.Metadata(), "EthereumOutboundQueueV2", "Nonce",
 		nil,
@@ -208,23 +237,11 @@ func (relay *OnDemandRelay) fetchLatestParachainNonce(_ context.Context) (uint64
 	if !ok {
 		paraOutboundNonce = 0
 	}
-
-	return paraOutboundNonce, nil
-}
-
-func (relay *OnDemandRelay) fetchEthereumNonce(ctx context.Context) (uint64, error) {
-	opts := bind.CallOpts{
-		Context: ctx,
-	}
-	ethInboundNonce, err := relay.gatewayContract.V2InboundNonce(&opts)
-	if err != nil {
-		return 0, fmt.Errorf(
-			"fetch Gateway.ChannelNoncesOf: %w",
-			err,
-		)
+	if paraOutboundNonce == 0 {
+		return paraOutboundNonce, nil
 	}
 
-	return ethInboundNonce, nil
+	return paraOutboundNonce - 1, nil
 }
 
 func (relay *OnDemandRelay) sync(ctx context.Context, blockNumber uint64) error {
@@ -338,4 +355,92 @@ func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber u
 
 	log.Info("Sync completed")
 	return nil
+}
+
+func (relay *OnDemandRelay) fetchParachainBlockByNonce(_ context.Context, nonce uint64) (uint64, error) {
+	nonceKey, _ := types.EncodeToBytes(types.NewU64(nonce))
+	storageKey, err := types.CreateStorageKey(relay.parachainConn.Metadata(), "EthereumOutboundQueueV2", "PendingOrders", nonceKey, nil)
+	if err != nil {
+		return 0, fmt.Errorf("create storage key for pendingOrder: %w", err)
+	}
+
+	var order parachain.PendingOrder
+	value, err := relay.parachainConn.API().RPC.State.GetStorageRawLatest(storageKey)
+	if err != nil {
+		return 0, fmt.Errorf("fetch value of pendingOrder with key '%v': %w", storageKey, err)
+	}
+	decoder := scale.NewDecoder(bytes.NewReader(*value))
+	err = decoder.Decode(&order)
+	if err != nil {
+		return 0, fmt.Errorf("decode order error: %w", err)
+	}
+	return uint64(order.BlockNumber), nil
+}
+
+func (relay *OnDemandRelay) fetchRelaychainInclusionBlock(
+	paraBlockNumber uint64,
+) (uint64, error) {
+	validationDataKey, err := types.CreateStorageKey(relay.parachainConn.Metadata(), "ParachainSystem", "ValidationData", nil, nil)
+	if err != nil {
+		return 0, fmt.Errorf("create storage key: %w", err)
+	}
+
+	paraBlockHash, err := relay.parachainConn.API().RPC.Chain.GetBlockHash(paraBlockNumber)
+	if err != nil {
+		return 0, fmt.Errorf("fetch parachain block hash: %w", err)
+	}
+
+	var validationData parachain.PersistedValidationData
+	ok, err := relay.parachainConn.API().RPC.State.GetStorage(validationDataKey, &validationData, paraBlockHash)
+	if err != nil {
+		return 0, fmt.Errorf("fetch PersistedValidationData for block %v: %w", paraBlockHash.Hex(), err)
+	}
+	if !ok {
+		return 0, fmt.Errorf("PersistedValidationData not found for block %v", paraBlockHash.Hex())
+	}
+
+	// fetch ParaId
+	paraIDKey, err := types.CreateStorageKey(relay.parachainConn.Metadata(), "ParachainInfo", "ParachainId", nil, nil)
+	if err != nil {
+		return 0, err
+	}
+	var paraID uint32
+	ok, err = relay.parachainConn.API().RPC.State.GetStorageLatest(paraIDKey, &paraID)
+	if err != nil {
+		return 0, fmt.Errorf("fetch parachain id: %w", err)
+	}
+
+	startBlock := validationData.RelayParentNumber + 1
+	for i := validationData.RelayParentNumber + 1; i < startBlock+relaychain.FinalizationTimeout; i++ {
+		relayBlockHash, err := relay.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(i))
+		if err != nil {
+			return 0, fmt.Errorf("fetch relaychain block hash: %w", err)
+		}
+
+		var paraHead types.Header
+		ok, err := relay.relaychainConn.FetchParachainHead(relayBlockHash, paraID, &paraHead)
+		if err != nil {
+			return 0, fmt.Errorf("fetch head for parachain %v at block %v: %w", paraID, relayBlockHash.Hex(), err)
+		}
+		if !ok {
+			return 0, fmt.Errorf("parachain %v is not registered", paraID)
+		}
+
+		if paraBlockNumber == uint64(paraHead.Number) {
+			return uint64(i), nil
+		}
+	}
+
+	return 0, fmt.Errorf("can't find inclusion block")
+}
+
+func (relay *OnDemandRelay) isNonceRelayed(ctx context.Context, nonce uint64) (bool, error) {
+	isRelayed, err := relay.gatewayContract.V2IsDispatched(&bind.CallOpts{
+		Pending: true,
+		Context: ctx,
+	}, nonce)
+	if err != nil {
+		return false, fmt.Errorf("check nonce from gateway contract: %w", err)
+	}
+	return isRelayed, nil
 }

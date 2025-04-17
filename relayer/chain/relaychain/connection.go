@@ -356,3 +356,5 @@ func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlo
 	}
 	return heads, nil
 }
+
+const FinalizationTimeout = 8
