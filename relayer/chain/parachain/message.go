@@ -128,6 +128,7 @@ func removeLeadingZeroHash(s string) string {
 	return strings.Replace(s, "0x", "", 1)
 }
 
+// Storage ValidationData from ParachainSystem pallet
 type PersistedValidationData struct {
 	ParentHead             []byte
 	RelayParentNumber      uint32
@@ -135,6 +136,7 @@ type PersistedValidationData struct {
 	MaxPOVSize             uint32
 }
 
+// Storage PendingOrder from EthereumOutboundQueueV2 pallet
 type PendingOrder struct {
 	Nonce       uint64
 	BlockNumber uint32

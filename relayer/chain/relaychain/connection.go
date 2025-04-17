@@ -357,4 +357,5 @@ func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlo
 	return heads, nil
 }
 
+// The process for finalizing a backed parachain header times out after these many blocks
 const FinalizationTimeout = 8
