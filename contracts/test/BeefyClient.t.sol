@@ -18,6 +18,7 @@ contract BeefyClientTest is Test {
     uint8 randaoCommitDelay;
     uint8 randaoCommitExpiration;
     uint256 minNumRequiredSignatures;
+    uint256 signatureUsageCount;
     uint32 blockNumber;
     uint32 prevRandao;
     uint32 setSize;
@@ -33,7 +34,6 @@ contract BeefyClientTest is Test {
     bytes32 mmrRoot;
     uint256[] finalBitfield;
     BeefyClient.ValidatorProof[] finalValidatorProofs;
-    BeefyClient.ValidatorProof[] finalValidatorProofs3SignatureCount;
     bytes32[] mmrLeafProofs;
     BeefyClient.MMRLeaf mmrLeaf;
     uint256 leafProofOrder;
@@ -41,13 +41,13 @@ contract BeefyClientTest is Test {
     bytes32[] emptyLeafProofs;
     uint256 emptyLeafProofOrder;
     bytes2 mmrRootID = bytes2("mh");
-    string bitFieldFile0SignatureCount;
-    string bitFieldFile3SignatureCount;
+    string bitFieldFileSignatureCount;
 
     function setUp() public {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
         randaoCommitExpiration = uint8(vm.envOr("RANDAO_COMMIT_EXP", uint256(8)));
-        minNumRequiredSignatures = uint8(vm.envOr("MINIMUM_REQUIRED_SIGNATURES", uint256(16)));
+        minNumRequiredSignatures = uint8(vm.envOr("MINIMUM_REQUIRED_SIGNATURES", uint256(17)));
+        signatureUsageCount = vm.envOr("SIGNATURE_USAGE_COUNT", uint256(0));
         prevRandao = uint32(vm.envOr("PREV_RANDAO", uint256(377)));
 
         string memory beefyCommitmentFile =
@@ -55,10 +55,8 @@ contract BeefyClientTest is Test {
 
         string memory beefyCommitmentRaw = vm.readFile(beefyCommitmentFile);
 
-        bitFieldFile0SignatureCount =
-            string.concat(vm.projectRoot(), "/test/data/beefy-final-bitfield-0.json");
-        bitFieldFile3SignatureCount =
-            string.concat(vm.projectRoot(), "/test/data/beefy-final-bitfield-3.json");
+        bitFieldFileSignatureCount =
+            string.concat(vm.projectRoot(), "/test/data/beefy-final-bitfield.json");
 
         blockNumber = uint32(beefyCommitmentRaw.readUint(".params.commitment.blockNumber"));
         setId = uint32(beefyCommitmentRaw.readUint(".params.commitment.validatorSetID"));
@@ -87,15 +85,10 @@ contract BeefyClientTest is Test {
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
         absentBitfield = beefyClient.createInitialBitfield(absentBitSetArray, setSize);
 
-        string memory finalProofFile0SignatureCount =
-            string.concat(vm.projectRoot(), "/test/data/beefy-final-proof-0.json");
-        string memory finalProofRaw0SignatureCount = vm.readFile(finalProofFile0SignatureCount);
-        loadFinalProofs(finalProofRaw0SignatureCount, finalValidatorProofs);
-
-        string memory finalProofFile3SignatureCount =
-            string.concat(vm.projectRoot(), "/test/data/beefy-final-proof-3.json");
-        string memory finalProofRaw3SignatureCount = vm.readFile(finalProofFile3SignatureCount);
-        loadFinalProofs(finalProofRaw3SignatureCount, finalValidatorProofs3SignatureCount);
+        string memory finalProofFile =
+            string.concat(vm.projectRoot(), "/test/data/beefy-final-proof.json");
+        string memory finalProofRaw = vm.readFile(finalProofFile);
+        loadFinalProofs(finalProofRaw, finalValidatorProofs);
     }
 
     function initialize(uint32 _setId) public returns (BeefyClient.Commitment memory) {
@@ -145,11 +138,11 @@ contract BeefyClientTest is Test {
     function regenerateBitField(string memory bitfieldFile, uint256 numRequiredSignatures)
         internal
     {
-        console.log("print initialBitField");
+        console.log("print initialBitField, length is: %d", bitfield.length);
         printBitArray(bitfield);
         prevRandao = uint32(vm.envOr("PREV_RANDAO", prevRandao));
         finalBitfield = Bitfield.subsample(prevRandao, bitfield, numRequiredSignatures, setSize);
-        console.log("print finalBitField");
+        console.log("print finalBitField, length is: %d", finalBitfield.length);
         printBitArray(finalBitfield);
 
         string memory finalBitFieldRaw = "";
@@ -187,7 +180,7 @@ contract BeefyClientTest is Test {
         );
     }
 
-    function testSubmit() public returns (BeefyClient.Commitment memory) {
+    function testSubmitHappyPath() public returns (BeefyClient.Commitment memory) {
         BeefyClient.Commitment memory commitment = initialize(setId);
 
         assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 0);
@@ -264,7 +257,7 @@ contract BeefyClientTest is Test {
         beefyClient.submitFinal(
             commitment,
             bitfield,
-            finalValidatorProofs3SignatureCount,
+            finalValidatorProofs,
             emptyLeaf,
             emptyLeafProofs,
             emptyLeafProofOrder
@@ -505,7 +498,7 @@ contract BeefyClientTest is Test {
         commitPrevRandao();
     }
 
-    function testSubmitWithHandoverAnd3SignatureCount() public {
+    function testSubmitWith3SignatureCountAndHandover() public {
         //initialize with previous set
         BeefyClient.Commitment memory commitment = initialize(setId - 1);
 
@@ -537,12 +530,7 @@ contract BeefyClientTest is Test {
         createFinalProofs();
 
         beefyClient.submitFinal(
-            commitment,
-            bitfield,
-            finalValidatorProofs3SignatureCount,
-            mmrLeaf,
-            mmrLeafProofs,
-            leafProofOrder
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
         );
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
         assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 4);
@@ -780,14 +768,15 @@ contract BeefyClientTest is Test {
     }
 
     function testRegenerateBitField() public {
-        // Generate a bitfield for signature count 0.
-        uint256 numRequiredSignatures =
-            beefyClient.computeNumRequiredSignatures_public(setSize, 0, minNumRequiredSignatures);
-        regenerateBitField(bitFieldFile0SignatureCount, numRequiredSignatures);
-        // Generate a bitfield for signature count 3.
-        numRequiredSignatures =
-            beefyClient.computeNumRequiredSignatures_public(setSize, 3, minNumRequiredSignatures);
-        regenerateBitField(bitFieldFile3SignatureCount, numRequiredSignatures);
+        console.log("validator set size: %d", setSize);
+        console.log("minimum required signatures: %d", minNumRequiredSignatures);
+        console.log("signature usage count: %d", signatureUsageCount);
+        // Generate a bitfield for initialized signature count.
+        uint256 numRequiredSignatures = beefyClient.computeNumRequiredSignatures_public(
+            setSize, signatureUsageCount, minNumRequiredSignatures
+        );
+        console.log("computed required signatures: %d", numRequiredSignatures);
+        regenerateBitField(bitFieldFileSignatureCount, numRequiredSignatures);
     }
 
     function testFuzzComputeValidatorSetQuorum(uint128 validatorSetLen) public {
@@ -801,11 +790,9 @@ contract BeefyClientTest is Test {
         assertGt(result, 0, "result is greater than zero.");
     }
 
-    function testFuzzSignatureSamplingRanges(
-        uint128 validatorSetLen,
-        uint16 signatureUsageCount,
-        uint16 minSignatures
-    ) public {
+    function testFuzzSignatureSamplingRanges(uint128 validatorSetLen, uint16 minSignatures)
+        public
+    {
         // There must be atleast 1 validator.
         vm.assume(validatorSetLen > 0);
         // Min signatures must be less than the amount of validators.
