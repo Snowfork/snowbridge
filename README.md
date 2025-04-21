@@ -6,6 +6,7 @@ This is a fork of the Snowbridge project (docs below).
 
 - `main` follows and should always match the `main` branch of the Snowbridge repo.
 - `solochain` is the default branch, and the one with all the custom changes made for Snowbridge to work with a Substrate solochain instead of the BridgeHub parachain in Polkadot. PRs with new features and changes should be made to this branch.
+- There's a [PR](https://github.com/Moonsong-Labs/snowbridge/pull/9) to track the diff between the `main` branch and the `solochain` branch.
 
 # Snowbridge
 
