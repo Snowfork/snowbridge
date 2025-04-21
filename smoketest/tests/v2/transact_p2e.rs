@@ -1,16 +1,23 @@
 use assethub::api::polkadot_xcm::calls::TransactionApi;
 use codec::Encode;
-use ethers::abi::{Abi, Token};
+use ethers::{
+	abi::{Abi, Token},
+	addressbook::Address,
+};
 use hex_literal::hex;
 use snowbridge_smoketest::{
 	asset_hub_helper::{eth_location, mint_token_to},
 	constants::*,
-	contracts::hello_world::{HelloWorld, SaidHelloFilter},
+	contracts::{
+		hello_world::{HelloWorld, SaidHelloFilter},
+		i_gateway_v2 as i_gateway,
+	},
 	helper::{initial_clients, AssetHubConfig},
 	helper_v2::{fund_agent_v2, get_agent_address, wait_for_ethereum_event_v2},
 	parachains::assethub::{
 		self,
 		api::runtime_types::{
+			bounded_collections::bounded_vec::BoundedVec,
 			sp_weights::weight_v2::Weight,
 			staging_xcm::v5::{
 				asset::{
@@ -47,6 +54,21 @@ async fn agent_transact() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let ethereum_client = test_clients.ethereum_client;
 
+	let ethereum_signed_client = *(test_clients.ethereum_signed_client.clone());
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
+	let gateway = i_gateway::IGatewayV2::new(gateway_addr, ethereum_signed_client.clone());
+	// register agent if not exist
+	let agent_address = gateway.agent_of(ASSET_HUB_BOB_AGENT_ID).await;
+	if !agent_address.is_ok() {
+		gateway
+			.v_2_create_agent(ASSET_HUB_BOB_AGENT_ID)
+			.send()
+			.await
+			.unwrap()
+			.await
+			.unwrap()
+			.unwrap();
+	}
 	// Initial fund for the AH agent
 	fund_agent_v2(ASSET_HUB_AGENT_ID, INITIAL_FUND_IN_ETHER)
 		.await
@@ -134,9 +156,9 @@ async fn agent_transact() {
 				vec![remote_fee_asset.clone()].into(),
 			)))),
 			preserve_origin: true,
-			assets: vec![AssetTransferFilter::ReserveWithdraw(Definite(Assets(vec![
+			assets: BoundedVec(vec![AssetTransferFilter::ReserveWithdraw(Definite(Assets(vec![
 				reserved_asset.clone(),
-			])))],
+			])))]),
 			remote_xcm: Xcm(vec![
 				DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
 				Transact {

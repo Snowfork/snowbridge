@@ -1,4 +1,4 @@
-FROM golang:1.21
+FROM golang:1.23
 WORKDIR /opt/relayer
 ADD . .
 RUN go build -v -o build/snowbridge-relay main.go

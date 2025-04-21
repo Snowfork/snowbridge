@@ -12,7 +12,6 @@ import {IGatewayBase} from "./interfaces/IGatewayBase.sol";
 import {
     OperatingMode,
     ParaID,
-    TokenInfo,
     Channel,
     ChannelID,
     MultiAddress,
@@ -35,7 +34,6 @@ import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
 import {Address} from "./utils/Address.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
-import {Call} from "./utils/Call.sol";
 import {Math} from "./utils/Math.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {Functions} from "./Functions.sol";
@@ -69,6 +67,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     modifier nonreentrant() {
         assembly {
             if tload(0) { revert(0, 0) }
+
+            // Set the flag to mark the function is currently executing.
             tstore(0, 1)
         }
         _;
@@ -508,9 +508,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         for (uint256 i = 0; i < message.commands.length; i++) {
             // check that there is enough gas available to forward to the command handler
             if (gasleft() * 63 / 64 < message.commands[i].gas + DISPATCH_OVERHEAD_GAS_V2) {
-                assembly {
-                    invalid()
-                }
+                revert IGatewayV2.InsufficientGasLimit();
             }
             if (message.commands[i].kind == CommandKind.Upgrade) {
                 try Gateway(this).v2_handleUpgrade{gas: message.commands[i].gas}(

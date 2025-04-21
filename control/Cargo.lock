@@ -665,6 +665,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
 
 [[package]]
+name = "asset-hub-kusama-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic 24.0.0",
+ "subxt",
+]
+
+[[package]]
 name = "asset-hub-paseo-runtime"
 version = "0.1.0"
 dependencies = [
@@ -922,9 +933,9 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "backtrace"
-version = "0.3.69"
+version = "0.3.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2089b7e3f35b9dd2d0ed921ead4f6d318c27680d4a5bd167b3ee120edb105837"
+checksum = "26b05800d2e817c8b3b4b54abd461726265fa9789ae34330622f2db9ee696f9d"
 dependencies = [
  "addr2line 0.21.0",
  "cc",
@@ -1164,9 +1175,9 @@ dependencies = [
 
 [[package]]
 name = "bounded-collections"
-version = "0.2.0"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d32385ecb91a31bddaf908e8dcf4a15aef1bcd3913cc03ebfad02ff6d568abc1"
+checksum = "64ad8a0bed7827f0b07a5d23cec2e58cc02038a99e4ca81616cb2bb2025f804d"
 dependencies = [
  "log",
  "parity-scale-codec",
@@ -1374,6 +1385,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bridge-hub-kusama-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "snowbridge-beacon-primitives 0.2.0",
+ "sp-arithmetic 24.0.0",
+ "subxt",
+]
+
+[[package]]
 name = "bridge-hub-paseo-runtime"
 version = "0.1.0"
 dependencies = [
@@ -1572,11 +1595,13 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.87"
+version = "1.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3286b845d0fccbdd15af433f61c5970e711987036cb468f437ff6badd70f4e24"
+checksum = "1fcb57c740ae1daf453ae85f16e37396f672b039e00d9d866e07ddb24e328e3a"
 dependencies = [
+ "jobserver",
  "libc",
+ "shlex",
 ]
 
 [[package]]
@@ -2180,7 +2205,7 @@ version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cbc44222c528b88dcc6e921e7a0dc94d66b5895aab9e9d9db8798fc62f7ccd40"
 dependencies = [
- "bounded-collections 0.2.0",
+ "bounded-collections 0.2.4",
  "bp-xcm-bridge-hub-router",
  "cumulus-primitives-core",
  "frame-benchmarking 38.0.0",
@@ -4371,7 +4396,7 @@ checksum = "e19b23d53f35ce9f56aebc7d1bb4e6ac1e9c0db7ac85c8d1760c04379edced37"
 dependencies = [
  "hermit-abi 0.4.0",
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4528,9 +4553,9 @@ dependencies = [
 
 [[package]]
 name = "k256"
-version = "0.13.3"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "956ff9b67e26e1a6a866cb758f12c6f8746208489e3e4a4b5580802f2f0a587b"
+checksum = "f6e3919bbaa2945715f0bb6d3934a173d1e9a59ac23767fbaaef277265a7411b"
 dependencies = [
  "cfg-if",
  "ecdsa",
@@ -4568,6 +4593,16 @@ checksum = "3e1b8590eb6148af2ea2d75f38e7d29f5ca970d5a4df456b3ef19b8b415d0264"
 dependencies = [
  "primitive-types 0.13.1",
  "tiny-keccak",
+]
+
+[[package]]
+name = "kusama-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "subxt",
 ]
 
 [[package]]
@@ -7301,7 +7336,7 @@ version = "17.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "989676964dbda5f5275650fbdcd3894fe7fac626d113abf89d572b4952adcc36"
 dependencies = [
- "bounded-collections 0.2.0",
+ "bounded-collections 0.2.4",
  "frame-benchmarking 38.0.0",
  "frame-support 38.2.0",
  "frame-system 38.0.0",
@@ -7793,7 +7828,7 @@ version = "8.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "567c738aa6b8d7eb113fe73e50fb9b6292f818f54da98bb25c7fe73e98d1709a"
 dependencies = [
- "bounded-collections 0.2.0",
+ "bounded-collections 0.2.4",
  "derive_more 0.99.17",
  "parity-scale-codec",
  "polkadot-core-primitives 9.0.0",
@@ -7811,7 +7846,7 @@ version = "14.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52b5648a2e8ce1f9a0f8c41c38def670cefd91932cd793468e1a5b0b0b4e4af1"
 dependencies = [
- "bounded-collections 0.2.0",
+ "bounded-collections 0.2.4",
  "derive_more 0.99.17",
  "parity-scale-codec",
  "polkadot-core-primitives 15.0.0",
@@ -8975,18 +9010,18 @@ dependencies = [
 
 [[package]]
 name = "ref-cast"
-version = "1.0.22"
+version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4846d4c50d1721b1a3bef8af76924eef20d5e723647333798c1b519b3a9473f"
+checksum = "4a0ae411dbe946a674d89546582cea4ba2bb8defac896622d6496f14c23ba5cf"
 dependencies = [
  "ref-cast-impl",
 ]
 
 [[package]]
 name = "ref-cast-impl"
-version = "1.0.22"
+version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fddb4f8d99b0a2ebafc65a87a69a7b9875e4b1ae1f00db265d300ef7f28bccc"
+checksum = "1165225c21bff1f3bbce98f5a1f889949bc902d3575308cc7b0de30b4f6d27c7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -9306,9 +9341,9 @@ dependencies = [
 
 [[package]]
 name = "rustversion"
-version = "1.0.14"
+version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ffc183a10b4478d04cbbbfc96d0873219d962dd5accaff2ffbd4ceb7df837f4"
+checksum = "eded382c5f5f786b989652c49544c4877d9f015cc22e145a5ea8ea66c2921cd2"
 
 [[package]]
 name = "rusty-fork"
@@ -9393,7 +9428,7 @@ dependencies = [
  "sp-core 34.0.0",
  "sp-externalities 0.29.0",
  "sp-io 38.0.0",
- "sp-panic-handler 13.0.0",
+ "sp-panic-handler 13.0.1",
  "sp-runtime-interface 28.0.0",
  "sp-trie 37.0.0",
  "sp-version 37.0.0",
@@ -9932,6 +9967,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "shlex"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
+
+[[package]]
 name = "signal-hook-registry"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10447,17 +10488,19 @@ name = "snowbridge-preimage"
 version = "0.1.0"
 dependencies = [
  "alloy-primitives 0.6.3",
+ "asset-hub-kusama-runtime",
  "asset-hub-paseo-runtime",
  "asset-hub-polkadot-runtime",
  "asset-hub-westend-runtime",
+ "bridge-hub-kusama-runtime",
  "bridge-hub-paseo-runtime",
  "bridge-hub-polkadot-runtime",
  "bridge-hub-westend-runtime",
  "clap",
  "futures",
- "handlebars",
  "hex",
  "hex-literal",
+ "kusama-runtime",
  "parity-scale-codec",
  "paseo-runtime",
  "polkadot-runtime",
@@ -10466,12 +10509,55 @@ dependencies = [
  "serde",
  "serde_json",
  "snowbridge-beacon-primitives 0.2.0",
+ "snowbridge-preimage-chopsticks",
  "snowbridge-router-primitives 0.2.0",
  "sp-arithmetic 24.0.0",
  "sp-crypto-hashing",
  "subxt",
  "tokio",
  "westend-runtime",
+]
+
+[[package]]
+name = "snowbridge-preimage-chopsticks"
+version = "0.1.0"
+dependencies = [
+ "handlebars",
+ "hex",
+ "parity-scale-codec",
+ "serde",
+ "serde_json",
+ "sp-crypto-hashing",
+]
+
+[[package]]
+name = "snowbridge-preimage-kusama"
+version = "0.1.0"
+dependencies = [
+ "alloy-primitives 0.6.3",
+ "asset-hub-kusama-runtime",
+ "bridge-hub-kusama-runtime",
+ "clap",
+ "frame-support 38.2.0",
+ "futures",
+ "hex",
+ "hex-literal",
+ "kusama-runtime",
+ "parity-scale-codec",
+ "polkadot-runtime-constants",
+ "scale-info",
+ "serde",
+ "snowbridge-beacon-primitives 0.10.0",
+ "snowbridge-preimage-chopsticks",
+ "snowbridge-router-primitives 0.16.1",
+ "sp-arithmetic 26.0.0",
+ "sp-core 34.0.0",
+ "sp-crypto-hashing",
+ "staging-xcm 14.2.0",
+ "staging-xcm-builder 17.0.4",
+ "staging-xcm-executor 17.0.1",
+ "subxt",
+ "tokio",
 ]
 
 [[package]]
@@ -11047,7 +11133,7 @@ dependencies = [
  "bip39",
  "bitflags 1.3.2",
  "blake2",
- "bounded-collections 0.2.0",
+ "bounded-collections 0.2.4",
  "bs58",
  "dyn-clonable",
  "ed25519-zebra 3.1.0",
@@ -11092,7 +11178,7 @@ dependencies = [
  "array-bytes",
  "bitflags 1.3.2",
  "blake2",
- "bounded-collections 0.2.0",
+ "bounded-collections 0.2.4",
  "bs58",
  "dyn-clonable",
  "ed25519-zebra 4.0.3",
@@ -11602,12 +11688,11 @@ dependencies = [
 
 [[package]]
 name = "sp-panic-handler"
-version = "13.0.0"
+version = "13.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8f5a17a0a11de029a8b811cb6e8b32ce7e02183cc04a3e965c383246798c416"
+checksum = "81478b3740b357fa0ea10fcdc1ee02ebae7734e50f80342c4743476d9f78eeea"
 dependencies = [
  "backtrace",
- "lazy_static",
  "regex",
 ]
 
@@ -11897,7 +11982,7 @@ dependencies = [
  "smallvec",
  "sp-core 30.0.0",
  "sp-externalities 0.27.0",
- "sp-panic-handler 13.0.0",
+ "sp-panic-handler 13.0.1",
  "sp-std 14.0.0",
  "sp-trie 31.0.0",
  "thiserror",
@@ -11919,7 +12004,7 @@ dependencies = [
  "smallvec",
  "sp-core 34.0.0",
  "sp-externalities 0.29.0",
- "sp-panic-handler 13.0.0",
+ "sp-panic-handler 13.0.1",
  "sp-trie 37.0.0",
  "thiserror",
  "tracing",
@@ -12320,7 +12405,7 @@ version = "29.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab8a9c7a1b64fa7dba38622ad1de26f0b2e595727c0e42c7b109ecb8e7120688"
 dependencies = [
- "bounded-collections 0.2.0",
+ "bounded-collections 0.2.4",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -12336,7 +12421,7 @@ version = "31.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93cdaf72a1dad537bbb130ba4d47307ebe5170405280ed1aa31fa712718a400e"
 dependencies = [
- "bounded-collections 0.2.0",
+ "bounded-collections 0.2.4",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -12444,7 +12529,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3028e3a4ee8493767ee66266571f5cf1fc3edc546bba650b2040c5418b318340"
 dependencies = [
  "array-bytes",
- "bounded-collections 0.2.0",
+ "bounded-collections 0.2.4",
  "derivative",
  "environmental",
  "impl-trait-for-tuples",
@@ -12463,7 +12548,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96bee7cd999e9cdf10f8db72342070d456e21e82a0f5962ff3b87edbd5f2b20e"
 dependencies = [
  "array-bytes",
- "bounded-collections 0.2.0",
+ "bounded-collections 0.2.4",
  "derivative",
  "environmental",
  "impl-trait-for-tuples",

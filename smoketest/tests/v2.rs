@@ -1,5 +1,3 @@
-#[path = "v2/register_agent.rs"]
-mod register_agent;
 #[path = "v2/register_ena.rs"]
 mod register_ena;
 #[path = "v2/register_pna.rs"]

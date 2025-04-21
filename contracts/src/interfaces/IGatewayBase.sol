@@ -30,7 +30,7 @@ interface IGatewayBase {
     // Emitted when the operating mode is changed
     event OperatingModeChanged(OperatingMode mode);
 
-    // Emitted when foreign token from polkadot registed
+    // Emitted when foreign token from polkadot registered
     event ForeignTokenRegistered(bytes32 indexed tokenID, address token);
 
     /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub

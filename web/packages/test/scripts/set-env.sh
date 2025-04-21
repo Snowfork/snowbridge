@@ -7,10 +7,13 @@ relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
 export output_dir="${OUTPUT_DIR:-/tmp/snowbridge-v2}"
 export output_bin_dir="$output_dir/bin"
+relayer_v1="$output_bin_dir/snowbridge-relay-v1"
+relayer_v2="$output_bin_dir/snowbridge-relay-v2"
 ethereum_data_dir="$output_dir/ethereum"
 zombienet_data_dir="$output_dir/zombienet"
 export PATH="$output_bin_dir:$PATH"
 export polkadot_sdk_dir="${POLKADOT_SDK_DIR:-../polkadot-sdk}"
+snowbridge_v1_v2=true
 
 eth_network="${ETH_NETWORK:-localhost}"
 eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
@@ -54,6 +57,10 @@ export PENPAL_CHANNEL_ID="0xa69fbbae90bb6096d59b1930bbcfc8a3ef23959d226b1861deb7
 export PRIMARY_GOVERNANCE_CHANNEL_ID="0x0000000000000000000000000000000000000000000000000000000000000001"
 export SECONDARY_GOVERNANCE_CHANNEL_ID="0x0000000000000000000000000000000000000000000000000000000000000002"
 
+penpal_ws_url="${PENPAL_WS_URL:-ws://127.0.0.1:13144}"
+penpal_seed="${PENPAL_SEED:-//Alice}"
+export PENPAL_PARAID="${PENPAL_PARAID:-2000}"
+
 # Token decimal of the relaychain(KSM|ROC:12,DOT:10)
 export FOREIGN_TOKEN_DECIMALS=12
 
@@ -68,6 +75,7 @@ reset_ethereum="${RESET_ETHEREUM:-true}"
 # Useful tool to get these account values: https://www.shawntabrizi.com/substrate-js-utilities/
 # Account for assethub (Sibling parachain 1000 5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV in testnet)
 assethub_sovereign_account="${ASSETHUB_SOVEREIGN_ACCOUNT:-0x7369626ce8030000000000000000000000000000000000000000000000000000}"
+checking_account="${CHECKING_ACCOUNT:-0x6d6f646c70792f78636d63680000000000000000000000000000000000000000}"
 # Account for penpal (Sibling parachain 2000 5Eg2fntJ27qsari4FGrGhrMqKFDRnkNSR6UshkZYBGXmSuC8 in testnet)
 penpal_sovereign_account="${PENPAL_SOVEREIGN_ACCOUNT:-0x7369626cd0070000000000000000000000000000000000000000000000000000}"
 # Account for snowbridge sovereign (5GjRnmh5o3usSYzVmsxBWzHEpvJyHK4tKNPhjpUR3ASrruBy in testnet)

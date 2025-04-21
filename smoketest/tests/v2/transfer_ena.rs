@@ -12,6 +12,7 @@ use snowbridge_smoketest::{
 	parachains::assethub::{
 		self,
 		api::runtime_types::{
+			bounded_collections::bounded_vec::BoundedVec,
 			sp_weights::weight_v2::Weight,
 			staging_xcm::v5::{
 				asset::{
@@ -100,9 +101,9 @@ async fn transfer_ena() {
 				vec![remote_fee_asset.clone()].into(),
 			)))),
 			preserve_origin: true,
-			assets: vec![AssetTransferFilter::ReserveWithdraw(Definite(Assets(vec![
+			assets: BoundedVec(vec![AssetTransferFilter::ReserveWithdraw(Definite(Assets(vec![
 				reserved_asset.clone(),
-			])))],
+			])))]),
 			remote_xcm: Xcm(vec![DepositAsset { assets: Wild(AllCounted(2)), beneficiary }]),
 		},
 	]));
