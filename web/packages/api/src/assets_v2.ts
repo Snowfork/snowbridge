@@ -88,6 +88,8 @@ export type Asset = {
     // the asset_id is normally represented as u32, but on Moonbeam,
     // it is u128, so use string here to avoid overflow
     assetId?: string
+    // Identifier of the PNA
+    foreignId?: string
 }
 
 export type RegistryOptions = {
@@ -103,6 +105,8 @@ export type RegistryOptions = {
     precompiles?: PrecompileMap
     assetOverrides?: AssetOverrideMap
     destinationFeeOverrides?: FeeOverrideMap
+    ethereum?: AbstractProvider
+    assetHub?: ApiPromise
 }
 
 export type AssetRegistry = {
@@ -175,6 +179,8 @@ export type TransferLocation = {
 
 export const ETHER_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000"
 
+export const ASSET_HUB_PARAID = 1000
+
 export async function buildRegistry(options: RegistryOptions): Promise<AssetRegistry> {
     const {
         environment,
@@ -187,8 +193,9 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         relaychain,
         bridgeHub,
         precompiles,
-        assetOverrides,
         destinationFeeOverrides,
+        ethereum,
+        assetHub,
     } = options
 
     let relayInfo: ChainProperties
@@ -212,6 +219,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         }
     }
 
+    let bridgeHubProvider
     let bridgeHubInfo: ChainProperties
     {
         let provider: ApiPromise
@@ -225,13 +233,16 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         } else {
             provider = bridgeHub
         }
-
+        bridgeHubProvider = provider
         bridgeHubInfo = await chainProperties(provider)
 
         if (typeof bridgeHub === "string") {
             await provider.disconnect()
         }
     }
+
+    const pnaOverrides = await indexPNAs(bridgeHubProvider, assetHub!, ethereum!, gatewayAddress)
+    const assetOverrides = { ...options.assetOverrides, ...pnaOverrides }
 
     const providers: {
         [paraIdKey: string]: { parachainId: number; provider: ApiPromise; managed: boolean }
@@ -505,6 +516,8 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
         gatewayAddress,
         ethchains: context.ethChains().map((ethChainId) => context.ethChain(ethChainId)),
         parachains,
+        assetHub: await context.assetHub(),
+        ethereum: await context.ethereum(),
     }
     addOverrides(context.config.environment, result)
     return result
@@ -1210,99 +1223,6 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         isSufficient: true,
                     },
                 ],
-                "1000": [
-                    {
-                        token: "0x196C20DA81Fbc324EcdF55501e95Ce9f0bD84d14".toLowerCase(),
-                        name: "DOT",
-                        minimumBalance: 100_000_000n,
-                        symbol: "DOT",
-                        decimals: 10,
-                        isSufficient: true,
-                        location: DOT_LOCATION,
-                    },
-                    {
-                        token: "0x12bbfDc9e813614eEf8Dc8A2560b0EfBeaf7C2AB".toLowerCase(),
-                        name: "KUSAMA",
-                        minimumBalance: 3_333_333n,
-                        symbol: "KSM",
-                        decimals: 12,
-                        isSufficient: true,
-                        location: {
-                            parents: 2,
-                            interior: {
-                                x1: [
-                                    {
-                                        globalConsensus: "Kusama",
-                                    },
-                                ],
-                            },
-                        },
-                    },
-                    {
-                        token: "0x21FaB0eA070F162180447881D5873Cf3d57200d6".toLowerCase(),
-                        name: "Kolkadot",
-                        minimumBalance: 1n,
-                        symbol: "KOL",
-                        decimals: 12,
-                        isSufficient: false,
-                        location: {
-                            parents: 0,
-                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 86 }] },
-                        },
-                        assetId: "86",
-                    },
-                    {
-                        token: "0x92262680A8d6636bbA9bFFDf484c274cA2de6400".toLowerCase(),
-                        name: "DED",
-                        minimumBalance: 1n,
-                        symbol: "DED",
-                        decimals: 10,
-                        isSufficient: false,
-                        location: {
-                            parents: 0,
-                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 30 }] },
-                        },
-                        assetId: "30",
-                    },
-                    {
-                        token: "0xa37B046782518A80e2E69056009FBD0431d36E50".toLowerCase(),
-                        name: "PINK",
-                        minimumBalance: 1n,
-                        symbol: "PINK",
-                        decimals: 10,
-                        isSufficient: false,
-                        location: {
-                            parents: 0,
-                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 23 }] },
-                        },
-                        assetId: "23",
-                    },
-                    {
-                        token: "0x5FDcD48F09FB67de3D202cd854B372AEC1100ED5".toLowerCase(),
-                        name: "GAVUN WUD",
-                        minimumBalance: 1n,
-                        symbol: "WUD",
-                        decimals: 10,
-                        isSufficient: false,
-                        location: {
-                            parents: 0,
-                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 31337 }] },
-                        },
-                        assetId: "31337",
-                    },
-                    {
-                        token: "0x769916A66fDAC0E3D57363129caac59386ea622B".toLowerCase(),
-                        name: "Integritee TEER",
-                        minimumBalance: 1n,
-                        symbol: "TEER",
-                        decimals: 12,
-                        isSufficient: false,
-                        location: {
-                            parents: 1,
-                            interior: { X1: [{ parachain: 2039 }] },
-                        },
-                    },
-                ],
             }
             break
         }
@@ -1429,15 +1349,12 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
 
                 // Disable stable coins in the UI from Ethereum to Polkadot
                 if (
-                    (
-                        path.asset === "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" // USDC
-                        || path.asset === "0xdac17f958d2ee523a2206206994597c13d831ec7" // USDT
-                        || path.asset === "0x9d39a5de30e57443bff2a8307a4256c8797a3497" // Staked USDe
-                        || path.asset === "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd" // Savings USD
-                        || path.asset === "0x6b175474e89094c44da98b954eedeac495271d0f" // DAI
-                    ) && (
-                        path.destination === 2034 // Hydration
-                    )
+                    (path.asset === "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" || // USDC
+                        path.asset === "0xdac17f958d2ee523a2206206994597c13d831ec7" || // USDT
+                        path.asset === "0x9d39a5de30e57443bff2a8307a4256c8797a3497" || // Staked USDe
+                        path.asset === "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd" || // Savings USD
+                        path.asset === "0x6b175474e89094c44da98b954eedeac495271d0f") && // DAI
+                    path.destination === 2034 // Hydration
                 ) {
                     return false
                 }
@@ -1446,5 +1363,135 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
 
         default:
             return (_: Path) => true
+    }
+}
+
+async function indexPNAs(
+    bridgehub: ApiPromise,
+    assethub: ApiPromise,
+    ethereum: AbstractProvider,
+    gatewayAddress: string
+): Promise<AssetOverrideMap> {
+    let pnas: Asset[] = []
+    let gateway = IGateway__factory.connect(gatewayAddress, ethereum)
+    const entries = await bridgehub.query.ethereumSystem.nativeToForeignId.entries()
+    for (const [key, value] of entries) {
+        const location: any = key.args.at(0)?.toJSON()
+        if (!location) {
+            console.warn(`Could not convert ${key.toHuman()} to location`)
+            continue
+        }
+        const locationOnAH: any = bridgeableLocationOnAssetHub(location)
+        if (!locationOnAH) {
+            console.warn(`Location ${JSON.stringify(location)} is not bridgeable on assethub`)
+            continue
+        }
+        const tokenId = (value.toPrimitive() as string).toLowerCase()
+        const token = await gateway.tokenAddressOf(tokenId)
+        const metadata = await assetErc20Metadata(ethereum, token, gatewayAddress)
+        let metadataOnAH: any, assetId: any
+        if (locationOnAH?.parents == 0) {
+            const assetId = locationOnAH?.interior?.x2[1]?.generalIndex
+            metadataOnAH = (await assethub.query.assets.asset(assetId)).toJSON()
+            metadataOnAH.assetId = assetId.toString()
+        } else {
+            if (
+                locationOnAH?.parents == DOT_LOCATION.parents &&
+                locationOnAH?.interior == DOT_LOCATION.interior
+            ) {
+                let existentialDeposit = assethub.consts.balances.existentialDeposit.toPrimitive()
+                metadataOnAH = {
+                    minBalance: existentialDeposit,
+                    isSufficient: true,
+                }
+            } else {
+                const assetType = assethub.registry.createType("StagingXcmV4Location", locationOnAH)
+                metadataOnAH = (await assethub.query.foreignAssets.asset(assetType)).toJSON()
+            }
+        }
+        const assetInfo: Asset = {
+            token,
+            name: metadata.name,
+            symbol: metadata.symbol,
+            decimals: metadata.decimals,
+            locationOnEthereum: location,
+            location: locationOnAH,
+            locationOnAH,
+            foreignId: tokenId,
+            minimumBalance: metadataOnAH?.minBalance as bigint,
+            isSufficient: metadataOnAH?.isSufficient as boolean,
+            assetId: metadataOnAH?.assetId,
+        }
+        pnas.push(assetInfo)
+    }
+    let assetOverrides: any = {}
+    assetOverrides[ASSET_HUB_PARAID.toString()] = pnas
+    return assetOverrides
+}
+
+// Currently, the bridgeable assets are limited to KSM, DOT, native assets on AH
+// and TEER
+function bridgeableLocationOnAssetHub(location: any): any {
+    if (location.parents != 1) {
+        return
+    }
+    // KSM
+    if (location.interior.x1 && location.interior.x1[0]?.globalConsensus?.kusama !== undefined) {
+        return {
+            parents: 2,
+            interior: {
+                x1: [
+                    {
+                        globalConsensus: {
+                            kusama: null,
+                        },
+                    },
+                ],
+            },
+        }
+    }
+    // DOT
+    else if (
+        location.interior.x1 &&
+        location.interior.x1[0]?.globalConsensus?.polkadot !== undefined
+    ) {
+        return DOT_LOCATION
+    }
+    // Native assets from AH
+    else if (
+        location.interior.x4 &&
+        location.interior.x4[0]?.globalConsensus?.polkadot !== undefined &&
+        location.interior.x4[1]?.parachain == ASSET_HUB_PARAID
+    ) {
+        return {
+            parents: 0,
+            interior: {
+                x2: [
+                    {
+                        palletInstance: location.interior.x4[2]?.palletInstance,
+                    },
+                    {
+                        generalIndex: location.interior.x4[3]?.generalIndex,
+                    },
+                ],
+            },
+        }
+    }
+    // Others from 3rd Parachains, only TEER for now
+    else if (
+        location.interior.x2 &&
+        location.interior.x2[0]?.globalConsensus?.polkadot !== undefined &&
+        location.interior.x2[1]?.parachain == 2039
+    ) {
+        return {
+            parents: 1,
+            interior: {
+                x1: [
+                    {
+                        parachain: 2039,
+                    },
+                ],
+            },
+        }
     }
 }
