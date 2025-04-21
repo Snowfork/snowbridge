@@ -133,7 +133,7 @@ async fn send_token_to_penpal() {
 			issued_event_found = true;
 		}
 		if issued_event_found {
-			break;
+			break
 		}
 	}
 	assert!(issued_event_found);
@@ -170,7 +170,7 @@ async fn send_token_to_penpal() {
 			}
 		}
 		if issued_event_found && issued_fee_event_found {
-			break;
+			break
 		}
 	}
 	assert!(issued_event_found);
