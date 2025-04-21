@@ -259,7 +259,7 @@ func (s *Scanner) gatherProofInputs(
 }
 
 // The process for finalizing a backed parachain header times out after these many blocks:
-const FinalizationTimeout = 4
+const FinalizationTimeout = 8
 
 // Find the relaychain block in which a parachain header was included (finalized). This usually happens
 // 2-3 blocks after the relaychain block in which the parachain header was backed.

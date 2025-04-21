@@ -71,7 +71,11 @@ struct InboundMessage {
 enum Command {
     AgentExecute, // Deprecated in favour of UnlockNativeToken
     Upgrade,
+    CreateAgent,
+    CreateChannel,
+    UpdateChannel,
     SetOperatingMode,
+    TransferNativeFromAgent,
     SetTokenTransferFees,
     SetPricingParameters,
     UnlockNativeToken,

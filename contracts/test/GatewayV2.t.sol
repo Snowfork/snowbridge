@@ -276,6 +276,36 @@ contract GatewayV2Test is Test {
         );
     }
 
+    function testSubmitFailNotEnoughGas() public {
+        bytes32 topic = keccak256("topic");
+
+        // Create a command with very high gas requirement
+        CommandV2[] memory commands = new CommandV2[](1);
+        SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[0] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 30_000_000, // Extremely high gas value
+            payload: abi.encode(params)
+        });
+
+        InboundMessageV2 memory message = InboundMessageV2({
+            origin: keccak256("666"),
+            nonce: 2, // Use a different nonce from other tests
+            topic: topic,
+            commands: commands
+        });
+
+        // Limit the gas for this test to ensure we hit the NotEnoughGas error
+        uint256 gasLimit = 100_000;
+        vm.deal(relayer, 1 ether);
+
+        vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
+        vm.prank(relayer);
+        IGatewayV2(address(gateway)).v2_submit{gas: gasLimit}(
+            message, proof, makeMockBeefyProof(), relayerRewardAddress
+        );
+    }
+
     function mockNativeTokenForSend(address user, uint128 amount)
         internal
         returns (address, bytes memory, Asset memory)
@@ -483,5 +513,58 @@ contract GatewayV2Test is Test {
 
         vm.expectRevert(IGatewayV2.AgentAlreadyExists.selector);
         IGatewayV2(payable(address(gateway))).v2_createAgent(origin);
+    }
+
+    function testRegisterTokenSuccess() public {
+        address validTokenContract = address(new WETH9());
+        uint128 executionFee = 0.1 ether;
+        uint128 relayerFee = 0.2 ether;
+        uint256 totalRequired = executionFee + relayerFee;
+
+        hoax(user1, totalRequired);
+        IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired}(
+            validTokenContract, uint8(0), executionFee, relayerFee
+        );
+
+        // Verify the token is registered
+        assertTrue(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
+    }
+
+    function testRegisterTokenFailsWithInsufficientValue() public {
+        address validTokenContract = address(new WETH9());
+        uint128 executionFee = 0.1 ether;
+        uint128 relayerFee = 0.2 ether;
+        uint256 totalRequired = executionFee + relayerFee;
+
+        // Verify token is not registered before the attempt
+        assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
+
+        vm.expectRevert(IGatewayV2.InsufficientValue.selector);
+        hoax(user1, totalRequired);
+        IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired - 1}(
+            validTokenContract, uint8(0), executionFee, relayerFee
+        );
+
+        // Verify token still is not registered after the failed attempt
+        assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
+    }
+
+    function testRegisterTokenFailsWithExceededMaximumValue() public {
+        address validTokenContract = address(new WETH9());
+        uint128 executionFee = 0.1 ether;
+        uint128 relayerFee = 0.2 ether;
+
+        // Verify token is not registered before the attempt
+        assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
+
+        vm.expectRevert(IGatewayV2.ExceededMaximumValue.selector);
+        uint256 value = uint256(type(uint128).max) + 1;
+        hoax(user1, value);
+        IGatewayV2(payable(address(gateway))).v2_registerToken{value: value}(
+            validTokenContract, uint8(0), executionFee, relayerFee
+        );
+
+        // Verify token still is not registered after the failed attempt
+        assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
     }
 }

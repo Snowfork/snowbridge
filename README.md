@@ -5,7 +5,6 @@ This is a fork of the Snowbridge project (docs below).
 ## Branching Strategy
 
 - `main` follows and should always match the `main` branch of the Snowbridge repo.
-- `v2` follows and should always match the `v2` branch of the Snowbridge repo. Once [this PR](https://github.com/Snowfork/snowbridge/pull/1371) is merged, this branch will be removed and only `main` will be used to follow the Snowbridge repo.
 - `solochain` is the default branch, and the one with all the custom changes made for Snowbridge to work with a Substrate solochain instead of the BridgeHub parachain in Polkadot. PRs with new features and changes should be made to this branch.
 
 # Snowbridge

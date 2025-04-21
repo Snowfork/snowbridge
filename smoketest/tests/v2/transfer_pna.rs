@@ -7,6 +7,7 @@ use snowbridge_smoketest::{
 	helper_v2::wait_for_ethereum_event_v2,
 	parachains::assethub::{
 		api::runtime_types::{
+			bounded_collections::bounded_vec::BoundedVec,
 			sp_weights::weight_v2::Weight,
 			staging_xcm::v5::{
 				asset::{
@@ -109,10 +110,12 @@ async fn transfer_pna() {
 				vec![remote_fee_asset.clone()].into(),
 			)))),
 			preserve_origin: true,
-			assets: vec![AssetTransferFilter::ReserveDeposit(Definite(Assets(vec![Asset {
-				id: AssetId(Location { parents: 1, interior: Junctions::Here }),
-				fun: Fungible(TOKEN_AMOUNT),
-			}])))],
+			assets: BoundedVec(vec![AssetTransferFilter::ReserveDeposit(Definite(Assets(vec![
+				Asset {
+					id: AssetId(Location { parents: 1, interior: Junctions::Here }),
+					fun: Fungible(TOKEN_AMOUNT),
+				},
+			])))]),
 			remote_xcm: Xcm(vec![DepositAsset { assets: Wild(AllCounted(2)), beneficiary }]),
 		},
 	]));

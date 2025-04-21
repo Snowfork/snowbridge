@@ -20,7 +20,7 @@ config_beacon_checkpoint() {
         config/beacon-relay.json >$output_dir/beacon-relay.json
 
     pushd $root_dir
-    local check_point_hex=$($relay_bin generate-beacon-checkpoint --config $output_dir/beacon-relay.json)
+    local check_point_hex=$($relayer_v2 generate-beacon-checkpoint --config $output_dir/beacon-relay.json)
     popd
     local transact_call="0x5200"$check_point_hex
     send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$transact_call" 180000000000 900000
@@ -105,6 +105,9 @@ register_native_eth() {
     # Registers Eth and makes it sufficient
     # https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:12144#/extrinsics/decode/0x3501020109079edaa80200ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d0104
     local call="0x3501020109079edaa80200ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d0104"
+    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+    # set metadata
+    local call="0x3513020109079edaa8021445746865721445746865721200"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 

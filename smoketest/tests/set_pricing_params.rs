@@ -1,7 +1,7 @@
 use ethers::prelude::Address;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{i_gateway, i_gateway::PricingParametersChangedFilter},
+	contracts::{i_gateway_v1, i_gateway_v1::PricingParametersChangedFilter},
 	helper::*,
 	parachains::{
 		bridgehub,
@@ -23,7 +23,7 @@ async fn set_pricing_params() {
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let ethereum_client = *(test_clients.ethereum_client.clone());
-	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
+	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, ethereum_client.clone());
 	let params = gateway.pricing_parameters().await.expect("get fees");
 	println!("pricing params {:?}", params);
 
