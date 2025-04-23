@@ -141,20 +141,15 @@ library Verification {
         ParachainHeader calldata header,
         bool isV2
     ) internal pure returns (bool) {
+        bytes1 digestItemOtherKind = isV2 ? DIGEST_ITEM_OTHER_SNOWBRIDGE_V2 : DIGEST_ITEM_OTHER_SNOWBRIDGE;
+        
         for (uint256 i = 0; i < header.digestItems.length; i++) {
-            if (
-                header.digestItems[i].kind == DIGEST_ITEM_OTHER
-                    && header.digestItems[i].data.length == 33
-                    && header.digestItems[i].data[0] == DIGEST_ITEM_OTHER_SNOWBRIDGE
-                    && commitment == bytes32(header.digestItems[i].data[1:])
-            ) {
-                return true;
-            }
-            if (
-                isV2 && header.digestItems[i].kind == DIGEST_ITEM_OTHER
-                    && header.digestItems[i].data.length == 33
-                    && header.digestItems[i].data[0] == DIGEST_ITEM_OTHER_SNOWBRIDGE_V2
-                    && commitment == bytes32(header.digestItems[i].data[1:])
+            // First check if the digest item is of the correct kind (DIGEST_ITEM_OTHER)
+            // and has the correct length (33 bytes)
+            if (header.digestItems[i].kind == DIGEST_ITEM_OTHER && 
+                header.digestItems[i].data.length == 33 &&
+                header.digestItems[i].data[0] == digestItemOtherKind &&
+                commitment == bytes32(header.digestItems[i].data[1:])
             ) {
                 return true;
             }
