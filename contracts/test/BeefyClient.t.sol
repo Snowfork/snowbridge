@@ -28,9 +28,7 @@ contract BeefyClientTest is Test {
     bytes32 commitHash;
     bytes32 root;
     uint256[] bitSetArray;
-    uint256[] absentBitSetArray;
     uint256[] bitfield;
-    uint256[] absentBitfield;
     bytes32 mmrRoot;
     uint256[] finalBitfield;
     BeefyClient.ValidatorProof[] finalValidatorProofs;
@@ -41,7 +39,7 @@ contract BeefyClientTest is Test {
     bytes32[] emptyLeafProofs;
     uint256 emptyLeafProofOrder;
     bytes2 mmrRootID = bytes2("mh");
-    string bitFieldFileSignatureCount;
+    string bitFieldFile;
 
     function setUp() public {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
@@ -55,8 +53,7 @@ contract BeefyClientTest is Test {
 
         string memory beefyCommitmentRaw = vm.readFile(beefyCommitmentFile);
 
-        bitFieldFileSignatureCount =
-            string.concat(vm.projectRoot(), "/test/data/beefy-final-bitfield.json");
+        bitFieldFile = string.concat(vm.projectRoot(), "/test/data/beefy-final-bitfield.json");
 
         blockNumber = uint32(beefyCommitmentRaw.readUint(".params.commitment.blockNumber"));
         setId = uint32(beefyCommitmentRaw.readUint(".params.commitment.validatorSetID"));
@@ -72,7 +69,6 @@ contract BeefyClientTest is Test {
         setSize = uint32(beefyValidatorSetRaw.readUint(".validatorSetSize"));
         root = beefyValidatorSetRaw.readBytes32(".validatorRoot");
         bitSetArray = beefyValidatorSetRaw.readUintArray(".participants");
-        absentBitSetArray = beefyValidatorSetRaw.readUintArray(".absentees");
 
         console.log(
             "current validator's merkle root is: %s", Strings.toHexString(uint256(root), 32)
@@ -83,7 +79,6 @@ contract BeefyClientTest is Test {
         );
 
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
-        absentBitfield = beefyClient.createInitialBitfield(absentBitSetArray, setSize);
 
         string memory finalProofFile =
             string.concat(vm.projectRoot(), "/test/data/beefy-final-proof.json");
@@ -760,7 +755,12 @@ contract BeefyClientTest is Test {
 
     function testSubmitFailWithNotEnoughClaims() public {
         BeefyClient.Commitment memory commitment = initialize(setId);
-        uint256[] memory initialBits = absentBitfield;
+        uint256[] memory bitSetArray2 = bitSetArray;
+        // New length is 5 less than two thirds of the validator set
+        assembly {
+            mstore(bitSetArray2, 5)
+        }
+        uint256[] memory initialBits = beefyClient.createInitialBitfield(bitSetArray2, setSize);
         Bitfield.set(initialBits, finalValidatorProofs[0].index);
         printBitArray(initialBits);
         vm.expectRevert(BeefyClient.NotEnoughClaims.selector);
@@ -776,7 +776,7 @@ contract BeefyClientTest is Test {
             setSize, signatureUsageCount, minNumRequiredSignatures
         );
         console.log("computed required signatures: %d", numRequiredSignatures);
-        regenerateBitField(bitFieldFileSignatureCount, numRequiredSignatures);
+        regenerateBitField(bitFieldFile, numRequiredSignatures);
     }
 
     function testFuzzComputeValidatorSetQuorum(uint128 validatorSetLen) public {

@@ -39,8 +39,8 @@ const run = async () => {
         fs.readFileSync(path.join(basedir, "test/data/beefy-commitment.json"), "utf8")
     )
     const ValidatorSetFile = path.join(basedir, "test/data/beefy-validator-set.json")
-    const BitFieldFileSigCount = path.join(basedir, "test/data/beefy-final-bitfield.json")
-    const ValidatorProofFileSigCount = path.join(basedir, "test/data/beefy-final-proof.json")
+    const BitFieldFile = path.join(basedir, "test/data/beefy-final-bitfield.json")
+    const ValidatorProofFile = path.join(basedir, "test/data/beefy-final-proof.json")
 
     const command = process.argv[2]
     const validatorSetID = fixtureData.params.id
@@ -67,24 +67,17 @@ const run = async () => {
         const subsetSize = validatorSetSize - absentSubsetSize
         const randomSet = createRandomSubset(validatorSetSize, subsetSize)
         const participants = randomSet.participants
-        const absentees = randomSet.absentees
 
         const testFixture = {
             validatorSetSize,
             participants,
-            absentees,
             validatorRoot: validatorSet.root,
         }
         console.log("Validator Set Size:", validatorSetSize)
         fs.writeFileSync(ValidatorSetFile, JSON.stringify(testFixture, null, 2), "utf8")
         console.log("Beefy fixture writing to dest file: " + ValidatorSetFile)
     } else if (command == "GenerateProofs") {
-        generateValidatorProof(
-            BitFieldFileSigCount,
-            ValidatorProofFileSigCount,
-            validatorSet,
-            commitHash
-        )
+        generateValidatorProof(BitFieldFile, ValidatorProofFile, validatorSet, commitHash)
     }
 }
 
