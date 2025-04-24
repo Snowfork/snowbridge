@@ -143,20 +143,12 @@ func (wr *EthereumWriter) WriteChannel(
 		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 
-	tx, err := wr.gateway.SubmitV1(
-		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
-	)
-	if err != nil {
-		return fmt.Errorf("send transaction Gateway.submit: %w", err)
-	}
-
 	hasher := &keccak.Keccak256{}
 	mmrLeafEncoded, err := gsrpcTypes.EncodeToBytes(proof.MMRProof.Leaf)
 	if err != nil {
 		return fmt.Errorf("encode MMRLeaf: %w", err)
 	}
-	log.WithField("txHash", tx.Hash().Hex()).
-		WithField("params", wr.logFieldsForSubmission(message, commitmentProof.Proof.InnerHashes, verificationProof)).
+	log.WithField("params", wr.logFieldsForSubmission(message, commitmentProof.Proof.InnerHashes, verificationProof)).
 		WithFields(log.Fields{
 			"commitmentHash":       commitmentProof.Proof.Root.Hex(),
 			"MMRRoot":              proof.MMRRootHash.Hex(),
@@ -166,7 +158,16 @@ func (wr *EthereumWriter) WriteChannel(
 			"beefyBlock":           proof.MMRProof.Blockhash.Hex(),
 			"header":               proof.Header,
 		}).
-		Info("Sent transaction Gateway.submit")
+		Info("Sending transaction Gateway.submit")
+
+	tx, err := wr.gateway.SubmitV1(
+		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
+	)
+	if err != nil {
+		return fmt.Errorf("send transaction Gateway.submit: %w", err)
+	}
+
+	log.WithField("txHash", tx.Hash().Hex()).Info("Sent transaction Gateway.submit")
 
 	receipt, err := wr.conn.WatchTransaction(ctx, tx, 1)
 
