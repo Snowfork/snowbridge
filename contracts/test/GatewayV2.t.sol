@@ -522,6 +522,22 @@ contract GatewayV2Test is Test {
         IGatewayV2(payable(address(gateway))).v2_createAgent(origin);
     }
 
+    function testRegisterNativeTokenValidatesAddress() public {
+        // Try to register a non-contract address (EOA)
+        address nonContractAddress = makeAddr("nonContractAddress");
+
+        // Expect the function to revert with InvalidToken error
+        vm.expectRevert(IGatewayBase.InvalidToken.selector);
+        MockGateway(address(gateway)).prank_registerNativeToken(nonContractAddress);
+
+        // Verify that a valid token contract can be registered
+        address validTokenContract = address(new WETH9());
+        MockGateway(address(gateway)).prank_registerNativeToken(validTokenContract);
+
+        // Verify the token is registered
+        assertTrue(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
+    }
+
     function testRegisterTokenSuccess() public {
         address validTokenContract = address(new WETH9());
         uint128 executionFee = 0.1 ether;
@@ -548,7 +564,7 @@ contract GatewayV2Test is Test {
 
         // Verify token is not registered before the attempt
         assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
-        
+
         vm.expectRevert(IGatewayV2.InsufficientValue.selector);
         hoax(user1, totalRequired);
         IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired - 1}(
@@ -557,7 +573,7 @@ contract GatewayV2Test is Test {
             executionFee,
             relayerFee
         );
-        
+
         // Verify token still is not registered after the failed attempt
         assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
     }
@@ -569,7 +585,7 @@ contract GatewayV2Test is Test {
 
         // Verify token is not registered before the attempt
         assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
-        
+
         vm.expectRevert(IGatewayV2.ExceededMaximumValue.selector);
         uint256 value = uint256(type(uint128).max) + 1;
         hoax(user1, value);
@@ -579,7 +595,7 @@ contract GatewayV2Test is Test {
             executionFee,
             relayerFee
         );
-        
+
         // Verify token still is not registered after the failed attempt
         assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
     }
