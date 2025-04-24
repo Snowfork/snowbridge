@@ -71,6 +71,9 @@ library CallsV1 {
     function registerToken(address token) external {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
+        // NOTE: Explicitly allow a token to be re-registered. This offers resiliency
+        // in case a previous registration attempt of the same token failed on the remote side.
+        // It means that registration can be retried.
         Functions.registerNativeToken(token);
 
         Ticket memory ticket = Ticket({
