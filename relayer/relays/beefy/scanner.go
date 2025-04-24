@@ -236,8 +236,18 @@ func verifyProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, proof merkle.Sim
 	if err != nil {
 		return false, err
 	}
-
-	return actualRoot == expectedRoot, nil
+	if actualRoot == expectedRoot {
+		return true, nil
+	}
+	errorDesc := fmt.Sprintf("\nMMR Root: computed=%v actual=%v",
+		expectedRoot.Hex(), actualRoot.Hex(),
+	)
+	errorDesc += fmt.Sprintf("\nLeaf { ParentNumber: %v, ParentHash: %v, NextValidatorSetID: %v}",
+		proof.Leaf.ParentNumberAndHash.ParentNumber,
+		proof.Leaf.ParentNumberAndHash.Hash.Hex(),
+		proof.Leaf.BeefyNextAuthoritySet.ID,
+	)
+	return false, fmt.Errorf("%s", errorDesc)
 }
 
 func fetchCommitmentAndProof(meta *types.Metadata, api *gsrpc.SubstrateAPI, beefyBlockHash types.Hash) (*types.SignedCommitment, *merkle.SimplifiedMMRProof, error) {

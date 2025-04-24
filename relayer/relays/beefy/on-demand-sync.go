@@ -297,3 +297,52 @@ func (relay *OnDemandRelay) sync(ctx context.Context, blockNumber uint64) error 
 	}).Info("Sync beefy update success")
 	return nil
 }
+
+func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber uint64) error {
+	err := relay.ethereumConn.Connect(ctx)
+	if err != nil {
+		return fmt.Errorf("connect to ethereum: %w", err)
+	}
+	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	if err != nil {
+		return fmt.Errorf("connect to relaychain: %w", err)
+	}
+	err = relay.parachainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	if err != nil {
+		return fmt.Errorf("connect to parachain: %w", err)
+	}
+	err = relay.ethereumWriter.initialize(ctx)
+	if err != nil {
+		return fmt.Errorf("initialize EthereumWriter: %w", err)
+	}
+
+	gatewayAddress := common.HexToAddress(relay.config.Sink.Contracts.Gateway)
+	gatewayContract, err := contracts.NewGateway(gatewayAddress, relay.ethereumConn.Client())
+	if err != nil {
+		return fmt.Errorf("create gateway client: %w", err)
+	}
+	relay.gatewayContract = gatewayContract
+
+	log.Info("Performing sync")
+
+	if beefyBlockNumber == 0 {
+		beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
+		if err != nil {
+			return fmt.Errorf("Fetch latest beefy block hash: %w", err)
+		}
+
+		header, err := relay.relaychainConn.API().RPC.Chain.GetHeader(beefyBlockHash)
+		if err != nil {
+			return fmt.Errorf("Fetch latest beefy block header: %w", err)
+		}
+		beefyBlockNumber = uint64(header.Number)
+	}
+
+	err = relay.sync(ctx, beefyBlockNumber)
+	if err != nil {
+		return fmt.Errorf("Sync failed: %w", err)
+	}
+
+	log.Info("Sync completed")
+	return nil
+}
