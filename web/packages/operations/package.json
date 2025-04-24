@@ -19,6 +19,7 @@
     "smokeTest": "npx ts-node src/transfer_token.ts start",
     "historyV2": "npx ts-node src/global_transfer_history_v2.ts",
     "format": "prettier src --write",
+    "transferToKusama": "npx ts-node src/transfer_token_to_kusama.ts start",
     "buildTokenRegistry": "npx ts-node src/index_meta_data.ts",
     "registerWEth": "npx ts-node src/register_weth.ts",
     "transferWEthToAH": "npx ts-node src/transfer_weth_to_ah.ts",

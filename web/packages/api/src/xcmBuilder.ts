@@ -22,6 +22,16 @@ export function parahchainLocation(paraId: number) {
     }
 }
 
+export function kusamaAssetHubLocation() {
+    return {
+        parents: 2,
+        interior: { x2: [
+            { GlobalConsensus: { Kusama: null } },
+            { parachain: 1000 }
+        ] },
+    }
+}
+
 export function erc20Location(ethChainId: number, tokenAddress: string) {
     if (tokenAddress === ETHER_TOKEN_ADDRESS) {
         return bridgeLocation(ethChainId)
@@ -331,6 +341,47 @@ export function buildParachainERC20ReceivedXcmOnAssetHub(
     })
 }
 
+function buildAssetHubXcmFromParachainKusama(
+    sourceAccount: string,
+    beneficiary: string,
+) {
+    let {
+        hexAddress,
+        address: { kind },
+    } = beneficiaryMultiAddress(sourceAccount)
+    console.log("sourceAccount: ", sourceAccount);
+    let sourceAccountLocation
+    switch (kind) {
+        case 1:
+            // 32 byte addresses
+            sourceAccountLocation = { accountId32: { id: hexAddress } }
+            break
+        case 2:
+            // 20 byte addresses
+            sourceAccountLocation = { accountKey20: { key: hexAddress } }
+            break
+        default:
+            throw Error(`Could not parse source address ${sourceAccount}`)
+    }
+    console.log("sourceAccountLocation: ", sourceAccountLocation);
+    return [
+        // Error Handling, return everything to sender on source parachain
+        {
+            depositAsset: {
+                assets: {
+                    Wild: {
+                        AllCounted: 2,
+                    },
+                },
+                beneficiary: {
+                    parents: 0,
+                    interior: { x1: [{ AccountId32: { id: beneficiary } }] },
+                },
+            },
+        },
+    ]
+}
+
 function buildAssetHubXcmFromParachain(
     ethChainId: number,
     sourceAccount: string,
@@ -440,6 +491,19 @@ function buildAssetHubXcmFromParachain(
             setTopic: topic,
         },
     ]
+}
+
+export function buildAssetHubERC20TransferToKusamaFromParachain(
+    registry: Registry,
+    sourceAccount: string,
+    beneficiary: string,
+) {
+    return registry.createType("XcmVersionedXcm", {
+        v4: buildAssetHubXcmFromParachainKusama(
+            sourceAccount,
+            beneficiary,
+        ),
+    })
 }
 
 export function buildAssetHubERC20TransferFromParachain(
