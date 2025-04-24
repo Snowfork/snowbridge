@@ -1,9 +1,20 @@
 import { decodeAddress } from "@polkadot/keyring"
 import { Codec } from "@polkadot/types/types"
 import { u8aToHex } from "@polkadot/util"
-import { IERC20__factory, IGateway__factory, WETH9__factory } from "@snowbridge/contract-types"
-import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway"
-import { Contract, ContractTransaction, LogDescription, Signer, TransactionReceipt, ethers } from "ethers"
+import {
+    IERC20__factory,
+    IGatewayV1__factory as IGateway__factory,
+    WETH9__factory,
+} from "@snowbridge/contract-types"
+import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway.sol/IGatewayV1"
+import {
+    Contract,
+    ContractTransaction,
+    LogDescription,
+    Signer,
+    TransactionReceipt,
+    ethers,
+} from "ethers"
 import { concatMap, filter, firstValueFrom, lastValueFrom, take, takeWhile, tap } from "rxjs"
 import { assetStatusInfo } from "./assets"
 import { Context } from "./index"
@@ -112,7 +123,9 @@ export const getSendFee = async (
     destinationParaId: number,
     destinationFee: bigint
 ): Promise<bigint> => {
-    return await context.gateway().quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
+    return await context
+        .gateway()
+        .quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
 }
 
 export const getSubstrateAccount = async (parachain: ApiPromise, beneficiaryHex: string) => {
@@ -123,23 +136,22 @@ export const getSubstrateAccount = async (parachain: ApiPromise, beneficiaryHex:
     return { balance: account.data.free, consumers: account.consumers }
 }
 
-
 export type SendTokenTx = {
     input: {
-        gatewayAddress: string,
-        sourceAddress: string;
-        beneficiaryAddress: string;
-        tokenAddress: string;
-        destinationParaId: number;
-        amount: bigint;
-        totalFeeInWei: bigint;
-        destinationFeeInDOT: bigint;
-    },
+        gatewayAddress: string
+        sourceAddress: string
+        beneficiaryAddress: string
+        tokenAddress: string
+        destinationParaId: number
+        amount: bigint
+        totalFeeInWei: bigint
+        destinationFeeInDOT: bigint
+    }
     computed: {
-        beneficiaryAddressHex: string;
-        beneficiaryMultiAddress: MultiAddressStruct;
-        totalValue: bigint;
-    },
+        beneficiaryAddressHex: string
+        beneficiaryMultiAddress: MultiAddressStruct
+        totalValue: bigint
+    }
     tx: ContractTransaction
 }
 
@@ -151,23 +163,26 @@ export async function createTx(
     destinationParaId: number,
     amount: bigint,
     totalFeeInWei: bigint,
-    destinationFeeInDOT: bigint,
+    destinationFeeInDOT: bigint
 ): Promise<SendTokenTx> {
-    let { address: beneficiary, hexAddress: beneficiaryAddressHex } = beneficiaryMultiAddress(beneficiaryAddress)
+    let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
+        beneficiaryMultiAddress(beneficiaryAddress)
     const value = totalFeeInWei
     const ifce = IGateway__factory.createInterface()
-    const con = new Contract(gatewayAddress, ifce);
-    const tx = await con.getFunction("sendToken").populateTransaction(
-        tokenAddress,
-        destinationParaId,
-        beneficiary,
-        destinationFeeInDOT,
-        amount,
-        {
-            value,
-            from: sourceAddress
-        }
-    )
+    const con = new Contract(gatewayAddress, ifce)
+    const tx = await con
+        .getFunction("sendToken")
+        .populateTransaction(
+            tokenAddress,
+            destinationParaId,
+            beneficiary,
+            destinationFeeInDOT,
+            amount,
+            {
+                value,
+                from: sourceAddress,
+            }
+        )
 
     return {
         input: {
@@ -179,7 +194,8 @@ export async function createTx(
             amount,
             totalFeeInWei,
             destinationFeeInDOT,
-        }, computed: {
+        },
+        computed: {
             beneficiaryAddressHex,
             beneficiaryMultiAddress: beneficiary,
             totalValue: value,
@@ -187,7 +203,6 @@ export async function createTx(
         tx,
     }
 }
-
 
 export const validateSend = async (
     context: Context,
@@ -568,10 +583,7 @@ export const trackSendProgressPolling = async (
         scanBlocks: 600,
     }
 ): Promise<{ status: "success" | "pending"; result: SendResult }> => {
-    const [assetHub, bridgeHub] = await Promise.all([
-        context.assetHub(),
-        context.bridgeHub(),
-    ])
+    const [assetHub, bridgeHub] = await Promise.all([context.assetHub(), context.bridgeHub()])
     const { success } = result
 
     if (result.failure || !success || !success.plan.success) {
@@ -584,7 +596,9 @@ export const trackSendProgressPolling = async (
             success.destinationParachain !== undefined &&
             context.hasParachain(success.plan.success.destinationParaId)
         ) {
-            const destinationParaApi = await context.parachain(success.plan.success.destinationParaId)
+            const destinationParaApi = await context.parachain(
+                success.plan.success.destinationParaId
+            )
             destinationMessageProcessed =
                 (
                     await destinationParaApi.rpc.chain.getHeader(
@@ -644,7 +658,8 @@ export const trackSendProgressPolling = async (
                     }
 
                     console.log(
-                        `Bridge Hub block ${blockHash.toHex()}: Beacon client ${ethereumBlockNumber - Number(ethBlockNumber)
+                        `Bridge Hub block ${blockHash.toHex()}: Beacon client ${
+                            ethereumBlockNumber - Number(ethBlockNumber)
                         } blocks behind.`
                     )
                 }
@@ -731,12 +746,12 @@ export const trackSendProgressPolling = async (
                     assetHub.events.foreignAssets.Issued.is(event.event) &&
                     eventData[2].toString() === success?.plan.success?.amount.toString() &&
                     u8aToHex(decodeAddress(eventData[1])).toLowerCase() ===
-                    issuedTo.toLowerCase() &&
+                        issuedTo.toLowerCase() &&
                     eventData[0]?.parents === 2 &&
                     eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() ===
-                    success?.plan.success?.ethereumChainId.toString() &&
+                        success?.plan.success?.ethereumChainId.toString() &&
                     eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() ===
-                    success?.plan.success?.token.toLowerCase()
+                        success?.plan.success?.token.toLowerCase()
                 ) {
                     transferBlockHash = blockHash.toHex()
                 }
@@ -819,10 +834,7 @@ export async function* trackSendProgress(
         scanBlocks: 200,
     }
 ): AsyncGenerator<string> {
-    const [assetHub, bridgeHub] = await Promise.all([
-        context.assetHub(),
-        context.bridgeHub(),
-    ])
+    const [assetHub, bridgeHub] = await Promise.all([context.assetHub(), context.bridgeHub()])
     const { success } = result
 
     if (result.failure || !success || !success.plan.success) {
@@ -856,7 +868,8 @@ export async function* trackSendProgress(
                 takeWhile(({ blockNumber }) => ethereumBlockNumber > Number(blockNumber)),
                 tap(({ createdAtHash, blockNumber }) =>
                     console.log(
-                        `Bridge Hub block ${createdAtHash}: Beacon client ${ethereumBlockNumber - Number(blockNumber)
+                        `Bridge Hub block ${createdAtHash}: Beacon client ${
+                            ethereumBlockNumber - Number(blockNumber)
                         } blocks behind.`
                     )
                 )
@@ -894,7 +907,7 @@ export async function* trackSendProgress(
                             bridgeHub.events.ethereumInboundQueue.MessageReceived.is(event.event) &&
                             eventData.nonce === success?.nonce.toString() &&
                             eventData.messageId.toLowerCase() ===
-                            success?.messageId.toLowerCase() &&
+                                success?.messageId.toLowerCase() &&
                             eventData.channelId.toLowerCase() === success?.channelId.toLowerCase()
                         ) {
                             messageReceivedFound = true
@@ -945,12 +958,12 @@ export async function* trackSendProgress(
                     assetHub.events.foreignAssets.Issued.is(event.event) &&
                     eventData[2].toString() === success?.plan.success?.amount.toString() &&
                     u8aToHex(decodeAddress(eventData[1])).toLowerCase() ===
-                    issuedTo.toLowerCase() &&
+                        issuedTo.toLowerCase() &&
                     eventData[0]?.parents === 2 &&
                     eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() ===
-                    success?.plan.success?.ethereumChainId.toString() &&
+                        success?.plan.success?.ethereumChainId.toString() &&
                     eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() ===
-                    success?.plan.success?.token.toLowerCase()
+                        success?.plan.success?.token.toLowerCase()
                 )
             },
             {
@@ -988,12 +1001,12 @@ export async function* trackSendProgress(
                         destParaApi.events.foreignAssets.Issued.is(event.event) &&
                         eventData[2].toString() === success?.plan.success?.amount.toString() &&
                         u8aToHex(decodeAddress(eventData[1])).toLowerCase() ===
-                        issuedTo.toLowerCase() &&
+                            issuedTo.toLowerCase() &&
                         eventData[0]?.parents === 2 &&
                         eventData[0]?.interior?.x2[0]?.globalConsensus?.ethereum?.chainId.toString() ===
-                        success?.plan.success?.ethereumChainId.toString() &&
+                            success?.plan.success?.ethereumChainId.toString() &&
                         eventData[0]?.interior?.x2[1]?.accountKey20?.key.toLowerCase() ===
-                        success?.plan.success?.token.toLowerCase()
+                            success?.plan.success?.token.toLowerCase()
                     )
                 },
                 {
@@ -1008,8 +1021,9 @@ export async function* trackSendProgress(
                 )
             }
         }
-        yield `Message delivered to parachain ${success.plan.success.destinationParaId
-            } at block ${success.destinationParachain?.events?.createdAtHash?.toHex()}.`
+        yield `Message delivered to parachain ${
+            success.plan.success.destinationParaId
+        } at block ${success.destinationParachain?.events?.createdAtHash?.toHex()}.`
     }
 
     yield "Transfer complete."

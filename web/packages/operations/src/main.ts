@@ -19,7 +19,7 @@ if (process.argv[2] == "start") {
             process.exit(1)
         })
 } else if (process.argv[2] == "cron") {
-    let interval = parseInt(process.env["SCAN_INTERVAL"] || "") || 30
+    let interval = parseInt(process.env["SCAN_INTERVAL"] || "") || 15
     cron.schedule(`*/${interval} * * * *`, monitor)
     console.log("cron task installed for monitoring with interval:" + interval + " (in minutes)")
 } else if (process.argv[2] == "init") {
@@ -32,5 +32,4 @@ if (process.argv[2] == "start") {
             console.error("Error:", error)
             process.exit(1)
         })
-    
 }

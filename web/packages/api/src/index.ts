@@ -4,12 +4,16 @@ import { AbstractProvider, JsonRpcProvider, WebSocketProvider } from "ethers"
 import {
     BeefyClient,
     BeefyClient__factory,
-    IGateway,
-    IGateway__factory,
+    IGatewayV1 as IGateway,
+    IGatewayV1__factory as IGateway__factory,
 } from "@snowbridge/contract-types"
 
-interface Parachains { [paraId: string]: ApiPromise }
-interface EthereumChains { [ethChainId: string]: AbstractProvider }
+interface Parachains {
+    [paraId: string]: ApiPromise
+}
+interface EthereumChains {
+    [ethChainId: string]: AbstractProvider
+}
 
 interface Config {
     environment: string
@@ -54,10 +58,12 @@ export class Context {
             return this.#relaychain
         }
         const url = this.config.polkadot.relaychain
+        console.log('Connecting to the relaychain.')
         this.#relaychain = await ApiPromise.create({
             noInitWarn: true,
             provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
         })
+        console.log('Connected to the relaychain.')
         return this.#relaychain
     }
 
@@ -93,6 +99,7 @@ export class Context {
         const { parachains } = this.config.polkadot
         if (paraIdKey in parachains) {
             const url = parachains[paraIdKey]
+            console.log('Connecting to parachain ', paraIdKey)
             const api = await ApiPromise.create({
                 noInitWarn: true,
                 provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
@@ -106,6 +113,7 @@ export class Context {
                 )
             }
             this.#parachains[onChainParaId] = api
+            console.log('Connected to parachain ', paraIdKey)
             return this.#parachains[onChainParaId]
         } else {
             throw Error(`Parachain id ${paraId} not in the list of parachain urls.`)
@@ -121,7 +129,7 @@ export class Context {
         const { ethChains } = this.config.ethereum
         if (ethChainKey in ethChains) {
             const url = ethChains[ethChainKey]
-            let provider: AbstractProvider;
+            let provider: AbstractProvider
             if (typeof url === "string") {
                 if (url.startsWith("http")) {
                     provider = new JsonRpcProvider(url)
@@ -163,7 +171,10 @@ export class Context {
 
         // clean up etheruem
         for (const ethChainKey of Object.keys(this.config.ethereum.ethChains)) {
-            if (typeof this.config.ethereum.ethChains[ethChainKey] === "string" && this.#ethChains[ethChainKey]) {
+            if (
+                typeof this.config.ethereum.ethChains[ethChainKey] === "string" &&
+                this.#ethChains[ethChainKey]
+            ) {
                 this.#ethChains[ethChainKey].destroy()
             }
         }

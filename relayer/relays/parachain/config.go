@@ -5,21 +5,23 @@ import (
 	"fmt"
 
 	"github.com/snowfork/snowbridge/relayer/config"
+	beaconconf "github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 )
 
 type Config struct {
-	Source   SourceConfig      `mapstructure:"source"`
-	Sink     SinkConfig        `mapstructure:"sink"`
-	Schedule ScheduleConfig    `mapstructure:"schedule"`
-	OFAC     config.OFACConfig `mapstructure:"ofac"`
+	Source        SourceConfig      `mapstructure:"source"`
+	Sink          SinkConfig        `mapstructure:"sink"`
+	Schedule      ScheduleConfig    `mapstructure:"schedule"`
+	RewardAddress string            `mapstructure:"reward-address"`
+	OFAC          config.OFACConfig `mapstructure:"ofac"`
 }
 
 type SourceConfig struct {
-	Polkadot  config.PolkadotConfig  `mapstructure:"polkadot"`
-	Parachain config.ParachainConfig `mapstructure:"parachain"`
-	Ethereum  config.EthereumConfig  `mapstructure:"ethereum"`
-	Contracts SourceContractsConfig  `mapstructure:"contracts"`
-	ChannelID ChannelID              `mapstructure:"channel-id"`
+	Polkadot  config.PolkadotConfig   `mapstructure:"polkadot"`
+	Parachain config.ParachainConfig  `mapstructure:"parachain"`
+	Ethereum  config.EthereumConfig   `mapstructure:"ethereum"`
+	Contracts SourceContractsConfig   `mapstructure:"contracts"`
+	Beacon    beaconconf.BeaconConfig `mapstructure:"beacon"`
 }
 
 type SourceContractsConfig struct {
@@ -77,9 +79,6 @@ func (c Config) Validate() error {
 	if c.Source.Contracts.Gateway == "" {
 		return fmt.Errorf("source contracts setting [Gateway] is not set")
 	}
-	if c.Source.ChannelID == [32]byte{} {
-		return fmt.Errorf("source setting [channel-id] is not set")
-	}
 
 	// Sink
 	err = c.Sink.Ethereum.Validate()
@@ -98,6 +97,10 @@ func (c Config) Validate() error {
 	err = c.OFAC.Validate()
 	if err != nil {
 		return fmt.Errorf("ofac config: %w", err)
+	}
+
+	if c.RewardAddress == "" {
+		return fmt.Errorf("reward address is not set")
 	}
 
 	return nil

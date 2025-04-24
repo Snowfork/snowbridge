@@ -1,7 +1,7 @@
 import { Registry } from "@polkadot/types/types"
 import { bnToU8a, hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
 import { blake2AsU8a, decodeAddress, keccak256AsU8a } from "@polkadot/util-crypto"
-import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway"
+import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway.sol/IGatewayV1"
 import { ethers } from "ethers"
 
 export const paraIdToSovereignAccount = (type: "para" | "sibl", paraId: number): string => {
