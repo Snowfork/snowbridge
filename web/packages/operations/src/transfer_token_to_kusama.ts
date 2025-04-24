@@ -54,7 +54,7 @@ const transfer = async () => {
     //    ? polkadot_keyring.addFromUri(process.env["SUBSTRATE_KEY"])
     //    : polkadot_keyring.addFromUri("//Ferdie")
 //
-    const amount = 2_000_000_000_000n
+    const amount = 200000000000000n
 
     const WETH_CONTRACT = snowbridgeEnv.locations[0].erc20tokensReceivable.find(
         (t) => t.id === "WETH"
@@ -69,13 +69,14 @@ const transfer = async () => {
 
     console.log("# Asset Hub Dry Run");
     let totalFeeInDot = 500000000n; // 1 DOT
-    let returnToSenderExecutionFeeDOT = 2000000000n; // 0.2 DOT
     let sourceAccountHex = "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e";
-    let messageId = "0xbf9c0cf8eb9090965346096b63564e6fee547dbe6420eb533d528dcf58cd0bea";
     let tx = toKusama.createERC20SourceParachainTxKusama(assetHub, ethChainId,  sourceAccountHex, WETH_CONTRACT, sourceAccountHex, amount, totalFeeInDot)
     const dryRunSource = await toKusama.dryRunOnSourceParachain(assetHub, config.ASSET_HUB_PARAID, config.BRIDGE_HUB_PARAID, tx, sourceAccountHex)
     if (!dryRunSource.success) {
         console.log("dry run error:", dryRunSource.success)
+    }
+    if (dryRunSource.success) {
+        console.log("works")
     }
 
     await context.destroyContext()
