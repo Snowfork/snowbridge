@@ -402,6 +402,82 @@ contract BeefyClient {
     }
 
     /**
+     * @dev Verify that the supplied MMR leaf is included in the latest verified MMR root.
+     * @param leafHash contains the merkle leaf to be verified
+     * @param proof contains simplified mmr proof
+     * @param proofOrder a bitfield describing the order of each item (left vs right)
+     */
+    function verifyMMRLeafProof(bytes32 leafHash, bytes32[] calldata proof, uint256 proofOrder)
+        external
+        view
+        returns (bool)
+    {
+        return MMRProof.verifyLeafProof(latestMMRRoot, leafHash, proof, proofOrder);
+    }
+
+    /**
+     * @dev Helper to create an initial validator bitfield.
+     * @param bitsToSet contains indexes of all signed validators, should be deduplicated
+     * @param length of validator set
+     */
+    function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
+        external
+        pure
+        returns (uint256[] memory)
+    {
+        if (length < bitsToSet.length) {
+            revert InvalidBitfieldLength();
+        }
+        return Bitfield.createBitfield(bitsToSet, length);
+    }
+
+    /**
+     * @dev Helper to create a final bitfield, with subsampled validator selections
+     * @param commitmentHash contains the commitmentHash signed by the validators
+     * @param bitfield claiming which validators have signed the commitment
+     */
+    function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        Ticket storage ticket = tickets[createTicketID(msg.sender, commitmentHash)];
+        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
+            revert InvalidBitfield();
+        }
+        return Bitfield.subsample(
+            ticket.prevRandao, bitfield, ticket.numRequiredSignatures, ticket.validatorSetLen
+        );
+    }
+
+    /**
+     * @dev Helper to create a final bitfield with subsampled validator selections using the Fiat-Shamir approach
+     * @param commitment contains the full commitment that was used for the commitmentHash
+     * @param bitfield claiming which validators have signed the commitment
+     */
+    function createFiatShamirFinalBitfield(
+        Commitment calldata commitment,
+        uint256[] calldata bitfield
+    ) external view returns (uint256[] memory) {
+        ValidatorSetState storage vset;
+        if (commitment.validatorSetID == nextValidatorSet.id) {
+            vset = nextValidatorSet;
+        } else if (commitment.validatorSetID == currentValidatorSet.id) {
+            vset = currentValidatorSet;
+        } else {
+            revert InvalidCommitment();
+        }
+
+        bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
+        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
+        bytes32 fiatShamirHash = keccak256(bytes.concat(commitmentHash, bitFieldHash, vset.root));
+
+        return Bitfield.subsample(
+            uint256(fiatShamirHash), bitfield, fiatShamirRequiredSignatures, vset.length
+        );
+    }
+
+    /**
      * @dev Submit a commitment and leaf using the Fiat-Shamir approach
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param bitfield claiming which validators have signed the commitment
@@ -464,55 +540,6 @@ contract BeefyClient {
         latestBeefyBlock = commitment.blockNumber;
 
         emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
-    }
-
-    /**
-     * @dev Verify that the supplied MMR leaf is included in the latest verified MMR root.
-     * @param leafHash contains the merkle leaf to be verified
-     * @param proof contains simplified mmr proof
-     * @param proofOrder a bitfield describing the order of each item (left vs right)
-     */
-    function verifyMMRLeafProof(bytes32 leafHash, bytes32[] calldata proof, uint256 proofOrder)
-        external
-        view
-        returns (bool)
-    {
-        return MMRProof.verifyLeafProof(latestMMRRoot, leafHash, proof, proofOrder);
-    }
-
-    /**
-     * @dev Helper to create an initial validator bitfield.
-     * @param bitsToSet contains indexes of all signed validators, should be deduplicated
-     * @param length of validator set
-     */
-    function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
-        external
-        pure
-        returns (uint256[] memory)
-    {
-        if (length < bitsToSet.length) {
-            revert InvalidBitfieldLength();
-        }
-        return Bitfield.createBitfield(bitsToSet, length);
-    }
-
-    /**
-     * @dev Helper to create a final bitfield, with subsampled validator selections
-     * @param commitmentHash contains the commitmentHash signed by the validators
-     * @param bitfield claiming which validators have signed the commitment
-     */
-    function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        Ticket storage ticket = tickets[createTicketID(msg.sender, commitmentHash)];
-        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
-            revert InvalidBitfield();
-        }
-        return Bitfield.subsample(
-            ticket.prevRandao, bitfield, ticket.numRequiredSignatures, ticket.validatorSetLen
-        );
     }
 
     /* Internal Functions */
