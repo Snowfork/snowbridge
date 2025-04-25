@@ -314,6 +314,11 @@ func (relay *OnDemandRelay) syncV2(ctx context.Context) error {
 		return nil
 	}
 
+	// Check if we are rate-limited
+	if !relay.tokenBucket.TryConsume(1) {
+		return fmt.Errorf("Rate-limit exceeded")
+	}
+
 	paraBlock, err := relay.fetchParachainBlockByV2Nonce(ctx, paraNonce)
 	if err != nil {
 		return fmt.Errorf("Fetch paraBlock of v2 nonce: %w", err)
@@ -345,11 +350,6 @@ func (relay *OnDemandRelay) syncV2(ctx context.Context) error {
 			break
 		}
 		time.Sleep(10 * time.Second)
-	}
-
-	// Check if we are rate-limited
-	if !relay.tokenBucket.TryConsume(1) {
-		return fmt.Errorf("Rate-limit exceeded")
 	}
 
 	log.Info("Performing v2 sync")
