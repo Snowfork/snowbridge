@@ -105,8 +105,6 @@ export type RegistryOptions = {
     precompiles?: PrecompileMap
     assetOverrides?: AssetOverrideMap
     destinationFeeOverrides?: FeeOverrideMap
-    ethereum?: AbstractProvider
-    assetHub?: ApiPromise
 }
 
 export type AssetRegistry = {
@@ -194,8 +192,6 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         bridgeHub,
         precompiles,
         destinationFeeOverrides,
-        ethereum,
-        assetHub,
     } = options
 
     let relayInfo: ChainProperties
@@ -219,7 +215,6 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         }
     }
 
-    let bridgeHubProvider
     let bridgeHubInfo: ChainProperties
     {
         let provider: ApiPromise
@@ -233,16 +228,12 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         } else {
             provider = bridgeHub
         }
-        bridgeHubProvider = provider
         bridgeHubInfo = await chainProperties(provider)
 
         if (typeof bridgeHub === "string") {
             await provider.disconnect()
         }
     }
-
-    const pnaOverrides = await indexPNAs(bridgeHubProvider, assetHub!, ethereum!, gatewayAddress)
-    const assetOverrides = { ...options.assetOverrides, ...pnaOverrides }
 
     const providers: {
         [paraIdKey: string]: { parachainId: number; provider: ApiPromise; managed: boolean }
@@ -268,6 +259,16 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
     )) {
         providers[parachainId.toString()] = { parachainId, provider, managed }
     }
+
+    const assethub = providers[assetHubParaId].provider
+    const ethereum = ethchains[0] as AbstractProvider
+    const pnaOverrides = await indexPNAs(
+        bridgeHub as ApiPromise,
+        assethub,
+        ethereum,
+        gatewayAddress
+    )
+    const assetOverrides = { ...options.assetOverrides, ...pnaOverrides }
 
     const paras: ParachainMap = {}
     for (const { parachainId, para } of await Promise.all(
@@ -516,8 +517,6 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
         gatewayAddress,
         ethchains: context.ethChains().map((ethChainId) => context.ethChain(ethChainId)),
         parachains,
-        assetHub: await context.assetHub(),
-        ethereum: await context.ethereum(),
     }
     addOverrides(context.config.environment, result)
     return result
