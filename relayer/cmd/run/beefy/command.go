@@ -94,24 +94,20 @@ func run(_ *cobra.Command, _ []string) error {
 			return err
 		}
 
-		err = relay.Start(ctx, eg)
-		if err != nil {
-			logrus.WithError(err).Fatal("Unhandled error")
-			cancel()
+		eg.Go(func() error {
+			err = relay.Start(ctx, eg)
 			return err
-		}
+		})
 	} else {
 		relay, err := beefy.NewOnDemandRelay(&config, keypair)
 		if err != nil {
 			return err
 		}
 
-		err = relay.Start(ctx)
-		if err != nil {
-			logrus.WithError(err).Fatal("Unhandled error")
-			cancel()
+		eg.Go(func() error {
+			err = relay.Start(ctx)
 			return err
-		}
+		})
 	}
 
 	err = eg.Wait()
