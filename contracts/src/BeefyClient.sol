@@ -195,6 +195,8 @@ contract BeefyClient {
      */
     uint256 public immutable minNumRequiredSignatures;
 
+    uint256 constant fiatShamirRequiredSignatures = 101;
+
     /* Errors */
     error InvalidBitfield();
     error InvalidBitfieldLength();
@@ -400,6 +402,71 @@ contract BeefyClient {
     }
 
     /**
+     * @dev Submit a commitment and leaf using the Fiat-Shamir approach
+     * @param commitment contains the full commitment that was used for the commitmentHash
+     * @param bitfield claiming which validators have signed the commitment
+     * @param proofs a struct containing the data needed to verify all validator signatures
+     * @param leaf an MMR leaf provable using the MMR root in the commitment payload
+     * @param leafProof an MMR leaf proof
+     * @param leafProofOrder a bitfield describing the order of each item (left vs right)
+     */
+    function submitFiatShamir(
+        Commitment calldata commitment,
+        uint256[] calldata bitfield,
+        ValidatorProof[] calldata proofs,
+        MMRLeaf calldata leaf,
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder
+    ) external {
+        if (commitment.blockNumber <= latestBeefyBlock) {
+            // ticket is obsolete
+            revert StaleCommitment();
+        }
+        if (proofs.length != fiatShamirRequiredSignatures) {
+            revert InvalidValidatorProofLength();
+        }
+
+        bool is_next_session = false;
+        ValidatorSetState storage vset;
+        if (commitment.validatorSetID == nextValidatorSet.id) {
+            is_next_session = true;
+            vset = nextValidatorSet;
+        } else if (commitment.validatorSetID == currentValidatorSet.id) {
+            vset = currentValidatorSet;
+        } else {
+            revert InvalidCommitment();
+        }
+
+        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
+
+        verifyFiatShamirCommitment(commitmentHash, bitfield, vset, proofs);
+
+        bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
+
+        if (is_next_session) {
+            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+                revert InvalidMMRLeaf();
+            }
+            bool leafIsValid = MMRProof.verifyLeafProof(
+                newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
+            );
+            if (!leafIsValid) {
+                revert InvalidMMRLeafProof();
+            }
+            currentValidatorSet = nextValidatorSet;
+            nextValidatorSet.id = leaf.nextAuthoritySetID;
+            nextValidatorSet.length = leaf.nextAuthoritySetLen;
+            nextValidatorSet.root = leaf.nextAuthoritySetRoot;
+            nextValidatorSet.usageCounters = createUint16Array(leaf.nextAuthoritySetLen);
+        }
+
+        latestMMRRoot = newMMRRoot;
+        latestBeefyBlock = commitment.blockNumber;
+
+        emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
+    }
+
+    /**
      * @dev Verify that the supplied MMR leaf is included in the latest verified MMR root.
      * @param leafHash contains the merkle leaf to be verified
      * @param proof contains simplified mmr proof
@@ -515,6 +582,45 @@ contract BeefyClient {
         // Generate final bitfield indicating which validators need to be included in the proofs.
         uint256[] memory finalbitfield =
             Bitfield.subsample(ticket.prevRandao, bitfield, numRequiredSignatures, vset.length);
+
+        for (uint256 i = 0; i < proofs.length; i++) {
+            ValidatorProof calldata proof = proofs[i];
+
+            // Check that validator is in bitfield
+            if (!Bitfield.isSet(finalbitfield, proof.index)) {
+                revert InvalidValidatorProof();
+            }
+
+            // Check that validator is actually in a validator set
+            if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
+                revert InvalidValidatorProof();
+            }
+
+            // Check that validator signed the commitment
+            if (ECDSA.recover(commitmentHash, proof.v, proof.r, proof.s) != proof.account) {
+                revert InvalidSignature();
+            }
+
+            // Ensure no validator can appear more than once in bitfield
+            Bitfield.unset(finalbitfield, proof.index);
+        }
+    }
+
+    /**
+     * @dev Verify commitment with the sampled signatures using the Fiat-Shamir hash
+     */
+    function verifyFiatShamirCommitment(
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
+        ValidatorSetState storage vset,
+        ValidatorProof[] calldata proofs
+    ) internal view {
+        bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
+        bytes32 fiatShamirHash = keccak256(bytes.concat(commitmentHash, bitFieldHash, vset.root));
+
+        uint256[] memory finalbitfield = Bitfield.subsample(
+            uint256(fiatShamirHash), bitfield, fiatShamirRequiredSignatures, vset.length
+        );
 
         for (uint256 i = 0; i < proofs.length; i++) {
             ValidatorProof calldata proof = proofs[i];
