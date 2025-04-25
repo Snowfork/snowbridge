@@ -50,21 +50,18 @@ const transfer = async () => {
     })
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
-    //const POLKADOT_ACCOUNT = process.env["SUBSTRATE_KEY"]
-    //    ? polkadot_keyring.addFromUri(process.env["SUBSTRATE_KEY"])
-    //    : polkadot_keyring.addFromUri("//Ferdie")
-//
+    const POLKADOT_ACCOUNT = process.env["SUBSTRATE_KEY"]
+        ? polkadot_keyring.addFromUri(process.env["SUBSTRATE_KEY"])
+        : polkadot_keyring.addFromUri("//Ferdie")
+
     const amount = 200000000000000n
 
     const WETH_CONTRACT = snowbridgeEnv.locations[0].erc20tokensReceivable.find(
         (t) => t.id === "WETH"
     )!.address
 
-    const [assetHub, bridgeHub, ethereum, relaychain] = await Promise.all([
+    const [assetHub] = await Promise.all([
         context.assetHub(),
-        context.bridgeHub(),
-        context.ethereum(),
-        context.relaychain()
     ])
 
     console.log("# Asset Hub Dry Run");
@@ -75,8 +72,11 @@ const transfer = async () => {
     if (!dryRunSource.success) {
         console.log("dry run error:", dryRunSource.success)
     }
-    if (dryRunSource.success) {
-        console.log("works")
+    else {
+        console.log("dry run succeeded, sending tx")
+
+        let result = await toKusama.signAndSend(assetHub, tx, POLKADOT_ACCOUNT, { withSignedTransaction: true })
+        console.log("result: ", result);
     }
 
     await context.destroyContext()

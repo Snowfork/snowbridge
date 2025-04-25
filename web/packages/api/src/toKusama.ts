@@ -636,10 +636,10 @@ export type MessageReceiptEvm = {
     messageId?: string
 }
 
-export async function signAndSend(parachain: ApiPromise, transfer: Transfer, account: AddressOrPair, options: Partial<SignerOptions>): Promise<MessageReceipt> {
+export async function signAndSend(parachain: ApiPromise, tx: SubmittableExtrinsic<any>, account: AddressOrPair, options: Partial<SignerOptions>): Promise<MessageReceipt> {
     const result = await new Promise<MessageReceipt>((resolve, reject) => {
         try {
-            transfer.tx.signAndSend(account, options, (c) => {
+            tx.signAndSend(account, options, (c) => {
                 if (c.isError) {
                     console.error(c)
                     reject(c.internalError || c.dispatchError || c)
@@ -683,7 +683,6 @@ export async function signAndSend(parachain: ApiPromise, transfer: Transfer, acc
     })
 
     result.blockHash = u8aToHex(await parachain.rpc.chain.getBlockHash(result.blockNumber))
-    result.messageId = transfer.computed.messageId ?? result.messageId
 
     return result
 }
