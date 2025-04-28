@@ -509,11 +509,6 @@ contract BeefyClient {
         } else {
             revert InvalidCommitment();
         }
-        uint256 requiredSignatures =
-            Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
-        if (proofs.length != requiredSignatures) {
-            revert InvalidValidatorProofLength();
-        }
 
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
 
@@ -648,6 +643,9 @@ contract BeefyClient {
         bytes32 fiatShamirHash = keccak256(bytes.concat(commitmentHash, bitFieldHash, vset.root));
         uint256 requiredSignatures =
             Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
+        if (proofs.length != requiredSignatures) {
+            revert InvalidValidatorProofLength();
+        }
 
         uint256[] memory finalbitfield =
             Bitfield.subsample(uint256(fiatShamirHash), bitfield, requiredSignatures, vset.length);
