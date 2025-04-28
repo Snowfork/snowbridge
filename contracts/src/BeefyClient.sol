@@ -471,10 +471,10 @@ contract BeefyClient {
         bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
         bytes32 fiatShamirHash = keccak256(bytes.concat(commitmentHash, bitFieldHash, vset.root));
-
-        return Bitfield.subsample(
-            uint256(fiatShamirHash), bitfield, fiatShamirRequiredSignatures, vset.length
-        );
+        uint256 requiredSignatures =
+            Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
+        return
+            Bitfield.subsample(uint256(fiatShamirHash), bitfield, requiredSignatures, vset.length);
     }
 
     /**
@@ -498,9 +498,6 @@ contract BeefyClient {
             // ticket is obsolete
             revert StaleCommitment();
         }
-        if (proofs.length != fiatShamirRequiredSignatures) {
-            revert InvalidValidatorProofLength();
-        }
 
         bool is_next_session = false;
         ValidatorSetState storage vset;
@@ -511,6 +508,11 @@ contract BeefyClient {
             vset = currentValidatorSet;
         } else {
             revert InvalidCommitment();
+        }
+        uint256 requiredSignatures =
+            Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
+        if (proofs.length != requiredSignatures) {
+            revert InvalidValidatorProofLength();
         }
 
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
@@ -644,10 +646,11 @@ contract BeefyClient {
     ) internal view {
         bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
         bytes32 fiatShamirHash = keccak256(bytes.concat(commitmentHash, bitFieldHash, vset.root));
+        uint256 requiredSignatures =
+            Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
 
-        uint256[] memory finalbitfield = Bitfield.subsample(
-            uint256(fiatShamirHash), bitfield, fiatShamirRequiredSignatures, vset.length
-        );
+        uint256[] memory finalbitfield =
+            Bitfield.subsample(uint256(fiatShamirHash), bitfield, requiredSignatures, vset.length);
 
         for (uint256 i = 0; i < proofs.length; i++) {
             ValidatorProof calldata proof = proofs[i];
