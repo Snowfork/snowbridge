@@ -1,10 +1,11 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment, toKusama } from "@snowbridge/api"
+import {Context, environment, toEthereumV2, toKusama} from "@snowbridge/api"
 import { AbstractProvider, Wallet } from "ethers"
 import cron from "node-cron"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import {ApiPromise} from "@polkadot/api";
+import {fetchRegistry} from "./registry";
 
 const transfer = async () => {
     let env = "local_e2e"
@@ -56,30 +57,59 @@ const transfer = async () => {
 
     const amount = 200000000000000n
 
+    const registry = await fetchRegistry(env, context)
+
     const WETH_CONTRACT = snowbridgeEnv.locations[0].erc20tokensReceivable.find(
         (t) => t.id === "WETH"
     )!.address
+    let totalFeeInDot = 500000000n; // 1 DOT
+    let sourceAccountHex = "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e";
 
     const [assetHub] = await Promise.all([
         context.assetHub(),
     ])
 
-    console.log("# Asset Hub Dry Run");
-    let totalFeeInDot = 500000000n; // 1 DOT
-    let sourceAccountHex = "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e";
-    let tx = toKusama.createERC20SourceParachainTxKusama(assetHub, ethChainId,  sourceAccountHex, WETH_CONTRACT, sourceAccountHex, amount, totalFeeInDot)
-    const dryRunSource = await toKusama.dryRunOnSourceParachain(assetHub, config.ASSET_HUB_PARAID, config.BRIDGE_HUB_PARAID, tx, sourceAccountHex)
-    if (!dryRunSource.success) {
-        console.log("dry run error:", dryRunSource.success)
-    }
-    else {
-        console.log("dry run succeeded, sending tx")
+    console.log("# Asset Hub Polkadot to Asset Hub Kusama")
+    {
+        // Step 1. Create a transfer tx
+        const transfer = await toKusama.createTransfer(
+            assetHub,
+            registry,
+            sourceAccountHex,
+            sourceAccountHex,
+            WETH_CONTRACT,
+            amount,
+            totalFeeInDot
+        )
 
-        let result = await toKusama.signAndSend(assetHub, tx, POLKADOT_ACCOUNT, { withSignedTransaction: true })
-        console.log("result: ", result);
+        // Step 2. Validate
+        const validation = await toKusama.validateTransfer(
+            assetHub,
+            transfer,
+        );
+        console.log("validation result", validation)
+
+        // Step 5. Check validation logs for errors
+        if (validation.logs.find((l) => l.kind == toKusama.ValidationKind.Error)) {
+            throw Error(`validation has one of more errors.`)
+        }
+
+        // Step 3. Submit transaction and get receipt for tracking
+       // const response = await toKusama.signAndSend(
+       //     assetHub,
+       //     transfer,
+       //     POLKADOT_ACCOUNT,
+       //     { withSignedTransaction: true }
+       // )
+       // if (!response) {
+       //     throw Error(`Transaction ${response} not included.`)
+       // }
+       // console.log("Success message", response.messageId)
+
+        await context.destroyContext()
     }
 
-    await context.destroyContext()
+
 }
 
 if (process.argv.length != 3) {

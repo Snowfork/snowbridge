@@ -345,27 +345,7 @@ function buildAssetHubXcmFromParachainKusama(
     sourceAccount: string,
     beneficiary: string,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(sourceAccount)
-    console.log("sourceAccount: ", sourceAccount);
-    let sourceAccountLocation
-    switch (kind) {
-        case 1:
-            // 32 byte addresses
-            sourceAccountLocation = { accountId32: { id: hexAddress } }
-            break
-        case 2:
-            // 20 byte addresses
-            sourceAccountLocation = { accountKey20: { key: hexAddress } }
-            break
-        default:
-            throw Error(`Could not parse source address ${sourceAccount}`)
-    }
-    console.log("sourceAccountLocation: ", sourceAccountLocation);
     return [
-        // Error Handling, return everything to sender on source parachain
         {
             depositAsset: {
                 assets: {
@@ -493,7 +473,7 @@ function buildAssetHubXcmFromParachain(
     ]
 }
 
-export function buildAssetHubERC20TransferToKusamaFromParachain(
+export function buildAssetHubERC20TransferToKusama(
     registry: Registry,
     sourceAccount: string,
     beneficiary: string,
