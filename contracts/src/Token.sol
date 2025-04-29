@@ -27,7 +27,7 @@ contract Token is IERC20, IERC20Metadata, IERC20Permit {
     /**
      * @dev Sets the values for {name}, {symbol}, and {decimals}.
      */
-    constructor(address agentOwner, string memory _name, string memory _symbol, uint8 _decimals) {
+    constructor(string memory _name, string memory _symbol, uint8 _decimals) {
         name = _name;
         symbol = _symbol;
         decimals = _decimals;
