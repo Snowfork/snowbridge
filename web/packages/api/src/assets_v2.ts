@@ -871,6 +871,35 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
                     xc20: "0xffffffff" + xc20,
                 }
             }
+            const foreignEntries = await provider.query.evmForeignAssets.assetsById.entries()
+            for (const [key, value] of foreignEntries) {
+                const location = (value.toJSON() as any)
+
+                const assetId = BigInt(key.args.at(0)?.toPrimitive() as any)
+                const xc20 = assetId.toString(16).toLowerCase()
+
+                const token = getTokenFromLocation(location, ethChainId)
+                if (!token) {
+                    continue
+                }
+                // we found the asset in pallet-assets so we can skip evmForeignAssets.
+                if(assets[token]) {
+                    continue
+                }
+
+                const asset: any = (await provider.query.assets.asset(assetId)).toPrimitive()
+                const metadata: any = (await provider.query.assets.metadata(assetId)).toPrimitive()
+
+                assets[token] = {
+                    token,
+                    name: String(metadata.name),
+                    minimumBalance: BigInt(asset?.minBalance ??  1),
+                    symbol: String(metadata.symbol),
+                    decimals: Number(metadata.decimals),
+                    isSufficient: Boolean(asset?.isSufficient ?? false),
+                    xc20: "0xffffffff" + xc20,
+                }
+            }
             break
         }
     }
