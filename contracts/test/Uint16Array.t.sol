@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
@@ -105,12 +105,14 @@ contract Uint16ArrayTest is Test {
         assertEq(value, new_value);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testCounterGetOutOfBounds() public {
         counters = createUint16Array(17);
         vm.expectRevert(IndexOutOfBounds.selector);
         counters.get(17);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testCounterSetOutOfBounds() public {
         counters = createUint16Array(17);
         vm.expectRevert(IndexOutOfBounds.selector);

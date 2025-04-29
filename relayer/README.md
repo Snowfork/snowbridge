@@ -46,7 +46,7 @@ To generate the SSZ encodings:
 
 ```
 go install github.com/ferranbt/fastssz/sszgen
-sszgen --path relays/beacon/state/beacon.go --objs BeaconStateCapellaMainnet,BlockRootsContainerMainnet,TransactionsRootContainer,BeaconBlockCapellaMainnet,WithdrawalsRootContainerMainnet
+sszgen --path relays/beacon/state/beacon.go --objs BlockRootsContainerMainnet,TransactionsRootContainer,WithdrawalsRootContainerMainnet,BeaconStateDenebMainnet,BeaconBlockDenebMainnet,SignedBeaconBlockDeneb,SignedBeaconBlockElectra,BeaconStateElectra,BeaconBlockElectra
 ```
 
 ## Configuration

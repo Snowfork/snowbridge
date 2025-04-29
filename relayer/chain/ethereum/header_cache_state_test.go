@@ -55,7 +55,10 @@ func block11408438() *gethTypes.Block {
 		panic(err)
 	}
 
-	block := gethTypes.NewBlockWithHeader(&header).WithBody(transactions, []*gethTypes.Header{})
+	block := gethTypes.NewBlockWithHeader(&header).WithBody(gethTypes.Body{
+		Transactions: transactions,
+		Uncles:       []*gethTypes.Header{},
+	})
 
 	return block
 }

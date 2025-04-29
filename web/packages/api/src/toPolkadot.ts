@@ -1,9 +1,20 @@
 import { decodeAddress } from "@polkadot/keyring"
 import { Codec } from "@polkadot/types/types"
 import { u8aToHex } from "@polkadot/util"
-import { IERC20__factory, IGateway__factory, WETH9__factory } from "@snowbridge/contract-types"
-import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway"
-import { LogDescription, Signer, TransactionReceipt, ethers } from "ethers"
+import {
+    IERC20__factory,
+    IGatewayV1__factory as IGateway__factory,
+    WETH9__factory,
+} from "@snowbridge/contract-types"
+import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway.sol/IGatewayV1"
+import {
+    Contract,
+    ContractTransaction,
+    LogDescription,
+    Signer,
+    TransactionReceipt,
+    ethers,
+} from "ethers"
 import { concatMap, filter, firstValueFrom, lastValueFrom, take, takeWhile, tap } from "rxjs"
 import { assetStatusInfo } from "./assets"
 import { Context } from "./index"
@@ -112,12 +123,9 @@ export const getSendFee = async (
     destinationParaId: number,
     destinationFee: bigint
 ): Promise<bigint> => {
-    const {
-        ethereum: {
-            contracts: { gateway },
-        },
-    } = context
-    return await gateway.quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
+    return await context
+        .gateway()
+        .quoteSendTokenFee(tokenAddress, destinationParaId, destinationFee)
 }
 
 export const getSubstrateAccount = async (parachain: ApiPromise, beneficiaryHex: string) => {
@@ -126,6 +134,74 @@ export const getSubstrateAccount = async (parachain: ApiPromise, beneficiaryHex:
         consumers: number
     }
     return { balance: account.data.free, consumers: account.consumers }
+}
+
+export type SendTokenTx = {
+    input: {
+        gatewayAddress: string
+        sourceAddress: string
+        beneficiaryAddress: string
+        tokenAddress: string
+        destinationParaId: number
+        amount: bigint
+        totalFeeInWei: bigint
+        destinationFeeInDOT: bigint
+    }
+    computed: {
+        beneficiaryAddressHex: string
+        beneficiaryMultiAddress: MultiAddressStruct
+        totalValue: bigint
+    }
+    tx: ContractTransaction
+}
+
+export async function createTx(
+    gatewayAddress: string,
+    sourceAddress: string,
+    beneficiaryAddress: string,
+    tokenAddress: string,
+    destinationParaId: number,
+    amount: bigint,
+    totalFeeInWei: bigint,
+    destinationFeeInDOT: bigint
+): Promise<SendTokenTx> {
+    let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
+        beneficiaryMultiAddress(beneficiaryAddress)
+    const value = totalFeeInWei
+    const ifce = IGateway__factory.createInterface()
+    const con = new Contract(gatewayAddress, ifce)
+    const tx = await con
+        .getFunction("sendToken")
+        .populateTransaction(
+            tokenAddress,
+            destinationParaId,
+            beneficiary,
+            destinationFeeInDOT,
+            amount,
+            {
+                value,
+                from: sourceAddress,
+            }
+        )
+
+    return {
+        input: {
+            gatewayAddress,
+            sourceAddress,
+            beneficiaryAddress,
+            tokenAddress,
+            destinationParaId,
+            amount,
+            totalFeeInWei,
+            destinationFeeInDOT,
+        },
+        computed: {
+            beneficiaryAddressHex,
+            beneficiaryMultiAddress: beneficiary,
+            totalValue: value,
+        },
+        tx,
+    }
 }
 
 export const validateSend = async (
@@ -139,12 +215,12 @@ export const validateSend = async (
     validateOptions: Partial<IValidateOptions> = {}
 ): Promise<SendValidationResult> => {
     const options = { ...ValidateOptionDefaults, ...validateOptions }
-    const {
-        ethereum,
-        polkadot: {
-            api: { assetHub, bridgeHub, relaychain, parachains },
-        },
-    } = context
+    const [assetHub, bridgeHub, ethereum, relaychain] = await Promise.all([
+        context.assetHub(),
+        context.bridgeHub(),
+        context.ethereum(),
+        context.relaychain(),
+    ])
 
     const sourceAddress = await source.getAddress()
 
@@ -188,7 +264,7 @@ export const validateSend = async (
     let ethereumBalance = 0n
     let canPayFee = false
     if (assetInfo.isTokenRegistered) {
-        ethereumBalance = await ethereum.api.getBalance(sourceAddress)
+        ethereumBalance = await ethereum.getBalance(sourceAddress)
         fee = await getSendFee(context, tokenAddress, destinationParaId, destinationFee)
         canPayFee = fee < ethereumBalance
     }
@@ -244,14 +320,13 @@ export const validateSend = async (
         destinationChainExists = destinationHead.toPrimitive() !== null
         hrmpChannelSetup = hrmpChannel.toPrimitive() !== null
 
-        if (destinationParaId in parachains) {
+        if (context.hasParachain(destinationParaId)) {
+            const destinationParachainApi = await context.parachain(destinationParaId)
             existentialDeposit = BigInt(
-                parachains[
-                    destinationParaId
-                ].consts.balances.existentialDeposit.toPrimitive() as number
+                destinationParachainApi.consts.balances.existentialDeposit.toPrimitive() as number
             )
             const { balance, consumers } = await getSubstrateAccount(
-                parachains[destinationParaId],
+                destinationParachainApi,
                 beneficiaryHex
             )
             beneficiaryAccountExists =
@@ -287,8 +362,8 @@ export const validateSend = async (
         })
 
     let destinationParachain = undefined
-    if (destinationParaId in context.polkadot.api.parachains) {
-        const destParaApi = context.polkadot.api.parachains[destinationParaId]
+    if (context.hasParachain(destinationParaId)) {
+        const destParaApi = await context.parachain(destinationParaId)
         destinationParachain = {
             validatedAtHash: u8aToHex(await destParaApi.rpc.chain.getFinalizedHead()),
         }
@@ -412,16 +487,17 @@ export const send = async (
     plan: SendValidationResult,
     confirmations = 1
 ): Promise<SendResult> => {
-    const {
-        polkadot: {
-            api: { assetHub, bridgeHub },
-        },
-    } = context
-    const { success } = plan
+    const [assetHub, bridgeHub, gateway] = await Promise.all([
+        context.assetHub(),
+        context.bridgeHub(),
+        context.gateway(),
+    ])
 
-    if (plan.failure || !success) {
+    if (plan.failure || !plan.success) {
         throw new Error("Plan failed")
     }
+
+    const { success } = plan
     if (success.sourceAddress !== (await signer.getAddress())) {
         throw new Error("Invalid signer")
     }
@@ -432,43 +508,18 @@ export const send = async (
         bridgeHub.rpc.chain.getFinalizedHead(),
     ])
 
-    const contract = IGateway__factory.connect(context.config.appContracts.gateway, signer)
-
-    const response = await contract.sendToken(
-        success.token,
-        success.destinationParaId,
-        success.beneficiaryMultiAddress,
-        success.destinationFee,
-        success.amount,
-        {
-            value: success.fee,
-        }
+    let { tx } = await createTx(
+        await gateway.getAddress(),
+        plan.success.sourceAddress,
+        plan.success.beneficiaryAddress,
+        plan.success.token,
+        plan.success.destinationParaId,
+        plan.success.amount,
+        plan.success.fee,
+        plan.success.destinationFee
     )
+    const response = await signer.sendTransaction(tx)
     let receipt = await response.wait(confirmations)
-
-    /// Was a nice idea to sign and send in two steps but metamask does not support this.
-    /// https://github.com/MetaMask/metamask-extension/issues/2506
-
-    //const response = await contract.sendToken(
-    //    success.token,
-    //    success.destinationParaId,
-    //    success.beneficiaryMultiAddress,
-    //    success.destinationFee,
-    //    success.amount,
-    //    {
-    //        value: success.fee
-    //    }
-    //)
-    //let receipt = await response.wait(confirmations)
-    //const signedTx = await signer.signTransaction(tx)
-    //const txHash = keccak256(signedTx)
-    //const response = await context.ethereum.api.provider.broadcastTransaction(signedTx)
-    // TODO: await context.ethereum.api.getTransaction(txHash) // Use this to check if the server knows about transaction.
-    // TODO: await context.ethereum.api.getTransactionReceipt(txHash) // Use this to check if the server has mined the transaction.
-    // TODO: remove this wait and move everything below this line to trackProgress/Polling methods.
-    //if(txHash !== receipt.hash) {
-    //    throw new Error('tx Hash mismtach')
-    //}
 
     if (receipt === null) {
         throw new Error("Error waiting for transaction completion")
@@ -483,7 +534,7 @@ export const send = async (
     }
     const events: LogDescription[] = []
     receipt.logs.forEach((log) => {
-        let event = contract.interface.parseLog({
+        let event = gateway.interface.parseLog({
             topics: [...log.topics],
             data: log.data,
         })
@@ -494,8 +545,8 @@ export const send = async (
     const messageAccepted = events.find((log) => log.name === "OutboundMessageAccepted")
 
     let destinationParachain = undefined
-    if (success.destinationParaId in context.polkadot.api.parachains) {
-        const destParaApi = context.polkadot.api.parachains[success.destinationParaId]
+    if (context.hasParachain(success.destinationParaId)) {
+        const destParaApi = await context.parachain(success.destinationParaId)
         destinationParachain = {
             submittedAtHash: u8aToHex(await destParaApi.rpc.chain.getFinalizedHead()),
         }
@@ -532,11 +583,7 @@ export const trackSendProgressPolling = async (
         scanBlocks: 600,
     }
 ): Promise<{ status: "success" | "pending"; result: SendResult }> => {
-    const {
-        polkadot: {
-            api: { assetHub, bridgeHub, parachains },
-        },
-    } = context
+    const [assetHub, bridgeHub] = await Promise.all([context.assetHub(), context.bridgeHub()])
     const { success } = result
 
     if (result.failure || !success || !success.plan.success) {
@@ -547,11 +594,14 @@ export const trackSendProgressPolling = async (
         let destinationMessageProcessed: number | undefined = undefined
         if (
             success.destinationParachain !== undefined &&
-            success.plan.success.destinationParaId in parachains
+            context.hasParachain(success.plan.success.destinationParaId)
         ) {
+            const destinationParaApi = await context.parachain(
+                success.plan.success.destinationParaId
+            )
             destinationMessageProcessed =
                 (
-                    await parachains[success.plan.success.destinationParaId].rpc.chain.getHeader(
+                    await destinationParaApi.rpc.chain.getHeader(
                         success.destinationParachain.submittedAtHash
                     )
                 ).number.toNumber() + 1
@@ -731,12 +781,12 @@ export const trackSendProgressPolling = async (
     if (
         success.destinationParachain !== undefined &&
         success.plan.success.assetHub.paraId !== success.plan.success.destinationParaId &&
-        success.plan.success.destinationParaId in parachains &&
+        context.hasParachain(success.plan.success.destinationParaId) &&
         success.polling.destinationMessageProcessed !== undefined &&
         success.destinationParachain.events === undefined &&
         success.assetHub.extrinsicSuccess === true
     ) {
-        const destParaApi = parachains[success.plan.success.destinationParaId]
+        const destParaApi = await context.parachain(success.plan.success.destinationParaId)
         let extrinsicSuccess = false
         let messageQueueProcessedAt
         console.log(
@@ -784,11 +834,7 @@ export async function* trackSendProgress(
         scanBlocks: 200,
     }
 ): AsyncGenerator<string> {
-    const {
-        polkadot: {
-            api: { assetHub, bridgeHub, parachains },
-        },
-    } = context
+    const [assetHub, bridgeHub] = await Promise.all([context.assetHub(), context.bridgeHub()])
     const { success } = result
 
     if (result.failure || !success || !success.plan.success) {
@@ -936,12 +982,12 @@ export async function* trackSendProgress(
     if (success.destinationParachain !== undefined) {
         if (
             success.plan.success.assetHub.paraId !== success.plan.success.destinationParaId &&
-            success.plan.success.destinationParaId in parachains &&
+            context.hasParachain(success.plan.success.destinationParaId) &&
             success.destinationParachain.events === undefined
         ) {
             yield `Waiting for delivery to destination parachain ${success.plan.success.destinationParaId}`
 
-            const destParaApi = parachains[success.plan.success.destinationParaId]
+            const destParaApi = await context.parachain(success.plan.success.destinationParaId)
             const issuedTo = success.plan?.success.beneficiaryAddress
 
             const { allEvents: receivedEvents, extrinsicSuccess } = await waitForMessageQueuePallet(

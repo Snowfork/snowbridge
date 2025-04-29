@@ -12,7 +12,7 @@ coverage/
 out/
 cache/
 broadcast/
-types/
+/types/
 tsconfig.tsbuildinfo
 lcov.info
 tenderly.yaml

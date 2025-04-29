@@ -1,14 +1,19 @@
 # Introduction
 
-Snowbridge is a general purpose, trustless and decentralized bridge between Polkadot and Ethereum.
+Snowbridge is a general-purpose, trustless, and decentralized bridge between Polkadot and Ethereum. It is part of the [Polkadot SDK](https://app.gitbook.com/o/bDGMcdShFBeGc3v6VzHf/s/tC80IPpnYgEJmgOYIpqZ/) and exists as a common-good bridge on BridgeHub. Ethereum contracts and other off-chain infrastructure (e.g. relayers, end-to-end tests) can be found in our [Github repository](https://github.com/snowfork/snowbridge).&#x20;
 
-Our goal is to launch as common-good bridge on the proposed BridgeHub parachain.
+Snowbridge launched on the Polkadot mainnet in June 2024 ([https://app.snowbridge.network](https://app.snowbridge.network/)) and has been running smoothly ever since. The bridge's total locked value (TVL) exceeds [$70 million USD](https://etherscan.io/address/0xd803472c47a87d7b63e888de53f03b4191b846a8#internaltx).
 
-<figure><img src=".gitbook/assets/badge_black.svg" alt=""><figcaption></figcaption></figure>
+Key features that set Snowbridge apart from other bridges:
 
-<figure><img src=".gitbook/assets/SBP_M2.svg" alt=""><figcaption></figcaption></figure>
+* Owned by the Polkadot community
+* Trustless, no multisigs
+* Integrates seamlessly into AssetHub&#x20;
+* Uses XCM as message format
 
-## Contact us <a href="#block-cc97a7bab4b348b5849698a0716ff0ae" id="block-cc97a7bab4b348b5849698a0716ff0ae"></a>
+The Snowbridge team continues to develop new features and enhance the bridge. For updates on Snowbridge, follow our [account on X](https://x.com/_snowbridge).
+
+## Contact Us
 
 To get in contact, please create a discussion thread [here](https://github.com/Snowfork/snowbridge/discussions).
 

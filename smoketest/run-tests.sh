@@ -5,6 +5,10 @@ set -xe
 cargo test --no-run
 
 tests=(
+  # Native ETH
+  send_native_eth
+  transfer_native_eth
+
   # ERC20 Tests
   register_token
   send_token
@@ -12,7 +16,7 @@ tests=(
   transfer_token
 
   # PNA Tests
-  register_polkadot_token 
+  register_polkadot_token
   transfer_polkadot_token
   send_polkadot_token
 
@@ -25,6 +29,6 @@ tests=(
   upgrade_gateway
 )
 
-for test in ${tests[@]}; do 
+for test in ${tests[@]}; do
   cargo test --test $test -- --nocapture
 done

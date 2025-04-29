@@ -5,12 +5,15 @@ export contract_dir="$root_dir/contracts"
 test_helpers_dir="$web_dir/packages/test-helpers"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
-export output_dir="${OUTPUT_DIR:-/tmp/snowbridge}"
+export output_dir="${OUTPUT_DIR:-/tmp/snowbridge-v2}"
 export output_bin_dir="$output_dir/bin"
+relayer_v1="$output_bin_dir/snowbridge-relay-v1"
+relayer_v2="$output_bin_dir/snowbridge-relay-v2"
 ethereum_data_dir="$output_dir/ethereum"
 zombienet_data_dir="$output_dir/zombienet"
 export PATH="$output_bin_dir:$PATH"
 export polkadot_sdk_dir="${POLKADOT_SDK_DIR:-../polkadot-sdk}"
+snowbridge_v1_v2=true
 
 eth_network="${ETH_NETWORK:-localhost}"
 eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
@@ -45,6 +48,7 @@ export BRIDGE_HUB_AGENT_ID="${BRIDGE_HUB_AGENT_ID:-0x03170a2e7597b7b7e3d84c05391
 
 assethub_ws_url="${ASSET_HUB_WS_URL:-ws://127.0.0.1:12144}"
 assethub_seed="${ASSET_HUB_SEED:-//Alice}"
+penpal_ws_url="${ASSET_HUB_WS_URL:-ws://127.0.0.1:13144}"
 export ASSET_HUB_PARAID="${ASSET_HUB_PARAID:-1000}"
 export ASSET_HUB_AGENT_ID="${ASSET_HUB_AGENT_ID:-0x81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79}"
 
@@ -52,6 +56,10 @@ export ASSET_HUB_CHANNEL_ID="0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601
 export PENPAL_CHANNEL_ID="0xa69fbbae90bb6096d59b1930bbcfc8a3ef23959d226b1861deb7ad8fb06c6fa3"
 export PRIMARY_GOVERNANCE_CHANNEL_ID="0x0000000000000000000000000000000000000000000000000000000000000001"
 export SECONDARY_GOVERNANCE_CHANNEL_ID="0x0000000000000000000000000000000000000000000000000000000000000002"
+
+penpal_ws_url="${PENPAL_WS_URL:-ws://127.0.0.1:13144}"
+penpal_seed="${PENPAL_SEED:-//Alice}"
+export PENPAL_PARAID="${PENPAL_PARAID:-2000}"
 
 # Token decimal of the relaychain(KSM|ROC:12,DOT:10)
 export FOREIGN_TOKEN_DECIMALS=12
@@ -67,8 +75,11 @@ reset_ethereum="${RESET_ETHEREUM:-true}"
 # Useful tool to get these account values: https://www.shawntabrizi.com/substrate-js-utilities/
 # Account for assethub (Sibling parachain 1000 5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV in testnet)
 assethub_sovereign_account="${ASSETHUB_SOVEREIGN_ACCOUNT:-0x7369626ce8030000000000000000000000000000000000000000000000000000}"
+checking_account="${CHECKING_ACCOUNT:-0x6d6f646c70792f78636d63680000000000000000000000000000000000000000}"
 # Account for penpal (Sibling parachain 2000 5Eg2fntJ27qsari4FGrGhrMqKFDRnkNSR6UshkZYBGXmSuC8 in testnet)
 penpal_sovereign_account="${PENPAL_SOVEREIGN_ACCOUNT:-0x7369626cd0070000000000000000000000000000000000000000000000000000}"
+# Account for snowbridge sovereign (5GjRnmh5o3usSYzVmsxBWzHEpvJyHK4tKNPhjpUR3ASrruBy in testnet)
+snowbridge_sovereign_account="${SNOWBRIDGE_SOVEREIGN_ACCOUNT:-0xce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d}"
 # Beacon relay account (//BeaconRelay 5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c in testnet)
 beacon_relayer_pub_key="${BEACON_RELAYER_PUB_KEY:-0xc46e141b5083721ad5f5056ba1cded69dce4a65f027ed3362357605b1687986a}"
 # Execution relay account (//ExecutionRelayAssetHub 5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV in testnet)
@@ -110,10 +121,10 @@ export LOCAL_REWARD="${LOCAL_REWARD:-1000000000000}"
 export REMOTE_REWARD="${REMOTE_REWARD:-1000000000000000}"
 
 ## Vault
-export BRIDGE_HUB_INITIAL_DEPOSIT="${ETH_BRIDGE_HUB_INITIAL_DEPOSIT:-10000000000000000000}"
+export GATEWAY_PROXY_INITIAL_DEPOSIT="${GATEWAY_PROXY_INITIAL_DEPOSIT:-10000000000000000000}"
 
 export GATEWAY_STORAGE_KEY="${GATEWAY_STORAGE_KEY:-0xaed97c7854d601808b98ae43079dafb3}"
-export GATEWAY_PROXY_CONTRACT="${GATEWAY_PROXY_CONTRACT:-0x87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d}"
+export GATEWAY_PROXY_CONTRACT="${GATEWAY_PROXY_CONTRACT:-0xb1185ede04202fe62d38f5db72f71e38ff3e8305}"
 
 address_for() {
     jq -r ".contracts.${1}.address" "$output_dir/contracts.json"

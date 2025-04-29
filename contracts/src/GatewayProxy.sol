@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {ERC1967} from "./utils/ERC1967.sol";
 import {Call} from "./utils/Call.sol";
@@ -20,7 +20,8 @@ contract GatewayProxy is IInitializable {
         Call.verifyResult(success, returndata);
     }
 
-    // Prevent fallback() from calling `IInitializable.initialize(bytes)` on the implementation contract
+    // Prevent fallback() from calling `IInitializable.initialize(bytes)` on the implementation
+    // contract
     function initialize(bytes calldata) external pure {
         revert Unauthorized();
     }

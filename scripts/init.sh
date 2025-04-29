@@ -22,16 +22,10 @@ pushd ..
   if [ ! -d "lodestar" ]; then
     git clone https://github.com/ChainSafe/lodestar
   fi
-  if [ ! -L "snowbridge/lodestar" ]; then
-    (cd snowbridge && ln -sf ../lodestar lodestar)
-  fi
   pushd lodestar
     git fetch && git checkout $LODESTAR_VERSION
   popd
 popd
-
-echo "Setting up git hooks"
-git config --local core.hooksPath hooks/
 
 echo "Installing Rust nightly toolchain"
 rustup default stable

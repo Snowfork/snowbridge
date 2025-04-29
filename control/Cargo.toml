@@ -1,12 +1,13 @@
 [workspace]
 resolver = "2"
 members = [
-    "runtimes/rococo",
-    "runtimes/bridge-hub-rococo",
-    "runtimes/asset-hub-rococo",
+    "chopsticks",
     "runtimes/polkadot",
     "runtimes/bridge-hub-polkadot",
     "runtimes/asset-hub-polkadot",
+    "runtimes/kusama",
+    "runtimes/bridge-hub-kusama",
+    "runtimes/asset-hub-kusama",
     "runtimes/westend",
     "runtimes/bridge-hub-westend",
     "runtimes/asset-hub-westend",
@@ -14,10 +15,11 @@ members = [
     "runtimes/bridge-hub-paseo",
     "runtimes/asset-hub-paseo",
     "preimage",
+    "preimage-kusama",
 ]
 
 [workspace.dependencies]
-codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false }
-scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
-serde = { version = "1.0.197", features = ["derive"] }
-subxt = { version = "0.37.0", features = ["substrate-compat"] }
+codec = { package = "parity-scale-codec", version = "3.6.9", default-features = false }
+scale-info = { version = "2.11.4", default-features = false, features = ["derive"] }
+serde = { version = "1.0.210", features = ["derive"] }
+subxt = { version = "0.38.1", features = ["substrate-compat"] }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
@@ -14,9 +14,9 @@ contract BitfieldTest is Test {
     function testBitfieldSubsampling() public {
         BitfieldWrapper bw = new BitfieldWrapper();
 
-        string memory json = vm.readFile(string.concat(vm.projectRoot(), "/test/data/beefy-validator-set.json"));
+        string memory json =
+            vm.readFile(string.concat(vm.projectRoot(), "/test/data/beefy-validator-set.json"));
         uint32 setSize = uint32(json.readUint(".validatorSetSize"));
-        bytes32 root = json.readBytes32(".validatorRoot");
         uint256[] memory bitSetArray = json.readUintArray(".participants");
 
         uint256[] memory initialBitField = bw.createBitfield(bitSetArray, setSize);
@@ -30,5 +30,24 @@ contract BitfieldTest is Test {
         }
         assertEq(30, counter);
         assertEq(Bitfield.countSetBits(finalBitfield), counter);
+    }
+    
+    function testBitfieldWithZeroLength() public {
+        BitfieldWrapper bw = new BitfieldWrapper();
+        
+        // Empty bitfield with zero length
+        uint256[] memory emptyBits;
+        emptyBits = new uint256[](0);
+        
+        // This should create a valid bitfield with 0 length
+        uint256[] memory initialBitField = bw.createBitfield(emptyBits, 0);
+        
+        // When length is 0, subsample should handle it gracefully without infinite loop
+        // Since we're asking for 0 bits, it should return an empty bitfield
+        uint256[] memory finalBitfield = bw.subsample(67, initialBitField, 0, 0);
+        
+        // Ensure the returned bitfield has the expected length and no set bits
+        assertEq(finalBitfield.length, initialBitField.length);
+        assertEq(Bitfield.countSetBits(finalBitfield), 0);
     }
 }

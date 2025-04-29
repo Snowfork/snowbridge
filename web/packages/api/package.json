@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/api",
-  "version": "0.1.25",
+  "version": "0.1.49",
   "description": "Snowbridge API client",
   "license": "Apache-2.0",
   "repository": {
@@ -11,7 +11,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --build --force",
     "lint": "eslint .",
     "format": "prettier src --write"
   },
@@ -27,14 +27,14 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@polkadot/api": "^14.2.1",
-    "@polkadot/keyring": "^13.2.2",
-    "@polkadot/types": "^14.2.1",
-    "@polkadot/util": "^13.2.2",
-    "@polkadot/util-crypto": "^13.2.2",
+    "@polkadot/api": "^15.7.2",
+    "@polkadot/keyring": "^13.4.3",
+    "@polkadot/types": "^15.7.2",
+    "@polkadot/util": "^13.4.3",
+    "@polkadot/util-crypto": "^13.4.3",
     "@snowbridge/contract-types": "workspace:*",
     "@typechain/ethers-v6": "^0.5.1",
-    "ethers": "^6.13.3",
+    "ethers": "^6.13.5",
     "rxjs": "^7.8.1"
   }
 }
