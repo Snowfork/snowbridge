@@ -9,7 +9,7 @@ generate_beefy_fixture() {
 
     # Generate bit field
     pushd ../../../contracts
-    forge build && MINIMUM_REQUIRED_SIGNATURES=$num forge test --match-test testRegenerateBitField -vvv
+    forge build && MINIMUM_REQUIRED_SIGNATURES=$num forge test --match-test testRegenerateBitField -vvv && forge test --match-test testRegenerateFiatShamirProofs
     popd
 
     # Generate final proof

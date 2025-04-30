@@ -41,6 +41,11 @@ const run = async () => {
     const ValidatorSetFile = path.join(basedir, "test/data/beefy-validator-set.json")
     const BitFieldFile = path.join(basedir, "test/data/beefy-final-bitfield.json")
     const ValidatorProofFile = path.join(basedir, "test/data/beefy-final-proof.json")
+    const fiatShamirBitFieldFile = path.join(basedir, "test/data/beefy-fiat-shamir-bitfield.json")
+    const fiatShamirValidatorProofFile = path.join(
+        basedir,
+        "test/data/beefy-fiat-shamir-proof.json"
+    )
 
     const command = process.argv[2]
     const validatorSetID = fixtureData.params.id
@@ -77,7 +82,13 @@ const run = async () => {
         fs.writeFileSync(ValidatorSetFile, JSON.stringify(testFixture, null, 2), "utf8")
         console.log("Beefy fixture writing to dest file: " + ValidatorSetFile)
     } else if (command == "GenerateProofs") {
-        generateValidatorProof(BitFieldFile, ValidatorProofFile, validatorSet, commitHash)
+        await generateValidatorProof(BitFieldFile, ValidatorProofFile, validatorSet, commitHash)
+        await generateValidatorProof(
+            fiatShamirBitFieldFile,
+            fiatShamirValidatorProofFile,
+            validatorSet,
+            commitHash
+        )
     }
 }
 

@@ -40,6 +40,9 @@ contract BeefyClientTest is Test {
     uint256 emptyLeafProofOrder;
     bytes2 mmrRootID = bytes2("mh");
     string bitFieldFile;
+    uint256[] fiatShamirFinalBitfield;
+    string fiatShamirBitFieldFile;
+    BeefyClient.ValidatorProof[] fiatShamirValidatorProofs;
 
     function setUp() public {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
@@ -54,6 +57,8 @@ contract BeefyClientTest is Test {
         string memory beefyCommitmentRaw = vm.readFile(beefyCommitmentFile);
 
         bitFieldFile = string.concat(vm.projectRoot(), "/test/data/beefy-final-bitfield.json");
+        fiatShamirBitFieldFile =
+            string.concat(vm.projectRoot(), "/test/data/beefy-fiat-shamir-bitfield.json");
 
         blockNumber = uint32(beefyCommitmentRaw.readUint(".params.commitment.blockNumber"));
         setId = uint32(beefyCommitmentRaw.readUint(".params.commitment.validatorSetID"));
@@ -84,6 +89,11 @@ contract BeefyClientTest is Test {
             string.concat(vm.projectRoot(), "/test/data/beefy-final-proof.json");
         string memory finalProofRaw = vm.readFile(finalProofFile);
         loadFinalProofs(finalProofRaw, finalValidatorProofs);
+
+        string memory fiatShamirProofFile =
+            string.concat(vm.projectRoot(), "/test/data/beefy-fiat-shamir-proof.json");
+        string memory fiatShamirProofRaw = vm.readFile(fiatShamirProofFile);
+        loadFinalProofs(fiatShamirProofRaw, fiatShamirValidatorProofs);
     }
 
     function initialize(uint32 _setId) public returns (BeefyClient.Commitment memory) {
@@ -833,5 +843,38 @@ contract BeefyClientTest is Test {
             BeefyClient.ValidatorSet(currentId, 0, 0x0),
             BeefyClient.ValidatorSet(nextId, 0, 0x0)
         );
+    }
+
+    function testRegenerateFiatShamirProofs() public returns (BeefyClient.Commitment memory) {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+
+        fiatShamirFinalBitfield = beefyClient.createFiatShamirFinalBitfield(commitment, bitfield);
+
+        string memory finalBitFieldRaw = "";
+        finalBitFieldRaw =
+            finalBitFieldRaw.serialize("finalBitFieldRaw", abi.encode(fiatShamirFinalBitfield));
+
+        string memory finaliBitFieldStr = "";
+        finaliBitFieldStr = finaliBitFieldStr.serialize("finalBitField", fiatShamirFinalBitfield);
+
+        string memory output = finalBitFieldRaw.serialize("final", finaliBitFieldStr);
+
+        vm.writeJson(output, fiatShamirBitFieldFile);
+    }
+
+    function testSubmitFiatShamir() public returns (BeefyClient.Commitment memory) {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+
+        beefyClient.submitFiatShamir(
+            commitment,
+            bitfield,
+            fiatShamirValidatorProofs,
+            emptyLeaf,
+            emptyLeafProofs,
+            emptyLeafProofOrder
+        );
+
+        assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+        return commitment;
     }
 }
