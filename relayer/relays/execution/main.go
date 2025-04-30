@@ -506,22 +506,6 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		"txIndex":     ev.Raw.TxIndex,
 	})
 
-	source, err := r.getTransactionSender(ctx, ev)
-	if err != nil {
-		return err
-	}
-
-	banned, err := r.ofac.IsBanned(source, "")
-	if err != nil {
-		return err
-	}
-	if banned {
-		log.Fatal("banned address found")
-		return errors.New("banned address found")
-	} else {
-		log.Info("address is not banned, continuing")
-	}
-
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
 
 	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
