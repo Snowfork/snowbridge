@@ -1531,12 +1531,10 @@ async function getMoonbeamEvmForeignAssetBalance(api: ApiPromise, token: string,
         null
     )
     const resultJson = result.toPrimitive() as any
-    console.log(resultJson)
     if (!(resultJson?.ok?.exitReason?.succeed === "Returned")) {
         console.error(resultJson)
         throw Error(`Could not fetch balance for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`)
     }
     const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value);
-    console.log(retVal)
     return BigInt(retVal[0]);
 }
