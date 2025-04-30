@@ -13,8 +13,8 @@ library CoreStorage {
         mapping(ChannelID channelID => Channel) channels;
         // Agents
         mapping(bytes32 agentID => address) agents;
-        // Agent addresses - DEPRECATED in V2 but kept for storage layout compatibility
-        mapping(address agent => bytes32 agentID) agentAddresses;
+        // Reserve slot to prevent state collision
+        uint256 private __gap;
         // V2
         SparseBitmap inboundNonce;
         uint64 outboundNonce;
