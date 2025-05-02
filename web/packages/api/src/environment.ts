@@ -13,6 +13,12 @@ export type Config = {
     GRAPHQL_API_URL?: string
 }
 
+export type KusamaConfig = {
+    ASSET_HUB_PARAID: number
+    BRIDGE_HUB_PARAID: number
+    PARACHAINS: { [paraId: string]: string }
+}
+
 export type AddressType = "20byte" | "32byte" | "both"
 export type SourceType = "substrate" | "ethereum"
 export type Relayer = { name: string; account: string; type: SourceType; balance?: bigint }
@@ -40,6 +46,7 @@ export type TransferLocation = {
 
 export type SnowbridgeEnvironment = {
     config: Config
+    kusamaConfig?: KusamaConfig
     name: string
     ethChainId: number
     locations: TransferLocation[]
@@ -541,6 +548,14 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             GRAPHQL_API_URL:
                 "https://snowbridge.squids.live/snowbridge-subsquid-polkadot@v1/api/graphql",
         },
+        kusamaConfig: {
+            ASSET_HUB_PARAID: 1000,
+            BRIDGE_HUB_PARAID: 1002,
+            PARACHAINS: {
+                "1000": "wss://asset-hub-kusama-rpc.dwellir.com",
+                "1002": "https://bridge-hub-kusama-rpc.dwellir.com",
+            }
+        }
     },
     westend_sepolia: {
         name: "westend_sepolia",

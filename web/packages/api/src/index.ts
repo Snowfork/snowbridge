@@ -28,6 +28,11 @@ interface Config {
         bridgeHubParaId: number
         parachains: { [paraId: string]: string }
     }
+    kusama?: {
+        assetHubParaId: number
+        bridgeHubParaId: number
+        parachains: { [paraId: string]: string }
+    }
     appContracts: {
         gateway: string
         beefy: string
@@ -69,6 +74,13 @@ export class Context {
 
     assetHub(): Promise<ApiPromise> {
         return this.parachain(this.config.polkadot.assetHubParaId)
+    }
+
+    kusamaAssetHub(): Promise<ApiPromise> | undefined {
+        const assetHubParaId = this.config.kusama?.assetHubParaId;
+        if (assetHubParaId) {
+            return this.parachain(assetHubParaId)
+        }
     }
 
     bridgeHub(): Promise<ApiPromise> {

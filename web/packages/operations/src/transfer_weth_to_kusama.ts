@@ -17,7 +17,7 @@ const transfer = async () => {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const { config, ethChainId, name } = snowbridgeEnv
+    const { config, kusamaConfig, ethChainId, name } = snowbridgeEnv
     await cryptoWaitReady()
 
     const parachains: { [paraId: string]: string } = {}
@@ -25,6 +25,14 @@ const transfer = async () => {
         process.env["BRIDGE_HUB_URL"] ?? config.PARACHAINS[config.BRIDGE_HUB_PARAID.toString()]
     parachains[config.ASSET_HUB_PARAID.toString()] =
         process.env["ASSET_HUB_URL"] ?? config.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
+
+    if (!kusamaConfig) {
+        throw Error(`Kusama config should be set`)
+    }
+
+    const kusamaParachains: { [paraId: string]: string } = {}
+    kusamaParachains[kusamaConfig?.BRIDGE_HUB_PARAID.toString()] = kusamaConfig?.PARACHAINS[config.BRIDGE_HUB_PARAID.toString()]
+    kusamaParachains[kusamaConfig?.ASSET_HUB_PARAID.toString()] = kusamaConfig?.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
 
     const ethChains: { [ethChainId: string]: string | AbstractProvider } = {}
     Object.keys(config.ETHEREUM_CHAINS)
@@ -44,11 +52,28 @@ const transfer = async () => {
             parachains: parachains,
             relaychain: process.env["RELAY_CHAIN_URL"] || config.RELAY_CHAIN_URL,
         },
+        kusama: {
+            assetHubParaId: kusamaConfig.ASSET_HUB_PARAID,
+            bridgeHubParaId: kusamaConfig.BRIDGE_HUB_PARAID,
+            parachains: kusamaParachains,
+        },
         appContracts: {
             gateway: config.GATEWAY_CONTRACT,
             beefy: config.BEEFY_CONTRACT,
         },
     })
+
+    const [polkadotAssetHub] = await Promise.all([
+        context.assetHub(),
+    ])
+    const [kusamaAssetHub] = await Promise.all([
+        context.kusamaAssetHub(),
+    ])
+
+    if (!kusamaAssetHub) {
+        throw Error(`Kusama asset hub could not connect`)
+    }
+
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const POLKADOT_ACCOUNT = process.env["SUBSTRATE_KEY"]
@@ -62,39 +87,41 @@ const transfer = async () => {
     const WETH_CONTRACT = snowbridgeEnv.locations[0].erc20tokensReceivable.find(
         (t) => t.id === "WETH"
     )!.address
-    let totalFeeInDot = 500000000n; // 1 DOT
     let sourceAccountHex = "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e";
 
-    const [assetHub] = await Promise.all([
-        context.assetHub(),
-    ])
+    const defaultBridgingFee = 333794429n;
 
     console.log("# Asset Hub Polkadot to Asset Hub Kusama")
     {
-        // Step 1. Create a transfer tx
+        // Step 1. Get the delivery fee for the transaction
+        const fee = await toKusama.getDeliveryFee(
+            polkadotAssetHub,
+            defaultBridgingFee
+        )
+
+        // Step 2. Create a transfer tx
         const transfer = await toKusama.createTransfer(
-            assetHub,
+            polkadotAssetHub,
             registry,
             sourceAccountHex,
             sourceAccountHex,
             WETH_CONTRACT,
             amount,
-            totalFeeInDot
+            fee
         )
 
-        // Step 2. Validate
+        // Step 3. Validate
         const validation = await toKusama.validateTransfer(
-            assetHub,
+            {polkadotAssetHub, kusamaAssetHub},
             transfer,
         );
-        console.log("validation result", validation)
 
-        // Step 5. Check validation logs for errors
+        // Step 4. Check validation logs for errors
         if (validation.logs.find((l) => l.kind == toKusama.ValidationKind.Error)) {
             throw Error(`validation has one of more errors.`)
         }
 
-        // Step 3. Submit transaction and get receipt for tracking
+        // Step 5. Submit transaction and get receipt for tracking
        // const response = await toKusama.signAndSend(
        //     assetHub,
        //     transfer,

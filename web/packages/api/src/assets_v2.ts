@@ -100,9 +100,16 @@ export type RegistryOptions = {
     ethchains: (string | AbstractProvider)[]
     relaychain: string | ApiPromise
     bridgeHub: string | ApiPromise
+    kusama?: KusamaOptions
     precompiles?: PrecompileMap
     assetOverrides?: AssetOverrideMap
     destinationFeeOverrides?: FeeOverrideMap
+}
+
+export type KusamaOptions = {
+    assetHubParaId: number
+    bridgeHubParaId: number
+    assetHub: string | ApiPromise
 }
 
 export type AssetRegistry = {
@@ -116,6 +123,13 @@ export type AssetRegistry = {
     ethereumChains: {
         [chainId: string]: EthereumChain
     }
+    parachains: ParachainMap,
+    kusama: KusamaConfig | undefined
+}
+
+type KusamaConfig = {
+    assetHubParaId: number
+    bridgeHubParaId: number
     parachains: ParachainMap
 }
 
@@ -186,6 +200,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         bridgeHubParaId,
         relaychain,
         bridgeHub,
+        kusama,
         precompiles,
         assetOverrides,
         destinationFeeOverrides,
@@ -320,6 +335,40 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         throw Error(`Cannot find ethereum chain ${ethChainId} in the list of ethereum chains.`)
     }
 
+    let kusamaConfig: KusamaConfig | undefined;
+    if (kusama) {
+        let kusamaAssetHub = kusama.assetHub;
+        let provider: ApiPromise
+        if (typeof kusamaAssetHub === "string") {
+            provider = await ApiPromise.create({
+                noInitWarn: true,
+                provider: kusamaAssetHub.startsWith("http")
+                    ? new HttpProvider(kusamaAssetHub)
+                    : new WsProvider(kusamaAssetHub),
+            })
+        } else {
+            provider = kusamaAssetHub
+        }
+
+        const para = await indexParachain(
+            provider,
+            providers[assetHubParaId.toString()].provider,
+            ethChainId,
+            kusama.assetHubParaId,
+            assetHubParaId,
+            assetOverrides ?? {},
+            destinationFeeOverrides ?? {}
+        )
+
+        paras[kusama.assetHubParaId] = para
+
+        kusamaConfig = {
+            parachains: paras,
+            assetHubParaId: kusama.assetHubParaId,
+            bridgeHubParaId: kusama.bridgeHubParaId,
+        }
+    }
+
     return {
         environment,
         ethChainId,
@@ -330,6 +379,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         bridgeHub: bridgeHubInfo,
         ethereumChains: ethChains,
         parachains: paras,
+        kusama: kusamaConfig,
     }
 }
 
@@ -461,10 +511,10 @@ export function getTransferLocations(
 }
 
 export function fromEnvironment(
-    { name, config, ethChainId }: SnowbridgeEnvironment,
+    { name, config, kusamaConfig, ethChainId }: SnowbridgeEnvironment,
     ethereumApiKey?: string
 ): RegistryOptions {
-    const result: RegistryOptions = {
+    let result: RegistryOptions = {
         environment: name,
         assetHubParaId: config.ASSET_HUB_PARAID,
         bridgeHubParaId: config.BRIDGE_HUB_PARAID,
@@ -476,6 +526,13 @@ export function fromEnvironment(
         parachains: Object.keys(config.PARACHAINS)
             .filter((paraId) => paraId !== config.BRIDGE_HUB_PARAID.toString())
             .map((paraId) => config.PARACHAINS[paraId]),
+    }
+    if (kusamaConfig) {
+        result.kusama = {
+            assetHubParaId: kusamaConfig.ASSET_HUB_PARAID,
+            bridgeHubParaId: kusamaConfig.BRIDGE_HUB_PARAID,
+            assetHub: kusamaConfig.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
+        }
     }
     addOverrides(name, result)
     return result
@@ -495,7 +552,8 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
                 .map((paraId) => context.parachain(paraId))
         ),
     ])
-    const result: RegistryOptions = {
+
+    let result: RegistryOptions = {
         environment: context.config.environment,
         assetHubParaId,
         bridgeHubParaId,
@@ -506,6 +564,22 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
         ethchains: context.ethChains().map((ethChainId) => context.ethChain(ethChainId)),
         parachains,
     }
+
+    if (context.config.kusama) {
+        const [kusamaAssetHub] = await Promise.all([
+            context.kusamaAssetHub(),
+        ])
+
+        if (kusamaAssetHub) {
+            const { assetHubParaId, bridgeHubParaId } = context.config.kusama;
+            result.kusama = {
+                assetHubParaId,
+                bridgeHubParaId,
+                assetHub: kusamaAssetHub
+            }
+        }
+    }
+
     addOverrides(context.config.environment, result)
     return result
 }
