@@ -877,4 +877,14 @@ contract BeefyClientTest is Test {
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
         return commitment;
     }
+
+    function testSubmitFiatShamirWithHandOver() public {
+        //initialize with previous set
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
+
+        beefyClient.submitFiatShamir(
+            commitment, bitfield, fiatShamirValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+        assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+    }
 }
