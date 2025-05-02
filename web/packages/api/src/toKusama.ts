@@ -6,12 +6,15 @@ import { blake2AsHex, decodeAddress, xxhashAsHex } from "@polkadot/util-crypto";
 import {
     DOT_LOCATION,
     erc20Location,
-    kusamaAssetHubLocation, buildAssetHubERC20TransferToKusama
+    kusamaAssetHubLocation,
+    buildAssetHubERC20TransferToKusama,
+    dotLocationOnKusamaAssetHubLocation,
+    polkadotAssetHubLocation
 } from "./xcmBuilder";
 import {
     Asset,
     AssetRegistry,
-    getDotBalance,
+    getDotBalance, getLocationBalance,
     getNativeAccount,
     getNativeBalance,
     getTokenBalance,
@@ -45,6 +48,10 @@ export type Transfer = {
 export type DeliveryFee = {
     baseFee: bigint
     totalFeeInDot: bigint
+}
+
+export enum Direction {
+    ToKusama, ToPolkadot
 }
 
 function resolveInputs(registry: AssetRegistry, tokenAddress: string, sourceParaId: number, destParaId: number) {
@@ -97,6 +104,7 @@ export async function getDeliveryFee(
 
 export async function createTransfer(
     parachain: ApiPromise,
+    direction: Direction,
     registry: AssetRegistry,
     sourceAccount: string,
     beneficiaryAccount: string,
@@ -119,7 +127,13 @@ export async function createTransfer(
 
     const { sourceAssetMetadata, destAssetMetadata, sourceParachain } = resolveInputs(registry, tokenAddress, sourceParaId, destParaId)
     let messageId = await buildMessageId(parachain, sourceParaId, sourceAccountHex, tokenAddress, beneficiaryAccount, amount)
-    let  tx = createERC20SourceParachainTxKusama(parachain, ethChainId,  sourceAccountHex, tokenAddress, sourceAccountHex, amount, fee.baseFee)
+
+    let tx;
+    if (direction == Direction.ToPolkadot) {
+        tx = createERC20ToPolkadotTx(parachain, ethChainId,  sourceAccountHex, tokenAddress, sourceAccountHex, amount, fee.baseFee)
+    } else {
+        tx = createERC20ToKusamaTx(parachain, ethChainId,  sourceAccountHex, tokenAddress, sourceAccountHex, amount, fee.baseFee)
+    }
 
     let { hexAddress: beneficiaryAddressHex } =
         beneficiaryMultiAddress(beneficiaryAccount)
@@ -180,23 +194,30 @@ export type ValidationResult = {
 
 export async function validateTransfer(
     connections: {
-        polkadotAssetHub: ApiPromise
-        kusamaAssetHub: ApiPromise
+        sourceAssetHub: ApiPromise
+        destAssetHub: ApiPromise
     },
+    direction: Direction,
     transfer: Transfer): Promise<ValidationResult> {
 
-    let polkadotAssetHub = connections.polkadotAssetHub;
-    let kusamaAssetHub = connections.kusamaAssetHub;
+    let sourceAssetHub = connections.sourceAssetHub;
+    let destAssetHub = connections.destAssetHub;
 
     const { registry, fee, tokenAddress, amount } = transfer.input
     const { sourceAccountHex, sourceParachain: source, beneficiaryAddressHex, destAssetMetadata } = transfer.computed
     const { tx } = transfer
 
-    const [nativeBalance, dotBalance, tokenBalance] = await Promise.all([
-        getNativeBalance(polkadotAssetHub, sourceAccountHex),
-        getDotBalance(polkadotAssetHub, source.info.specName, sourceAccountHex),
-        getTokenBalance(polkadotAssetHub, source.info.specName, sourceAccountHex, registry.ethChainId, tokenAddress)
+    const [nativeBalance, tokenBalance] = await Promise.all([
+        getNativeBalance(sourceAssetHub, sourceAccountHex),
+        getTokenBalance(sourceAssetHub, source.info.specName, sourceAccountHex, registry.ethChainId, tokenAddress)
     ])
+
+    let dotBalance = 0n;
+    if (direction == Direction.ToPolkadot) {
+        dotBalance = await getLocationBalance(sourceAssetHub, source.info.specName, dotLocationOnKusamaAssetHubLocation(), sourceAccountHex);
+    } else {
+        dotBalance = await getDotBalance(sourceAssetHub, source.info.specName, sourceAccountHex);
+    }
 
     console.log("dotBalance:", dotBalance);
     console.log("nativeBalance:", nativeBalance);
@@ -206,7 +227,7 @@ export async function validateTransfer(
     const logs: ValidationLog[] = []
 
     const { accountMaxConsumers, accountExists } = await validateAccount(
-        kusamaAssetHub,
+        destAssetHub,
         "statemint",
         beneficiaryAddressHex,
         registry.ethChainId,
@@ -234,8 +255,8 @@ export async function validateTransfer(
     }
 
     let assetHubDryRunError;
-    // do the dry run, get the forwarded xcm and dry run that
-    const dryRunSource = await dryRunOnSourceParachain(polkadotAssetHub, registry.assetHubParaId, registry.bridgeHubParaId, transfer.tx, sourceAccountHex)
+
+    const dryRunSource = await dryRunOnSourceParachain(sourceAssetHub, direction, registry.assetHubParaId, registry.bridgeHubParaId, transfer.tx, sourceAccountHex)
     if (!dryRunSource.success) {
         logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run call on source failed.' })
         assetHubDryRunError = dryRunSource.error
@@ -328,7 +349,7 @@ export async function signAndSend(parachain: ApiPromise, transfer: Transfer, acc
     return result
 }
 
-export function createERC20SourceParachainTxKusama(
+export function createERC20ToKusamaTx(
     parachain: ApiPromise,
     ethChainId: number,
     sourceAccount: string,
@@ -358,18 +379,58 @@ export function createERC20SourceParachainTxKusama(
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(destination, assets, "LocalReserve", feeAsset, "LocalReserve", customXcm, "Unlimited")
 }
 
+export function createERC20ToPolkadotTx(
+    parachain: ApiPromise,
+    ethChainId: number,
+    sourceAccount: string,
+    tokenAddress: string,
+    beneficiaryAccount: string,
+    amount: bigint,
+    totalFeeInDot: bigint,
+): SubmittableExtrinsic<"promise", ISubmittableResult> {
+    const assets = {
+        v4: [
+            {
+                id: dotLocationOnKusamaAssetHubLocation(),
+                fun: { Fungible: totalFeeInDot },
+            },
+            {
+                id: erc20Location(ethChainId, tokenAddress),
+                fun: { Fungible: amount },
+            },
+        ]
+    }
+    const destination = { v4: polkadotAssetHubLocation() }
+
+    const feeAsset = {
+        v4: dotLocationOnKusamaAssetHubLocation()
+    }
+    const customXcm = buildAssetHubERC20TransferToKusama(parachain.registry, sourceAccount, beneficiaryAccount)
+    return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(destination, assets, "DestinationReserve", feeAsset, "DestinationReserve", customXcm, "Unlimited")
+}
+
 export async function dryRunOnSourceParachain(
     source: ApiPromise,
+    direction: Direction,
     assetHubParaId: number,
     bridgeHubParaId: number,
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>,
     sourceAccount: string
 ) {
     const origin = { system: { signed: sourceAccount } }
-    const result = (await source.call.dryRunApi.dryRunCall<Result<CallDryRunEffects, XcmDryRunApiError>>(
-        origin,
-        tx,
-    ))
+    let result: Result<CallDryRunEffects, XcmDryRunApiError>;
+    if (direction == Direction.ToPolkadot) {
+        result = (await source.call.dryRunApi.dryRunCall<Result<CallDryRunEffects, XcmDryRunApiError>>(
+            origin,
+            tx,
+            3
+        ))
+    } else {
+        result = (await source.call.dryRunApi.dryRunCall<Result<CallDryRunEffects, XcmDryRunApiError>>(
+            origin,
+            tx,
+        ))
+    }
 
     let assetHubForwarded;
     let bridgeHubForwarded;

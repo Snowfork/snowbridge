@@ -27,8 +27,27 @@ export function kusamaAssetHubLocation() {
         parents: 2,
         interior: { x2: [
             { GlobalConsensus: { Kusama: null } },
-            { parachain: 1000 }
+            { parachain: 1000 } // TODO
         ] },
+    }
+}
+
+export function polkadotAssetHubLocation() {
+    return {
+        parents: 2,
+        interior: { x2: [
+                { GlobalConsensus: { Polkadot: null } },
+                { parachain: 1000 } // TODO
+            ] },
+    }
+}
+
+export function dotLocationOnKusamaAssetHubLocation() {
+    return {
+        parents: 2,
+        interior: { x1: [
+                { GlobalConsensus: { Polkadot: null } },
+            ] },
     }
 }
 

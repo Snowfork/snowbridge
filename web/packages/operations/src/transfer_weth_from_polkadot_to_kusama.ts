@@ -1,11 +1,11 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
-import {Context, environment, toEthereumV2, toKusama} from "@snowbridge/api"
-import { AbstractProvider, Wallet } from "ethers"
+import {Context, environment, toKusama} from "@snowbridge/api"
+import { AbstractProvider } from "ethers"
 import cron from "node-cron"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import {ApiPromise} from "@polkadot/api";
 import {fetchRegistry} from "./registry";
+import {Direction} from "@snowbridge/api/dist/toKusama";
 
 const transfer = async () => {
     let env = "local_e2e"
@@ -76,7 +76,7 @@ const transfer = async () => {
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
-    const POLKADOT_ACCOUNT = process.env["SUBSTRATE_KEY"]
+    const SUBSTRATE_ACCOUNT = process.env["SUBSTRATE_KEY"]
         ? polkadot_keyring.addFromUri(process.env["SUBSTRATE_KEY"])
         : polkadot_keyring.addFromUri("//Ferdie")
 
@@ -88,8 +88,10 @@ const transfer = async () => {
         (t) => t.id === "WETH"
     )!.address
     let sourceAccountHex = "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e";
+    let beneficiaryAccountHex = "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e";
 
     const defaultBridgingFee = 333794429n;
+    const direction = Direction.ToKusama;
 
     console.log("# Asset Hub Polkadot to Asset Hub Kusama")
     {
@@ -102,9 +104,10 @@ const transfer = async () => {
         // Step 2. Create a transfer tx
         const transfer = await toKusama.createTransfer(
             polkadotAssetHub,
+            direction,
             registry,
             sourceAccountHex,
-            sourceAccountHex,
+            beneficiaryAccountHex,
             WETH_CONTRACT,
             amount,
             fee
@@ -112,26 +115,28 @@ const transfer = async () => {
 
         // Step 3. Validate
         const validation = await toKusama.validateTransfer(
-            {polkadotAssetHub, kusamaAssetHub},
+            {sourceAssetHub: polkadotAssetHub, destAssetHub: kusamaAssetHub},
+            direction,
             transfer,
         );
 
         // Step 4. Check validation logs for errors
         if (validation.logs.find((l) => l.kind == toKusama.ValidationKind.Error)) {
+            console.error("validation errors", validation.logs)
             throw Error(`validation has one of more errors.`)
         }
 
         // Step 5. Submit transaction and get receipt for tracking
-       // const response = await toKusama.signAndSend(
-       //     assetHub,
-       //     transfer,
-       //     POLKADOT_ACCOUNT,
-       //     { withSignedTransaction: true }
-       // )
-       // if (!response) {
-       //     throw Error(`Transaction ${response} not included.`)
-       // }
-       // console.log("Success message", response.messageId)
+        const response = await toKusama.signAndSend(
+            polkadotAssetHub,
+            transfer,
+            SUBSTRATE_ACCOUNT,
+            { withSignedTransaction: true }
+        )
+        if (!response) {
+            throw Error(`Transaction ${response} not included.`)
+        }
+        console.log("Success message", response.messageId)
 
         await context.destroyContext()
     }
