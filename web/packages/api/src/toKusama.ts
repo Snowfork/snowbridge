@@ -423,7 +423,7 @@ export async function dryRunOnSourceParachain(
         result = (await source.call.dryRunApi.dryRunCall<Result<CallDryRunEffects, XcmDryRunApiError>>(
             origin,
             tx,
-            3
+            4
         ))
     } else {
         result = (await source.call.dryRunApi.dryRunCall<Result<CallDryRunEffects, XcmDryRunApiError>>(
