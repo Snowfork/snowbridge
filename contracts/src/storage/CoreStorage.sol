@@ -14,7 +14,7 @@ library CoreStorage {
         // Agents
         mapping(bytes32 agentID => address) agents;
         // Reserve slot to prevent state collision
-        uint256 private __gap;
+        uint256 __gap;
         // V2
         SparseBitmap inboundNonce;
         uint64 outboundNonce;
