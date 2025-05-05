@@ -5,7 +5,7 @@ import { SnowbridgeEnvironment } from "./environment"
 import { Context } from "./index"
 import {
     buildParachainERC20ReceivedXcmOnDestination,
-    DOT_LOCATION,
+    DOT_LOCATION, dotLocationOnKusamaAssetHubLocation,
     erc20Location,
 } from "./xcmBuilder"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
@@ -360,10 +360,11 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
             destinationFeeOverrides ?? {}
         )
 
-        paras[kusama.assetHubParaId] = para
+        const kusamaParas: ParachainMap = {}
+        kusamaParas[kusama.assetHubParaId] = para
 
         kusamaConfig = {
-            parachains: paras,
+            parachains: kusamaParas,
             assetHubParaId: kusama.assetHubParaId,
             bridgeHubParaId: kusama.bridgeHubParaId,
         }
@@ -631,7 +632,6 @@ export async function getLocationBalance(
         case "penpal-parachain":
         case "asset-hub-paseo":
         case "westmint":
-        case "statemine":
         case "statemint": {
             let accountData: any
             if (pnaAssetId) {
@@ -643,6 +643,13 @@ export async function getLocationBalance(
                     await provider.query.foreignAssets.account(location, account)
                 ).toPrimitive() as any
             }
+            return BigInt(accountData?.balance ?? 0n)
+        }
+        case "statemine": {
+            console.log("statemine DOT value at location", location);
+            let accountData = (
+                await provider.query.foreignAssets.account(location, account)
+            ).toPrimitive() as any
             return BigInt(accountData?.balance ?? 0n)
         }
         case "bifrost":
@@ -683,6 +690,9 @@ export function getDotBalance(
         case "westmint":
         case "statemint": {
             return getNativeBalance(provider, account)
+        }
+        case "statemine": {
+            return getLocationBalance(provider, specName, dotLocationOnKusamaAssetHubLocation(), account)
         }
         default:
             return getLocationBalance(provider, specName, DOT_LOCATION, account)
