@@ -92,6 +92,11 @@ library Functions {
     }
 
     function registerNativeToken(address token) internal {
+        // Validate that the token address is a contract
+        if (!token.isContract()) {
+            revert InvalidToken();
+        }
+        
         // NOTE: Explicitly allow a native token to be re-registered. This offers resiliency
         // in case a previous registration attempt of the same token failed on the remote side.
         // It means that registration can be retried.

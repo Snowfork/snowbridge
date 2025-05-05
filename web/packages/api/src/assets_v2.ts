@@ -612,19 +612,19 @@ export async function getLocationBalance(
     specName: string,
     location: any,
     account: string,
-    assetId?: any
+    pnaAssetId?: any
 ): Promise<bigint> {
     switch (specName) {
         case "basilisk":
         case "hydradx": {
-            const assetId = (
+            const paraAssetId = (
                 await provider.query.assetRegistry.locationAssets(location)
             ).toPrimitive()
-            if (!assetId) {
+            if (!paraAssetId) {
                 throw Error(`DOT not registered for spec ${specName}.`)
             }
             const accountData = (
-                await provider.query.tokens.accounts(account, assetId)
+                await provider.query.tokens.accounts(account, paraAssetId)
             ).toPrimitive() as any
             return BigInt(accountData?.free ?? 0n)
         }
@@ -633,9 +633,9 @@ export async function getLocationBalance(
         case "westmint":
         case "statemint": {
             let accountData: any
-            if (assetId) {
+            if (pnaAssetId) {
                 accountData = (
-                    await provider.query.assets.account(assetId, account)
+                    await provider.query.assets.account(pnaAssetId, account)
                 ).toPrimitive() as any
             } else {
                 accountData = (
@@ -647,14 +647,14 @@ export async function getLocationBalance(
         case "bifrost":
         case "bifrost_paseo":
         case "bifrost_polkadot": {
-            const assetId = (
+            const paraAssetId = (
                 await provider.query.assetRegistry.locationToCurrencyIds(location)
             ).toPrimitive()
-            if (!assetId) {
+            if (!paraAssetId) {
                 throw Error(`DOT not registered for spec ${specName}.`)
             }
             const accountData = (
-                await provider.query.tokens.accounts(account, assetId)
+                await provider.query.tokens.accounts(account, paraAssetId)
             ).toPrimitive() as any
             return BigInt(accountData?.free ?? 0n)
         }
@@ -665,19 +665,7 @@ export async function getLocationBalance(
         }
         case "moonriver":
         case "moonbeam": {
-            // For PNA, use assetId directly; for ENA, query assetId by Multilocation
-            if (!assetId) {
-                assetId = (
-                    await provider.query.assetManager.assetTypeId({ xcm: location })
-                ).toPrimitive()
-                if (!assetId) {
-                    throw Error(`Asset not registered for spec ${specName}.`)
-                }
-            }
-            const accountData = (
-                await provider.query.assets.account(assetId, account)
-            ).toPrimitive() as any
-            return BigInt(accountData?.balance ?? 0n)
+            return await getMoonbeamLocationBalance(pnaAssetId, location, provider, specName, account)
         }
         default:
             throw Error(`Cannot get DOT balance for spec ${specName}.`)
@@ -922,10 +910,10 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
                 const location = (value.toJSON() as any).xcm
 
                 const assetId = BigInt(key.args.at(0)?.toPrimitive() as any)
-                const xc20 = assetId.toString(16).toLowerCase()
+                const xc20 = toMoonbeamXC20(assetId)
 
                 if (location.parents === 1 && location.interior.here !== undefined) {
-                    xcDOT = "0xffffffff" + xc20
+                    xcDOT = xc20
                 }
                 const token = getTokenFromLocation(location, ethChainId)
                 if (!token) {
@@ -942,7 +930,36 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
                     symbol: String(metadata.symbol),
                     decimals: Number(metadata.decimals),
                     isSufficient: Boolean(asset.isSufficient),
-                    xc20: "0xffffffff" + xc20,
+                    xc20,
+                }
+            }
+            const foreignEntries = await provider.query.evmForeignAssets.assetsById.entries()
+            for (const [key, value] of foreignEntries) {
+                const location = (value.toJSON() as any)
+
+                const assetId = BigInt(key.args.at(0)?.toPrimitive() as any)
+                const xc20 = toMoonbeamXC20(assetId)
+
+                const token = getTokenFromLocation(location, ethChainId)
+                if (!token) {
+                    continue
+                }
+                // we found the asset in pallet-assets so we can skip evmForeignAssets.
+                if (assets[token]) {
+                    continue
+                }
+
+                const asset: any = (await provider.query.assets.asset(assetId)).toPrimitive()
+                const metadata: any = (await provider.query.assets.metadata(assetId)).toPrimitive()
+
+                assets[token] = {
+                    token,
+                    name: String(metadata.name),
+                    minimumBalance: BigInt(asset?.minBalance ?? 1),
+                    symbol: String(metadata.symbol),
+                    decimals: Number(metadata.decimals),
+                    isSufficient: Boolean(asset?.isSufficient ?? false),
+                    xc20,
                 }
             }
             break
@@ -1521,4 +1538,77 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
         default:
             return (_: Path) => true
     }
+}
+
+function toMoonbeamXC20(assetId: bigint) {
+    const xc20 = assetId.toString(16).toLowerCase()
+    return "0xffffffff" + xc20
+}
+
+const MOONBEAM_ERC20_ABI = [
+    "function name() view returns (string)",
+    "function symbol() view returns (string)",
+    "function decimals() view returns (uint8)",
+    "function balanceOf(address) view returns (uint256)"
+];
+const MOONBEAM_ERC20 = new ethers.Interface(MOONBEAM_ERC20_ABI)
+
+async function getMoonbeamLocationBalance(pnaAssetId: any, location: any, provider: ApiPromise, specName: string, account: string) {
+    // For PNA, use assetId directly; for ENA, query assetId by Multilocation
+    let paraAssetId = pnaAssetId
+    if (!paraAssetId) {
+        // Moonbeam only supports v3 xcm locations on asset Manager. Deep clone the location because
+        // we might modify it.
+        const assetManagerLocation = JSON.parse(JSON.stringify(location))
+        // In xcm v3 x1 is not an array, so we unwrap the array here.
+        if (location.interior.x1) {
+            assetManagerLocation.interior.x1 = assetManagerLocation.interior.x1[0]
+        }
+        paraAssetId = (
+            await provider.query.assetManager.assetTypeId({ xcm: assetManagerLocation })
+        ).toPrimitive()
+    }
+
+    // If we cannot find the asset in asset manager look in foreign assets.
+    if (!paraAssetId) {
+        // evmForeignAssets uses xcm v4 so we use the original location.
+        paraAssetId = ((
+            await provider.query.evmForeignAssets.assetsByLocation(location)
+        ).toPrimitive() as any)[0]
+        const xc20 = toMoonbeamXC20(BigInt(paraAssetId))
+        return await getMoonbeamEvmForeignAssetBalance(provider, xc20, account)
+    }
+
+    if (!paraAssetId) {
+        throw Error(`Asset not registered for spec ${specName}.`)
+    }
+
+    const accountData = (
+        await provider.query.assets.account(paraAssetId, account)
+    ).toPrimitive() as any
+    return BigInt(accountData?.balance ?? 0n)
+}
+
+async function getMoonbeamEvmForeignAssetBalance(api: ApiPromise, token: string, account: string) {
+    const method = "balanceOf"
+    const data = MOONBEAM_ERC20.encodeFunctionData(method, [account]);
+    const result = await api.call.ethereumRuntimeRPCApi.call(
+        "0x0000000000000000000000000000000000000000",
+        token,
+        data,
+        0n,
+        500_000n,
+        null,
+        null,
+        null,
+        false,
+        null
+    )
+    const resultJson = result.toPrimitive() as any
+    if (!(resultJson?.ok?.exitReason?.succeed === "Returned")) {
+        console.error(resultJson)
+        throw Error(`Could not fetch balance for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`)
+    }
+    const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value);
+    return BigInt(retVal[0]);
 }
