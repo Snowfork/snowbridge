@@ -646,7 +646,6 @@ export async function getLocationBalance(
             return BigInt(accountData?.balance ?? 0n)
         }
         case "statemine": {
-            console.log("statemine DOT value at location", location);
             let accountData = (
                 await provider.query.foreignAssets.account(location, account)
             ).toPrimitive() as any
