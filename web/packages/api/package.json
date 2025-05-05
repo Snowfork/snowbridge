@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/api",
-  "version": "0.1.50",
+  "version": "0.1.51",
   "description": "Snowbridge API client",
   "license": "Apache-2.0",
   "repository": {
@@ -27,9 +27,9 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@polkadot/api": "^15.7.2",
+    "@polkadot/api": "^15.9.1",
     "@polkadot/keyring": "^13.4.3",
-    "@polkadot/types": "^15.7.2",
+    "@polkadot/types": "^15.9.1",
     "@polkadot/util": "^13.4.3",
     "@polkadot/util-crypto": "^13.4.3",
     "@snowbridge/contract-types": "workspace:*",

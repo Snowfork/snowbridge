@@ -631,6 +631,7 @@ export async function getLocationBalance(
         case "penpal-parachain":
         case "asset-hub-paseo":
         case "westmint":
+        case "statemine":
         case "statemint": {
             let accountData: any
             if (pnaAssetId) {
