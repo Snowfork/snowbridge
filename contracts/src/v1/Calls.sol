@@ -69,10 +69,6 @@ library CallsV1 {
     /// @dev Registers a token (only native tokens at this time)
     /// @param token The ERC20 token address.
     function registerToken(address token) external {
-        if (!token.isContract()) {
-            revert InvalidToken();
-        }
-
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
         // NOTE: Explicitly allow a token to be re-registered. This offers resiliency

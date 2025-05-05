@@ -6,7 +6,7 @@ The system BridgeHub parachain hosts various bridges to other chains, including 
 
 ### InboundQueue
 
-This [pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/inbound-queue) is responsible for accepting inbound messages from Ethereum. This involves the following:
+This [pallet](https://github.com/paritytech/polkadot-sdk/tree/master/bridges/snowbridge/pallets/inbound-queue) is responsible for accepting inbound messages from Ethereum. This involves the following:
 
 1. Verifying that message[^1] was included in the finalized Ethereum execution chain as tracked by our ethereum light client.
 2. Converting the message to an [XCM](https://wiki.polkadot.network/docs/learn-xcm) script.
@@ -14,28 +14,28 @@ This [pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets
 
 ### OutboundQueue
 
-This [pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/outbound-queue) is responsible for accepting outbound XCM messages to Ethereum. This involves the following:
+This [pallet](https://github.com/paritytech/polkadot-sdk/tree/master/bridges/snowbridge/pallets/outbound-queue) is responsible for accepting outbound XCM messages to Ethereum. This involves the following:
 
-1. Buffering the message in the [MessageQueue](https://github.com/paritytech/substrate/tree/master/frame/message-queue) pallet until as such as there is enough free weight in a future block to be able to process it.
+1. Buffering the message in the [MessageQueue](https://github.com/paritytech/polkadot-sdk/tree/master/substrate/frame/message-queue) pallet until as such as there is enough free weight in a future block to be able to process it.
 2. When an XCM message is processed, it is assigned a nonce (sequence number), and converted to a simpler command which is more efficient to execute.
-3. At the end of every block, a merkle root of all processed messages is generated and inserted into the parachain header as a [digest item](https://github.com/paritytech/substrate/blob/46136f2a18780d71542ae615565703da754b5348/primitives/runtime/src/generic/digest.rs#L100).
+3. At the end of every block, a merkle root of all processed messages is generated and inserted into the parachain header as a [digest item](https://github.com/paritytech/polkadot-sdk/blob/master/substrate/primitives/runtime/src/generic/digest.rs#L102).
 4. Processed messages are also temporarily held in storage so that they can be queried by offchain message relayers.
 
 The merkle root in (3) is the commitment that needs to be verified on the Ethereum side.
 
 ### EthereumBeaconClient
 
-This [pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/ethereum-beacon-client) implements a light client that tracks Ethereum's [Beacon Chain](https://ethereum.org/en/roadmap/beacon-chain/). It is used to verify inbound messages submitted to the [InboundQueue](components.md#inboundqueue) pallet.
+This [pallet](https://github.com/paritytech/polkadot-sdk/tree/master/bridges/snowbridge/pallets/ethereum-client) implements a light client that tracks Ethereum's [Beacon Chain](https://ethereum.org/en/roadmap/beacon-chain/). It is used to verify inbound messages submitted to the [InboundQueue](components.md#inboundqueue) pallet.
 
 ### System
 
-This [pallet](https://github.com/Snowfork/snowbridge/tree/main/parachain/pallets/system) has overall responsibility for the bridge as well as providing basic system functionality for bridge operations.
+This [pallet](https://github.com/paritytech/polkadot-sdk/tree/master/bridges/snowbridge/pallets/system) has overall responsibility for the bridge as well as providing basic system functionality for bridge operations.
 
 ## Ethereum
 
 ### Gateway
 
-The Ethereum side of the bridge is organised around a central gateway [contract](../../contracts/src/interfaces/IGateway.sol), responsible for the following:
+The Ethereum side of the bridge is organised around a central gateway contract ([IGatewayV1](../../contracts/src/v1/IGateway.sol), [IGatewayV2](../../contracts/src/v2/IGateway.sol), [IGatewayBase](../../contracts/src/interfaces/IGatewayBase.sol)), responsible for the following:
 
 * Receiving, verifying, and dispatching inbound messages from Polkadot
 * Accepting outbound messages for delivery to Polkadot

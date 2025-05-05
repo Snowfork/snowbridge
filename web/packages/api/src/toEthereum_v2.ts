@@ -438,7 +438,6 @@ export async function getDeliveryFee(
             1000
         )
     }
-    console.log("xcm forwarded to BH:", forwardedXcm.toHuman())
 
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n

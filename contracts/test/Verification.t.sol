@@ -118,7 +118,7 @@ contract VerificationTest is Test {
         // Digest item at index 2 contains the commitment
         assert(
             v.isCommitmentInHeaderDigest(
-                0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c, header
+                0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c, header, false
             )
         );
 
@@ -126,8 +126,60 @@ contract VerificationTest is Test {
         header.digestItems[2] = header.digestItems[3];
         assert(
             !v.isCommitmentInHeaderDigest(
-                0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c, header
+                0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c, header, false
             )
         );
+    }
+    
+    function testIsCommitmentInHeaderDigestVersionedItems() public {
+        // Test the V1 vs V2 digest item validation logic
+        
+        // Create a test commitment
+        bytes32 testCommitment = 0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c;
+        
+        // Create a V1 digest item
+        Verification.DigestItem[] memory v1DigestItems = new Verification.DigestItem[](1);
+        v1DigestItems[0] = Verification.DigestItem({
+            kind: 0, // DIGEST_ITEM_OTHER
+            consensusEngineID: 0x00000000,
+            data: hex"00b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c" // DIGEST_ITEM_OTHER_SNOWBRIDGE (0x00) + commitment
+        });
+        
+        // Create a V2 digest item
+        Verification.DigestItem[] memory v2DigestItems = new Verification.DigestItem[](1);
+        v2DigestItems[0] = Verification.DigestItem({
+            kind: 0, // DIGEST_ITEM_OTHER
+            consensusEngineID: 0x00000000,
+            data: hex"01b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c" // DIGEST_ITEM_OTHER_SNOWBRIDGE_V2 (0x01) + commitment
+        });
+        
+        // Create headers with respective digest items
+        Verification.ParachainHeader memory v1Header = Verification.ParachainHeader({
+            parentHash: 0x1df01d40273b074708115135fd7f76801ad4e4f1266a771a037962ee3a03259d,
+            number: 866_538,
+            stateRoot: 0x7b2d59d4de7c629b55a9bc9b76d932616f2011a26f09b52da36e070d6a7eee0d,
+            extrinsicsRoot: 0x9d1c5d256003f68dda03dc33810a88a61f73791dc7ff92b04232a6b1b4f4b3c0,
+            digestItems: v1DigestItems
+        });
+        
+        Verification.ParachainHeader memory v2Header = Verification.ParachainHeader({
+            parentHash: 0x1df01d40273b074708115135fd7f76801ad4e4f1266a771a037962ee3a03259d,
+            number: 866_538,
+            stateRoot: 0x7b2d59d4de7c629b55a9bc9b76d932616f2011a26f09b52da36e070d6a7eee0d,
+            extrinsicsRoot: 0x9d1c5d256003f68dda03dc33810a88a61f73791dc7ff92b04232a6b1b4f4b3c0,
+            digestItems: v2DigestItems
+        });
+        
+        // Testing V1 protocol with V1 header (should match)
+        assertTrue(v.isCommitmentInHeaderDigest(testCommitment, v1Header, false));
+        
+        // Testing V1 protocol with V2 header (should NOT match)
+        assertFalse(v.isCommitmentInHeaderDigest(testCommitment, v2Header, false));
+        
+        // Testing V2 protocol with V2 header (should match)
+        assertTrue(v.isCommitmentInHeaderDigest(testCommitment, v2Header, true));
+        
+        // Testing V2 protocol with V1 header (should NOT match)
+        assertFalse(v.isCommitmentInHeaderDigest(testCommitment, v1Header, true));
     }
 }
