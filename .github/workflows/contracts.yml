@@ -2,19 +2,13 @@ name: contracts
 
 on:
   push:
-    paths:
-      - "contracts/**"
-      - "!contracts/**/README.md"
     branches:
-      - main
+      - solochain
   pull_request:
-    paths:
-      - "contracts/**"
-      - "!contracts/**/README.md"
 
 jobs:
   build:
-    runs-on: snowbridge-runner
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v1
@@ -25,13 +19,3 @@ jobs:
       - name: Test
         working-directory: contracts
         run: forge test
-      - name: Coverage
-        working-directory: contracts
-        run: forge coverage --report=lcov
-      - name: Upload coverage reports to Codecov with GitHub Action
-        uses: codecov/codecov-action@v5
-        with:
-          working-directory: contracts
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: lcov.info
-          flags: solidity
