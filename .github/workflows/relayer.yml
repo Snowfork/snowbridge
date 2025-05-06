@@ -11,29 +11,59 @@ on:
       - "relayer/**"
 
 jobs:
-  build:
-    runs-on: snowbridge-runner
+  
+  build-and-test:
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v1
-        with:
-          fetch-depth: 2
+      - uses: actions/checkout@v4
 
-      - name: setup go
-        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
           go-version: '^1.23.0'
 
-      - name: check go version
-        run: go version
-
-      - name: install dependencies
+      - name: Install dependencies
         working-directory: relayer
         run: go mod download
 
-      - name: Add gopath to bin
-        run: echo "$HOME/go/bin" >> $GITHUB_PATH
+      - name: Lint
+        working-directory: relayer
+        run: go vet ./...
 
-      - name: test
+      - name: Build
+        working-directory: relayer
+        run: go build -v -o relayer ./...
+
+      - name: Upload relayer binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: relayer-binary
+          path: relayer/relayer
+
+      - name: Test
         working-directory: relayer
         run: go test -v ./...
+
+  docker-build-and-test:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download relayer binary
+        uses: actions/download-artifact@v4
+        with:
+          name: relayer-binary
+          path: relayer/
+
+      - name: Make relayer binary executable
+        run: chmod +x relayer/relayer
+
+      - name: Run build-local-docker.sh
+        working-directory: relayer
+        run: ./build-local-docker.sh
+
+      - name: Test Docker image with --help
+        run: docker run --rm snowbridge-relayer:local --help
