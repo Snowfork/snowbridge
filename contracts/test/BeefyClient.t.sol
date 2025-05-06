@@ -792,10 +792,10 @@ contract BeefyClientTest is Test {
     function testFuzzComputeValidatorSetQuorum(uint128 validatorSetLen) public {
         // There must be atleast 1 validator.
         vm.assume(validatorSetLen > 0);
-        // Calculator 2/3 with flooring due to integer division.
-        uint256 twoThirdsMajority = uint256(validatorSetLen) * 2 / 3;
+        // Calculator 1/3 with flooring due to integer division.
+        uint256 oneThirdMajority = uint256(validatorSetLen) / 3;
         uint256 result = beefyClient.computeQuorum_public(validatorSetLen);
-        assertGt(result, twoThirdsMajority, "result is greater than 2/3rds");
+        assertGt(result, oneThirdMajority, "result is greater than 1/3rd");
         assertLe(result, validatorSetLen, "result is less than validator set length.");
         assertGt(result, 0, "result is greater than zero.");
     }

@@ -579,11 +579,11 @@ contract BeefyClient {
     }
 
     /**
-     * @dev Calculates 2/3 majority required for quorum for a given number of validators.
+     * @dev We have 2/3rd +1 honesty assumption on polkadot validators. Hence it is sufficient to check 1/3rd +1 validator signatures to ensure at least 1 honest validator signed the payload.
      * @param numValidators The number of validators in the validator set.
      */
     function computeQuorum(uint256 numValidators) internal pure returns (uint256) {
-        return numValidators - (numValidators - 1) / 3;
+        return numValidators / 3 + 1;
     }
 
     /**
