@@ -857,6 +857,7 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
         case "asset-hub-paseo":
         case "westmint":
         case "penpal-parachain":
+        case "statemine":
         case "statemint": {
             const entries = await provider.query.foreignAssets.asset.entries()
             for (const [key, value] of entries) {
