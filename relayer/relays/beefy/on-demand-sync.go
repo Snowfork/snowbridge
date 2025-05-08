@@ -158,15 +158,13 @@ func (relay *OnDemandRelay) syncV1(ctx context.Context) error {
 }
 
 func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, paraNonce uint64) {
-	waitingTime := 0
 	for {
 		ethNonce, err := relay.fetchEthereumNonce(ctx)
 		if err != nil {
 			log.WithError(err).Error("fetch latest ethereum nonce")
 			return
 		}
-		waitingTime++
-		if ethNonce >= paraNonce || waitingTime > 10 {
+		if ethNonce >= paraNonce {
 			return
 		}
 		time.Sleep(time.Second * 10)
@@ -366,7 +364,6 @@ func (relay *OnDemandRelay) syncV2(ctx context.Context) error {
 }
 
 func (relay *OnDemandRelay) waitUntilV2MessagesSynced(ctx context.Context, paraNonce uint64) {
-	waitingTime := 0
 	for {
 		log.Info(fmt.Sprintf("waiting for nonce %d picked by parachain relayer", paraNonce))
 		relayed, err := relay.isV2NonceRelayed(ctx, paraNonce)
@@ -374,9 +371,8 @@ func (relay *OnDemandRelay) waitUntilV2MessagesSynced(ctx context.Context, paraN
 			log.WithError(err).Error("check nonce relayed")
 			return
 		}
-		waitingTime++
 
-		if relayed || waitingTime > 10 {
+		if relayed {
 			break
 		}
 		time.Sleep(10 * time.Second)
