@@ -177,8 +177,6 @@ export type TransferLocation = {
 
 export const ETHER_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000"
 
-export const ASSET_HUB_PARAID = 1000
-
 export async function buildRegistry(options: RegistryOptions): Promise<AssetRegistry> {
     const {
         environment,
@@ -266,7 +264,8 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         bridgeHub as ApiPromise,
         assethub,
         ethereum,
-        gatewayAddress
+        gatewayAddress,
+        assetHubParaId
     )
     const assetOverrides = { ...options.assetOverrides, ...pnaOverrides }
 
@@ -1473,7 +1472,8 @@ async function indexPNAs(
     bridgehub: ApiPromise,
     assethub: ApiPromise,
     ethereum: AbstractProvider,
-    gatewayAddress: string
+    gatewayAddress: string,
+    assetHubParaId: number,
 ): Promise<AssetOverrideMap> {
     let pnas: Asset[] = []
     let gateway = IGateway__factory.connect(gatewayAddress, ethereum)
@@ -1484,7 +1484,7 @@ async function indexPNAs(
             console.warn(`Could not convert ${key.toHuman()} to location`)
             continue
         }
-        const locationOnAH: any = bridgeableLocationOnAssetHub(location)
+        const locationOnAH: any = bridgeableLocationOnAssetHub(location, assetHubParaId)
         if (!locationOnAH) {
             console.warn(`Location ${JSON.stringify(location)} is not bridgeable on assethub`)
             continue
@@ -1528,13 +1528,13 @@ async function indexPNAs(
         pnas.push(assetInfo)
     }
     let assetOverrides: any = {}
-    assetOverrides[ASSET_HUB_PARAID.toString()] = pnas
+    assetOverrides[assetHubParaId.toString()] = pnas
     return assetOverrides
 }
 
 // Currently, the bridgeable assets are limited to KSM, DOT, native assets on AH
 // and TEER
-function bridgeableLocationOnAssetHub(location: any): any {
+function bridgeableLocationOnAssetHub(location: any, assetHubParaId: number): any {
     if (location.parents != 1) {
         return
     }
@@ -1564,7 +1564,7 @@ function bridgeableLocationOnAssetHub(location: any): any {
     else if (
         location.interior.x4 &&
         location.interior.x4[0]?.globalConsensus?.polkadot !== undefined &&
-        location.interior.x4[1]?.parachain == ASSET_HUB_PARAID
+        location.interior.x4[1]?.parachain == assetHubParaId
     ) {
         return {
             parents: 0,
