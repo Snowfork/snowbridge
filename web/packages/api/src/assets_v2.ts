@@ -1359,6 +1359,15 @@ function addOverrides(envName: string, result: RegistryOptions) {
 
 function defaultPathFilter(envName: string): (_: Path) => boolean {
     switch (envName) {
+        case "westend_sepolia": {
+            return (path: Path) => {
+                // Frequency
+                if(path.asset.toLocaleUpperCase() === "0x72c610e05eaafcdf1fa7a2da15374ee90edb1620") {
+                    return false
+                }
+                return true
+            }
+        }
         case "paseo_sepolia":
             return (path: Path) => {
                 // Disallow MUSE to any location but 3369
@@ -1596,18 +1605,18 @@ function bridgeableLocationOnAssetHub(location: any, assetHubParaId: number): an
             },
         }
     }
-    // Others from 3rd Parachains, only TEER for now
+    // Reanchor all parachain terminal. TEER and Frequency
     else if (
         location.interior.x2 &&
         location.interior.x2[0]?.globalConsensus?.polkadot !== undefined &&
-        location.interior.x2[1]?.parachain == 2039
+        location.interior.x2[1]?.parachain != undefined
     ) {
         return {
             parents: 1,
             interior: {
                 x1: [
                     {
-                        parachain: 2039,
+                        parachain: location.interior.x2[1]?.parachain,
                     },
                 ],
             },
