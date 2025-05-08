@@ -539,7 +539,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 },
             ],
             GRAPHQL_API_URL:
-                "https://snowbridge.squids.live/snowbridge-subsquid-polkadot@v1/api/graphql",
+                "https://snowbridge.squids.live/snowbridge-subsquid-polkadot:production/api/graphql",
         },
     },
     westend_sepolia: {
