@@ -233,42 +233,71 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         }
     }
 
+    // Connect to all substrate parachains.
     const providers: {
         [paraIdKey: string]: { parachainId: number; provider: ApiPromise; managed: boolean }
     } = {}
-    for (const { parachainId, provider, managed } of await Promise.all(
-        parachains.map(async (parachain) => {
-            let provider: ApiPromise
-            let managed = false
-            if (typeof parachain === "string") {
-                provider = await ApiPromise.create({
-                    noInitWarn: true,
-                    provider: parachain.startsWith("http")
-                        ? new HttpProvider(parachain)
-                        : new WsProvider(parachain),
-                })
-                managed = true
-            } else {
-                provider = parachain
-            }
-            const parachainId = await getParachainId(provider)
-            return { parachainId, provider, managed }
-        })
-    )) {
-        providers[parachainId.toString()] = { parachainId, provider, managed }
+    {
+        for (const { parachainId, provider, managed } of await Promise.all(
+            parachains.map(async (parachain) => {
+                let provider: ApiPromise
+                let managed = false
+                if (typeof parachain === "string") {
+                    provider = await ApiPromise.create({
+                        noInitWarn: true,
+                        provider: parachain.startsWith("http")
+                            ? new HttpProvider(parachain)
+                            : new WsProvider(parachain),
+                    })
+                    managed = true
+                } else {
+                    provider = parachain
+                }
+                const parachainId = await getParachainId(provider)
+                return { parachainId, provider, managed }
+            })
+        )) {
+            providers[parachainId.toString()] = { parachainId, provider, managed }
+        }
+        if (!(assetHubParaId.toString() in providers)) {
+            throw Error(
+                `Could not resolve asset hub para id ${assetHubParaId} in the list of parachains provided.`
+            )
+        }
     }
 
-    const assethub = providers[assetHubParaId].provider
-    const ethereum = ethchains[0] as AbstractProvider
+    // Connect to all eth connections
+    const ethProviders: { [chainId: string]: { chainId: number; provider: AbstractProvider; managed: boolean, name: string } } = {}
+    {
+        for (const result of await Promise.all(ethchains.map(async ethChain => {
+            let provider: AbstractProvider
+            let managed = false
+            if (typeof ethChain === "string") {
+                provider = ethers.getDefaultProvider(ethChain)
+                managed = true
+            } else {
+                provider = ethChain
+            }
+            const network = await provider.getNetwork()
+            return { chainId: Number(network.chainId), provider, managed, name: network.name }
+        }))) {
+            ethProviders[result.chainId.toString()] = result
+        }
+        if (!(ethChainId.toString() in ethProviders)) {
+            throw Error(`Cannot find ethereum chain ${ethChainId} in the list of ethereum chains.`)
+        }
+    }
+
     const pnaOverrides = await indexPNAs(
         bridgeHub as ApiPromise,
-        assethub,
-        ethereum,
+        providers[assetHubParaId].provider,
+        ethProviders[ethChainId].provider,
         gatewayAddress,
         assetHubParaId
     )
     const assetOverrides = { ...options.assetOverrides, ...pnaOverrides }
 
+    // Index parachains
     const paras: ParachainMap = {}
     for (const { parachainId, para } of await Promise.all(
         Object.keys(providers).map(async (parachainIdKey) => {
@@ -288,48 +317,36 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         paras[parachainId.toString()] = para
     }
 
-    await Promise.all(
-        Object.keys(providers)
-            .filter((parachainKey) => providers[parachainKey].managed)
-            .map(async (parachainKey) => await providers[parachainKey].provider.disconnect())
-    )
-
-    if (!(assetHubParaId.toString() in paras)) {
-        throw Error(
-            `Could not resolve asset hub para id ${assetHubParaId} in the list of parachains provided.`
-        )
-    }
-
+    // Index Ethereum chain
     const ethChains: { [chainId: string]: EthereumChain } = {}
     for (const ethChainInfo of await Promise.all(
-        ethchains.map(async (ethChain) => {
-            let provider: AbstractProvider
-            if (typeof ethChain === "string") {
-                provider = ethers.getDefaultProvider(ethChain)
-            } else {
-                provider = ethChain
-            }
-            const ethChainInfo = await indexEthChain(
-                provider,
+        Object.keys(ethProviders).map(async (ethChainKey) => {
+            return indexEthChain(
+                ethProviders[ethChainKey].provider,
+                ethProviders[ethChainKey].chainId,
+                ethProviders[ethChainKey].name,
                 ethChainId,
                 gatewayAddress,
                 assetHubParaId,
                 paras,
                 precompiles ?? {}
             )
-
-            if (typeof ethChain === "string") {
-                provider.destroy()
-            }
-            return ethChainInfo
         })
     )) {
         ethChains[ethChainInfo.chainId.toString()] = ethChainInfo
     }
 
-    if (!(ethChainId in ethChains)) {
-        throw Error(`Cannot find ethereum chain ${ethChainId} in the list of ethereum chains.`)
-    }
+    // Dispose of all substrate connections
+    await Promise.all(
+        Object.keys(providers)
+            .filter((parachainKey) => providers[parachainKey].managed)
+            .map(async (parachainKey) => await providers[parachainKey].provider.disconnect())
+    )
+
+    // Dispose all eth connections
+    Object.keys(ethProviders)
+        .filter((parachainKey) => ethProviders[parachainKey].managed)
+        .forEach((parachainKey) => ethProviders[parachainKey].provider.destroy())
 
     return {
         environment,
@@ -1010,17 +1027,16 @@ async function indexParachain(
 
 async function indexEthChain(
     provider: AbstractProvider,
+    networkChainId: number,
+    networkName: string,
     ethChainId: number,
     gatewayAddress: string,
     assetHubParaId: number,
     parachains: ParachainMap,
     precompiles: PrecompileMap
 ): Promise<EthereumChain> {
-    const network = await provider.getNetwork()
-    const chainId = Number(network.chainId)
-    const id = network.name !== "unknown" ? network.name : undefined
-
-    if (chainId == ethChainId) {
+    const id = networkName !== "unknown" ? networkName : undefined
+    if (networkChainId == ethChainId) {
         // Asset Hub and get meta data
         const assetHub = parachains[assetHubParaId.toString()]
         const gateway = IGateway__factory.connect(gatewayAddress, provider)
@@ -1043,25 +1059,25 @@ async function indexEthChain(
         }
         if ((await provider.getCode(gatewayAddress)) === undefined) {
             throw Error(
-                `Could not fetch code for gatway address ${gatewayAddress} on ethereum chain ${chainId}.`
+                `Could not fetch code for gatway address ${gatewayAddress} on ethereum chain ${networkChainId}.`
             )
         }
         return {
-            chainId,
+            chainId: networkChainId,
             assets,
-            id: id ?? `chain_${chainId}`,
+            id: id ?? `chain_${networkChainId}`,
         }
     } else {
         let evmParachainChain: Parachain | undefined
         for (const paraId in parachains) {
             const parachain = parachains[paraId]
-            if (parachain.info.evmChainId === chainId) {
+            if (parachain.info.evmChainId === networkChainId) {
                 evmParachainChain = parachain
                 break
             }
         }
         if (!evmParachainChain) {
-            throw Error(`Could not find evm chain ${chainId} in the list of parachains.`)
+            throw Error(`Could not find evm chain ${networkChainId} in the list of parachains.`)
         }
         const xcTokenMap: XC20TokenMap = {}
         const assets: ERC20MetadataMap = {}
@@ -1077,17 +1093,17 @@ async function indexEthChain(
         const paraId = evmParachainChain.parachainId.toString()
         if (!(paraId in precompiles)) {
             throw Error(
-                `No precompile configured for parachain ${paraId} (ethereum chain ${chainId}).`
+                `No precompile configured for parachain ${paraId} (ethereum chain ${networkChainId}).`
             )
         }
         const precompile = precompiles[paraId]
         if ((await provider.getCode(precompile)) === undefined) {
             throw Error(
-                `Could not fetch code for ${precompile} on parachain ${paraId} (ethereum chain ${chainId}).`
+                `Could not fetch code for ${precompile} on parachain ${paraId} (ethereum chain ${networkChainId}).`
             )
         }
         if (!evmParachainChain.xcDOT) {
-            throw Error(`Could not DOT XC20 address for evm chain ${chainId}.`)
+            throw Error(`Could not DOT XC20 address for evm chain ${networkChainId}.`)
         }
         const xc20DOTAsset: ERC20Metadata = await assetErc20Metadata(
             provider,
@@ -1096,7 +1112,7 @@ async function indexEthChain(
         assets[evmParachainChain.xcDOT] = xc20DOTAsset
 
         return {
-            chainId,
+            chainId: networkChainId,
             evmParachainId: evmParachainChain.parachainId,
             assets,
             precompile,
