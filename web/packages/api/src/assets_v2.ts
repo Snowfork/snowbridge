@@ -1362,7 +1362,7 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
         case "westend_sepolia": {
             return (path: Path) => {
                 // Frequency
-                if (path.asset.toLocaleUpperCase() === "0x72c610e05eaafcdf1fa7a2da15374ee90edb1620") {
+                if (path.asset === "0x72c610e05eaafcdf1fa7a2da15374ee90edb1620") {
                     return false
                 }
                 return true
