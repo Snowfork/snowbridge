@@ -1362,7 +1362,7 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
         case "westend_sepolia": {
             return (path: Path) => {
                 // Frequency
-                if(path.asset.toLocaleUpperCase() === "0x72c610e05eaafcdf1fa7a2da15374ee90edb1620") {
+                if (path.asset.toLocaleUpperCase() === "0x72c610e05eaafcdf1fa7a2da15374ee90edb1620") {
                     return false
                 }
                 return true
@@ -1605,10 +1605,27 @@ function bridgeableLocationOnAssetHub(location: any, assetHubParaId: number): an
             },
         }
     }
-    // Reanchor all parachain terminal. TEER and Frequency
+    // Others from 3rd Parachains, only TEER for now
     else if (
         location.interior.x2 &&
         location.interior.x2[0]?.globalConsensus?.polkadot !== undefined &&
+        location.interior.x2[1]?.parachain == 2039
+    ) {
+        return {
+            parents: 1,
+            interior: {
+                x1: [
+                    {
+                        parachain: 2039,
+                    },
+                ],
+            },
+        }
+    } 
+    // Parachains on westend.
+    else if (
+        location.interior.x2 &&
+        location.interior.x2[0]?.globalConsensus?.byGenesis === "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e" &&
         location.interior.x2[1]?.parachain != undefined
     ) {
         return {
