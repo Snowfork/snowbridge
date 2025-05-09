@@ -267,20 +267,29 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
     }
 
     // Connect to all eth connections
-    const ethProviders: { [chainId: string]: { chainId: number; provider: AbstractProvider; managed: boolean, name: string } } = {}
+    const ethProviders: {
+        [chainId: string]: {
+            chainId: number
+            provider: AbstractProvider
+            managed: boolean
+            name: string
+        }
+    } = {}
     {
-        for (const result of await Promise.all(ethchains.map(async ethChain => {
-            let provider: AbstractProvider
-            let managed = false
-            if (typeof ethChain === "string") {
-                provider = ethers.getDefaultProvider(ethChain)
-                managed = true
-            } else {
-                provider = ethChain
-            }
-            const network = await provider.getNetwork()
-            return { chainId: Number(network.chainId), provider, managed, name: network.name }
-        }))) {
+        for (const result of await Promise.all(
+            ethchains.map(async (ethChain) => {
+                let provider: AbstractProvider
+                let managed = false
+                if (typeof ethChain === "string") {
+                    provider = ethers.getDefaultProvider(ethChain)
+                    managed = true
+                } else {
+                    provider = ethChain
+                }
+                const network = await provider.getNetwork()
+                return { chainId: Number(network.chainId), provider, managed, name: network.name }
+            })
+        )) {
             ethProviders[result.chainId.toString()] = result
         }
         if (!(ethChainId.toString() in ethProviders)) {
@@ -289,6 +298,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
     }
 
     const pnaOverrides = await indexPNAs(
+        environment,
         bridgeHub as ApiPromise,
         providers[assetHubParaId].provider,
         ethProviders[ethChainId].provider,
@@ -1264,19 +1274,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
             break
         }
         case "westend_sepolia": {
-            result.assetOverrides = {
-                "1000": [
-                    {
-                        token: "0xF50fb50d65C8C1f6c72E4D8397c984933AfC8F7e".toLowerCase(),
-                        name: "WND",
-                        minimumBalance: 1n,
-                        symbol: "WND",
-                        decimals: 18,
-                        isSufficient: true,
-                        location: DOT_LOCATION,
-                    },
-                ],
-            }
+            result.assetOverrides = {}
             break
         }
         case "local_e2e": {
@@ -1494,11 +1492,12 @@ async function getMoonbeamEvmForeignAssetBalance(api: ApiPromise, token: string,
 }
 
 async function indexPNAs(
+    environment: string,
     bridgehub: ApiPromise,
     assethub: ApiPromise,
     ethereum: AbstractProvider,
     gatewayAddress: string,
-    assetHubParaId: number,
+    assetHubParaId: number
 ): Promise<AssetOverrideMap> {
     let pnas: Asset[] = []
     let gateway = IGateway__factory.connect(gatewayAddress, ethereum)
@@ -1509,7 +1508,7 @@ async function indexPNAs(
             console.warn(`Could not convert ${key.toHuman()} to location`)
             continue
         }
-        const locationOnAH: any = bridgeableLocationOnAssetHub(location, assetHubParaId)
+        const locationOnAH: any = bridgeablePNAsOnAH(environment, location, assetHubParaId)
         if (!locationOnAH) {
             console.warn(`Location ${JSON.stringify(location)} is not bridgeable on assethub`)
             continue
@@ -1557,9 +1556,11 @@ async function indexPNAs(
     return assetOverrides
 }
 
+export const WESTEND_GENESIS = "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
+
 // Currently, the bridgeable assets are limited to KSM, DOT, native assets on AH
 // and TEER
-function bridgeableLocationOnAssetHub(location: any, assetHubParaId: number): any {
+function bridgeablePNAsOnAH(environment: string, location: any, assetHubParaId: number): any {
     if (location.parents != 1) {
         return
     }
@@ -1621,22 +1622,31 @@ function bridgeableLocationOnAssetHub(location: any, assetHubParaId: number): an
                 ],
             },
         }
-    } 
-    // Parachains on westend.
-    else if (
-        location.interior.x2 &&
-        location.interior.x2[0]?.globalConsensus?.byGenesis === "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e" &&
-        location.interior.x2[1]?.parachain != undefined
-    ) {
-        return {
-            parents: 1,
-            interior: {
-                x1: [
-                    {
-                        parachain: location.interior.x2[1]?.parachain,
+    }
+    // Add assets for Westend
+    switch (environment) {
+        case "westend_sepolia": {
+            if (
+                location.interior.x1 &&
+                location.interior.x1[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS
+            ) {
+                return DOT_LOCATION
+            } else if (
+                location.interior.x2 &&
+                location.interior.x2[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS &&
+                location.interior.x2[1]?.parachain != undefined
+            ) {
+                return {
+                    parents: 1,
+                    interior: {
+                        x1: [
+                            {
+                                parachain: location.interior.x2[1]?.parachain,
+                            },
+                        ],
                     },
-                ],
-            },
+                }
+            }
         }
     }
 }
