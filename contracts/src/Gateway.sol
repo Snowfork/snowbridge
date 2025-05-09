@@ -428,9 +428,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             revert IGatewayBase.InvalidProof();
         }
 
-        // Dispatch the message payload
+        // Dispatch the message payload - now returns whether all commands succeeded
         bool success = v2_dispatch(message);
 
+        // Emit the event with a success value of:
+        // 1 = all commands succeeded, 0 = some commands failed
         emit IGatewayV2.InboundMessageDispatched(
             message.nonce, message.topic, success, rewardAddress
         );
@@ -509,56 +511,67 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
      * APIv2 Internal functions
      */
 
-    // Dispatch all the commands within the batch of commands in the message payload. If a single
-    // command fails, dispatches of subsequent commands are aborted.
+    // Dispatch all the commands within the batch of commands in the message payload. Each command is processed
+    // independently, and failures emits event CommandFailed without stopping execution of subsequent commands.
     function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {
+        bool allCommandsSucceeded = true;
+
         for (uint256 i = 0; i < message.commands.length; i++) {
             // check that there is enough gas available to forward to the command handler
             if (gasleft() * 63 / 64 < message.commands[i].gas + DISPATCH_OVERHEAD_GAS_V2) {
                 revert IGatewayV2.InsufficientGasLimit();
             }
+
+            bool commandSucceeded = true;
+
             if (message.commands[i].kind == CommandKind.Upgrade) {
                 try Gateway(this).v2_handleUpgrade{gas: message.commands[i].gas}(
                     message.commands[i].payload
                 ) {} catch {
-                    return false;
+                    commandSucceeded = false;
                 }
             } else if (message.commands[i].kind == CommandKind.SetOperatingMode) {
                 try Gateway(this).v2_handleSetOperatingMode{gas: message.commands[i].gas}(
                     message.commands[i].payload
                 ) {} catch {
-                    return false;
+                    commandSucceeded = false;
                 }
             } else if (message.commands[i].kind == CommandKind.UnlockNativeToken) {
                 try Gateway(this).v2_handleUnlockNativeToken{gas: message.commands[i].gas}(
                     message.commands[i].payload
                 ) {} catch {
-                    return false;
+                    commandSucceeded = false;
                 }
             } else if (message.commands[i].kind == CommandKind.RegisterForeignToken) {
                 try Gateway(this).v2_handleRegisterForeignToken{gas: message.commands[i].gas}(
                     message.commands[i].payload
                 ) {} catch {
-                    return false;
+                    commandSucceeded = false;
                 }
             } else if (message.commands[i].kind == CommandKind.MintForeignToken) {
                 try Gateway(this).v2_handleMintForeignToken{gas: message.commands[i].gas}(
                     message.commands[i].payload
                 ) {} catch {
-                    return false;
+                    commandSucceeded = false;
                 }
             } else if (message.commands[i].kind == CommandKind.CallContract) {
                 try Gateway(this).v2_handleCallContract{gas: message.commands[i].gas}(
                     message.origin, message.commands[i].payload
                 ) {} catch {
-                    return false;
+                    commandSucceeded = false;
                 }
             } else {
                 // Unknown command
-                return false;
+                commandSucceeded = false;
+            }
+
+            if (!commandSucceeded) {
+                emit IGatewayV2.CommandFailed(message.nonce, i);
+                allCommandsSucceeded = false;
             }
         }
-        return true;
+
+        return allCommandsSucceeded;
     }
 
     /**
