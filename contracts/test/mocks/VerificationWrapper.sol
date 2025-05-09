@@ -13,8 +13,9 @@ contract VerificationWrapper {
 
     function isCommitmentInHeaderDigest(
         bytes32 commitment,
-        Verification.ParachainHeader calldata header
+        Verification.ParachainHeader calldata header,
+        bool isV2
     ) external pure returns (bool) {
-        return Verification.isCommitmentInHeaderDigest(commitment, header, false);
+        return Verification.isCommitmentInHeaderDigest(commitment, header, isV2);
     }
 }
