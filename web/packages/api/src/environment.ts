@@ -13,6 +13,12 @@ export type Config = {
     GRAPHQL_API_URL?: string
 }
 
+export type KusamaConfig = {
+    ASSET_HUB_PARAID: number
+    BRIDGE_HUB_PARAID: number
+    PARACHAINS: { [paraId: string]: string }
+}
+
 export type AddressType = "20byte" | "32byte" | "both"
 export type SourceType = "substrate" | "ethereum"
 export type Relayer = { name: string; account: string; type: SourceType; balance?: bigint }
@@ -40,6 +46,7 @@ export type TransferLocation = {
 
 export type SnowbridgeEnvironment = {
     config: Config
+    kusamaConfig?: KusamaConfig
     name: string
     ethChainId: number
     locations: TransferLocation[]
@@ -487,7 +494,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             BEACON_HTTP_API: "https://lodestar-mainnet.chainsafe.io",
             ETHEREUM_CHAINS: {
                 "1": (key) => `https://eth-mainnet.g.alchemy.com/v2/${key}`,
-                "1284": () => "https://rpc.api.moonbeam.network",
+                //"1284": () => "https://rpc.api.moonbeam.network",
             },
             RELAY_CHAIN_URL: "https://polkadot-rpc.dwellir.com",
             PARACHAINS: {
@@ -541,6 +548,14 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             GRAPHQL_API_URL:
                 "https://snowbridge.squids.live/snowbridge-subsquid-polkadot:production/api/graphql",
         },
+        kusamaConfig: {
+            ASSET_HUB_PARAID: 1000,
+            BRIDGE_HUB_PARAID: 1002,
+            PARACHAINS: {
+                "1000": "wss://asset-hub-kusama-rpc.dwellir.com",
+                "1002": "https://bridge-hub-kusama-rpc.dwellir.com",
+            }
+        }
     },
     westend_sepolia: {
         name: "westend_sepolia",

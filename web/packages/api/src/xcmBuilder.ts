@@ -22,6 +22,35 @@ export function parahchainLocation(paraId: number) {
     }
 }
 
+export function kusamaAssetHubLocation() {
+    return {
+        parents: 2,
+        interior: { x2: [
+            { GlobalConsensus: { Kusama: null } },
+            { parachain: 1000 } // TODO
+        ] },
+    }
+}
+
+export function polkadotAssetHubLocation() {
+    return {
+        parents: 2,
+        interior: { x2: [
+                { GlobalConsensus: { Polkadot: null } },
+                { parachain: 1000 } // TODO
+            ] },
+    }
+}
+
+export function dotLocationOnKusamaAssetHubLocation() {
+    return {
+        parents: 2,
+        interior: { x1: [
+                { GlobalConsensus: { Polkadot: null } },
+            ] },
+    }
+}
+
 export function erc20Location(ethChainId: number, tokenAddress: string) {
     if (tokenAddress === ETHER_TOKEN_ADDRESS) {
         return bridgeLocation(ethChainId)
@@ -331,6 +360,27 @@ export function buildParachainERC20ReceivedXcmOnAssetHub(
     })
 }
 
+function buildAssetHubXcmFromParachainKusama(
+    sourceAccount: string,
+    beneficiary: string,
+) {
+    return [
+        {
+            depositAsset: {
+                assets: {
+                    Wild: {
+                        AllCounted: 2,
+                    },
+                },
+                beneficiary: {
+                    parents: 0,
+                    interior: { x1: [{ AccountId32: { id: beneficiary } }] },
+                },
+            },
+        },
+    ]
+}
+
 function buildAssetHubXcmFromParachain(
     ethChainId: number,
     sourceAccount: string,
@@ -440,6 +490,19 @@ function buildAssetHubXcmFromParachain(
             setTopic: topic,
         },
     ]
+}
+
+export function buildAssetHubERC20TransferToKusama(
+    registry: Registry,
+    sourceAccount: string,
+    beneficiary: string,
+) {
+    return registry.createType("XcmVersionedXcm", {
+        v4: buildAssetHubXcmFromParachainKusama(
+            sourceAccount,
+            beneficiary,
+        ),
+    })
 }
 
 export function buildAssetHubERC20TransferFromParachain(
