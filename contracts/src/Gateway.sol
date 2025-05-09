@@ -428,11 +428,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             revert IGatewayBase.InvalidProof();
         }
 
-        // Dispatch the message payload - now returns whether all commands succeeded
+        // Dispatch the message payload. The boolean return indicates whether all commands succeeded.
         bool success = v2_dispatch(message);
 
-        // Emit the event with a success value of:
-        // 1 = all commands succeeded, 0 = some commands failed
+        // Emit the event with a success value "true" if all commands successfully executed, otherwise "false"
+        // if all or some of the commands failed.
         emit IGatewayV2.InboundMessageDispatched(
             message.nonce, message.topic, success, rewardAddress
         );
