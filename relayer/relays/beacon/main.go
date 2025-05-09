@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
-	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
@@ -18,12 +18,12 @@ import (
 
 type Relay struct {
 	config  *config.Config
-	keypair *sr25519.Keypair
+	keypair *signature.KeyringPair
 }
 
 func NewRelay(
 	config *config.Config,
-	keypair *sr25519.Keypair,
+	keypair *signature.KeyringPair,
 ) *Relay {
 	return &Relay{
 		config:  config,
@@ -35,7 +35,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	specSettings := r.config.Source.Beacon.Spec
 	log.WithField("spec", specSettings).Info("spec settings")
 
-	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
+	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair)
 
 	err := paraconn.ConnectWithHeartBeat(ctx, 30*time.Second)
 	if err != nil {

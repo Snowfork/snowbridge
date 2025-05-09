@@ -217,7 +217,6 @@ func (a *Attestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Offset (0) 'AggregationBits'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(a.AggregationBits)
 
 	// Field (1) 'Data'
 	if a.Data == nil {
@@ -256,7 +255,7 @@ func (a *Attestation) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o0 < 228 {
+	if o0 != 228 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -547,7 +546,6 @@ func (i *IndexedAttestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Offset (0) 'AttestationIndices'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(i.AttestationIndices) * 8
 
 	// Field (1) 'Data'
 	if i.Data == nil {
@@ -592,7 +590,7 @@ func (i *IndexedAttestation) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o0 < 228 {
+	if o0 != 228 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -1275,10 +1273,6 @@ func (a *AttesterSlashing) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Offset (1) 'Attestation2'
 	dst = ssz.WriteOffset(dst, offset)
-	if a.Attestation2 == nil {
-		a.Attestation2 = new(IndexedAttestation)
-	}
-	offset += a.Attestation2.SizeSSZ()
 
 	// Field (0) 'Attestation1'
 	if dst, err = a.Attestation1.MarshalSSZTo(dst); err != nil {
@@ -1309,7 +1303,7 @@ func (a *AttesterSlashing) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o0 < 8 {
+	if o0 != 8 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -1487,10 +1481,6 @@ func (t *TransactionsRootContainer) MarshalSSZTo(buf []byte) (dst []byte, err er
 
 	// Offset (0) 'Transactions'
 	dst = ssz.WriteOffset(dst, offset)
-	for ii := 0; ii < len(t.Transactions); ii++ {
-		offset += 4
-		offset += len(t.Transactions[ii])
-	}
 
 	// Field (0) 'Transactions'
 	if size := len(t.Transactions); size > 1048576 {
@@ -1531,7 +1521,7 @@ func (t *TransactionsRootContainer) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o0 < 4 {
+	if o0 != 4 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -2370,7 +2360,6 @@ func (w *WithdrawalsRootContainerMainnet) MarshalSSZTo(buf []byte) (dst []byte, 
 
 	// Offset (0) 'Withdrawals'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(w.Withdrawals) * 44
 
 	// Field (0) 'Withdrawals'
 	if size := len(w.Withdrawals); size > 16 {
@@ -2402,7 +2391,7 @@ func (w *WithdrawalsRootContainerMainnet) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o0 < 4 {
+	if o0 != 4 {
 		return ssz.ErrInvalidVariableOffset
 	}
 

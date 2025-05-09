@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
+	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/snowbridge/relayer/secrets"
 )
 
-func ResolvePrivateKey(privateKey, privateKeyFile, privateKeyID string) (*sr25519.Keypair, error) {
+func ResolvePrivateKey(privateKey, privateKeyFile, privateKeyID string) (*signature.KeyringPair, error) {
 	switch {
 	case privateKey != "":
 	case privateKeyFile != "":
@@ -29,10 +29,10 @@ func ResolvePrivateKey(privateKey, privateKeyFile, privateKeyID string) (*sr2551
 		return nil, fmt.Errorf("Unable to resolve a private key")
 	}
 
-	keypair, err := sr25519.NewKeypairFromSeed(privateKey, 42)
+	keypair, err := signature.NewEcdsaKeyringPair(privateKey)
 	if err != nil {
 		return nil, fmt.Errorf("parse private key: %w", err)
 	}
 
-	return keypair, nil
+	return &keypair, nil
 }

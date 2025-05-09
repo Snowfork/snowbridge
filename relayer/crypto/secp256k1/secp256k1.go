@@ -5,9 +5,12 @@ package secp256k1
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/snowbridge/relayer/crypto"
 
 	secp256k1 "github.com/ethereum/go-ethereum/crypto"
@@ -18,43 +21,31 @@ var _ crypto.Keypair = &Keypair{}
 const PrivateKeyLength = 32
 
 type Keypair struct {
-	public  *ecdsa.PublicKey
-	private *ecdsa.PrivateKey
+	keyringPair *signature.KeyringPair
 }
 
 func NewKeypairFromPrivateKey(priv []byte) (*Keypair, error) {
-	pk, err := secp256k1.ToECDSA(priv)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Keypair{
-		public:  pk.Public().(*ecdsa.PublicKey),
-		private: pk,
-	}, nil
+	privHex := hex.EncodeToString(priv)
+	return NewKeypairFromString(privHex)
 }
 
 // NewKeypairFromString parses a string for a hex private key. Must be at least
 // PrivateKeyLength long.
 func NewKeypairFromString(priv string) (*Keypair, error) {
-	pk, err := secp256k1.HexToECDSA(priv)
+	kp, err := signature.NewEcdsaKeyringPair(priv)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Keypair{
-		public:  pk.Public().(*ecdsa.PublicKey),
-		private: pk,
+		keyringPair: &kp,
 	}, nil
 }
 
-func NewKeypair(pk ecdsa.PrivateKey) *Keypair {
-	pub := pk.Public()
-
-	return &Keypair{
-		public:  pub.(*ecdsa.PublicKey),
-		private: &pk,
-	}
+func NewKeypair(pk ecdsa.PrivateKey) (*Keypair, error) {
+	privateKeyBytes := secp256k1.FromECDSA(&pk)
+	privateKeyHex := hexutil.Encode(privateKeyBytes)
+	return NewKeypairFromString(privateKeyHex)
 }
 
 func GenerateKeypair() (*Keypair, error) {
@@ -63,43 +54,49 @@ func GenerateKeypair() (*Keypair, error) {
 		return nil, err
 	}
 
-	return NewKeypair(*priv), nil
+	return NewKeypair(*priv)
 }
 
 // Encode dumps the private key as bytes
 func (kp *Keypair) Encode() []byte {
-	return secp256k1.FromECDSA(kp.private)
+	pureHexString := strings.TrimPrefix(kp.keyringPair.URI, "0x")
+	privateKeyBytes, _ := hex.DecodeString(pureHexString)
+	return privateKeyBytes
 }
 
 // Decode initializes the keypair using the input
 func (kp *Keypair) Decode(in []byte) error {
-	key, err := secp256k1.ToECDSA(in)
+	decodedKeypair, err := NewKeypairFromPrivateKey(in)
 	if err != nil {
 		return err
 	}
 
-	kp.public = key.Public().(*ecdsa.PublicKey)
-	kp.private = key
+	kp.keyringPair = decodedKeypair.keyringPair
 
 	return nil
 }
 
 // Address returns the Ethereum address format
 func (kp *Keypair) Address() string {
-	return secp256k1.PubkeyToAddress(*kp.public).String()
+	return kp.keyringPair.Address
 }
 
 // CommonAddress returns the Ethereum address in the common.Address Format
 func (kp *Keypair) CommonAddress() common.Address {
-	return secp256k1.PubkeyToAddress(*kp.public)
+	return common.HexToAddress(kp.Address())
 }
 
 // PublicKey returns the public key hex encoded
 func (kp *Keypair) PublicKey() string {
-	return hexutil.Encode(secp256k1.CompressPubkey(kp.public))
+	return hexutil.Encode(kp.keyringPair.PublicKey)
 }
 
 // PrivateKey returns the keypair's private key
 func (kp *Keypair) PrivateKey() *ecdsa.PrivateKey {
-	return kp.private
+	pk, _ := secp256k1.ToECDSA(kp.Encode())
+	return pk
+}
+
+func (kp *Keypair) AsKeyringPair() *signature.KeyringPair {
+	return kp.keyringPair
 }

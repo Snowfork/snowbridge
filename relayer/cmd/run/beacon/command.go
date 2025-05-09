@@ -70,9 +70,6 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	relay := beacon.NewRelay(&config, keypair)
-	if err != nil {
-		return err
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

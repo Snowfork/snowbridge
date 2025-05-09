@@ -15,11 +15,11 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
+	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
-	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
@@ -30,7 +30,7 @@ import (
 
 type Relay struct {
 	config          *Config
-	keypair         *sr25519.Keypair
+	keypair         *signature.KeyringPair
 	paraconn        *parachain.Connection
 	ethconn         *ethereum.Connection
 	gatewayContract *contracts.Gateway
@@ -43,7 +43,7 @@ type Relay struct {
 
 func NewRelay(
 	config *Config,
-	keypair *sr25519.Keypair,
+	keypair *signature.KeyringPair,
 ) *Relay {
 	return &Relay{
 		config:  config,
@@ -52,7 +52,7 @@ func NewRelay(
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
-	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
+	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair)
 	ethconn := ethereum.NewConnection(&r.config.Source.Ethereum, nil)
 
 	err := paraconn.ConnectWithHeartBeat(ctx, 30*time.Second)

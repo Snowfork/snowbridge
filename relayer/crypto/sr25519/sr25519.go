@@ -28,7 +28,7 @@ func GenerateKeypair(network uint8) (*Keypair, error) {
 }
 
 func NewKeypairFromSeed(seed string, network uint8) (*Keypair, error) {
-	kp, err := signature.KeyringPairFromSecret(seed, network)
+	kp, err := signature.NewSr25519KeyringPair(seed, network)
 	return &Keypair{&kp}, err
 }
 

@@ -73,9 +73,6 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	relay := execution.NewRelay(&config, keypair)
-	if err != nil {
-		return err
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

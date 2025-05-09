@@ -7,11 +7,11 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
-	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 
 	"github.com/snowfork/snowbridge/relayer/ofac"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
@@ -35,14 +35,14 @@ type Relay struct {
 	headerCache           *ethereum.HeaderCache
 }
 
-func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keypair) (*Relay, error) {
+func NewRelay(config *Config, ethKeypair *secp256k1.Keypair, substrateKeypair *signature.KeyringPair) (*Relay, error) {
 	log.Info("Creating worker")
 
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
 	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
 
-	ethereumConnWriter := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
-	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
+	ethereumConnWriter := ethereum.NewConnection(&config.Sink.Ethereum, ethKeypair)
+	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, ethKeypair)
 
 	ofacClient := ofac.New(config.OFAC.Enabled, config.OFAC.ApiKey)
 
@@ -69,7 +69,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 		tasks,
 	)
 
-	parachainWriterConn := parachain.NewConnection(config.Source.Parachain.Endpoint, keypair2.AsKeyringPair())
+	parachainWriterConn := parachain.NewConnection(config.Source.Parachain.Endpoint, substrateKeypair)
 
 	parachainWriter := parachain.NewParachainWriter(
 		parachainWriterConn,

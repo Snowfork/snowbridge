@@ -33,7 +33,7 @@ func NewExtrinsicPool(eg *errgroup.Group, conn *Connection, maxWatchedExtrinsics
 
 func (ep *ExtrinsicPool) WaitForSubmitAndWatch(
 	ctx context.Context,
-	ext *types.Extrinsic,
+	ext *types.EthExtrinsic,
 	onFinalized OnFinalized,
 ) error {
 	err := ep.sem.Acquire(ctx, 1)
@@ -41,7 +41,7 @@ func (ep *ExtrinsicPool) WaitForSubmitAndWatch(
 		return err
 	}
 
-	sub, err := ep.conn.api.RPC.Author.SubmitAndWatchExtrinsic(*ext)
+	sub, err := ep.conn.api.RPC.Author.SubmitAndWatchEthExtrinsic(*ext)
 	if err != nil {
 		ep.sem.Release(1)
 		return err
@@ -77,7 +77,7 @@ func (ep *ExtrinsicPool) WaitForSubmitAndWatch(
 	return nil
 }
 
-func nonce(ext *types.Extrinsic) uint64 {
+func nonce(ext *types.EthExtrinsic) uint64 {
 	nonce := big.Int(ext.Signature.Nonce)
 	return nonce.Uint64()
 }
