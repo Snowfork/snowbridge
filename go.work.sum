@@ -318,6 +318,8 @@ github.com/ffarall/go-substrate-rpc-client/v4 v4.1.3-ffarall h1:S5q9ixhIAdh9kJVA
 github.com/ffarall/go-substrate-rpc-client/v4 v4.1.3-ffarall/go.mod h1:lxwliDuUGMGx7s22GCm49DGO+A4IpF1Qj2duVC3bsjk=
 github.com/ffarall/go-substrate-rpc-client/v4 v4.1.5-ffarall h1:U/wJUPauedVtRk2xvnxTZfzZCmz5CjO9JfmsazQrHGQ=
 github.com/ffarall/go-substrate-rpc-client/v4 v4.1.5-ffarall/go.mod h1:lxwliDuUGMGx7s22GCm49DGO+A4IpF1Qj2duVC3bsjk=
+github.com/ffarall/go-substrate-rpc-client/v4 v4.1.7-ffarall h1:/hgSBIpD/n2Xtj/AW3WTptpS6WdjbKJI3JjYvGCOdM0=
+github.com/ffarall/go-substrate-rpc-client/v4 v4.1.7-ffarall/go.mod h1:lxwliDuUGMGx7s22GCm49DGO+A4IpF1Qj2duVC3bsjk=
 github.com/fjl/gencodec v0.0.0-20230517082657-f9840df7b83e h1:bBLctRc7kr01YGvaDfgLbTwjFNW5jdp5y5rj8XXBHfY=
 github.com/fjl/gencodec v0.0.0-20230517082657-f9840df7b83e/go.mod h1:AzA8Lj6YtixmJWL+wkKoBGsLWy9gFrAzi4g+5bCKwpY=
 github.com/fjl/gencodec v0.1.0 h1:B3K0xPfc52cw52BBgUbSPxYo+HlLfAgWMVKRWXUXBcs=

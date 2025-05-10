@@ -256,7 +256,7 @@ func (wr *ParachainWriter) writeToParachain(ctx context.Context, extrinsicName s
 		return nil, err
 	}
 
-	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchEthExtrinsic(*extI)
+	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(*extI)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +288,7 @@ func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
 	return uint32(accountInfo.Nonce), nil
 }
 
-func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName string, payload ...interface{}) (*types.EthExtrinsic, error) {
+func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName string, payload ...interface{}) (*types.Extrinsic, error) {
 	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
 	if err != nil {
 		return nil, err
@@ -309,7 +309,7 @@ func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName str
 		return nil, err
 	}
 
-	ext := types.NewEthExtrinsic(c)
+	ext := types.NewExtrinsic(c)
 	era := NewMortalEra(uint64(latestBlock.Block.Header.Number))
 
 	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
