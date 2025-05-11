@@ -18,6 +18,7 @@ contract BeefyClientTest is Test {
     uint8 randaoCommitDelay;
     uint8 randaoCommitExpiration;
     uint256 minNumRequiredSignatures;
+    uint256 fiatShamirRequiresSignatures;
     uint256 signatureUsageCount;
     uint32 blockNumber;
     uint32 prevRandao;
@@ -48,6 +49,7 @@ contract BeefyClientTest is Test {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
         randaoCommitExpiration = uint8(vm.envOr("RANDAO_COMMIT_EXP", uint256(8)));
         minNumRequiredSignatures = uint8(vm.envOr("MINIMUM_REQUIRED_SIGNATURES", uint256(17)));
+        fiatShamirRequiresSignatures = vm.envOr("FIAT_SHAMIR_REQUIRED_SIGNATURES", uint256(101));
         signatureUsageCount = vm.envOr("SIGNATURE_USAGE_COUNT", uint256(0));
         prevRandao = uint32(vm.envOr("PREV_RANDAO", uint256(377)));
 
@@ -80,7 +82,10 @@ contract BeefyClientTest is Test {
         );
 
         beefyClient = new BeefyClientMock(
-            randaoCommitDelay, randaoCommitExpiration, minNumRequiredSignatures
+            randaoCommitDelay,
+            randaoCommitExpiration,
+            minNumRequiredSignatures,
+            fiatShamirRequiresSignatures
         );
 
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
@@ -839,6 +844,7 @@ contract BeefyClientTest is Test {
             randaoCommitDelay,
             randaoCommitExpiration,
             minNumRequiredSignatures,
+            fiatShamirRequiresSignatures,
             0,
             BeefyClient.ValidatorSet(currentId, 0, 0x0),
             BeefyClient.ValidatorSet(nextId, 0, 0x0)

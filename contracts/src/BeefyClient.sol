@@ -195,7 +195,7 @@ contract BeefyClient {
      */
     uint256 public immutable minNumRequiredSignatures;
 
-    uint256 constant fiatShamirRequiredSignatures = 101;
+    uint256 public immutable fiatShamirRequiredSignatures;
 
     /* Errors */
     error InvalidBitfield();
@@ -220,6 +220,7 @@ contract BeefyClient {
         uint256 _randaoCommitDelay,
         uint256 _randaoCommitExpiration,
         uint256 _minNumRequiredSignatures,
+        uint256 _fiatShamirRequiredSignatures,
         uint64 _initialBeefyBlock,
         ValidatorSet memory _initialValidatorSet,
         ValidatorSet memory _nextValidatorSet
@@ -230,6 +231,7 @@ contract BeefyClient {
         randaoCommitDelay = _randaoCommitDelay;
         randaoCommitExpiration = _randaoCommitExpiration;
         minNumRequiredSignatures = _minNumRequiredSignatures;
+        fiatShamirRequiredSignatures = _fiatShamirRequiredSignatures;
         latestBeefyBlock = _initialBeefyBlock;
         currentValidatorSet.id = _initialValidatorSet.id;
         currentValidatorSet.length = _initialValidatorSet.length;

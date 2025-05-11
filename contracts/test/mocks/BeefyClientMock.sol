@@ -9,12 +9,14 @@ contract BeefyClientMock is BeefyClient {
     constructor(
         uint256 randaoCommitDelay,
         uint256 randaoCommitExpiration,
-        uint256 minNumRequiredSignatures
+        uint256 minNumRequiredSignatures,
+        uint256 fiatShamirRequiredSignatures
     )
         BeefyClient(
             randaoCommitDelay,
             randaoCommitExpiration,
             minNumRequiredSignatures,
+            fiatShamirRequiredSignatures,
             0,
             BeefyClient.ValidatorSet(0, 0, 0x0),
             BeefyClient.ValidatorSet(1, 0, 0x0)
