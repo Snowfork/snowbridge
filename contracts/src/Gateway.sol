@@ -512,34 +512,45 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
      */
 
     // Internal helper to dispatch a single command
-    function _dispatchCommand(CommandV2 calldata command, bytes32 origin, uint64 nonce, uint256 index) internal returns (bool) {
+    function _dispatchCommand(
+        CommandV2 calldata command,
+        bytes32 origin,
+        uint64 nonce,
+        uint256 index
+    ) internal returns (bool) {
         // check that there is enough gas available to forward to the command handler
         if (gasleft() * 63 / 64 < command.gas + DISPATCH_OVERHEAD_GAS_V2) {
             revert IGatewayV2.InsufficientGasLimit();
         }
 
         if (command.kind == CommandKind.Upgrade) {
-            try Gateway(this).v2_handleUpgrade{gas: command.gas}(command.payload) {} catch {
+            try Gateway(this).v2_handleUpgrade{gas: command.gas}(command.payload) {}
+            catch {
                 return false;
             }
         } else if (command.kind == CommandKind.SetOperatingMode) {
-            try Gateway(this).v2_handleSetOperatingMode{gas: command.gas}(command.payload) {} catch {
+            try Gateway(this).v2_handleSetOperatingMode{gas: command.gas}(command.payload) {}
+            catch {
                 return false;
             }
         } else if (command.kind == CommandKind.UnlockNativeToken) {
-            try Gateway(this).v2_handleUnlockNativeToken{gas: command.gas}(command.payload) {} catch {
+            try Gateway(this).v2_handleUnlockNativeToken{gas: command.gas}(command.payload) {}
+            catch {
                 return false;
             }
         } else if (command.kind == CommandKind.RegisterForeignToken) {
-            try Gateway(this).v2_handleRegisterForeignToken{gas: command.gas}(command.payload) {} catch {
+            try Gateway(this).v2_handleRegisterForeignToken{gas: command.gas}(command.payload) {}
+            catch {
                 return false;
             }
         } else if (command.kind == CommandKind.MintForeignToken) {
-            try Gateway(this).v2_handleMintForeignToken{gas: command.gas}(command.payload) {} catch {
+            try Gateway(this).v2_handleMintForeignToken{gas: command.gas}(command.payload) {}
+            catch {
                 return false;
             }
         } else if (command.kind == CommandKind.CallContract) {
-            try Gateway(this).v2_handleCallContract{gas: command.gas}(origin, command.payload) {} catch {
+            try Gateway(this).v2_handleCallContract{gas: command.gas}(origin, command.payload) {}
+            catch {
                 return false;
             }
         } else {
@@ -555,7 +566,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         bool allCommandsSucceeded = true;
 
         for (uint256 i = 0; i < message.commands.length; i++) {
-            bool commandSucceeded = _dispatchCommand(message.commands[i], message.origin, message.nonce, i);
+            bool commandSucceeded =
+                _dispatchCommand(message.commands[i], message.origin, message.nonce, i);
             if (!commandSucceeded) {
                 emit IGatewayV2.CommandFailed(message.nonce, i);
                 allCommandsSucceeded = false;
