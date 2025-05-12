@@ -14,10 +14,68 @@ use crate::{
 	},
 };
 use subxt::{
-	tx::{PairSigner, Payload},
+	tx::Payload,
 	utils::{AccountId32, MultiAddress},
 	OnlineClient,
 };
+
+use pair_signer::PairSigner;
+
+/// A concrete PairSigner implementation which relies on `sr25519::Pair` for signing
+/// and that PolkadotConfig is the runtime configuration.
+mod pair_signer {
+	use super::*;
+	use sp_core::{sr25519, Pair};
+	use sp_runtime::{
+		traits::{IdentifyAccount, Verify},
+		MultiSignature as SpMultiSignature,
+	};
+	use subxt::{
+		config::substrate::{AccountId32, MultiSignature},
+		tx::Signer,
+		Config,
+	};
+
+	/// A [`Signer`] implementation for [`polkadot_sdk::sp_core::sr25519::Pair`].
+	#[derive(Clone)]
+	pub struct PairSigner {
+		account_id: <AssetHubConfig as Config>::AccountId,
+		signer: sr25519::Pair,
+	}
+
+	impl PairSigner {
+		/// Creates a new [`Signer`] from an [`sp_core::sr25519::Pair`].
+		pub fn new(signer: sr25519::Pair) -> Self {
+			let account_id =
+				<SpMultiSignature as Verify>::Signer::from(signer.public()).into_account();
+			Self {
+				// Convert `sp_core::AccountId32` to `subxt::config::substrate::AccountId32`.
+				//
+				// This is necessary because we use `subxt::config::substrate::AccountId32` and no
+				// From/Into impls are provided between `sp_core::AccountId32` because
+				// `polkadot-sdk` isn't a direct dependency in subxt.
+				//
+				// This can also be done by provided a wrapper type around
+				// `subxt::config::substrate::AccountId32` to implement such conversions but
+				// that also most likely requires a custom `Config` with a separate `AccountId` type
+				// to work properly without additional hacks.
+				account_id: AccountId32(account_id.into()),
+				signer,
+			}
+		}
+	}
+
+	impl Signer<AssetHubConfig> for PairSigner {
+		fn account_id(&self) -> <AssetHubConfig as Config>::AccountId {
+			self.account_id.clone()
+		}
+
+		fn sign(&self, signer_payload: &[u8]) -> <AssetHubConfig as Config>::Signature {
+			let signature = self.signer.sign(signer_payload);
+			MultiSignature::Sr25519(signature.0)
+		}
+	}
+}
 
 pub fn weth_location() -> Location {
 	Location {
@@ -108,7 +166,7 @@ pub async fn create_asset_pool(asset_hub_client: &Box<OnlineClient<AssetHubConfi
 	let create_pool_call = assethub::api::tx()
 		.asset_conversion()
 		.create_pool(dot_location(), eth_location());
-	let signer: PairSigner<AssetHubConfig, _> = PairSigner::new((*FERDIE).clone());
+	let signer: PairSigner = PairSigner::new((*FERDIE).clone());
 	asset_hub_client
 		.tx()
 		.sign_and_submit_then_watch_default(&create_pool_call, &signer)
@@ -131,7 +189,7 @@ pub async fn create_asset_pool(asset_hub_client: &Box<OnlineClient<AssetHubConfi
 		1,
 		ferdie_account,
 	);
-	let signer: PairSigner<AssetHubConfig, _> = PairSigner::new((*FERDIE).clone());
+	let signer: PairSigner = PairSigner::new((*FERDIE).clone());
 	asset_hub_client
 		.tx()
 		.sign_and_submit_then_watch_default(&create_liquidity, &signer)
