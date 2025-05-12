@@ -561,7 +561,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     }
 
     // Dispatch all the commands within the batch of commands in the message payload. Each command is processed
-    // independently, and failures emits event CommandFailed without stopping execution of subsequent commands.
+    // independently, such that failures emit a `CommandFailed` event without stopping execution of subsequent commands.
     function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {
         bool allCommandsSucceeded = true;
 
