@@ -86,6 +86,14 @@ export class Context {
         }
     }
 
+    kusamaBridgeHub(): Promise<ApiPromise> | undefined {
+        console.log()
+        const bridgeHubParaId = this.config.kusama?.bridgeHubParaId;
+        if (bridgeHubParaId) {
+            return this.kusamaParachain(bridgeHubParaId)
+        }
+    }
+
     bridgeHub(): Promise<ApiPromise> {
         return this.parachain(this.config.polkadot.bridgeHubParaId)
     }

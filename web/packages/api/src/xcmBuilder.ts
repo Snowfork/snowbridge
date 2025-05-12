@@ -8,6 +8,14 @@ const ethereumNetwork = (ethChainId: number) => ({
     GlobalConsensus: { Ethereum: { chain_id: ethChainId } },
 })
 
+const polkadotNetwork = () => ({
+    GlobalConsensus: { Polkadot: { network: null } },
+})
+
+const kusamaNetwork = () => ({
+    GlobalConsensus: { Kusama: { network: null } },
+})
+
 export function bridgeLocation(ethChainId: number) {
     return {
         parents: 2,
@@ -19,6 +27,13 @@ export function parahchainLocation(paraId: number) {
     return {
         parents: 1,
         interior: { x1: [{ parachain: paraId }] },
+    }
+}
+
+export function accountId32Location(hexAddress: string) {
+    return {
+        parents: 0,
+        interior: { x1: [{ accountId32: { id: hexAddress } }] },
     }
 }
 
@@ -1030,6 +1045,174 @@ export function buildAssetHubPNAReceivedXcm(
                 },
             },
             { setTopic: topic },
+        ],
+    })
+}
+
+export function buildTransferToKusamaExportXCM(
+    registry: Registry,
+    totalFeeInDot: bigint,
+    feeOnDest: bigint,
+    assetHubParaId: number,
+    transferTokenLocation: any,
+    transferAmount: bigint,
+    beneficiary: string,
+    topic: string
+) {
+    return registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                withdrawAsset: [
+                    {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: totalFeeInDot,
+                        },
+                    },
+                ],
+            },
+            {
+                buyExecution: {
+                    fees: {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: totalFeeInDot,
+                        },
+                    },
+                    weightLimit: "Unlimited",
+                },
+            },
+            {
+                setAppendix: [
+                    {
+                        depositAsset: {
+                            assets: {
+                                wild: {
+                                    allCounted: 1,
+                                },
+                            },
+                            beneficiary: parahchainLocation(assetHubParaId),
+                        },
+                    },
+                ],
+            },
+            {
+                exportMessage: {
+                    network: { Kusama: {network: null} },
+                    destination: "Here",
+                    xcm: [
+                    {
+                     reserveAssetDeposited: [
+                         {
+                             id: dotLocationOnKusamaAssetHubLocation(),
+                             fun: {
+                                 Fungible: totalFeeInDot,
+                             },
+                         },
+                        {
+                            id: transferTokenLocation,
+                            fun: {
+                                Fungible: transferAmount,
+                            },
+                        }
+                    ]},
+                    { clearOrigin: null },
+                    {
+                        buyExecution: {
+                            fees: {
+                                id: dotLocationOnKusamaAssetHubLocation(),
+                                fun: {
+                                    Fungible: feeOnDest,
+                                },
+                            },
+                            weight_limit: "Unlimited",
+                        },
+                    },
+                    {
+                        depositAsset: {
+                            assets: {
+                                wild: {
+                                    allCounted: 2,
+                                },
+                            },
+                            beneficiary: accountId32Location(beneficiary),
+                        },
+                    },
+                    {
+                        setTopic: topic,
+                    },
+                    ],
+                },
+            },
+
+            {
+                setTopic: topic,
+            },
+        ],
+    })
+}
+
+export function buildKusamaAssetHubExportXCM(
+    registry: Registry,
+    totalFeeInDot: bigint,
+    assetHubParaId: number,
+    transferTokenLocation: any,
+    transferAmount: bigint,
+    beneficiary: string,
+    topic: string
+) {
+    return registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                descendOrigin: { x1: [{ PalletInstance: 53 }] },
+            },
+            {
+                universalOrigin: polkadotNetwork(),
+            },
+            {
+                descendOrigin: { x1: [{ parachain: assetHubParaId }] },
+            },
+            {
+                reserveAssetDeposited: [
+                    {
+                        id: dotLocationOnKusamaAssetHubLocation(),
+                        fun: {
+                            Fungible: totalFeeInDot,
+                        },
+                    },
+                    {
+                        id: transferTokenLocation,
+                        fun: {
+                            Fungible: transferAmount,
+                        },
+                    }
+                ]
+            },
+            { clearOrigin: null },
+            {
+                buyExecution: {
+                    fees: {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: totalFeeInDot,
+                        },
+                    },
+                    weightLimit: "Unlimited",
+                },
+            },
+            {
+                depositAsset: {
+                    assets: {
+                        wild: {
+                            allCounted: 2,
+                        },
+                    },
+                    beneficiary: accountId32Location(beneficiary),
+                },
+            },
+            {
+                setTopic: topic,
+            },
         ],
     })
 }

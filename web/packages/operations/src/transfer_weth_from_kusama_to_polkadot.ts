@@ -63,16 +63,15 @@ const transfer = async () => {
         },
     })
 
-    const [polkadotAssetHub] = await Promise.all([
+    const [polkadotAssetHub, polkadotBridgeHub, kusamaAssetHub, kusamaBridgeHub] = await Promise.all([
         context.assetHub(),
-    ])
-
-    const [kusamaAssetHub] = await Promise.all([
+        context.bridgeHub(),
         context.kusamaAssetHub(),
+        context.kusamaBridgeHub(),
     ])
 
-    if (!kusamaAssetHub) {
-        throw Error(`Kusama asset hub could not connect`)
+    if (!kusamaAssetHub || !kusamaBridgeHub) {
+        throw Error(`Kusama asset hub or bridge hub could not connect`)
     }
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
@@ -99,7 +98,8 @@ const transfer = async () => {
         // Step 1. Get the delivery fee for the transaction
         const fee = await toKusama.getDeliveryFee(
             kusamaAssetHub,
-            defaultBridgingFee
+            registry,
+            defaultBridgingFee,
         )
 
         // Step 2. Create a transfer tx
@@ -116,7 +116,7 @@ const transfer = async () => {
 
         // Step 3. Validate
         const validation = await toKusama.validateTransfer(
-            {sourceAssetHub: kusamaAssetHub, destAssetHub: polkadotAssetHub},
+            {sourceAssetHub: kusamaAssetHub, destAssetHub: polkadotAssetHub, sourceBridgeHub: kusamaBridgeHub, destinationBridgeHub: polkadotBridgeHub},
             direction,
             transfer,
         );
@@ -128,16 +128,16 @@ const transfer = async () => {
         }
 
         // Step 5. Submit transaction and get receipt for tracking
-        const response = await toKusama.signAndSend(
-            kusamaAssetHub,
-            transfer,
-            SUBSTRATE_ACCOUNT,
-            { withSignedTransaction: true }
-        )
-        if (!response) {
-            throw Error(`Transaction ${response} not included.`)
-        }
-        console.log("Success message", response.messageId)
+        //const response = await toKusama.signAndSend(
+        //    kusamaAssetHub,
+        //    transfer,
+        //    SUBSTRATE_ACCOUNT,
+        //    { withSignedTransaction: true }
+        //)
+        //if (!response) {
+        //    throw Error(`Transaction ${response} not included.`)
+        //}
+        //console.log("Success message", response.messageId)
 
         await context.destroyContext()
     }
