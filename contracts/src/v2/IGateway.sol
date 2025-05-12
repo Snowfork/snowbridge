@@ -33,8 +33,8 @@ interface IGatewayV2 {
         uint64 indexed nonce, bytes32 topic, bool success, bytes32 rewardAddress
     );
 
-    /// Emitted when a command within an inbound message failed to execute
-    event CommandFailed(uint64 indexed nonce, uint256 commandIndex);
+    /// Emitted when a command at `index` within an inbound message identified by `nonce` fails to execute
+    event CommandFailed(uint64 indexed nonce, uint256 index);
 
     /// Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
     event OutboundMessageAccepted(uint64 nonce, Payload payload);
