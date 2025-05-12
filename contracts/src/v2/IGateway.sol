@@ -28,7 +28,8 @@ interface IGatewayV2 {
     /// Emitted when an agent has been created for a consensus system on Polkadot
     event AgentCreated(bytes32 agentID, address agent);
 
-    /// Emitted when inbound message has been dispatched
+    /// Emitted when inbound message has been dispatched.The "success" field is "true" if all
+    //commands successfully executed, otherwise "false" if all or some of the commands failed.
     event InboundMessageDispatched(
         uint64 indexed nonce, bytes32 topic, bool success, bytes32 rewardAddress
     );

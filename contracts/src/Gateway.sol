@@ -512,12 +512,10 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
      */
 
     // Internal helper to dispatch a single command
-    function _dispatchCommand(
-        CommandV2 calldata command,
-        bytes32 origin,
-        uint64 nonce,
-        uint256 index
-    ) internal returns (bool) {
+    function _dispatchCommand(CommandV2 calldata command, bytes32 origin)
+        internal
+        returns (bool)
+    {
         // check that there is enough gas available to forward to the command handler
         if (gasleft() * 63 / 64 < command.gas + DISPATCH_OVERHEAD_GAS_V2) {
             revert IGatewayV2.InsufficientGasLimit();
@@ -566,9 +564,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         bool allCommandsSucceeded = true;
 
         for (uint256 i = 0; i < message.commands.length; i++) {
-            bool commandSucceeded =
-                _dispatchCommand(message.commands[i], message.origin, message.nonce, i);
-            if (!commandSucceeded) {
+            if (!_dispatchCommand(message.commands[i], message.origin)) {
                 emit IGatewayV2.CommandFailed(message.nonce, i);
                 allCommandsSucceeded = false;
             }
