@@ -1192,7 +1192,7 @@ export function buildKusamaAssetHubExportXCM(
             {
                 buyExecution: {
                     fees: {
-                        id: DOT_LOCATION,
+                        id: dotLocationOnKusamaAssetHubLocation(),
                         fun: {
                             Fungible: totalFeeInDot,
                         },

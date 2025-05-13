@@ -91,7 +91,7 @@ export async function getDeliveryFee(
 ): Promise<DeliveryFee> {
     const feeStorageKey = xxhashAsHex(":XcmBridgeHubRouterBaseFee:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
-    const feePadPercentage = padPercentage ?? 20n
+    const feePadPercentage = padPercentage ?? 10n
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
 
     let xcmBridgeFee: bigint
@@ -293,17 +293,25 @@ export async function validateTransfer(
         logs.push({ kind: ValidationKind.Error, reason: ValidationReason.InsufficientDotFee, message: 'Insufficient DOT balance to submit transaction on the source parachain.' })
     }
 
+    let location = registry.kusama?.parachains[registry.assetHubParaId].assets[tokenAddress].location;
+    if (!location) {
+        location = erc20Location(registry.ethChainId, tokenAddress);
+    }
+
+    console.log("location:", location);
+    console.log("fee.totalFeeInDot:", fee.totalFeeInDot);
+
     let kahXCM = buildKusamaAssetHubExportXCM(
         destAssetHub.registry,
         fee.totalFeeInDot,
         registry.assetHubParaId,
-        registry.kusama?.parachains[registry.assetHubParaId].assets[tokenAddress].location,
+        location,
         transfer.input.amount,
         transfer.input.beneficiaryAccount,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
     );
 
-    const dryRunKAH = await dryRunAssetHub(destAssetHub, registry.assetHubParaId, registry.bridgeHubParaId, kahXCM);
+    const dryRunKAH = await dryRunAssetHub(destAssetHub, registry.bridgeHubParaId, kahXCM);
     if (!dryRunKAH.success) {
         logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run call on Kusama AH failed: ' + dryRunKAH.errorMessage })
         assetHubDryRunError = dryRunKAH.errorMessage
@@ -512,10 +520,11 @@ export async function dryRunOnSourceParachain(
 async function dryRunAssetHub(
     assetHub: ApiPromise,
     parachainId: number,
-    bridgeHubParaId: number,
     xcm: any
 ) {
     const sourceParachain = { v4: { parents: 1, interior: { x1: [{ parachain: parachainId }] } } }
+    console.dir(xcm.toHuman(), {depth: 100});
+    console.dir(sourceParachain, {depth: 100});
     const result = await assetHub.call.dryRunApi.dryRunXcm<
         Result<XcmDryRunEffects, XcmDryRunApiError>
     >(sourceParachain, xcm)
@@ -524,34 +533,13 @@ async function dryRunAssetHub(
     const resultHuman = result.toHuman() as any
 
     const success = result.isOk && result.asOk.executionResult.isComplete
-    let sourceParachainForwarded
-    let bridgeHubForwarded
     if (!success) {
-        console.error("Error during dry run on asset hub:", xcm.toHuman(), result.toHuman())
-    } else {
-        bridgeHubForwarded = result.asOk.forwardedXcms.find((x) => {
-            return (
-                x[0].isV4 &&
-                x[0].asV4.parents.toNumber() === 1 &&
-                x[0].asV4.interior.isX1 &&
-                x[0].asV4.interior.asX1[0].isParachain &&
-                x[0].asV4.interior.asX1[0].asParachain.toNumber() === bridgeHubParaId
-            )
-        })
-        sourceParachainForwarded = result.asOk.forwardedXcms.find((x) => {
-            return (
-                x[0].isV4 &&
-                x[0].asV4.parents.toNumber() === 1 &&
-                x[0].asV4.interior.isX1 &&
-                x[0].asV4.interior.asX1[0].isParachain &&
-                x[0].asV4.interior.asX1[0].asParachain.toNumber() === parachainId
-            )
-        })
+       // console.error("Error during dry run on asset hub:", xcm.toHuman(), result.toHuman());
+        //console.dir(xcm.toHuman(), {depth: 100});
+        console.dir(result.toHuman(), {depth: 100});
     }
     return {
-        success: success && bridgeHubForwarded,
-        sourceParachainForwarded,
-        bridgeHubForwarded,
+        success: success,
         errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
     }
 }
