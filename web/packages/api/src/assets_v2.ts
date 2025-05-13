@@ -9,8 +9,8 @@ import {
     erc20Location,
 } from "./xcmBuilder"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
-import { convertToXcmV3X1, getMoonbeamLocationBalance, toMoonbeamXC20 } from "./moonbeam"
-import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID, getMythosLocationBalance } from "./mythos"
+import { convertToXcmV3X1, getMoonbeamLocationBalance, toMoonbeamXC20 } from "./parachains/moonbeam"
+import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID, getMythosLocationBalance } from "./parachains/mythos"
 
 export type ERC20Metadata = {
     token: string
@@ -1582,4 +1582,18 @@ function bridgeablePNAsOnAH(environment: string, location: any, assetHubParaId: 
             }
         }
     }
+}
+
+export async function getAssetHubConversationPalletSwap(assetHub: ApiPromise, asset1: any, asset2: any, exactAsset2Balance: bigint) {
+    const result = await assetHub.call.assetConversionApi.quotePriceTokensForExactTokens(
+        asset1,
+        asset2,
+        exactAsset2Balance,
+        true
+    )
+    const asset1Balance = result.toPrimitive() as any
+    if (asset1Balance == null) {
+        throw Error(`No pool set up in asset conversion pallet for '${JSON.stringify(asset1)}' and '${JSON.stringify(asset2)}'.`)
+    }
+    return BigInt(asset1Balance) 
 }

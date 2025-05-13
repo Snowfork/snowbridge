@@ -1,6 +1,6 @@
 import { ApiPromise } from "@polkadot/api"
-import { erc20Location } from "./xcmBuilder"
-import { getNativeBalance } from "./assets_v2"
+import { erc20Location } from "../xcmBuilder"
+import { getNativeBalance } from "../assets_v2"
 
 export const MUSE_CHAIN_ID = 11155111 // Sepolia
 export const MUSE_TOKEN_ID = "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee"

@@ -1,4 +1,4 @@
-import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID } from "./mythos"
+import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID } from "./parachains/mythos"
 
 export type Config = {
     BEACON_HTTP_API: string
