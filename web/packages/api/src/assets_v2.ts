@@ -388,12 +388,22 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
             provider = kusamaAssetHub
         }
 
+        const kusamaPnaOverrides = await indexKusamaPNAs(
+            bridgeHub as ApiPromise,
+            providers[assetHubParaId].provider,
+            provider,
+            ethProviders[ethChainId].provider,
+            gatewayAddress,
+            assetHubParaId
+        )
+        let assetOverrides = { ...options.assetOverrides, ...kusamaPnaOverrides }
+
         const para = await indexParachain(
             provider,
-            providers[assetHubParaId.toString()].provider,
+            provider,
             ethChainId,
             kusama.assetHubParaId,
-            assetHubParaId,
+            kusama.assetHubParaId,
             assetOverrides ?? {},
             destinationFeeOverrides ?? {}
         )
@@ -1615,18 +1625,22 @@ async function indexPNAs(
             console.warn(`Could not convert ${key.toHuman()} to location`)
             continue
         }
-        const locationOnAH: any = bridgeablePNAsOnAH(environment, location, assetHubParaId)
+        const locationOnAH: any = bridgeablePNAsOnPolkadotAH(environment, location, assetHubParaId)
+        console.log("key:", location);
         if (!locationOnAH) {
             console.warn(`Location ${JSON.stringify(location)} is not bridgeable on assethub`)
             continue
         }
+        console.log("locationOnAH:", locationOnAH);
         const tokenId = (value.toPrimitive() as string).toLowerCase()
         const token = await gateway.tokenAddressOf(tokenId)
         const metadata = await assetErc20Metadata(ethereum, token, gatewayAddress)
         let metadataOnAH: any, assetId: any
         if (locationOnAH?.parents == 0) {
             const assetId = locationOnAH?.interior?.x2[1]?.generalIndex
+            console.log("assetId: ", assetId);
             metadataOnAH = (await assethub.query.assets.asset(assetId)).toJSON()
+            console.log("metadataOnAH: ", metadataOnAH);
             metadataOnAH.assetId = assetId.toString()
         } else {
             if (
@@ -1663,11 +1677,94 @@ async function indexPNAs(
     return assetOverrides
 }
 
+async function indexKusamaPNAs(
+    bridgehub: ApiPromise,
+    polkadotAssethub: ApiPromise,
+    kusamaAssethub: ApiPromise,
+    ethereum: AbstractProvider,
+    gatewayAddress: string,
+    assetHubParaId: number
+): Promise<AssetOverrideMap> {
+    let pnas: Asset[] = []
+    let gateway = IGateway__factory.connect(gatewayAddress, ethereum)
+    const entries = await bridgehub.query.ethereumSystem.nativeToForeignId.entries()
+    for (const [key, value] of entries) {
+        const location: any = key.args.at(0)?.toJSON()
+        if (!location) {
+            console.warn(`Could not convert ${key.toHuman()} to location`)
+            continue
+        }
+
+        const locationOnAHKusama: any = bridgeablePNAsOnKusamaAH(location, assetHubParaId)
+        const locationOnAHPolkadot: any = bridgeablePNAsOnPolkadotAH("", location, assetHubParaId)
+        if (!locationOnAHKusama) {
+            console.warn(`Location ${JSON.stringify(location)} is not bridgeable on assethub`)
+            continue
+        }
+        // Check if asset is registered on Kusama Assethub, if is not native KSM
+        if (locationOnAHKusama?.parents != DOT_LOCATION.parents &&
+            locationOnAHKusama?.interior != DOT_LOCATION.interior) {
+            const assetType = kusamaAssethub.registry.createType("StagingXcmV4Location", locationOnAHKusama)
+            let assetOnKusama = (await kusamaAssethub.query.foreignAssets.asset(assetType)).toJSON();;
+            if (!assetOnKusama) {
+                console.warn(`Location ${JSON.stringify(locationOnAHKusama)} is not a registered asset on Kusama Assethub`)
+                continue
+            }
+        }
+
+        const tokenId = (value.toPrimitive() as string).toLowerCase()
+        const token = await gateway.tokenAddressOf(tokenId)
+        const metadata = await assetErc20Metadata(ethereum, token, gatewayAddress)
+        let metadataOnAH: any, assetId: any
+        if (locationOnAHKusama?.parents == 0) {
+            // skip any Kusama native assets for now
+            continue
+        } else {
+            if (
+                locationOnAHKusama?.parents == DOT_LOCATION.parents &&
+                locationOnAHKusama?.interior == DOT_LOCATION.interior
+            ) {
+                let existentialDeposit = kusamaAssethub.consts.balances.existentialDeposit.toPrimitive()
+                metadataOnAH = {
+                    minBalance: existentialDeposit,
+                    isSufficient: true,
+                }
+            } else if (
+                locationOnAHPolkadot?.parents == DOT_LOCATION.parents &&
+                locationOnAHPolkadot?.interior == DOT_LOCATION.interior
+            ){
+                let existentialDeposit = polkadotAssethub.consts.balances.existentialDeposit.toPrimitive()
+                metadataOnAH = {
+                    minBalance: existentialDeposit,
+                    isSufficient: true,
+                }
+            }
+        }
+        const assetInfo: Asset = {
+            token,
+            name: metadata.name,
+            symbol: metadata.symbol,
+            decimals: metadata.decimals,
+            locationOnEthereum: location,
+            location: locationOnAHKusama,
+            locationOnAH: locationOnAHKusama,
+            foreignId: tokenId,
+            minimumBalance: metadataOnAH?.minBalance as bigint,
+            isSufficient: metadataOnAH?.isSufficient as boolean,
+            assetId: metadataOnAH?.assetId,
+        }
+        pnas.push(assetInfo)
+    }
+    let assetOverrides: any = {}
+    assetOverrides[assetHubParaId.toString()] = pnas
+    return assetOverrides
+}
+
 export const WESTEND_GENESIS = "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
 
 // Currently, the bridgeable assets are limited to KSM, DOT, native assets on AH
 // and TEER
-function bridgeablePNAsOnAH(environment: string, location: any, assetHubParaId: number): any {
+function bridgeablePNAsOnPolkadotAH(environment: string, location: any, assetHubParaId: number): any {
     if (location.parents != 1) {
         return
     }
@@ -1754,6 +1851,88 @@ function bridgeablePNAsOnAH(environment: string, location: any, assetHubParaId: 
                     },
                 }
             }
+        }
+    }
+}
+
+function bridgeablePNAsOnKusamaAH(location: any, assetHubParaId: number): any {
+    if (location.parents != 1) {
+        return
+    }
+    // KSM
+    if (location.interior.x1 && location.interior.x1[0]?.globalConsensus?.kusama !== undefined) {
+        console.log("KSM");
+        return {
+            parents: 1,
+            interior: "Here",
+        }
+    }
+    // DOT
+    else if (
+        location.interior.x1 &&
+        location.interior.x1[0]?.globalConsensus?.polkadot !== undefined
+    ) {
+        return {
+            parents: 2,
+            interior: {
+                x1: [
+                    {
+                        globalConsensus: {
+                            Polkadot: null,
+                        },
+                    },
+                ],
+            },
+        }
+    }
+    // Native assets from AH
+    else if (
+        location.interior.x4 &&
+        location.interior.x4[0]?.globalConsensus?.polkadot !== undefined &&
+        location.interior.x4[1]?.parachain == assetHubParaId
+    ) {
+        return {
+            parents: 2,
+            interior: {
+                x4: [
+                    {
+                        globalConsensus: {
+                            Polkadot: null,
+                        },
+                    },
+                    {
+                        parachain: assetHubParaId,
+                    },
+                    {
+                        palletInstance: location.interior.x4[2]?.palletInstance,
+                    },
+                    {
+                        generalIndex: location.interior.x4[3]?.generalIndex,
+                    },
+                ],
+            },
+        }
+    }
+    // Others from 3rd Parachains, only TEER for now
+    else if (
+        location.interior.x2 &&
+        location.interior.x2[0]?.globalConsensus?.polkadot !== undefined &&
+        location.interior.x2[1]?.parachain == 2039
+    ) {
+        return {
+            parents: 2,
+            interior: {
+                x2: [
+                    {
+                        globalConsensus: {
+                            Polkadot: null,
+                        },
+                    },
+                    {
+                        parachain: 2039,
+                    },
+                ],
+            },
         }
     }
 }

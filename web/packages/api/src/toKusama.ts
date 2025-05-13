@@ -181,11 +181,12 @@ export async function createTransfer(
     const { sourceAssetMetadata, destAssetMetadata, sourceParachain } = resolveInputs(registry, tokenAddress, sourceParaId, destParaId)
     let messageId = await buildMessageId(parachain, sourceParaId, sourceAccountHex, tokenAddress, beneficiaryAccount, amount)
 
+    let tokenLocation = getTokenLocation(registry, tokenAddress);
     let tx;
     if (direction == Direction.ToPolkadot) {
-        tx = createERC20ToPolkadotTx(parachain, ethChainId,  sourceAccountHex, tokenAddress, sourceAccountHex, amount, fee.totalFeeInDot)
+        tx = createERC20ToPolkadotTx(parachain,  sourceAccountHex, tokenLocation, sourceAccountHex, amount, fee.totalFeeInDot)
     } else {
-        tx = createERC20ToKusamaTx(parachain, ethChainId,  sourceAccountHex, tokenAddress, sourceAccountHex, amount, fee.totalFeeInDot)
+        tx = createERC20ToKusamaTx(parachain,  sourceAccountHex, tokenLocation, sourceAccountHex, amount, fee.totalFeeInDot)
     }
 
     let { hexAddress: beneficiaryAddressHex } =
@@ -443,25 +444,35 @@ export async function signAndSend(parachain: ApiPromise, transfer: Transfer, acc
 
 export function createERC20ToKusamaTx(
     parachain: ApiPromise,
-    ethChainId: number,
     sourceAccount: string,
-    tokenAddress: string,
+    tokenLocation: any,
     beneficiaryAccount: string,
     amount: bigint,
     totalFeeInDot: bigint,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
-    const assets = {
-        v4: [
-            {
-                id: DOT_LOCATION,
-                fun: { Fungible: totalFeeInDot },
-            },
-            {
-                id: erc20Location(ethChainId, tokenAddress),
-                fun: { Fungible: amount },
-            },
-        ]
+    let assets: any;
+    if (tokenLocation.parents == DOT_LOCATION.parents && tokenLocation.interior == DOT_LOCATION.interior) {
+        assets = {v4: [
+                {
+                    id: DOT_LOCATION,
+                    fun: { Fungible: totalFeeInDot +  amount},
+                },
+            ]};
+    } else {
+        assets = {
+            v4: [
+                {
+                    id: DOT_LOCATION,
+                    fun: { Fungible: totalFeeInDot },
+                },
+                {
+                    id: tokenLocation,
+                    fun: { Fungible: amount },
+                },
+            ]
+        }
     }
+
     const destination = { v4: kusamaAssetHubLocation() }
 
     const feeAsset = {
@@ -473,25 +484,35 @@ export function createERC20ToKusamaTx(
 
 export function createERC20ToPolkadotTx(
     parachain: ApiPromise,
-    ethChainId: number,
     sourceAccount: string,
-    tokenAddress: string,
+    tokenLocation: any,
     beneficiaryAccount: string,
     amount: bigint,
     totalFeeInDot: bigint,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
-    const assets = {
-        v4: [
+    let assets: any;
+    if (tokenLocation.parents == DOT_LOCATION.parents && tokenLocation.interior == DOT_LOCATION.interior) {
+        assets = {v4: [
             {
                 id: dotLocationOnKusamaAssetHubLocation(),
-                fun: { Fungible: totalFeeInDot },
+                fun: { Fungible: totalFeeInDot +  amount},
             },
-            {
-                id: erc20Location(ethChainId, tokenAddress),
-                fun: { Fungible: amount },
-            },
-        ]
+        ]};
+    } else {
+        assets = {
+            v4: [
+                {
+                    id: dotLocationOnKusamaAssetHubLocation(),
+                    fun: { Fungible: totalFeeInDot },
+                },
+                {
+                    id: tokenLocation,
+                    fun: { Fungible: amount },
+                },
+            ]
+        }
     }
+
     const destination = { v4: polkadotAssetHubLocation() }
 
     const feeAsset = {
@@ -622,4 +643,13 @@ async function buildMessageId(parachain: ApiPromise, sourceParaId: number, sourc
         ...stringToU8a(amount.toString()),
     ]);
     return blake2AsHex(entropy);
+}
+
+function getTokenLocation(registry: AssetRegistry, tokenAddress: string) {
+    let location = registry.kusama?.parachains[registry.assetHubParaId].assets[tokenAddress].location;
+    if (!location) {
+        location = erc20Location(registry.ethChainId, tokenAddress);
+    }
+
+    return location;
 }
