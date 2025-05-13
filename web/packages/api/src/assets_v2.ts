@@ -9,6 +9,8 @@ import {
     erc20Location,
 } from "./xcmBuilder"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
+import { convertToXcmV3X1, getMoonbeamLocationBalance, toMoonbeamXC20 } from "./moonbeam"
+import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID, getMythosLocationBalance } from "./mythos"
 
 export type ERC20Metadata = {
     token: string
@@ -63,6 +65,7 @@ export type Parachain = {
         hasTxPaymentApi: boolean
         hasXcmPaymentApi: boolean
         hasDryRunRpc: boolean
+        hasDotBalance: boolean
     }
     assets: AssetMap
     estimatedExecutionFeeDOT: bigint
@@ -622,11 +625,6 @@ export async function getLocationBalance(
             ).toPrimitive() as any
             return BigInt(accountData?.free ?? 0n)
         }
-        case "mythos":
-        case "muse": {
-            console.warn(`${specName} does not support DOT, returning 0.`)
-            return 0n
-        }
         case "moonriver":
         case "moonbeam": {
             return await getMoonbeamLocationBalance(
@@ -637,8 +635,14 @@ export async function getLocationBalance(
                 account
             )
         }
+        case "muse":
+        case "mythos": {
+            return await getMythosLocationBalance(
+                location, provider, specName, account
+            )
+        }
         default:
-            throw Error(`Cannot get DOT balance for spec ${specName}.`)
+            throw Error(`Cannot get balance for spec ${specName}. Location = ${location}`)
     }
 }
 
@@ -977,20 +981,23 @@ async function indexParachain(
         isFunction(provider.call.xcmPaymentApi?.queryDeliveryFees) &&
         isFunction(provider.call.xcmPaymentApi?.queryWeightToAssetFee)
 
-    if (info.accountType === "AccountId32") {
+    // test getting balances
+    let hasDotBalance = true;
+    try {
         await getDotBalance(
             provider,
             info.specName,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            info.accountType === "AccountId32" ? "0x0000000000000000000000000000000000000000000000000000000000000000" : "0x0000000000000000000000000000000000000000"
         )
-        await getNativeBalance(
-            provider,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        )
-    } else {
-        await getDotBalance(provider, info.specName, "0x0000000000000000000000000000000000000000")
-        await getNativeBalance(provider, "0x0000000000000000000000000000000000000000")
+    } catch(err) {
+        console.warn(`Spec ${info.specName} does not support dot ${err}`)
+        hasDotBalance = false
     }
+
+    await getNativeBalance(
+        provider,
+        info.accountType === "AccountId32" ? "0x0000000000000000000000000000000000000000000000000000000000000000" : "0x0000000000000000000000000000000000000000"
+    )
 
     let estimatedExecutionFeeDOT = 0n
     let estimatedDeliveryFeeDOT = 0n
@@ -1026,6 +1033,7 @@ async function indexParachain(
             hasTxPaymentApi,
             hasDryRunRpc,
             hasXcmPaymentApi,
+            hasDotBalance,
         },
         info,
         xcDOT,
@@ -1242,7 +1250,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
             result.assetOverrides = {
                 "3369": [
                     {
-                        token: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee".toLowerCase(),
+                        token: MUSE_TOKEN_ID.toLowerCase(),
                         name: "Muse",
                         minimumBalance: 10_000_000_000_000_000n,
                         symbol: "MUSE",
@@ -1262,7 +1270,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
             result.assetOverrides = {
                 "3369": [
                     {
-                        token: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003".toLowerCase(),
+                        token: MYTHOS_TOKEN_ID.toLowerCase(),
                         name: "Mythos",
                         minimumBalance: 10_000_000_000_000_000n,
                         symbol: "MYTH",
@@ -1370,8 +1378,11 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
             return (path: Path) => {
                 // Disallow MUSE to any location but 3369
                 if (
-                    path.asset === "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee" &&
-                    path.destination !== 3369
+                    path.asset === MUSE_TOKEN_ID &&
+                    (
+                        (path.destination !== 3369 && path.type === "ethereum") || 
+                        (path.destination !== 1 && path.type === "substrate")
+                    )
                 ) {
                     return false
                 }
@@ -1385,8 +1396,11 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 }
                 // Disallow MYTH to any location but 3369
                 if (
-                    path.asset === "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003" &&
-                    path.destination !== 3369
+                    path.asset === MYTHOS_TOKEN_ID &&
+                    (
+                        (path.destination !== 3369 && path.type === "ethereum") || 
+                        (path.destination !== 1 && path.type === "substrate")
+                    )
                 ) {
                     return false
                 }
@@ -1408,92 +1422,6 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
         default:
             return (_: Path) => true
     }
-}
-
-function toMoonbeamXC20(assetId: bigint) {
-    const xc20 = assetId.toString(16).toLowerCase()
-    return "0xffffffff" + xc20
-}
-
-const MOONBEAM_ERC20_ABI = [
-    "function name() view returns (string)",
-    "function symbol() view returns (string)",
-    "function decimals() view returns (uint8)",
-    "function balanceOf(address) view returns (uint256)",
-]
-const MOONBEAM_ERC20 = new ethers.Interface(MOONBEAM_ERC20_ABI)
-
-function convertToXcmV3X1(location: any) {
-    if (location.interior.x1) {
-        const convertedLocation = JSON.parse(JSON.stringify(location))
-        convertedLocation.interior.x1 = convertedLocation.interior.x1[0]
-        return convertedLocation
-    }
-    return location
-}
-
-async function getMoonbeamLocationBalance(
-    pnaAssetId: any,
-    location: any,
-    provider: ApiPromise,
-    specName: string,
-    account: string
-) {
-    // For PNA, use assetId directly; for ENA, query assetId by Multilocation
-    let paraAssetId = pnaAssetId
-    if (!paraAssetId) {
-        // Moonbeam only supports v3 xcm locations on asset Manager. Deep clone the location because
-        // we might modify it.
-        const assetManagerLocation = convertToXcmV3X1(location)
-        paraAssetId = (
-            await provider.query.assetManager.assetTypeId({ xcm: assetManagerLocation })
-        ).toPrimitive()
-    }
-
-    // If we cannot find the asset in asset manager look in foreign assets.
-    if (!paraAssetId) {
-        // evmForeignAssets uses xcm v4 so we use the original location.
-        paraAssetId = (
-            (await provider.query.evmForeignAssets.assetsByLocation(location)).toPrimitive() as any
-        )[0]
-        const xc20 = toMoonbeamXC20(BigInt(paraAssetId))
-        return await getMoonbeamEvmForeignAssetBalance(provider, xc20, account)
-    }
-
-    if (!paraAssetId) {
-        throw Error(`Asset not registered for spec ${specName}.`)
-    }
-
-    const accountData = (
-        await provider.query.assets.account(paraAssetId, account)
-    ).toPrimitive() as any
-    return BigInt(accountData?.balance ?? 0n)
-}
-
-async function getMoonbeamEvmForeignAssetBalance(api: ApiPromise, token: string, account: string) {
-    const method = "balanceOf"
-    const data = MOONBEAM_ERC20.encodeFunctionData(method, [account])
-    const result = await api.call.ethereumRuntimeRPCApi.call(
-        "0x0000000000000000000000000000000000000000",
-        token,
-        data,
-        0n,
-        500_000n,
-        null,
-        null,
-        null,
-        false,
-        null
-    )
-    const resultJson = result.toPrimitive() as any
-    if (!(resultJson?.ok?.exitReason?.succeed === "Returned")) {
-        console.error(resultJson)
-        throw Error(
-            `Could not fetch balance for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`
-        )
-    }
-    const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)
-    return BigInt(retVal[0])
 }
 
 async function indexPNAs(

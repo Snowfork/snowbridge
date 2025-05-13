@@ -1,3 +1,5 @@
+import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID } from "./mythos"
+
 export type Config = {
     BEACON_HTTP_API: string
     ETHEREUM_CHAINS: { [chain: string]: (secret: string) => string }
@@ -233,7 +235,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 erc20tokensReceivable: [
                     {
                         id: "MUSE",
-                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
+                        address: MUSE_TOKEN_ID,
                         minimumTransferAmount: 10_000_000_000_000_000n,
                     },
                 ],
@@ -456,7 +458,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 erc20tokensReceivable: [
                     {
                         id: "MYTH",
-                        address: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003",
+                        address: MYTHOS_TOKEN_ID,
                         minimumTransferAmount: 10_000_000_000_000_000n,
                     },
                 ],

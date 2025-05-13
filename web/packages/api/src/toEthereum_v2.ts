@@ -385,7 +385,7 @@ export async function getDeliveryFee(
         snowbridgeDeliveryFeeDOT = BigInt(leFee.toString())
     }
 
-    const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
+    const { sourceAssetMetadata } =
         resolveInputs(registry, tokenAddress, parachain)
 
     let xcm: any, forwardedXcm: any
