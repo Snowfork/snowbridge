@@ -582,7 +582,7 @@ export async function getLocationBalance(
         case "basilisk":
         case "hydradx": {
             const paraAssetId = (
-                await provider.query.assetRegistry.locationAssets(location)
+                await provider.query.assetRegistry.locationAssets(convertToXcmV3X1(location))
             ).toPrimitive()
             if (!paraAssetId) {
                 throw Error(`DOT not registered for spec ${specName}.`)
@@ -1423,6 +1423,15 @@ const MOONBEAM_ERC20_ABI = [
 ]
 const MOONBEAM_ERC20 = new ethers.Interface(MOONBEAM_ERC20_ABI)
 
+function convertToXcmV3X1(location: any) {
+    if (location.interior.x1) {
+        const convertedLocation = JSON.parse(JSON.stringify(location))
+        convertedLocation.interior.x1 = convertedLocation.interior.x1[0]
+        return convertedLocation
+    }
+    return location
+}
+
 async function getMoonbeamLocationBalance(
     pnaAssetId: any,
     location: any,
@@ -1435,11 +1444,7 @@ async function getMoonbeamLocationBalance(
     if (!paraAssetId) {
         // Moonbeam only supports v3 xcm locations on asset Manager. Deep clone the location because
         // we might modify it.
-        const assetManagerLocation = JSON.parse(JSON.stringify(location))
-        // In xcm v3 x1 is not an array, so we unwrap the array here.
-        if (location.interior.x1) {
-            assetManagerLocation.interior.x1 = assetManagerLocation.interior.x1[0]
-        }
+        const assetManagerLocation = convertToXcmV3X1(location)
         paraAssetId = (
             await provider.query.assetManager.assetTypeId({ xcm: assetManagerLocation })
         ).toPrimitive()
