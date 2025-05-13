@@ -8,11 +8,11 @@ const ethereumNetwork = (ethChainId: number) => ({
     GlobalConsensus: { Ethereum: { chain_id: ethChainId } },
 })
 
-const polkadotNetwork = () => ({
+export const polkadotNetwork = () => ({
     GlobalConsensus: { Polkadot: { network: null } },
 })
 
-const kusamaNetwork = () => ({
+export const kusamaNetwork = () => ({
     GlobalConsensus: { Kusama: { network: null } },
 })
 
@@ -1051,10 +1051,12 @@ export function buildAssetHubPNAReceivedXcm(
 
 export function buildTransferToKusamaExportXCM(
     registry: Registry,
+    feeAssetOnSource: any,
+    feeAssetOnDest: any,
+    transferTokenLocation: any,
     totalFeeInDot: bigint,
     feeOnDest: bigint,
     assetHubParaId: number,
-    transferTokenLocation: any,
     transferAmount: bigint,
     beneficiary: string,
     topic: string
@@ -1064,7 +1066,7 @@ export function buildTransferToKusamaExportXCM(
             {
                 withdrawAsset: [
                     {
-                        id: DOT_LOCATION,
+                        id: feeAssetOnSource,
                         fun: {
                             Fungible: totalFeeInDot,
                         },
@@ -1074,7 +1076,7 @@ export function buildTransferToKusamaExportXCM(
             {
                 buyExecution: {
                     fees: {
-                        id: DOT_LOCATION,
+                        id: feeAssetOnSource,
                         fun: {
                             Fungible: totalFeeInDot,
                         },
@@ -1104,7 +1106,7 @@ export function buildTransferToKusamaExportXCM(
                     {
                      reserveAssetDeposited: [
                          {
-                             id: dotLocationOnKusamaAssetHubLocation(),
+                             id: feeAssetOnDest,
                              fun: {
                                  Fungible: totalFeeInDot,
                              },
@@ -1120,7 +1122,7 @@ export function buildTransferToKusamaExportXCM(
                     {
                         buyExecution: {
                             fees: {
-                                id: dotLocationOnKusamaAssetHubLocation(),
+                                id: feeAssetOnDest,
                                 fun: {
                                     Fungible: feeOnDest,
                                 },
@@ -1152,7 +1154,7 @@ export function buildTransferToKusamaExportXCM(
     })
 }
 
-export function buildKusamaAssetHubExportXCM(
+export function buildPolkadotToKusamaAssetHubExportXCM(
     registry: Registry,
     totalFeeInDot: bigint,
     assetHubParaId: number,
@@ -1193,6 +1195,71 @@ export function buildKusamaAssetHubExportXCM(
                 buyExecution: {
                     fees: {
                         id: dotLocationOnKusamaAssetHubLocation(),
+                        fun: {
+                            Fungible: totalFeeInDot,
+                        },
+                    },
+                    weightLimit: "Unlimited",
+                },
+            },
+            {
+                depositAsset: {
+                    assets: {
+                        wild: {
+                            allCounted: 2,
+                        },
+                    },
+                    beneficiary: accountId32Location(beneficiary),
+                },
+            },
+            {
+                setTopic: topic,
+            },
+        ],
+    })
+}
+
+export function buildKusamaToPolkadotAssetHubExportXCM(
+    registry: Registry,
+    totalFeeInDot: bigint,
+    assetHubParaId: number,
+    transferTokenLocation: any,
+    transferAmount: bigint,
+    beneficiary: string,
+    topic: string
+) {
+    return registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                descendOrigin: { x1: [{ PalletInstance: 53 }] },
+            },
+            {
+                universalOrigin: kusamaNetwork(),
+            },
+            {
+                descendOrigin: { x1: [{ parachain: assetHubParaId }] },
+            },
+            {
+                withdrawAsset: [
+                    {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: totalFeeInDot,
+                        },
+                    },
+                    {
+                        id: transferTokenLocation,
+                        fun: {
+                            Fungible: transferAmount,
+                        },
+                    }
+                ]
+            },
+            { clearOrigin: null },
+            {
+                buyExecution: {
+                    fees: {
+                        id: DOT_LOCATION,
                         fun: {
                             Fungible: totalFeeInDot,
                         },

@@ -98,6 +98,7 @@ const transfer = async () => {
         // Step 1. Get the delivery fee for the transaction
         const fee = await toKusama.getDeliveryFee(
             polkadotAssetHub,
+            direction,
             registry,
             defaultBridgingFee
         )

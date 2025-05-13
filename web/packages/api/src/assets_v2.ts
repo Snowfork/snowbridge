@@ -748,6 +748,28 @@ export async function calculateDestinationFee(provider: ApiPromise, destinationX
     return executionFee
 }
 
+export async function quoteFeeSwap(
+    provider: ApiPromise,
+    asset1: any,
+    asset2: any,
+    amount: bigint,
+) {
+    const result = await provider.call.assetConversionApi.quotePriceExactTokensForTokens(
+        asset1,
+        asset2,
+        amount,
+        true
+    );
+
+    const resultPrimitive = result.toPrimitive() as any;
+
+    if (!resultPrimitive) {
+        throw Error(`Cannot get swap quote.`);
+    }
+
+    return BigInt(resultPrimitive);
+}
+
 export async function calculateDeliveryFee(
     provider: ApiPromise,
     parachainId: number,

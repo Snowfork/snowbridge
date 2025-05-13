@@ -10,10 +10,9 @@ import {
     buildAssetHubERC20TransferToKusama,
     dotLocationOnKusamaAssetHubLocation,
     polkadotAssetHubLocation,
-    buildExportXcmForERC20,
     buildTransferToKusamaExportXCM,
-    buildExportXcmForPNA,
-    buildKusamaAssetHubExportXCM
+    buildPolkadotToKusamaAssetHubExportXCM,
+    buildKusamaToPolkadotAssetHubExportXCM
 } from "./xcmBuilder";
 import {
     Asset,
@@ -22,7 +21,7 @@ import {
     getNativeAccount,
     getNativeBalance,
     getTokenBalance, padFeeByPercentage,
-    Parachain
+    Parachain, quoteFeeSwap
 } from "./assets_v2";
 import {CallDryRunEffects, EventRecord, XcmDryRunApiError, XcmDryRunEffects} from "@polkadot/types/interfaces";
 import { Result } from "@polkadot/types";
@@ -50,8 +49,8 @@ export type Transfer = {
 }
 
 export type DeliveryFee = {
-    xcmBridgeFeeDOT: bigint
-    bridgeHubDeliveryFeeDOT: bigint
+    xcmBridgeFee: bigint
+    bridgeHubDeliveryFee: bigint
     totalFeeInDot: bigint
 }
 
@@ -84,20 +83,27 @@ function resolveInputs(registry: AssetRegistry, tokenAddress: string, sourcePara
 }
 
 export async function getDeliveryFee(
-    assetHub: ApiPromise,
+    sourceAssetHub: ApiPromise,
+    direction: Direction,
     registry: AssetRegistry,
     defaultFee?: bigint,
     padPercentage?: bigint
 ): Promise<DeliveryFee> {
     const feeStorageKey = xxhashAsHex(":XcmBridgeHubRouterBaseFee:", 128, true)
-    const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
+    const feeStorageItem = await sourceAssetHub.rpc.state.getStorage(feeStorageKey)
     const feePadPercentage = padPercentage ?? 10n
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
 
+    let defaultFeeConfiguredInRuntime:bigint;
+    if (direction == Direction.ToPolkadot) {
+        defaultFeeConfiguredInRuntime = 10_602_492_378n; // .0106KSM
+    } else {
+        defaultFeeConfiguredInRuntime = 333_794_429n; // 0.033 DOT
+    }
     let xcmBridgeFee: bigint
     if (leFee.eqn(0)) {
         console.warn("Asset Hub onchain XcmBridgeHubRouterBaseFee not set. Using default fee.")
-        xcmBridgeFee = defaultFee ?? 333_794_429n
+        xcmBridgeFee = defaultFee ?? defaultFeeConfiguredInRuntime
     } else {
         xcmBridgeFee = BigInt(leFee.toString())
     }
@@ -105,27 +111,47 @@ export async function getDeliveryFee(
     xcmBridgeFee = padFeeByPercentage(xcmBridgeFee, feePadPercentage);
 
     let forwardedXcm = buildTransferToKusamaExportXCM(
-        assetHub.registry,
+        sourceAssetHub.registry,
+        DOT_LOCATION,
+        dotLocationOnKusamaAssetHubLocation(),
+        erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
         xcmBridgeFee,
         xcmBridgeFee,
         registry.assetHubParaId,
-        erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
         340282366920938463463374607431768211455n,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
         "0x0000000000000000000000000000000000000000000000000000000000000000");
 
-    let bridgeHubDeliveryFeeDOT = await calculateDeliveryFee(
-        assetHub,
+    let bridgeHubDeliveryFee = await calculateDeliveryFee(
+        sourceAssetHub,
         registry.bridgeHubParaId,
         forwardedXcm
     )
 
-    console.info("Total fee in DOT:", xcmBridgeFee + bridgeHubDeliveryFeeDOT)
+    // In either DOT or KSM
+    let totalFee = (xcmBridgeFee + bridgeHubDeliveryFee)
+
+    let totalFeeInDot = 0n;
+    // Convert KSM to DOT
+    if (direction == Direction.ToPolkadot) {
+        console.info("Converting KSM to DOT");
+        let amount = xcmBridgeFee + bridgeHubDeliveryFee;
+        totalFeeInDot = await quoteFeeSwap(
+            sourceAssetHub,
+            { parents: 1, interior: "Here" },
+            { parents: 2, interior: { x1: [{ GlobalConsensus: { Polkadot: null } }] } },
+            amount
+        )
+    } else {
+        totalFeeInDot = totalFee
+    }
+
+    console.info("Total fee in DOT:", totalFeeInDot)
 
     return {
-        xcmBridgeFeeDOT: xcmBridgeFee,
-        bridgeHubDeliveryFeeDOT: bridgeHubDeliveryFeeDOT,
-        totalFeeInDot: (xcmBridgeFee + bridgeHubDeliveryFeeDOT) * feePadPercentage
+        xcmBridgeFee: xcmBridgeFee,
+        bridgeHubDeliveryFee: bridgeHubDeliveryFee,
+        totalFeeInDot: totalFeeInDot * feePadPercentage
     }
 }
 
@@ -280,7 +306,7 @@ export async function validateTransfer(
 
     let assetHubDryRunError;
 
-    const dryRunSource = await dryRunOnSourceParachain(sourceAssetHub, direction, registry.assetHubParaId, registry.bridgeHubParaId, transfer.tx, sourceAccountHex)
+    const dryRunSource = await dryRunSourceAssetHub(sourceAssetHub, direction, registry.assetHubParaId, registry.bridgeHubParaId, transfer.tx, sourceAccountHex)
     if (!dryRunSource.success) {
         logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run call on source failed.' })
         assetHubDryRunError = dryRunSource.error
@@ -299,22 +325,34 @@ export async function validateTransfer(
     }
 
     console.log("location:", location);
-    console.log("fee.totalFeeInDot:", fee.totalFeeInDot);
 
-    let kahXCM = buildKusamaAssetHubExportXCM(
-        destAssetHub.registry,
-        fee.totalFeeInDot,
-        registry.assetHubParaId,
-        location,
-        transfer.input.amount,
-        transfer.input.beneficiaryAccount,
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-    );
+    let destAssetHubXCM: any;
+    if (direction == Direction.ToPolkadot) {
+        destAssetHubXCM = buildKusamaToPolkadotAssetHubExportXCM(
+            destAssetHub.registry,
+            fee.totalFeeInDot,
+            registry.assetHubParaId,
+            location,
+            transfer.input.amount,
+            transfer.input.beneficiaryAccount,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+        );
+    } else {
+        destAssetHubXCM = buildPolkadotToKusamaAssetHubExportXCM(
+            destAssetHub.registry,
+            fee.totalFeeInDot,
+            registry.assetHubParaId,
+            location,
+            transfer.input.amount,
+            transfer.input.beneficiaryAccount,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+        );
+    }
 
-    const dryRunKAH = await dryRunAssetHub(destAssetHub, registry.bridgeHubParaId, kahXCM);
-    if (!dryRunKAH.success) {
-        logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run call on Kusama AH failed: ' + dryRunKAH.errorMessage })
-        assetHubDryRunError = dryRunKAH.errorMessage
+    const dryRunAssetHubDest = await dryRunDestAssetHub(destAssetHub, registry.bridgeHubParaId, destAssetHubXCM);
+    if (!dryRunAssetHubDest.success) {
+        logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run call on destination AH failed: ' + dryRunAssetHubDest.errorMessage })
+        assetHubDryRunError = dryRunAssetHubDest.errorMessage
     }
 
     console.log("dotBalance:", dotBalance);
@@ -463,7 +501,7 @@ export function createERC20ToPolkadotTx(
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(destination, assets, "DestinationReserve", feeAsset, "DestinationReserve", customXcm, "Unlimited")
 }
 
-export async function dryRunOnSourceParachain(
+export async function dryRunSourceAssetHub(
     source: ApiPromise,
     direction: Direction,
     assetHubParaId: number,
@@ -517,26 +555,21 @@ export async function dryRunOnSourceParachain(
     }
 }
 
-async function dryRunAssetHub(
+async function dryRunDestAssetHub(
     assetHub: ApiPromise,
     parachainId: number,
     xcm: any
 ) {
     const sourceParachain = { v4: { parents: 1, interior: { x1: [{ parachain: parachainId }] } } }
-    console.dir(xcm.toHuman(), {depth: 100});
-    console.dir(sourceParachain, {depth: 100});
     const result = await assetHub.call.dryRunApi.dryRunXcm<
         Result<XcmDryRunEffects, XcmDryRunApiError>
     >(sourceParachain, xcm)
 
-    const resultPrimitive = result.toPrimitive() as any
     const resultHuman = result.toHuman() as any
 
     const success = result.isOk && result.asOk.executionResult.isComplete
     if (!success) {
-       // console.error("Error during dry run on asset hub:", xcm.toHuman(), result.toHuman());
-        //console.dir(xcm.toHuman(), {depth: 100});
-        console.dir(result.toHuman(), {depth: 100});
+        console.error("Error during dry run on asset hub:", xcm.toHuman(), result.toHuman());
     }
     return {
         success: success,
