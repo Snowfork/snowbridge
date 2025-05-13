@@ -635,7 +635,7 @@ export async function validateTransfer(
     let nativeBalanceCheckFailed = false
     if (isNativeBalance && fee.totalFeeInNative) {
         nativeBalanceCheckFailed = true
-        if (amount > tokenBalance + fee.totalFeeInNative) {
+        if (amount+ fee.totalFeeInNative > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -759,7 +759,7 @@ export async function validateTransfer(
 
     // recheck total after fee estimation
     if (isNativeBalance && fee.totalFeeInNative && !nativeBalanceCheckFailed) {
-        if (amount > tokenBalance + fee.totalFeeInNative + sourceExecutionFee) {
+        if (amount + fee.totalFeeInNative + sourceExecutionFee > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -865,7 +865,7 @@ export async function validateTransferEvm(
     ])
 
     let nativeBalanceCheckFailed = false
-    if (isNativeBalanceTransfer && fee.totalFeeInNative && amount > tokenBalance + fee.totalFeeInNative) {
+    if (isNativeBalanceTransfer && fee.totalFeeInNative && amount + fee.totalFeeInNative > tokenBalance) {
         nativeBalanceCheckFailed = true
         logs.push({
             kind: ValidationKind.Error,
@@ -1021,7 +1021,7 @@ export async function validateTransferEvm(
         }
     }
     // Recheck balance after execution fee
-    if (!nativeBalanceCheckFailed && isNativeBalanceTransfer && fee.totalFeeInNative && amount > tokenBalance + fee.totalFeeInNative + (feeInfo?.totalTxCost ?? 0n)) {
+    if (!nativeBalanceCheckFailed && isNativeBalanceTransfer && fee.totalFeeInNative && amount + fee.totalFeeInNative + (feeInfo?.totalTxCost ?? 0n) > tokenBalance) {
         logs.push({
             kind: ValidationKind.Error,
             reason: ValidationReason.InsufficientTokenBalance,
