@@ -642,7 +642,7 @@ export async function getLocationBalance(
             )
         }
         default:
-            throw Error(`Cannot get balance for spec ${specName}. Location = ${location}`)
+            throw Error(`Cannot get balance for spec ${specName}. Location = ${JSON.stringify(location)}`)
     }
 }
 
@@ -1381,7 +1381,7 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                     path.asset === MUSE_TOKEN_ID &&
                     (
                         (path.destination !== 3369 && path.type === "ethereum") || 
-                        (path.destination !== 1 && path.type === "substrate")
+                        (path.source !== 3369 && path.type === "substrate")
                     )
                 ) {
                     return false
@@ -1399,7 +1399,7 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                     path.asset === MYTHOS_TOKEN_ID &&
                     (
                         (path.destination !== 3369 && path.type === "ethereum") || 
-                        (path.destination !== 1 && path.type === "substrate")
+                        (path.source !== 3369 && path.type === "substrate")
                     )
                 ) {
                     return false

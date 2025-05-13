@@ -141,6 +141,7 @@ export type DeliveryFee = {
     returnToSenderExecutionFeeDOT: bigint
     returnToSenderDeliveryFeeDOT: bigint
     totalFeeInDot: bigint
+    totalFeeInNative?: bigint
 }
 
 export type FeeInfo = {
@@ -487,7 +488,7 @@ export async function getDeliveryFee(
             )
         } else {
             console.warn(
-                `Parachain ${parachain} does not support payment apis. Using an estimated fee.`
+                `Parachain ${parachain} does not support payment apis. Using a manually estimated fee.`
             )
             returnToSenderExecutionFeeDOT = padFeeByPercentage(
                 registry.parachains[parachain].estimatedExecutionFeeDOT,
@@ -500,18 +501,37 @@ export async function getDeliveryFee(
         )
     }
 
+    const totalFeeInDot = snowbridgeDeliveryFeeDOT +
+        assetHubExecutionFeeDOT +
+        returnToSenderExecutionFeeDOT +
+        returnToSenderDeliveryFeeDOT +
+        bridgeHubDeliveryFeeDOT;
+
+    // calculate the cost of swapping for DOT
+    let totalFeeInNative: bigint | undefined = undefined
+    if (!registry.parachains[parachain].features.hasDotBalance) {
+        const paraLoc = parahchainLocation(parachain);
+        const result = await assetHub.call.assetConversionApi.quotePriceTokensForExactTokens(
+            paraLoc,
+            DOT_LOCATION,
+            totalFeeInDot,
+            true
+        )
+        const swappedBalance = result.toPrimitive() as any
+        if (swappedBalance == null) {
+            throw Error(`No pool set up in asset conversion pallet for '${JSON.stringify(paraLoc)}' and '${JSON.stringify(DOT_LOCATION)}'.`)
+        }
+        totalFeeInNative = BigInt(swappedBalance)
+    }
+
     return {
         snowbridgeDeliveryFeeDOT,
         assetHubExecutionFeeDOT,
         bridgeHubDeliveryFeeDOT,
         returnToSenderDeliveryFeeDOT,
         returnToSenderExecutionFeeDOT,
-        totalFeeInDot:
-            snowbridgeDeliveryFeeDOT +
-            assetHubExecutionFeeDOT +
-            returnToSenderExecutionFeeDOT +
-            returnToSenderDeliveryFeeDOT +
-            bridgeHubDeliveryFeeDOT,
+        totalFeeInDot,
+        totalFeeInNative,
     }
 }
 
@@ -542,7 +562,7 @@ export type ValidationResult = {
     data: {
         bridgeStatus: OperationStatus
         nativeBalance: bigint
-        dotBalance: bigint
+        dotBalance?: bigint
         sourceExecutionFee: bigint
         tokenBalance: bigint
         sourceDryRunError: any
@@ -557,7 +577,7 @@ export type ValidationResultEvm = {
     data: {
         bridgeStatus: OperationStatus
         nativeBalance: bigint
-        dotBalance: bigint
+        dotBalance?: bigint
         tokenBalance: bigint
         feeInfo?: FeeInfo
         sourceDryRunError: any
@@ -586,12 +606,13 @@ export async function validateTransfer(
     const { tx } = transfer
 
     const logs: ValidationLog[] = []
-
-    const [nativeBalance, dotBalance] = await Promise.all([
-        getNativeBalance(sourceParachain, sourceAccountHex),
-        getDotBalance(sourceParachain, source.info.specName, sourceAccountHex),
-    ])
+    const nativeBalance = await getNativeBalance(sourceParachain, sourceAccountHex);
+    let dotBalance: bigint | undefined = undefined
+    if (source.features.hasDotBalance) {
+        dotBalance = await getDotBalance(sourceParachain, source.info.specName, sourceAccountHex);
+    }
     let tokenBalance: any
+    let isNativeBalance = false
     // For DOT on AH, get it from the native balance pallet.
     if (
         sourceParaId == registry.assetHubParaId &&
@@ -599,6 +620,7 @@ export async function validateTransfer(
         transfer.computed.ahAssetMetadata.location?.interior == DOT_LOCATION.interior
     ) {
         tokenBalance = await getNativeBalance(sourceParachain, sourceAccountHex)
+        isNativeBalance = true
     } else {
         tokenBalance = await getTokenBalance(
             sourceParachain,
@@ -608,14 +630,27 @@ export async function validateTransfer(
             tokenAddress,
             sourceAssetMetadata
         )
+        isNativeBalance = sourceAssetMetadata.decimals === source.info.tokenDecimals && sourceAssetMetadata.symbol == source.info.tokenSymbols
     }
-
-    if (amount > tokenBalance) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.InsufficientTokenBalance,
-            message: "Insufficient token balance to submit transaction.",
-        })
+    let nativeBalanceCheckFailed = false
+    if (isNativeBalance && fee.totalFeeInNative) {
+        nativeBalanceCheckFailed = true
+        if (amount > tokenBalance + fee.totalFeeInNative) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: "Insufficient token balance to submit transaction.",
+            })
+        }
+    }
+    else {
+        if (amount > tokenBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: "Insufficient token balance to submit transaction.",
+            })
+        }
     }
 
     let sourceDryRunError
@@ -722,8 +757,25 @@ export async function validateTransfer(
     const paymentInfo = await tx.paymentInfo(sourceAccountHex)
     const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
 
+    // recheck total after fee estimation
+    if (isNativeBalance && fee.totalFeeInNative && !nativeBalanceCheckFailed) {
+        if (amount > tokenBalance + fee.totalFeeInNative + sourceExecutionFee) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: "Insufficient token balance to submit transaction.",
+            })
+        }
+    }
+
     if (sourceParaId === registry.assetHubParaId) {
-        if (sourceExecutionFee + fee.totalFeeInDot > dotBalance) {
+        if (!dotBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientDotFee,
+                message: "Could not determine the DOT balance",
+            })
+        } else if (sourceExecutionFee + fee.totalFeeInDot > dotBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientDotFee,
@@ -731,11 +783,17 @@ export async function validateTransfer(
             })
         }
     } else {
-        if (fee.totalFeeInDot > dotBalance) {
+        if (dotBalance && fee.totalFeeInDot > dotBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientDotFee,
                 message: "Insufficient DOT balance to submit transaction on the source parachain.",
+            })
+        } else if (fee.totalFeeInNative && fee.totalFeeInNative + sourceExecutionFee > nativeBalance && !nativeBalanceCheckFailed) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientNativeFee,
+                message: "Insufficient native balance to submit transaction on the source parachain.",
             })
         }
         if (sourceExecutionFee > nativeBalance) {
@@ -786,14 +844,17 @@ export async function validateTransferEvm(
 ): Promise<ValidationResultEvm> {
     const { sourceParachain, gateway, bridgeHub, assetHub, sourceEthChain } = connections
     const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
-    const { sourceAccountHex, sourceParaId, sourceParachain: source, messageId } = transfer.computed
+    const { sourceAccountHex, sourceParaId, sourceParachain: source, messageId, sourceAssetMetadata } = transfer.computed
     const { tx } = transfer
 
     const logs: ValidationLog[] = []
-
-    const [nativeBalance, dotBalance, tokenBalance] = await Promise.all([
+    let dotBalance: bigint | undefined = undefined
+    if (source.features.hasDotBalance) {
+        dotBalance = await getDotBalance(sourceParachain, source.info.specName, sourceAccountHex);
+    }
+    let isNativeBalanceTransfer = sourceAssetMetadata.decimals === source.info.tokenDecimals && sourceAssetMetadata.symbol == source.info.tokenSymbols
+    const [nativeBalance, tokenBalance] = await Promise.all([
         getNativeBalance(sourceParachain, sourceAccountHex),
-        getDotBalance(sourceParachain, source.info.specName, sourceAccountHex),
         getTokenBalance(
             sourceParachain,
             source.info.specName,
@@ -803,7 +864,15 @@ export async function validateTransferEvm(
         ),
     ])
 
-    if (amount > tokenBalance) {
+    let nativeBalanceCheckFailed = false
+    if (isNativeBalanceTransfer && fee.totalFeeInNative && amount > tokenBalance + fee.totalFeeInNative) {
+        nativeBalanceCheckFailed = true
+        logs.push({
+            kind: ValidationKind.Error,
+            reason: ValidationReason.InsufficientTokenBalance,
+            message: "Insufficient token balance to submit transaction.",
+        })
+    } else if (amount > tokenBalance) {
         logs.push({
             kind: ValidationKind.Error,
             reason: ValidationReason.InsufficientTokenBalance,
@@ -906,13 +975,20 @@ export async function validateTransferEvm(
         }
     }
 
-    if (fee.totalFeeInDot > dotBalance) {
+    if (!dotBalance) {
         logs.push({
             kind: ValidationKind.Error,
             reason: ValidationReason.InsufficientDotFee,
-            message: "Insufficient DOT balance to submit transaction on the source parachain.",
+            message: "Could not determine the DOT balance",
         })
-    }
+    } else
+        if (fee.totalFeeInDot > dotBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientDotFee,
+                message: "Insufficient DOT balance to submit transaction on the source parachain.",
+            })
+        }
 
     let feeInfo: FeeInfo | undefined
     if (logs.length === 0) {
@@ -929,7 +1005,7 @@ export async function validateTransferEvm(
             })
         }
 
-        if (sourceExecutionFee > nativeBalance) {
+        if (sourceExecutionFee > nativeBalance && !nativeBalanceCheckFailed) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientNativeFee,
@@ -944,7 +1020,14 @@ export async function validateTransferEvm(
             totalTxCost: sourceExecutionFee,
         }
     }
-
+    // Recheck balance after execution fee
+    if (!nativeBalanceCheckFailed && isNativeBalanceTransfer && fee.totalFeeInNative && amount > tokenBalance + fee.totalFeeInNative + (feeInfo?.totalTxCost ?? 0n)) {
+        logs.push({
+            kind: ValidationKind.Error,
+            reason: ValidationReason.InsufficientTokenBalance,
+            message: "Insufficient token balance to submit transaction.",
+        })
+    }
     const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
     if (bridgeStatus.toEthereum.outbound !== "Normal") {
         logs.push({

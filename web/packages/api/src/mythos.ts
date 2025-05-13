@@ -18,6 +18,6 @@ export async function getMythosLocationBalance(
     } else if(specName === "mythos" && JSON.stringify(location) == JSON.stringify(erc20Location(MYTHOS_CHAIN_ID, MYTHOS_TOKEN_ID))) {
         return await getNativeBalance(provider, account);
     } else {
-        throw Error(`Cannot get balance for spec ${specName}. Location = ${location}`)
+        throw Error(`Cannot get balance for spec ${specName}. Location = ${JSON.stringify(location)}`)
     }
 }
