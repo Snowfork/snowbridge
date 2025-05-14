@@ -591,7 +591,8 @@ contract GatewayV2Test is Test {
         CommandV2[] memory commands = new CommandV2[](3);
 
         // First command should succeed - SetOperatingMode
-        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params1 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
@@ -600,19 +601,14 @@ contract GatewayV2Test is Test {
 
         // Second command should fail - Call a function that reverts
         bytes memory failingData = abi.encodeWithSignature("revertUnauthorized()");
-        CallContractParams memory params2 = CallContractParams({
-            target: address(helloWorld),
-            data: failingData,
-            value: 0
-        });
-        commands[1] = CommandV2({
-            kind: CommandKind.CallContract,
-            gas: 500_000,
-            payload: abi.encode(params2)
-        });
+        CallContractParams memory params2 =
+            CallContractParams({target: address(helloWorld), data: failingData, value: 0});
+        commands[1] =
+            CommandV2({kind: CommandKind.CallContract, gas: 500_000, payload: abi.encode(params2)});
 
         // Third command should succeed - SetOperatingMode again
-        SetOperatingModeParams memory params3 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params3 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[2] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
@@ -629,14 +625,9 @@ contract GatewayV2Test is Test {
 
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({
-                origin: keccak256("666"),
-                nonce: 1,
-                topic: topic,
-                commands: commands
-            }),
+            InboundMessageV2({origin: keccak256("666"), nonce: 1, topic: topic, commands: commands}),
             proof,
-            makeMockProof(),
+            makeMockBeefyProof(),
             relayerRewardAddress
         );
     }
@@ -648,7 +639,8 @@ contract GatewayV2Test is Test {
         CommandV2[] memory commands = new CommandV2[](2);
 
         // First command should succeed
-        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params1 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
@@ -672,14 +664,9 @@ contract GatewayV2Test is Test {
 
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({
-                origin: keccak256("666"),
-                nonce: 2,
-                topic: topic,
-                commands: commands
-            }),
+            InboundMessageV2({origin: keccak256("666"), nonce: 2, topic: topic, commands: commands}),
             proof,
-            makeMockProof(),
+            makeMockBeefyProof(),
             relayerRewardAddress
         );
     }
@@ -691,7 +678,8 @@ contract GatewayV2Test is Test {
         CommandV2[] memory commands = new CommandV2[](3);
 
         // First command - SetOperatingMode to Normal
-        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params1 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
@@ -699,7 +687,8 @@ contract GatewayV2Test is Test {
         });
 
         // Second command - Set mode to RejectingOutboundMessages (will succeed)
-        SetOperatingModeParams memory params2 = SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
+        SetOperatingModeParams memory params2 =
+            SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
         commands[1] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
@@ -707,7 +696,8 @@ contract GatewayV2Test is Test {
         });
 
         // Third command - Also set mode to Normal again (will succeed)
-        SetOperatingModeParams memory params3 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params3 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[2] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
@@ -720,14 +710,9 @@ contract GatewayV2Test is Test {
 
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({
-                origin: keccak256("666"),
-                nonce: 3,
-                topic: topic,
-                commands: commands
-            }),
+            InboundMessageV2({origin: keccak256("666"), nonce: 3, topic: topic, commands: commands}),
             proof,
-            makeMockProof(),
+            makeMockBeefyProof(),
             relayerRewardAddress
         );
     }
