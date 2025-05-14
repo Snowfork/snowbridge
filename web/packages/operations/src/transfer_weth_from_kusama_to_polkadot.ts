@@ -1,11 +1,11 @@
 import "dotenv/config"
 import {Keyring} from "@polkadot/keyring"
-import {Context, environment, toKusama} from "@snowbridge/api"
+import {Context, environment, forKusama} from "@snowbridge/api"
 import {AbstractProvider} from "ethers"
 import cron from "node-cron"
 import {cryptoWaitReady} from "@polkadot/util-crypto"
 import {fetchRegistry} from "./registry";
-import {Direction} from "@snowbridge/api/dist/toKusama";
+import {Direction} from "@snowbridge/api/dist/forKusama";
 
 const transfer = async () => {
     let env = "local_e2e"
@@ -96,7 +96,7 @@ const transfer = async () => {
     console.log("# Asset Hub Kusama to Asset Hub Polkadot")
     {
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toKusama.getDeliveryFee(
+        const fee = await forKusama.getDeliveryFee(
             kusamaAssetHub,
             direction,
             registry,
@@ -104,7 +104,7 @@ const transfer = async () => {
         )
 
         // Step 2. Create a transfer tx
-        const transfer = await toKusama.createTransfer(
+        const transfer = await forKusama.createTransfer(
             kusamaAssetHub,
             direction,
             registry,
@@ -116,20 +116,20 @@ const transfer = async () => {
         )
 
         // Step 3. Validate
-        const validation = await toKusama.validateTransfer(
+        const validation = await forKusama.validateTransfer(
             {sourceAssetHub: kusamaAssetHub, destAssetHub: polkadotAssetHub, sourceBridgeHub: kusamaBridgeHub, destinationBridgeHub: polkadotBridgeHub},
             direction,
             transfer,
         );
 
         // Step 4. Check validation logs for errors
-        if (validation.logs.find((l) => l.kind == toKusama.ValidationKind.Error)) {
+        if (validation.logs.find((l) => l.kind == forKusama.ValidationKind.Error)) {
             console.error("validation errors", validation.logs)
             throw Error(`validation has one of more errors.`)
         }
 
         // Step 5. Submit transaction and get receipt for tracking
-        const response = await toKusama.signAndSend(
+        const response = await forKusama.signAndSend(
             kusamaAssetHub,
             transfer,
             SUBSTRATE_ACCOUNT,

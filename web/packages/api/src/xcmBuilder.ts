@@ -1,7 +1,6 @@
 import { Registry } from "@polkadot/types/types"
 import { beneficiaryMultiAddress } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
-import {Direction} from "./toKusama";
 
 export const HERE_LOCATION = { parents: 0, interior: "Here"  }
 export const DOT_LOCATION = { parents: 1, interior: "Here"  }
@@ -44,7 +43,7 @@ export function kusamaAssetHubLocation(parachainId: number) {
         parents: 2,
         interior: { x2: [
             { GlobalConsensus: { Kusama: null } },
-            { parachain: parachainId } // TODO
+            { parachain: parachainId }
         ] },
     }
 }
