@@ -39,22 +39,22 @@ export function accountId32Location(hexAddress: string) {
     }
 }
 
-export function kusamaAssetHubLocation() {
+export function kusamaAssetHubLocation(parachainId: number) {
     return {
         parents: 2,
         interior: { x2: [
             { GlobalConsensus: { Kusama: null } },
-            { parachain: 1000 } // TODO
+            { parachain: parachainId } // TODO
         ] },
     }
 }
 
-export function polkadotAssetHubLocation() {
+export function polkadotAssetHubLocation(parachainId: number) {
     return {
         parents: 2,
         interior: { x2: [
                 { GlobalConsensus: { Polkadot: null } },
-                { parachain: 1000 } // TODO
+                { parachain: parachainId }
             ] },
     }
 }

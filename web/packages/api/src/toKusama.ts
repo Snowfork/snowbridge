@@ -183,9 +183,9 @@ export async function createTransfer(
     let tokenLocation = getTokenLocation(registry, direction, tokenAddress);
     let tx;
     if (direction == Direction.ToPolkadot) {
-        tx = createERC20ToPolkadotTx(parachain, tokenLocation, sourceAccountHex, amount, fee.totalFeeInDot)
+        tx = createERC20ToPolkadotTx(sourceParaId, parachain, tokenLocation, sourceAccountHex, amount, fee.totalFeeInDot)
     } else {
-        tx = createERC20ToKusamaTx(parachain, tokenLocation, sourceAccountHex, amount, fee.totalFeeInDot)
+        tx = createERC20ToKusamaTx(destParaId, parachain, tokenLocation, sourceAccountHex, amount, fee.totalFeeInDot)
     }
 
     let { hexAddress: beneficiaryAddressHex } =
@@ -201,7 +201,7 @@ export async function createTransfer(
             fee,
         },
         computed: {
-            sourceParaId: assetHubParaId,
+            sourceParaId,
             sourceParachain,
             sourceAssetMetadata,
             sourceAccountHex,
@@ -438,6 +438,7 @@ export async function signAndSend(parachain: ApiPromise, transfer: Transfer, acc
 }
 
 export function createERC20ToKusamaTx(
+    destParaId: number,
     parachain: ApiPromise,
     tokenLocation: any,
     beneficiaryAccount: string,
@@ -467,7 +468,7 @@ export function createERC20ToKusamaTx(
         }
     }
 
-    const destination = { v4: kusamaAssetHubLocation() }
+    const destination = { v4: kusamaAssetHubLocation(destParaId) }
 
     const feeAsset = {
         v4: DOT_LOCATION
@@ -477,6 +478,7 @@ export function createERC20ToKusamaTx(
 }
 
 export function createERC20ToPolkadotTx(
+    destParaId: number,
     parachain: ApiPromise,
     tokenLocation: any,
     beneficiaryAccount: string,
@@ -506,7 +508,7 @@ export function createERC20ToPolkadotTx(
         }
     }
 
-    const destination = { v4: polkadotAssetHubLocation() }
+    const destination = { v4: polkadotAssetHubLocation(destParaId) }
 
     const feeAsset = {
         v4: dotLocationOnKusamaAssetHubLocation()
