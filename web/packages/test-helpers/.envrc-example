@@ -1,0 +1,7 @@
+source_up_if_exists
+
+# The validator set size which is 600 in Polkadot mainnet.
+# export VALIDATOR_SET_SIZE=600
+
+# The minimum number of signatures which is 17 in Polkadot mainnet.
+# export MINIMUM_REQUIRED_SIGNATURES=17
