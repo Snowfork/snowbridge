@@ -93,7 +93,7 @@ const transfer = async () => {
     const defaultBridgingFee = 333794429n;
     const direction = Direction.ToPolkadot;
 
-    console.log("# Asset Hub Polkadot to Asset Hub Kusama")
+    console.log("# Asset Hub Kusama to Asset Hub Polkadot")
     {
         // Step 1. Get the delivery fee for the transaction
         const fee = await toKusama.getDeliveryFee(

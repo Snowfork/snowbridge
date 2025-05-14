@@ -4,6 +4,7 @@ import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import {Direction} from "./toKusama";
 
 export const DOT_LOCATION = { parents: 1, interior: "Here" }
+export const NATIVE_TOKEN = { parents: 1, interior: "Here" }
 
 const ethereumNetwork = (ethChainId: number) => ({
     GlobalConsensus: { Ethereum: { chain_id: ethChainId } },
@@ -377,7 +378,6 @@ export function buildParachainERC20ReceivedXcmOnAssetHub(
 }
 
 function buildAssetHubXcmFromParachainKusama(
-    sourceAccount: string,
     beneficiary: string,
 ) {
     return [
@@ -510,12 +510,10 @@ function buildAssetHubXcmFromParachain(
 
 export function buildAssetHubERC20TransferToKusama(
     registry: Registry,
-    sourceAccount: string,
     beneficiary: string,
 ) {
     return registry.createType("XcmVersionedXcm", {
         v4: buildAssetHubXcmFromParachainKusama(
-            sourceAccount,
             beneficiary,
         ),
     })
@@ -1552,4 +1550,3 @@ export function isDOTOnOtherConsensusSystem(location: any) {
 export function isDOTOnPolkadotAssetHub(location: any) {
     return location.parents == DOT_LOCATION.parents && location.interior == DOT_LOCATION.interior
 }
-

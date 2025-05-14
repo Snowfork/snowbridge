@@ -19,7 +19,6 @@ import {
     AssetRegistry, calculateDeliveryFee,
     getDotBalance, getLocationBalance,
     getNativeAccount,
-    getNativeBalance,
     getTokenBalance, padFeeByPercentage,
     Parachain, quoteFeeSwap
 } from "./assets_v2";
@@ -165,7 +164,7 @@ export async function createTransfer(
     amount: bigint,
     fee: DeliveryFee,
 ): Promise<Transfer> {
-    const { ethChainId, assetHubParaId } = registry
+    const { assetHubParaId } = registry
     const destParaId = registry.kusama?.assetHubParaId
     let sourceParaId = assetHubParaId;
 
@@ -184,9 +183,9 @@ export async function createTransfer(
     let tokenLocation = getTokenLocation(registry, direction, tokenAddress);
     let tx;
     if (direction == Direction.ToPolkadot) {
-        tx = createERC20ToPolkadotTx(parachain,  sourceAccountHex, tokenLocation, sourceAccountHex, amount, fee.totalFeeInDot)
+        tx = createERC20ToPolkadotTx(parachain, tokenLocation, sourceAccountHex, amount, fee.totalFeeInDot)
     } else {
-        tx = createERC20ToKusamaTx(parachain,  sourceAccountHex, tokenLocation, sourceAccountHex, amount, fee.totalFeeInDot)
+        tx = createERC20ToKusamaTx(parachain, tokenLocation, sourceAccountHex, amount, fee.totalFeeInDot)
     }
 
     let { hexAddress: beneficiaryAddressHex } =
@@ -273,15 +272,16 @@ export async function validateTransfer(
 
     let tokenBalance: bigint;
     if (isDOT(direction, location)) {
-        console.log("token transferred is DOT");
         tokenBalance = dotBalance;
-    } else {
-        console.log("token transferred is not DOT");
+    }
+    else {
         tokenBalance = await getTokenBalance(sourceAssetHub, source.info.specName, sourceAccountHex, registry.ethChainId, tokenAddress);
     }
 
     console.log("dotBalance:", dotBalance);
     console.log("tokenBalance:", tokenBalance);
+    console.log("amount:", amount);
+    console.log("fee:", fee)
 
     const logs: ValidationLog[] = []
 
@@ -361,8 +361,6 @@ export async function validateTransfer(
         assetHubDryRunError = dryRunAssetHubDest.errorMessage
     }
 
-    console.log("amount:", amount);
-    console.log("fee:", fee)
     console.log("sourceExecutionFee:", sourceExecutionFee)
     console.log("TOTAL FEE", sourceExecutionFee + fee.totalFeeInDot)
 
@@ -445,7 +443,6 @@ export async function signAndSend(parachain: ApiPromise, transfer: Transfer, acc
 
 export function createERC20ToKusamaTx(
     parachain: ApiPromise,
-    sourceAccount: string,
     tokenLocation: any,
     beneficiaryAccount: string,
     amount: bigint,
@@ -479,13 +476,12 @@ export function createERC20ToKusamaTx(
     const feeAsset = {
         v4: DOT_LOCATION
     }
-    const customXcm = buildAssetHubERC20TransferToKusama(parachain.registry, sourceAccount, beneficiaryAccount)
+    const customXcm = buildAssetHubERC20TransferToKusama(parachain.registry, beneficiaryAccount)
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(destination, assets, "LocalReserve", feeAsset, "LocalReserve", customXcm, "Unlimited")
 }
 
 export function createERC20ToPolkadotTx(
     parachain: ApiPromise,
-    sourceAccount: string,
     tokenLocation: any,
     beneficiaryAccount: string,
     amount: bigint,
@@ -493,7 +489,7 @@ export function createERC20ToPolkadotTx(
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any;
     if (isDOT(Direction.ToPolkadot, tokenLocation)) {
-        assets = {v4: [
+        assets = { v4: [
             {
                 id: dotLocationOnKusamaAssetHubLocation(),
                 fun: { Fungible: totalFeeInDot +  amount},
@@ -519,7 +515,7 @@ export function createERC20ToPolkadotTx(
     const feeAsset = {
         v4: dotLocationOnKusamaAssetHubLocation()
     }
-    const customXcm = buildAssetHubERC20TransferToKusama(parachain.registry, sourceAccount, beneficiaryAccount)
+    const customXcm = buildAssetHubERC20TransferToKusama(parachain.registry, beneficiaryAccount)
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(destination, assets, "DestinationReserve", feeAsset, "DestinationReserve", customXcm, "Unlimited")
 }
 

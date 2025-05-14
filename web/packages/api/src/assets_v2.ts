@@ -1626,21 +1626,17 @@ async function indexPNAs(
             continue
         }
         const locationOnAH: any = bridgeablePNAsOnPolkadotAH(environment, location, assetHubParaId)
-        console.log("key:", location);
         if (!locationOnAH) {
             console.warn(`Location ${JSON.stringify(location)} is not bridgeable on assethub`)
             continue
         }
-        console.log("locationOnAH:", locationOnAH);
         const tokenId = (value.toPrimitive() as string).toLowerCase()
         const token = await gateway.tokenAddressOf(tokenId)
         const metadata = await assetErc20Metadata(ethereum, token, gatewayAddress)
         let metadataOnAH: any, assetId: any
         if (locationOnAH?.parents == 0) {
             const assetId = locationOnAH?.interior?.x2[1]?.generalIndex
-            console.log("assetId: ", assetId);
             metadataOnAH = (await assethub.query.assets.asset(assetId)).toJSON()
-            console.log("metadataOnAH: ", metadataOnAH);
             metadataOnAH.assetId = assetId.toString()
         } else {
             if (
@@ -1720,15 +1716,12 @@ async function indexKusamaPNAs(
             // skip any Kusama native assets for now
             continue
         } else {
+            // Also skip KSM for now.
             if (
                 locationOnAHKusama?.parents == DOT_LOCATION.parents &&
                 locationOnAHKusama?.interior == DOT_LOCATION.interior
             ) {
-                let existentialDeposit = kusamaAssethub.consts.balances.existentialDeposit.toPrimitive()
-                metadataOnAH = {
-                    minBalance: existentialDeposit,
-                    isSufficient: true,
-                }
+                continue
             } else if (
                 locationOnAHPolkadot?.parents == DOT_LOCATION.parents &&
                 locationOnAHPolkadot?.interior == DOT_LOCATION.interior
