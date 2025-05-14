@@ -247,8 +247,6 @@ export async function validateTransfer(
     connections: {
         sourceAssetHub: ApiPromise
         destAssetHub: ApiPromise
-        sourceBridgeHub: ApiPromise
-        destinationBridgeHub: ApiPromise
     },
     direction: Direction,
     transfer: Transfer,

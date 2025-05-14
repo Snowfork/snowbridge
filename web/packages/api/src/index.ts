@@ -79,18 +79,9 @@ export class Context {
     }
 
     kusamaAssetHub(): Promise<ApiPromise> | undefined {
-        console.log()
         const assetHubParaId = this.config.kusama?.assetHubParaId;
         if (assetHubParaId) {
             return this.kusamaParachain(assetHubParaId)
-        }
-    }
-
-    kusamaBridgeHub(): Promise<ApiPromise> | undefined {
-        console.log()
-        const bridgeHubParaId = this.config.kusama?.bridgeHubParaId;
-        if (bridgeHubParaId) {
-            return this.kusamaParachain(bridgeHubParaId)
         }
     }
 
