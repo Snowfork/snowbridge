@@ -1077,7 +1077,7 @@ export function buildTransferToKusamaExportXCM(
                                     allCounted: 1,
                                 },
                             },
-                            beneficiary: parahchainLocation(assetHubParaId),
+                            beneficiary: parachainLocation(assetHubParaId),
                         },
                     },
                 ],

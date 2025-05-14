@@ -129,16 +129,16 @@ const transfer = async () => {
         }
 
         // Step 5. Submit transaction and get receipt for tracking
-        //const response = await toKusama.signAndSend(
-        //    polkadotAssetHub,
-        //    transfer,
-        //    SUBSTRATE_ACCOUNT,
-        //    { withSignedTransaction: true }
-        //)
-        //if (!response) {
-        //    throw Error(`Transaction ${response} not included.`)
-        //}
-        //console.log("Success message", response.messageId)
+        const response = await toKusama.signAndSend(
+            polkadotAssetHub,
+            transfer,
+            SUBSTRATE_ACCOUNT,
+            { withSignedTransaction: true }
+        )
+        if (!response) {
+            throw Error(`Transaction ${response} not included.`)
+        }
+        console.log("Success message", response.messageId)
 
         await context.destroyContext()
     }
