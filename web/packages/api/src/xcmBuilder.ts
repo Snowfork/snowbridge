@@ -1,6 +1,7 @@
 import { Registry } from "@polkadot/types/types"
 import { beneficiaryMultiAddress } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import {Direction} from "./toKusama";
 
 export const DOT_LOCATION = { parents: 1, interior: "Here" }
 
@@ -1163,6 +1164,33 @@ export function buildPolkadotToKusamaAssetHubExportXCM(
     beneficiary: string,
     topic: string
 ) {
+    let reserverAssetDeposited = {}
+    // If the asset transferred is DOT, only add DOT as the asset
+    if (isDOTOnPolkadotAssetHub(transferTokenLocation)) {
+        reserverAssetDeposited = [
+            {
+                id: dotLocationOnKusamaAssetHubLocation(),
+                fun: {
+                    Fungible: totalFeeInDot + transferAmount,
+                },
+            },
+        ];
+    } else {
+        reserverAssetDeposited = [
+            {
+                id: dotLocationOnKusamaAssetHubLocation(),
+                fun: {
+                    Fungible: totalFeeInDot,
+                },
+            },
+            {
+                id: transferTokenLocation,
+                fun: {
+                    Fungible: transferAmount,
+                },
+            }
+        ];
+    }
     return registry.createType("XcmVersionedXcm", {
         v4: [
             {
@@ -1175,20 +1203,7 @@ export function buildPolkadotToKusamaAssetHubExportXCM(
                 descendOrigin: { x1: [{ parachain: assetHubParaId }] },
             },
             {
-                reserveAssetDeposited: [
-                    {
-                        id: dotLocationOnKusamaAssetHubLocation(),
-                        fun: {
-                            Fungible: totalFeeInDot,
-                        },
-                    },
-                    {
-                        id: transferTokenLocation,
-                        fun: {
-                            Fungible: transferAmount,
-                        },
-                    }
-                ]
+                reserveAssetDeposited: reserverAssetDeposited
             },
             { clearOrigin: null },
             {
@@ -1228,6 +1243,35 @@ export function buildKusamaToPolkadotAssetHubExportXCM(
     beneficiary: string,
     topic: string
 ) {
+    let withdrawAssets = {}
+    // If the asset transferred is DOT, only add DOT as the asset
+    if (isDOTOnOtherConsensusSystem(transferTokenLocation)) {
+        withdrawAssets = [
+            {
+                id: DOT_LOCATION,
+                fun: {
+                    Fungible: totalFeeInDot + transferAmount,
+                },
+            },
+        ];
+    } else {
+        withdrawAssets = [
+            {
+                id: DOT_LOCATION,
+                fun: {
+                    Fungible: totalFeeInDot,
+                },
+            },
+            {
+                id: transferTokenLocation,
+                fun: {
+                    Fungible: transferAmount,
+                },
+            }
+        ];
+    }
+    console.log("transferTokenLocation");
+    console.dir(transferTokenLocation, {depth: 100});
     return registry.createType("XcmVersionedXcm", {
         v4: [
             {
@@ -1240,20 +1284,7 @@ export function buildKusamaToPolkadotAssetHubExportXCM(
                 descendOrigin: { x1: [{ parachain: assetHubParaId }] },
             },
             {
-                withdrawAsset: [
-                    {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: totalFeeInDot,
-                        },
-                    },
-                    {
-                        id: transferTokenLocation,
-                        fun: {
-                            Fungible: transferAmount,
-                        },
-                    }
-                ]
+                withdrawAsset: withdrawAssets
             },
             { clearOrigin: null },
             {
@@ -1513,3 +1544,12 @@ export function buildExportXcmForPNA(
         ],
     })
 }
+
+export function isDOTOnOtherConsensusSystem(location: any) {
+    return location.parents == 2 && location.interior.x1 && (location.interior.x1[0]?.globalConsensus?.Polkadot !== undefined || location.interior.x1[0]?.globalConsensus?.polkadot !== undefined)
+}
+
+export function isDOTOnPolkadotAssetHub(location: any) {
+    return location.parents == DOT_LOCATION.parents && location.interior == DOT_LOCATION.interior
+}
+

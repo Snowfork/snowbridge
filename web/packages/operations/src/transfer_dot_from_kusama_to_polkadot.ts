@@ -80,7 +80,7 @@ const transfer = async () => {
         ? polkadot_keyring.addFromUri(process.env["SUBSTRATE_KEY"])
         : polkadot_keyring.addFromUri("//Ferdie")
 
-    const amount = 20000000000n
+    const amount = 10000000000n
 
     const registry = await fetchRegistry(env, context)
 
@@ -91,13 +91,13 @@ const transfer = async () => {
     let beneficiaryAccountHex = "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e";
 
     const defaultBridgingFee = 333794429n;
-    const direction = Direction.ToKusama;
+    const direction = Direction.ToPolkadot;
 
-    console.log("# Asset Hub Kusama to Asset Hub Polkadot")
+    console.log("# Asset Hub Polkadot to Asset Hub Kusama")
     {
         // Step 1. Get the delivery fee for the transaction
         const fee = await toKusama.getDeliveryFee(
-            polkadotAssetHub,
+            kusamaAssetHub,
             direction,
             registry,
             defaultBridgingFee
@@ -105,7 +105,7 @@ const transfer = async () => {
 
         // Step 2. Create a transfer tx
         const transfer = await toKusama.createTransfer(
-            polkadotAssetHub,
+            kusamaAssetHub,
             direction,
             registry,
             sourceAccountHex,
@@ -117,7 +117,7 @@ const transfer = async () => {
 
         // Step 3. Validate
         const validation = await toKusama.validateTransfer(
-            {sourceAssetHub: polkadotAssetHub, destAssetHub: kusamaAssetHub, sourceBridgeHub: polkadotBridgeHub, destinationBridgeHub: kusamaBridgeHub},
+            {sourceAssetHub: kusamaAssetHub, destAssetHub: polkadotAssetHub, sourceBridgeHub: kusamaBridgeHub, destinationBridgeHub: polkadotBridgeHub},
             direction,
             transfer,
         );
@@ -130,7 +130,7 @@ const transfer = async () => {
 
         // Step 5. Submit transaction and get receipt for tracking
         const response = await toKusama.signAndSend(
-            polkadotAssetHub,
+            kusamaAssetHub,
             transfer,
             SUBSTRATE_ACCOUNT,
             { withSignedTransaction: true }

@@ -12,7 +12,7 @@ import {
     polkadotAssetHubLocation,
     buildTransferToKusamaExportXCM,
     buildPolkadotToKusamaAssetHubExportXCM,
-    buildKusamaToPolkadotAssetHubExportXCM
+    buildKusamaToPolkadotAssetHubExportXCM, isDOTOnOtherConsensusSystem, isDOTOnPolkadotAssetHub
 } from "./xcmBuilder";
 import {
     Asset,
@@ -181,7 +181,7 @@ export async function createTransfer(
     const { sourceAssetMetadata, destAssetMetadata, sourceParachain } = resolveInputs(registry, tokenAddress, sourceParaId, destParaId)
     let messageId = await buildMessageId(parachain, sourceParaId, sourceAccountHex, tokenAddress, beneficiaryAccount, amount)
 
-    let tokenLocation = getTokenLocation(registry, tokenAddress);
+    let tokenLocation = getTokenLocation(registry, direction, tokenAddress);
     let tx;
     if (direction == Direction.ToPolkadot) {
         tx = createERC20ToPolkadotTx(parachain,  sourceAccountHex, tokenLocation, sourceAccountHex, amount, fee.totalFeeInDot)
@@ -236,7 +236,6 @@ export type ValidationResult = {
     logs: ValidationLog[]
     success: boolean
     data: {
-        nativeBalance: bigint
         dotBalance: bigint
         sourceExecutionFee: bigint
         tokenBalance: bigint
@@ -263,10 +262,7 @@ export async function validateTransfer(
     const { sourceAccountHex, sourceParachain: source, beneficiaryAddressHex, destAssetMetadata } = transfer.computed
     const { tx } = transfer
 
-    const [nativeBalance, tokenBalance] = await Promise.all([
-        getNativeBalance(sourceAssetHub, sourceAccountHex),
-        getTokenBalance(sourceAssetHub, source.info.specName, sourceAccountHex, registry.ethChainId, tokenAddress)
-    ])
+    let location = getTokenLocation(registry, direction, tokenAddress);
 
     let dotBalance = 0n;
     if (direction == Direction.ToPolkadot) {
@@ -274,6 +270,18 @@ export async function validateTransfer(
     } else {
         dotBalance = await getDotBalance(sourceAssetHub, source.info.specName, sourceAccountHex);
     }
+
+    let tokenBalance: bigint;
+    if (isDOT(direction, location)) {
+        console.log("token transferred is DOT");
+        tokenBalance = dotBalance;
+    } else {
+        console.log("token transferred is not DOT");
+        tokenBalance = await getTokenBalance(sourceAssetHub, source.info.specName, sourceAccountHex, registry.ethChainId, tokenAddress);
+    }
+
+    console.log("dotBalance:", dotBalance);
+    console.log("tokenBalance:", tokenBalance);
 
     const logs: ValidationLog[] = []
 
@@ -313,19 +321,14 @@ export async function validateTransfer(
         assetHubDryRunError = dryRunSource.error
     }
 
+    console.dir(transfer.tx.toHuman(), {depth: 100});
+
     const paymentInfo = await tx.paymentInfo(sourceAccountHex)
     const sourceExecutionFee = paymentInfo['partialFee'].toBigInt()
 
     if ((sourceExecutionFee + fee.totalFeeInDot) > (dotBalance)) {
         logs.push({ kind: ValidationKind.Error, reason: ValidationReason.InsufficientDotFee, message: 'Insufficient DOT balance to submit transaction on the source parachain.' })
     }
-
-    let location = registry.kusama?.parachains[registry.assetHubParaId].assets[tokenAddress].location;
-    if (!location) {
-        location = erc20Location(registry.ethChainId, tokenAddress);
-    }
-
-    console.log("location:", location);
 
     let destAssetHubXCM: any;
     if (direction == Direction.ToPolkadot) {
@@ -350,15 +353,14 @@ export async function validateTransfer(
         );
     }
 
+    console.dir(destAssetHubXCM.toHuman(), {depth: 100});
+
     const dryRunAssetHubDest = await dryRunDestAssetHub(destAssetHub, registry.bridgeHubParaId, destAssetHubXCM);
     if (!dryRunAssetHubDest.success) {
         logs.push({ kind: ValidationKind.Error, reason: ValidationReason.DryRunFailed, message: 'Dry run call on destination AH failed: ' + dryRunAssetHubDest.errorMessage })
         assetHubDryRunError = dryRunAssetHubDest.errorMessage
     }
 
-    console.log("dotBalance:", dotBalance);
-    console.log("nativeBalance:", nativeBalance);
-    console.log("tokenBalance:", tokenBalance);
     console.log("amount:", amount);
     console.log("fee:", fee)
     console.log("sourceExecutionFee:", sourceExecutionFee)
@@ -370,7 +372,6 @@ export async function validateTransfer(
         logs,
         success,
         data: {
-            nativeBalance,
             dotBalance,
             sourceExecutionFee,
             tokenBalance,
@@ -451,7 +452,7 @@ export function createERC20ToKusamaTx(
     totalFeeInDot: bigint,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any;
-    if (tokenLocation.parents == DOT_LOCATION.parents && tokenLocation.interior == DOT_LOCATION.interior) {
+    if (isDOT(Direction.ToKusama, tokenLocation)) {
         assets = {v4: [
                 {
                     id: DOT_LOCATION,
@@ -491,7 +492,7 @@ export function createERC20ToPolkadotTx(
     totalFeeInDot: bigint,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any;
-    if (tokenLocation.parents == DOT_LOCATION.parents && tokenLocation.interior == DOT_LOCATION.interior) {
+    if (isDOT(Direction.ToPolkadot, tokenLocation)) {
         assets = {v4: [
             {
                 id: dotLocationOnKusamaAssetHubLocation(),
@@ -645,11 +646,27 @@ async function buildMessageId(parachain: ApiPromise, sourceParaId: number, sourc
     return blake2AsHex(entropy);
 }
 
-function getTokenLocation(registry: AssetRegistry, tokenAddress: string) {
-    let location = registry.kusama?.parachains[registry.assetHubParaId].assets[tokenAddress].location;
-    if (!location) {
-        location = erc20Location(registry.ethChainId, tokenAddress);
+function getTokenLocation(registry: AssetRegistry, direction: Direction, tokenAddress: string) {
+    let location;
+    if (direction == Direction.ToPolkadot) {
+        location = registry.kusama?.parachains[registry.kusama?.assetHubParaId].assets[tokenAddress].location;
+        if (!location) {
+            location = erc20Location(registry.ethChainId, tokenAddress);
+        }
+    } else {
+        location = registry.parachains[registry.assetHubParaId].assets[tokenAddress].location;
+        if (!location) {
+            location = erc20Location(registry.ethChainId, tokenAddress);
+        }
     }
 
     return location;
+}
+
+function isDOT(direction: Direction, location: any) {
+    if (direction == Direction.ToPolkadot) {
+        return isDOTOnOtherConsensusSystem(location)
+    } else {
+        return isDOTOnPolkadotAssetHub(location)
+    }
 }
