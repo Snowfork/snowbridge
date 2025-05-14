@@ -1253,8 +1253,6 @@ export function buildKusamaToPolkadotAssetHubExportXCM(
             }
         ];
     }
-    console.log("transferTokenLocation");
-    console.dir(transferTokenLocation, {depth: 100});
     return registry.createType("XcmVersionedXcm", {
         v4: [
             {

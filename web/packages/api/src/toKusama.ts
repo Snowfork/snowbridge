@@ -321,8 +321,6 @@ export async function validateTransfer(
         assetHubDryRunError = dryRunSource.error
     }
 
-    console.dir(transfer.tx.toHuman(), {depth: 100});
-
     const paymentInfo = await tx.paymentInfo(sourceAccountHex)
     const sourceExecutionFee = paymentInfo['partialFee'].toBigInt()
 
@@ -352,8 +350,6 @@ export async function validateTransfer(
             "0x0000000000000000000000000000000000000000000000000000000000000000",
         );
     }
-
-    console.dir(destAssetHubXCM.toHuman(), {depth: 100});
 
     const dryRunAssetHubDest = await dryRunDestAssetHub(destAssetHub, registry.bridgeHubParaId, destAssetHubXCM);
     if (!dryRunAssetHubDest.success) {
