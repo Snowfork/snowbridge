@@ -9,6 +9,8 @@ import {
     erc20Location,
 } from "./xcmBuilder"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
+import { convertToXcmV3X1, getMoonbeamLocationBalance, toMoonbeamXC20 } from "./parachains/moonbeam"
+import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID, getMythosLocationBalance } from "./parachains/mythos"
 
 export type ERC20Metadata = {
     token: string
@@ -63,6 +65,7 @@ export type Parachain = {
         hasTxPaymentApi: boolean
         hasXcmPaymentApi: boolean
         hasDryRunRpc: boolean
+        hasDotBalance: boolean
     }
     assets: AssetMap
     estimatedExecutionFeeDOT: bigint
@@ -88,6 +91,8 @@ export type Asset = {
     // the asset_id is normally represented as u32, but on Moonbeam,
     // it is u128, so use string here to avoid overflow
     assetId?: string
+    // Identifier of the PNA
+    foreignId?: string
 }
 
 export type RegistryOptions = {
@@ -187,7 +192,6 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         relaychain,
         bridgeHub,
         precompiles,
-        assetOverrides,
         destinationFeeOverrides,
     } = options
 
@@ -225,7 +229,6 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         } else {
             provider = bridgeHub
         }
-
         bridgeHubInfo = await chainProperties(provider)
 
         if (typeof bridgeHub === "string") {
@@ -233,31 +236,81 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         }
     }
 
+    // Connect to all substrate parachains.
     const providers: {
         [paraIdKey: string]: { parachainId: number; provider: ApiPromise; managed: boolean }
     } = {}
-    for (const { parachainId, provider, managed } of await Promise.all(
-        parachains.map(async (parachain) => {
-            let provider: ApiPromise
-            let managed = false
-            if (typeof parachain === "string") {
-                provider = await ApiPromise.create({
-                    noInitWarn: true,
-                    provider: parachain.startsWith("http")
-                        ? new HttpProvider(parachain)
-                        : new WsProvider(parachain),
-                })
-                managed = true
-            } else {
-                provider = parachain
-            }
-            const parachainId = await getParachainId(provider)
-            return { parachainId, provider, managed }
-        })
-    )) {
-        providers[parachainId.toString()] = { parachainId, provider, managed }
+    {
+        for (const { parachainId, provider, managed } of await Promise.all(
+            parachains.map(async (parachain) => {
+                let provider: ApiPromise
+                let managed = false
+                if (typeof parachain === "string") {
+                    provider = await ApiPromise.create({
+                        noInitWarn: true,
+                        provider: parachain.startsWith("http")
+                            ? new HttpProvider(parachain)
+                            : new WsProvider(parachain),
+                    })
+                    managed = true
+                } else {
+                    provider = parachain
+                }
+                const parachainId = await getParachainId(provider)
+                return { parachainId, provider, managed }
+            })
+        )) {
+            providers[parachainId.toString()] = { parachainId, provider, managed }
+        }
+        if (!(assetHubParaId.toString() in providers)) {
+            throw Error(
+                `Could not resolve asset hub para id ${assetHubParaId} in the list of parachains provided.`
+            )
+        }
     }
 
+    // Connect to all eth connections
+    const ethProviders: {
+        [chainId: string]: {
+            chainId: number
+            provider: AbstractProvider
+            managed: boolean
+            name: string
+        }
+    } = {}
+    {
+        for (const result of await Promise.all(
+            ethchains.map(async (ethChain) => {
+                let provider: AbstractProvider
+                let managed = false
+                if (typeof ethChain === "string") {
+                    provider = ethers.getDefaultProvider(ethChain)
+                    managed = true
+                } else {
+                    provider = ethChain
+                }
+                const network = await provider.getNetwork()
+                return { chainId: Number(network.chainId), provider, managed, name: network.name }
+            })
+        )) {
+            ethProviders[result.chainId.toString()] = result
+        }
+        if (!(ethChainId.toString() in ethProviders)) {
+            throw Error(`Cannot find ethereum chain ${ethChainId} in the list of ethereum chains.`)
+        }
+    }
+
+    const pnaOverrides = await indexPNAs(
+        environment,
+        bridgeHub as ApiPromise,
+        providers[assetHubParaId].provider,
+        ethProviders[ethChainId].provider,
+        gatewayAddress,
+        assetHubParaId
+    )
+    const assetOverrides = { ...options.assetOverrides, ...pnaOverrides }
+
+    // Index parachains
     const paras: ParachainMap = {}
     for (const { parachainId, para } of await Promise.all(
         Object.keys(providers).map(async (parachainIdKey) => {
@@ -277,48 +330,36 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         paras[parachainId.toString()] = para
     }
 
-    await Promise.all(
-        Object.keys(providers)
-            .filter((parachainKey) => providers[parachainKey].managed)
-            .map(async (parachainKey) => await providers[parachainKey].provider.disconnect())
-    )
-
-    if (!(assetHubParaId.toString() in paras)) {
-        throw Error(
-            `Could not resolve asset hub para id ${assetHubParaId} in the list of parachains provided.`
-        )
-    }
-
+    // Index Ethereum chain
     const ethChains: { [chainId: string]: EthereumChain } = {}
     for (const ethChainInfo of await Promise.all(
-        ethchains.map(async (ethChain) => {
-            let provider: AbstractProvider
-            if (typeof ethChain === "string") {
-                provider = ethers.getDefaultProvider(ethChain)
-            } else {
-                provider = ethChain
-            }
-            const ethChainInfo = await indexEthChain(
-                provider,
+        Object.keys(ethProviders).map(async (ethChainKey) => {
+            return indexEthChain(
+                ethProviders[ethChainKey].provider,
+                ethProviders[ethChainKey].chainId,
+                ethProviders[ethChainKey].name,
                 ethChainId,
                 gatewayAddress,
                 assetHubParaId,
                 paras,
                 precompiles ?? {}
             )
-
-            if (typeof ethChain === "string") {
-                provider.destroy()
-            }
-            return ethChainInfo
         })
     )) {
         ethChains[ethChainInfo.chainId.toString()] = ethChainInfo
     }
 
-    if (!(ethChainId in ethChains)) {
-        throw Error(`Cannot find ethereum chain ${ethChainId} in the list of ethereum chains.`)
-    }
+    // Dispose of all substrate connections
+    await Promise.all(
+        Object.keys(providers)
+            .filter((parachainKey) => providers[parachainKey].managed)
+            .map(async (parachainKey) => await providers[parachainKey].provider.disconnect())
+    )
+
+    // Dispose all eth connections
+    Object.keys(ethProviders)
+        .filter((parachainKey) => ethProviders[parachainKey].managed)
+        .forEach((parachainKey) => ethProviders[parachainKey].provider.destroy())
 
     return {
         environment,
@@ -544,7 +585,7 @@ export async function getLocationBalance(
         case "basilisk":
         case "hydradx": {
             const paraAssetId = (
-                await provider.query.assetRegistry.locationAssets(location)
+                await provider.query.assetRegistry.locationAssets(convertToXcmV3X1(location))
             ).toPrimitive()
             if (!paraAssetId) {
                 throw Error(`DOT not registered for spec ${specName}.`)
@@ -584,17 +625,24 @@ export async function getLocationBalance(
             ).toPrimitive() as any
             return BigInt(accountData?.free ?? 0n)
         }
-        case "mythos":
-        case "muse": {
-            console.warn(`${specName} does not support DOT, returning 0.`)
-            return 0n
-        }
         case "moonriver":
         case "moonbeam": {
-            return await getMoonbeamLocationBalance(pnaAssetId, location, provider, specName, account)
+            return await getMoonbeamLocationBalance(
+                pnaAssetId,
+                location,
+                provider,
+                specName,
+                account
+            )
+        }
+        case "muse":
+        case "mythos": {
+            return await getMythosLocationBalance(
+                location, provider, specName, account
+            )
         }
         default:
-            throw Error(`Cannot get DOT balance for spec ${specName}.`)
+            throw Error(`Cannot get balance for spec ${specName}. Location = ${JSON.stringify(location)}`)
     }
 }
 
@@ -861,7 +909,7 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
             }
             const foreignEntries = await provider.query.evmForeignAssets.assetsById.entries()
             for (const [key, value] of foreignEntries) {
-                const location = (value.toJSON() as any)
+                const location = value.toJSON() as any
 
                 const assetId = BigInt(key.args.at(0)?.toPrimitive() as any)
                 const xc20 = toMoonbeamXC20(assetId)
@@ -933,20 +981,23 @@ async function indexParachain(
         isFunction(provider.call.xcmPaymentApi?.queryDeliveryFees) &&
         isFunction(provider.call.xcmPaymentApi?.queryWeightToAssetFee)
 
-    if (info.accountType === "AccountId32") {
+    // test getting balances
+    let hasDotBalance = true;
+    try {
         await getDotBalance(
             provider,
             info.specName,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            info.accountType === "AccountId32" ? "0x0000000000000000000000000000000000000000000000000000000000000000" : "0x0000000000000000000000000000000000000000"
         )
-        await getNativeBalance(
-            provider,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        )
-    } else {
-        await getDotBalance(provider, info.specName, "0x0000000000000000000000000000000000000000")
-        await getNativeBalance(provider, "0x0000000000000000000000000000000000000000")
+    } catch(err) {
+        console.warn(`Spec ${info.specName} does not support dot ${err}`)
+        hasDotBalance = false
     }
+
+    await getNativeBalance(
+        provider,
+        info.accountType === "AccountId32" ? "0x0000000000000000000000000000000000000000000000000000000000000000" : "0x0000000000000000000000000000000000000000"
+    )
 
     let estimatedExecutionFeeDOT = 0n
     let estimatedDeliveryFeeDOT = 0n
@@ -982,6 +1033,7 @@ async function indexParachain(
             hasTxPaymentApi,
             hasDryRunRpc,
             hasXcmPaymentApi,
+            hasDotBalance,
         },
         info,
         xcDOT,
@@ -993,17 +1045,16 @@ async function indexParachain(
 
 async function indexEthChain(
     provider: AbstractProvider,
+    networkChainId: number,
+    networkName: string,
     ethChainId: number,
     gatewayAddress: string,
     assetHubParaId: number,
     parachains: ParachainMap,
     precompiles: PrecompileMap
 ): Promise<EthereumChain> {
-    const network = await provider.getNetwork()
-    const chainId = Number(network.chainId)
-    const id = network.name !== "unknown" ? network.name : undefined
-
-    if (chainId == ethChainId) {
+    const id = networkName !== "unknown" ? networkName : undefined
+    if (networkChainId == ethChainId) {
         // Asset Hub and get meta data
         const assetHub = parachains[assetHubParaId.toString()]
         const gateway = IGateway__factory.connect(gatewayAddress, provider)
@@ -1026,25 +1077,25 @@ async function indexEthChain(
         }
         if ((await provider.getCode(gatewayAddress)) === undefined) {
             throw Error(
-                `Could not fetch code for gatway address ${gatewayAddress} on ethereum chain ${chainId}.`
+                `Could not fetch code for gatway address ${gatewayAddress} on ethereum chain ${networkChainId}.`
             )
         }
         return {
-            chainId,
+            chainId: networkChainId,
             assets,
-            id: id ?? `chain_${chainId}`,
+            id: id ?? `chain_${networkChainId}`,
         }
     } else {
         let evmParachainChain: Parachain | undefined
         for (const paraId in parachains) {
             const parachain = parachains[paraId]
-            if (parachain.info.evmChainId === chainId) {
+            if (parachain.info.evmChainId === networkChainId) {
                 evmParachainChain = parachain
                 break
             }
         }
         if (!evmParachainChain) {
-            throw Error(`Could not find evm chain ${chainId} in the list of parachains.`)
+            throw Error(`Could not find evm chain ${networkChainId} in the list of parachains.`)
         }
         const xcTokenMap: XC20TokenMap = {}
         const assets: ERC20MetadataMap = {}
@@ -1060,17 +1111,17 @@ async function indexEthChain(
         const paraId = evmParachainChain.parachainId.toString()
         if (!(paraId in precompiles)) {
             throw Error(
-                `No precompile configured for parachain ${paraId} (ethereum chain ${chainId}).`
+                `No precompile configured for parachain ${paraId} (ethereum chain ${networkChainId}).`
             )
         }
         const precompile = precompiles[paraId]
         if ((await provider.getCode(precompile)) === undefined) {
             throw Error(
-                `Could not fetch code for ${precompile} on parachain ${paraId} (ethereum chain ${chainId}).`
+                `Could not fetch code for ${precompile} on parachain ${paraId} (ethereum chain ${networkChainId}).`
             )
         }
         if (!evmParachainChain.xcDOT) {
-            throw Error(`Could not DOT XC20 address for evm chain ${chainId}.`)
+            throw Error(`Could not DOT XC20 address for evm chain ${networkChainId}.`)
         }
         const xc20DOTAsset: ERC20Metadata = await assetErc20Metadata(
             provider,
@@ -1079,7 +1130,7 @@ async function indexEthChain(
         assets[evmParachainChain.xcDOT] = xc20DOTAsset
 
         return {
-            chainId,
+            chainId: networkChainId,
             evmParachainId: evmParachainChain.parachainId,
             assets,
             precompile,
@@ -1199,7 +1250,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
             result.assetOverrides = {
                 "3369": [
                     {
-                        token: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee".toLowerCase(),
+                        token: MUSE_TOKEN_ID.toLowerCase(),
                         name: "Muse",
                         minimumBalance: 10_000_000_000_000_000n,
                         symbol: "MUSE",
@@ -1219,7 +1270,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
             result.assetOverrides = {
                 "3369": [
                     {
-                        token: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003".toLowerCase(),
+                        token: MYTHOS_TOKEN_ID.toLowerCase(),
                         name: "Mythos",
                         minimumBalance: 10_000_000_000_000_000n,
                         symbol: "MYTH",
@@ -1227,116 +1278,11 @@ function addOverrides(envName: string, result: RegistryOptions) {
                         isSufficient: true,
                     },
                 ],
-                "1000": [
-                    {
-                        token: "0x196C20DA81Fbc324EcdF55501e95Ce9f0bD84d14".toLowerCase(),
-                        name: "DOT",
-                        minimumBalance: 100_000_000n,
-                        symbol: "DOT",
-                        decimals: 10,
-                        isSufficient: true,
-                        location: DOT_LOCATION,
-                    },
-                    {
-                        token: "0x12bbfDc9e813614eEf8Dc8A2560b0EfBeaf7C2AB".toLowerCase(),
-                        name: "KUSAMA",
-                        minimumBalance: 3_333_333n,
-                        symbol: "KSM",
-                        decimals: 12,
-                        isSufficient: true,
-                        location: {
-                            parents: 2,
-                            interior: {
-                                x1: [
-                                    {
-                                        globalConsensus: "Kusama",
-                                    },
-                                ],
-                            },
-                        },
-                    },
-                    {
-                        token: "0x21FaB0eA070F162180447881D5873Cf3d57200d6".toLowerCase(),
-                        name: "Kolkadot",
-                        minimumBalance: 1n,
-                        symbol: "KOL",
-                        decimals: 12,
-                        isSufficient: false,
-                        location: {
-                            parents: 0,
-                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 86 }] },
-                        },
-                        assetId: "86",
-                    },
-                    {
-                        token: "0x92262680A8d6636bbA9bFFDf484c274cA2de6400".toLowerCase(),
-                        name: "DED",
-                        minimumBalance: 1n,
-                        symbol: "DED",
-                        decimals: 10,
-                        isSufficient: false,
-                        location: {
-                            parents: 0,
-                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 30 }] },
-                        },
-                        assetId: "30",
-                    },
-                    {
-                        token: "0xa37B046782518A80e2E69056009FBD0431d36E50".toLowerCase(),
-                        name: "PINK",
-                        minimumBalance: 1n,
-                        symbol: "PINK",
-                        decimals: 10,
-                        isSufficient: false,
-                        location: {
-                            parents: 0,
-                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 23 }] },
-                        },
-                        assetId: "23",
-                    },
-                    {
-                        token: "0x5FDcD48F09FB67de3D202cd854B372AEC1100ED5".toLowerCase(),
-                        name: "GAVUN WUD",
-                        minimumBalance: 1n,
-                        symbol: "WUD",
-                        decimals: 10,
-                        isSufficient: false,
-                        location: {
-                            parents: 0,
-                            interior: { X2: [{ palletInstance: 50 }, { generalIndex: 31337 }] },
-                        },
-                        assetId: "31337",
-                    },
-                    {
-                        token: "0x769916A66fDAC0E3D57363129caac59386ea622B".toLowerCase(),
-                        name: "Integritee TEER",
-                        minimumBalance: 1n,
-                        symbol: "TEER",
-                        decimals: 12,
-                        isSufficient: false,
-                        location: {
-                            parents: 1,
-                            interior: { X1: [{ parachain: 2039 }] },
-                        },
-                    },
-                ],
             }
             break
         }
         case "westend_sepolia": {
-            result.assetOverrides = {
-                "1000": [
-                    {
-                        token: "0xF50fb50d65C8C1f6c72E4D8397c984933AfC8F7e".toLowerCase(),
-                        name: "WND",
-                        minimumBalance: 1n,
-                        symbol: "WND",
-                        decimals: 18,
-                        isSufficient: true,
-                        location: DOT_LOCATION,
-                    },
-                ],
-            }
+            result.assetOverrides = {}
             break
         }
         case "local_e2e": {
@@ -1419,12 +1365,24 @@ function addOverrides(envName: string, result: RegistryOptions) {
 
 function defaultPathFilter(envName: string): (_: Path) => boolean {
     switch (envName) {
+        case "westend_sepolia": {
+            return (path: Path) => {
+                // Frequency
+                if (path.asset === "0x72c610e05eaafcdf1fa7a2da15374ee90edb1620") {
+                    return false
+                }
+                return true
+            }
+        }
         case "paseo_sepolia":
             return (path: Path) => {
                 // Disallow MUSE to any location but 3369
                 if (
-                    path.asset === "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee" &&
-                    path.destination !== 3369
+                    path.asset === MUSE_TOKEN_ID &&
+                    (
+                        (path.destination !== 3369 && path.type === "ethereum") || 
+                        (path.source !== 3369 && path.type === "substrate")
+                    )
                 ) {
                     return false
                 }
@@ -1438,23 +1396,23 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 }
                 // Disallow MYTH to any location but 3369
                 if (
-                    path.asset === "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003" &&
-                    path.destination !== 3369
+                    path.asset === MYTHOS_TOKEN_ID &&
+                    (
+                        (path.destination !== 3369 && path.type === "ethereum") || 
+                        (path.source !== 3369 && path.type === "substrate")
+                    )
                 ) {
                     return false
                 }
 
                 // Disable stable coins in the UI from Ethereum to Polkadot
                 if (
-                    (
-                        path.asset === "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" // USDC
-                        || path.asset === "0xdac17f958d2ee523a2206206994597c13d831ec7" // USDT
-                        || path.asset === "0x9d39a5de30e57443bff2a8307a4256c8797a3497" // Staked USDe
-                        || path.asset === "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd" // Savings USD
-                        || path.asset === "0x6b175474e89094c44da98b954eedeac495271d0f" // DAI
-                    ) && (
-                        path.destination === 2034 // Hydration
-                    )
+                    (path.asset === "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" || // USDC
+                        path.asset === "0xdac17f958d2ee523a2206206994597c13d831ec7" || // USDT
+                        path.asset === "0x9d39a5de30e57443bff2a8307a4256c8797a3497" || // Staked USDe
+                        path.asset === "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd" || // Savings USD
+                        path.asset === "0x6b175474e89094c44da98b954eedeac495271d0f") && // DAI
+                    path.destination === 2034 // Hydration
                 ) {
                     return false
                 }
@@ -1466,75 +1424,176 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
     }
 }
 
-function toMoonbeamXC20(assetId: bigint) {
-    const xc20 = assetId.toString(16).toLowerCase()
-    return "0xffffffff" + xc20
-}
-
-const MOONBEAM_ERC20_ABI = [
-    "function name() view returns (string)",
-    "function symbol() view returns (string)",
-    "function decimals() view returns (uint8)",
-    "function balanceOf(address) view returns (uint256)"
-];
-const MOONBEAM_ERC20 = new ethers.Interface(MOONBEAM_ERC20_ABI)
-
-async function getMoonbeamLocationBalance(pnaAssetId: any, location: any, provider: ApiPromise, specName: string, account: string) {
-    // For PNA, use assetId directly; for ENA, query assetId by Multilocation
-    let paraAssetId = pnaAssetId
-    if (!paraAssetId) {
-        // Moonbeam only supports v3 xcm locations on asset Manager. Deep clone the location because
-        // we might modify it.
-        const assetManagerLocation = JSON.parse(JSON.stringify(location))
-        // In xcm v3 x1 is not an array, so we unwrap the array here.
-        if (location.interior.x1) {
-            assetManagerLocation.interior.x1 = assetManagerLocation.interior.x1[0]
+async function indexPNAs(
+    environment: string,
+    bridgehub: ApiPromise,
+    assethub: ApiPromise,
+    ethereum: AbstractProvider,
+    gatewayAddress: string,
+    assetHubParaId: number
+): Promise<AssetOverrideMap> {
+    let pnas: Asset[] = []
+    let gateway = IGateway__factory.connect(gatewayAddress, ethereum)
+    const entries = await bridgehub.query.ethereumSystem.nativeToForeignId.entries()
+    for (const [key, value] of entries) {
+        const location: any = key.args.at(0)?.toJSON()
+        if (!location) {
+            console.warn(`Could not convert ${key.toHuman()} to location`)
+            continue
         }
-        paraAssetId = (
-            await provider.query.assetManager.assetTypeId({ xcm: assetManagerLocation })
-        ).toPrimitive()
+        const locationOnAH: any = bridgeablePNAsOnAH(environment, location, assetHubParaId)
+        if (!locationOnAH) {
+            console.warn(`Location ${JSON.stringify(location)} is not bridgeable on assethub`)
+            continue
+        }
+        const tokenId = (value.toPrimitive() as string).toLowerCase()
+        const token = await gateway.tokenAddressOf(tokenId)
+        const metadata = await assetErc20Metadata(ethereum, token, gatewayAddress)
+        let metadataOnAH: any, assetId: any
+        if (locationOnAH?.parents == 0) {
+            const assetId = locationOnAH?.interior?.x2[1]?.generalIndex
+            metadataOnAH = (await assethub.query.assets.asset(assetId)).toJSON()
+            metadataOnAH.assetId = assetId.toString()
+        } else {
+            if (
+                locationOnAH?.parents == DOT_LOCATION.parents &&
+                locationOnAH?.interior == DOT_LOCATION.interior
+            ) {
+                let existentialDeposit = assethub.consts.balances.existentialDeposit.toPrimitive()
+                metadataOnAH = {
+                    minBalance: existentialDeposit,
+                    isSufficient: true,
+                }
+            } else {
+                const assetType = assethub.registry.createType("StagingXcmV4Location", locationOnAH)
+                metadataOnAH = (await assethub.query.foreignAssets.asset(assetType)).toJSON()
+            }
+        }
+        const assetInfo: Asset = {
+            token,
+            name: metadata.name,
+            symbol: metadata.symbol,
+            decimals: metadata.decimals,
+            locationOnEthereum: location,
+            location: locationOnAH,
+            locationOnAH,
+            foreignId: tokenId,
+            minimumBalance: metadataOnAH?.minBalance as bigint,
+            isSufficient: metadataOnAH?.isSufficient as boolean,
+            assetId: metadataOnAH?.assetId,
+        }
+        pnas.push(assetInfo)
     }
-
-    // If we cannot find the asset in asset manager look in foreign assets.
-    if (!paraAssetId) {
-        // evmForeignAssets uses xcm v4 so we use the original location.
-        paraAssetId = ((
-            await provider.query.evmForeignAssets.assetsByLocation(location)
-        ).toPrimitive() as any)[0]
-        const xc20 = toMoonbeamXC20(BigInt(paraAssetId))
-        return await getMoonbeamEvmForeignAssetBalance(provider, xc20, account)
-    }
-
-    if (!paraAssetId) {
-        throw Error(`Asset not registered for spec ${specName}.`)
-    }
-
-    const accountData = (
-        await provider.query.assets.account(paraAssetId, account)
-    ).toPrimitive() as any
-    return BigInt(accountData?.balance ?? 0n)
+    let assetOverrides: any = {}
+    assetOverrides[assetHubParaId.toString()] = pnas
+    return assetOverrides
 }
 
-async function getMoonbeamEvmForeignAssetBalance(api: ApiPromise, token: string, account: string) {
-    const method = "balanceOf"
-    const data = MOONBEAM_ERC20.encodeFunctionData(method, [account]);
-    const result = await api.call.ethereumRuntimeRPCApi.call(
-        "0x0000000000000000000000000000000000000000",
-        token,
-        data,
-        0n,
-        500_000n,
-        null,
-        null,
-        null,
-        false,
-        null
-    )
-    const resultJson = result.toPrimitive() as any
-    if (!(resultJson?.ok?.exitReason?.succeed === "Returned")) {
-        console.error(resultJson)
-        throw Error(`Could not fetch balance for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`)
+export const WESTEND_GENESIS = "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
+
+// Currently, the bridgeable assets are limited to KSM, DOT, native assets on AH
+// and TEER
+function bridgeablePNAsOnAH(environment: string, location: any, assetHubParaId: number): any {
+    if (location.parents != 1) {
+        return
     }
-    const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value);
-    return BigInt(retVal[0]);
+    // KSM
+    if (location.interior.x1 && location.interior.x1[0]?.globalConsensus?.kusama !== undefined) {
+        return {
+            parents: 2,
+            interior: {
+                x1: [
+                    {
+                        globalConsensus: {
+                            kusama: null,
+                        },
+                    },
+                ],
+            },
+        }
+    }
+    // DOT
+    else if (
+        location.interior.x1 &&
+        location.interior.x1[0]?.globalConsensus?.polkadot !== undefined
+    ) {
+        return DOT_LOCATION
+    }
+    // Native assets from AH
+    else if (
+        location.interior.x4 &&
+        location.interior.x4[0]?.globalConsensus?.polkadot !== undefined &&
+        location.interior.x4[1]?.parachain == assetHubParaId
+    ) {
+        return {
+            parents: 0,
+            interior: {
+                x2: [
+                    {
+                        palletInstance: location.interior.x4[2]?.palletInstance,
+                    },
+                    {
+                        generalIndex: location.interior.x4[3]?.generalIndex,
+                    },
+                ],
+            },
+        }
+    }
+    // Others from 3rd Parachains, only TEER for now
+    else if (
+        location.interior.x2 &&
+        location.interior.x2[0]?.globalConsensus?.polkadot !== undefined &&
+        location.interior.x2[1]?.parachain == 2039
+    ) {
+        return {
+            parents: 1,
+            interior: {
+                x1: [
+                    {
+                        parachain: 2039,
+                    },
+                ],
+            },
+        }
+    }
+    // Add assets for Westend
+    switch (environment) {
+        case "westend_sepolia": {
+            if (
+                location.interior.x1 &&
+                location.interior.x1[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS
+            ) {
+                return DOT_LOCATION
+            } else if (
+                location.interior.x2 &&
+                location.interior.x2[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS &&
+                location.interior.x2[1]?.parachain != undefined
+            ) {
+                return {
+                    parents: 1,
+                    interior: {
+                        x1: [
+                            {
+                                parachain: location.interior.x2[1]?.parachain,
+                            },
+                        ],
+                    },
+                }
+            }
+        }
+    }
+}
+
+export async function getAssetHubConversationPalletSwap(assetHub: ApiPromise, asset1: any, asset2: any, exactAsset2Balance: bigint) {
+    const result = await assetHub.call.assetConversionApi.quotePriceTokensForExactTokens(
+        asset1,
+        asset2,
+        exactAsset2Balance,
+        true
+    )
+    const asset1Balance = result.toPrimitive() as any
+    if (asset1Balance == null) {
+        throw Error(`No pool set up in asset conversion pallet for '${JSON.stringify(asset1)}' and '${JSON.stringify(asset2)}'.`)
+    }
+    return BigInt(asset1Balance) 
 }

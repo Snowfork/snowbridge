@@ -2,7 +2,8 @@ import { Registry } from "@polkadot/types/types"
 import { beneficiaryMultiAddress } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 
-export const DOT_LOCATION = { parents: 1, interior: "Here" }
+export const HERE_LOCATION = { parents: 0, interior: "Here"  }
+export const DOT_LOCATION = { parents: 1, interior: "Here"  }
 
 const ethereumNetwork = (ethChainId: number) => ({
     GlobalConsensus: { Ethereum: { chain_id: ethChainId } },
@@ -15,7 +16,7 @@ export function bridgeLocation(ethChainId: number) {
     }
 }
 
-export function parahchainLocation(paraId: number) {
+export function parachainLocation(paraId: number) {
     return {
         parents: 1,
         interior: { x1: [{ parachain: paraId }] },
@@ -338,7 +339,8 @@ function buildAssetHubXcmFromParachain(
     tokenAddress: string,
     topic: string,
     sourceParachainId: number,
-    destinationFeeInDOT: bigint
+    destinationFee: bigint,
+    feeAssetId: any
 ) {
     let {
         hexAddress,
@@ -371,9 +373,9 @@ function buildAssetHubXcmFromParachain(
                             {
                                 buyExecution: {
                                     fees: {
-                                        id: DOT_LOCATION,
+                                        id: feeAssetId,
                                         fun: {
-                                            fungible: destinationFeeInDOT,
+                                            fungible: destinationFee,
                                         },
                                     },
                                     weightLimit: "Unlimited",
@@ -450,7 +452,8 @@ export function buildAssetHubERC20TransferFromParachain(
     tokenAddress: string,
     topic: string,
     sourceParachainId: number,
-    returnToSenderFeeInDOT: bigint
+    returnToSenderFee: bigint,
+    feeAssetId: any
 ) {
     return registry.createType("XcmVersionedXcm", {
         v4: buildAssetHubXcmFromParachain(
@@ -460,7 +463,8 @@ export function buildAssetHubERC20TransferFromParachain(
             tokenAddress,
             topic,
             sourceParachainId,
-            returnToSenderFeeInDOT
+            returnToSenderFee,
+            feeAssetId
         ),
     })
 }
@@ -473,19 +477,21 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
     tokenAddress: string,
     topic: string,
     transferAmount: bigint,
-    totalFeeInDot: bigint,
-    destinationFeeInDot: bigint,
+    totalFee: bigint,
+    destinationFee: bigint,
     sourceParachainId: number,
-    returnToSenderFeeInDOT: bigint
+    returnToSenderFee: bigint,
+    feeAssetId: any,
+    feeAssetIdReanchored: any,
 ) {
     return registry.createType("XcmVersionedXcm", {
         v4: [
             {
                 withdrawAsset: [
                     {
-                        id: DOT_LOCATION,
+                        id: feeAssetIdReanchored,
                         fun: {
-                            Fungible: totalFeeInDot,
+                            Fungible: totalFee,
                         },
                     },
                     {
@@ -500,9 +506,9 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
             {
                 buyExecution: {
                     fees: {
-                        id: DOT_LOCATION,
+                        id: feeAssetIdReanchored,
                         fun: {
-                            Fungible: destinationFeeInDot,
+                            Fungible: destinationFee,
                         },
                     },
                     weightLimit: "Unlimited",
@@ -515,7 +521,8 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
                 tokenAddress,
                 topic,
                 sourceParachainId,
-                returnToSenderFeeInDOT
+                returnToSenderFee,
+                feeAssetId
             ),
         ],
     })
@@ -569,7 +576,6 @@ export function buildResultXcmAssetHubPNATransferFromParachain(
             { clearOrigin: null },
             ...buildAssetHubXcmForPNAFromParachain(
                 ethChainId,
-                sourceAccount,
                 beneficiary,
                 assetLocationOnAH,
                 assetLocationOnEthereum,
@@ -581,29 +587,11 @@ export function buildResultXcmAssetHubPNATransferFromParachain(
 
 function buildAssetHubXcmForPNAFromParachain(
     ethChainId: number,
-    sourceAccount: string,
     beneficiary: string,
     assetLocationOnAH: any,
     assetLocationOnEthereum: any,
-    topic: string
+    topic: string,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(sourceAccount)
-    let sourceAccountLocation
-    switch (kind) {
-        case 1:
-            // 32 byte addresses
-            sourceAccountLocation = { accountId32: { id: hexAddress } }
-            break
-        case 2:
-            // 20 byte addresses
-            sourceAccountLocation = { accountKey20: { key: hexAddress } }
-            break
-        default:
-            throw Error(`Could not parse source address ${sourceAccount}`)
-    }
     return [
         // Initiate the bridged transfer
         {
@@ -731,7 +719,6 @@ export function buildParachainPNAReceivedXcmOnDestination(
 export function buildAssetHubPNATransferFromParachain(
     registry: Registry,
     ethChainId: number,
-    sourceAccount: string,
     beneficiary: string,
     assetLocationOnAH: any,
     assetLocationOnEthereum: any,
@@ -740,7 +727,6 @@ export function buildAssetHubPNATransferFromParachain(
     return registry.createType("XcmVersionedXcm", {
         v4: buildAssetHubXcmForPNAFromParachain(
             ethChainId,
-            sourceAccount,
             beneficiary,
             assetLocationOnAH,
             assetLocationOnEthereum,
@@ -1030,7 +1016,7 @@ export function buildExportXcmForERC20(
                                     allCounted: 1,
                                 },
                             },
-                            beneficiary: parahchainLocation(assetHubParaId),
+                            beneficiary: parachainLocation(assetHubParaId),
                         },
                     },
                 ],
@@ -1069,7 +1055,7 @@ export function buildExportXcmForERC20(
                                         allCounted: 1,
                                     },
                                 },
-                                beneficiary: parahchainLocation(1000),
+                                beneficiary: parachainLocation(1000),
                             },
                         },
                         {
@@ -1145,7 +1131,7 @@ export function buildExportXcmForPNA(
                                     allCounted: 1,
                                 },
                             },
-                            beneficiary: parahchainLocation(assetHubParaId),
+                            beneficiary: parachainLocation(assetHubParaId),
                         },
                     },
                 ],
@@ -1184,7 +1170,7 @@ export function buildExportXcmForPNA(
                                         allCounted: 1,
                                     },
                                 },
-                                beneficiary: parahchainLocation(1000),
+                                beneficiary: parachainLocation(1000),
                             },
                         },
                         {

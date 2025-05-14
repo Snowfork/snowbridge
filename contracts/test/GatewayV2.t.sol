@@ -583,4 +583,152 @@ contract GatewayV2Test is Test {
         // Verify token still is not registered after the failed attempt
         assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
     }
+
+    function testPartialCommandExecution() public {
+        bytes32 topic = keccak256("topic");
+
+        // Create a compound set of commands, where the second one will fail
+        CommandV2[] memory commands = new CommandV2[](3);
+
+        // First command should succeed - SetOperatingMode
+        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[0] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params1)
+        });
+
+        // Second command should fail - Call a function that reverts
+        bytes memory failingData = abi.encodeWithSignature("revertUnauthorized()");
+        CallContractParams memory params2 = CallContractParams({
+            target: address(helloWorld),
+            data: failingData,
+            value: 0
+        });
+        commands[1] = CommandV2({
+            kind: CommandKind.CallContract,
+            gas: 500_000,
+            payload: abi.encode(params2)
+        });
+
+        // Third command should succeed - SetOperatingMode again
+        SetOperatingModeParams memory params3 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[2] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params3)
+        });
+
+        // Expect the failed command to emit CommandFailed event
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 1); // nonce 1, command index 1
+
+        // Expect InboundMessageDispatched to be emitted with success=false since not all commands succeeded
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: keccak256("666"),
+                nonce: 1,
+                topic: topic,
+                commands: commands
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
+        );
+    }
+
+    function testUnknownCommandType() public {
+        bytes32 topic = keccak256("topic");
+
+        // Create a command with an unknown command type
+        CommandV2[] memory commands = new CommandV2[](2);
+
+        // First command should succeed
+        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[0] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params1)
+        });
+
+        // Second command is invalid
+        commands[1] = CommandV2({
+            kind: 255, // Invalid command kind
+            gas: 500_000,
+            payload: abi.encode(bytes32(0))
+        });
+
+        // Expect the unknown command to emit CommandFailed event
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(2, 1); // nonce 2, command index 1
+
+        // Expect InboundMessageDispatched to be emitted with success=false
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(2, topic, false, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: keccak256("666"),
+                nonce: 2,
+                topic: topic,
+                commands: commands
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
+        );
+    }
+
+    function testMultipleSuccessfulCommands() public {
+        bytes32 topic = keccak256("topic");
+
+        // Create multiple commands that should all succeed
+        CommandV2[] memory commands = new CommandV2[](3);
+
+        // First command - SetOperatingMode to Normal
+        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[0] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params1)
+        });
+
+        // Second command - Set mode to RejectingOutboundMessages (will succeed)
+        SetOperatingModeParams memory params2 = SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
+        commands[1] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params2)
+        });
+
+        // Third command - Also set mode to Normal again (will succeed)
+        SetOperatingModeParams memory params3 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[2] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params3)
+        });
+
+        // Expect InboundMessageDispatched to be emitted with success=true since all commands should succeed
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(3, topic, true, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: keccak256("666"),
+                nonce: 3,
+                topic: topic,
+                commands: commands
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
+        );
+    }
 }
