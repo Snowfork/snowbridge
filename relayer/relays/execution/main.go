@@ -222,7 +222,7 @@ func (r *Relay) fetchUnprocessedParachainNonces(latest uint64) ([]uint64, error)
 	latestBucket := latest / 128
 
 	for b := uint64(0); b <= latestBucket; b++ {
-		encodedBucket, err := types.EncodeToBytes(types.NewU128(*big.NewInt(int64(b))))
+		encodedBucket, err := types.EncodeToBytes(types.NewU64(b))
 		bucketKey, _ := types.CreateStorageKey(
 			r.paraconn.Metadata(),
 			"EthereumInboundQueueV2",
@@ -261,7 +261,7 @@ func (r *Relay) isParachainNonceSet(index uint64) (bool, error) {
 	bucket := index / 128
 	bitPosition := index % 128
 
-	encodedBucket, err := types.EncodeToBytes(types.NewU128(*big.NewInt(int64(bucket))))
+	encodedBucket, err := types.EncodeToBytes(types.NewU64(bucket))
 	bucketKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueueV2", "NonceBitmap", encodedBucket)
 	if err != nil {
 		return false, fmt.Errorf("create storage key for EthereumInboundQueueV2.NonceBitmap: %w", err)
