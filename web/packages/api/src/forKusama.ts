@@ -86,11 +86,9 @@ export async function getDeliveryFee(
     direction: Direction,
     registry: AssetRegistry,
     defaultFee?: bigint,
-    padPercentage?: bigint
 ): Promise<DeliveryFee> {
     const feeStorageKey = xxhashAsHex(":XcmBridgeHubRouterBaseFee:", 128, true)
     const feeStorageItem = await sourceAssetHub.rpc.state.getStorage(feeStorageKey)
-    const feePadPercentage = padPercentage ?? 10n
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
 
     let defaultFeeConfiguredInRuntime:bigint;
@@ -106,8 +104,6 @@ export async function getDeliveryFee(
     } else {
         xcmBridgeFee = BigInt(leFee.toString())
     }
-
-    xcmBridgeFee = padFeeByPercentage(xcmBridgeFee, feePadPercentage);
 
     let forwardedXcm = buildTransferToKusamaExportXCM(
         sourceAssetHub.registry,
@@ -145,12 +141,14 @@ export async function getDeliveryFee(
         totalFeeInDot = totalFee
     }
 
+    console.info("xcmBridgeFee:", xcmBridgeFee)
+    console.info("bridgeHubDeliveryFee:", bridgeHubDeliveryFee)
     console.info("Total fee in DOT:", totalFeeInDot)
 
     return {
         xcmBridgeFee: xcmBridgeFee,
         bridgeHubDeliveryFee: bridgeHubDeliveryFee,
-        totalFeeInDot: totalFeeInDot * feePadPercentage
+        totalFeeInDot: totalFeeInDot
     }
 }
 
@@ -177,19 +175,19 @@ export async function createTransfer(
         throw Error("Kusama destination para ID is not set")
     }
 
+    let { hexAddress: beneficiaryAddressHex } =
+        beneficiaryMultiAddress(beneficiaryAccount)
+
     const { sourceAssetMetadata, destAssetMetadata, sourceParachain } = resolveInputs(registry, tokenAddress, sourceParaId, destParaId)
     let messageId = await buildMessageId(parachain, sourceParaId, sourceAccountHex, tokenAddress, beneficiaryAccount, amount)
 
     let tokenLocation = getTokenLocation(registry, direction, tokenAddress);
     let tx;
     if (direction == Direction.ToPolkadot) {
-        tx = createERC20ToPolkadotTx(sourceParaId, parachain, tokenLocation, sourceAccountHex, amount, fee.totalFeeInDot)
+        tx = createERC20ToPolkadotTx(sourceParaId, parachain, tokenLocation, beneficiaryAddressHex, amount, fee.totalFeeInDot)
     } else {
-        tx = createERC20ToKusamaTx(destParaId, parachain, tokenLocation, sourceAccountHex, amount, fee.totalFeeInDot)
+        tx = createERC20ToKusamaTx(destParaId, parachain, tokenLocation, beneficiaryAddressHex, amount, fee.totalFeeInDot)
     }
-
-    let { hexAddress: beneficiaryAddressHex } =
-        beneficiaryMultiAddress(beneficiaryAccount)
 
     return {
         input: {
@@ -258,6 +256,8 @@ export async function validateTransfer(
     const { registry, fee, tokenAddress, amount } = transfer.input
     const { sourceAccountHex, sourceParachain: source, beneficiaryAddressHex, destAssetMetadata } = transfer.computed
     const { tx } = transfer
+
+    console.log("beneficiaryAddressHex:", beneficiaryAddressHex);
 
     let location = getTokenLocation(registry, direction, tokenAddress);
 
@@ -334,7 +334,7 @@ export async function validateTransfer(
             registry.assetHubParaId,
             location,
             transfer.input.amount,
-            transfer.input.beneficiaryAccount,
+            transfer.computed.beneficiaryAddressHex,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
         );
     } else {
@@ -344,7 +344,7 @@ export async function validateTransfer(
             registry.assetHubParaId,
             location,
             transfer.input.amount,
-            transfer.input.beneficiaryAccount,
+            transfer.computed.beneficiaryAddressHex,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
         );
     }
