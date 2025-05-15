@@ -1627,7 +1627,6 @@ async function indexKusamaPNAs(
         const locationOnAHKusama: any = bridgeablePNAsOnKusamaAH(location, assetHubParaId)
         const locationOnAHPolkadot: any = bridgeablePNAsOnPolkadotAH("", location, assetHubParaId)
         if (!locationOnAHKusama) {
-            console.warn(`Location ${JSON.stringify(location)} is not bridgeable on assethub`)
             continue
         }
         // Check if asset is registered on Kusama Assethub, if is not native KSM
