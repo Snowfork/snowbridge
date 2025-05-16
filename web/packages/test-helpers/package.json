@@ -15,7 +15,7 @@
     "generateContracts": "npx ts-node src/generateContractInfo.ts",
     "generateBeefyValidatorSet": "npx ts-node src/generateBeefyTestFixture.ts GenerateInitialSet",
     "generateBeefyFinalProof": "npx ts-node src/generateBeefyTestFixture.ts GenerateProofs",
-    "batchTransfer": "npx ts-node src/batchTransfer.ts",
+    "configureE2E": "npx ts-node src/configureE2E.ts",
     "format": "prettier src --write"
   },
   "devDependencies": {

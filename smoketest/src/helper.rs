@@ -46,17 +46,17 @@ use std::{ops::Deref, sync::Arc, time::Duration};
 use subxt::{
 	config::DefaultExtrinsicParams,
 	events::StaticEvent,
-	ext::sp_core::{sr25519::Pair, Pair as PairT},
-	tx::PairSigner,
 	utils::{AccountId32, MultiAddress, H256},
 	Config, OnlineClient, PolkadotConfig,
 };
+
+use pair_signer::PairSigner;
+use sp_core::{sr25519::Pair, Pair as PairT};
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
 
 impl Config for AssetHubConfig {
-	type Hash = <PolkadotConfig as Config>::Hash;
 	type AccountId = <PolkadotConfig as Config>::AccountId;
 	type Address = <PolkadotConfig as Config>::Address;
 	type Signature = <PolkadotConfig as Config>::Signature;
@@ -64,6 +64,61 @@ impl Config for AssetHubConfig {
 	type Header = <PolkadotConfig as Config>::Header;
 	type ExtrinsicParams = DefaultExtrinsicParams<AssetHubConfig>;
 	type AssetId = <PolkadotConfig as Config>::AssetId;
+}
+
+/// A concrete PairSigner implementation which relies on `sr25519::Pair` for signing
+/// and that PolkadotConfig is the runtime configuration.
+mod pair_signer {
+	use super::*;
+	use sp_core::sr25519;
+	use sp_runtime::{
+		traits::{IdentifyAccount, Verify},
+		MultiSignature as SpMultiSignature,
+	};
+	use subxt::{
+		config::substrate::{AccountId32, MultiSignature},
+		tx::Signer,
+	};
+
+	/// A [`Signer`] implementation for [`polkadot_sdk::sp_core::sr25519::Pair`].
+	#[derive(Clone)]
+	pub struct PairSigner {
+		account_id: <PolkadotConfig as Config>::AccountId,
+		signer: sr25519::Pair,
+	}
+
+	impl PairSigner {
+		/// Creates a new [`Signer`] from an [`sp_core::sr25519::Pair`].
+		pub fn new(signer: sr25519::Pair) -> Self {
+			let account_id =
+				<SpMultiSignature as Verify>::Signer::from(signer.public()).into_account();
+			Self {
+				// Convert `sp_core::AccountId32` to `subxt::config::substrate::AccountId32`.
+				//
+				// This is necessary because we use `subxt::config::substrate::AccountId32` and no
+				// From/Into impls are provided between `sp_core::AccountId32` because
+				// `polkadot-sdk` isn't a direct dependency in subxt.
+				//
+				// This can also be done by provided a wrapper type around
+				// `subxt::config::substrate::AccountId32` to implement such conversions but
+				// that also most likely requires a custom `Config` with a separate `AccountId` type
+				// to work properly without additional hacks.
+				account_id: AccountId32(account_id.into()),
+				signer,
+			}
+		}
+	}
+
+	impl Signer<PolkadotConfig> for PairSigner {
+		fn account_id(&self) -> <PolkadotConfig as Config>::AccountId {
+			self.account_id.clone()
+		}
+
+		fn sign(&self, signer_payload: &[u8]) -> <PolkadotConfig as Config>::Signature {
+			let signature = self.signer.sign(signer_payload);
+			MultiSignature::Sr25519(signature.0)
+		}
+	}
 }
 
 pub struct TestClients {
@@ -242,7 +297,7 @@ pub async fn governance_bridgehub_call_from_relay_chain(
 
 	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 
-	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+	let signer: PairSigner = PairSigner::new(sudo);
 
 	let weight = 180000000000;
 	let proof_size = 900000;
@@ -289,7 +344,7 @@ pub async fn snowbridge_assethub_call_from_relay_chain(
 
 	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 
-	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+	let signer: PairSigner = PairSigner::new(sudo);
 
 	let weight = 180000000000;
 	let proof_size = 900000;
@@ -345,7 +400,7 @@ pub async fn assethub_deposit_eth_on_penpal_call_from_relay_chain(
 
 	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 
-	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+	let signer: PairSigner = PairSigner::new(sudo);
 
 	let weight = 180000000000;
 	let proof_size = 900000;
@@ -475,7 +530,7 @@ pub async fn governance_assethub_call_from_relay_chain_sudo_as(
 
 	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 
-	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+	let signer: PairSigner = PairSigner::new(sudo);
 
 	let weight = 180000000000;
 	let proof_size = 900000;
@@ -566,7 +621,7 @@ pub async fn governance_assethub_call_from_relay_chain(
 
 	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 
-	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+	let signer: PairSigner = PairSigner::new(sudo);
 
 	let weight = 180000000000;
 	let proof_size = 900000;
@@ -584,6 +639,81 @@ pub async fn governance_assethub_call_from_relay_chain(
 			origin_kind: RelaychainOriginKind::Superuser,
 			require_weight_at_most: RelaychainWeight { ref_time: weight, proof_size },
 			call: RelaychainDoubleEncoded { encoded: call },
+		},
+	])));
+
+	let sudo_api = relaychain::api::sudo::calls::TransactionApi;
+	let sudo_call = sudo_api
+		.sudo(RelaychainRuntimeCall::XcmPallet(RelaychainPalletXcmCall::send { dest, message }));
+
+	let result = test_clients
+		.relaychain_client
+		.tx()
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.await
+		.expect("send through sudo call.")
+		.wait_for_finalized_success()
+		.await
+		.expect("sudo call success");
+
+	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
+
+	Ok(())
+}
+
+pub async fn deposit_eth_to_penpal(
+	account: [u8; 32],
+	amount: u128,
+) -> Result<(), Box<dyn std::error::Error>> {
+	let test_clients = initial_clients().await.expect("initialize clients");
+
+	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
+
+	let signer: PairSigner = PairSigner::new(sudo);
+
+	let weight = 180000000000;
+	let proof_size = 900000;
+
+	let account_location: RelaychainMultiLocation = RelaychainMultiLocation {
+		parents: 0,
+		interior: RelaychainJunctions::X1(RelaychainAccountId32 {
+			network: None,
+			id: account.into(),
+		}),
+	};
+	let dest = Box::new(RelaychainVersionedLocation::V3(RelaychainMultiLocation {
+		parents: 0,
+		interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(PENPAL_PARA_ID)),
+	}));
+
+	let message = Box::new(RelaychainVersionedXcm::V3(RelaychainXcm(vec![
+		RelaychainInstruction::BuyExecution {
+			fees: RelaychainMultiAsset {
+				id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
+					parents: 0,
+					interior: RelaychainJunctions::Here,
+				}),
+				fun: RelaychainFungibility::Fungible(amount),
+			},
+			weight_limit: RelaychainWeightLimit::Limited(RelaychainWeight {
+				ref_time: weight,
+				proof_size,
+			}),
+		},
+		RelaychainInstruction::ReserveAssetDeposited(RelaychainMultiAssets(vec![
+			RelaychainMultiAsset {
+				id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
+					parents: 2,
+					interior: RelaychainJunctions::X1(RelaychainJunction::GlobalConsensus(
+						RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID },
+					)),
+				}),
+				fun: RelaychainFungibility::Fungible(amount),
+			},
+		])),
+		RelaychainInstruction::DepositAsset {
+			assets: RelaychainMultiAssetFilter::Wild(RelaychainWildMultiAsset::AllCounted(2)),
+			beneficiary: account_location,
 		},
 	])));
 

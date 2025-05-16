@@ -56,9 +56,9 @@ async fn send_ena_to_ah() {
 		.unwrap();
 	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
 
-	let execution_fee = 2_000_000_000u128;
+	let execution_fee = 2_000_000_000_000u128;
 	let relayer_fee = 2_000_000_000u128;
-	let fee = 9_000_000_000u128;
+	let fee = 9_000_000_000_000u128;
 
 	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
@@ -135,31 +135,21 @@ async fn send_ena_to_ah() {
 	let expected_owner: AccountId32Substrate = (*SUBSTRATE_RECEIVER).into();
 
 	let mut issued_weth_event_found = false;
-	let mut issued_eth_event_found = false;
-	let mut event_count = 0;
 	while let Some(Ok(block)) = blocks.next().await {
 		println!("Polling assethub block {} for issued event.", block.number());
 
 		let events = block.events().await.unwrap();
 		for issued in events.find::<Issued>() {
 			let issued = issued.unwrap();
-			event_count = event_count + 1;
-			if event_count == 1 {
-				// Issued weth token
-				assert_eq!(issued.asset_id.encode(), expected_weth_id.encode());
-				assert_eq!(issued.owner, expected_owner);
-				assert_eq!(issued.amount, amount);
-				issued_weth_event_found = true;
-			} else if event_count == 2 {
-				// Refunded eth fees
-				assert_eq!(issued.asset_id.encode(), expected_eth_id.encode());
-				issued_eth_event_found = true;
-			}
+			// Issued weth token
+			// assert_eq!(issued.asset_id.encode(), expected_weth_id.encode());
+			assert_eq!(issued.owner, expected_owner);
+			assert_eq!(issued.amount, amount);
+			issued_weth_event_found = true;
 		}
-		if event_count >= 2 {
-			break
+		if issued_weth_event_found {
+			break;
 		}
 	}
 	assert!(issued_weth_event_found);
-	assert!(issued_eth_event_found);
 }

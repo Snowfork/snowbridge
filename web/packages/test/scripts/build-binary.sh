@@ -58,7 +58,7 @@ build_contracts() {
 build_latest_relayer() {
     echo "Building latest relayer"
     mage -d "$relay_dir" build
-    cp $relay_bin "$output_bin_dir"
+    cp $relay_bin "$output_bin_dir/snowbridge-relay-v2"
 }
 
 build_relayers_v1_v2() {
@@ -155,7 +155,7 @@ install_binary() {
         echo "Building relayers v1 and v2"
         build_relayers_v1_v2
     else
-        echo "Building relayers v1"
+        echo "Building relayers v2"
         build_latest_relayer
     fi
     build_web_packages

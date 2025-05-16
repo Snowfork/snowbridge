@@ -182,8 +182,14 @@ start_relayer() {
     ) &
 }
 
+build_relayer() {
+    echo "Building latest relayer"
+    mage -d "$relay_dir" build
+    cp $relay_bin "$output_bin_dir/snowbridge-relay-v2"
+}
+
 deploy_relayer() {
-    check_tool && config_relayer && start_relayer
+    check_tool && build_relayer && config_relayer && start_relayer
 }
 
 if [ -z "${from_start_services:-}" ]; then

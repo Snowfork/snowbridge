@@ -70,6 +70,26 @@ register_weth_on_penpal() {
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
 }
 
+function transfer_local_balance() {
+    local runtime_para_endpoint=$1
+    local seed=$2
+    local target_account=$3
+    local amount=$4
+    echo "  calling transfer_balance:"
+    echo "      runtime_para_endpoint: ${runtime_para_endpoint}"
+    echo "      seed: ${seed}"
+    echo "      target_account: ${target_account}"
+    echo "      amount: ${amount}"
+    echo "--------------------------------------------------"
+
+    call_polkadot_js_api \
+        --ws "${runtime_para_endpoint}" \
+        --seed "${seed?}" \
+        tx.balances.transferAllowDeath \
+            "${target_account}" \
+            "${amount}"
+}
+
 
 if [ -z "${from_start_services:-}" ]; then
     echo "config others for PNA tests"

@@ -1,6 +1,6 @@
 use codec::{Decode, Encode};
 use scale_info::TypeInfo;
-use subxt::ext::sp_core::RuntimeDebug;
+use sp_core::RuntimeDebug;
 
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum ContractCall {

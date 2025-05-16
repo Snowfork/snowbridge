@@ -36,9 +36,9 @@ async fn send_pna() {
 			.await
 			.unwrap();
 
-	let execution_fee = 2_000_000_000u128;
+	let execution_fee = 2_000_000_000_000u128;
 	let relayer_fee = 2_000_000_000u128;
-	let fee = 9_000_000_000u128;
+	let fee = 9_000_000_000_000u128;
 
 	let amount: u128 = 10_000_000_000;
 

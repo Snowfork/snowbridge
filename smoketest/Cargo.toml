@@ -6,19 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-futures = "0.3.30"
-tokio = { version = "1.35.0", features = ["macros", "rt-multi-thread", "time"] }
-codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false, features = ["bit-vec", "derive", "full"] }
+futures = "0.3.31"
+tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread", "time"] }
+codec = { package = "parity-scale-codec", version = "3.7.4", default-features = false, features = ["bit-vec", "derive", "full"] }
 scale-info = { features = ["derive"], version = "2.11.6", default-features = false }
 hex = "0.4.3"
 hex-literal = "0.4.1"
-serde = { version = "1.0.197", features = ["derive"] }
-subxt = { version = "0.38.0", features = ["substrate-compat", "unstable-light-client"] }
-subxt-macro = { version = "0.38.0" }
-subxt-metadata = { version = "0.38.0" }
-subxt-codegen = { version = "0.38.0" }
-subxt-signer = { version = "0.38.0" }
+serde = { version = "1.0.210", features = ["derive"] }
+subxt = { version = "0.42.1" }
+subxt-signer = { version = "0.42.1" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", default-features = false, features = ["abigen", "ws", "rustls"] }
 lazy_static = "1.4.0"
-sp-crypto-hashing = "0.1.0"
-alloy = { version = "0.4.2", features = ["full"] }
+sp-core = { version = "36.1.0" }
+sp-crypto-hashing = { version = "0.1.0" }
+sp-runtime = { version = "41.1.0" }
