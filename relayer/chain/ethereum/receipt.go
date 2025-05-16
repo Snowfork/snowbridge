@@ -21,10 +21,7 @@ func GetAllReceipts(ctx context.Context, conn *Connection, block *etypes.Block) 
 
 	for i := 0; i < numTransactions; i += receiptFetchBatchSize {
 		eg, ctx := errgroup.WithContext(ctx)
-		upper := i + receiptFetchBatchSize
-		if upper >= numTransactions {
-			upper = numTransactions
-		}
+		upper := min(i+receiptFetchBatchSize, numTransactions)
 		for j, tx := range transactions[i:upper] {
 			index := i + j
 			txHash := tx.Hash()
