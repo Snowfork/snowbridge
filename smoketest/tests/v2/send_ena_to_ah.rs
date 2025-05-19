@@ -119,14 +119,14 @@ async fn send_ena_to_ah() {
 		.expect("block subscription")
 		.take(wait_for_blocks);
 
-	let expected_weth_id: Location = Location {
+	let _expected_weth_id: Location = Location {
 		parents: 2,
 		interior: Junctions::X2([
 			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
 			AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
 		]),
 	};
-	let expected_eth_id: Location = Location {
+	let _expected_eth_id: Location = Location {
 		parents: 2,
 		interior: Junctions::X1([GlobalConsensus(NetworkId::Ethereum {
 			chain_id: ETHEREUM_CHAIN_ID,

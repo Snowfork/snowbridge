@@ -4,10 +4,6 @@ use ethers::{
 };
 use futures::StreamExt;
 use penpal::api::runtime_types as penpalTypes;
-use snowbridge_smoketest::penpal_helper::dot_location;
-use snowbridge_smoketest::penpal_helper::ensure_penpal_asset_exists;
-use snowbridge_smoketest::penpal_helper::set_reserve_asset_storage;
-use snowbridge_smoketest::penpal_helper::weth_location;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{i_gateway_v1, weth9},
@@ -26,7 +22,10 @@ use snowbridge_smoketest::{
 		},
 		penpal::{self, api::foreign_assets::events::Issued as PenpalIssued},
 	},
-	penpal_helper::PenpalConfig,
+	penpal_helper::{
+		dot_location, ensure_penpal_asset_exists, set_reserve_asset_storage, weth_location,
+		PenpalConfig,
+	},
 };
 use subxt::{ext::codec::Encode, utils::AccountId32, OnlineClient};
 
