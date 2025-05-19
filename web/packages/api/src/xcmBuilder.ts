@@ -378,6 +378,7 @@ export function buildParachainERC20ReceivedXcmOnAssetHub(
 
 function buildAssetHubXcmFromParachainKusama(
     beneficiary: string,
+    topic: string,
 ) {
     return [
         {
@@ -392,6 +393,9 @@ function buildAssetHubXcmFromParachainKusama(
                     interior: { x1: [{ AccountId32: { id: beneficiary } }] },
                 },
             },
+        },
+        {
+            setTopic: topic,
         },
     ]
 }
@@ -511,10 +515,12 @@ function buildAssetHubXcmFromParachain(
 export function buildAssetHubERC20TransferToKusama(
     registry: Registry,
     beneficiary: string,
+    topic: string,
 ) {
     return registry.createType("XcmVersionedXcm", {
         v4: buildAssetHubXcmFromParachainKusama(
             beneficiary,
+            topic,
         ),
     })
 }

@@ -184,9 +184,9 @@ export async function createTransfer(
     let tokenLocation = getTokenLocation(registry, direction, tokenAddress);
     let tx;
     if (direction == Direction.ToPolkadot) {
-        tx = createERC20ToPolkadotTx(sourceParaId, parachain, tokenLocation, beneficiaryAddressHex, amount, fee.totalFeeInDot)
+        tx = createERC20ToPolkadotTx(sourceParaId, parachain, tokenLocation, beneficiaryAddressHex, amount, fee.totalFeeInDot, messageId)
     } else {
-        tx = createERC20ToKusamaTx(destParaId, parachain, tokenLocation, beneficiaryAddressHex, amount, fee.totalFeeInDot)
+        tx = createERC20ToKusamaTx(destParaId, parachain, tokenLocation, beneficiaryAddressHex, amount, fee.totalFeeInDot, messageId)
     }
 
     return {
@@ -442,6 +442,7 @@ export function createERC20ToKusamaTx(
     beneficiaryAccount: string,
     amount: bigint,
     totalFeeInDot: bigint,
+    topic: string,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any;
     if (isDOT(Direction.ToKusama, tokenLocation)) {
@@ -471,7 +472,7 @@ export function createERC20ToKusamaTx(
     const feeAsset = {
         v4: DOT_LOCATION
     }
-    const customXcm = buildAssetHubERC20TransferToKusama(parachain.registry, beneficiaryAccount)
+    const customXcm = buildAssetHubERC20TransferToKusama(parachain.registry, beneficiaryAccount, topic)
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(destination, assets, "LocalReserve", feeAsset, "LocalReserve", customXcm, "Unlimited")
 }
 
@@ -482,6 +483,7 @@ export function createERC20ToPolkadotTx(
     beneficiaryAccount: string,
     amount: bigint,
     totalFeeInDot: bigint,
+    topic: string,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any;
     if (isDOT(Direction.ToPolkadot, tokenLocation)) {
@@ -511,7 +513,7 @@ export function createERC20ToPolkadotTx(
     const feeAsset = {
         v4: dotLocationOnKusamaAssetHubLocation()
     }
-    const customXcm = buildAssetHubERC20TransferToKusama(parachain.registry, beneficiaryAccount)
+    const customXcm = buildAssetHubERC20TransferToKusama(parachain.registry, beneficiaryAccount, topic)
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(destination, assets, "DestinationReserve", feeAsset, "DestinationReserve", customXcm, "Unlimited")
 }
 
@@ -662,3 +664,4 @@ function isDOT(direction: Direction, location: any) {
         return isDOTOnPolkadotAssetHub(location)
     }
 }
+
