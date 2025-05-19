@@ -111,7 +111,7 @@ type Xcm struct {
 
 // GatewayMetaData contains all meta data concerning the Gateway contract.
 var GatewayMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"function\",\"name\":\"agentOf\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isTokenRegistered\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"operatingMode\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"enumOperatingMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"v2_createAgent\",\"inputs\":[{\"name\":\"id\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"v2_isDispatched\",\"inputs\":[{\"name\":\"nonce\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"v2_outboundNonce\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"v2_registerToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"network\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"executionFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"relayerFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"v2_sendMessage\",\"inputs\":[{\"name\":\"xcm\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"assets\",\"type\":\"bytes[]\",\"internalType\":\"bytes[]\"},{\"name\":\"claimer\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"executionFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"relayerFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"v2_submit\",\"inputs\":[{\"name\":\"message\",\"type\":\"tuple\",\"internalType\":\"structInboundMessage\",\"components\":[{\"name\":\"origin\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"topic\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"commands\",\"type\":\"tuple[]\",\"internalType\":\"structCommand[]\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"gas\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"payload\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"headerProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.Proof\",\"components\":[{\"name\":\"header\",\"type\":\"tuple\",\"internalType\":\"structVerification.ParachainHeader\",\"components\":[{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"number\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"stateRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"digestItems\",\"type\":\"tuple[]\",\"internalType\":\"structVerification.DigestItem[]\",\"components\":[{\"name\":\"kind\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"consensusEngineID\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"headProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.HeadProof\",\"components\":[{\"name\":\"pos\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"width\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]},{\"name\":\"leafPartial\",\"type\":\"tuple\",\"internalType\":\"structVerification.MMRLeafPartial\",\"components\":[{\"name\":\"version\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"parentNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"leafProofOrder\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"rewardAddress\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"AgentCreated\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"agent\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InboundMessageDispatched\",\"inputs\":[{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"topic\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"success\",\"type\":\"bool\",\"indexed\":false,\"internalType\":\"bool\"},{\"name\":\"rewardAddress\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OutboundMessageAccepted\",\"inputs\":[{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"payload\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structPayload\",\"components\":[{\"name\":\"origin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"assets\",\"type\":\"tuple[]\",\"internalType\":\"structAsset[]\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"xcm\",\"type\":\"tuple\",\"internalType\":\"structXcm\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"claimer\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"executionFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"relayerFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"}]}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AgentAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ExceededMaximumValue\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InsufficientGasLimit\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InsufficientValue\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidAsset\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidNetwork\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ShouldNotReachHere\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TooManyAssets\",\"inputs\":[]}]",
+	ABI: "[{\"type\":\"function\",\"name\":\"agentOf\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isTokenRegistered\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"operatingMode\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"enumOperatingMode\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"v2_createAgent\",\"inputs\":[{\"name\":\"id\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"v2_isDispatched\",\"inputs\":[{\"name\":\"nonce\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"v2_outboundNonce\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"v2_registerToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"network\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"executionFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"relayerFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"v2_sendMessage\",\"inputs\":[{\"name\":\"xcm\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"assets\",\"type\":\"bytes[]\",\"internalType\":\"bytes[]\"},{\"name\":\"claimer\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"executionFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"relayerFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"v2_submit\",\"inputs\":[{\"name\":\"message\",\"type\":\"tuple\",\"internalType\":\"structInboundMessage\",\"components\":[{\"name\":\"origin\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nonce\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"topic\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"commands\",\"type\":\"tuple[]\",\"internalType\":\"structCommand[]\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"gas\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"payload\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"headerProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.Proof\",\"components\":[{\"name\":\"header\",\"type\":\"tuple\",\"internalType\":\"structVerification.ParachainHeader\",\"components\":[{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"number\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"stateRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"extrinsicsRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"digestItems\",\"type\":\"tuple[]\",\"internalType\":\"structVerification.DigestItem[]\",\"components\":[{\"name\":\"kind\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"consensusEngineID\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"headProof\",\"type\":\"tuple\",\"internalType\":\"structVerification.HeadProof\",\"components\":[{\"name\":\"pos\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"width\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]},{\"name\":\"leafPartial\",\"type\":\"tuple\",\"internalType\":\"structVerification.MMRLeafPartial\",\"components\":[{\"name\":\"version\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"parentNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"leafProofOrder\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"rewardAddress\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"AgentCreated\",\"inputs\":[{\"name\":\"agentID\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"agent\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CommandFailed\",\"inputs\":[{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"index\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InboundMessageDispatched\",\"inputs\":[{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":true,\"internalType\":\"uint64\"},{\"name\":\"topic\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"success\",\"type\":\"bool\",\"indexed\":false,\"internalType\":\"bool\"},{\"name\":\"rewardAddress\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OutboundMessageAccepted\",\"inputs\":[{\"name\":\"nonce\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"payload\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structPayload\",\"components\":[{\"name\":\"origin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"assets\",\"type\":\"tuple[]\",\"internalType\":\"structAsset[]\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"xcm\",\"type\":\"tuple\",\"internalType\":\"structXcm\",\"components\":[{\"name\":\"kind\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]},{\"name\":\"claimer\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"executionFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"relayerFee\",\"type\":\"uint128\",\"internalType\":\"uint128\"}]}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AgentAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ExceededMaximumValue\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InsufficientGasLimit\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InsufficientValue\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidAsset\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidNetwork\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ShouldNotReachHere\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TooManyAssets\",\"inputs\":[]}]",
 }
 
 // GatewayABI is the input ABI used to generate the binding from.
@@ -628,6 +628,151 @@ func (_Gateway *GatewayFilterer) WatchAgentCreated(opts *bind.WatchOpts, sink ch
 func (_Gateway *GatewayFilterer) ParseAgentCreated(log types.Log) (*GatewayAgentCreated, error) {
 	event := new(GatewayAgentCreated)
 	if err := _Gateway.contract.UnpackLog(event, "AgentCreated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// GatewayCommandFailedIterator is returned from FilterCommandFailed and is used to iterate over the raw logs and unpacked data for CommandFailed events raised by the Gateway contract.
+type GatewayCommandFailedIterator struct {
+	Event *GatewayCommandFailed // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *GatewayCommandFailedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(GatewayCommandFailed)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(GatewayCommandFailed)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *GatewayCommandFailedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *GatewayCommandFailedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// GatewayCommandFailed represents a CommandFailed event raised by the Gateway contract.
+type GatewayCommandFailed struct {
+	Nonce uint64
+	Index *big.Int
+	Raw   types.Log // Blockchain specific contextual infos
+}
+
+// FilterCommandFailed is a free log retrieval operation binding the contract event 0xa6dc208277bb3da3666e7305baf550db2daf26f8f386a431a4b27cc7a02965a2.
+//
+// Solidity: event CommandFailed(uint64 indexed nonce, uint256 index)
+func (_Gateway *GatewayFilterer) FilterCommandFailed(opts *bind.FilterOpts, nonce []uint64) (*GatewayCommandFailedIterator, error) {
+
+	var nonceRule []interface{}
+	for _, nonceItem := range nonce {
+		nonceRule = append(nonceRule, nonceItem)
+	}
+
+	logs, sub, err := _Gateway.contract.FilterLogs(opts, "CommandFailed", nonceRule)
+	if err != nil {
+		return nil, err
+	}
+	return &GatewayCommandFailedIterator{contract: _Gateway.contract, event: "CommandFailed", logs: logs, sub: sub}, nil
+}
+
+// WatchCommandFailed is a free log subscription operation binding the contract event 0xa6dc208277bb3da3666e7305baf550db2daf26f8f386a431a4b27cc7a02965a2.
+//
+// Solidity: event CommandFailed(uint64 indexed nonce, uint256 index)
+func (_Gateway *GatewayFilterer) WatchCommandFailed(opts *bind.WatchOpts, sink chan<- *GatewayCommandFailed, nonce []uint64) (event.Subscription, error) {
+
+	var nonceRule []interface{}
+	for _, nonceItem := range nonce {
+		nonceRule = append(nonceRule, nonceItem)
+	}
+
+	logs, sub, err := _Gateway.contract.WatchLogs(opts, "CommandFailed", nonceRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(GatewayCommandFailed)
+				if err := _Gateway.contract.UnpackLog(event, "CommandFailed", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseCommandFailed is a log parse operation binding the contract event 0xa6dc208277bb3da3666e7305baf550db2daf26f8f386a431a4b27cc7a02965a2.
+//
+// Solidity: event CommandFailed(uint64 indexed nonce, uint256 index)
+func (_Gateway *GatewayFilterer) ParseCommandFailed(log types.Log) (*GatewayCommandFailed, error) {
+	event := new(GatewayCommandFailed)
+	if err := _Gateway.contract.UnpackLog(event, "CommandFailed", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
