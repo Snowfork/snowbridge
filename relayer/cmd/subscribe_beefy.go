@@ -227,7 +227,7 @@ func printCommitment(commitment *types.SignedCommitment, conn *relaychain.Connec
 // 		"BlockHash":                       proofResponse.BlockHash.Hex(),
 // 		"Leaf.ParentNumber":               proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
 // 		"Leaf.Hash":                       proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
-// 		"Leaf.ParachainHeads":             proofResponse.Leaf.ParachainHeads.Hex(),
+// 		"Leaf.BeefyExtraField":             proofResponse.Leaf.BeefyExtraField.Hex(),
 // 		"Leaf.BeefyNextAuthoritySet.ID":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
 // 		"Leaf.BeefyNextAuthoritySet.Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,
 // 		"Leaf.BeefyNextAuthoritySet.Root": proofResponse.Leaf.BeefyNextAuthoritySet.Root.Hex(),

@@ -117,10 +117,10 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
+	if merkleProofData.Root.Hex() != mmrProof.Leaf.BeefyExtraField.Hex() {
 		log.WithFields(log.Fields{
 			"computedMmr": merkleProofData.Root.Hex(),
-			"mmr":         mmrProof.Leaf.ParachainHeads.Hex(),
+			"mmr":         mmrProof.Leaf.BeefyExtraField.Hex(),
 		}).Warn("MMR parachain merkle root does not match calculated merkle root. Filtering out parachain heads.")
 
 		paraHeadsAsSlice, err = conn.FilterParachainHeads(paraHeadsAsSlice, relayChainBlockHash)
@@ -133,10 +133,10 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			log.WithError(err).Fatal("Filtering out parachain heads failed.")
 		}
-		if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
+		if merkleProofData.Root.Hex() != mmrProof.Leaf.BeefyExtraField.Hex() {
 			log.WithFields(log.Fields{
 				"computedMmr": merkleProofData.Root.Hex(),
-				"mmr":         mmrProof.Leaf.ParachainHeads.Hex(),
+				"mmr":         mmrProof.Leaf.BeefyExtraField.Hex(),
 			}).Fatal("MMR parachain merkle root does not match calculated merkle root.")
 		}
 	}
@@ -156,7 +156,7 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 	}).Info("Generated proof input for parachain block.")
 
 	log.WithFields(log.Fields{
-		"mmrProofParachainHeads":           mmrProof.Leaf.ParachainHeads.Hex(),
+		"mmrProofParachainHeads":           mmrProof.Leaf.BeefyExtraField.Hex(),
 		"mmrProofParentNumberAndHash":      mmrProof.Leaf.ParentNumberAndHash,
 		"computedProofParachainHeads":      merkleProofData.Root.Hex(),
 		"computedProofParentNumberAndHash": types.ParentNumberAndHash{ParentNumber: types.U32(relayChainBlock), Hash: relayChainBlockHash},

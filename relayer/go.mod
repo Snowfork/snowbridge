@@ -111,4 +111,4 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/snowfork/go-substrate-rpc-client/v4 => github.com/ffarall/go-substrate-rpc-client/v4 v4.1.7-ffarall
+replace github.com/snowfork/go-substrate-rpc-client/v4 => github.com/Moonsong-Labs/go-substrate-rpc-client/v4 v4.1.1-msl

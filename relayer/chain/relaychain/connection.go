@@ -137,7 +137,7 @@ func (co *Connection) GenerateProofForBlock(
 		"Leaf": log.Fields{
 			"ParentNumber":   proofResponse.Leaf.ParentNumberAndHash.ParentNumber,
 			"ParentHash":     proofResponse.Leaf.ParentNumberAndHash.Hash.Hex(),
-			"ParachainHeads": proofResponse.Leaf.ParachainHeads.Hex(),
+			"BeefyExtraField": proofResponse.Leaf.BeefyExtraField.Hex(),
 			"NextAuthoritySet": log.Fields{
 				"Id":   proofResponse.Leaf.BeefyNextAuthoritySet.ID,
 				"Len":  proofResponse.Leaf.BeefyNextAuthoritySet.Len,

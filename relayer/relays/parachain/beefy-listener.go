@@ -296,14 +296,14 @@ func (li *BeefyListener) generateAndValidateParasHeadsMerkleProof(input *ProofIn
 	}
 
 	// Verify merkle root generated is same as value generated in relaychain and if so exit early
-	if merkleProofData.Root.Hex() == mmrProof.Leaf.ParachainHeads.Hex() {
+	if merkleProofData.Root.Hex() == mmrProof.Leaf.BeefyExtraField.Hex() {
 		return &merkleProofData, paraHeads, nil
 	}
 
 	// Try a filtering out parathreads
 	log.WithFields(log.Fields{
 		"computedMmr": merkleProofData.Root.Hex(),
-		"mmr":         mmrProof.Leaf.ParachainHeads.Hex(),
+		"mmr":         mmrProof.Leaf.BeefyExtraField.Hex(),
 	}).Warn("MMR parachain merkle root does not match calculated merkle root. Trying to filtering out parathreads.")
 
 	paraHeads, err = li.relaychainConn.FilterParachainHeads(paraHeads, input.RelayBlockHash)
@@ -316,9 +316,9 @@ func (li *BeefyListener) generateAndValidateParasHeadsMerkleProof(input *ProofIn
 	if err != nil {
 		return nil, paraHeads, fmt.Errorf("create parachain header proof: %w", err)
 	}
-	if merkleProofData.Root.Hex() != mmrProof.Leaf.ParachainHeads.Hex() {
+	if merkleProofData.Root.Hex() != mmrProof.Leaf.BeefyExtraField.Hex() {
 		return nil, paraHeads, fmt.Errorf("MMR parachain merkle root does not match calculated parachain merkle root (mmr: %s, computed: %s)",
-			mmrProof.Leaf.ParachainHeads.Hex(),
+			mmrProof.Leaf.BeefyExtraField.Hex(),
 			merkleProofData.Root.String(),
 		)
 	}

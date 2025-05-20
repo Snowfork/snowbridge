@@ -205,7 +205,7 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 		Version:              uint8(r.Proof.Leaf.Version),
 		ParentNumber:         uint32(r.Proof.Leaf.ParentNumberAndHash.ParentNumber),
 		ParentHash:           r.Proof.Leaf.ParentNumberAndHash.Hash,
-		ParachainHeadsRoot:   r.Proof.Leaf.ParachainHeads,
+		ParachainHeadsRoot:   r.Proof.Leaf.BeefyExtraField,
 		NextAuthoritySetID:   uint64(r.Proof.Leaf.BeefyNextAuthoritySet.ID),
 		NextAuthoritySetLen:  uint32(r.Proof.Leaf.BeefyNextAuthoritySet.Len),
 		NextAuthoritySetRoot: r.Proof.Leaf.BeefyNextAuthoritySet.Root,
