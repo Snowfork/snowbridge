@@ -91,7 +91,42 @@ const sendBatchTransactionsOnAssethub = async () => {
     })
 }
 
+const buildHrmpChannels = async () => {
+    // Connect to node
+    let api = await ApiPromise.create({ provider: new WsProvider("ws://127.0.0.1:9944") })
+    api = await api.isReady
+
+    // Initialize Keyring and add an account (Replace with your private key or use mnemonic)
+    const keyring = new Keyring({ type: "sr25519" })
+    const sender = keyring.addFromUri("//Alice")
+    await cryptoWaitReady()
+
+    const transactions = [
+        api.tx.hrmp.forceOpenHrmpChannel(1000, 1002, 8, 512),
+        api.tx.hrmp.forceOpenHrmpChannel(1002, 1000, 8, 512),
+        api.tx.hrmp.forceOpenHrmpChannel(1000, 2000, 8, 512),
+        api.tx.hrmp.forceOpenHrmpChannel(2000, 1000, 8, 512),
+    ]
+
+    // Create a batch transaction
+    const batchTx = api.tx.utility.batchAll(transactions)
+    const sudoTx = api.tx.sudo.sudo(batchTx)
+
+    console.log("Sending sudo transaction...")
+
+    // Sign and send the batch transaction
+    const unsub = await sudoTx.signAndSend(sender, ({ status }) => {
+        if (status.isInBlock) {
+            console.log(`✅ Transaction included in block: ${status.asInBlock}`)
+        } else if (status.isFinalized) {
+            console.log(`🎉 Transaction finalized in block: ${status.asFinalized}`)
+            unsub()
+        }
+    })
+}
+
 const main = async () => {
+    await buildHrmpChannels()
     await sendBatchTransactionsOnBridgehub()
     await sendBatchTransactionsOnAssethub()
 }
