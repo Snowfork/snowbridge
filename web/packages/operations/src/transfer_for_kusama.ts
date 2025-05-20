@@ -76,14 +76,17 @@ export const transferForKusama = async (
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
-    const SUBSTRATE_ACCOUNT = process.env["SUBSTRATE_KEY"]
-        ? polkadot_keyring.addFromUri(process.env["SUBSTRATE_KEY"])
+    const SOURCE_ACCOUNT = process.env["SOURCE_SUBSTRATE_KEY"]
+        ? polkadot_keyring.addFromUri(process.env["SOURCE_SUBSTRATE_KEY"])
+        : polkadot_keyring.addFromUri("//Ferdie")
+    const DEST_ACCOUNT = process.env["DEST_SUBSTRATE_KEY"]
+        ? polkadot_keyring.addFromUri(process.env["DEST_SUBSTRATE_KEY"])
         : polkadot_keyring.addFromUri("//Ferdie")
 
     const registry = await fetchRegistry(env, context)
 
-    let sourceAccountHex = "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e"
-    let beneficiaryAccountHex = "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e"
+    const SOURCE_ACCOUNT_PUBLIC = SOURCE_ACCOUNT.address
+    const DEST_ACCOUNT_PUBLIC = DEST_ACCOUNT.address
 
     let sourceAssetHub
     let destAssetHub
@@ -114,8 +117,8 @@ export const transferForKusama = async (
             sourceAssetHub,
             direction,
             registry,
-            sourceAccountHex,
-            beneficiaryAccountHex,
+            SOURCE_ACCOUNT_PUBLIC,
+            DEST_ACCOUNT_PUBLIC,
             tokenAddress,
             amount,
             fee
@@ -135,7 +138,7 @@ export const transferForKusama = async (
         }
 
         // Step 5. Submit transaction and get receipt for tracking
-        const response = await forKusama.signAndSend(sourceAssetHub, transfer, SUBSTRATE_ACCOUNT, {
+        const response = await forKusama.signAndSend(sourceAssetHub, transfer, SOURCE_ACCOUNT, {
             withSignedTransaction: true,
         })
         if (!response) {
