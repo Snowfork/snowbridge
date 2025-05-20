@@ -556,8 +556,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             PARACHAINS: {
                 "1000": "wss://asset-hub-kusama-rpc.dwellir.com",
                 "1002": "https://bridge-hub-kusama-rpc.dwellir.com",
-            }
-        }
+            },
+        },
     },
     westend_sepolia: {
         name: "westend_sepolia",

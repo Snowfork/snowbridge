@@ -13,11 +13,19 @@ export async function getMythosLocationBalance(
     specName: string,
     account: string
 ) {
-    if(specName === "muse" && JSON.stringify(location) == JSON.stringify(erc20Location(MUSE_CHAIN_ID, MUSE_TOKEN_ID))) {
-        return await getNativeBalance(provider, account);
-    } else if(specName === "mythos" && JSON.stringify(location) == JSON.stringify(erc20Location(MYTHOS_CHAIN_ID, MYTHOS_TOKEN_ID))) {
-        return await getNativeBalance(provider, account);
+    if (
+        specName === "muse" &&
+        JSON.stringify(location) == JSON.stringify(erc20Location(MUSE_CHAIN_ID, MUSE_TOKEN_ID))
+    ) {
+        return await getNativeBalance(provider, account)
+    } else if (
+        specName === "mythos" &&
+        JSON.stringify(location) == JSON.stringify(erc20Location(MYTHOS_CHAIN_ID, MYTHOS_TOKEN_ID))
+    ) {
+        return await getNativeBalance(provider, account)
     } else {
-        throw Error(`Cannot get balance for spec ${specName}. Location = ${JSON.stringify(location)}`)
+        throw Error(
+            `Cannot get balance for spec ${specName}. Location = ${JSON.stringify(location)}`
+        )
     }
 }

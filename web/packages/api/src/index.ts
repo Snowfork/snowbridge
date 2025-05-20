@@ -65,12 +65,12 @@ export class Context {
             return this.#relaychain
         }
         const url = this.config.polkadot.relaychain
-        console.log('Connecting to the relaychain.')
+        console.log("Connecting to the relaychain.")
         this.#relaychain = await ApiPromise.create({
             noInitWarn: true,
             provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
         })
-        console.log('Connected to the relaychain.')
+        console.log("Connected to the relaychain.")
         return this.#relaychain
     }
 
@@ -79,7 +79,7 @@ export class Context {
     }
 
     kusamaAssetHub(): Promise<ApiPromise> | undefined {
-        const assetHubParaId = this.config.kusama?.assetHubParaId;
+        const assetHubParaId = this.config.kusama?.assetHubParaId
         if (assetHubParaId) {
             return this.kusamaParachain(assetHubParaId)
         }
@@ -113,7 +113,7 @@ export class Context {
         const { parachains } = this.config.polkadot
         if (paraIdKey in parachains) {
             const url = parachains[paraIdKey]
-            console.log('Connecting to parachain ', paraIdKey, url)
+            console.log("Connecting to parachain ", paraIdKey, url)
             const api = await ApiPromise.create({
                 noInitWarn: true,
                 provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
@@ -127,7 +127,7 @@ export class Context {
                 )
             }
             this.#polkadotParachains[onChainParaId] = api
-            console.log('Connected to parachain ', paraIdKey)
+            console.log("Connected to parachain ", paraIdKey)
             return this.#polkadotParachains[onChainParaId]
         } else {
             throw Error(`Parachain id ${paraId} not in the list of parachain urls.`)
@@ -145,7 +145,7 @@ export class Context {
         const { parachains } = this.config.kusama
         if (paraIdKey in parachains) {
             const url = parachains[paraIdKey]
-            console.log('Connecting to Kusama parachain ', paraIdKey, url)
+            console.log("Connecting to Kusama parachain ", paraIdKey, url)
             const api = await ApiPromise.create({
                 noInitWarn: true,
                 provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
@@ -159,7 +159,7 @@ export class Context {
                 )
             }
             this.#kusamaParachains[onChainParaId] = api
-            console.log('Connected to Kusama parachain ', paraIdKey)
+            console.log("Connected to Kusama parachain ", paraIdKey)
             return this.#kusamaParachains[onChainParaId]
         } else {
             throw Error(`Parachain id ${paraId} not in the list of parachain urls.`)

@@ -1,13 +1,18 @@
 import "dotenv/config"
-import {Keyring} from "@polkadot/keyring"
-import {Context, environment, forKusama} from "@snowbridge/api"
-import {AbstractProvider} from "ethers"
+import { Keyring } from "@polkadot/keyring"
+import { Context, environment, forKusama } from "@snowbridge/api"
+import { AbstractProvider } from "ethers"
 import cron from "node-cron"
-import {cryptoWaitReady} from "@polkadot/util-crypto"
-import {fetchRegistry} from "./registry";
-import {Direction} from "@snowbridge/api/dist/forKusama";
+import { cryptoWaitReady } from "@polkadot/util-crypto"
+import { fetchRegistry } from "./registry"
+import { Direction } from "@snowbridge/api/dist/forKusama"
 
-export const transferForKusama = async (transferName: string, direction: Direction, amount: bigint, tokenName: string) => {
+export const transferForKusama = async (
+    transferName: string,
+    direction: Direction,
+    amount: bigint,
+    tokenName: string
+) => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
@@ -25,8 +30,10 @@ export const transferForKusama = async (transferName: string, direction: Directi
     }
 
     const kusamaParachains: { [paraId: string]: string } = {}
-    kusamaParachains[kusamaConfig?.BRIDGE_HUB_PARAID.toString()] = kusamaConfig?.PARACHAINS[config.BRIDGE_HUB_PARAID.toString()]
-    kusamaParachains[kusamaConfig?.ASSET_HUB_PARAID.toString()] = kusamaConfig?.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
+    kusamaParachains[kusamaConfig?.BRIDGE_HUB_PARAID.toString()] =
+        kusamaConfig?.PARACHAINS[config.BRIDGE_HUB_PARAID.toString()]
+    kusamaParachains[kusamaConfig?.ASSET_HUB_PARAID.toString()] =
+        kusamaConfig?.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
 
     const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
     const ethChains: { [ethChainId: string]: string } = {}
@@ -75,22 +82,22 @@ export const transferForKusama = async (transferName: string, direction: Directi
 
     const registry = await fetchRegistry(env, context)
 
-    let sourceAccountHex = "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e";
-    let beneficiaryAccountHex = "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e";
+    let sourceAccountHex = "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e"
+    let beneficiaryAccountHex = "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e"
 
-    let sourceAssetHub;
-    let destAssetHub;
+    let sourceAssetHub
+    let destAssetHub
     if (direction == Direction.ToPolkadot) {
-        sourceAssetHub = kusamaAssetHub;
-        destAssetHub = polkadotAssetHub;
+        sourceAssetHub = kusamaAssetHub
+        destAssetHub = polkadotAssetHub
     } else {
-        sourceAssetHub = polkadotAssetHub;
-        destAssetHub = kusamaAssetHub;
+        sourceAssetHub = polkadotAssetHub
+        destAssetHub = kusamaAssetHub
     }
 
-    let tokenAddress;
+    let tokenAddress
     if (tokenName == "DOT") {
-        tokenAddress = "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14";
+        tokenAddress = "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14"
     } else {
         tokenAddress = snowbridgeEnv.locations[0].erc20tokensReceivable.find(
             (t) => t.id === tokenName
@@ -100,11 +107,7 @@ export const transferForKusama = async (transferName: string, direction: Directi
     console.log(transferName)
     {
         // Step 1. Get the delivery fee for the transaction
-        const fee = await forKusama.getDeliveryFee(
-            sourceAssetHub,
-            direction,
-            registry,
-        )
+        const fee = await forKusama.getDeliveryFee(sourceAssetHub, direction, registry)
 
         // Step 2. Create a transfer tx
         const transfer = await forKusama.createTransfer(
@@ -120,10 +123,10 @@ export const transferForKusama = async (transferName: string, direction: Directi
 
         // Step 3. Validate
         const validation = await forKusama.validateTransfer(
-            {sourceAssetHub, destAssetHub},
+            { sourceAssetHub, destAssetHub },
             direction,
-            transfer,
-        );
+            transfer
+        )
 
         // Step 4. Check validation logs for errors
         if (validation.logs.find((l) => l.kind == forKusama.ValidationKind.Error)) {
@@ -132,12 +135,9 @@ export const transferForKusama = async (transferName: string, direction: Directi
         }
 
         // Step 5. Submit transaction and get receipt for tracking
-        const response = await forKusama.signAndSend(
-            sourceAssetHub,
-            transfer,
-            SUBSTRATE_ACCOUNT,
-            { withSignedTransaction: true }
-        )
+        const response = await forKusama.signAndSend(sourceAssetHub, transfer, SUBSTRATE_ACCOUNT, {
+            withSignedTransaction: true,
+        })
         if (!response) {
             throw Error(`Transaction ${response} not included.`)
         }
