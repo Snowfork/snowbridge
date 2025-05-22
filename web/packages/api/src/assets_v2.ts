@@ -619,7 +619,7 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
     }
 
     if (context.config.kusama) {
-        const [kusamaAssetHub] = await Promise.all([context.kusamaAssetHub()])
+        const kusamaAssetHub = await context.kusamaAssetHub()
 
         if (kusamaAssetHub) {
             const { assetHubParaId, bridgeHubParaId } = context.config.kusama
