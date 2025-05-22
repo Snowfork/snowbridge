@@ -682,6 +682,7 @@ export async function getLocationBalance(
         case "penpal-parachain":
         case "asset-hub-paseo":
         case "westmint":
+        case "statemine":
         case "statemint": {
             let accountData: any
             if (pnaAssetId) {
@@ -693,12 +694,6 @@ export async function getLocationBalance(
                     await provider.query.foreignAssets.account(location, account)
                 ).toPrimitive() as any
             }
-            return BigInt(accountData?.balance ?? 0n)
-        }
-        case "statemine": {
-            let accountData = (
-                await provider.query.foreignAssets.account(location, account)
-            ).toPrimitive() as any
             return BigInt(accountData?.balance ?? 0n)
         }
         case "bifrost":
@@ -751,7 +746,7 @@ export function getDotBalance(
             return getLocationBalance(
                 provider,
                 specName,
-                dotLocationOnKusamaAssetHubLocation(),
+                dotLocationOnKusamaAssetHubLocation,
                 account
             )
         }

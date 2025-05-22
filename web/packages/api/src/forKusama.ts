@@ -123,7 +123,7 @@ export async function getDeliveryFee(
     let forwardedXcm = buildTransferToKusamaExportXCM(
         sourceAssetHub.registry,
         DOT_LOCATION,
-        dotLocationOnKusamaAssetHubLocation(),
+        dotLocationOnKusamaAssetHubLocation,
         erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
         xcmBridgeFee,
         xcmBridgeFee,
@@ -314,7 +314,7 @@ export async function validateTransfer(
         dotBalance = await getLocationBalance(
             sourceAssetHub,
             source.info.specName,
-            dotLocationOnKusamaAssetHubLocation(),
+            dotLocationOnKusamaAssetHubLocation,
             sourceAccountHex
         )
     } else {
@@ -593,7 +593,7 @@ export function createERC20ToPolkadotTx(
         assets = {
             v4: [
                 {
-                    id: dotLocationOnKusamaAssetHubLocation(),
+                    id: dotLocationOnKusamaAssetHubLocation,
                     fun: { Fungible: totalFeeInDot + amount },
                 },
             ],
@@ -602,7 +602,7 @@ export function createERC20ToPolkadotTx(
         assets = {
             v4: [
                 {
-                    id: dotLocationOnKusamaAssetHubLocation(),
+                    id: dotLocationOnKusamaAssetHubLocation,
                     fun: { Fungible: totalFeeInDot },
                 },
                 {
@@ -616,7 +616,7 @@ export function createERC20ToPolkadotTx(
     const destination = { v4: polkadotAssetHubLocation(destParaId) }
 
     const feeAsset = {
-        v4: dotLocationOnKusamaAssetHubLocation(),
+        v4: dotLocationOnKusamaAssetHubLocation,
     }
     const customXcm = buildAssetHubERC20TransferToKusama(
         parachain.registry,

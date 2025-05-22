@@ -4,17 +4,19 @@ import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 
 export const HERE_LOCATION = { parents: 0, interior: "Here" }
 export const DOT_LOCATION = { parents: 1, interior: "Here" }
+export const polkadotNetwork = {
+    GlobalConsensus: { Polkadot: { network: null } },
+}
+export const kusamaNetwork = {
+    GlobalConsensus: { Kusama: { network: null } },
+}
+export const dotLocationOnKusamaAssetHubLocation = {
+    parents: 2,
+    interior: { x1: [{ GlobalConsensus: { Polkadot: null } }] },
+}
 
 const ethereumNetwork = (ethChainId: number) => ({
     GlobalConsensus: { Ethereum: { chain_id: ethChainId } },
-})
-
-export const polkadotNetwork = () => ({
-    GlobalConsensus: { Polkadot: { network: null } },
-})
-
-export const kusamaNetwork = () => ({
-    GlobalConsensus: { Kusama: { network: null } },
 })
 
 export function bridgeLocation(ethChainId: number) {
@@ -49,13 +51,6 @@ export function polkadotAssetHubLocation(parachainId: number) {
     return {
         parents: 2,
         interior: { x2: [{ GlobalConsensus: { Polkadot: null } }, { parachain: parachainId }] },
-    }
-}
-
-export function dotLocationOnKusamaAssetHubLocation() {
-    return {
-        parents: 2,
-        interior: { x1: [{ GlobalConsensus: { Polkadot: null } }] },
     }
 }
 
@@ -1144,7 +1139,7 @@ export function buildPolkadotToKusamaAssetHubExportXCM(
     if (isDOTOnPolkadotAssetHub(transferTokenLocation)) {
         reserverAssetDeposited = [
             {
-                id: dotLocationOnKusamaAssetHubLocation(),
+                id: dotLocationOnKusamaAssetHubLocation,
                 fun: {
                     Fungible: totalFeeInDot + transferAmount,
                 },
@@ -1153,7 +1148,7 @@ export function buildPolkadotToKusamaAssetHubExportXCM(
     } else {
         reserverAssetDeposited = [
             {
-                id: dotLocationOnKusamaAssetHubLocation(),
+                id: dotLocationOnKusamaAssetHubLocation,
                 fun: {
                     Fungible: totalFeeInDot,
                 },
@@ -1172,7 +1167,7 @@ export function buildPolkadotToKusamaAssetHubExportXCM(
                 descendOrigin: { x1: [{ PalletInstance: 53 }] },
             },
             {
-                universalOrigin: polkadotNetwork(),
+                universalOrigin: polkadotNetwork,
             },
             {
                 descendOrigin: { x1: [{ parachain: assetHubParaId }] },
@@ -1184,7 +1179,7 @@ export function buildPolkadotToKusamaAssetHubExportXCM(
             {
                 buyExecution: {
                     fees: {
-                        id: dotLocationOnKusamaAssetHubLocation(),
+                        id: dotLocationOnKusamaAssetHubLocation,
                         fun: {
                             Fungible: totalFeeInDot,
                         },
@@ -1251,7 +1246,7 @@ export function buildKusamaToPolkadotAssetHubExportXCM(
                 descendOrigin: { x1: [{ PalletInstance: 53 }] },
             },
             {
-                universalOrigin: kusamaNetwork(),
+                universalOrigin: kusamaNetwork,
             },
             {
                 descendOrigin: { x1: [{ parachain: assetHubParaId }] },
