@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"path/filepath"
+	"runtime"
 	"sort"
 	"time"
 
@@ -28,6 +30,28 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// ConfigureLogger sets up the logger with colors, emojis, and better formatting
+func ConfigureLogger() {
+	// Set the formatter to include colors and timestamps
+	log.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02 15:04:05",
+		ForceColors:     true,
+		DisableColors:   false,
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			// Extract just the filename, not the full path
+			filename := filepath.Base(f.File)
+			return "", fmt.Sprintf("%s:%d", filename, f.Line)
+		},
+	})
+
+	// Set the log level to Info by default
+	log.SetLevel(logrus.DebugLevel)
+
+	// Add some custom fields that will be included in all log messages
+	log.SetReportCaller(true)
+}
+
 type Relay struct {
 	config          *Config
 	keypair         *signature.KeyringPair
@@ -45,6 +69,9 @@ func NewRelay(
 	config *Config,
 	keypair *signature.KeyringPair,
 ) *Relay {
+	// Configure the logger with colors and better formatting
+	ConfigureLogger()
+
 	return &Relay{
 		config:  config,
 		keypair: keypair,
@@ -52,21 +79,34 @@ func NewRelay(
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
+	log.WithFields(log.Fields{
+		"parachain_endpoint": r.config.Sink.Parachain.Endpoint,
+		"ethereum_endpoint":  r.config.Source.Ethereum.Endpoint,
+		"gateway_address":    r.config.Source.Contracts.Gateway,
+	}).Info("🚀 Starting execution relay")
+	
 	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair)
 	ethconn := ethereum.NewConnection(&r.config.Source.Ethereum, nil)
 
+	log.Info("🔌 Connecting to substrate chain...")
 	err := paraconn.ConnectWithHeartBeat(ctx, 30*time.Second)
 	if err != nil {
+		log.WithError(err).Error("❌ Failed to connect to substrate chain")
 		return err
 	}
+	log.Info("✅ Successfully connected to substrate chain")
 	r.paraconn = paraconn
 
+	log.Info("🔌 Connecting to Ethereum...")
 	err = ethconn.Connect(ctx)
 	if err != nil {
+		log.WithError(err).Error("❌ Failed to connect to Ethereum")
 		return err
 	}
+	log.Info("✅ Successfully connected to Ethereum")
 	r.ethconn = ethconn
 
+	log.Info("📝 Initializing substrate chain writer...")
 	r.writer = parachain.NewParachainWriter(
 		paraconn,
 		r.config.Sink.Parachain.MaxWatchedExtrinsics,
@@ -74,31 +114,50 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	err = r.writer.Start(ctx, eg)
 	if err != nil {
+		log.WithError(err).Error("❌ Failed to start substrate chain writer")
 		return err
 	}
+	log.Info("✅ Substrate chain writer started successfully")
 
+	log.Info("📦 Creating Ethereum header cache...")
 	headerCache, err := ethereum.NewHeaderBlockCache(
 		&ethereum.DefaultBlockLoader{Conn: ethconn},
 	)
 	if err != nil {
+		log.WithError(err).Error("❌ Failed to create header cache")
 		return err
 	}
 	r.headerCache = headerCache
+	log.Info("✅ Ethereum header cache created successfully")
 
+	log.WithField("gateway_address", r.config.Source.Contracts.Gateway).Info("🔗 Connecting to Gateway contract...")
 	address := common.HexToAddress(r.config.Source.Contracts.Gateway)
 	contract, err := contracts.NewGateway(address, ethconn.Client())
 	if err != nil {
+		log.WithError(err).WithField("address", address.Hex()).Error("❌ Failed to connect to Gateway contract")
 		return err
 	}
+	log.Info("✅ Gateway contract connected successfully")
 	r.gatewayContract = contract
 
+	log.Info("⚡ Setting up beacon protocol...")
 	p := protocol.New(r.config.Source.Beacon.Spec, r.config.Sink.Parachain.HeaderRedundancy)
 
+	log.WithField("ofac_enabled", r.config.OFAC.Enabled).Info("🔒 Initializing OFAC compliance")
 	r.ofac = ofac.New(r.config.OFAC.Enabled, r.config.OFAC.ApiKey)
 
+	log.WithFields(log.Fields{
+		"store_location": r.config.Source.Beacon.DataStore.Location,
+		"max_entries":    r.config.Source.Beacon.DataStore.MaxEntries,
+	}).Info("💾 Connecting to beacon store...")
 	store := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries, *p)
 	store.Connect()
+	log.Info("✅ Beacon store connected successfully")
 
+	log.WithFields(log.Fields{
+		"beacon_endpoint": r.config.Source.Beacon.Endpoint,
+		"state_endpoint":  r.config.Source.Beacon.StateEndpoint,
+	}).Info("🔌 Initializing beacon client...")
 	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint, r.config.Source.Beacon.StateEndpoint)
 	beaconHeader := header.New(
 		r.writer,
@@ -109,75 +168,120 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		0, // setting is not used in the execution relay
 	)
 	r.beaconHeader = &beaconHeader
+	log.Info("✅ Beacon header initialized successfully")
 
+	log.Info("🔍 Fetching Ethereum network ID...")
 	r.chainID, err = r.ethconn.Client().NetworkID(ctx)
 	if err != nil {
+		log.WithError(err).Error("❌ Failed to fetch Ethereum network ID")
 		return err
 	}
+	log.WithField("chain_id", r.chainID).Info("✅ Ethereum network ID fetched successfully")
 
 	log.WithFields(log.Fields{
 		"relayerId":     r.config.Schedule.ID,
 		"relayerCount":  r.config.Schedule.TotalRelayerCount,
 		"sleepInterval": r.config.Schedule.SleepInterval,
 		"chainId":       r.chainID,
-	}).Info("relayer config")
+	}).Info("⚙️  Relayer configuration")
 
+	log.Info("🔄 Starting main polling loop...")
 	for {
 		select {
 		case <-ctx.Done():
+			log.Info("🛑 Context done, stopping execution relay")
 			return nil
 		case <-time.After(60 * time.Second):
-			log.Info("Polling Nonces")
+			log.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+			log.Info("🔄 POLL CYCLE START")
+			log.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
+			log.Info("🔍 Polling Ethereum nonce...")
 			ethNonce, err := r.fetchEthereumNonce(ctx)
 			if err != nil {
+				log.WithError(err).Error("❌ Failed to fetch Ethereum nonce")
 				return err
 			}
+			log.WithField("ethNonce", ethNonce).Info("✅ Successfully fetched Ethereum nonce")
 
+			log.Info("🔍 Fetching unprocessed substrate chain nonces...")
 			paraNonces, err := r.fetchUnprocessedParachainNonces(ethNonce)
 			if err != nil {
+				log.WithError(err).Error("❌ Failed to fetch unprocessed substrate chain nonces")
 				return err
 			}
 
 			log.WithFields(log.Fields{
 				"paraNonces":          paraNonces,
 				"ethNonce":            ethNonce,
+				"nonce_count":         len(paraNonces),
 				"instantVerification": r.config.InstantVerification,
-			}).Info("Polled Nonces")
+			}).Info("📊 Nonce polling results")
 
+			log.Info("🔍 Fetching latest Ethereum block number...")
 			blockNumber, err := ethconn.Client().BlockNumber(ctx)
 			if err != nil {
+				log.WithError(err).Error("❌ Failed to get last block number")
 				return fmt.Errorf("get last block number: %w", err)
 			}
 
 			log.WithFields(log.Fields{
 				"blockNumber": blockNumber,
-			}).Info("block number is")
+			}).Info("📦 Current Ethereum block number")
 
 			for _, paraNonce := range paraNonces {
 				log.WithFields(log.Fields{
 					"nonce": paraNonce,
-				}).Info("Finding events for nonce")
+				}).Info("🔍 Finding events for nonce")
+				
+				log.WithFields(log.Fields{
+					"blockNumber": blockNumber,
+					"paraNonce":   paraNonce,
+				}).Debug("🔎 Search parameters for finding events")
+				
 				events, err := r.findEvents(ctx, blockNumber, paraNonce)
 				if err != nil {
+					log.WithError(err).WithField("nonce", paraNonce).Error("❌ Failed to find events for nonce")
 					return fmt.Errorf("find events: %w", err)
 				}
 
 				log.WithFields(log.Fields{
-					"events":    events,
-					"paraNonce": paraNonce,
-				}).Info("Found events for nonce")
+					"events_count": len(events),
+					"paraNonce":    paraNonce,
+				}).Info("📦 Found events for nonce")
+				
+				if len(events) == 0 {
+					log.WithField("nonce", paraNonce).Info("⏭️  No events found for nonce, skipping")
+					continue
+				}
 
-				for _, ev := range events {
+				for i, ev := range events {
+					log.WithFields(log.Fields{
+						"event_index":  i,
+						"nonce":        ev.Nonce,
+						"block_number": ev.Raw.BlockNumber,
+						"tx_hash":      ev.Raw.TxHash.Hex(),
+					}).Info("⚡ Processing event")
+					
 					err := r.waitAndSend(ctx, ev)
 					if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
-						log.WithField("nonce", ev.Nonce).Info("beacon header not finalized yet")
+						log.WithField("nonce", ev.Nonce).Info("⏳ Beacon header not finalized yet, will retry in next cycle")
 						continue
 					} else if err != nil {
+						log.WithError(err).WithField("nonce", ev.Nonce).Error("❌ Failed to submit event")
 						return fmt.Errorf("submit event: %w", err)
 					}
+					
+					log.WithFields(log.Fields{
+						"nonce":    ev.Nonce,
+						"tx_hash":  ev.Raw.TxHash.Hex(),
+					}).Info("✅ Successfully processed event")
 				}
 			}
+			
+			log.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+			log.Info("✅ POLL CYCLE COMPLETE")
+			log.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 		}
 	}
 }
@@ -192,8 +296,30 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 
 	// There is already a valid finalized header on-chain that can prove the message
 	if proof.FinalizedPayload == nil {
-		err := r.writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueueV2.submit", inboundMsg)
+		// Create detailed logs about the message structure
+		log.WithFields(logrus.Fields{
+			"message_type": "InboundQueueV2.submit",
+			"event_log_address": inboundMsg.EventLog.Address.Hex(),
+			"event_log_topics_count": len(inboundMsg.EventLog.Topics),
+			"event_log_data_length": len(inboundMsg.EventLog.Data),
+			"execution_proof_header_slot": inboundMsg.Proof.ExecutionProof.Header.Slot,
+			"execution_proof_header_parent_root": inboundMsg.Proof.ExecutionProof.Header.ParentRoot.Hex(),
+			"execution_proof_header_state_root": inboundMsg.Proof.ExecutionProof.Header.StateRoot.Hex(),
+			"execution_branch_length": len(inboundMsg.Proof.ExecutionProof.ExecutionBranch),
+			"receipt_proof_keys_length": len(inboundMsg.Proof.ReceiptProof.Keys),
+			"receipt_proof_values_length": len(inboundMsg.Proof.ReceiptProof.Values),
+		}).Info("📤 Submitting message to parachain without finalized header update")
+		
+		err := r.writer.WriteToParachainAndWatch(ctx, "InboundQueueV2.submit", inboundMsg)
 		if err != nil {
+			log.WithFields(logrus.Fields{
+				"error": err.Error(),
+				"message_type": "InboundQueueV2.submit",
+				"event_log_address": inboundMsg.EventLog.Address.Hex(),
+				"event_log_topics_count": len(inboundMsg.EventLog.Topics),
+				"event_log_data_length": len(inboundMsg.EventLog.Data),
+				"execution_proof_header_slot": inboundMsg.Proof.ExecutionProof.Header.Slot,
+			}).Error("❌ Failed to submit message to inbound queue")
 			return fmt.Errorf("submit message to inbound queue: %w", err)
 		}
 
@@ -204,9 +330,11 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 		"finalized_slot": proof.FinalizedPayload.Payload.FinalizedHeader.Slot,
 		"finalized_root": proof.FinalizedPayload.FinalizedHeaderBlockRoot,
 		"message_slot":   proof.HeaderPayload.Header.Slot,
-	}).Debug("Batching finalized header update with message")
+		"execution_proof_header": proof.HeaderPayload.Header.ToJSON(),
+		"execution_branch_length": len(proof.HeaderPayload.ExecutionBranch),
+	}).Info("📤 Batching finalized header update with message")
 
-	extrinsics := []string{"EthereumBeaconClient.submit", "EthereumInboundQueueV2.submit"}
+	extrinsics := []string{"EthereumBeaconClient.submit", "InboundQueueV2.submit"}
 	payloads := []interface{}{proof.FinalizedPayload.Payload, inboundMsg}
 	// Batch the finalized header update with the inbound message
 	err := r.writer.BatchCall(ctx, extrinsics, payloads)
@@ -225,7 +353,7 @@ func (r *Relay) fetchUnprocessedParachainNonces(latest uint64) ([]uint64, error)
 		encodedBucket, err := types.EncodeToBytes(types.NewU128(*big.NewInt(int64(b))))
 		bucketKey, _ := types.CreateStorageKey(
 			r.paraconn.Metadata(),
-			"EthereumInboundQueueV2",
+			"InboundQueueV2",
 			"NonceBitmap",
 			encodedBucket,
 			nil,
@@ -262,16 +390,16 @@ func (r *Relay) isParachainNonceSet(index uint64) (bool, error) {
 	bitPosition := index % 128
 
 	encodedBucket, err := types.EncodeToBytes(types.NewU128(*big.NewInt(int64(bucket))))
-	bucketKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueueV2", "NonceBitmap", encodedBucket)
+	bucketKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "InboundQueueV2", "NonceBitmap", encodedBucket)
 	if err != nil {
-		return false, fmt.Errorf("create storage key for EthereumInboundQueueV2.NonceBitmap: %w", err)
+		return false, fmt.Errorf("create storage key for InboundQueueV2.NonceBitmap: %w", err)
 	}
 
 	var bucketValue types.U128
 	ok, err := r.paraconn.API().RPC.State.GetStorageLatest(bucketKey, &bucketValue)
 
 	if err != nil {
-		return false, fmt.Errorf("fetch storage EthereumInboundQueueV2.NonceBitmap keys: %w", err)
+		return false, fmt.Errorf("fetch storage InboundQueueV2.NonceBitmap keys: %w", err)
 	}
 	if !ok {
 		return false, fmt.Errorf("bucket does not exist: %w", err)
@@ -506,12 +634,24 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		"txIndex":     ev.Raw.TxIndex,
 	})
 
+	logger.WithFields(log.Fields{
+		"event_log_address": inboundMsg.EventLog.Address.Hex(),
+		"event_log_topics_count": len(inboundMsg.EventLog.Topics),
+		"event_log_data_length": len(inboundMsg.EventLog.Data),
+		"event_log_first_topic": inboundMsg.EventLog.Topics[0].Hex(),
+	}).Info("🔍 Created inbound message from Ethereum event")
+
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
 
 	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
 	if err != nil {
 		return fmt.Errorf("get block header: %w", err)
 	}
+
+	logger.WithFields(log.Fields{
+		"next_block_number": nextBlockNumber.Uint64(),
+		"parent_beacon_root": blockHeader.ParentBeaconRoot.Hex(),
+	}).Info("🔍 Fetching execution proof for block header")
 
 	// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
 	proof, err := r.beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
@@ -521,6 +661,13 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	if err != nil {
 		return fmt.Errorf("fetch execution header proof: %w", err)
 	}
+
+	logger.WithFields(log.Fields{
+		"header_slot": proof.HeaderPayload.Header.Slot,
+		"has_finalized_payload": proof.FinalizedPayload != nil,
+		"ancestry_proof_has_value": proof.HeaderPayload.AncestryProof.HasValue,
+		"execution_branch_length": len(proof.HeaderPayload.ExecutionBranch),
+	}).Info("✅ Successfully fetched execution proof")
 
 	// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state
 	isProcessed, err := r.isMessageProcessed(ev.Nonce)

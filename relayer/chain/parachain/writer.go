@@ -123,10 +123,26 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 	wr.mu.Lock()
 	defer wr.mu.Unlock()
 
+	log.WithFields(log.Fields{
+		"extrinsic": extrinsicName,
+		"nonce": wr.nonce,
+	}).Info("🔍 Preparing to submit extrinsic to parachain")
+
 	sub, err := wr.writeToParachain(ctx, extrinsicName, payload...)
 	if err != nil {
-		return err
+		log.WithFields(log.Fields{
+			"extrinsic": extrinsicName,
+			"error": err.Error(),
+			"error_type": fmt.Sprintf("%T", err),
+			"stack": fmt.Sprintf("%+v", err),
+		}).Error("❌ Failed to prepare or submit extrinsic")
+		return fmt.Errorf("failed to submit extrinsic: %w", err)
 	}
+
+	log.WithFields(log.Fields{
+		"extrinsic": extrinsicName,
+		"nonce": wr.nonce,
+	}).Info("✅ Extrinsic submitted successfully, watching for finalization")
 
 	wr.nonce = wr.nonce + 1
 
@@ -135,6 +151,16 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 	for {
 		select {
 		case status := <-sub.Chan():
+			log.WithFields(log.Fields{
+				"extrinsic": extrinsicName,
+				"status": fmt.Sprintf("%+v", status),
+				"isDropped": status.IsDropped,
+				"isInvalid": status.IsInvalid,
+				"isUsurped": status.IsUsurped,
+				"isFinalityTimeout": status.IsFinalityTimeout,
+				"isFinalized": status.IsFinalized,
+			}).Info("📊 Extrinsic status update")
+			
 			if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
 				return fmt.Errorf("parachain write status was dropped, invalid, usurped or finality timed out")
 			}
@@ -144,8 +170,15 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 				return nil
 			}
 		case err = <-sub.Err():
+			log.WithFields(log.Fields{
+				"extrinsic": extrinsicName,
+				"error": err.Error(),
+			}).Error("❌ Subscription error while watching extrinsic")
 			return err
 		case <-ctx.Done():
+			log.WithFields(log.Fields{
+				"extrinsic": extrinsicName,
+			}).Warn("⚠️ Context done while watching extrinsic")
 			return nil
 		}
 	}
@@ -251,15 +284,37 @@ func (wr *ParachainWriter) GetFinalizedHeaderStateByBlockRoot(blockRoot types.H2
 }
 
 func (wr *ParachainWriter) writeToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) (*author.ExtrinsicStatusSubscription, error) {
+	log.WithFields(log.Fields{
+		"extrinsic": extrinsicName,
+		"payload_type": fmt.Sprintf("%T", payload),
+	}).Debug("🔧 Preparing extrinsic")
+	
 	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"extrinsic": extrinsicName,
+			"error": err.Error(),
+		}).Error("❌ Failed to prepare extrinsic")
 		return nil, err
 	}
-
+	
+	log.WithFields(log.Fields{
+		"extrinsic": extrinsicName,
+		"extrinsic_type": fmt.Sprintf("%T", extI),
+	}).Debug("📝 Submitting extrinsic to network")
+	
 	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(*extI)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"extrinsic": extrinsicName,
+			"error": err,
+		}).Error("❌ Failed to submit extrinsic")
 		return nil, err
 	}
+	
+	log.WithFields(log.Fields{
+		"extrinsic": extrinsicName,
+	}).Debug("✅ Extrinsic submitted, returning subscription")
 
 	return sub, nil
 }
@@ -291,21 +346,38 @@ func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
 func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName string, payload ...interface{}) (*types.Extrinsic, error) {
 	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
 	if err != nil {
+		log.WithError(err).Error("Failed to get metadata")
 		return nil, err
 	}
 
+	log.WithFields(log.Fields{
+		"extrinsic": extrinsicName,
+		"payload_count": len(payload),
+	}).Debug("Creating new call")
+	
 	c, err := types.NewCall(meta, extrinsicName, payload...)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"extrinsic": extrinsicName,
+			"error": err.Error(),
+			"payload_types": fmt.Sprintf("%T", payload),
+		}).Error("Failed to create new call from metadata")
 		return nil, err
 	}
+
+	log.WithFields(log.Fields{
+		"call_index": fmt.Sprintf("%#x", c.CallIndex),
+	}).Debug("Call created successfully")
 
 	latestHash, err := wr.conn.API().RPC.Chain.GetFinalizedHead()
 	if err != nil {
+		log.WithError(err).Error("Failed to get finalized head")
 		return nil, err
 	}
 
 	latestBlock, err := wr.conn.API().RPC.Chain.GetBlock(latestHash)
 	if err != nil {
+		log.WithError(err).Error("Failed to get block")
 		return nil, err
 	}
 
@@ -314,11 +386,13 @@ func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName str
 
 	genesisHash, err := wr.conn.API().RPC.Chain.GetBlockHash(0)
 	if err != nil {
+		log.WithError(err).Error("Failed to get genesis hash")
 		return nil, err
 	}
 
 	rv, err := wr.conn.API().RPC.State.GetRuntimeVersionLatest()
 	if err != nil {
+		log.WithError(err).Error("Failed to get runtime version")
 		return nil, err
 	}
 
@@ -332,13 +406,21 @@ func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName str
 		TransactionVersion: rv.TransactionVersion,
 	}
 
+	log.WithFields(log.Fields{
+		"nonce": wr.nonce,
+		"spec_version": rv.SpecVersion,
+		"transaction_version": rv.TransactionVersion,
+	}).Debug("Signing extrinsic")
+	
 	extI := ext
 
 	err = extI.Sign(*wr.conn.Keypair(), o)
 	if err != nil {
+		log.WithError(err).Error("Failed to sign extrinsic")
 		return nil, err
 	}
 
+	log.Debug("Extrinsic signed successfully")
 	return &extI, nil
 }
 

@@ -980,6 +980,7 @@ func (s *Syncer) getBestMatchBeaconDataFromStore(minSlot, maxSlot uint64) (final
 }
 
 func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {
+	log.WithField("slot", slot).Info("fetching beacon state from api")
 	data, apiErr := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
 	if apiErr != nil {
 		var storeErr error
