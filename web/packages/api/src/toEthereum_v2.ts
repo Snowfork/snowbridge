@@ -322,7 +322,7 @@ export async function createTransferEvm(
         messageId,
         sourceParaId,
         fee.returnToSenderExecutionFeeDOT,
-        DOT_LOCATION, // TODO: Support Native fee for EVM chains
+        DOT_LOCATION // TODO: Support Native fee for EVM chains
     )
 
     const tx = await contract[
@@ -392,8 +392,11 @@ export async function getDeliveryFee(
         snowbridgeDeliveryFeeDOT = BigInt(leFee.toString())
     }
 
-    const { sourceAssetMetadata, sourceParachain } =
-        resolveInputs(registry, tokenAddress, parachain)
+    const { sourceAssetMetadata, sourceParachain } = resolveInputs(
+        registry,
+        tokenAddress,
+        parachain
+    )
 
     let xcm: any, forwardedXcm: any
 
@@ -435,7 +438,7 @@ export async function getDeliveryFee(
                 parachain,
                 340282366920938463463374607431768211455n,
                 DOT_LOCATION,
-                DOT_LOCATION,
+                DOT_LOCATION
             )
         } else {
             xcm = buildResultXcmAssetHubERC20TransferFromParachain(
@@ -451,7 +454,7 @@ export async function getDeliveryFee(
                 parachain,
                 340282366920938463463374607431768211455n,
                 HERE_LOCATION,
-                parachainLocation(sourceParachain.parachainId),
+                parachainLocation(sourceParachain.parachainId)
             )
         }
         forwardedXcm = buildExportXcmForERC20(
@@ -527,23 +530,38 @@ export async function getDeliveryFee(
         )
     }
 
-    const totalFeeInDot = snowbridgeDeliveryFeeDOT +
+    const totalFeeInDot =
+        snowbridgeDeliveryFeeDOT +
         assetHubExecutionFeeDOT +
         returnToSenderExecutionFeeDOT +
         returnToSenderDeliveryFeeDOT +
-        bridgeHubDeliveryFeeDOT;
+        bridgeHubDeliveryFeeDOT
 
     // calculate the cost of swapping for DOT
     let totalFeeInNative: bigint | undefined = undefined
     let assetHubExecutionFeeNative: bigint | undefined = undefined
     let returnToSenderExecutionFeeNative: bigint | undefined = undefined
     if (!registry.parachains[parachain].features.hasDotBalance) {
-        const paraLoc = parachainLocation(parachain);
-        const [totalFeeInNativeRes, assetHubExecutionFeeNativeRes, returnToSenderExecutionFeeNativeRes] = await Promise.all([
+        const paraLoc = parachainLocation(parachain)
+        const [
+            totalFeeInNativeRes,
+            assetHubExecutionFeeNativeRes,
+            returnToSenderExecutionFeeNativeRes,
+        ] = await Promise.all([
             getAssetHubConversationPalletSwap(assetHub, paraLoc, DOT_LOCATION, totalFeeInDot),
-            getAssetHubConversationPalletSwap(assetHub, paraLoc, DOT_LOCATION, assetHubExecutionFeeDOT),
-            getAssetHubConversationPalletSwap(assetHub, paraLoc, DOT_LOCATION, returnToSenderExecutionFeeDOT),
-        ]);
+            getAssetHubConversationPalletSwap(
+                assetHub,
+                paraLoc,
+                DOT_LOCATION,
+                assetHubExecutionFeeDOT
+            ),
+            getAssetHubConversationPalletSwap(
+                assetHub,
+                paraLoc,
+                DOT_LOCATION,
+                returnToSenderExecutionFeeDOT
+            ),
+        ])
         totalFeeInNative = totalFeeInNativeRes
         assetHubExecutionFeeNative = assetHubExecutionFeeNativeRes
         returnToSenderExecutionFeeNative = returnToSenderExecutionFeeNativeRes
@@ -558,7 +576,7 @@ export async function getDeliveryFee(
         totalFeeInDot,
         totalFeeInNative,
         assetHubExecutionFeeNative,
-        returnToSenderExecutionFeeNative
+        returnToSenderExecutionFeeNative,
     }
 }
 
@@ -633,10 +651,10 @@ export async function validateTransfer(
     const { tx } = transfer
 
     const logs: ValidationLog[] = []
-    const nativeBalance = await getNativeBalance(sourceParachain, sourceAccountHex);
+    const nativeBalance = await getNativeBalance(sourceParachain, sourceAccountHex)
     let dotBalance: bigint | undefined = undefined
     if (source.features.hasDotBalance) {
-        dotBalance = await getDotBalance(sourceParachain, source.info.specName, sourceAccountHex);
+        dotBalance = await getDotBalance(sourceParachain, source.info.specName, sourceAccountHex)
     }
     let tokenBalance: any
     let isNativeBalance = false
@@ -657,7 +675,9 @@ export async function validateTransfer(
             tokenAddress,
             sourceAssetMetadata
         )
-        isNativeBalance = sourceAssetMetadata.decimals === source.info.tokenDecimals && sourceAssetMetadata.symbol == source.info.tokenSymbols
+        isNativeBalance =
+            sourceAssetMetadata.decimals === source.info.tokenDecimals &&
+            sourceAssetMetadata.symbol == source.info.tokenSymbols
     }
     let nativeBalanceCheckFailed = false
     if (isNativeBalance && fee.totalFeeInNative) {
@@ -669,8 +689,7 @@ export async function validateTransfer(
                 message: "Insufficient token balance to submit transaction.",
             })
         }
-    }
-    else {
+    } else {
         if (amount > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
@@ -841,11 +860,16 @@ export async function validateTransfer(
                 reason: ValidationReason.InsufficientDotFee,
                 message: "Insufficient DOT balance to submit transaction on the source parachain.",
             })
-        } else if (fee.totalFeeInNative && fee.totalFeeInNative + sourceExecutionFee > nativeBalance && !nativeBalanceCheckFailed) {
+        } else if (
+            fee.totalFeeInNative &&
+            fee.totalFeeInNative + sourceExecutionFee > nativeBalance &&
+            !nativeBalanceCheckFailed
+        ) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientNativeFee,
-                message: "Insufficient native balance to submit transaction on the source parachain.",
+                message:
+                    "Insufficient native balance to submit transaction on the source parachain.",
             })
         }
         if (sourceExecutionFee > nativeBalance) {
@@ -896,15 +920,23 @@ export async function validateTransferEvm(
 ): Promise<ValidationResultEvm> {
     const { sourceParachain, gateway, bridgeHub, assetHub, sourceEthChain } = connections
     const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
-    const { sourceAccountHex, sourceParaId, sourceParachain: source, messageId, sourceAssetMetadata } = transfer.computed
+    const {
+        sourceAccountHex,
+        sourceParaId,
+        sourceParachain: source,
+        messageId,
+        sourceAssetMetadata,
+    } = transfer.computed
     const { tx } = transfer
 
     const logs: ValidationLog[] = []
     let dotBalance: bigint | undefined = undefined
     if (source.features.hasDotBalance) {
-        dotBalance = await getDotBalance(sourceParachain, source.info.specName, sourceAccountHex);
+        dotBalance = await getDotBalance(sourceParachain, source.info.specName, sourceAccountHex)
     }
-    let isNativeBalanceTransfer = sourceAssetMetadata.decimals === source.info.tokenDecimals && sourceAssetMetadata.symbol == source.info.tokenSymbols
+    let isNativeBalanceTransfer =
+        sourceAssetMetadata.decimals === source.info.tokenDecimals &&
+        sourceAssetMetadata.symbol == source.info.tokenSymbols
     const [nativeBalance, tokenBalance] = await Promise.all([
         getNativeBalance(sourceParachain, sourceAccountHex),
         getTokenBalance(
@@ -917,7 +949,11 @@ export async function validateTransferEvm(
     ])
 
     let nativeBalanceCheckFailed = false
-    if (isNativeBalanceTransfer && fee.totalFeeInNative && amount + fee.totalFeeInNative > tokenBalance) {
+    if (
+        isNativeBalanceTransfer &&
+        fee.totalFeeInNative &&
+        amount + fee.totalFeeInNative > tokenBalance
+    ) {
         nativeBalanceCheckFailed = true
         logs.push({
             kind: ValidationKind.Error,
@@ -1036,14 +1072,13 @@ export async function validateTransferEvm(
             reason: ValidationReason.InsufficientDotFee,
             message: "Could not determine the DOT balance",
         })
-    } else
-        if (fee.totalFeeInDot > dotBalance) {
-            logs.push({
-                kind: ValidationKind.Error,
-                reason: ValidationReason.InsufficientDotFee,
-                message: "Insufficient DOT balance to submit transaction on the source parachain.",
-            })
-        }
+    } else if (fee.totalFeeInDot > dotBalance) {
+        logs.push({
+            kind: ValidationKind.Error,
+            reason: ValidationReason.InsufficientDotFee,
+            message: "Insufficient DOT balance to submit transaction on the source parachain.",
+        })
+    }
 
     let feeInfo: FeeInfo | undefined
     if (logs.length === 0) {
@@ -1076,7 +1111,12 @@ export async function validateTransferEvm(
         }
     }
     // Recheck balance after execution fee
-    if (!nativeBalanceCheckFailed && isNativeBalanceTransfer && fee.totalFeeInNative && amount + fee.totalFeeInNative + (feeInfo?.totalTxCost ?? 0n) > tokenBalance) {
+    if (
+        !nativeBalanceCheckFailed &&
+        isNativeBalanceTransfer &&
+        fee.totalFeeInNative &&
+        amount + fee.totalFeeInNative + (feeInfo?.totalTxCost ?? 0n) > tokenBalance
+    ) {
         logs.push({
             kind: ValidationKind.Error,
             reason: ValidationReason.InsufficientTokenBalance,
@@ -1310,7 +1350,7 @@ function createERC20SourceParachainTx(
     messageId: string,
     sourceParaId: number,
     returnToSenderFeeInDOT: bigint,
-    useNativeAssetAsFee: boolean,
+    useNativeAssetAsFee: boolean
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     const feeAssetId = useNativeAssetAsFee ? HERE_LOCATION : DOT_LOCATION
     const assets = {
@@ -1383,40 +1423,44 @@ async function dryRunOnSourceParachain(
             result.toHuman()
         )
     } else {
-        bridgeHubForwarded = result.asOk.forwardedXcms.find((x) => {
-            return (
-                x[0].isV4 &&
-                x[0].asV4.parents.toNumber() === 1 &&
-                x[0].asV4.interior.isX1 &&
-                x[0].asV4.interior.asX1[0].isParachain &&
-                x[0].asV4.interior.asX1[0].asParachain.toNumber() === bridgeHubParaId
-            )
-        }) ?? result.asOk.forwardedXcms.find((x) => {
-            return (
-                x[0].isV5 &&
-                x[0].asV5.parents.toNumber() === 1 &&
-                x[0].asV5.interior.isX1 &&
-                x[0].asV5.interior.asX1[0].isParachain &&
-                x[0].asV5.interior.asX1[0].asParachain.toNumber() === bridgeHubParaId
-            )
-        })
-        assetHubForwarded = result.asOk.forwardedXcms.find((x) => {
-            return (
-                x[0].isV4 &&
-                x[0].asV4.parents.toNumber() === 1 &&
-                x[0].asV4.interior.isX1 &&
-                x[0].asV4.interior.asX1[0].isParachain &&
-                x[0].asV4.interior.asX1[0].asParachain.toNumber() === assetHubParaId
-            )
-        }) ?? result.asOk.forwardedXcms.find((x) => {
-            return (
-                x[0].isV5 &&
-                x[0].asV5.parents.toNumber() === 1 &&
-                x[0].asV5.interior.isX1 &&
-                x[0].asV5.interior.asX1[0].isParachain &&
-                x[0].asV5.interior.asX1[0].asParachain.toNumber() === assetHubParaId
-            )
-        })
+        bridgeHubForwarded =
+            result.asOk.forwardedXcms.find((x) => {
+                return (
+                    x[0].isV4 &&
+                    x[0].asV4.parents.toNumber() === 1 &&
+                    x[0].asV4.interior.isX1 &&
+                    x[0].asV4.interior.asX1[0].isParachain &&
+                    x[0].asV4.interior.asX1[0].asParachain.toNumber() === bridgeHubParaId
+                )
+            }) ??
+            result.asOk.forwardedXcms.find((x) => {
+                return (
+                    x[0].isV5 &&
+                    x[0].asV5.parents.toNumber() === 1 &&
+                    x[0].asV5.interior.isX1 &&
+                    x[0].asV5.interior.asX1[0].isParachain &&
+                    x[0].asV5.interior.asX1[0].asParachain.toNumber() === bridgeHubParaId
+                )
+            })
+        assetHubForwarded =
+            result.asOk.forwardedXcms.find((x) => {
+                return (
+                    x[0].isV4 &&
+                    x[0].asV4.parents.toNumber() === 1 &&
+                    x[0].asV4.interior.isX1 &&
+                    x[0].asV4.interior.asX1[0].isParachain &&
+                    x[0].asV4.interior.asX1[0].asParachain.toNumber() === assetHubParaId
+                )
+            }) ??
+            result.asOk.forwardedXcms.find((x) => {
+                return (
+                    x[0].isV5 &&
+                    x[0].asV5.parents.toNumber() === 1 &&
+                    x[0].asV5.interior.isX1 &&
+                    x[0].asV5.interior.asX1[0].isParachain &&
+                    x[0].asV5.interior.asX1[0].asParachain.toNumber() === assetHubParaId
+                )
+            })
     }
     return {
         success: success && (bridgeHubForwarded || assetHubForwarded),
@@ -1507,7 +1551,7 @@ function createPNASourceParachainTx(
     amount: bigint,
     totalFee: bigint,
     messageId: string,
-    useNativeAssetAsFee: boolean,
+    useNativeAssetAsFee: boolean
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     const feeAssetId = useNativeAssetAsFee ? HERE_LOCATION : DOT_LOCATION
     const assets = {
@@ -1533,7 +1577,7 @@ function createPNASourceParachainTx(
         beneficiaryAccount,
         asset.locationOnAH,
         asset.locationOnEthereum,
-        messageId,
+        messageId
     )
 
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(

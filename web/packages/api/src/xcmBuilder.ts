@@ -2,8 +2,23 @@ import { Registry } from "@polkadot/types/types"
 import { beneficiaryMultiAddress } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 
-export const HERE_LOCATION = { parents: 0, interior: "Here"  }
-export const DOT_LOCATION = { parents: 1, interior: "Here"  }
+export const HERE_LOCATION = { parents: 0, interior: "Here" }
+export const DOT_LOCATION = { parents: 1, interior: "Here" }
+export const NATIVE_TOKEN_LOCATION = { parents: 1, interior: "Here" }
+export const polkadotNetwork = {
+    GlobalConsensus: { Polkadot: { network: null } },
+}
+export const kusamaNetwork = {
+    GlobalConsensus: { Kusama: { network: null } },
+}
+export const dotLocationOnKusamaAssetHub = {
+    parents: 2,
+    interior: { x1: [{ GlobalConsensus: { Polkadot: null } }] },
+}
+export const ksmLocationOnPolkadotAssetHub = {
+    parents: 2,
+    interior: { x1: [{ GlobalConsensus: { Kusama: null } }] },
+}
 
 const ethereumNetwork = (ethChainId: number) => ({
     GlobalConsensus: { Ethereum: { chain_id: ethChainId } },
@@ -20,6 +35,27 @@ export function parachainLocation(paraId: number) {
     return {
         parents: 1,
         interior: { x1: [{ parachain: paraId }] },
+    }
+}
+
+export function accountId32Location(hexAddress: string) {
+    return {
+        parents: 0,
+        interior: { x1: [{ accountId32: { id: hexAddress } }] },
+    }
+}
+
+export function kusamaAssetHubLocation(parachainId: number) {
+    return {
+        parents: 2,
+        interior: { x2: [{ GlobalConsensus: { Kusama: null } }, { parachain: parachainId }] },
+    }
+}
+
+export function polkadotAssetHubLocation(parachainId: number) {
+    return {
+        parents: 2,
+        interior: { x2: [{ GlobalConsensus: { Polkadot: null } }, { parachain: parachainId }] },
     }
 }
 
@@ -332,6 +368,27 @@ export function buildParachainERC20ReceivedXcmOnAssetHub(
     })
 }
 
+function buildAssetHubXcmFromParachainKusama(beneficiary: string, topic: string) {
+    return [
+        {
+            depositAsset: {
+                assets: {
+                    Wild: {
+                        AllCounted: 2,
+                    },
+                },
+                beneficiary: {
+                    parents: 0,
+                    interior: { x1: [{ AccountId32: { id: beneficiary } }] },
+                },
+            },
+        },
+        {
+            setTopic: topic,
+        },
+    ]
+}
+
 function buildAssetHubXcmFromParachain(
     ethChainId: number,
     sourceAccount: string,
@@ -444,6 +501,16 @@ function buildAssetHubXcmFromParachain(
     ]
 }
 
+export function buildAssetHubERC20TransferToKusama(
+    registry: Registry,
+    beneficiary: string,
+    topic: string
+) {
+    return registry.createType("XcmVersionedXcm", {
+        v4: buildAssetHubXcmFromParachainKusama(beneficiary, topic),
+    })
+}
+
 export function buildAssetHubERC20TransferFromParachain(
     registry: Registry,
     ethChainId: number,
@@ -482,7 +549,7 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
     sourceParachainId: number,
     returnToSenderFee: bigint,
     feeAssetId: any,
-    feeAssetIdReanchored: any,
+    feeAssetIdReanchored: any
 ) {
     return registry.createType("XcmVersionedXcm", {
         v4: [
@@ -590,7 +657,7 @@ function buildAssetHubXcmForPNAFromParachain(
     beneficiary: string,
     assetLocationOnAH: any,
     assetLocationOnEthereum: any,
-    topic: string,
+    topic: string
 ) {
     return [
         // Initiate the bridged transfer
@@ -957,6 +1024,396 @@ export function buildAssetHubPNAReceivedXcm(
     })
 }
 
+export function buildTransferPolkadotToKusamaExportXCM(
+    registry: Registry,
+    transferTokenLocation: any,
+    totalFeeInNative: bigint,
+    feeOnDest: bigint,
+    assetHubParaId: number,
+    transferAmount: bigint,
+    beneficiary: string,
+    topic: string
+) {
+    return registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                withdrawAsset: [
+                    {
+                        id: HERE_LOCATION,
+                        fun: {
+                            Fungible: totalFeeInNative,
+                        },
+                    },
+                ],
+            },
+            {
+                buyExecution: {
+                    fees: {
+                        id: HERE_LOCATION,
+                        fun: {
+                            Fungible: totalFeeInNative,
+                        },
+                    },
+                    weightLimit: "Unlimited",
+                },
+            },
+            {
+                setAppendix: [
+                    {
+                        depositAsset: {
+                            assets: {
+                                wild: {
+                                    allCounted: 1,
+                                },
+                            },
+                            beneficiary: parachainLocation(assetHubParaId),
+                        },
+                    },
+                ],
+            },
+            {
+                exportMessage: {
+                    network: { Kusama: { network: null } },
+                    destination: "Here",
+                    xcm: [
+                        {
+                            reserveAssetDeposited: [
+                                {
+                                    id: dotLocationOnKusamaAssetHub,
+                                    fun: {
+                                        Fungible: totalFeeInNative,
+                                    },
+                                },
+                                {
+                                    id: transferTokenLocation,
+                                    fun: {
+                                        Fungible: transferAmount,
+                                    },
+                                },
+                            ],
+                        },
+                        { clearOrigin: null },
+                        {
+                            buyExecution: {
+                                fees: {
+                                    id: dotLocationOnKusamaAssetHub,
+                                    fun: {
+                                        Fungible: feeOnDest,
+                                    },
+                                },
+                                weight_limit: "Unlimited",
+                            },
+                        },
+                        {
+                            depositAsset: {
+                                assets: {
+                                    wild: {
+                                        allCounted: 2,
+                                    },
+                                },
+                                beneficiary: accountId32Location(beneficiary),
+                            },
+                        },
+                        {
+                            setTopic: topic,
+                        },
+                    ],
+                },
+            },
+
+            {
+                setTopic: topic,
+            },
+        ],
+    })
+}
+
+export function buildTransferKusamaToPolkadotExportXCM(
+    registry: Registry,
+    transferTokenLocation: any,
+    totalFeeInNative: bigint,
+    feeOnDest: bigint,
+    assetHubParaId: number,
+    transferAmount: bigint,
+    beneficiary: string,
+    topic: string
+) {
+    return registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                withdrawAsset: [
+                    {
+                        id: HERE_LOCATION,
+                        fun: {
+                            Fungible: totalFeeInNative,
+                        },
+                    },
+                ],
+            },
+            {
+                buyExecution: {
+                    fees: {
+                        id: HERE_LOCATION,
+                        fun: {
+                            Fungible: totalFeeInNative,
+                        },
+                    },
+                    weightLimit: "Unlimited",
+                },
+            },
+            {
+                setAppendix: [
+                    {
+                        depositAsset: {
+                            assets: {
+                                wild: {
+                                    allCounted: 1,
+                                },
+                            },
+                            beneficiary: parachainLocation(assetHubParaId),
+                        },
+                    },
+                ],
+            },
+            {
+                exportMessage: {
+                    network: { Polkadot: { network: null } },
+                    destination: "Here",
+                    xcm: [
+                        {
+                            reserveAssetDeposited: [
+                                {
+                                    id: ksmLocationOnPolkadotAssetHub,
+                                    fun: {
+                                        Fungible: totalFeeInNative,
+                                    },
+                                },
+                            ],
+                        },
+                        {
+                            withdrawAsset: [
+                                {
+                                    id: transferTokenLocation,
+                                    fun: {
+                                        Fungible: transferAmount,
+                                    },
+                                },
+                            ],
+                        },
+                        { clearOrigin: null },
+                        {
+                            buyExecution: {
+                                fees: {
+                                    id: ksmLocationOnPolkadotAssetHub,
+                                    fun: {
+                                        Fungible: feeOnDest,
+                                    },
+                                },
+                                weight_limit: "Unlimited",
+                            },
+                        },
+                        {
+                            depositAsset: {
+                                assets: {
+                                    wild: {
+                                        allCounted: 2,
+                                    },
+                                },
+                                beneficiary: accountId32Location(beneficiary),
+                            },
+                        },
+                        {
+                            setTopic: topic,
+                        },
+                    ],
+                },
+            },
+
+            {
+                setTopic: topic,
+            },
+        ],
+    })
+}
+
+export function buildPolkadotToKusamaDestAssetHubXCM(
+    registry: Registry,
+    totalFeeInNative: bigint,
+    assetHubParaId: number,
+    transferTokenLocation: any,
+    transferAmount: bigint,
+    beneficiary: string,
+    topic: string
+) {
+    let withdrawAssets: any[] = []
+    let reserveAssetsDeposited = [
+        {
+            id: dotLocationOnKusamaAssetHub,
+            fun: {
+                Fungible: totalFeeInNative,
+            },
+        },
+    ]
+    if (isNative(transferTokenLocation)) {
+        // If the asset transferred is DOT, only add the transfer amount to the asset
+        reserveAssetsDeposited[0].fun.Fungible =
+            reserveAssetsDeposited[0].fun.Fungible + transferAmount
+    } else if (isKSMOnOtherConsensusSystem(transferTokenLocation)) {
+        // If the asset transferred is KSM, reanchor to KAH
+        withdrawAssets = [
+            {
+                id: NATIVE_TOKEN_LOCATION,
+                fun: {
+                    Fungible: transferAmount,
+                },
+            },
+        ]
+    } else if (isEthereumAsset(transferTokenLocation)) {
+        // If the asset transferred is Ether or an ERC-20, the token location is already correct.
+        reserveAssetsDeposited.push({
+            id: transferTokenLocation,
+            fun: {
+                Fungible: transferAmount,
+            },
+        })
+    }
+
+    return registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                descendOrigin: { x1: [{ PalletInstance: 53 }] },
+            },
+            {
+                universalOrigin: polkadotNetwork,
+            },
+            {
+                descendOrigin: { x1: [{ parachain: assetHubParaId }] },
+            },
+            {
+                reserveAssetDeposited: reserveAssetsDeposited,
+            },
+            {
+                buyExecution: {
+                    fees: {
+                        id: dotLocationOnKusamaAssetHub,
+                        fun: {
+                            Fungible: totalFeeInNative,
+                        },
+                    },
+                    weightLimit: "Unlimited",
+                },
+            },
+            {
+                withdrawAsset: withdrawAssets,
+            },
+            { clearOrigin: null },
+            {
+                depositAsset: {
+                    assets: {
+                        wild: {
+                            allCounted: 2,
+                        },
+                    },
+                    beneficiary: accountId32Location(beneficiary),
+                },
+            },
+            {
+                setTopic: topic,
+            },
+        ],
+    })
+}
+
+export function buildKusamaToPolkadotDestAssetHubXCM(
+    registry: Registry,
+    totalFeeInNative: bigint,
+    assetHubParaId: number,
+    transferTokenLocation: any,
+    transferAmount: bigint,
+    beneficiary: string,
+    topic: string
+) {
+    let withdrawAssets: any[] = []
+    let reserveAssetsDeposited = [
+        {
+            id: ksmLocationOnPolkadotAssetHub,
+            fun: {
+                Fungible: totalFeeInNative,
+            },
+        },
+    ]
+    if (isNative(transferTokenLocation)) {
+        // If the asset transferred is KSM, only add the transfer amount to the asset
+        reserveAssetsDeposited[0].fun.Fungible =
+            reserveAssetsDeposited[0].fun.Fungible + transferAmount
+    } else if (isDOTOnOtherConsensusSystem(transferTokenLocation)) {
+        // If the asset transferred is DOT, reanchor to PAH
+        withdrawAssets = [
+            {
+                id: NATIVE_TOKEN_LOCATION,
+                fun: {
+                    Fungible: transferAmount,
+                },
+            },
+        ]
+    } else if (isEthereumAsset(transferTokenLocation)) {
+        // If the asset transferred is Ether or an ERC-20, the token location is already correct.
+        withdrawAssets = [
+            {
+                id: transferTokenLocation,
+                fun: {
+                    Fungible: transferAmount,
+                },
+            },
+        ]
+    }
+
+    return registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                descendOrigin: { x1: [{ PalletInstance: 53 }] },
+            },
+            {
+                universalOrigin: kusamaNetwork,
+            },
+            {
+                descendOrigin: { x1: [{ parachain: assetHubParaId }] },
+            },
+            {
+                reserveAssetDeposited: reserveAssetsDeposited,
+            },
+            {
+                buyExecution: {
+                    fees: {
+                        id: ksmLocationOnPolkadotAssetHub,
+                        fun: {
+                            Fungible: totalFeeInNative,
+                        },
+                    },
+                    weightLimit: "Unlimited",
+                },
+            },
+            {
+                withdrawAsset: withdrawAssets,
+            },
+            { clearOrigin: null },
+            {
+                depositAsset: {
+                    assets: {
+                        wild: {
+                            allCounted: 2,
+                        },
+                    },
+                    beneficiary: accountId32Location(beneficiary),
+                },
+            },
+            {
+                setTopic: topic,
+            },
+        ],
+    })
+}
+
 export function buildExportXcmForERC20(
     registry: Registry,
     ethChainId: number,
@@ -1185,4 +1642,39 @@ export function buildExportXcmForPNA(
             },
         ],
     })
+}
+
+export function isDOTOnOtherConsensusSystem(location: any) {
+    return (
+        location.parents == 2 &&
+        location.interior.x1 &&
+        (location.interior.x1[0]?.globalConsensus?.Polkadot !== undefined ||
+            location.interior.x1[0]?.globalConsensus?.polkadot !== undefined)
+    )
+}
+
+export function isEthereumAsset(location: any) {
+    return (
+        (location.parents == 2 &&
+            location.interior.x1 &&
+            (location.interior.x1[0]?.globalConsensus?.Ethereum !== undefined ||
+                location.interior.x1[0]?.globalConsensus?.ethereum !== undefined)) ||
+        (location.parents == 2 &&
+            location.interior.x2 &&
+            (location.interior.x2[0]?.globalConsensus?.Ethereum !== undefined ||
+                location.interior.x2[0]?.globalConsensus?.ethereum !== undefined))
+    )
+}
+
+export function isKSMOnOtherConsensusSystem(location: any) {
+    return (
+        location.parents == 2 &&
+        location.interior.x1 &&
+        (location.interior.x1[0]?.globalConsensus?.Kusama !== undefined ||
+            location.interior.x1[0]?.globalConsensus?.kusama !== undefined)
+    )
+}
+
+export function isNative(location: any) {
+    return location.parents == DOT_LOCATION.parents && location.interior == DOT_LOCATION.interior
 }
