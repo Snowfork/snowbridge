@@ -290,8 +290,7 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 	inboundMsg.Proof.ExecutionProof = proof.HeaderPayload
 
 	log.WithFields(logrus.Fields{
-		"EventLog": inboundMsg.EventLog,
-		"Proof":    inboundMsg.Proof,
+		"EventLog": inboundMsg.EventLog.Data.Hex(),
 	}).Debug("Generated message from Ethereum log")
 
 	// There is already a valid finalized header on-chain that can prove the message
@@ -317,6 +316,7 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 				"message_type": "InboundQueueV2.submit",
 				"event_log_address": inboundMsg.EventLog.Address.Hex(),
 				"event_log_topics_count": len(inboundMsg.EventLog.Topics),
+				"event_log_topic": inboundMsg.EventLog.Topics[0].Hex(),
 				"event_log_data_length": len(inboundMsg.EventLog.Data),
 				"execution_proof_header_slot": inboundMsg.Proof.ExecutionProof.Header.Slot,
 			}).Error("❌ Failed to submit message to inbound queue")
@@ -384,28 +384,68 @@ func (r *Relay) fetchUnprocessedParachainNonces(latest uint64) ([]uint64, error)
 func (r *Relay) isParachainNonceSet(index uint64) (bool, error) {
 	log.WithFields(logrus.Fields{
 		"index": index,
-	}).Debug("is parachain nonce set")
+	}).Info("🔍 Checking if parachain nonce is set")
+
 	// Calculate the bucket and bit position
 	bucket := index / 128
 	bitPosition := index % 128
 
+	log.WithFields(logrus.Fields{
+		"bucket": bucket,
+		"bitPosition": bitPosition,
+	}).Debug("📊 Calculated bucket and bit position")
+
 	encodedBucket, err := types.EncodeToBytes(types.NewU128(*big.NewInt(int64(bucket))))
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"bucket": bucket,
+		}).Error("❌ Failed to encode bucket value")
+		return false, fmt.Errorf("encode bucket value: %w", err)
+	}
+
 	bucketKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "InboundQueueV2", "NonceBitmap", encodedBucket)
 	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"bucket": bucket,
+			"encodedBucket": encodedBucket,
+		}).Error("❌ Failed to create storage key")
 		return false, fmt.Errorf("create storage key for InboundQueueV2.NonceBitmap: %w", err)
 	}
+
+	log.WithFields(logrus.Fields{
+		"bucketKey": bucketKey.Hex(),
+	}).Debug("🔑 Created storage key for bucket")
 
 	var bucketValue types.U128
 	ok, err := r.paraconn.API().RPC.State.GetStorageLatest(bucketKey, &bucketValue)
 
 	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"bucketKey": bucketKey.Hex(),
+		}).Error("❌ Failed to fetch storage value")
 		return false, fmt.Errorf("fetch storage InboundQueueV2.NonceBitmap keys: %w", err)
 	}
 	if !ok {
+		log.WithFields(logrus.Fields{
+			"bucketKey": bucketKey.Hex(),
+		}).Error("❌ Bucket does not exist in storage")
 		return false, fmt.Errorf("bucket does not exist: %w", err)
 	}
 
-	return checkBitState(bucketValue, bitPosition), nil
+	log.WithFields(logrus.Fields{
+		"bucketValue": bucketValue.String(),
+		"bitPosition": bitPosition,
+	}).Debug("📥 Retrieved bucket value from storage")
+
+	result := checkBitState(bucketValue, bitPosition)
+	log.WithFields(logrus.Fields{
+		"result": result,
+		"index": index,
+		"bucket": bucket,
+		"bitPosition": bitPosition,
+	}).Info("✅ Completed nonce check")
+
+	return result, nil
 }
 
 func checkBitState(bucketValue types.U128, bitPosition uint64) bool {

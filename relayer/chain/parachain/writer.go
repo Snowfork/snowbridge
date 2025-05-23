@@ -135,7 +135,7 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 			"error": err.Error(),
 			"error_type": fmt.Sprintf("%T", err),
 			"stack": fmt.Sprintf("%+v", err),
-		}).Error("❌ Failed to prepare or submit extrinsic")
+		}).Error("❌ Failed to write extrinsic to parachain")
 		return fmt.Errorf("failed to submit extrinsic: %w", err)
 	}
 
@@ -153,7 +153,6 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 		case status := <-sub.Chan():
 			log.WithFields(log.Fields{
 				"extrinsic": extrinsicName,
-				"status": fmt.Sprintf("%+v", status),
 				"isDropped": status.IsDropped,
 				"isInvalid": status.IsInvalid,
 				"isUsurped": status.IsUsurped,
@@ -166,7 +165,7 @@ func (wr *ParachainWriter) WriteToParachainAndWatch(ctx context.Context, extrins
 			}
 			if status.IsFinalized {
 				log.WithFields(log.Fields{
-					"extrinsic": extrinsicName, "block": status.AsFinalized}).Debug("extrinsic finalized")
+					"extrinsic": extrinsicName, "block": status.AsFinalized.Hex()}).Debug("extrinsic finalized")
 				return nil
 			}
 		case err = <-sub.Err():
@@ -303,7 +302,21 @@ func (wr *ParachainWriter) writeToParachain(ctx context.Context, extrinsicName s
 		"extrinsic_type": fmt.Sprintf("%T", extI),
 	}).Debug("📝 Submitting extrinsic to network")
 	
+	encoded, err := types.EncodeToHexString(*extI)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"extrinsic": extrinsicName,
+			"error": err.Error(),
+		}).Error("❌ Failed to encode extrinsic to hex")
+		return nil, err
+	}
+
+	log.WithFields(log.Fields{
+		"data": encoded,
+	}).Debug("📝 Extrinsic hex representation")
+
 	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(*extI)
+
 	if err != nil {
 		log.WithFields(log.Fields{
 			"extrinsic": extrinsicName,
