@@ -99,12 +99,21 @@ export const transferForKusama = async (
     }
 
     let tokenAddress
-    if (tokenName == "DOT") {
-        tokenAddress = "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14"
+    if (tokenName == "DOT" || tokenName == "KSM") {
+        const assets = registry.parachains[registry.assetHubParaId].assets;
+        for (const [token, asset] of Object.entries(assets)) {
+            if (asset.symbol === tokenName) {
+                tokenAddress = token;
+            }
+        }
     } else {
         tokenAddress = snowbridgeEnv.locations[0].erc20tokensReceivable.find(
             (t) => t.id === tokenName
         )!.address
+    }
+
+    if (!tokenAddress) {
+        throw Error(`Token ${tokenName} not found`)
     }
 
     console.log(transferName)

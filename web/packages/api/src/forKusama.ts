@@ -4,28 +4,27 @@ import { Codec, ISubmittableResult } from "@polkadot/types/types"
 import { BN, hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
 import { blake2AsHex, decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
 import {
-    DOT_LOCATION,
     erc20Location,
     kusamaAssetHubLocation,
     buildAssetHubERC20TransferToKusama,
-    dotLocationOnKusamaAssetHubLocation,
     polkadotAssetHubLocation,
-    buildTransferToKusamaExportXCM,
-    buildPolkadotToKusamaAssetHubExportXCM,
-    buildKusamaToPolkadotAssetHubExportXCM,
     isDOTOnOtherConsensusSystem,
-    isDOTOnPolkadotAssetHub,
+    isKSMOnOtherConsensusSystem,
+    isNative,
+    NATIVE_TOKEN_LOCATION,
+    buildKusamaToPolkadotDestAssetHubXCM,
+    buildPolkadotToKusamaDestAssetHubXCM,
+    buildTransferKusamaToPolkadotExportXCM,
+    buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilder"
 import {
     Asset,
     AssetRegistry,
     calculateDeliveryFee,
-    getDotBalance,
-    getLocationBalance,
     getNativeAccount,
+    getNativeBalance,
     getTokenBalance,
     Parachain,
-    quoteFeeSwap,
 } from "./assets_v2"
 import {
     CallDryRunEffects,
@@ -60,7 +59,7 @@ export type Transfer = {
 export type DeliveryFee = {
     xcmBridgeFee: bigint
     bridgeHubDeliveryFee: bigint
-    totalFeeInDot: bigint
+    totalFeeInNative: bigint
 }
 
 export enum Direction {
@@ -119,19 +118,30 @@ export async function getDeliveryFee(
     } else {
         xcmBridgeFee = BigInt(leFee.toString())
     }
-
-    let forwardedXcm = buildTransferToKusamaExportXCM(
-        sourceAssetHub.registry,
-        DOT_LOCATION,
-        dotLocationOnKusamaAssetHubLocation,
-        erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
-        xcmBridgeFee,
-        xcmBridgeFee,
-        registry.assetHubParaId,
-        340282366920938463463374607431768211455n,
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "0x0000000000000000000000000000000000000000000000000000000000000000"
-    )
+    let forwardedXcm
+    if (direction == Direction.ToPolkadot) {
+        forwardedXcm = buildTransferKusamaToPolkadotExportXCM(
+            sourceAssetHub.registry,
+            erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
+            xcmBridgeFee,
+            xcmBridgeFee,
+            registry.assetHubParaId,
+            340282366920938463463374607431768211455n,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        )
+    } else {
+        forwardedXcm = buildTransferPolkadotToKusamaExportXCM(
+            sourceAssetHub.registry,
+            erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
+            xcmBridgeFee,
+            xcmBridgeFee,
+            registry.assetHubParaId,
+            340282366920938463463374607431768211455n,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        )
+    }
 
     let bridgeHubDeliveryFee = await calculateDeliveryFee(
         sourceAssetHub,
@@ -139,32 +149,16 @@ export async function getDeliveryFee(
         forwardedXcm
     )
 
-    // In either DOT or KSM
     let totalFee = xcmBridgeFee + bridgeHubDeliveryFee
-
-    let totalFeeInDot = 0n
-    // Convert KSM to DOT
-    if (direction == Direction.ToPolkadot) {
-        console.info("Converting KSM to DOT")
-        let amount = xcmBridgeFee + bridgeHubDeliveryFee
-        totalFeeInDot = await quoteFeeSwap(
-            sourceAssetHub,
-            { parents: 1, interior: "Here" },
-            { parents: 2, interior: { x1: [{ GlobalConsensus: { Polkadot: null } }] } },
-            amount
-        )
-    } else {
-        totalFeeInDot = totalFee
-    }
 
     console.info("xcmBridgeFee:", xcmBridgeFee)
     console.info("bridgeHubDeliveryFee:", bridgeHubDeliveryFee)
-    console.info("Total fee in DOT:", totalFeeInDot)
+    console.info("Total fee in native:", totalFee)
 
     return {
         xcmBridgeFee: xcmBridgeFee,
         bridgeHubDeliveryFee: bridgeHubDeliveryFee,
-        totalFeeInDot: totalFeeInDot,
+        totalFeeInNative: totalFee,
     }
 }
 
@@ -217,7 +211,7 @@ export async function createTransfer(
             tokenLocation,
             beneficiaryAddressHex,
             amount,
-            fee.totalFeeInDot,
+            fee.totalFeeInNative,
             messageId
         )
     } else {
@@ -227,7 +221,7 @@ export async function createTransfer(
             tokenLocation,
             beneficiaryAddressHex,
             amount,
-            fee.totalFeeInDot,
+            fee.totalFeeInNative,
             messageId
         )
     }
@@ -261,7 +255,7 @@ export enum ValidationKind {
 
 export enum ValidationReason {
     InsufficientTokenBalance,
-    InsufficientDotFee,
+    InsufficientFee,
     DryRunFailed,
     MaxConsumersReached,
     AccountDoesNotExist,
@@ -277,7 +271,7 @@ export type ValidationResult = {
     logs: ValidationLog[]
     success: boolean
     data: {
-        dotBalance: bigint
+        nativeBalance: bigint
         sourceExecutionFee: bigint
         tokenBalance: bigint
         assetHubDryRunError: any
@@ -307,34 +301,27 @@ export async function validateTransfer(
 
     console.log("beneficiaryAddressHex:", beneficiaryAddressHex)
 
-    let location = getTokenLocation(registry, direction, tokenAddress)
+    let tokenLocation = getTokenLocation(registry, direction, tokenAddress)
 
-    let dotBalance = 0n
-    if (direction == Direction.ToPolkadot) {
-        dotBalance = await getLocationBalance(
-            sourceAssetHub,
-            source.info.specName,
-            dotLocationOnKusamaAssetHubLocation,
-            sourceAccountHex
-        )
-    } else {
-        dotBalance = await getDotBalance(sourceAssetHub, source.info.specName, sourceAccountHex)
-    }
+    let nativeBalance = await getNativeBalance(sourceAssetHub, sourceAccountHex)
+
+    let tokenAsset = getTransferAsset(direction, tokenAddress, transfer.input.registry)
 
     let tokenBalance: bigint
-    if (isDOT(direction, location)) {
-        tokenBalance = dotBalance
+    if (isNative(tokenLocation)) {
+        tokenBalance = nativeBalance
     } else {
         tokenBalance = await getTokenBalance(
             sourceAssetHub,
             source.info.specName,
             sourceAccountHex,
             registry.ethChainId,
-            tokenAddress
+            tokenAddress,
+            tokenAsset
         )
     }
 
-    console.log("dotBalance:", dotBalance)
+    console.log("nativeBalance:", nativeBalance)
     console.log("tokenBalance:", tokenBalance)
     console.log("amount:", amount)
     console.log("fee:", fee)
@@ -395,31 +382,34 @@ export async function validateTransfer(
     const paymentInfo = await tx.paymentInfo(sourceAccountHex)
     const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
 
-    if (sourceExecutionFee + fee.totalFeeInDot > dotBalance) {
+    if (sourceExecutionFee + fee.totalFeeInNative > nativeBalance) {
         logs.push({
             kind: ValidationKind.Error,
-            reason: ValidationReason.InsufficientDotFee,
-            message: "Insufficient DOT balance to submit transaction on the source parachain.",
+            reason: ValidationReason.InsufficientFee,
+            message:
+                "Insufficient " +
+                nativeFeeAsset(direction) +
+                " balance to submit transaction on the source parachain.",
         })
     }
 
     let destAssetHubXCM: any
     if (direction == Direction.ToPolkadot) {
-        destAssetHubXCM = buildKusamaToPolkadotAssetHubExportXCM(
+        destAssetHubXCM = buildKusamaToPolkadotDestAssetHubXCM(
             destAssetHub.registry,
-            fee.totalFeeInDot,
+            fee.totalFeeInNative,
             registry.assetHubParaId,
-            location,
+            tokenLocation,
             transfer.input.amount,
             transfer.computed.beneficiaryAddressHex,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
     } else {
-        destAssetHubXCM = buildPolkadotToKusamaAssetHubExportXCM(
+        destAssetHubXCM = buildPolkadotToKusamaDestAssetHubXCM(
             destAssetHub.registry,
-            fee.totalFeeInDot,
+            fee.totalFeeInNative,
             registry.assetHubParaId,
-            location,
+            tokenLocation,
             transfer.input.amount,
             transfer.computed.beneficiaryAddressHex,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -441,7 +431,7 @@ export async function validateTransfer(
     }
 
     console.log("sourceExecutionFee:", sourceExecutionFee)
-    console.log("TOTAL FEE", sourceExecutionFee + fee.totalFeeInDot)
+    console.log("TOTAL FEE", sourceExecutionFee + fee.totalFeeInNative)
 
     const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
 
@@ -449,7 +439,7 @@ export async function validateTransfer(
         logs,
         success,
         data: {
-            dotBalance,
+            nativeBalance,
             sourceExecutionFee,
             tokenBalance,
             assetHubDryRunError,
@@ -530,7 +520,7 @@ export function createERC20ToKusamaTx(
     tokenLocation: any,
     beneficiaryAccount: string,
     amount: bigint,
-    totalFeeInDot: bigint,
+    totalFeeInNative: bigint,
     topic: string
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any
@@ -538,8 +528,8 @@ export function createERC20ToKusamaTx(
         assets = {
             v4: [
                 {
-                    id: DOT_LOCATION,
-                    fun: { Fungible: totalFeeInDot + amount },
+                    id: NATIVE_TOKEN_LOCATION,
+                    fun: { Fungible: totalFeeInNative + amount },
                 },
             ],
         }
@@ -547,8 +537,8 @@ export function createERC20ToKusamaTx(
         assets = {
             v4: [
                 {
-                    id: DOT_LOCATION,
-                    fun: { Fungible: totalFeeInDot },
+                    id: NATIVE_TOKEN_LOCATION,
+                    fun: { Fungible: totalFeeInNative },
                 },
                 {
                     id: tokenLocation,
@@ -557,11 +547,15 @@ export function createERC20ToKusamaTx(
             ],
         }
     }
+    let reserveTypeAsset = "LocalReserve"
+    if (isKSM(Direction.ToKusama, tokenLocation)) {
+        reserveTypeAsset = "DestinationReserve"
+    }
 
     const destination = { v4: kusamaAssetHubLocation(destParaId) }
 
     const feeAsset = {
-        v4: DOT_LOCATION,
+        v4: NATIVE_TOKEN_LOCATION,
     }
     const customXcm = buildAssetHubERC20TransferToKusama(
         parachain.registry,
@@ -571,7 +565,7 @@ export function createERC20ToKusamaTx(
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
         assets,
-        "LocalReserve",
+        reserveTypeAsset,
         feeAsset,
         "LocalReserve",
         customXcm,
@@ -585,25 +579,27 @@ export function createERC20ToPolkadotTx(
     tokenLocation: any,
     beneficiaryAccount: string,
     amount: bigint,
-    totalFeeInDot: bigint,
+    totalFeeInNative: bigint,
     topic: string
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any
-    if (isDOT(Direction.ToPolkadot, tokenLocation)) {
+    let reserveTypeAsset = "DestinationReserve"
+    if (isKSM(Direction.ToPolkadot, tokenLocation)) {
         assets = {
             v4: [
                 {
-                    id: dotLocationOnKusamaAssetHubLocation,
-                    fun: { Fungible: totalFeeInDot + amount },
+                    id: NATIVE_TOKEN_LOCATION,
+                    fun: { Fungible: totalFeeInNative + amount },
                 },
             ],
         }
+        reserveTypeAsset = "LocalReserve"
     } else {
         assets = {
             v4: [
                 {
-                    id: dotLocationOnKusamaAssetHubLocation,
-                    fun: { Fungible: totalFeeInDot },
+                    id: NATIVE_TOKEN_LOCATION,
+                    fun: { Fungible: totalFeeInNative },
                 },
                 {
                     id: tokenLocation,
@@ -616,7 +612,7 @@ export function createERC20ToPolkadotTx(
     const destination = { v4: polkadotAssetHubLocation(destParaId) }
 
     const feeAsset = {
-        v4: dotLocationOnKusamaAssetHubLocation,
+        v4: NATIVE_TOKEN_LOCATION,
     }
     const customXcm = buildAssetHubERC20TransferToKusama(
         parachain.registry,
@@ -626,9 +622,9 @@ export function createERC20ToPolkadotTx(
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
         assets,
-        "DestinationReserve",
+        reserveTypeAsset,
         feeAsset,
-        "DestinationReserve",
+        "LocalReserve",
         customXcm,
         "Unlimited"
     )
@@ -795,6 +791,30 @@ function isDOT(direction: Direction, location: any) {
     if (direction == Direction.ToPolkadot) {
         return isDOTOnOtherConsensusSystem(location)
     } else {
-        return isDOTOnPolkadotAssetHub(location)
+        return isNative(location)
+    }
+}
+
+function isKSM(direction: Direction, location: any) {
+    if (direction == Direction.ToKusama) {
+        return isKSMOnOtherConsensusSystem(location)
+    } else {
+        return isNative(location)
+    }
+}
+
+function nativeFeeAsset(direction: Direction) {
+    if (direction == Direction.ToPolkadot) {
+        return "KSM"
+    } else {
+        return "DOT"
+    }
+}
+
+function getTransferAsset(direction: Direction, tokenAddress: string, registry: AssetRegistry) {
+    if (direction == Direction.ToPolkadot) {
+        return registry.kusama?.parachains[registry.kusama?.assetHubParaId].assets[tokenAddress]
+    } else {
+        return registry.parachains[registry.assetHubParaId].assets[tokenAddress]
     }
 }

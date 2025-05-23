@@ -6,7 +6,7 @@ import { Context } from "./index"
 import {
     buildParachainERC20ReceivedXcmOnDestination,
     DOT_LOCATION,
-    dotLocationOnKusamaAssetHubLocation,
+    dotLocationOnKusamaAssetHub,
     erc20Location,
 } from "./xcmBuilder"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
@@ -743,12 +743,7 @@ export function getDotBalance(
             return getNativeBalance(provider, account)
         }
         case "statemine": {
-            return getLocationBalance(
-                provider,
-                specName,
-                dotLocationOnKusamaAssetHubLocation,
-                account
-            )
+            return getLocationBalance(provider, specName, dotLocationOnKusamaAssetHub, account)
         }
         default:
             return getLocationBalance(provider, specName, DOT_LOCATION, account)
@@ -1651,12 +1646,16 @@ async function indexKusamaPNAs(
             // skip any Kusama native assets for now
             continue
         } else {
-            // Also skip KSM for now.
             if (
                 locationOnAHKusama?.parents == DOT_LOCATION.parents &&
                 locationOnAHKusama?.interior == DOT_LOCATION.interior
             ) {
-                continue
+                let existentialDeposit =
+                    kusamaAssethub.consts.balances.existentialDeposit.toPrimitive()
+                metadataOnAH = {
+                    minBalance: existentialDeposit,
+                    isSufficient: true,
+                }
             } else if (
                 locationOnAHPolkadot?.parents == DOT_LOCATION.parents &&
                 locationOnAHPolkadot?.interior == DOT_LOCATION.interior
