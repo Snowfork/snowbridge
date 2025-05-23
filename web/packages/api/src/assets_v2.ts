@@ -5,17 +5,14 @@ import { SnowbridgeEnvironment } from "./environment"
 import { Context } from "./index"
 import {
     buildParachainERC20ReceivedXcmOnDestination,
+    convertToXcmV3X1,
     DOT_LOCATION,
     dotLocationOnKusamaAssetHub,
     erc20Location,
+    getTokenFromLocation,
 } from "./xcmBuilder"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
-import {
-    convertToXcmV3X1,
-    getMoonbeamEvmAssetMetadata,
-    getMoonbeamLocationBalance,
-    toMoonbeamXC20,
-} from "./parachains/moonbeam"
+import { getMoonbeamEvmAssetMetadata, getMoonbeamLocationBalance, toMoonbeamXC20 } from "./parachains/moonbeam"
 import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID, getMythosLocationBalance } from "./parachains/mythos"
 
 export type ERC20Metadata = {
@@ -144,7 +141,7 @@ type KusamaConfig = {
     parachains: ParachainMap
 }
 
-interface AssetMap {
+export interface AssetMap {
     [token: string]: Asset
 }
 
@@ -1294,36 +1291,6 @@ async function assetErc20Metadata(
         }
     }
     return metadata
-}
-
-function getTokenFromLocation(location: any, chainId: number) {
-    if (location.parents === 2) {
-        // New XCM multi-location format. x1 is an array.
-        if (
-            location.interior.x1 &&
-            location.interior.x1[0]?.globalConsensus?.ethereum?.chainId === chainId
-        ) {
-            return ETHER_TOKEN_ADDRESS
-        }
-        // Old XCM multi-location format. x1 is not an array.
-        if (
-            location.interior.x1 &&
-            location.interior.x1.globalConsensus?.ethereum?.chainId === chainId
-        ) {
-            return ETHER_TOKEN_ADDRESS
-        }
-        if (
-            location.interior.x2 &&
-            location.interior.x2[0]?.globalConsensus?.ethereum?.chainId === chainId &&
-            location.interior.x2[1].accountKey20
-        ) {
-            const token = String(location.interior.x2[1].accountKey20.key.toLowerCase())
-            if (token !== ETHER_TOKEN_ADDRESS) {
-                return token
-            }
-        }
-    }
-    return undefined
 }
 
 function addOverrides(envName: string, result: RegistryOptions) {
