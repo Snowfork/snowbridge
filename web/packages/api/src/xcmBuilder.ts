@@ -84,6 +84,45 @@ export function erc20LocationReanchored(tokenAddress: string) {
     }
 }
 
+export function convertToXcmV3X1(location: any) {
+    if (location.interior.x1) {
+        const convertedLocation = JSON.parse(JSON.stringify(location))
+        convertedLocation.interior.x1 = convertedLocation.interior.x1[0]
+        return convertedLocation
+    }
+    return location
+}
+
+export function getTokenFromLocation(location: any, chainId: number) {
+    if (location.parents === 2) {
+        // New XCM multi-location format. x1 is an array.
+        if (
+            location.interior.x1 &&
+            location.interior.x1[0]?.globalConsensus?.ethereum?.chainId === chainId
+        ) {
+            return ETHER_TOKEN_ADDRESS
+        }
+        // Old XCM multi-location format. x1 is not an array.
+        if (
+            location.interior.x1 &&
+            location.interior.x1.globalConsensus?.ethereum?.chainId === chainId
+        ) {
+            return ETHER_TOKEN_ADDRESS
+        }
+        if (
+            location.interior.x2 &&
+            location.interior.x2[0]?.globalConsensus?.ethereum?.chainId === chainId &&
+            location.interior.x2[1].accountKey20
+        ) {
+            const token = String(location.interior.x2[1].accountKey20.key.toLowerCase())
+            if (token !== ETHER_TOKEN_ADDRESS) {
+                return token
+            }
+        }
+    }
+    return undefined
+}
+
 export function buildParachainERC20ReceivedXcmOnDestination(
     registry: Registry,
     ethChainId: number,
