@@ -94,10 +94,7 @@ func run(_ *cobra.Command, _ []string) error {
 			return err
 		}
 
-		eg.Go(func() error {
-			err = relay.Start(ctx, eg)
-			return err
-		})
+		err = relay.Start(ctx, eg)
 	} else {
 		relay, err := beefy.NewOnDemandRelay(&config, keypair)
 		if err != nil {
