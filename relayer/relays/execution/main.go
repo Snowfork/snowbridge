@@ -46,7 +46,7 @@ func ConfigureLogger() {
 	})
 
 	// Set the log level to Info by default
-	log.SetLevel(logrus.DebugLevel)
+	log.SetLevel(logrus.InfoLevel)
 
 	// Add some custom fields that will be included in all log messages
 	log.SetReportCaller(true)
