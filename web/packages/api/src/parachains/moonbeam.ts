@@ -1,5 +1,8 @@
 import { ApiPromise } from "@polkadot/api"
 import { ethers } from "ethers"
+import { ParachainBase } from "./parachain"
+import { AssetMap, } from "src/assets_v2"
+import { convertToXcmV3X1, DOT_LOCATION, getTokenFromLocation } from "src/xcmBuilder"
 
 const MOONBEAM_ERC20_ABI = [
     "function name() view returns (string)",
@@ -12,15 +15,6 @@ const MOONBEAM_ERC20 = new ethers.Interface(MOONBEAM_ERC20_ABI)
 export function toMoonbeamXC20(assetId: bigint) {
     const xc20 = assetId.toString(16).toLowerCase()
     return "0xffffffff" + xc20
-}
-
-export function convertToXcmV3X1(location: any) {
-    if (location.interior.x1) {
-        const convertedLocation = JSON.parse(JSON.stringify(location))
-        convertedLocation.interior.x1 = convertedLocation.interior.x1[0]
-        return convertedLocation
-    }
-    return location
 }
 
 export async function getMoonbeamLocationBalance(
@@ -48,7 +42,7 @@ export async function getMoonbeamLocationBalance(
     return await getMoonbeamEvmForeignAssetBalance(provider, xc20, account)
 }
 
-async function getMoonbeamEvmForeignAssetBalance(api: ApiPromise, token: string, account: string) {
+export async function getMoonbeamEvmForeignAssetBalance(api: ApiPromise, token: string, account: string) {
     const method = "balanceOf"
     const data = MOONBEAM_ERC20.encodeFunctionData(method, [account])
     const result = await api.call.ethereumRuntimeRPCApi.call(
@@ -97,4 +91,81 @@ export async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: strin
     }
     const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)
     return retVal[0]
+}
+
+export class MoonbeamParachain extends ParachainBase {
+    async getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint> {
+        let paraAssetId = pnaAssetId
+        if (!paraAssetId) {
+            // Moonbeam only supports v3 xcm locations on asset Manager. Deep clone the location because
+            // we might modify it.
+            const assetManagerLocation = convertToXcmV3X1(location)
+            paraAssetId = (
+                await this.provider.query.assetManager.assetTypeId({ xcm: assetManagerLocation })
+            ).toPrimitive()
+        }
+
+        // If we cannot find the asset in asset manager look in foreign assets.
+        if (!paraAssetId) {
+            // evmForeignAssets uses xcm v4 so we use the original location.
+            paraAssetId = (
+                (await this.provider.query.evmForeignAssets.assetsByLocation(location)).toPrimitive() as any
+            )[0]
+            const xc20 = toMoonbeamXC20(BigInt(paraAssetId))
+            return await getMoonbeamEvmForeignAssetBalance(this.provider, xc20, account)
+        }
+
+        if (!paraAssetId) {
+            throw Error(`Asset not registered for spec ${this.specName}.`)
+        }
+
+        const accountData = (
+            await this.provider.query.assets.account(paraAssetId, account)
+        ).toPrimitive() as any
+        return BigInt(accountData?.balance ?? 0n)
+    }
+
+    getDotBalance(account: string): Promise<bigint> {
+        return this.getLocationBalance(DOT_LOCATION, account)
+    }
+
+    async getAssets(ethChainId: number): Promise<AssetMap> {
+        const assets: AssetMap = {}
+        const entries = await this.provider.query.assetManager.assetIdType.entries()
+        let xcDOT: string | undefined
+        const foreignEntries = await this.provider.query.evmForeignAssets.assetsById.entries()
+        for (const [key, value] of foreignEntries) {
+            const location = value.toJSON() as any
+
+            const assetId = BigInt(key.args.at(0)?.toPrimitive() as any)
+            const xc20 = toMoonbeamXC20(assetId)
+
+            if (location.parents === 1 && location.interior.here !== undefined) {
+                xcDOT = xc20
+            }
+
+            const token = getTokenFromLocation(location, ethChainId)
+            if (!token) {
+                continue
+            }
+            // we found the asset in pallet-assets so we can skip evmForeignAssets.
+            if (assets[token]) {
+                continue
+            }
+
+            const symbol = await getMoonbeamEvmAssetMetadata(this.provider, "symbol", xc20)
+            const name = await getMoonbeamEvmAssetMetadata(this.provider, "name", xc20)
+            const decimals = await getMoonbeamEvmAssetMetadata(this.provider, "decimals", xc20)
+            assets[token] = {
+                token,
+                name: String(name),
+                minimumBalance: 1n,
+                symbol: String(symbol),
+                decimals: Number(decimals),
+                isSufficient: true,
+                xc20,
+            }
+        }
+        return assets;
+    }
 }
