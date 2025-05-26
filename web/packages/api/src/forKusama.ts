@@ -20,7 +20,7 @@ import {
 import {
     Asset,
     AssetRegistry,
-    calculateDeliveryFee,
+    calculateDeliveryFee, calculateDestinationFee,
     getNativeAccount,
     getNativeBalance,
     getTokenBalance,
@@ -59,6 +59,7 @@ export type Transfer = {
 export type DeliveryFee = {
     xcmBridgeFee: bigint
     bridgeHubDeliveryFee: bigint
+    destinationFee: bigint
     totalFeeInNative: bigint
 }
 
@@ -97,6 +98,7 @@ function resolveInputs(
 
 export async function getDeliveryFee(
     sourceAssetHub: ApiPromise,
+    destAssetHub: ApiPromise,
     direction: Direction,
     registry: AssetRegistry,
     defaultFee?: bigint
@@ -119,6 +121,7 @@ export async function getDeliveryFee(
         xcmBridgeFee = BigInt(leFee.toString())
     }
     let forwardedXcm
+    // Message from dest AH to BH
     if (direction == Direction.ToPolkadot) {
         forwardedXcm = buildTransferKusamaToPolkadotExportXCM(
             sourceAssetHub.registry,
@@ -126,7 +129,7 @@ export async function getDeliveryFee(
             xcmBridgeFee,
             xcmBridgeFee,
             registry.assetHubParaId,
-            340282366920938463463374607431768211455n,
+            100000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
@@ -137,11 +140,42 @@ export async function getDeliveryFee(
             xcmBridgeFee,
             xcmBridgeFee,
             registry.assetHubParaId,
+            100000000000n,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        )
+    }
+
+    // Message on Dest AH
+    //calculateDestinationFee
+    // Message from dest AH to BH
+    let destXcm
+    if (destXcm == Direction.ToPolkadot) {
+        forwardedXcm = buildKusamaToPolkadotDestAssetHubXCM(
+            sourceAssetHub.registry,
+            xcmBridgeFee,
+            registry.assetHubParaId,
+            erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
+            340282366920938463463374607431768211455n,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        )
+    } else {
+        destXcm = buildPolkadotToKusamaDestAssetHubXCM(
+            sourceAssetHub.registry,
+            xcmBridgeFee,
+            registry.assetHubParaId,
+            erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
             340282366920938463463374607431768211455n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
     }
+
+    let destinationFee = await calculateDestinationFee(
+        destAssetHub,
+        destXcm
+    )
 
     let bridgeHubDeliveryFee = await calculateDeliveryFee(
         sourceAssetHub,
@@ -149,15 +183,17 @@ export async function getDeliveryFee(
         forwardedXcm
     )
 
-    let totalFee = xcmBridgeFee + bridgeHubDeliveryFee
+    let totalFee = xcmBridgeFee + bridgeHubDeliveryFee + destinationFee
 
     console.info("xcmBridgeFee:", xcmBridgeFee)
+    console.info("destinationFee:", destinationFee)
     console.info("bridgeHubDeliveryFee:", bridgeHubDeliveryFee)
     console.info("Total fee in native:", totalFee)
 
     return {
-        xcmBridgeFee: xcmBridgeFee,
-        bridgeHubDeliveryFee: bridgeHubDeliveryFee,
+        xcmBridgeFee,
+        destinationFee,
+        bridgeHubDeliveryFee,
         totalFeeInNative: totalFee,
     }
 }

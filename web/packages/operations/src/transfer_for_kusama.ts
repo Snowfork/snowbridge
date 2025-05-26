@@ -119,7 +119,7 @@ export const transferForKusama = async (
     console.log(transferName)
     {
         // Step 1. Get the delivery fee for the transaction
-        const fee = await forKusama.getDeliveryFee(sourceAssetHub, direction, registry)
+        const fee = await forKusama.getDeliveryFee(sourceAssetHub, destAssetHub, direction, registry)
 
         // Step 2. Create a transfer tx
         const transfer = await forKusama.createTransfer(
@@ -147,13 +147,13 @@ export const transferForKusama = async (
         }
 
         // Step 5. Submit transaction and get receipt for tracking
-        const response = await forKusama.signAndSend(sourceAssetHub, transfer, SOURCE_ACCOUNT, {
-            withSignedTransaction: true,
-        })
-        if (!response) {
-            throw Error(`Transaction ${response} not included.`)
-        }
-        console.log("Success message", response.messageId)
+       //const response = await forKusama.signAndSend(sourceAssetHub, transfer, SOURCE_ACCOUNT, {
+       //    withSignedTransaction: true,
+       //})
+       //if (!response) {
+       //    throw Error(`Transaction ${response} not included.`)
+       //}
+       //console.log("Success message", response.messageId)
 
         await context.destroyContext()
     }
