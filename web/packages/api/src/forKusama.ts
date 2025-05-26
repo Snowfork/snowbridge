@@ -364,7 +364,6 @@ export async function validateTransfer(
 
     const dryRunSource = await dryRunSourceAssetHub(
         sourceAssetHub,
-        direction,
         registry.assetHubParaId,
         registry.bridgeHubParaId,
         transfer.tx,
@@ -632,7 +631,6 @@ export function createERC20ToPolkadotTx(
 
 export async function dryRunSourceAssetHub(
     source: ApiPromise,
-    direction: Direction,
     assetHubParaId: number,
     bridgeHubParaId: number,
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>,
@@ -640,15 +638,9 @@ export async function dryRunSourceAssetHub(
 ) {
     const origin = { system: { signed: sourceAccount } }
     let result: Result<CallDryRunEffects, XcmDryRunApiError>
-    if (direction == Direction.ToPolkadot) {
-        result = await source.call.dryRunApi.dryRunCall<
-            Result<CallDryRunEffects, XcmDryRunApiError>
-        >(origin, tx, 4)
-    } else {
-        result = await source.call.dryRunApi.dryRunCall<
-            Result<CallDryRunEffects, XcmDryRunApiError>
-        >(origin, tx)
-    }
+    result = await source.call.dryRunApi.dryRunCall<
+        Result<CallDryRunEffects, XcmDryRunApiError>
+    >(origin, tx, 4)
 
     let assetHubForwarded
     let bridgeHubForwarded
