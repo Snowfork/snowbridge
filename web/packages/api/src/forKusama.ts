@@ -15,7 +15,7 @@ import {
     buildKusamaToPolkadotDestAssetHubXCM,
     buildPolkadotToKusamaDestAssetHubXCM,
     buildTransferKusamaToPolkadotExportXCM,
-    buildTransferPolkadotToKusamaExportXCM,
+    buildTransferPolkadotToKusamaExportXCM, dotLocationOnKusamaAssetHub, ksmLocationOnPolkadotAssetHub,
 } from "./xcmBuilder"
 import {
     Asset,
@@ -23,8 +23,8 @@ import {
     calculateDeliveryFee, calculateDestinationFee,
     getNativeAccount,
     getNativeBalance,
-    getTokenBalance,
-    Parachain,
+    getTokenBalance, padFeeByPercentage,
+    Parachain, quoteFeeSwap,
 } from "./assets_v2"
 import {
     CallDryRunEffects,
@@ -68,6 +68,11 @@ export enum Direction {
     ToPolkadot,
 }
 
+const KUSAMA_BASE_FEE = 10_602_492_378n; // 0.0106KSM
+const KUSAMA_FEE_PER_BYTE = 1000000n; // 0.000001 KSM
+const POLKADOT_BASE_FEE = 333_794_429n; // 0.033 DOT
+const POLKADOT_FEE_PER_BYTE = 16666n; // 0.0000016666 DOT
+
 function resolveInputs(
     registry: AssetRegistry,
     tokenAddress: string,
@@ -101,33 +106,45 @@ export async function getDeliveryFee(
     destAssetHub: ApiPromise,
     direction: Direction,
     registry: AssetRegistry,
-    defaultFee?: bigint
 ): Promise<DeliveryFee> {
-    const feeStorageKey = xxhashAsHex(":XcmBridgeHubRouterBaseFee:", 128, true)
-    const feeStorageItem = await sourceAssetHub.rpc.state.getStorage(feeStorageKey)
-    let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
-
-    let defaultFeeConfiguredInRuntime: bigint
-    if (direction == Direction.ToPolkadot) {
-        defaultFeeConfiguredInRuntime = 10_602_492_378n // .0106KSM
-    } else {
-        defaultFeeConfiguredInRuntime = 333_794_429n // 0.033 DOT
-    }
-    let xcmBridgeFee: bigint
-    if (leFee.eqn(0)) {
+    // Get base bridge fee
+    // https://github.com/polkadot-fellows/runtimes/blob/main/system-parachains/asset-hubs/asset-hub-polkadot/src/xcm_config.rs#L546
+    let baseFeeInStorage = await getStorageItem(sourceAssetHub, ":XcmBridgeHubRouterBaseFee:");
+    let xcmBridgeBaseFee: bigint
+    if (baseFeeInStorage.eqn(0)) {
         console.warn("Asset Hub onchain XcmBridgeHubRouterBaseFee not set. Using default fee.")
-        xcmBridgeFee = defaultFee ?? defaultFeeConfiguredInRuntime
+        if (direction == Direction.ToPolkadot) {
+            xcmBridgeBaseFee = KUSAMA_BASE_FEE
+        } else {
+            xcmBridgeBaseFee = POLKADOT_BASE_FEE
+        }
     } else {
-        xcmBridgeFee = BigInt(leFee.toString())
+        xcmBridgeBaseFee = BigInt(baseFeeInStorage.toString())
     }
+
+    // Get fee per byte
+    // https://github.com/polkadot-fellows/runtimes/blob/main/system-parachains/asset-hubs/asset-hub-polkadot/src/xcm_config.rs#L551
+    let feePerByteInStorage = await getStorageItem(sourceAssetHub, ":XcmBridgeHubRouterByteFee:");
+    let xcmFeePerByte: bigint
+    if (feePerByteInStorage.eqn(0)) {
+        console.warn("Asset Hub onchain XcmBridgeHubRouterByteFee not set. Using default fee per byte.")
+        if (direction == Direction.ToPolkadot) {
+            xcmFeePerByte = KUSAMA_FEE_PER_BYTE
+        } else {
+            xcmFeePerByte = POLKADOT_FEE_PER_BYTE
+        }
+    } else {
+        xcmFeePerByte = BigInt(baseFeeInStorage.toString())
+    }
+
     let forwardedXcm
     // Message from dest AH to BH
     if (direction == Direction.ToPolkadot) {
         forwardedXcm = buildTransferKusamaToPolkadotExportXCM(
             sourceAssetHub.registry,
             erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
-            xcmBridgeFee,
-            xcmBridgeFee,
+            xcmBridgeBaseFee,
+            xcmBridgeBaseFee,
             registry.assetHubParaId,
             100000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -137,8 +154,8 @@ export async function getDeliveryFee(
         forwardedXcm = buildTransferPolkadotToKusamaExportXCM(
             sourceAssetHub.registry,
             erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
-            xcmBridgeFee,
-            xcmBridgeFee,
+            xcmBridgeBaseFee,
+            xcmBridgeBaseFee,
             registry.assetHubParaId,
             100000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -146,14 +163,19 @@ export async function getDeliveryFee(
         )
     }
 
-    // Message on Dest AH
-    //calculateDestinationFee
+    let bytes = forwardedXcm.toHex().length / 2;
+    console.log("forwardedXcm length:", bytes);
+    let xcmBytesFee = (BigInt(bytes) * xcmFeePerByte);
+    let totalXcmBridgeFee = xcmBridgeBaseFee + xcmBytesFee;
+    console.info("xcmBridgeBaseFee:", xcmBridgeBaseFee)
+    console.info("xcmBytesFee:", xcmBytesFee)
+
     // Message from dest AH to BH
     let destXcm
-    if (destXcm == Direction.ToPolkadot) {
-        forwardedXcm = buildKusamaToPolkadotDestAssetHubXCM(
+    if (direction == Direction.ToPolkadot) {
+        destXcm = buildKusamaToPolkadotDestAssetHubXCM(
             sourceAssetHub.registry,
-            xcmBridgeFee,
+            totalXcmBridgeFee,
             registry.assetHubParaId,
             erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
             340282366920938463463374607431768211455n,
@@ -163,7 +185,7 @@ export async function getDeliveryFee(
     } else {
         destXcm = buildPolkadotToKusamaDestAssetHubXCM(
             sourceAssetHub.registry,
-            xcmBridgeFee,
+            totalXcmBridgeFee,
             registry.assetHubParaId,
             erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
             340282366920938463463374607431768211455n,
@@ -172,7 +194,7 @@ export async function getDeliveryFee(
         )
     }
 
-    let destinationFee = await calculateDestinationFee(
+    let destinationFeeInDestAsset = await calculateDestinationFee(
         destAssetHub,
         destXcm
     )
@@ -183,15 +205,30 @@ export async function getDeliveryFee(
         forwardedXcm
     )
 
-    let totalFee = xcmBridgeFee + bridgeHubDeliveryFee + destinationFee
+    let feeAssetOnDest;
+    if (direction == Direction.ToPolkadot) {
+        feeAssetOnDest = ksmLocationOnPolkadotAssetHub;
+    } else {
+        feeAssetOnDest = dotLocationOnKusamaAssetHub;
+    }
+    let destinationFee = await quoteFeeSwap(
+        destAssetHub,
+        NATIVE_TOKEN_LOCATION,
+        feeAssetOnDest,
+        destinationFeeInDestAsset
+    )
+    // pad destination XCM fee
+    destinationFee = destinationFee + (destinationFee * 33n / 100n)
+    let totalFee = totalXcmBridgeFee + bridgeHubDeliveryFee + destinationFee
 
-    console.info("xcmBridgeFee:", xcmBridgeFee)
+    console.info("totalXcmBridgeFee:", totalXcmBridgeFee)
+    console.info("destinationFeeInDestAsset:", destinationFeeInDestAsset)
     console.info("destinationFee:", destinationFee)
     console.info("bridgeHubDeliveryFee:", bridgeHubDeliveryFee)
     console.info("Total fee in native:", totalFee)
 
     return {
-        xcmBridgeFee,
+        xcmBridgeFee: totalXcmBridgeFee,
         destinationFee,
         bridgeHubDeliveryFee,
         totalFeeInNative: totalFee,
@@ -247,7 +284,7 @@ export async function createTransfer(
             tokenLocation,
             beneficiaryAddressHex,
             amount,
-            fee.totalFeeInNative,
+            fee.destinationFee,
             messageId
         )
     } else {
@@ -257,7 +294,7 @@ export async function createTransfer(
             tokenLocation,
             beneficiaryAddressHex,
             amount,
-            fee.totalFeeInNative,
+            fee.destinationFee,
             messageId
         )
     }
@@ -432,7 +469,7 @@ export async function validateTransfer(
     if (direction == Direction.ToPolkadot) {
         destAssetHubXCM = buildKusamaToPolkadotDestAssetHubXCM(
             destAssetHub.registry,
-            fee.totalFeeInNative,
+            fee.destinationFee,
             registry.assetHubParaId,
             tokenLocation,
             transfer.input.amount,
@@ -442,7 +479,7 @@ export async function validateTransfer(
     } else {
         destAssetHubXCM = buildPolkadotToKusamaDestAssetHubXCM(
             destAssetHub.registry,
-            fee.totalFeeInNative,
+            fee.destinationFee,
             registry.assetHubParaId,
             tokenLocation,
             transfer.input.amount,
@@ -845,4 +882,10 @@ function getTransferAsset(direction: Direction, tokenAddress: string, registry: 
     } else {
         return registry.parachains[registry.assetHubParaId].assets[tokenAddress]
     }
+}
+
+async function getStorageItem(sourceAssetHub: ApiPromise, key: string) {
+    const feeStorageKey = xxhashAsHex(key, 128, true)
+    const feeStorageItem = await sourceAssetHub.rpc.state.getStorage(feeStorageKey)
+    return new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
 }
