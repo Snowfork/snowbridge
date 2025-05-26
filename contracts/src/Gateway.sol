@@ -416,16 +416,18 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             revert IGatewayBase.InvalidNonce();
         }
 
-        bytes32 leafHash = keccak256(abi.encode(message));
-
         $.inboundNonce.set(message.nonce);
 
-        // Produce the commitment (message root) by applying the leaf proof to the message leaf
-        bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
+        if (msg.sender != address(this)) {
+            bytes32 leafHash = keccak256(abi.encode(message));
 
-        // Verify that the commitment is included in a parachain header finalized by BEEFY.
-        if (!_verifyCommitment(commitment, headerProof, true)) {
-            revert IGatewayBase.InvalidProof();
+            // Produce the commitment (message root) by applying the leaf proof to the message leaf
+            bytes32 commitment = MerkleProof.processProof(leafProof, leafHash);
+
+            // Verify that the commitment is included in a parachain header finalized by BEEFY.
+            if (!_verifyCommitment(commitment, headerProof, true)) {
+                revert IGatewayBase.InvalidProof();
+            }
         }
 
         // Dispatch the message payload. The boolean returned indicates whether all commands succeeded.
