@@ -1,9 +1,10 @@
 import { Registry } from "@polkadot/types/types"
-import { beneficiaryMultiAddress } from "./utils"
+import { beneficiaryMultiAddress, parseLocation } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { Asset } from "./assets_v3"
 
-export const HERE_LOCATION = { parents: 0, interior: "Here"  }
-export const DOT_LOCATION = { parents: 1, interior: "Here"  }
+export const HERE_LOCATION = { parents: 0, interior: "Here" }
+export const DOT_LOCATION = { parents: 1, interior: "Here" }
 
 const ethereumNetwork = (ethChainId: number) => ({
     GlobalConsensus: { Ethereum: { chain_id: ethChainId } },
@@ -75,7 +76,7 @@ export function buildParachainERC20ReceivedXcmOnDestination(
             throw Error(`Could not parse beneficiary address ${beneficiary}`)
     }
     return registry.createType("XcmVersionedXcm", {
-        v4: [
+        v5: [
             {
                 reserveAssetDeposited: [
                     {
@@ -482,10 +483,10 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
     sourceParachainId: number,
     returnToSenderFee: bigint,
     feeAssetId: any,
-    feeAssetIdReanchored: any,
+    feeAssetIdReanchored: any
 ) {
     return registry.createType("XcmVersionedXcm", {
-        v4: [
+        v5: [
             {
                 withdrawAsset: [
                     {
@@ -541,7 +542,7 @@ export function buildResultXcmAssetHubPNATransferFromParachain(
     destinationFeeInDot: bigint
 ) {
     return registry.createType("XcmVersionedXcm", {
-        v4: [
+        v5: [
             {
                 withdrawAsset: [
                     {
@@ -590,7 +591,7 @@ function buildAssetHubXcmForPNAFromParachain(
     beneficiary: string,
     assetLocationOnAH: any,
     assetLocationOnEthereum: any,
-    topic: string,
+    topic: string
 ) {
     return [
         // Initiate the bridged transfer
@@ -665,7 +666,7 @@ export function buildParachainPNAReceivedXcmOnDestination(
             throw Error(`Could not parse beneficiary address ${beneficiary}`)
     }
     return registry.createType("XcmVersionedXcm", {
-        v4: [
+        v5: [
             {
                 reserveAssetDeposited: [
                     {
@@ -985,7 +986,7 @@ export function buildExportXcmForERC20(
             throw Error(`Could not parse beneficiary address ${beneficiary}`)
     }
     return registry.createType("XcmVersionedXcm", {
-        v4: [
+        v5: [
             {
                 withdrawAsset: [
                     {
@@ -1100,7 +1101,7 @@ export function buildExportXcmForPNA(
             throw Error(`Could not parse beneficiary address ${beneficiary}`)
     }
     return registry.createType("XcmVersionedXcm", {
-        v4: [
+        v5: [
             {
                 withdrawAsset: [
                     {
@@ -1180,6 +1181,164 @@ export function buildExportXcmForPNA(
                 },
             },
 
+            {
+                setTopic: topic,
+            },
+        ],
+    })
+}
+
+export function buildTransferXcmFromAssetHub(
+    registry: Registry,
+    ethChainId: number,
+    sourceAccount: string,
+    beneficiary: string,
+    asset: Asset,
+    tokenAmount: bigint,
+    localFeeAssetId: any,
+    localFeeAmount: bigint,
+    remoteFeeAssetId: any,
+    remoteFeeAmount: bigint,
+    topic: string
+) {
+    let beneficiaryLocation = parseLocation(beneficiary)
+    let sourceLocation = parseLocation(sourceAccount)
+    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let assets = []
+    if (
+        tokenLocation.parents == DOT_LOCATION.parents &&
+        tokenLocation.interior == DOT_LOCATION.interior
+    ) {
+        assets.push({
+            id: localFeeAssetId,
+            fun: {
+                Fungible: localFeeAmount + tokenAmount,
+            },
+        })
+        assets.push({
+            id: remoteFeeAssetId,
+            fun: {
+                Fungible: remoteFeeAmount,
+            },
+        })
+    } else {
+        assets.push({
+            id: localFeeAssetId,
+            fun: {
+                Fungible: localFeeAmount,
+            },
+        })
+        if (JSON.stringify(tokenLocation) == JSON.stringify(remoteFeeAssetId)) {
+            assets.push({
+                id: remoteFeeAssetId,
+                fun: {
+                    Fungible: tokenAmount + remoteFeeAmount,
+                },
+            })
+        } else {
+            assets.push({
+                id: tokenLocation,
+                fun: {
+                    Fungible: tokenAmount,
+                },
+            })
+            assets.push({
+                id: remoteFeeAssetId,
+                fun: {
+                    Fungible: remoteFeeAmount,
+                },
+            })
+        }
+    }
+    let transferredAsset = asset.location
+        ? {
+              reserveDeposit: {
+                  definite: [
+                      {
+                          id: tokenLocation,
+                          fun: {
+                              Fungible: tokenAmount,
+                          },
+                      },
+                  ],
+              },
+          }
+        : {
+              reserveWithdraw: {
+                  definite: [
+                      {
+                          id: tokenLocation,
+                          fun: {
+                              Fungible: tokenAmount,
+                          },
+                      },
+                  ],
+              },
+          }
+    return registry.createType("XcmVersionedXcm", {
+        v5: [
+            {
+                withdrawAsset: assets,
+            },
+            {
+                payfees: {
+                    asset: {
+                        id: localFeeAssetId,
+                        fun: {
+                            Fungible: localFeeAmount,
+                        },
+                    },
+                },
+            },
+            {
+                setAppendix: [
+                    {
+                        depositAsset: {
+                            assets: {
+                                wild: "All",
+                            },
+                            beneficiary: {
+                                parents: 0,
+                                interior: { x1: [sourceLocation] },
+                            },
+                        },
+                    },
+                ],
+            },
+            {
+                initiateTransfer: {
+                    destination: bridgeLocation(ethChainId),
+                    remote_fees: {
+                        reserveWithdraw: {
+                            definite: [
+                                {
+                                    id: remoteFeeAssetId,
+                                    fun: {
+                                        Fungible: remoteFeeAmount,
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                    preserveOrigin: true,
+                    assets: [transferredAsset],
+                    remoteXcm: [
+                        {
+                            depositAsset: {
+                                assets: {
+                                    wild: {
+                                        allCounted: 2,
+                                    },
+                                },
+                                beneficiary: {
+                                    parents: 0,
+                                    interior: { x1: [beneficiaryLocation] },
+                                },
+                            },
+                        },
+                    ],
+                },
+            },
             {
                 setTopic: topic,
             },

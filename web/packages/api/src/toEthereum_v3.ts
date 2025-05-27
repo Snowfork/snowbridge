@@ -17,6 +17,7 @@ import {
     buildExportXcmForPNA,
     buildExportXcmForERC20,
     HERE_LOCATION,
+    buildTransferXcmFromAssetHub,
 } from "./xcmV5Builder"
 import {
     Asset,
@@ -27,6 +28,7 @@ import {
     EthereumChain,
     getAssetHubConversationPalletSwap,
     getDotBalance,
+    getEtherBalance,
     getNativeBalance,
     getParachainId,
     getTokenBalance,
@@ -146,6 +148,7 @@ export type DeliveryFee = {
     totalFeeInNative?: bigint
     assetHubExecutionFeeNative?: bigint
     returnToSenderExecutionFeeNative?: bigint
+    ethereumExecutionFee: bigint
 }
 
 export type FeeInfo = {
@@ -188,13 +191,24 @@ export async function createTransfer(
                 ahAssetMetadata
             )
         } else {
+            messageId = await buildMessageId(
+                parachain,
+                sourceParaId,
+                sourceAccountHex,
+                tokenAddress,
+                beneficiaryAccount,
+                amount
+            )
             tx = createAssetHubTx(
                 parachain,
                 ethChainId,
-                tokenAddress,
+                sourceAccount,
                 beneficiaryAccount,
                 amount,
-                ahAssetMetadata
+                ahAssetMetadata,
+                fee.assetHubExecutionFeeDOT || 800_000_000_000n,
+                fee.ethereumExecutionFee,
+                messageId
             )
         }
     } else {
@@ -370,14 +384,14 @@ export async function createTransferEvm(
 }
 
 export async function getDeliveryFee(
-    connections: { assetHub: ApiPromise; source: ApiPromise },
+    connections: { assetHub: ApiPromise; source: ApiPromise; ethereum: AbstractProvider },
     parachain: number,
     registry: AssetRegistry,
     tokenAddress: string,
     padPercentage?: bigint,
     defaultFee?: bigint
 ): Promise<DeliveryFee> {
-    const { assetHub, source } = connections
+    const { assetHub, source, ethereum } = connections
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
     const feePadPercentage = padPercentage ?? 33n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
@@ -387,12 +401,12 @@ export async function getDeliveryFee(
     let snowbridgeDeliveryFeeDOT = 0n
     if (leFee.eqn(0)) {
         console.warn("Asset Hub onchain BridgeHubEthereumBaseFee not set. Using default fee.")
-        snowbridgeDeliveryFeeDOT = defaultFee ?? 2_750_872_500_000n
+        snowbridgeDeliveryFeeDOT = defaultFee ?? 100_000_000_000n
     } else {
         snowbridgeDeliveryFeeDOT = BigInt(leFee.toString())
     }
 
-    const { sourceAssetMetadata, sourceParachain } = resolveInputs(
+    const { tokenErcMetadata, sourceAssetMetadata, sourceParachain } = resolveInputs(
         registry,
         tokenAddress,
         parachain
@@ -567,6 +581,13 @@ export async function getDeliveryFee(
         returnToSenderExecutionFeeNative = returnToSenderExecutionFeeNativeRes
     }
 
+    // Calculate execution cost on ethereum
+    let ethereumChain = registry.ethereumChains[registry.ethChainId.toString()]
+    let feeData = await ethereum.getFeeData()
+    let ethereumExecutionFee =
+        (feeData.gasPrice ?? 2_000_000_000n) *
+        ((tokenErcMetadata.deliveryGas ?? 100_000n) + (ethereumChain.baseDeliveryGas ?? 180_000n))
+
     return {
         snowbridgeDeliveryFeeDOT,
         assetHubExecutionFeeDOT,
@@ -577,6 +598,7 @@ export async function getDeliveryFee(
         totalFeeInNative,
         assetHubExecutionFeeNative,
         returnToSenderExecutionFeeNative,
+        ethereumExecutionFee,
     }
 }
 
@@ -593,6 +615,7 @@ export enum ValidationReason {
     InsufficientNativeFee,
     DryRunApiNotAvailable,
     DryRunFailed,
+    InsufficientEtherBalance,
 }
 
 export type ValidationLog = {
@@ -697,6 +720,20 @@ export async function validateTransfer(
                 message: "Insufficient token balance to submit transaction.",
             })
         }
+    }
+
+    let etherBalance = await getEtherBalance(
+        sourceParachain,
+        source.info.specName,
+        sourceAccountHex,
+        registry.ethChainId
+    )
+    if (fee.ethereumExecutionFee > etherBalance) {
+        logs.push({
+            kind: ValidationKind.Error,
+            reason: ValidationReason.InsufficientEtherBalance,
+            message: "Insufficient ether balance to submit transaction.",
+        })
     }
 
     let sourceDryRunError
@@ -1307,35 +1344,29 @@ function resolveInputs(registry: AssetRegistry, tokenAddress: string, sourcePara
 function createAssetHubTx(
     parachain: ApiPromise,
     ethChainId: number,
-    tokenAddress: string,
+    sourceAccount: string,
     beneficiaryAccount: string,
     amount: bigint,
-    asset: Asset
+    asset: Asset,
+    localFeeAmount: bigint,
+    remoteFeeAmount: bigint,
+    messageId: string
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
-    // Asset with location not null for PNA
-    let assetLocation = asset.location || erc20Location(ethChainId, tokenAddress)
-    const assets = {
-        v5: [
-            {
-                id: assetLocation,
-                fun: { Fungible: amount },
-            },
-        ],
-    }
-    const destination = { v5: bridgeLocation(ethChainId) }
-    const beneficiaryLocation = {
-        v5: {
-            parents: 0,
-            interior: { x1: [{ accountKey20: { key: beneficiaryAccount } }] },
-        },
-    }
-    return parachain.tx.polkadotXcm.transferAssets(
-        destination,
-        beneficiaryLocation,
-        assets,
-        0,
-        "Unlimited"
+    let xcm = buildTransferXcmFromAssetHub(
+        parachain.registry,
+        ethChainId,
+        sourceAccount,
+        beneficiaryAccount,
+        asset,
+        amount,
+        DOT_LOCATION,
+        localFeeAmount,
+        bridgeLocation(ethChainId),
+        remoteFeeAmount,
+        messageId
     )
+    let maxWeight = { refTime: 100_000_000_000n, proofSize: 4_000_000 }
+    return parachain.tx.polkadotXcm.execute(xcm, maxWeight)
 }
 
 function createERC20SourceParachainTx(
@@ -1400,17 +1431,9 @@ async function dryRunOnSourceParachain(
     sourceAccount: string
 ) {
     const origin = { system: { signed: sourceAccount } }
-    // To ensure compatibility, dryRunCall includes the version parameter in XCMv5.
-    let result
-    try {
-        result = await source.call.dryRunApi.dryRunCall<
-            Result<CallDryRunEffects, XcmDryRunApiError>
-        >(origin, tx.inner.toHex(), 4)
-    } catch {
-        result = await source.call.dryRunApi.dryRunCall<
-            Result<CallDryRunEffects, XcmDryRunApiError>
-        >(origin, tx.inner.toHex())
-    }
+    let result = await source.call.dryRunApi.dryRunCall<
+        Result<CallDryRunEffects, XcmDryRunApiError>
+    >(origin, tx.inner.toHex(), 5)
 
     let assetHubForwarded
     let bridgeHubForwarded

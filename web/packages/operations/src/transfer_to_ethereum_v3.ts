@@ -46,13 +46,12 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        process.env.ETHEREUM_KEY ?? "your key goes here",
+        process.env.ETHEREUM_KEY ??
+            "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
         context.ethereum()
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
-    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(
-        process.env.SUBSTRATE_KEY ?? "your key goes here"
-    )
+    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
@@ -68,7 +67,11 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     {
         // Step 1. Get the delivery fee for the transaction
         const fee = await toEthereumV3.getDeliveryFee(
-            { assetHub: await context.assetHub(), source: await context.parachain(sourceParaId) },
+            {
+                assetHub: await context.assetHub(),
+                source: await context.parachain(sourceParaId),
+                ethereum: await context.ethereum(),
+            },
             sourceParaId,
             registry,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -100,10 +103,6 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
             `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
             formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals)
         )
-        // console.log(
-        //     "dryRun: ",
-        //     (await transfer.tx.dryRun(POLKADOT_ACCOUNT, { withSignedTransaction: true })).toHuman()
-        // )
 
         // Step 4. Validate the transaction.
         const validation = await toEthereumV3.validateTransfer(
