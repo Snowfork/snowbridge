@@ -23,7 +23,7 @@ import {
     calculateDeliveryFee, calculateDestinationFee,
     getNativeAccount,
     getNativeBalance,
-    getTokenBalance, padFeeByPercentage,
+    getTokenBalance,
     Parachain, quoteFeeSwap,
 } from "./assets_v2"
 import {
@@ -163,7 +163,7 @@ export async function getDeliveryFee(
         )
     }
 
-    let bytes = forwardedXcm.toHex().length / 2;
+    let bytes = forwardedXcm.toU8a().length / 2;
     console.log("forwardedXcm length:", bytes);
     let xcmBytesFee = (BigInt(bytes) * xcmFeePerByte);
     let totalXcmBridgeFee = xcmBridgeBaseFee + xcmBytesFee;
@@ -219,6 +219,9 @@ export async function getDeliveryFee(
     )
     // pad destination XCM fee
     destinationFee = destinationFee + (destinationFee * 33n / 100n)
+    // pad destination XCM fee
+    totalXcmBridgeFee = totalXcmBridgeFee + (totalXcmBridgeFee * 33n / 100n)
+
     let totalFee = totalXcmBridgeFee + bridgeHubDeliveryFee + destinationFee
 
     console.info("totalXcmBridgeFee:", totalXcmBridgeFee)
