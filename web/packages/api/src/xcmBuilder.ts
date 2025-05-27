@@ -1644,35 +1644,71 @@ export function buildExportXcmForPNA(
     })
 }
 
-export function isDOTOnOtherConsensusSystem(location: any) {
-    return (
-        location.parents == 2 &&
-        location.interior.x1 &&
-        (location.interior.x1[0]?.globalConsensus?.Polkadot !== undefined ||
-            location.interior.x1[0]?.globalConsensus?.polkadot !== undefined)
-    )
-}
+export function isEthereumAsset(location: any): boolean {
+    if (location.parents !== 2 || !location.interior) return false;
 
-export function isEthereumAsset(location: any) {
+    const interior = location.interior;
+
+    const kind = Object.keys(interior).find(
+        k => k.toLowerCase() === "x1" || k.toLowerCase() === "x2"
+    );
+
+    if (!kind) return false;
+
+    const values = interior[kind];
+    if (!Array.isArray(values) || values.length === 0) return false;
+
+    const consensus = values[0];
+
+    const consensusKey = Object.keys(consensus || {}).find(
+        k => k.toLowerCase() === "globalconsensus"
+    );
+
+    if (!consensusKey) return false;
+
+    const consensusValue = consensus[consensusKey];
+
     return (
-        (location.parents == 2 &&
-            location.interior.x1 &&
-            (location.interior.x1[0]?.globalConsensus?.Ethereum !== undefined ||
-                location.interior.x1[0]?.globalConsensus?.ethereum !== undefined)) ||
-        (location.parents == 2 &&
-            location.interior.x2 &&
-            (location.interior.x2[0]?.globalConsensus?.Ethereum !== undefined ||
-                location.interior.x2[0]?.globalConsensus?.ethereum !== undefined))
-    )
+        typeof consensusValue === "object" &&
+        Object.keys(consensusValue).some(k => k.toLowerCase() === "ethereum")
+    );
 }
 
 export function isKSMOnOtherConsensusSystem(location: any) {
+    return matchesConsensusSystem(location, "Kusama");
+}
+
+export function isDOTOnOtherConsensusSystem(location: any): boolean {
+    return matchesConsensusSystem(location, "Polkadot");
+}
+
+function matchesConsensusSystem(
+    location: any,
+    expectedSystem: string
+): boolean {
+    if (location.parents !== 2 || !location.interior) return false;
+
+    const kind = Object.keys(location.interior).find(
+        (k) => k.toLowerCase() === "x1"
+    );
+    if (!kind) return false;
+
+    const values = location.interior[kind];
+    if (!Array.isArray(values) || values.length === 0) return false;
+
+    const consensus = values[0];
+    const consensusKey = Object.keys(consensus || {}).find(
+        (k) => k.toLowerCase() === "globalconsensus"
+    );
+    if (!consensusKey) return false;
+
+    const consensusValue = consensus[consensusKey];
     return (
-        location.parents == 2 &&
-        location.interior.x1 &&
-        (location.interior.x1[0]?.globalConsensus?.Kusama !== undefined ||
-            location.interior.x1[0]?.globalConsensus?.kusama !== undefined)
-    )
+        typeof consensusValue === "object" &&
+        Object.keys(consensusValue).some(
+            (k) => k.toLowerCase() === expectedSystem.toLowerCase()
+        )
+    );
 }
 
 export function isNative(location: any) {

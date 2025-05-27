@@ -194,7 +194,7 @@ export async function getDeliveryFee(
         )
     }
 
-    let destinationFeeInDestAsset = await calculateDestinationFee(
+    let destinationFeeInDestNative = await calculateDestinationFee(
         destAssetHub,
         destXcm
     )
@@ -213,9 +213,9 @@ export async function getDeliveryFee(
     }
     let destinationFee = await quoteFeeSwap(
         destAssetHub,
-        NATIVE_TOKEN_LOCATION,
         feeAssetOnDest,
-        destinationFeeInDestAsset
+        NATIVE_TOKEN_LOCATION,
+        destinationFeeInDestNative
     )
     // pad destination XCM fee
     destinationFee = destinationFee + (destinationFee * 33n / 100n)
@@ -225,7 +225,7 @@ export async function getDeliveryFee(
     let totalFee = totalXcmBridgeFee + bridgeHubDeliveryFee + destinationFee
 
     console.info("totalXcmBridgeFee:", totalXcmBridgeFee)
-    console.info("destinationFeeInDestAsset:", destinationFeeInDestAsset)
+    console.info("destinationFeeInDestAsset:", destinationFeeInDestNative)
     console.info("destinationFee:", destinationFee)
     console.info("bridgeHubDeliveryFee:", bridgeHubDeliveryFee)
     console.info("Total fee in native:", totalFee)
@@ -595,7 +595,7 @@ export function createERC20ToKusamaTx(
     tokenLocation: any,
     beneficiaryAccount: string,
     amount: bigint,
-    totalFeeInNative: bigint,
+    destFeeInSourceNative: bigint,
     topic: string
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any
@@ -604,7 +604,7 @@ export function createERC20ToKusamaTx(
             v4: [
                 {
                     id: NATIVE_TOKEN_LOCATION,
-                    fun: { Fungible: totalFeeInNative + amount },
+                    fun: { Fungible: destFeeInSourceNative + amount },
                 },
             ],
         }
@@ -613,7 +613,7 @@ export function createERC20ToKusamaTx(
             v4: [
                 {
                     id: NATIVE_TOKEN_LOCATION,
-                    fun: { Fungible: totalFeeInNative },
+                    fun: { Fungible: destFeeInSourceNative },
                 },
                 {
                     id: tokenLocation,
@@ -654,7 +654,7 @@ export function createERC20ToPolkadotTx(
     tokenLocation: any,
     beneficiaryAccount: string,
     amount: bigint,
-    totalFeeInNative: bigint,
+    destFeeInSourceNative: bigint,
     topic: string
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any
@@ -664,7 +664,7 @@ export function createERC20ToPolkadotTx(
             v4: [
                 {
                     id: NATIVE_TOKEN_LOCATION,
-                    fun: { Fungible: totalFeeInNative + amount },
+                    fun: { Fungible: destFeeInSourceNative + amount },
                 },
             ],
         }
@@ -674,7 +674,7 @@ export function createERC20ToPolkadotTx(
             v4: [
                 {
                     id: NATIVE_TOKEN_LOCATION,
-                    fun: { Fungible: totalFeeInNative },
+                    fun: { Fungible: destFeeInSourceNative },
                 },
                 {
                     id: tokenLocation,
@@ -837,14 +837,17 @@ async function buildMessageId(
 }
 
 function getTokenLocation(registry: AssetRegistry, direction: Direction, tokenAddress: string) {
+    console.log("getTokenLocation:", direction, tokenAddress)
     let location
     if (direction == Direction.ToPolkadot) {
         location =
             registry.kusama?.parachains[registry.kusama?.assetHubParaId].assets[tokenAddress]
                 .location
+        console.log("location:", location)
         if (!location) {
             location = erc20Location(registry.ethChainId, tokenAddress)
         }
+        console.dir(location, {depth: 10})
     } else {
         location = registry.parachains[registry.assetHubParaId].assets[tokenAddress].location
         if (!location) {

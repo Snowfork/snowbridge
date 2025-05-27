@@ -801,7 +801,7 @@ export async function calculateDestinationFee(provider: ApiPromise, destinationX
 }
 
 export async function quoteFeeSwap(provider: ApiPromise, asset1: any, asset2: any, amount: bigint) {
-    const result = await provider.call.assetConversionApi.quotePriceExactTokensForTokens(
+    const result = await provider.call.assetConversionApi.quotePriceTokensForExactTokens(
         asset1,
         asset2,
         amount,
