@@ -837,17 +837,14 @@ async function buildMessageId(
 }
 
 function getTokenLocation(registry: AssetRegistry, direction: Direction, tokenAddress: string) {
-    console.log("getTokenLocation:", direction, tokenAddress)
     let location
     if (direction == Direction.ToPolkadot) {
         location =
             registry.kusama?.parachains[registry.kusama?.assetHubParaId].assets[tokenAddress]
                 .location
-        console.log("location:", location)
         if (!location) {
             location = erc20Location(registry.ethChainId, tokenAddress)
         }
-        console.dir(location, {depth: 10})
     } else {
         location = registry.parachains[registry.assetHubParaId].assets[tokenAddress].location
         if (!location) {
