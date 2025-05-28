@@ -184,21 +184,11 @@ export async function getDeliveryFee(
             destinationParaId,
             destinationXcm
         )
-        if (destParachain.features.hasXcmPaymentApi) {
-            const destinationImpl = await getParachainImplementationFor(destination)
-            destinationExecutionFeeDOT = padFeeByPercentage(
-                await destinationImpl.calculateXcmFee(destinationXcm, DOT_LOCATION),
-                paddFeeByPercentage ?? 33n
-            )
-        } else {
-            console.warn(
-                `Parachain ${destinationParaId} does not support payment apis. Using a high estimated fee.`
-            )
-            destinationExecutionFeeDOT = padFeeByPercentage(
-                destParachain.estimatedExecutionFeeDOT,
-                100n
-            )
-        }
+        const destinationImpl = await getParachainImplementationFor(destination)
+        destinationExecutionFeeDOT = padFeeByPercentage(
+            await destinationImpl.calculateXcmFee(destinationXcm, DOT_LOCATION),
+            paddFeeByPercentage ?? 33n
+        )
     }
     const totalFeeInDOT = destinationExecutionFeeDOT + destinationDeliveryFeeDOT
     return {

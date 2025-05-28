@@ -467,21 +467,12 @@ export async function getDeliveryFee(
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
     let returnToSenderDeliveryFeeDOT = 0n
-    let bridgeHubDeliveryFeeDOT = 0n
     const ahParachain = registry.parachains[registry.assetHubParaId]
     const assetHubImpl = await getParachainProviderFor(assetHub)
-    if (ahParachain.features.hasXcmPaymentApi) {
-        bridgeHubDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
-            registry.bridgeHubParaId,
-            forwardedXcm
-        )
-    } else {
-        console.warn(
-            `Parachain ${ahParachain.parachainId} does not support payment apis. Using a high estimated fee.`
-        )
-        bridgeHubDeliveryFeeDOT =
-            registry.parachains[registry.assetHubParaId].estimatedDeliveryFeeDOT || 1_000_000_000n
-    }
+    const bridgeHubDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
+        registry.bridgeHubParaId,
+        forwardedXcm
+    )
     if (parachain !== registry.assetHubParaId) {
         let returnToSenderXcm: any
         if (sourceAssetMetadata.location) {
@@ -509,21 +500,11 @@ export async function getDeliveryFee(
             parachain,
             returnToSenderXcm
         )
-        if (registry.parachains[parachain].features.hasXcmPaymentApi) {
-            const sourceParachainImpl = await getParachainProviderFor(source)
-            returnToSenderExecutionFeeDOT = padFeeByPercentage(
-                await sourceParachainImpl.calculateXcmFee(returnToSenderXcm, DOT_LOCATION),
-                feePadPercentage
-            )
-        } else {
-            console.warn(
-                `Parachain ${parachain} does not support payment apis. Using a manually estimated fee.`
-            )
-            returnToSenderExecutionFeeDOT = padFeeByPercentage(
-                registry.parachains[parachain].estimatedExecutionFeeDOT,
-                feePadPercentage
-            )
-        }
+        const sourceParachainImpl = await getParachainProviderFor(source)
+        returnToSenderExecutionFeeDOT = padFeeByPercentage(
+            await sourceParachainImpl.calculateXcmFee(returnToSenderXcm, DOT_LOCATION),
+            feePadPercentage
+        )
         assetHubExecutionFeeDOT = padFeeByPercentage(
             await assetHubImpl.calculateXcmFee(xcm, DOT_LOCATION),
             feePadPercentage
