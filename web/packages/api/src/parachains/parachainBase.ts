@@ -1,6 +1,6 @@
-import { ApiPromise } from "@polkadot/api";
-import { Asset, AssetMap, ChainProperties, PNAMap, SubstrateAccount } from "src/assets_v2";
-import { erc20Location } from "../xcmBuilder";
+import { ApiPromise } from "@polkadot/api"
+import { Asset, AssetMap, ChainProperties, PNAMap, SubstrateAccount } from "src/assets_v2"
+import { erc20Location } from "../xcmBuilder"
 
 export abstract class ParachainBase {
     provider: ApiPromise
@@ -77,7 +77,12 @@ export abstract class ParachainBase {
         return acc.data.free
     }
 
-    getTokenBalance(account: string, ethChainId: number, tokenAddress: string, asset?: Asset): Promise<bigint> {
+    getTokenBalance(
+        account: string,
+        ethChainId: number,
+        tokenAddress: string,
+        asset?: Asset
+    ): Promise<bigint> {
         return this.getLocationBalance(
             asset?.location ?? erc20Location(ethChainId, tokenAddress),
             account,
@@ -139,7 +144,11 @@ export abstract class ParachainBase {
         return deliveryFee
     }
 
-    async getConversationPalletSwap(asset1: any, asset2: any, exactAsset2Balance: bigint): Promise<bigint> {
+    async getConversationPalletSwap(
+        asset1: any,
+        asset2: any,
+        exactAsset2Balance: bigint
+    ): Promise<bigint> {
         const result = await this.provider.call.assetConversionApi.quotePriceTokensForExactTokens(
             asset1,
             asset2,
@@ -148,13 +157,17 @@ export abstract class ParachainBase {
         )
         const asset1Balance = result.toPrimitive() as any
         if (asset1Balance == null) {
-            throw Error(`No pool set up in asset conversion pallet for '${JSON.stringify(asset1)}' and '${JSON.stringify(asset2)}'.`)
+            throw Error(
+                `No pool set up in asset conversion pallet for '${JSON.stringify(
+                    asset1
+                )}' and '${JSON.stringify(asset2)}'.`
+            )
         }
         return BigInt(asset1Balance)
     }
 
-    abstract getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint>;
-    abstract getDotBalance(account: string): Promise<bigint>;
-    abstract getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap>;
-    abstract getXC20DOT(): string|undefined;
+    abstract getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint>
+    abstract getDotBalance(account: string): Promise<bigint>
+    abstract getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap>
+    abstract getXC20DOT(): string | undefined
 }

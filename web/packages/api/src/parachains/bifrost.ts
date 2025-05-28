@@ -1,6 +1,6 @@
-import { AssetMap, PNAMap } from "src/assets_v2";
-import { ParachainBase } from "./parachainBase";
-import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder";
+import { AssetMap, PNAMap } from "src/assets_v2"
+import { ParachainBase } from "./parachainBase"
+import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
 export class BifrostParachain extends ParachainBase {
     getXC20DOT() {

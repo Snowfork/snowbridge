@@ -467,11 +467,14 @@ export async function getDeliveryFee(
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
     let returnToSenderDeliveryFeeDOT = 0n
-    let bridgeHubDeliveryFeeDOT = 0n 
+    let bridgeHubDeliveryFeeDOT = 0n
     const ahParachain = registry.parachains[registry.assetHubParaId]
     const assetHubImpl = await getParachainProviderFor(assetHub)
     if (ahParachain.features.hasXcmPaymentApi) {
-        bridgeHubDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(registry.bridgeHubParaId, forwardedXcm)
+        bridgeHubDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
+            registry.bridgeHubParaId,
+            forwardedXcm
+        )
     } else {
         console.warn(
             `Parachain ${ahParachain.parachainId} does not support payment apis. Using a high estimated fee.`
@@ -649,10 +652,10 @@ export async function validateTransfer(
 
     const logs: ValidationLog[] = []
     const sourceParachainImpl = await getParachainProviderFor(sourceParachain)
-    const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex);
+    const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
     let dotBalance: bigint | undefined = undefined
     if (source.features.hasDotBalance) {
-        dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex);
+        dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
     }
     let tokenBalance: any
     let isNativeBalance = false
@@ -929,18 +932,14 @@ export async function validateTransferEvm(
     const logs: ValidationLog[] = []
     let dotBalance: bigint | undefined = undefined
     if (source.features.hasDotBalance) {
-        dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex);
+        dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
     }
     let isNativeBalanceTransfer =
         sourceAssetMetadata.decimals === source.info.tokenDecimals &&
         sourceAssetMetadata.symbol == source.info.tokenSymbols
     const [nativeBalance, tokenBalance] = await Promise.all([
         sourceParachainImpl.getNativeBalance(sourceAccountHex),
-        sourceParachainImpl.getTokenBalance(
-            sourceAccountHex,
-            registry.ethChainId,
-            tokenAddress
-        ),
+        sourceParachainImpl.getTokenBalance(sourceAccountHex, registry.ethChainId, tokenAddress),
     ])
 
     let nativeBalanceCheckFailed = false
