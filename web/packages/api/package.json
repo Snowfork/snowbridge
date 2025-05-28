@@ -27,11 +27,11 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@polkadot/api": "^16.0.1",
-    "@polkadot/keyring": "^13.5.1",
-    "@polkadot/types": "^16.0.1",
-    "@polkadot/util": "^13.5.1",
-    "@polkadot/util-crypto": "^13.5.1",
+    "@polkadot/api": "^15.10.2",
+    "@polkadot/keyring": "^13.4.4",
+    "@polkadot/types": "^15.10.2",
+    "@polkadot/util": "^13.4.4",
+    "@polkadot/util-crypto": "^13.4.4",
     "@snowbridge/contract-types": "workspace:*",
     "@typechain/ethers-v6": "^0.5.1",
     "ethers": "^6.13.5",
