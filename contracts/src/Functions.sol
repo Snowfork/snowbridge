@@ -15,8 +15,6 @@ import {TokenInfo} from "./types/Common.sol";
 import {ChannelID, Channel} from "./v1/Types.sol";
 import {IGatewayBase} from "./interfaces/IGatewayBase.sol";
 import {IGatewayV1} from "./v1/IGateway.sol";
-import {IGatewayV2} from "./v2/IGateway.sol";
-import {OperatingMode} from "./types/Common.sol";
 
 // Common functionality that is shared between V1 and V2
 library Functions {
@@ -94,6 +92,11 @@ library Functions {
     }
 
     function registerNativeToken(address token) internal {
+        // Validate that the token address is a contract
+        if (!token.isContract()) {
+            revert InvalidToken();
+        }
+        
         // NOTE: Explicitly allow a native token to be re-registered. This offers resiliency
         // in case a previous registration attempt of the same token failed on the remote side.
         // It means that registration can be retried.
@@ -103,9 +106,9 @@ library Functions {
         if (info.isRegistered && info.isForeign()) {
             // Prevent re-registration of foreign tokens as native tokens
             revert IGatewayBase.TokenAlreadyRegistered();
-        } else if (!info.isRegistered) {
-            info.isRegistered = true;
         }
+
+        info.isRegistered = true;
     }
 
     /// Creates a new wrapped ERC20 token for a foreign token

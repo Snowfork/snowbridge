@@ -4,10 +4,9 @@ use ethers::{
 };
 use futures::StreamExt;
 use penpal::api::runtime_types as penpalTypes;
-use penpalTypes::penpal_runtime::RuntimeCall as PenpalRuntimeCall;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{i_gateway, weth9},
+	contracts::{i_gateway_v1, weth9},
 	helper::initial_clients,
 	parachains::{
 		assethub::api::{
@@ -23,15 +22,12 @@ use snowbridge_smoketest::{
 		},
 		penpal::{self, api::foreign_assets::events::Issued as PenpalIssued},
 	},
-	penpal_helper::PenpalConfig,
+	penpal_helper::{
+		dot_location, ensure_penpal_asset_exists, set_reserve_asset_storage, weth_location,
+		PenpalConfig,
+	},
 };
-use sp_crypto_hashing::twox_128;
-use subxt::{
-	ext::codec::Encode,
-	tx::PairSigner,
-	utils::{AccountId32, MultiAddress},
-	OnlineClient,
-};
+use subxt::{ext::codec::Encode, utils::AccountId32, OnlineClient};
 
 #[tokio::test]
 async fn send_token_to_penpal() {
@@ -43,7 +39,7 @@ async fn send_token_to_penpal() {
 		.expect("can not connect to penpal parachain");
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
+	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, ethereum_client.clone());
 
 	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
@@ -88,7 +84,7 @@ async fn send_token_to_penpal() {
 		.send_token(
 			weth.address(),
 			PENPAL_PARA_ID,
-			i_gateway::MultiAddress { kind: 1, data: (*FERDIE_PUBLIC).into() },
+			i_gateway_v1::MultiAddress { kind: 1, data: (*FERDIE_PUBLIC).into() },
 			4_000_000_000,
 			amount,
 		)

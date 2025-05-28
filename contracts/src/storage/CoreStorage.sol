@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.28;
 
-import {Channel, OperatingMode, ChannelID, ParaID} from "../v1/Types.sol";
+import {Channel, OperatingMode, ChannelID} from "../v1/Types.sol";
 import {SparseBitmap} from "../utils/SparseBitmap.sol";
 
 library CoreStorage {
@@ -13,6 +13,8 @@ library CoreStorage {
         mapping(ChannelID channelID => Channel) channels;
         // Agents
         mapping(bytes32 agentID => address) agents;
+        // Reserve slot to prevent state collision
+        uint256 __gap;
         // V2
         SparseBitmap inboundNonce;
         uint64 outboundNonce;

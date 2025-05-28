@@ -283,6 +283,36 @@ contract GatewayV2Test is Test {
         );
     }
 
+    function testSubmitFailNotEnoughGas() public {
+        bytes32 topic = keccak256("topic");
+
+        // Create a command with very high gas requirement
+        CommandV2[] memory commands = new CommandV2[](1);
+        SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[0] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 30_000_000, // Extremely high gas value
+            payload: abi.encode(params)
+        });
+
+        InboundMessageV2 memory message = InboundMessageV2({
+            origin: keccak256("666"),
+            nonce: 2, // Use a different nonce from other tests
+            topic: topic,
+            commands: commands
+        });
+
+        // Limit the gas for this test to ensure we hit the NotEnoughGas error
+        uint256 gasLimit = 100_000;
+        vm.deal(relayer, 1 ether);
+
+        vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
+        vm.prank(relayer);
+        IGatewayV2(address(gateway)).v2_submit{gas: gasLimit}(
+            message, proof, makeMockProof(), relayerRewardAddress
+        );
+    }
+
     function mockNativeTokenForSend(address user, uint128 amount)
         internal
         returns (address, bytes memory, Asset memory)
@@ -490,5 +520,231 @@ contract GatewayV2Test is Test {
 
         vm.expectRevert(IGatewayV2.AgentAlreadyExists.selector);
         IGatewayV2(payable(address(gateway))).v2_createAgent(origin);
+    }
+
+    function testRegisterNativeTokenValidatesAddress() public {
+        // Try to register a non-contract address (EOA)
+        address nonContractAddress = makeAddr("nonContractAddress");
+
+        // Expect the function to revert with InvalidToken error
+        vm.expectRevert(IGatewayBase.InvalidToken.selector);
+        MockGateway(address(gateway)).prank_registerNativeToken(nonContractAddress);
+
+        // Verify that a valid token contract can be registered
+        address validTokenContract = address(new WETH9());
+        MockGateway(address(gateway)).prank_registerNativeToken(validTokenContract);
+
+        // Verify the token is registered
+        assertTrue(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
+    }
+
+    function testRegisterTokenSuccess() public {
+        address validTokenContract = address(new WETH9());
+        uint128 executionFee = 0.1 ether;
+        uint128 relayerFee = 0.2 ether;
+        uint256 totalRequired = executionFee + relayerFee;
+
+        hoax(user1, totalRequired);
+        IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired}(
+            validTokenContract,
+            uint8(0),
+            executionFee,
+            relayerFee
+        );
+
+        // Verify the token is registered
+        assertTrue(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
+    }
+
+    function testRegisterTokenFailsWithInsufficientValue() public {
+        address validTokenContract = address(new WETH9());
+        uint128 executionFee = 0.1 ether;
+        uint128 relayerFee = 0.2 ether;
+        uint256 totalRequired = executionFee + relayerFee;
+
+        // Verify token is not registered before the attempt
+        assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
+
+        vm.expectRevert(IGatewayV2.InsufficientValue.selector);
+        hoax(user1, totalRequired);
+        IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired - 1}(
+            validTokenContract,
+            uint8(0),
+            executionFee,
+            relayerFee
+        );
+
+        // Verify token still is not registered after the failed attempt
+        assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
+    }
+
+    function testRegisterTokenFailsWithExceededMaximumValue() public {
+        address validTokenContract = address(new WETH9());
+        uint128 executionFee = 0.1 ether;
+        uint128 relayerFee = 0.2 ether;
+
+        // Verify token is not registered before the attempt
+        assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
+
+        vm.expectRevert(IGatewayV2.ExceededMaximumValue.selector);
+        uint256 value = uint256(type(uint128).max) + 1;
+        hoax(user1, value);
+        IGatewayV2(payable(address(gateway))).v2_registerToken{value: value}(
+            validTokenContract,
+            uint8(0),
+            executionFee,
+            relayerFee
+        );
+
+        // Verify token still is not registered after the failed attempt
+        assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
+    }
+
+    function testPartialCommandExecution() public {
+        bytes32 topic = keccak256("topic");
+
+        // Create a compound set of commands, where the second one will fail
+        CommandV2[] memory commands = new CommandV2[](3);
+
+        // First command should succeed - SetOperatingMode
+        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[0] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params1)
+        });
+
+        // Second command should fail - Call a function that reverts
+        bytes memory failingData = abi.encodeWithSignature("revertUnauthorized()");
+        CallContractParams memory params2 = CallContractParams({
+            target: address(helloWorld),
+            data: failingData,
+            value: 0
+        });
+        commands[1] = CommandV2({
+            kind: CommandKind.CallContract,
+            gas: 500_000,
+            payload: abi.encode(params2)
+        });
+
+        // Third command should succeed - SetOperatingMode again
+        SetOperatingModeParams memory params3 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[2] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params3)
+        });
+
+        // Expect the failed command to emit CommandFailed event
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 1); // nonce 1, command index 1
+
+        // Expect InboundMessageDispatched to be emitted with success=false since not all commands succeeded
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: keccak256("666"),
+                nonce: 1,
+                topic: topic,
+                commands: commands
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
+        );
+    }
+
+    function testUnknownCommandType() public {
+        bytes32 topic = keccak256("topic");
+
+        // Create a command with an unknown command type
+        CommandV2[] memory commands = new CommandV2[](2);
+
+        // First command should succeed
+        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[0] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params1)
+        });
+
+        // Second command is invalid
+        commands[1] = CommandV2({
+            kind: 255, // Invalid command kind
+            gas: 500_000,
+            payload: abi.encode(bytes32(0))
+        });
+
+        // Expect the unknown command to emit CommandFailed event
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(2, 1); // nonce 2, command index 1
+
+        // Expect InboundMessageDispatched to be emitted with success=false
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(2, topic, false, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: keccak256("666"),
+                nonce: 2,
+                topic: topic,
+                commands: commands
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
+        );
+    }
+
+    function testMultipleSuccessfulCommands() public {
+        bytes32 topic = keccak256("topic");
+
+        // Create multiple commands that should all succeed
+        CommandV2[] memory commands = new CommandV2[](3);
+
+        // First command - SetOperatingMode to Normal
+        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[0] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params1)
+        });
+
+        // Second command - Set mode to RejectingOutboundMessages (will succeed)
+        SetOperatingModeParams memory params2 = SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
+        commands[1] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params2)
+        });
+
+        // Third command - Also set mode to Normal again (will succeed)
+        SetOperatingModeParams memory params3 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        commands[2] = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 500_000,
+            payload: abi.encode(params3)
+        });
+
+        // Expect InboundMessageDispatched to be emitted with success=true since all commands should succeed
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(3, topic, true, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: keccak256("666"),
+                nonce: 3,
+                topic: topic,
+                commands: commands
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
+        );
     }
 }

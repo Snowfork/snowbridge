@@ -3,22 +3,14 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "../interfaces/IERC20.sol";
-
 import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
 import {IGatewayV2} from "./IGateway.sol";
-
 import {SafeNativeTransfer, SafeTokenTransfer} from "../utils/SafeTransfer.sol";
-
 import {AssetsStorage, TokenInfo} from "../storage/AssetsStorage.sol";
 import {CoreStorage} from "../storage/CoreStorage.sol";
-import {PricingStorage} from "../storage/PricingStorage.sol";
-import {SubstrateTypes} from "../SubstrateTypes.sol";
 import {Address} from "../utils/Address.sol";
-import {AgentExecutor} from "../AgentExecutor.sol";
 import {Agent} from "../Agent.sol";
-import {Call} from "../utils/Call.sol";
 import {Token} from "../Token.sol";
-import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
 import {Constants} from "../Constants.sol";
 
@@ -75,9 +67,6 @@ library CallsV2 {
         uint128 executionFee,
         uint128 relayerFee
     ) internal {
-        require(msg.value <= type(uint128).max, IGatewayV2.ExceededMaximumValue());
-        require(msg.value >= executionFee + relayerFee, IGatewayV2.InsufficientValue());
-
         Xcm memory xcm = makeCreateAssetXCM(token, network);
 
         Functions.registerNativeToken(token);
