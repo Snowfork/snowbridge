@@ -180,7 +180,10 @@ export async function getDeliveryFee(
         }
 
         const assetHubImpl = await getParachainImplementationFor(assetHub)
-        destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(destinationParaId, destinationXcm)
+        destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
+            destinationParaId,
+            destinationXcm
+        )
         if (destParachain.features.hasXcmPaymentApi) {
             const destinationImpl = await getParachainImplementationFor(destination)
             destinationExecutionFeeDOT = padFeeByPercentage(
@@ -282,12 +285,7 @@ async function validateAccount(
     // Check if the acocunt is created
     const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
         parachainImpl.getNativeAccount(beneficiaryAddress),
-        parachainImpl.getTokenBalance(
-            beneficiaryAddress,
-            ethChainId,
-            tokenAddress,
-            assetMetadata
-        ),
+        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
     ])
     return {
         accountExists: !(

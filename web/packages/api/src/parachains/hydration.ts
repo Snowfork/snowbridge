@@ -1,6 +1,6 @@
-import { AssetMap, PNAMap } from "src/assets_v2";
-import { ParachainBase } from "./parachainBase";
-import { convertToXcmV3X1, DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder";
+import { AssetMap, PNAMap } from "src/assets_v2"
+import { ParachainBase } from "./parachainBase"
+import { convertToXcmV3X1, DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
 export class HydrationParachain extends ParachainBase {
     getXC20DOT() {
