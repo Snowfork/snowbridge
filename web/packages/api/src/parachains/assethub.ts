@@ -1,6 +1,6 @@
-import { AssetMap, PNAMap } from "src/assets_v2";
-import { ParachainBase } from "./parachainBase";
-import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder";
+import { AssetMap, PNAMap } from "src/assets_v2"
+import { ParachainBase } from "./parachainBase"
+import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
 export const WESTEND_GENESIS = "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
 
@@ -34,7 +34,9 @@ export class AssetHubParachain extends ParachainBase {
             for (const [key, value] of entries) {
                 const location: any = key.args.at(0)?.toJSON()
                 if (!location) {
-                    console.warn(`Could not convert ${key.toHuman()} to location for ${this.specName}.`)
+                    console.warn(
+                        `Could not convert ${key.toHuman()} to location for ${this.specName}.`
+                    )
                     continue
                 }
                 const token = getTokenFromLocation(location, ethChainId)
@@ -59,19 +61,25 @@ export class AssetHubParachain extends ParachainBase {
         }
         // PNA
         {
-            for (const { token, foreignId, ethereumlocation } of Object.keys(pnas).map(p => pnas[p])) {
+            for (const { token, foreignId, ethereumlocation } of Object.keys(pnas).map(
+                (p) => pnas[p]
+            )) {
                 const locationOnAH: any = bridgeablePNAsOnAH(ethereumlocation, this.parachainId)
                 if (!locationOnAH) {
-                    console.warn(`Location ${JSON.stringify(ethereumlocation)} is not bridgeable on assethub`)
+                    console.warn(
+                        `Location ${JSON.stringify(ethereumlocation)} is not bridgeable on assethub`
+                    )
                     continue
                 }
 
                 if (locationOnAH?.parents == 0) {
                     const assetId = locationOnAH?.interior?.x2[1]?.generalIndex
-                    const [assetInfo, assetMeta] = (await Promise.all([
-                        this.provider.query.assets.asset(assetId), 
-                        this.provider.query.assets.metadata(assetId)]
-                    )).map(encoded => encoded.toPrimitive() as any)
+                    const [assetInfo, assetMeta] = (
+                        await Promise.all([
+                            this.provider.query.assets.asset(assetId),
+                            this.provider.query.assets.metadata(assetId),
+                        ])
+                    ).map((encoded) => encoded.toPrimitive() as any)
 
                     assets[token.toLowerCase()] = {
                         token: token.toLowerCase(),
@@ -90,8 +98,9 @@ export class AssetHubParachain extends ParachainBase {
                     locationOnAH?.parents == DOT_LOCATION.parents &&
                     locationOnAH?.interior == DOT_LOCATION.interior
                 ) {
-                    let existentialDeposit = this.provider.consts.balances.existentialDeposit.toPrimitive()
-                    const chainInfo = await this.chainProperties();
+                    let existentialDeposit =
+                        this.provider.consts.balances.existentialDeposit.toPrimitive()
+                    const chainInfo = await this.chainProperties()
 
                     assets[token.toLowerCase()] = {
                         token: token.toLowerCase(),
@@ -106,11 +115,16 @@ export class AssetHubParachain extends ParachainBase {
                         isSufficient: true,
                     }
                 } else {
-                    const assetType = this.provider.registry.createType("StagingXcmV4Location", locationOnAH)
-                    const [assetInfo, assetMeta] = (await Promise.all([
-                        this.provider.query.foreignAssets.asset(assetType), 
-                        this.provider.query.foreignAssets.metadata(assetType)]
-                    )).map(encoded => encoded.toPrimitive() as any)
+                    const assetType = this.provider.registry.createType(
+                        "StagingXcmV4Location",
+                        locationOnAH
+                    )
+                    const [assetInfo, assetMeta] = (
+                        await Promise.all([
+                            this.provider.query.foreignAssets.asset(assetType),
+                            this.provider.query.foreignAssets.metadata(assetType),
+                        ])
+                    ).map((encoded) => encoded.toPrimitive() as any)
 
                     assets[token.toLowerCase()] = {
                         token: token.toLowerCase(),
