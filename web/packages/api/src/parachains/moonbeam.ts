@@ -1,8 +1,8 @@
 import { ApiPromise } from "@polkadot/api"
 import { ethers } from "ethers"
-import { ParachainBase } from "./parachain"
-import { AssetMap, } from "src/assets_v2"
-import { convertToXcmV3X1, DOT_LOCATION, getTokenFromLocation } from "src/xcmBuilder"
+import { ParachainBase } from "./parachainBase"
+import { AssetMap, PNAMap, } from "src/assets_v2"
+import { convertToXcmV3X1, DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
 const MOONBEAM_ERC20_ABI = [
     "function name() view returns (string)",
@@ -94,6 +94,12 @@ export async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: strin
 }
 
 export class MoonbeamParachain extends ParachainBase {
+    #xcDOT?: string
+
+    getXC20DOT() {
+        return this.#xcDOT
+    }
+
     async getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint> {
         let paraAssetId = pnaAssetId
         if (!paraAssetId) {
@@ -129,9 +135,8 @@ export class MoonbeamParachain extends ParachainBase {
         return this.getLocationBalance(DOT_LOCATION, account)
     }
 
-    async getAssets(ethChainId: number): Promise<AssetMap> {
+    async getAssets(ethChainId: number, _pnas: PNAMap): Promise<AssetMap> {
         const assets: AssetMap = {}
-        const entries = await this.provider.query.assetManager.assetIdType.entries()
         let xcDOT: string | undefined
         const foreignEntries = await this.provider.query.evmForeignAssets.assetsById.entries()
         for (const [key, value] of foreignEntries) {
@@ -141,7 +146,7 @@ export class MoonbeamParachain extends ParachainBase {
             const xc20 = toMoonbeamXC20(assetId)
 
             if (location.parents === 1 && location.interior.here !== undefined) {
-                xcDOT = xc20
+                this.#xcDOT = xc20
             }
 
             const token = getTokenFromLocation(location, ethChainId)

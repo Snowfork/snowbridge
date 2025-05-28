@@ -1,7 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { DOT_LOCATION, erc20Location } from "../xcmBuilder"
-import { AssetMap, getNativeBalance } from "../assets_v2"
-import { ParachainBase } from "./parachain"
+import { AssetMap, PNAMap } from "../assets_v2"
+import { ParachainBase } from "./parachainBase"
 
 export const MUSE_CHAIN_ID = 11155111 // Sepolia
 export const MUSE_TOKEN_ID = "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee"
@@ -9,20 +9,25 @@ export const MYTHOS_CHAIN_ID = 1 // Ethereum Mainnet
 export const MYTHOS_TOKEN_ID = "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003"
 
 export class MythosParachain extends ParachainBase {
-    async getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint> {
+    getXC20DOT() {
+        return undefined;
+    }
+
+    async getLocationBalance(location: any, account: string, _pnaAssetId?: any): Promise<bigint> {
         if (this.specName === "muse" && JSON.stringify(location) == JSON.stringify(erc20Location(MUSE_CHAIN_ID, MUSE_TOKEN_ID))) {
-            return await getNativeBalance(this.provider, account);
+            return await this.getNativeBalance(account);
         } else if (this.specName === "mythos" && JSON.stringify(location) == JSON.stringify(erc20Location(MYTHOS_CHAIN_ID, MYTHOS_TOKEN_ID))) {
-            return await getNativeBalance(this.provider, account);
+            return await this.getNativeBalance(account);
         } else {
             throw Error(`Cannot get balance for spec ${this.specName}. Location = ${JSON.stringify(location)}`)
         }
     }
-    getDotBalance(account: string): Promise<bigint> {
+
+    getDotBalance(_account: string): Promise<bigint> {
         throw Error(`Cannot get DOT balance for spec ${this.specName}.`)
     }
 
-    async getAssets(): Promise<AssetMap> {
+    async getAssets(_ethChainId: number, _pnas: PNAMap): Promise<AssetMap> {
         const assets: AssetMap = {}
         if (this.specName === "muse") {
             assets[MUSE_TOKEN_ID.toLowerCase()] = {
@@ -53,28 +58,5 @@ export class MythosParachain extends ParachainBase {
             return this.specName === "muse" ? 200_000_000_000n : 100_000_000n;
         }
         return await this.calculateXcmFee(destinationXcm, asset);
-    }
-}
-
-export async function getMythosLocationBalance(
-    location: any,
-    provider: ApiPromise,
-    specName: string,
-    account: string
-) {
-    if (
-        specName === "muse" &&
-        JSON.stringify(location) == JSON.stringify(erc20Location(MUSE_CHAIN_ID, MUSE_TOKEN_ID))
-    ) {
-        return await getNativeBalance(provider, account)
-    } else if (
-        specName === "mythos" &&
-        JSON.stringify(location) == JSON.stringify(erc20Location(MYTHOS_CHAIN_ID, MYTHOS_TOKEN_ID))
-    ) {
-        return await getNativeBalance(provider, account)
-    } else {
-        throw Error(
-            `Cannot get balance for spec ${specName}. Location = ${JSON.stringify(location)}`
-        )
     }
 }
