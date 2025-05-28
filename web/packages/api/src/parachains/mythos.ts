@@ -10,16 +10,27 @@ export const MYTHOS_TOKEN_ID = "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003"
 
 export class MythosParachain extends ParachainBase {
     getXC20DOT() {
-        return undefined;
+        return undefined
     }
 
     async getLocationBalance(location: any, account: string, _pnaAssetId?: any): Promise<bigint> {
-        if (this.specName === "muse" && JSON.stringify(location) == JSON.stringify(erc20Location(MUSE_CHAIN_ID, MUSE_TOKEN_ID))) {
-            return await this.getNativeBalance(account);
-        } else if (this.specName === "mythos" && JSON.stringify(location) == JSON.stringify(erc20Location(MYTHOS_CHAIN_ID, MYTHOS_TOKEN_ID))) {
-            return await this.getNativeBalance(account);
+        if (
+            this.specName === "muse" &&
+            JSON.stringify(location) == JSON.stringify(erc20Location(MUSE_CHAIN_ID, MUSE_TOKEN_ID))
+        ) {
+            return await this.getNativeBalance(account)
+        } else if (
+            this.specName === "mythos" &&
+            JSON.stringify(location) ==
+                JSON.stringify(erc20Location(MYTHOS_CHAIN_ID, MYTHOS_TOKEN_ID))
+        ) {
+            return await this.getNativeBalance(account)
         } else {
-            throw Error(`Cannot get balance for spec ${this.specName}. Location = ${JSON.stringify(location)}`)
+            throw Error(
+                `Cannot get balance for spec ${this.specName}. Location = ${JSON.stringify(
+                    location
+                )}`
+            )
         }
     }
 
@@ -48,15 +59,19 @@ export class MythosParachain extends ParachainBase {
                 isSufficient: true,
             }
         } else {
-            throw Error(`Cannot get balance for spec ${this.specName}. Location = ${JSON.stringify(location)}`)
+            throw Error(
+                `Cannot get balance for spec ${this.specName}. Location = ${JSON.stringify(
+                    location
+                )}`
+            )
         }
-        return assets;
+        return assets
     }
 
     async calculateXcmFee(destinationXcm: any, asset: any): Promise<bigint> {
         if (JSON.stringify(asset) == JSON.stringify(DOT_LOCATION)) {
-            return this.specName === "muse" ? 200_000_000_000n : 100_000_000n;
+            return this.specName === "muse" ? 200_000_000_000n : 100_000_000n
         }
-        return await this.calculateXcmFee(destinationXcm, asset);
+        return await this.calculateXcmFee(destinationXcm, asset)
     }
 }

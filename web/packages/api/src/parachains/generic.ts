@@ -1,5 +1,5 @@
-import { PNAMap, AssetMap } from "src/assets_v2";
-import { ParachainBase } from "./parachainBase";
+import { PNAMap, AssetMap } from "src/assets_v2"
+import { ParachainBase } from "./parachainBase"
 
 export class GenericChain extends ParachainBase {
     getXC20DOT() {
@@ -7,12 +7,12 @@ export class GenericChain extends ParachainBase {
     }
 
     getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint> {
-        throw new Error("Method not implemented.");
+        throw new Error("Method not implemented.")
     }
     getDotBalance(account: string): Promise<bigint> {
         return this.getNativeBalance(account)
     }
     getAssets(_ethChainId: number, _pnas: PNAMap): Promise<AssetMap> {
-        throw new Error("Method not implemented.");
+        throw new Error("Method not implemented.")
     }
 }

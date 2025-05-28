@@ -3,10 +3,7 @@ import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api"
 import { isFunction } from "@polkadot/util"
 import { SnowbridgeEnvironment } from "./environment"
 import { Context } from "./index"
-import {
-    buildParachainERC20ReceivedXcmOnDestination,
-    DOT_LOCATION,
-} from "./xcmBuilder"
+import { buildParachainERC20ReceivedXcmOnDestination, DOT_LOCATION } from "./xcmBuilder"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID } from "./parachains/mythos"
 import { getParachainProviderFor as getParachainFor } from "./parachains"
@@ -140,8 +137,8 @@ type KusamaConfig = {
 
 export interface PNAMap {
     [token: string]: {
-        token: string,
-        foreignId: string,
+        token: string
+        foreignId: string
         ethereumlocation: any
     }
 }
@@ -216,7 +213,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         kusama,
         precompiles,
         destinationFeeOverrides,
-        assetOverrides
+        assetOverrides,
     } = options
 
     let relayInfo: ChainProperties
@@ -286,7 +283,11 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
             provider = bridgeHub
         }
         bridgeHubInfo = await (await getParachainFor(provider)).chainProperties()
-        pnaAssets = await getRegisteredPnas(provider, ethProviders[ethChainId].provider, gatewayAddress)
+        pnaAssets = await getRegisteredPnas(
+            provider,
+            ethProviders[ethChainId].provider,
+            gatewayAddress
+        )
 
         if (typeof bridgeHub === "string") {
             await provider.disconnect()
@@ -370,7 +371,9 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
     await Promise.all(
         Object.keys(providers)
             .filter((parachainKey) => providers[parachainKey].managed)
-            .map(async (parachainKey) => await providers[parachainKey].accessor.provider.disconnect())
+            .map(
+                async (parachainKey) => await providers[parachainKey].accessor.provider.disconnect()
+            )
     )
 
     // Dispose all eth connections
@@ -679,7 +682,9 @@ async function indexParachain(
         )
     }
 
-    const hasPalletXcm = isFunction(parachain.provider.tx.polkadotXcm.transferAssetsUsingTypeAndThen)
+    const hasPalletXcm = isFunction(
+        parachain.provider.tx.polkadotXcm.transferAssetsUsingTypeAndThen
+    )
     const hasDryRunRpc = isFunction(parachain.provider.rpc.system?.dryRun)
     const hasDryRunApi =
         isFunction(parachain.provider.call.dryRunApi?.dryRunCall) &&
@@ -694,7 +699,9 @@ async function indexParachain(
     let hasDotBalance = true
     try {
         await parachain.getDotBalance(
-            info.accountType === "AccountId32" ? "0x0000000000000000000000000000000000000000000000000000000000000000" : "0x0000000000000000000000000000000000000000"
+            info.accountType === "AccountId32"
+                ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+                : "0x0000000000000000000000000000000000000000"
         )
     } catch (err) {
         console.warn(`Spec ${info.specName} does not support dot ${err}`)
@@ -702,7 +709,9 @@ async function indexParachain(
     }
 
     await parachain.getNativeBalance(
-        info.accountType === "AccountId32" ? "0x0000000000000000000000000000000000000000000000000000000000000000" : "0x0000000000000000000000000000000000000000"
+        info.accountType === "AccountId32"
+            ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+            : "0x0000000000000000000000000000000000000000"
     )
 
     let estimatedExecutionFeeDOT = 0n
@@ -719,7 +728,10 @@ async function indexParachain(
                 : "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
-        estimatedDeliveryFeeDOT = await assetHub.calculateDeliveryFeeInDOT(parachainId, destinationXcm)
+        estimatedDeliveryFeeDOT = await assetHub.calculateDeliveryFeeInDOT(
+            parachainId,
+            destinationXcm
+        )
         if (hasXcmPaymentApi) {
             estimatedExecutionFeeDOT = await parachain.calculateXcmFee(destinationXcm, DOT_LOCATION)
         } else {
@@ -780,11 +792,15 @@ async function indexEthChain(
             } else {
                 const [asset, foreignId] = await Promise.all([
                     assetErc20Metadata(provider, token),
-                    gateway.queryForeignTokenID(token)],
-                )
+                    gateway.queryForeignTokenID(token),
+                ])
                 assets[token] = {
                     ...asset,
-                    foreignId: foreignId != "0x0000000000000000000000000000000000000000000000000000000000000000" ? foreignId : undefined
+                    foreignId:
+                        foreignId !=
+                        "0x0000000000000000000000000000000000000000000000000000000000000000"
+                            ? foreignId
+                            : undefined,
                 }
             }
         }
@@ -1031,10 +1047,8 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MUSE to any location but 3369
                 if (
                     path.asset === MUSE_TOKEN_ID &&
-                    (
-                        (path.destination !== 3369 && path.type === "ethereum") ||
-                        (path.source !== 3369 && path.type === "substrate")
-                    )
+                    ((path.destination !== 3369 && path.type === "ethereum") ||
+                        (path.source !== 3369 && path.type === "substrate"))
                 ) {
                     return false
                 }
@@ -1045,10 +1059,8 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MYTH to any location but 3369
                 if (
                     path.asset === MYTHOS_TOKEN_ID &&
-                    (
-                        (path.destination !== 3369 && path.type === "ethereum") ||
-                        (path.source !== 3369 && path.type === "substrate")
-                    )
+                    ((path.destination !== 3369 && path.type === "ethereum") ||
+                        (path.source !== 3369 && path.type === "substrate"))
                 ) {
                     return false
                 }
@@ -1075,11 +1087,12 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
 async function getRegisteredPnas(
     bridgehub: ApiPromise,
     ethereum: AbstractProvider,
-    gatewayAddress: string,
+    gatewayAddress: string
 ): Promise<PNAMap> {
     let gateway = IGateway__factory.connect(gatewayAddress, ethereum)
     const entries = await bridgehub.query.ethereumSystem.nativeToForeignId.entries()
-    const pnas: { [token: string]: { token: string, foreignId: string, ethereumlocation: any } } = {}
+    const pnas: { [token: string]: { token: string; foreignId: string; ethereumlocation: any } } =
+        {}
     for (const [key, value] of entries) {
         const location: any = key.args.at(0)?.toJSON()
         if (!location) {
@@ -1091,10 +1104,10 @@ async function getRegisteredPnas(
         pnas[token.toLowerCase()] = {
             token: token.toLowerCase(),
             ethereumlocation: location,
-            foreignId: tokenId
+            foreignId: tokenId,
         }
     }
-    return pnas;
+    return pnas
 }
 
 export async function getAssetHubConversationPalletSwap(

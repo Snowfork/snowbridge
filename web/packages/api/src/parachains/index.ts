@@ -10,7 +10,7 @@ import { AssetHubKusamaParachain } from "./assethubKusama"
 
 export async function getParachainProviderFor(provider: ApiPromise): Promise<ParachainBase> {
     let parachainId = 0
-    if(provider.query.parachainInfo) {
+    if (provider.query.parachainInfo) {
         const encoded = await provider.query.parachainInfo.parachainId()
         parachainId = Number(encoded.toPrimitive())
     }
@@ -44,6 +44,8 @@ export async function getParachainProviderFor(provider: ApiPromise): Promise<Par
         case "bridge-hub-polkadot":
             return new GenericChain(provider, parachainId, specName, specVersion)
         default:
-            throw Error(`No parachain provider for ParaId = ${parachainId}, Spec = ${specName}, Version = ${specVersion}`)
+            throw Error(
+                `No parachain provider for ParaId = ${parachainId}, Spec = ${specName}, Version = ${specVersion}`
+            )
     }
 }
