@@ -178,48 +178,28 @@ export async function createTransfer(
     const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
         resolveInputs(registry, tokenAddress, sourceParaId)
 
-    let messageId: string | undefined
+    let messageId: string | undefined = await buildMessageId(
+        parachain,
+        sourceParaId,
+        sourceAccountHex,
+        tokenAddress,
+        beneficiaryAccount,
+        amount
+    )
     let tx: SubmittableExtrinsic<"promise", ISubmittableResult>
     if (sourceParaId === assetHubParaId) {
-        // For PNA from foreign consensus
-        if (ahAssetMetadata.location?.parents == 2) {
-            tx = createAssetHubTxForPNAFromForeignConsensus(
-                parachain,
-                ethChainId,
-                beneficiaryAccount,
-                amount,
-                ahAssetMetadata
-            )
-        } else {
-            messageId = await buildMessageId(
-                parachain,
-                sourceParaId,
-                sourceAccountHex,
-                tokenAddress,
-                beneficiaryAccount,
-                amount
-            )
-            tx = createAssetHubTx(
-                parachain,
-                ethChainId,
-                sourceAccount,
-                beneficiaryAccount,
-                amount,
-                ahAssetMetadata,
-                fee.assetHubExecutionFeeDOT || 800_000_000_000n,
-                fee.ethereumExecutionFee,
-                messageId
-            )
-        }
-    } else {
-        messageId = await buildMessageId(
+        tx = createAssetHubTx(
             parachain,
-            sourceParaId,
-            sourceAccountHex,
-            tokenAddress,
+            ethChainId,
+            sourceAccount,
             beneficiaryAccount,
-            amount
+            amount,
+            ahAssetMetadata,
+            fee.assetHubExecutionFeeDOT || 800_000_000_000n,
+            fee.ethereumExecutionFee,
+            messageId
         )
+    } else {
         if (sourceAssetMetadata.location) {
             tx = createPNASourceParachainTx(
                 parachain,
@@ -392,9 +372,8 @@ export async function getDeliveryFee(
     defaultFee?: bigint
 ): Promise<DeliveryFee> {
     const { assetHub, source, ethereum } = connections
-    // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
     const feePadPercentage = padPercentage ?? 33n
-    const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
+    const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFeeV2:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
 
@@ -486,16 +465,11 @@ export async function getDeliveryFee(
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
     let returnToSenderDeliveryFeeDOT = 0n
-    let bridgeHubDeliveryFeeDOT =
-        registry.parachains[registry.assetHubParaId].estimatedDeliveryFeeDOT || 1_000_000_000n
-    const ahParachain = registry.parachains[registry.assetHubParaId]
-    if (ahParachain.features.hasXcmPaymentApi) {
-        bridgeHubDeliveryFeeDOT = await calculateDeliveryFee(
-            assetHub,
-            registry.bridgeHubParaId,
-            forwardedXcm
-        )
-    }
+    let bridgeHubDeliveryFeeDOT = await calculateDeliveryFee(
+        assetHub,
+        registry.bridgeHubParaId,
+        forwardedXcm
+    )
     if (parachain !== registry.assetHubParaId) {
         let returnToSenderXcm: any
         if (sourceAssetMetadata.location) {
@@ -861,9 +835,13 @@ export async function validateTransfer(
             }
         }
     }
-
-    const paymentInfo = await tx.paymentInfo(sourceAccountHex)
-    const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
+    let paymentInfo, sourceExecutionFee
+    try {
+        paymentInfo = await tx.paymentInfo(sourceAccountHex)
+        sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
+    } catch {
+        sourceExecutionFee = 1_000_000_000n
+    }
 
     // recheck total after fee estimation
     if (isNativeBalance && fee.totalFeeInNative && !nativeBalanceCheckFailed) {
@@ -1609,53 +1587,6 @@ function createPNASourceParachainTx(
         "Teleport",
         feeAsset,
         useNativeAssetAsFee ? "Teleport" : "DestinationReserve",
-        customXcm,
-        "Unlimited"
-    )
-}
-
-function createAssetHubTxForPNAFromForeignConsensus(
-    parachain: ApiPromise,
-    ethChainId: number,
-    beneficiaryAccount: string,
-    amount: bigint,
-    asset: Asset
-): SubmittableExtrinsic<"promise", ISubmittableResult> {
-    const assets = {
-        v4: [
-            {
-                id: asset.location,
-                fun: { Fungible: amount },
-            },
-        ],
-    }
-    const feeAsset = {
-        v4: asset.location,
-    }
-    const destination = { v4: bridgeLocation(ethChainId) }
-    let customXcm = parachain.registry.createType("XcmVersionedXcm", {
-        v4: [
-            {
-                depositAsset: {
-                    assets: {
-                        Wild: {
-                            AllCounted: 1,
-                        },
-                    },
-                    beneficiary: {
-                        parents: 0,
-                        interior: { x1: [{ accountKey20: { key: beneficiaryAccount } }] },
-                    },
-                },
-            },
-        ],
-    })
-    return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
-        destination,
-        assets,
-        "LocalReserve",
-        feeAsset,
-        "LocalReserve",
         customXcm,
         "Unlimited"
     )

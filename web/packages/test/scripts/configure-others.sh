@@ -7,6 +7,19 @@ source scripts/xcm-helper.sh
 config_ah() {
    register_weth_on_ah
    register_pal_on_ah
+   register_roc_on_ah
+}
+
+register_roc() {
+    # Register Roc on AH
+    local call="0x28020c1f04020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e050000003501020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c01043513020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e0c526f630c526f630c00"
+    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+    # Register Roc on BH
+    local call="0x240105020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e0c526f630c526f630c"
+    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+    # Mint Roc to Ferdie
+    # local call="0x3506020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229"
+    # send_transact_locally $ASSET_HUB_PARAID "$call" "//Ferdie"
 }
 
 register_weth_on_ah() {
@@ -93,8 +106,9 @@ function transfer_local_balance() {
 
 if [ -z "${from_start_services:-}" ]; then
     echo "config others for PNA tests"
-    config_ah
-    config_bh
-    config_penpal
+    # config_ah
+    # config_bh
+    # config_penpal
+    register_roc
     wait
 fi

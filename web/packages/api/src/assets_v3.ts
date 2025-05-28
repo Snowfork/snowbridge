@@ -1454,7 +1454,7 @@ async function indexPNAs(
                     isSufficient: true,
                 }
             } else {
-                const assetType = assethub.registry.createType("StagingXcmV4Location", locationOnAH)
+                const assetType = assethub.registry.createType("StagingXcmV5Location", locationOnAH)
                 metadataOnAH = (await assethub.query.foreignAssets.asset(assetType)).toJSON()
             }
         }
@@ -1481,6 +1481,7 @@ async function indexPNAs(
 }
 
 export const WESTEND_GENESIS = "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
+export const ROCOCO_GENESIS = "0x6408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e"
 
 // Currently, the bridgeable assets are limited to KSM, DOT, native assets on AH
 // and TEER
@@ -1567,6 +1568,20 @@ function bridgeablePNAsOnAH(environment: string, location: any, assetHubParaId: 
                         x1: [
                             {
                                 parachain: location.interior.x2[1]?.parachain,
+                            },
+                        ],
+                    },
+                }
+            } else if (
+                location.interior.x1 &&
+                location.interior.x1[0]?.globalConsensus?.byGenesis === ROCOCO_GENESIS
+            ) {
+                return {
+                    parents: 2,
+                    interior: {
+                        x1: [
+                            {
+                                globalConsensus: { byGenesis: ROCOCO_GENESIS },
                             },
                         ],
                     },
