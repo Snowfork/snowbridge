@@ -60,7 +60,6 @@ export type Parachain = {
         hasPalletXcm: boolean
         hasDryRunApi: boolean
         hasTxPaymentApi: boolean
-        hasXcmPaymentApi: boolean
         hasDryRunRpc: boolean
         hasDotBalance: boolean
     }
@@ -105,7 +104,6 @@ export type RegistryOptions = {
     kusama?: KusamaOptions
     precompiles?: PrecompileMap
     assetOverrides?: AssetOverrideMap
-    destinationFeeOverrides?: FeeOverrideMap
 }
 
 export type KusamaOptions = {
@@ -159,10 +157,6 @@ interface AssetOverrideMap {
     [paraId: string]: Asset[]
 }
 
-interface FeeOverrideMap {
-    [paraId: string]: bigint
-}
-
 interface XC20TokenMap {
     [xc20: string]: string
 }
@@ -212,7 +206,6 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         bridgeHub,
         kusama,
         precompiles,
-        destinationFeeOverrides,
         assetOverrides,
     } = options
 
@@ -339,8 +332,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
                 parachainId,
                 assetHubParaId,
                 pnaAssets,
-                assetOverrides ?? {},
-                destinationFeeOverrides ?? {}
+                assetOverrides ?? {}
             )
             return { parachainId, para }
         })
@@ -650,8 +642,7 @@ async function indexParachain(
     parachainId: number,
     assetHubParaId: number,
     pnaAssets: PNAMap,
-    assetOverrides: AssetOverrideMap,
-    destinationFeeOverrides: FeeOverrideMap
+    assetOverrides: AssetOverrideMap
 ): Promise<Parachain> {
     const info = await parachain.chainProperties()
 
@@ -678,10 +669,6 @@ async function indexParachain(
         isFunction(parachain.provider.call.dryRunApi?.dryRunCall) &&
         isFunction(parachain.provider.call.dryRunApi?.dryRunXcm)
     const hasTxPaymentApi = isFunction(parachain.provider.call.transactionPaymentApi?.queryInfo)
-    const hasXcmPaymentApi =
-        isFunction(parachain.provider.call.xcmPaymentApi?.queryXcmWeight) &&
-        isFunction(parachain.provider.call.xcmPaymentApi?.queryDeliveryFees) &&
-        isFunction(parachain.provider.call.xcmPaymentApi?.queryWeightToAssetFee)
 
     // test getting balances
     let hasDotBalance = true
@@ -720,16 +707,7 @@ async function indexParachain(
             parachainId,
             destinationXcm
         )
-        if (hasXcmPaymentApi) {
-            estimatedExecutionFeeDOT = await parachain.calculateXcmFee(destinationXcm, DOT_LOCATION)
-        } else {
-            if (!(parachainIdKey in destinationFeeOverrides)) {
-                throw Error(
-                    `Parachain ${parachainId} cannot fetch the destination fee and needs a fee override.`
-                )
-            }
-            estimatedExecutionFeeDOT = destinationFeeOverrides[parachainIdKey]
-        }
+        estimatedExecutionFeeDOT = await parachain.calculateXcmFee(destinationXcm, DOT_LOCATION)
     }
     return {
         parachainId,
@@ -738,7 +716,6 @@ async function indexParachain(
             hasDryRunApi,
             hasTxPaymentApi,
             hasDryRunRpc,
-            hasXcmPaymentApi,
             hasDotBalance,
         },
         info,
@@ -922,23 +899,9 @@ async function assetErc20Metadata(
 
 function addOverrides(envName: string, result: RegistryOptions) {
     switch (envName) {
-        case "paseo_sepolia": {
-            // Add override for mythos token and add precompile for moonbeam
-            result.destinationFeeOverrides = {
-                "3369": 200_000_000_000n,
-            }
-            break
-        }
         case "polkadot_mainnet": {
             // Add override for mythos token and add precompile for moonbeam
             result.precompiles = { "2004": "0x000000000000000000000000000000000000081a" }
-            result.destinationFeeOverrides = {
-                "3369": 100_000_000n,
-            }
-            break
-        }
-        case "westend_sepolia": {
-            result.assetOverrides = {}
             break
         }
         case "local_e2e": {
