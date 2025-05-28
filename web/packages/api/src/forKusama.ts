@@ -15,16 +15,20 @@ import {
     buildKusamaToPolkadotDestAssetHubXCM,
     buildPolkadotToKusamaDestAssetHubXCM,
     buildTransferKusamaToPolkadotExportXCM,
-    buildTransferPolkadotToKusamaExportXCM, dotLocationOnKusamaAssetHub, ksmLocationOnPolkadotAssetHub,
+    buildTransferPolkadotToKusamaExportXCM,
+    dotLocationOnKusamaAssetHub,
+    ksmLocationOnPolkadotAssetHub,
 } from "./xcmBuilder"
 import {
     Asset,
     AssetRegistry,
-    calculateDeliveryFee, calculateDestinationFee,
+    calculateDeliveryFee,
+    calculateDestinationFee,
     getNativeAccount,
     getNativeBalance,
     getTokenBalance,
-    Parachain, quoteFeeSwap,
+    Parachain,
+    quoteFeeSwap,
 } from "./assets_v2"
 import {
     CallDryRunEffects,
@@ -68,10 +72,10 @@ export enum Direction {
     ToPolkadot,
 }
 
-const KUSAMA_BASE_FEE = 10_602_492_378n; // 0.0106KSM
-const KUSAMA_FEE_PER_BYTE = 1000000n; // 0.000001 KSM
-const POLKADOT_BASE_FEE = 333_794_429n; // 0.033 DOT
-const POLKADOT_FEE_PER_BYTE = 16666n; // 0.0000016666 DOT
+const KUSAMA_BASE_FEE = 10_602_492_378n // 0.0106KSM
+const KUSAMA_FEE_PER_BYTE = 1000000n // 0.000001 KSM
+const POLKADOT_BASE_FEE = 333_794_429n // 0.033 DOT
+const POLKADOT_FEE_PER_BYTE = 16666n // 0.0000016666 DOT
 
 function resolveInputs(
     registry: AssetRegistry,
@@ -106,11 +110,11 @@ export async function getDeliveryFee(
     destAssetHub: ApiPromise,
     direction: Direction,
     registry: AssetRegistry,
-    tokenAddress: string,
+    tokenAddress: string
 ): Promise<DeliveryFee> {
     // Get base bridge fee
     // https://github.com/polkadot-fellows/runtimes/blob/main/system-parachains/asset-hubs/asset-hub-polkadot/src/xcm_config.rs#L546
-    let baseFeeInStorage = await getStorageItem(sourceAssetHub, ":XcmBridgeHubRouterBaseFee:");
+    let baseFeeInStorage = await getStorageItem(sourceAssetHub, ":XcmBridgeHubRouterBaseFee:")
     let xcmBridgeBaseFee: bigint
     if (baseFeeInStorage.eqn(0)) {
         console.warn("Asset Hub onchain XcmBridgeHubRouterBaseFee not set. Using default fee.")
@@ -125,10 +129,12 @@ export async function getDeliveryFee(
 
     // Get fee per byte
     // https://github.com/polkadot-fellows/runtimes/blob/main/system-parachains/asset-hubs/asset-hub-polkadot/src/xcm_config.rs#L551
-    let feePerByteInStorage = await getStorageItem(sourceAssetHub, ":XcmBridgeHubRouterByteFee:");
+    let feePerByteInStorage = await getStorageItem(sourceAssetHub, ":XcmBridgeHubRouterByteFee:")
     let xcmFeePerByte: bigint
     if (feePerByteInStorage.eqn(0)) {
-        console.warn("Asset Hub onchain XcmBridgeHubRouterByteFee not set. Using default fee per byte.")
+        console.warn(
+            "Asset Hub onchain XcmBridgeHubRouterByteFee not set. Using default fee per byte."
+        )
         if (direction == Direction.ToPolkadot) {
             xcmFeePerByte = KUSAMA_FEE_PER_BYTE
         } else {
@@ -138,10 +144,7 @@ export async function getDeliveryFee(
         xcmFeePerByte = BigInt(baseFeeInStorage.toString())
     }
 
-    let tokenLocation =  erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000");
-    if (tokenAddress) {
-        tokenLocation = getTokenLocation(registry, direction, tokenAddress);
-    }
+    let tokenLocation = getTokenLocation(registry, direction, tokenAddress)
 
     if (!registry.kusama) {
         throw Error("Kusama config is not set")
@@ -175,10 +178,10 @@ export async function getDeliveryFee(
         )
     }
 
-    let bytes = forwardedXcm.toU8a().length;
-    console.log("forwardedXcm length:", bytes);
-    let xcmBytesFee = (BigInt(bytes) * xcmFeePerByte);
-    let totalXcmBridgeFee = xcmBridgeBaseFee + xcmBytesFee;
+    let bytes = forwardedXcm.toU8a().length
+    console.log("forwardedXcm length:", bytes)
+    let xcmBytesFee = BigInt(bytes) * xcmFeePerByte
+    let totalXcmBridgeFee = xcmBridgeBaseFee + xcmBytesFee
     console.info("xcmBridgeBaseFee:", xcmBridgeBaseFee)
     console.info("xcmBytesFee:", xcmBytesFee)
 
@@ -206,10 +209,7 @@ export async function getDeliveryFee(
         )
     }
 
-    let destinationFeeInDestNative = await calculateDestinationFee(
-        destAssetHub,
-        destXcm
-    )
+    let destinationFeeInDestNative = await calculateDestinationFee(destAssetHub, destXcm)
 
     let bridgeHubDeliveryFee = await calculateDeliveryFee(
         sourceAssetHub,
@@ -217,11 +217,11 @@ export async function getDeliveryFee(
         forwardedXcm
     )
 
-    let feeAssetOnDest;
+    let feeAssetOnDest
     if (direction == Direction.ToPolkadot) {
-        feeAssetOnDest = ksmLocationOnPolkadotAssetHub;
+        feeAssetOnDest = ksmLocationOnPolkadotAssetHub
     } else {
-        feeAssetOnDest = dotLocationOnKusamaAssetHub;
+        feeAssetOnDest = dotLocationOnKusamaAssetHub
     }
     let destinationFee = await quoteFeeSwap(
         destAssetHub,
@@ -230,9 +230,9 @@ export async function getDeliveryFee(
         destinationFeeInDestNative
     )
     // pad destination XCM fee
-    destinationFee = destinationFee + (destinationFee * 33n / 100n)
+    destinationFee = destinationFee + (destinationFee * 33n) / 100n
     // pad destination XCM fee
-    totalXcmBridgeFee = totalXcmBridgeFee + (totalXcmBridgeFee * 33n / 100n)
+    totalXcmBridgeFee = totalXcmBridgeFee + (totalXcmBridgeFee * 33n) / 100n
 
     let totalFee = totalXcmBridgeFee + bridgeHubDeliveryFee + destinationFee
 
@@ -726,9 +726,11 @@ export async function dryRunSourceAssetHub(
 ) {
     const origin = { system: { signed: sourceAccount } }
     let result: Result<CallDryRunEffects, XcmDryRunApiError>
-    result = await source.call.dryRunApi.dryRunCall<
-        Result<CallDryRunEffects, XcmDryRunApiError>
-    >(origin, tx, 4)
+    result = await source.call.dryRunApi.dryRunCall<Result<CallDryRunEffects, XcmDryRunApiError>>(
+        origin,
+        tx,
+        4
+    )
 
     let assetHubForwarded
     let bridgeHubForwarded

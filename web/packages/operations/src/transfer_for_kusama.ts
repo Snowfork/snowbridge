@@ -100,16 +100,15 @@ export const transferForKusama = async (
 
     let tokenAddress
     if (tokenName == "DOT" || tokenName == "KSM") {
-        const assets = registry.parachains[registry.assetHubParaId].assets;
+        const assets = registry.parachains[registry.assetHubParaId].assets
         for (const [token, asset] of Object.entries(assets)) {
             if (asset.symbol === tokenName) {
-                tokenAddress = token;
+                tokenAddress = token
             }
         }
-    } else if(tokenName == "ETH")  {
+    } else if (tokenName == "ETH") {
         tokenAddress = "0x0000000000000000000000000000000000000000"
-    }
-    else {
+    } else {
         tokenAddress = snowbridgeEnv.locations[0].erc20tokensReceivable.find(
             (t) => t.id === tokenName
         )!.address
@@ -122,7 +121,13 @@ export const transferForKusama = async (
     console.log(transferName)
     {
         // Step 1. Get the delivery fee for the transaction
-        const fee = await forKusama.getDeliveryFee(sourceAssetHub, destAssetHub, direction, registry, tokenAddress)
+        const fee = await forKusama.getDeliveryFee(
+            sourceAssetHub,
+            destAssetHub,
+            direction,
+            registry,
+            tokenAddress
+        )
 
         // Step 2. Create a transfer tx
         const transfer = await forKusama.createTransfer(
@@ -150,13 +155,13 @@ export const transferForKusama = async (
         }
 
         // Step 5. Submit transaction and get receipt for tracking
-       //const response = await forKusama.signAndSend(sourceAssetHub, transfer, SOURCE_ACCOUNT, {
-       //    withSignedTransaction: true,
-       //})
-       //if (!response) {
-       //    throw Error(`Transaction ${response} not included.`)
-       //}
-       //console.log("Success message", response.messageId)
+        const response = await forKusama.signAndSend(sourceAssetHub, transfer, SOURCE_ACCOUNT, {
+            withSignedTransaction: true,
+        })
+        if (!response) {
+            throw Error(`Transaction ${response} not included.`)
+        }
+        console.log("Success message", response.messageId)
 
         await context.destroyContext()
     }

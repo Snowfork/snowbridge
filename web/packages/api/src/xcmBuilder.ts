@@ -1043,20 +1043,22 @@ export function buildTransferPolkadotToKusamaExportXCM(
             },
         },
     ]
-    let reserveAssetsDepositedDest = [{
-        id: dotLocationOnKusamaAssetHub,
-        fun: {
-            Fungible: totalFeeInNative,
+    let reserveAssetsDepositedDest = [
+        {
+            id: dotLocationOnKusamaAssetHub,
+            fun: {
+                Fungible: totalFeeInNative,
+            },
         },
-    }]
+    ]
     let withdrawAssetsDest: any[] = []
 
     if (isNative(transferTokenLocation)) {
         // If the asset transferred is DOT, only add the transfer amount to the asset
         withdrawAssetsOnSource[0].fun.Fungible =
-            withdrawAssetsOnSource[0].fun.Fungible + transferAmount;
+            withdrawAssetsOnSource[0].fun.Fungible + transferAmount
         reserveAssetsDepositedDest[0].fun.Fungible =
-            reserveAssetsDepositedDest[0].fun.Fungible + transferAmount;
+            reserveAssetsDepositedDest[0].fun.Fungible + transferAmount
     } else if (isKSMOnOtherConsensusSystem(transferTokenLocation)) {
         // If the asset transferred is KSM, reanchor to KAH
         withdrawAssetsDest = [
@@ -1112,10 +1114,10 @@ export function buildTransferPolkadotToKusamaExportXCM(
                     destination: { x1: [{ parachain: destAssetHubParaId }] },
                     xcm: [
                         {
-                            reserveAssetDeposited: reserveAssetsDepositedDest
+                            reserveAssetDeposited: reserveAssetsDepositedDest,
                         },
                         {
-                            withdrawAsset: withdrawAssetsDest
+                            withdrawAsset: withdrawAssetsDest,
                         },
                         { clearOrigin: null },
                         {
@@ -1172,20 +1174,22 @@ export function buildTransferKusamaToPolkadotExportXCM(
             },
         },
     ]
-    let reserveAssetsDepositedDest = [{
-        id: ksmLocationOnPolkadotAssetHub,
-        fun: {
-            Fungible: totalFeeInNative,
+    let reserveAssetsDepositedDest = [
+        {
+            id: ksmLocationOnPolkadotAssetHub,
+            fun: {
+                Fungible: totalFeeInNative,
+            },
         },
-    }]
+    ]
     let withdrawAssetsDest: any[] = []
 
     if (isNative(transferTokenLocation)) {
         // If the asset transferred is KSM, only add the transfer amount to the asset
         withdrawAssetsOnSource[0].fun.Fungible =
-            withdrawAssetsOnSource[0].fun.Fungible + transferAmount;
+            withdrawAssetsOnSource[0].fun.Fungible + transferAmount
         reserveAssetsDepositedDest[0].fun.Fungible =
-            reserveAssetsDepositedDest[0].fun.Fungible + transferAmount;
+            reserveAssetsDepositedDest[0].fun.Fungible + transferAmount
     } else if (isDOTOnOtherConsensusSystem(transferTokenLocation)) {
         // If the asset transferred is DOT, reanchor to KAH
         withdrawAssetsDest = [
@@ -1208,7 +1212,7 @@ export function buildTransferKusamaToPolkadotExportXCM(
     return registry.createType("XcmVersionedXcm", {
         v4: [
             {
-                withdrawAsset: withdrawAssetsDest
+                withdrawAsset: withdrawAssetsDest,
             },
             {
                 buyExecution: {
@@ -1241,7 +1245,7 @@ export function buildTransferKusamaToPolkadotExportXCM(
                     destination: { x1: [{ parachain: destAssetHubParaId }] },
                     xcm: [
                         {
-                            reserveAssetDeposited: reserveAssetsDepositedDest
+                            reserveAssetDeposited: reserveAssetsDepositedDest,
                         },
                         {
                             buyExecution: {
@@ -1255,7 +1259,7 @@ export function buildTransferKusamaToPolkadotExportXCM(
                             },
                         },
                         {
-                            withdrawAsset: withdrawAssetsDest
+                            withdrawAsset: withdrawAssetsDest,
                         },
                         { clearOrigin: null },
                         {
@@ -1303,7 +1307,7 @@ export function buildPolkadotToKusamaDestAssetHubXCM(
     if (isNative(transferTokenLocation)) {
         // If the asset transferred is DOT, only add the transfer amount to the asset
         reserveAssetsDeposited[0].fun.Fungible =
-            reserveAssetsDeposited[0].fun.Fungible + transferAmount;
+            reserveAssetsDeposited[0].fun.Fungible + transferAmount
     } else if (isKSMOnOtherConsensusSystem(transferTokenLocation)) {
         // If the asset transferred is KSM, reanchor to KAH
         withdrawAssets = [
@@ -1691,70 +1695,63 @@ export function buildExportXcmForPNA(
 }
 
 export function isEthereumAsset(location: any): boolean {
-    if (location.parents !== 2 || !location.interior) return false;
+    if (location.parents !== 2 || !location.interior) return false
 
-    const interior = location.interior;
+    const interior = location.interior
 
     const kind = Object.keys(interior).find(
-        k => k.toLowerCase() === "x1" || k.toLowerCase() === "x2"
-    );
+        (k) => k.toLowerCase() === "x1" || k.toLowerCase() === "x2"
+    )
 
-    if (!kind) return false;
+    if (!kind) return false
 
-    const values = interior[kind];
-    if (!Array.isArray(values) || values.length === 0) return false;
+    const values = interior[kind]
+    if (!Array.isArray(values) || values.length === 0) return false
 
-    const consensus = values[0];
+    const consensus = values[0]
 
     const consensusKey = Object.keys(consensus || {}).find(
-        k => k.toLowerCase() === "globalconsensus"
-    );
+        (k) => k.toLowerCase() === "globalconsensus"
+    )
 
-    if (!consensusKey) return false;
+    if (!consensusKey) return false
 
-    const consensusValue = consensus[consensusKey];
+    const consensusValue = consensus[consensusKey]
 
     return (
         typeof consensusValue === "object" &&
-        Object.keys(consensusValue).some(k => k.toLowerCase() === "ethereum")
-    );
+        Object.keys(consensusValue).some((k) => k.toLowerCase() === "ethereum")
+    )
 }
 
 export function isKSMOnOtherConsensusSystem(location: any) {
-    return matchesConsensusSystem(location, "Kusama");
+    return matchesConsensusSystem(location, "Kusama")
 }
 
 export function isDOTOnOtherConsensusSystem(location: any): boolean {
-    return matchesConsensusSystem(location, "Polkadot");
+    return matchesConsensusSystem(location, "Polkadot")
 }
 
-function matchesConsensusSystem(
-    location: any,
-    expectedSystem: string
-): boolean {
-    if (location.parents !== 2 || !location.interior) return false;
+function matchesConsensusSystem(location: any, expectedSystem: string): boolean {
+    if (location.parents !== 2 || !location.interior) return false
 
-    const kind = Object.keys(location.interior).find(
-        (k) => k.toLowerCase() === "x1"
-    );
-    if (!kind) return false;
+    const kind = Object.keys(location.interior).find((k) => k.toLowerCase() === "x1")
+    if (!kind) return false
 
-    const values = location.interior[kind];
-    if (!Array.isArray(values) || values.length === 0) return false;
+    const values = location.interior[kind]
+    if (!Array.isArray(values) || values.length === 0) return false
 
-    const consensus = values[0];
+    const consensus = values[0]
     const consensusKey = Object.keys(consensus || {}).find(
         (k) => k.toLowerCase() === "globalconsensus"
-    );
-    if (!consensusKey) return false;
+    )
+    if (!consensusKey) return false
 
-    const consensusValue = consensus[consensusKey];
+    const consensusValue = consensus[consensusKey]
     return (
         typeof consensusValue === "object" &&
-        Object.keys(consensusValue).some(
-            (k) => k.toLowerCase() === expectedSystem.toLowerCase()
-        )
-    );
+        Object.keys(consensusValue).some((k) => k.toLowerCase() === expectedSystem.toLowerCase())
+    )
 }
 
 export function isNative(location: any) {
