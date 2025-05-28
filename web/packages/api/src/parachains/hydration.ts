@@ -1,8 +1,12 @@
-import { AssetMap } from "src/assets_v2";
-import { ParachainBase } from "./parachain";
-import { convertToXcmV3X1, DOT_LOCATION, getTokenFromLocation } from "src/xcmBuilder";
+import { AssetMap, PNAMap } from "src/assets_v2";
+import { ParachainBase } from "./parachainBase";
+import { convertToXcmV3X1, DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder";
 
 export class HydrationParachain extends ParachainBase {
+    getXC20DOT() {
+        return undefined
+    }
+
     async getLocationBalance(location: any, account: string, _pnaAssetId?: any): Promise<bigint> {
         const paraAssetId = (
             await this.provider.query.assetRegistry.locationAssets(convertToXcmV3X1(location))
@@ -20,7 +24,7 @@ export class HydrationParachain extends ParachainBase {
         return this.getLocationBalance(DOT_LOCATION, account)
     }
 
-    async getAssets(ethChainId: number): Promise<AssetMap> {
+    async getAssets(ethChainId: number, _pnas: PNAMap): Promise<AssetMap> {
         const assets: AssetMap = {}
         const entries = await this.provider.query.assetRegistry.assetLocations.entries()
         for (const [id, value] of entries) {
