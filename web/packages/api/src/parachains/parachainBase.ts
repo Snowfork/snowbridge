@@ -1,11 +1,6 @@
 import { ApiPromise } from "@polkadot/api";
-import { Asset, AssetMap, ChainProperties, SubstrateAccount } from "src/assets_v2";
-import { erc20Location } from "src/xcmBuilder";
-import { MythosParachain } from "./mythos";
-import { MoonbeamParachain } from "./moonbeam";
-import { HydrationParachain } from "./hydration";
-import { AssetHubParachain } from "./assethub";
-import { BifrostParachain } from "./bifrost";
+import { Asset, AssetMap, ChainProperties, PNAMap, SubstrateAccount } from "src/assets_v2";
+import { erc20Location } from "../xcmBuilder";
 
 export abstract class ParachainBase {
     provider: ApiPromise
@@ -160,33 +155,6 @@ export abstract class ParachainBase {
 
     abstract getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint>;
     abstract getDotBalance(account: string): Promise<bigint>;
-    abstract getAssets(ethChainId: number): Promise<AssetMap>;
-}
-
-export async function getParachainProviderFor(provider: ApiPromise): Promise<ParachainBase> {
-    const encoded = await provider.query.parachainInfo.parachainId()
-    const parachainId = Number(encoded.toPrimitive())
-    const { specName, specVersion } = provider.consts.system.version.toJSON() as any
-    switch (specName) {
-        case "basilisk":
-        case "hydradx":
-            return new HydrationParachain(provider, parachainId, specName, specName)
-        case "asset-hub-paseo":
-        case "westmint":
-        case "penpal-parachain":
-        case "statemint":
-            return new AssetHubParachain(provider, parachainId, specName, specName)
-        case "bifrost":
-        case "bifrost_paseo":
-        case "bifrost_polkadot":
-            return new BifrostParachain(provider, parachainId, specName, specName)
-        case "moonriver":
-        case "moonbeam":
-            return new MoonbeamParachain(provider, parachainId, specName, specName)
-        case "muse":
-        case "mythos":
-            return new MythosParachain(provider, parachainId, specName, specName)
-        default:
-            throw Error(`No parachain provider for ParaId = ${parachainId}, Spec = ${specName}, Version = ${specVersion}`)
-    }
+    abstract getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap>;
+    abstract getXC20DOT(): string|undefined;
 }
