@@ -70,7 +70,12 @@ export class MythosParachain extends ParachainBase {
 
     async calculateXcmFee(destinationXcm: any, asset: any): Promise<bigint> {
         if (JSON.stringify(asset) == JSON.stringify(DOT_LOCATION)) {
-            return this.specName === "muse" ? 200_000_000_000n : 100_000_000n
+            console.warn(
+                `${this.specName} does not support calculating fee for asset '${JSON.stringify(
+                    asset
+                )}'. Using default.`
+            )
+            return this.specName === "muse" ? 200_000_000_000n : 150_000_000n
         }
         return await this.calculateXcmFee(destinationXcm, asset)
     }
