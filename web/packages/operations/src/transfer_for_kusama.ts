@@ -106,7 +106,10 @@ export const transferForKusama = async (
                 tokenAddress = token;
             }
         }
-    } else {
+    } else if(tokenName == "ETH")  {
+        tokenAddress = "0x0000000000000000000000000000000000000000"
+    }
+    else {
         tokenAddress = snowbridgeEnv.locations[0].erc20tokensReceivable.find(
             (t) => t.id === tokenName
         )!.address
@@ -119,7 +122,7 @@ export const transferForKusama = async (
     console.log(transferName)
     {
         // Step 1. Get the delivery fee for the transaction
-        const fee = await forKusama.getDeliveryFee(sourceAssetHub, destAssetHub, direction, registry)
+        const fee = await forKusama.getDeliveryFee(sourceAssetHub, destAssetHub, direction, registry, tokenAddress)
 
         // Step 2. Create a transfer tx
         const transfer = await forKusama.createTransfer(

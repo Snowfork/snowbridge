@@ -106,6 +106,7 @@ export async function getDeliveryFee(
     destAssetHub: ApiPromise,
     direction: Direction,
     registry: AssetRegistry,
+    tokenAddress: string,
 ): Promise<DeliveryFee> {
     // Get base bridge fee
     // https://github.com/polkadot-fellows/runtimes/blob/main/system-parachains/asset-hubs/asset-hub-polkadot/src/xcm_config.rs#L546
@@ -137,14 +138,24 @@ export async function getDeliveryFee(
         xcmFeePerByte = BigInt(baseFeeInStorage.toString())
     }
 
+    let tokenLocation =  erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000");
+    if (tokenAddress) {
+        tokenLocation = getTokenLocation(registry, direction, tokenAddress);
+    }
+
+    if (!registry.kusama) {
+        throw Error("Kusama config is not set")
+    }
+
     let forwardedXcm
     // Message from dest AH to BH
     if (direction == Direction.ToPolkadot) {
         forwardedXcm = buildTransferKusamaToPolkadotExportXCM(
             sourceAssetHub.registry,
-            erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
+            tokenLocation,
             xcmBridgeBaseFee,
             xcmBridgeBaseFee,
+            registry.kusama?.assetHubParaId,
             registry.assetHubParaId,
             100000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -153,17 +164,18 @@ export async function getDeliveryFee(
     } else {
         forwardedXcm = buildTransferPolkadotToKusamaExportXCM(
             sourceAssetHub.registry,
-            erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
+            tokenLocation,
             xcmBridgeBaseFee,
             xcmBridgeBaseFee,
             registry.assetHubParaId,
+            registry.kusama?.assetHubParaId,
             100000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
     }
 
-    let bytes = forwardedXcm.toU8a().length / 2;
+    let bytes = forwardedXcm.toU8a().length;
     console.log("forwardedXcm length:", bytes);
     let xcmBytesFee = (BigInt(bytes) * xcmFeePerByte);
     let totalXcmBridgeFee = xcmBridgeBaseFee + xcmBytesFee;
@@ -174,21 +186,21 @@ export async function getDeliveryFee(
     let destXcm
     if (direction == Direction.ToPolkadot) {
         destXcm = buildKusamaToPolkadotDestAssetHubXCM(
-            sourceAssetHub.registry,
+            destAssetHub.registry,
             totalXcmBridgeFee,
             registry.assetHubParaId,
-            erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
-            340282366920938463463374607431768211455n,
+            tokenLocation,
+            100000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
     } else {
         destXcm = buildPolkadotToKusamaDestAssetHubXCM(
-            sourceAssetHub.registry,
+            destAssetHub.registry,
             totalXcmBridgeFee,
             registry.assetHubParaId,
-            erc20Location(registry.ethChainId, "0x0000000000000000000000000000000000000000"), // actual token location doesn't matter here, just weighing the message
-            340282366920938463463374607431768211455n,
+            tokenLocation,
+            100000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
