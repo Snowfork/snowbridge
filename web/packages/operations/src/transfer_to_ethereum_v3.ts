@@ -92,14 +92,13 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         // Step 3. Estimate the cost of the execution cost of the transaction
         console.log("call: ", transfer.tx.inner.toHex())
         console.log("utx: ", transfer.tx.toHex())
-        // Todo: Figure out the error `Extrinsic: ExtrinsicV5 does not include signing support`
-        // const feePayment = (
-        //     await transfer.tx.paymentInfo(POLKADOT_ACCOUNT, { withSignedTransaction: true })
-        // ).toPrimitive() as any
-        // console.log(
-        //     `execution fee (${transfer.computed.sourceParachain.info.tokenSymbols}):`,
-        //     formatUnits(feePayment.partialFee, transfer.computed.sourceParachain.info.tokenDecimals)
-        // )
+        const feePayment = (
+            await transfer.tx.paymentInfo(POLKADOT_ACCOUNT, { withSignedTransaction: true })
+        ).toPrimitive() as any
+        console.log(
+            `execution fee (${transfer.computed.sourceParachain.info.tokenSymbols}):`,
+            formatUnits(feePayment.partialFee, transfer.computed.sourceParachain.info.tokenDecimals)
+        )
         console.log(
             `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
             formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals)
