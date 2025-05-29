@@ -6,7 +6,7 @@ import { Context } from "./index"
 import { buildParachainERC20ReceivedXcmOnDestination, DOT_LOCATION } from "./xcmBuilder"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID } from "./parachains/mythos"
-import { getParachainProviderFor as getParachainFor } from "./parachains"
+import { paraImplementation } from "./parachains"
 import { ParachainBase } from "./parachains/parachainBase"
 
 export type ERC20Metadata = {
@@ -223,7 +223,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
             provider = relaychain
         }
 
-        relayInfo = await (await getParachainFor(provider)).chainProperties()
+        relayInfo = await (await paraImplementation(provider)).chainProperties()
 
         if (typeof relaychain === "string") {
             await provider.disconnect()
@@ -275,7 +275,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         } else {
             provider = bridgeHub
         }
-        bridgeHubInfo = await (await getParachainFor(provider)).chainProperties()
+        bridgeHubInfo = await (await paraImplementation(provider)).chainProperties()
         pnaAssets = await getRegisteredPnas(
             provider,
             ethProviders[ethChainId].provider,
@@ -307,7 +307,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
                 } else {
                     provider = parachain
                 }
-                const accessor = await getParachainFor(provider)
+                const accessor = await paraImplementation(provider)
                 return { parachainId: accessor.parachainId, accessor, managed }
             })
         )) {
