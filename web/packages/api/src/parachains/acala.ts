@@ -1,0 +1,57 @@
+import { AssetMap, PNAMap } from "src/assets_v2"
+import { ParachainBase } from "./parachainBase"
+import { getTokenFromLocation } from "../xcmBuilder"
+
+export class AcalaParachain extends ParachainBase {
+    getXC20DOT() {
+        return undefined
+    }
+
+    async getLocationBalance(location: any, account: string, _pnaAssetId?: any): Promise<bigint> {
+        const paraAssetId = (
+            await this.provider.query.assetRegistry.locationToCurrencyIds(location)
+        ).toPrimitive()
+        if (!paraAssetId) {
+            throw Error(`'${JSON.stringify(location)}' not registered for spec ${this.specName}.`)
+        }
+        const accountData = (
+            await this.provider.query.tokens.accounts(account, paraAssetId)
+        ).toPrimitive() as any
+        return BigInt(accountData?.free ?? 0n)
+    }
+
+    async getDotBalance(account: string): Promise<bigint> {
+        const accountData = (
+            await this.provider.query.tokens.accounts(account, { Token: "DOT" })
+        ).toPrimitive() as any
+        return BigInt(accountData.free)
+    }
+
+    async getAssets(ethChainId: number, _pnas: PNAMap): Promise<AssetMap> {
+        const assets: AssetMap = {}
+        const entries = await this.provider.query.assetRegistry.foreignAssetLocations.entries()
+        for (const [value, key] of entries) {
+
+            const location: any = key.toPrimitive()
+            const token = getTokenFromLocation(location, ethChainId)
+            if (!token) {
+                continue
+            }
+
+            const assetId: any = value.args.at(0)?.toPrimitive()
+            const asset: any = (
+                await this.provider.query.assetRegistry.assetMetadatas({ foreignAssetId : assetId })
+            ).toPrimitive()
+
+            assets[token] = {
+                token,
+                name: String(asset.name),
+                minimumBalance: BigInt(asset.minimalBalance),
+                symbol: String(asset.symbol),
+                decimals: Number(asset.decimals),
+                isSufficient: false,
+            }
+        }
+        return assets
+    }
+}

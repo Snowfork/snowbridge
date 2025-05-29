@@ -7,8 +7,9 @@ import { MoonbeamParachain } from "./moonbeam"
 import { MythosParachain } from "./mythos"
 import { GenericChain } from "./generic"
 import { AssetHubKusamaParachain } from "./assethubKusama"
+import { AcalaParachain } from "./acala"
 
-export async function getParachainProviderFor(provider: ApiPromise): Promise<ParachainBase> {
+export async function paraImplementation(provider: ApiPromise): Promise<ParachainBase> {
     let parachainId = 0
     if (provider.query.parachainInfo) {
         const encoded = await provider.query.parachainInfo.parachainId()
@@ -16,6 +17,8 @@ export async function getParachainProviderFor(provider: ApiPromise): Promise<Par
     }
     const { specName, specVersion } = provider.consts.system.version.toJSON() as any
     switch (specName) {
+        case "acala":
+            return new AcalaParachain(provider, parachainId, specName, specVersion)
         case "basilisk":
         case "hydradx":
             return new HydrationParachain(provider, parachainId, specName, specVersion)
