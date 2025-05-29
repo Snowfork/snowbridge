@@ -43,7 +43,7 @@ import {
     FeeData,
     TransactionReceipt,
 } from "ethers"
-import { getParachainProviderFor } from "./parachains"
+import { paraImplementation } from "./parachains"
 
 const PALLET_XCM_PRECOMPILE = [
     {
@@ -166,7 +166,7 @@ export async function createTransfer(
         sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
     }
 
-    const sourceParachainImpl = await getParachainProviderFor(parachain)
+    const sourceParachainImpl = await paraImplementation(parachain)
     const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
         resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
 
@@ -272,7 +272,7 @@ export async function createTransferEvm(
         throw Error(`Source address ${sourceAccountHex} is not a 20 byte address.`)
     }
 
-    const sourceParachainImpl = await getParachainProviderFor(parachain)
+    const sourceParachainImpl = await paraImplementation(parachain)
     const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
         resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
     if (!sourceParachain.info.evmChainId) {
@@ -468,7 +468,7 @@ export async function getDeliveryFee(
     let returnToSenderExecutionFeeDOT = 0n
     let returnToSenderDeliveryFeeDOT = 0n
     const ahParachain = registry.parachains[registry.assetHubParaId]
-    const assetHubImpl = await getParachainProviderFor(assetHub)
+    const assetHubImpl = await paraImplementation(assetHub)
     const bridgeHubDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
         registry.bridgeHubParaId,
         forwardedXcm
@@ -500,7 +500,7 @@ export async function getDeliveryFee(
             parachain,
             returnToSenderXcm
         )
-        const sourceParachainImpl = await getParachainProviderFor(source)
+        const sourceParachainImpl = await paraImplementation(source)
         returnToSenderExecutionFeeDOT = padFeeByPercentage(
             await sourceParachainImpl.calculateXcmFee(returnToSenderXcm, DOT_LOCATION),
             feePadPercentage
@@ -632,7 +632,7 @@ export async function validateTransfer(
     const { tx } = transfer
 
     const logs: ValidationLog[] = []
-    const sourceParachainImpl = await getParachainProviderFor(sourceParachain)
+    const sourceParachainImpl = await paraImplementation(sourceParachain)
     const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
     let dotBalance: bigint | undefined = undefined
     if (source.features.hasDotBalance) {
@@ -909,7 +909,7 @@ export async function validateTransferEvm(
     } = transfer.computed
     const { tx } = transfer
 
-    const sourceParachainImpl = await getParachainProviderFor(sourceParachain)
+    const sourceParachainImpl = await paraImplementation(sourceParachain)
     const logs: ValidationLog[] = []
     let dotBalance: bigint | undefined = undefined
     if (source.features.hasDotBalance) {
