@@ -11,9 +11,10 @@ import {
 } from "./xcmBuilder"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 import {
-    convertToXcmV3X1, getMoonbeamEvmAssetMetadata,
+    convertToXcmV3X1,
+    getMoonbeamEvmAssetMetadata,
     getMoonbeamLocationBalance,
-    toMoonbeamXC20
+    toMoonbeamXC20,
 } from "./parachains/moonbeam"
 import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID, getMythosLocationBalance } from "./parachains/mythos"
 
@@ -1470,10 +1471,8 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MUSE to any location but 3369
                 if (
                     path.asset === MUSE_TOKEN_ID &&
-                    (
-                        (path.destination !== 3369 && path.type === "ethereum") ||
-                        (path.source !== 3369 && path.type === "substrate")
-                    )
+                    ((path.destination !== 3369 && path.type === "ethereum") ||
+                        (path.source !== 3369 && path.type === "substrate"))
                 ) {
                     return false
                 }
@@ -1488,10 +1487,8 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MYTH to any location but 3369
                 if (
                     path.asset === MYTHOS_TOKEN_ID &&
-                    (
-                        // TODO: Disable Mythos to Eth until mythos is ready to enable
-                        (path.destination !== 3369)
-                    )
+                    // TODO: Disable Mythos to Eth until mythos is ready to enable
+                    path.destination !== 3369
                 ) {
                     return false
                 }
