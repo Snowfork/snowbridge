@@ -9,7 +9,11 @@ import {
     erc20Location,
 } from "./xcmBuilder"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
-import { convertToXcmV3X1, getMoonbeamLocationBalance, toMoonbeamXC20 } from "./parachains/moonbeam"
+import {
+    convertToXcmV3X1, getMoonbeamEvmAssetMetadata,
+    getMoonbeamLocationBalance,
+    toMoonbeamXC20
+} from "./parachains/moonbeam"
 import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID, getMythosLocationBalance } from "./parachains/mythos"
 
 export type ERC20Metadata = {
@@ -898,14 +902,16 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
                     continue
                 }
 
-                const metadata: any = (await provider.query.assets.metadata(assetId)).toPrimitive()
+                const symbol = await getMoonbeamEvmAssetMetadata(provider, "symbol", xc20)
+                const name = await getMoonbeamEvmAssetMetadata(provider, "name", xc20)
+                const decimals = await getMoonbeamEvmAssetMetadata(provider, "decimals", xc20)
 
                 assets[token] = {
                     token,
-                    name: String(metadata.name),
+                    name: String(name),
                     minimumBalance: 1n,
-                    symbol: String(metadata.symbol),
-                    decimals: Number(metadata.decimals),
+                    symbol: String(symbol),
+                    decimals: Number(decimals),
                     isSufficient: false,
                     xc20,
                 }

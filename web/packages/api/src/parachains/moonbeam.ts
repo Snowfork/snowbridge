@@ -73,3 +73,28 @@ async function getMoonbeamEvmForeignAssetBalance(api: ApiPromise, token: string,
     const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)
     return BigInt(retVal[0])
 }
+
+export async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: string, token: string) {
+    const data = MOONBEAM_ERC20.encodeFunctionData(method, [])
+    const result = await api.call.ethereumRuntimeRPCApi.call(
+        "0x0000000000000000000000000000000000000000",
+        token,
+        data,
+        0n,
+        500_000n,
+        null,
+        null,
+        null,
+        false,
+        null
+    )
+    const resultJson = result.toPrimitive() as any
+    if (!(resultJson?.ok?.exitReason?.succeed === "Returned")) {
+        console.error(resultJson)
+        throw Error(
+            `Could not fetch metadata for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`
+        )
+    }
+    const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)
+    return retVal[0]
+}
