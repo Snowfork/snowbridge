@@ -150,7 +150,7 @@ export function buildAssetHubERC20ReceivedXcm(
             throw Error(`Could not parse beneficiary address ${beneficiary}`)
     }
     return registry.createType("XcmVersionedXcm", {
-        v4: [
+        v5: [
             {
                 receiveTeleportedAsset: [
                     {
@@ -236,7 +236,7 @@ export function buildParachainERC20ReceivedXcmOnAssetHub(
             throw Error(`Could not parse beneficiary address ${beneficiary}`)
     }
     return registry.createType("XcmVersionedXcm", {
-        v4: [
+        v5: [
             {
                 receiveTeleportedAsset: [
                     {
@@ -457,7 +457,7 @@ export function buildAssetHubERC20TransferFromParachain(
     feeAssetId: any
 ) {
     return registry.createType("XcmVersionedXcm", {
-        v4: buildAssetHubXcmFromParachain(
+        v5: buildAssetHubXcmFromParachain(
             ethChainId,
             sourceAccount,
             beneficiary,
@@ -726,7 +726,7 @@ export function buildAssetHubPNATransferFromParachain(
     topic: string
 ) {
     return registry.createType("XcmVersionedXcm", {
-        v4: buildAssetHubXcmForPNAFromParachain(
+        v5: buildAssetHubXcmForPNAFromParachain(
             ethChainId,
             beneficiary,
             assetLocationOnAH,
@@ -765,7 +765,7 @@ export function buildParachainPNAReceivedXcmOnAssetHub(
             throw Error(`Could not parse beneficiary address ${beneficiary}`)
     }
     return registry.createType("XcmVersionedXcm", {
-        v4: [
+        v5: [
             {
                 receiveTeleportedAsset: [
                     {
@@ -902,7 +902,7 @@ export function buildAssetHubPNAReceivedXcm(
             throw Error(`Could not parse beneficiary address ${beneficiary}`)
     }
     return registry.createType("XcmVersionedXcm", {
-        v4: [
+        v5: [
             {
                 receiveTeleportedAsset: [
                     {
