@@ -40,14 +40,17 @@ register_eth_on_penpal() {
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
     # Mint Ether
     # local call='0x3306020109079edaa802001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
-    # send_transact_locally $ASSET_HUB_PARAID "$call" "//Ferdie"
+    # send_transact_locally $PENPAL_PARAID "$call" "//Ferdie"
     # Mint Wnd
     # local call='0x33060100001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
-    # send_transact_locally $ASSET_HUB_PARAID "$call" "//Alice"
+    # send_transact_locally $PENPAL_PARAID "$call" "//Alice"
 }
 
 register_pal() {
     register_pal_on_ah
+    # Mint Pal to Ferdie
+    #local call='0x320608001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0b0030ef7dba02'
+    #send_transact_locally $PENPAL_PARAID "$call" "//Alice"
 }
 
 register_pal_on_ah() {

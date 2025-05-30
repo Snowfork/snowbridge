@@ -1205,10 +1205,7 @@ export function buildTransferXcmFromAssetHub(
     let sourceLocation = parseLocation(sourceAccount)
     let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
     let assets = []
-    if (
-        tokenLocation.parents == DOT_LOCATION.parents &&
-        tokenLocation.interior == DOT_LOCATION.interior
-    ) {
+    if (JSON.stringify(localFeeAssetId) == JSON.stringify(tokenLocation)) {
         assets.push({
             id: localFeeAssetId,
             fun: {
@@ -1369,6 +1366,14 @@ export function buildTransferXcmFromParachain(
     let sourceLocation = parseLocation(sourceAccount)
     let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
     let assets = []
+    if (tokenLocation.parents == 0) {
+        assets.push({
+            id: tokenLocation,
+            fun: {
+                Fungible: tokenAmount,
+            },
+        })
+    }
     if (JSON.stringify(localFeeAssetId) == JSON.stringify(assethubFeeAssetId)) {
         assets.push({
             id: localFeeAssetId,
@@ -1398,12 +1403,14 @@ export function buildTransferXcmFromParachain(
             },
         })
     } else {
-        assets.push({
-            id: tokenLocation,
-            fun: {
-                Fungible: tokenAmount,
-            },
-        })
+        if (tokenLocation.parents != 0) {
+            assets.push({
+                id: tokenLocation,
+                fun: {
+                    Fungible: tokenAmount,
+                },
+            })
+        }
         assets.push({
             id: remoteFeeAssetId,
             fun: {

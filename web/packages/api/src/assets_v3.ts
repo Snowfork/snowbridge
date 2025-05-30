@@ -1311,7 +1311,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
             result.assetOverrides = {
                 "2000": [
                     {
-                        token: "0xD8597EB7eF761E3315623EdFEe9DEfcBACd72e8b".toLowerCase(),
+                        token: "0x805c5a7d4E97908a8EC726DcCc94a047D073eB7E".toLowerCase(),
                         name: "pal-2",
                         minimumBalance: 1n,
                         symbol: "pal-2",
@@ -1582,6 +1582,25 @@ function bridgeablePNAsOnAH(environment: string, location: any, assetHubParaId: 
                         x1: [
                             {
                                 globalConsensus: { byGenesis: ROCOCO_GENESIS },
+                            },
+                        ],
+                    },
+                }
+            } else if (
+                location.interior.x4 &&
+                location.interior.x4[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS &&
+                location.interior.x4[1]?.parachain &&
+                location.interior.x4[2]?.palletInstance &&
+                location.interior.x4[3]?.generalIndex != undefined
+            ) {
+                return {
+                    parents: 2,
+                    interior: {
+                        x3: [
+                            {
+                                parachain: location.interior.x4[1]?.parachain,
+                                palletInstance: location.interior.x4[2].palletInstance,
+                                generalIndex: location.interior.x4[3].generalIndex,
                             },
                         ],
                     },

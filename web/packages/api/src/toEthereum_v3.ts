@@ -128,6 +128,8 @@ export async function createTransfer(
             messageId
         )
     } else {
+        const fee_on_ah =
+            fee.assetHubExecutionFeeDOT + fee.snowbridgeDeliveryFeeDOT + fee.bridgeHubDeliveryFeeDOT
         tx = createSourceParachainTx(
             parachain,
             ethChainId,
@@ -136,9 +138,9 @@ export async function createTransfer(
             sourceAssetMetadata,
             amount,
             DOT_LOCATION,
-            fee.totalFeeInDot - fee.assetHubExecutionFeeDOT - fee.bridgeHubDeliveryFeeDOT,
+            fee.totalFeeInDot - fee_on_ah,
             DOT_LOCATION,
-            fee.assetHubExecutionFeeDOT + fee.bridgeHubDeliveryFeeDOT,
+            fee_on_ah,
             bridgeLocation(ethChainId),
             fee.ethereumExecutionFee,
             assetHubParaId,
@@ -178,7 +180,7 @@ export async function getDeliveryFee(
     defaultFee?: bigint
 ): Promise<DeliveryFee> {
     const { assetHub, source, ethereum } = connections
-    const feePadPercentage = padPercentage ?? 33n
+    const feePadPercentage = padPercentage ?? 100n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFeeV2:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
@@ -186,7 +188,7 @@ export async function getDeliveryFee(
     let snowbridgeDeliveryFeeDOT = 0n
     if (leFee.eqn(0)) {
         console.warn("Asset Hub onchain BridgeHubEthereumBaseFee not set. Using default fee.")
-        snowbridgeDeliveryFeeDOT = defaultFee ?? 100_000_000_000n
+        snowbridgeDeliveryFeeDOT = defaultFee ?? 200_000_000_000n
     } else {
         snowbridgeDeliveryFeeDOT = BigInt(leFee.toString())
     }
