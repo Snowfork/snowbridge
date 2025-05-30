@@ -1378,8 +1378,8 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 if (
                     path.asset === MYTHOS_TOKEN_ID &&
                     (
-                        (path.destination !== 3369 && path.type === "ethereum") ||
-                        (path.source !== 3369 && path.type === "substrate")
+                        // TODO: Disable Mythos to Eth until mythos is ready to enable
+                        (path.destination !== 3369)
                     )
                 ) {
                     return false
