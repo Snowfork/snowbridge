@@ -11,7 +11,7 @@ use snowbridge_preimage_chopsticks::generate_chopsticks_script;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
 use constants::{ASSET_HUB_API, BRIDGE_HUB_API, POLKADOT_DECIMALS, POLKADOT_SYMBOL, RELAY_API};
-use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_force_batch};
+use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_batch_all};
 use sp_crypto_hashing::blake2_256;
 use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
@@ -56,12 +56,12 @@ pub enum Command {
     HaltBridge(HaltBridgeArgs),
     /// Register Ether
     RegisterEther(RegisterEtherArgs),
-    /// Treasury proposal
-    TreasuryProposal2024(TreasuryProposal2024Args),
     /// Governance update 202501
     GovUpdate202501(GovUpdate202501Args),
     /// Register PNA
     RegisterPnaBatch202503,
+    /// Treasury proposal 2025
+    TreasuryProposal2025(TreasuryProposal2025Args),
 }
 
 #[derive(Debug, Args)]
@@ -213,10 +213,13 @@ pub struct HaltBridgeArgs {
 }
 
 #[derive(Debug, Args)]
-pub struct TreasuryProposal2024Args {
+pub struct TreasuryProposal2025Args {
     /// Beneficiary address
     #[arg(long, value_name = "ADDRESS", value_parser=parse_hex_bytes32)]
     beneficiary: FixedBytes<32>,
+    /// Base block number for calculating spend delays
+    #[arg(long, value_name = "BLOCKS")]
+    base_block: u32,
 }
 
 #[derive(Debug, Args)]
@@ -369,7 +372,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ],
             )
             .await?;
-            utility_force_batch(vec![bridge_hub_call, asset_hub_call])
+            utility_batch_all(vec![bridge_hub_call, asset_hub_call])
         }
         Command::UpdateAsset(params) => {
             send_xcm_asset_hub(
@@ -395,7 +398,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let bridge_hub_call =
                 send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
             let asset_hub_call = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
-            utility_force_batch(vec![bridge_hub_call, asset_hub_call])
+            utility_batch_all(vec![bridge_hub_call, asset_hub_call])
         }
         Command::HaltBridge(params) => {
             let mut bh_calls = vec![];
@@ -440,14 +443,14 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 let call1 = send_xcm_bridge_hub(&context, bh_calls).await?;
                 let call2 = send_xcm_asset_hub(&context, ah_calls).await?;
-                utility_force_batch(vec![call1, call2])
+                utility_batch_all(vec![call1, call2])
             }
         }
         Command::RegisterEther(params) => {
             let (register_ether_call, set_ether_metadata_call) = commands::register_ether(&params);
             send_xcm_asset_hub(&context, vec![register_ether_call, set_ether_metadata_call]).await?
         }
-        Command::TreasuryProposal2024(params) => treasury_commands::treasury_proposal(&params),
+        Command::TreasuryProposal2025(params) => treasury_commands::treasury_proposal_2025(&params),
         Command::GovUpdate202501(GovUpdate202501Args {
             pricing_parameters,
             register_ether,
@@ -466,7 +469,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 send_xcm_asset_hub(&context, vec![register_ether_call, set_ether_metadata_call])
                     .await?;
 
-            utility_force_batch(vec![
+            utility_batch_all(vec![
                 bh_set_pricing_call,
                 ah_set_pricing_call,
                 ah_register_ether_call,

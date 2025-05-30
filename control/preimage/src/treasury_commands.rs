@@ -1,4 +1,4 @@
-use crate::{constants::*, TreasuryProposal2024Args};
+use crate::{constants::*, TreasuryProposal2025Args};
 
 use crate::helpers::utility_force_batch;
 use crate::relay_runtime::runtime_types::{
@@ -13,13 +13,15 @@ use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 use polkadot_runtime_constants::currency::UNITS;
 use polkadot_runtime_constants::time::DAYS;
 
-// USDC has 6 decimal places
+// USDC and USDT has 6 decimal places
 pub const USDC_UNITS: u128 = 1_000_000;
+pub const USDT_UNITS: u128 = 1_000_000;
 
 #[derive(Copy, Clone)]
 enum TreasuryAsset {
     DOT(u128),
     USDC(u128),
+    USDT(u128),
 }
 
 impl Into<(&str, Location, u128)> for TreasuryAsset {
@@ -44,6 +46,17 @@ impl Into<(&str, Location, u128)> for TreasuryAsset {
                 },
                 value * USDC_UNITS,
             ),
+            TreasuryAsset::USDT(value) => (
+                "USDT",
+                Location {
+                    parents: 0,
+                    interior: Junctions::X2([
+                        Junction::PalletInstance(50),
+                        Junction::GeneralIndex(1984),
+                    ]),
+                },
+                value * USDT_UNITS,
+            ),
         }
     }
 }
@@ -54,143 +67,191 @@ struct Spend {
     delay: Option<u32>,
 }
 
-const SPENDS: [Spend; 23] = [
+const SPENDS: [Spend; 36] = [
+    // DOT spends
     Spend {
-        name: "Operational & Development costs",
-        asset: TreasuryAsset::DOT(187849),
+        name: "2025 DOT spend #1",
+        asset: TreasuryAsset::DOT(17800),
         delay: None,
     },
     Spend {
-        name: "Launch reward",
-        asset: TreasuryAsset::DOT(158656),
-        delay: Some(90 * DAYS),
-    },
-    Spend {
-        name: "Milestone completion reward #1",
-        asset: TreasuryAsset::DOT(13221),
-        delay: None,
-    },
-    Spend {
-        name: "Milestone completion reward #2",
-        asset: TreasuryAsset::DOT(13221),
+        name: "2025 DOT spend #2",
+        asset: TreasuryAsset::DOT(17800),
         delay: Some(30 * DAYS),
     },
     Spend {
-        name: "Milestone completion reward #3",
-        asset: TreasuryAsset::DOT(13221),
+        name: "2025 DOT spend #3",
+        asset: TreasuryAsset::DOT(17800),
         delay: Some(60 * DAYS),
     },
     Spend {
-        name: "Milestone completion reward #4",
-        asset: TreasuryAsset::DOT(13221),
+        name: "2025 DOT spend #4",
+        asset: TreasuryAsset::DOT(17800),
         delay: Some(90 * DAYS),
     },
     Spend {
-        name: "Milestone completion reward #5",
-        asset: TreasuryAsset::DOT(13221),
+        name: "2025 DOT spend #5",
+        asset: TreasuryAsset::DOT(17800),
         delay: Some(120 * DAYS),
     },
     Spend {
-        name: "Milestone completion reward #6",
-        asset: TreasuryAsset::DOT(13221),
+        name: "2025 DOT spend #6",
+        asset: TreasuryAsset::DOT(17800),
         delay: Some(150 * DAYS),
     },
     Spend {
-        name: "Milestone completion reward #7",
-        asset: TreasuryAsset::DOT(13221),
+        name: "2025 DOT spend #7",
+        asset: TreasuryAsset::DOT(17800),
         delay: Some(180 * DAYS),
     },
     Spend {
-        name: "Milestone completion reward #8",
-        asset: TreasuryAsset::DOT(13221),
+        name: "2025 DOT spend #8",
+        asset: TreasuryAsset::DOT(17800),
         delay: Some(210 * DAYS),
     },
     Spend {
-        name: "Milestone completion reward #9",
-        asset: TreasuryAsset::DOT(13221),
+        name: "2025 DOT spend #9",
+        asset: TreasuryAsset::DOT(17800),
         delay: Some(240 * DAYS),
     },
     Spend {
-        name: "Milestone completion reward #10",
-        asset: TreasuryAsset::DOT(13221),
+        name: "2025 DOT spend #10",
+        asset: TreasuryAsset::DOT(17800),
         delay: Some(270 * DAYS),
     },
     Spend {
-        name: "Milestone completion reward #11",
-        asset: TreasuryAsset::DOT(13221),
+        name: "2025 DOT spend #11",
+        asset: TreasuryAsset::DOT(17800),
         delay: Some(300 * DAYS),
     },
     Spend {
-        name: "Milestone completion reward #12",
-        asset: TreasuryAsset::DOT(13221),
+        name: "2025 DOT spend #12",
+        asset: TreasuryAsset::DOT(17800),
         delay: Some(330 * DAYS),
     },
+    // USDC spends
     Spend {
-        name: "General Incentive reward #1",
+        name: "2025 USDC spend #1",
         asset: TreasuryAsset::USDC(312500),
+        delay: None,
+    },
+    Spend {
+        name: "2025 USDC spend #2",
+        asset: TreasuryAsset::USDC(156250),
+        delay: Some(30 * DAYS),
+    },
+    Spend {
+        name: "2025 USDC spend #3",
+        asset: TreasuryAsset::USDC(156250),
+        delay: Some(60 * DAYS),
+    },
+    Spend {
+        name: "2025 USDC spend #4",
+        asset: TreasuryAsset::USDC(156250),
         delay: Some(90 * DAYS),
     },
     Spend {
-        name: "General Incentive reward #2",
-        asset: TreasuryAsset::USDC(312500),
+        name: "2025 USDC spend #5",
+        asset: TreasuryAsset::USDC(156250),
         delay: Some(120 * DAYS),
     },
     Spend {
-        name: "General Incentive reward #3",
-        asset: TreasuryAsset::USDC(312500),
+        name: "2025 USDC spend #6",
+        asset: TreasuryAsset::USDC(156250),
         delay: Some(150 * DAYS),
     },
     Spend {
-        name: "General Incentive reward #4",
-        asset: TreasuryAsset::USDC(312500),
+        name: "2025 USDC spend #7",
+        asset: TreasuryAsset::USDC(156250),
         delay: Some(180 * DAYS),
     },
     Spend {
-        name: "General Incentive reward #5",
-        asset: TreasuryAsset::USDC(312500),
+        name: "2025 USDC spend #8",
+        asset: TreasuryAsset::USDC(156250),
         delay: Some(210 * DAYS),
     },
     Spend {
-        name: "General Incentive reward #6",
-        asset: TreasuryAsset::USDC(312500),
+        name: "2025 USDC spend #9",
+        asset: TreasuryAsset::USDC(156250),
         delay: Some(240 * DAYS),
     },
     Spend {
-        name: "General Incentive reward #7",
-        asset: TreasuryAsset::USDC(312500),
+        name: "2025 USDC spend #10",
+        asset: TreasuryAsset::USDC(156250),
         delay: Some(270 * DAYS),
     },
     Spend {
-        name: "General Incentive reward #8",
-        asset: TreasuryAsset::USDC(312500),
+        name: "2025 USDC spend #11",
+        asset: TreasuryAsset::USDC(156250),
         delay: Some(300 * DAYS),
     },
     Spend {
-        name: "General Incentive reward #9",
-        asset: TreasuryAsset::USDC(312500),
+        name: "2025 USDC spend #12",
+        asset: TreasuryAsset::USDC(156250),
+        delay: Some(330 * DAYS),
+    },
+    // USDT spends
+    Spend {
+        name: "2025 USDT spend #1",
+        asset: TreasuryAsset::USDT(312500),
+        delay: None,
+    },
+    Spend {
+        name: "2025 USDT spend #2",
+        asset: TreasuryAsset::USDT(156250),
+        delay: Some(30 * DAYS),
+    },
+    Spend {
+        name: "2025 USDT spend #3",
+        asset: TreasuryAsset::USDT(156250),
+        delay: Some(60 * DAYS),
+    },
+    Spend {
+        name: "2025 USDT spend #4",
+        asset: TreasuryAsset::USDT(156250),
+        delay: Some(90 * DAYS),
+    },
+    Spend {
+        name: "2025 USDT spend #5",
+        asset: TreasuryAsset::USDT(156250),
+        delay: Some(120 * DAYS),
+    },
+    Spend {
+        name: "2025 USDT spend #6",
+        asset: TreasuryAsset::USDT(156250),
+        delay: Some(150 * DAYS),
+    },
+    Spend {
+        name: "2025 USDT spend #7",
+        asset: TreasuryAsset::USDT(156250),
+        delay: Some(180 * DAYS),
+    },
+    Spend {
+        name: "2025 USDT spend #8",
+        asset: TreasuryAsset::USDT(156250),
+        delay: Some(210 * DAYS),
+    },
+    Spend {
+        name: "2025 USDT spend #9",
+        asset: TreasuryAsset::USDT(156250),
+        delay: Some(240 * DAYS),
+    },
+    Spend {
+        name: "2025 USDT spend #10",
+        asset: TreasuryAsset::USDT(156250),
+        delay: Some(270 * DAYS),
+    },
+    Spend {
+        name: "2025 USDT spend #11",
+        asset: TreasuryAsset::USDT(156250),
+        delay: Some(300 * DAYS),
+    },
+    Spend {
+        name: "2025 USDT spend #12",
+        asset: TreasuryAsset::USDT(156250),
         delay: Some(330 * DAYS),
     },
 ];
-
-pub const LAUNCH_BLOCK: u32 = 21292000;
-
-pub fn treasury_proposal(params: &TreasuryProposal2024Args) -> RelayRuntimeCall {
-    let mut calls: Vec<RelayRuntimeCall> = vec![];
-
-    for spend in SPENDS.iter() {
-        let (asset_id, asset_location, asset_amount) = spend.asset.into();
-        let call = make_treasury_spend(
-            params.beneficiary.into(),
-            asset_location,
-            asset_amount,
-            spend.delay.map(|delay| LAUNCH_BLOCK + delay),
-        );
-        calls.push(call);
-        println!("Spend: {}, {}({})", spend.name, asset_id, asset_amount);
-    }
-
-    utility_force_batch(calls)
-}
 
 fn make_treasury_spend(
     beneficiary: [u8; 32],
@@ -218,4 +279,22 @@ fn make_treasury_spend(
     });
 
     call
+}
+
+pub fn treasury_proposal_2025(params: &TreasuryProposal2025Args) -> RelayRuntimeCall {
+    let mut calls: Vec<RelayRuntimeCall> = vec![];
+
+    for spend in SPENDS.iter() {
+        let (asset_id, asset_location, asset_amount) = spend.asset.into();
+        let call = make_treasury_spend(
+            params.beneficiary.into(),
+            asset_location,
+            asset_amount,
+            spend.delay.map(|delay| params.base_block + delay),
+        );
+        calls.push(call);
+        println!("Spend: {}, {}({})", spend.name, asset_id, asset_amount);
+    }
+
+    utility_force_batch(calls)
 }

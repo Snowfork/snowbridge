@@ -163,9 +163,15 @@ pub async fn query_weight_asset_hub(
     Ok((call_info.weight.ref_time, call_info.weight.proof_size))
 }
 
-pub fn utility_force_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
+pub fn utility_batch_all(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
     RelayRuntimeCall::Utility(
         crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::batch_all { calls },
+    )
+}
+
+pub fn utility_force_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
+    RelayRuntimeCall::Utility(
+        crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::force_batch { calls },
     )
 }
 
