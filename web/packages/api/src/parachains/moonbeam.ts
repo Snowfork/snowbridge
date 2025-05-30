@@ -32,33 +32,20 @@ export async function getMoonbeamLocationBalance(
 ) {
     // For PNA, use assetId directly; for ENA, query assetId by Multilocation
     let paraAssetId = pnaAssetId
-    if (!paraAssetId) {
-        // Moonbeam only supports v3 xcm locations on asset Manager. Deep clone the location because
-        // we might modify it.
-        const assetManagerLocation = convertToXcmV3X1(location)
-        paraAssetId = (
-            await provider.query.assetManager.assetTypeId({ xcm: assetManagerLocation })
-        ).toPrimitive()
-    }
-
     // If we cannot find the asset in asset manager look in foreign assets.
     if (!paraAssetId) {
         // evmForeignAssets uses xcm v4 so we use the original location.
         paraAssetId = (
             (await provider.query.evmForeignAssets.assetsByLocation(location)).toPrimitive() as any
         )[0]
-        const xc20 = toMoonbeamXC20(BigInt(paraAssetId))
-        return await getMoonbeamEvmForeignAssetBalance(provider, xc20, account)
     }
 
     if (!paraAssetId) {
         throw Error(`Asset not registered for spec ${specName}.`)
     }
 
-    const accountData = (
-        await provider.query.assets.account(paraAssetId, account)
-    ).toPrimitive() as any
-    return BigInt(accountData?.balance ?? 0n)
+    const xc20 = toMoonbeamXC20(BigInt(paraAssetId))
+    return await getMoonbeamEvmForeignAssetBalance(provider, xc20, account)
 }
 
 async function getMoonbeamEvmForeignAssetBalance(api: ApiPromise, token: string, account: string) {
