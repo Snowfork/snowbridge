@@ -912,7 +912,7 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
                     minimumBalance: 1n,
                     symbol: String(symbol),
                     decimals: Number(decimals),
-                    isSufficient: false,
+                    isSufficient: true,
                     xc20,
                 }
             }
