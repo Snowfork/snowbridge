@@ -637,12 +637,12 @@ export async function getLocationBalance(
         }
         case "muse":
         case "mythos": {
-            return await getMythosLocationBalance(
-                location, provider, specName, account
-            )
+            return await getMythosLocationBalance(location, provider, specName, account)
         }
         default:
-            throw Error(`Cannot get balance for spec ${specName}. Location = ${JSON.stringify(location)}`)
+            throw Error(
+                `Cannot get balance for spec ${specName}. Location = ${JSON.stringify(location)}`
+            )
     }
 }
 
@@ -879,9 +879,9 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
         }
         case "moonriver":
         case "moonbeam": {
-            const entries = await provider.query.assetManager.assetIdType.entries()
-            for (const [key, value] of entries) {
-                const location = (value.toJSON() as any).xcm
+            const foreignEntries = await provider.query.evmForeignAssets.assetsById.entries()
+            for (const [key, value] of foreignEntries) {
+                const location = value.toJSON() as any
 
                 const assetId = BigInt(key.args.at(0)?.toPrimitive() as any)
                 const xc20 = toMoonbeamXC20(assetId)
@@ -893,46 +893,20 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
                 if (!token) {
                     continue
                 }
-
-                const asset: any = (await provider.query.assets.asset(assetId)).toPrimitive()
-                const metadata: any = (await provider.query.assets.metadata(assetId)).toPrimitive()
-
-                assets[token] = {
-                    token,
-                    name: String(metadata.name),
-                    minimumBalance: BigInt(asset.minBalance),
-                    symbol: String(metadata.symbol),
-                    decimals: Number(metadata.decimals),
-                    isSufficient: Boolean(asset.isSufficient),
-                    xc20,
-                }
-            }
-            const foreignEntries = await provider.query.evmForeignAssets.assetsById.entries()
-            for (const [key, value] of foreignEntries) {
-                const location = value.toJSON() as any
-
-                const assetId = BigInt(key.args.at(0)?.toPrimitive() as any)
-                const xc20 = toMoonbeamXC20(assetId)
-
-                const token = getTokenFromLocation(location, ethChainId)
-                if (!token) {
-                    continue
-                }
                 // we found the asset in pallet-assets so we can skip evmForeignAssets.
                 if (assets[token]) {
                     continue
                 }
 
-                const asset: any = (await provider.query.assets.asset(assetId)).toPrimitive()
                 const metadata: any = (await provider.query.assets.metadata(assetId)).toPrimitive()
 
                 assets[token] = {
                     token,
                     name: String(metadata.name),
-                    minimumBalance: BigInt(asset?.minBalance ?? 1),
+                    minimumBalance: 1n,
                     symbol: String(metadata.symbol),
                     decimals: Number(metadata.decimals),
-                    isSufficient: Boolean(asset?.isSufficient ?? false),
+                    isSufficient: false,
                     xc20,
                 }
             }
@@ -982,21 +956,25 @@ async function indexParachain(
         isFunction(provider.call.xcmPaymentApi?.queryWeightToAssetFee)
 
     // test getting balances
-    let hasDotBalance = true;
+    let hasDotBalance = true
     try {
         await getDotBalance(
             provider,
             info.specName,
-            info.accountType === "AccountId32" ? "0x0000000000000000000000000000000000000000000000000000000000000000" : "0x0000000000000000000000000000000000000000"
+            info.accountType === "AccountId32"
+                ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+                : "0x0000000000000000000000000000000000000000"
         )
-    } catch(err) {
+    } catch (err) {
         console.warn(`Spec ${info.specName} does not support dot ${err}`)
         hasDotBalance = false
     }
 
     await getNativeBalance(
         provider,
-        info.accountType === "AccountId32" ? "0x0000000000000000000000000000000000000000000000000000000000000000" : "0x0000000000000000000000000000000000000000"
+        info.accountType === "AccountId32"
+            ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+            : "0x0000000000000000000000000000000000000000"
     )
 
     let estimatedExecutionFeeDOT = 0n
@@ -1121,7 +1099,7 @@ async function indexEthChain(
             )
         }
         if (!evmParachainChain.xcDOT) {
-            throw Error(`Could not DOT XC20 address for evm chain ${networkChainId}.`)
+            throw Error(`Could not find DOT XC20 address for evm chain ${networkChainId}.`)
         }
         const xc20DOTAsset: ERC20Metadata = await assetErc20Metadata(
             provider,
@@ -1379,10 +1357,8 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MUSE to any location but 3369
                 if (
                     path.asset === MUSE_TOKEN_ID &&
-                    (
-                        (path.destination !== 3369 && path.type === "ethereum") || 
-                        (path.source !== 3369 && path.type === "substrate")
-                    )
+                    ((path.destination !== 3369 && path.type === "ethereum") ||
+                        (path.source !== 3369 && path.type === "substrate"))
                 ) {
                     return false
                 }
@@ -1397,10 +1373,8 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MYTH to any location but 3369
                 if (
                     path.asset === MYTHOS_TOKEN_ID &&
-                    (
-                        (path.destination !== 3369 && path.type === "ethereum") || 
-                        (path.source !== 3369 && path.type === "substrate")
-                    )
+                    ((path.destination !== 3369 && path.type === "ethereum") ||
+                        (path.source !== 3369 && path.type === "substrate"))
                 ) {
                     return false
                 }
@@ -1584,7 +1558,12 @@ function bridgeablePNAsOnAH(environment: string, location: any, assetHubParaId: 
     }
 }
 
-export async function getAssetHubConversationPalletSwap(assetHub: ApiPromise, asset1: any, asset2: any, exactAsset2Balance: bigint) {
+export async function getAssetHubConversationPalletSwap(
+    assetHub: ApiPromise,
+    asset1: any,
+    asset2: any,
+    exactAsset2Balance: bigint
+) {
     const result = await assetHub.call.assetConversionApi.quotePriceTokensForExactTokens(
         asset1,
         asset2,
@@ -1593,7 +1572,11 @@ export async function getAssetHubConversationPalletSwap(assetHub: ApiPromise, as
     )
     const asset1Balance = result.toPrimitive() as any
     if (asset1Balance == null) {
-        throw Error(`No pool set up in asset conversion pallet for '${JSON.stringify(asset1)}' and '${JSON.stringify(asset2)}'.`)
+        throw Error(
+            `No pool set up in asset conversion pallet for '${JSON.stringify(
+                asset1
+            )}' and '${JSON.stringify(asset2)}'.`
+        )
     }
-    return BigInt(asset1Balance) 
+    return BigInt(asset1Balance)
 }
