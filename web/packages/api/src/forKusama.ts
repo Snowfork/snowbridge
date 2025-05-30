@@ -12,13 +12,15 @@ import {
     isKSMOnOtherConsensusSystem,
     isNative,
     NATIVE_TOKEN_LOCATION,
+    dotLocationOnKusamaAssetHub,
+    ksmLocationOnPolkadotAssetHub,
+} from "./xcmBuilder"
+import {
     buildKusamaToPolkadotDestAssetHubXCM,
     buildPolkadotToKusamaDestAssetHubXCM,
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
-    dotLocationOnKusamaAssetHub,
-    ksmLocationOnPolkadotAssetHub,
-} from "./xcmBuilder"
+} from "./xcmBuilderKusama"
 import {
     Asset,
     AssetRegistry,
