@@ -637,12 +637,12 @@ export async function getLocationBalance(
         }
         case "muse":
         case "mythos": {
-            return await getMythosLocationBalance(location, provider, specName, account)
+            return await getMythosLocationBalance(
+                location, provider, specName, account
+            )
         }
         default:
-            throw Error(
-                `Cannot get balance for spec ${specName}. Location = ${JSON.stringify(location)}`
-            )
+            throw Error(`Cannot get balance for spec ${specName}. Location = ${JSON.stringify(location)}`)
     }
 }
 
@@ -956,25 +956,21 @@ async function indexParachain(
         isFunction(provider.call.xcmPaymentApi?.queryWeightToAssetFee)
 
     // test getting balances
-    let hasDotBalance = true
+    let hasDotBalance = true;
     try {
         await getDotBalance(
             provider,
             info.specName,
-            info.accountType === "AccountId32"
-                ? "0x0000000000000000000000000000000000000000000000000000000000000000"
-                : "0x0000000000000000000000000000000000000000"
+            info.accountType === "AccountId32" ? "0x0000000000000000000000000000000000000000000000000000000000000000" : "0x0000000000000000000000000000000000000000"
         )
-    } catch (err) {
+    } catch(err) {
         console.warn(`Spec ${info.specName} does not support dot ${err}`)
         hasDotBalance = false
     }
 
     await getNativeBalance(
         provider,
-        info.accountType === "AccountId32"
-            ? "0x0000000000000000000000000000000000000000000000000000000000000000"
-            : "0x0000000000000000000000000000000000000000"
+        info.accountType === "AccountId32" ? "0x0000000000000000000000000000000000000000000000000000000000000000" : "0x0000000000000000000000000000000000000000"
     )
 
     let estimatedExecutionFeeDOT = 0n
@@ -1357,8 +1353,10 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MUSE to any location but 3369
                 if (
                     path.asset === MUSE_TOKEN_ID &&
-                    ((path.destination !== 3369 && path.type === "ethereum") ||
-                        (path.source !== 3369 && path.type === "substrate"))
+                    (
+                        (path.destination !== 3369 && path.type === "ethereum") ||
+                        (path.source !== 3369 && path.type === "substrate")
+                    )
                 ) {
                     return false
                 }
@@ -1373,8 +1371,10 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MYTH to any location but 3369
                 if (
                     path.asset === MYTHOS_TOKEN_ID &&
-                    ((path.destination !== 3369 && path.type === "ethereum") ||
-                        (path.source !== 3369 && path.type === "substrate"))
+                    (
+                        (path.destination !== 3369 && path.type === "ethereum") ||
+                        (path.source !== 3369 && path.type === "substrate")
+                    )
                 ) {
                     return false
                 }
@@ -1558,12 +1558,7 @@ function bridgeablePNAsOnAH(environment: string, location: any, assetHubParaId: 
     }
 }
 
-export async function getAssetHubConversationPalletSwap(
-    assetHub: ApiPromise,
-    asset1: any,
-    asset2: any,
-    exactAsset2Balance: bigint
-) {
+export async function getAssetHubConversationPalletSwap(assetHub: ApiPromise, asset1: any, asset2: any, exactAsset2Balance: bigint) {
     const result = await assetHub.call.assetConversionApi.quotePriceTokensForExactTokens(
         asset1,
         asset2,
@@ -1572,11 +1567,7 @@ export async function getAssetHubConversationPalletSwap(
     )
     const asset1Balance = result.toPrimitive() as any
     if (asset1Balance == null) {
-        throw Error(
-            `No pool set up in asset conversion pallet for '${JSON.stringify(
-                asset1
-            )}' and '${JSON.stringify(asset2)}'.`
-        )
+        throw Error(`No pool set up in asset conversion pallet for '${JSON.stringify(asset1)}' and '${JSON.stringify(asset2)}'.`)
     }
     return BigInt(asset1Balance)
 }
