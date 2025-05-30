@@ -1295,7 +1295,9 @@ export function buildTransferXcmFromAssetHub(
                     {
                         depositAsset: {
                             assets: {
-                                wild: "All",
+                                wild: {
+                                    allCounted: 2,
+                                },
                             },
                             beneficiary: {
                                 parents: 0,
@@ -1335,6 +1337,248 @@ export function buildTransferXcmFromAssetHub(
                                     interior: { x1: [beneficiaryLocation] },
                                 },
                             },
+                        },
+                    ],
+                },
+            },
+            {
+                setTopic: topic,
+            },
+        ],
+    })
+}
+
+export function buildTransferXcmFromParachain(
+    registry: Registry,
+    ethChainId: number,
+    sourceAccount: string,
+    beneficiary: string,
+    asset: Asset,
+    tokenAmount: bigint,
+    localFeeAssetId: any,
+    localFeeAmount: bigint,
+    assethubFeeAssetId: any,
+    assethubFeeAmount: bigint,
+    remoteFeeAssetId: any,
+    remoteFeeAmount: bigint,
+    assetHubParaId: number,
+    sourceParachainId: number,
+    topic: string
+) {
+    let beneficiaryLocation = parseLocation(beneficiary)
+    let sourceLocation = parseLocation(sourceAccount)
+    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let assets = []
+    if (JSON.stringify(localFeeAssetId) == JSON.stringify(assethubFeeAssetId)) {
+        assets.push({
+            id: localFeeAssetId,
+            fun: {
+                Fungible: localFeeAmount + assethubFeeAmount,
+            },
+        })
+    } else {
+        assets.push({
+            id: localFeeAssetId,
+            fun: {
+                Fungible: localFeeAmount,
+            },
+        })
+        assets.push({
+            id: assethubFeeAssetId,
+            fun: {
+                Fungible: assethubFeeAmount,
+            },
+        })
+    }
+    if (JSON.stringify(tokenLocation) == JSON.stringify(remoteFeeAssetId)) {
+        assets.push({
+            id: remoteFeeAssetId,
+            fun: {
+                Fungible: remoteFeeAmount + tokenAmount,
+            },
+        })
+    } else {
+        assets.push({
+            id: tokenLocation,
+            fun: {
+                Fungible: tokenAmount,
+            },
+        })
+        assets.push({
+            id: remoteFeeAssetId,
+            fun: {
+                Fungible: remoteFeeAmount,
+            },
+        })
+    }
+
+    let transferredAsset = asset.location
+        ? {
+              teleport: {
+                  definite: [
+                      {
+                          id: tokenLocation,
+                          fun: {
+                              Fungible: tokenAmount,
+                          },
+                      },
+                  ],
+              },
+          }
+        : {
+              reserveWithdraw: {
+                  definite: [
+                      {
+                          id: tokenLocation,
+                          fun: {
+                              Fungible: tokenAmount,
+                          },
+                      },
+                  ],
+              },
+          }
+    let transferredAssetReanchored = asset.location
+        ? {
+              reserveDeposit: {
+                  definite: [
+                      {
+                          id: asset.locationOnAH,
+                          fun: {
+                              Fungible: tokenAmount,
+                          },
+                      },
+                  ],
+              },
+          }
+        : {
+              reserveWithdraw: {
+                  definite: [
+                      {
+                          id: tokenLocation,
+                          fun: {
+                              Fungible: tokenAmount,
+                          },
+                      },
+                  ],
+              },
+          }
+    return registry.createType("XcmVersionedXcm", {
+        v5: [
+            {
+                withdrawAsset: assets,
+            },
+            {
+                payfees: {
+                    asset: {
+                        id: localFeeAssetId,
+                        fun: {
+                            Fungible: localFeeAmount,
+                        },
+                    },
+                },
+            },
+            {
+                setAppendix: [
+                    {
+                        depositAsset: {
+                            assets: {
+                                wild: {
+                                    allCounted: 2,
+                                },
+                            },
+                            beneficiary: {
+                                parents: 0,
+                                interior: { x1: [sourceLocation] },
+                            },
+                        },
+                    },
+                ],
+            },
+            {
+                initiateTransfer: {
+                    destination: parachainLocation(assetHubParaId),
+                    remote_fees: {
+                        reserveWithdraw: {
+                            definite: [
+                                {
+                                    id: assethubFeeAssetId,
+                                    fun: {
+                                        Fungible: assethubFeeAmount,
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                    preserveOrigin: true,
+                    assets: [
+                        {
+                            reserveWithdraw: {
+                                definite: [
+                                    {
+                                        id: remoteFeeAssetId,
+                                        fun: {
+                                            Fungible: remoteFeeAmount,
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                        transferredAsset,
+                    ],
+                    remoteXcm: [
+                        {
+                            setAppendix: [
+                                {
+                                    depositAsset: {
+                                        assets: {
+                                            wild: {
+                                                allCounted: 2,
+                                            },
+                                        },
+                                        beneficiary: parachainLocation(sourceParachainId),
+                                    },
+                                },
+                            ],
+                        },
+                        {
+                            initiateTransfer: {
+                                destination: bridgeLocation(ethChainId),
+                                remote_fees: {
+                                    reserveWithdraw: {
+                                        definite: [
+                                            {
+                                                id: remoteFeeAssetId,
+                                                fun: {
+                                                    Fungible: remoteFeeAmount,
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                                preserveOrigin: true,
+                                assets: [transferredAssetReanchored],
+                                remoteXcm: [
+                                    {
+                                        depositAsset: {
+                                            assets: {
+                                                wild: {
+                                                    allCounted: 2,
+                                                },
+                                            },
+                                            beneficiary: {
+                                                parents: 0,
+                                                interior: { x1: [beneficiaryLocation] },
+                                            },
+                                        },
+                                    },
+                                    {
+                                        setTopic: topic,
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            setTopic: topic,
                         },
                     ],
                 },
