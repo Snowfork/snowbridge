@@ -10,7 +10,11 @@ import {
     erc20Location,
 } from "./xcmBuilder"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
-import { convertToXcmV3X1, getMoonbeamLocationBalance, toMoonbeamXC20 } from "./parachains/moonbeam"
+import {
+    convertToXcmV3X1, getMoonbeamEvmAssetMetadata,
+    getMoonbeamLocationBalance,
+    toMoonbeamXC20
+} from "./parachains/moonbeam"
 import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID, getMythosLocationBalance } from "./parachains/mythos"
 
 export type ERC20Metadata = {
@@ -986,9 +990,9 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
         }
         case "moonriver":
         case "moonbeam": {
-            const entries = await provider.query.assetManager.assetIdType.entries()
-            for (const [key, value] of entries) {
-                const location = (value.toJSON() as any).xcm
+            const foreignEntries = await provider.query.evmForeignAssets.assetsById.entries()
+            for (const [key, value] of foreignEntries) {
+                const location = value.toJSON() as any
 
                 const assetId = BigInt(key.args.at(0)?.toPrimitive() as any)
                 const xc20 = toMoonbeamXC20(assetId)
@@ -1000,46 +1004,22 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
                 if (!token) {
                     continue
                 }
-
-                const asset: any = (await provider.query.assets.asset(assetId)).toPrimitive()
-                const metadata: any = (await provider.query.assets.metadata(assetId)).toPrimitive()
-
-                assets[token] = {
-                    token,
-                    name: String(metadata.name),
-                    minimumBalance: BigInt(asset.minBalance),
-                    symbol: String(metadata.symbol),
-                    decimals: Number(metadata.decimals),
-                    isSufficient: Boolean(asset.isSufficient),
-                    xc20,
-                }
-            }
-            const foreignEntries = await provider.query.evmForeignAssets.assetsById.entries()
-            for (const [key, value] of foreignEntries) {
-                const location = value.toJSON() as any
-
-                const assetId = BigInt(key.args.at(0)?.toPrimitive() as any)
-                const xc20 = toMoonbeamXC20(assetId)
-
-                const token = getTokenFromLocation(location, ethChainId)
-                if (!token) {
-                    continue
-                }
                 // we found the asset in pallet-assets so we can skip evmForeignAssets.
                 if (assets[token]) {
                     continue
                 }
 
-                const asset: any = (await provider.query.assets.asset(assetId)).toPrimitive()
-                const metadata: any = (await provider.query.assets.metadata(assetId)).toPrimitive()
+                const symbol = await getMoonbeamEvmAssetMetadata(provider, "symbol", xc20)
+                const name = await getMoonbeamEvmAssetMetadata(provider, "name", xc20)
+                const decimals = await getMoonbeamEvmAssetMetadata(provider, "decimals", xc20)
 
                 assets[token] = {
                     token,
-                    name: String(metadata.name),
-                    minimumBalance: BigInt(asset?.minBalance ?? 1),
-                    symbol: String(metadata.symbol),
-                    decimals: Number(metadata.decimals),
-                    isSufficient: Boolean(asset?.isSufficient ?? false),
+                    name: String(name),
+                    minimumBalance: 1n,
+                    symbol: String(symbol),
+                    decimals: Number(decimals),
+                    isSufficient: true,
                     xc20,
                 }
             }
@@ -1232,7 +1212,7 @@ async function indexEthChain(
             )
         }
         if (!evmParachainChain.xcDOT) {
-            throw Error(`Could not DOT XC20 address for evm chain ${networkChainId}.`)
+            throw Error(`Could not find DOT XC20 address for evm chain ${networkChainId}.`)
         }
         const xc20DOTAsset: ERC20Metadata = await assetErc20Metadata(
             provider,
@@ -1490,8 +1470,10 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MUSE to any location but 3369
                 if (
                     path.asset === MUSE_TOKEN_ID &&
-                    ((path.destination !== 3369 && path.type === "ethereum") ||
-                        (path.source !== 3369 && path.type === "substrate"))
+                    (
+                        (path.destination !== 3369 && path.type === "ethereum") ||
+                        (path.source !== 3369 && path.type === "substrate")
+                    )
                 ) {
                     return false
                 }
@@ -1506,8 +1488,10 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MYTH to any location but 3369
                 if (
                     path.asset === MYTHOS_TOKEN_ID &&
-                    ((path.destination !== 3369 && path.type === "ethereum") ||
-                        (path.source !== 3369 && path.type === "substrate"))
+                    (
+                        // TODO: Disable Mythos to Eth until mythos is ready to enable
+                        (path.destination !== 3369)
+                    )
                 ) {
                     return false
                 }
