@@ -33,14 +33,14 @@ register_weth_on_penpal() {
 
 register_eth_on_penpal() {
     # register ether
-    local call='0x3301020109079edaa802001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0104'
+    local call='0x3301020109079edaa80200d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d0104'
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
     # set meta data
     local call='0x3313020109079edaa8021445746865721445746865721200'
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
     # Mint Ether
     # local call='0x3306020109079edaa802001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
-    # send_transact_locally $PENPAL_PARAID "$call" "//Ferdie"
+    # send_transact_locally $PENPAL_PARAID "$call" "//Alice"
     # Mint Wnd
     # local call='0x33060100001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
     # send_transact_locally $PENPAL_PARAID "$call" "//Alice"

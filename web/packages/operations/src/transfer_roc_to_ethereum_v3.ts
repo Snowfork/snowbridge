@@ -1,5 +1,4 @@
 import "dotenv/config"
-import cron from "node-cron"
 import { transferToEthereum } from "./transfer_to_ethereum_v3"
 
 const transfer = async () => {
