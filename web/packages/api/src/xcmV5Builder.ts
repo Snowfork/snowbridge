@@ -1219,6 +1219,15 @@ export function buildTransferXcmFromAssetHub(
             },
         })
     } else {
+        // native asset first
+        if (tokenLocation.parents == 0) {
+            assets.push({
+                id: tokenLocation,
+                fun: {
+                    Fungible: tokenAmount,
+                },
+            })
+        }
         assets.push({
             id: localFeeAssetId,
             fun: {
@@ -1233,12 +1242,14 @@ export function buildTransferXcmFromAssetHub(
                 },
             })
         } else {
-            assets.push({
-                id: tokenLocation,
-                fun: {
-                    Fungible: tokenAmount,
-                },
-            })
+            if (tokenLocation.parents != 0) {
+                assets.push({
+                    id: tokenLocation,
+                    fun: {
+                        Fungible: tokenAmount,
+                    },
+                })
+            }
             assets.push({
                 id: remoteFeeAssetId,
                 fun: {
@@ -1289,6 +1300,9 @@ export function buildTransferXcmFromAssetHub(
             },
             {
                 setAppendix: [
+                    {
+                        refundSurplus: null,
+                    },
                     {
                         depositAsset: {
                             assets: {
@@ -1350,6 +1364,8 @@ export function buildTransferXcmFromParachain(
     ethChainId: number,
     sourceAccount: string,
     beneficiary: string,
+    assetHubParaId: number,
+    sourceParachainId: number,
     asset: Asset,
     tokenAmount: bigint,
     localFeeAssetId: any,
@@ -1358,14 +1374,13 @@ export function buildTransferXcmFromParachain(
     assethubFeeAmount: bigint,
     remoteFeeAssetId: any,
     remoteFeeAmount: bigint,
-    assetHubParaId: number,
-    sourceParachainId: number,
     topic: string
 ) {
     let beneficiaryLocation = parseLocation(beneficiary)
     let sourceLocation = parseLocation(sourceAccount)
     let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
     let assets = []
+    // native asset first
     if (tokenLocation.parents == 0) {
         assets.push({
             id: tokenLocation,
@@ -1487,6 +1502,9 @@ export function buildTransferXcmFromParachain(
             {
                 setAppendix: [
                     {
+                        refundSurplus: null,
+                    },
+                    {
                         depositAsset: {
                             assets: {
                                 wild: {
@@ -1535,6 +1553,9 @@ export function buildTransferXcmFromParachain(
                     remoteXcm: [
                         {
                             setAppendix: [
+                                {
+                                    refundSurplus: null,
+                                },
                                 {
                                     depositAsset: {
                                         assets: {

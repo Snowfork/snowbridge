@@ -849,6 +849,8 @@ function createSourceParachainTx(
         ethChainId,
         sourceAccount,
         beneficiaryAccount,
+        assetHubParaId,
+        sourceParachainId,
         asset,
         amount,
         localFeeAssetId,
@@ -857,8 +859,6 @@ function createSourceParachainTx(
         assethubFeeAmount,
         remoteFeeAssetId,
         remoteFeeAmount,
-        assetHubParaId,
-        sourceParachainId,
         messageId
     )
     let maxWeight = { refTime: 100_000_000_000n, proofSize: 4_000_000 }
