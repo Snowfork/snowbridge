@@ -130,3 +130,24 @@ export const getEventIndex = (id: string) => {
     }
     return `${blockNumber}-${eventIndex}`
 }
+
+export const parseLocation = (account: string) => {
+    let {
+        hexAddress,
+        address: { kind },
+    } = beneficiaryMultiAddress(account)
+    let beneficiaryLocation
+    switch (kind) {
+        case 1:
+            // 32 byte addresses
+            beneficiaryLocation = { accountId32: { id: hexAddress } }
+            break
+        case 2:
+            // 20 byte addresses
+            beneficiaryLocation = { accountKey20: { key: hexAddress } }
+            break
+        default:
+            throw Error(`Could not parse beneficiary address ${account}`)
+    }
+    return beneficiaryLocation
+}

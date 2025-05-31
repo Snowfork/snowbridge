@@ -4,6 +4,7 @@ import { isFunction } from "@polkadot/util"
 import { SnowbridgeEnvironment } from "./environment"
 import { Context } from "./index"
 import {
+    bridgeLocation,
     buildParachainERC20ReceivedXcmOnDestination,
     DOT_LOCATION,
     erc20Location,
@@ -18,6 +19,7 @@ export type ERC20Metadata = {
     symbol: string
     decimals: number
     foreignId?: string
+    deliveryGas?: bigint
 }
 
 export type EthereumChain = {
@@ -28,6 +30,8 @@ export type EthereumChain = {
     precompile?: `0x${string}`
     xcDOT?: string
     xcTokenMap?: XC20TokenMap
+    // The gas cost of v2_submit excludes command execution, mainly covers the verification
+    baseDeliveryGas?: bigint
 }
 
 export type AccountType = "AccountId20" | "AccountId32"
@@ -679,6 +683,15 @@ export function getTokenBalance(
     )
 }
 
+export function getEtherBalance(
+    provider: ApiPromise,
+    specName: string,
+    account: string,
+    ethChainId: number
+) {
+    return getLocationBalance(provider, specName, bridgeLocation(ethChainId), account)
+}
+
 export async function getParachainId(parachain: ApiPromise): Promise<number> {
     const sourceParachainEncoded = await parachain.query.parachainInfo.parachainId()
     return Number(sourceParachainEncoded.toPrimitive())
@@ -695,7 +708,7 @@ export async function calculateDestinationFee(provider: ApiPromise, destinationX
     let feeInDot: any
     feeInDot = (
         await provider.call.xcmPaymentApi.queryWeightToAssetFee(weight.ok, {
-            v4: { parents: 1, interior: "Here" },
+            v5: { parents: 1, interior: "Here" },
         })
     ).toPrimitive() as any
     // For compatibility with Westend, which has XCMV5 enabled.
@@ -719,7 +732,7 @@ export async function calculateDeliveryFee(
 ) {
     const result = (
         await provider.call.xcmPaymentApi.queryDeliveryFees(
-            { v4: { parents: 1, interior: { x1: [{ parachain: parachainId }] } } },
+            { v5: { parents: 1, interior: { x1: [{ parachain: parachainId }] } } },
             destinationXcm
         )
     ).toPrimitive() as any
@@ -727,7 +740,7 @@ export async function calculateDeliveryFee(
         throw Error(`Can not query XCM Weight.`)
     }
     let dotAsset = undefined
-    for (const asset of result.ok.v4) {
+    for (const asset of result.ok.v5) {
         if (asset.id.parents === 1 && asset.id.interior.here === null) {
             dotAsset = asset
         }
@@ -1074,6 +1087,7 @@ async function indexEthChain(
                     name: assetHub.assets[token].name,
                     symbol: assetHub.assets[token].symbol,
                     decimals: assetHub.assets[token].decimals,
+                    deliveryGas: 100_000n,
                 }
             } else {
                 assets[token] = await assetErc20Metadata(provider, token, gatewayAddress)
@@ -1088,6 +1102,7 @@ async function indexEthChain(
             chainId: networkChainId,
             assets,
             id: id ?? `chain_${networkChainId}`,
+            baseDeliveryGas: 180_000n,
         }
     } else {
         let evmParachainChain: Parachain | undefined
@@ -1203,12 +1218,15 @@ async function assetErc20Metadata(
         name: String(name),
         symbol: String(symbol),
         decimals: Number(decimals),
+        // Todo: Customize logic for LDO token
+        deliveryGas: 100_000n,
     }
     if (gateway) {
         let gatewayCon = IGateway__factory.connect(gateway, provider)
         let tokenId = await gatewayCon.queryForeignTokenID(token)
         if (tokenId != "0x0000000000000000000000000000000000000000000000000000000000000000") {
             metadata.foreignId = tokenId
+            metadata.deliveryGas = 100_000n
         }
     }
     return metadata
@@ -1293,7 +1311,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
             result.assetOverrides = {
                 "2000": [
                     {
-                        token: "0xD8597EB7eF761E3315623EdFEe9DEfcBACd72e8b".toLowerCase(),
+                        token: "0x805c5a7d4E97908a8EC726DcCc94a047D073eB7E".toLowerCase(),
                         name: "pal-2",
                         minimumBalance: 1n,
                         symbol: "pal-2",
@@ -1405,9 +1423,9 @@ async function indexPNAs(
 ): Promise<AssetOverrideMap> {
     let pnas: Asset[] = []
     let gateway = IGateway__factory.connect(gatewayAddress, ethereum)
-    const entries = await bridgehub.query.ethereumSystem.nativeToForeignId.entries()
+    const entries = await bridgehub.query.ethereumSystem.foreignToNativeId.entries()
     for (const [key, value] of entries) {
-        const location: any = key.args.at(0)?.toJSON()
+        const location: any = value.toPrimitive()
         if (!location) {
             console.warn(`Could not convert ${key.toHuman()} to location`)
             continue
@@ -1417,7 +1435,7 @@ async function indexPNAs(
             console.warn(`Location ${JSON.stringify(location)} is not bridgeable on assethub`)
             continue
         }
-        const tokenId = (value.toPrimitive() as string).toLowerCase()
+        const tokenId = (key.args.at(0)?.toPrimitive() as string).toLowerCase()
         const token = await gateway.tokenAddressOf(tokenId)
         const metadata = await assetErc20Metadata(ethereum, token, gatewayAddress)
         let metadataOnAH: any, assetId: any
@@ -1436,7 +1454,7 @@ async function indexPNAs(
                     isSufficient: true,
                 }
             } else {
-                const assetType = assethub.registry.createType("StagingXcmV4Location", locationOnAH)
+                const assetType = assethub.registry.createType("StagingXcmV5Location", locationOnAH)
                 metadataOnAH = (await assethub.query.foreignAssets.asset(assetType)).toJSON()
             }
         }
@@ -1463,6 +1481,7 @@ async function indexPNAs(
 }
 
 export const WESTEND_GENESIS = "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
+export const ROCOCO_GENESIS = "0x6408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e"
 
 // Currently, the bridgeable assets are limited to KSM, DOT, native assets on AH
 // and TEER
@@ -1549,6 +1568,39 @@ function bridgeablePNAsOnAH(environment: string, location: any, assetHubParaId: 
                         x1: [
                             {
                                 parachain: location.interior.x2[1]?.parachain,
+                            },
+                        ],
+                    },
+                }
+            } else if (
+                location.interior.x1 &&
+                location.interior.x1[0]?.globalConsensus?.byGenesis === ROCOCO_GENESIS
+            ) {
+                return {
+                    parents: 2,
+                    interior: {
+                        x1: [
+                            {
+                                globalConsensus: { byGenesis: ROCOCO_GENESIS },
+                            },
+                        ],
+                    },
+                }
+            } else if (
+                location.interior.x4 &&
+                location.interior.x4[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS &&
+                location.interior.x4[1]?.parachain &&
+                location.interior.x4[2]?.palletInstance &&
+                location.interior.x4[3]?.generalIndex != undefined
+            ) {
+                return {
+                    parents: 2,
+                    interior: {
+                        x3: [
+                            {
+                                parachain: location.interior.x4[1]?.parachain,
+                                palletInstance: location.interior.x4[2].palletInstance,
+                                generalIndex: location.interior.x4[3].generalIndex,
                             },
                         ],
                     },
