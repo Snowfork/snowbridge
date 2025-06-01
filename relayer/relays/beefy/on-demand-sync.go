@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -107,9 +108,11 @@ func (relay *OnDemandRelay) Start(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("sync for v1 message: %w", err)
 			}
-			err = relay.syncV2(ctx)
-			if err != nil {
-				return fmt.Errorf("sync for v2 message: %w", err)
+			if relay.isV2Enabled(ctx) {
+				err = relay.syncV2(ctx)
+				if err != nil {
+					return fmt.Errorf("sync for v2 message: %w", err)
+				}
 			}
 		}
 	}
@@ -540,4 +543,13 @@ func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber u
 
 	log.Info("Sync completed")
 	return nil
+}
+
+func (relay *OnDemandRelay) isV2Enabled(ctx context.Context) bool {
+	_, err := relay.fetchLatestV2Nonce(ctx)
+
+	if err != nil {
+		return !strings.Contains(err.Error(), "EthereumOutboundQueueV2 not found")
+	}
+	return true
 }
