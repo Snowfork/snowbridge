@@ -1,7 +1,11 @@
 use std::{sync::Arc, time::Duration};
 
 use codec::{DecodeAll, Encode};
-use ethers::{abi::Address, core::types::U256, prelude::*};
+use ethers::{
+	abi::Address,
+	core::{k256::ecdsa::SigningKey, types::U256},
+	prelude::*,
+};
 
 use snowbridge_smoketest::{
 	constants::*,
@@ -39,36 +43,45 @@ use subxt::{
 
 // const GATEWAY_V2_ADDRESS: [u8; 20] = hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0");
 
+pub struct TestClients {
+	pub relaychain_client: Box<OnlineClient<PolkadotConfig>>,
+	pub ethereum_client: Box<Arc<Provider<Ws>>>,
+	pub beefy_client: Box<BeefyClient<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>>,
+}
+
+async fn initialize_clients() -> Result<TestClients, Box<dyn std::error::Error>> {
+	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
+		.await?
+		.interval(Duration::from_millis(10u64));
+	let ethereum_client = Arc::new(ethereum_provider);
+	let ethereum_signed_client = Arc::new(initialize_wallet().await?);
+	let relaychain_client = OnlineClient::from_url((*RELAY_CHAIN_WS_URL).to_string()).await?;
+	let beefy_client_addr: Address = BEEFY_CLIENT_CONTRACT.into();
+	let beefy_client = BeefyClient::new(beefy_client_addr, ethereum_signed_client.clone());
+	Ok(TestClients {
+		relaychain_client: Box::new(relaychain_client),
+		ethereum_client: Box::new(ethereum_client),
+		beefy_client: Box::new(beefy_client),
+	})
+}
+
 #[tokio::test]
 async fn malicious_payload() {
 	// Setup clients
 	// ---
-	let (ethereum_client, ethereum_signed_client, relaychain_client, beefy_client) = {
-		let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
-			.await
-			.unwrap()
-			.interval(Duration::from_millis(10u64));
-		let ethereum_client = Arc::new(ethereum_provider);
-		let ethereum_signed_client =
-			Arc::new(initialize_wallet().await.expect("initialize wallet"));
+	let test_clients = initialize_clients().await.expect("initialize clients");
 
-		let relaychain_client: OnlineClient<PolkadotConfig> =
-			OnlineClient::from_url((*RELAY_CHAIN_WS_URL).to_string())
-				.await
-				.expect("can not connect to relaychain");
+	let (submit_initial, submit_final, report_equivocation) = (true, true, true);
 
-		let beefy_client_addr: Address = BEEFY_CLIENT_CONTRACT.into();
-		let beefy_client = BeefyClient::new(beefy_client_addr, ethereum_signed_client.clone());
-		(ethereum_client, ethereum_signed_client, relaychain_client, beefy_client)
-	};
-
-	let current_validator_set = beefy_client
+	let current_validator_set = test_clients
+		.beefy_client
 		.current_validator_set()
 		.call()
 		.await
 		.expect("beefy client initialized");
 
-	let block_number = beefy_client
+	let block_number = test_clients
+		.beefy_client
 		.latest_beefy_block()
 		.call()
 		.await
@@ -76,7 +89,7 @@ async fn malicious_payload() {
 
 	println!("block_number: {:?}", block_number);
 
-	let call = beefy_client.latest_mmr_root();
+	let call = test_clients.beefy_client.latest_mmr_root();
 	let current_mmr_root = call.call().await.expect("commit valid");
 	println!("current mmr root: {:?}", current_mmr_root);
 	let mut payload_data = Vec::new();
@@ -86,7 +99,8 @@ async fn malicious_payload() {
 		println!("NOTE: BEEFY client already has malicious mmr payload");
 	}
 
-	let randao_delay = beefy_client
+	let randao_delay = test_clients
+		.beefy_client
 		.randao_commit_delay()
 		.call()
 		.await
@@ -172,10 +186,9 @@ async fn malicious_payload() {
 
 	let mut r = [0u8; 32];
 	let mut s = [0u8; 32];
-
-	let init_signature_bytes = malicious_signatures[signer_index].0.as_slice();
-
 	let proof = {
+		let init_signature_bytes = malicious_signatures[signer_index].0.as_slice();
+
 		r.copy_from_slice(&init_signature_bytes[0..32]);
 		s.copy_from_slice(&init_signature_bytes[32..64]);
 
@@ -199,9 +212,11 @@ async fn malicious_payload() {
 		}
 	};
 
-	let submit_initial = false;
 	if submit_initial {
-		let call = beefy_client.submit_initial(commitment.clone(), bitfield.clone(), proof);
+		let call =
+			test_clients
+				.beefy_client
+				.submit_initial(commitment.clone(), bitfield.clone(), proof);
 		let result = call.send().await;
 
 		println!("{:?}", result);
@@ -213,21 +228,20 @@ async fn malicious_payload() {
 		assert!(result.is_ok());
 		tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
 
-		let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(3);
+		let mut stream = test_clients.ethereum_client.subscribe_blocks().await.unwrap().take(3);
 
 		while let Some(_block) = stream.next().await {}
 
-		let call = beefy_client.commit_prev_randao(*hashed_commitment);
+		let call = test_clients.beefy_client.commit_prev_randao(*hashed_commitment);
 		let result = call.send().await.expect("commit valid");
 		println!("{:?}", result);
 	}
 
-	let submit_final = false;
 	if submit_final {
-		let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(1);
+		let mut stream = test_clients.ethereum_client.subscribe_blocks().await.unwrap().take(1);
 		while let Some(_block) = stream.next().await {}
 
-		let call = beefy_client.create_final_bitfield(*hashed_commitment, bitfield);
+		let call = test_clients.beefy_client.create_final_bitfield(*hashed_commitment, bitfield);
 		let bitfield = call.call().await.expect("commit valid");
 		// println!("final bitfield: {:?}", result);
 
@@ -271,7 +285,7 @@ async fn malicious_payload() {
 			parachain_heads_root: [0; 32],
 		};
 
-		let call = beefy_client.submit_final(
+		let call = test_clients.beefy_client.submit_final(
 			commitment,
 			bitfield,
 			chosen_malicious_proofs,
@@ -285,32 +299,34 @@ async fn malicious_payload() {
 	}
 
 
-	let report_equivocation = false;
 	if report_equivocation {
 		let beefy_storage_api = relaychain::api::beefy::storage::StorageApi;
 		let validator_set_id = beefy_storage_api.validator_set_id();
 		println!("validator_set_id: {:?}", validator_set_id);
 
-		let proof_query = beefy_api::BeefyApi::generate_key_ownership_proof(
-			&beefy_api::BeefyApi,
-			0,
-			Public { 0: malicious_authority.public().0 },
-		);
+		println!("validator set id: {:?}", validator_set_id);
+		let key_ownership_proof = {
+			let proof_query = beefy_api::BeefyApi::generate_key_ownership_proof(
+				&beefy_api::BeefyApi,
+				// validator_set_id,
+				0,
+				Public { 0: malicious_authority.public().0 },
+			);
 
-		let key_ownership_proof_bytes = relaychain_client
-			.runtime_api()
-			.at_latest()
-			.await
-			.expect("can not connect to relaychain")
-			.call(proof_query)
-			.await
-			.expect("runtime query failed")
-			.expect("validator set is not Some");
-		println!("{:?}", key_ownership_proof_bytes.0);
+			let key_ownership_proof_bytes = test_clients
+				.relaychain_client
+				.runtime_api()
+				.at_latest()
+				.await
+				.expect("can not connect to relaychain")
+				.call(proof_query)
+				.await
+				.expect("runtime query failed")
+				.expect("validator set is not Some");
+			// println!("{:?}", key_ownership_proof_bytes.0);
 
-		let key_ownership_proof =
-			MembershipProof::decode_all(&mut key_ownership_proof_bytes.0.as_slice()).unwrap();
-
+			MembershipProof::decode_all(&mut key_ownership_proof_bytes.0.as_slice()).unwrap()
+		};
 		println!("{:?}", key_ownership_proof);
 
 		// Create equivocation proof
@@ -331,7 +347,8 @@ async fn malicious_payload() {
 			.beefy()
 			.report_future_block_voting(equivocation_proof, key_ownership_proof);
 
-		let events = relaychain_client
+		let events = test_clients
+			.relaychain_client
 			.tx()
 			.sign_and_submit_then_watch_default(&report, &dev::alice())
 			.await
