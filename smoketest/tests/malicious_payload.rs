@@ -65,6 +65,37 @@ async fn initialize_clients() -> Result<TestClients, Box<dyn std::error::Error>>
 	})
 }
 
+fn validator_proof(
+	signature_bytes: &[u8],
+	signer_index: usize,
+	validator_secp256k1_bytes: &Vec<[u8; 20]>,
+	validator_proofs: &[[[u8; 32]; 2]; 4],
+) -> ValidatorProof {
+	let mut r = [0u8; 32];
+	let mut s = [0u8; 32];
+	r.copy_from_slice(&signature_bytes[0..32]);
+	s.copy_from_slice(&signature_bytes[32..64]);
+
+	// For legacy format, convert 0/1 to 27/28
+	let v_raw = signature_bytes[64];
+	let v = match v_raw {
+		0 => 27,
+		1 => 28,
+		_ => panic!("v can only be 0 or 1"),
+	};
+
+	println!("r: {:?}, s: {:?}, v: {:?}", r, s, v);
+
+	ValidatorProof {
+		v,
+		r,
+		s,
+		index: U256::from_little_endian(&[signer_index.try_into().unwrap()]),
+		account: H160::from_slice(&validator_secp256k1_bytes[signer_index]),
+		proof: validator_proofs[signer_index].to_vec(),
+	}
+}
+
 #[tokio::test]
 async fn malicious_payload() {
 	// Setup clients
@@ -184,33 +215,12 @@ async fn malicious_payload() {
 	let signer_index = 0;
 	let malicious_authority: Pair = Pair::from_string(malicious_suris[signer_index], None).unwrap();
 
-	let mut r = [0u8; 32];
-	let mut s = [0u8; 32];
-	let proof = {
-		let init_signature_bytes = malicious_signatures[signer_index].0.as_slice();
-
-		r.copy_from_slice(&init_signature_bytes[0..32]);
-		s.copy_from_slice(&init_signature_bytes[32..64]);
-
-		// For legacy format, convert 0/1 to 27/28
-		let v_raw = init_signature_bytes[64];
-		let v = match v_raw {
-			0 => 27,
-			1 => 28,
-			_ => panic!("v can only be 0 or 1"),
-		};
-
-		println!("r: {:?}, s: {:?}, v: {:?}", r, s, v);
-
-		ValidatorProof {
-			v,
-			r,
-			s,
-			index: U256::from_little_endian(&[signer_index.try_into().unwrap()]),
-			account: H160::from_slice(&validator_secp256k1_bytes[signer_index]),
-			proof: validator_proofs[signer_index].to_vec(),
-		}
-	};
+	let proof = validator_proof(
+		malicious_signatures[signer_index].0.as_slice(),
+		signer_index,
+		&validator_secp256k1_bytes,
+		&validator_proofs,
+	);
 
 	if submit_initial {
 		let call =
@@ -254,24 +264,7 @@ async fn malicious_payload() {
 				//TODO: deduplicate with init sig
 				let sig_bytes = sig.0.as_slice();
 
-				r.copy_from_slice(&sig_bytes[0..32]);
-				s.copy_from_slice(&sig_bytes[32..64]);
-
-				let v_raw = sig_bytes[64];
-				let v = match v_raw {
-					0 => 27,
-					1 => 28,
-					_ => panic!("v can only be 0 or 1"),
-				};
-
-				ValidatorProof {
-					v,
-					r,
-					s,
-					index: U256::from_little_endian(&[i.try_into().unwrap()]),
-					account: H160::from_slice(&validator_secp256k1_bytes[i]),
-					proof: validator_proofs[i].to_vec(),
-				}
+				validator_proof(sig_bytes, i, &validator_secp256k1_bytes, &validator_proofs)
 			})
 			.collect::<Vec<_>>();
 
