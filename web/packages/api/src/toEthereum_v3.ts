@@ -67,6 +67,7 @@ export type Transfer = {
 export type DeliveryFee = {
     snowbridgeDeliveryFeeDOT: bigint
     bridgeHubDeliveryFeeDOT: bigint
+    localExecutionFeeDOT: bigint
     assetHubExecutionFeeDOT: bigint
     returnToSenderExecutionFeeDOT: bigint
     returnToSenderDeliveryFeeDOT: bigint
@@ -121,30 +122,27 @@ export async function createTransfer(
             beneficiaryAccount,
             ahAssetMetadata,
             amount,
-            DOT_LOCATION,
-            fee.assetHubExecutionFeeDOT || 800_000_000_000n,
-            bridgeLocation(ethChainId),
+            fee.localExecutionFeeDOT,
+            fee.totalFeeInDot,
             fee.ethereumExecutionFee,
             messageId
         )
     } else {
-        const fee_on_ah =
-            fee.assetHubExecutionFeeDOT + fee.snowbridgeDeliveryFeeDOT + fee.bridgeHubDeliveryFeeDOT
         tx = createSourceParachainTx(
             parachain,
             ethChainId,
+            assetHubParaId,
+            sourceParaId,
             sourceAccountHex,
             beneficiaryAccount,
             sourceAssetMetadata,
             amount,
-            DOT_LOCATION,
-            fee.totalFeeInDot - fee_on_ah,
-            DOT_LOCATION,
-            fee_on_ah,
-            bridgeLocation(ethChainId),
+            fee.localExecutionFeeDOT + fee.returnToSenderDeliveryFeeDOT,
+            fee.totalFeeInDot,
+            fee.assetHubExecutionFeeDOT +
+                fee.snowbridgeDeliveryFeeDOT +
+                fee.bridgeHubDeliveryFeeDOT,
             fee.ethereumExecutionFee,
-            assetHubParaId,
-            sourceParaId,
             messageId
         )
     }
@@ -180,7 +178,7 @@ export async function getDeliveryFee(
     defaultFee?: bigint
 ): Promise<DeliveryFee> {
     const { assetHub, source, ethereum } = connections
-    const feePadPercentage = padPercentage ?? 100n
+    const feePadPercentage = padPercentage ?? 70n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFeeV2:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
@@ -199,7 +197,7 @@ export async function getDeliveryFee(
         parachain
     )
 
-    let xcm: any, forwardedXcm: any
+    let xcm: any, forwardedXcm: any, returnToSenderXcm: any, localXcm: any
 
     if (sourceAssetMetadata.location) {
         xcm = buildResultXcmAssetHubPNATransferFromParachain(
@@ -270,6 +268,7 @@ export async function getDeliveryFee(
         )
     }
 
+    let localExecutionFeeDOT = 0n
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
     let returnToSenderDeliveryFeeDOT = 0n
@@ -279,7 +278,6 @@ export async function getDeliveryFee(
         forwardedXcm
     )
     if (parachain !== registry.assetHubParaId) {
-        let returnToSenderXcm: any
         if (sourceAssetMetadata.location) {
             returnToSenderXcm = buildParachainPNAReceivedXcmOnDestination(
                 source.registry,
@@ -324,9 +322,46 @@ export async function getDeliveryFee(
             await calculateDestinationFee(assetHub, xcm),
             feePadPercentage
         )
+        localXcm = buildTransferXcmFromParachain(
+            assetHub.registry,
+            registry.ethChainId,
+            registry.assetHubParaId,
+            parachain,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000",
+            sourceAssetMetadata,
+            1n,
+            1n,
+            1n,
+            1n,
+            1n,
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        )
+        localExecutionFeeDOT = padFeeByPercentage(
+            await calculateDestinationFee(assetHub, localXcm),
+            feePadPercentage
+        )
+    } else {
+        localXcm = buildTransferXcmFromAssetHub(
+            assetHub.registry,
+            registry.ethChainId,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000",
+            sourceAssetMetadata,
+            1n,
+            1n,
+            1n,
+            1n,
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        )
+        localExecutionFeeDOT = padFeeByPercentage(
+            await calculateDestinationFee(assetHub, localXcm),
+            feePadPercentage
+        )
     }
 
     const totalFeeInDot =
+        localExecutionFeeDOT +
         snowbridgeDeliveryFeeDOT +
         assetHubExecutionFeeDOT +
         returnToSenderExecutionFeeDOT +
@@ -371,6 +406,7 @@ export async function getDeliveryFee(
         ((tokenErcMetadata.deliveryGas ?? 100_000n) + (ethereumChain.baseDeliveryGas ?? 180_000n))
 
     return {
+        localExecutionFeeDOT,
         snowbridgeDeliveryFeeDOT,
         assetHubExecutionFeeDOT,
         bridgeHubDeliveryFeeDOT,
@@ -816,10 +852,9 @@ function createAssetHubTx(
     beneficiaryAccount: string,
     asset: Asset,
     amount: bigint,
-    localFeeAsset: any,
-    localFeeAmount: bigint,
-    remoteFeeAsset: any,
-    remoteFeeAmount: bigint,
+    localDOTFeeAmount: bigint,
+    totalDOTFeeAmount: bigint,
+    remoteEtherFeeAmount: bigint,
     messageId: string
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let xcm = buildTransferXcmFromAssetHub(
@@ -829,10 +864,9 @@ function createAssetHubTx(
         beneficiaryAccount,
         asset,
         amount,
-        localFeeAsset,
-        localFeeAmount,
-        remoteFeeAsset,
-        remoteFeeAmount,
+        localDOTFeeAmount,
+        totalDOTFeeAmount,
+        remoteEtherFeeAmount,
         messageId
     )
     let maxWeight = { refTime: 100_000_000_000n, proofSize: 4_000_000 }
@@ -843,35 +877,31 @@ function createAssetHubTx(
 function createSourceParachainTx(
     parachain: ApiPromise,
     ethChainId: number,
+    assetHubParaId: number,
+    sourceParachainId: number,
     sourceAccount: string,
     beneficiaryAccount: string,
     asset: Asset,
     amount: bigint,
-    localFeeAssetId: any,
-    localFeeAmount: bigint,
-    assethubFeeAssetId: any,
-    assethubFeeAmount: bigint,
-    remoteFeeAssetId: any,
-    remoteFeeAmount: bigint,
-    assetHubParaId: number,
-    sourceParachainId: number,
+    localDOTFeeAmount: bigint,
+    totalDOTFeeAmount: bigint,
+    assethubDOTFeeAmount: bigint,
+    remoteEtherFeeAmount: bigint,
     messageId: string
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let xcm = buildTransferXcmFromParachain(
         parachain.registry,
         ethChainId,
-        sourceAccount,
-        beneficiaryAccount,
         assetHubParaId,
         sourceParachainId,
+        sourceAccount,
+        beneficiaryAccount,
         asset,
         amount,
-        localFeeAssetId,
-        localFeeAmount,
-        assethubFeeAssetId,
-        assethubFeeAmount,
-        remoteFeeAssetId,
-        remoteFeeAmount,
+        localDOTFeeAmount,
+        totalDOTFeeAmount,
+        assethubDOTFeeAmount,
+        remoteEtherFeeAmount,
         messageId
     )
     let maxWeight = { refTime: 100_000_000_000n, proofSize: 4_000_000 }

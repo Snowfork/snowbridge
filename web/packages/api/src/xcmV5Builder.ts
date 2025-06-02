@@ -1195,27 +1195,26 @@ export function buildTransferXcmFromAssetHub(
     beneficiary: string,
     asset: Asset,
     tokenAmount: bigint,
-    localFeeAssetId: any,
-    localFeeAmount: bigint,
-    remoteFeeAssetId: any,
-    remoteFeeAmount: bigint,
+    localDOTFeeAmount: bigint,
+    totalDOTFeeAmount: bigint,
+    remoteEtherFeeAmount: bigint,
     topic: string
 ) {
     let beneficiaryLocation = parseLocation(beneficiary)
     let sourceLocation = parseLocation(sourceAccount)
     let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
     let assets = []
-    if (JSON.stringify(localFeeAssetId) == JSON.stringify(tokenLocation)) {
+    if (JSON.stringify(DOT_LOCATION) == JSON.stringify(tokenLocation)) {
         assets.push({
-            id: localFeeAssetId,
+            id: DOT_LOCATION,
             fun: {
-                Fungible: localFeeAmount + tokenAmount,
+                Fungible: totalDOTFeeAmount + tokenAmount,
             },
         })
         assets.push({
-            id: remoteFeeAssetId,
+            id: bridgeLocation(ethChainId),
             fun: {
-                Fungible: remoteFeeAmount,
+                Fungible: remoteEtherFeeAmount,
             },
         })
     } else {
@@ -1227,35 +1226,46 @@ export function buildTransferXcmFromAssetHub(
                     Fungible: tokenAmount,
                 },
             })
-        }
-        assets.push({
-            id: localFeeAssetId,
-            fun: {
-                Fungible: localFeeAmount,
-            },
-        })
-        if (JSON.stringify(tokenLocation) == JSON.stringify(remoteFeeAssetId)) {
             assets.push({
-                id: remoteFeeAssetId,
+                id: DOT_LOCATION,
                 fun: {
-                    Fungible: tokenAmount + remoteFeeAmount,
+                    Fungible: totalDOTFeeAmount,
+                },
+            })
+            assets.push({
+                id: bridgeLocation(ethChainId),
+                fun: {
+                    Fungible: remoteEtherFeeAmount,
                 },
             })
         } else {
-            if (tokenLocation.parents != 0) {
+            assets.push({
+                id: DOT_LOCATION,
+                fun: {
+                    Fungible: totalDOTFeeAmount,
+                },
+            })
+            if (JSON.stringify(tokenLocation) == JSON.stringify(bridgeLocation(ethChainId))) {
+                assets.push({
+                    id: bridgeLocation(ethChainId),
+                    fun: {
+                        Fungible: tokenAmount + remoteEtherFeeAmount,
+                    },
+                })
+            } else {
                 assets.push({
                     id: tokenLocation,
                     fun: {
                         Fungible: tokenAmount,
                     },
                 })
+                assets.push({
+                    id: bridgeLocation(ethChainId),
+                    fun: {
+                        Fungible: remoteEtherFeeAmount,
+                    },
+                })
             }
-            assets.push({
-                id: remoteFeeAssetId,
-                fun: {
-                    Fungible: remoteFeeAmount,
-                },
-            })
         }
     }
     let transferredAsset = asset.location
@@ -1291,9 +1301,9 @@ export function buildTransferXcmFromAssetHub(
             {
                 payfees: {
                     asset: {
-                        id: localFeeAssetId,
+                        id: DOT_LOCATION,
                         fun: {
-                            Fungible: localFeeAmount,
+                            Fungible: localDOTFeeAmount,
                         },
                     },
                 },
@@ -1325,9 +1335,9 @@ export function buildTransferXcmFromAssetHub(
                         reserveWithdraw: {
                             definite: [
                                 {
-                                    id: remoteFeeAssetId,
+                                    id: bridgeLocation(ethChainId),
                                     fun: {
-                                        Fungible: remoteFeeAmount,
+                                        Fungible: remoteEtherFeeAmount,
                                     },
                                 },
                             ],
@@ -1362,18 +1372,16 @@ export function buildTransferXcmFromAssetHub(
 export function buildTransferXcmFromParachain(
     registry: Registry,
     ethChainId: number,
-    sourceAccount: string,
-    beneficiary: string,
     assetHubParaId: number,
     sourceParachainId: number,
+    sourceAccount: string,
+    beneficiary: string,
     asset: Asset,
     tokenAmount: bigint,
-    localFeeAssetId: any,
-    localFeeAmount: bigint,
-    assethubFeeAssetId: any,
-    assethubFeeAmount: bigint,
-    remoteFeeAssetId: any,
-    remoteFeeAmount: bigint,
+    localDOTFeeAmount: bigint,
+    totalDOTFeeAmount: bigint,
+    assethubDOTFeeAmount: bigint,
+    remoteEtherFeeAmount: bigint,
     topic: string
 ) {
     let beneficiaryLocation = parseLocation(beneficiary)
@@ -1388,52 +1396,47 @@ export function buildTransferXcmFromParachain(
                 Fungible: tokenAmount,
             },
         })
-    }
-    if (JSON.stringify(localFeeAssetId) == JSON.stringify(assethubFeeAssetId)) {
         assets.push({
-            id: localFeeAssetId,
+            id: DOT_LOCATION,
             fun: {
-                Fungible: localFeeAmount + assethubFeeAmount,
+                Fungible: totalDOTFeeAmount,
+            },
+        })
+        assets.push({
+            id: bridgeLocation(ethChainId),
+            fun: {
+                Fungible: remoteEtherFeeAmount,
             },
         })
     } else {
         assets.push({
-            id: localFeeAssetId,
+            id: DOT_LOCATION,
             fun: {
-                Fungible: localFeeAmount,
+                Fungible: totalDOTFeeAmount,
             },
         })
-        assets.push({
-            id: assethubFeeAssetId,
-            fun: {
-                Fungible: assethubFeeAmount,
-            },
-        })
-    }
-    if (JSON.stringify(tokenLocation) == JSON.stringify(remoteFeeAssetId)) {
-        assets.push({
-            id: remoteFeeAssetId,
-            fun: {
-                Fungible: remoteFeeAmount + tokenAmount,
-            },
-        })
-    } else {
-        if (tokenLocation.parents != 0) {
+        if (JSON.stringify(tokenLocation) == JSON.stringify(bridgeLocation(ethChainId))) {
+            assets.push({
+                id: bridgeLocation(ethChainId),
+                fun: {
+                    Fungible: remoteEtherFeeAmount + tokenAmount,
+                },
+            })
+        } else {
             assets.push({
                 id: tokenLocation,
                 fun: {
                     Fungible: tokenAmount,
                 },
             })
+            assets.push({
+                id: bridgeLocation(ethChainId),
+                fun: {
+                    Fungible: remoteEtherFeeAmount,
+                },
+            })
         }
-        assets.push({
-            id: remoteFeeAssetId,
-            fun: {
-                Fungible: remoteFeeAmount,
-            },
-        })
     }
-
     let transferredAsset = asset.location
         ? {
               teleport: {
@@ -1492,9 +1495,9 @@ export function buildTransferXcmFromParachain(
             {
                 payfees: {
                     asset: {
-                        id: localFeeAssetId,
+                        id: DOT_LOCATION,
                         fun: {
-                            Fungible: localFeeAmount,
+                            Fungible: localDOTFeeAmount,
                         },
                     },
                 },
@@ -1526,9 +1529,9 @@ export function buildTransferXcmFromParachain(
                         reserveWithdraw: {
                             definite: [
                                 {
-                                    id: assethubFeeAssetId,
+                                    id: DOT_LOCATION,
                                     fun: {
-                                        Fungible: assethubFeeAmount,
+                                        Fungible: assethubDOTFeeAmount,
                                     },
                                 },
                             ],
@@ -1540,9 +1543,9 @@ export function buildTransferXcmFromParachain(
                             reserveWithdraw: {
                                 definite: [
                                     {
-                                        id: remoteFeeAssetId,
+                                        id: bridgeLocation(ethChainId),
                                         fun: {
-                                            Fungible: remoteFeeAmount,
+                                            Fungible: remoteEtherFeeAmount,
                                         },
                                     },
                                 ],
@@ -1575,9 +1578,9 @@ export function buildTransferXcmFromParachain(
                                     reserveWithdraw: {
                                         definite: [
                                             {
-                                                id: remoteFeeAssetId,
+                                                id: bridgeLocation(ethChainId),
                                                 fun: {
-                                                    Fungible: remoteFeeAmount,
+                                                    Fungible: remoteEtherFeeAmount,
                                                 },
                                             },
                                         ],
