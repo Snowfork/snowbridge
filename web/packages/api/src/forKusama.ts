@@ -30,7 +30,7 @@ import {
     getNativeBalance,
     getTokenBalance,
     Parachain,
-    quoteFeeSwap,
+    getAssetHubConversationPalletSwap,
 } from "./assets_v2"
 import {
     CallDryRunEffects,
@@ -225,7 +225,7 @@ export async function getDeliveryFee(
     } else {
         feeAssetOnDest = dotLocationOnKusamaAssetHub
     }
-    let destinationFee = await quoteFeeSwap(
+    let destinationFee = await getAssetHubConversationPalletSwap(
         destAssetHub,
         feeAssetOnDest,
         NATIVE_TOKEN_LOCATION,
