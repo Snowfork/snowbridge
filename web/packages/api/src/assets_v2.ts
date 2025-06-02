@@ -6,13 +6,15 @@ import { Context } from "./index"
 import {
     buildParachainERC20ReceivedXcmOnDestination,
     DOT_LOCATION,
+    dotLocationOnKusamaAssetHub,
     erc20Location,
 } from "./xcmBuilder"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 import {
-    convertToXcmV3X1, getMoonbeamEvmAssetMetadata,
+    convertToXcmV3X1,
+    getMoonbeamEvmAssetMetadata,
     getMoonbeamLocationBalance,
-    toMoonbeamXC20
+    toMoonbeamXC20,
 } from "./parachains/moonbeam"
 import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID, getMythosLocationBalance } from "./parachains/mythos"
 
@@ -109,9 +111,16 @@ export type RegistryOptions = {
     ethchains: (string | AbstractProvider)[]
     relaychain: string | ApiPromise
     bridgeHub: string | ApiPromise
+    kusama?: KusamaOptions
     precompiles?: PrecompileMap
     assetOverrides?: AssetOverrideMap
     destinationFeeOverrides?: FeeOverrideMap
+}
+
+export type KusamaOptions = {
+    assetHubParaId: number
+    bridgeHubParaId: number
+    assetHub: string | ApiPromise
 }
 
 export type AssetRegistry = {
@@ -125,6 +134,13 @@ export type AssetRegistry = {
     ethereumChains: {
         [chainId: string]: EthereumChain
     }
+    parachains: ParachainMap
+    kusama: KusamaConfig | undefined
+}
+
+type KusamaConfig = {
+    assetHubParaId: number
+    bridgeHubParaId: number
     parachains: ParachainMap
 }
 
@@ -195,6 +211,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         bridgeHubParaId,
         relaychain,
         bridgeHub,
+        kusama,
         precompiles,
         destinationFeeOverrides,
     } = options
@@ -365,6 +382,51 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         .filter((parachainKey) => ethProviders[parachainKey].managed)
         .forEach((parachainKey) => ethProviders[parachainKey].provider.destroy())
 
+    let kusamaConfig: KusamaConfig | undefined
+    if (kusama) {
+        let kusamaAssetHub = kusama.assetHub
+        let provider: ApiPromise
+        if (typeof kusamaAssetHub === "string") {
+            provider = await ApiPromise.create({
+                noInitWarn: true,
+                provider: kusamaAssetHub.startsWith("http")
+                    ? new HttpProvider(kusamaAssetHub)
+                    : new WsProvider(kusamaAssetHub),
+            })
+        } else {
+            provider = kusamaAssetHub
+        }
+
+        const kusamaPnaOverrides = await indexKusamaPNAs(
+            bridgeHub as ApiPromise,
+            providers[assetHubParaId].provider,
+            provider,
+            ethProviders[ethChainId].provider,
+            gatewayAddress,
+            assetHubParaId
+        )
+        let assetOverrides = { ...options.assetOverrides, ...kusamaPnaOverrides }
+
+        const para = await indexParachain(
+            provider,
+            provider,
+            ethChainId,
+            kusama.assetHubParaId,
+            kusama.assetHubParaId,
+            assetOverrides ?? {},
+            destinationFeeOverrides ?? {}
+        )
+
+        const kusamaParas: ParachainMap = {}
+        kusamaParas[kusama.assetHubParaId] = para
+
+        kusamaConfig = {
+            parachains: kusamaParas,
+            assetHubParaId: kusama.assetHubParaId,
+            bridgeHubParaId: kusama.bridgeHubParaId,
+        }
+    }
+
     return {
         environment,
         ethChainId,
@@ -375,6 +437,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         bridgeHub: bridgeHubInfo,
         ethereumChains: ethChains,
         parachains: paras,
+        kusama: kusamaConfig,
     }
 }
 
@@ -506,10 +569,10 @@ export function getTransferLocations(
 }
 
 export function fromEnvironment(
-    { name, config, ethChainId }: SnowbridgeEnvironment,
+    { name, config, kusamaConfig, ethChainId }: SnowbridgeEnvironment,
     ethereumApiKey?: string
 ): RegistryOptions {
-    const result: RegistryOptions = {
+    let result: RegistryOptions = {
         environment: name,
         assetHubParaId: config.ASSET_HUB_PARAID,
         bridgeHubParaId: config.BRIDGE_HUB_PARAID,
@@ -521,6 +584,13 @@ export function fromEnvironment(
         parachains: Object.keys(config.PARACHAINS)
             .filter((paraId) => paraId !== config.BRIDGE_HUB_PARAID.toString())
             .map((paraId) => config.PARACHAINS[paraId]),
+    }
+    if (kusamaConfig) {
+        result.kusama = {
+            assetHubParaId: kusamaConfig.ASSET_HUB_PARAID,
+            bridgeHubParaId: kusamaConfig.BRIDGE_HUB_PARAID,
+            assetHub: kusamaConfig.PARACHAINS[config.ASSET_HUB_PARAID.toString()],
+        }
     }
     addOverrides(name, result)
     return result
@@ -540,7 +610,8 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
                 .map((paraId) => context.parachain(paraId))
         ),
     ])
-    const result: RegistryOptions = {
+
+    let result: RegistryOptions = {
         environment: context.config.environment,
         assetHubParaId,
         bridgeHubParaId,
@@ -551,6 +622,20 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
         ethchains: context.ethChains().map((ethChainId) => context.ethChain(ethChainId)),
         parachains,
     }
+
+    if (context.config.kusama) {
+        const kusamaAssetHub = await context.kusamaAssetHub()
+
+        if (kusamaAssetHub) {
+            const { assetHubParaId, bridgeHubParaId } = context.config.kusama
+            result.kusama = {
+                assetHubParaId,
+                bridgeHubParaId,
+                assetHub: kusamaAssetHub,
+            }
+        }
+    }
+
     addOverrides(context.config.environment, result)
     return result
 }
@@ -602,6 +687,7 @@ export async function getLocationBalance(
         case "penpal-parachain":
         case "asset-hub-paseo":
         case "westmint":
+        case "statemine":
         case "statemint": {
             let accountData: any
             if (pnaAssetId) {
@@ -641,12 +727,12 @@ export async function getLocationBalance(
         }
         case "muse":
         case "mythos": {
-            return await getMythosLocationBalance(
-                location, provider, specName, account
-            )
+            return await getMythosLocationBalance(location, provider, specName, account)
         }
         default:
-            throw Error(`Cannot get balance for spec ${specName}. Location = ${JSON.stringify(location)}`)
+            throw Error(
+                `Cannot get balance for spec ${specName}. Location = ${JSON.stringify(location)}`
+            )
     }
 }
 
@@ -660,6 +746,9 @@ export function getDotBalance(
         case "westmint":
         case "statemint": {
             return getNativeBalance(provider, account)
+        }
+        case "statemine": {
+            return getLocationBalance(provider, specName, dotLocationOnKusamaAssetHub, account)
         }
         default:
             return getLocationBalance(provider, specName, DOT_LOCATION, account)
@@ -825,6 +914,7 @@ async function indexParachainAssets(provider: ApiPromise, ethChainId: number, sp
         case "asset-hub-paseo":
         case "westmint":
         case "penpal-parachain":
+        case "statemine":
         case "statemint": {
             const entries = await provider.query.foreignAssets.asset.entries()
             for (const [key, value] of entries) {
@@ -962,21 +1052,25 @@ async function indexParachain(
         isFunction(provider.call.xcmPaymentApi?.queryWeightToAssetFee)
 
     // test getting balances
-    let hasDotBalance = true;
+    let hasDotBalance = true
     try {
         await getDotBalance(
             provider,
             info.specName,
-            info.accountType === "AccountId32" ? "0x0000000000000000000000000000000000000000000000000000000000000000" : "0x0000000000000000000000000000000000000000"
+            info.accountType === "AccountId32"
+                ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+                : "0x0000000000000000000000000000000000000000"
         )
-    } catch(err) {
+    } catch (err) {
         console.warn(`Spec ${info.specName} does not support dot ${err}`)
         hasDotBalance = false
     }
 
     await getNativeBalance(
         provider,
-        info.accountType === "AccountId32" ? "0x0000000000000000000000000000000000000000000000000000000000000000" : "0x0000000000000000000000000000000000000000"
+        info.accountType === "AccountId32"
+            ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+            : "0x0000000000000000000000000000000000000000"
     )
 
     let estimatedExecutionFeeDOT = 0n
@@ -1359,10 +1453,8 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MUSE to any location but 3369
                 if (
                     path.asset === MUSE_TOKEN_ID &&
-                    (
-                        (path.destination !== 3369 && path.type === "ethereum") ||
-                        (path.source !== 3369 && path.type === "substrate")
-                    )
+                    ((path.destination !== 3369 && path.type === "ethereum") ||
+                        (path.source !== 3369 && path.type === "substrate"))
                 ) {
                     return false
                 }
@@ -1377,10 +1469,8 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MYTH to any location but 3369
                 if (
                     path.asset === MYTHOS_TOKEN_ID &&
-                    (
-                        // TODO: Disable Mythos to Eth until mythos is ready to enable
-                        (path.destination !== 3369)
-                    )
+                    // TODO: Disable Mythos to Eth until mythos is ready to enable
+                    path.destination !== 3369
                 ) {
                     return false
                 }
@@ -1421,7 +1511,7 @@ async function indexPNAs(
             console.warn(`Could not convert ${key.toHuman()} to location`)
             continue
         }
-        const locationOnAH: any = bridgeablePNAsOnAH(environment, location, assetHubParaId)
+        const locationOnAH: any = bridgeablePNAsOnPolkadotAH(environment, location, assetHubParaId)
         if (!locationOnAH) {
             console.warn(`Location ${JSON.stringify(location)} is not bridgeable on assethub`)
             continue
@@ -1469,11 +1559,108 @@ async function indexPNAs(
     return assetOverrides
 }
 
+async function indexKusamaPNAs(
+    bridgehub: ApiPromise,
+    polkadotAssethub: ApiPromise,
+    kusamaAssethub: ApiPromise,
+    ethereum: AbstractProvider,
+    gatewayAddress: string,
+    assetHubParaId: number
+): Promise<AssetOverrideMap> {
+    let pnas: Asset[] = []
+    let gateway = IGateway__factory.connect(gatewayAddress, ethereum)
+    const entries = await bridgehub.query.ethereumSystem.nativeToForeignId.entries()
+    for (const [key, value] of entries) {
+        const location: any = key.args.at(0)?.toJSON()
+        if (!location) {
+            console.warn(`Could not convert ${key.toHuman()} to location`)
+            continue
+        }
+
+        const locationOnAHKusama: any = bridgeablePNAsOnKusamaAH(location, assetHubParaId)
+        const locationOnAHPolkadot: any = bridgeablePNAsOnPolkadotAH("", location, assetHubParaId)
+        if (!locationOnAHKusama) {
+            continue
+        }
+        // Check if asset is registered on Kusama Assethub, if is not native KSM
+        if (
+            locationOnAHKusama?.parents != DOT_LOCATION.parents &&
+            locationOnAHKusama?.interior != DOT_LOCATION.interior
+        ) {
+            const assetType = kusamaAssethub.registry.createType(
+                "StagingXcmV4Location",
+                locationOnAHKusama
+            )
+            let assetOnKusama = (await kusamaAssethub.query.foreignAssets.asset(assetType)).toJSON()
+            if (!assetOnKusama) {
+                console.warn(
+                    `Location ${JSON.stringify(
+                        locationOnAHKusama
+                    )} is not a registered asset on Kusama Assethub`
+                )
+                continue
+            }
+        }
+
+        const tokenId = (value.toPrimitive() as string).toLowerCase()
+        const token = await gateway.tokenAddressOf(tokenId)
+        const metadata = await assetErc20Metadata(ethereum, token, gatewayAddress)
+        let metadataOnAH: any, assetId: any
+        if (locationOnAHKusama?.parents == 0) {
+            // skip any Kusama native assets for now
+            continue
+        } else {
+            if (
+                locationOnAHKusama?.parents == DOT_LOCATION.parents &&
+                locationOnAHKusama?.interior == DOT_LOCATION.interior
+            ) {
+                let existentialDeposit =
+                    kusamaAssethub.consts.balances.existentialDeposit.toPrimitive()
+                metadataOnAH = {
+                    minBalance: existentialDeposit,
+                    isSufficient: true,
+                }
+            } else if (
+                locationOnAHPolkadot?.parents == DOT_LOCATION.parents &&
+                locationOnAHPolkadot?.interior == DOT_LOCATION.interior
+            ) {
+                let existentialDeposit =
+                    polkadotAssethub.consts.balances.existentialDeposit.toPrimitive()
+                metadataOnAH = {
+                    minBalance: existentialDeposit,
+                    isSufficient: true,
+                }
+            }
+        }
+        const assetInfo: Asset = {
+            token,
+            name: metadata.name,
+            symbol: metadata.symbol,
+            decimals: metadata.decimals,
+            locationOnEthereum: location,
+            location: locationOnAHKusama,
+            locationOnAH: locationOnAHKusama,
+            foreignId: tokenId,
+            minimumBalance: metadataOnAH?.minBalance as bigint,
+            isSufficient: metadataOnAH?.isSufficient as boolean,
+            assetId: metadataOnAH?.assetId,
+        }
+        pnas.push(assetInfo)
+    }
+    let assetOverrides: any = {}
+    assetOverrides[assetHubParaId.toString()] = pnas
+    return assetOverrides
+}
+
 export const WESTEND_GENESIS = "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
 
 // Currently, the bridgeable assets are limited to KSM, DOT, native assets on AH
 // and TEER
-function bridgeablePNAsOnAH(environment: string, location: any, assetHubParaId: number): any {
+function bridgeablePNAsOnPolkadotAH(
+    environment: string,
+    location: any,
+    assetHubParaId: number
+): any {
     if (location.parents != 1) {
         return
     }
@@ -1564,7 +1751,12 @@ function bridgeablePNAsOnAH(environment: string, location: any, assetHubParaId: 
     }
 }
 
-export async function getAssetHubConversationPalletSwap(assetHub: ApiPromise, asset1: any, asset2: any, exactAsset2Balance: bigint) {
+export async function getAssetHubConversationPalletSwap(
+    assetHub: ApiPromise,
+    asset1: any,
+    asset2: any,
+    exactAsset2Balance: bigint
+) {
     const result = await assetHub.call.assetConversionApi.quotePriceTokensForExactTokens(
         asset1,
         asset2,
@@ -1573,7 +1765,93 @@ export async function getAssetHubConversationPalletSwap(assetHub: ApiPromise, as
     )
     const asset1Balance = result.toPrimitive() as any
     if (asset1Balance == null) {
-        throw Error(`No pool set up in asset conversion pallet for '${JSON.stringify(asset1)}' and '${JSON.stringify(asset2)}'.`)
+        throw Error(
+            `No pool set up in asset conversion pallet for '${JSON.stringify(
+                asset1
+            )}' and '${JSON.stringify(asset2)}'.`
+        )
     }
     return BigInt(asset1Balance)
+}
+
+function bridgeablePNAsOnKusamaAH(location: any, assetHubParaId: number): any {
+    if (location.parents != 1) {
+        return
+    }
+    // KSM
+    if (location.interior.x1 && location.interior.x1[0]?.globalConsensus?.kusama !== undefined) {
+        console.log("KSM")
+        return {
+            parents: 1,
+            interior: "Here",
+        }
+    }
+    // DOT
+    else if (
+        location.interior.x1 &&
+        location.interior.x1[0]?.globalConsensus?.polkadot !== undefined
+    ) {
+        return {
+            parents: 2,
+            interior: {
+                x1: [
+                    {
+                        globalConsensus: {
+                            Polkadot: null,
+                        },
+                    },
+                ],
+            },
+        }
+    }
+    // Native assets from AH
+    else if (
+        location.interior.x4 &&
+        location.interior.x4[0]?.globalConsensus?.polkadot !== undefined &&
+        location.interior.x4[1]?.parachain == assetHubParaId
+    ) {
+        return {
+            parents: 2,
+            interior: {
+                x4: [
+                    {
+                        globalConsensus: {
+                            Polkadot: null,
+                        },
+                    },
+                    {
+                        parachain: assetHubParaId,
+                    },
+                    {
+                        palletInstance: location.interior.x4[2]?.palletInstance,
+                    },
+                    {
+                        generalIndex: location.interior.x4[3]?.generalIndex,
+                    },
+                ],
+            },
+        }
+    }
+    // Others from 3rd Parachains, only TEER for now
+    else if (
+        location.interior.x2 &&
+        location.interior.x2[0]?.globalConsensus?.polkadot !== undefined &&
+        location.interior.x2[1]?.parachain == 2039
+    ) {
+        return {
+            parents: 2,
+            interior: {
+                x2: [
+                    {
+                        globalConsensus: {
+                            Polkadot: null,
+                        },
+                    },
+                    {
+                        parachain: 2039,
+                    },
+                ],
+            },
+        }
+    }
 }

@@ -2,8 +2,23 @@ import { Registry } from "@polkadot/types/types"
 import { beneficiaryMultiAddress } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 
-export const HERE_LOCATION = { parents: 0, interior: "Here"  }
-export const DOT_LOCATION = { parents: 1, interior: "Here"  }
+export const HERE_LOCATION = { parents: 0, interior: "Here" }
+export const DOT_LOCATION = { parents: 1, interior: "Here" }
+export const NATIVE_TOKEN_LOCATION = { parents: 1, interior: "Here" }
+export const polkadotNetwork = {
+    GlobalConsensus: { Polkadot: { network: null } },
+}
+export const kusamaNetwork = {
+    GlobalConsensus: { Kusama: { network: null } },
+}
+export const dotLocationOnKusamaAssetHub = {
+    parents: 2,
+    interior: { x1: [{ GlobalConsensus: { Polkadot: null } }] },
+}
+export const ksmLocationOnPolkadotAssetHub = {
+    parents: 2,
+    interior: { x1: [{ GlobalConsensus: { Kusama: null } }] },
+}
 
 const ethereumNetwork = (ethChainId: number) => ({
     GlobalConsensus: { Ethereum: { chain_id: ethChainId } },
@@ -20,6 +35,27 @@ export function parachainLocation(paraId: number) {
     return {
         parents: 1,
         interior: { x1: [{ parachain: paraId }] },
+    }
+}
+
+export function accountId32Location(hexAddress: string) {
+    return {
+        parents: 0,
+        interior: { x1: [{ accountId32: { id: hexAddress } }] },
+    }
+}
+
+export function kusamaAssetHubLocation(parachainId: number) {
+    return {
+        parents: 2,
+        interior: { x2: [{ GlobalConsensus: { Kusama: null } }, { parachain: parachainId }] },
+    }
+}
+
+export function polkadotAssetHubLocation(parachainId: number) {
+    return {
+        parents: 2,
+        interior: { x2: [{ GlobalConsensus: { Polkadot: null } }, { parachain: parachainId }] },
     }
 }
 
@@ -332,6 +368,27 @@ export function buildParachainERC20ReceivedXcmOnAssetHub(
     })
 }
 
+function buildAssetHubXcmFromParachainKusama(beneficiary: string, topic: string) {
+    return [
+        {
+            depositAsset: {
+                assets: {
+                    Wild: {
+                        AllCounted: 2,
+                    },
+                },
+                beneficiary: {
+                    parents: 0,
+                    interior: { x1: [{ AccountId32: { id: beneficiary } }] },
+                },
+            },
+        },
+        {
+            setTopic: topic,
+        },
+    ]
+}
+
 function buildAssetHubXcmFromParachain(
     ethChainId: number,
     sourceAccount: string,
@@ -444,6 +501,16 @@ function buildAssetHubXcmFromParachain(
     ]
 }
 
+export function buildAssetHubERC20TransferToKusama(
+    registry: Registry,
+    beneficiary: string,
+    topic: string
+) {
+    return registry.createType("XcmVersionedXcm", {
+        v4: buildAssetHubXcmFromParachainKusama(beneficiary, topic),
+    })
+}
+
 export function buildAssetHubERC20TransferFromParachain(
     registry: Registry,
     ethChainId: number,
@@ -482,7 +549,7 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
     sourceParachainId: number,
     returnToSenderFee: bigint,
     feeAssetId: any,
-    feeAssetIdReanchored: any,
+    feeAssetIdReanchored: any
 ) {
     return registry.createType("XcmVersionedXcm", {
         v4: [
@@ -590,7 +657,7 @@ function buildAssetHubXcmForPNAFromParachain(
     beneficiary: string,
     assetLocationOnAH: any,
     assetLocationOnEthereum: any,
-    topic: string,
+    topic: string
 ) {
     return [
         // Initiate the bridged transfer
@@ -1185,4 +1252,68 @@ export function buildExportXcmForPNA(
             },
         ],
     })
+}
+
+export function isKSMOnOtherConsensusSystem(location: any) {
+    return matchesConsensusSystem(location, "Kusama")
+}
+
+export function isDOTOnOtherConsensusSystem(location: any): boolean {
+    return matchesConsensusSystem(location, "Polkadot")
+}
+
+function matchesConsensusSystem(location: any, expectedSystem: string): boolean {
+    if (location.parents !== 2 || !location.interior) return false
+
+    const kind = Object.keys(location.interior).find((k) => k.toLowerCase() === "x1")
+    if (!kind) return false
+
+    const values = location.interior[kind]
+    if (!Array.isArray(values) || values.length === 0) return false
+
+    const consensus = values[0]
+    const consensusKey = Object.keys(consensus || {}).find(
+        (k) => k.toLowerCase() === "globalconsensus"
+    )
+    if (!consensusKey) return false
+
+    const consensusValue = consensus[consensusKey]
+    return (
+        typeof consensusValue === "object" &&
+        Object.keys(consensusValue).some((k) => k.toLowerCase() === expectedSystem.toLowerCase())
+    )
+}
+
+export function isEthereumAsset(location: any): boolean {
+    if (location.parents !== 2 || !location.interior) return false
+
+    const interior = location.interior
+
+    const kind = Object.keys(interior).find(
+        (k) => k.toLowerCase() === "x1" || k.toLowerCase() === "x2"
+    )
+
+    if (!kind) return false
+
+    const values = interior[kind]
+    if (!Array.isArray(values) || values.length === 0) return false
+
+    const consensus = values[0]
+
+    const consensusKey = Object.keys(consensus || {}).find(
+        (k) => k.toLowerCase() === "globalconsensus"
+    )
+
+    if (!consensusKey) return false
+
+    const consensusValue = consensus[consensusKey]
+
+    return (
+        typeof consensusValue === "object" &&
+        Object.keys(consensusValue).some((k) => k.toLowerCase() === "ethereum")
+    )
+}
+
+export function isNative(location: any) {
+    return location.parents == DOT_LOCATION.parents && location.interior == DOT_LOCATION.interior
 }
