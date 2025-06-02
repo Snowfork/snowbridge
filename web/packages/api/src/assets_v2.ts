@@ -1405,9 +1405,9 @@ async function indexPNAs(
 ): Promise<AssetOverrideMap> {
     let pnas: Asset[] = []
     let gateway = IGateway__factory.connect(gatewayAddress, ethereum)
-    const entries = await bridgehub.query.ethereumSystem.nativeToForeignId.entries()
+    const entries = await bridgehub.query.ethereumSystem.foreignToNativeId.entries()
     for (const [key, value] of entries) {
-        const location: any = key.args.at(0)?.toJSON()
+        const location: any = value.toPrimitive()
         if (!location) {
             console.warn(`Could not convert ${key.toHuman()} to location`)
             continue
@@ -1417,7 +1417,7 @@ async function indexPNAs(
             console.warn(`Location ${JSON.stringify(location)} is not bridgeable on assethub`)
             continue
         }
-        const tokenId = (value.toPrimitive() as string).toLowerCase()
+        const tokenId = (key.args.at(0)?.toPrimitive() as string).toLowerCase()
         const token = await gateway.tokenAddressOf(tokenId)
         const metadata = await assetErc20Metadata(ethereum, token, gatewayAddress)
         let metadataOnAH: any, assetId: any

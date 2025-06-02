@@ -1,5 +1,5 @@
 import "dotenv/config"
-import { Context, environment, assetsV2 } from "@snowbridge/api"
+import { Context, environment, assetsV3 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { writeFile } from "fs/promises"
 
@@ -72,7 +72,7 @@ const run = async () => {
 
     const registry = await cache(
         `.${env}.registry.json`,
-        async () => await assetsV2.buildRegistry(await assetsV2.fromContext(context))
+        async () => await assetsV3.buildRegistry(await assetsV3.fromContext(context))
     )
     console.log(
         "Asset Registry:",
