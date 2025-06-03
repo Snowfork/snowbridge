@@ -26,7 +26,11 @@ export class AssetHubParachain extends ParachainBase {
         return this.getNativeBalance(account)
     }
 
-    async getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap> {
+    getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap> {
+        return this.getAssetsFiltered(ethChainId, pnas, bridgeablePNAsOnAH)
+    }
+
+    async getAssetsFiltered(ethChainId: number, pnas: PNAMap, pnaFilter: (location: any, assetHubParaId: number) => any) {
         const assets: AssetMap = {}
         // ERC20
         {
@@ -64,10 +68,10 @@ export class AssetHubParachain extends ParachainBase {
             for (const { token, foreignId, ethereumlocation } of Object.keys(pnas).map(
                 (p) => pnas[p]
             )) {
-                const locationOnAH: any = bridgeablePNAsOnAH(ethereumlocation, this.parachainId)
+                const locationOnAH: any = pnaFilter(ethereumlocation, this.parachainId)
                 if (!locationOnAH) {
                     console.warn(
-                        `Location ${JSON.stringify(ethereumlocation)} is not bridgeable on assethub`
+                        `Location ${JSON.stringify(ethereumlocation)} is not bridgeable on ${this.specName}`
                     )
                     continue
                 }
@@ -125,6 +129,10 @@ export class AssetHubParachain extends ParachainBase {
                             this.provider.query.foreignAssets.metadata(assetType),
                         ])
                     ).map((encoded) => encoded.toPrimitive() as any)
+                    if(!assetInfo) {
+                        console.warn(`Asset '${JSON.stringify(locationOnAH)}' is not a registered foregin asset on ${this.specName}.`)
+                        continue
+                    }
 
                     assets[token.toLowerCase()] = {
                         token: token.toLowerCase(),
