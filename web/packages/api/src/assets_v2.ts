@@ -359,20 +359,6 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         ethChains[ethChainInfo.chainId.toString()] = ethChainInfo
     }
 
-    // Dispose of all substrate connections
-    await Promise.all(
-        Object.keys(providers)
-            .filter((parachainKey) => providers[parachainKey].managed)
-            .map(
-                async (parachainKey) => await providers[parachainKey].accessor.provider.disconnect()
-            )
-    )
-
-    // Dispose all eth connections
-    Object.keys(ethProviders)
-        .filter((parachainKey) => ethProviders[parachainKey].managed)
-        .forEach((parachainKey) => ethProviders[parachainKey].provider.destroy())
-
     let kusamaConfig: KusamaConfig | undefined
     if (kusama) {
         let provider: ApiPromise
@@ -388,17 +374,16 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         } else {
             provider = kusama.assetHub
         }
-        const accessor = await getParachainFor(provider)
+        const accessor = await paraImplementation(provider)
 
         const para = await indexParachain(
             accessor,
-            accessor,
+            providers[assetHubParaId].accessor,
             ethChainId,
             accessor.parachainId,
             assetHubParaId,
             pnaAssets,
-            assetOverrides ?? {},
-            destinationFeeOverrides ?? {}
+            assetOverrides ?? {}
         )
 
         const kusamaParas: ParachainMap = {}
@@ -414,6 +399,20 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
             accessor.provider.disconnect()
         }
     }
+    // Dispose of all substrate connections
+    await Promise.all(
+        Object.keys(providers)
+            .filter((parachainKey) => providers[parachainKey].managed)
+            .map(
+                async (parachainKey) => await providers[parachainKey].accessor.provider.disconnect()
+            )
+    )
+
+    // Dispose all eth connections
+    Object.keys(ethProviders)
+        .filter((parachainKey) => ethProviders[parachainKey].managed)
+        .forEach((parachainKey) => ethProviders[parachainKey].provider.destroy())
+
 
     return {
         environment,
