@@ -212,7 +212,7 @@ export async function getDeliveryFee(
     let destinationFeeInDestNative = await destAssetHubImpl.calculateXcmFee(destXcm, DOT_LOCATION)
 
     const sourceAssetHubImpl = await paraImplementation(sourceAssetHub)
-    let bridgeHubDeliveryFee = await sourceAssetHubImpl.calculateDeliveryFeeInDOT(registry.bridgeHubParaId, forwardedXcm)l
+    let bridgeHubDeliveryFee = await sourceAssetHubImpl.calculateDeliveryFeeInDOT(registry.bridgeHubParaId, forwardedXcm)
 
     let feeAssetOnDest
     if (direction == Direction.ToPolkadot) {
