@@ -9,17 +9,18 @@ export class AssetHubParachain extends ParachainBase {
         return undefined
     }
 
-    async getLocationBalance(location: any, account: string, _pnaAssetId?: any): Promise<bigint> {
-        const paraAssetId = (
-            await this.provider.query.assetRegistry.locationToCurrencyIds(location)
-        ).toPrimitive()
-        if (!paraAssetId) {
-            throw Error(`'${JSON.stringify(location)}' not registered for spec ${this.specName}.`)
+    async getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint> {
+        let accountData: any
+        if (pnaAssetId) {
+            accountData = (
+                await this.provider.query.assets.account(pnaAssetId, account)
+            ).toPrimitive() as any
+        } else {
+            accountData = (
+                await this.provider.query.foreignAssets.account(location, account)
+            ).toPrimitive() as any
         }
-        const accountData = (
-            await this.provider.query.tokens.accounts(account, paraAssetId)
-        ).toPrimitive() as any
-        return BigInt(accountData?.free ?? 0n)
+        return BigInt(accountData?.balance ?? 0n)
     }
 
     getDotBalance(account: string): Promise<bigint> {
