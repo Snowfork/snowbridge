@@ -421,7 +421,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						log.Info("stripped proof hex: ", fmt.Sprintf("%x", payload2))
 						// payload := []interface{}{types.NewBytes(payload1), types.NewBytes(payload2)}
 						// combine payload1 and payload2
-						payload := []interface{}{types.NewBytes(append(payload1, payload2...))}
+						payload := []interface{}{types.NewData(append(payload1, payload2...))}
 						log.Info("payload: ", fmt.Sprintf("%x", payload))
 						c, err := types.NewCall(meta, extrinsicName, payload...)
 						if err != nil {
@@ -465,7 +465,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						if err != nil {
 							log.Error("Failed to submit extrinsic: ", err, sub)
 						} else {
-							// log.Info("Extrinsic submitted: ", res)
+							log.Info("Extrinsic submitted: ", sub)
 							for {
 								status := <-sub.Chan()
 								fmt.Printf("Transaction status: %#v\n", status)
@@ -487,9 +487,9 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 									sub.Unsubscribe()
 									break
 								}
+								log.Info("equivocation report complete")
 							}
 						}
-						log.Info("equivocation report complete")
 
 					} else {
 						beefyBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(event.BlockNumber)
