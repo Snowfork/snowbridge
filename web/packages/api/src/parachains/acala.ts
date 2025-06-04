@@ -68,4 +68,8 @@ export class AcalaParachain extends ParachainBase {
 
         return 5_000_000_000n
     }
+
+    async calculateDeliveryFeeInDOT(_destParachainId: number, _xcm: any): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
+    }
 }
