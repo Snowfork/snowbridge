@@ -22,12 +22,7 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import {
-    Asset,
-    AssetRegistry,
-    Parachain,
-    getAssetHubConversationPalletSwap,
-} from "./assets_v2"
+import { Asset, AssetRegistry, Parachain, getAssetHubConversationPalletSwap } from "./assets_v2"
 import {
     CallDryRunEffects,
     EventRecord,
@@ -212,7 +207,10 @@ export async function getDeliveryFee(
     let destinationFeeInDestNative = await destAssetHubImpl.calculateXcmFee(destXcm, DOT_LOCATION)
 
     const sourceAssetHubImpl = await paraImplementation(sourceAssetHub)
-    let bridgeHubDeliveryFee = await sourceAssetHubImpl.calculateDeliveryFeeInDOT(registry.bridgeHubParaId, forwardedXcm)
+    let bridgeHubDeliveryFee = await sourceAssetHubImpl.calculateDeliveryFeeInDOT(
+        registry.bridgeHubParaId,
+        forwardedXcm
+    )
 
     let feeAssetOnDest
     if (direction == Direction.ToPolkadot) {
@@ -797,12 +795,7 @@ async function validateAccount(
     // Check if the account is created
     const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
         parachainImpl.getNativeAccount(beneficiaryAddress),
-        parachainImpl.getTokenBalance(
-            beneficiaryAddress,
-            ethChainId,
-            tokenAddress,
-            assetMetadata
-        ),
+        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
     ])
     return {
         accountExists: !(
