@@ -608,6 +608,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             PARACHAINS: {
                 "1000": "wss://asset-hub-westend-rpc.dwellir.com",
                 "1002": "wss://bridge-hub-westend-rpc.dwellir.com",
+                "2313": `wss://node-7330371704012918784.nv.onfinality.io/ws?apikey=${process.env["FREQUENCY_NODE_KEY"]}`,
             },
             GATEWAY_CONTRACT: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
             BEEFY_CONTRACT: "0x6DFaD3D73A28c48E4F4c616ECda80885b415283a",

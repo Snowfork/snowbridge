@@ -38,7 +38,8 @@
     "transferRelayTokenToEthereum": "npx ts-node src/transfer_relay_token_to_ethereum.ts start",
     "transferRelayTokenToAH": "npx ts-node src/transfer_relay_token_to_ah.ts start",
     "transferPenpalTokenToEthereum": "npx ts-node src/transfer_penpal_token_to_ethereum.ts",
-    "transferPenpalTokenToAH": "npx ts-node src/transfer_penpal_token_to_ah.ts"
+    "transferPenpalTokenToAH": "npx ts-node src/transfer_penpal_token_to_ah.ts",
+    "transferXQCYToEthereum": "npx ts-node src/transfer_penpal_token_to_ethereum.ts"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.62.0",
