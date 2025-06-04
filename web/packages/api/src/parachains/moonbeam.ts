@@ -42,7 +42,11 @@ export async function getMoonbeamLocationBalance(
     return await getMoonbeamEvmForeignAssetBalance(provider, xc20, account)
 }
 
-export async function getMoonbeamEvmForeignAssetBalance(api: ApiPromise, token: string, account: string) {
+export async function getMoonbeamEvmForeignAssetBalance(
+    api: ApiPromise,
+    token: string,
+    account: string
+) {
     const method = "balanceOf"
     const data = MOONBEAM_ERC20.encodeFunctionData(method, [account])
     const result = await api.call.ethereumRuntimeRPCApi.call(

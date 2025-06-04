@@ -395,7 +395,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
             bridgeHubParaId: kusama.bridgeHubParaId,
         }
 
-        if(managed) {
+        if (managed) {
             accessor.provider.disconnect()
         }
     }
@@ -412,7 +412,6 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
     Object.keys(ethProviders)
         .filter((parachainKey) => ethProviders[parachainKey].managed)
         .forEach((parachainKey) => ethProviders[parachainKey].provider.destroy())
-
 
     return {
         environment,
