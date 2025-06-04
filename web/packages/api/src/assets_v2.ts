@@ -1462,10 +1462,6 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
             }
         case "polkadot_mainnet":
             return (path: Path) => {
-                // Disallow LDO token on mainnet. Transfer Gas is too high
-                if (path.asset === "0x5a98fcbea516cf06857215779fd812ca3bef1b32") {
-                    return false
-                }
                 // Disallow MYTH to any location but 3369
                 if (
                     path.asset === MYTHOS_TOKEN_ID &&
