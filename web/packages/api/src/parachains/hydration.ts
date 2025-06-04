@@ -1,4 +1,4 @@
-import { AssetMap, PNAMap } from "src/assets_v2"
+import { AssetMap, PNAMap } from "../assets_v2"
 import { ParachainBase } from "./parachainBase"
 import { convertToXcmV3X1, DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
