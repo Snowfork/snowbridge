@@ -1,4 +1,4 @@
-import { AssetMap, PNAMap } from "src/assets_v2"
+import { AssetMap, PNAMap } from "../assets_v2"
 import { ParachainBase } from "./parachainBase"
 import { getTokenFromLocation } from "../xcmBuilder"
 
@@ -31,7 +31,6 @@ export class AcalaParachain extends ParachainBase {
         const assets: AssetMap = {}
         const entries = await this.provider.query.assetRegistry.foreignAssetLocations.entries()
         for (const [value, key] of entries) {
-
             const location: any = key.toPrimitive()
             const token = getTokenFromLocation(location, ethChainId)
             if (!token) {
@@ -40,7 +39,7 @@ export class AcalaParachain extends ParachainBase {
 
             const assetId: any = value.args.at(0)?.toPrimitive()
             const asset: any = (
-                await this.provider.query.assetRegistry.assetMetadatas({ foreignAssetId : assetId })
+                await this.provider.query.assetRegistry.assetMetadatas({ foreignAssetId: assetId })
             ).toPrimitive()
 
             assets[token] = {
@@ -62,7 +61,7 @@ export class AcalaParachain extends ParachainBase {
                 asset
             )}'. Using default.`
         )
-        
-        return 5_000_000_000n;
+
+        return 5_000_000_000n
     }
 }

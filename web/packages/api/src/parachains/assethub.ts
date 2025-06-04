@@ -1,4 +1,4 @@
-import { AssetMap, PNAMap } from "src/assets_v2"
+import { AssetMap, PNAMap } from "../assets_v2"
 import { ParachainBase } from "./parachainBase"
 import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
@@ -31,7 +31,11 @@ export class AssetHubParachain extends ParachainBase {
         return this.getAssetsFiltered(ethChainId, pnas, bridgeablePNAsOnAH)
     }
 
-    async getAssetsFiltered(ethChainId: number, pnas: PNAMap, pnaFilter: (location: any, assetHubParaId: number) => any) {
+    async getAssetsFiltered(
+        ethChainId: number,
+        pnas: PNAMap,
+        pnaFilter: (location: any, assetHubParaId: number) => any
+    ) {
         const assets: AssetMap = {}
         // ERC20
         {
@@ -72,7 +76,9 @@ export class AssetHubParachain extends ParachainBase {
                 const locationOnAH: any = pnaFilter(ethereumlocation, this.parachainId)
                 if (!locationOnAH) {
                     console.warn(
-                        `Location ${JSON.stringify(ethereumlocation)} is not bridgeable on ${this.specName}`
+                        `Location ${JSON.stringify(ethereumlocation)} is not bridgeable on ${
+                            this.specName
+                        }`
                     )
                     continue
                 }
@@ -130,8 +136,12 @@ export class AssetHubParachain extends ParachainBase {
                             this.provider.query.foreignAssets.metadata(assetType),
                         ])
                     ).map((encoded) => encoded.toPrimitive() as any)
-                    if(!assetInfo) {
-                        console.warn(`Asset '${JSON.stringify(locationOnAH)}' is not a registered foregin asset on ${this.specName}.`)
+                    if (!assetInfo) {
+                        console.warn(
+                            `Asset '${JSON.stringify(
+                                locationOnAH
+                            )}' is not a registered foregin asset on ${this.specName}.`
+                        )
                         continue
                     }
 
