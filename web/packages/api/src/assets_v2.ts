@@ -474,6 +474,18 @@ export function getTransferLocation(
     }
 }
 
+export function getTransferLocationKusama(
+    registry: AssetRegistry,
+    network: string,
+    parachainId: string
+): TransferLocation {
+    if (network === "kusama" && registry.kusama) {
+        return getSubstrateTransferLocation(registry.kusama?.parachains[parachainId])
+    } else {
+        return getSubstrateTransferLocation(registry.parachains[parachainId])
+    }
+}
+
 export function getTransferLocations(
     registry: AssetRegistry,
     filter?: (path: Path) => boolean
