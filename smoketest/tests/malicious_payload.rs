@@ -24,7 +24,12 @@ use snowbridge_smoketest::{
 					commitment::Commitment as spCommitment,
 					ecdsa_crypto::{Public, Signature},
 					payload::Payload,
-					FutureBlockVotingProof, VoteMessage,
+					ForkVotingProof, FutureBlockVotingProof, VoteMessage,
+				},
+				sp_mmr_primitives::AncestryProof,
+				sp_runtime::generic::{
+					digest::{Digest, DigestItem},
+					header::Header,
 				},
 				sp_session::MembershipProof,
 			},
@@ -96,13 +101,21 @@ fn validator_proof(
 	}
 }
 
+// TODO: reuse from polkadot-sdk
+enum EquivocationType {
+	FutureBlockEquivocation,
+	ForkEquivocation,
+}
+
 #[tokio::test]
 async fn malicious_payload() {
 	// Setup clients
 	// ---
 	let test_clients = initialize_clients().await.expect("initialize clients");
 
-	let (submit_initial, submit_final, report_equivocation) = (true, true, true);
+	let (submit_initial, submit_final, report_equivocation) = (true, false, true);
+	// let equivocation_type = EquivocationType::FutureBlockEquivocation;
+	let equivocation_type = EquivocationType::ForkEquivocation;
 
 	let current_validator_set = test_clients
 		.beefy_client
@@ -130,18 +143,22 @@ async fn malicious_payload() {
 		println!("NOTE: BEEFY client already has malicious mmr payload");
 	}
 
-	let randao_delay = test_clients
-		.beefy_client
-		.randao_commit_delay()
-		.call()
-		.await
-		.expect("beefy client initialized");
-	println!("randao delay: {:?}", randao_delay);
+	// let randao_delay = test_clients
+	// 	.beefy_client
+	// 	.randao_commit_delay()
+	// 	.call()
+	// 	.await
+	// 	.expect("beefy client initialized");
+	// println!("randao delay: {:?}", randao_delay);
 
 	let payload = vec![PayloadItem { payload_id: [109, 104], data: Bytes::from(payload_data) }];
+	let equivocation_block = match equivocation_type {
+		EquivocationType::ForkEquivocation => (block_number as u32) + 1,
+		EquivocationType::FutureBlockEquivocation => (block_number as u32) + 1000,
+	};
 	let commitment = Commitment {
 		payload: payload.clone(),
-		block_number: (block_number as u32) + 1000,
+		block_number: equivocation_block,
 		validator_set_id: (current_validator_set.0 as u64),
 	};
 
@@ -293,16 +310,16 @@ async fn malicious_payload() {
 
 
 	if report_equivocation {
-		let beefy_storage_api = relaychain::api::beefy::storage::StorageApi;
-		let validator_set_id = beefy_storage_api.validator_set_id();
-		println!("validator_set_id: {:?}", validator_set_id);
+		// let beefy_storage_api = relaychain::api::beefy::storage::StorageApi;
+		// let validator_set_id = beefy_storage_api.validator_set_id();
+		// println!("validator_set_id: {:?}", validator_set_id);
 
-		println!("validator set id: {:?}", validator_set_id);
 		let key_ownership_proof = {
 			let proof_query = beefy_api::BeefyApi::generate_key_ownership_proof(
 				&beefy_api::BeefyApi,
 				// validator_set_id,
-				0,
+				current_validator_set.0 as u64,
+				// 0,
 				Public { 0: malicious_authority.public().0 },
 			);
 
@@ -320,46 +337,140 @@ async fn malicious_payload() {
 
 			MembershipProof::decode_all(&mut key_ownership_proof_bytes.0.as_slice()).unwrap()
 		};
-		println!("{:?}", key_ownership_proof);
+		// println!("{:?}", key_ownership_proof);
 
 		// Create equivocation proof
 		// ---
-		let equivocation_proof = FutureBlockVotingProof {
-			vote: VoteMessage {
-				commitment: spCommitment {
-					block_number: sp_commitment.block_number,
-					payload: Payload(vec![(payload[0].payload_id, payload[0].data.to_vec())]),
-					validator_set_id: sp_commitment.validator_set_id,
-				},
-				id: Public { 0: malicious_authority.public().0 },
-				signature: Signature(malicious_signatures[signer_index].0),
+		match equivocation_type {
+			EquivocationType::ForkEquivocation => {
+				let latest_block = test_clients
+					.relaychain_client
+					.blocks()
+					.at_latest()
+					.await
+					.expect("can not connect to relaychain");
+				let latest_header = latest_block.header();
+				let encoded_header = latest_header.encode();
+				let local_header: Header<_> =
+					Header::decode_all(&mut encoded_header.as_bytes_ref())
+						.expect("decode latest header");
+
+				let genesis_hash = test_clients
+					.relaychain_client
+					.backend()
+					.genesis_hash()
+					.await
+					.expect("get genesis hash");
+				let ancestry_proof: AncestryProof<_> = {
+					let ancestry_proof_query = beefy_api::BeefyApi::generate_ancestry_proof(
+						&beefy_api::BeefyApi,
+						equivocation_block - 10,
+						None,
+					);
+
+					let api = test_clients.relaychain_client.runtime_api();
+
+
+					let ancestry_proof_bytes = api
+						.at_latest()
+						.await
+						.expect("can not connect to relaychain")
+						.call(ancestry_proof_query)
+						.await
+						.expect("runtime query failed")
+						.expect("validator set is not Some");
+
+					AncestryProof::decode_all(&mut ancestry_proof_bytes.0.as_slice())
+						.expect("decode ancestry proof")
+				};
+
+				let equivocation_proof = ForkVotingProof {
+					ancestry_proof,
+					header: local_header,
+					vote: VoteMessage {
+						commitment: spCommitment {
+							block_number: sp_commitment.block_number,
+							payload: Payload(vec![(
+								payload[0].payload_id,
+								payload[0].data.to_vec(),
+							)]),
+							validator_set_id: sp_commitment.validator_set_id,
+						},
+						id: Public { 0: malicious_authority.public().0 },
+						signature: Signature(malicious_signatures[signer_index].0),
+					},
+				};
+
+				let report = relaychain::api::tx()
+					.beefy()
+					.report_fork_voting(equivocation_proof, key_ownership_proof);
+
+				let events = test_clients
+					.relaychain_client
+					.tx()
+					.sign_and_submit_then_watch_default(&report, &dev::alice())
+					.await
+					.expect("submit report")
+					.wait_for_finalized_success()
+					.await
+					.expect("finalized");
+
+				println!("submitted fork equivocation report");
+
+				events.find::<relaychain::api::offences::events::Offence>().for_each(|event| {
+					println!("offence event: {event:?}");
+				});
+				events.find::<relaychain::api::staking::events::SlashReported>().for_each(
+					|event| {
+						println!("slash report event: {event:?}");
+					},
+				);
+				events.find::<relaychain::api::staking::events::Slashed>().for_each(|event| {
+					println!("slashed event: {event:?}");
+				});
 			},
-		};
+			EquivocationType::FutureBlockEquivocation => {
+				let equivocation_proof = FutureBlockVotingProof {
+					vote: VoteMessage {
+						commitment: spCommitment {
+							block_number: sp_commitment.block_number,
+							payload: Payload(vec![(
+								payload[0].payload_id,
+								payload[0].data.to_vec(),
+							)]),
+							validator_set_id: sp_commitment.validator_set_id,
+						},
+						id: Public { 0: malicious_authority.public().0 },
+						signature: Signature(malicious_signatures[signer_index].0),
+					},
+				};
 
-		let report = relaychain::api::tx()
-			.beefy()
-			.report_future_block_voting(equivocation_proof, key_ownership_proof);
+				let report = relaychain::api::tx()
+					.beefy()
+					.report_future_block_voting(equivocation_proof, key_ownership_proof);
 
-		let events = test_clients
-			.relaychain_client
-			.tx()
-			.sign_and_submit_then_watch_default(&report, &dev::alice())
-			.await
-			.expect("submit report")
-			.wait_for_finalized_success()
-			.await
-			.expect("finalized");
+				let events = test_clients
+					.relaychain_client
+					.tx()
+					.sign_and_submit_then_watch_default(&report, &dev::alice())
+					.await
+					.expect("submit report")
+					.wait_for_finalized_success()
+					.await
+					.expect("finalized");
 
-		events.find::<relaychain::api::offences::events::Offence>().for_each(|event| {
-			println!("offence event: {event:?}");
-		});
-		events
-			.find::<relaychain::api::staking::events::SlashReported>()
-			.for_each(|event| {
-				println!("slash report event: {event:?}");
-			});
-		events.find::<relaychain::api::staking::events::Slashed>().for_each(|event| {
-			println!("slashed event: {event:?}");
-		});
+				events.find::<relaychain::api::offences::events::Offence>().for_each(|event| {
+					println!("offence event: {event:?}");
+				});
+				events.find::<relaychain::api::staking::events::SlashReported>().for_each(
+					|event| {
+						println!("slash report event: {event:?}");
+					},
+				);
+				events.find::<relaychain::api::staking::events::Slashed>().for_each(|event| {
+					println!("slashed event: {event:?}");
+				});
+			},
+		}
 	}
 }
