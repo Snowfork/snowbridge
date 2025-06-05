@@ -147,7 +147,11 @@ export const transferToPolkadot = async (
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }
-            console.log("Success message", message.messageId)
+            console.log(
+                `Success message with message id: ${message.messageId}
+                block number: ${message.blockNumber}  
+                tx hash: ${message.txHash}`
+            )
         }
     }
     await context.destroyContext()
