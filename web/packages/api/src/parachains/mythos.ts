@@ -1,6 +1,5 @@
-import { ApiPromise } from "@polkadot/api"
 import { DOT_LOCATION, erc20Location } from "../xcmBuilder"
-import { AssetMap, PNAMap } from "../assets_v2"
+import { AssetMap, PNAMap } from "../types"
 import { ParachainBase } from "./parachainBase"
 
 export const MUSE_CHAIN_ID = 11155111 // Sepolia

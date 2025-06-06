@@ -1,5 +1,5 @@
-import { PNAMap, AssetMap } from "../assets_v2"
-import { DOT_LOCATION, dotLocationOnKusamaAssetHub, getTokenFromLocation } from "../xcmBuilder"
+import { PNAMap, AssetMap } from "../types"
+import { dotLocationOnKusamaAssetHub } from "../xcmBuilder"
 import { AssetHubParachain } from "./assethub"
 
 export class AssetHubKusamaParachain extends AssetHubParachain {

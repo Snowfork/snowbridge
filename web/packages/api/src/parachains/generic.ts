@@ -1,4 +1,4 @@
-import { PNAMap, AssetMap } from "../assets_v2"
+import { PNAMap, AssetMap } from "../types"
 import { ParachainBase } from "./parachainBase"
 
 export class GenericChain extends ParachainBase {
