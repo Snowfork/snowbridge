@@ -66,7 +66,7 @@ export class AcalaParachain extends ParachainBase {
             )}'. Using default.`
         )
 
-        return 5_000_000_000n
+        return 300_000_000n
     }
 
     async calculateDeliveryFeeInDOT(_destParachainId: number, _xcm: any): Promise<bigint> {
