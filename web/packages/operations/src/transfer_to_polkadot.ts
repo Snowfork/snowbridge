@@ -50,13 +50,12 @@ export const transferToPolkadot = async (
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        process.env.ETHEREUM_KEY ?? "your key goes here",
+        process.env.ETHEREUM_KEY ??
+            "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
         context.ethereum()
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
-    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(
-        process.env.SUBSTRATE_KEY ?? "your key goes here"
-    )
+    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
@@ -147,7 +146,11 @@ export const transferToPolkadot = async (
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }
-            console.log("Success message", message.messageId)
+            console.log(
+                `Success message with message id: ${message.messageId}
+                block number: ${message.blockNumber}  
+                tx hash: ${message.txHash}`
+            )
         }
     }
     await context.destroyContext()

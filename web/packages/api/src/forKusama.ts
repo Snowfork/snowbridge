@@ -14,6 +14,7 @@ import {
     NATIVE_TOKEN_LOCATION,
     dotLocationOnKusamaAssetHub,
     ksmLocationOnPolkadotAssetHub,
+    DOT_LOCATION,
 } from "./xcmBuilder"
 import {
     buildKusamaToPolkadotDestAssetHubXCM,
@@ -21,17 +22,7 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import {
-    Asset,
-    AssetRegistry,
-    calculateDeliveryFee,
-    calculateDestinationFee,
-    getNativeAccount,
-    getNativeBalance,
-    getTokenBalance,
-    Parachain,
-    getAssetHubConversationPalletSwap,
-} from "./assets_v2"
+import { Asset, AssetRegistry, Parachain, getAssetHubConversationPalletSwap } from "./assets_v2"
 import {
     CallDryRunEffects,
     EventRecord,
@@ -40,6 +31,8 @@ import {
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import { beneficiaryMultiAddress } from "./utils"
+import { paraImplementation } from "./parachains"
+import { ParachainBase } from "./parachains/parachainBase"
 
 export type Transfer = {
     input: {
@@ -210,11 +203,11 @@ export async function getDeliveryFee(
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
     }
+    const destAssetHubImpl = await paraImplementation(destAssetHub)
+    let destinationFeeInDestNative = await destAssetHubImpl.calculateXcmFee(destXcm, DOT_LOCATION)
 
-    let destinationFeeInDestNative = await calculateDestinationFee(destAssetHub, destXcm)
-
-    let bridgeHubDeliveryFee = await calculateDeliveryFee(
-        sourceAssetHub,
+    const sourceAssetHubImpl = await paraImplementation(sourceAssetHub)
+    let bridgeHubDeliveryFee = await sourceAssetHubImpl.calculateDeliveryFeeInDOT(
         registry.bridgeHubParaId,
         forwardedXcm
     )
@@ -393,7 +386,8 @@ export async function validateTransfer(
 
     let tokenLocation = getTokenLocation(registry, direction, tokenAddress)
 
-    let nativeBalance = await getNativeBalance(sourceAssetHub, sourceAccountHex)
+    const sourceAssetHubImpl = await paraImplementation(sourceAssetHub)
+    let nativeBalance = await sourceAssetHubImpl.getNativeBalance(sourceAccountHex)
 
     let tokenAsset = getTransferAsset(direction, tokenAddress, transfer.input.registry)
 
@@ -401,9 +395,7 @@ export async function validateTransfer(
     if (isNative(tokenLocation)) {
         tokenBalance = nativeBalance
     } else {
-        tokenBalance = await getTokenBalance(
-            sourceAssetHub,
-            source.info.specName,
+        tokenBalance = await sourceAssetHubImpl.getTokenBalance(
             sourceAccountHex,
             registry.ethChainId,
             tokenAddress,
@@ -411,16 +403,10 @@ export async function validateTransfer(
         )
     }
 
-    console.log("nativeBalance:", nativeBalance)
-    console.log("tokenBalance:", tokenBalance)
-    console.log("amount:", amount)
-    console.log("fee:", fee)
-
     const logs: ValidationLog[] = []
-
+    const destAssetHubImpl = await paraImplementation(destAssetHub)
     const { accountMaxConsumers, accountExists } = await validateAccount(
-        destAssetHub,
-        "statemint",
+        destAssetHubImpl,
         beneficiaryAddressHex,
         registry.ethChainId,
         tokenAddress,
@@ -799,8 +785,7 @@ async function dryRunDestAssetHub(assetHub: ApiPromise, parachainId: number, xcm
 }
 
 async function validateAccount(
-    parachain: ApiPromise,
-    specName: string,
+    parachainImpl: ParachainBase,
     beneficiaryAddress: string,
     ethChainId: number,
     tokenAddress: string,
@@ -809,15 +794,8 @@ async function validateAccount(
 ) {
     // Check if the account is created
     const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
-        getNativeAccount(parachain, beneficiaryAddress),
-        getTokenBalance(
-            parachain,
-            specName,
-            beneficiaryAddress,
-            ethChainId,
-            tokenAddress,
-            assetMetadata
-        ),
+        parachainImpl.getNativeAccount(beneficiaryAddress),
+        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
     ])
     return {
         accountExists: !(

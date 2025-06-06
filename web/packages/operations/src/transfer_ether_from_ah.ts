@@ -3,7 +3,7 @@ import cron from "node-cron"
 import { transferToEthereum } from "./transfer_to_ethereum"
 
 const transfer = async () => {
-    await transferToEthereum(1000, "Ether", 1_000_000_000_000n)
+    await transferToEthereum(1000, "Eth", 10_000_000_000_000n)
 }
 
 if (process.argv.length != 3) {

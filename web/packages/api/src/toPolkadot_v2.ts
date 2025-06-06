@@ -17,12 +17,8 @@ import {
 import {
     Asset,
     AssetRegistry,
-    calculateDeliveryFee,
-    calculateDestinationFee,
     ERC20Metadata,
     ETHER_TOKEN_ADDRESS,
-    getNativeAccount,
-    getTokenBalance,
     padFeeByPercentage,
     Parachain,
 } from "./assets_v2"
@@ -35,9 +31,12 @@ import {
     buildParachainERC20ReceivedXcmOnDestination,
     buildParachainPNAReceivedXcmOnAssetHub,
     buildParachainPNAReceivedXcmOnDestination,
+    DOT_LOCATION,
 } from "./xcmBuilder"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
+import { paraImplementation } from "./parachains"
+import { ParachainBase } from "./parachains/parachainBase"
 
 export type Transfer = {
     input: {
@@ -180,25 +179,16 @@ export async function getDeliveryFee(
             )
         }
 
-        destinationDeliveryFeeDOT = await calculateDeliveryFee(
-            assetHub,
+        const assetHubImpl = await paraImplementation(assetHub)
+        destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
             destinationParaId,
             destinationXcm
         )
-        if (destParachain.features.hasXcmPaymentApi) {
-            destinationExecutionFeeDOT = padFeeByPercentage(
-                await calculateDestinationFee(destination, destinationXcm),
-                paddFeeByPercentage ?? 33n
-            )
-        } else {
-            console.warn(
-                `Parachain ${destinationParaId} does not support payment apis. Using a high estimated fee.`
-            )
-            destinationExecutionFeeDOT = padFeeByPercentage(
-                destParachain.estimatedExecutionFeeDOT,
-                100n
-            )
-        }
+        const destinationImpl = await paraImplementation(destination)
+        destinationExecutionFeeDOT = padFeeByPercentage(
+            await destinationImpl.calculateXcmFee(destinationXcm, DOT_LOCATION),
+            paddFeeByPercentage ?? 33n
+        )
     }
     const totalFeeInDOT = destinationExecutionFeeDOT + destinationDeliveryFeeDOT
     return {
@@ -275,8 +265,7 @@ export async function createTransfer(
 }
 
 async function validateAccount(
-    parachain: ApiPromise,
-    specName: string,
+    parachainImpl: ParachainBase,
     beneficiaryAddress: string,
     ethChainId: number,
     tokenAddress: string,
@@ -285,15 +274,8 @@ async function validateAccount(
 ) {
     // Check if the acocunt is created
     const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
-        getNativeAccount(parachain, beneficiaryAddress),
-        getTokenBalance(
-            parachain,
-            specName,
-            beneficiaryAddress,
-            ethChainId,
-            tokenAddress,
-            assetMetadata
-        ),
+        parachainImpl.getNativeAccount(beneficiaryAddress),
+        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
     ])
     return {
         accountExists: !(
@@ -430,14 +412,14 @@ export async function validateTransfer(
         }
     }
 
+    const assetHubImpl = await paraImplementation(assetHub)
     let destinationParachainDryRunError: string | undefined
     if (destinationParaId !== registry.assetHubParaId) {
         // Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
             const sovereignAccountId = paraIdToSovereignAccount("sibl", destinationParaId)
             const { accountMaxConumers, accountExists } = await validateAccount(
-                assetHub,
-                ahParachain.info.specName,
+                assetHubImpl,
                 sovereignAccountId,
                 registry.ethChainId,
                 tokenAddress,
@@ -510,10 +492,10 @@ export async function validateTransfer(
                 ((destParachain.features.hasDryRunApi && destinationParachainDryRunError) ||
                     !destParachain.features.hasDryRunApi)
             ) {
+                const destParachainImpl = await paraImplementation(destParachainApi)
                 // Check if the acocunt is created
                 const { accountMaxConumers, accountExists } = await validateAccount(
-                    destParachainApi,
-                    destParachain.info.specName,
+                    destParachainImpl,
                     beneficiaryAddressHex,
                     registry.ethChainId,
                     tokenAddress,
@@ -538,8 +520,7 @@ export async function validateTransfer(
         }
     } else if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
         const { accountMaxConumers, accountExists } = await validateAccount(
-            assetHub,
-            ahParachain.info.specName,
+            assetHubImpl,
             beneficiaryAddressHex,
             registry.ethChainId,
             tokenAddress,

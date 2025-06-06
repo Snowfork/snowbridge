@@ -3,7 +3,7 @@ import cron from "node-cron"
 import { transferToPolkadot } from "./transfer_to_polkadot"
 
 const transfer = async () => {
-    await transferToPolkadot(1000, "WND", 1_000_000_000n)
+    await transferToPolkadot(1000, "DOT", 1_000_000_000n)
 }
 
 if (process.argv.length != 3) {
