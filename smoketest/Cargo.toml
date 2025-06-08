@@ -24,4 +24,7 @@ sp-crypto-hashing = "0.1.0"
 sp-consensus-beefy = "22.1"
 sp-application-crypto = "38.0.0"
 sp-core = "34.0.0"
+sp-mmr-primitives = { path = "../../polkadot-sdk-alt/substrate/primitives/merkle-mountain-range" }
 alloy = { version = "0.4.2", features = ["full"] }
+jsonrpsee = { version = "0.16", features = ["client"] }
+serde_json = "1.0"

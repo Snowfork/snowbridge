@@ -7,6 +7,10 @@ use ethers::{
 	prelude::*,
 };
 
+use jsonrpsee::core::client::ClientT;
+use jsonrpsee::ws_client::WsClientBuilder;
+use serde_json::Value;
+
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{
@@ -36,6 +40,7 @@ use snowbridge_smoketest::{
 		},
 	},
 };
+use sp_mmr_primitives::AncestryProof as MmrAncestryProof;
 use subxt_signer::sr25519::dev;
 
 use sp_consensus_beefy;
@@ -43,7 +48,10 @@ use sp_consensus_beefy;
 use sp_core::{ecdsa::Pair, hex2array, Pair as PairT};
 use sp_crypto_hashing::keccak_256;
 use subxt::{
-	client::OfflineClientT, ext::sp_core::hexdisplay::AsBytesRef, OnlineClient, PolkadotConfig,
+	backend::rpc::RpcClient,
+	config::substrate::{BlakeTwo256, SubstrateHeader},
+	ext::sp_core::hexdisplay::AsBytesRef,
+	OnlineClient, PolkadotConfig,
 };
 
 // const GATEWAY_V2_ADDRESS: [u8; 20] = hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0");
@@ -60,7 +68,10 @@ async fn initialize_clients() -> Result<TestClients, Box<dyn std::error::Error>>
 		.interval(Duration::from_millis(10u64));
 	let ethereum_client = Arc::new(ethereum_provider);
 	let ethereum_signed_client = Arc::new(initialize_wallet().await?);
-	let relaychain_client = OnlineClient::from_url((*RELAY_CHAIN_WS_URL).to_string()).await?;
+	let relaychain_rpc_client = RpcClient::from_url((*RELAY_CHAIN_WS_URL).to_string())
+		.await
+		.expect("can not connect to relaychain RPC");
+	let relaychain_client = OnlineClient::from_rpc_client(relaychain_rpc_client).await?;
 	let beefy_client_addr: Address = BEEFY_CLIENT_CONTRACT.into();
 	let beefy_client = BeefyClient::new(beefy_client_addr, ethereum_signed_client.clone());
 	Ok(TestClients {
@@ -343,50 +354,49 @@ async fn malicious_payload() {
 		// ---
 		match equivocation_type {
 			EquivocationType::ForkEquivocation => {
-				let latest_block = test_clients
-					.relaychain_client
-					.blocks()
-					.at_latest()
+				let client = WsClientBuilder::default()
+					.build("ws://127.0.0.1:9944")
 					.await
-					.expect("can not connect to relaychain");
-				let latest_header = latest_block.header();
-				let encoded_header = latest_header.encode();
-				let local_header: Header<_> =
-					Header::decode_all(&mut encoded_header.as_bytes_ref())
-						.expect("decode latest header");
+					.expect("connect to relaychain node rpc");
 
-				let genesis_hash = test_clients
-					.relaychain_client
-					.backend()
-					.genesis_hash()
-					.await
-					.expect("get genesis hash");
-				let ancestry_proof: AncestryProof<_> = {
-					let ancestry_proof_query = beefy_api::BeefyApi::generate_ancestry_proof(
-						&beefy_api::BeefyApi,
-						equivocation_block - 10,
-						None,
-					);
-
-					let api = test_clients.relaychain_client.runtime_api();
-
-
-					let ancestry_proof_bytes = api
-						.at_latest()
+				let header = {
+					let block_hash: Value = client
+						.request::<Value, Vec<Value>>("chain_getBlockHash", vec![])
 						.await
-						.expect("can not connect to relaychain")
-						.call(ancestry_proof_query)
+						.expect("get block hash");
+					let header_substrate: SubstrateHeader<u32, BlakeTwo256> = client
+						.request("chain_getHeader", vec![block_hash])
 						.await
-						.expect("runtime query failed")
-						.expect("validator set is not Some");
-
-					AncestryProof::decode_all(&mut ancestry_proof_bytes.0.as_slice())
-						.expect("decode ancestry proof")
+						.expect("get block header");
+					Header {
+						digest: Digest::decode_all(
+							&mut header_substrate.digest.encode().as_bytes_ref(),
+						)
+						.expect("decode digest"),
+						number: header_substrate.number,
+						parent_hash: header_substrate.parent_hash,
+						extrinsics_root: header_substrate.extrinsics_root,
+						state_root: header_substrate.state_root,
+					}
 				};
+
+				let ancestry_proof_substrate: MmrAncestryProof<subxt::utils::H256> = client
+					.request("mmr_generateAncestryProof", vec![equivocation_block])
+					.await
+					.expect("get ancestry proof");
+
+				let ancestry_proof = AncestryProof {
+					prev_peaks: ancestry_proof_substrate.prev_peaks,
+					prev_leaf_count: ancestry_proof_substrate.prev_leaf_count,
+					leaf_count: ancestry_proof_substrate.leaf_count,
+					items: ancestry_proof_substrate.items,
+				};
+
+				println!("Ancestry Proof: {:?}", ancestry_proof);
 
 				let equivocation_proof = ForkVotingProof {
 					ancestry_proof,
-					header: local_header,
+					header,
 					vote: VoteMessage {
 						commitment: spCommitment {
 							block_number: sp_commitment.block_number,
