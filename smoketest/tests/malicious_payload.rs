@@ -380,16 +380,18 @@ async fn malicious_payload() {
 					}
 				};
 
-				let ancestry_proof_substrate: MmrAncestryProof<subxt::utils::H256> = client
-					.request("mmr_generateAncestryProof", vec![equivocation_block])
-					.await
-					.expect("get ancestry proof");
+				let ancestry_proof = {
+					let ancestry_proof_substrate: MmrAncestryProof<subxt::utils::H256> = client
+						.request("mmr_generateAncestryProof", vec![equivocation_block])
+						.await
+						.expect("get ancestry proof");
 
-				let ancestry_proof = AncestryProof {
-					prev_peaks: ancestry_proof_substrate.prev_peaks,
-					prev_leaf_count: ancestry_proof_substrate.prev_leaf_count,
-					leaf_count: ancestry_proof_substrate.leaf_count,
-					items: ancestry_proof_substrate.items,
+					AncestryProof {
+						prev_peaks: ancestry_proof_substrate.prev_peaks,
+						prev_leaf_count: ancestry_proof_substrate.prev_leaf_count,
+						leaf_count: ancestry_proof_substrate.leaf_count,
+						items: ancestry_proof_substrate.items,
+					}
 				};
 
 				println!("Ancestry Proof: {:?}", ancestry_proof);
