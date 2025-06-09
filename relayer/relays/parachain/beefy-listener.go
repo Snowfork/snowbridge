@@ -2,8 +2,6 @@ package parachain
 
 import (
 	"context"
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -14,16 +12,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
-	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"github.com/snowfork/snowbridge/relayer/ofac"
 
@@ -209,6 +204,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 					latestBlockNumber := uint64(latestBlock.Block.Header.Number)
 
 					if event.BlockNumber > uint64(latestBlockNumber) {
+						// Future block equivocation handling
 						log.WithFields(log.Fields{
 							"commitment.payload.data": fmt.Sprintf("%#x", commitment.Payload[0].Data),
 							"proof":                   validatorProof,
@@ -226,94 +222,15 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 							return fmt.Errorf("get metadata: %w", err)
 						}
 
-						signer := signature.KeyringPair{
-							URI:       "//Bob",
-							PublicKey: []byte{0x8e, 0xaf, 0x04, 0x15, 0x16, 0x87, 0x73, 0x63, 0x26, 0xc9, 0xfe, 0xa1, 0x7e, 0x25, 0xfc, 0x52, 0x87, 0x61, 0x36, 0x93, 0xc9, 0x12, 0x90, 0x9c, 0xb2, 0x26, 0xaa, 0x47, 0x94, 0xf2, 0x6a, 0x48}, //nolint:lll
-							Address:   "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
-						}
-						key, err := types.CreateStorageKey(meta, "System", "Account", signer.PublicKey)
+						signer, nonce, err := li.getSignerInfo(meta)
 						if err != nil {
-							return fmt.Errorf("create storage key: %w", err)
+							return fmt.Errorf("get signer info: %w", err)
 						}
-
-						var accountInfo types.AccountInfo
-						ok, err := li.relaychainConn.API().RPC.State.GetStorageLatest(key, &accountInfo)
-						if err != nil || !ok {
-							return fmt.Errorf("get storage latest: %w", err)
-						}
-
-						nonce := uint64(accountInfo.Nonce)
-						log.Info("Nonce: ", nonce)
 
 						extrinsicName := "Beefy.report_future_block_voting"
 						// call: c805
-						// build payload for equivocation proof
-						payload1 := append([]byte{0x04}, commitment.Payload[0].PayloadID[:]...)
-						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-						// commitment
-						payload1 = append(payload1, 0x80)
-						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-						payload1 = append(payload1, commitment.Payload[0].Data...)
-						log.Info("payload1: data ", fmt.Sprintf("%x", commitment.Payload[0].Data))
-						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-						// block number
-						blockNumberBytes := make([]byte, 4)
-						binary.LittleEndian.PutUint32(blockNumberBytes, commitment.BlockNumber)
-						log.Info("payload1: block ", commitment.BlockNumber)
-						payload1 = append(payload1, blockNumberBytes...)
-						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-						// validator set id
-						validatorSetBytes := make([]byte, 8)
-						binary.LittleEndian.PutUint64(validatorSetBytes, commitment.ValidatorSetID)
-						payload1 = append(payload1, validatorSetBytes...)
-						log.Info("payload1: vset ", commitment.ValidatorSetID)
-						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-						// id
-						log.Info("DEBUG commitment: ", commitment)
-						// encode the commitment, but in the canonical sequence: Payload, BlockNumber, ValidatorSetID
-						commitmentPayloadBytes, err := types.EncodeToBytes(commitment.Payload)
-						if err != nil {
-							return fmt.Errorf("Errored encode commitment: %w", err)
-						}
-						commitmentBlockNumberBytes, err := types.EncodeToBytes(commitment.BlockNumber)
-						if err != nil {
-							return fmt.Errorf("Errored encode commitment: %w", err)
-						}
-						commitmentValidatorSetIdBytes, err := types.EncodeToBytes(commitment.ValidatorSetID)
-						if err != nil {
-							return fmt.Errorf("Errored encode commitment: %w", err)
-						}
-						commitmentBytes := append(commitmentPayloadBytes, commitmentBlockNumberBytes...)
-						commitmentBytes = append(commitmentBytes, commitmentValidatorSetIdBytes...)
-						log.Info("DEBUG encoded commitment: ", commitmentBytes)
-
-						commitmentHash := (&keccak.Keccak256{}).Hash(commitmentBytes)
-						log.Info("payload1: commitmentHash: ", commitmentHash)
-						log.Info("payload1: commitmentHash: ", fmt.Sprintf("%x", commitmentHash))
-						var offenderSig []byte
-						offenderSig = append(validatorProof.R[:], validatorProof.S[:]...)
-
-						if validatorProof.V == 27 || validatorProof.V == 28 {
-							offenderSig = append(offenderSig, validatorProof.V-27)
-						} else {
-							return fmt.Errorf("Invalid V value")
-						}
-
-						offenderPubKey, err := crypto.SigToPub(commitmentHash[:], offenderSig[:])
-						if err != nil {
-							return fmt.Errorf("Errored recover pubkey: %w", err)
-						}
-						offenderPubKeyCompressed := crypto.CompressPubkey(offenderPubKey)
-
-						payload1 = append(payload1, offenderPubKeyCompressed...)
-						log.Info("payload1: offenderPubKey ", fmt.Sprintf("%x", offenderPubKeyCompressed))
-						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-						// signature
-						payload1 = append(payload1, offenderSig[:]...)
-						log.Info("payload1: signature ", offenderSig)
-						log.Info("payload1: signature hex ", fmt.Sprintf("%x", offenderSig))
-						log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-
+						// build vote payload for equivocation proof
+						payload1, offenderPubKeyCompressed, err := buildVotePayload(commitment, validatorProof)
 						log.Info("calling api")
 
 						//TODO: merge with prior query for finalized head
@@ -327,6 +244,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						if err != nil {
 							return fmt.Errorf("get block: %w", err)
 						}
+						latestBlockNumber := uint64(latestBlock.Block.Header.Number)
 						// ---
 						//
 						// keyOwnership Proof
@@ -365,17 +283,25 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 							BlockHash:          latestHash,
 							Era:                era,
 							GenesisHash:        genesisHash,
-							Nonce:              types.NewUCompactFromUInt(uint64(nonce)),
+							Nonce:              nonce,
 							SpecVersion:        rv.SpecVersion,
 							Tip:                types.NewUCompactFromUInt(0),
 							TransactionVersion: rv.TransactionVersion,
 						}
 
+						callHex, err := types.EncodeToHexString(c)
+						log.Info("Extrinsic unsigned hex: ", callHex)
+						log.Info("Extrinsic unsigned: ", ext)
+						extHex, err := types.EncodeToHexString(ext)
+						log.Info("Extrinsic unsigned hex: ", extHex)
 						err = ext.Sign(signer, o)
 						if err != nil {
 							return fmt.Errorf("sign extrinsic: %w", err)
 						}
 						log.Info("Extrinsic: ", ext)
+						extHex, err = types.EncodeToHexString(ext)
+						log.Info("Extrinsic signed hex: ", extHex)
+
 						// ext.Sign(signature.TestKeyringPairAlice, o)
 
 						// Send the extrinsic
