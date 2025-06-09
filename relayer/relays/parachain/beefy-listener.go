@@ -192,7 +192,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						log.WithError(err).Warning("Failed to decode transaction call data")
 					}
 					// TODO: handle tickets submitted for future blocks
-					_, latestBlock, err := li.getLatestBlockInfo()
+					latestHash, latestBlock, err := li.getLatestBlockInfo()
 					if err != nil {
 						return fmt.Errorf("get latest block info: %w", err)
 					}
@@ -230,11 +230,11 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 
 						//TODO: merge with prior query for finalized head
 						// ---
-						latestHash, latestBlock, err := li.getLatestBlockInfo()
-						if err != nil {
-							return fmt.Errorf("get latest block info: %w", err)
-						}
-						latestBlockNumber := uint64(latestBlock.Block.Header.Number)
+						// latestHash, latestBlock, err := li.getLatestBlockInfo()
+						// if err != nil {
+						// 	return fmt.Errorf("get latest block info: %w", err)
+						// }
+						// latestBlockNumber := uint64(latestBlock.Block.Header.Number)
 						// ---
 						//
 						// keyOwnership Proof
@@ -264,29 +264,12 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						if err != nil {
 							log.Error("Failed to submit extrinsic: ", err, sub)
 						} else {
+							err := li.watchExtrinsicSubscription(sub)
 							log.Info("Extrinsic submitted: ", sub)
-							for {
-								status := <-sub.Chan()
-								fmt.Printf("Transaction status: %#v\n", status)
-
-								if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
-									sub.Unsubscribe()
-									log.WithFields(log.Fields{
-										"nonce":  ext.Signature.Nonce,
-										"status": status,
-									}).Error("Extrinsic removed from the transaction pool")
-									return fmt.Errorf("extrinsic removed from the transaction pool")
-								}
-
-								if status.IsInBlock {
-									log.Info("Completed at block hash ", status.AsInBlock.Hex())
-								}
-								if status.IsFinalized {
-									log.Info("Finalized at block hash ", status.AsFinalized.Hex())
-									sub.Unsubscribe()
-									log.Info("equivocation report complete")
-									break
-								}
+							if err != nil {
+								log.Error("Extrinsic submission failed: ", err)
+							} else {
+								log.Info("equivocation report complete")
 							}
 						}
 

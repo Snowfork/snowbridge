@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -272,4 +273,30 @@ func (li *BeefyListener) signedExtrinsicFromCall(meta *types.Metadata, call type
 	return ext, nil
 
 	// ext.Sign(signature.TestKeyringPairAlice, o)
+}
+
+func (li *BeefyListener) watchExtrinsicSubscription(sub *author.ExtrinsicStatusSubscription) error {
+	for {
+		status := <-sub.Chan()
+		fmt.Printf("Transaction status: %#v\n", status)
+
+		if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
+			sub.Unsubscribe()
+			log.WithFields(log.Fields{
+				// "nonce":  ext.Signature.Nonce,
+				"status": status,
+			}).Error("Extrinsic removed from the transaction pool")
+			return fmt.Errorf("extrinsic removed from the transaction pool")
+		}
+
+		if status.IsInBlock {
+			log.Info("Completed at block hash ", status.AsInBlock.Hex())
+		}
+		if status.IsFinalized {
+			log.Info("Finalized at block hash ", status.AsFinalized.Hex())
+			sub.Unsubscribe()
+			break
+		}
+	}
+	return nil
 }
