@@ -129,30 +129,7 @@ func (li *BeefyListener) getSignerInfo(meta *types.Metadata) (signature.KeyringP
 	return signer, types.NewUCompactFromUInt(nonce), nil
 }
 
-// function to build vote payload
-func buildVotePayload(commitment contracts.BeefyClientCommitment, validatorProof contracts.BeefyClientValidatorProof) ([]byte, []byte, error) {
-	payload1 := append([]byte{0x04}, commitment.Payload[0].PayloadID[:]...)
-	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-	// commitment
-	payload1 = append(payload1, 0x80)
-	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-	payload1 = append(payload1, commitment.Payload[0].Data...)
-	log.Info("payload1: data ", fmt.Sprintf("%x", commitment.Payload[0].Data))
-	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-	// block number
-	blockNumberBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(blockNumberBytes, commitment.BlockNumber)
-	log.Info("payload1: block ", commitment.BlockNumber)
-	payload1 = append(payload1, blockNumberBytes...)
-	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-	// validator set id
-	validatorSetBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(validatorSetBytes, commitment.ValidatorSetID)
-	payload1 = append(payload1, validatorSetBytes...)
-	log.Info("payload1: vset ", commitment.ValidatorSetID)
-	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-	// id
-	log.Info("DEBUG commitment: ", commitment)
+func getOffenderPubKeyAndSig(commitment contracts.BeefyClientCommitment, validatorProof contracts.BeefyClientValidatorProof) ([]byte, []byte, error) {
 	// encode the commitment, but in the canonical sequence: Payload, BlockNumber, ValidatorSetID
 	commitmentPayloadBytes, err := types.EncodeToBytes(commitment.Payload)
 	if err != nil {
@@ -186,7 +163,34 @@ func buildVotePayload(commitment contracts.BeefyClientCommitment, validatorProof
 	if err != nil {
 		return nil, nil, fmt.Errorf("Errored recover pubkey: %w", err)
 	}
-	offenderPubKeyCompressed := crypto.CompressPubkey(offenderPubKey)
+	return crypto.CompressPubkey(offenderPubKey), offenderSig, nil
+
+}
+
+// build vote payload
+func buildVotePayload(commitment contracts.BeefyClientCommitment, offenderPubKeyCompressed []byte, offenderSig []byte) []byte {
+	payload1 := append([]byte{0x04}, commitment.Payload[0].PayloadID[:]...)
+	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+	// commitment
+	payload1 = append(payload1, 0x80)
+	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+	payload1 = append(payload1, commitment.Payload[0].Data...)
+	log.Info("payload1: data ", fmt.Sprintf("%x", commitment.Payload[0].Data))
+	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+	// block number
+	blockNumberBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(blockNumberBytes, commitment.BlockNumber)
+	log.Info("payload1: block ", commitment.BlockNumber)
+	payload1 = append(payload1, blockNumberBytes...)
+	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+	// validator set id
+	validatorSetBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(validatorSetBytes, commitment.ValidatorSetID)
+	payload1 = append(payload1, validatorSetBytes...)
+	log.Info("payload1: vset ", commitment.ValidatorSetID)
+	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+	// id
+	log.Info("DEBUG commitment: ", commitment)
 
 	payload1 = append(payload1, offenderPubKeyCompressed...)
 	log.Info("payload1: offenderPubKey ", fmt.Sprintf("%x", offenderPubKeyCompressed))
@@ -197,5 +201,5 @@ func buildVotePayload(commitment contracts.BeefyClientCommitment, validatorProof
 	log.Info("payload1: signature hex ", fmt.Sprintf("%x", offenderSig))
 	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
 
-	return payload1, offenderPubKeyCompressed, nil
+	return payload1
 }

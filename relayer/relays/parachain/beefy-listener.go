@@ -230,7 +230,12 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						extrinsicName := "Beefy.report_future_block_voting"
 						// call: c805
 						// build vote payload for equivocation proof
-						payload1, offenderPubKeyCompressed, err := buildVotePayload(commitment, validatorProof)
+						offenderPubKeyCompressed, offenderSig, err := getOffenderPubKeyAndSig(commitment, validatorProof)
+						if err != nil {
+							return fmt.Errorf("get offender pubkey and sig: %w", err)
+						}
+
+						payload1 := buildVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
 						log.Info("calling api")
 
 						//TODO: merge with prior query for finalized head
