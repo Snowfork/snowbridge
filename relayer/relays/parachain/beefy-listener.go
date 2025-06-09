@@ -14,7 +14,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/go-substrate-rpc-client/v4/client"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -226,7 +225,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 							return fmt.Errorf("get offender pubkey and sig: %w", err)
 						}
 
-						payload1 := buildVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
+						payload1 := constructVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
 						log.Info("calling api")
 
 						// keyOwnership Proof
@@ -308,44 +307,14 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 									return fmt.Errorf("get offender pubkey and sig: %w", err)
 								}
 
-								payload1 := buildVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
+								payload1 := constructVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
 								log.Info("calling api")
 
 								// Ancestry Proof
-								// TODO: move to go-substrate-rpc-client
-								var ancestryProof GenerateAncestryProofResponse
-								err = client.CallWithBlockHash(li.relaychainConn.API().Client, &ancestryProof, "mmr_generateAncestryProof", nil, commitment.BlockNumber, nil)
+								payload2, err := li.constructAncestryProofPayload(commitment)
 								if err != nil {
-									return fmt.Errorf("generate MMR ancestry proof: %w", err)
+									return fmt.Errorf("build ancestry proof payload: %w", err)
 								}
-
-								prevPeaksBytes, err := types.EncodeToBytes(ancestryProof.PrevPeaks)
-								if err != nil {
-									return fmt.Errorf("encode ancestry proof: %w", err)
-								}
-
-								payload2 := prevPeaksBytes
-
-								prevLeafCountBytes, err := types.EncodeToBytes(ancestryProof.PrevLeafCount)
-								if err != nil {
-									return fmt.Errorf("encode prev leaf count: %w", err)
-								}
-								payload2 = append(payload2, prevLeafCountBytes...)
-
-								leafCountBytes, err := types.EncodeToBytes(ancestryProof.LeafCount)
-								if err != nil {
-									return fmt.Errorf("encode leaf count: %w", err)
-								}
-								payload2 = append(payload2, leafCountBytes...)
-
-								itemsBytes, err := types.EncodeToBytes(ancestryProof.Items)
-								if err != nil {
-									return fmt.Errorf("encode ancestry proof items: %w", err)
-								}
-								payload2 = append(payload2, itemsBytes...)
-
-								log.Info("ancestry proof: ", payload2)
-								log.Info("ancestry proof hex: ", fmt.Sprintf("%x", payload2))
 
 								// header
 								payload3, err := types.EncodeToBytes(latestBlock.Block.Header)

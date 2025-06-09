@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/snowfork/go-substrate-rpc-client/v4/client"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
@@ -171,8 +172,8 @@ func getOffenderPubKeyAndSig(commitment contracts.BeefyClientCommitment, validat
 
 }
 
-// build vote payload
-func buildVotePayload(commitment contracts.BeefyClientCommitment, offenderPubKeyCompressed []byte, offenderSig []byte) []byte {
+// construct vote payload
+func constructVotePayload(commitment contracts.BeefyClientCommitment, offenderPubKeyCompressed []byte, offenderSig []byte) []byte {
 	payload1 := append([]byte{0x04}, commitment.Payload[0].PayloadID[:]...)
 	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
 	// commitment
@@ -206,6 +207,46 @@ func buildVotePayload(commitment contracts.BeefyClientCommitment, offenderPubKey
 	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
 
 	return payload1
+}
+
+// construct ancestry proof payload
+func (li *BeefyListener) constructAncestryProofPayload(commitment contracts.BeefyClientCommitment) ([]byte, error) {
+
+	// TODO: move to go-substrate-rpc-client
+	var ancestryProof GenerateAncestryProofResponse
+	err := client.CallWithBlockHash(li.relaychainConn.API().Client, &ancestryProof, "mmr_generateAncestryProof", nil, commitment.BlockNumber, nil)
+	if err != nil {
+		return nil, fmt.Errorf("generate MMR ancestry proof: %w", err)
+	}
+
+	prevPeaksBytes, err := types.EncodeToBytes(ancestryProof.PrevPeaks)
+	if err != nil {
+		return nil, fmt.Errorf("encode ancestry proof: %w", err)
+	}
+
+	payload := prevPeaksBytes
+
+	prevLeafCountBytes, err := types.EncodeToBytes(ancestryProof.PrevLeafCount)
+	if err != nil {
+		return nil, fmt.Errorf("encode prev leaf count: %w", err)
+	}
+	payload = append(payload, prevLeafCountBytes...)
+
+	leafCountBytes, err := types.EncodeToBytes(ancestryProof.LeafCount)
+	if err != nil {
+		return nil, fmt.Errorf("encode leaf count: %w", err)
+	}
+	payload = append(payload, leafCountBytes...)
+
+	itemsBytes, err := types.EncodeToBytes(ancestryProof.Items)
+	if err != nil {
+		return nil, fmt.Errorf("encode ancestry proof items: %w", err)
+	}
+	payload = append(payload, itemsBytes...)
+
+	log.Info("ancestry proof: ", payload)
+	log.Info("ancestry proof hex: ", fmt.Sprintf("%x", payload))
+	return payload, nil
 }
 
 func (li *BeefyListener) getLatestBlockInfo() (types.Hash, *types.SignedBlock, error) {
