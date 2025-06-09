@@ -192,14 +192,9 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						log.WithError(err).Warning("Failed to decode transaction call data")
 					}
 					// TODO: handle tickets submitted for future blocks
-					latestHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
+					_, latestBlock, err := li.getLatestBlockInfo()
 					if err != nil {
-						return fmt.Errorf("get finalized head: %w", err)
-					}
-
-					latestBlock, err := li.relaychainConn.API().RPC.Chain.GetBlock(latestHash)
-					if err != nil {
-						return fmt.Errorf("get block: %w", err)
+						return fmt.Errorf("get latest block info: %w", err)
 					}
 					latestBlockNumber := uint64(latestBlock.Block.Header.Number)
 
@@ -222,11 +217,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 							return fmt.Errorf("get metadata: %w", err)
 						}
 
-						signer, nonce, err := li.getSignerInfo(meta)
-						if err != nil {
-							return fmt.Errorf("get signer info: %w", err)
-						}
-
 						extrinsicName := "Beefy.report_future_block_voting"
 						// call: c805
 						// build vote payload for equivocation proof
@@ -240,14 +230,9 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 
 						//TODO: merge with prior query for finalized head
 						// ---
-						latestHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
+						latestHash, latestBlock, err := li.getLatestBlockInfo()
 						if err != nil {
-							return fmt.Errorf("get finalized head: %w", err)
-						}
-
-						latestBlock, err := li.relaychainConn.API().RPC.Chain.GetBlock(latestHash)
-						if err != nil {
-							return fmt.Errorf("get block: %w", err)
+							return fmt.Errorf("get latest block info: %w", err)
 						}
 						latestBlockNumber := uint64(latestBlock.Block.Header.Number)
 						// ---
@@ -266,48 +251,12 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						payload := []interface{}{types.NewData(append(payload1, payload2...))}
 						log.Info("payload: ", fmt.Sprintf("%x", payload))
 						c, err := types.NewCall(meta, extrinsicName, payload...)
+						// c, err := types.NewCall(meta, extrinsicName, types.NewBytes(payload1), types.NewBytes(payload2))
 						if err != nil {
 							return fmt.Errorf("create call: %w", err)
 						}
 
-						ext := types.NewExtrinsic(c)
-						// TODO: check if applicable here
-						era := parachain.NewMortalEra(uint64(latestBlock.Block.Header.Number))
-
-						genesisHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(0)
-						if err != nil {
-							return fmt.Errorf("get block hash: %w", err)
-						}
-
-						rv, err := li.relaychainConn.API().RPC.State.GetRuntimeVersionLatest()
-						if err != nil {
-							return fmt.Errorf("get runtime version: %w", err)
-						}
-
-						o := types.SignatureOptions{
-							BlockHash:          latestHash,
-							Era:                era,
-							GenesisHash:        genesisHash,
-							Nonce:              nonce,
-							SpecVersion:        rv.SpecVersion,
-							Tip:                types.NewUCompactFromUInt(0),
-							TransactionVersion: rv.TransactionVersion,
-						}
-
-						callHex, err := types.EncodeToHexString(c)
-						log.Info("Extrinsic unsigned hex: ", callHex)
-						log.Info("Extrinsic unsigned: ", ext)
-						extHex, err := types.EncodeToHexString(ext)
-						log.Info("Extrinsic unsigned hex: ", extHex)
-						err = ext.Sign(signer, o)
-						if err != nil {
-							return fmt.Errorf("sign extrinsic: %w", err)
-						}
-						log.Info("Extrinsic: ", ext)
-						extHex, err = types.EncodeToHexString(ext)
-						log.Info("Extrinsic signed hex: ", extHex)
-
-						// ext.Sign(signature.TestKeyringPairAlice, o)
+						ext, err := li.signedExtrinsicFromCall(meta, c)
 
 						// Send the extrinsic
 						sub, err := li.relaychainConn.API().RPC.Author.SubmitAndWatchExtrinsic(ext)
@@ -335,9 +284,9 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 								if status.IsFinalized {
 									log.Info("Finalized at block hash ", status.AsFinalized.Hex())
 									sub.Unsubscribe()
+									log.Info("equivocation report complete")
 									break
 								}
-								log.Info("equivocation report complete")
 							}
 						}
 

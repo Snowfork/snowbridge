@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 
@@ -202,4 +203,73 @@ func buildVotePayload(commitment contracts.BeefyClientCommitment, offenderPubKey
 	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
 
 	return payload1
+}
+
+func (li *BeefyListener) getLatestBlockInfo() (types.Hash, *types.SignedBlock, error) {
+	latestHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
+	if err != nil {
+		return types.Hash{}, nil, fmt.Errorf("get finalized head: %w", err)
+	}
+
+	latestBlock, err := li.relaychainConn.API().RPC.Chain.GetBlock(latestHash)
+	if err != nil {
+		return types.Hash{}, nil, fmt.Errorf("get block: %w", err)
+	}
+
+	log.Info("Latest block number: ", latestBlock.Block.Header.Number)
+
+	return latestHash, latestBlock, nil
+}
+
+func (li *BeefyListener) signedExtrinsicFromCall(meta *types.Metadata, call types.Call) (types.Extrinsic, error) {
+	ext := types.NewExtrinsic(call)
+	signer, nonce, err := li.getSignerInfo(meta)
+	if err != nil {
+		return ext, fmt.Errorf("get signer info: %w", err)
+	}
+
+	latestHash, latestBlock, err := li.getLatestBlockInfo()
+	if err != nil {
+		return ext, fmt.Errorf("get latest block info: %w", err)
+	}
+
+	// TODO: check if applicable here
+	era := parachain.NewMortalEra(uint64(latestBlock.Block.Header.Number))
+
+	genesisHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(0)
+	if err != nil {
+		return ext, fmt.Errorf("get block hash: %w", err)
+	}
+
+	rv, err := li.relaychainConn.API().RPC.State.GetRuntimeVersionLatest()
+	if err != nil {
+		return ext, fmt.Errorf("get runtime version: %w", err)
+	}
+
+	o := types.SignatureOptions{
+		BlockHash:          latestHash,
+		Era:                era,
+		GenesisHash:        genesisHash,
+		Nonce:              nonce,
+		SpecVersion:        rv.SpecVersion,
+		Tip:                types.NewUCompactFromUInt(0),
+		TransactionVersion: rv.TransactionVersion,
+	}
+
+	callHex, err := types.EncodeToHexString(call)
+	log.Info("Extrinsic unsigned hex: ", callHex)
+	log.Info("Extrinsic unsigned: ", ext)
+	extHex, err := types.EncodeToHexString(ext)
+	log.Info("Extrinsic unsigned hex: ", extHex)
+	err = ext.Sign(signer, o)
+	if err != nil {
+		return ext, fmt.Errorf("sign extrinsic: %w", err)
+	}
+	log.Info("Extrinsic: ", ext)
+	extHex, err = types.EncodeToHexString(ext)
+	log.Info("Extrinsic signed hex: ", extHex)
+
+	return ext, nil
+
+	// ext.Sign(signature.TestKeyringPairAlice, o)
 }
