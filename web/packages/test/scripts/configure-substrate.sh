@@ -36,8 +36,8 @@ wait_beacon_chain_ready() {
     done
 }
 
-configure_channels() {
-    echo "Configure channels"
+configure_from_test_helper() {
+    echo "Configure from test helper"
     pushd ../test-helpers
     pnpm configureE2E
     popd
@@ -60,6 +60,9 @@ configure_ah() {
     # Create Ether
     local call="0x28020c1f04020109079edaa802040000003501020109079edaa80200ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d01043513020109079edaa8021445746865721445746865721200"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+    # Mint Ether to Alice
+    local call="0x3506020109079edaa80200d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d1300002cf61a24a229"
+    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
     # Mint Ether to Ferdie
     local call="0x3506020109079edaa802001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229"
     send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
@@ -69,6 +72,11 @@ configure_ah() {
     # Register Wnd
     local call="0x24010501000c574e440c574e440c"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+    # Create Pool for Ether<->Wnd and add liquidity
+    local call="0x38000100020109079edaa802"
+    send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
+    local call="0x38010100020109079edaa8020000e941cc6b01000000000000000000000064a7b3b6e00d000000000000000001000000000000000000000000000000010000000000000000000000000000001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c"
+    send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
     # Register Roc
     register_roc
 }
@@ -81,16 +89,15 @@ register_roc() {
     local call="0x240105020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e0c526f630c526f630c"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
     # Mint Roc to Ferdie
-    # local call="0x3506020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229"
-    # send_transact_locally $ASSET_HUB_PARAID "$call" "//Alice"
+    local call="0x3506020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229"
+    send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
 }
 
 
 configure_substrate() {
+    configure_from_test_helper
     configure_bh
     configure_ah
-    configure_channels
-    # The beacon checkpoint is a large call and should be separated.
     wait_beacon_chain_ready
     config_beacon_checkpoint
 }

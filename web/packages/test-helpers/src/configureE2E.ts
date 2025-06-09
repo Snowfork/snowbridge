@@ -61,6 +61,22 @@ const sendBatchTransactionsOnAssethub = async () => {
     const keyring = new Keyring({ type: "sr25519" })
     const sender = keyring.addFromUri("//Alice")
 
+    const versionedLocation = api.createType("XcmVersionedLocation", {
+        v4: {
+            parents: 1,
+            interior: {
+                x1: [
+                    {
+                        accountId32: {
+                            network: null,
+                            id: "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d",
+                        },
+                    },
+                ],
+            },
+        },
+    })
+
     // Define recipient addresses and amounts (replace with real addresses)
     const transactions = [
         //Account for penpal (Sibling parachain 2000)
@@ -73,6 +89,7 @@ const sendBatchTransactionsOnAssethub = async () => {
             "5GjRnmh5o3usSYzVmsxBWzHEpvJyHK4tKNPhjpUR3ASrruBy",
             InitialFund
         ),
+        api.tx.polkadotXcm.addAuthorizedAlias(versionedLocation, null),
     ]
 
     // Create a batch transaction
@@ -125,10 +142,51 @@ const buildHrmpChannels = async () => {
     })
 }
 
+const sendBatchTransactionsOnPenpal = async () => {
+    // Connect to node
+    const api = await ApiPromise.create({ provider: new WsProvider("ws://127.0.0.1:13144") })
+
+    // Initialize Keyring and add an account (Replace with your private key or use mnemonic)
+    const keyring = new Keyring({ type: "sr25519" })
+    const sender = keyring.addFromUri("//Alice")
+
+    const versionedLocation = api.createType("XcmVersionedLocation", {
+        v4: {
+            parents: 1,
+            interior: {
+                x1: [
+                    {
+                        accountId32: {
+                            network: null,
+                            id: "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d",
+                        },
+                    },
+                ],
+            },
+        },
+    })
+
+    // Create a batch transaction
+    const transaction = api.tx.polkadotXcm.addAuthorizedAlias(versionedLocation, null)
+
+    console.log("Sending batch transaction...")
+
+    // Sign and send the batch transaction
+    const unsub = await transaction.signAndSend(sender, ({ status }) => {
+        if (status.isInBlock) {
+            console.log(`✅ Transaction included in block: ${status.asInBlock}`)
+        } else if (status.isFinalized) {
+            console.log(`🎉 Transaction finalized in block: ${status.asFinalized}`)
+            unsub()
+        }
+    })
+}
+
 const main = async () => {
     await buildHrmpChannels()
     await sendBatchTransactionsOnBridgehub()
     await sendBatchTransactionsOnAssethub()
+    await sendBatchTransactionsOnPenpal()
 }
 
 // Run the script

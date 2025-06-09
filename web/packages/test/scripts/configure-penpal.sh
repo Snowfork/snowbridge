@@ -26,12 +26,9 @@ register_weth_on_penpal() {
     # set weth meta data
     local call='0x3313020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d105745544810574554481200'
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
-    # Mint weth to Ferdie
-    # local call="0x3506020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229"
-    # send_transact_locally $ASSET_HUB_PARAID "$call" "//Ferdie"
 }
 
-register_eth_on_penpal() {
+register_ether() {
     # register ether
     local call='0x3301020109079edaa80200d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d0104'
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
@@ -39,30 +36,39 @@ register_eth_on_penpal() {
     local call='0x3313020109079edaa8021445746865721445746865721200'
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
     # Mint Ether
-    # local call='0x3306020109079edaa802001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
-    # send_transact_locally $PENPAL_PARAID "$call" "//Alice"
+    local call='0x3306020109079edaa802001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
+    send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
     # Mint Wnd
-    # local call='0x33060100001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
-    # send_transact_locally $PENPAL_PARAID "$call" "//Alice"
+    local call='0x33060100001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
+    send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
 }
+
 
 register_pal() {
-    register_pal_on_ah
-    # Mint Pal to Ferdie
-    #local call='0x320608001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0b0030ef7dba02'
-    #send_transact_locally $PENPAL_PARAID "$call" "//Alice"
-}
-
-register_pal_on_ah() {
-    # register token
+    # register pal-2
     local call='0x3501010300411f0432050800d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d0104'
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
-    # set metadata
+    # set pal-2 metadata
     local call="0x3513010300411f043205081470616c2d321470616c2d320c00"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
-    # register on bh
+    # register pal-2 on bh
     local call='0x240105010300411f043205081470616c2d321470616c2d320c'
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+    # mint Pal-2 to Ferdie
+    local call='0x320608001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0b0030ef7dba02'
+    send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
+
+    # register native pal
+    local call='0x3501010100411f00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d0104'
+    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+    # mint pal
+    local call='0x3506010100411f00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d0f0080c6a47e8d03'
+    send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
+    # Create Pool for Pal<->Wnd and add liquidity
+    local call="0x38000100010100411f"
+    send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
+    local call="0x38010100010100411f00a0724e18090000000000000000000000a0724e18090000000000000000000001000000000000000000000000000000010000000000000000000000000000001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c"
+    send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
 }
 
 
@@ -102,12 +108,15 @@ function transfer_local_balance() {
             "${amount}"
 }
 
+function register_alias_from_relaychain() {
+    local call
+}
+
 
 if [ -z "${from_start_services:-}" ]; then
     echo "config Penpal for tests"
-    config_penpal
-    register_weth
-    register_eth_on_penpal
+    # config_penpal
+    # register_ether
     register_pal
     wait
 fi
