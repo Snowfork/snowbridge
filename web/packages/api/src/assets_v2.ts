@@ -473,13 +473,6 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
     return result
 }
 
-export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
-    if (padPercent < 0 || padPercent > 100) {
-        throw Error(`padPercent ${padPercent} not in range of 0 to 100.`)
-    }
-    return fee * ((100n + padPercent) / 100n)
-}
-
 async function indexParachain(
     parachain: ParachainBase,
     assetHub: ParachainBase,
