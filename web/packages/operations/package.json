@@ -32,7 +32,9 @@
     "transferWndToEthereum": "npx ts-node src/transfer_from_p2e.ts 1000 WND 2000000000",
     "transferWndToAH": "npx ts-node src/transfer_from_e2p.ts 1000 WND 1000000000",
     "transferPenpalTokenToEthereum": "npx ts-node src/transfer_from_p2e.ts 2000 pal 2000000000",
-    "transferPenpalTokenToAH": "npx ts-node src/transfer_from_e2p.ts 1000 pal 1000000000"
+    "transferPenpalTokenToAH": "npx ts-node src/transfer_from_e2p.ts 1000 pal 1000000000",
+    "transferWndToEthereumV3": "npx ts-node src/transfer_from_p2e_v3.ts 1000 WND 2000000000",
+    "transferEtherFromAHV3": "npx ts-node src/transfer_from_p2e_v3.ts 1000 Eth 200000000000000"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.62.0",

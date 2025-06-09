@@ -7,6 +7,8 @@ export type ERC20Metadata = {
     symbol: string
     decimals: number
     foreignId?: string
+    // The gas cost of a local transfer
+    deliveryGas?: bigint
 }
 
 export type EthereumChain = {
@@ -17,6 +19,8 @@ export type EthereumChain = {
     precompile?: `0x${string}`
     xcDOT?: string
     xcTokenMap?: XC20TokenMap
+    // The gas cost of v2_submit excludes command execution, mainly covers the verification
+    baseDeliveryGas?: bigint
 }
 
 export type AccountType = "AccountId20" | "AccountId32"
