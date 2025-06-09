@@ -14,6 +14,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/snowfork/go-substrate-rpc-client/v4/client"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -228,15 +229,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						payload1 := buildVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
 						log.Info("calling api")
 
-						//TODO: merge with prior query for finalized head
-						// ---
-						// latestHash, latestBlock, err := li.getLatestBlockInfo()
-						// if err != nil {
-						// 	return fmt.Errorf("get latest block info: %w", err)
-						// }
-						// latestBlockNumber := uint64(latestBlock.Block.Header.Number)
-						// ---
-						//
 						// keyOwnership Proof
 						keyOwnershipProof, err := li.getKeyOwnershipProof(meta, latestHash, latestBlockNumber, offenderPubKeyCompressed, commitment.ValidatorSetID)
 						if err != nil {
@@ -274,28 +266,128 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						}
 
 					} else {
-						beefyBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(event.BlockNumber)
+						canonicalBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(event.BlockNumber)
 						if err != nil {
 							return fmt.Errorf("fetch block hash: %w", err)
 						}
-						mmrRootHash, err := li.relaychainConn.GetMMRRootHash(beefyBlockHash)
+						canonicalMmrRootHash, err := li.relaychainConn.GetMMRRootHash(canonicalBlockHash)
 						if err != nil {
-							return fmt.Errorf("retrieve MMR root hash at block %v: %w", beefyBlockHash.Hex(), err)
+							return fmt.Errorf("retrieve MMR root hash at block %v: %w", canonicalBlockHash.Hex(), err)
 						} else {
 							log.WithFields(log.Fields{
 								"commitment":               commitment,
 								"bitfield":                 bitfield,
 								"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
 								"proof":                    validatorProof,
-								"correspondingMMRRootHash": mmrRootHash,
+								"correspondingMMRRootHash": canonicalMmrRootHash,
 							}).Info("Decoded transaction call data for NewTicket event")
-							if mmrRootHash != types.NewHash(commitment.Payload[0].Data) {
+							if canonicalMmrRootHash != types.NewHash(commitment.Payload[0].Data) {
 								log.WithFields(log.Fields{
 									"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
 									"proof":                    validatorProof,
-									"correspondingMMRRootHash": mmrRootHash,
+									"correspondingMMRRootHash": canonicalMmrRootHash,
 								}).Warning("MMR root hash does NOT match the commitment payload")
 								// TODO: get the required state to prove the equivocation from the signature
+
+								log.Info("schedule ID", li.scheduleConfig.ID)
+								if li.scheduleConfig.ID != 0 {
+									log.Info("testing: only submitting from relayer 0 - skipping")
+									return nil
+								}
+
+								meta, err := li.relaychainConn.API().RPC.State.GetMetadataLatest()
+								if err != nil {
+									return fmt.Errorf("get metadata: %w", err)
+								}
+
+								extrinsicName := "Beefy.report_fork_voting"
+								// call: c803
+								// build vote payload for equivocation proof
+								offenderPubKeyCompressed, offenderSig, err := getOffenderPubKeyAndSig(commitment, validatorProof)
+								if err != nil {
+									return fmt.Errorf("get offender pubkey and sig: %w", err)
+								}
+
+								payload1 := buildVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
+								log.Info("calling api")
+
+								// Ancestry Proof
+								// TODO: move to go-substrate-rpc-client
+								var ancestryProof GenerateAncestryProofResponse
+								err = client.CallWithBlockHash(li.relaychainConn.API().Client, &ancestryProof, "mmr_generateAncestryProof", nil, commitment.BlockNumber, nil)
+								if err != nil {
+									return fmt.Errorf("generate MMR ancestry proof: %w", err)
+								}
+
+								prevPeaksBytes, err := types.EncodeToBytes(ancestryProof.PrevPeaks)
+								if err != nil {
+									return fmt.Errorf("encode ancestry proof: %w", err)
+								}
+
+								payload2 := prevPeaksBytes
+
+								prevLeafCountBytes, err := types.EncodeToBytes(ancestryProof.PrevLeafCount)
+								if err != nil {
+									return fmt.Errorf("encode prev leaf count: %w", err)
+								}
+								payload2 = append(payload2, prevLeafCountBytes...)
+
+								leafCountBytes, err := types.EncodeToBytes(ancestryProof.LeafCount)
+								if err != nil {
+									return fmt.Errorf("encode leaf count: %w", err)
+								}
+								payload2 = append(payload2, leafCountBytes...)
+
+								itemsBytes, err := types.EncodeToBytes(ancestryProof.Items)
+								if err != nil {
+									return fmt.Errorf("encode ancestry proof items: %w", err)
+								}
+								payload2 = append(payload2, itemsBytes...)
+
+								log.Info("ancestry proof: ", payload2)
+								log.Info("ancestry proof hex: ", fmt.Sprintf("%x", payload2))
+
+								// header
+								payload3, err := types.EncodeToBytes(latestBlock.Block.Header)
+
+								// keyOwnership Proof
+								keyOwnershipProof, err := li.getKeyOwnershipProof(meta, latestHash, latestBlockNumber, offenderPubKeyCompressed, commitment.ValidatorSetID)
+								if err != nil {
+									return fmt.Errorf("get key ownership proof: %w", err)
+								}
+
+								payload4 := keyOwnershipProof[3:]
+								log.Info("stripped key ownership proof: ", payload4)
+								log.Info("stripped key ownership hex: ", fmt.Sprintf("%x", payload4))
+								// payload := []interface{}{types.NewBytes(payload1), types.NewBytes(payload2)}
+								// combine payload1 and payload2
+								payloadEquivocationProof := append(payload1, payload2...)
+								payloadEquivocationProof = append(payloadEquivocationProof, payload3...)
+								payload := []interface{}{types.NewData(append(payloadEquivocationProof, payload4...))}
+								log.Info("payload: ", fmt.Sprintf("%x", payload))
+								c, err := types.NewCall(meta, extrinsicName, payload...)
+								// c, err := types.NewCall(meta, extrinsicName, types.NewBytes(payload1), types.NewBytes(payload2))
+								if err != nil {
+									return fmt.Errorf("create call: %w", err)
+								}
+
+								ext, err := li.signedExtrinsicFromCall(meta, c)
+
+								// Send the extrinsic
+								sub, err := li.relaychainConn.API().RPC.Author.SubmitAndWatchExtrinsic(ext)
+								// res, err := li.relaychainConn.API().RPC.Author.SubmitExtrinsic(ext)
+								if err != nil {
+									log.Error("Failed to submit extrinsic: ", err, sub)
+								} else {
+									err := li.watchExtrinsicSubscription(sub)
+									log.Info("Extrinsic submitted: ", sub)
+									if err != nil {
+										log.Error("Extrinsic submission failed: ", err)
+									} else {
+										log.Info("equivocation report complete")
+									}
+								}
+
 							} else {
 								log.Info("MMR root hash DOES match the commitment payload")
 							}
