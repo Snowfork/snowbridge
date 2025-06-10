@@ -286,7 +286,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 									"proof":                    validatorProof,
 									"correspondingMMRRootHash": canonicalMmrRootHash,
 								}).Warning("MMR root hash does NOT match the commitment payload")
-								// TODO: get the required state to prove the equivocation from the signature
 
 								log.Info("schedule ID", li.scheduleConfig.ID)
 								if li.scheduleConfig.ID != 0 {
@@ -316,10 +315,10 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 									return fmt.Errorf("build ancestry proof payload: %w", err)
 								}
 
-								// header
+								// Header
 								payload3, err := types.EncodeToBytes(latestBlock.Block.Header)
 
-								// keyOwnership Proof
+								// Key Ownership Proof
 								keyOwnershipProof, err := li.getKeyOwnershipProof(meta, latestHash, latestBlockNumber, offenderPubKeyCompressed, commitment.ValidatorSetID)
 								if err != nil {
 									return fmt.Errorf("get key ownership proof: %w", err)

@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/snowfork/go-substrate-rpc-client/v4/client"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
-	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -28,21 +27,17 @@ func (li *BeefyListener) getKeyOwnershipProof(meta *types.Metadata, latestHash t
 		return nil, err
 	}
 	keyOwnershipProofPayload := "0x" + fmt.Sprintf("%x", sessionDummy) + fmt.Sprintf("%x", offenderPubKeyCompressed)
-	log.Info("DEBUG: kopPayload: ", keyOwnershipProofPayload)
 
 	// encodedVID, err := types.EncodeToBytes(types.NewOption(commitment.ValidatorSetID))
 	encodedVID, err := types.EncodeToBytes(validatorSetID)
 	if err != nil {
 		return nil, err
 	}
-	log.Info("DEBUG encoded: ", encodedVID)
 	setIdSessionKey, err := types.CreateStorageKey(meta, "Beefy", "SetIdSession", encodedVID)
 	if err != nil {
 		return nil, err
 	}
-	log.Info("DEBUG storage key:", setIdSessionKey)
 	encodedSessionKey, err := types.EncodeToBytes(setIdSessionKey)
-	log.Info("DEBUG storage key:", setIdSessionKey.Hex())
 	var offenderSession uint32
 	ok, err := li.relaychainConn.API().RPC.State.GetStorage(setIdSessionKey, &offenderSession, latestHash)
 
@@ -52,7 +47,6 @@ func (li *BeefyListener) getKeyOwnershipProof(meta *types.Metadata, latestHash t
 	if !ok {
 		return nil, fmt.Errorf("DEBUG: No value for SetIdSession key: %x", encodedSessionKey)
 	}
-	log.Info("DEBUG setIdSession: ", offenderSession)
 
 	currentEpochIndexKey, err := types.CreateStorageKey(meta, "Babe", "EpochIndex", nil)
 	if err != nil {
@@ -66,7 +60,6 @@ func (li *BeefyListener) getKeyOwnershipProof(meta *types.Metadata, latestHash t
 	if !ok {
 		return nil, fmt.Errorf("DEBUG: No value for SetIdSession key: %x", currentEpochIndexKey.Hex())
 	}
-	log.Info("DEBUG currentSession: ", currentSession)
 
 	// if offenderSession != currentSession {
 	// epochDurationKey, err := types.CreateStorageKey(meta, "Babe", "EpochDuration")
@@ -93,7 +86,6 @@ func (li *BeefyListener) getKeyOwnershipProof(meta *types.Metadata, latestHash t
 	if err != nil {
 		return nil, err
 	}
-	log.Info("DEBUG offender session block: ", offenderSessionBlockHash.Hex())
 	// }
 
 	err = li.relaychainConn.API().Client.Call(&keyOwnershipProofRaw, "state_call", callName, keyOwnershipProofPayload, offenderSessionBlockHash.Hex())
@@ -101,7 +93,6 @@ func (li *BeefyListener) getKeyOwnershipProof(meta *types.Metadata, latestHash t
 	if err != nil || !ok {
 		return nil, fmt.Errorf("generate key owner proof: %w", err)
 	}
-	log.Info("return: ", keyOwnershipProofRaw)
 
 	keyOwnershipProof, err := hex.DecodeString(keyOwnershipProofRaw[2:])
 	if err != nil || !ok {
@@ -129,7 +120,6 @@ func (li *BeefyListener) getSignerInfo(meta *types.Metadata) (signature.KeyringP
 	}
 
 	nonce := uint64(accountInfo.Nonce)
-	log.Info("Nonce: ", nonce)
 
 	return signer, types.NewUCompactFromUInt(nonce), nil
 }
@@ -150,11 +140,8 @@ func getOffenderPubKeyAndSig(commitment contracts.BeefyClientCommitment, validat
 	}
 	commitmentBytes := append(commitmentPayloadBytes, commitmentBlockNumberBytes...)
 	commitmentBytes = append(commitmentBytes, commitmentValidatorSetIdBytes...)
-	log.Info("DEBUG encoded commitment: ", commitmentBytes)
 
 	commitmentHash := (&keccak.Keccak256{}).Hash(commitmentBytes)
-	log.Info("payload1: commitmentHash: ", commitmentHash)
-	log.Info("payload1: commitmentHash: ", fmt.Sprintf("%x", commitmentHash))
 	var offenderSig []byte
 	offenderSig = append(validatorProof.R[:], validatorProof.S[:]...)
 
@@ -174,39 +161,25 @@ func getOffenderPubKeyAndSig(commitment contracts.BeefyClientCommitment, validat
 
 // construct vote payload
 func constructVotePayload(commitment contracts.BeefyClientCommitment, offenderPubKeyCompressed []byte, offenderSig []byte) []byte {
-	payload1 := append([]byte{0x04}, commitment.Payload[0].PayloadID[:]...)
-	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+	payload := append([]byte{0x04}, commitment.Payload[0].PayloadID[:]...)
 	// commitment
-	payload1 = append(payload1, 0x80)
-	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
-	payload1 = append(payload1, commitment.Payload[0].Data...)
-	log.Info("payload1: data ", fmt.Sprintf("%x", commitment.Payload[0].Data))
-	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+	payload = append(payload, 0x80)
+	payload = append(payload, commitment.Payload[0].Data...)
 	// block number
 	blockNumberBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(blockNumberBytes, commitment.BlockNumber)
-	log.Info("payload1: block ", commitment.BlockNumber)
-	payload1 = append(payload1, blockNumberBytes...)
-	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+	payload = append(payload, blockNumberBytes...)
 	// validator set id
 	validatorSetBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(validatorSetBytes, commitment.ValidatorSetID)
-	payload1 = append(payload1, validatorSetBytes...)
-	log.Info("payload1: vset ", commitment.ValidatorSetID)
-	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+	payload = append(payload, validatorSetBytes...)
 	// id
-	log.Info("DEBUG commitment: ", commitment)
 
-	payload1 = append(payload1, offenderPubKeyCompressed...)
-	log.Info("payload1: offenderPubKey ", fmt.Sprintf("%x", offenderPubKeyCompressed))
-	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+	payload = append(payload, offenderPubKeyCompressed...)
 	// signature
-	payload1 = append(payload1, offenderSig[:]...)
-	log.Info("payload1: signature ", offenderSig)
-	log.Info("payload1: signature hex ", fmt.Sprintf("%x", offenderSig))
-	log.Info("payload1: ", fmt.Sprintf("%x", payload1))
+	payload = append(payload, offenderSig[:]...)
 
-	return payload1
+	return payload
 }
 
 // construct ancestry proof payload
@@ -244,8 +217,6 @@ func (li *BeefyListener) constructAncestryProofPayload(commitment contracts.Beef
 	}
 	payload = append(payload, itemsBytes...)
 
-	log.Info("ancestry proof: ", payload)
-	log.Info("ancestry proof hex: ", fmt.Sprintf("%x", payload))
 	return payload, nil
 }
 
@@ -260,7 +231,6 @@ func (li *BeefyListener) getLatestBlockInfo() (types.Hash, *types.SignedBlock, e
 		return types.Hash{}, nil, fmt.Errorf("get block: %w", err)
 	}
 
-	log.Info("Latest block number: ", latestBlock.Block.Header.Number)
 
 	return latestHash, latestBlock, nil
 }
@@ -301,21 +271,13 @@ func (li *BeefyListener) signedExtrinsicFromCall(meta *types.Metadata, call type
 	}
 
 	callHex, err := types.EncodeToHexString(call)
-	log.Info("Call unsigned hex: ", callHex)
-	// log.Info("Extrinsic unsigned: ", ext)
-	// extHex, err := types.EncodeToHexString(ext)
-	// log.Info("Extrinsic unsigned hex: ", extHex)
+
 	err = ext.Sign(signer, o)
 	if err != nil {
 		return ext, fmt.Errorf("sign extrinsic: %w", err)
 	}
-	// log.Info("Extrinsic: ", ext)
-	// extHex, err := types.EncodeToHexString(ext)
-	// log.Info("Extrinsic signed hex: ", extHex)
 
 	return ext, nil
-
-	// ext.Sign(signature.TestKeyringPairAlice, o)
 }
 
 func (li *BeefyListener) watchExtrinsicSubscription(sub *author.ExtrinsicStatusSubscription) error {
@@ -359,15 +321,6 @@ type GenerateAncestryProofResponse struct {
 	PrevLeafCount types.U64
 	LeafCount     types.U64
 	Items         []ProofItem
-	/// Peaks of the ancestor's mmr
-	// pub prev_peaks: Vec<Hash>,
-	/// Number of leaves in the ancestor's MMR.
-	// pub prev_leaf_count: u64,
-	/// Number of leaves in MMR, when the proof was generated.
-	// pub leaf_count: NodeIndex,
-	/// Proof elements
-	/// (positions and hashes of siblings of inner nodes on the path to the previous peaks).
-	// pub items: Vec<(u64, Hash)>,
 }
 
 // UnmarshalJSON fills u with the JSON encoded byte array given by b
@@ -378,30 +331,22 @@ func (d *GenerateAncestryProofResponse) UnmarshalJSON(bz []byte) error {
 		LeafCount     uint64           `json:"leaf_count"`
 		Items         [][2]interface{} `json:"items"`
 	}
-	log.Info("bz: ", string(bz))
 	if err := json.Unmarshal(bz, &tmp); err != nil {
 		return fmt.Errorf("unmarshal JSON: %w", err)
 	}
-	log.Info("tmp: ", tmp)
-	log.Info("tmp.Items: ", tmp.Items)
-	log.Info("tmp.Items len: ", len(tmp.Items))
-	log.Info("tmp.PrevPeaks len: ", len(tmp.PrevPeaks))
 
 	d.PrevPeaks = make([]types.H256, len(tmp.PrevPeaks))
 	for i, prevPeak := range tmp.PrevPeaks {
-		log.Info("prevPeak: ", prevPeak)
 		err := types.DecodeFromHexString(prevPeak, &d.PrevPeaks[i])
 		if err != nil {
 			return err
 		}
 	}
 
-	log.Info("d.PrevPeaks: ", d.PrevPeaks)
 
 	d.PrevLeafCount = types.NewU64(tmp.PrevLeafCount)
 	d.LeafCount = types.NewU64(tmp.LeafCount)
 
-	log.Info("d.PrevLeafCount: ", d.PrevLeafCount)
 
 	d.Items = make([]ProofItem, len(tmp.Items))
 	for i, item := range tmp.Items {
@@ -427,57 +372,6 @@ func (d *GenerateAncestryProofResponse) UnmarshalJSON(bz []byte) error {
 			return fmt.Errorf("decode hash in item %d: %w", i, err)
 		}
 	}
-
-	// for i, item := range tmp.Items {
-	// 	log.Info("item: ", item)
-	// 	d.Items[i].Position = types.NewU64(item.Position)
-	// 	err := types.DecodeFromHexString(item.Hash, &d.Items[i].Hash)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-	// err := types.Decode(tmp.PrevLeafCount, &d.PrevLeafCount)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// var encodedLeaf []MMREncodableOpaqueLeaf
-	// err = DecodeFromHexString(tmp.Leaves, &encodedLeaf)
-	// if err != nil {
-	// 	return err
-	// }
-	// if len(encodedLeaf) == 0 {
-	// 	return fmt.Errorf("decode leaf error")
-	// }
-
-	// err = DecodeFromBytes(encodedLeaf[0], &d.Leaf)
-	// if err != nil {
-	// 	return err
-	// }
-	// var proof MultiMMRProof
-	// err = DecodeFromHexString(tmp.Proof, &proof)
-	// if err != nil {
-	// 	return err
-	// }
-	// if proof.LeafIndices == nil || len(proof.LeafIndices) == 0 {
-	// 	return fmt.Errorf("decode proof LeafIndices error")
-	// }
-	// d.Proof.LeafCount = proof.LeafCount
-	// d.Proof.Items = proof.Items
-	// d.Proof.LeafIndex = proof.LeafIndices[0]
-	log.Info("d: ", d)
 	return nil
 }
 
-func (a GenerateAncestryProofResponse) Encode(encoder scale.Encoder) error {
-	// encoder.PushByteArray(a.PrevPeaks)
-	// encoder.PushU64(uint64(a.PrevLeafCount))
-	// encoder.PushU64(uint64(a.LeafCount))
-
-	// for _, item := range a.Items {
-	// 	encoder.PushU64(uint64(item.Position))
-	// 	encoder.PushByteArray(item.Hash[:])
-	// }
-
-	return encoder.Encode(a)
-}
