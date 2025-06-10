@@ -352,7 +352,7 @@ async fn malicious_payload() {
 
 		// Create equivocation proof
 		// ---
-		let events = match equivocation_type {
+		match equivocation_type {
 			EquivocationType::ForkEquivocation => {
 				let client = WsClientBuilder::default()
 					.build((*RELAY_CHAIN_WS_URL).to_string())
@@ -417,17 +417,14 @@ async fn malicious_payload() {
 					.beefy()
 					.report_fork_voting(equivocation_proof, key_ownership_proof);
 
-				let events = test_clients
+				let tx = test_clients
 					.relaychain_client
 					.tx()
-					.sign_and_submit_then_watch_default(&report, &dev::alice())
+					.sign_and_submit_default(&report, &dev::alice())
 					.await
-					.expect("submit report")
-					.wait_for_finalized_success()
-					.await
-					.expect("finalized");
+					.expect("submit report");
 
-				events
+				println!("report_fork_equivocation transaction: {:?}", tx);
 			},
 			EquivocationType::FutureBlockEquivocation => {
 				let equivocation_proof = FutureBlockVotingProof {
@@ -449,30 +446,48 @@ async fn malicious_payload() {
 					.beefy()
 					.report_future_block_voting(equivocation_proof, key_ownership_proof);
 
-				let events = test_clients
+				let tx = test_clients
 					.relaychain_client
 					.tx()
-					.sign_and_submit_then_watch_default(&report, &dev::alice())
+					.sign_and_submit_default(&report, &dev::alice())
 					.await
-					.expect("submit report")
-					.wait_for_finalized_success()
-					.await
-					.expect("finalized");
+					.expect("submit report");
 
-				events
+				println!("report_future_block_equivocation transaction: {:?}", tx);
 			},
 		};
+	}
 
-		events.find::<relaychain::api::offences::events::Offence>().for_each(|event| {
-			println!("offence event: {event:?}");
-		});
-		events
+	// Watch blocks until equivocator is slashed
+	while let Some(block) = blocks_sub.next().await {
+		let block = block.expect("get block");
+		let block_number = block.header().number;
+		let block_hash = block.hash();
+		println!("Processing block #{} (Hash: {})", block_number, block_hash);
+
+		let events = block.events().await.expect("get events");
+
+		let offence_events =
+			events.find::<relaychain::api::offences::events::Offence>().collect::<Vec<_>>();
+		if offence_events.len() > 0 {
+			println!("Offence events found in block #{}: {:?}", block_number, offence_events);
+		}
+
+		let slash_report_events = events
 			.find::<relaychain::api::staking::events::SlashReported>()
-			.for_each(|event| {
-				println!("slash report event: {event:?}");
-			});
-		events.find::<relaychain::api::staking::events::Slashed>().for_each(|event| {
-			println!("slashed event: {event:?}");
-		});
+			.collect::<Vec<_>>();
+		if slash_report_events.len() > 0 {
+			println!(
+				"Slash reported events found in block #{}: {:?}",
+				block_number, slash_report_events
+			);
+		}
+
+		let slashed_events =
+			events.find::<relaychain::api::staking::events::Slashed>().collect::<Vec<_>>();
+		if slashed_events.len() > 0 {
+			println!("Slashed events found in block #{}: {:?}", block_number, slashed_events);
+			return ();
+		}
 	}
 }
