@@ -131,7 +131,7 @@ async fn malicious_payload_test() {
 	// ---
 	let test_clients = initialize_clients().await.expect("initialize clients");
 
-	let mut block_sub = test_clients
+	let mut blocks_sub = test_clients
 		.relaychain_client
 		.blocks()
 		.subscribe_finalized()
@@ -141,20 +141,42 @@ async fn malicious_payload_test() {
 	let test_config =
 		TestConfig { submit_initial: true, submit_final: false, report_equivocation: false };
 
-	malicious_payload(
-		EquivocationType::FutureBlockEquivocation,
-		test_config.clone(),
-		&test_clients,
-		&mut block_sub,
-	)
-	.await;
-	malicious_payload(
-		EquivocationType::ForkEquivocation,
-		test_config,
-		&test_clients,
-		&mut block_sub,
-	)
-	.await;
+	for equivocation_variant in
+		[EquivocationType::FutureBlockEquivocation, EquivocationType::ForkEquivocation]
+	{
+		malicious_payload(
+			equivocation_variant,
+			test_config.clone(),
+			&test_clients,
+			&mut blocks_sub,
+		)
+		.await;
+	}
+
+	let mut slashed_event_count = 0;
+	// Watch blocks until offence & slash are reported
+	while let Some(block) = blocks_sub.next().await {
+		let block = block.expect("get block");
+		let block_number = block.header().number;
+		let block_hash = block.hash();
+
+		if block_number % 5 == 0 {
+			println!("Processing block #{} (Hash: {})", block_number, block_hash);
+		}
+
+		let events = block.events().await.expect("get events");
+
+		let slashed_events =
+			events.find::<relaychain::api::staking::events::Slashed>().collect::<Vec<_>>();
+		if slashed_events.len() > 0 {
+			println!("Slashed events found in block #{}: {:?}", block_number, slashed_events);
+			slashed_event_count += slashed_events.len();
+		}
+		if slashed_event_count >= 2 {
+			println!("Slashed event count reached: {}", slashed_event_count);
+			break;
+		}
+	}
 }
 
 async fn malicious_payload(
@@ -277,7 +299,10 @@ async fn malicious_payload(
 
 	println!("validator proofs: {:?}", validator_proofs);
 
-	let signer_index = 0;
+	let signer_index = match equivocation_type {
+		EquivocationType::ForkEquivocation => 0, // Fork equivocation uses first signer
+		EquivocationType::FutureBlockEquivocation => 2, // Future block equivocation uses second signer
+	};
 	let malicious_authority: Pair = Pair::from_string(malicious_suris[signer_index], None).unwrap();
 
 	let proof = validator_proof(
@@ -417,6 +442,7 @@ async fn malicious_payload(
 					}
 				};
 
+				// TODO: use block_hash from prior to ensure same call
 				let ancestry_proof = {
 					let ancestry_proof_substrate: MmrAncestryProof<subxt::utils::H256> = client
 						.request("mmr_generateAncestryProof", vec![equivocation_block])
@@ -495,12 +521,15 @@ async fn malicious_payload(
 		};
 	}
 
-	// Watch blocks until equivocator is slashed
+	// Watch blocks until offence & slash are reported
 	while let Some(block) = blocks_sub.next().await {
 		let block = block.expect("get block");
 		let block_number = block.header().number;
 		let block_hash = block.hash();
-		println!("Processing block #{} (Hash: {})", block_number, block_hash);
+
+		if block_number % 5 == 0 {
+			println!("Processing block #{} (Hash: {})", block_number, block_hash);
+		}
 
 		let events = block.events().await.expect("get events");
 
@@ -518,12 +547,6 @@ async fn malicious_payload(
 				"Slash reported events found in block #{}: {:?}",
 				block_number, slash_report_events
 			);
-		}
-
-		let slashed_events =
-			events.find::<relaychain::api::staking::events::Slashed>().collect::<Vec<_>>();
-		if slashed_events.len() > 0 {
-			println!("Slashed events found in block #{}: {:?}", block_number, slashed_events);
 			return ();
 		}
 	}
