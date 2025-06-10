@@ -34,7 +34,7 @@ const run = async () => {
     }
     console.log(`Using environment '${env}'`)
 
-    const { name, config, ethChainId } = snwobridgeEnv
+    const { name, config, ethChainId, kusamaConfig } = snwobridgeEnv
     await cryptoWaitReady()
 
     const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
@@ -43,7 +43,7 @@ const run = async () => {
         (ethChainId) =>
             (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
     )
-    const context = new Context({
+    const ctxConfig: any = {
         environment: name,
         ethereum: {
             ethChainId,
@@ -60,7 +60,16 @@ const run = async () => {
             gateway: config.GATEWAY_CONTRACT,
             beefy: config.BEEFY_CONTRACT,
         },
-    })
+    }
+    if (name === "polkadot_mainnet" && kusamaConfig) {
+        ctxConfig.kusama = {
+            assetHubParaId: kusamaConfig.ASSET_HUB_PARAID,
+            bridgeHubParaId: kusamaConfig.BRIDGE_HUB_PARAID,
+            parachains: kusamaConfig.PARACHAINS,
+        }
+    }
+
+    const context = new Context(ctxConfig)
 
     // Step 0. Build the Asset Registry. The registry contains the list of all token and parachain metadata in order to send tokens.
     // It may take some build but does not change often so it is safe to cache for 12 hours and shipped with your dapp as static data.

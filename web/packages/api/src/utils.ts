@@ -121,6 +121,12 @@ export const fetchFinalityUpdate = async (
 export const getEventIndex = (id: string) => {
     let parts = id.split("-")
     let blockNumber = parseInt(parts[0])
-    let eventIndex = parseInt(parts[2])
+    // Extract eventIndex for compatibility
+    let eventIndex
+    if (parts.length == 2) {
+        eventIndex = parseInt(parts[1])
+    } else {
+        eventIndex = parseInt(parts[2])
+    }
     return `${blockNumber}-${eventIndex}`
 }

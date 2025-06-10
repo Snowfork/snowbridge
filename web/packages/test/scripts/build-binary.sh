@@ -18,7 +18,7 @@ build_binaries() {
     # Check that all 3 binaries are available and no changes made in the polkadot and substrate dirs
     if [[ ! -e "target/release/polkadot" || ! -e "target/release/polkadot-execute-worker" || ! -e "target/release/polkadot-prepare-worker" || "$changes_detected" -eq 1 ]]; then
         echo "Building polkadot binary, due to changes detected in polkadot or substrate, or binaries not found"
-        EPOCH_DURATION=10 cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker $features
+        cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker $features
     else
         echo "No changes detected in polkadot or substrate and binaries are available, not rebuilding relaychain binaries."
     fi
@@ -58,7 +58,7 @@ build_contracts() {
 build_latest_relayer() {
     echo "Building latest relayer"
     mage -d "$relay_dir" build
-    cp $relay_bin "$output_bin_dir"
+    cp $relay_bin "$output_bin_dir/snowbridge-relay-v2"
 }
 
 build_relayers_v1_v2() {
@@ -155,7 +155,7 @@ install_binary() {
         echo "Building relayers v1 and v2"
         build_relayers_v1_v2
     else
-        echo "Building relayers v1"
+        echo "Building relayers v2"
         build_latest_relayer
     fi
     build_web_packages

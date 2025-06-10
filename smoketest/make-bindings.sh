@@ -12,8 +12,8 @@ forge bind --module --overwrite --ethers --select 'IGateway|IUpgradable|WETH9|Mo
 
 # Install subxt
 command -v subxt || cargo install subxt-cli \
-  --git https://github.com/paritytech/subxt.git \
-  --tag v0.38.0
+    --git https://github.com/paritytech/subxt.git \
+    --tag v0.42.1
 
 eth_network="${ETH_NETWORK:-localhost}"
 polkadot_network="${POLKADOT_NETWORK:-localhost}"

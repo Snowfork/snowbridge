@@ -31,9 +31,9 @@ async fn transact_e2p() {
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = i_gateway::IGatewayV2::new(gateway_addr, ethereum_client.clone());
 
-	let execution_fee = 2_000_000_000u128;
+	let execution_fee = 2_000_000_000_000u128;
 	let relayer_fee = 2_000_000_000u128;
-	let fee = 9_000_000_000u128;
+	let fee = 9_000_000_000_000u128;
 
 	let remark_message = b"Hey there";
 	let mut encoded = Vec::new();

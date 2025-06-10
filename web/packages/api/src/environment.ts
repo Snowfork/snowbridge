@@ -1,3 +1,5 @@
+import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID } from "./parachains/mythos"
+
 export type Config = {
     BEACON_HTTP_API: string
     ETHEREUM_CHAINS: { [chain: string]: (secret: string) => string }
@@ -11,6 +13,12 @@ export type Config = {
     RELAYERS: Relayer[]
     PARACHAINS: { [paraId: string]: string }
     GRAPHQL_API_URL?: string
+}
+
+export type KusamaConfig = {
+    ASSET_HUB_PARAID: number
+    BRIDGE_HUB_PARAID: number
+    PARACHAINS: { [paraId: string]: string }
 }
 
 export type AddressType = "20byte" | "32byte" | "both"
@@ -40,6 +48,7 @@ export type TransferLocation = {
 
 export type SnowbridgeEnvironment = {
     config: Config
+    kusamaConfig?: KusamaConfig
     name: string
     ethChainId: number
     locations: TransferLocation[]
@@ -233,7 +242,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 erc20tokensReceivable: [
                     {
                         id: "MUSE",
-                        address: "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
+                        address: MUSE_TOKEN_ID,
                         minimumTransferAmount: 10_000_000_000_000_000n,
                     },
                 ],
@@ -456,7 +465,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 erc20tokensReceivable: [
                     {
                         id: "MYTH",
-                        address: "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003",
+                        address: MYTHOS_TOKEN_ID,
                         minimumTransferAmount: 10_000_000_000_000_000n,
                     },
                 ],
@@ -493,10 +502,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             PARACHAINS: {
                 "1000": "wss://asset-hub-polkadot-rpc.dwellir.com",
                 "1002": "https://bridge-hub-polkadot-rpc.dwellir.com",
-                "3369": "https://polkadot-mythos-rpc.polkadot.io",
+                "3369": "wss://polkadot-mythos-rpc.polkadot.io",
                 "2034": "wss://hydration-rpc.n.dwellir.com",
                 "2030": "wss://bifrost-polkadot.ibp.network",
                 "2004": "wss://moonbeam-rpc.n.dwellir.com",
+                "2000": "wss://acala-rpc.dwellir.com",
             },
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
             BEEFY_CONTRACT: "0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C",
@@ -539,7 +549,15 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 },
             ],
             GRAPHQL_API_URL:
-                "https://snowbridge.squids.live/snowbridge-subsquid-polkadot@v1/api/graphql",
+                "https://snowbridge.squids.live/snowbridge-subsquid-polkadot:production/api/graphql",
+        },
+        kusamaConfig: {
+            ASSET_HUB_PARAID: 1000,
+            BRIDGE_HUB_PARAID: 1002,
+            PARACHAINS: {
+                "1000": "wss://asset-hub-kusama-rpc.dwellir.com",
+                "1002": "https://bridge-hub-kusama-rpc.dwellir.com",
+            },
         },
     },
     westend_sepolia: {
