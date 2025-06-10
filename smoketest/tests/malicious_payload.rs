@@ -118,16 +118,53 @@ enum EquivocationType {
 	ForkEquivocation,
 }
 
+#[derive(Clone)]
+struct TestConfig {
+	submit_initial: bool,
+	submit_final: bool,
+	report_equivocation: bool,
+}
+
 #[tokio::test]
-async fn malicious_payload() {
+async fn malicious_payload_test() {
 	// Setup clients
 	// ---
 	let test_clients = initialize_clients().await.expect("initialize clients");
 
-	let (submit_initial, submit_final, report_equivocation) = (true, false, true);
-	// let equivocation_type = EquivocationType::FutureBlockEquivocation;
-	let equivocation_type = EquivocationType::ForkEquivocation;
+	let mut block_sub = test_clients
+		.relaychain_client
+		.blocks()
+		.subscribe_finalized()
+		.await
+		.expect("subscribe to blocks");
 
+	let test_config =
+		TestConfig { submit_initial: true, submit_final: false, report_equivocation: false };
+
+	malicious_payload(
+		EquivocationType::FutureBlockEquivocation,
+		test_config.clone(),
+		&test_clients,
+		&mut block_sub,
+	)
+	.await;
+	malicious_payload(
+		EquivocationType::ForkEquivocation,
+		test_config,
+		&test_clients,
+		&mut block_sub,
+	)
+	.await;
+}
+
+async fn malicious_payload(
+	equivocation_type: EquivocationType,
+	test_config: TestConfig,
+	test_clients: &TestClients,
+	blocks_sub: &mut subxt::backend::StreamOf<
+		Result<subxt::blocks::Block<PolkadotConfig, OnlineClient<PolkadotConfig>>, subxt::Error>,
+	>,
+) {
 	let current_validator_set = test_clients
 		.beefy_client
 		.current_validator_set()
@@ -250,7 +287,7 @@ async fn malicious_payload() {
 		&validator_proofs,
 	);
 
-	if submit_initial {
+	if test_config.submit_initial {
 		let call =
 			test_clients
 				.beefy_client
@@ -275,7 +312,7 @@ async fn malicious_payload() {
 		println!("{:?}", result);
 	}
 
-	if submit_final {
+	if test_config.submit_final {
 		let mut stream = test_clients.ethereum_client.subscribe_blocks().await.unwrap().take(1);
 		while let Some(_block) = stream.next().await {}
 
@@ -320,7 +357,7 @@ async fn malicious_payload() {
 	}
 
 
-	if report_equivocation {
+	if test_config.report_equivocation {
 		// let beefy_storage_api = relaychain::api::beefy::storage::StorageApi;
 		// let validator_set_id = beefy_storage_api.validator_set_id();
 		// println!("validator_set_id: {:?}", validator_set_id);
