@@ -802,6 +802,8 @@ export async function buildMessageId(
     return blake2AsHex(entropy)
 }
 
+const MaxWeight = { refTime: 15_000_000_000n, proofSize: 800_000 }
+
 function createAssetHubTx(
     parachain: ApiPromise,
     ethChainId: number,
@@ -824,9 +826,8 @@ function createAssetHubTx(
         remoteEtherFeeAmount,
         messageId
     )
-    let maxWeight = { refTime: 100_000_000_000n, proofSize: 4_000_000 }
     console.log("xcm on AH:", xcm.toHuman())
-    return parachain.tx.polkadotXcm.execute(xcm, maxWeight)
+    return parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
 }
 
 function createSourceParachainTx(
@@ -859,7 +860,6 @@ function createSourceParachainTx(
         remoteEtherFeeAmount,
         messageId
     )
-    let maxWeight = { refTime: 100_000_000_000n, proofSize: 4_000_000 }
     console.log("xcm on source chain:", xcm.toHuman())
-    return parachain.tx.polkadotXcm.execute(xcm, maxWeight)
+    return parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
 }
