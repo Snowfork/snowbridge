@@ -45,12 +45,11 @@ use subxt_signer::sr25519::dev;
 
 use sp_consensus_beefy;
 // use sp_consensus_beefy::ecdsa_crypto::Pair as PairT3;
-use sp_core::{ecdsa::Pair, hex2array, Pair as PairT};
+use sp_core::{ecdsa::Pair, hex2array, hexdisplay::AsBytesRef, Pair as PairT};
 use sp_crypto_hashing::keccak_256;
 use subxt::{
 	backend::rpc::RpcClient,
 	config::substrate::{BlakeTwo256, SubstrateHeader},
-	ext::sp_core::hexdisplay::AsBytesRef,
 	OnlineClient, PolkadotConfig,
 };
 
