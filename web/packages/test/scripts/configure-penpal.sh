@@ -52,7 +52,7 @@ register_pal() {
     local call="0x3513010300411f043205081470616c2d321470616c2d320c00"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
     # register pal-2 on bh
-    local call='0x240105010300411f043205081470616c2d321470616c2d320c'
+    local call='0x240105010300411f043205081470616c2d321470616c2d320c020109079edaa8020002286bee'
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
     # mint Pal-2 to Ferdie
     local call='0x320608001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0b0030ef7dba02'
@@ -115,8 +115,8 @@ function register_alias_from_relaychain() {
 
 if [ -z "${from_start_services:-}" ]; then
     echo "config Penpal for tests"
-    # config_penpal
-    # register_ether
+    config_penpal
+    register_ether
     register_pal
     wait
 fi
