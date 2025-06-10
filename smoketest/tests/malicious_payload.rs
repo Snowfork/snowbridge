@@ -352,10 +352,10 @@ async fn malicious_payload() {
 
 		// Create equivocation proof
 		// ---
-		match equivocation_type {
+		let events = match equivocation_type {
 			EquivocationType::ForkEquivocation => {
 				let client = WsClientBuilder::default()
-					.build("ws://127.0.0.1:9944")
+					.build((*RELAY_CHAIN_WS_URL).to_string())
 					.await
 					.expect("connect to relaychain node rpc");
 
@@ -427,19 +427,7 @@ async fn malicious_payload() {
 					.await
 					.expect("finalized");
 
-				println!("submitted fork equivocation report");
-
-				events.find::<relaychain::api::offences::events::Offence>().for_each(|event| {
-					println!("offence event: {event:?}");
-				});
-				events.find::<relaychain::api::staking::events::SlashReported>().for_each(
-					|event| {
-						println!("slash report event: {event:?}");
-					},
-				);
-				events.find::<relaychain::api::staking::events::Slashed>().for_each(|event| {
-					println!("slashed event: {event:?}");
-				});
+				events
 			},
 			EquivocationType::FutureBlockEquivocation => {
 				let equivocation_proof = FutureBlockVotingProof {
@@ -471,18 +459,20 @@ async fn malicious_payload() {
 					.await
 					.expect("finalized");
 
-				events.find::<relaychain::api::offences::events::Offence>().for_each(|event| {
-					println!("offence event: {event:?}");
-				});
-				events.find::<relaychain::api::staking::events::SlashReported>().for_each(
-					|event| {
-						println!("slash report event: {event:?}");
-					},
-				);
-				events.find::<relaychain::api::staking::events::Slashed>().for_each(|event| {
-					println!("slashed event: {event:?}");
-				});
+				events
 			},
-		}
+		};
+
+		events.find::<relaychain::api::offences::events::Offence>().for_each(|event| {
+			println!("offence event: {event:?}");
+		});
+		events
+			.find::<relaychain::api::staking::events::SlashReported>()
+			.for_each(|event| {
+				println!("slash report event: {event:?}");
+			});
+		events.find::<relaychain::api::staking::events::Slashed>().for_each(|event| {
+			println!("slashed event: {event:?}");
+		});
 	}
 }
