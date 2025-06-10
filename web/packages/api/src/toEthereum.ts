@@ -80,14 +80,14 @@ export interface IValidateOptions {
 }
 
 const ValidateOptionDefaults: IValidateOptions = {
-    defaultFee: 2_750_872_500_000n,
+    defaultFee: 3_833_568_200_000n,
     acceptableLatencyInSeconds: 28800 /* 8 Hours */,
 }
 
 export const getSendFee = async (
     context: Context,
     options = {
-        defaultFee: 2_750_872_500_000n,
+        defaultFee: 3_833_568_200_000n,
     }
 ) => {
     const assetHub = await context.assetHub()
