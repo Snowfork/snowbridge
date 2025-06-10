@@ -1331,6 +1331,16 @@ checksum = "230c5f1ca6a325a32553f8640d31ac9b49f2411e901e427570154868b46da4f7"
 
 [[package]]
 name = "binary-merkle-tree"
+version = "13.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
+dependencies = [
+ "hash-db",
+ "log",
+ "parity-scale-codec",
+]
+
+[[package]]
+name = "binary-merkle-tree"
 version = "16.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "181f5380e435b8ba6d901f8b16fc8908c6f0f8bea8973113d1c8718d89bb1809"
@@ -3261,6 +3271,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "h2"
+version = "0.4.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9421a676d1b147b16b82c9225157dc629087ef8ec4d5e2960f9437a90dac0a5"
+dependencies = [
+ "atomic-waker",
+ "bytes",
+ "fnv",
+ "futures-core",
+ "futures-sink",
+ "http 1.3.1",
+ "indexmap",
+ "slab",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "hash-db"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3480,7 +3509,7 @@ dependencies = [
  "futures-channel",
  "futures-core",
  "futures-util",
- "h2",
+ "h2 0.3.26",
  "http 0.2.12",
  "http-body 0.4.6",
  "httparse",
@@ -3503,9 +3532,11 @@ dependencies = [
  "bytes",
  "futures-channel",
  "futures-util",
+ "h2 0.4.10",
  "http 1.3.1",
  "http-body 1.0.1",
  "httparse",
+ "httpdate",
  "itoa",
  "pin-project-lite",
  "smallvec",
@@ -4352,6 +4383,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "memory-db"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6da20dba965bd218a14c3b335b90d3e07c09ede190c7c19b50deb23d418a322"
+dependencies = [
+ "hash-db",
+ "hashbrown 0.15.3",
+]
+
+[[package]]
 name = "merlin"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4660,9 +4701,9 @@ dependencies = [
 
 [[package]]
 name = "parity-scale-codec"
-version = "3.7.4"
+version = "3.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9fde3d0718baf5bc92f577d652001da0f8d54cd03a7974e118d04fc888dc23d"
+checksum = "799781ae679d79a948e13d4824a40970bfa500058d245760dd857301059810fa"
 dependencies = [
  "arrayvec 0.7.6",
  "bitvec",
@@ -4677,9 +4718,9 @@ dependencies = [
 
 [[package]]
 name = "parity-scale-codec-derive"
-version = "3.7.4"
+version = "3.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "581c837bb6b9541ce7faa9377c20616e4fb7650f6b0f68bc93c827ee504fb7b3"
+checksum = "34b4653168b563151153c9e4c08ebed57fb8262bebfa79711552fa983c623e7a"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -4937,6 +4978,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "polkadot-ckb-merkle-mountain-range"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "221c71b432b38e494a0fdedb5f720e4cb974edf03a0af09e5b2238dbac7e6947"
+dependencies = [
+ "cfg-if",
+ "itertools 0.10.5",
+]
+
+[[package]]
 name = "polkavm-common"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4947,6 +4998,12 @@ name = "polkavm-common"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "31ff33982a807d8567645d4784b9b5d7ab87bcb494f534a57cadd9012688e102"
+
+[[package]]
+name = "polkavm-common"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d91ed9e5af472f729fcf3b3c1cf17508ddbb3505259dd6e2ee0fb5a29e105d22"
 
 [[package]]
 name = "polkavm-derive"
@@ -4964,6 +5021,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2eb703f3b6404c13228402e98a5eae063fd16b8f58afe334073ec105ee4117e"
 dependencies = [
  "polkavm-derive-impl-macro 0.18.0",
+]
+
+[[package]]
+name = "polkavm-derive"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "176144f8661117ea95fa7cf868c9a62d6b143e8a2ebcb7582464c3faade8669a"
+dependencies = [
+ "polkavm-derive-impl-macro 0.24.0",
 ]
 
 [[package]]
@@ -4991,6 +5057,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "polkavm-derive-impl"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5a21844afdfcc10c92b9ef288ccb926211af27478d1730fcd55e4aec710179d"
+dependencies = [
+ "polkavm-common 0.24.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
+]
+
+[[package]]
 name = "polkavm-derive-impl-macro"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5007,6 +5085,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c16669ddc7433e34c1007d31080b80901e3e8e523cb9d4b441c3910cf9294b"
 dependencies = [
  "polkavm-derive-impl 0.18.1",
+ "syn 2.0.101",
+]
+
+[[package]]
+name = "polkavm-derive-impl-macro"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba0ef0f17ad81413ea1ca5b1b67553aedf5650c88269b673d3ba015c83bc2651"
+dependencies = [
+ "polkavm-derive-impl 0.24.0",
  "syn 2.0.101",
 ]
 
@@ -5136,12 +5224,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "proc-macro-warning"
+version = "1.84.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75eea531cfcd120e0851a3f8aed42c4841f78c889eefafd96339c72677ae42c3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "prometheus"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d33c28a30771f7f96db69893f78b857f7450d7e0237e9c8fc6427a81bae7ed1"
+dependencies = [
+ "cfg-if",
+ "fnv",
+ "lazy_static",
+ "memchr",
+ "parking_lot",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -5381,7 +5494,7 @@ dependencies = [
  "encoding_rs",
  "futures-core",
  "futures-util",
- "h2",
+ "h2 0.3.26",
  "http 0.2.12",
  "http-body 0.4.6",
  "hyper 0.14.32",
@@ -6481,11 +6594,11 @@ dependencies = [
  "scale-info",
  "serde",
  "serde_json",
- "sp-application-crypto 38.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-application-crypto 38.0.0",
  "sp-consensus-beefy",
  "sp-core 36.1.0",
  "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-mmr-primitives 34.1.0",
+ "sp-mmr-primitives 26.0.0",
  "sp-runtime 41.1.0",
  "subxt",
  "subxt-signer",
@@ -6548,7 +6661,31 @@ dependencies = [
 
 [[package]]
 name = "sp-api"
+version = "26.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
+dependencies = [
+ "docify",
+ "hash-db",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api-proc-macro 15.0.0",
+ "sp-core 28.0.0",
+ "sp-externalities 0.25.0",
+ "sp-metadata-ir 0.6.0",
+ "sp-runtime 31.0.1",
+ "sp-runtime-interface 24.0.0",
+ "sp-state-machine 0.35.0",
+ "sp-trie 29.0.0",
+ "sp-version 29.0.0",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "sp-api"
 version = "34.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbce492e0482134128b7729ea36f5ef1a9f9b4de2d48ff8dde7b5e464e28ce75"
 dependencies = [
  "docify",
  "hash-db",
@@ -6568,31 +6705,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "sp-api"
-version = "34.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbce492e0482134128b7729ea36f5ef1a9f9b4de2d48ff8dde7b5e464e28ce75"
-dependencies = [
- "docify",
- "hash-db",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-api-proc-macro 20.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-core 34.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-externalities 0.29.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-metadata-ir 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime 39.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime-interface 28.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-state-machine 0.43.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-trie 37.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-version 37.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "sp-api-proc-macro"
-version = "20.0.3"
+version = "15.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "Inflector",
  "blake2",
@@ -6620,13 +6735,14 @@ dependencies = [
 
 [[package]]
 name = "sp-application-crypto"
-version = "38.0.0"
+version = "30.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-core 34.0.0",
- "sp-io 38.0.2",
+ "sp-core 28.0.0",
+ "sp-io 30.0.0",
 ]
 
 [[package]]
@@ -6638,8 +6754,8 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-core 34.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-io 38.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-core 34.0.0",
+ "sp-io 38.0.2",
 ]
 
 [[package]]
@@ -6657,7 +6773,8 @@ dependencies = [
 
 [[package]]
 name = "sp-arithmetic"
-version = "26.0.0"
+version = "23.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "docify",
  "integer-sqrt",
@@ -6693,33 +6810,35 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-api 34.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-application-crypto 38.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-core 34.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-api 34.0.0",
+ "sp-application-crypto 38.0.0",
+ "sp-core 34.0.0",
  "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-io 38.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-keystore 0.40.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-mmr-primitives 34.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime 39.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-io 38.0.2",
+ "sp-keystore 0.40.0",
+ "sp-mmr-primitives 34.1.0",
+ "sp-runtime 39.0.5",
  "sp-weights 31.1.0",
  "strum 0.26.3",
 ]
 
 [[package]]
 name = "sp-core"
-version = "34.0.0"
+version = "28.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
+ "ark-vrf",
  "array-bytes",
  "bitflags 1.3.2",
  "blake2",
  "bounded-collections",
  "bs58",
- "dyn-clonable",
+ "dyn-clone",
  "ed25519-zebra",
  "futures",
  "hash-db",
  "hash256-std-hasher",
- "impl-serde 0.4.0",
+ "impl-serde 0.5.0",
  "itertools 0.11.0",
  "k256",
  "libsecp256k1",
@@ -6729,21 +6848,22 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot",
  "paste",
- "primitive-types 0.12.2",
+ "primitive-types 0.13.1",
  "rand 0.8.5",
  "scale-info",
  "schnorrkel",
  "secp256k1 0.28.2",
  "secrecy 0.8.0",
  "serde",
- "sp-crypto-hashing 0.1.0",
- "sp-debug-derive 14.0.0",
- "sp-externalities 0.29.0",
- "sp-runtime-interface 28.0.0",
- "sp-std 14.0.0",
- "sp-storage 21.0.0",
+ "sha2 0.10.9",
+ "sp-crypto-hashing 0.1.0 (git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call)",
+ "sp-debug-derive 14.0.0 (git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call)",
+ "sp-externalities 0.25.0",
+ "sp-runtime-interface 24.0.0",
+ "sp-std 14.0.0 (git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call)",
+ "sp-storage 19.0.0",
  "ss58-registry",
- "substrate-bip39 0.6.0",
+ "substrate-bip39 0.4.7",
  "thiserror 1.0.69",
  "tracing",
  "w3f-bls",
@@ -6785,12 +6905,12 @@ dependencies = [
  "serde",
  "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-debug-derive 14.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-externalities 0.29.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime-interface 28.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-externalities 0.29.0",
+ "sp-runtime-interface 28.0.0",
  "sp-std 14.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-storage 21.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-storage 21.0.0",
  "ss58-registry",
- "substrate-bip39 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-bip39 0.6.0",
  "thiserror 1.0.69",
  "tracing",
  "w3f-bls",
@@ -6838,23 +6958,11 @@ dependencies = [
  "sp-std 14.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-storage 22.0.0",
  "ss58-registry",
- "substrate-bip39 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-bip39 0.6.0",
  "thiserror 1.0.69",
  "tracing",
  "w3f-bls",
  "zeroize",
-]
-
-[[package]]
-name = "sp-crypto-hashing"
-version = "0.1.0"
-dependencies = [
- "blake2b_simd",
- "byteorder",
- "digest 0.10.7",
- "sha2 0.10.9",
- "sha3",
- "twox-hash 1.6.3",
 ]
 
 [[package]]
@@ -6872,12 +6980,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "sp-crypto-hashing-proc-macro"
+name = "sp-crypto-hashing"
 version = "0.1.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
- "quote",
- "sp-crypto-hashing 0.1.0",
- "syn 2.0.101",
+ "blake2b_simd",
+ "byteorder",
+ "digest 0.10.7",
+ "sha2 0.10.9",
+ "sha3",
+ "twox-hash 1.6.3",
 ]
 
 [[package]]
@@ -6892,11 +7004,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "sp-debug-derive"
-version = "14.0.0"
+name = "sp-crypto-hashing-proc-macro"
+version = "0.1.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
- "proc-macro2",
  "quote",
+ "sp-crypto-hashing 0.1.0 (git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call)",
  "syn 2.0.101",
 ]
 
@@ -6912,12 +7025,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-debug-derive"
+version = "14.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
+]
+
+[[package]]
 name = "sp-externalities"
-version = "0.29.0"
+version = "0.25.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "environmental",
  "parity-scale-codec",
- "sp-storage 21.0.0",
+ "sp-storage 19.0.0",
 ]
 
 [[package]]
@@ -6928,7 +7052,7 @@ checksum = "a904407d61cb94228c71b55a9d3708e9d6558991f9e83bd42bd91df37a159d30"
 dependencies = [
  "environmental",
  "parity-scale-codec",
- "sp-storage 21.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-storage 21.0.0",
 ]
 
 [[package]]
@@ -6944,7 +7068,8 @@ dependencies = [
 
 [[package]]
 name = "sp-io"
-version = "38.0.2"
+version = "30.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "bytes",
  "docify",
@@ -6952,17 +7077,17 @@ dependencies = [
  "libsecp256k1",
  "log",
  "parity-scale-codec",
- "polkavm-derive 0.9.1",
+ "polkavm-derive 0.24.0",
  "rustversion",
  "secp256k1 0.28.2",
- "sp-core 34.0.0",
- "sp-crypto-hashing 0.1.0",
- "sp-externalities 0.29.0",
- "sp-keystore 0.40.0",
- "sp-runtime-interface 28.0.0",
- "sp-state-machine 0.43.0",
- "sp-tracing 17.0.1",
- "sp-trie 37.0.0",
+ "sp-core 28.0.0",
+ "sp-crypto-hashing 0.1.0 (git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call)",
+ "sp-externalities 0.25.0",
+ "sp-keystore 0.34.0",
+ "sp-runtime-interface 24.0.0",
+ "sp-state-machine 0.35.0",
+ "sp-tracing 16.0.0",
+ "sp-trie 29.0.0",
  "tracing",
  "tracing-core",
 ]
@@ -6982,14 +7107,14 @@ dependencies = [
  "polkavm-derive 0.9.1",
  "rustversion",
  "secp256k1 0.28.2",
- "sp-core 34.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-core 34.0.0",
  "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-externalities 0.29.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-keystore 0.40.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime-interface 28.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-state-machine 0.43.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-externalities 0.29.0",
+ "sp-keystore 0.40.0",
+ "sp-runtime-interface 28.0.0",
+ "sp-state-machine 0.43.0",
  "sp-tracing 17.1.0",
- "sp-trie 37.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-trie 37.0.0",
  "tracing",
  "tracing-core",
 ]
@@ -7023,12 +7148,13 @@ dependencies = [
 
 [[package]]
 name = "sp-keystore"
-version = "0.40.0"
+version = "0.34.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "parity-scale-codec",
  "parking_lot",
- "sp-core 34.0.0",
- "sp-externalities 0.29.0",
+ "sp-core 28.0.0",
+ "sp-externalities 0.25.0",
 ]
 
 [[package]]
@@ -7039,8 +7165,8 @@ checksum = "0248b4d784cb4a01472276928977121fa39d977a5bb24793b6b15e64b046df42"
 dependencies = [
  "parity-scale-codec",
  "parking_lot",
- "sp-core 34.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-externalities 0.29.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-core 34.0.0",
+ "sp-externalities 0.29.0",
 ]
 
 [[package]]
@@ -7057,9 +7183,10 @@ dependencies = [
 
 [[package]]
 name = "sp-metadata-ir"
-version = "0.7.0"
+version = "0.6.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
- "frame-metadata 16.0.0",
+ "frame-metadata 23.0.0",
  "parity-scale-codec",
  "scale-info",
 ]
@@ -7077,17 +7204,18 @@ dependencies = [
 
 [[package]]
 name = "sp-mmr-primitives"
-version = "34.1.0"
+version = "26.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "log",
  "parity-scale-codec",
- "polkadot-ckb-merkle-mountain-range",
+ "polkadot-ckb-merkle-mountain-range 0.8.1",
  "scale-info",
  "serde",
- "sp-api 34.0.0",
- "sp-core 34.0.0",
- "sp-debug-derive 14.0.0",
- "sp-runtime 39.0.5",
+ "sp-api 26.0.0",
+ "sp-core 28.0.0",
+ "sp-debug-derive 14.0.0 (git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call)",
+ "sp-runtime 31.0.1",
  "thiserror 1.0.69",
 ]
 
@@ -7099,22 +7227,22 @@ checksum = "9a12dd76e368f1e48144a84b4735218b712f84b3f976970e2f25a29b30440e10"
 dependencies = [
  "log",
  "parity-scale-codec",
- "polkadot-ckb-merkle-mountain-range",
+ "polkadot-ckb-merkle-mountain-range 0.7.0",
  "scale-info",
  "serde",
- "sp-api 34.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-core 34.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-api 34.0.0",
+ "sp-core 34.0.0",
  "sp-debug-derive 14.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime 39.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime 39.0.5",
  "thiserror 1.0.69",
 ]
 
 [[package]]
 name = "sp-panic-handler"
 version = "13.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "backtrace",
- "lazy_static",
  "regex",
 ]
 
@@ -7130,8 +7258,10 @@ dependencies = [
 
 [[package]]
 name = "sp-runtime"
-version = "39.0.5"
+version = "31.0.1"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
+ "binary-merkle-tree 13.0.0",
  "docify",
  "either",
  "hash256-std-hasher",
@@ -7144,13 +7274,15 @@ dependencies = [
  "scale-info",
  "serde",
  "simple-mermaid",
- "sp-application-crypto 38.0.0",
- "sp-arithmetic 26.0.0",
- "sp-core 34.0.0",
- "sp-io 38.0.2",
- "sp-std 14.0.0",
- "sp-weights 31.0.0",
+ "sp-application-crypto 30.0.0",
+ "sp-arithmetic 23.0.0",
+ "sp-core 28.0.0",
+ "sp-io 30.0.0",
+ "sp-std 14.0.0 (git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call)",
+ "sp-trie 29.0.0",
+ "sp-weights 27.0.0",
  "tracing",
+ "tuplex",
 ]
 
 [[package]]
@@ -7171,10 +7303,10 @@ dependencies = [
  "scale-info",
  "serde",
  "simple-mermaid",
- "sp-application-crypto 38.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-application-crypto 38.0.0",
  "sp-arithmetic 26.1.0",
- "sp-core 34.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-io 38.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-core 34.0.0",
+ "sp-io 38.0.2",
  "sp-std 14.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-weights 31.1.0",
  "tracing",
@@ -7186,7 +7318,7 @@ version = "41.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3864101a28faba3d8eca026e3f56ea20dd1d979ce1bcc20152e86c9d82be52bf"
 dependencies = [
- "binary-merkle-tree",
+ "binary-merkle-tree 16.0.0",
  "docify",
  "either",
  "hash256-std-hasher",
@@ -7212,19 +7344,20 @@ dependencies = [
 
 [[package]]
 name = "sp-runtime-interface"
-version = "28.0.0"
+version = "24.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "bytes",
  "impl-trait-for-tuples",
  "parity-scale-codec",
- "polkavm-derive 0.9.1",
- "primitive-types 0.12.2",
- "sp-externalities 0.29.0",
- "sp-runtime-interface-proc-macro 18.0.0",
- "sp-std 14.0.0",
- "sp-storage 21.0.0",
- "sp-tracing 17.0.1",
- "sp-wasm-interface 21.0.1",
+ "polkavm-derive 0.24.0",
+ "primitive-types 0.13.1",
+ "sp-externalities 0.25.0",
+ "sp-runtime-interface-proc-macro 17.0.0",
+ "sp-std 14.0.0 (git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call)",
+ "sp-storage 19.0.0",
+ "sp-tracing 16.0.0",
+ "sp-wasm-interface 20.0.0",
  "static_assertions",
 ]
 
@@ -7239,12 +7372,12 @@ dependencies = [
  "parity-scale-codec",
  "polkavm-derive 0.9.1",
  "primitive-types 0.12.2",
- "sp-externalities 0.29.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime-interface-proc-macro 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-externalities 0.29.0",
+ "sp-runtime-interface-proc-macro 18.0.0",
  "sp-std 14.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-storage 21.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-storage 21.0.0",
  "sp-tracing 17.1.0",
- "sp-wasm-interface 21.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-wasm-interface 21.0.1",
  "static_assertions",
 ]
 
@@ -7260,17 +7393,18 @@ dependencies = [
  "polkavm-derive 0.18.0",
  "primitive-types 0.13.1",
  "sp-externalities 0.30.0",
- "sp-runtime-interface-proc-macro 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime-interface-proc-macro 18.0.0",
  "sp-std 14.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-storage 22.0.0",
  "sp-tracing 17.1.0",
- "sp-wasm-interface 21.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-wasm-interface 21.0.1",
  "static_assertions",
 ]
 
 [[package]]
 name = "sp-runtime-interface-proc-macro"
-version = "18.0.0"
+version = "17.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "Inflector",
  "expander",
@@ -7296,7 +7430,8 @@ dependencies = [
 
 [[package]]
 name = "sp-state-machine"
-version = "0.43.0"
+version = "0.35.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "hash-db",
  "log",
@@ -7304,13 +7439,13 @@ dependencies = [
  "parking_lot",
  "rand 0.8.5",
  "smallvec",
- "sp-core 34.0.0",
- "sp-externalities 0.29.0",
+ "sp-core 28.0.0",
+ "sp-externalities 0.25.0",
  "sp-panic-handler 13.0.0",
- "sp-trie 37.0.0",
+ "sp-trie 29.0.0",
  "thiserror 1.0.69",
  "tracing",
- "trie-db 0.29.1",
+ "trie-db 0.30.0",
 ]
 
 [[package]]
@@ -7325,10 +7460,10 @@ dependencies = [
  "parking_lot",
  "rand 0.8.5",
  "smallvec",
- "sp-core 34.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-externalities 0.29.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-core 34.0.0",
+ "sp-externalities 0.29.0",
  "sp-panic-handler 13.0.2",
- "sp-trie 37.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-trie 37.0.0",
  "thiserror 1.0.69",
  "tracing",
  "trie-db 0.29.1",
@@ -7358,22 +7493,24 @@ dependencies = [
 [[package]]
 name = "sp-std"
 version = "14.0.0"
-
-[[package]]
-name = "sp-std"
-version = "14.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12f8ee986414b0a9ad741776762f4083cd3a5128449b982a3919c4df36874834"
 
 [[package]]
+name = "sp-std"
+version = "14.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
+
+[[package]]
 name = "sp-storage"
-version = "21.0.0"
+version = "19.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
- "impl-serde 0.4.0",
+ "impl-serde 0.5.0",
  "parity-scale-codec",
  "ref-cast",
  "serde",
- "sp-debug-derive 14.0.0",
+ "sp-debug-derive 14.0.0 (git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call)",
 ]
 
 [[package]]
@@ -7404,7 +7541,8 @@ dependencies = [
 
 [[package]]
 name = "sp-tracing"
-version = "17.0.1"
+version = "16.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "parity-scale-codec",
  "tracing",
@@ -7426,12 +7564,37 @@ dependencies = [
 
 [[package]]
 name = "sp-trie"
+version = "29.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
+dependencies = [
+ "ahash",
+ "hash-db",
+ "memory-db 0.33.0",
+ "nohash-hasher",
+ "parity-scale-codec",
+ "parking_lot",
+ "rand 0.8.5",
+ "scale-info",
+ "schnellru",
+ "sp-core 28.0.0",
+ "sp-externalities 0.25.0",
+ "substrate-prometheus-endpoint",
+ "thiserror 1.0.69",
+ "tracing",
+ "trie-db 0.30.0",
+ "trie-root",
+]
+
+[[package]]
+name = "sp-trie"
 version = "37.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6282aef9f4b6ecd95a67a45bcdb67a71f4a4155c09a53c10add4ffe823db18cd"
 dependencies = [
  "ahash",
  "hash-db",
  "lazy_static",
- "memory-db",
+ "memory-db 0.32.0",
  "nohash-hasher",
  "parity-scale-codec",
  "parking_lot",
@@ -7448,37 +7611,13 @@ dependencies = [
 
 [[package]]
 name = "sp-trie"
-version = "37.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6282aef9f4b6ecd95a67a45bcdb67a71f4a4155c09a53c10add4ffe823db18cd"
-dependencies = [
- "ahash",
- "hash-db",
- "lazy_static",
- "memory-db",
- "nohash-hasher",
- "parity-scale-codec",
- "parking_lot",
- "rand 0.8.5",
- "scale-info",
- "schnellru",
- "sp-core 34.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-externalities 0.29.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.69",
- "tracing",
- "trie-db 0.29.1",
- "trie-root",
-]
-
-[[package]]
-name = "sp-trie"
 version = "39.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a555bf4c42ca89e2e7bf2f11308806dad13cdbd7f8fd60cf2649f12b6ee809bf"
 dependencies = [
  "ahash",
  "hash-db",
- "memory-db",
+ "memory-db 0.32.0",
  "nohash-hasher",
  "parity-scale-codec",
  "parking_lot",
@@ -7495,17 +7634,18 @@ dependencies = [
 
 [[package]]
 name = "sp-version"
-version = "37.0.0"
+version = "29.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
- "impl-serde 0.4.0",
+ "impl-serde 0.5.0",
  "parity-scale-codec",
  "parity-wasm",
  "scale-info",
  "serde",
- "sp-crypto-hashing-proc-macro 0.1.0",
- "sp-runtime 39.0.5",
- "sp-std 14.0.0",
- "sp-version-proc-macro 14.0.0",
+ "sp-crypto-hashing-proc-macro 0.1.0 (git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call)",
+ "sp-runtime 31.0.1",
+ "sp-std 14.0.0 (git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call)",
+ "sp-version-proc-macro 13.0.0",
  "thiserror 1.0.69",
 ]
 
@@ -7521,17 +7661,19 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-crypto-hashing-proc-macro 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime 39.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime 39.0.5",
  "sp-std 14.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-version-proc-macro 14.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-version-proc-macro 14.0.0",
  "thiserror 1.0.69",
 ]
 
 [[package]]
 name = "sp-version-proc-macro"
-version = "14.0.0"
+version = "13.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "parity-scale-codec",
+ "proc-macro-warning",
  "proc-macro2",
  "quote",
  "syn 2.0.101",
@@ -7551,7 +7693,8 @@ dependencies = [
 
 [[package]]
 name = "sp-wasm-interface"
-version = "21.0.1"
+version = "20.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "anyhow",
  "impl-trait-for-tuples",
@@ -7573,15 +7716,16 @@ dependencies = [
 
 [[package]]
 name = "sp-weights"
-version = "31.0.0"
+version = "27.0.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "bounded-collections",
  "parity-scale-codec",
  "scale-info",
  "serde",
  "smallvec",
- "sp-arithmetic 26.0.0",
- "sp-debug-derive 14.0.0",
+ "sp-arithmetic 23.0.0",
+ "sp-debug-derive 14.0.0 (git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call)",
 ]
 
 [[package]]
@@ -7712,7 +7856,8 @@ dependencies = [
 
 [[package]]
 name = "substrate-bip39"
-version = "0.6.0"
+version = "0.4.7"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
 dependencies = [
  "hmac 0.12.1",
  "pbkdf2 0.12.2",
@@ -7732,6 +7877,20 @@ dependencies = [
  "schnorrkel",
  "sha2 0.10.9",
  "zeroize",
+]
+
+[[package]]
+name = "substrate-prometheus-endpoint"
+version = "0.17.0"
+source = "git+https://github.com/Lederstrumpf/polkadot-sdk?branch=rhmb%2Fadd-generate-ancestry-proof-mmr-rpc-call#3b6216ae106f9f776fd7ac78b1c96b43ded60cb8"
+dependencies = [
+ "http-body-util",
+ "hyper 1.6.0",
+ "hyper-util",
+ "log",
+ "prometheus",
+ "thiserror 1.0.69",
+ "tokio",
 ]
 
 [[package]]
@@ -8210,6 +8369,7 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
+ "parking_lot",
  "pin-project-lite",
  "socket2",
  "tokio-macros",
