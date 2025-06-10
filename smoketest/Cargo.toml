@@ -20,9 +20,9 @@ lazy_static = "1.4.0"
 sp-core = { version = "36.1.0" }
 sp-crypto-hashing = { version = "0.1.0" }
 sp-runtime = { version = "41.1.0" }
-sp-consensus-beefy = "22.1"
-sp-application-crypto = "38.0.0"
+sp-consensus-beefy = "24.1.0"
+sp-application-crypto = "40.1.0"
 sp-mmr-primitives = { git = "https://github.com/Lederstrumpf/polkadot-sdk", branch = "rhmb/add-generate-ancestry-proof-mmr-rpc-call" }
 alloy = { version = "0.4.2", features = ["full"] }
-jsonrpsee = { version = "0.16", features = ["client"] }
+jsonrpsee = { version = "0.25.1", features = ["client"] }
 serde_json = "1.0"
