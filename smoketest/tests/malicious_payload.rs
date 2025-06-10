@@ -126,7 +126,7 @@ struct TestConfig {
 }
 
 #[tokio::test]
-async fn malicious_payload_test() {
+async fn malicious_payload() {
 	// Setup clients
 	// ---
 	let test_clients = initialize_clients().await.expect("initialize clients");
@@ -144,7 +144,7 @@ async fn malicious_payload_test() {
 	for equivocation_variant in
 		[EquivocationType::FutureBlockEquivocation, EquivocationType::ForkEquivocation]
 	{
-		malicious_payload(
+		malicious_payload_inner(
 			equivocation_variant,
 			test_config.clone(),
 			&test_clients,
@@ -179,7 +179,7 @@ async fn malicious_payload_test() {
 	}
 }
 
-async fn malicious_payload(
+async fn malicious_payload_inner(
 	equivocation_type: EquivocationType,
 	test_config: TestConfig,
 	test_clients: &TestClients,

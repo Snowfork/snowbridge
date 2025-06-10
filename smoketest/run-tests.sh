@@ -30,6 +30,9 @@ tests=(
   transfer_native_from_agent
 
   upgrade_gateway
+
+  # Equivocation Tests
+  malicious_payload
 )
 
 for test in ${tests[@]}; do
