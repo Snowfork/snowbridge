@@ -187,7 +187,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						"rawEvent":            event.Raw,
 					}).Debug("Witnessed a new Ticket event")
 
-					commitment, bitfield, validatorProof, err := li.parseSubmitInitial(callData)
+					commitment, err := li.parseSubmitInitialCommitment(callData)
 					if err != nil {
 						log.WithError(err).Warning("Failed to decode transaction call data")
 					}
@@ -199,11 +199,14 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 					latestBlockNumber := uint64(latestBlock.Block.Header.Number)
 
 					if event.BlockNumber > uint64(latestBlockNumber) {
+						validatorProof, err := li.parseSubmitInitialProof(callData)
+						if err != nil {
+							log.WithError(err).Warning("Failed to decode transaction call data")
+						}
 						// Future block equivocation handling
 						log.WithFields(log.Fields{
 							"commitment.payload.data": fmt.Sprintf("%#x", commitment.Payload[0].Data),
-							"proof":                   validatorProof,
-							"latestBlock":             latestBlockNumber,
+							"latestBlock": latestBlockNumber,
 						}).Warning("Detected submitInitial for future block")
 
 
@@ -264,11 +267,13 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						if err != nil {
 							return fmt.Errorf("retrieve MMR root hash at block %v: %w", canonicalBlockHash.Hex(), err)
 						} else {
+							validatorProof, err := li.parseSubmitInitialProof(callData)
+							if err != nil {
+								log.WithError(err).Warning("Failed to decode transaction call data")
+							}
 							log.WithFields(log.Fields{
-								"commitment":               commitment,
-								"bitfield":                 bitfield,
-								"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
-								"proof":                    validatorProof,
+								"commitment": commitment,
+								"commitment.payload.data": fmt.Sprintf("%#x", commitment.Payload[0].Data),
 								"correspondingMMRRootHash": canonicalMmrRootHash,
 							}).Debug("Decoded transaction call data for NewTicket event")
 							if canonicalMmrRootHash != types.NewHash(commitment.Payload[0].Data) {
@@ -393,22 +398,20 @@ func (li *BeefyListener) decodeTransactionCallData(callData []byte) (string, map
 	return method.Name, decoded, nil
 }
 
-// decodes a submitInitial call
-// TODO: not necessary to parse everything - doing it for now in case something ends up needed & avoid losing time on not finding it.
-// strictly speaking only want to parse the commitment initially to get blocknumber & payload, and then if those do not match the relay chain's canonical payload, parse the validator proof to extract signature and validator who signed it
-func (li *BeefyListener) parseSubmitInitial(callData []byte) (contracts.BeefyClientCommitment, []*big.Int, contracts.BeefyClientValidatorProof, error) {
+// decodes the commitment in a submitInitial call
+// only need to parse the commitment initially to get blocknumber & payload, and then if those do not match the relay chain's canonical payload, the validator proof is parsed in `parseSubmitInitialRemainder` to extract signature and validator who authored the signature
+func (li *BeefyListener) parseSubmitInitialCommitment(callData []byte) (contracts.BeefyClientCommitment, error) {
 	// decode the callData
 	methodName, decoded, err := li.decodeTransactionCallData(callData)
 	if err != nil {
-		return contracts.BeefyClientCommitment{}, nil, contracts.BeefyClientValidatorProof{}, err
+		return contracts.BeefyClientCommitment{}, err
 	}
 	if methodName != "submitInitial" {
-		return contracts.BeefyClientCommitment{}, nil, contracts.BeefyClientValidatorProof{}, fmt.Errorf("unexpected method name: %s", methodName)
+		return contracts.BeefyClientCommitment{}, fmt.Errorf("unexpected method name: %s", methodName)
 	}
 
 	log.WithFields(log.Fields{
 		"raw commitment": decoded["commitment"],
-		"raw proof":      decoded["proof"],
 	}).Debug("Decoded transaction call data for NewTicket event")
 
 	// Extract the commitment
@@ -435,7 +438,26 @@ func (li *BeefyListener) parseSubmitInitial(callData []byte) (contracts.BeefyCli
 		}
 	}
 
-	bitfield := decoded["bitfield"].([]*big.Int)
+	return commitment, nil
+}
+
+// decodes the remainder of a submitInitial call - only needed if equivocation detected
+func (li *BeefyListener) parseSubmitInitialProof(callData []byte) (contracts.BeefyClientValidatorProof, error) {
+	// decode the callData
+	methodName, decoded, err := li.decodeTransactionCallData(callData)
+	if err != nil {
+		return contracts.BeefyClientValidatorProof{}, err
+	}
+	if methodName != "submitInitial" {
+		return contracts.BeefyClientValidatorProof{}, fmt.Errorf("unexpected method name: %s", methodName)
+	}
+
+	log.WithFields(log.Fields{
+		// "raw commitment": decoded["commitment"],
+		"raw proof": decoded["proof"],
+	}).Debug("Decoded transaction call data for NewTicket event")
+
+	// bitfield := decoded["bitfield"].([]*big.Int)
 
 	// Extract validator proof
 	proofRaw := decoded["proof"].(struct {
@@ -456,7 +478,7 @@ func (li *BeefyListener) parseSubmitInitial(callData []byte) (contracts.BeefyCli
 		Proof:   proofRaw.Proof,
 	}
 
-	return commitment, bitfield, proof, nil
+	return proof, nil
 }
 
 func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) error {
