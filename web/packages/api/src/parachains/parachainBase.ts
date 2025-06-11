@@ -1,5 +1,5 @@
 import { ApiPromise } from "@polkadot/api"
-import { Asset, AssetMap, ChainProperties, PNAMap, SubstrateAccount } from "../types"
+import { Asset, AssetMap, ChainProperties, PNAMap, SubstrateAccount } from "../assets_v2"
 import { erc20Location } from "../xcmBuilder"
 
 export abstract class ParachainBase {

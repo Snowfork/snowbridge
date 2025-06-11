@@ -18,8 +18,13 @@ import {
     buildExportXcmForERC20,
     HERE_LOCATION,
 } from "./xcmBuilder"
-import { getAssetHubConversationPalletSwap } from "./assets_v2"
-import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "./types"
+import {
+    Asset,
+    AssetRegistry,
+    ERC20Metadata,
+    Parachain,
+    getAssetHubConversationPalletSwap,
+} from "./assets_v2"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
 import {
