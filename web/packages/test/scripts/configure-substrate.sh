@@ -36,6 +36,7 @@ wait_beacon_chain_ready() {
     done
 }
 
+# A batch call to create all HRMP channels and provide some initial funding
 configure_from_test_helper() {
     echo "Configure from test helper"
     pushd ../test-helpers
@@ -69,16 +70,20 @@ configure_ah() {
     # Mint Ether to Penpal Sovereign
     local call="0x3506020109079edaa802007369626cd00700000000000000000000000000000000000000000000000000001300002cf61a24a229"
     send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
-    # Register Wnd
-    local call="0x24010501000c776e640c776e640c020109079edaa8020002286bee"
-    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
     # Create Pool for Ether<->Wnd and add liquidity
     local call="0x38000100020109079edaa802"
     send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
     local call="0x38010100020109079edaa8020000e941cc6b01000000000000000000000064a7b3b6e00d000000000000000001000000000000000000000000000000010000000000000000000000000000001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c"
     send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
+    # register Wnd
+    register_wnd
     # Register Roc
     register_roc
+}
+
+register_wnd() {
+    local call="0x24010501000c776e640c776e640c020109079edaa8020002286bee"
+    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 
 register_roc() {
@@ -96,6 +101,7 @@ register_roc() {
 
 configure_substrate() {
     configure_from_test_helper
+    sleep 5
     configure_bh
     configure_ah
     wait_beacon_chain_ready
