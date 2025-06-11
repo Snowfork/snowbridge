@@ -38,7 +38,7 @@
                     # ps for zombienet, required in pure shells on Linux
                     ps
 
-                    # typescript
+                    typescript
                     python311
                     nodePackages.pnpm
                     nodejs_20
@@ -73,7 +73,7 @@
 
                     cowsay
 
-                    # smoketests
+                    # smoketest
                     openssl.dev
                     pkg-config
                 ];
