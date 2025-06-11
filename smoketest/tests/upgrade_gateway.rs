@@ -39,11 +39,8 @@ use snowbridge_smoketest::{
 		},
 	},
 };
-use subxt::{
-	ext::sp_core::{sr25519::Pair, Pair as PairT},
-	tx::{PairSigner, Payload},
-	OnlineClient, PolkadotConfig,
-};
+use subxt::{tx::Payload, OnlineClient, PolkadotConfig};
+use subxt_signer::sr25519::dev;
 
 const GATEWAY_V2_ADDRESS: [u8; 20] = hex!("f8f7758fbcefd546eaeff7de24aff666b6228e73");
 
@@ -71,9 +68,7 @@ async fn upgrade_gateway() {
 	let bridgehub: OnlineClient<PolkadotConfig> =
 		OnlineClient::from_url((*BRIDGE_HUB_WS_URL).to_string()).await.unwrap();
 
-	let sudo: Pair = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
-
-	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+	let signer = dev::alice();
 
 	let ethereum_system_api = bridgehub::api::ethereum_system::calls::TransactionApi;
 
