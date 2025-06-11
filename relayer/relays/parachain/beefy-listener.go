@@ -221,7 +221,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						}
 
 						payload1 := constructVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
-						log.Info("calling api")
 
 						// keyOwnership Proof
 						keyOwnershipProof, err := li.getKeyOwnershipProof(meta, latestHash, latestBlockNumber, offenderPubKeyCompressed, commitment.ValidatorSetID)
@@ -252,7 +251,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 							if err != nil {
 								log.Error("Extrinsic submission failed: ", err)
 							} else {
-								log.Info("equivocation report complete")
+								log.Info("Equivocation report complete")
 							}
 						}
 
@@ -271,7 +270,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 								"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
 								"proof":                    validatorProof,
 								"correspondingMMRRootHash": canonicalMmrRootHash,
-							}).Info("Decoded transaction call data for NewTicket event")
+							}).Debug("Decoded transaction call data for NewTicket event")
 							if canonicalMmrRootHash != types.NewHash(commitment.Payload[0].Data) {
 								log.WithFields(log.Fields{
 									"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
@@ -333,7 +332,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 									if err != nil {
 										log.Error("Extrinsic submission failed: ", err)
 									} else {
-										log.Info("equivocation report complete")
+										log.Info("Equivocation report complete")
 									}
 								}
 
@@ -387,7 +386,7 @@ func (li *BeefyListener) decodeTransactionCallData(callData []byte) (string, map
 			"name":      method.Inputs[i].Name,
 			"param":     param,
 			"param raw": param,
-		}).Info("Decoded transaction call data for NewTicket event")
+		}).Debug("Decoded transaction call data for NewTicket event")
 		decoded[method.Inputs[i].Name] = param
 	}
 
@@ -410,7 +409,7 @@ func (li *BeefyListener) parseSubmitInitial(callData []byte) (contracts.BeefyCli
 	log.WithFields(log.Fields{
 		"raw commitment": decoded["commitment"],
 		"raw proof":      decoded["proof"],
-	}).Info("Decoded transaction call data for NewTicket event")
+	}).Debug("Decoded transaction call data for NewTicket event")
 
 	// Extract the commitment
 	commitmentRaw := decoded["commitment"].(struct {
