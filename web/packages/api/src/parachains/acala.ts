@@ -1,18 +1,22 @@
 import { AssetMap, PNAMap } from "../assets_v2"
 import { ParachainBase } from "./parachainBase"
-import { getTokenFromLocation } from "../xcmBuilder"
+import { convertToXcmV3X1, getTokenFromLocation } from "../xcmBuilder"
 
 export class AcalaParachain extends ParachainBase {
     getXC20DOT() {
         return undefined
     }
 
-    async getLocationBalance(location: any, account: string, _pnaAssetId?: any): Promise<bigint> {
-        const paraAssetId = (
-            await this.provider.query.assetRegistry.locationToCurrencyIds(location)
-        ).toPrimitive()
+    async getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint> {
+        let paraAssetId = pnaAssetId
+        const v3location = convertToXcmV3X1(location)
         if (!paraAssetId) {
-            throw Error(`'${JSON.stringify(location)}' not registered for spec ${this.specName}.`)
+            paraAssetId = (
+                await this.provider.query.assetRegistry.locationToCurrencyIds(v3location)
+            ).toPrimitive()
+        }
+        if (!paraAssetId) {
+            throw Error(`'${JSON.stringify(v3location)}' not registered for spec ${this.specName}.`)
         }
         const accountData = (
             await this.provider.query.tokens.accounts(account, paraAssetId)
@@ -55,13 +59,17 @@ export class AcalaParachain extends ParachainBase {
     }
 
     // Acala does not support xcm fee payment queries
-    async calculateXcmFee(destinationXcm: any, asset: any): Promise<bigint> {
+    async calculateXcmFee(_destinationXcm: any, asset: any): Promise<bigint> {
         console.warn(
             `${this.specName} does not support calculating fee with asset '${JSON.stringify(
                 asset
             )}'. Using default.`
         )
 
-        return 5_000_000_000n
+        return 300_000_000n
+    }
+
+    async calculateDeliveryFeeInDOT(_destParachainId: number, _xcm: any): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
     }
 }

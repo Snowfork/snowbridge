@@ -8,20 +8,13 @@ import {
     parseUnits,
     TransactionReceipt,
 } from "ethers"
-import { beneficiaryMultiAddress, paraIdToSovereignAccount } from "./utils"
+import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "./utils"
 import {
     IERC20__factory,
     IGatewayV1 as IGateway,
     IGatewayV1__factory as IGateway__factory,
 } from "@snowbridge/contract-types"
-import {
-    Asset,
-    AssetRegistry,
-    ERC20Metadata,
-    ETHER_TOKEN_ADDRESS,
-    padFeeByPercentage,
-    Parachain,
-} from "./assets_v2"
+import { Asset, AssetRegistry, ERC20Metadata, ETHER_TOKEN_ADDRESS, Parachain } from "./assets_v2"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { ApiPromise } from "@polkadot/api"
 import {

@@ -76,9 +76,9 @@ func (s *Scanner) findTasks(
 	if err != nil {
 		return nil, fmt.Errorf("fetch nonces from PendingOrders start with key '%v' and hash '%v': %w", storageKey, paraHash, err)
 	}
-	var pendingOrders []PendingOrder
+	var pendingOrders []parachain.PendingOrder
 	for _, key := range keys {
-		var pendingOrder PendingOrder
+		var pendingOrder parachain.PendingOrder
 		value, err := s.paraConn.API().RPC.State.GetStorageRaw(key, paraHash)
 		if err != nil {
 			return nil, fmt.Errorf("fetch value of pendingOrder with key '%v' and hash '%v': %w", key, paraHash, err)
@@ -112,7 +112,7 @@ func (s *Scanner) findTasks(
 // or some fee estimation api
 func (s *Scanner) filterTasks(
 	ctx context.Context,
-	pendingOrders []PendingOrder,
+	pendingOrders []parachain.PendingOrder,
 ) ([]*Task, error) {
 
 	var tasks []*Task
@@ -214,13 +214,6 @@ func (s *Scanner) filterTasks(
 	return tasks, nil
 }
 
-type PersistedValidationData struct {
-	ParentHead             []byte
-	RelayParentNumber      uint32
-	RelayParentStorageRoot types.Hash
-	MaxPOVSize             uint32
-}
-
 // For each task, gatherProofInputs will search to find the relay chain block
 // in which that header was included as well as the parachain heads for that block.
 func (s *Scanner) gatherProofInputs(
@@ -258,9 +251,6 @@ func (s *Scanner) gatherProofInputs(
 	return nil
 }
 
-// The process for finalizing a backed parachain header times out after these many blocks:
-const FinalizationTimeout = 8
-
 // Find the relaychain block in which a parachain header was included (finalized). This usually happens
 // 2-3 blocks after the relaychain block in which the parachain header was backed.
 func (s *Scanner) findInclusionBlockNumber(
@@ -276,7 +266,7 @@ func (s *Scanner) findInclusionBlockNumber(
 		return 0, fmt.Errorf("fetch parachain block hash: %w", err)
 	}
 
-	var validationData PersistedValidationData
+	var validationData parachain.PersistedValidationData
 	ok, err := s.paraConn.API().RPC.State.GetStorage(validationDataKey, &validationData, paraBlockHash)
 	if err != nil {
 		return 0, fmt.Errorf("fetch PersistedValidationData for block %v: %w", paraBlockHash.Hex(), err)
@@ -286,7 +276,7 @@ func (s *Scanner) findInclusionBlockNumber(
 	}
 
 	startBlock := validationData.RelayParentNumber + 1
-	for i := validationData.RelayParentNumber + 1; i < startBlock+FinalizationTimeout; i++ {
+	for i := validationData.RelayParentNumber + 1; i < startBlock+relaychain.FinalizationTimeout; i++ {
 		relayBlockHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(i))
 		if err != nil {
 			return 0, fmt.Errorf("fetch relaychain block hash: %w", err)
@@ -407,15 +397,15 @@ func (s *Scanner) isNonceRelayed(ctx context.Context, nonce uint64) (bool, error
 
 func (s *Scanner) findOrderUndelivered(
 	ctx context.Context,
-) ([]*PendingOrder, error) {
+) ([]*parachain.PendingOrder, error) {
 	storageKey := types.NewStorageKey(types.CreateStorageKeyPrefix("EthereumOutboundQueueV2", "PendingOrders"))
 	keys, err := s.paraConn.API().RPC.State.GetKeysLatest(storageKey)
 	if err != nil {
 		return nil, fmt.Errorf("fetch nonces from PendingOrders start with key '%v': %w", storageKey, err)
 	}
-	var undeliveredOrders []*PendingOrder
+	var undeliveredOrders []*parachain.PendingOrder
 	for _, key := range keys {
-		var undeliveredOrder PendingOrder
+		var undeliveredOrder parachain.PendingOrder
 		value, err := s.paraConn.API().RPC.State.GetStorageRawLatest(key)
 		if err != nil {
 			return nil, fmt.Errorf("fetch value of pendingOrder with key '%v': %w", key, err)

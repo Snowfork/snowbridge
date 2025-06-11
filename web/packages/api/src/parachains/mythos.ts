@@ -1,4 +1,3 @@
-import { ApiPromise } from "@polkadot/api"
 import { DOT_LOCATION, erc20Location } from "../xcmBuilder"
 import { AssetMap, PNAMap } from "../assets_v2"
 import { ParachainBase } from "./parachainBase"
