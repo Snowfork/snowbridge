@@ -3,8 +3,12 @@ import { cryptoWaitReady } from "@polkadot/util-crypto"
 
 const InitialFund = 100_000_000_000_000n
 
+interface TransactionConfig {
+    recipient: string
+    senderParaId?: number
+}
 
-const sendBatchTransactions = async (wsPort: number, txs: string[]) => {
+const sendBatchTransactions = async (wsPort: number, txs: TransactionConfig[]) => {
     // Connect to node
     let api = await ApiPromise.create({
         provider: new WsProvider("ws://127.0.0.1:" + wsPort.toString()),
@@ -23,51 +27,22 @@ const sendBatchTransactions = async (wsPort: number, txs: string[]) => {
 
     // Define recipient addresses and amounts (replace with real addresses)
     // Create transactions
-    const transactions = txs.map((recipient) =>
-        api.tx.balances.transferAllowDeath(recipient, InitialFund)
+    const transactions = txs.map(({ recipient, senderParaId }) =>
+        senderParaId
+            ? api.tx.hrmp.forceOpenHrmpChannel(senderParaId, parseInt(recipient), 8, 512)
+            : api.tx.balances.transferAllowDeath(recipient, InitialFund)
     )
 
-    // Create a batch transaction
-    const batchTx = api.tx.utility.batchAll(transactions)
-
-    console.log("Sending batch transaction...")
-
-    // Sign and send the batch transaction
-    const unsub = await batchTx.signAndSend(sender, ({ status }) => {
-        if (status.isInBlock) {
-            console.log(`✅ Transaction included in block: ${status.asInBlock}`)
-        } else if (status.isFinalized) {
-            console.log(`🎉 Transaction finalized in block: ${status.asFinalized}`)
-            unsub()
-        }
-    })
-}
-
-const buildHrmpChannels = async () => {
-    // Connect to node
-    let api = await ApiPromise.create({ provider: new WsProvider("ws://127.0.0.1:9944") })
-    api = await api.isReady
-
-    // Initialize Keyring and add an account (Replace with your private key or use mnemonic)
-    const keyring = new Keyring({ type: "sr25519" })
-    const sender = keyring.addFromUri("//Alice")
-    await cryptoWaitReady()
-
-    const transactions = [
-        api.tx.hrmp.forceOpenHrmpChannel(1000, 1002, 8, 512),
-        api.tx.hrmp.forceOpenHrmpChannel(1002, 1000, 8, 512),
-        api.tx.hrmp.forceOpenHrmpChannel(1000, 2000, 8, 512),
-        api.tx.hrmp.forceOpenHrmpChannel(2000, 1000, 8, 512),
-    ]
+    console.log("Transactions: ", transactions)
 
     // Create a batch transaction
     const batchTx = api.tx.utility.batchAll(transactions)
-    const sudoTx = api.tx.sudo.sudo(batchTx)
-
-    console.log("Sending sudo transaction...")
+    const finalTx = txs.some((tx) => tx.senderParaId)
+        ? (console.log("Sending sudo transaction..."), api.tx.sudo.sudo(batchTx))
+        : (console.log("Sending batch transaction..."), batchTx)
 
     // Sign and send the batch transaction
-    const unsub = await sudoTx.signAndSend(sender, ({ status }) => {
+    const unsub = await finalTx.signAndSend(sender, ({ status }) => {
         if (status.isInBlock) {
             console.log(`✅ Transaction included in block: ${status.asInBlock}`)
         } else if (status.isFinalized) {
@@ -78,20 +53,28 @@ const buildHrmpChannels = async () => {
 }
 
 const main = async () => {
-    await buildHrmpChannels()
-    // bridgehub funding
+    // HRMP channel opening
+    await sendBatchTransactions(9944, [
+        { recipient: "1002", senderParaId: 1000 },
+        { recipient: "1000", senderParaId: 1002 },
+        { recipient: "2000", senderParaId: 1000 },
+        { recipient: "1000", senderParaId: 2000 },
+    ])
+    // BridgeHub funding
     await sendBatchTransactions(11144, [
-        "5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV",
-        "5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c",
-        "5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV",
+        { recipient: "5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV" },
+        { recipient: "5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c" },
+        { recipient: "5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV" },
     ])
-    // assethub funding
+    // AssetHub funding
     await sendBatchTransactions(12144, [
-        "5Eg2fntJ27qsari4FGrGhrMqKFDRnkNSR6UshkZYBGXmSuC8",
-        "5GjRnmh5o3usSYzVmsxBWzHEpvJyHK4tKNPhjpUR3ASrruBy",
+        { recipient: "5Eg2fntJ27qsari4FGrGhrMqKFDRnkNSR6UshkZYBGXmSuC8" },
+        { recipient: "5GjRnmh5o3usSYzVmsxBWzHEpvJyHK4tKNPhjpUR3ASrruBy" },
     ])
-    // relaychain funding
-    await sendBatchTransactions(9944, ["5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV"])
+    // Relaychain funding
+    await sendBatchTransactions(9944, [
+        { recipient: "5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV" },
+    ])
 }
 
 // Run the script
