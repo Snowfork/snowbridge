@@ -10,6 +10,7 @@ import (
 	"time"
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
+	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 
 	log "github.com/sirupsen/logrus"
@@ -17,14 +18,16 @@ import (
 
 type Connection struct {
 	endpoint    string
+	kp          *signature.KeyringPair
 	api         *gsrpc.SubstrateAPI
 	metadata    types.Metadata
 	genesisHash types.Hash
 }
 
-func NewConnection(endpoint string) *Connection {
+func NewConnection(endpoint string, kp *signature.KeyringPair) *Connection {
 	return &Connection{
 		endpoint: endpoint,
+		kp:       kp,
 	}
 }
 
@@ -34,6 +37,10 @@ func (co *Connection) API() *gsrpc.SubstrateAPI {
 
 func (co *Connection) Metadata() *types.Metadata {
 	return &co.metadata
+}
+
+func (co *Connection) Keypair() *signature.KeyringPair {
+	return co.kp
 }
 
 func (co *Connection) Connect(_ context.Context) error {

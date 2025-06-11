@@ -3,6 +3,40 @@ import { cryptoWaitReady } from "@polkadot/util-crypto"
 
 const InitialFund = 100_000_000_000_000n
 
+const sendTransactionOnRelay = async () => {
+    // Connect to node
+    let api = await ApiPromise.create({ provider: new WsProvider("ws://127.0.0.1:9944") })
+    api = await api.isReady
+
+    // Initialize Keyring and add an account (Replace with your private key or use mnemonic)
+    const keyring = new Keyring({ type: "sr25519" })
+    const sender = keyring.addFromUri("//Alice")
+    await cryptoWaitReady()
+
+    // Check if 'balances' is available in the API
+    if (!api.tx.balances || !api.tx.balances.transferAllowDeath) {
+        throw new Error("Balances module is not available in this network.")
+    }
+
+    // Define recipient address and amount (replace with real address)
+    const transaction =
+        //ExecutionRelayAssetHub
+        api.tx.balances.transferAllowDeath(
+            "5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV",
+            InitialFund
+        )
+
+    // Sign and send the batch transaction
+    const unsub = await transaction.signAndSend(sender, ({ status }) => {
+        if (status.isInBlock) {
+            console.log(`✅ Transaction included in block: ${status.asInBlock}`)
+        } else if (status.isFinalized) {
+            console.log(`🎉 Transaction finalized in block: ${status.asFinalized}`)
+            unsub()
+        }
+    })
+}
+
 const sendBatchTransactionsOnBridgehub = async () => {
     // Connect to node
     let api = await ApiPromise.create({ provider: new WsProvider("ws://127.0.0.1:11144") })
@@ -129,12 +163,13 @@ const main = async () => {
     await buildHrmpChannels()
     await sendBatchTransactionsOnBridgehub()
     await sendBatchTransactionsOnAssethub()
+    await sendTransactionOnRelay()
 }
 
 // Run the script
 main()
     .then(() => {
-        console.log("initial fund finshed")
+        console.log("initial fund finished")
         process.exit(0)
     })
     .catch(console.error)

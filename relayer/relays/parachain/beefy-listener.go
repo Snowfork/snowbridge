@@ -335,7 +335,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 
 								// Send the extrinsic
 								sub, err := li.relaychainConn.API().RPC.Author.SubmitAndWatchExtrinsic(ext)
-								// res, err := li.relaychainConn.API().RPC.Author.SubmitExtrinsic(ext)
 								if err != nil {
 									log.Error("Failed to submit extrinsic: ", err, sub)
 								} else {

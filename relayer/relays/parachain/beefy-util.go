@@ -101,13 +101,9 @@ func (li *BeefyListener) getKeyOwnershipProof(meta *types.Metadata, latestHash t
 	return keyOwnershipProof, nil
 }
 
-func (li *BeefyListener) getSignerInfo(meta *types.Metadata) (signature.KeyringPair, types.UCompact, error) {
+func (li *BeefyListener) getSignerInfo(meta *types.Metadata) (*signature.KeyringPair, types.UCompact, error) {
 
-	signer := signature.KeyringPair{
-		URI:       "//Bob",
-		PublicKey: []byte{0x8e, 0xaf, 0x04, 0x15, 0x16, 0x87, 0x73, 0x63, 0x26, 0xc9, 0xfe, 0xa1, 0x7e, 0x25, 0xfc, 0x52, 0x87, 0x61, 0x36, 0x93, 0xc9, 0x12, 0x90, 0x9c, 0xb2, 0x26, 0xaa, 0x47, 0x94, 0xf2, 0x6a, 0x48}, //nolint:lll
-		Address:   "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
-	}
+	signer := li.relaychainConn.Keypair()
 	key, err := types.CreateStorageKey(meta, "System", "Account", signer.PublicKey)
 	if err != nil {
 		return signer, types.NewUCompactFromUInt(0), fmt.Errorf("create storage key: %w", err)
@@ -270,9 +266,8 @@ func (li *BeefyListener) signedExtrinsicFromCall(meta *types.Metadata, call type
 		TransactionVersion: rv.TransactionVersion,
 	}
 
-	callHex, err := types.EncodeToHexString(call)
 
-	err = ext.Sign(signer, o)
+	err = ext.Sign(*signer, o)
 	if err != nil {
 		return ext, fmt.Errorf("sign extrinsic: %w", err)
 	}
