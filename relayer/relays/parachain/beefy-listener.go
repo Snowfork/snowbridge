@@ -185,7 +185,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						"ethereumTxHash":      event.Raw.TxHash.Hex(),
 						"ethereumTxIndex":     event.Raw.TxHash.Hex(),
 						"rawEvent":            event.Raw,
-					}).Info("Witnessed a new Ticket event")
+					}).Debug("Witnessed a new Ticket event")
 
 					commitment, bitfield, validatorProof, err := li.parseSubmitInitial(callData)
 					if err != nil {
@@ -206,11 +206,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 							"latestBlock":             latestBlockNumber,
 						}).Warning("Detected submitInitial for future block")
 
-						log.Info("schedule ID", li.scheduleConfig.ID)
-						if li.scheduleConfig.ID != 0 {
-							log.Info("testing: only submitting from relayer 0 - skipping")
-							return nil
-						}
 
 						meta, err := li.relaychainConn.API().RPC.State.GetMetadataLatest()
 						if err != nil {
@@ -284,10 +279,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 									"correspondingMMRRootHash": canonicalMmrRootHash,
 								}).Warning("MMR root hash does NOT match the commitment payload")
 
-								if li.scheduleConfig.ID != 0 {
-									log.Info("testing: only submitting from relayer 0 - skipping")
-									return nil
-								}
 
 								meta, err := li.relaychainConn.API().RPC.State.GetMetadataLatest()
 								if err != nil {
