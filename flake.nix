@@ -37,6 +37,8 @@
                     tree
                     # ps for zombienet, required in pure shells on Linux
                     ps
+                    # convenience for developing relayer
+                    killall
 
                     typescript
                     python311
