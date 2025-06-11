@@ -127,7 +127,7 @@ export type AssetRegistry = {
     kusama: KusamaConfig | undefined
 }
 
-type KusamaConfig = {
+export type KusamaConfig = {
     assetHubParaId: number
     bridgeHubParaId: number
     parachains: ParachainMap
@@ -145,23 +145,23 @@ export interface AssetMap {
     [token: string]: Asset
 }
 
-interface ParachainMap {
+export interface ParachainMap {
     [paraId: string]: Parachain
 }
 
-interface PrecompileMap {
+export interface PrecompileMap {
     [chainId: string]: `0x${string}`
 }
 
-interface AssetOverrideMap {
+export interface AssetOverrideMap {
     [paraId: string]: Asset[]
 }
 
-interface XC20TokenMap {
+export interface XC20TokenMap {
     [xc20: string]: string
 }
 
-interface ERC20MetadataMap {
+export interface ERC20MetadataMap {
     [token: string]: ERC20Metadata
 }
 
@@ -636,13 +636,6 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
 
     addOverrides(context.config.environment, result)
     return result
-}
-
-export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
-    if (padPercent < 0 || padPercent > 100) {
-        throw Error(`padPercent ${padPercent} not in range of 0 to 100.`)
-    }
-    return fee * ((100n + padPercent) / 100n)
 }
 
 async function indexParachain(
