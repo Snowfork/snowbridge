@@ -3,12 +3,13 @@ import { ParachainBase } from "./parachainBase"
 import { DOT_LOCATION, HERE_LOCATION } from "../xcmBuilder"
 import { WESTEND_GENESIS } from "./assethub"
 
-export const FREQUENCY_TOKEN_ID = "0x23838b1bb57cecf4422a57dd8e7f8a087b30d54f"
-export const FREQUENCY_TOKEN_LOCATION_ON_AH = {
+export const FREQUENCY_WESTEND_TOKEN_ID = "0x23838b1bb57cecf4422a57dd8e7f8a087b30d54f"
+export const FREQUENCY_WESTEND_PARA_ID = 2313
+export const FREQUENCY_TOKEN_LOCATION_ON_WESTEND_AH = {
     parents: 1,
-    interior: { x1: [{ parachain: 2313 }] },
+    interior: { x1: [{ parachain: FREQUENCY_WESTEND_PARA_ID }] },
 }
-export const FREQUENCY_TOKEN_LOCATION_ON_ETHEREUM = {
+export const FREQUENCY_WESTEND_TOKEN_LOCATION_ON_ETHEREUM = {
     parents: 1,
     interior: {
         x2: [
@@ -17,7 +18,7 @@ export const FREQUENCY_TOKEN_LOCATION_ON_ETHEREUM = {
                     byGenesis: WESTEND_GENESIS,
                 },
             },
-            { parachain: 2313 },
+            { parachain: FREQUENCY_WESTEND_PARA_ID },
         ],
     },
 }
@@ -42,16 +43,16 @@ export class FrequencyParachain extends ParachainBase {
     async getAssets(ethChainId: number, _pnas: PNAMap): Promise<AssetMap> {
         const assets: AssetMap = {}
         if (this.specName === "frequency-testnet") {
-            assets[FREQUENCY_TOKEN_ID.toLowerCase()] = {
-                token: FREQUENCY_TOKEN_ID.toLowerCase(),
+            assets[FREQUENCY_WESTEND_TOKEN_ID.toLowerCase()] = {
+                token: FREQUENCY_WESTEND_TOKEN_ID.toLowerCase(),
                 name: "XRQCY",
                 minimumBalance: 1_000_000n,
                 symbol: "XRQCY",
                 decimals: 8,
                 isSufficient: true,
                 location: HERE_LOCATION,
-                locationOnAH: FREQUENCY_TOKEN_LOCATION_ON_AH,
-                locationOnEthereum: FREQUENCY_TOKEN_LOCATION_ON_ETHEREUM,
+                locationOnAH: FREQUENCY_TOKEN_LOCATION_ON_WESTEND_AH,
+                locationOnEthereum: FREQUENCY_WESTEND_TOKEN_LOCATION_ON_ETHEREUM,
             }
         } else {
             throw Error(
