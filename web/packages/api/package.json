@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/api",
-  "version": "0.1.59",
+  "version": "0.1.60-alpha.1",
   "description": "Snowbridge API client",
   "license": "Apache-2.0",
   "repository": {
@@ -8,7 +8,7 @@
     "url": "https://github.com/Snowfork/snowbridge.git",
     "directory": "web/packages/api"
   },
-  "main": "dist/index.js",
+  "main": "src/index.ts",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --build --force",
