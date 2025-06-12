@@ -17,7 +17,7 @@ pushd ..
   fi
 popd
 
-echo "Checkout lodestar Snowfork fork"
+echo "Checkout lodestar"
 pushd ..
   if [ ! -d "lodestar" ]; then
     git clone https://github.com/ChainSafe/lodestar
