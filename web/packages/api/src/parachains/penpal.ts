@@ -1,4 +1,4 @@
-import { AssetMap, PNAMap } from "../types"
+import { AssetMap, PNAMap } from "../assets_v2"
 import { ParachainBase } from "./parachainBase"
 import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 import { WESTEND_GENESIS } from "./assethub"

@@ -9,7 +9,7 @@ import {
     parachainLocation,
     accountToLocation,
 } from "./xcmBuilder"
-import { Asset } from "./types"
+import { Asset } from "./assets_v2"
 
 export function buildParachainERC20ReceivedXcmOnDestination(
     registry: Registry,
