@@ -4,7 +4,7 @@ set -eu
 rm -rf src/contracts
 mkdir -p src/contracts
 
-snowbridge_v1=true
+snowbridge_v1=false
 contracts_root="../contracts"
 if [ "$snowbridge_v1" = true ]; then
         contracts_root="../../snowbridge-v1/contracts"
