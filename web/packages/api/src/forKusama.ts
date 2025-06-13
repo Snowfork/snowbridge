@@ -232,7 +232,6 @@ export async function getDeliveryFee(
     destinationFee = destinationFee + (destinationFee * 33n) / 100n
 
     // add minimum balance to the dest fee, to avoid not being able to deposit leftover fees
-    console.log("adding min balance", minBalanceFeeDest)
     destinationFee = destinationFee + BigInt(minBalanceFeeDest)
 
     // pad destination XCM fee
