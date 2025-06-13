@@ -182,7 +182,7 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         // Make sure relayers provide enough gas so that inner message dispatch
         // does not run out of gas.
         uint256 maxDispatchGas = message.maxDispatchGas;
-        if (gasleft() < maxDispatchGas + DISPATCH_OVERHEAD_GAS) {
+        if (gasleft() * 63 / 64 < maxDispatchGas + DISPATCH_OVERHEAD_GAS) {
             revert NotEnoughGas();
         }
 

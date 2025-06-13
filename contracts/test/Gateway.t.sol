@@ -57,6 +57,7 @@ import {
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import "./mocks/HighGasToken.sol";
 
 contract GatewayTest is Test {
     // Emitted when token minted/burnt/transfered
@@ -1303,5 +1304,45 @@ contract GatewayTest is Test {
         uint256 fee = IGateway(address(gateway)).quoteRegisterTokenFee();
         vm.expectRevert(Assets.InvalidToken.selector);
         IGateway(address(gateway)).registerToken{value: fee}(address(0));
+    }
+
+    function testSubmitV1GasCheckFails() public {
+        HighGasToken highGasToken = new HighGasToken();
+
+        address agentContract = IGatewayV1(address(gateway)).agentOf(assetHubAgentID);
+        highGasToken.mint(agentContract, 1000);
+
+        uint128 amount = 100;
+        UnlockNativeTokenParams memory params = UnlockNativeTokenParams({
+            agentID: assetHubAgentID,
+            token: address(highGasToken),
+            recipient: account1,
+            amount: amount
+        });
+
+        maxDispatchGas = 1_100_000;
+        uint256 relayerGas = 1_170_000; // Just enough to pass check, but vulnerable to 63/64
+
+        vm.expectRevert(IGatewayBase.NotEnoughGas.selector);
+
+        hoax(relayer, 1 ether);
+        IGatewayV1(address(gateway)).submitV1{gas: relayerGas}(
+            InboundMessage(
+                assetHubParaID.into(),
+                1,
+                CommandV1.UnlockNativeToken,
+                abi.encode(params),
+                maxDispatchGas,
+                maxRefund,
+                reward,
+                messageID
+            ),
+            proof,
+            makeMockProof()
+        );
+
+        // Verify that the token transfer didn't happen (indicating the handler failed due to out of gas)
+        assertEq(highGasToken.balanceOf(account1), 0);
+        assertEq(highGasToken.balanceOf(assetHubAgent), 1000);
     }
 }
