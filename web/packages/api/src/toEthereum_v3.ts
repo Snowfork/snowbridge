@@ -16,8 +16,13 @@ import {
     buildTransferXcmFromAssetHub,
 } from "./xcmV5Builder"
 
-import { getAssetHubConversationPalletSwap, padFeeByPercentage } from "./assets_v2"
-import { Asset, AssetRegistry, ETHER_TOKEN_ADDRESS } from "./types"
+import {
+    Asset,
+    AssetRegistry,
+    ETHER_TOKEN_ADDRESS,
+    getAssetHubConversationPalletSwap,
+} from "./assets_v2"
+import { padFeeByPercentage } from "./utils"
 import { getOperatingStatus } from "./status"
 import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"

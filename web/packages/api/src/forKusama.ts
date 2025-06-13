@@ -22,8 +22,7 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import { getAssetHubConversationPalletSwap } from "./assets_v2"
-import { Asset, AssetRegistry, Parachain } from "./types"
+import { Asset, AssetRegistry, Parachain, getAssetHubConversationPalletSwap } from "./assets_v2"
 import {
     CallDryRunEffects,
     EventRecord,

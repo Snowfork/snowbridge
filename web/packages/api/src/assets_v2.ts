@@ -8,25 +8,194 @@ import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-t
 import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID } from "./parachains/mythos"
 import { paraImplementation } from "./parachains"
 import { ParachainBase } from "./parachains/parachainBase"
-import {
-    AssetOverrideMap,
-    AssetRegistry,
-    ChainProperties,
-    ERC20Metadata,
-    ERC20MetadataMap,
-    ETHER_TOKEN_ADDRESS,
-    EthereumChain,
-    Parachain,
-    ParachainMap,
-    Path,
-    PNAMap,
-    PrecompileMap,
-    RegistryOptions,
-    Source,
-    TransferLocation,
-    XC20TokenMap,
-    KusamaConfig,
-} from "./types"
+
+export type ERC20Metadata = {
+    token: string
+    name: string
+    symbol: string
+    decimals: number
+    foreignId?: string
+    // The gas cost of a local transfer
+    deliveryGas?: bigint
+}
+
+export type EthereumChain = {
+    chainId: number
+    id: string
+    evmParachainId?: number
+    assets: ERC20MetadataMap
+    precompile?: `0x${string}`
+    xcDOT?: string
+    xcTokenMap?: XC20TokenMap
+    // The gas cost of v2_submit excludes command execution, mainly covers the verification
+    baseDeliveryGas?: bigint
+}
+
+export type AccountType = "AccountId20" | "AccountId32"
+
+export type SubstrateAccount = {
+    nonce: bigint
+    consumers: bigint
+    providers: bigint
+    sufficients: bigint
+    data: {
+        free: bigint
+        reserved: bigint
+        frozen: bigint
+    }
+}
+
+export type ChainProperties = {
+    tokenSymbols: string
+    tokenDecimals: number
+    ss58Format: number
+    isEthereum: boolean
+    accountType: AccountType
+    evmChainId?: number
+    name: string
+    specName: string
+    specVersion: number
+}
+
+export type Parachain = {
+    parachainId: number
+    info: ChainProperties
+    features: {
+        hasPalletXcm: boolean
+        hasDryRunApi: boolean
+        hasTxPaymentApi: boolean
+        hasDryRunRpc: boolean
+        hasDotBalance: boolean
+    }
+    assets: AssetMap
+    estimatedExecutionFeeDOT: bigint
+    estimatedDeliveryFeeDOT: bigint
+    xcDOT?: string
+}
+
+export type Asset = {
+    token: string
+    name: string
+    minimumBalance: bigint
+    symbol: string
+    decimals: number
+    isSufficient: boolean
+    xc20?: string
+    // Location on source Parachain
+    location?: any
+    // Location reanchored on AH
+    locationOnAH?: any
+    // Location reanchored on Ethereum
+    locationOnEthereum?: any
+    // For chains that use `Assets` pallet to manage local assets
+    // the asset_id is normally represented as u32, but on Moonbeam,
+    // it is u128, so use string here to avoid overflow
+    assetId?: string
+    // Identifier of the PNA
+    foreignId?: string
+}
+
+export type RegistryOptions = {
+    environment: string
+    gatewayAddress: string
+    ethChainId: number
+    assetHubParaId: number
+    bridgeHubParaId: number
+    parachains: (string | ApiPromise)[]
+    ethchains: (string | AbstractProvider)[]
+    relaychain: string | ApiPromise
+    bridgeHub: string | ApiPromise
+    kusama?: KusamaOptions
+    precompiles?: PrecompileMap
+    assetOverrides?: AssetOverrideMap
+}
+
+export type KusamaOptions = {
+    assetHubParaId: number
+    bridgeHubParaId: number
+    assetHub: string | ApiPromise
+}
+
+export type AssetRegistry = {
+    environment: string
+    gatewayAddress: string
+    ethChainId: number
+    assetHubParaId: number
+    bridgeHubParaId: number
+    relaychain: ChainProperties
+    bridgeHub: ChainProperties
+    ethereumChains: {
+        [chainId: string]: EthereumChain
+    }
+    parachains: ParachainMap
+    kusama: KusamaConfig | undefined
+}
+
+export type KusamaConfig = {
+    assetHubParaId: number
+    bridgeHubParaId: number
+    parachains: ParachainMap
+}
+
+export interface PNAMap {
+    [token: string]: {
+        token: string
+        foreignId: string
+        ethereumlocation: any
+    }
+}
+
+export interface AssetMap {
+    [token: string]: Asset
+}
+
+export interface ParachainMap {
+    [paraId: string]: Parachain
+}
+
+export interface PrecompileMap {
+    [chainId: string]: `0x${string}`
+}
+
+export interface AssetOverrideMap {
+    [paraId: string]: Asset[]
+}
+
+export interface XC20TokenMap {
+    [xc20: string]: string
+}
+
+export interface ERC20MetadataMap {
+    [token: string]: ERC20Metadata
+}
+
+export type SourceType = "substrate" | "ethereum"
+
+export type Path = {
+    type: SourceType
+    id: string
+    source: number
+    destination: number
+    asset: string
+}
+
+export type Source = {
+    type: SourceType
+    id: string
+    key: string
+    destinations: { [destination: string]: string[] }
+}
+
+export type TransferLocation = {
+    id: string
+    name: string
+    key: string
+    type: SourceType
+    parachain?: Parachain
+    ethChain?: EthereumChain
+}
+
+export const ETHER_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 export async function buildRegistry(options: RegistryOptions): Promise<AssetRegistry> {
     const {
@@ -471,13 +640,6 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
 
     addOverrides(context.config.environment, result)
     return result
-}
-
-export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
-    if (padPercent < 0 || padPercent > 100) {
-        throw Error(`padPercent ${padPercent} not in range of 0 to 100.`)
-    }
-    return fee * ((100n + padPercent) / 100n)
 }
 
 async function indexParachain(

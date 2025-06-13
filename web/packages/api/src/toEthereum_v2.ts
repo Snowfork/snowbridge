@@ -18,8 +18,13 @@ import {
     buildExportXcmForERC20,
     HERE_LOCATION,
 } from "./xcmBuilder"
-import { getAssetHubConversationPalletSwap, padFeeByPercentage } from "./assets_v2"
-import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "./types"
+import {
+    Asset,
+    AssetRegistry,
+    ERC20Metadata,
+    Parachain,
+    getAssetHubConversationPalletSwap,
+} from "./assets_v2"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
 import {
@@ -31,6 +36,7 @@ import {
 import { Result } from "@polkadot/types"
 import { FeeData } from "ethers"
 import { paraImplementation } from "./parachains"
+import { padFeeByPercentage } from "./utils"
 
 export type Transfer = {
     input: {
@@ -195,7 +201,7 @@ export async function getDeliveryFee(
     let snowbridgeDeliveryFeeDOT = 0n
     if (leFee.eqn(0)) {
         console.warn("Asset Hub onchain BridgeHubEthereumBaseFee not set. Using default fee.")
-        snowbridgeDeliveryFeeDOT = defaultFee ?? 2_750_872_500_000n
+        snowbridgeDeliveryFeeDOT = defaultFee ?? 3_833_568_200_000n
     } else {
         snowbridgeDeliveryFeeDOT = BigInt(leFee.toString())
     }
