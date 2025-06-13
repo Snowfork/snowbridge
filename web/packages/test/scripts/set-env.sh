@@ -13,11 +13,9 @@ ethereum_data_dir="$output_dir/ethereum"
 zombienet_data_dir="$output_dir/zombienet"
 export PATH="$output_bin_dir:$PATH"
 export polkadot_sdk_dir="${POLKADOT_SDK_DIR:-../polkadot-sdk}"
-export LODESTAR_VERSION=v1.31.0
-export GETH_VERSION=v1.15.11
-snowbridge_v1="${BUILD_V1:-false}"
+export snowbridge_v1="${BUILD_V1:-false}"
 v1_root_dir="$root_dir/../snowbridge-v1"
-v1_contract_dir="$v1_root_dir/contracts"
+export v1_contract_dir="$v1_root_dir/contracts"
 v1_relay_dir="$v1_root_dir/relayer"
 
 eth_network="${ETH_NETWORK:-localhost}"

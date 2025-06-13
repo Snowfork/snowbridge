@@ -4,7 +4,6 @@ set -eu
 start=$(date +%s)
 
 from_start_services=true
-is_electra=false
 
 source scripts/set-env.sh
 source scripts/build-binary.sh
@@ -42,10 +41,10 @@ echo "Deploying ethereum contracts"
 source scripts/deploy-contracts.sh
 deploy_contracts
 
-# # 6. config substrate
-# echo "Config Substrate"
-# source scripts/configure-substrate.sh
-# configure_substrate
+# 6. config substrate
+echo "Config Substrate"
+source scripts/configure-substrate.sh
+configure_substrate
 
 if [ "$skip_relayer" == "false" ]; then
   # 7. start relayer

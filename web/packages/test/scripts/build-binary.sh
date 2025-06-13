@@ -56,7 +56,7 @@ build_contracts() {
 }
 
 build_relayer() {
-    echo "Building latest relayer"
+    echo "Building relayer v2"
     mage -d "$relay_dir" build
     cp $relay_bin "$output_bin_dir/snowbridge-relay-v2"
 }

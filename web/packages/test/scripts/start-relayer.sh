@@ -1,14 +1,10 @@
 #!/usr/bin/env bash
 set -eu
 
-is_electra=false
 source scripts/set-env.sh
 
 config_relayer() {
-    local electra_forked_epoch=2000000
-    if [ "$is_electra" == "true" ]; then
-        electra_forked_epoch=0
-    fi
+    local electra_forked_epoch=0
     # Configure beefy relay
     jq \
         --arg k1 "$(address_for BeefyClient)" \
@@ -183,7 +179,7 @@ start_relayer() {
 }
 
 build_relayer() {
-    echo "Building latest relayer"
+    echo "Building relayer v2"
     mage -d "$relay_dir" build
     cp $relay_bin "$output_bin_dir/snowbridge-relay-v2"
 }
