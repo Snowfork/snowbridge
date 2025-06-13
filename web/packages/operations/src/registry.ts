@@ -1,4 +1,4 @@
-import { Context, assetsV2, types } from "@snowbridge/api"
+import { Context, assetsV2 } from "@snowbridge/api"
 import { readFile, writeFile } from "fs/promises"
 import { existsSync } from "fs"
 
@@ -49,7 +49,7 @@ function cache<T>(filePath: string, generator: () => T | Promise<T>): Promise<T>
 export const fetchRegistry = async (
     env: string,
     context: Context
-): Promise<types.AssetRegistry> => {
+): Promise<assetsV2.AssetRegistry> => {
     const registry = await cache(
         `.${env}.registry.json`,
         async () => await assetsV2.buildRegistry(await assetsV2.fromContext(context))
