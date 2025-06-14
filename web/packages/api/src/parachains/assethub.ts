@@ -34,7 +34,7 @@ export class AssetHubParachain extends ParachainBase {
     async getAssetsFiltered(
         ethChainId: number,
         pnas: PNAMap,
-        pnaFilter: (location: any, assetHubParaId: number) => any
+        pnaFilter: (location: any, assetHubParaId: number, env: string) => any
     ) {
         const assets: AssetMap = {}
         // ERC20
@@ -73,7 +73,11 @@ export class AssetHubParachain extends ParachainBase {
             for (const { token, foreignId, ethereumlocation } of Object.keys(pnas).map(
                 (p) => pnas[p]
             )) {
-                const locationOnAH: any = pnaFilter(ethereumlocation, this.parachainId)
+                const locationOnAH: any = pnaFilter(
+                    ethereumlocation,
+                    this.parachainId,
+                    this.specName
+                )
                 if (!locationOnAH) {
                     console.warn(
                         `Location ${JSON.stringify(ethereumlocation)} is not bridgeable on ${
@@ -126,23 +130,36 @@ export class AssetHubParachain extends ParachainBase {
                         isSufficient: true,
                     }
                 } else {
-                    const assetType = this.provider.registry.createType(
+                    let assetType = this.provider.registry.createType(
                         "StagingXcmV4Location",
                         locationOnAH
                     )
-                    const [assetInfo, assetMeta] = (
+                    let [assetInfo, assetMeta] = (
                         await Promise.all([
                             this.provider.query.foreignAssets.asset(assetType),
                             this.provider.query.foreignAssets.metadata(assetType),
                         ])
                     ).map((encoded) => encoded.toPrimitive() as any)
                     if (!assetInfo) {
-                        console.warn(
-                            `Asset '${JSON.stringify(
-                                locationOnAH
-                            )}' is not a registered foregin asset on ${this.specName}.`
+                        assetType = this.provider.registry.createType(
+                            "StagingXcmV5Location",
+                            locationOnAH
                         )
-                        continue
+                        assetInfo = (
+                            await this.provider.query.foreignAssets.asset(assetType)
+                        ).toPrimitive()
+                        assetMeta = (
+                            await this.provider.query.foreignAssets.metadata(assetType)
+                        ).toPrimitive()
+
+                        if (!assetInfo) {
+                            console.warn(
+                                `Asset '${JSON.stringify(
+                                    locationOnAH
+                                )}' is not a registered foregin asset on ${this.specName}.`
+                            )
+                            continue
+                        }
                     }
 
                     assets[token.toLowerCase()] = {
@@ -166,7 +183,7 @@ export class AssetHubParachain extends ParachainBase {
 
 // Currently, the bridgeable assets are limited to KSM, DOT, native assets on AH
 // and TEER
-function bridgeablePNAsOnAH(location: any, assetHubParaId: number): any {
+function bridgeablePNAsOnAH(location: any, assetHubParaId: number, env: string): any {
     if (location.parents != 1) {
         return
     }
@@ -247,6 +264,23 @@ function bridgeablePNAsOnAH(location: any, assetHubParaId: number): any {
                     {
                         parachain: location.interior.x2[1]?.parachain,
                     },
+                ],
+            },
+        }
+    } else if (
+        location.interior.x4 &&
+        location.interior.x4[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS &&
+        location.interior.x4[1]?.parachain &&
+        location.interior.x4[2]?.palletInstance &&
+        location.interior.x4[3]?.generalIndex != undefined
+    ) {
+        return {
+            parents: 1,
+            interior: {
+                x3: [
+                    { parachain: location.interior.x4[1]?.parachain },
+                    { palletInstance: location.interior.x4[2].palletInstance },
+                    { generalIndex: location.interior.x4[3].generalIndex },
                 ],
             },
         }
