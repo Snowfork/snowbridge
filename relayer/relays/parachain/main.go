@@ -39,7 +39,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 	log.Info("Creating worker")
 
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
-	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
+	relaychainWriterConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint, keypair2.AsKeyringPair())
 
 	ethereumConnWriter := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
 	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
@@ -63,7 +63,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 		&config.Source,
 		&config.Schedule,
 		ethereumConnBeefy,
-		relaychainConn,
+		relaychainWriterConn,
 		parachainConn,
 		ofacClient,
 		tasks,
@@ -96,7 +96,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 	return &Relay{
 		config:                config,
 		parachainConn:         parachainConn,
-		relaychainConn:        relaychainConn,
+		relaychainConn:        relaychainWriterConn,
 		ethereumConnWriter:    ethereumConnWriter,
 		ethereumConnBeefy:     ethereumConnBeefy,
 		ethereumChannelWriter: ethereumChannelWriter,
@@ -140,6 +140,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
+	log.Info("Starting parachain writer")
 	err = relay.parachainWriter.Start(ctx, eg)
 	if err != nil {
 		return err
