@@ -1,7 +1,7 @@
-use ethers::prelude::Address;
+use alloy::primitives::Address;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{i_gateway_v1, i_gateway_v1::TokenTransferFeesChangedFilter},
+	contracts::{i_gateway_v1, i_gateway_v1::IGatewayV1::TokenTransferFeesChanged},
 	helper::*,
 	parachains::{
 		bridgehub,
@@ -17,9 +17,9 @@ async fn set_token_transfer_fees() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let ethereum_client = *(test_clients.ethereum_client.clone());
+	let ethereum_client = test_clients.ethereum_client;
 	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, ethereum_client.clone());
-	let fees = gateway.quote_register_token_fee().await.expect("get fees");
+	let fees = gateway.quoteRegisterTokenFee().call().await.expect("get fees");
 	println!("register fees {:?}", fees);
 
 	let ethereum_system_api = bridgehub::api::ethereum_system::calls::TransactionApi;
@@ -40,8 +40,8 @@ async fn set_token_transfer_fees() {
 
 	wait_for_bridgehub_event::<SetTokenTransferFees>(&test_clients.bridge_hub_client).await;
 
-	wait_for_ethereum_event::<TokenTransferFeesChangedFilter>(&test_clients.ethereum_client).await;
+	wait_for_ethereum_event::<TokenTransferFeesChanged>(ethereum_client, gateway_addr).await;
 
-	let fees = gateway.quote_register_token_fee().await.expect("get fees");
+	let fees = gateway.quoteRegisterTokenFee().call().await.expect("get fees");
 	println!("asset fees {:?}", fees);
 }

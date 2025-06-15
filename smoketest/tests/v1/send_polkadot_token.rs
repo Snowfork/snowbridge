@@ -1,4 +1,4 @@
-use ethers::{core::types::Address, prelude::U256, utils::parse_units};
+use alloy::primitives::{utils::parse_units, Address, U256};
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
@@ -11,34 +11,31 @@ use subxt::utils::AccountId32;
 #[tokio::test]
 async fn send_polkadot_token() {
 	let test_clients = initial_clients().await.expect("initialize clients");
-	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
 	let assethub = *(test_clients.asset_hub_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, ethereum_client.clone());
+	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, test_clients.ethereum_client);
 
 	let token: Address = ERC20_DOT_CONTRACT.into();
 
 	let destination_fee = 400_000_000;
-	let fee: U256 = parse_units("0.01", "ether").unwrap().into();
+	let fee: U256 = parse_units("0.01", "ether").unwrap().get_absolute();
 
 	let amount = 500_000_000;
 
-	let receipt = gateway
-		.send_token(
+	let transaction = gateway
+		.sendToken(
 			token,
 			ASSET_HUB_PARA_ID,
-			i_gateway_v1::MultiAddress { kind: 1, data: (*BOB_PUBLIC).into() },
+			i_gateway_v1::IGatewayV1::MultiAddress { kind: 1, data: (*BOB_PUBLIC).into() },
 			destination_fee,
 			amount,
 		)
 		.value(fee)
 		.send()
 		.await
-		.unwrap()
-		.await
-		.unwrap()
 		.unwrap();
+	let receipt = transaction.get_receipt().await.expect("get receipt");
 
 	println!(
 		"receipt transaction hash: {:#?}, transaction block: {:#?}",
@@ -46,13 +43,10 @@ async fn send_polkadot_token() {
 		receipt.block_number
 	);
 
-	// Log for OutboundMessageAccepted
-	let outbound_message_accepted_log = receipt.logs.last().unwrap();
-
 	// print log for unit tests
-	print_event_log_for_unit_tests(outbound_message_accepted_log);
+	print_event_log_for_unit_tests(receipt.logs().first().unwrap().as_ref());
 
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
+	assert_eq!(receipt.status(), true);
 
 	let wait_for_blocks = 500;
 	let mut blocks = assethub

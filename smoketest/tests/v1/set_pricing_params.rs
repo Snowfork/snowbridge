@@ -1,7 +1,10 @@
-use ethers::prelude::Address;
+use alloy::primitives::Address;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{i_gateway_v1, i_gateway_v1::PricingParametersChangedFilter},
+	contracts::{
+		i_gateway_v1,
+		i_gateway_v1::IGatewayV1::PricingParametersChanged as EthereumPricingParametersChanged,
+	},
 	helper::*,
 	parachains::{
 		bridgehub,
@@ -22,9 +25,9 @@ async fn set_pricing_params() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let ethereum_client = *(test_clients.ethereum_client.clone());
+	let ethereum_client = test_clients.ethereum_client;
 	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, ethereum_client.clone());
-	let params = gateway.pricing_parameters().await.expect("get fees");
+	let params = gateway.pricingParameters().call().await.expect("get pricing");
 	println!("pricing params {:?}", params);
 
 	let ethereum_system_api = bridgehub::api::ethereum_system::calls::TransactionApi;
@@ -46,8 +49,9 @@ async fn set_pricing_params() {
 
 	wait_for_bridgehub_event::<PricingParametersChanged>(&test_clients.bridge_hub_client).await;
 
-	wait_for_ethereum_event::<PricingParametersChangedFilter>(&test_clients.ethereum_client).await;
+	wait_for_ethereum_event::<EthereumPricingParametersChanged>(ethereum_client, gateway_addr)
+		.await;
 
-	let params = gateway.pricing_parameters().await.expect("get fees");
+	let params = gateway.pricingParameters().call().await.expect("get fees");
 	println!("pricing params {:?}", params);
 }

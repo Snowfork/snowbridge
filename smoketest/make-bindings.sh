@@ -4,18 +4,11 @@ set -eu
 rm -rf src/contracts
 mkdir -p src/contracts
 
-snowbridge_v1=false
-contracts_root="../contracts"
-if [ "$snowbridge_v1" = true ]; then
-        contracts_root="../../snowbridge-v1/contracts"
-fi
-
-echo $contracts_root
 # Generate Rust bindings for contracts
 forge bind --module --overwrite \
     --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token|HelloWorld' \
     --bindings-path src/contracts \
-    --root $contracts_root
+    --root ../contracts
 
 # Install subxt
 command -v subxt || cargo install subxt-cli \

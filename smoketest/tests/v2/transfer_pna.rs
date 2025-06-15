@@ -2,9 +2,8 @@ use assethub::api::polkadot_xcm::calls::TransactionApi;
 use snowbridge_smoketest::{
 	asset_hub_helper::{eth_location, mint_token_to},
 	constants::*,
-	contracts::token::TransferFilter,
-	helper::{initial_clients, AssetHubConfig},
-	helper_v2::wait_for_ethereum_event_v2,
+	contracts::token::Token::Transfer,
+	helper::{initial_clients, wait_for_ethereum_event, AssetHubConfig},
 	parachains::assethub::{
 		api::runtime_types::{
 			bounded_collections::bounded_vec::BoundedVec,
@@ -52,8 +51,6 @@ async fn transfer_pna() {
 		INITIAL_FUND,
 	)
 	.await;
-
-	let ethereum_client = *test_clients.ethereum_client;
 
 	let assethub: OnlineClient<AssetHubConfig> = *test_clients.asset_hub_client;
 
@@ -129,5 +126,6 @@ async fn transfer_pna() {
 		.await
 		.expect("call success");
 
-	wait_for_ethereum_event_v2::<TransferFilter>(&Box::new(ethereum_client)).await;
+	wait_for_ethereum_event::<Transfer>(test_clients.ethereum_client, ERC20_DOT_CONTRACT.into())
+		.await;
 }

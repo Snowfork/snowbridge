@@ -1,5 +1,5 @@
+use alloy::primitives::{Address, U256};
 use codec::Encode;
-use ethers::core::types::Address;
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	asset_hub_helper::{create_asset_pool, weth_location},
@@ -13,7 +13,7 @@ use subxt::utils::AccountId32;
 #[tokio::test]
 async fn register_ena() {
 	let test_clients = initial_clients().await.expect("initialize clients");
-	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
+	let ethereum_client = test_clients.ethereum_client;
 	let assethub = *(test_clients.asset_hub_client.clone());
 
 	create_asset_pool(&Box::new(assethub.clone())).await;
@@ -25,14 +25,14 @@ async fn register_ena() {
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
 	let receipt = gateway
-		.v_2_register_token(weth.address(), 0, 1_500_000_000_000u128, 1_500_000_000_000u128)
-		.value(13_000_000_000_000u128)
+		.v2_registerToken(*weth.address(), 0, 1_500_000_000_000u128, 1_500_000_000_000u128)
+		.value(U256::from(13_000_000_000_000u128))
 		.send()
 		.await
 		.unwrap()
+		.get_receipt()
 		.await
-		.unwrap()
-		.unwrap();
+		.expect("get receipt");
 
 	println!(
 		"receipt transaction hash: {:#?}, transaction block: {:#?}",
@@ -41,12 +41,12 @@ async fn register_ena() {
 	);
 
 	// Log for OutboundMessageAccepted
-	let outbound_message_accepted_log = receipt.logs.last().unwrap();
+	let outbound_message_accepted_log = receipt.logs().last().unwrap().as_ref();
 
 	// print log for unit tests
 	print_event_log_for_unit_tests(outbound_message_accepted_log);
 
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
+	assert_eq!(receipt.status(), true);
 
 	let wait_for_blocks = (*WAIT_PERIOD) as usize;
 	let mut blocks = assethub
