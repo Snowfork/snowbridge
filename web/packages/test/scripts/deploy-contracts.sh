@@ -8,8 +8,10 @@ deploy_command() {
 
     if [ "$snowbridge_v1" = true ]; then
         pushd "$v1_contract_dir"
+        rm -rf $v1_contract_dir/broadcast
     else
         pushd "$contract_dir"
+        rm -rf $contract_dir/broadcast
     fi
 
 

@@ -20,7 +20,7 @@ async function generateBeefyCheckpoint() {
         ? parseInt(process.env.BEEFY_START_BLOCK)
         : 1
     let basedir = process.env.contract_dir || "../../../contracts"
-    if (process.env.snowbridge_v1) {
+    if (process.env.snowbridge_v1 == "true") {
         basedir = process.env.v1_contract_dir || "../../snowbridge-v1/contracts"
     }
     const BeefyStateFile = path.join(basedir, "beefy-state.json")
