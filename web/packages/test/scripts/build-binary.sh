@@ -86,10 +86,12 @@ build_lodestar() {
 }
 
 build_web_packages() {
-    pushd $root_dir/web
-    pnpm install
-    pnpm build
-    popd
+    if [ "$rebuild_web_packages" == "true" ]; then
+        pushd $root_dir/web
+        pnpm install
+        pnpm build
+        popd
+    fi
 }
 
 build_v1() {
