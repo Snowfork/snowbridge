@@ -28,4 +28,5 @@ tests=(
 
 for test in ${tests[@]}; do 
   cargo test --features legacy-v1 --test v1_legacy $test -- --nocapture
+  cargo test --test v1 $test -- --nocapture
 done
