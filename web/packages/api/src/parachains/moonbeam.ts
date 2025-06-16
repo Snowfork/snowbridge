@@ -17,31 +17,6 @@ export function toMoonbeamXC20(assetId: bigint) {
     return "0xffffffff" + xc20
 }
 
-export async function getMoonbeamLocationBalance(
-    pnaAssetId: any,
-    location: any,
-    provider: ApiPromise,
-    specName: string,
-    account: string
-) {
-    // For PNA, use assetId directly; for ENA, query assetId by Multilocation
-    let paraAssetId = pnaAssetId
-    // If we cannot find the asset in asset manager look in foreign assets.
-    if (!paraAssetId) {
-        // evmForeignAssets uses xcm v4 so we use the original location.
-        paraAssetId = (
-            (await provider.query.evmForeignAssets.assetsByLocation(location)).toPrimitive() as any
-        )[0]
-    }
-
-    if (!paraAssetId) {
-        throw Error(`Asset not registered for spec ${specName}.`)
-    }
-
-    const xc20 = toMoonbeamXC20(BigInt(paraAssetId))
-    return await getMoonbeamEvmForeignAssetBalance(provider, xc20, account)
-}
-
 export async function getMoonbeamEvmForeignAssetBalance(
     api: ApiPromise,
     token: string,
@@ -105,36 +80,22 @@ export class MoonbeamParachain extends ParachainBase {
     }
 
     async getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint> {
+        // For PNA, use assetId directly; for ENA, query assetId by Multilocation
         let paraAssetId = pnaAssetId
-        if (!paraAssetId) {
-            // Moonbeam only supports v3 xcm locations on asset Manager. Deep clone the location because
-            // we might modify it.
-            const assetManagerLocation = convertToXcmV3X1(location)
-            paraAssetId = (
-                await this.provider.query.assetManager.assetTypeId({ xcm: assetManagerLocation })
-            ).toPrimitive()
-        }
-
         // If we cannot find the asset in asset manager look in foreign assets.
         if (!paraAssetId) {
             // evmForeignAssets uses xcm v4 so we use the original location.
             paraAssetId = (
-                (
-                    await this.provider.query.evmForeignAssets.assetsByLocation(location)
-                ).toPrimitive() as any
+                (await this.provider.query.evmForeignAssets.assetsByLocation(location)).toPrimitive() as any
             )[0]
-            const xc20 = toMoonbeamXC20(BigInt(paraAssetId))
-            return await getMoonbeamEvmForeignAssetBalance(this.provider, xc20, account)
         }
 
         if (!paraAssetId) {
             throw Error(`Asset not registered for spec ${this.specName}.`)
         }
 
-        const accountData = (
-            await this.provider.query.assets.account(paraAssetId, account)
-        ).toPrimitive() as any
-        return BigInt(accountData?.balance ?? 0n)
+        const xc20 = toMoonbeamXC20(BigInt(paraAssetId))
+        return await getMoonbeamEvmForeignAssetBalance(this.provider, xc20, account)
     }
 
     getDotBalance(account: string): Promise<bigint> {
@@ -143,7 +104,6 @@ export class MoonbeamParachain extends ParachainBase {
 
     async getAssets(ethChainId: number, _pnas: PNAMap): Promise<AssetMap> {
         const assets: AssetMap = {}
-        let xcDOT: string | undefined
         const foreignEntries = await this.provider.query.evmForeignAssets.assetsById.entries()
         for (const [key, value] of foreignEntries) {
             const location = value.toJSON() as any
