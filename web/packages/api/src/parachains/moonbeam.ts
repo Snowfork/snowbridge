@@ -2,7 +2,7 @@ import { ApiPromise } from "@polkadot/api"
 import { ethers } from "ethers"
 import { ParachainBase } from "./parachainBase"
 import { AssetMap, PNAMap } from "../assets_v2"
-import { convertToXcmV3X1, DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
+import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
 const MOONBEAM_ERC20_ABI = [
     "function name() view returns (string)",
@@ -86,7 +86,9 @@ export class MoonbeamParachain extends ParachainBase {
         if (!paraAssetId) {
             // evmForeignAssets uses xcm v4 so we use the original location.
             paraAssetId = (
-                (await this.provider.query.evmForeignAssets.assetsByLocation(location)).toPrimitive() as any
+                (
+                    await this.provider.query.evmForeignAssets.assetsByLocation(location)
+                ).toPrimitive() as any
             )[0]
         }
 
