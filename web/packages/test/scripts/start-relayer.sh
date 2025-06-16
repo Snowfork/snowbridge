@@ -38,6 +38,44 @@ config_relayer() {
     ' \
         config/parachain-relay-v1.json >$output_dir/parachain-relay-v1.json
 
+    # Configure parachain relay (primary governance)
+    jq \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --arg k2 "$(address_for BeefyClient)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
+        --arg channelID $PRIMARY_GOVERNANCE_CHANNEL_ID \
+        --arg eth_gas_limit $eth_gas_limit \
+        '
+      .source.contracts.Gateway = $k1
+    | .source.contracts.BeefyClient = $k2
+    | .sink.contracts.Gateway = $k1
+    | .source.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
+    | .sink.ethereum."gas-limit" = $eth_gas_limit
+    | .source."channel-id" = $channelID
+    ' \
+        config/parachain-relay-v1.json >$output_dir/parachain-relay-bridge-hub-01.json
+
+    # Configure parachain relay (secondary governance)
+    jq \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --arg k2 "$(address_for BeefyClient)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
+        --arg channelID $SECONDARY_GOVERNANCE_CHANNEL_ID \
+        --arg eth_gas_limit $eth_gas_limit \
+        '
+      .source.contracts.Gateway = $k1
+    | .source.contracts.BeefyClient = $k2
+    | .sink.contracts.Gateway = $k1
+    | .source.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
+    | .sink.ethereum."gas-limit" = $eth_gas_limit
+    | .source."channel-id" = $channelID
+    ' \
+        config/parachain-relay-v1.json >$output_dir/parachain-relay-bridge-hub-02.json
+
     # Configure parachain relay v2
     jq \
         --arg k1 "$(address_for GatewayProxy)" \
@@ -173,6 +211,32 @@ start_relayer() {
                 --config $output_dir/execution-relay.json \
                 --substrate.private-key "//ExecutionRelayAssetHub" \
                 >>"$output_dir"/execution-relay-v2.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch parachain relay for bridgehub (primary governance)
+    (
+        : >"$output_dir"/parachain-relay-bridge-hub-01.log
+        while :; do
+            echo "Starting parachain-relay (primary governance) at $(date)"
+            "${relayer_v1}" run parachain \
+                --config "$output_dir/parachain-relay-bridge-hub-01.json" \
+                --ethereum.private-key $parachain_relay_primary_gov_eth_key \
+                >>"$output_dir"/parachain-relay-bridge-hub-01.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch parachain relay for bridgehub (secondary governance)
+    (
+        : >"$output_dir"/parachain-relay-bridge-hub-02.log
+        while :; do
+            echo "Starting parachain-relay (secondary governance) at $(date)"
+            "${relayer_v1}" run parachain \
+                --config "$output_dir/parachain-relay-bridge-hub-02.json" \
+                --ethereum.private-key $parachain_relay_secondary_gov_eth_key \
+                >>"$output_dir"/parachain-relay-bridge-hub-02.log 2>&1 || true
             sleep 20
         done
     ) &

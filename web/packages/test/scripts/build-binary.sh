@@ -113,10 +113,7 @@ install_binary() {
     build_contracts
     build_relayer
     build_web_packages
-    if [ "$snowbridge_v1" = "true" ]; then
-        echo "Building v1 contracts and relayers"
-        build_v1
-    fi
+    build_v1
 }
 
 if [ -z "${from_start_services:-}" ]; then
