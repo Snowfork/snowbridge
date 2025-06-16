@@ -86,7 +86,9 @@ export class MoonbeamParachain extends ParachainBase {
         if (!paraAssetId) {
             // evmForeignAssets uses xcm v4 so we use the original location.
             paraAssetId = (
-                (await this.provider.query.evmForeignAssets.assetsByLocation(location)).toPrimitive() as any
+                (
+                    await this.provider.query.evmForeignAssets.assetsByLocation(location)
+                ).toPrimitive() as any
             )[0]
         }
 

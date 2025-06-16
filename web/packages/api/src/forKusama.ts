@@ -23,7 +23,13 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import {Asset, AssetRegistry, Parachain, getAssetHubConversationPalletSwap, AssetMap} from "./assets_v2"
+import {
+    Asset,
+    AssetRegistry,
+    Parachain,
+    getAssetHubConversationPalletSwap,
+    AssetMap,
+} from "./assets_v2"
 import {
     CallDryRunEffects,
     EventRecord,
@@ -214,13 +220,19 @@ export async function getDeliveryFee(
     )
 
     let feeAssetOnDest
-    let minBalanceFeeDest: bigint;
+    let minBalanceFeeDest: bigint
     if (direction == Direction.ToPolkadot) {
         feeAssetOnDest = ksmLocationOnPolkadotAssetHub
-        minBalanceFeeDest = getDestFeeAssetMinimumBalance(registry.parachains[registry.assetHubParaId].assets, "kusama")
+        minBalanceFeeDest = getDestFeeAssetMinimumBalance(
+            registry.parachains[registry.assetHubParaId].assets,
+            "kusama"
+        )
     } else {
         feeAssetOnDest = dotLocationOnKusamaAssetHub
-        minBalanceFeeDest = getDestFeeAssetMinimumBalance(registry.kusama.parachains[registry.kusama.assetHubParaId].assets, "polkadot")
+        minBalanceFeeDest = getDestFeeAssetMinimumBalance(
+            registry.kusama.parachains[registry.kusama.assetHubParaId].assets,
+            "polkadot"
+        )
     }
     let destinationFee = await getAssetHubConversationPalletSwap(
         destAssetHub,
@@ -899,12 +911,12 @@ function getDestFeeAssetMinimumBalance(assetMap: AssetMap, network: string): big
     const assets = Object.values(assetMap)
     for (const asset of assets) {
         if (asset.location === undefined) {
-            continue;
+            continue
         }
         if (matchesConsensusSystem(asset.location, network)) {
-           return asset.minimumBalance;
+            return asset.minimumBalance
         }
     }
 
-    return 0n;
+    return 0n
 }
