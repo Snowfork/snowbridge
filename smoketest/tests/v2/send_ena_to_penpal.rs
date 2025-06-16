@@ -63,6 +63,7 @@ async fn send_ena_to_penpal() {
 	let mut receipt = weth
 		.deposit()
 		.value(value)
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
 		.unwrap()
@@ -74,6 +75,7 @@ async fn send_ena_to_penpal() {
 	// Approve token spend
 	receipt = weth
 		.approve(gateway_addr, value.into())
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
 		.unwrap()
@@ -122,6 +124,7 @@ async fn send_ena_to_penpal() {
 	let receipt = gateway
 		.v2_sendMessage(xcm, assets, claimer, execution_fee, relayer_fee)
 		.value(U256::from(fee))
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
 		.unwrap()

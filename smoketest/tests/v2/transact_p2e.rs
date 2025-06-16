@@ -58,6 +58,7 @@ async fn agent_transact() {
 	if !agent_address.is_ok() {
 		gateway
 			.v2_createAgent(FixedBytes::from(ASSET_HUB_BOB_AGENT_ID))
+			.gas_price(GAS_PRICE)
 			.send()
 			.await
 			.unwrap()

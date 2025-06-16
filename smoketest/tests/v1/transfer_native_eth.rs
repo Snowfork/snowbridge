@@ -5,7 +5,6 @@ use alloy::{
 use assethub::api::polkadot_xcm::calls::TransactionApi;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::i_gateway_v1::IGatewayV1::InboundMessageDispatched,
 	helper::{initial_clients, wait_for_ethereum_event, AssetHubConfig},
 	parachains::assethub::{
 		self,
@@ -23,6 +22,11 @@ use snowbridge_smoketest::{
 use std::str::FromStr;
 use subxt::OnlineClient;
 use subxt_signer::{sr25519, SecretUri};
+
+#[cfg(feature = "legacy-v1")]
+use snowbridge_smoketest::contracts::i_gateway::IGateway;
+#[cfg(not(feature = "legacy-v1"))]
+use snowbridge_smoketest::contracts::i_gateway_v1::IGatewayV1 as IGateway;
 
 #[tokio::test]
 async fn transfer_native_eth() {
@@ -79,8 +83,11 @@ async fn transfer_native_eth() {
 	let receiver: Address = (*ETHEREUM_RECEIVER).into();
 	let balance_before = ethereum_client.get_balance(receiver).await.expect("fetch balance");
 
-	wait_for_ethereum_event::<InboundMessageDispatched>(ethereum_client.clone(), gateway_addr)
-		.await;
+	wait_for_ethereum_event::<IGateway::InboundMessageDispatched>(
+		ethereum_client.clone(),
+		gateway_addr,
+	)
+	.await;
 
 	let balance_after = ethereum_client.get_balance(receiver).await.expect("fetch balance");
 	assert_eq!(balance_before + U256::from(amount), balance_after)

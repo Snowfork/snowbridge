@@ -43,19 +43,19 @@ use subxt::{
 use pair_signer::PairSigner;
 use sp_core::{sr25519::Pair, Pair as PairT};
 
+#[cfg(feature = "legacy-v1")]
+use crate::contracts::i_gateway::IGateway;
+#[cfg(not(feature = "legacy-v1"))]
+use crate::contracts::i_gateway_v1::IGatewayV1 as IGateway;
 use alloy::{
 	eips::BlockNumberOrTag,
+	network::TransactionBuilder,
 	primitives::{Address, FixedBytes, Log, B256, U256},
 	providers::{DynProvider, Provider, ProviderBuilder, WsConnect},
 	rpc::types::{Filter, TransactionRequest},
 	signers::local::PrivateKeySigner,
 	sol_types::SolEvent,
 };
-
-#[cfg(feature = "legacy-v1")]
-use crate::contracts::i_gateway::IGateway;
-#[cfg(not(feature = "legacy-v1"))]
-use crate::contracts::i_gateway_v1::IGatewayV1 as IGateway;
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
@@ -273,7 +273,10 @@ pub async fn fund_account(
 	address_to: Address,
 	amount: u128,
 ) -> Result<(), Box<dyn std::error::Error>> {
-	let tx = TransactionRequest::default().to(address_to).value(U256::from(amount));
+	let tx = TransactionRequest::default()
+		.to(address_to)
+		.with_gas_price(GAS_PRICE)
+		.value(U256::from(amount));
 	let pending_tx = client.send_transaction(tx).await?;
 	println!("Pending transaction... {}", pending_tx.tx_hash());
 

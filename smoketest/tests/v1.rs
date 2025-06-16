@@ -10,6 +10,10 @@ mod send_polkadot_token;
 mod send_token_to_ah;
 #[path = "v1/send_token_to_penpal.rs"]
 mod send_token_to_penpal;
+#[path = "v1/set_pricing_params.rs"]
+mod set_pricing_params;
+#[path = "v1/set_token_transfer_fees.rs"]
+mod set_token_transfer_fees;
 #[path = "v1/transfer_native_eth.rs"]
 mod transfer_native_eth;
 #[path = "v1/transfer_polkadot_token.rs"]

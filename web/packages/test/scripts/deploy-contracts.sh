@@ -27,6 +27,7 @@ deploy_command() {
         RUST_LOG=forge forge script \
             --rpc-url $eth_endpoint_http \
             --broadcast \
+            --legacy \
             -vvvv \
             $deploy_script
     fi

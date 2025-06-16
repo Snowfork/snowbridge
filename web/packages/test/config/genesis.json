@@ -17,7 +17,19 @@
     "ShanghaiTime": 0,
     "CancunTime": 0,
     "PragueTime": 0,
-    "terminalTotalDifficultyPassed": true
+    "terminalTotalDifficultyPassed": true,
+    "blobSchedule": {
+      "cancun": {
+        "max": 0,
+        "target": 0,
+        "baseFeeUpdateFraction": 1
+      },
+      "prague": {
+        "max": 0,
+        "target": 0,
+        "baseFeeUpdateFraction": 1
+      }
+    }
   },
   "difficulty": "0x9FFE0",
   "gasLimit": "80000000",

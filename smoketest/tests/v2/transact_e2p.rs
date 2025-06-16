@@ -60,6 +60,7 @@ async fn transact_e2p() {
 	let receipt = gateway
 		.v2_sendMessage(xcm, assets, claimer, execution_fee, relayer_fee)
 		.value(U256::from(fee))
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
 		.unwrap()

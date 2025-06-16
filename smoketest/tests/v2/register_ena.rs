@@ -27,6 +27,7 @@ async fn register_ena() {
 	let receipt = gateway
 		.v2_registerToken(*weth.address(), 0, 1_500_000_000_000u128, 1_500_000_000_000u128)
 		.value(U256::from(13_000_000_000_000u128))
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
 		.unwrap()

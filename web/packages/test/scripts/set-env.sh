@@ -18,6 +18,9 @@ v1_root_dir="$root_dir/../snowbridge-v1"
 export v1_contract_dir="$v1_root_dir/contracts"
 v1_relay_dir="$v1_root_dir/relayer"
 
+export GETH_VERSION=v1.15.11
+export LODESTAR_VERSION=v1.27.1
+
 eth_network="${ETH_NETWORK:-localhost}"
 eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
 eth_endpoint_ws="${ETH_WS_ENDPOINT:-ws://127.0.0.1:8546}/${INFURA_PROJECT_ID:-}"

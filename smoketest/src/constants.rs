@@ -56,6 +56,8 @@ pub const PENPAL_SOVEREIGN: [u8; 32] =
 
 pub const INBOUND_QUEUE_PALLET_INDEX_V2: u8 = 91;
 
+pub const GAS_PRICE: u128 = 20_000_000_000;
+
 lazy_static! {
 	// SS58: 5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL
 	pub static ref ALICE: Pair = Pair::from_string("//Alice", None)

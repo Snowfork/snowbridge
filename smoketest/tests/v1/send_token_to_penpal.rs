@@ -2,7 +2,7 @@ use alloy::primitives::{utils::parse_units, Address};
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{i_gateway_v1, weth9},
+	contracts::weth9,
 	helper::initial_clients,
 	parachains::{
 		assethub::api::{
@@ -25,6 +25,11 @@ use snowbridge_smoketest::{
 };
 use subxt::{ext::codec::Encode, utils::AccountId32, OnlineClient};
 
+#[cfg(feature = "legacy-v1")]
+use snowbridge_smoketest::contracts::i_gateway::IGateway;
+#[cfg(not(feature = "legacy-v1"))]
+use snowbridge_smoketest::contracts::i_gateway_v1::IGatewayV1 as IGateway;
+
 #[tokio::test]
 async fn send_token_to_penpal() {
 	let test_clients = initial_clients().await.expect("initialize clients");
@@ -35,7 +40,7 @@ async fn send_token_to_penpal() {
 		.expect("can not connect to penpal parachain");
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, ethereum_client.clone());
+	let gateway = IGateway::new(gateway_addr, ethereum_client.clone());
 
 	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
@@ -45,6 +50,7 @@ async fn send_token_to_penpal() {
 	let receipt = weth
 		.deposit()
 		.value(value)
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
 		.unwrap()
@@ -88,7 +94,7 @@ async fn send_token_to_penpal() {
 		.sendToken(
 			*weth.address(),
 			PENPAL_PARA_ID,
-			i_gateway_v1::IGatewayV1::MultiAddress { kind: 1, data: (*FERDIE_PUBLIC).into() },
+			IGateway::MultiAddress { kind: 1, data: (*FERDIE_PUBLIC).into() },
 			4_000_000_000,
 			amount,
 		)

@@ -2,11 +2,15 @@ use alloy::primitives::{utils::parse_units, Address, U256};
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::i_gateway_v1,
 	helper::{initial_clients, print_event_log_for_unit_tests},
 	parachains::assethub::api::balances::events::Minted,
 };
 use subxt::utils::AccountId32;
+
+#[cfg(feature = "legacy-v1")]
+use snowbridge_smoketest::contracts::i_gateway::IGateway;
+#[cfg(not(feature = "legacy-v1"))]
+use snowbridge_smoketest::contracts::i_gateway_v1::IGatewayV1 as IGateway;
 
 #[tokio::test]
 async fn send_polkadot_token() {
@@ -14,7 +18,7 @@ async fn send_polkadot_token() {
 	let assethub = *(test_clients.asset_hub_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, test_clients.ethereum_client);
+	let gateway = IGateway::new(gateway_addr, test_clients.ethereum_client);
 
 	let token: Address = (*ERC20_DOT_CONTRACT).into();
 
@@ -27,11 +31,12 @@ async fn send_polkadot_token() {
 		.sendToken(
 			token,
 			ASSET_HUB_PARA_ID,
-			i_gateway_v1::IGatewayV1::MultiAddress { kind: 1, data: (*BOB_PUBLIC).into() },
+			IGateway::MultiAddress { kind: 1, data: (*BOB_PUBLIC).into() },
 			destination_fee,
 			amount,
 		)
 		.value(fee)
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
 		.unwrap();
