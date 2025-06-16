@@ -60,7 +60,7 @@ async fn transfer_polkadot_token() {
 		.await
 		.expect("call success");
 
-	let erc20_dot_address: Address = ERC20_DOT_CONTRACT.into();
+	let erc20_dot_address: Address = (*ERC20_DOT_CONTRACT).into();
 
 	wait_for_ethereum_event::<Transfer>(ethereum_client, erc20_dot_address).await;
 }

@@ -16,7 +16,7 @@ async fn send_polkadot_token() {
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, test_clients.ethereum_client);
 
-	let token: Address = ERC20_DOT_CONTRACT.into();
+	let token: Address = (*ERC20_DOT_CONTRACT).into();
 
 	let destination_fee = 400_000_000;
 	let fee: U256 = parse_units("0.01", "ether").unwrap().get_absolute();
