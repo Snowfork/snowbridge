@@ -10,9 +10,13 @@ on:
     paths:
       - "control/**"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   control:
-    runs-on: snowbridge-runner
+    runs-on: ubuntu-latest
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1

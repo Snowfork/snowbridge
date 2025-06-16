@@ -1,0 +1,46 @@
+# Check if Go clients consistent with contracts
+name: Check Contracts Clients
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-contracts-clients:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check jq
+      run: jq --version
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@v1
+      with:
+        version: "v1.1.0"
+
+    - name: Show Forge version
+      run: forge --version
+
+    - name: Install abigen
+      run: go install github.com/ethereum/go-ethereum/cmd/abigen@v1.14.11
+
+    - name: Check abigen
+      run: abigen --version
+
+    - name: Generate clients
+      working-directory: relayer
+      run: |
+        go generate ./...
+
+    - name: Check if go contract bindings are up-to-date
+      run: git diff --exit-code ./relayer/contracts || (echo "The contract bindings are not up-to-date against contracts." && exit 1)

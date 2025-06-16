@@ -1252,6 +1252,7 @@ contract GatewayTest is Test {
         bytes memory encodedParams = abi.encode(params);
         MockGateway(address(gateway)).agentExecutePublic(encodedParams);
     }
+<<<<<<< HEAD
 
     function testRegisterForeignTokenAsNativeTokenWillFail() public {
         testRegisterForeignToken();
@@ -1292,3 +1293,6 @@ contract GatewayTest is Test {
         IGateway(address(gateway)).registerToken{value: fee}(address(0));
     }
 }
+=======
+}
+>>>>>>> 357cbcb5 (- Fixed gateway rpc + added cancel)

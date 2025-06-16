@@ -696,3 +696,4 @@ contract Gateway is IGateway, IInitializable, IUpgradable {
         operatorStorage.operator = config.rescueOperator;
     }
 }
+

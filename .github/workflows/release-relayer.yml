@@ -13,6 +13,7 @@ env:
   IMAGE_NAME: snowfork/snowbridge-relay
 
 jobs:
+  if: false
   release-relayer:
     runs-on: snowbridge-runner
     timeout-minutes: 15

@@ -12,9 +12,13 @@ on:
       - "contracts/**"
       - "!contracts/**/README.md"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    runs-on: snowbridge-runner
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v1
@@ -25,9 +29,13 @@ jobs:
       - name: Test
         working-directory: contracts
         run: forge test
+        env:
+          RPC_URL: ${{ secrets.RPC_URL }}
       - name: Coverage
         working-directory: contracts
         run: forge coverage --report=lcov --via-ir
+        env:
+          RPC_URL: ${{ secrets.RPC_URL }}
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v3
         with:

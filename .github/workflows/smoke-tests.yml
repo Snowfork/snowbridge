@@ -9,9 +9,13 @@ on:
     # Runs at 8:00 AM every day
     - cron: '0 8 * * *'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   smoketests:
-    runs-on: snowbridge-runner
+    runs-on: ubuntu-latest
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
