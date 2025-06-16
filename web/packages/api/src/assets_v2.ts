@@ -910,7 +910,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
     }
 }
 
-function defaultPathFilter(envName: string): (_: Path) => boolean {
+export function defaultPathFilter(envName: string): (_: Path) => boolean {
     switch (envName) {
         case "westend_sepolia": {
             return (path: Path) => {

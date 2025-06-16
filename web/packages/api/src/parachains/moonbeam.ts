@@ -2,7 +2,7 @@ import { ApiPromise } from "@polkadot/api"
 import { ethers } from "ethers"
 import { ParachainBase } from "./parachainBase"
 import { AssetMap, PNAMap } from "../assets_v2"
-import { convertToXcmV3X1, DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
+import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
 const MOONBEAM_ERC20_ABI = [
     "function name() view returns (string)",
