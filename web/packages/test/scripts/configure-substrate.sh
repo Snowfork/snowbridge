@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
 set -eu
 
-is_electra=false
-
 source scripts/set-env.sh
 source scripts/xcm-helper.sh
 
 config_beacon_checkpoint() {
     # Configure beacon relay
-    local electra_forked_epoch=2000000
-    if [ "$is_electra" == "true" ]; then
-        electra_forked_epoch=0
-    fi
+    local electra_forked_epoch=0
     jq \
         --argjson electra_forked_epoch $electra_forked_epoch \
         '

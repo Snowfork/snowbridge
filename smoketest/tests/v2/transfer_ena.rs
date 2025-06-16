@@ -1,14 +1,9 @@
 use assethub::api::polkadot_xcm::calls::TransactionApi;
-use ethers::{
-	providers::{Provider, Ws},
-	types::Address,
-};
 use snowbridge_smoketest::{
 	asset_hub_helper::{eth_location, mint_token_to},
 	constants::*,
-	contracts::i_gateway_v2::{IGatewayV2, InboundMessageDispatchedFilter},
-	helper::{initial_clients, AssetHubConfig},
-	helper_v2::wait_for_ethereum_event_v2,
+	contracts::i_gateway_v2::{IGatewayV2, IGatewayV2::InboundMessageDispatched},
+	helper::{initial_clients, wait_for_ethereum_event, AssetHubConfig},
 	parachains::assethub::{
 		self,
 		api::runtime_types::{
@@ -32,26 +27,26 @@ use snowbridge_smoketest::{
 		},
 	},
 };
-use std::{str::FromStr, sync::Arc, time::Duration};
+use std::str::FromStr;
 use subxt::OnlineClient;
 use subxt_signer::{sr25519, SecretUri};
+
+use alloy::primitives::{Address, FixedBytes};
 
 const INITIAL_FUND: u128 = 3_000_000_000_000;
 
 #[tokio::test]
 async fn transfer_ena() {
 	let test_clients = initial_clients().await.expect("initialize clients");
-	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
-		.await
-		.unwrap()
-		.interval(Duration::from_millis(10u64));
-	let ethereum_client = Arc::new(ethereum_provider);
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = IGatewayV2::new(gateway_addr, ethereum_client.clone());
+	let gateway = IGatewayV2::new(gateway_addr, test_clients.ethereum_client.clone());
 
-	let agent_src =
-		gateway.agent_of(ASSET_HUB_AGENT_ID).await.expect("could not get agent address");
+	let agent_src = gateway
+		.agentOf(FixedBytes::from(ASSET_HUB_AGENT_ID))
+		.call()
+		.await
+		.expect("could not get agent address");
 	println!("agent_src: {:?}", agent_src);
 
 	let assethub: OnlineClient<AssetHubConfig> =
@@ -130,5 +125,6 @@ async fn transfer_ena() {
 		.await
 		.expect("call success");
 
-	wait_for_ethereum_event_v2::<InboundMessageDispatchedFilter>(&Box::new(ethereum_client)).await;
+	wait_for_ethereum_event::<InboundMessageDispatched>(test_clients.ethereum_client, gateway_addr)
+		.await;
 }

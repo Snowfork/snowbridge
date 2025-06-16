@@ -1,19 +1,16 @@
+use alloy::primitives::{Address, FixedBytes};
 use assethub::api::polkadot_xcm::calls::TransactionApi;
 use codec::Encode;
-use ethers::{
-	abi::{Abi, Token},
-	addressbook::Address,
-};
 use hex_literal::hex;
 use snowbridge_smoketest::{
 	asset_hub_helper::{eth_location, mint_token_to},
 	constants::*,
 	contracts::{
-		hello_world::{HelloWorld, SaidHelloFilter},
+		hello_world::{HelloWorld, HelloWorld::SaidHello},
 		i_gateway_v2 as i_gateway,
 	},
-	helper::{initial_clients, AssetHubConfig},
-	helper_v2::{fund_agent_v2, get_agent_address, wait_for_ethereum_event_v2},
+	helper::{initial_clients, wait_for_ethereum_event, AssetHubConfig},
+	helper_v2::{fund_agent_v2, get_agent_address},
 	parachains::assethub::{
 		self,
 		api::runtime_types::{
@@ -54,20 +51,19 @@ async fn agent_transact() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let ethereum_client = test_clients.ethereum_client;
 
-	let ethereum_signed_client = *(test_clients.ethereum_signed_client.clone());
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway::IGatewayV2::new(gateway_addr, ethereum_signed_client.clone());
+	let gateway = i_gateway::IGatewayV2::new(gateway_addr, ethereum_client.clone());
 	// register agent if not exist
-	let agent_address = gateway.agent_of(ASSET_HUB_BOB_AGENT_ID).await;
+	let agent_address = gateway.agentOf(FixedBytes::from(ASSET_HUB_BOB_AGENT_ID)).call().await;
 	if !agent_address.is_ok() {
 		gateway
-			.v_2_create_agent(ASSET_HUB_BOB_AGENT_ID)
+			.v2_createAgent(FixedBytes::from(ASSET_HUB_BOB_AGENT_ID))
 			.send()
 			.await
 			.unwrap()
+			.get_receipt()
 			.await
-			.unwrap()
-			.unwrap();
+			.expect("get agent receipt");
 	}
 	// Initial fund for the AH agent
 	fund_agent_v2(ASSET_HUB_AGENT_ID, INITIAL_FUND_IN_ETHER)
@@ -75,7 +71,7 @@ async fn agent_transact() {
 		.expect("fund the agent");
 
 	// Initial fund for the user agent
-	let agent_address = get_agent_address(&ethereum_client, ASSET_HUB_BOB_AGENT_ID)
+	let agent_address = get_agent_address(ethereum_client.clone(), ASSET_HUB_BOB_AGENT_ID)
 		.await
 		.expect("find agent");
 	println!("agent address {}", hex::encode(agent_address));
@@ -95,10 +91,8 @@ async fn agent_transact() {
 	)
 	.await;
 
-	let hello_world = HelloWorld::new(HELLO_WORLD_CONTRACT, *ethereum_client.clone());
-	let contract_abi: Abi = hello_world.abi().clone();
-	let function = contract_abi.function("sayHello").unwrap();
-	let encoded_data = function.encode_input(&[Token::String("Hello!".to_string())]).unwrap();
+	let hello_world = HelloWorld::new(Address::from(HELLO_WORLD_CONTRACT), ethereum_client.clone());
+	let encoded_data = hello_world.sayHello("Hello!".to_string()).calldata().to_vec();
 
 	println!("data is {}", hex::encode(encoded_data.clone()));
 
@@ -179,5 +173,5 @@ async fn agent_transact() {
 		.await
 		.expect("call success");
 
-	wait_for_ethereum_event_v2::<SaidHelloFilter>(&ethereum_client).await;
+	wait_for_ethereum_event::<SaidHello>(ethereum_client, HELLO_WORLD_CONTRACT.into()).await;
 }
