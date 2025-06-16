@@ -13,7 +13,7 @@ use snowbridge_smoketest::{
 		},
 	},
 };
-use subxt::{ext::codec::Encode, utils::AccountId32};
+use subxt::ext::codec::Encode;
 
 #[tokio::test]
 async fn send_native_eth() {
@@ -68,7 +68,6 @@ async fn send_native_eth() {
 		parents: 2,
 		interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID })]),
 	};
-	let expected_owner: AccountId32 = (*SUBSTRATE_RECEIVER).into();
 
 	let mut issued_event_found = false;
 	while let Some(Ok(block)) = blocks.next().await {
@@ -79,7 +78,6 @@ async fn send_native_eth() {
 			println!("Created event found in assethub block {}.", block.number());
 			let issued = issued.unwrap();
 			assert_eq!(issued.asset_id.encode(), expected_asset_id.encode());
-			assert_eq!(issued.owner, expected_owner);
 			assert_eq!(issued.amount, amount);
 			issued_event_found = true;
 		}

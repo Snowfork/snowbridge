@@ -126,6 +126,6 @@ async fn transfer_pna() {
 		.await
 		.expect("call success");
 
-	wait_for_ethereum_event::<Transfer>(test_clients.ethereum_client, ERC20_DOT_CONTRACT.into())
+	wait_for_ethereum_event::<Transfer>(test_clients.ethereum_client, (*ERC20_DOT_CONTRACT).into())
 		.await;
 }
