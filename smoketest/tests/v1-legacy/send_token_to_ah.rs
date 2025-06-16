@@ -2,7 +2,7 @@ use alloy::primitives::{utils::parse_units, Address};
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{i_gateway_v1, weth9},
+	contracts::{i_gateway, weth9},
 	helper::{initial_clients, print_event_log_for_unit_tests},
 	parachains::assethub::api::{
 		foreign_assets::events::Issued,
@@ -19,13 +19,13 @@ use snowbridge_smoketest::{
 use subxt::{ext::codec::Encode, utils::AccountId32};
 
 #[tokio::test]
-async fn send_token() {
+async fn send_token_to_ah() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let ethereum_client = test_clients.ethereum_client;
 	let assethub = *(test_clients.asset_hub_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, ethereum_client.clone());
+	let gateway = i_gateway::IGateway::new(gateway_addr, ethereum_client.clone());
 
 	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
@@ -61,7 +61,7 @@ async fn send_token() {
 		.sendToken(
 			*weth.address(),
 			ASSET_HUB_PARA_ID,
-			i_gateway_v1::IGatewayV1::MultiAddress { kind: 1, data: (*SUBSTRATE_RECEIVER).into() },
+			i_gateway::IGateway::MultiAddress { kind: 1, data: (*SUBSTRATE_RECEIVER).into() },
 			destination_fee,
 			amount,
 		)

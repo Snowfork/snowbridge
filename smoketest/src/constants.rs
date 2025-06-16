@@ -30,7 +30,7 @@ pub const DEFAULT_GATEWAY_PROXY_CONTRACT: [u8; 20] =
 pub const DEFAULT_WETH_CONTRACT: [u8; 20] = hex!("b8ea8cb425d85536b158d661da1ef0895bb92f1d");
 pub const AGENT_EXECUTOR_CONTRACT: [u8; 20] = hex!("Fc97A6197dc90bef6bbEFD672742Ed75E9768553");
 
-pub const ERC20_DOT_CONTRACT: [u8; 20] = hex!("De45448Ca2d57797c0BEC0ee15A1E42334744219");
+pub const DEFAULT_ERC20_DOT_CONTRACT: [u8; 20] = hex!("De45448Ca2d57797c0BEC0ee15A1E42334744219");
 pub const ERC20_DOT_TOKEN_ID: [u8; 32] =
 	hex!("9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7");
 
@@ -158,6 +158,14 @@ lazy_static! {
 		}
 		else {
 			DEFAULT_WETH_CONTRACT
+		}
+	};
+	pub static ref ERC20_DOT_CONTRACT: [u8; 20] = {
+		if let Ok(val) = env::var("ERC20_DOT_CONTRACT") {
+				<[u8; 20]>::from_hex(val).unwrap()
+		}
+		else {
+			DEFAULT_ERC20_DOT_CONTRACT
 		}
 	};
 

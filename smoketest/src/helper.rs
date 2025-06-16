@@ -1,6 +1,5 @@
 use crate::{
 	constants::*,
-	contracts::i_gateway_v1 as i_gateway,
 	parachains::{
 		relaychain,
 		relaychain::api::runtime_types::{
@@ -52,6 +51,11 @@ use alloy::{
 	signers::local::PrivateKeySigner,
 	sol_types::SolEvent,
 };
+
+#[cfg(feature = "legacy-v1")]
+use crate::contracts::i_gateway::IGateway;
+#[cfg(not(feature = "legacy-v1"))]
+use crate::contracts::i_gateway_v1::IGatewayV1 as IGateway;
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
@@ -580,7 +584,7 @@ pub async fn fund_agent(
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway::IGatewayV1::new(gateway_addr, *(test_clients.ethereum_client.clone()));
+	let gateway = IGateway::new(gateway_addr, *(test_clients.ethereum_client.clone()));
 	let agent_address = gateway.agentOf(FixedBytes::from(agent_id)).call().await?;
 
 	println!("agent address {}", hex::encode(agent_address));

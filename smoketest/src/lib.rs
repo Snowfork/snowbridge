@@ -2,6 +2,7 @@ pub mod asset_hub_helper;
 pub mod constants;
 pub mod contracts;
 pub mod helper;
+#[cfg(not(feature = "legacy-v1"))]
 pub mod helper_v2;
 pub mod parachains;
 pub mod penpal_helper;

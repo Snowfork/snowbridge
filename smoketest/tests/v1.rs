@@ -4,8 +4,10 @@ mod register_polkadot_token;
 mod register_token;
 #[path = "v1/send_native_eth.rs"]
 mod send_native_eth;
-#[path = "v1/send_token.rs"]
-mod send_token;
+#[path = "v1/send_polkadot_token.rs"]
+mod send_polkadot_token;
+#[path = "v1/send_token_to_ah.rs"]
+mod send_token_to_ah;
 #[path = "v1/send_token_to_penpal.rs"]
 mod send_token_to_penpal;
 #[path = "v1/transfer_native_eth.rs"]

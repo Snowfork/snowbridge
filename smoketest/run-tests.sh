@@ -11,7 +11,7 @@ tests=(
 
   # ERC20 Tests
   register_token
-  send_token
+  send_token_to_ah
   send_token_to_penpal
   transfer_token
 
@@ -23,12 +23,9 @@ tests=(
   # System Pallet Tests
   set_pricing_params
   set_token_transfer_fees
-  create_agent
-  create_channel
-  transfer_native_from_agent
   upgrade_gateway
 )
 
 for test in ${tests[@]}; do 
-  cargo test --test $test -- --nocapture
+  cargo test --features legacy-v1 --test v1_legacy $test -- --nocapture
 done
