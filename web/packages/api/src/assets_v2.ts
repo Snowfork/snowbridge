@@ -218,7 +218,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         kusama,
         precompiles,
         assetOverrides,
-        metadataOverrides
+        metadataOverrides,
     } = options
 
     let relayInfo: ChainProperties
@@ -751,7 +751,7 @@ async function indexEthChain(
     assetHubParaId: number,
     parachains: ParachainMap,
     precompiles: PrecompileMap,
-    metadataOverrides: ERC20MetadataOverrideMap,
+    metadataOverrides: ERC20MetadataOverrideMap
 ): Promise<EthereumChain> {
     const id = networkName !== "unknown" ? networkName : undefined
     if (networkChainId == ethChainId) {
@@ -785,12 +785,18 @@ async function indexEthChain(
                             : undefined,
                 }
             }
-            if(token in metadataOverrides) {
+            if (token in metadataOverrides) {
                 const override = metadataOverrides[token]
                 const asset = assets[token]
-                if(override.name) { asset.name = override.name }
-                if(override.symbol) { asset.symbol = override.symbol }
-                if(override.decimals) { asset.decimals = override.decimals }
+                if (override.name) {
+                    asset.name = override.name
+                }
+                if (override.symbol) {
+                    asset.symbol = override.symbol
+                }
+                if (override.decimals) {
+                    asset.decimals = override.decimals
+                }
             }
         }
         if ((await provider.getCode(gatewayAddress)) === undefined) {
@@ -930,7 +936,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
             result.metadataOverrides = {}
             // Change the name of TRAC
             result.metadataOverrides["0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f".toLowerCase()] = {
-                name: "TRAC (OriginTrail)"
+                name: "OriginTrail TRAC",
             }
             break
         }
