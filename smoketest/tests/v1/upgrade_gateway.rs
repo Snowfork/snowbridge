@@ -21,7 +21,7 @@ use snowbridge_smoketest::{
 };
 use subxt::{tx::Payload, OnlineClient, PolkadotConfig};
 
-const GATEWAY_V2_ADDRESS: [u8; 20] = hex!("f8f7758fbcefd546eaeff7de24aff666b6228e73");
+const GATEWAY_V2_ADDRESS: [u8; 20] = hex!("440edffa1352b13227e8ee646f3ea37456dec701");
 
 #[tokio::test]
 async fn upgrade_gateway() {
