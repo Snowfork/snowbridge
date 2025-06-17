@@ -87,7 +87,7 @@
                     export RUSTUP_HOME=$PWD/.rustup
                     export RUST_NIGHTLY_VERSION=nightly-2025-02-19
                     export PATH=$CARGO_HOME/bin:$PATH
-                    export LODESTAR_VERSION=v1.31.0
+                    source $PWD/web/packages/test/scripts/set-env.sh
 
                     eval "$(direnv hook bash)"
 
