@@ -250,8 +250,8 @@ pub struct RegisterEtherArgs {
 
 #[derive(Debug, Args)]
 pub struct ReinitializeBridgeArgs {
-    //#[arg(long, value_name = "FILE")]
-   // pub checkpoint: PathBuf,
+    #[arg(long, value_name = "FILE")]
+    pub checkpoint: PathBuf,
     #[command(flatten)]
     register_ether: RegisterEtherArgs,
     #[command(flatten)]
@@ -488,9 +488,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             ])
         },
         Command::ReinitializeBridge(params) => {
-            //let force_checkpoint_call = commands::force_checkpoint(&ForceCheckpointArgs{
-            //    checkpoint: params.checkpoint.clone(),
-           // });
+            let force_checkpoint_call = commands::force_checkpoint(&ForceCheckpointArgs{
+                checkpoint: params.checkpoint.clone(),
+            });
             let gateway_address_call = commands::set_gateway_address(&params.gateway_address);
             let inbound_nonce_call = commands::set_inbound_nonce();
             let outbound_nonce_call = commands::set_outbound_nonce();
@@ -498,7 +498,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 commands::register_ether(&params.register_ether);
 
             let bridge_hub_call = send_xcm_bridge_hub(&context, vec![
-              //  force_checkpoint_call,
+                force_checkpoint_call,
                 gateway_address_call,
                 inbound_nonce_call,
                 outbound_nonce_call,

@@ -184,12 +184,12 @@ pub fn sudo(call: Box<RelayRuntimeCall>) -> RelayRuntimeCall {
 }
 
 pub fn force_xcm_version() -> AssetHubRuntimeCall {
-    #[cfg(any(feature = "paseo", feature = "polkadot"))]
+    #[cfg(feature = "polkadot")]
     use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
         junction::Junction::GlobalConsensus, junction::NetworkId, junctions::Junctions::X1,
         location::Location,
     };
-    #[cfg(feature = "westend")]
+    #[cfg(any(feature = "paseo", feature = "westend"))]
     use crate::asset_hub_runtime::runtime_types::staging_xcm::v5::{
         junction::Junction::GlobalConsensus, junction::NetworkId, junctions::Junctions::X1,
         location::Location,
