@@ -80,14 +80,14 @@ export interface IValidateOptions {
 }
 
 const ValidateOptionDefaults: IValidateOptions = {
-    defaultFee: 2_750_872_500_000n,
+    defaultFee: 3_833_568_200_000n,
     acceptableLatencyInSeconds: 28800 /* 8 Hours */,
 }
 
 export const getSendFee = async (
     context: Context,
     options = {
-        defaultFee: 2_750_872_500_000n,
+        defaultFee: 3_833_568_200_000n,
     }
 ) => {
     const assetHub = await context.assetHub()
@@ -100,22 +100,22 @@ export const getSendFee = async (
 
 export type SendTokenTx = {
     input: {
-        ethereumChainId: bigint;
-        sourceAddress: string;
-        beneficiaryAddress: any;
-        tokenAddress: string;
-        amount: bigint;
-    },
+        ethereumChainId: bigint
+        sourceAddress: string
+        beneficiaryAddress: any
+        tokenAddress: string
+        amount: bigint
+    }
     computed: {
-        assetLocation: any;
-        sourceAddressHex: `0x${string}`;
-        destination: any;
-        beneficiary: any;
-        assets: any;
-        fee_asset: number;
-        weight: string;
-        extrinsic: SubmittableExtrinsicFunction<"promise", AnyTuple>;
-    },
+        assetLocation: any
+        sourceAddressHex: `0x${string}`
+        destination: any
+        beneficiary: any
+        assets: any
+        fee_asset: number
+        weight: string
+        extrinsic: SubmittableExtrinsicFunction<"promise", AnyTuple>
+    }
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>
 }
 
@@ -125,7 +125,7 @@ export async function createTx(
     sourceAddress: string,
     beneficiaryAddress: string,
     tokenAddress: string,
-    amount: bigint,
+    amount: bigint
 ): Promise<SendTokenTx> {
     const assetLocation = {
         parents: 2,
@@ -177,9 +177,9 @@ export async function createTx(
             assets,
             fee_asset,
             weight,
-            extrinsic
+            extrinsic,
         },
-        tx
+        tx,
     }
 }
 
@@ -296,7 +296,7 @@ export const validateSend = async (
             message: "Asset balance insufficient for transfer.",
         })
 
-    const bridgeStatus = await bridgeStatusInfo(context);
+    const bridgeStatus = await bridgeStatusInfo(context)
 
     const bridgeOperational = bridgeStatus.toEthereum.operatingMode.outbound === "Normal"
     const lightClientLatencyIsAcceptable =
@@ -432,9 +432,9 @@ export type SendResult = {
 }
 
 export interface ISendOptions {
-    xcmVersion: number,
-    sourceParachainFee: bigint,
-    scanBlocks: number,
+    xcmVersion: number
+    sourceParachainFee: bigint
+    scanBlocks: number
 }
 
 const SendOptionDefaults: ISendOptions = {
@@ -453,7 +453,7 @@ export const send = async (
         context.assetHub(),
         context.bridgeHub(),
         context.ethereum(),
-        context.relaychain()
+        context.relaychain(),
     ])
 
     if (!plan.success) {
@@ -620,10 +620,12 @@ export const send = async (
         plan.success.beneficiary,
         plan.success.tokenAddress,
         plan.success.amount
-    );
+    )
 
-    const assetHubSignedTx = await assetHubUnsigned.tx
-        .signAsync(addressOrPair, { signer: walletSigner, withSignedTransaction: true })
+    const assetHubSignedTx = await assetHubUnsigned.tx.signAsync(addressOrPair, {
+        signer: walletSigner,
+        withSignedTransaction: true,
+    })
 
     let result = await new Promise<{
         blockNumber: number
@@ -758,9 +760,13 @@ export const trackSendProgressPolling = async (
                 let eventData = event.event.toPrimitive().data
                 if (
                     bridgeHub.events.ethereumOutboundQueue.MessageAccepted.is(event.event) &&
-                    eventData[0].toLowerCase() === success?.messageId?.toLowerCase()
+                    eventData[0].toLowerCase() ===
+                        paraIdToChannelId(
+                            success.plan.success?.assetHub.paraId ?? 1000
+                        ).toLowerCase() &&
+                    eventData[1].toLowerCase() === success?.messageId?.toLowerCase()
                 ) {
-                    success.bridgeHub.nonce = BigInt(eventData[1])
+                    success.bridgeHub.nonce = BigInt(eventData[2])
                     success.bridgeHub.extrinsicSuccess = true
                     success.bridgeHub.messageAcceptedAtHash = blockHash.toHex()
                     return true
@@ -857,8 +863,8 @@ export const trackSendProgressPolling = async (
             if (
                 messageID.toLowerCase() === success.messageId?.toLowerCase() &&
                 nonce === success.bridgeHub.nonce &&
-                channelID.toLowerCase() ==
-                paraIdToChannelId(success.plan.success?.assetHub.paraId ?? 1000).toLowerCase()
+                channelID.toLowerCase() ===
+                    paraIdToChannelId(success.plan.success?.assetHub.paraId ?? 1000).toLowerCase()
             ) {
                 success.ethereum.transferBlockNumber = blockNumber
                 success.ethereum.transferBlockHash = blockHash
@@ -967,9 +973,9 @@ export async function* trackSendProgress(
                     messageId.toLowerCase() === success.messageId?.toLowerCase() &&
                     nonce === success.bridgeHub.nonce &&
                     channelId.toLowerCase() ==
-                    paraIdToChannelId(
-                        success.plan.success?.assetHub.paraId ?? 1000
-                    ).toLowerCase()
+                        paraIdToChannelId(
+                            success.plan.success?.assetHub.paraId ?? 1000
+                        ).toLowerCase()
                 ) {
                     resolve(dispatchSuccess)
                     gateway.removeListener(InboundMessageDispatched, listener)

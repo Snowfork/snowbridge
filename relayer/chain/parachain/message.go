@@ -4,11 +4,12 @@
 package parachain
 
 import (
-	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
+	sc "github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
@@ -127,113 +128,38 @@ func removeLeadingZeroHash(s string) string {
 	return strings.Replace(s, "0x", "", 1)
 }
 
-type Destination struct {
-	Variant          types.U8
-	DestinationBytes types.Data
+// Storage ValidationData from ParachainSystem pallet
+type PersistedValidationData struct {
+	ParentHead             []byte
+	RelayParentNumber      uint32
+	RelayParentStorageRoot types.Hash
+	MaxPOVSize             uint32
 }
 
-type ForeignAccountId32 struct {
-	ParaID uint32
-	ID     types.H256
-	Fee    types.U128
+// Storage PendingOrder from EthereumOutboundQueueV2 pallet
+type PendingOrder struct {
+	Nonce       uint64
+	BlockNumber uint32
+	Fee         big.Int
 }
 
-type ForeignAccountId20 struct {
-	ParaID uint32
-	ID     types.H160
-	Fee    types.U128
-}
-
-type RegisterToken struct {
-	Token types.H160
-	Fee   types.U128
-}
-
-type SendToken struct {
-	Token       types.H160
-	Destination Destination
-}
-
-type SendNativeToken struct {
-	TokenID     types.H256
-	Destination Destination
-}
-
-type InboundMessage struct {
-	Version      types.U8
-	ChainID      types.U64
-	Command      types.U8
-	CommandBytes types.Data
-}
-
-func GetDestination(input []byte) (string, error) {
-	var inboundMessage = &InboundMessage{}
-	err := types.DecodeFromBytes(input, inboundMessage)
+func (p *PendingOrder) Decode(decoder sc.Decoder) error {
+	var nonce types.U64
+	err := decoder.Decode(&nonce)
 	if err != nil {
-		return "", fmt.Errorf("failed to decode message: %v", err)
+		return err
 	}
-
-	address := ""
-	switch inboundMessage.Command {
-	case 0:
-		// Register token does not have a destination
-		break
-	case 1:
-		// Send token has a destination
-		var command = &SendToken{}
-		err = types.DecodeFromBytes(inboundMessage.CommandBytes, command)
-		if err != nil {
-			return "", fmt.Errorf("failed to decode send token command: %v", err)
-		}
-
-		address, err = decodeDestination(command.Destination.Variant, command.Destination.DestinationBytes)
-		if err != nil {
-			return "", fmt.Errorf("decode destination: %v", err)
-		}
-	case 2:
-		// Send native token has a destination
-		var command = &SendNativeToken{}
-		err = types.DecodeFromBytes(inboundMessage.CommandBytes, command)
-		if err != nil {
-			return "", fmt.Errorf("failed to decode send native token command: %v", err)
-		}
-
-		address, err = decodeDestination(command.Destination.Variant, command.Destination.DestinationBytes)
-		if err != nil {
-			return "", fmt.Errorf("decode destination: %v", err)
-		}
+	p.Nonce = uint64(nonce)
+	var blockNumber types.U32
+	err = decoder.Decode(&blockNumber)
+	if err != nil {
+		return err
 	}
-
-	return address, nil
-}
-
-func decodeDestination(variant types.U8, destinationBytes []byte) (string, error) {
-	switch variant {
-	case 0:
-		// Account32
-		account32 := &types.H256{}
-		err := types.DecodeFromBytes(destinationBytes, account32)
-		if err != nil {
-			return "", fmt.Errorf("failed to decode destination: %v", err)
-		}
-		return account32.Hex(), nil
-	case 1:
-		// Account32 on destination parachain
-		var account = &ForeignAccountId32{}
-		err := types.DecodeFromBytes(destinationBytes, account)
-		if err != nil {
-			return "", fmt.Errorf("failed to decode foreign account: %v", err)
-		}
-		return account.ID.Hex(), nil
-	case 2:
-		// Account20
-		var account = &ForeignAccountId20{}
-		err := types.DecodeFromBytes(destinationBytes, account)
-		if err != nil {
-			return "", fmt.Errorf("failed to decode foreign account: %v", err)
-		}
-		return account.ID.Hex(), nil
+	p.BlockNumber = uint32(blockNumber)
+	decoded, err := decoder.DecodeUintCompact()
+	if err != nil {
+		return err
 	}
-
-	return "", errors.New("destination variant could not be matched")
+	p.Fee = *types.U128{Int: decoded}.Int
+	return nil
 }

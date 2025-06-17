@@ -1,6 +1,7 @@
 const graphqlApiUrl =
     process.env["GRAPHQL_API_URL"] ||
-    "https://snowbridge.squids.live/snowbridge-subsquid@v2/api/graphql"
+    process.env["NEXT_PUBLIC_GRAPHQL_API_URL"] ||
+    "https://snowbridge.squids.live/snowbridge-subsquid-polkadot@v1/api/graphql"
 const graphqlQuerySize = process.env["GRAPHQL_QUERY_SIZE"] || "100"
 
 /**
@@ -19,12 +20,12 @@ $graphqlApiUrl --no-progress-meter | jq "."
 * @param toBridgeHubInboundQueue - transfer received in inbound queue on bridge hub
 * @param toAssetHubMessageQueue - transfer received in message queue on asset hub
 * @param toDestination - transfer received in message queue on the destination chain, if destination is asset hub then same as toAssetHubMessageQueue
-* 
+*
 "transferStatusToPolkadots": [
       {
-        
+
         "txHash": "0x53597b6f98334a160f26182398ec3e7368be8ca7aea3eea41d288046f3a1999d",
-        "status": 1, 
+        "status": 1,
         "channelId": "0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539",
         "destinationAddress": "0x628119c736c0e8ff28bd2f42920a4682bd6feb7b000000000000000000000000",
         "messageId": "0x00d720d39256bab74c0be362005b9a50951a0909e6dabda588a5d319bfbedb65",
@@ -55,6 +56,9 @@ export const fetchToPolkadotTransfers = async () => {
             tokenAddress
             txHash
             amount
+            sourceNetwork
+            destinationNetwork
+            sourceParaId
             toBridgeHubInboundQueue {
                 id
                 timestamp
@@ -100,12 +104,12 @@ $graphqlApiUrl --no-progress-meter | jq "."
 * @param toBridgeHubMessageQueue - transfer received in message queue on bridge hub
 * @param toBridgeHubOutboundQueue - transfer received in outbound queue on bridge hub
 * @param toDestination - transfer received on the destination chain(Ethereum)
-* 
+*
 "transferStatusToEthereums": [
       {
-        
+
         "txHash": "0x53597b6f98334a160f26182398ec3e7368be8ca7aea3eea41d288046f3a1999d",
-        "status": 1, 
+        "status": 1,
         "channelId": "0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539",
         "destinationAddress": "0x628119c736c0e8ff28bd2f42920a4682bd6feb7b000000000000000000000000",
         "messageId": "0x00d720d39256bab74c0be362005b9a50951a0909e6dabda588a5d319bfbedb65",
@@ -160,7 +164,7 @@ export const fetchToEthereumTransfers = async () => {
                 nonce
                 channelId
             }
-        } 
+        }
     }`
     let result = await queryByGraphQL(query)
     return result?.transferStatusToEthereums
@@ -172,7 +176,7 @@ const fetchBridgeHubOutboundMessageAccepted = async (messageID: string) => {
             nonce
             blockNumber
             timestamp
-        }   
+        }
     }`
     let result = await queryByGraphQL(query)
     return result?.outboundMessageAcceptedOnBridgeHubs[0]
@@ -202,7 +206,7 @@ const fetchBridgeHubInboundMessageReceived = async (messageID: string) => {
             messageId
             nonce
             timestamp
-        }   
+        }
     }`
     let result = await queryByGraphQL(query)
     return result?.inboundMessageReceivedOnBridgeHubs[0]
@@ -216,7 +220,7 @@ const fetchMessageProcessedOnPolkadot = async (messageID: string) => {
             paraId
             timestamp
             success
-        }   
+        }
     }`
     let result = await queryByGraphQL(query)
     return result?.messageProcessedOnPolkadots[0]
@@ -230,7 +234,7 @@ curl -H 'Content-Type: application/json' \
 '{ "query": "query { toEthereumElapse { elapse } toPolkadotElapse { elapse } }" }' \
 $graphqlApiUrl --no-progress-meter | jq "."
 
-* @param elapse - the estimated delivery time of the transfer so far in average (in seconds) 
+* @param elapse - the estimated delivery time of the transfer so far in average (in seconds)
 
 {
   "data": {
@@ -282,12 +286,12 @@ $graphqlApiUrl --no-progress-meter | jq "."
 * @param toBridgeHubInboundQueue - transfer received in inbound queue on bridge hub
 * @param toAssetHubMessageQueue - transfer received in message queue on asset hub
 * @param toDestination - transfer received in message queue on the destination chain, if destination is asset hub then same as toAssetHubMessageQueue
-* 
+*
 "transferStatusToPolkadots": [
       {
-        
+
         "txHash": "0x53597b6f98334a160f26182398ec3e7368be8ca7aea3eea41d288046f3a1999d",
-        "status": 1, 
+        "status": 1,
         "channelId": "0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539",
         "destinationAddress": "0x628119c736c0e8ff28bd2f42920a4682bd6feb7b000000000000000000000000",
         "messageId": "0x00d720d39256bab74c0be362005b9a50951a0909e6dabda588a5d319bfbedb65",
@@ -362,12 +366,12 @@ $graphqlApiUrl --no-progress-meter | jq "."
 * @param toBridgeHubMessageQueue - transfer received in message queue on bridge hub
 * @param toBridgeHubOutboundQueue - transfer received in outbound queue on bridge hub
 * @param toDestination - transfer received on the destination chain(Ethereum)
-* 
+*
 "transferStatusToEthereums": [
       {
-        
+
         "txHash": "0x53597b6f98334a160f26182398ec3e7368be8ca7aea3eea41d288046f3a1999d",
-        "status": 1, 
+        "status": 1,
         "channelId": "0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539",
         "destinationAddress": "0x628119c736c0e8ff28bd2f42920a4682bd6feb7b000000000000000000000000",
         "messageId": "0x00d720d39256bab74c0be362005b9a50951a0909e6dabda588a5d319bfbedb65",
@@ -421,7 +425,7 @@ export const fetchToEthereumTransferById = async (id: string) => {
                 nonce
                 channelId
             }
-        } 
+        }
     }`
     let result = await queryByGraphQL(query)
     return result?.transferStatusToEthereums

@@ -19,10 +19,13 @@ export type TransferInfo = {
     tokenAddress: string
     destinationParachain?: number
     amount: string
+    sourceNetwork?: string
+    destinationNetwork?: string
+    sourceParachain?: number
 }
 
 export type ToPolkadotTransferResult = {
-    sourceType: "ethereum"
+    sourceType: string
     id: string
     status: TransferStatus
     info: TransferInfo
@@ -121,7 +124,7 @@ export type ToEthereumTransferResult = {
 }
 
 const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult => {
-    const result: ToPolkadotTransferResult = {
+    let result: ToPolkadotTransferResult = {
         sourceType: "ethereum",
         id: transfer.id,
         status: TransferStatus.Pending,
@@ -132,6 +135,9 @@ const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult 
             tokenAddress: transfer.tokenAddress,
             destinationParachain: transfer.destinationParaId,
             amount: transfer.amount,
+            sourceNetwork: transfer.sourceNetwork,
+            destinationNetwork: transfer.destinationNetwork,
+            sourceParachain: transfer.sourceParaId,
         },
         submitted: {
             blockNumber: transfer.blockNumber,
@@ -140,6 +146,9 @@ const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult 
             messageId: transfer.messageId,
             nonce: transfer.nonce,
         },
+    }
+    if (transfer.sourceNetwork == "kusama" || transfer.destinationNetwork == "kusama") {
+        result.sourceType = "kusama"
     }
     let inboundMessageReceived = transfer.toBridgeHubInboundQueue
     if (inboundMessageReceived) {
@@ -163,7 +172,7 @@ const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult 
             result.status = TransferStatus.Failed
         }
     }
-    
+
     if (transfer.toDestination) {
         result.destinationReceived = {
             event_index: getEventIndex(transfer.toDestination.id),

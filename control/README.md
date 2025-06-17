@@ -43,6 +43,14 @@ subxt metadata --url wss://bridge-hub-polkadot-rpc.dwellir.com -f bytes -o runti
 subxt metadata --url wss://asset-hub-polkadot-rpc.dwellir.com -f bytes -o runtimes/asset-hub-polkadot/asset-hub-metadata.bin
 ```
 
+Kusama:
+
+```shell
+subxt metadata --url wss://kusama-rpc.dwellir.com -f bytes -o runtimes/kusama/polkadot-metadata.bin
+subxt metadata --url wss://bridge-hub-kusama-rpc.dwellir.com -f bytes -o runtimes/bridge-hub-kusama/bridge-hub-metadata.bin
+subxt metadata --url wss://asset-hub-kusama-rpc.dwellir.com -f bytes -o runtimes/asset-hub-kusama/asset-hub-metadata.bin
+```
+
 Paseo:
 
 ```

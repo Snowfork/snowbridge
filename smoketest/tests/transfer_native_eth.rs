@@ -7,7 +7,7 @@ use ethers::{
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::i_gateway::{IGateway, InboundMessageDispatchedFilter},
+	contracts::i_gateway_v1::{IGatewayV1 as IGateway, InboundMessageDispatchedFilter},
 	helper::AssetHubConfig,
 	parachains::assethub::{
 		self,
@@ -86,7 +86,7 @@ async fn transfer_native_eth() {
 		.expect("call success")
 		.wait_for_finalized_success()
 		.await
-		.expect("sucessful call");
+		.expect("successful call");
 
 	let message_id = events
 		.find_first::<Sent>()

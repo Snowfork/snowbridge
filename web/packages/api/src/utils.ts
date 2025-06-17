@@ -1,7 +1,7 @@
 import { Registry } from "@polkadot/types/types"
 import { bnToU8a, hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
 import { blake2AsU8a, decodeAddress, keccak256AsU8a } from "@polkadot/util-crypto"
-import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway"
+import { MultiAddressStruct } from "@snowbridge/contract-types/src/IGateway.sol/IGatewayV1"
 import { ethers } from "ethers"
 
 export const paraIdToSovereignAccount = (type: "para" | "sibl", paraId: number): string => {
@@ -121,6 +121,19 @@ export const fetchFinalityUpdate = async (
 export const getEventIndex = (id: string) => {
     let parts = id.split("-")
     let blockNumber = parseInt(parts[0])
-    let eventIndex = parseInt(parts[2])
+    // Extract eventIndex for compatibility
+    let eventIndex
+    if (parts.length == 2) {
+        eventIndex = parseInt(parts[1])
+    } else {
+        eventIndex = parseInt(parts[2])
+    }
     return `${blockNumber}-${eventIndex}`
+}
+
+export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
+    if (padPercent < 0 || padPercent > 100) {
+        throw Error(`padPercent ${padPercent} not in range of 0 to 100.`)
+    }
+    return fee * ((100n + padPercent) / 100n)
 }

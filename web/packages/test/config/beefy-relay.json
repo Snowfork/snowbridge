@@ -2,6 +2,9 @@
   "source": {
     "polkadot": {
       "endpoint": "ws://127.0.0.1:9944"
+    },
+    "bridge-hub": {
+      "endpoint": "ws://127.0.0.1:11144"
     }
   },
   "sink": {

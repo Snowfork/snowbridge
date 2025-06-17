@@ -28,23 +28,32 @@ polkadot-runtime = { path = "../runtimes/polkadot", optional = true }
 bridge-hub-polkadot-runtime = { path = "../runtimes/bridge-hub-polkadot", optional = true }
 asset-hub-polkadot-runtime = { path = "../runtimes/asset-hub-polkadot", optional = true }
 
+kusama-runtime = { path = "../runtimes/kusama", optional = true }
+bridge-hub-kusama-runtime = { path = "../runtimes/bridge-hub-kusama", optional = true }
+asset-hub-kusama-runtime = { path = "../runtimes/asset-hub-kusama", optional = true }
+
 paseo-runtime = { path = "../runtimes/paseo", optional = true }
 bridge-hub-paseo-runtime = { path = "../runtimes/bridge-hub-paseo", optional = true }
 asset-hub-paseo-runtime = { path = "../runtimes/asset-hub-paseo", optional = true }
 
 polkadot-runtime-constants = "3.0.0"
 
-serde_json = "1.0.114"
 sp-crypto-hashing = "0.1.0"
-handlebars = "5.1.2"
 
 westend-runtime = { path = "../runtimes/westend", optional = true }
 bridge-hub-westend-runtime = { path = "../runtimes/bridge-hub-westend", optional = true }
 asset-hub-westend-runtime = { path = "../runtimes/asset-hub-westend", optional = true }
+snowbridge-preimage-chopsticks = { path = "../chopsticks" }
+
+serde_json = "1.0.114"
 
 [features]
 default = []
-kusama = []
+kusama = [
+    "kusama-runtime",
+    "asset-hub-kusama-runtime",
+    "bridge-hub-kusama-runtime",
+]
 polkadot = [
     "polkadot-runtime",
     "asset-hub-polkadot-runtime",
@@ -55,8 +64,4 @@ westend = [
     "asset-hub-westend-runtime",
     "bridge-hub-westend-runtime",
 ]
-paseo = [
-    "paseo-runtime",
-    "asset-hub-paseo-runtime",
-    "bridge-hub-paseo-runtime",
-]
+paseo = ["paseo-runtime", "asset-hub-paseo-runtime", "bridge-hub-paseo-runtime"]

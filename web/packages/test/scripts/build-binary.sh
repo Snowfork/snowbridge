@@ -18,7 +18,7 @@ build_binaries() {
     # Check that all 3 binaries are available and no changes made in the polkadot and substrate dirs
     if [[ ! -e "target/release/polkadot" || ! -e "target/release/polkadot-execute-worker" || ! -e "target/release/polkadot-prepare-worker" || "$changes_detected" -eq 1 ]]; then
         echo "Building polkadot binary, due to changes detected in polkadot or substrate, or binaries not found"
-        EPOCH_DURATION=10 cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker $features
+        cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker $features
     else
         echo "No changes detected in polkadot or substrate and binaries are available, not rebuilding relaychain binaries."
     fi
@@ -55,16 +55,69 @@ build_contracts() {
     popd
 }
 
-build_relayer() {
-    echo "Building relayer"
+build_latest_relayer() {
+    echo "Building latest relayer"
     mage -d "$relay_dir" build
-    cp $relay_bin "$output_bin_dir"
+    cp $relay_bin "$output_bin_dir/snowbridge-relay-v2"
+}
+
+build_relayers_v1_v2() {
+    pushd "$root_dir"
+
+    # Backup relayer directory
+    BACKUP_DIR=$(mktemp -d -t relayer-backup-XXXXXX)
+    echo "Backing up relayer directory to $BACKUP_DIR"
+    cp -r "$relay_dir" "$BACKUP_DIR/"
+
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+    # Build current version
+    echo "Building relayer v2"
+    mage -d "$relay_dir" build
+    echo "Copying binary to output directory"
+    cp $relay_bin "$output_bin_dir/snowbridge-relay-v2"
+
+    # Build snowbridge-v1 branch version
+    echo "Building relayer v1"
+    checkout_build_and_copy "snowbridge-v1" "snowbridge-relay-v1"
+
+    # Restore original relayer directory
+    echo "Restoring original relayer directory from backup"
+    rm -rf "$relay_dir"
+    mv "$BACKUP_DIR/$(basename "$relay_dir")" "$relay_dir"
+    rm -rf "$BACKUP_DIR"
+
+    popd
+}
+
+# Function to checkout, build relayer, and copy binary
+checkout_build_and_copy() {
+    BRANCH=$1
+    BINARY_NAME=$2
+
+    pushd $root_dir
+
+    rm -rf "$relay_dir"
+
+    echo "Checking out relayer directory from branch: $BRANCH"
+    git fetch origin $BRANCH
+    git checkout FETCH_HEAD -- relayer
+
+    echo "Fixing contract bindings."
+    cp generate.go_v1 relayer/generate.go
+
+    echo "Building relayer from branch: $BRANCH"
+    mage -d "$relay_dir" build
+
+    echo "Copying binary to output directory"
+    cp $relay_bin "$output_bin_dir/$BINARY_NAME"
+    popd
 }
 
 set_slot_time() {
     local new_value=$1
     echo "Hack lodestar for faster slot time"
-    local preset_mainnet_config_file="$root_dir/lodestar/packages/config/src/chainConfig/configs/mainnet.ts"
+    local preset_mainnet_config_file="$root_dir/../lodestar/packages/config/src/chainConfig/configs/mainnet.ts"
     if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
         gsed -i "s/SECONDS_PER_SLOT: .*/SECONDS_PER_SLOT: $new_value,/g" $preset_mainnet_config_file
     else
@@ -74,7 +127,7 @@ set_slot_time() {
 
 build_lodestar() {
     if [ "$rebuild_lodestar" == "true" ]; then
-        pushd $root_dir/lodestar
+        pushd $root_dir/../lodestar
         if [ "$eth_fast_mode" == "true" ]; then
             set_slot_time 1
         else
@@ -85,13 +138,27 @@ build_lodestar() {
     fi
 }
 
+build_web_packages() {
+    pushd $root_dir/web
+    pnpm install
+    pnpm build
+    popd
+}
+
 install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
     build_lodestar
     build_binaries
     build_contracts
-    build_relayer
+    if [ "$snowbridge_v1_v2" = true ]; then
+        echo "Building relayers v1 and v2"
+        build_relayers_v1_v2
+    else
+        echo "Building relayers v2"
+        build_latest_relayer
+    fi
+    build_web_packages
 }
 
 if [ -z "${from_start_services:-}" ]; then
