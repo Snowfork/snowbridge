@@ -1,4 +1,7 @@
-use alloy::primitives::{utils::parse_units, Address, U256};
+use alloy::{
+	primitives::{utils::parse_units, Address, U256},
+	sol_types::SolEvent,
+};
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
@@ -6,6 +9,7 @@ use snowbridge_smoketest::{
 	parachains::assethub::api::balances::events::Minted,
 };
 use subxt::utils::AccountId32;
+use IGateway::OutboundMessageAccepted;
 
 #[cfg(feature = "legacy-v1")]
 use snowbridge_smoketest::contracts::i_gateway::IGateway;
@@ -49,7 +53,9 @@ async fn send_polkadot_token() {
 	);
 
 	// print log for unit tests
-	print_event_log_for_unit_tests(receipt.logs().first().unwrap().as_ref());
+	let log = receipt.logs().last().unwrap();
+	assert_eq!(log.topic0().unwrap().0, OutboundMessageAccepted::SIGNATURE_HASH);
+	print_event_log_for_unit_tests(log.as_ref());
 
 	assert_eq!(receipt.status(), true);
 
