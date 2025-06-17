@@ -1309,28 +1309,24 @@ contract GatewayTest is Test {
     function testSubmitV1GasCheckFails() public {
         HighGasToken highGasToken = new HighGasToken();
 
-        address agentContract = IGatewayV1(address(gateway)).agentOf(assetHubAgentID);
+        address agentContract = IGateway(address(gateway)).agentOf(assetHubAgentID);
         highGasToken.mint(agentContract, 1000);
 
         uint128 amount = 100;
-        UnlockNativeTokenParams memory params = UnlockNativeTokenParams({
-            agentID: assetHubAgentID,
-            token: address(highGasToken),
-            recipient: account1,
-            amount: amount
-        });
+        TransferNativeTokenParams memory params =
+                        TransferNativeTokenParams({agentID: assetHubAgentID, token: address(highGasToken), recipient: account1, amount: amount});
 
         maxDispatchGas = 1_100_000;
         uint256 relayerGas = 1_170_000; // Just enough to pass check, but vulnerable to 63/64
 
-        vm.expectRevert(IGatewayBase.NotEnoughGas.selector);
+        vm.expectRevert(Gateway.NotEnoughGas.selector);
 
         hoax(relayer, 1 ether);
-        IGatewayV1(address(gateway)).submitV1{gas: relayerGas}(
+        IGateway(address(gateway)).submitV1{gas: relayerGas}(
             InboundMessage(
                 assetHubParaID.into(),
                 1,
-                CommandV1.UnlockNativeToken,
+                Command.TransferNativeToken,
                 abi.encode(params),
                 maxDispatchGas,
                 maxRefund,
