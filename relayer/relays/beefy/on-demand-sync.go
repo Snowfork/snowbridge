@@ -116,6 +116,8 @@ func (relay *OnDemandRelay) Start(ctx context.Context) error {
 			}
 
 			log.Info("Performing sync")
+			// sleep to ensure that beefy head newer than relay chain block in which the parachain block was accepted.
+			sleep(ctx, time.Minute*1)
 
 			beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
 			if err != nil {
