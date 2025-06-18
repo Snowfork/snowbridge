@@ -23,7 +23,7 @@ use pair_signer::PairSigner;
 
 /// A concrete PairSigner implementation which relies on `sr25519::Pair` for signing
 /// and that PolkadotConfig is the runtime configuration.
-mod pair_signer {
+pub mod pair_signer {
 	use super::*;
 	use sp_core::{sr25519, Pair};
 	use sp_runtime::{

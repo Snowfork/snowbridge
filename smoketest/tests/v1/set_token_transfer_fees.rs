@@ -1,7 +1,6 @@
-use ethers::prelude::Address;
+use alloy::primitives::Address;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{i_gateway_v1, i_gateway_v1::TokenTransferFeesChangedFilter},
 	helper::*,
 	parachains::{
 		bridgehub,
@@ -12,14 +11,19 @@ use snowbridge_smoketest::{
 };
 use subxt::tx::Payload;
 
+#[cfg(feature = "legacy-v1")]
+use snowbridge_smoketest::contracts::i_gateway::IGateway;
+#[cfg(not(feature = "legacy-v1"))]
+use snowbridge_smoketest::contracts::i_gateway_v1::IGatewayV1 as IGateway;
+
 #[tokio::test]
 async fn set_token_transfer_fees() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let ethereum_client = *(test_clients.ethereum_client.clone());
-	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, ethereum_client.clone());
-	let fees = gateway.quote_register_token_fee().await.expect("get fees");
+	let ethereum_client = test_clients.ethereum_client;
+	let gateway = IGateway::new(gateway_addr, ethereum_client.clone());
+	let fees = gateway.quoteRegisterTokenFee().call().await.expect("get fees");
 	println!("register fees {:?}", fees);
 
 	let ethereum_system_api = bridgehub::api::ethereum_system::calls::TransactionApi;
@@ -40,8 +44,9 @@ async fn set_token_transfer_fees() {
 
 	wait_for_bridgehub_event::<SetTokenTransferFees>(&test_clients.bridge_hub_client).await;
 
-	wait_for_ethereum_event::<TokenTransferFeesChangedFilter>(&test_clients.ethereum_client).await;
+	wait_for_ethereum_event::<IGateway::TokenTransferFeesChanged>(ethereum_client, gateway_addr)
+		.await;
 
-	let fees = gateway.quote_register_token_fee().await.expect("get fees");
+	let fees = gateway.quoteRegisterTokenFee().call().await.expect("get fees");
 	println!("asset fees {:?}", fees);
 }

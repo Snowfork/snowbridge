@@ -1,10 +1,11 @@
-use ethers::{core::types::Address, types::Bytes};
+use alloy::primitives::{Address, Bytes, U256};
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::i_gateway_v2 as i_gateway,
-	helper::{initial_clients, print_event_log_for_unit_tests},
-	helper_v2::{build_native_asset, get_token_address},
+	helper::{
+		build_native_asset, get_token_address, initial_clients, print_event_log_for_unit_tests,
+	},
 	parachains::assethub::api::{
 		balances::events::Minted,
 		runtime_types::{
@@ -25,16 +26,13 @@ use subxt::{ext::codec::Encode, utils::AccountId32 as AccountId32Substrate};
 #[tokio::test]
 async fn send_pna() {
 	let test_clients = initial_clients().await.expect("initialize clients");
-	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
+	let ethereum_client = test_clients.ethereum_client;
 	let assethub = *(test_clients.asset_hub_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = i_gateway::IGatewayV2::new(gateway_addr, ethereum_client.clone());
 
-	let token_address: Address =
-		get_token_address(&test_clients.ethereum_client, ERC20_DOT_TOKEN_ID)
-			.await
-			.unwrap();
+	let token_address = get_token_address(ethereum_client, ERC20_DOT_TOKEN_ID).await.unwrap();
 
 	let execution_fee = 2_000_000_000_000u128;
 	let relayer_fee = 2_000_000_000u128;
@@ -59,14 +57,15 @@ async fn send_pna() {
 	let assets = vec![pna_asset];
 
 	let receipt = gateway
-		.v_2_send_message(xcm, assets, claimer, execution_fee, relayer_fee)
-		.value(fee)
+		.v2_sendMessage(xcm, assets, claimer, execution_fee, relayer_fee)
+		.value(U256::from(fee))
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
 		.unwrap()
+		.get_receipt()
 		.await
-		.unwrap()
-		.unwrap();
+		.expect("get receipt");
 
 	println!(
 		"receipt transaction hash: {:#?}, transaction block: {:#?}",
@@ -75,12 +74,12 @@ async fn send_pna() {
 	);
 
 	// Log for OutboundMessageAccepted
-	let outbound_message_accepted_log = receipt.logs.last().unwrap();
+	let outbound_message_accepted_log = receipt.logs().last().unwrap().as_ref();
 
 	// print log for unit tests
 	print_event_log_for_unit_tests(outbound_message_accepted_log);
 
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
+	assert_eq!(receipt.status(), true);
 
 	let wait_for_blocks = (*WAIT_PERIOD) as usize;
 	let mut blocks = assethub

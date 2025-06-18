@@ -1301,7 +1301,7 @@ export function isDOTOnOtherConsensusSystem(location: any): boolean {
     return matchesConsensusSystem(location, "Polkadot")
 }
 
-function matchesConsensusSystem(location: any, expectedSystem: string): boolean {
+export function matchesConsensusSystem(location: any, expectedSystem: string): boolean {
     if (location.parents !== 2 || !location.interior) return false
 
     const kind = Object.keys(location.interior).find((k) => k.toLowerCase() === "x1")
