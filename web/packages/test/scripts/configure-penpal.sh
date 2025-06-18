@@ -108,15 +108,16 @@ function transfer_local_balance() {
             "${amount}"
 }
 
-function register_alias_from_relaychain() {
-    local call
+function configure_penpal() {
+    config_penpal
+    register_ether
+    register_weth
+    register_pal
 }
 
 
 if [ -z "${from_start_services:-}" ]; then
     echo "config Penpal for tests"
-    config_penpal
-    register_ether
-    register_pal
+    configure_penpal
     wait
 fi
