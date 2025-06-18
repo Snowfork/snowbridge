@@ -3,8 +3,9 @@ use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::i_gateway_v2 as i_gateway,
-	helper::{initial_clients, print_event_log_for_unit_tests},
-	helper_v2::{build_native_asset, get_token_address},
+	helper::{
+		build_native_asset, get_token_address, initial_clients, print_event_log_for_unit_tests,
+	},
 	parachains::assethub::api::{
 		balances::events::Minted,
 		runtime_types::{

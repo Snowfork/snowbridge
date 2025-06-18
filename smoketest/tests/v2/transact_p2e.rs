@@ -9,8 +9,9 @@ use snowbridge_smoketest::{
 		hello_world::{HelloWorld, HelloWorld::SaidHello},
 		i_gateway_v2 as i_gateway,
 	},
-	helper::{initial_clients, wait_for_ethereum_event, AssetHubConfig},
-	helper_v2::{fund_agent_v2, get_agent_address},
+	helper::{
+		fund_agent_v2, get_agent_address, initial_clients, wait_for_ethereum_event, AssetHubConfig,
+	},
 	parachains::assethub::{
 		self,
 		api::runtime_types::{
@@ -47,7 +48,7 @@ const INITIAL_FUND_IN_ETHER: u128 = 1_000_000_000_000_000;
 const HELLO_WORLD_CONTRACT: [u8; 20] = hex!("8cf6147918a5cbb672703f879f385036f8793a24");
 
 #[tokio::test]
-async fn agent_transact() {
+async fn transact_p2e() {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let ethereum_client = test_clients.ethereum_client;
 

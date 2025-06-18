@@ -32,7 +32,19 @@ use crate::{
 		},
 	},
 };
+use alloy::{
+	dyn_abi::DynSolValue,
+	eips::BlockNumberOrTag,
+	network::TransactionBuilder,
+	primitives::{Address, Bytes, FixedBytes, Log, B256, U256},
+	providers::{DynProvider, Provider, ProviderBuilder, WsConnect},
+	rpc::types::{Filter, TransactionRequest},
+	signers::local::PrivateKeySigner,
+	sol_types::SolEvent,
+};
 use futures::StreamExt;
+use pair_signer::PairSigner;
+use sp_core::{sr25519::Pair, Pair as PairT};
 use subxt::{
 	config::DefaultExtrinsicParams,
 	events::StaticEvent,
@@ -40,22 +52,12 @@ use subxt::{
 	Config, OnlineClient, PolkadotConfig,
 };
 
-use pair_signer::PairSigner;
-use sp_core::{sr25519::Pair, Pair as PairT};
-
 #[cfg(feature = "legacy-v1")]
 use crate::contracts::i_gateway::IGateway;
 #[cfg(not(feature = "legacy-v1"))]
 use crate::contracts::i_gateway_v1::IGatewayV1 as IGateway;
-use alloy::{
-	eips::BlockNumberOrTag,
-	network::TransactionBuilder,
-	primitives::{Address, FixedBytes, Log, B256, U256},
-	providers::{DynProvider, Provider, ProviderBuilder, WsConnect},
-	rpc::types::{Filter, TransactionRequest},
-	signers::local::PrivateKeySigner,
-	sol_types::SolEvent,
-};
+#[cfg(not(feature = "legacy-v1"))]
+use crate::contracts::i_gateway_v2::IGatewayV2;
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
@@ -732,4 +734,46 @@ pub async fn deposit_eth_to_penpal(
 	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
 
 	Ok(())
+}
+
+pub fn build_native_asset(token: Address, amount: u128) -> Bytes {
+	let kind_token = DynSolValue::Uint(U256::from(0u8), 256);
+	let token_token = DynSolValue::Address(token);
+	let amount_token = DynSolValue::Uint(U256::from(amount), 256);
+	Bytes::from(DynSolValue::Tuple(vec![kind_token, token_token, amount_token]).abi_encode())
+}
+
+pub async fn fund_agent_v2(
+	agent_id: [u8; 32],
+	amount: u128,
+) -> Result<(), Box<dyn std::error::Error>> {
+	let test_clients = initial_clients().await.expect("initialize clients");
+	let agent_address = get_agent_address(test_clients.ethereum_client.clone(), agent_id)
+		.await
+		.expect("get agent address");
+
+	fund_account(test_clients.ethereum_client, agent_address, amount)
+		.await
+		.expect("fund account");
+	Ok(())
+}
+
+pub async fn get_agent_address(
+	ethereum_client: Box<DynProvider>,
+	agent_id: [u8; 32],
+) -> Result<Address, Box<dyn std::error::Error>> {
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
+	let gateway = IGatewayV2::new(gateway_addr, *ethereum_client);
+	let agent_address = gateway.agentOf(FixedBytes::from(agent_id)).call().await?;
+	Ok(agent_address)
+}
+
+pub async fn get_token_address(
+	ethereum_client: Box<DynProvider>,
+	token_id: [u8; 32],
+) -> Result<Address, Box<dyn std::error::Error>> {
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
+	let gateway = IGateway::new(gateway_addr, *ethereum_client);
+	let token_address = gateway.tokenAddressOf(FixedBytes::from(token_id)).call().await?;
+	Ok(token_address)
 }
