@@ -15,6 +15,8 @@ use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utilit
 use sp_crypto_hashing::blake2_256;
 use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
+use hex_literal::hex;
+use crate::commands::ASSET_HUB_CHANNEL_ID;
 
 #[cfg(any(feature = "westend", feature = "paseo"))]
 use crate::helpers::sudo;
@@ -64,6 +66,7 @@ pub enum Command {
     RegisterPnaBatch202503,
     /// Reinitialize bridge
     ReinitializeBridge(ReinitializeBridgeArgs),
+    ReinitializeBridge2(ReinitializeBridgeArgs2),
 }
 
 #[derive(Debug, Args)]
@@ -258,6 +261,13 @@ pub struct ReinitializeBridgeArgs {
     #[command(flatten)]
     gateway_address: GatewayAddressArgs,
 }
+
+#[derive(Debug, Args)]
+pub struct ReinitializeBridgeArgs2 {
+    #[command(flatten)]
+    pricing_parameters: PricingParametersArgs,
+}
+
 
 #[derive(Debug, Args)]
 pub struct ApiEndpoints {
@@ -494,7 +504,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             });
             let gateway_address_call = commands::set_gateway_address(&params.gateway_address);
             let inbound_nonce_call = commands::set_inbound_nonce();
-            let outbound_nonce_call = commands::set_outbound_nonce();
+            let outbound_nonce_call = commands::set_outbound_nonce(ASSET_HUB_CHANNEL_ID.into());
             let (register_ether_call, set_ether_metadata_call) =
                 commands::register_ether(&params.register_ether);
 
@@ -510,6 +520,26 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 vec![
                     register_ether_call,
                     set_ether_metadata_call,
+                ],
+            )
+                .await?;
+            utility_force_batch(vec![bridge_hub_call, asset_hub_call])
+        }
+        Command::ReinitializeBridge2(ReinitializeBridgeArgs2{pricing_parameters}) => {
+            let (set_pricing_parameters, set_ethereum_fee) =
+                commands::pricing_parameters(&context, pricing_parameters).await?;
+
+            let outbound_nonce_call = commands::set_outbound_nonce(hex!("0000000000000000000000000000000000000000000000000000000000000001").into());
+
+            let bridge_hub_call = send_xcm_bridge_hub(&context, vec![
+                set_pricing_parameters,
+                outbound_nonce_call,
+            ]).await?;
+
+            let asset_hub_call = send_xcm_asset_hub(
+                &context,
+                vec![
+                    set_ethereum_fee,
                 ],
             )
                 .await?;

@@ -30,7 +30,7 @@ use crate::bridge_hub_runtime::RuntimeCall as BridgeHubRuntimeCall;
 use hex_literal::hex;
 use sp_crypto_hashing::twox_64;
 
-const ASSET_HUB_CHANNEL_ID: [u8; 32] = hex!("c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539");
+pub const ASSET_HUB_CHANNEL_ID: [u8; 32] = hex!("c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539");
 
 #[cfg(feature = "polkadot")]
 pub mod asset_hub_polkadot_types {
@@ -278,14 +278,14 @@ pub fn set_assethub_fee(fee: u128) -> AssetHubRuntimeCall {
 }
 
 pub fn set_inbound_nonce() -> BridgeHubRuntimeCall {
-    set_nonce("EthereumInboundQueue")
+    set_nonce("EthereumInboundQueue", ASSET_HUB_CHANNEL_ID.into())
 }
 
-pub fn set_outbound_nonce() -> BridgeHubRuntimeCall {
-    set_nonce("EthereumOutboundQueue")
+pub fn set_outbound_nonce(channel: [u8; 32]) -> BridgeHubRuntimeCall {
+    set_nonce("EthereumOutboundQueue", channel.into())
 }
 
-fn set_nonce(pallet_name: &str) -> BridgeHubRuntimeCall {
+fn set_nonce(pallet_name: &str, channel: [u8; 32]) -> BridgeHubRuntimeCall {
     let new_nonce: Vec<u8> = 0u64.encode();
 
     let mut key = Vec::new();
@@ -295,7 +295,7 @@ fn set_nonce(pallet_name: &str) -> BridgeHubRuntimeCall {
     let storage_prefix = b"Nonce";
     key.extend_from_slice(&twox_128(storage_prefix));
 
-    let encoded_id = ASSET_HUB_CHANNEL_ID.encode();
+    let encoded_id = channel.encode();
     let hash_id_64 = twox_64(&encoded_id);
     key.extend_from_slice(&hash_id_64);
     key.extend_from_slice(&encoded_id);
