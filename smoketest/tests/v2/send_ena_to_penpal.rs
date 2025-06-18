@@ -1,14 +1,9 @@
-use ethers::{
-	core::types::Address,
-	types::{Bytes, U256},
-	utils::parse_units,
-};
+use alloy::primitives::{utils::parse_units, Address, Bytes, U256};
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{i_gateway_v2 as i_gateway, weth9},
-	helper::{initial_clients, print_event_log_for_unit_tests},
-	helper_v2::build_native_asset,
+	helper::{build_native_asset, initial_clients, print_event_log_for_unit_tests},
 	parachains::penpal::api::{
 		foreign_assets::events::{Issued as PenpalIssued, Issued as AssetHubIssued},
 		runtime_types::{
@@ -43,7 +38,7 @@ use subxt::{
 #[tokio::test]
 async fn send_ena_to_penpal() {
 	let test_clients = initial_clients().await.expect("initialize clients");
-	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
+	let ethereum_client = test_clients.ethereum_client;
 	let assethub_client = *(test_clients.asset_hub_client.clone());
 	let penpal_client: OnlineClient<PenpalConfig> = OnlineClient::from_url(PENPAL_WS_URL)
 		.await
@@ -63,19 +58,30 @@ async fn send_ena_to_penpal() {
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
 	// Mint WETH tokens
-	let value = parse_units("0.01", "ether").unwrap();
-	let receipt = weth.deposit().value(value).send().await.unwrap().await.unwrap().unwrap();
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
-
-	// Approve token spend
-	weth.approve(gateway_addr, value.into())
+	let value = parse_units("0.01", "ether").unwrap().get_absolute();
+	let mut receipt = weth
+		.deposit()
+		.value(value)
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
 		.unwrap()
+		.get_receipt()
+		.await
+		.expect("get receipt");
+	assert_eq!(receipt.status(), true);
+
+	// Approve token spend
+	receipt = weth
+		.approve(gateway_addr, value.into())
+		.gas_price(GAS_PRICE)
+		.send()
 		.await
 		.unwrap()
-		.unwrap();
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
+		.get_receipt()
+		.await
+		.expect("get receipt");
+	assert_eq!(receipt.status(), true);
 
 	let execution_fee = 1_500_000_000_000u128;
 	let relayer_fee = 1_500_000_000_000u128;
@@ -84,8 +90,8 @@ async fn send_ena_to_penpal() {
 	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
-	let amount: u128 = U256::from(value).low_u128();
-	let weth_asset = build_native_asset(weth.address(), amount);
+	let amount: u128 = value.to::<u128>();
+	let weth_asset = build_native_asset(*weth.address(), amount);
 	// To pay fees on Penpal.
 	let eth_fee_penpal: Asset =
 		Asset { id: AssetId(eth_location()), fun: Fungibility::Fungible(3_000_000_000_000u128) };
@@ -115,14 +121,15 @@ async fn send_ena_to_penpal() {
 	let assets = vec![weth_asset];
 
 	let receipt = gateway
-		.v_2_send_message(xcm, assets, claimer, execution_fee, relayer_fee)
-		.value(fee)
+		.v2_sendMessage(xcm, assets, claimer, execution_fee, relayer_fee)
+		.value(U256::from(fee))
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
 		.unwrap()
+		.get_receipt()
 		.await
-		.unwrap()
-		.unwrap();
+		.expect("get receipt");
 
 	println!(
 		"receipt transaction hash: {:#?}, transaction block: {:#?}",
@@ -131,12 +138,12 @@ async fn send_ena_to_penpal() {
 	);
 
 	// Log for OutboundMessageAccepted
-	let outbound_message_accepted_log = receipt.logs.last().unwrap();
+	let outbound_message_accepted_log = receipt.logs().last().unwrap().as_ref();
 
 	// print log for unit tests
 	print_event_log_for_unit_tests(outbound_message_accepted_log);
 
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
+	assert_eq!(receipt.status(), true);
 
 	let wait_for_blocks = (*WAIT_PERIOD) as usize;
 	let mut blocks = assethub_client

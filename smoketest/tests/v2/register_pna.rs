@@ -1,12 +1,20 @@
 use snowbridge_smoketest::{
-	contracts::i_gateway_base::ForeignTokenRegisteredFilter,
+	constants::{ETHEREUM_CHAIN_ID, GATEWAY_PROXY_CONTRACT},
+	contracts::i_gateway_base::IGatewayBase::ForeignTokenRegistered,
 	helper::*,
-	helper_v2::wait_for_ethereum_event_v2,
 	parachains::{
 		assethub,
 		assethub::api::{
 			runtime_types,
-			runtime_types::{bounded_collections::bounded_vec::BoundedVec, xcm::VersionedLocation},
+			runtime_types::{
+				bounded_collections::bounded_vec::BoundedVec,
+				staging_xcm::v5::{
+					asset::{Asset, AssetId, Fungibility::Fungible},
+					junction::{Junction, NetworkId},
+					location::Location,
+				},
+				xcm::VersionedLocation,
+			},
 		},
 		bridgehub::api::ethereum_system_v2::events::RegisterToken,
 	},
@@ -47,9 +55,17 @@ async fn register_pna() {
 	let ethereum_system_frontend_api =
 		assethub::api::snowbridge_system_frontend::calls::TransactionApi;
 
+	let fee_asset_location = Location {
+		parents: 2,
+		interior: runtime_types::staging_xcm::v5::junctions::Junctions::X1([
+			Junction::GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
+		]),
+	};
+	let fee_asset = Asset { id: AssetId(fee_asset_location.clone()), fun: Fungible(10000) };
+
 	let mut encoded_call = Vec::new();
 	ethereum_system_frontend_api
-		.register_token(asset, metadata)
+		.register_token(asset, metadata, fee_asset)
 		.encode_call_data_to(&asset_hub_client.metadata(), &mut encoded_call)
 		.expect("encoded call");
 
@@ -59,5 +75,9 @@ async fn register_pna() {
 
 	wait_for_bridgehub_event::<RegisterToken>(&test_clients.bridge_hub_client).await;
 
-	wait_for_ethereum_event_v2::<ForeignTokenRegisteredFilter>(&test_clients.ethereum_client).await;
+	wait_for_ethereum_event::<ForeignTokenRegistered>(
+		test_clients.ethereum_client,
+		(*GATEWAY_PROXY_CONTRACT).into(),
+	)
+	.await;
 }

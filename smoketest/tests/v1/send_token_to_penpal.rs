@@ -1,12 +1,8 @@
-use ethers::{
-	core::types::{Address, U256},
-	utils::parse_units,
-};
+use alloy::primitives::{utils::parse_units, Address};
 use futures::StreamExt;
-use penpal::api::runtime_types as penpalTypes;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{i_gateway_v1, weth9},
+	contracts::weth9,
 	helper::initial_clients,
 	parachains::{
 		assethub::api::{
@@ -20,7 +16,7 @@ use snowbridge_smoketest::{
 				location::Location,
 			},
 		},
-		penpal::{self, api::foreign_assets::events::Issued as PenpalIssued},
+		penpal::api::foreign_assets::events::Issued as PenpalIssued,
 	},
 	penpal_helper::{
 		dot_location, ensure_penpal_asset_exists, set_reserve_asset_storage, weth_location,
@@ -29,27 +25,41 @@ use snowbridge_smoketest::{
 };
 use subxt::{ext::codec::Encode, utils::AccountId32, OnlineClient};
 
+#[cfg(feature = "legacy-v1")]
+use snowbridge_smoketest::contracts::i_gateway::IGateway;
+#[cfg(not(feature = "legacy-v1"))]
+use snowbridge_smoketest::contracts::i_gateway_v1::IGatewayV1 as IGateway;
+
 #[tokio::test]
 async fn send_token_to_penpal() {
 	let test_clients = initial_clients().await.expect("initialize clients");
-	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
+	let ethereum_client = test_clients.ethereum_client;
 	let assethub_client = *(test_clients.asset_hub_client.clone());
 	let penpal_client: OnlineClient<PenpalConfig> = OnlineClient::from_url(PENPAL_WS_URL)
 		.await
 		.expect("can not connect to penpal parachain");
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway_v1::IGatewayV1::new(gateway_addr, ethereum_client.clone());
+	let gateway = IGateway::new(gateway_addr, ethereum_client.clone());
 
 	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
 	// Mint WETH tokens
-	let value = parse_units("1", "ether").unwrap();
-	let receipt = weth.deposit().value(value).send().await.unwrap().await.unwrap().unwrap();
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
+	let value = parse_units("1", "ether").unwrap().get_absolute();
+	let receipt = weth
+		.deposit()
+		.value(value)
+		.gas_price(GAS_PRICE)
+		.send()
+		.await
+		.unwrap()
+		.get_receipt()
+		.await
+		.expect("get receipt");
+	assert_eq!(receipt.status(), true);
 
-	let penpal_asset_id = Location {
+	let _penpal_asset_id = Location {
 		parents: 2,
 		interior: X2([
 			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
@@ -66,25 +76,25 @@ async fn send_token_to_penpal() {
 		.send()
 		.await
 		.unwrap()
+		.get_receipt()
 		.await
-		.unwrap()
-		.unwrap();
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
+		.expect("get receipt");
+	assert_eq!(receipt.status(), true);
 
 	let destination_fee = 4_000_000_000;
 	let fee = gateway
-		.quote_send_token_fee(weth.address(), PENPAL_PARA_ID, destination_fee)
+		.quoteSendTokenFee(*weth.address(), PENPAL_PARA_ID, destination_fee)
 		.call()
 		.await
 		.unwrap();
 
 	// Lock tokens into vault
-	let amount: u128 = U256::from(value).low_u128();
+	let amount: u128 = value.to::<u128>();
 	let receipt = gateway
-		.send_token(
-			weth.address(),
+		.sendToken(
+			*weth.address(),
 			PENPAL_PARA_ID,
-			i_gateway_v1::MultiAddress { kind: 1, data: (*FERDIE_PUBLIC).into() },
+			IGateway::MultiAddress { kind: 1, data: (*FERDIE_PUBLIC).into() },
 			4_000_000_000,
 			amount,
 		)
@@ -92,13 +102,13 @@ async fn send_token_to_penpal() {
 		.send()
 		.await
 		.unwrap()
+		.get_receipt()
 		.await
-		.unwrap()
-		.unwrap();
+		.expect("get receipt");
 
-	println!("receipt: {:#?}", receipt);
+	println!("receipt: {:#?}", receipt.transaction_hash);
 
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
+	assert_eq!(receipt.status(), true);
 
 	let wait_for_blocks = 100;
 	let mut assethub_blocks = assethub_client

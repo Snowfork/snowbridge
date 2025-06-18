@@ -4,7 +4,6 @@ set -eu
 start=$(date +%s)
 
 from_start_services=true
-is_electra=false
 
 source scripts/set-env.sh
 source scripts/build-binary.sh
