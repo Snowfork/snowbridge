@@ -247,42 +247,44 @@ function bridgeablePNAsOnAH(location: any, assetHubParaId: number, env: string):
         }
     }
     // Add assets for Westend
-    if (
-        location.interior.x1 &&
-        location.interior.x1[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS
-    ) {
-        return DOT_LOCATION
-    } else if (
-        location.interior.x2 &&
-        location.interior.x2[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS &&
-        location.interior.x2[1]?.parachain != undefined
-    ) {
-        return {
-            parents: 1,
-            interior: {
-                x1: [
-                    {
-                        parachain: location.interior.x2[1]?.parachain,
-                    },
-                ],
-            },
-        }
-    } else if (
-        location.interior.x4 &&
-        location.interior.x4[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS &&
-        location.interior.x4[1]?.parachain &&
-        location.interior.x4[2]?.palletInstance &&
-        location.interior.x4[3]?.generalIndex != undefined
-    ) {
-        return {
-            parents: 1,
-            interior: {
-                x3: [
-                    { parachain: location.interior.x4[1]?.parachain },
-                    { palletInstance: location.interior.x4[2].palletInstance },
-                    { generalIndex: location.interior.x4[3].generalIndex },
-                ],
-            },
+    if (env == "westmint") {
+        if (
+            location.interior.x1 &&
+            location.interior.x1[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS
+        ) {
+            return DOT_LOCATION
+        } else if (
+            location.interior.x2 &&
+            location.interior.x2[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS &&
+            location.interior.x2[1]?.parachain != undefined
+        ) {
+            return {
+                parents: 1,
+                interior: {
+                    x1: [
+                        {
+                            parachain: location.interior.x2[1]?.parachain,
+                        },
+                    ],
+                },
+            }
+        } else if (
+            location.interior.x4 &&
+            location.interior.x4[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS &&
+            location.interior.x4[1]?.parachain &&
+            location.interior.x4[2]?.palletInstance &&
+            location.interior.x4[3]?.generalIndex != undefined
+        ) {
+            return {
+                parents: 1,
+                interior: {
+                    x3: [
+                        { parachain: location.interior.x4[1]?.parachain },
+                        { palletInstance: location.interior.x4[2].palletInstance },
+                        { generalIndex: location.interior.x4[3].generalIndex },
+                    ],
+                },
+            }
         }
     }
 }
