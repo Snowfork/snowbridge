@@ -8,6 +8,7 @@ import {
     ethereumNetwork,
     parachainLocation,
     accountToLocation,
+    HERE_LOCATION,
 } from "./xcmBuilder"
 import { Asset } from "./assets_v2"
 
@@ -855,195 +856,105 @@ export function buildAssetHubPNAReceivedXcm(
     })
 }
 
-export function buildExportXcmForERC20(
+export function buildExportXcm(
     registry: Registry,
     ethChainId: number,
-    tokenAddress: string,
+    asset: Asset,
+    sender: string,
     beneficiary: string,
     topic: string,
     transferAmount: bigint,
-    totalFeeInDot: bigint,
-    assetHubParaId: number
+    feeInEther: bigint
 ) {
+    let senderLocation = accountToLocation(sender)
+    let beneficiaryLocation = accountToLocation(beneficiary)
+    let exportXcm: any[] = [
+        {
+            withdrawAsset: [
+                {
+                    id: HERE_LOCATION,
+                    fun: {
+                        Fungible: feeInEther,
+                    },
+                },
+            ],
+        },
+        {
+            payFees: {
+                asset: {
+                    id: HERE_LOCATION,
+                    fun: {
+                        Fungible: feeInEther,
+                    },
+                },
+            },
+        },
+    ]
+    if (asset.location) {
+        exportXcm.push({
+            reserveAssetDeposited: [
+                {
+                    id: asset.locationOnEthereum,
+                    fun: {
+                        Fungible: transferAmount,
+                    },
+                },
+            ],
+        })
+    } else {
+        exportXcm.push({
+            withdrawAsset: [
+                {
+                    id: erc20LocationReanchored(asset.token),
+                    fun: {
+                        Fungible: transferAmount,
+                    },
+                },
+            ],
+        })
+    }
+    exportXcm = exportXcm.concat([
+        {
+            aliasOrigin: {
+                parents: 0,
+                interior: {
+                    x1: [senderLocation],
+                },
+            },
+        },
+        {
+            depositAsset: {
+                assets: {
+                    wild: {
+                        allCounted: 2,
+                    },
+                },
+                beneficiary: {
+                    parents: 0,
+                    interior: { x1: [beneficiaryLocation] },
+                },
+            },
+        },
+        {
+            setTopic: topic,
+        },
+    ])
+
     return registry.createType("XcmVersionedXcm", {
         v5: [
             {
-                withdrawAsset: [
-                    {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: totalFeeInDot,
-                        },
-                    },
-                ],
-            },
-            {
-                buyExecution: {
-                    fees: {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: totalFeeInDot,
-                        },
-                    },
-                    weightLimit: "Unlimited",
+                unpaidexecution: {
+                    weight_limit: "unlimited",
+                    check_origin: null,
                 },
-            },
-            {
-                setAppendix: [
-                    {
-                        depositAsset: {
-                            assets: {
-                                wild: {
-                                    allCounted: 1,
-                                },
-                            },
-                            beneficiary: parachainLocation(assetHubParaId),
-                        },
-                    },
-                ],
             },
             {
                 exportMessage: {
                     network: { Ethereum: { chain_id: ethChainId } },
                     destination: "Here",
-                    xcm: [
-                        {
-                            withdrawAsset: [
-                                {
-                                    id: erc20LocationReanchored(tokenAddress),
-                                    fun: {
-                                        Fungible: transferAmount,
-                                    },
-                                },
-                            ],
-                        },
-                        { clearOrigin: null },
-                        {
-                            buyExecution: {
-                                fees: {
-                                    id: erc20LocationReanchored(tokenAddress),
-                                    fun: {
-                                        Fungible: "1",
-                                    },
-                                },
-                                weight_limit: "Unlimited",
-                            },
-                        },
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 1,
-                                    },
-                                },
-                                beneficiary: parachainLocation(assetHubParaId),
-                            },
-                        },
-                        {
-                            setTopic: topic,
-                        },
-                    ],
+                    xcm: exportXcm,
                 },
             },
-
-            {
-                setTopic: topic,
-            },
-        ],
-    })
-}
-
-export function buildExportXcmForPNA(
-    registry: Registry,
-    ethChainId: number,
-    assetLocationOnEthereum: any,
-    beneficiary: string,
-    topic: string,
-    transferAmount: bigint,
-    totalFeeInDot: bigint,
-    assetHubParaId: number
-) {
-    return registry.createType("XcmVersionedXcm", {
-        v5: [
-            {
-                withdrawAsset: [
-                    {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: totalFeeInDot,
-                        },
-                    },
-                ],
-            },
-            {
-                buyExecution: {
-                    fees: {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: totalFeeInDot,
-                        },
-                    },
-                    weightLimit: "Unlimited",
-                },
-            },
-            {
-                setAppendix: [
-                    {
-                        depositAsset: {
-                            assets: {
-                                wild: {
-                                    allCounted: 1,
-                                },
-                            },
-                            beneficiary: parachainLocation(assetHubParaId),
-                        },
-                    },
-                ],
-            },
-            {
-                exportMessage: {
-                    network: { Ethereum: { chain_id: ethChainId } },
-                    destination: "Here",
-                    xcm: [
-                        {
-                            reserveAssetDeposited: [
-                                {
-                                    id: assetLocationOnEthereum,
-                                    fun: {
-                                        Fungible: transferAmount,
-                                    },
-                                },
-                            ],
-                        },
-                        { clearOrigin: null },
-                        {
-                            buyExecution: {
-                                fees: {
-                                    id: assetLocationOnEthereum,
-                                    fun: {
-                                        Fungible: "1",
-                                    },
-                                },
-                                weight_limit: "Unlimited",
-                            },
-                        },
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 1,
-                                    },
-                                },
-                                beneficiary: parachainLocation(assetHubParaId),
-                            },
-                        },
-                        {
-                            setTopic: topic,
-                        },
-                    ],
-                },
-            },
-
             {
                 setTopic: topic,
             },

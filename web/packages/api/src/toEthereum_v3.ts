@@ -10,8 +10,7 @@ import {
     buildParachainERC20ReceivedXcmOnDestination,
     buildResultXcmAssetHubPNATransferFromParachain,
     buildParachainPNAReceivedXcmOnDestination,
-    buildExportXcmForPNA,
-    buildExportXcmForERC20,
+    buildExportXcm,
     buildTransferXcmFromParachain,
     buildTransferXcmFromAssetHub,
 } from "./xcmV5Builder"
@@ -274,29 +273,16 @@ export async function getDeliveryFee(
         )
     }
 
-    if (sourceAssetMetadata.location) {
-        forwardedXcmToBH = buildExportXcmForPNA(
-            assetHub.registry,
-            registry.ethChainId,
-            sourceAssetMetadata.locationOnEthereum,
-            "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            340282366920938463463374607431768211455n,
-            340282366920938463463374607431768211455n,
-            1000
-        )
-    } else {
-        forwardedXcmToBH = buildExportXcmForERC20(
-            assetHub.registry,
-            registry.ethChainId,
-            tokenAddress,
-            "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            340282366920938463463374607431768211455n,
-            340282366920938463463374607431768211455n,
-            1000
-        )
-    }
+    forwardedXcmToBH = buildExportXcm(
+        assetHub.registry,
+        registry.ethChainId,
+        sourceAssetMetadata,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        1n,
+        1n
+    )
 
     localExecutionFeeDOT = padFeeByPercentage(
         await assetHubImpl.calculateXcmFee(localXcm, DOT_LOCATION),
