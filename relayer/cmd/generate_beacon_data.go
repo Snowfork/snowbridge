@@ -46,6 +46,20 @@ func generateBeaconFixtureCmd() *cobra.Command {
 	return cmd
 }
 
+func generateSyncCommiteeFixtureCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "generate-sync-committee-fixture",
+		Short: "Generate sync committee fixture.",
+		Args:  cobra.ExactArgs(0),
+		RunE:  generateSyncCommiteeFixture,
+	}
+
+	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
+	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
+	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
+	return cmd
+}
+
 func generateBeaconCheckpointCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "generate-beacon-checkpoint",
@@ -169,6 +183,84 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 	}()
 	if err != nil {
 		log.WithError(err).Error("error generating beacon checkpoint")
+	}
+
+	return nil
+}
+
+func generateSyncCommiteeFixture(cmd *cobra.Command, _ []string) error {
+	err := func() error {
+		ctx := context.Background()
+
+		config, err := cmd.Flags().GetString("config")
+		if err != nil {
+			return err
+		}
+
+		viper.SetConfigFile(config)
+		if err = viper.ReadInConfig(); err != nil {
+			return err
+		}
+
+		var conf beaconConf.Config
+		err = viper.Unmarshal(&conf)
+		if err != nil {
+			return err
+		}
+
+		p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
+
+		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
+		err = store.Connect()
+		if err != nil {
+			return err
+		}
+		defer store.Close()
+
+		log.WithFields(log.Fields{"endpoint": conf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
+		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
+		s := syncer.New(client, &store, p)
+
+		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub-0.json")
+
+		if err = viper.ReadInConfig(); err != nil {
+			return err
+		}
+
+		var executionConfig executionConf.Config
+		err = viper.Unmarshal(&executionConfig, viper.DecodeHook(execution.HexHookFunc()))
+		if err != nil {
+			return fmt.Errorf("unable to parse execution relay config: %w", err)
+		}
+
+		ethconn := ethereum.NewConnection(&executionConfig.Source.Ethereum, nil)
+		err = ethconn.Connect(ctx)
+		if err != nil {
+			return err
+		}
+
+		syncCommitteeUpdateScale, err := s.GetFinalizedUpdateAtAttestedSlot(96, 130, true)
+		if err != nil {
+			return fmt.Errorf("get sync committee update: %w", err)
+		}
+		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
+		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update-period-0-older.json"))
+
+		time.Sleep(2 * time.Minute)
+
+		syncCommitteeUpdateScale, err = s.GetFinalizedUpdateAtAttestedSlot(200, 500, true)
+		if err != nil {
+			return fmt.Errorf("get sync committee update: %w", err)
+		}
+		syncCommitteeUpdate = syncCommitteeUpdateScale.Payload.ToJSON()
+		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update-period-0-newer.json"))
+
+		log.Info("done")
+
+		return nil
+	}()
+	if err != nil {
+		log.WithError(err).Error("error generating beacon data")
 	}
 
 	return nil
