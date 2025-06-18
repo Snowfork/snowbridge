@@ -40,12 +40,12 @@
                     # typescript
                     python311
                     nodePackages.pnpm
-                    nodejs_20
-                    (yarn.override { nodejs = nodejs_20; })
+                    nodejs_22
+                    (yarn.override { nodejs = nodejs_22; })
 
                     # ethereum
                     foundry-bin
-                    go-ethereum
+                    # go-ethereum
                     # gnupg for forge install
                     gnupg
 
