@@ -35,13 +35,13 @@ start_geth() {
       --vmdebug \
       --datadir "$output_dir/ethereum" \
       --http \
-      --http.api debug,personal,eth,net,web3,txpool,engine \
+      --http.api debug,eth,net,web3,txpool,engine \
       --ws --ws.api debug,eth,net,web3 \
       --rpc.allow-unprotected-txs \
       --authrpc.addr 0.0.0.0 \
       --authrpc.vhosts "*" \
       --http \
-      --http.api "debug,personal,eth,net,web3,txpool,engine,miner" \
+      --http.api "debug,eth,net,web3,txpool,engine,miner" \
       --http.addr 0.0.0.0 \
       --http.vhosts "*" \
       --http.corsdomain '*' \
@@ -49,10 +49,8 @@ start_geth() {
       --ws.api "debug,eth,net,web3" \
       --ws.addr 0.0.0.0 \
       --ws.origins "*" \
-      --allow-insecure-unlock \
       --authrpc.jwtsecret "$config_dir/jwtsecret" \
       --password /dev/null \
-      --rpc.gascap 0 \
       --ws.origins "*" \
       --gcmode archive \
       --syncmode=full \
@@ -100,7 +98,6 @@ start_lodestar() {
         --params.CAPELLA_FORK_EPOCH 0 \
         --params.DENEB_FORK_EPOCH 0 \
         --params.ELECTRA_FORK_EPOCH 0 \
-        --eth1=true \
         --rest.namespace="*" \
         --jwt-secret $config_dir/jwtsecret \
         --chain.archiveStateEpochFrequency 1 \

@@ -12,12 +12,13 @@
     "muirGlacierBlock": 0,
     "berlinBlock": 0,
     "londonBlock": 0,
-    "ethash": {},
-    "terminalTotalDifficulty": 0,
+    "arrowGlacierBlock": 0,
+    "grayGlacierBlock": 0,
     "ShanghaiTime": 0,
     "CancunTime": 0,
     "PragueTime": 0,
     "terminalTotalDifficultyPassed": true,
+    "terminalTotalDifficulty": 0,
     "blobSchedule": {
       "cancun": {
         "max": 0,
