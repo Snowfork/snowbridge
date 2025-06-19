@@ -11,21 +11,27 @@ register_weth() {
 }
 
 register_weth_on_ah() {
-    # register token
+    # register weth
     local call='0x3501020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d00ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d0104'
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
     # set metadata
     local call='0x3513020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d105745544810574554481200'
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+    # Mint weth to Penpal Sovereign on AH
+    local call="0x3506020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d007369626cd00700000000000000000000000000000000000000000000000000001300002cf61a24a229"
+    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 
 register_weth_on_penpal() {
     # register weth
-    local call='0x3301020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0104'
+    local call='0x3301020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d0104'
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
     # set weth meta data
     local call='0x3313020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d105745544810574554481200'
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
+    # Mint weth to ferdie
+    local call='0x3306020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
+    send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
 }
 
 register_ether() {
@@ -38,9 +44,9 @@ register_ether() {
     # Mint Ether
     local call='0x3306020109079edaa802001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
     send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
-    # Mint Wnd
-    local call='0x33060100001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
-    send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
+    # Mint Ether to Penpal Sovereign on AH
+    local call="0x3506020109079edaa802007369626cd00700000000000000000000000000000000000000000000000000001300002cf61a24a229"
+    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 
 
@@ -57,7 +63,6 @@ register_pal() {
     # mint Pal-2 to Ferdie
     local call='0x320608001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0b0030ef7dba02'
     send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
-
     # register native pal
     local call='0x3501010100411f00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d0104'
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
@@ -71,18 +76,17 @@ register_pal() {
     send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
 }
 
-
-config_penpal() {
-    fund_on_penpal
-    config_bridge_on_penpal
+mint_wnd_as_fee() {
+    # Mint Wnd
+    local call='0x33060100001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
+    send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
 }
 
-fund_on_penpal() {
+
+configure_bridge() {
+    # fund on penpal
     transfer_local_balance "$penpal_ws_url" "//Alice" "$assethub_sovereign_account" 1000000000000
     transfer_local_balance "$penpal_ws_url" "//Alice" "$checking_account" 1000000000000
-}
-
-config_bridge_on_penpal() {
     # config bridge sovereign as reserve
     local call='0x00040440770800eb78be69c327d8334d0927607220020109079edaa802'
     send_governance_transact_from_relaychain $PENPAL_PARAID "$call"
@@ -109,10 +113,11 @@ function transfer_local_balance() {
 }
 
 function configure_penpal() {
-    config_penpal
+    configure_bridge
     register_ether
     register_weth
     register_pal
+    mint_wnd_as_fee
 }
 
 
