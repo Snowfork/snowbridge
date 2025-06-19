@@ -1027,15 +1027,15 @@ export function buildTransferXcmFromAssetHub(
                 })
             } else {
                 assets.push({
-                    id: tokenLocation,
-                    fun: {
-                        Fungible: tokenAmount,
-                    },
-                })
-                assets.push({
                     id: bridgeLocation(ethChainId),
                     fun: {
                         Fungible: remoteEtherFeeAmount,
+                    },
+                })
+                assets.push({
+                    id: tokenLocation,
+                    fun: {
+                        Fungible: tokenAmount,
                     },
                 })
             }
