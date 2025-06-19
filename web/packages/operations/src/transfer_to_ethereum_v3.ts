@@ -62,6 +62,9 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
+    if (!TOKEN_CONTRACT) {
+        console.log("no token contract exists, check it and rebuild asset registry.")
+    }
 
     console.log("Asset Hub to Ethereum")
     {

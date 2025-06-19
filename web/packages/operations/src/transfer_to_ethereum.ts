@@ -46,13 +46,12 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        process.env.ETHEREUM_KEY ?? "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
+        process.env.ETHEREUM_KEY ??
+            "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
         context.ethereum()
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
-    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(
-        process.env.SUBSTRATE_KEY ?? "//Ferdie"
-    )
+    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
@@ -63,6 +62,9 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
+    if (!TOKEN_CONTRACT) {
+        console.log("no token contract exists, check it and rebuild asset registry.")
+    }
 
     console.log("Asset Hub to Ethereum")
     {
