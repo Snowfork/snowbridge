@@ -21,7 +21,6 @@
     "transferEthFromPolkadotToKusama": "npx ts-node src/transfer_eth_from_polkadot_to_kusama.ts",
     "transferDotFromPolkadotToKusama": "npx ts-node src/transfer_dot_from_polkadot_to_kusama.ts",
     "transferKsmFromPolkadotToKusama": "npx ts-node src/transfer_ksm_from_polkadot_to_kusama.ts",
-    "transferWTBCFromPolkadotToKusama": "npx ts-node src/transfer_wbtc_from_polkadot_to_kusama.ts",
     "transferWethFromKusamaToPolkadot": "npx ts-node src/transfer_weth_from_kusama_to_polkadot.ts",
     "transferEthFromKusamaToPolkadot": "npx ts-node src/transfer_eth_from_kusama_to_polkadot.ts",
     "transferDotFromKusamaToPolkadot": "npx ts-node src/transfer_dot_from_kusama_to_polkadot.ts",
