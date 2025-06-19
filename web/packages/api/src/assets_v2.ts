@@ -120,6 +120,7 @@ export type KusamaOptions = {
 }
 
 export type AssetRegistry = {
+    timestamp: string
     environment: string
     gatewayAddress: string
     ethChainId: number
@@ -427,6 +428,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         .forEach((parachainKey) => ethProviders[parachainKey].provider.destroy())
 
     return {
+        timestamp: new Date().toISOString(),
         environment,
         ethChainId,
         gatewayAddress,
@@ -763,6 +765,7 @@ async function indexEthChain(
         for (const token in assetHub.assets) {
             if (!(await gateway.isTokenRegistered(token))) {
                 console.warn(`Token ${token} is not registered with the gateway.`)
+                continue // Skip unregistered assets
             }
             if (token === ETHER_TOKEN_ADDRESS) {
                 assets[token] = {
@@ -979,9 +982,7 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
 
                 // Disable stable coins in the UI from Ethereum to Polkadot
                 if (
-                    (path.asset === "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" || // USDC
-                        path.asset === "0xdac17f958d2ee523a2206206994597c13d831ec7" || // USDT
-                        path.asset === "0x9d39a5de30e57443bff2a8307a4256c8797a3497" || // Staked USDe
+                    (path.asset === "0x9d39a5de30e57443bff2a8307a4256c8797a3497" || // Staked USDe
                         path.asset === "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd" || // Savings USD
                         path.asset === "0x6b175474e89094c44da98b954eedeac495271d0f") && // DAI
                     path.destination === 2034 // Hydration
