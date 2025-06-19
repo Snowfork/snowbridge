@@ -179,7 +179,7 @@ func (relay *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayInboundMe
 
 	proof, err := relay.beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot, false)
 	if errors.Is(err, header.ErrBeaconHeaderNotFinalized) || proof.HeaderPayload.ExecutionBranch == nil {
-		logger.Warn("event block is not finalized yet")
+		logger.Info("event block is not finalized yet")
 		return nil
 	}
 	if err != nil {
