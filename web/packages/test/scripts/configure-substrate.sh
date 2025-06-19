@@ -89,7 +89,7 @@ register_roc() {
 
 configure_substrate() {
     configure_from_test_helper
-    sleep 5
+    sleep 3
     configure_bh
     configure_ah
     wait_beacon_chain_ready

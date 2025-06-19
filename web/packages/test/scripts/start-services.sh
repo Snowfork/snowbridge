@@ -46,13 +46,8 @@ echo "Config Substrate"
 source scripts/configure-substrate.sh
 configure_substrate
 
-# 7. config penpal
-echo "Config Substrate"
-source scripts/configure-penpal.sh
-configure_penpal
-
 if [ "$skip_relayer" == "false" ]; then
-  # 8. start relayer
+  # 7. start relayer
   echo "Starting relayers"
   source scripts/start-relayer.sh
   deploy_relayer

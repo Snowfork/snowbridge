@@ -166,13 +166,28 @@ const sendBatchTransactionsOnPenpal = async () => {
         },
     })
 
+    // Define recipient addresses and amounts (replace with real addresses)
+    const transactions = [
+        //Account for AH sovereign
+        api.tx.balances.transferAllowDeath(
+            "5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV",
+            InitialFund
+        ),
+        //Checking account
+        api.tx.balances.transferAllowDeath(
+            "5EYCAe5ijiYgWYWi1fs8Xz1td1djEtJVVnNfzvDRP4VtLL7Y",
+            InitialFund
+        ),
+        api.tx.polkadotXcm.addAuthorizedAlias(versionedLocation, null),
+    ]
+
     // Create a batch transaction
-    const transaction = api.tx.polkadotXcm.addAuthorizedAlias(versionedLocation, null)
+    const batchTx = api.tx.utility.batchAll(transactions)
 
     console.log("Sending batch transaction...")
 
     // Sign and send the batch transaction
-    const unsub = await transaction.signAndSend(sender, ({ status }) => {
+    const unsub = await batchTx.signAndSend(sender, ({ status }) => {
         if (status.isInBlock) {
             console.log(`✅ Transaction included in block: ${status.asInBlock}`)
         } else if (status.isFinalized) {
