@@ -56,9 +56,7 @@ export class AssetHubParachain extends ParachainBase {
                 const isBridgeable = enaFilter(token)
                 if (!isBridgeable) {
                     console.warn(
-                        `Location ${JSON.stringify(token)} is filtered out on ${
-                            this.specName
-                        }`
+                        `Location ${JSON.stringify(token)} is filtered out on ${this.specName}`
                     )
                     continue
                 }
@@ -265,5 +263,5 @@ function bridgeablePNAsOnAH(location: any, assetHubParaId: number): any {
 
 // All ERC-20s are bridgeable on AH
 function bridgeableENAsOnAH(_token: string): boolean {
-   return true;
+    return true
 }

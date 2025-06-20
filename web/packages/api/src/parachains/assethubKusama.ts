@@ -7,7 +7,12 @@ export class AssetHubKusamaParachain extends AssetHubParachain {
         return this.getLocationBalance(dotLocationOnKusamaAssetHub, account)
     }
     async getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap> {
-        return this.getAssetsFiltered(ethChainId, bridgeableENAsOnAH, pnas, bridgeablePNAsOnKusamaAH)
+        return this.getAssetsFiltered(
+            ethChainId,
+            bridgeableENAsOnAH,
+            pnas,
+            bridgeablePNAsOnKusamaAH
+        )
     }
 }
 
@@ -94,6 +99,5 @@ function bridgeablePNAsOnKusamaAH(location: any, assetHubParaId: number): any {
 
 // MYTH token is not transferable between Polkadot and Kusama AH.
 function bridgeableENAsOnAH(token: string): boolean {
-    return token != "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003";
-
+    return token != "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003"
 }
