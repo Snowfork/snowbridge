@@ -94,6 +94,12 @@ register_roc_on_ah() {
     send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
 }
 
+register_wnd_on_bh() {
+    # register Wnd on BH
+    local call="0x24010501000c776e640c776e640c020109079edaa8020002286bee"
+    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+}
+
 configure_bridge() {
     # fund on penpal
     transfer_local_balance "$penpal_ws_url" "//Alice" "$assethub_sovereign_account" 1000000000000
@@ -123,18 +129,19 @@ function transfer_local_balance() {
             "${amount}"
 }
 
-function configure_penpal() {
+function configure_all() {
     configure_bridge
     register_ether
     register_weth
     register_pal
     mint_wnd_as_fee
+    register_wnd_on_bh
     register_roc_on_ah
 }
 
 
 if [ -z "${from_start_services:-}" ]; then
     echo "config Penpal for tests"
-    configure_penpal
+    configure_all
     wait
 fi

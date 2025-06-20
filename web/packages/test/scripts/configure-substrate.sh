@@ -65,11 +65,8 @@ configure_ah() {
     # Create Pool for Ether<->Wnd and add liquidity
     local call="0x38000100020109079edaa802"
     send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
-    local call="0x38010100020109079edaa8020000e941cc6b01000000000000000000000064a7b3b6e00d000000000000000001000000000000000000000000000000010000000000000000000000000000001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c"
+    local call="0x38010100020109079edaa8020080c6a47e8d0300000000000000000000008d49fd1a0700000000000000000001000000000000000000000000000000010000000000000000000000000000001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c"
     send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
-    # register Wnd on BH
-    local call="0x24010501000c776e640c776e640c020109079edaa8020002286bee"
-    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 
 

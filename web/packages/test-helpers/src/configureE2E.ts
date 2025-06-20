@@ -2,6 +2,9 @@ import { ApiPromise, WsProvider, Keyring } from "@polkadot/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 
 const InitialFund = 100_000_000_000_000n
+const SudoPubKey =
+    process.env["sudo_pubkey"] ||
+    "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
 const sendBatchTransactionsOnBridgehub = async () => {
     // Connect to node
@@ -69,7 +72,7 @@ const sendBatchTransactionsOnAssethub = async () => {
                     {
                         accountId32: {
                             network: null,
-                            id: "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d",
+                            id: SudoPubKey,
                         },
                     },
                 ],
@@ -158,7 +161,7 @@ const sendBatchTransactionsOnPenpal = async () => {
                     {
                         accountId32: {
                             network: null,
-                            id: "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d",
+                            id: SudoPubKey,
                         },
                     },
                 ],

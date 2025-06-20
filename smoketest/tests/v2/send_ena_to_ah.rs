@@ -127,18 +127,12 @@ async fn send_ena_to_ah() {
 		.expect("block subscription")
 		.take(wait_for_blocks);
 
-	let _expected_weth_id: Location = Location {
+	let expected_weth_id: Location = Location {
 		parents: 2,
 		interior: Junctions::X2([
 			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
 			AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
 		]),
-	};
-	let _expected_eth_id: Location = Location {
-		parents: 2,
-		interior: Junctions::X1([GlobalConsensus(NetworkId::Ethereum {
-			chain_id: ETHEREUM_CHAIN_ID,
-		})]),
 	};
 	let expected_owner: AccountId32Substrate = (*SUBSTRATE_RECEIVER).into();
 
@@ -150,7 +144,7 @@ async fn send_ena_to_ah() {
 		for issued in events.find::<Issued>() {
 			let issued = issued.unwrap();
 			// Issued weth token
-			// assert_eq!(issued.asset_id.encode(), expected_weth_id.encode());
+			assert_eq!(issued.asset_id.encode(), expected_weth_id.encode());
 			assert_eq!(issued.owner, expected_owner);
 			assert_eq!(issued.amount, amount);
 			issued_weth_event_found = true;
