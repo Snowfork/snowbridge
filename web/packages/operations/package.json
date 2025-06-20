@@ -38,7 +38,7 @@
     "transferWndToEthereumV3": "npx ts-node src/transfer_from_p2e_v3.ts 1000 WND 2000000000",
     "transferEtherFromAHV3": "npx ts-node src/transfer_from_p2e_v3.ts 1000 Eth 100000000000000",
     "transferWEthFromAHV3": "npx ts-node src/transfer_from_p2e_v3.ts 1000 WETH 100000000000000",
-    "transferRocFromAHV3": "npx ts-node src/transfer_from_p2e_v3.ts 1000 Roc 2000000000",
+    "transferRocToEthereumV3": "npx ts-node src/transfer_from_p2e_v3.ts 1000 Roc 2000000000",
     "transferPenpalTokenToEthereumV3": "npx ts-node src/transfer_from_p2e_v3.ts 2000 pal 2000000000",
     "transferEtherFromPenpalV3": "npx ts-node src/transfer_from_p2e_v3.ts 2000 ETH 100000000000000",
     "transferWEthFromPenpalV3": "npx ts-node src/transfer_from_p2e_v3.ts 2000 WETH 100000000000000"
