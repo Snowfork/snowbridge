@@ -6,7 +6,7 @@ source scripts/set-env.sh
 deploy_command() {
     local deploy_script=$1
 
-    if [ "$snowbridge_v1" = true ]; then
+    if [ "$snowbridge_v1" = "true" ]; then
         pushd "$v1_contract_dir"
         rm -rf $v1_contract_dir/broadcast
     else
@@ -20,7 +20,7 @@ deploy_command() {
             --rpc-url $eth_endpoint_http \
             --broadcast \
             --verify \
-            --etherscan-api-key $etherscan_api_key \
+            --etherscan-api-key $ETHERSCAN_API_KEY \
             -vvv \
             $deploy_script
     else

@@ -129,7 +129,8 @@ export abstract class ParachainBase {
             throw Error(`Can not query XCM Weight.`)
         }
         let dotAsset = undefined
-        for (const asset of result.ok.v4) {
+        const assets = result.ok.v4 || result.ok.v5
+        for (const asset of assets) {
             if (asset.id.parents === 1 && asset.id.interior.here === null) {
                 dotAsset = asset
             }

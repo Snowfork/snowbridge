@@ -2,6 +2,9 @@ import { ApiPromise, WsProvider, Keyring } from "@polkadot/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 
 const InitialFund = 100_000_000_000_000n
+const SudoPubKey =
+    process.env["sudo_pubkey"] ||
+    "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 
 const sendBatchTransactionsOnBridgehub = async () => {
     // Connect to node
@@ -61,6 +64,22 @@ const sendBatchTransactionsOnAssethub = async () => {
     const keyring = new Keyring({ type: "sr25519" })
     const sender = keyring.addFromUri("//Alice")
 
+    const versionedLocation = api.createType("XcmVersionedLocation", {
+        v4: {
+            parents: 1,
+            interior: {
+                x1: [
+                    {
+                        accountId32: {
+                            network: null,
+                            id: SudoPubKey,
+                        },
+                    },
+                ],
+            },
+        },
+    })
+
     // Define recipient addresses and amounts (replace with real addresses)
     const transactions = [
         //Account for penpal (Sibling parachain 2000)
@@ -73,6 +92,7 @@ const sendBatchTransactionsOnAssethub = async () => {
             "5GjRnmh5o3usSYzVmsxBWzHEpvJyHK4tKNPhjpUR3ASrruBy",
             InitialFund
         ),
+        api.tx.polkadotXcm.addAuthorizedAlias(versionedLocation, null),
     ]
 
     // Create a batch transaction
@@ -125,10 +145,66 @@ const buildHrmpChannels = async () => {
     })
 }
 
+const sendBatchTransactionsOnPenpal = async () => {
+    // Connect to node
+    const api = await ApiPromise.create({ provider: new WsProvider("ws://127.0.0.1:13144") })
+
+    // Initialize Keyring and add an account (Replace with your private key or use mnemonic)
+    const keyring = new Keyring({ type: "sr25519" })
+    const sender = keyring.addFromUri("//Alice")
+
+    const versionedLocation = api.createType("XcmVersionedLocation", {
+        v4: {
+            parents: 1,
+            interior: {
+                x1: [
+                    {
+                        accountId32: {
+                            network: null,
+                            id: SudoPubKey,
+                        },
+                    },
+                ],
+            },
+        },
+    })
+
+    // Define recipient addresses and amounts (replace with real addresses)
+    const transactions = [
+        //Account for AH sovereign
+        api.tx.balances.transferAllowDeath(
+            "5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV",
+            InitialFund
+        ),
+        //Checking account
+        api.tx.balances.transferAllowDeath(
+            "5EYCAe5ijiYgWYWi1fs8Xz1td1djEtJVVnNfzvDRP4VtLL7Y",
+            InitialFund
+        ),
+        api.tx.polkadotXcm.addAuthorizedAlias(versionedLocation, null),
+    ]
+
+    // Create a batch transaction
+    const batchTx = api.tx.utility.batchAll(transactions)
+
+    console.log("Sending batch transaction...")
+
+    // Sign and send the batch transaction
+    const unsub = await batchTx.signAndSend(sender, ({ status }) => {
+        if (status.isInBlock) {
+            console.log(`✅ Transaction included in block: ${status.asInBlock}`)
+        } else if (status.isFinalized) {
+            console.log(`🎉 Transaction finalized in block: ${status.asFinalized}`)
+            unsub()
+        }
+    })
+}
+
 const main = async () => {
     await buildHrmpChannels()
     await sendBatchTransactionsOnBridgehub()
     await sendBatchTransactionsOnAssethub()
+    await sendBatchTransactionsOnPenpal()
 }
 
 // Run the script

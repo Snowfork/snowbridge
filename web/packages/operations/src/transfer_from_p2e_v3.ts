@@ -1,5 +1,5 @@
 import "dotenv/config"
-import { transferToEthereum } from "./transfer_to_ethereum"
+import { transferToEthereum } from "./transfer_to_ethereum_v3"
 
 const transfer = async (sourceParaId: number, symbol: string, amount: bigint) => {
     await transferToEthereum(sourceParaId, symbol, amount)
