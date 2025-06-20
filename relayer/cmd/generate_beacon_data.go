@@ -409,22 +409,18 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		log.Info("nonce is %d", nonce)
 		event, err := getEthereumEvent(ctx, client, gatewayContract, nonce)
 		if err != nil {
 			return err
 		}
-		log.Info("event is %v", event)
 		receiptTrie, err := headerCache.GetReceiptTrie(ctx, event.Raw.BlockHash)
 		if err != nil {
 			return err
 		}
-		log.Info("found receipts trie")
 		inboundMessage, err := ethereum.MakeMessageFromEvent(&event.Raw, receiptTrie)
 		if err != nil {
 			return err
 		}
-		log.Info("found message")
 		messageBlockNumber := event.Raw.BlockNumber
 
 		log.WithFields(log.Fields{
@@ -470,20 +466,18 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		inboundMessage.Proof.ExecutionProof = headerUpdateScale
 		headerUpdate := headerUpdateScale.ToJSON()
 
-		log.WithField("blockNumber", blockNumber).Info("found beacon block by slot")
-
 		messageJSON := inboundMessage.ToJSON()
 
 		err = writeJSONToFile(headerUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "execution-proof.json"))
 		if err != nil {
 			return err
 		}
-		log.Info("created execution update file")
+
 		err = writeJSONToFile(messageJSON, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "inbound-message.json"))
 		if err != nil {
 			return err
 		}
-		log.Info("created inbound message file")
+
 		// get inbound message data end
 
 		finalizedUpdate := finalizedUpdateAfterMessage.Payload.ToJSON()
@@ -573,8 +567,8 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 
 					break
 				} else {
-					log.WithField("slot", nextFinalizedUpdate.FinalizedHeader.Slot).Info("wait 5 minutes for next sync committee period")
-					time.Sleep(time.Minute * 5)
+					log.WithField("slot", nextFinalizedUpdate.FinalizedHeader.Slot).Info("wait 1 minute for next sync committee period")
+					time.Sleep(time.Minute * 1)
 				}
 			}
 		}
