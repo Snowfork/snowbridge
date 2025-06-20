@@ -1,5 +1,5 @@
 import "dotenv/config"
-import { historyV2 } from "@snowbridge/api"
+import { historyV2, subsquid } from "@snowbridge/api"
 
 const monitor = async () => {
     console.log("To Ethereum transfers:")
@@ -26,6 +26,13 @@ const monitor = async () => {
         "0x04b7a6c7552d2890094dfe43e037cb5f5495fec2419f33b0072439a9ee7629a0"
     )
     console.log(JSON.stringify(toEthereum, null, 2))
+
+    const estimatedDeliveryTime = await subsquid.fetchEstimatedDeliveryTime(
+        "0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539"
+    )
+    console.log(estimatedDeliveryTime)
+    const latestBlock = await subsquid.fetchLatestBlocksSynced()
+    console.log(latestBlock)
 }
 
 monitor()
