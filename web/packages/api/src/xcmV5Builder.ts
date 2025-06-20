@@ -9,6 +9,7 @@ import {
     parachainLocation,
     accountToLocation,
     HERE_LOCATION,
+    isEthereumAsset,
 } from "./xcmBuilder"
 import { Asset } from "./assets_v2"
 
@@ -1026,18 +1027,33 @@ export function buildTransferXcmFromAssetHub(
                     },
                 })
             } else {
-                assets.push({
-                    id: bridgeLocation(ethChainId),
-                    fun: {
-                        Fungible: remoteEtherFeeAmount,
-                    },
-                })
-                assets.push({
-                    id: tokenLocation,
-                    fun: {
-                        Fungible: tokenAmount,
-                    },
-                })
+                if (isEthereumAsset(tokenLocation)) {
+                    assets.push({
+                        id: bridgeLocation(ethChainId),
+                        fun: {
+                            Fungible: remoteEtherFeeAmount,
+                        },
+                    })
+                    assets.push({
+                        id: tokenLocation,
+                        fun: {
+                            Fungible: tokenAmount,
+                        },
+                    })
+                } else {
+                    assets.push({
+                        id: tokenLocation,
+                        fun: {
+                            Fungible: tokenAmount,
+                        },
+                    })
+                    assets.push({
+                        id: bridgeLocation(ethChainId),
+                        fun: {
+                            Fungible: remoteEtherFeeAmount,
+                        },
+                    })
+                }
             }
         }
     }
