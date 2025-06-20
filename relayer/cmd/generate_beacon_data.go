@@ -535,6 +535,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("could not parse flag wait_until_next_period: %w", err)
 		}
+		interimHeader := false
 		if waitUntilNextPeriod {
 			log.Info("waiting finalized_update in next period (5 hours later), be patient and wait...")
 			for {
@@ -545,6 +546,16 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 				}
 				nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
 				nextFinalizedUpdatePeriod := p.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
+
+				if nextFinalizedUpdate.FinalizedHeader.Slot > 800 && !interimHeader {
+					log.Info("wrote interim header")
+					err := writeJSONToFile(nextFinalizedUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "interim-finalized-header-update.json"))
+					if err != nil {
+						return err
+					}
+					interimHeader = true
+				}
+
 				if initialSyncPeriod+1 == nextFinalizedUpdatePeriod {
 					err := writeJSONToFile(nextFinalizedUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "next-finalized-header-update.json"))
 					if err != nil {
@@ -718,8 +729,6 @@ func getEthereumEvent(ctx context.Context, api api.BeaconAPI, gatewayContract *c
 				}
 				break
 			}
-			log.Info("event nonce is ", iter.Event.Nonce)
-			log.Info("check nonce is ", nonce)
 			if iter.Event.Nonce >= uint64(nonce) {
 				event = iter.Event
 				iter.Close()
