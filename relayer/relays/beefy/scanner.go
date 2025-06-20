@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
@@ -19,7 +20,7 @@ type ScanBlocksResult struct {
 
 func ScanBlocks(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateAPI, startBlock uint64) (chan ScanBlocksResult, error) {
 	results := make(chan ScanBlocksResult)
-	go scanBlocks(ctx, meta, api, startBlock, results)
+	go scanBlocks(ctx, meta, api, 25420890, results)
 	return results, nil
 }
 
@@ -108,7 +109,7 @@ func scanBlocks(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateA
 		}
 
 		if sessionIndex > currentSessionIndex {
-			currentSessionIndex = sessionIndex
+			//currentSessionIndex = sessionIndex
 		} else {
 			current++
 			continue
@@ -171,8 +172,10 @@ func scanCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.Subst
 
 			commitment, proof, err := fetchCommitmentAndProof(meta, api, result.BlockHash)
 			if err != nil {
-				emitError(fmt.Errorf("fetch commitment and proof: %w", err))
-				return
+				logrus.WithError(err).Error("scanned commitment")
+				//emitError(fmt.Errorf("fetch commitment and proof: %w", err))
+				//return
+				continue
 			}
 
 			select {
