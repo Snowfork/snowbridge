@@ -46,20 +46,6 @@ func generateBeaconFixtureCmd() *cobra.Command {
 	return cmd
 }
 
-func generateSyncCommiteeFixtureCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "generate-sync-committee-fixture",
-		Short: "Generate sync committee fixture.",
-		Args:  cobra.ExactArgs(0),
-		RunE:  generateSyncCommiteeFixture,
-	}
-
-	cmd.Flags().String("config", "/tmp/snowbridge-v2/beacon-relay.json", "Path to the beacon relay config")
-	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
-	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
-	return cmd
-}
-
 func generateBeaconCheckpointCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "generate-beacon-checkpoint",
@@ -188,94 +174,7 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-// Note: Needs to be run with SLOTS_PER_SECOND = 4
-func generateSyncCommiteeFixture(cmd *cobra.Command, _ []string) error {
-	err := func() error {
-		ctx := context.Background()
-
-		config, err := cmd.Flags().GetString("config")
-		if err != nil {
-			return err
-		}
-
-		viper.SetConfigFile(config)
-		if err = viper.ReadInConfig(); err != nil {
-			return err
-		}
-
-		var conf beaconConf.Config
-		err = viper.Unmarshal(&conf)
-		if err != nil {
-			return err
-		}
-
-		p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
-
-		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
-		err = store.Connect()
-		if err != nil {
-			return err
-		}
-		defer store.Close()
-
-		log.WithFields(log.Fields{"endpoint": conf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
-		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
-		s := syncer.New(client, &store, p)
-
-		viper.SetConfigFile("/tmp/snowbridge-v2/execution-relay-v1.json")
-
-		if err = viper.ReadInConfig(); err != nil {
-			return err
-		}
-
-		var executionConfig executionConf.Config
-		err = viper.Unmarshal(&executionConfig, viper.DecodeHook(execution.HexHookFunc()))
-		if err != nil {
-			return fmt.Errorf("unable to parse execution relay config: %w", err)
-		}
-
-		ethconn := ethereum.NewConnection(&executionConfig.Source.Ethereum, nil)
-		err = ethconn.Connect(ctx)
-		if err != nil {
-			return err
-		}
-
-		syncCommitteeUpdateScale, err := s.GetFinalizedUpdateAtAttestedSlot(32, 96, true)
-		if err != nil {
-			return fmt.Errorf("get sync committee update: %w", err)
-		}
-		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
-		log.Info("saving sync-committee-update-period-0-older.json")
-		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update-period-0-older.json"))
-
-		syncCommitteeUpdateScale, err = s.GetFinalizedUpdateAtAttestedSlot(32, 128, true)
-		if err != nil {
-			return fmt.Errorf("get sync committee update: %w", err)
-		}
-		syncCommitteeUpdate = syncCommitteeUpdateScale.Payload.ToJSON()
-		log.Info("saving sync-committee-update-period-0-older.json")
-		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update-period-0.json"))
-
-		syncCommitteeUpdateScale, err = s.GetFinalizedUpdateAtAttestedSlot(200, 500, true)
-		if err != nil {
-			return fmt.Errorf("get sync committee update: %w", err)
-		}
-		syncCommitteeUpdate = syncCommitteeUpdateScale.Payload.ToJSON()
-		log.Info("saving sync-committee-update-period-0-newer.json")
-		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update-period-0-newer.json"))
-
-		log.Info("done")
-
-		return nil
-	}()
-	if err != nil {
-		log.WithError(err).Error("error generating beacon data")
-	}
-
-	return nil
-}
-
-// Note: Can to be run with SLOTS_PER_SECOND = 1
+// Note: Needs to run with SLOTS_PER_SECOND = 4
 func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 	err := func() error {
 		ctx := context.Background()
@@ -306,7 +205,6 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		defer store.Close()
 
 		log.WithFields(log.Fields{"endpoint": conf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
-		log.WithFields(log.Fields{"endpoint": conf.Source.Beacon.Spec.ForkVersions.Electra}).Info("Electra fork version")
 		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
 		s := syncer.New(client, &store, p)
 
@@ -361,7 +259,6 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
 		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
-		log.Info("saving sync-committee-update-period-0-older.json")
 		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update-period-0-older.json"))
 
 		syncCommitteeUpdateScale, err = s.GetFinalizedUpdateAtAttestedSlot(32, 128, true)
@@ -369,7 +266,6 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
 		syncCommitteeUpdate = syncCommitteeUpdateScale.Payload.ToJSON()
-		log.Info("saving sync-committee-update-period-0-older.json")
 		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update-period-0.json"))
 
 		syncCommitteeUpdateScale, err = s.GetFinalizedUpdateAtAttestedSlot(200, 500, true)
@@ -377,7 +273,6 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
 		syncCommitteeUpdate = syncCommitteeUpdateScale.Payload.ToJSON()
-		log.Info("saving sync-committee-update-period-0-newer.json")
 		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update-period-0-newer.json"))
 		initialSyncHeaderSlot := initialSync.Header.Slot
 		initialSyncPeriod := p.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
@@ -466,18 +361,20 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		inboundMessage.Proof.ExecutionProof = headerUpdateScale
 		headerUpdate := headerUpdateScale.ToJSON()
 
+		log.WithField("blockNumber", blockNumber).Info("found beacon block by slot")
+
 		messageJSON := inboundMessage.ToJSON()
 
 		err = writeJSONToFile(headerUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "execution-proof.json"))
 		if err != nil {
 			return err
 		}
-
+		log.Info("created execution update file")
 		err = writeJSONToFile(messageJSON, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "inbound-message.json"))
 		if err != nil {
 			return err
 		}
-
+		log.Info("created inbound message file")
 		// get inbound message data end
 
 		finalizedUpdate := finalizedUpdateAfterMessage.Payload.ToJSON()
@@ -1223,8 +1120,8 @@ func generateDeliveryProofFixtureCmd() *cobra.Command {
 		RunE:  generateDeliveryProofFixture,
 	}
 
-	cmd.Flags().String("beacon-config", "/tmp/snowbridge-v2-v2/beacon-relay.json", "Path to the beacon relay config")
-	cmd.Flags().String("execution-config", "/tmp/snowbridge-v2-v2/execution-relay-v2.json", "Path to the beacon relay config")
+	cmd.Flags().String("beacon-config", "/tmp/snowbridge-v2/beacon-relay.json", "Path to the beacon relay config")
+	cmd.Flags().String("execution-config", "/tmp/snowbridge-v2/execution-relay-v2.json", "Path to the beacon relay config")
 	cmd.Flags().Uint32("nonce", 0, "Nonce of the outbound message")
 	return cmd
 }
