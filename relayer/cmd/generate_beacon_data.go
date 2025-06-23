@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
@@ -110,6 +112,7 @@ const (
 	pathToInboundQueueFixtureTestCaseTemplate = "relayer/templates/inbound-fixtures.mustache"
 	pathToInboundQueueFixtureTestCaseData     = "../polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures/src/%s.rs"
 	pathToDeliveryProofFixtureData            = "../polkadot-sdk/bridges/snowbridge/pallets/outbound-queue-v2/src/fixture.rs"
+	pathToLodestarMainnetConfig               = "lodestar/packages/config/src/chainConfig/configs/mainnet.ts"
 )
 
 // Only print the hex encoded call as output of this command
@@ -177,6 +180,17 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 // Note: Needs to run with SLOTS_PER_SECOND = 4
 func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 	err := func() error {
+		// Validate SECONDS_PER_SLOT configuration. Needs to be >= 4, otherwise the sync committee bits
+		// are not set in time.
+		secondsPerSlot, err := parseSecondsPerSlotFromMainnetConfig()
+		if err != nil {
+			return fmt.Errorf("failed to parse SECONDS_PER_SLOT from mainnet config: %w", err)
+		}
+		if secondsPerSlot < 4 {
+			return fmt.Errorf("SECONDS_PER_SLOT must be 4 or larger, found: %d", secondsPerSlot)
+		}
+		log.WithField("SECONDS_PER_SLOT", secondsPerSlot).Info("validated SECONDS_PER_SLOT configuration")
+
 		ctx := context.Background()
 
 		config, err := cmd.Flags().GetString("config")
@@ -1124,4 +1138,26 @@ func generateDeliveryProofFixtureCmd() *cobra.Command {
 	cmd.Flags().String("execution-config", "/tmp/snowbridge-v2/execution-relay-v2.json", "Path to the beacon relay config")
 	cmd.Flags().Uint32("nonce", 0, "Nonce of the outbound message")
 	return cmd
+}
+
+// parseSecondsPerSlotFromMainnetConfig reads the lodestar mainnet.ts file and extracts the SECONDS_PER_SLOT value
+func parseSecondsPerSlotFromMainnetConfig() (int, error) {
+	content, err := os.ReadFile(pathToLodestarMainnetConfig)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read mainnet config file: %w", err)
+	}
+
+	// Look for SECONDS_PER_SLOT: value pattern
+	re := regexp.MustCompile(`SECONDS_PER_SLOT:\s*(\d+)`)
+	matches := re.FindStringSubmatch(string(content))
+	if len(matches) < 2 {
+		return 0, fmt.Errorf("SECONDS_PER_SLOT not found in mainnet config")
+	}
+
+	value, err := strconv.Atoi(strings.TrimSpace(matches[1]))
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse SECONDS_PER_SLOT value: %w", err)
+	}
+
+	return value, nil
 }
