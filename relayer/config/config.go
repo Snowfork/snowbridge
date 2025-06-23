@@ -15,6 +15,8 @@ type EthereumConfig struct {
 	GasFeeCap uint64 `mapstructure:"gas-fee-cap"`
 	GasTipCap uint64 `mapstructure:"gas-tip-cap"`
 	GasLimit  uint64 `mapstructure:"gas-limit"`
+	// The gas cost of v2_submit excludes command execution, mainly covers the verification
+	BaseDeliveryGas uint64 `mapstructure:"base-delivery-gas"`
 }
 
 type OFACConfig struct {

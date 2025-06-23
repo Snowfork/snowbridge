@@ -100,13 +100,34 @@ func (wr *EthereumWriter) WriteChannels(
 	task *Task,
 ) error {
 	for _, proof := range *task.MessageProofs {
-		err := wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
+		profitable, err := wr.isTaskMessageProfitable(ctx, &proof)
 		if err != nil {
-			return fmt.Errorf("write eth gateway: %w", err)
+			return fmt.Errorf("check message profitable: %w", err)
+		}
+		if profitable {
+			err = wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
+			if err != nil {
+				return fmt.Errorf("write eth gateway: %w", err)
+			}
 		}
 	}
 
 	return nil
+}
+
+func (wr *EthereumWriter) isTaskMessageProfitable(ctx context.Context, proof *MessageProof) (bool, error) {
+	var result bool
+	gasPrice, err := wr.conn.Client().SuggestGasPrice(ctx)
+	if err != nil {
+		return result, err
+	}
+	// Todo: Iterate over all commands and sum their gas costs
+	gasFee := new(big.Int)
+	gasFee.Mul(gasPrice, big.NewInt(int64(wr.config.Ethereum.BaseDeliveryGas)))
+	if proof.Message.Fee.Cmp(gasFee) >= 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
@@ -116,7 +137,7 @@ func (wr *EthereumWriter) WriteChannel(
 	commitmentProof *MessageProof,
 	proof *ProofOutput,
 ) error {
-	message := commitmentProof.Message.IntoInboundMessage()
+	message := commitmentProof.Message.Message.IntoInboundMessage()
 
 	convertedHeader, err := convertHeader(proof.Header)
 	if err != nil {
