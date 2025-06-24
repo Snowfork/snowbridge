@@ -206,15 +206,9 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						// Future block equivocation handling
 						log.WithFields(log.Fields{
 							"commitment.payload.data": fmt.Sprintf("%#x", commitment.Payload[0].Data),
-							// "proof":                   validatorProof,
 							"latestBlock": latestBlockNumber,
 						}).Warning("Detected submitInitial for future block")
 
-						// log.Info("schedule ID", li.scheduleConfig.ID)
-						// if li.scheduleConfig.ID != 0 {
-						// 	log.Debug("testing: only submitting from relayer 0 - skipping")
-						// 	return nil
-						// }
 
 						meta, err := li.relaychainConn.API().RPC.State.GetMetadataLatest()
 						if err != nil {
@@ -238,12 +232,9 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 						}
 
 						payload2 := keyOwnershipProof[3:]
-						// log.Info("stripped proof: ", payload2)
-						// log.Info("stripped proof hex: ", fmt.Sprintf("%x", payload2))
 						// payload := []interface{}{types.NewBytes(payload1), types.NewBytes(payload2)}
 						// combine payload1 and payload2
 						payload := []interface{}{types.NewData(append(payload1, payload2...))}
-						// log.Info("payload: ", fmt.Sprintf("%x", payload))
 						c, err := types.NewCall(meta, extrinsicName, payload...)
 						// c, err := types.NewCall(meta, extrinsicName, types.NewBytes(payload1), types.NewBytes(payload2))
 						if err != nil {
@@ -282,9 +273,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 							}
 							log.WithFields(log.Fields{
 								"commitment": commitment,
-								// "bitfield":                 bitfield,
 								"commitment.payload.data": fmt.Sprintf("%#x", commitment.Payload[0].Data),
-								// "proof":                    validatorProof,
 								"correspondingMMRRootHash": canonicalMmrRootHash,
 							}).Debug("Decoded transaction call data for NewTicket event")
 							if canonicalMmrRootHash != types.NewHash(commitment.Payload[0].Data) {
@@ -294,12 +283,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 									"correspondingMMRRootHash": canonicalMmrRootHash,
 								}).Warning("MMR root hash does NOT match the commitment payload")
 
-								// log.Info("schedule ID", li.scheduleConfig.ID)
-								// TODO: remove
-								// if li.scheduleConfig.ID != 0 {
-								// 	log.Info("testing: only submitting from relayer 0 - skipping")
-								// 	return nil
-								// }
 
 								meta, err := li.relaychainConn.API().RPC.State.GetMetadataLatest()
 								if err != nil {
@@ -315,7 +298,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 								}
 
 								payload1 := constructVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
-								// log.Info("calling api")
 
 								// Ancestry Proof
 								payload2, err := li.constructAncestryProofPayload(commitment)
@@ -333,14 +315,11 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 								}
 
 								payload4 := keyOwnershipProof[3:]
-								// log.Info("stripped key ownership proof: ", payload4)
-								// log.Info("stripped key ownership hex: ", fmt.Sprintf("%x", payload4))
 								// payload := []interface{}{types.NewBytes(payload1), types.NewBytes(payload2)}
 								// combine payload1 and payload2
 								payloadEquivocationProof := append(payload1, payload2...)
 								payloadEquivocationProof = append(payloadEquivocationProof, payload3...)
 								payload := []interface{}{types.NewData(append(payloadEquivocationProof, payload4...))}
-								// log.Info("payload: ", fmt.Sprintf("%x", payload))
 								c, err := types.NewCall(meta, extrinsicName, payload...)
 								// c, err := types.NewCall(meta, extrinsicName, types.NewBytes(payload1), types.NewBytes(payload2))
 								if err != nil {
@@ -355,7 +334,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 									log.Error("Failed to submit extrinsic: ", err, sub)
 								} else {
 									err := li.watchExtrinsicSubscription(sub)
-									// log.Info("Extrinsic submitted: ", sub)
 									if err != nil {
 										log.Error("Extrinsic submission failed: ", err)
 									} else {
@@ -434,7 +412,6 @@ func (li *BeefyListener) parseSubmitInitialCommitment(callData []byte) (contract
 
 	log.WithFields(log.Fields{
 		"raw commitment": decoded["commitment"],
-		// "raw proof":      decoded["proof"],
 	}).Debug("Decoded transaction call data for NewTicket event")
 
 	// Extract the commitment

@@ -39,7 +39,6 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 	log.Info("Creating worker")
 
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
-	// TODO: should any other relay instantiations have access to the keypair for reporting equivocations? For instance, the OnDemandRelay.
 	relaychainWriterConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint, keypair2.AsKeyringPair())
 
 	ethereumConnWriter := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
