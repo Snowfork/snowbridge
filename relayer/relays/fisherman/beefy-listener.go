@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -31,11 +30,6 @@ type BeefyListener struct {
 	ethereumConn        *ethereum.Connection
 	beefyClientContract *contracts.BeefyClient
 	relaychainConn      *relaychain.Connection
-	parachainConnection *parachain.Connection
-	ofac                *ofac.OFAC
-	paraID              uint32
-	tasks               chan<- *Task
-	scanner             *Scanner
 }
 
 func NewBeefyListener(
@@ -48,13 +42,10 @@ func NewBeefyListener(
 	tasks chan<- *Task,
 ) *BeefyListener {
 	return &BeefyListener{
-		config:              config,
-		scheduleConfig:      scheduleConfig,
-		ethereumConn:        ethereumConn,
-		relaychainConn:      relaychainConn,
-		parachainConnection: parachainConnection,
-		ofac:                ofac,
-		tasks:               tasks,
+		config:         config,
+		scheduleConfig: scheduleConfig,
+		ethereumConn:   ethereumConn,
+		relaychainConn: relaychainConn,
 	}
 }
 
@@ -67,55 +58,13 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	li.beefyClientContract = beefyClientContract
 
-	// fetch ParaId
-	paraIDKey, err := types.CreateStorageKey(li.parachainConnection.Metadata(), "ParachainInfo", "ParachainId", nil, nil)
+	err = li.subscribeNewBEEFYEvents(ctx)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil
+		}
 		return err
 	}
-	var paraID uint32
-	ok, err := li.parachainConnection.API().RPC.State.GetStorageLatest(paraIDKey, &paraID)
-	if err != nil {
-		return fmt.Errorf("fetch parachain id: %w", err)
-	}
-	if !ok {
-		return fmt.Errorf("parachain id missing")
-	}
-	li.paraID = paraID
-
-	li.scanner = &Scanner{
-		config:    li.config,
-		ethConn:   li.ethereumConn,
-		relayConn: li.relaychainConn,
-		paraConn:  li.parachainConnection,
-		paraID:    paraID,
-		ofac:      li.ofac,
-	}
-
-	eg.Go(func() error {
-		defer close(li.tasks)
-
-		// Subscribe NewMMRRoot event logs and fetch parachain message commitments
-		// since latest beefy block
-		beefyBlockNumber, _, err := li.fetchLatestBeefyBlock(ctx)
-		if err != nil {
-			return fmt.Errorf("fetch latest beefy block: %w", err)
-		}
-
-		err = li.doScan(ctx, beefyBlockNumber)
-		if err != nil {
-			return fmt.Errorf("scan for sync tasks bounded by BEEFY block %v: %w", beefyBlockNumber, err)
-		}
-
-		err = li.subscribeNewBEEFYEvents(ctx)
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return nil
-			}
-			return err
-		}
-
-		return nil
-	})
 
 	return nil
 }
@@ -157,11 +106,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 					"ethereumBlockNumber": event.Raw.BlockNumber,
 					"ethereumTxHash":      event.Raw.TxHash.Hex(),
 				}).Info("Witnessed a new MMRRoot event")
-
-				err = li.doScan(ctx, event.BlockNumber)
-				if err != nil {
-					return fmt.Errorf("scan for sync tasks bounded by BEEFY block %v: %w", event.BlockNumber, err)
-				}
 			}
 
 			contractNewTicketEvents, err := li.queryNewTicketEvents(ctx, blockNumber, &blockNumber)
@@ -481,23 +425,6 @@ func (li *BeefyListener) parseSubmitInitialProof(callData []byte) (contracts.Bee
 	return proof, nil
 }
 
-func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) error {
-	tasks, err := li.scanner.Scan(ctx, beefyBlockNumber)
-	if err != nil {
-		return err
-	}
-	for _, task := range tasks {
-		paraNonce := (*task.MessageProofs)[0].Message.Nonce
-		waitingPeriod := (uint64(paraNonce) + li.scheduleConfig.TotalRelayerCount - li.scheduleConfig.ID) % li.scheduleConfig.TotalRelayerCount
-		err = li.waitAndSend(ctx, task, waitingPeriod)
-		if err != nil {
-			return fmt.Errorf("wait task for nonce %d: %w", paraNonce, err)
-		}
-	}
-
-	return nil
-}
-
 // queryNewMMRRootEvents queries NewMMRRoot events from the BeefyClient contract
 func (li *BeefyListener) queryNewMMRRootEvents(
 	ctx context.Context, start uint64,
@@ -672,38 +599,4 @@ func (li *BeefyListener) generateAndValidateParasHeadsMerkleProof(input *ProofIn
 		)
 	}
 	return &merkleProofData, paraHeads, nil
-}
-
-func (li *BeefyListener) waitAndSend(ctx context.Context, task *Task, waitingPeriod uint64) error {
-	paraNonce := (*task.MessageProofs)[0].Message.Nonce
-	log.Info(fmt.Sprintf("waiting for nonce %d to be picked up by another relayer", paraNonce))
-	var cnt uint64
-	var err error
-	for {
-		isRelayed, err := li.scanner.isNonceRelayed(ctx, uint64(paraNonce))
-		if err != nil {
-			return err
-		}
-		if isRelayed {
-			log.Info(fmt.Sprintf("nonce %d picked up by another relayer, just skip", paraNonce))
-			return nil
-		}
-		if cnt == waitingPeriod {
-			break
-		}
-		time.Sleep(time.Duration(li.scheduleConfig.SleepInterval) * time.Second)
-		cnt++
-	}
-	log.Info(fmt.Sprintf("nonce %d is not picked up by any one, submit anyway", paraNonce))
-	task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
-	if err != nil {
-		return err
-	}
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case li.tasks <- task:
-		log.Info("Beefy Listener emitted new task")
-	}
-	return nil
 }
