@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	para "github.com/snowfork/snowbridge/relayer/chain/parachain"
-	"github.com/snowfork/snowbridge/relayer/relays/parachain"
+	"github.com/snowfork/snowbridge/relayer/relays/fisherman"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -58,7 +58,7 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	var config parachain.Config
+	var config fisherman.Config
 	err := viper.UnmarshalExact(&config, viper.DecodeHook(HexHookFunc()))
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	relay, err := parachain.NewRelay(&config, keypair, keypair2)
+	relay, err := fisherman.NewRelay(&config, keypair, keypair2)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func HexHookFunc() mapstructure.DecodeHookFuncType {
 		}
 
 		// Check that the target type is our custom type
-		if t != reflect.TypeOf(parachain.ChannelID{}) {
+		if t != reflect.TypeOf(fisherman.ChannelID{}) {
 			return data, nil
 		}
 
@@ -144,7 +144,7 @@ func HexHookFunc() mapstructure.DecodeHookFuncType {
 		copy(out[:], foo)
 
 		// Return the parsed value
-		return parachain.ChannelID(out), nil
+		return fisherman.ChannelID(out), nil
 	}
 }
 
