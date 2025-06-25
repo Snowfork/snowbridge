@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-06-25T00:15:52.758Z",
+  "timestamp": "2025-06-25T21:17:00.064Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -1014,7 +1014,7 @@
           "isSufficient": false
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:81852745",
+      "estimatedExecutionFeeDOT": "bigint:82186811",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2034": {
@@ -1151,7 +1151,7 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:2309001",
+      "estimatedExecutionFeeDOT": "bigint:2168317",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "3369": {
