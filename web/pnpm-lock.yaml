@@ -235,36 +235,9 @@ importers:
 
   packages/registry:
     dependencies:
-      '@polkadot/api':
-        specifier: ^15.10.2
-        version: 15.10.2
-      '@polkadot/keyring':
-        specifier: ^13.4.4
-        version: 13.4.4(@polkadot/util-crypto@13.4.4(@polkadot/util@13.4.4))(@polkadot/util@13.4.4)
-      '@polkadot/types':
-        specifier: ^15.10.2
-        version: 15.10.2
-      '@polkadot/util':
-        specifier: ^13.4.4
-        version: 13.4.4
-      '@polkadot/util-crypto':
-        specifier: ^13.4.4
-        version: 13.4.4(@polkadot/util@13.4.4)
       '@snowbridge/api':
         specifier: workspace:*
         version: link:../api
-      '@snowbridge/contract-types':
-        specifier: workspace:*
-        version: link:../contract-types
-      '@typechain/ethers-v6':
-        specifier: ^0.5.1
-        version: 0.5.1(ethers@6.13.5)(typechain@8.3.2(typescript@5.5.4))(typescript@5.5.4)
-      ethers:
-        specifier: ^6.13.5
-        version: 6.13.5
-      rxjs:
-        specifier: ^7.8.1
-        version: 7.8.1
     devDependencies:
       '@types/node':
         specifier: ^18.19.31
