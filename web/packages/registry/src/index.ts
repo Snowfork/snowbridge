@@ -12,15 +12,15 @@ function transformBigInt(obj: any): any {
     if (typeof obj === "string") {
       const match = obj.match(bigintPattern);
       if (match) {
-        return BigInt(match[1]);
+        return Object.freeze(BigInt(match[1]));
       }
     }
-    return obj;
+    return Object.freeze(obj);
   }
 
   // Handle arrays
   if (Array.isArray(obj)) {
-    return obj.map((item) => transformBigInt(item));
+    return Object.freeze(obj.map((item) => transformBigInt(item)));
   }
 
   // Handle objects
@@ -30,7 +30,7 @@ function transformBigInt(obj: any): any {
       result[key] = transformBigInt(obj[key]);
     }
   }
-  return result;
+  return Object.freeze(result);
 }
 
 const cache: { [env: string]: assetsV2.AssetRegistry } = {};
