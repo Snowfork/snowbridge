@@ -1,6 +1,3 @@
-
-
-
 import { assetsV2, environment } from "@snowbridge/api"
 import { writeFile } from "fs/promises"
 
