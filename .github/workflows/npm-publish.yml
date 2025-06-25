@@ -57,3 +57,8 @@ jobs:
         working-directory: web/packages/api
         run: |
           pnpm publish --no-git-checks --access public
+      
+      - name: Publish Registry
+        working-directory: web/packages/registry
+        run: |
+          pnpm publish --no-git-checks --access public
