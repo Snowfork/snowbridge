@@ -7,6 +7,7 @@ on:
 
 env:
   NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+  ETHEREUM_API_KEY: ${{ secrets.ETHEREUM_API_KEY }}
 
 jobs:
   publish:
