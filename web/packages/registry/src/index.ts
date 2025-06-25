@@ -35,7 +35,7 @@ function transformBigInt(obj: any): any {
 
 const cache: { [env: string]: assetsV2.AssetRegistry } = {};
 export function assetRegistryFor(
-  env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia"
+  env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {})
 ): assetsV2.AssetRegistry {
   if (env in cache) {
     return cache[env];
