@@ -259,8 +259,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 "1002": "wss://bridge-hub-paseo.dotters.network",
                 "3369": "wss://paseo-muse-rpc.polkadot.io",
             },
-            GATEWAY_CONTRACT: "0x5a84b15B618beEE6F6285F6bd2bA20a08673e473",
-            BEEFY_CONTRACT: "0xE7388f953f50d377D131350490156dB649E5DC10",
+            GATEWAY_CONTRACT: "0x1607C1368bc943130258318c91bBd8cFf3D063E6",
+            BEEFY_CONTRACT: "0x2c780945beb1241fE9c645800110cb9C4bBbb639",
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
             PRIMARY_GOVERNANCE_CHANNEL_ID:

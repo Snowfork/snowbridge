@@ -1,5 +1,7 @@
+use alloy::primitives::Address;
 use snowbridge_smoketest::{
-	contracts::i_gateway_base::ForeignTokenRegisteredFilter,
+	constants::GATEWAY_PROXY_CONTRACT,
+	contracts::i_gateway_base::IGatewayBase::ForeignTokenRegistered,
 	helper::*,
 	parachains::{
 		bridgehub,
@@ -14,6 +16,7 @@ use subxt::tx::Payload;
 
 #[tokio::test]
 async fn register_polkadot_token() {
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let test_clients = initial_clients().await.expect("initialize clients");
 	type Junctions = runtime_types::staging_xcm::v4::junctions::Junctions;
 	let asset = VersionedLocation::V4(runtime_types::staging_xcm::v4::location::Location {
@@ -56,5 +59,6 @@ async fn register_polkadot_token() {
 
 	wait_for_bridgehub_event::<RegisterToken>(&test_clients.bridge_hub_client).await;
 
-	wait_for_ethereum_event::<ForeignTokenRegisteredFilter>(&test_clients.ethereum_client).await;
+	wait_for_ethereum_event::<ForeignTokenRegistered>(test_clients.ethereum_client, gateway_addr)
+		.await;
 }

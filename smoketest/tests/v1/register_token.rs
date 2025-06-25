@@ -1,63 +1,58 @@
+use alloy::primitives::Address;
 use codec::Encode;
-use ethers::core::types::Address;
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{i_gateway_v1 as i_gateway, weth9},
+	contracts::weth9,
 	helper::{initial_clients, print_event_log_for_unit_tests},
 	parachains::assethub::api::{
 		foreign_assets::events::Created,
-		runtime_types::{
-			staging_xcm::v3::multilocation::MultiLocation,
-			xcm::v3::{
-				junction::{
-					Junction::{AccountKey20, GlobalConsensus},
-					NetworkId,
-				},
-				junctions::Junctions::X2,
+		runtime_types::staging_xcm::v4::{
+			junction::{
+				Junction::{AccountKey20, GlobalConsensus},
+				NetworkId,
 			},
+			junctions::Junctions::X2,
+			location::Location,
 		},
 	},
 };
 use subxt::utils::AccountId32;
 
+#[cfg(feature = "legacy-v1")]
+use snowbridge_smoketest::contracts::i_gateway::IGateway;
+#[cfg(not(feature = "legacy-v1"))]
+use snowbridge_smoketest::contracts::i_gateway_v1::IGatewayV1 as IGateway;
+
 #[tokio::test]
 async fn register_token() {
 	let test_clients = initial_clients().await.expect("initialize clients");
-	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
+	let ethereum_client = test_clients.ethereum_client;
 	let assethub = *(test_clients.asset_hub_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway::IGatewayV1::new(gateway_addr, ethereum_client.clone());
+	let gateway = IGateway::new(gateway_addr, ethereum_client.clone());
 
 	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
-	let fee = gateway.quote_register_token_fee().call().await.unwrap();
+	let fee = gateway.quoteRegisterTokenFee().call().await.unwrap();
 
-	let receipt = gateway
-		.register_token(weth.address())
+	let transaction = gateway
+		.registerToken(*weth.address())
 		.value(fee)
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
-		.unwrap()
-		.await
-		.unwrap()
-		.unwrap();
+		.expect("send token");
+	let receipt = transaction.get_receipt().await.expect("get receipt");
 
-	println!(
-		"receipt transaction hash: {:#?}, transaction block: {:#?}",
-		hex::encode(receipt.transaction_hash),
-		receipt.block_number
-	);
-
-	// Log for OutboundMessageAccepted
-	let outbound_message_accepted_log = receipt.logs.last().unwrap();
+	println!("receipt transaction hash: {:#?}", hex::encode(receipt.transaction_hash));
 
 	// print log for unit tests
-	print_event_log_for_unit_tests(outbound_message_accepted_log);
+	print_event_log_for_unit_tests(receipt.logs().first().unwrap().as_ref());
 
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
+	assert_eq!(receipt.status(), true);
 
 	let wait_for_blocks = (*WAIT_PERIOD) as usize;
 	let mut blocks = assethub
@@ -67,12 +62,12 @@ async fn register_token() {
 		.expect("block subscription")
 		.take(wait_for_blocks);
 
-	let expected_asset_id: MultiLocation = MultiLocation {
+	let expected_asset_id: Location = Location {
 		parents: 2,
-		interior: X2(
+		interior: X2([
 			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
 			AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
-		),
+		]),
 	};
 	let expected_creator: AccountId32 = SNOWBRIDGE_SOVEREIGN.into();
 	let expected_owner: AccountId32 = SNOWBRIDGE_SOVEREIGN.into();
