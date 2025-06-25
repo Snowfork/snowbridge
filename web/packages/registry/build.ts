@@ -27,6 +27,10 @@ async function buildRegistry(env: string, options: assetsV2.RegistryOptions) {
         "westend_sepolia",
         "paseo_sepolia",
     ]
+    const apiKey = process.env.ETHEREUM_API_KEY
+    if(!apiKey || apiKey.trim().length === 0) {
+        console.error(`ETHEREUM_API_KEY env variable not set.`)
+    }
     for (const env of envs) {
         const options = assetsV2.fromEnvironment(environment.SNOWBRIDGE_ENV[env], process.env.ETHEREUM_API_KEY)
         await buildRegistry(env, options)
