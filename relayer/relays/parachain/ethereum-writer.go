@@ -121,9 +121,14 @@ func (wr *EthereumWriter) isTaskMessageProfitable(ctx context.Context, proof *Me
 	if err != nil {
 		return result, err
 	}
-	// Todo: Iterate over all commands and sum their gas costs
+	var totalDispatchGas uint64
+	commands := proof.Message.Message.Commands
+	for _, command := range commands {
+		totalDispatchGas = totalDispatchGas + uint64(command.MaxDispatchGas)
+	}
+	totalDispatchGas = totalDispatchGas + wr.config.Ethereum.BaseDeliveryGas
 	gasFee := new(big.Int)
-	gasFee.Mul(gasPrice, big.NewInt(int64(wr.config.Ethereum.BaseDeliveryGas)))
+	gasFee.Mul(gasPrice, big.NewInt(int64(totalDispatchGas)))
 	if proof.Message.Fee.Cmp(gasFee) >= 0 {
 		return true, nil
 	}
