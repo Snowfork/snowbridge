@@ -76,16 +76,21 @@ struct AsCreateAsset {
     address token;
     // Polkadot network to create the asset in
     uint8 network;
+    // Gas cost of a local transfer
+    uint64 gasCost;
 }
 
 function makeRawXCM(bytes memory xcm) pure returns (Xcm memory) {
     return Xcm({kind: XcmKind.Raw, data: xcm});
 }
 
-function makeCreateAssetXCM(address token, Network network) pure returns (Xcm memory) {
+function makeCreateAssetXCM(address token, Network network, uint64 gasCost)
+    pure
+    returns (Xcm memory)
+{
     return Xcm({
         kind: XcmKind.CreateAsset,
-        data: abi.encode(AsCreateAsset({token: token, network: uint8(network)}))
+        data: abi.encode(AsCreateAsset({token: token, network: uint8(network), gasCost: gasCost}))
     });
 }
 
