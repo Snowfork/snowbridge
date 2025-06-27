@@ -25,7 +25,7 @@ async fn register_ena() {
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
 	let receipt = gateway
-		.v2_registerToken(*weth.address(), 0, 1_500_000_000_000u128, 1_500_000_000_000u128)
+		.v2_registerToken(*weth.address(), 0, 1_500_000_000_000u128, 1_500_000_000_000u128, 0)
 		.value(U256::from(13_000_000_000_000u128))
 		.gas_price(GAS_PRICE)
 		.send()

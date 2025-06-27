@@ -93,11 +93,13 @@ interface IGatewayV2 {
     //   * `network` (uint8): Polkadot=0. Kusama may be added later - it is not supported yet.
     //   * `executionFee`: Amount of ether to pay for execution on AssetHub.
     //   * `relayerFee`: Amount of ether to pay for relayer incentivation.
+    //   * `gasCost`: The gas cost for a local transfer
     function v2_registerToken(
         address token,
         uint8 network,
         uint128 executionFee,
-        uint128 relayerFee
+        uint128 relayerFee,
+        uint64 gasCost
     ) external payable;
 
     /// @dev Creates a new agent contract to act as a proxy for the remote location

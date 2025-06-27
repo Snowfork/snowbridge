@@ -65,9 +65,10 @@ library CallsV2 {
         address token,
         Network network,
         uint128 executionFee,
-        uint128 relayerFee
+        uint128 relayerFee,
+        uint64 gasCost
     ) internal {
-        Xcm memory xcm = makeCreateAssetXCM(token, network);
+        Xcm memory xcm = makeCreateAssetXCM(token, network, gasCost);
 
         Functions.registerNativeToken(token);
 
