@@ -468,7 +468,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         uint64 gasCost
     ) external payable nonreentrant {
         require(network == uint8(Network.Polkadot), IGatewayV2.InvalidNetwork());
-        if (gasCost == 0) {
+        if (gasCost < DEFAULT_GAS_FOR_UNLOCK_NATIVE_TOKEN) {
             gasCost = DEFAULT_GAS_FOR_UNLOCK_NATIVE_TOKEN;
         }
         CallsV2.registerToken(token, Network(network), executionFee, relayerFee, gasCost);
