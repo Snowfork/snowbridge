@@ -402,8 +402,8 @@ $graphqlApiUrl --no-progress-meter | jq "."
   }
 }
 **/
-export const fetchLatestBlocksSynced = async () => {
-    let query = `query { latestBlocks {
+export const fetchLatestBlocksSynced = async (includePKBridge: boolean) => {
+    let query = `query { latestBlocks(withPKBridge: ${includePKBridge}) {
                     height
                     name
                 }}`
