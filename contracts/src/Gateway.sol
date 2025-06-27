@@ -457,6 +457,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         CallsV2.sendMessage(xcm, assets, claimer, executionFee, relayerFee);
     }
 
+    uint64 constant DEFAULT_GAS_FOR_UNLOCK_NATIVE_TOKEN = 100_000;
+
     // See docs for `IGateway.v2_registerToken`
     function v2_registerToken(
         address token,
@@ -466,6 +468,9 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         uint64 gasCost
     ) external payable nonreentrant {
         require(network == uint8(Network.Polkadot), IGatewayV2.InvalidNetwork());
+        if (gasCost == 0) {
+            gasCost = DEFAULT_GAS_FOR_UNLOCK_NATIVE_TOKEN;
+        }
         CallsV2.registerToken(token, Network(network), executionFee, relayerFee, gasCost);
     }
 
