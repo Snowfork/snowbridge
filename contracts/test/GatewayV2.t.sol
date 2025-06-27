@@ -166,14 +166,17 @@ contract GatewayV2Test is Test {
         return commands;
     }
 
-    function makeUnlockWethCommand(uint128 value) public view returns (CommandV2[] memory) {
+    function makeUnlockWethCommand(uint128 value, uint64 gas)
+        public
+        view
+        returns (CommandV2[] memory)
+    {
         UnlockNativeTokenParams memory params =
             UnlockNativeTokenParams({token: address(weth), recipient: relayer, amount: value});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] =
-            CommandV2({kind: CommandKind.UnlockNativeToken, gas: 500_000, payload: payload});
+        commands[0] = CommandV2({kind: CommandKind.UnlockNativeToken, gas: gas, payload: payload});
         return commands;
     }
 
@@ -425,7 +428,37 @@ contract GatewayV2Test is Test {
                 origin: Constants.ASSET_HUB_AGENT_ID,
                 nonce: 1,
                 topic: topic,
-                commands: makeUnlockWethCommand(0.1 ether)
+                commands: makeUnlockWethCommand(0.1 ether, 50_000)
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
+        );
+    }
+
+    function testUnlockWethWithInsufficientGasWillFail() public {
+        bytes32 topic = keccak256("topic");
+
+        hoax(assetHubAgent);
+        weth.deposit{value: 1 ether}();
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+
+        // Expect the failed command to emit CommandFailed event
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0); // nonce 1, command index 1
+
+        // Expect InboundMessageDispatched to be emitted with success=false since not all commands succeeded
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: Constants.ASSET_HUB_AGENT_ID,
+                nonce: 1,
+                topic: topic,
+                commands: makeUnlockWethCommand(0.1 ether, 21_000)
             }),
             proof,
             makeMockProof(),
