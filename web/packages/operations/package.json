@@ -59,6 +59,7 @@
     "@polkadot/util": "^13.4.4",
     "@polkadot/util-crypto": "^13.4.4",
     "@snowbridge/api": "workspace:*",
+    "@snowbridge/registry": "workspace:*",
     "@snowbridge/contract-types": "workspace:*",
     "@types/keccak": "^3.0.4",
     "@types/lodash": "^4.17.0",

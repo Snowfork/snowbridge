@@ -3,5 +3,6 @@ packages:
   - "packages/api"
   - "packages/contracts"
   - "packages/contract-types"
+  - "packages/registry"
   - "packages/test-helpers"
   - "packages/operations"

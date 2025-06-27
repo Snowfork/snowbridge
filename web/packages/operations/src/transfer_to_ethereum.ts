@@ -2,7 +2,7 @@ import { Keyring } from "@polkadot/keyring"
 import { Context, environment, toEthereumV2, assetsV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
-import { fetchRegistry } from "./registry"
+import { assetRegistryFor } from "@snowbridge/registry"
 
 export const transferToEthereum = async (sourceParaId: number, symbol: string, amount: bigint) => {
     let env = "local_e2e"
@@ -46,18 +46,17 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        process.env.ETHEREUM_KEY ?? "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
+        process.env.ETHEREUM_KEY ??
+            "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
         context.ethereum()
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
-    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(
-        process.env.SUBSTRATE_KEY ?? "//Ferdie"
-    )
+    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
-    const registry = await fetchRegistry(env, context)
+    const registry = assetRegistryFor(env)
 
     const assets = registry.ethereumChains[registry.ethChainId].assets
     const TOKEN_CONTRACT = Object.keys(assets)
