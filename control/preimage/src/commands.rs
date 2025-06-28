@@ -27,6 +27,10 @@ use crate::bridge_hub_runtime::runtime_types::{
     snowbridge_pallet_outbound_queue, snowbridge_pallet_system,
 };
 use crate::bridge_hub_runtime::RuntimeCall as BridgeHubRuntimeCall;
+use hex_literal::hex;
+use sp_crypto_hashing::twox_64;
+
+pub const ASSET_HUB_CHANNEL_ID: [u8; 32] = hex!("c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539");
 
 #[cfg(feature = "polkadot")]
 pub mod asset_hub_polkadot_types {
@@ -57,27 +61,26 @@ pub mod asset_hub_polkadot_types {
 
 #[cfg(feature = "paseo")]
 pub mod asset_hub_paseo_types {
-    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation as Location;
-    pub use crate::asset_hub_runtime::runtime_types::xcm::v3::{
+    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
         junction::Junction::AccountKey20,
         junction::Junction::GlobalConsensus,
         junction::NetworkId,
         junctions::Junctions::{X1, X2},
+        location::Location,
     };
-
     pub fn get_ether_id(chain_id: u64) -> Location {
         return Location {
             parents: 2,
-            interior: X1(GlobalConsensus(NetworkId::Ethereum { chain_id })),
+            interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id })]),
         };
     }
     pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> Location {
         return Location {
             parents: 2,
-            interior: X2(
+            interior: X2([
                 GlobalConsensus(NetworkId::Ethereum { chain_id }),
                 AccountKey20 { network: None, key },
-            ),
+            ]),
         };
     }
 }
@@ -151,12 +154,21 @@ pub fn outbound_queue_operating_mode(param: &OperatingModeEnum) -> BridgeHubRunt
 }
 
 pub fn upgrade(params: &UpgradeArgs) -> BridgeHubRuntimeCall {
+    let initializer = if params.initializer {
+        Some((
+            params.initializer_params.as_ref().unwrap().clone(),
+            params.initializer_gas.unwrap(),
+        ))
+    } else {
+        None
+    };
+
     BridgeHubRuntimeCall::EthereumSystem(snowbridge_pallet_system::pallet::Call::upgrade {
         impl_address: params.logic_address.into_array().into(),
         impl_code_hash: params.logic_code_hash.0.into(),
-        initializer: Some(Initializer {
-            params: params.initializer_params.clone().into(),
-            maximum_required_gas: params.initializer_gas,
+        initializer: initializer.map(|(params, gas)| Initializer {
+            params: params.into(),
+            maximum_required_gas: gas,
         }),
     })
 }
@@ -260,6 +272,41 @@ pub fn set_assethub_fee(fee: u128) -> AssetHubRuntimeCall {
             items: vec![(
                 asset_hub_outbound_fee_storage_key,
                 asset_hub_outbound_fee_encoded,
+            )],
+        },
+    )
+}
+
+pub fn set_inbound_nonce() -> BridgeHubRuntimeCall {
+    set_nonce("EthereumInboundQueue", ASSET_HUB_CHANNEL_ID.into())
+}
+
+pub fn set_outbound_nonce(channel: [u8; 32]) -> BridgeHubRuntimeCall {
+    set_nonce("EthereumOutboundQueue", channel.into())
+}
+
+fn set_nonce(pallet_name: &str, channel: [u8; 32]) -> BridgeHubRuntimeCall {
+    let new_nonce: Vec<u8> = 0u64.encode();
+
+    let mut key = Vec::new();
+    let pallet_prefix = pallet_name.as_bytes();
+    key.extend_from_slice(&twox_128(&pallet_prefix));
+
+    let storage_prefix = b"Nonce";
+    key.extend_from_slice(&twox_128(storage_prefix));
+
+    let encoded_id = channel.encode();
+    let hash_id_64 = twox_64(&encoded_id);
+    key.extend_from_slice(&hash_id_64);
+    key.extend_from_slice(&encoded_id);
+
+    println!("nonce key for {}: 0x{}", pallet_name, hex::encode(&key));
+
+    BridgeHubRuntimeCall::System(
+        crate::bridge_hub_runtime::runtime_types::frame_system::pallet::Call::set_storage {
+            items: vec![(
+                key,
+                new_nonce,
             )],
         },
     )
