@@ -40,10 +40,7 @@ func (tb *TokenBucket) refiller(ctx context.Context) {
 			return
 		case <-ticker.C:
 			currentTokens := tb.tokens.Load()
-			newTokens := currentTokens + tb.refillAmount
-			if newTokens > tb.maxTokens {
-				newTokens = tb.maxTokens
-			}
+			newTokens := min(currentTokens+tb.refillAmount, tb.maxTokens)
 			tb.tokens.Store(newTokens)
 		}
 	}
