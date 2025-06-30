@@ -31,7 +31,7 @@ interface IGatewayV2 {
     /// Emitted when inbound message has been dispatched.The "success" field is "true" if all
     //commands successfully executed, otherwise "false" if all or some of the commands failed.
     event InboundMessageDispatched(
-        uint64 indexed nonce, bytes32 topic, bool success, bytes32 rewardAddress
+        uint64 indexed nonce, bytes32 hash, bytes32 topic, bool success, bytes32 rewardAddress
     );
 
     /// Emitted when a command at `index` within an inbound message identified by `nonce` fails to execute

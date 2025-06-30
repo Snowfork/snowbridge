@@ -434,7 +434,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         // Emit the event with a success value "true" if all commands successfully executed, otherwise "false"
         // if all or some of the commands failed.
         emit IGatewayV2.InboundMessageDispatched(
-            message.nonce, message.topic, success, rewardAddress
+            message.nonce, message.hash, message.topic, success, rewardAddress
         );
     }
 

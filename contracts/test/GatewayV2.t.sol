@@ -84,6 +84,9 @@ contract GatewayV2Test is Test {
     // tokenID for DOT
     bytes32 public dotTokenID;
 
+    // default hash of the message
+    bytes32 public defaultHash;
+
     HelloWorld public helloWorld;
 
     event SaidHello(string indexed message);
@@ -128,6 +131,7 @@ contract GatewayV2Test is Test {
         weth.deposit{value: 1 ether}();
 
         dotTokenID = bytes32(uint256(1));
+        defaultHash = bytes32(uint256(1));
 
         helloWorld = new HelloWorld();
     }
@@ -226,13 +230,14 @@ contract GatewayV2Test is Test {
 
         // Expect the gateway to emit `InboundMessageDispatched`
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(1, defaultHash, topic, true, relayerRewardAddress);
 
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway)).v2_submit(
             InboundMessageV2({
                 origin: keccak256("666"),
                 nonce: 1,
+                hash: defaultHash,
                 topic: topic,
                 commands: makeMockCommand()
             }),
@@ -248,6 +253,7 @@ contract GatewayV2Test is Test {
         InboundMessageV2 memory message = InboundMessageV2({
             origin: keccak256("666"),
             nonce: 1,
+            hash: defaultHash,
             topic: topic,
             commands: makeMockCommand()
         });
@@ -270,6 +276,7 @@ contract GatewayV2Test is Test {
         InboundMessageV2 memory message = InboundMessageV2({
             origin: keccak256("666"),
             nonce: 1,
+            hash: defaultHash,
             topic: topic,
             commands: makeMockCommand()
         });
@@ -298,6 +305,7 @@ contract GatewayV2Test is Test {
         InboundMessageV2 memory message = InboundMessageV2({
             origin: keccak256("666"),
             nonce: 2, // Use a different nonce from other tests
+            hash: defaultHash,
             topic: topic,
             commands: commands
         });
@@ -416,7 +424,7 @@ contract GatewayV2Test is Test {
         weth.deposit{value: 1 ether}();
 
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(1, defaultHash, topic, true, relayerRewardAddress);
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
@@ -424,6 +432,7 @@ contract GatewayV2Test is Test {
             InboundMessageV2({
                 origin: Constants.ASSET_HUB_AGENT_ID,
                 nonce: 1,
+                hash: defaultHash,
                 topic: topic,
                 commands: makeUnlockWethCommand(0.1 ether)
             }),
@@ -440,7 +449,7 @@ contract GatewayV2Test is Test {
         emit IGatewayBase.ForeignTokenRegistered(keccak256("DOT"), address(0));
 
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(1, defaultHash, topic, true, relayerRewardAddress);
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
@@ -448,6 +457,7 @@ contract GatewayV2Test is Test {
             InboundMessageV2({
                 origin: keccak256("origin"),
                 nonce: 1,
+                hash: defaultHash,
                 topic: topic,
                 commands: makeRegisterForeignTokenCommand(keccak256("DOT"), "DOT", "DOT", 10)
             }),
@@ -467,7 +477,7 @@ contract GatewayV2Test is Test {
         emit IERC20.Transfer(address(0), recipient, 100);
 
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(2, topic, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(2, defaultHash, topic, true, relayerRewardAddress);
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
@@ -475,6 +485,7 @@ contract GatewayV2Test is Test {
             InboundMessageV2({
                 origin: keccak256("origin"),
                 nonce: 2,
+                hash: defaultHash,
                 topic: topic,
                 commands: makeMintForeignTokenCommand(keccak256("DOT"), recipient, 100)
             }),
@@ -488,7 +499,7 @@ contract GatewayV2Test is Test {
         bytes32 topic = keccak256("topic");
 
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(1, defaultHash, topic, true, relayerRewardAddress);
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
@@ -496,6 +507,7 @@ contract GatewayV2Test is Test {
             InboundMessageV2({
                 origin: Constants.ASSET_HUB_AGENT_ID,
                 nonce: 1,
+                hash: defaultHash,
                 topic: topic,
                 commands: makeCallContractCommand(0.1 ether)
             }),
@@ -546,10 +558,7 @@ contract GatewayV2Test is Test {
 
         hoax(user1, totalRequired);
         IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired}(
-            validTokenContract,
-            uint8(0),
-            executionFee,
-            relayerFee
+            validTokenContract, uint8(0), executionFee, relayerFee
         );
 
         // Verify the token is registered
@@ -568,10 +577,7 @@ contract GatewayV2Test is Test {
         vm.expectRevert(IGatewayV2.InsufficientValue.selector);
         hoax(user1, totalRequired);
         IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired - 1}(
-            validTokenContract,
-            uint8(0),
-            executionFee,
-            relayerFee
+            validTokenContract, uint8(0), executionFee, relayerFee
         );
 
         // Verify token still is not registered after the failed attempt
@@ -590,10 +596,7 @@ contract GatewayV2Test is Test {
         uint256 value = uint256(type(uint128).max) + 1;
         hoax(user1, value);
         IGatewayV2(payable(address(gateway))).v2_registerToken{value: value}(
-            validTokenContract,
-            uint8(0),
-            executionFee,
-            relayerFee
+            validTokenContract, uint8(0), executionFee, relayerFee
         );
 
         // Verify token still is not registered after the failed attempt
@@ -607,7 +610,8 @@ contract GatewayV2Test is Test {
         CommandV2[] memory commands = new CommandV2[](3);
 
         // First command should succeed - SetOperatingMode
-        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params1 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
@@ -616,19 +620,14 @@ contract GatewayV2Test is Test {
 
         // Second command should fail - Call a function that reverts
         bytes memory failingData = abi.encodeWithSignature("revertUnauthorized()");
-        CallContractParams memory params2 = CallContractParams({
-            target: address(helloWorld),
-            data: failingData,
-            value: 0
-        });
-        commands[1] = CommandV2({
-            kind: CommandKind.CallContract,
-            gas: 500_000,
-            payload: abi.encode(params2)
-        });
+        CallContractParams memory params2 =
+            CallContractParams({target: address(helloWorld), data: failingData, value: 0});
+        commands[1] =
+            CommandV2({kind: CommandKind.CallContract, gas: 500_000, payload: abi.encode(params2)});
 
         // Third command should succeed - SetOperatingMode again
-        SetOperatingModeParams memory params3 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params3 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[2] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
@@ -641,13 +640,16 @@ contract GatewayV2Test is Test {
 
         // Expect InboundMessageDispatched to be emitted with success=false since not all commands succeeded
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(
+            1, defaultHash, topic, false, relayerRewardAddress
+        );
 
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway)).v2_submit(
             InboundMessageV2({
                 origin: keccak256("666"),
                 nonce: 1,
+                hash: defaultHash,
                 topic: topic,
                 commands: commands
             }),
@@ -664,7 +666,8 @@ contract GatewayV2Test is Test {
         CommandV2[] memory commands = new CommandV2[](2);
 
         // First command should succeed
-        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params1 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
@@ -684,13 +687,16 @@ contract GatewayV2Test is Test {
 
         // Expect InboundMessageDispatched to be emitted with success=false
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(2, topic, false, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(
+            2, defaultHash, topic, false, relayerRewardAddress
+        );
 
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway)).v2_submit(
             InboundMessageV2({
                 origin: keccak256("666"),
                 nonce: 2,
+                hash: defaultHash,
                 topic: topic,
                 commands: commands
             }),
@@ -707,7 +713,8 @@ contract GatewayV2Test is Test {
         CommandV2[] memory commands = new CommandV2[](3);
 
         // First command - SetOperatingMode to Normal
-        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params1 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
@@ -715,7 +722,8 @@ contract GatewayV2Test is Test {
         });
 
         // Second command - Set mode to RejectingOutboundMessages (will succeed)
-        SetOperatingModeParams memory params2 = SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
+        SetOperatingModeParams memory params2 =
+            SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
         commands[1] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
@@ -723,7 +731,8 @@ contract GatewayV2Test is Test {
         });
 
         // Third command - Also set mode to Normal again (will succeed)
-        SetOperatingModeParams memory params3 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params3 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[2] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
@@ -732,13 +741,14 @@ contract GatewayV2Test is Test {
 
         // Expect InboundMessageDispatched to be emitted with success=true since all commands should succeed
         vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(3, topic, true, relayerRewardAddress);
+        emit IGatewayV2.InboundMessageDispatched(3, defaultHash, topic, true, relayerRewardAddress);
 
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway)).v2_submit(
             InboundMessageV2({
                 origin: keccak256("666"),
                 nonce: 3,
+                hash: defaultHash,
                 topic: topic,
                 commands: commands
             }),

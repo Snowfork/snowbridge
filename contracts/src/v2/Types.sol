@@ -10,6 +10,8 @@ struct InboundMessage {
     bytes32 origin;
     // Message nonce
     uint64 nonce;
+    // Message hash
+    bytes32 hash;
     // XCM Topic
     bytes32 topic;
     // Commands
