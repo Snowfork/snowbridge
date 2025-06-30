@@ -1,12 +1,12 @@
 {
-  "name": "@snowbridge/api",
+  "name": "@snowbridge/registry",
   "version": "0.1.64",
-  "description": "Snowbridge API client",
+  "description": "Snowbridge Asset Registry",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/Snowfork/snowbridge.git",
-    "directory": "web/packages/api"
+    "directory": "web/packages/registry"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,15 +27,6 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@polkadot/api": "^15.10.2",
-    "@polkadot/keyring": "^13.4.4",
-    "@polkadot/types": "^15.10.2",
-    "@polkadot/util": "^13.4.4",
-    "@polkadot/util-crypto": "^13.4.4",
-    "@snowbridge/base-types": "workspace:*",
-    "@snowbridge/contract-types": "workspace:*",
-    "@typechain/ethers-v6": "^0.5.1",
-    "ethers": "^6.13.5",
-    "rxjs": "^7.8.1"
+    "@snowbridge/base-types": "workspace:*"
   }
 }

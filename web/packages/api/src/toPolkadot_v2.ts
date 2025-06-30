@@ -14,7 +14,8 @@ import {
     IGatewayV1 as IGateway,
     IGatewayV1__factory as IGateway__factory,
 } from "@snowbridge/contract-types"
-import { Asset, AssetRegistry, ERC20Metadata, ETHER_TOKEN_ADDRESS, Parachain } from "./assets_v2"
+import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { ApiPromise } from "@polkadot/api"
 import {

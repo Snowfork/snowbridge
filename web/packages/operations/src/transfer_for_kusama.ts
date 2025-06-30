@@ -4,7 +4,7 @@ import { Context, environment, forKusama } from "@snowbridge/api"
 import { AbstractProvider } from "ethers"
 import cron from "node-cron"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import { fetchRegistry } from "./registry"
+import { assetRegistryFor } from "@snowbridge/registry"
 import { Direction } from "@snowbridge/api/dist/forKusama"
 
 export const transferForKusama = async (
@@ -83,7 +83,7 @@ export const transferForKusama = async (
         ? polkadot_keyring.addFromUri(process.env["DEST_SUBSTRATE_KEY"])
         : polkadot_keyring.addFromUri("//Ferdie")
 
-    const registry = await fetchRegistry(env, context)
+    const registry = assetRegistryFor(env)
 
     const SOURCE_ACCOUNT_PUBLIC = SOURCE_ACCOUNT.address
     const DEST_ACCOUNT_PUBLIC = DEST_ACCOUNT.address
