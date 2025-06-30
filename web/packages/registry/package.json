@@ -27,6 +27,6 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@snowbridge/api": "workspace:*"
+    "@snowbridge/base-types": "workspace:*"
   }
 }

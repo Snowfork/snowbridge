@@ -1,4 +1,4 @@
-import { assetsV2 } from "@snowbridge/api";
+import { AssetRegistry } from "@snowbridge/base-types";
 import polkadot_mainnet from "./polkadot_mainnet.registry.json";
 import westend_sepolia from "./westend_sepolia.registry.json";
 import paseo_sepolia from "./paseo_sepolia.registry.json";
@@ -33,10 +33,10 @@ function transformBigInt(obj: any): any {
   return Object.freeze(result);
 }
 
-const cache: { [env: string]: assetsV2.AssetRegistry } = {};
+const cache: { [env: string]: AssetRegistry } = {};
 export function assetRegistryFor(
   env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {})
-): assetsV2.AssetRegistry {
+): AssetRegistry {
   if (env in cache) {
     return cache[env];
   }
