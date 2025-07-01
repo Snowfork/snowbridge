@@ -391,15 +391,19 @@ export async function validateTransfer(
         tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
         isNativeBalance = true
     } else {
-        tokenBalance = await sourceParachainImpl.getTokenBalance(
-            sourceAccountHex,
-            registry.ethChainId,
-            tokenAddress,
-            sourceAssetMetadata
-        )
         isNativeBalance =
             sourceAssetMetadata.decimals === source.info.tokenDecimals &&
             sourceAssetMetadata.symbol == source.info.tokenSymbols
+        if (isNativeBalance) {
+            tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+        } else {
+            tokenBalance = await sourceParachainImpl.getTokenBalance(
+                sourceAccountHex,
+                registry.ethChainId,
+                tokenAddress,
+                sourceAssetMetadata
+            )
+        }
     }
     let nativeBalanceCheckFailed = false
     if (isNativeBalance && fee.totalFeeInNative) {
