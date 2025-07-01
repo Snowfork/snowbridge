@@ -142,6 +142,7 @@ export class AssetHubParachain extends ParachainBase {
                         ])
                     ).map((encoded) => encoded.toPrimitive() as any)
                     if (!assetInfo) {
+                        // Query assets using XCM V5, if XCM V4 did not return anything
                         assetType = this.provider.registry.createType(
                             "StagingXcmV5Location",
                             locationOnAH
