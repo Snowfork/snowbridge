@@ -140,7 +140,7 @@ export async function getDeliveryFee(
 
     let snowbridgeDeliveryFeeDOT = 0n
     if (leFee.eqn(0)) {
-        console.warn("Asset Hub onchain BridgeHubEthereumBaseFee not set. Using default fee.")
+        console.warn("Asset Hub onchain BridgeHubEthereumBaseFeeV2 not set. Using default fee.")
         snowbridgeDeliveryFeeDOT = defaultFee ?? 150_000_000_000n
     } else {
         snowbridgeDeliveryFeeDOT = BigInt(leFee.toString())
