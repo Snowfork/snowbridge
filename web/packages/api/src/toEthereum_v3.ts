@@ -133,7 +133,7 @@ export async function getDeliveryFee(
 ): Promise<DeliveryFee> {
     const { assetHub, source, ethereum } = connections
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
-    const feePadPercentage = padPercentage ?? 70n
+    const feePadPercentage = padPercentage ?? 33n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFeeV2:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
