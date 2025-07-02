@@ -182,11 +182,13 @@ export async function getDeliveryFee(
     registry: AssetRegistry,
     tokenAddress: string,
     padPercentage?: bigint,
-    defaultFee?: bigint
+    slippagePadPercentage?: bigint,
+    defaultFee?: bigint,
 ): Promise<DeliveryFee> {
     const { assetHub, source } = connections
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
     const feePadPercentage = padPercentage ?? 33n
+    const feeSlippagePadPercentage = slippagePadPercentage ?? 20n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
@@ -323,7 +325,7 @@ export async function getDeliveryFee(
         )
     }
 
-    const totalFeeInDot =
+    let totalFeeInDot =
         snowbridgeDeliveryFeeDOT +
         assetHubExecutionFeeDOT +
         returnToSenderExecutionFeeDOT +
@@ -335,6 +337,13 @@ export async function getDeliveryFee(
     let assetHubExecutionFeeNative: bigint | undefined = undefined
     let returnToSenderExecutionFeeNative: bigint | undefined = undefined
     if (!registry.parachains[parachain].features.hasDotBalance) {
+        // padding the bridging fee and bridge hub delivery by the slippage fee to make sure the trade goes through.
+        totalFeeInDot =
+            padFeeByPercentage(snowbridgeDeliveryFeeDOT + bridgeHubDeliveryFeeDOT, feeSlippagePadPercentage) +
+            assetHubExecutionFeeDOT +
+            returnToSenderExecutionFeeDOT +
+            returnToSenderDeliveryFeeDOT
+
         const paraLoc = parachainLocation(parachain)
         const [
             totalFeeInNativeRes,
