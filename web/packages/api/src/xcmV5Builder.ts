@@ -944,7 +944,7 @@ export function buildExportXcm(
     return registry.createType("XcmVersionedXcm", {
         v5: [
             {
-                unpaidexecution: {
+                unpaidExecution: {
                     weight_limit: "unlimited",
                     check_origin: null,
                 },
