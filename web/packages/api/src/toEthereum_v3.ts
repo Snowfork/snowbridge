@@ -91,9 +91,10 @@ export async function createTransfer(
             beneficiaryAccount,
             sourceAssetMetadata,
             amount,
-            fee.localExecutionFeeDOT! + fee.returnToSenderDeliveryFeeDOT,
+            fee.localExecutionFeeDOT! + fee.returnToSenderExecutionFeeDOT,
             fee.totalFeeInDot,
             fee.assetHubExecutionFeeDOT +
+                fee.returnToSenderDeliveryFeeDOT +
                 fee.snowbridgeDeliveryFeeDOT +
                 fee.bridgeHubDeliveryFeeDOT,
             fee.ethereumExecutionFee!,
