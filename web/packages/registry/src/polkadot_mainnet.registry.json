@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-06-25T21:17:00.064Z",
+  "timestamp": "2025-07-02T20:10:09.764Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -130,6 +130,12 @@
           "name": "SHIBA INU",
           "symbol": "SHIB",
           "decimals": 18
+        },
+        "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7": {
+          "token": "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7",
+          "name": "Robonomics",
+          "symbol": "XRT",
+          "decimals": 9
         },
         "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": {
           "token": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
@@ -443,6 +449,14 @@
         },
         "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce": {
           "token": "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
+          "name": "",
+          "minimumBalance": "bigint:1",
+          "symbol": "",
+          "decimals": 0,
+          "isSufficient": false
+        },
+        "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7": {
+          "token": "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7",
           "name": "",
           "minimumBalance": "bigint:1",
           "symbol": "",
@@ -905,7 +919,7 @@
         "evmChainId": 1284,
         "name": "Moonbeam",
         "specName": "moonbeam",
-        "specVersion": 3701
+        "specVersion": 3702
       },
       "xcDOT": "0xffffffff1fcacbd218edc0eba20fc2308c778080",
       "assets": {
@@ -1014,7 +1028,7 @@
           "isSufficient": false
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:82186811",
+      "estimatedExecutionFeeDOT": "bigint:80246152",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2034": {
@@ -1035,7 +1049,7 @@
         "evmChainId": 222222,
         "name": "Hydration",
         "specName": "hydradx",
-        "specVersion": 315
+        "specVersion": 323
       },
       "assets": {
         "0x0000000000000000000000000000000000000000": {
@@ -1067,6 +1081,14 @@
           "name": "SKY",
           "minimumBalance": "bigint:211685012701101000",
           "symbol": "SKY",
+          "decimals": 18,
+          "isSufficient": true
+        },
+        "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f": {
+          "token": "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
+          "name": "OriginTrail",
+          "minimumBalance": "bigint:27777777777777800",
+          "symbol": "TRAC",
           "decimals": 18,
           "isSufficient": true
         },
@@ -1151,7 +1173,7 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:2168317",
+      "estimatedExecutionFeeDOT": "bigint:2209033",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "3369": {

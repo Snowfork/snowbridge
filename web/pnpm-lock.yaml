@@ -272,6 +272,9 @@ importers:
         specifier: workspace:*
         version: link:../base-types
     devDependencies:
+      '@snowbridge/api':
+        specifier: workspace:*
+        version: link:../api
       '@types/node':
         specifier: ^18.19.31
         version: 18.19.45

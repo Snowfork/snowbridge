@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/registry",
-  "version": "0.1.65",
+  "version": "0.1.66",
   "description": "Snowbridge Asset Registry",
   "license": "Apache-2.0",
   "repository": {
@@ -12,10 +12,12 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --build --force",
+    "build-registry": "npx ts-node build.ts",
     "lint": "eslint .",
     "format": "prettier src --write"
   },
   "devDependencies": {
+    "@snowbridge/api": "workspace:*",
     "@types/node": "^18.19.31",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
