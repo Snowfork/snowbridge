@@ -1356,3 +1356,249 @@ export function isEthereumAsset(location: any): boolean {
 export function isNative(location: any) {
     return location.parents == DOT_LOCATION.parents && location.interior == DOT_LOCATION.interior
 }
+
+export function buildAssetHubERC20TransferFromParachainWithNativeFee(
+    registry: Registry,
+    ethChainId: number,
+    sourceAccount: string,
+    beneficiary: string,
+    tokenAddress: string,
+    topic: string,
+    sourceParachainId: number,
+    assetHubParaId: number,
+    returnToSenderFee: bigint
+) {
+    return registry.createType("XcmVersionedXcm", {
+        v4: buildAssetHubXcmFromParachainWithNativeAssetAsFee(
+            ethChainId,
+            sourceAccount,
+            beneficiary,
+            tokenAddress,
+            topic,
+            sourceParachainId,
+            assetHubParaId,
+            returnToSenderFee
+        ),
+    })
+}
+
+function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
+    ethChainId: number,
+    sourceAccount: string,
+    beneficiary: string,
+    tokenAddress: string,
+    topic: string,
+    sourceParachainId: number,
+    assetHubParaId: number,
+    destinationFee: bigint
+) {
+    let {
+        hexAddress,
+        address: { kind },
+    } = beneficiaryMultiAddress(sourceAccount)
+    let sourceAccountLocation
+    switch (kind) {
+        case 1:
+            // 32 byte addresses
+            sourceAccountLocation = { accountId32: { id: hexAddress } }
+            break
+        case 2:
+            // 20 byte addresses
+            sourceAccountLocation = { accountKey20: { key: hexAddress } }
+            break
+        default:
+            throw Error(`Could not parse source address ${sourceAccount}`)
+    }
+    const feeAssetId = HERE_LOCATION // Using HERE as the fee asset
+    let appendixInstructions = [
+        // Fund the AH sovereign account with the fee asset on source chain
+        // This is needed to pay for the fee for the next depositReserveAsset instruction
+        {
+            initiateTeleport: {
+                assets: {
+                    definite: [
+                        {
+                            id: {
+                                parents: 1,
+                                interior: { x1: [{ parachain: sourceParachainId }] },
+                            },
+                            fun: {
+                                Fungible: destinationFee * 2n,
+                            },
+                        },
+                    ],
+                },
+                dest: { parents: 1, interior: { x1: [{ parachain: sourceParachainId }] } },
+                xcm: [
+                    {
+                        buyExecution: {
+                            fees: {
+                                id: feeAssetId,
+                                fun: {
+                                    fungible: destinationFee,
+                                },
+                            },
+                            weightLimit: "Unlimited",
+                        },
+                    },
+                    {
+                        depositAsset: {
+                            assets: {
+                                wild: {
+                                    allCounted: 1,
+                                },
+                            },
+                            beneficiary: {
+                                parents: 1,
+                                interior: { x1: [{ parachain: assetHubParaId }] },
+                            },
+                        },
+                    },
+                    { setTopic: topic },
+                ],
+            },
+        },
+        // Deposit the reserve asset on the source parachain, with fee asset withdrawn from the sovereign account
+        {
+            depositReserveAsset: {
+                assets: {
+                    Wild: {
+                        AllOf: {
+                            id: erc20Location(ethChainId, tokenAddress),
+                            fun: "Fungible",
+                        },
+                    },
+                },
+                dest: { parents: 1, interior: { x1: [{ parachain: sourceParachainId }] } },
+                xcm: [
+                    {
+                        withdrawAsset: [
+                            {
+                                id: feeAssetId,
+                                fun: {
+                                    Fungible: destinationFee,
+                                },
+                            },
+                        ],
+                        buyExecution: {
+                            fees: {
+                                id: feeAssetId,
+                                fun: {
+                                    fungible: destinationFee,
+                                },
+                            },
+                            weightLimit: "Unlimited",
+                        },
+                    },
+                    {
+                        depositAsset: {
+                            assets: {
+                                wild: {
+                                    allCounted: 2,
+                                },
+                            },
+                            beneficiary: {
+                                parents: 0,
+                                interior: { x1: [sourceAccountLocation] },
+                            },
+                        },
+                    },
+                    { setTopic: topic },
+                ],
+            },
+        },
+        // Teleport the left fee asset to the sender's account on the source parachain
+        {
+            initiateTeleport: {
+                assets: {
+                    Wild: {
+                        AllOf: {
+                            id: {
+                                parents: 1,
+                                interior: { x1: [{ parachain: sourceParachainId }] },
+                            },
+                            fun: "Fungible",
+                        },
+                    },
+                },
+                dest: { parents: 1, interior: { x1: [{ parachain: sourceParachainId }] } },
+                xcm: [
+                    {
+                        buyExecution: {
+                            fees: {
+                                id: feeAssetId,
+                                fun: {
+                                    fungible: destinationFee,
+                                },
+                            },
+                            weightLimit: "Unlimited",
+                        },
+                    },
+                    {
+                        depositAsset: {
+                            assets: {
+                                wild: {
+                                    allCounted: 1,
+                                },
+                            },
+                            beneficiary: {
+                                parents: 0,
+                                interior: { x1: [sourceAccountLocation] },
+                            },
+                        },
+                    },
+                    { setTopic: topic },
+                ],
+            },
+        },
+    ]
+    return [
+        // Error Handling, return everything to sender on source parachain
+        {
+            setAppendix: appendixInstructions,
+        },
+        // Initiate the bridged transfer
+        {
+            initiateReserveWithdraw: {
+                assets: {
+                    Wild: {
+                        AllOf: { id: erc20Location(ethChainId, tokenAddress), fun: "Fungible" },
+                    },
+                },
+                reserve: bridgeLocation(ethChainId),
+                xcm: [
+                    {
+                        buyExecution: {
+                            fees: {
+                                id: erc20LocationReanchored(tokenAddress), // CAUTION: Must use reanchored locations.
+                                fun: {
+                                    Fungible: "1", // Offering 1 unit as fee, but it is returned to the beneficiary address.
+                                },
+                            },
+                            weight_limit: "Unlimited",
+                        },
+                    },
+                    {
+                        depositAsset: {
+                            assets: {
+                                Wild: {
+                                    AllCounted: 1,
+                                },
+                            },
+                            beneficiary: {
+                                parents: 0,
+                                interior: { x1: [{ AccountKey20: { key: beneficiary } }] },
+                            },
+                        },
+                    },
+                    {
+                        setTopic: topic,
+                    },
+                ],
+            },
+        },
+        {
+            setTopic: topic,
+        },
+    ]
+}

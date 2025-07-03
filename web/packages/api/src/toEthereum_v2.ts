@@ -17,6 +17,7 @@ import {
     buildExportXcmForPNA,
     buildExportXcmForERC20,
     HERE_LOCATION,
+    buildAssetHubERC20TransferFromParachainWithNativeFee,
 } from "./xcmBuilder"
 import { getAssetHubConversationPalletSwap } from "./assets_v2"
 import { getOperatingStatus, OperationStatus } from "./status"
@@ -824,7 +825,7 @@ export function createERC20SourceParachainTx(
     tokenAddress: string,
     beneficiaryAccount: string,
     amount: bigint,
-    totalFeeInDot: bigint,
+    totalFee: bigint,
     messageId: string,
     sourceParaId: number,
     returnToSenderFeeInDOT: bigint,
@@ -835,7 +836,7 @@ export function createERC20SourceParachainTx(
         v4: [
             {
                 id: feeAssetId,
-                fun: { Fungible: totalFeeInDot },
+                fun: { Fungible: totalFee },
             },
             {
                 id: erc20Location(ethChainId, tokenAddress),
@@ -848,17 +849,32 @@ export function createERC20SourceParachainTx(
     const feeAsset = {
         v4: feeAssetId,
     }
-    const customXcm = buildAssetHubERC20TransferFromParachain(
-        parachain.registry,
-        ethChainId,
-        sourceAccount,
-        beneficiaryAccount,
-        tokenAddress,
-        messageId,
-        sourceParaId,
-        returnToSenderFeeInDOT,
-        feeAssetId
-    )
+    let customXcm
+    if (useNativeAssetAsFee) {
+        customXcm = buildAssetHubERC20TransferFromParachainWithNativeFee(
+            parachain.registry,
+            ethChainId,
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            messageId,
+            sourceParaId,
+            assetHubParaId,
+            returnToSenderFeeInDOT
+        )
+    } else {
+        customXcm = buildAssetHubERC20TransferFromParachain(
+            parachain.registry,
+            ethChainId,
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            messageId,
+            sourceParaId,
+            returnToSenderFeeInDOT,
+            feeAssetId
+        )
+    }
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
         assets,
