@@ -1365,6 +1365,7 @@ export function buildAssetHubERC20TransferFromParachainWithNativeFee(
     tokenAddress: string,
     topic: string,
     sourceParachainId: number,
+    amount: bigint,
     returnToSenderFeeInDot: bigint
 ) {
     return registry.createType("XcmVersionedXcm", {
@@ -1375,6 +1376,7 @@ export function buildAssetHubERC20TransferFromParachainWithNativeFee(
             tokenAddress,
             topic,
             sourceParachainId,
+            amount,
             returnToSenderFeeInDot
         ),
     })
@@ -1387,6 +1389,7 @@ function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
     tokenAddress: string,
     topic: string,
     sourceParachainId: number,
+    amount: bigint,
     destinationFeeInDot: bigint
 ) {
     let {
@@ -1407,7 +1410,7 @@ function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
             throw Error(`Could not parse source address ${sourceAccount}`)
     }
     let appendixInstructions = [
-        // Exchange for some dot to pay for the fee on the source parachain
+        // Exchange some DOT to pay the fee on the source parachain
         {
             exchangeAsset: {
                 give: {
@@ -1432,25 +1435,22 @@ function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
                 maximal: false,
             },
         },
-        // Make sure the native asset is burnt, so there is no left in the next depositReserveAsset
-        {
-            burnAsset: [
-                {
-                    id: {
-                        parents: 1,
-                        interior: { x1: [{ parachain: sourceParachainId }] },
-                    },
-                    fun: {
-                        Fungible: "1000000000000000000000", // Burn a large amount to ensure the native asset is burnt.
-                    },
-                },
-            ],
-        },
-        // Deposit the reserve asset on the source parachain
+        // DepositReserveAsset for both DOT and the ERC-20 asset
         {
             depositReserveAsset: {
                 assets: {
-                    wild: "All",
+                    definite: [
+                        {
+                            id: DOT_LOCATION,
+                            fun: {
+                                Fungible: destinationFeeInDot,
+                            },
+                        },
+                        {
+                            id: erc20Location(ethChainId, tokenAddress),
+                            fun: { Fungible: amount },
+                        },
+                    ],
                 },
                 dest: { parents: 1, interior: { x1: [{ parachain: sourceParachainId }] } },
                 xcm: [

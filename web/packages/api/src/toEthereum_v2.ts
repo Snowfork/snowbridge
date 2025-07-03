@@ -873,6 +873,7 @@ export function createERC20SourceParachainTx(
             tokenAddress,
             messageId,
             sourceParaId,
+            amount,
             returnToSenderFeeInDOT
         )
     } else {
