@@ -347,7 +347,8 @@ export async function getDeliveryFee(
                 feeSlippagePadPercentage
             ) +
             assetHubExecutionFeeDOT +
-            returnToSenderExecutionFeeDOT +
+            // Increase the returnToSenderExecutionFeeDOT by 5x in an edge case to ensure the token is sent back, mainly for the Mythos parachain
+            returnToSenderExecutionFeeDOT * 5n +
             returnToSenderDeliveryFeeDOT
 
         const paraLoc = parachainLocation(parachain)
@@ -367,7 +368,7 @@ export async function getDeliveryFee(
                 assetHub,
                 paraLoc,
                 DOT_LOCATION,
-                returnToSenderExecutionFeeDOT
+                returnToSenderExecutionFeeDOT * 5n
             ),
         ])
         totalFeeInNative = totalFeeInNativeRes
@@ -842,7 +843,7 @@ export function createERC20SourceParachainTx(
     totalFee: bigint,
     messageId: string,
     sourceParaId: number,
-    returnToSenderFeeInDOT: bigint,
+    returnToSenderFee: bigint,
     useNativeAssetAsFee: boolean
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     const feeAssetId = useNativeAssetAsFee ? HERE_LOCATION : DOT_LOCATION
@@ -874,7 +875,7 @@ export function createERC20SourceParachainTx(
             messageId,
             sourceParaId,
             assetHubParaId,
-            returnToSenderFeeInDOT
+            returnToSenderFee
         )
     } else {
         customXcm = buildAssetHubERC20TransferFromParachain(
@@ -885,7 +886,7 @@ export function createERC20SourceParachainTx(
             tokenAddress,
             messageId,
             sourceParaId,
-            returnToSenderFeeInDOT,
+            returnToSenderFee,
             feeAssetId
         )
     }
