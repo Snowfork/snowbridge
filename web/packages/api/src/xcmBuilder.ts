@@ -1365,8 +1365,7 @@ export function buildAssetHubERC20TransferFromParachainWithNativeFee(
     tokenAddress: string,
     topic: string,
     sourceParachainId: number,
-    assetHubParaId: number,
-    returnToSenderFee: bigint
+    returnToSenderFeeInDot: bigint
 ) {
     return registry.createType("XcmVersionedXcm", {
         v4: buildAssetHubXcmFromParachainWithNativeAssetAsFee(
@@ -1376,8 +1375,7 @@ export function buildAssetHubERC20TransferFromParachainWithNativeFee(
             tokenAddress,
             topic,
             sourceParachainId,
-            assetHubParaId,
-            returnToSenderFee
+            returnToSenderFeeInDot
         ),
     })
 }
@@ -1389,8 +1387,7 @@ function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
     tokenAddress: string,
     topic: string,
     sourceParachainId: number,
-    assetHubParaId: number,
-    destinationFee: bigint
+    destinationFeeInDot: bigint
 ) {
     let {
         hexAddress,
@@ -1409,82 +1406,60 @@ function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
         default:
             throw Error(`Could not parse source address ${sourceAccount}`)
     }
-    const feeAssetId = HERE_LOCATION // Using HERE as the fee asset
     let appendixInstructions = [
-        // Fund the AH sovereign account with the fee asset on source chain
-        // This is needed to pay for the fee for the next depositReserveAsset instruction
+        // Exchange for some dot to pay for the fee on the source parachain
         {
-            initiateTeleport: {
-                assets: {
-                    definite: [
-                        {
+            exchangeAsset: {
+                give: {
+                    Wild: {
+                        AllOf: {
                             id: {
                                 parents: 1,
                                 interior: { x1: [{ parachain: sourceParachainId }] },
                             },
-                            fun: {
-                                Fungible: destinationFee * 2n,
-                            },
-                        },
-                    ],
-                },
-                dest: { parents: 1, interior: { x1: [{ parachain: sourceParachainId }] } },
-                xcm: [
-                    {
-                        buyExecution: {
-                            fees: {
-                                id: feeAssetId,
-                                fun: {
-                                    fungible: destinationFee,
-                                },
-                            },
-                            weightLimit: "Unlimited",
-                        },
-                    },
-                    {
-                        depositAsset: {
-                            assets: {
-                                wild: {
-                                    allCounted: 1,
-                                },
-                            },
-                            beneficiary: {
-                                parents: 1,
-                                interior: { x1: [{ parachain: assetHubParaId }] },
-                            },
-                        },
-                    },
-                    { setTopic: topic },
-                ],
-            },
-        },
-        // Deposit the reserve asset on the source parachain, with fee asset withdrawn from the sovereign account
-        {
-            depositReserveAsset: {
-                assets: {
-                    Wild: {
-                        AllOf: {
-                            id: erc20Location(ethChainId, tokenAddress),
                             fun: "Fungible",
                         },
                     },
                 },
+                want: [
+                    {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: destinationFeeInDot,
+                        },
+                    },
+                ],
+                maximal: false,
+            },
+        },
+        // Make sure the native asset is burnt, so there is no left in the next depositReserveAsset
+        {
+            burnAsset: [
+                {
+                    id: {
+                        parents: 1,
+                        interior: { x1: [{ parachain: sourceParachainId }] },
+                    },
+                    fun: {
+                        Fungible: "1000000000000000000000", // Burn a large amount to ensure the native asset is burnt.
+                    },
+                },
+            ],
+        },
+        // Deposit the reserve asset on the source parachain
+        {
+            depositReserveAsset: {
+                assets: {
+                    wild: "All",
+                },
                 dest: { parents: 1, interior: { x1: [{ parachain: sourceParachainId }] } },
                 xcm: [
                     {
-                        withdrawAsset: [
-                            {
-                                id: feeAssetId,
-                                fun: {
-                                    Fungible: destinationFee,
-                                },
-                            },
-                        ],
                         buyExecution: {
                             fees: {
-                                id: feeAssetId,
+                                id: DOT_LOCATION,
                                 fun: {
-                                    fungible: destinationFee,
+                                    fungible: destinationFeeInDot,
                                 },
                             },
                             weightLimit: "Unlimited",
@@ -1495,50 +1470,6 @@ function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
                             assets: {
                                 wild: {
                                     allCounted: 2,
-                                },
-                            },
-                            beneficiary: {
-                                parents: 0,
-                                interior: { x1: [sourceAccountLocation] },
-                            },
-                        },
-                    },
-                    { setTopic: topic },
-                ],
-            },
-        },
-        // Teleport the left fee asset to the sender's account on the source parachain
-        {
-            initiateTeleport: {
-                assets: {
-                    Wild: {
-                        AllOf: {
-                            id: {
-                                parents: 1,
-                                interior: { x1: [{ parachain: sourceParachainId }] },
-                            },
-                            fun: "Fungible",
-                        },
-                    },
-                },
-                dest: { parents: 1, interior: { x1: [{ parachain: sourceParachainId }] } },
-                xcm: [
-                    {
-                        buyExecution: {
-                            fees: {
-                                id: feeAssetId,
-                                fun: {
-                                    fungible: destinationFee,
-                                },
-                            },
-                            weightLimit: "Unlimited",
-                        },
-                    },
-                    {
-                        depositAsset: {
-                            assets: {
-                                wild: {
-                                    allCounted: 1,
                                 },
                             },
                             beneficiary: {

@@ -149,7 +149,7 @@ export async function createTransfer(
                 fee.totalFeeInNative ?? fee.totalFeeInDot,
                 messageId,
                 sourceParachainImpl.parachainId,
-                fee.returnToSenderExecutionFeeNative ?? fee.returnToSenderExecutionFeeDOT,
+                fee.returnToSenderExecutionFeeDOT,
                 fee.totalFeeInNative !== undefined
             )
         }
@@ -842,7 +842,7 @@ export function createERC20SourceParachainTx(
     totalFee: bigint,
     messageId: string,
     sourceParaId: number,
-    returnToSenderFee: bigint,
+    returnToSenderFeeInDOT: bigint,
     useNativeAssetAsFee: boolean
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     const feeAssetId = useNativeAssetAsFee ? HERE_LOCATION : DOT_LOCATION
@@ -873,8 +873,7 @@ export function createERC20SourceParachainTx(
             tokenAddress,
             messageId,
             sourceParaId,
-            assetHubParaId,
-            returnToSenderFee
+            returnToSenderFeeInDOT
         )
     } else {
         customXcm = buildAssetHubERC20TransferFromParachain(
@@ -885,7 +884,7 @@ export function createERC20SourceParachainTx(
             tokenAddress,
             messageId,
             sourceParaId,
-            returnToSenderFee,
+            returnToSenderFeeInDOT,
             feeAssetId
         )
     }
