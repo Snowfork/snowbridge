@@ -347,8 +347,7 @@ export async function getDeliveryFee(
                 feeSlippagePadPercentage
             ) +
             assetHubExecutionFeeDOT +
-            // Increase the returnToSenderExecutionFeeDOT by 5x in an edge case to ensure the token is sent back, mainly for the Mythos parachain
-            returnToSenderExecutionFeeDOT * 5n +
+            returnToSenderExecutionFeeDOT +
             returnToSenderDeliveryFeeDOT
 
         const paraLoc = parachainLocation(parachain)
@@ -368,7 +367,7 @@ export async function getDeliveryFee(
                 assetHub,
                 paraLoc,
                 DOT_LOCATION,
-                returnToSenderExecutionFeeDOT * 5n
+                returnToSenderExecutionFeeDOT
             ),
         ])
         totalFeeInNative = totalFeeInNativeRes
