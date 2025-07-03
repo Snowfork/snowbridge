@@ -190,7 +190,7 @@ export async function getDeliveryFee(
     const { assetHub, source } = connections
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
     const feePadPercentage = options?.padPercentage ?? 33n
-    const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
+    const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 10n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
