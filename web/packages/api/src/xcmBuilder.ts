@@ -1377,3 +1377,180 @@ export const accountToLocation = (account: string) => {
     }
     return beneficiaryLocation
 }
+
+export function buildAssetHubERC20TransferFromParachainWithNativeFee(
+    registry: Registry,
+    ethChainId: number,
+    sourceAccount: string,
+    beneficiary: string,
+    tokenAddress: string,
+    topic: string,
+    sourceParachainId: number,
+    amount: bigint,
+    returnToSenderFeeInDot: bigint
+) {
+    return registry.createType("XcmVersionedXcm", {
+        v4: buildAssetHubXcmFromParachainWithNativeAssetAsFee(
+            ethChainId,
+            sourceAccount,
+            beneficiary,
+            tokenAddress,
+            topic,
+            sourceParachainId,
+            amount,
+            returnToSenderFeeInDot
+        ),
+    })
+}
+
+function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
+    ethChainId: number,
+    sourceAccount: string,
+    beneficiary: string,
+    tokenAddress: string,
+    topic: string,
+    sourceParachainId: number,
+    amount: bigint,
+    destinationFeeInDot: bigint
+) {
+    let {
+        hexAddress,
+        address: { kind },
+    } = beneficiaryMultiAddress(sourceAccount)
+    let sourceAccountLocation
+    switch (kind) {
+        case 1:
+            // 32 byte addresses
+            sourceAccountLocation = { accountId32: { id: hexAddress } }
+            break
+        case 2:
+            // 20 byte addresses
+            sourceAccountLocation = { accountKey20: { key: hexAddress } }
+            break
+        default:
+            throw Error(`Could not parse source address ${sourceAccount}`)
+    }
+    let appendixInstructions = [
+        // Exchange some DOT to pay the fee on the source parachain
+        {
+            exchangeAsset: {
+                give: {
+                    Wild: {
+                        AllOf: {
+                            id: {
+                                parents: 1,
+                                interior: { x1: [{ parachain: sourceParachainId }] },
+                            },
+                            fun: "Fungible",
+                        },
+                    },
+                },
+                want: [
+                    {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: destinationFeeInDot,
+                        },
+                    },
+                ],
+                maximal: false,
+            },
+        },
+        // DepositReserveAsset for both DOT and the ERC-20 asset
+        {
+            depositReserveAsset: {
+                assets: {
+                    definite: [
+                        {
+                            id: DOT_LOCATION,
+                            fun: {
+                                Fungible: destinationFeeInDot,
+                            },
+                        },
+                        {
+                            id: erc20Location(ethChainId, tokenAddress),
+                            fun: { Fungible: amount },
+                        },
+                    ],
+                },
+                dest: { parents: 1, interior: { x1: [{ parachain: sourceParachainId }] } },
+                xcm: [
+                    {
+                        buyExecution: {
+                            fees: {
+                                id: DOT_LOCATION,
+                                fun: {
+                                    fungible: destinationFeeInDot,
+                                },
+                            },
+                            weightLimit: "Unlimited",
+                        },
+                    },
+                    {
+                        depositAsset: {
+                            assets: {
+                                wild: {
+                                    allCounted: 2,
+                                },
+                            },
+                            beneficiary: {
+                                parents: 0,
+                                interior: { x1: [sourceAccountLocation] },
+                            },
+                        },
+                    },
+                    { setTopic: topic },
+                ],
+            },
+        },
+    ]
+    return [
+        // Error Handling, return everything to sender on source parachain
+        {
+            setAppendix: appendixInstructions,
+        },
+        // Initiate the bridged transfer
+        {
+            initiateReserveWithdraw: {
+                assets: {
+                    Wild: {
+                        AllOf: { id: erc20Location(ethChainId, tokenAddress), fun: "Fungible" },
+                    },
+                },
+                reserve: bridgeLocation(ethChainId),
+                xcm: [
+                    {
+                        buyExecution: {
+                            fees: {
+                                id: erc20LocationReanchored(tokenAddress), // CAUTION: Must use reanchored locations.
+                                fun: {
+                                    Fungible: "1", // Offering 1 unit as fee, but it is returned to the beneficiary address.
+                                },
+                            },
+                            weight_limit: "Unlimited",
+                        },
+                    },
+                    {
+                        depositAsset: {
+                            assets: {
+                                Wild: {
+                                    AllCounted: 1,
+                                },
+                            },
+                            beneficiary: {
+                                parents: 0,
+                                interior: { x1: [{ AccountKey20: { key: beneficiary } }] },
+                            },
+                        },
+                    },
+                    {
+                        setTopic: topic,
+                    },
+                ],
+            },
+        },
+        {
+            setTopic: topic,
+        },
+    ]
+}

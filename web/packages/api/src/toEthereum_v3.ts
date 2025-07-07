@@ -14,13 +14,8 @@ import {
     buildTransferXcmFromParachain,
     buildTransferXcmFromAssetHub,
 } from "./xcmV5Builder"
-
-import {
-    Asset,
-    AssetRegistry,
-    ETHER_TOKEN_ADDRESS,
-    getAssetHubConversationPalletSwap,
-} from "./assets_v2"
+import { Asset, AssetRegistry } from "@snowbridge/base-types"
+import { ETHER_TOKEN_ADDRESS, getAssetHubConversationPalletSwap } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
 import { getOperatingStatus } from "./status"
 import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"

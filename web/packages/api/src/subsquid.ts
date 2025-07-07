@@ -170,62 +170,6 @@ export const fetchToEthereumTransfers = async () => {
     return result?.transferStatusToEthereums
 }
 
-const fetchBridgeHubOutboundMessageAccepted = async (messageID: string) => {
-    let query = `query { outboundMessageAcceptedOnBridgeHubs(where: {messageId_eq:"${messageID}"}) {
-            id
-            nonce
-            blockNumber
-            timestamp
-        }
-    }`
-    let result = await queryByGraphQL(query)
-    return result?.outboundMessageAcceptedOnBridgeHubs[0]
-}
-
-const fetchEthereumInboundMessageDispatched = async (messageID: string) => {
-    let query = `query {inboundMessageDispatchedOnEthereums(where: {messageId_eq: "${messageID}"}) {
-            id
-            channelId
-            blockNumber
-            messageId
-            nonce
-            success
-            timestamp
-            txHash
-        }
-    }`
-    let result = await queryByGraphQL(query)
-    return result?.inboundMessageDispatchedOnEthereums[0]
-}
-
-const fetchBridgeHubInboundMessageReceived = async (messageID: string) => {
-    let query = `query { inboundMessageReceivedOnBridgeHubs(where: {messageId_eq:"${messageID}"}) {
-            id
-            channelId
-            blockNumber
-            messageId
-            nonce
-            timestamp
-        }
-    }`
-    let result = await queryByGraphQL(query)
-    return result?.inboundMessageReceivedOnBridgeHubs[0]
-}
-
-const fetchMessageProcessedOnPolkadot = async (messageID: string) => {
-    let query = `query { messageProcessedOnPolkadots(where: {messageId_eq:"${messageID}"}) {
-            id
-            blockNumber
-            messageId
-            paraId
-            timestamp
-            success
-        }
-    }`
-    let result = await queryByGraphQL(query)
-    return result?.messageProcessedOnPolkadots[0]
-}
-
 /**
  * Query the estimated delivery time for transfers to both directions
 
@@ -307,7 +251,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
 ]
  **/
 export const fetchToPolkadotTransferById = async (id: string) => {
-    let query = `query { transferStatusToPolkadots(where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) {
+    let query = `query { transferStatusToPolkadots(limit: 1, where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) {
             id
             status
             blockNumber
@@ -387,7 +331,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
 ]
  **/
 export const fetchToEthereumTransferById = async (id: string) => {
-    let query = `query { transferStatusToEthereums(where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) {
+    let query = `query { transferStatusToEthereums(limit: 1, where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) {
             id
             status
             blockNumber
@@ -458,8 +402,8 @@ $graphqlApiUrl --no-progress-meter | jq "."
   }
 }
 **/
-export const fetchLatestBlocksSynced = async () => {
-    let query = `query { latestBlocks {
+export const fetchLatestBlocksSynced = async (includePKBridge: boolean) => {
+    let query = `query { latestBlocks(withPKBridge: ${includePKBridge}) {
                     height
                     name
                 }}`

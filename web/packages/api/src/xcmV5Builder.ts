@@ -11,7 +11,7 @@ import {
     HERE_LOCATION,
     isEthereumAsset,
 } from "./xcmBuilder"
-import { Asset } from "./assets_v2"
+import { Asset } from "@snowbridge/base-types"
 
 export function buildParachainERC20ReceivedXcmOnDestination(
     registry: Registry,

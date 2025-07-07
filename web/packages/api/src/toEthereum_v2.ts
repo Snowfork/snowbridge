@@ -17,15 +17,11 @@ import {
     buildExportXcmForPNA,
     buildExportXcmForERC20,
     HERE_LOCATION,
+    buildAssetHubERC20TransferFromParachainWithNativeFee,
 } from "./xcmBuilder"
-import {
-    Asset,
-    AssetRegistry,
-    ERC20Metadata,
-    Parachain,
-    getAssetHubConversationPalletSwap,
-} from "./assets_v2"
+import { getAssetHubConversationPalletSwap } from "./assets_v2"
 import { getOperatingStatus, OperationStatus } from "./status"
+import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
 import {
     CallDryRunEffects,
@@ -155,7 +151,7 @@ export async function createTransfer(
                 fee.totalFeeInNative ?? fee.totalFeeInDot,
                 messageId,
                 sourceParachainImpl.parachainId,
-                fee.returnToSenderExecutionFeeNative ?? fee.returnToSenderExecutionFeeDOT,
+                fee.returnToSenderExecutionFeeDOT,
                 fee.totalFeeInNative !== undefined
             )
         }
@@ -188,12 +184,16 @@ export async function getDeliveryFee(
     parachain: number,
     registry: AssetRegistry,
     tokenAddress: string,
-    padPercentage?: bigint,
-    defaultFee?: bigint
+    options?: {
+        padPercentage?: bigint
+        slippagePadPercentage?: bigint
+        defaultFee?: bigint
+    }
 ): Promise<DeliveryFee> {
     const { assetHub, source } = connections
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
-    const feePadPercentage = padPercentage ?? 33n
+    const feePadPercentage = options?.padPercentage ?? 33n
+    const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
@@ -201,7 +201,7 @@ export async function getDeliveryFee(
     let snowbridgeDeliveryFeeDOT = 0n
     if (leFee.eqn(0)) {
         console.warn("Asset Hub onchain BridgeHubEthereumBaseFee not set. Using default fee.")
-        snowbridgeDeliveryFeeDOT = defaultFee ?? 3_833_568_200_000n
+        snowbridgeDeliveryFeeDOT = options?.defaultFee ?? 3_833_568_200_000n
     } else {
         snowbridgeDeliveryFeeDOT = BigInt(leFee.toString())
     }
@@ -330,7 +330,7 @@ export async function getDeliveryFee(
         )
     }
 
-    const totalFeeInDot =
+    let totalFeeInDot =
         snowbridgeDeliveryFeeDOT +
         assetHubExecutionFeeDOT +
         returnToSenderExecutionFeeDOT +
@@ -342,6 +342,16 @@ export async function getDeliveryFee(
     let assetHubExecutionFeeNative: bigint | undefined = undefined
     let returnToSenderExecutionFeeNative: bigint | undefined = undefined
     if (!registry.parachains[parachain].features.hasDotBalance) {
+        // padding the bridging fee and bridge hub delivery by the slippage fee to make sure the trade goes through.
+        totalFeeInDot =
+            padFeeByPercentage(
+                snowbridgeDeliveryFeeDOT + bridgeHubDeliveryFeeDOT,
+                feeSlippagePadPercentage
+            ) +
+            assetHubExecutionFeeDOT +
+            returnToSenderExecutionFeeDOT +
+            returnToSenderDeliveryFeeDOT
+
         const paraLoc = parachainLocation(parachain)
         const [
             totalFeeInNativeRes,
@@ -454,15 +464,19 @@ export async function validateTransfer(
         tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
         isNativeBalance = true
     } else {
-        tokenBalance = await sourceParachainImpl.getTokenBalance(
-            sourceAccountHex,
-            registry.ethChainId,
-            tokenAddress,
-            sourceAssetMetadata
-        )
         isNativeBalance =
             sourceAssetMetadata.decimals === source.info.tokenDecimals &&
             sourceAssetMetadata.symbol == source.info.tokenSymbols
+        if (isNativeBalance) {
+            tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+        } else {
+            tokenBalance = await sourceParachainImpl.getTokenBalance(
+                sourceAccountHex,
+                registry.ethChainId,
+                tokenAddress,
+                sourceAssetMetadata
+            )
+        }
     }
     let nativeBalanceCheckFailed = false
     if (isNativeBalance && fee.totalFeeInNative) {
@@ -717,7 +731,9 @@ export async function signAndSend(
                     console.error(c)
                     reject(c.internalError || c.dispatchError || c)
                 }
-                if (c.isInBlock) {
+                // We have to check for finalization here because re-orgs will produce a different messageId on Asset Hub.
+                // TODO: Change back to isInBlock when we switch to pallet-xcm.execute for Asset Hub and we can generate the messageId offchain.
+                if (c.isFinalized) {
                     const result = {
                         txHash: u8aToHex(c.txHash),
                         txIndex: c.txIndex || 0,
@@ -826,7 +842,7 @@ export function createERC20SourceParachainTx(
     tokenAddress: string,
     beneficiaryAccount: string,
     amount: bigint,
-    totalFeeInDot: bigint,
+    totalFee: bigint,
     messageId: string,
     sourceParaId: number,
     returnToSenderFeeInDOT: bigint,
@@ -837,7 +853,7 @@ export function createERC20SourceParachainTx(
         v4: [
             {
                 id: feeAssetId,
-                fun: { Fungible: totalFeeInDot },
+                fun: { Fungible: totalFee },
             },
             {
                 id: erc20Location(ethChainId, tokenAddress),
@@ -850,17 +866,32 @@ export function createERC20SourceParachainTx(
     const feeAsset = {
         v4: feeAssetId,
     }
-    const customXcm = buildAssetHubERC20TransferFromParachain(
-        parachain.registry,
-        ethChainId,
-        sourceAccount,
-        beneficiaryAccount,
-        tokenAddress,
-        messageId,
-        sourceParaId,
-        returnToSenderFeeInDOT,
-        feeAssetId
-    )
+    let customXcm
+    if (useNativeAssetAsFee) {
+        customXcm = buildAssetHubERC20TransferFromParachainWithNativeFee(
+            parachain.registry,
+            ethChainId,
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            messageId,
+            sourceParaId,
+            amount,
+            returnToSenderFeeInDOT
+        )
+    } else {
+        customXcm = buildAssetHubERC20TransferFromParachain(
+            parachain.registry,
+            ethChainId,
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            messageId,
+            sourceParaId,
+            returnToSenderFeeInDOT,
+            feeAssetId
+        )
+    }
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
         assets,
