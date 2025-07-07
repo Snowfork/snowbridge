@@ -18,11 +18,9 @@ export const registerERC20 = async (symbol: string) => {
     const { config, ethChainId, name } = snwobridgeEnv
     await cryptoWaitReady()
 
-    const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
     const ethChains: { [ethChainId: string]: string | AbstractProvider } = {}
     Object.keys(config.ETHEREUM_CHAINS).forEach(
-        (ethChainId) =>
-            (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
+        (ethChainId) => (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId])
     )
     const context = new Context({
         environment: name,
