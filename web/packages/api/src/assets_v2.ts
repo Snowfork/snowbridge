@@ -485,10 +485,12 @@ export function getTransferLocations(
     return results
 }
 
-export function fromEnvironment(
-    { name, config, kusamaConfig, ethChainId }: SnowbridgeEnvironment,
-    ethereumApiKey?: string
-): RegistryOptions {
+export function fromEnvironment({
+    name,
+    config,
+    kusamaConfig,
+    ethChainId,
+}: SnowbridgeEnvironment): RegistryOptions {
     let result: RegistryOptions = {
         environment: name,
         assetHubParaId: config.ASSET_HUB_PARAID,
@@ -497,7 +499,7 @@ export function fromEnvironment(
         relaychain: config.RELAY_CHAIN_URL,
         ethChainId,
         gatewayAddress: config.GATEWAY_CONTRACT,
-        ethchains: Object.values(config.ETHEREUM_CHAINS).map((x) => x(ethereumApiKey ?? "")),
+        ethchains: Object.values(config.ETHEREUM_CHAINS),
         parachains: Object.keys(config.PARACHAINS)
             .filter((paraId) => paraId !== config.BRIDGE_HUB_PARAID.toString())
             .map((paraId) => config.PARACHAINS[paraId]),
