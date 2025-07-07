@@ -18,11 +18,9 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     const { name, config, ethChainId } = snwobridgeEnv
     await cryptoWaitReady()
 
-    const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
     const ethChains: { [ethChainId: string]: string } = {}
     Object.keys(config.ETHEREUM_CHAINS).forEach(
-        (ethChainId) =>
-            (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
+        (ethChainId) => (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId])
     )
     const context = new Context({
         environment: name,
