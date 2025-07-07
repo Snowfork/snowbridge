@@ -32,7 +32,7 @@ import {
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import { beneficiaryMultiAddress } from "./utils"
+import { beneficiaryMultiAddress, padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
 import { ParachainBase } from "./parachains/parachainBase"
 
@@ -236,13 +236,13 @@ export async function getDeliveryFee(
         destinationFeeInDestNative
     )
     // pad destination XCM fee
-    destinationFee = destinationFee + (destinationFee * 33n) / 100n
+    destinationFee = padFeeByPercentage(destinationFee, 33n)
 
     // add minimum balance to the dest fee, to avoid not being able to deposit leftover fees
     destinationFee = destinationFee + BigInt(minBalanceFeeDest)
 
     // pad destination XCM fee
-    totalXcmBridgeFee = totalXcmBridgeFee + (totalXcmBridgeFee * 33n) / 100n
+    totalXcmBridgeFee = padFeeByPercentage(totalXcmBridgeFee, 33n)
 
     let totalFee = totalXcmBridgeFee + bridgeHubDeliveryFee + destinationFee
 
