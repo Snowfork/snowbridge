@@ -33,15 +33,11 @@ export const transferForKusama = async (
     kusamaParachains[kusamaConfig?.ASSET_HUB_PARAID.toString()] =
         kusamaConfig?.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
 
-    const ethChains: { [ethChainId: string]: string } = {}
-    Object.keys(config.ETHEREUM_CHAINS).forEach(
-        (ethChainId) => (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId])
-    )
     const context = new Context({
         environment: name,
         ethereum: {
             ethChainId,
-            ethChains,
+            ethChains: config.ETHEREUM_CHAINS,
             beacon_url: process.env["BEACON_NODE_URL"] || config.BEACON_HTTP_API,
         },
         polkadot: {

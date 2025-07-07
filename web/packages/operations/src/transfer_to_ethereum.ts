@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment, toEthereumV2, assetsV2 } from "@snowbridge/api"
+import { Context, environment, toEthereumV2, assetsV2, contextConfigFor } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
@@ -15,31 +15,9 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     }
     console.log(`Using environment '${env}'`)
 
-    const { name, config, ethChainId } = snwobridgeEnv
     await cryptoWaitReady()
 
-    const ethChains: { [ethChainId: string]: string } = {}
-    Object.keys(config.ETHEREUM_CHAINS).forEach(
-        (ethChainId) => (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId])
-    )
-    const context = new Context({
-        environment: name,
-        ethereum: {
-            ethChainId,
-            ethChains,
-            beacon_url: config.BEACON_HTTP_API,
-        },
-        polkadot: {
-            assetHubParaId: config.ASSET_HUB_PARAID,
-            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
-            relaychain: config.RELAY_CHAIN_URL,
-            parachains: config.PARACHAINS,
-        },
-        appContracts: {
-            gateway: config.GATEWAY_CONTRACT,
-            beefy: config.BEEFY_CONTRACT,
-        },
-    })
+    const context = new Context(contextConfigFor(env))
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 

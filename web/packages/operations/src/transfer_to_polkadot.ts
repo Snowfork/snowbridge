@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment, toPolkadotV2 } from "@snowbridge/api"
+import { Context, contextConfigFor, environment, toPolkadotV2 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { assetRegistryFor } from "@snowbridge/registry"
@@ -10,43 +10,15 @@ export const transferToPolkadot = async (
     symbol: string,
     amount: bigint
 ) => {
+    await cryptoWaitReady()
+
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snwobridgeEnv = environment.SNOWBRIDGE_ENV[env]
-    if (snwobridgeEnv === undefined) {
-        throw Error(`Unknown environment '${env}'`)
-    }
     console.log(`Using environment '${env}'`)
 
-    const { name, config, ethChainId } = snwobridgeEnv
-    await cryptoWaitReady()
-
-    const ethChains: { [ethChainId: string]: string } = {}
-    Object.keys(config.ETHEREUM_CHAINS).forEach(
-        (ethChainId) => (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId])
-    )
-    const context = new Context({
-        environment: name,
-        ethereum: {
-            ethChainId,
-            ethChains,
-            beacon_url: config.BEACON_HTTP_API,
-        },
-        polkadot: {
-            assetHubParaId: config.ASSET_HUB_PARAID,
-            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
-            relaychain: config.RELAY_CHAIN_URL,
-            parachains: config.PARACHAINS,
-        },
-        appContracts: {
-            gateway: config.GATEWAY_CONTRACT,
-            beefy: config.BEEFY_CONTRACT,
-        },
-    })
-
-    const polkadot_keyring = new Keyring({ type: "sr25519" })
+    const context = new Context(contextConfigFor(env))
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ??
@@ -54,6 +26,8 @@ export const transferToPolkadot = async (
         context.ethereum()
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
+
+    const polkadot_keyring = new Keyring({ type: "sr25519" })
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
