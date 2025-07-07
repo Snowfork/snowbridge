@@ -1,45 +1,19 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment } from "@snowbridge/api"
+import { Context, contextConfigFor, environment } from "@snowbridge/api"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 import { AbstractProvider, Contract, ethers, LogDescription, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 
 export const registerERC20 = async (symbol: string) => {
+    await cryptoWaitReady()
+
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snwobridgeEnv = environment.SNOWBRIDGE_ENV[env]
-    if (snwobridgeEnv === undefined) {
-        throw Error(`Unknown environment '${env}'`)
-    }
     console.log(`Using environment '${env}'`)
 
-    const { config, ethChainId, name } = snwobridgeEnv
-    await cryptoWaitReady()
-
-    const ethChains: { [ethChainId: string]: string | AbstractProvider } = {}
-    Object.keys(config.ETHEREUM_CHAINS).forEach(
-        (ethChainId) => (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId])
-    )
-    const context = new Context({
-        environment: name,
-        ethereum: {
-            ethChainId,
-            ethChains,
-            beacon_url: config.BEACON_HTTP_API,
-        },
-        polkadot: {
-            assetHubParaId: config.ASSET_HUB_PARAID,
-            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
-            relaychain: config.RELAY_CHAIN_URL,
-            parachains: config.PARACHAINS,
-        },
-        appContracts: {
-            gateway: config.GATEWAY_CONTRACT,
-            beefy: config.BEEFY_CONTRACT,
-        },
-    })
+    const context = new Context(contextConfigFor(env))
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "your key goes here",
@@ -55,8 +29,8 @@ export const registerERC20 = async (symbol: string) => {
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
-    const TOKEN_CONTRACT = snwobridgeEnv.locations[0].erc20tokensReceivable.find((t) =>
-        t.id.toLowerCase().startsWith(symbol.toLowerCase())
+    const TOKEN_CONTRACT = environment.SNOWBRIDGE_ENV[env].locations[0].erc20tokensReceivable.find(
+        (t) => t.id.toLowerCase().startsWith(symbol.toLowerCase())
     )!.address
 
     const ifce = IGateway__factory.createInterface()
