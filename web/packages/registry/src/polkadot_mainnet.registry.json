@@ -1207,38 +1207,6 @@
       },
       "estimatedExecutionFeeDOT": "bigint:1000000000",
       "estimatedDeliveryFeeDOT": "bigint:306500000"
-    },
-    "3397": {
-      "parachainId": 3397,
-      "features": {
-        "hasPalletXcm": true,
-        "hasDryRunApi": false,
-        "hasTxPaymentApi": true,
-        "hasDryRunRpc": true,
-        "hasDotBalance": true
-      },
-      "info": {
-        "tokenSymbols": "DOTON",
-        "tokenDecimals": 18,
-        "ss58Format": 5589,
-        "isEthereum": false,
-        "accountType": "AccountId32",
-        "name": "JAMTON",
-        "specName": "jamton-runtime",
-        "specVersion": 1120120
-      },
-      "assets": {
-        "0x0e186357c323c806c1efdad36d217f7a54b63d18": {
-          "token": "0x0e186357c323c806c1efdad36d217f7a54b63d18",
-          "name": "Curio Gas Token",
-          "minimumBalance": "bigint:10000000000000000",
-          "symbol": "CGT",
-          "decimals": 18,
-          "isSufficient": true
-        }
-      },
-      "estimatedExecutionFeeDOT": "bigint:625000000",
-      "estimatedDeliveryFeeDOT": "bigint:307100000"
     }
   },
   "kusama": {
