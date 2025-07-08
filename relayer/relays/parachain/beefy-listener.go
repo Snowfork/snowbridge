@@ -203,33 +203,6 @@ func (li *BeefyListener) queryNewMMRRootEvents(
 	return events, nil
 }
 
-// queryNewTicketEvents queries NewTicket events from the BeefyClient contract
-func (li *BeefyListener) queryNewTicketEvents(
-	ctx context.Context, start uint64,
-	end *uint64,
-) ([]*contracts.BeefyClientNewTicket, error) {
-	var events []*contracts.BeefyClientNewTicket
-	filterOps := bind.FilterOpts{Start: start, End: end, Context: ctx}
-	iter, err := li.beefyClientContract.FilterNewTicket(&filterOps)
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		more := iter.Next()
-		if !more {
-			err = iter.Error()
-			if err != nil {
-				return nil, err
-			}
-			break
-		}
-		events = append(events, iter.Event)
-	}
-
-	return events, nil
-}
-
 // Fetch the latest verified beefy block number and hash from Ethereum
 func (li *BeefyListener) fetchLatestBeefyBlock(ctx context.Context) (uint64, types.Hash, error) {
 	number, err := li.beefyClientContract.LatestBeefyBlock(&bind.CallOpts{
