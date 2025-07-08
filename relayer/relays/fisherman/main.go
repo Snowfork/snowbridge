@@ -31,7 +31,6 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 
 	beefyListener := NewBeefyListener(
 		&config.Source,
-		&config.Schedule,
 		ethereumConnBeefy,
 		relaychainWriterConn,
 	)

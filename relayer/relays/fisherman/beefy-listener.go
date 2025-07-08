@@ -23,7 +23,6 @@ import (
 
 type BeefyListener struct {
 	config              *SourceConfig
-	scheduleConfig      *ScheduleConfig
 	ethereumConn        *ethereum.Connection
 	beefyClientContract *contracts.BeefyClient
 	relaychainConn      *relaychain.Connection
@@ -31,13 +30,11 @@ type BeefyListener struct {
 
 func NewBeefyListener(
 	config *SourceConfig,
-	scheduleConfig *ScheduleConfig,
 	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 ) *BeefyListener {
 	return &BeefyListener{
 		config:         config,
-		scheduleConfig: scheduleConfig,
 		ethereumConn:   ethereumConn,
 		relaychainConn: relaychainConn,
 	}
