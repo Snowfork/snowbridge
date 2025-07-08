@@ -254,8 +254,11 @@ const buildToEthereumTransferResult = (transfer: any): ToEthereumTransferResult 
     return result
 }
 
-export const toPolkadotHistory = async (): Promise<ToPolkadotTransferResult[]> => {
-    const allTransfers = await fetchToPolkadotTransfers()
+export const toPolkadotHistory = async (
+    graphqlApiUrl: string,
+    graphqlQuerySize: number = 100
+): Promise<ToPolkadotTransferResult[]> => {
+    const allTransfers = await fetchToPolkadotTransfers(graphqlApiUrl, graphqlQuerySize)
     const results: ToPolkadotTransferResult[] = []
     for (const transfer of allTransfers) {
         let result = buildToPolkadotTransferResult(transfer)
@@ -264,8 +267,11 @@ export const toPolkadotHistory = async (): Promise<ToPolkadotTransferResult[]> =
     return results
 }
 
-export const toEthereumHistory = async (): Promise<ToEthereumTransferResult[]> => {
-    const allTransfers = await fetchToEthereumTransfers()
+export const toEthereumHistory = async (
+    graphqlApiUrl: string,
+    graphqlQuerySize: number = 100
+): Promise<ToEthereumTransferResult[]> => {
+    const allTransfers = await fetchToEthereumTransfers(graphqlApiUrl, graphqlQuerySize)
     const results: ToEthereumTransferResult[] = []
     for (const transfer of allTransfers) {
         let result = buildToEthereumTransferResult(transfer)
@@ -275,9 +281,10 @@ export const toEthereumHistory = async (): Promise<ToEthereumTransferResult[]> =
 }
 
 export const toPolkadotTransferById = async (
+    graphqlApiUrl: string,
     id: string
 ): Promise<ToPolkadotTransferResult | undefined> => {
-    const transfers = await fetchToPolkadotTransferById(id)
+    const transfers = await fetchToPolkadotTransferById(graphqlApiUrl, id)
     if (transfers?.length > 0) {
         let result = buildToPolkadotTransferResult(transfers[0])
         return result
@@ -286,9 +293,10 @@ export const toPolkadotTransferById = async (
 }
 
 export const toEthereumTransferById = async (
+    graphqlApiUrl: string,
     id: string
 ): Promise<ToEthereumTransferResult | undefined> => {
-    const transfers = await fetchToEthereumTransferById(id)
+    const transfers = await fetchToEthereumTransferById(graphqlApiUrl, id)
     if (transfers?.length > 0) {
         let result = buildToEthereumTransferResult(transfers[0])
         return result

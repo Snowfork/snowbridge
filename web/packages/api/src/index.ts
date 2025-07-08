@@ -227,6 +227,10 @@ export class Context {
         return BeefyClient__factory.connect(this.config.appContracts.beefy, this.ethereum())
     }
 
+    graphqlApiUrl(): string {
+        return this.config.graphqlApiUrl!
+    }
+
     async destroyContext(): Promise<void> {
         // clean up contract listeners
         if (this.#beefyClient) await this.beefyClient().removeAllListeners()
@@ -255,8 +259,10 @@ export class Context {
     }
 }
 
-export function contextConfigFor(env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {})): Config {
-    if(!(env in SNOWBRIDGE_ENV)) {
+export function contextConfigFor(
+    env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {})
+): Config {
+    if (!(env in SNOWBRIDGE_ENV)) {
         throw Error(`Unknown environment '${env}'.`)
     }
     const {
@@ -270,17 +276,20 @@ export function contextConfigFor(env: "polkadot_mainnet" | "westend_sepolia" | "
             GATEWAY_CONTRACT,
             PARACHAINS,
             RELAY_CHAIN_URL,
+            GRAPHQL_API_URL,
         },
-        kusamaConfig
+        kusamaConfig,
     } = SNOWBRIDGE_ENV[env]
 
-    let kusama: {
-        assetHubParaId: number
-        bridgeHubParaId: number
-        parachains: { [paraId: string]: string }
-    } | undefined = undefined
+    let kusama:
+        | {
+              assetHubParaId: number
+              bridgeHubParaId: number
+              parachains: { [paraId: string]: string }
+          }
+        | undefined = undefined
 
-    if(kusamaConfig) {
+    if (kusamaConfig) {
         const kusamaParachains: { [paraId: string]: string } = {}
         kusamaParachains[kusamaConfig?.BRIDGE_HUB_PARAID.toString()] =
             kusamaConfig?.PARACHAINS[BRIDGE_HUB_PARAID.toString()]
@@ -294,7 +303,7 @@ export function contextConfigFor(env: "polkadot_mainnet" | "westend_sepolia" | "
         }
     }
 
-   return { 
+    return {
         environment: env,
         ethereum: {
             ethChainId,
@@ -312,5 +321,6 @@ export function contextConfigFor(env: "polkadot_mainnet" | "westend_sepolia" | "
             gateway: GATEWAY_CONTRACT,
             beefy: BEEFY_CONTRACT,
         },
+        graphqlApiUrl: GRAPHQL_API_URL,
     }
 }

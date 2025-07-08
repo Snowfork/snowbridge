@@ -50,7 +50,7 @@ import { setTimeout } from "timers/promises"
     )
 
     // Step 2. Create a transfer tx
-    const amount = 1000n
+    const amount = 15_000_000_000_000n // 0.000015 ETH
     const transfer = await toEthereumV2.createTransfer(
         await context.parachain(SOURCE_PARACHAIN), // Source parachain websocket connection
         registry, // The asset registry
@@ -116,7 +116,10 @@ import { setTimeout } from "timers/promises"
 
     // Step 7. Poll for message completion
     while (true) {
-        const status = await historyV2.toEthereumTransferById(response.messageId)
+        const status = await historyV2.toEthereumTransferById(
+            context.graphqlApiUrl(), // GraphQL endpoint to query
+            response.messageId
+        )
         if (status !== undefined && status.status !== historyV2.TransferStatus.Pending) {
             console.dir(status, { depth: 100 })
             console.log("tx complete:", historyV2.TransferStatus[status.status])
@@ -124,7 +127,7 @@ import { setTimeout } from "timers/promises"
         }
         console.dir(status, { depth: 100 })
         console.log("waiting for tx to be completed...")
-        await setTimeout(10_000) // Wait 10 seconds between requests
+        await setTimeout(60_000) // Wait 60 seconds between requests
     }
 
     // Clean up all open connections
