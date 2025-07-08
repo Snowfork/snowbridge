@@ -25,8 +25,6 @@ type SinkConfig struct {
 	Polkadot config.PolkadotConfig `mapstructure:"polkadot"`
 }
 
-type ChannelID [32]byte
-
 func (c Config) Validate() error {
 	// Source
 	err := c.Source.Polkadot.Validate()
