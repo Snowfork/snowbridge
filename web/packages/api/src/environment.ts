@@ -51,6 +51,7 @@ export type SnowbridgeEnvironment = {
     kusamaConfig?: KusamaConfig
     name: string
     ethChainId: number
+    /** @deprecated Use `assetsV2.getTransferLocations` instead */
     locations: TransferLocation[]
 }
 
@@ -551,7 +552,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 },
             ],
             GRAPHQL_API_URL:
-                "https://snowbridge.squids.live/snowbridge-subsquid-polkadot:production/api/graphql",
+                "https://snowbridge.squids.live/snowbridge-subsquid-polkadot@v1/api/graphql",
         },
         kusamaConfig: {
             ASSET_HUB_PARAID: 1000,

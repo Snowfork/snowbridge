@@ -51,7 +51,7 @@ import { setTimeout } from "timers/promises"
     )
 
     // Step 2. Create a transfer tx.
-    const amount = 1000n
+    const amount = 15_000_000_000_000n // 0.000015 ETH
     const transfer = await toPolkadotV2.createTransfer(
         registry, // Asset registry
         ETHEREUM_ACCOUNT_PUBLIC, // Source account
@@ -120,7 +120,10 @@ import { setTimeout } from "timers/promises"
 
     // Step 8. Poll for message completion
     while (true) {
-        const status = await historyV2.toPolkadotTransferById(message.messageId)
+        const status = await historyV2.toPolkadotTransferById(
+            context.graphqlApiUrl(), // GraphQL endpoint to query
+            message.messageId
+        )
         if (status !== undefined && status.status !== historyV2.TransferStatus.Pending) {
             console.dir(status, { depth: 100 })
             console.log("tx complete:", historyV2.TransferStatus[status.status])
@@ -128,7 +131,7 @@ import { setTimeout } from "timers/promises"
         }
         console.dir(status, { depth: 100 })
         console.log("waiting for tx to be completed...")
-        await setTimeout(10_000) // Wait 10 seconds between requests
+        await setTimeout(60_000) // Wait 60 seconds between requests
     }
 
     // Clean up all open connections
