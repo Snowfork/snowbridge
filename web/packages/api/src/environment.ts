@@ -259,8 +259,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 "1002": "wss://bridge-hub-paseo.dotters.network",
                 "3369": "wss://paseo-muse-rpc.polkadot.io",
             },
-            GATEWAY_CONTRACT: "0x5a84b15B618beEE6F6285F6bd2bA20a08673e473",
-            BEEFY_CONTRACT: "0xE7388f953f50d377D131350490156dB649E5DC10",
+            GATEWAY_CONTRACT: "0x1607C1368bc943130258318c91bBd8cFf3D063E6",
+            BEEFY_CONTRACT: "0x2c780945beb1241fE9c645800110cb9C4bBbb639",
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
             PRIMARY_GOVERNANCE_CHANNEL_ID:
@@ -608,6 +608,10 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             PARACHAINS: {
                 "1000": "wss://asset-hub-westend-rpc.dwellir.com",
                 "1002": "wss://bridge-hub-westend-rpc.dwellir.com",
+                "2313": `wss://node-7330371704012918784.nv.onfinality.io/ws?apikey=${
+                    process.env["FREQUENCY_NODE_KEY"] ||
+                    process.env["NEXT_PUBLIC_FREQUENCY_NODE_KEY"]
+                }`,
             },
             GATEWAY_CONTRACT: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
             BEEFY_CONTRACT: "0x6DFaD3D73A28c48E4F4c616ECda80885b415283a",

@@ -43,12 +43,12 @@
                     typescript
                     python311
                     nodePackages.pnpm
-                    nodejs_20
-                    (yarn.override { nodejs = nodejs_20; })
+                    nodejs_22
+                    (yarn.override { nodejs = nodejs_22; })
 
                     # ethereum
                     foundry-bin
-                    go-ethereum
+                    # go-ethereum
                     # gnupg for forge install
                     gnupg
 
@@ -94,7 +94,7 @@
                     export RUSTUP_HOME=$PWD/.rustup
                     export RUST_NIGHTLY_VERSION=nightly-2025-02-19
                     export PATH=$CARGO_HOME/bin:$PATH
-                    export LODESTAR_VERSION=v1.24.0
+                    source $PWD/web/packages/test/scripts/set-env.sh
 
                     eval "$(direnv hook bash)"
 

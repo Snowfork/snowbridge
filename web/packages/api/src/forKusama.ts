@@ -15,6 +15,7 @@ import {
     dotLocationOnKusamaAssetHub,
     ksmLocationOnPolkadotAssetHub,
     DOT_LOCATION,
+    matchesConsensusSystem,
 } from "./xcmBuilder"
 import {
     buildKusamaToPolkadotDestAssetHubXCM,
@@ -22,7 +23,8 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import { Asset, AssetRegistry, Parachain, getAssetHubConversationPalletSwap } from "./assets_v2"
+import { getAssetHubConversationPalletSwap } from "./assets_v2"
+import { Asset, AssetRegistry, Parachain, AssetMap } from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
     EventRecord,
@@ -213,10 +215,19 @@ export async function getDeliveryFee(
     )
 
     let feeAssetOnDest
+    let minBalanceFeeDest: bigint
     if (direction == Direction.ToPolkadot) {
         feeAssetOnDest = ksmLocationOnPolkadotAssetHub
+        minBalanceFeeDest = getDestFeeAssetMinimumBalance(
+            registry.parachains[registry.assetHubParaId].assets,
+            "kusama"
+        )
     } else {
         feeAssetOnDest = dotLocationOnKusamaAssetHub
+        minBalanceFeeDest = getDestFeeAssetMinimumBalance(
+            registry.kusama.parachains[registry.kusama.assetHubParaId].assets,
+            "polkadot"
+        )
     }
     let destinationFee = await getAssetHubConversationPalletSwap(
         destAssetHub,
@@ -226,6 +237,10 @@ export async function getDeliveryFee(
     )
     // pad destination XCM fee
     destinationFee = destinationFee + (destinationFee * 33n) / 100n
+
+    // add minimum balance to the dest fee, to avoid not being able to deposit leftover fees
+    destinationFee = destinationFee + BigInt(minBalanceFeeDest)
+
     // pad destination XCM fee
     totalXcmBridgeFee = totalXcmBridgeFee + (totalXcmBridgeFee * 33n) / 100n
 
@@ -547,7 +562,9 @@ export async function signAndSend(
                     console.error(c)
                     reject(c.internalError || c.dispatchError || c)
                 }
-                if (c.isInBlock) {
+                // We have to check for finalization here because re-orgs will produce a different messageId on Asset Hub.
+                // TODO: Change back to isInBlock when we switch to pallet-xcm.execute for Asset Hub and we can generate the messageId offchain.
+                if (c.isFinalized) {
                     const result = {
                         txHash: u8aToHex(c.txHash),
                         txIndex: c.txIndex || 0,
@@ -585,6 +602,7 @@ export async function signAndSend(
     })
 
     result.blockHash = u8aToHex(await parachain.rpc.chain.getBlockHash(result.blockNumber))
+    result.messageId = transfer.computed.messageId ?? result.messageId
 
     return result
 }
@@ -885,4 +903,18 @@ async function getStorageItem(sourceAssetHub: ApiPromise, key: string) {
     const feeStorageKey = xxhashAsHex(key, 128, true)
     const feeStorageItem = await sourceAssetHub.rpc.state.getStorage(feeStorageKey)
     return new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
+}
+
+function getDestFeeAssetMinimumBalance(assetMap: AssetMap, network: string): bigint {
+    const assets = Object.values(assetMap)
+    for (const asset of assets) {
+        if (asset.location === undefined) {
+            continue
+        }
+        if (matchesConsensusSystem(asset.location, network)) {
+            return asset.minimumBalance
+        }
+    }
+
+    return 0n
 }

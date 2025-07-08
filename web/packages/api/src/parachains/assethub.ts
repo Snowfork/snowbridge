@@ -1,4 +1,5 @@
-import { AssetMap, PNAMap } from "../assets_v2"
+import { PNAMap } from "../assets_v2"
+import { AssetMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
 import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
@@ -28,11 +29,12 @@ export class AssetHubParachain extends ParachainBase {
     }
 
     getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap> {
-        return this.getAssetsFiltered(ethChainId, pnas, bridgeablePNAsOnAH)
+        return this.getAssetsFiltered(ethChainId, bridgeableENAsOnAH, pnas, bridgeablePNAsOnAH)
     }
 
     async getAssetsFiltered(
         ethChainId: number,
+        enaFilter: (address: string) => boolean,
         pnas: PNAMap,
         pnaFilter: (location: any, assetHubParaId: number) => any
     ) {
@@ -50,6 +52,13 @@ export class AssetHubParachain extends ParachainBase {
                 }
                 const token = getTokenFromLocation(location, ethChainId)
                 if (!token) {
+                    continue
+                }
+                const isBridgeable = enaFilter(token)
+                if (!isBridgeable) {
+                    console.warn(
+                        `Location ${JSON.stringify(token)} is filtered out on ${this.specName}`
+                    )
                     continue
                 }
 
@@ -251,4 +260,9 @@ function bridgeablePNAsOnAH(location: any, assetHubParaId: number): any {
             },
         }
     }
+}
+
+// All ERC-20s are bridgeable on AH
+function bridgeableENAsOnAH(_token: string): boolean {
+    return true
 }

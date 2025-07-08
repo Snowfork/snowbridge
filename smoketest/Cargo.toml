@@ -15,7 +15,7 @@ hex-literal = "0.4.1"
 serde = { version = "1.0.210", features = ["derive"] }
 subxt = { version = "0.42.1" }
 subxt-signer = { version = "0.42.1" }
-ethers = { git = "https://github.com/gakonst/ethers-rs", default-features = false, features = ["abigen", "ws", "rustls"] }
+alloy = { version = "1.0.9", features = ["full"] }
 lazy_static = "1.4.0"
 sp-core = { version = "36.1.0" }
 sp-crypto-hashing = { version = "0.1.0" }
@@ -26,3 +26,6 @@ sp-mmr-primitives = { git = "https://github.com/Lederstrumpf/polkadot-sdk", bran
 alloy = { version = "0.4.2", features = ["full"] }
 jsonrpsee = { version = "0.25.1", features = ["client"] }
 serde_json = "1.0"
+
+[features]
+legacy-v1 = []

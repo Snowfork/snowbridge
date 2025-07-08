@@ -8,26 +8,24 @@ import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-t
 import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID } from "./parachains/mythos"
 import { paraImplementation } from "./parachains"
 import { ParachainBase } from "./parachains/parachainBase"
+import {
+    Asset,
+    AssetRegistry,
+    ChainProperties,
+    ERC20Metadata,
+    ERC20MetadataMap,
+    EthereumChain,
+    KusamaConfig,
+    Parachain,
+    ParachainMap,
+    XC20TokenMap,
+} from "@snowbridge/base-types"
 
-export type ERC20Metadata = {
-    token: string
-    name: string
-    symbol: string
-    decimals: number
-    foreignId?: string
+export type ERC20MetadataOverride = {
+    name?: string
+    symbol?: string
+    decimals?: number
 }
-
-export type EthereumChain = {
-    chainId: number
-    id: string
-    evmParachainId?: number
-    assets: ERC20MetadataMap
-    precompile?: `0x${string}`
-    xcDOT?: string
-    xcTokenMap?: XC20TokenMap
-}
-
-export type AccountType = "AccountId20" | "AccountId32"
 
 export type SubstrateAccount = {
     nonce: bigint
@@ -39,56 +37,6 @@ export type SubstrateAccount = {
         reserved: bigint
         frozen: bigint
     }
-}
-
-export type ChainProperties = {
-    tokenSymbols: string
-    tokenDecimals: number
-    ss58Format: number
-    isEthereum: boolean
-    accountType: AccountType
-    evmChainId?: number
-    name: string
-    specName: string
-    specVersion: number
-}
-
-export type Parachain = {
-    parachainId: number
-    info: ChainProperties
-    features: {
-        hasPalletXcm: boolean
-        hasDryRunApi: boolean
-        hasTxPaymentApi: boolean
-        hasDryRunRpc: boolean
-        hasDotBalance: boolean
-    }
-    assets: AssetMap
-    estimatedExecutionFeeDOT: bigint
-    estimatedDeliveryFeeDOT: bigint
-    xcDOT?: string
-}
-
-export type Asset = {
-    token: string
-    name: string
-    minimumBalance: bigint
-    symbol: string
-    decimals: number
-    isSufficient: boolean
-    xc20?: string
-    // Location on source Parachain
-    location?: any
-    // Location reanchored on AH
-    locationOnAH?: any
-    // Location reanchored on Ethereum
-    locationOnEthereum?: any
-    // For chains that use `Assets` pallet to manage local assets
-    // the asset_id is normally represented as u32, but on Moonbeam,
-    // it is u128, so use string here to avoid overflow
-    assetId?: string
-    // Identifier of the PNA
-    foreignId?: string
 }
 
 export type RegistryOptions = {
@@ -104,33 +52,13 @@ export type RegistryOptions = {
     kusama?: KusamaOptions
     precompiles?: PrecompileMap
     assetOverrides?: AssetOverrideMap
+    metadataOverrides?: ERC20MetadataOverrideMap
 }
 
 export type KusamaOptions = {
     assetHubParaId: number
     bridgeHubParaId: number
     assetHub: string | ApiPromise
-}
-
-export type AssetRegistry = {
-    environment: string
-    gatewayAddress: string
-    ethChainId: number
-    assetHubParaId: number
-    bridgeHubParaId: number
-    relaychain: ChainProperties
-    bridgeHub: ChainProperties
-    ethereumChains: {
-        [chainId: string]: EthereumChain
-    }
-    parachains: ParachainMap
-    kusama: KusamaConfig | undefined
-}
-
-type KusamaConfig = {
-    assetHubParaId: number
-    bridgeHubParaId: number
-    parachains: ParachainMap
 }
 
 export interface PNAMap {
@@ -141,28 +69,16 @@ export interface PNAMap {
     }
 }
 
-export interface AssetMap {
-    [token: string]: Asset
-}
-
-interface ParachainMap {
-    [paraId: string]: Parachain
-}
-
-interface PrecompileMap {
+export interface PrecompileMap {
     [chainId: string]: `0x${string}`
 }
 
-interface AssetOverrideMap {
+export interface AssetOverrideMap {
     [paraId: string]: Asset[]
 }
 
-interface XC20TokenMap {
-    [xc20: string]: string
-}
-
-interface ERC20MetadataMap {
-    [token: string]: ERC20Metadata
+export interface ERC20MetadataOverrideMap {
+    [token: string]: ERC20MetadataOverride
 }
 
 export type SourceType = "substrate" | "ethereum"
@@ -207,6 +123,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         kusama,
         precompiles,
         assetOverrides,
+        metadataOverrides,
     } = options
 
     let relayInfo: ChainProperties
@@ -352,7 +269,8 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
                 gatewayAddress,
                 assetHubParaId,
                 paras,
-                precompiles ?? {}
+                precompiles ?? {},
+                metadataOverrides ?? {}
             )
         })
     )) {
@@ -414,6 +332,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         .forEach((parachainKey) => ethProviders[parachainKey].provider.destroy())
 
     return {
+        timestamp: new Date().toISOString(),
         environment,
         ethChainId,
         gatewayAddress,
@@ -638,13 +557,6 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
     return result
 }
 
-export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
-    if (padPercent < 0 || padPercent > 100) {
-        throw Error(`padPercent ${padPercent} not in range of 0 to 100.`)
-    }
-    return fee * ((100n + padPercent) / 100n)
-}
-
 async function indexParachain(
     parachain: ParachainBase,
     assetHub: ParachainBase,
@@ -744,7 +656,8 @@ async function indexEthChain(
     gatewayAddress: string,
     assetHubParaId: number,
     parachains: ParachainMap,
-    precompiles: PrecompileMap
+    precompiles: PrecompileMap,
+    metadataOverrides: ERC20MetadataOverrideMap
 ): Promise<EthereumChain> {
     const id = networkName !== "unknown" ? networkName : undefined
     if (networkChainId == ethChainId) {
@@ -756,6 +669,7 @@ async function indexEthChain(
         for (const token in assetHub.assets) {
             if (!(await gateway.isTokenRegistered(token))) {
                 console.warn(`Token ${token} is not registered with the gateway.`)
+                continue // Skip unregistered assets
             }
             if (token === ETHER_TOKEN_ADDRESS) {
                 assets[token] = {
@@ -776,6 +690,19 @@ async function indexEthChain(
                         "0x0000000000000000000000000000000000000000000000000000000000000000"
                             ? foreignId
                             : undefined,
+                }
+            }
+            if (token in metadataOverrides) {
+                const override = metadataOverrides[token]
+                const asset = assets[token]
+                if (override.name) {
+                    asset.name = override.name
+                }
+                if (override.symbol) {
+                    asset.symbol = override.symbol
+                }
+                if (override.decimals) {
+                    asset.decimals = override.decimals
                 }
             }
         }
@@ -912,12 +839,18 @@ function addOverrides(envName: string, result: RegistryOptions) {
         case "polkadot_mainnet": {
             // Add override for mythos token and add precompile for moonbeam
             result.precompiles = { "2004": "0x000000000000000000000000000000000000081a" }
+
+            result.metadataOverrides = {}
+            // Change the name of TRAC
+            result.metadataOverrides["0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f".toLowerCase()] = {
+                name: "OriginTrail TRAC",
+            }
             break
         }
     }
 }
 
-function defaultPathFilter(envName: string): (_: Path) => boolean {
+export function defaultPathFilter(envName: string): (_: Path) => boolean {
     switch (envName) {
         case "westend_sepolia": {
             return (path: Path) => {
@@ -953,9 +886,7 @@ function defaultPathFilter(envName: string): (_: Path) => boolean {
 
                 // Disable stable coins in the UI from Ethereum to Polkadot
                 if (
-                    (path.asset === "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" || // USDC
-                        path.asset === "0xdac17f958d2ee523a2206206994597c13d831ec7" || // USDT
-                        path.asset === "0x9d39a5de30e57443bff2a8307a4256c8797a3497" || // Staked USDe
+                    (path.asset === "0x9d39a5de30e57443bff2a8307a4256c8797a3497" || // Staked USDe
                         path.asset === "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd" || // Savings USD
                         path.asset === "0x6b175474e89094c44da98b954eedeac495271d0f") && // DAI
                     path.destination === 2034 // Hydration

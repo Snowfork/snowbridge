@@ -1,0 +1,30 @@
+{
+  "name": "@snowbridge/base-types",
+  "version": "0.1.68",
+  "description": "Snowbridge Base Types",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Snowfork/snowbridge.git",
+    "directory": "web/packages/base-types"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build --force",
+    "lint": "eslint .",
+    "format": "prettier src --write"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.31",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^8.10.0",
+    "prettier": "^2.8.8",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {}
+}
