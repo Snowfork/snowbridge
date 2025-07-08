@@ -122,12 +122,12 @@ import { setTimeout } from "timers/promises"
     while (true) {
         const status = await historyV2.toPolkadotTransferById(message.messageId)
         if (status !== undefined && status.status !== historyV2.TransferStatus.Pending) {
-            console.log("tx complete:", historyV2.TransferStatus[status.status])
             console.dir(status, { depth: 100 })
+            console.log("tx complete:", historyV2.TransferStatus[status.status])
             break
         }
-        console.log("waiting for tx...")
         console.dir(status, { depth: 100 })
+        console.log("waiting for tx to be completed...")
         await setTimeout(10_000) // Wait 10 seconds between requests
     }
 

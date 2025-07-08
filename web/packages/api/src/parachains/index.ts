@@ -9,6 +9,7 @@ import { GenericChain } from "./generic"
 import { AssetHubKusamaParachain } from "./assethubKusama"
 import { AcalaParachain } from "./acala"
 import { FrequencyParachain } from "./frequency"
+import { JamtonParachain } from "./jamton"
 
 export async function paraImplementation(provider: ApiPromise): Promise<ParachainBase> {
     let parachainId = 0
@@ -50,6 +51,8 @@ export async function paraImplementation(provider: ApiPromise): Promise<Parachai
         case "bridge-hub-westend":
         case "bridge-hub-polkadot":
             return new GenericChain(provider, parachainId, specName, specVersion)
+        case "jamton-runtime":
+            return new JamtonParachain(provider, parachainId, specName, specVersion)
         default:
             throw Error(
                 `No parachain provider for ParaId = ${parachainId}, Spec = ${specName}, Version = ${specVersion}`
