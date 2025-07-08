@@ -34,9 +34,6 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 		&config.Schedule,
 		ethereumConnBeefy,
 		relaychainWriterConn,
-		nil,
-		nil,
-		nil,
 	)
 
 	return &Relay{

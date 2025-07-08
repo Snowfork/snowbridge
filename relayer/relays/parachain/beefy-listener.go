@@ -197,6 +197,7 @@ func (li *BeefyListener) queryNewMMRRootEvents(
 			}
 			break
 		}
+
 		events = append(events, iter.Event)
 	}
 

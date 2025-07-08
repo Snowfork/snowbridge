@@ -39,7 +39,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 	log.Info("Creating worker")
 
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
-	relaychainWriterConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint, keypair2.AsKeyringPair())
+	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint, keypair2.AsKeyringPair())
 
 	ethereumConnWriter := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
 	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
@@ -63,7 +63,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 		&config.Source,
 		&config.Schedule,
 		ethereumConnBeefy,
-		relaychainWriterConn,
+		relaychainConn,
 		parachainConn,
 		ofacClient,
 		tasks,
@@ -96,7 +96,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 	return &Relay{
 		config:                config,
 		parachainConn:         parachainConn,
-		relaychainConn:        relaychainWriterConn,
+		relaychainConn:        relaychainConn,
 		ethereumConnWriter:    ethereumConnWriter,
 		ethereumConnBeefy:     ethereumConnBeefy,
 		ethereumChannelWriter: ethereumChannelWriter,
