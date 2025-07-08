@@ -507,7 +507,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 "2030": "wss://bifrost-polkadot.ibp.network",
                 "2004": "wss://moonbeam-rpc.n.dwellir.com",
                 "2000": "wss://acala-rpc.dwellir.com",
-                "3397": "wss://rpc.jamton.network",
+                // TODO: Add back in jampton once we have an indexer in place.
+                //"3397": "wss://rpc.jamton.network",
             },
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
             BEEFY_CONTRACT: "0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C",
