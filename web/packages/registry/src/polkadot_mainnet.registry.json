@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-07-07T22:45:44.020Z",
+  "timestamp": "2025-07-08T00:21:41.121Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -1028,7 +1028,7 @@
           "isSufficient": false
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:84004155",
+      "estimatedExecutionFeeDOT": "bigint:83639474",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2034": {
@@ -1173,7 +1173,7 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:2540895",
+      "estimatedExecutionFeeDOT": "bigint:2548437",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "3369": {
@@ -1207,6 +1207,38 @@
       },
       "estimatedExecutionFeeDOT": "bigint:1000000000",
       "estimatedDeliveryFeeDOT": "bigint:306500000"
+    },
+    "3397": {
+      "parachainId": 3397,
+      "features": {
+        "hasPalletXcm": true,
+        "hasDryRunApi": false,
+        "hasTxPaymentApi": true,
+        "hasDryRunRpc": true,
+        "hasDotBalance": true
+      },
+      "info": {
+        "tokenSymbols": "DOTON",
+        "tokenDecimals": 18,
+        "ss58Format": 5589,
+        "isEthereum": false,
+        "accountType": "AccountId32",
+        "name": "JAMTON",
+        "specName": "jamton-runtime",
+        "specVersion": 1120120
+      },
+      "assets": {
+        "0x0e186357c323c806c1efdad36d217f7a54b63d18": {
+          "token": "0x0e186357c323c806c1efdad36d217f7a54b63d18",
+          "name": "Curio Gas Token",
+          "minimumBalance": "bigint:10000000000000000",
+          "symbol": "CGT",
+          "decimals": 18,
+          "isSufficient": true
+        }
+      },
+      "estimatedExecutionFeeDOT": "bigint:625000000",
+      "estimatedDeliveryFeeDOT": "bigint:307100000"
     }
   },
   "kusama": {
