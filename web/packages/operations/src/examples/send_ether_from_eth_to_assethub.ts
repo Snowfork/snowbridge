@@ -40,11 +40,7 @@ import { setTimeout } from "timers/promises"
     console.log("# Ethereum to Asset Hub")
     // Step 1. Get the delivery fee for the transaction
     const fee = await toPolkadotV2.getDeliveryFee(
-        {
-            gateway: context.gateway(), // Gateway contract
-            assetHub: await context.assetHub(), // Asset Hub websocket connection
-            destination: await context.parachain(DESTINATION_PARACHAIN), // Destination chain websocket connection
-        },
+        context, // The context
         registry, // Asset registry
         TOKEN_CONTRACT, // The erc20 token contract address
         DESTINATION_PARACHAIN // Destination parachain
@@ -64,13 +60,7 @@ import { setTimeout } from "timers/promises"
 
     // Step 3. Validate the transaction by dry-running on source and destination.
     const validation = await toPolkadotV2.validateTransfer(
-        {
-            ethereum: context.ethereum(), // Ethereum connection
-            gateway: context.gateway(), // Gateway contract
-            bridgeHub: await context.bridgeHub(), // Bridge hub websocket connection
-            assetHub: await context.assetHub(), // Asset hub websocket connection
-            destParachain: await context.parachain(DESTINATION_PARACHAIN), // Destination websocket connection
-        },
+        context, // The context
         transfer // The transfer tx
     )
     console.log("validation result", validation)

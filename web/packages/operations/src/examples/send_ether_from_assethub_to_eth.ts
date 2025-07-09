@@ -40,10 +40,7 @@ import { setTimeout } from "timers/promises"
     console.log("Asset Hub to Ethereum")
     // Step 1. Get the delivery fee for the transaction
     const fee = await toEthereumV2.getDeliveryFee(
-        {
-            assetHub: await context.assetHub(), // Asset Hub websocket connection
-            source: await context.parachain(SOURCE_PARACHAIN), // Source parachain websocket connection
-        },
+        context, // The context
         SOURCE_PARACHAIN, // Source parachain Id
         registry, // The asset registry
         TOKEN_CONTRACT // The token being transferred
@@ -52,7 +49,7 @@ import { setTimeout } from "timers/promises"
     // Step 2. Create a transfer tx
     const amount = 15_000_000_000_000n // 0.000015 ETH
     const transfer = await toEthereumV2.createTransfer(
-        await context.parachain(SOURCE_PARACHAIN), // Source parachain websocket connection
+        { sourceParaId: SOURCE_PARACHAIN, context }, // The context and source parachain
         registry, // The asset registry
         POLKADOT_ACCOUNT_PUBLIC, // The source account
         ETHEREUM_ACCOUNT_PUBLIC, // The destination account
@@ -78,12 +75,7 @@ import { setTimeout } from "timers/promises"
 
     // Step 4. Validate the transaction.
     const validation = await toEthereumV2.validateTransfer(
-        {
-            sourceParachain: await context.parachain(SOURCE_PARACHAIN),
-            assetHub: await context.assetHub(),
-            gateway: context.gateway(),
-            bridgeHub: await context.bridgeHub(),
-        },
+        context, // The context
         transfer
     )
     console.log("validation result", validation)
@@ -95,7 +87,7 @@ import { setTimeout } from "timers/promises"
 
     // Step 6. Submit transaction and get receipt for tracking
     const response = await toEthereumV2.signAndSend(
-        await context.parachain(SOURCE_PARACHAIN),
+        context, // The context
         transfer,
         POLKADOT_ACCOUNT,
         { withSignedTransaction: true }
