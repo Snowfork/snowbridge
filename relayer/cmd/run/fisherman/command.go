@@ -7,11 +7,9 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"reflect"
 	"strings"
 	"syscall"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	para "github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -59,12 +57,7 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	var config fisherman.Config
-	err := viper.UnmarshalExact(&config, viper.DecodeHook(HexHookFunc()))
-	if err != nil {
-		return err
-	}
-
-	err = config.Validate()
+	err := config.Validate()
 	if err != nil {
 		return fmt.Errorf("config file validation failed: %w", err)
 	}
@@ -117,35 +110,6 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
-}
-
-func HexHookFunc() mapstructure.DecodeHookFuncType {
-	return func(
-		f reflect.Type,
-		t reflect.Type,
-		data interface{},
-	) (interface{}, error) {
-		// Check that the data is string
-		if f.Kind() != reflect.String {
-			return data, nil
-		}
-
-		// Check that the target type is our custom type
-		if t != reflect.TypeOf(fisherman.ChannelID{}) {
-			return data, nil
-		}
-
-		foo, err := HexDecodeString(data.(string))
-		if err != nil {
-			return nil, err
-		}
-
-		var out [32]byte
-		copy(out[:], foo)
-
-		// Return the parsed value
-		return fisherman.ChannelID(out), nil
-	}
 }
 
 // HexDecodeString decodes bytes from a hex string. Contrary to hex.DecodeString, this function does not error if "0x"
