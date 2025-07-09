@@ -33,6 +33,7 @@ import { Result } from "@polkadot/types"
 import { FeeData } from "ethers"
 import { paraImplementation } from "./parachains"
 import { padFeeByPercentage } from "./utils"
+import { Context } from "./index"
 
 export type Transfer = {
     input: {
@@ -75,7 +76,7 @@ export type FeeInfo = {
 }
 
 export async function createTransfer(
-    parachain: ApiPromise,
+    source: { sourceParaId: number; context: Context } | { parachain: ApiPromise },
     registry: AssetRegistry,
     sourceAccount: string,
     beneficiaryAccount: string,
@@ -89,6 +90,11 @@ export async function createTransfer(
     if (!isHex(sourceAccountHex)) {
         sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
     }
+
+    const { parachain } =
+        "sourceParaId" in source
+            ? { parachain: await source.context.parachain(source.sourceParaId) }
+            : source
 
     const sourceParachainImpl = await paraImplementation(parachain)
     const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
@@ -178,7 +184,7 @@ export async function createTransfer(
 }
 
 export async function getDeliveryFee(
-    connections: { assetHub: ApiPromise; source: ApiPromise },
+    context: Context | { assetHub: ApiPromise; source: ApiPromise },
     parachain: number,
     registry: AssetRegistry,
     tokenAddress: string,
@@ -188,7 +194,11 @@ export async function getDeliveryFee(
         defaultFee?: bigint
     }
 ): Promise<DeliveryFee> {
-    const { assetHub, source } = connections
+    const { assetHub, source } =
+        context instanceof Context
+            ? { assetHub: await context.assetHub(), source: await context.parachain(parachain) }
+            : context
+
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
     const feePadPercentage = options?.padPercentage ?? 33n
     const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
@@ -425,15 +435,16 @@ export type ValidationResult = {
 }
 
 export async function validateTransfer(
-    connections: {
-        sourceParachain: ApiPromise
-        assetHub: ApiPromise
-        gateway: IGateway
-        bridgeHub: ApiPromise
-    },
+    context:
+        | Context
+        | {
+              sourceParachain: ApiPromise
+              assetHub: ApiPromise
+              gateway: IGateway
+              bridgeHub: ApiPromise
+          },
     transfer: Transfer
 ): Promise<ValidationResult> {
-    const { sourceParachain, gateway, bridgeHub, assetHub } = connections
     const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
     const {
         sourceAccountHex,
@@ -441,6 +452,17 @@ export async function validateTransfer(
         sourceParachain: source,
         sourceAssetMetadata,
     } = transfer.computed
+
+    const { sourceParachain, assetHub, gateway, bridgeHub } =
+        context instanceof Context
+            ? {
+                  sourceParachain: await context.parachain(sourceParaId),
+                  assetHub: await context.assetHub(),
+                  gateway: context.gateway(),
+                  bridgeHub: await context.bridgeHub(),
+              }
+            : context
+
     const { tx } = transfer
 
     const logs: ValidationLog[] = []
@@ -716,11 +738,19 @@ export type MessageReceipt = {
 }
 
 export async function signAndSend(
-    parachain: ApiPromise,
+    context: Context | { sourceParachain: ApiPromise },
     transfer: Transfer,
     account: AddressOrPair,
     options: Partial<SignerOptions>
 ): Promise<MessageReceipt> {
+    const { sourceParaId } = transfer.computed
+    const { sourceParachain } =
+        context instanceof Context
+            ? {
+                  sourceParachain: await context.parachain(sourceParaId),
+              }
+            : context
+
     const result = await new Promise<MessageReceipt>((resolve, reject) => {
         try {
             transfer.tx.signAndSend(account, options, (c) => {
@@ -739,7 +769,7 @@ export async function signAndSend(
                         events: c.events,
                     }
                     for (const e of c.events) {
-                        if (parachain.events.system.ExtrinsicFailed.is(e.event)) {
+                        if (sourceParachain.events.system.ExtrinsicFailed.is(e.event)) {
                             resolve({
                                 ...result,
                                 success: false,
@@ -747,7 +777,7 @@ export async function signAndSend(
                             })
                         }
 
-                        if (parachain.events.polkadotXcm.Sent.is(e.event)) {
+                        if (sourceParachain.events.polkadotXcm.Sent.is(e.event)) {
                             resolve({
                                 ...result,
                                 success: true,
@@ -767,7 +797,7 @@ export async function signAndSend(
         }
     })
 
-    result.blockHash = u8aToHex(await parachain.rpc.chain.getBlockHash(result.blockNumber))
+    result.blockHash = u8aToHex(await sourceParachain.rpc.chain.getBlockHash(result.blockNumber))
     result.messageId = transfer.computed.messageId ?? result.messageId
 
     return result
