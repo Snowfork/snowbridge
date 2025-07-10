@@ -1,0 +1,61 @@
+[workspace]
+resolver = "2"
+members = [
+    "runtimes/polkadot",
+    "runtimes/bridge-hub-polkadot", 
+    "runtimes/asset-hub-polkadot",
+]
+
+[package]
+name = "snowbridge-gas-estimator"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "snowbridge-gas-estimator"
+path = "src/main.rs"
+
+[dependencies]
+# Core async runtime
+tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread", "time"] }
+futures = "0.3.31"
+
+# Command line interface
+clap = { version = "4.4", features = ["derive"] }
+
+# Serialization
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0"
+
+# Ethereum interaction
+alloy = { version = "1.0.9", features = ["full"] }
+hex = "0.4.3"
+hex-literal = "0.4.1"
+
+# Substrate/Polkadot interaction
+subxt = { version = "0.42.1" }
+subxt-signer = { version = "0.42.1" }
+codec = { package = "parity-scale-codec", version = "3.7.4", default-features = false, features = ["bit-vec", "derive", "full"] }
+scale-info = { features = ["derive"], version = "2.11.6", default-features = false }
+
+# Substrate primitives
+sp-core = { version = "36.1.0" }
+sp-crypto-hashing = { version = "0.1.0" }
+sp-runtime = { version = "41.1.0" }
+
+# XCM - simplified to avoid version conflicts for now
+# xcm = { version = "1.0" }  # Commented out until proper version is determined
+
+# Error handling and logging
+anyhow = "1.0"
+thiserror = "1.0"
+log = "0.4"
+env_logger = "0.11"
+
+# Utilities
+lazy_static = "1.4.0"
+
+# Runtime bindings
+asset-hub-polkadot-runtime = { path = "runtimes/asset-hub-polkadot" }
+bridge-hub-polkadot-runtime = { path = "runtimes/bridge-hub-polkadot" }
+polkadot-runtime = { path = "runtimes/polkadot" }
