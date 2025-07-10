@@ -1,8 +1,6 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
 import { Context, environment, forKusama } from "@snowbridge/api"
-import { AbstractProvider } from "ethers"
-import cron from "node-cron"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { assetRegistryFor } from "@snowbridge/registry"
 import { Direction } from "@snowbridge/api/dist/forKusama"
@@ -35,17 +33,11 @@ export const transferForKusama = async (
     kusamaParachains[kusamaConfig?.ASSET_HUB_PARAID.toString()] =
         kusamaConfig?.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
 
-    const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
-    const ethChains: { [ethChainId: string]: string } = {}
-    Object.keys(config.ETHEREUM_CHAINS).forEach(
-        (ethChainId) =>
-            (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
-    )
     const context = new Context({
         environment: name,
         ethereum: {
             ethChainId,
-            ethChains,
+            ethChains: config.ETHEREUM_CHAINS,
             beacon_url: process.env["BEACON_NODE_URL"] || config.BEACON_HTTP_API,
         },
         polkadot: {

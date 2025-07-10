@@ -29,7 +29,7 @@ async function buildRegistry(env: string, options: assetsV2.RegistryOptions) {
         throw Error(`ETHEREUM_API_KEY env variable not set.`)
     }
     await Promise.all(envs.map(async env => {
-        const options = assetsV2.fromEnvironment(environment.SNOWBRIDGE_ENV[env], process.env.ETHEREUM_API_KEY)
+        const options = assetsV2.fromEnvironment(environment.SNOWBRIDGE_ENV[env])
         await buildRegistry(env, options)
     }))
 })()

@@ -30,6 +30,7 @@ import {
     ValidationLog,
     ValidationReason,
 } from "./toEthereum_v2"
+import { Context } from "./index"
 
 const PALLET_XCM_PRECOMPILE = [
     {
@@ -97,7 +98,7 @@ export type TransferEvm = {
 }
 
 export async function createTransferEvm(
-    parachain: ApiPromise,
+    source: { sourceParaId: number; context: Context } | { parachain: ApiPromise },
     registry: AssetRegistry,
     sourceAccount: string,
     beneficiaryAccount: string,
@@ -115,6 +116,10 @@ export async function createTransferEvm(
         throw Error(`Source address ${sourceAccountHex} is not a 20 byte address.`)
     }
 
+    const { parachain } =
+        "sourceParaId" in source
+            ? { parachain: await source.context.parachain(source.sourceParaId) }
+            : source
     const sourceParachainImpl = await paraImplementation(parachain)
     const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
         resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
@@ -223,16 +228,17 @@ export type ValidationResultEvm = {
 }
 
 export async function validateTransferEvm(
-    connections: {
-        sourceParachain: ApiPromise
-        sourceEthChain: AbstractProvider
-        assetHub: ApiPromise
-        gateway: IGateway
-        bridgeHub: ApiPromise
-    },
+    context:
+        | Context
+        | {
+              sourceParachain: ApiPromise
+              sourceEthChain: AbstractProvider
+              assetHub: ApiPromise
+              gateway: IGateway
+              bridgeHub: ApiPromise
+          },
     transfer: TransferEvm
 ): Promise<ValidationResultEvm> {
-    const { sourceParachain, gateway, bridgeHub, assetHub, sourceEthChain } = connections
     const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
     const {
         sourceAccountHex,
@@ -240,7 +246,19 @@ export async function validateTransferEvm(
         sourceParachain: source,
         messageId,
         sourceAssetMetadata,
+        ethChain,
     } = transfer.computed
+
+    const { sourceParachain, gateway, bridgeHub, assetHub, sourceEthChain } =
+        context instanceof Context
+            ? {
+                  sourceParachain: await context.parachain(sourceParaId),
+                  gateway: context.gateway(),
+                  bridgeHub: await context.bridgeHub(),
+                  assetHub: await context.assetHub(),
+                  sourceEthChain: context.ethChain(ethChain?.chainId!),
+              }
+            : context
     const { tx } = transfer
 
     const sourceParachainImpl = await paraImplementation(sourceParachain)
@@ -471,9 +489,13 @@ export type MessageReceiptEvm = {
 }
 
 export async function getMessageReceipt(
-    sourceParachain: ApiPromise,
+    source: { sourceParaId: number; context: Context } | { sourceParachain: ApiPromise },
     receipt: TransactionReceipt
 ): Promise<MessageReceiptEvm> {
+    const { sourceParachain } =
+        "sourceParaId" in source
+            ? { sourceParachain: await source.context.parachain(source.sourceParaId) }
+            : source
     const blockHash = await sourceParachain.rpc.chain.getBlockHash(receipt.blockNumber)
     const events = await (await sourceParachain.at(blockHash)).query.system.events<EventRecord[]>()
     let success = false

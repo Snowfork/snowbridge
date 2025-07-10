@@ -31,6 +31,7 @@ import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { paraImplementation } from "./parachains"
 import { ParachainBase } from "./parachains/parachainBase"
+import { Context } from "./index"
 
 export type Transfer = {
     input: {
@@ -131,13 +132,21 @@ export type MessageReceipt = {
 }
 
 export async function getDeliveryFee(
-    connections: { gateway: IGateway; assetHub: ApiPromise; destination: ApiPromise },
+    context: Context | { gateway: IGateway; assetHub: ApiPromise; destination: ApiPromise },
     registry: AssetRegistry,
     tokenAddress: string,
     destinationParaId: number,
     paddFeeByPercentage?: bigint
 ): Promise<DeliveryFee> {
-    const { gateway, assetHub, destination } = connections
+    const { gateway, assetHub, destination } =
+        context instanceof Context
+            ? {
+                  gateway: context.gateway(),
+                  assetHub: await context.assetHub(),
+                  destination: await context.parachain(destinationParaId),
+              }
+            : context
+
     const { destParachain, destAssetMetadata } = resolveInputs(
         registry,
         tokenAddress,
@@ -283,12 +292,27 @@ async function validateAccount(
 }
 
 export async function validateTransfer(
-    connections: Connections,
+    context: Context | Connections,
     transfer: Transfer
 ): Promise<ValidationResult> {
     const { tx } = transfer
-    const { ethereum, gateway, bridgeHub, assetHub, destParachain: destParachainApi } = connections
     const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
+    const {
+        ethereum,
+        gateway,
+        bridgeHub,
+        assetHub,
+        destParachain: destParachainApi,
+    } = context instanceof Context
+        ? {
+              ethereum: context.ethereum(),
+              gateway: context.gateway(),
+              bridgeHub: await context.bridgeHub(),
+              assetHub: await context.assetHub(),
+              destParachain: await context.parachain(destinationParaId),
+          }
+        : context
+
     const {
         totalValue,
         minimalBalance,
