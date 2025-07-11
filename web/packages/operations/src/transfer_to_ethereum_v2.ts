@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment, toEthereumV3 } from "@snowbridge/api"
+import { Context, environment, toEthereumSnowbridgeV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
@@ -69,7 +69,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     console.log("Asset Hub to Ethereum")
     {
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toEthereumV3.getDeliveryFee(
+        const fee = await toEthereumSnowbridgeV2.getDeliveryFee(
             {
                 assetHub: await context.assetHub(),
                 source: await context.parachain(sourceParaId),
@@ -82,7 +82,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         )
 
         // Step 2. Create a transfer tx
-        const transfer = await toEthereumV3.createTransfer(
+        const transfer = await toEthereumSnowbridgeV2.createTransfer(
             await context.parachain(sourceParaId),
             registry,
             POLKADOT_ACCOUNT_PUBLIC,
@@ -112,7 +112,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         // )
 
         // Step 4. Validate the transaction.
-        const validation = await toEthereumV3.validateTransfer(
+        const validation = await toEthereumSnowbridgeV2.validateTransfer(
             {
                 sourceParachain: await context.parachain(sourceParaId),
                 assetHub: await context.assetHub(),
@@ -124,12 +124,12 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         console.log("validation result", validation)
 
         // Step 5. Check validation logs for errors
-        if (validation.logs.find((l) => l.kind == toEthereumV3.ValidationKind.Error)) {
+        if (validation.logs.find((l) => l.kind == toEthereumSnowbridgeV2.ValidationKind.Error)) {
             throw Error(`validation has one of more errors.`)
         }
         if (process.env["DRY_RUN"] != "true") {
             // Step 6. Submit transaction and get receipt for tracking
-            const response = await toEthereumV3.signAndSend(
+            const response = await toEthereumSnowbridgeV2.signAndSend(
                 await context.parachain(sourceParaId),
                 transfer,
                 POLKADOT_ACCOUNT,
