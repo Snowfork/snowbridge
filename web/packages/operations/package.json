@@ -16,7 +16,7 @@
     "initializeAlarmsFromContainer": "docker run -v $(pwd)/config:/config --rm snowbridge-monitor:latest init",
     "monitor": "npx ts-node src/main.ts start",
     "historyV2": "npx ts-node src/global_transfer_history_v2.ts",
-    "buildTokenRegistry": "npx ts-node src/index_meta_data.ts",
+    "buildTokenRegistry": "npx ts-node src/build_asset_registry.ts",
     "transferWethFromPolkadotToKusama": "npx ts-node src/transfer_weth_from_polkadot_to_kusama.ts",
     "transferEthFromPolkadotToKusama": "npx ts-node src/transfer_eth_from_polkadot_to_kusama.ts",
     "transferDotFromPolkadotToKusama": "npx ts-node src/transfer_dot_from_polkadot_to_kusama.ts",
@@ -34,7 +34,16 @@
     "transferPenpalTokenToEthereum": "npx ts-node src/transfer_from_p2e.ts 2000 pal 2000000000",
     "transferPenpalTokenToAH": "npx ts-node src/transfer_from_e2p.ts 1000 pal 1000000000",
     "transferXQCYToEthereum": "npx ts-node src/transfer_from_p2e.ts 2313 xrqcy 1000000",
-    "transferXQCYFromEthereumToAH": "npx ts-node src/transfer_from_e2p.ts 1000 xrqcy 100000"
+    "transferXQCYFromEthereumToAH": "npx ts-node src/transfer_from_e2p.ts 1000 xrqcy 100000",
+    "registerWeth": "npx ts-node src/register_erc20.ts 0xb8ea8cb425d85536b158d661da1ef0895bb92f1d",
+    "transferWethToAH": "npx ts-node src/transfer_from_e2p.ts 1000 WETH 200000000000000",
+    "transferWndToEthereumV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 WND 2000000000",
+    "transferEtherFromAHV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 Eth 100000000000000",
+    "transferWEthFromAHV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 WETH 100000000000000",
+    "transferRocToEthereumV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 Roc 2000000000",
+    "transferPenpalTokenToEthereumV2": "npx ts-node src/transfer_from_p2e_v2.ts 2000 pal 2000000000",
+    "transferEtherFromPenpalV2": "npx ts-node src/transfer_from_p2e_v2.ts 2000 ETH 100000000000000",
+    "transferWEthFromPenpalV2": "npx ts-node src/transfer_from_p2e_v2.ts 2000 WETH 100000000000000"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.62.0",
