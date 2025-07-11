@@ -4,7 +4,6 @@ import { Codec, ISubmittableResult } from "@polkadot/types/types"
 import { BN, hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
 import { blake2AsHex, decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
 import { DOT_LOCATION, parachainLocation, HERE_LOCATION } from "./xcmBuilder"
-
 import {
     buildResultXcmAssetHubERC20TransferFromParachain,
     buildParachainERC20ReceivedXcmOnDestination,
@@ -333,7 +332,7 @@ export async function getDeliveryFee(
     let feeData = await ethereum.getFeeData()
     let ethereumExecutionFee =
         (feeData.gasPrice ?? 2_000_000_000n) *
-        ((tokenErcMetadata.deliveryGas ?? 100_000n) + (ethereumChain.baseDeliveryGas ?? 180_000n))
+        ((tokenErcMetadata.deliveryGas ?? 80_000n) + (ethereumChain.baseDeliveryGas ?? 120_000n))
 
     return {
         localExecutionFeeDOT,
