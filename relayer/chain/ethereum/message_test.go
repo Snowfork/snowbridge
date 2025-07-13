@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/trie"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
+	"github.com/ethereum/go-ethereum/triedb"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/stretchr/testify/assert"
 
@@ -45,10 +49,9 @@ func TestMessage_Proof(t *testing.T) {
 	}
 
 	// Construct Merkle Patricia Trie for receipts
-	receiptTrie, err := ethereum.MakeTrie(receipts)
-	if err != nil {
-		panic(err)
-	}
+	receiptTrie := trie.NewEmpty(triedb.NewDatabase(rawdb.NewMemoryDatabase(), nil))
+
+	types.DeriveSha(receipts, receiptTrie)
 
 	fmt.Println("Hash", receiptTrie.Hash())
 
