@@ -2,11 +2,9 @@ mod estimator;
 
 use crate::estimator::{EstimatorError, clients, build_asset_hub_xcm};
 use clap::{Parser, Subcommand, ValueEnum};
-use serde_json;
 use std::process;
 use hex;
 use codec;
-use asset_hub_westend_runtime::runtime_types::xcm::VersionedXcm;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::location::Location;
 
 #[derive(Parser)]
@@ -84,7 +82,7 @@ async fn run_estimation(
     let claimer: Location = codec::Decode::decode(&mut &claimer_bytes[..])
         .map_err(|_| EstimatorError::InvalidCommand("Failed to decode claimer".to_string()))?;
 
-    let destination_xcm = build_asset_hub_xcm(xcm_bytes, claimer);
+    let destination_xcm = build_asset_hub_xcm(&xcm_bytes, claimer);
 
     let runtime_api_call = asset_hub_westend_runtime::runtime::apis().xcm_payment_api().query_xcm_weight(destination_xcm);
 

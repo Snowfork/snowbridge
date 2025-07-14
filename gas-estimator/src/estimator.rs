@@ -1,7 +1,6 @@
-use crate::{Commands, Environment};
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Fungibility::Fungible;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::{
-    Asset, AssetId, Assets, Fungibility,
+    Asset, AssetId, Assets,
 };
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::Junction::GlobalConsensus;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::Junction::PalletInstance;
@@ -11,7 +10,7 @@ use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junctions::Juncti
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::location::Location;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Instruction::UniversalOrigin;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Instruction::{
-    DescendOrigin, RefundSurplus, ReserveAssetDeposited, SetHints
+    DescendOrigin, ReserveAssetDeposited, SetHints
 };
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Xcm;
 use asset_hub_westend_runtime::runtime_types::bounded_collections::bounded_vec::BoundedVec;
@@ -96,18 +95,19 @@ pub fn build_asset_hub_xcm(xcm_bytes: &[u8], claimer: Location) -> VersionedXcm 
     ];
 
 
-    instructions.extend(extract_remote_xcm(xcm_bytes));
+    let remote_xcm = extract_remote_xcm(xcm_bytes);
+    instructions.extend(remote_xcm.0);
 
-    VersionedXcm::V5( Xcm::from(Xcm(instructions)))
+    VersionedXcm::V5(Xcm(instructions))
 }
 
-fn extract_remote_xcm(raw: &[u8]) -> Xcm<> {
+fn extract_remote_xcm(raw: &[u8]) -> Xcm {
     if let Ok(versioned_xcm) =
-        VersionedXcm::decode_with_depth_limit(8, &mut raw)
+        VersionedXcm::decode_with_depth_limit(8, &mut &raw[..])
     {
-        if let Ok(decoded_xcm) = versioned_xcm.try_into() {
-            return decoded_xcm;
+        if let VersionedXcm::V5(xcm) = versioned_xcm {
+            return xcm;
         }
     }
-    Xcm::new()
+    Xcm(vec![])
 }
