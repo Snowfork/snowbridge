@@ -1321,6 +1321,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "asset-hub-westend-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic 26.1.0",
+ "subxt",
+]
+
+[[package]]
 name = "async-channel"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1750,6 +1761,18 @@ dependencies = [
 
 [[package]]
 name = "bridge-hub-polkadot-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "snowbridge-beacon-primitives",
+ "sp-arithmetic 26.1.0",
+ "subxt",
+]
+
+[[package]]
+name = "bridge-hub-westend-runtime"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
@@ -6239,8 +6262,8 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "anyhow",
- "asset-hub-polkadot-runtime",
- "bridge-hub-polkadot-runtime",
+ "asset-hub-westend-runtime",
+ "bridge-hub-westend-runtime",
  "clap",
  "env_logger",
  "futures",
@@ -6249,7 +6272,6 @@ dependencies = [
  "lazy_static",
  "log",
  "parity-scale-codec",
- "polkadot-runtime",
  "scale-info",
  "serde",
  "serde_json",
@@ -6260,6 +6282,8 @@ dependencies = [
  "subxt-signer",
  "thiserror 1.0.69",
  "tokio",
+ "westend-runtime",
+ "xcm",
 ]
 
 [[package]]
@@ -8530,6 +8554,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "westend-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "subxt",
+]
+
+[[package]]
 name = "widestring"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8975,6 +9009,12 @@ dependencies = [
  "serde",
  "zeroize",
 ]
+
+[[package]]
+name = "xcm"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47a357d8b5946abbdcff03fcd7c3ba97bbb7741520118aebb5f0411d807d4492"
 
 [[package]]
 name = "yap"

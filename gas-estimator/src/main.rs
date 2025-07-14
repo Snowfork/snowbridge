@@ -1,10 +1,13 @@
 mod estimator;
 
+use crate::estimator::{EstimatorError, clients, build_asset_hub_xcm};
 use clap::{Parser, Subcommand, ValueEnum};
 use serde_json;
 use std::process;
-use crate::estimator::EstimatorArgs;
-use crate::estimator::EstimatorError;
+use hex;
+use codec;
+use asset_hub_westend_runtime::runtime_types::xcm::VersionedXcm;
+use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::location::Location;
 
 #[derive(Parser)]
 #[command(name = "snowbridge-gas-estimator")]
@@ -52,37 +55,48 @@ enum Environment {
 async fn main() {
     let cli = Cli::parse();
 
-    // Parse and validate arguments
-    let args = match parse_args(cli) {
-        Ok(args) => args,
+    // Run the estimation
+    match run_estimation(cli).await {
+        Ok(output) => {
+            println!("{}", output);
+        }
         Err(e) => {
             eprintln!("Error: {}", e);
             process::exit(1);
         }
-    };
-//
-    //// Run the estimation
-    //match run_estimation(args).await {
-    //    Ok(output) => {
-    //        println!("{}", output);
-    //    }
-    //    Err(e) => {
-    //        eprintln!("Error: {}", e);
-    //        process::exit(1);
-    //    }
-    //}
+    }
 }
 
-fn parse_args(cli: Cli) -> Result<EstimatorArgs, EstimatorError> {
-    Ok(EstimatorArgs::new(cli.env, cli.command)?)
+async fn run_estimation(
+    cli: Cli
+) -> Result<String, EstimatorError> {
+    let clients = clients().await?;
+
+    // Extract the fields from the command
+    let (xcm_hex, claimer_hex) = match cli.command {
+        Commands::V2SendMessage { xcm, claimer, .. } => (xcm, claimer),
+    };
+
+    // Convert hex strings to bytes
+    let xcm_bytes = hex::decode(&xcm_hex[2..]).map_err(|_| EstimatorError::InvalidHexFormat)?;
+    let claimer_bytes = hex::decode(&claimer_hex[2..]).map_err(|_| EstimatorError::InvalidHexFormat)?;
+
+    let claimer: Location = codec::Decode::decode(&mut &claimer_bytes[..])
+        .map_err(|_| EstimatorError::InvalidCommand("Failed to decode claimer".to_string()))?;
+
+    let destination_xcm = build_asset_hub_xcm(xcm_bytes, claimer);
+
+    let runtime_api_call = asset_hub_westend_runtime::runtime::apis().xcm_payment_api().query_xcm_weight(destination_xcm);
+
+    let weight_result = clients.asset_hub_client
+        .runtime_api()
+        .at_latest()
+        .await.map_err(|_| EstimatorError::InvalidHexFormat)?
+        .call(runtime_api_call)
+        .await;
+
+    Ok(format!("XCM weight query result: {:?}", weight_result))
 }
-//
-//async fn run_estimation(
-//    (args, output_format): (EstimatorArgs, OutputFormat),
-//) -> Result<String, EstimatorError> {
-//
-//    //format_output(&estimation, output_format)
-//}
 
 //fn format_output(
 //    estimation: &crate::types::GasEstimation,

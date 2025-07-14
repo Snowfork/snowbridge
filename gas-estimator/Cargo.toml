@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "runtimes/polkadot",
-    "runtimes/bridge-hub-polkadot", 
+    "runtimes/bridge-hub-polkadot",
     "runtimes/asset-hub-polkadot",
 ]
 
@@ -44,7 +44,7 @@ sp-crypto-hashing = { version = "0.1.0" }
 sp-runtime = { version = "41.1.0" }
 
 # XCM - simplified to avoid version conflicts for now
-# xcm = { version = "1.0" }  # Commented out until proper version is determined
+xcm = { version = "0.0.1" }
 
 # Error handling and logging
 anyhow = "1.0"
@@ -56,6 +56,6 @@ env_logger = "0.11"
 lazy_static = "1.4.0"
 
 # Runtime bindings
-asset-hub-polkadot-runtime = { path = "runtimes/asset-hub-polkadot" }
-bridge-hub-polkadot-runtime = { path = "runtimes/bridge-hub-polkadot" }
-polkadot-runtime = { path = "runtimes/polkadot" }
+asset-hub-westend-runtime = { path = "runtimes/asset-hub-westend" }
+bridge-hub-westend-runtime = { path = "runtimes/bridge-hub-westend" }
+westend-runtime = { path = "runtimes/westend" }
