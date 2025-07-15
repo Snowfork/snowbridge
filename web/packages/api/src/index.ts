@@ -56,7 +56,7 @@ interface Config {
         gateway: string
         beefy: string
     }
-    graphqlApiUrl?: string
+    graphqlApiUrl: string
 }
 
 export class Context {
@@ -230,7 +230,7 @@ export class Context {
     }
 
     graphqlApiUrl(): string {
-        return this.config.graphqlApiUrl!
+        return this.config.graphqlApiUrl
     }
 
     async destroyContext(): Promise<void> {
