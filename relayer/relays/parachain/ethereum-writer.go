@@ -100,7 +100,7 @@ func (wr *EthereumWriter) WriteChannels(
 	task *Task,
 ) error {
 	for _, proof := range *task.MessageProofs {
-		profitable, err := wr.isTaskMessageProfitable(ctx, &proof)
+		profitable, err := wr.isRelayMessageProfitable(ctx, &proof)
 		if err != nil {
 			return fmt.Errorf("check message profitable: %w", err)
 		}
@@ -115,7 +115,7 @@ func (wr *EthereumWriter) WriteChannels(
 	return nil
 }
 
-func (wr *EthereumWriter) isTaskMessageProfitable(ctx context.Context, proof *MessageProof) (bool, error) {
+func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *MessageProof) (bool, error) {
 	var result bool
 	gasPrice, err := wr.conn.Client().SuggestGasPrice(ctx)
 	if err != nil {
