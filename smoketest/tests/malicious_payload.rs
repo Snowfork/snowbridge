@@ -1,23 +1,23 @@
 use std::{sync::Arc, time::Duration};
 
+use alloy::primitives::{Address, Bytes, U256};
+use alloy::providers::{DynProvider, Provider, ProviderBuilder, WsConnect};
+use alloy::signers::local::PrivateKeySigner;
 use codec::{DecodeAll, Encode};
-use ethers::{
-	abi::Address,
-	core::{k256::ecdsa::SigningKey, types::U256},
-	prelude::*,
-};
+use futures::StreamExt;
+use k256::ecdsa::SigningKey;
 
 use jsonrpsee::core::client::ClientT;
 use jsonrpsee::ws_client::WsClientBuilder;
 use serde_json::Value;
 
+use alloy::primitives::FixedBytes;
 use snowbridge_smoketest::{
 	constants::*,
-	contracts::{
-		beefy_client::{BeefyClient, Commitment, PayloadItem},
-		shared_types::{Mmrleaf, ValidatorProof},
+	contracts::beefy_client::{
+		BeefyClient, BeefyClient::Commitment, BeefyClient::MMRLeaf, BeefyClient::PayloadItem,
+		BeefyClient::ValidatorProof,
 	},
-	helper::initialize_wallet,
 	parachains::relaychain::{
 		self,
 		api::{
@@ -57,25 +57,29 @@ use subxt::{
 
 pub struct TestClients {
 	pub relaychain_client: Box<OnlineClient<PolkadotConfig>>,
-	pub ethereum_client: Box<Arc<Provider<Ws>>>,
-	pub beefy_client: Box<BeefyClient<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>>,
+	pub ethereum_client: Box<DynProvider>,
+	pub beefy_client: Box<BeefyClient::BeefyClientInstance<Arc<DynProvider>>>,
 }
 
 async fn initialize_clients() -> Result<TestClients, Box<dyn std::error::Error>> {
-	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
-		.await?
-		.interval(Duration::from_millis(10u64));
-	let ethereum_client = Arc::new(ethereum_provider);
-	let ethereum_signed_client = Arc::new(initialize_wallet().await?);
+	// Initialize a signer with a private key
+	let signer: PrivateKeySigner = (*ETHEREUM_KEY).to_string().parse()?;
+
+	// Create the provider.
+	let ws = WsConnect::new((*ETHEREUM_API).to_string());
+
+	let ethereum_provider = ProviderBuilder::new().connect_ws(ws.clone()).await?.erased();
+	let ethereum_signed_provider =
+		ProviderBuilder::new().wallet(signer).connect_ws(ws).await?.erased();
 	let relaychain_rpc_client = RpcClient::from_url((*RELAY_CHAIN_WS_URL).to_string())
 		.await
 		.expect("can not connect to relaychain RPC");
 	let relaychain_client = OnlineClient::from_rpc_client(relaychain_rpc_client).await?;
 	let beefy_client_addr: Address = BEEFY_CLIENT_CONTRACT.into();
-	let beefy_client = BeefyClient::new(beefy_client_addr, ethereum_signed_client.clone());
+	let beefy_client = BeefyClient::new(beefy_client_addr, Arc::new(ethereum_signed_provider));
 	Ok(TestClients {
 		relaychain_client: Box::new(relaychain_client),
-		ethereum_client: Box::new(ethereum_client),
+		ethereum_client: Box::new(ethereum_provider),
 		beefy_client: Box::new(beefy_client),
 	})
 }
@@ -84,10 +88,10 @@ fn validator_proof(
 	signature_bytes: &[u8],
 	signer_index: usize,
 	validator_secp256k1_bytes: &Vec<[u8; 20]>,
-	validator_proofs: &[[[u8; 32]; 2]; 4],
+	validator_proofs: &[[FixedBytes<32>; 2]; 4],
 ) -> ValidatorProof {
-	let mut r = [0u8; 32];
-	let mut s = [0u8; 32];
+	let mut r = FixedBytes([0u8; 32]);
+	let mut s = FixedBytes([0u8; 32]);
 	r.copy_from_slice(&signature_bytes[0..32]);
 	s.copy_from_slice(&signature_bytes[32..64]);
 
@@ -105,8 +109,8 @@ fn validator_proof(
 		v,
 		r,
 		s,
-		index: U256::from_little_endian(&[signer_index.try_into().unwrap()]),
-		account: H160::from_slice(&validator_secp256k1_bytes[signer_index]),
+		index: U256::from(signer_index),
+		account: Address::from_slice(&validator_secp256k1_bytes[signer_index]),
 		proof: validator_proofs[signer_index].to_vec(),
 	}
 }
@@ -188,25 +192,24 @@ async fn malicious_payload_inner(
 ) {
 	let current_validator_set = test_clients
 		.beefy_client
-		.current_validator_set()
+		.currentValidatorSet()
 		.call()
 		.await
 		.expect("beefy client initialized");
 
 	let block_number = test_clients
 		.beefy_client
-		.latest_beefy_block()
+		.latestBeefyBlock()
 		.call()
 		.await
 		.expect("beefy client initialized");
 
 	println!("block_number: {:?}", block_number);
 
-	let call = test_clients.beefy_client.latest_mmr_root();
+	let call = test_clients.beefy_client.latestMMRRoot();
 	let current_mmr_root = call.call().await.expect("commit valid");
 	println!("current mmr root: {:?}", current_mmr_root);
-	let mut payload_data = Vec::new();
-	payload_data.resize(32, 0);
+	let payload_data = FixedBytes([0; 32]);
 
 	if current_mmr_root == *payload_data {
 		println!("NOTE: BEEFY client already has malicious mmr payload");
@@ -220,15 +223,16 @@ async fn malicious_payload_inner(
 	// 	.expect("beefy client initialized");
 	// println!("randao delay: {:?}", randao_delay);
 
-	let payload = vec![PayloadItem { payload_id: [109, 104], data: Bytes::from(payload_data) }];
+	let payload =
+		vec![PayloadItem { payloadID: FixedBytes([109, 104]), data: Bytes::from(payload_data) }];
 	let equivocation_block = match equivocation_type {
 		EquivocationType::ForkEquivocation => (block_number as u32) + 1,
 		EquivocationType::FutureBlockEquivocation => (block_number as u32) + 1000,
 	};
 	let commitment = Commitment {
 		payload: payload.clone(),
-		block_number: equivocation_block,
-		validator_set_id: (current_validator_set.0 as u64),
+		blockNumber: equivocation_block,
+		validatorSetID: (current_validator_set.id as u64),
 	};
 
 	let malicious_suris = vec!["//Westend04", "//Westend01", "//Westend02"];
@@ -241,13 +245,13 @@ async fn malicious_payload_inner(
 	);
 
 	let sp_payload = sp_consensus_beefy::Payload::from_single_entry(
-		payload[0].payload_id,
+		*payload[0].payloadID,
 		payload[0].data.to_vec(),
 	);
 	let sp_commitment = sp_consensus_beefy::Commitment {
 		payload: sp_payload,
-		block_number: commitment.block_number,
-		validator_set_id: commitment.validator_set_id,
+		block_number: commitment.blockNumber,
+		validator_set_id: commitment.validatorSetID,
 	};
 	println!("sp_commitment: {:?}", sp_commitment);
 	let encoded_commitment = sp_commitment.encode();
@@ -266,7 +270,7 @@ async fn malicious_payload_inner(
 		malicious_signatures.iter().map(|sig| sig.0).collect::<Vec<_>>()
 	);
 
-	let bitfield: Vec<U256> = vec![U256::from_little_endian(&[0b0111])];
+	let bitfield: Vec<U256> = vec![U256::from(0b0111)];
 
 	let (validator_secp256k1_bytes, validator_set_root, validator_proofs) = {
 		let validator_secp256k1_bytes = vec![
@@ -276,15 +280,17 @@ async fn malicious_payload_inner(
 			hex2array!("a601c19ad010f21031f7317f08b4f0046db6ce2a"),
 		];
 
-		let keccak_validator_secp256k1_bytes: Vec<[u8; 32]> =
-			validator_secp256k1_bytes.iter().map(|key| keccak_256(key)).collect();
+		let keccak_validator_secp256k1_bytes: Vec<FixedBytes<32>> = validator_secp256k1_bytes
+			.iter()
+			.map(|key| FixedBytes(keccak_256(key)))
+			.collect();
 
-		let keccak01 = keccak_256(
+		let keccak01 = FixedBytes(keccak_256(
 			&[keccak_validator_secp256k1_bytes[0], keccak_validator_secp256k1_bytes[1]].concat(),
-		);
-		let keccak23 = keccak_256(
+		));
+		let keccak23 = FixedBytes(keccak_256(
 			&[keccak_validator_secp256k1_bytes[2], keccak_validator_secp256k1_bytes[3]].concat(),
-		);
+		));
 		let validator_set_root = keccak_256(&[keccak01, keccak23].concat());
 
 		let validator_proofs = [
@@ -315,32 +321,48 @@ async fn malicious_payload_inner(
 		let call =
 			test_clients
 				.beefy_client
-				.submit_initial(commitment.clone(), bitfield.clone(), proof);
+				.submitInitial(commitment.clone(), bitfield.clone(), proof);
 		let result = call.send().await;
 
 		println!("{:?}", result);
 		if result.is_ok() {
 			println!("success!");
 		} else {
-			println!("{:?}", result.as_ref().err().unwrap().as_revert().expect("is revert error"));
+			println!(
+				"{:?}",
+				result.as_ref().err().unwrap().as_revert_data().expect("is revert error")
+			);
 		}
 		assert!(result.is_ok());
 		tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
 
-		let mut stream = test_clients.ethereum_client.subscribe_blocks().await.unwrap().take(3);
+		let mut stream = test_clients
+			.ethereum_client
+			.subscribe_blocks()
+			.await
+			.unwrap()
+			.into_result_stream()
+			.take(3);
 
 		while let Some(_block) = stream.next().await {}
 
-		let call = test_clients.beefy_client.commit_prev_randao(*hashed_commitment);
+		let call = test_clients.beefy_client.commitPrevRandao(FixedBytes(*hashed_commitment));
 		let result = call.send().await.expect("commit valid");
 		println!("{:?}", result);
 	}
 
 	if test_config.submit_final {
-		let mut stream = test_clients.ethereum_client.subscribe_blocks().await.unwrap().take(1);
+		let mut stream = test_clients
+			.ethereum_client
+			.subscribe_blocks()
+			.await
+			.unwrap()
+			.into_result_stream();
 		while let Some(_block) = stream.next().await {}
 
-		let call = test_clients.beefy_client.create_final_bitfield(*hashed_commitment, bitfield);
+		let call = test_clients
+			.beefy_client
+			.createFinalBitfield(FixedBytes(*hashed_commitment), bitfield);
 		let bitfield = call.call().await.expect("commit valid");
 		// println!("final bitfield: {:?}", result);
 
@@ -357,29 +379,28 @@ async fn malicious_payload_inner(
 			})
 			.collect::<Vec<_>>();
 
-		let mmr_leaf = Mmrleaf {
+		let mmr_leaf = MMRLeaf {
 			version: 0,
-			parent_number: 0,
-			parent_hash: [0; 32],
-			next_authority_set_id: (current_validator_set.0 as u64) + 1,
-			next_authority_set_len: 4,
-			next_authority_set_root: validator_set_root,
-			parachain_heads_root: [0; 32],
+			parentNumber: 0,
+			parentHash: FixedBytes([0; 32]),
+			nextAuthoritySetID: (current_validator_set.id as u64) + 1,
+			nextAuthoritySetLen: 4,
+			nextAuthoritySetRoot: FixedBytes(validator_set_root),
+			parachainHeadsRoot: FixedBytes([0; 32]),
 		};
 
-		let call = test_clients.beefy_client.submit_final(
+		let call = test_clients.beefy_client.submitFinal(
 			commitment,
 			bitfield,
 			chosen_malicious_proofs,
 			mmr_leaf,
 			vec![],
-			U256::zero(),
+			U256::from(0),
 		);
 		let result = call.send().await;
 		// println!("{:?}", result);
 		assert!(result.is_ok());
 	}
-
 
 	if test_config.report_equivocation {
 		// let beefy_storage_api = relaychain::api::beefy::storage::StorageApi;
@@ -390,7 +411,7 @@ async fn malicious_payload_inner(
 			let proof_query = beefy_api::BeefyApi::generate_key_ownership_proof(
 				&beefy_api::BeefyApi,
 				// validator_set_id,
-				current_validator_set.0 as u64,
+				current_validator_set.id as u64,
 				// 0,
 				Public { 0: malicious_authority.public().0 },
 			);
@@ -465,7 +486,7 @@ async fn malicious_payload_inner(
 						commitment: spCommitment {
 							block_number: sp_commitment.block_number,
 							payload: Payload(vec![(
-								payload[0].payload_id,
+								*payload[0].payloadID,
 								payload[0].data.to_vec(),
 							)]),
 							validator_set_id: sp_commitment.validator_set_id,
@@ -494,7 +515,7 @@ async fn malicious_payload_inner(
 						commitment: spCommitment {
 							block_number: sp_commitment.block_number,
 							payload: Payload(vec![(
-								payload[0].payload_id,
+								*payload[0].payloadID,
 								payload[0].data.to_vec(),
 							)]),
 							validator_set_id: sp_commitment.validator_set_id,
