@@ -32,6 +32,9 @@ interface IGateway {
     // Emitted when pricing params updated
     event PricingParametersChanged();
 
+    // Emitted when funds are withdrawn from an agent
+    event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount);
+
     // Emitted when foreign token from polkadot registed
     event ForeignTokenRegistered(bytes32 indexed tokenID, address token);
 
