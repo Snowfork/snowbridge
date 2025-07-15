@@ -65,13 +65,13 @@ import { setTimeout } from "timers/promises"
     )
     console.log("validation result", validation)
 
-    // Step 4. Check validation logs for errors
+    // Step 4. Check validation logs for dry errors
     if (validation.logs.find((l) => l.kind == toPolkadotV2.ValidationKind.Error)) {
         console.error(validation)
         throw Error(`validation has one of more errors.`)
     }
 
-    // Step 5. Estimate the cost of the execution cost of the transaction
+    // Estimate the cost of the execution cost of the transaction
     const {
         tx,
         computed: { totalValue },
@@ -90,14 +90,14 @@ import { setTimeout } from "timers/promises"
     )
     console.log("Ether sent:", formatEther(totalValue - fee.totalFeeInWei))
 
-    // Step 6. Submit the transaction
+    // Step 5. Submit the transaction
     const response = await ETHEREUM_ACCOUNT.sendTransaction(tx)
     const receipt = await response.wait(1)
     if (!receipt) {
         throw Error(`Transaction ${response.hash} not included.`)
     }
 
-    // Step 7. Get the message reciept for tracking purposes
+    // Step 6. Get the message reciept for tracking purposes
     const message = await toPolkadotV2.getMessageReceipt(receipt)
     if (!message) {
         throw Error(`Transaction ${receipt.hash} did not emit a message.`)
@@ -108,7 +108,7 @@ import { setTimeout } from "timers/promises"
                 tx hash: ${message.txHash}`
     )
 
-    // Step 8. Poll for message completion
+    // Step 7. Poll for message completion
     while (true) {
         const status = await historyV2.toPolkadotTransferById(
             context.graphqlApiUrl(), // GraphQL endpoint to query
