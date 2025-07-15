@@ -10,6 +10,8 @@ export type ERC20Metadata = {
   symbol: string;
   decimals: number;
   foreignId?: string;
+  // The gas cost of a local transfer, which involves unlocking for ENA and minting for PNA.
+  deliveryGas?: bigint;
 };
 
 export interface ERC20MetadataMap {
@@ -24,6 +26,8 @@ export type EthereumChain = {
   precompile?: `0x${string}`;
   xcDOT?: string;
   xcTokenMap?: XC20TokenMap;
+  // The gas cost of v2_submit excludes command execution, mainly covers the verification.
+  baseDeliveryGas?: bigint;
 };
 
 export type ChainProperties = {

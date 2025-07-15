@@ -3,6 +3,7 @@ import { Context, environment, toPolkadotV2 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { assetRegistryFor } from "@snowbridge/registry"
+import { WETH9__factory } from "@snowbridge/contract-types"
 
 export const transferToPolkadot = async (
     destinationChainId: number,
@@ -66,6 +67,24 @@ export const transferToPolkadot = async (
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
+    if (!TOKEN_CONTRACT) {
+        console.log("no token contract exists, check it and rebuild asset registry.")
+        return
+    }
+
+    if (symbol.toLowerCase().startsWith("weth")) {
+        console.log("# Deposit and Approve WETH")
+        {
+            const weth9 = WETH9__factory.connect(TOKEN_CONTRACT, ETHEREUM_ACCOUNT)
+            const depositResult = await weth9.deposit({ value: amount })
+            const depositReceipt = await depositResult.wait()
+
+            const approveResult = await weth9.approve(config.GATEWAY_CONTRACT, amount)
+            const approveReceipt = await approveResult.wait()
+
+            console.log("deposit tx", depositReceipt?.hash, "approve tx", approveReceipt?.hash)
+        }
+    }
 
     console.log("# Ethereum to Asset Hub")
     {
@@ -148,7 +167,7 @@ export const transferToPolkadot = async (
             }
             console.log(
                 `Success message with message id: ${message.messageId}
-                block number: ${message.blockNumber}  
+                block number: ${message.blockNumber}
                 tx hash: ${message.txHash}`
             )
         }
