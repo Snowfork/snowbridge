@@ -18,7 +18,10 @@ use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Hint::AssetClaime
 use subxt::{Config, OnlineClient, PolkadotConfig, config::DefaultExtrinsicParams};
 use lazy_static::lazy_static;
 use asset_hub_westend_runtime::runtime_types::xcm::VersionedXcm;
+use asset_hub_westend_runtime::runtime_types::xcm::VersionedAssetId;
+use asset_hub_westend_runtime::runtime_types::sp_weights::weight_v2::Weight;
 use std::env;
+use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::Here;
 use codec::DecodeLimit;
 
 lazy_static! {
@@ -30,6 +33,8 @@ lazy_static! {
         }
     };
 }
+
+const CHAIN_ID: u64 = 11155111;
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
@@ -77,6 +82,41 @@ pub struct Clients {
     pub asset_hub_client: Box<OnlineClient<AssetHubConfig>>,
 }
 
+pub async fn estimate_gas(
+    clients: &Clients,
+    xcm_bytes: &[u8],
+    claimer: Location,
+) -> Result<String, EstimatorError> {
+    let destination_xcm = build_asset_hub_xcm(xcm_bytes, claimer);
+
+    let weight = query_xcm_weight(clients, destination_xcm).await?;
+    let fee_in_dot = query_weight_to_asset_fee(clients, &weight).await?;
+
+    let dot_asset = Location {
+        parents: 1,
+        interior: Here,
+    };
+
+    let ether_asset = Location {
+        parents: 2,
+        interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
+    };
+
+    // Quote the price to swap DOT for Ether
+    let fee_in_ether = quote_price_exact_tokens_for_tokens(
+        clients,
+        dot_asset,
+        ether_asset,
+        fee_in_dot,
+        true,
+    ).await?;
+
+    Ok(format!(
+        "XCM weight: {:?}\nFee in DOT: {} planck\nFee in Ether: {} wei",
+        weight, fee_in_dot, fee_in_ether
+    ))
+}
+
 pub fn build_asset_hub_xcm(xcm_bytes: &[u8], claimer: Location) -> VersionedXcm {
     let mut instructions = vec![
         DescendOrigin(X1([PalletInstance(91)])),
@@ -85,7 +125,7 @@ pub fn build_asset_hub_xcm(xcm_bytes: &[u8], claimer: Location) -> VersionedXcm 
             vec![Asset {
                 id: AssetId(Location {
                     parents: 2,
-                    interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: 1 })]),
+                    interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
                 }),
                 fun: Fungible(1500000000000u128),
             }]
@@ -93,7 +133,6 @@ pub fn build_asset_hub_xcm(xcm_bytes: &[u8], claimer: Location) -> VersionedXcm 
         )),
         SetHints { hints: BoundedVec([AssetClaimer { location: claimer }].into()) },
     ];
-
 
     let remote_xcm = extract_remote_xcm(xcm_bytes);
     instructions.extend(remote_xcm.0);
@@ -111,3 +150,59 @@ fn extract_remote_xcm(raw: &[u8]) -> Xcm {
     }
     Xcm(vec![])
 }
+
+pub async fn query_xcm_weight(clients: &Clients, destination_xcm: VersionedXcm) -> Result<Weight, EstimatorError> {
+    let runtime_api_call = asset_hub_westend_runtime::runtime::apis().xcm_payment_api().query_xcm_weight(destination_xcm);
+
+    let weight_result = clients.asset_hub_client
+        .runtime_api()
+        .at_latest()
+        .await.map_err(|e| EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e)))?
+        .call(runtime_api_call)
+        .await
+        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to query XCM weight: {:?}", e)))?;
+
+    weight_result.map_err(|e| EstimatorError::InvalidCommand(format!("XCM weight query returned error: {:?}", e)))
+}
+
+pub async fn query_weight_to_asset_fee(clients: &Clients, weight: &Weight) -> Result<u128, EstimatorError> {
+    let dot_asset = VersionedAssetId::V5(AssetId(Location {
+        parents: 1,
+        interior: Here,
+    }));
+
+    let runtime_api_call = asset_hub_westend_runtime::runtime::apis().xcm_payment_api().query_weight_to_asset_fee(weight.clone(), dot_asset);
+
+    let fee_result = clients.asset_hub_client
+        .runtime_api()
+        .at_latest()
+        .await.map_err(|e| EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e)))?
+        .call(runtime_api_call)
+        .await
+        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to query weight to asset fee: {:?}", e)))?;
+
+    fee_result.map_err(|e| EstimatorError::InvalidCommand(format!("Weight to asset fee query returned error: {:?}", e)))
+}
+
+pub async fn quote_price_exact_tokens_for_tokens(
+    clients: &Clients,
+    asset1: Location,
+    asset2: Location,
+    asset1_balance: u128,
+    include_fee: bool,
+) -> Result<u128, EstimatorError> {
+    let runtime_api_call = asset_hub_westend_runtime::runtime::apis()
+        .asset_conversion_api()
+        .quote_price_exact_tokens_for_tokens(asset1, asset2, asset1_balance, include_fee);
+
+    let quote_result = clients.asset_hub_client
+        .runtime_api()
+        .at_latest()
+        .await.map_err(|e| EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e)))?
+        .call(runtime_api_call)
+        .await
+        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to quote price for tokens: {:?}", e)))?;
+
+    quote_result.ok_or_else(|| EstimatorError::InvalidCommand("Quote price query returned None".to_string()))
+}
+

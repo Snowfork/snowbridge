@@ -1,6 +1,6 @@
 mod estimator;
 
-use crate::estimator::{EstimatorError, clients, build_asset_hub_xcm};
+use crate::estimator::{EstimatorError, clients, estimate_gas};
 use clap::{Parser, Subcommand, ValueEnum};
 use std::process;
 use hex;
@@ -54,7 +54,7 @@ async fn main() {
     let cli = Cli::parse();
 
     // Run the estimation
-    match run_estimation(cli).await {
+    match estimate(cli).await {
         Ok(output) => {
             println!("{}", output);
         }
@@ -65,45 +65,20 @@ async fn main() {
     }
 }
 
-async fn run_estimation(
+async fn estimate(
     cli: Cli
 ) -> Result<String, EstimatorError> {
     let clients = clients().await?;
 
-    // Extract the fields from the command
     let (xcm_hex, claimer_hex) = match cli.command {
         Commands::V2SendMessage { xcm, claimer, .. } => (xcm, claimer),
     };
 
-    // Convert hex strings to bytes
     let xcm_bytes = hex::decode(&xcm_hex[2..]).map_err(|_| EstimatorError::InvalidHexFormat)?;
     let claimer_bytes = hex::decode(&claimer_hex[2..]).map_err(|_| EstimatorError::InvalidHexFormat)?;
 
     let claimer: Location = codec::Decode::decode(&mut &claimer_bytes[..])
         .map_err(|_| EstimatorError::InvalidCommand("Failed to decode claimer".to_string()))?;
 
-    let destination_xcm = build_asset_hub_xcm(&xcm_bytes, claimer);
-
-    let runtime_api_call = asset_hub_westend_runtime::runtime::apis().xcm_payment_api().query_xcm_weight(destination_xcm);
-
-    let weight_result = clients.asset_hub_client
-        .runtime_api()
-        .at_latest()
-        .await.map_err(|_| EstimatorError::InvalidHexFormat)?
-        .call(runtime_api_call)
-        .await;
-
-    Ok(format!("XCM weight query result: {:?}", weight_result))
+    estimate_gas(&clients, &xcm_bytes, claimer).await
 }
-
-//fn format_output(
-//    estimation: &crate::types::GasEstimation,
-//    format: OutputFormat,
-//) -> Result<String, EstimatorError> {
-//    match format {
-//        OutputFormat::Json => {
-//            serde_json::to_string_pretty(estimation)
-//                .map_err(|e| EstimatorError::ConfigError(format!("JSON serialization failed: {}", e)))
-//        }
-//    }
-//}
