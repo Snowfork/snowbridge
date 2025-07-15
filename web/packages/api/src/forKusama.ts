@@ -23,13 +23,8 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import {
-    Asset,
-    AssetRegistry,
-    Parachain,
-    getAssetHubConversationPalletSwap,
-    AssetMap,
-} from "./assets_v2"
+import { getAssetHubConversationPalletSwap } from "./assets_v2"
+import { Asset, AssetRegistry, Parachain, AssetMap } from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
     EventRecord,
@@ -567,7 +562,9 @@ export async function signAndSend(
                     console.error(c)
                     reject(c.internalError || c.dispatchError || c)
                 }
-                if (c.isInBlock) {
+                // We have to check for finalization here because re-orgs will produce a different messageId on Asset Hub.
+                // TODO: Change back to isInBlock when we switch to pallet-xcm.execute for Asset Hub and we can generate the messageId offchain.
+                if (c.isFinalized) {
                     const result = {
                         txHash: u8aToHex(c.txHash),
                         txIndex: c.txIndex || 0,
@@ -605,6 +602,7 @@ export async function signAndSend(
     })
 
     result.blockHash = u8aToHex(await parachain.rpc.chain.getBlockHash(result.blockNumber))
+    result.messageId = transfer.computed.messageId ?? result.messageId
 
     return result
 }

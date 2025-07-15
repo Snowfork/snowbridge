@@ -6,7 +6,13 @@ import {
     buildAssetHubERC20TransferFromParachain,
     DOT_LOCATION,
 } from "./xcmBuilder"
-import { Asset, AssetRegistry, ERC20Metadata, EthereumChain, Parachain } from "./assets_v2"
+import {
+    Asset,
+    AssetRegistry,
+    ERC20Metadata,
+    EthereumChain,
+    Parachain,
+} from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
 import { EventRecord } from "@polkadot/types/interfaces"

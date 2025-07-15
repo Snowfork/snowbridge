@@ -1,5 +1,6 @@
 import { DOT_LOCATION, erc20Location } from "../xcmBuilder"
-import { AssetMap, PNAMap } from "../assets_v2"
+import { PNAMap } from "../assets_v2"
+import { AssetMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
 
 export const MUSE_CHAIN_ID = 11155111 // Sepolia
@@ -74,7 +75,7 @@ export class MythosParachain extends ParachainBase {
                     asset
                 )}'. Using default.`
             )
-            return this.specName === "muse" ? 200_000_000_000n : 150_000_000n
+            return this.specName === "muse" ? 200_000_000_000n : 1_000_000_000n
         }
         return await this.calculateXcmFee(destinationXcm, asset)
     }

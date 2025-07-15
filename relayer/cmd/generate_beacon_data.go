@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
@@ -40,7 +42,7 @@ func generateBeaconFixtureCmd() *cobra.Command {
 		RunE:  generateBeaconTestFixture,
 	}
 
-	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
+	cmd.Flags().String("config", "/tmp/snowbridge-v2/beacon-relay.json", "Path to the beacon relay config")
 	cmd.Flags().Bool("wait_until_next_period", true, "Waiting until next period")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	return cmd
@@ -54,7 +56,7 @@ func generateBeaconCheckpointCmd() *cobra.Command {
 		RunE:  generateBeaconCheckpoint,
 	}
 
-	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
+	cmd.Flags().String("config", "/tmp/snowbridge-v2/beacon-relay.json", "Path to the beacon relay config")
 	cmd.Flags().Uint64("finalized-slot", 0, "Optional finalized slot to create checkpoint at")
 	cmd.Flags().Bool("export-json", false, "Export Json")
 
@@ -69,7 +71,7 @@ func generateExecutionUpdateCmd() *cobra.Command {
 		RunE:  generateExecutionUpdate,
 	}
 
-	cmd.Flags().String("config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
+	cmd.Flags().String("config", "/tmp/snowbridge-v2/beacon-relay.json", "Path to the beacon relay config")
 	cmd.Flags().Uint32("slot", 1, "slot number")
 	return cmd
 }
@@ -82,8 +84,8 @@ func generateInboundFixtureCmd() *cobra.Command {
 		RunE:  generateInboundFixture,
 	}
 
-	cmd.Flags().String("beacon-config", "/tmp/snowbridge/beacon-relay.json", "Path to the beacon relay config")
-	cmd.Flags().String("execution-config", "/tmp/snowbridge/execution-relay-asset-hub-0.json", "Path to the beacon relay config")
+	cmd.Flags().String("beacon-config", "/tmp/snowbridge-v2/beacon-relay.json", "Path to the beacon relay config")
+	cmd.Flags().String("execution-config", "/tmp/snowbridge-v2/execution-relay-asset-hub-0.json", "Path to the beacon relay config")
 	cmd.Flags().Uint32("nonce", 1, "Nonce of the inbound message")
 	cmd.Flags().String("test_case", "register_token", "Inbound test case")
 	return cmd
@@ -104,12 +106,13 @@ type InboundFixture struct {
 }
 
 const (
-	pathToBeaconTestFixtureFiles              = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/tests/fixtures"
+	pathToBeaconTestFixtureFiles              = "../polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/tests/fixtures"
 	pathToInboundQueueFixtureTemplate         = "relayer/templates/beacon-fixtures.mustache"
-	pathToInboundQueueFixtureData             = "polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures/src/lib.rs"
+	pathToInboundQueueFixtureData             = "../polkadot-sdk/bridges/snowbridge/pallets/ethereum-client/fixtures/src/lib.rs"
 	pathToInboundQueueFixtureTestCaseTemplate = "relayer/templates/inbound-fixtures.mustache"
-	pathToInboundQueueFixtureTestCaseData     = "polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures/src/%s.rs"
+	pathToInboundQueueFixtureTestCaseData     = "../polkadot-sdk/bridges/snowbridge/pallets/inbound-queue/fixtures/src/%s.rs"
 	pathToDeliveryProofFixtureData            = "../polkadot-sdk/bridges/snowbridge/pallets/outbound-queue-v2/src/fixture.rs"
+	pathToLodestarMainnetConfig               = "lodestar/packages/config/src/chainConfig/configs/mainnet.ts"
 )
 
 // Only print the hex encoded call as output of this command
@@ -174,8 +177,20 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
+// Note: Needs to run with SLOTS_PER_SECOND = 4
 func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 	err := func() error {
+		// Validate SECONDS_PER_SLOT configuration. Needs to be >= 4, otherwise the sync committee bits
+		// are not set in time.
+		secondsPerSlot, err := parseSecondsPerSlotFromMainnetConfig()
+		if err != nil {
+			return fmt.Errorf("failed to parse SECONDS_PER_SLOT from mainnet config: %w", err)
+		}
+		if secondsPerSlot < 4 {
+			return fmt.Errorf("SECONDS_PER_SLOT must be 4 or larger, found: %d", secondsPerSlot)
+		}
+		log.WithField("SECONDS_PER_SLOT", secondsPerSlot).Info("validated SECONDS_PER_SLOT configuration")
+
 		ctx := context.Background()
 
 		config, err := cmd.Flags().GetString("config")
@@ -207,7 +222,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
 		s := syncer.New(client, &store, p)
 
-		viper.SetConfigFile("/tmp/snowbridge/execution-relay-asset-hub-0.json")
+		viper.SetConfigFile("/tmp/snowbridge-v2/execution-relay-v1.json")
 
 		if err = viper.ReadInConfig(); err != nil {
 			return err
@@ -232,8 +247,18 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 
+		currentHeader, err := client.GetHeaderAtHead()
+		for currentHeader.Slot < 300 {
+			log.WithField("slot", currentHeader.Slot).Info("waiting for block 300")
+			time.Sleep(time.Minute * 2)
+			currentHeader, err = client.GetHeaderAtHead()
+			if err != nil {
+				return err
+			}
+		}
+
 		// generate InitialUpdate
-		initialSyncScale, err := s.GetCheckpoint()
+		initialSyncScale, err := s.GetCheckpointAtSlot(64)
 		if err != nil {
 			return fmt.Errorf("get initial sync: %w", err)
 		}
@@ -242,16 +267,37 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
+
+		syncCommitteeUpdateScale, err := s.GetFinalizedUpdateAtAttestedSlot(32, 96, true)
+		if err != nil {
+			return fmt.Errorf("get sync committee update: %w", err)
+		}
+		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
+		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update-period-0-older.json"))
+
+		syncCommitteeUpdateScale, err = s.GetFinalizedUpdateAtAttestedSlot(32, 128, true)
+		if err != nil {
+			return fmt.Errorf("get sync committee update: %w", err)
+		}
+		syncCommitteeUpdate = syncCommitteeUpdateScale.Payload.ToJSON()
+		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update-period-0.json"))
+
+		syncCommitteeUpdateScale, err = s.GetFinalizedUpdateAtAttestedSlot(200, 500, true)
+		if err != nil {
+			return fmt.Errorf("get sync committee update: %w", err)
+		}
+		syncCommitteeUpdate = syncCommitteeUpdateScale.Payload.ToJSON()
+		err = writeJSONToFile(syncCommitteeUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "sync-committee-update-period-0-newer.json"))
 		initialSyncHeaderSlot := initialSync.Header.Slot
 		initialSyncPeriod := p.ComputeSyncPeriodAtSlot(initialSyncHeaderSlot)
 		initialEpoch := p.ComputeEpochAtSlot(initialSyncHeaderSlot)
 
 		// generate SyncCommitteeUpdate for filling the missing NextSyncCommittee in initial checkpoint
-		syncCommitteeUpdateScale, err := s.GetSyncCommitteePeriodUpdate(initialSyncPeriod, 0)
+		syncCommitteeUpdateScale, err = s.GetSyncCommitteePeriodUpdate(initialSyncPeriod, 0)
 		if err != nil {
 			return fmt.Errorf("get sync committee update: %w", err)
 		}
-		syncCommitteeUpdate := syncCommitteeUpdateScale.Payload.ToJSON()
+		syncCommitteeUpdate = syncCommitteeUpdateScale.Payload.ToJSON()
 		log.WithFields(log.Fields{
 			"epoch":  initialEpoch,
 			"period": initialSyncPeriod,
@@ -272,7 +318,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		event, err := getEthereumEvent(ctx, gatewayContract, nonce)
+		event, err := getEthereumEvent(ctx, client, gatewayContract, nonce)
 		if err != nil {
 			return err
 		}
@@ -400,6 +446,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("could not parse flag wait_until_next_period: %w", err)
 		}
+		interimHeader := false
 		if waitUntilNextPeriod {
 			log.Info("waiting finalized_update in next period (5 hours later), be patient and wait...")
 			for {
@@ -410,6 +457,16 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 				}
 				nextFinalizedUpdate := nextFinalizedUpdateScale.Payload.ToJSON()
 				nextFinalizedUpdatePeriod := p.ComputeSyncPeriodAtSlot(nextFinalizedUpdate.FinalizedHeader.Slot)
+
+				if nextFinalizedUpdate.FinalizedHeader.Slot > 800 && !interimHeader {
+					log.Info("wrote interim header")
+					err := writeJSONToFile(nextFinalizedUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "interim-finalized-header-update.json"))
+					if err != nil {
+						return err
+					}
+					interimHeader = true
+				}
+
 				if initialSyncPeriod+1 == nextFinalizedUpdatePeriod {
 					err := writeJSONToFile(nextFinalizedUpdate, fmt.Sprintf("%s/%s", pathToBeaconTestFixtureFiles, "next-finalized-header-update.json"))
 					if err != nil {
@@ -432,8 +489,8 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 
 					break
 				} else {
-					log.WithField("slot", nextFinalizedUpdate.FinalizedHeader.Slot).Info("wait 5 minutes for next sync committee period")
-					time.Sleep(time.Minute * 5)
+					log.WithField("slot", nextFinalizedUpdate.FinalizedHeader.Slot).Info("wait 1 minute for next sync committee period")
+					time.Sleep(time.Minute * 1)
 				}
 			}
 		}
@@ -542,8 +599,21 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func getEthereumEvent(ctx context.Context, gatewayContract *contracts.Gateway, nonce uint32) (*contracts.GatewayOutboundMessageAccepted, error) {
-	maxBlockNumber := uint64(10000)
+func getEthereumEvent(ctx context.Context, api api.BeaconAPI, gatewayContract *contracts.Gateway, nonce uint32) (*contracts.GatewayOutboundMessageAccepted, error) {
+	header, err := api.GetHeaderAtHead()
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := api.GetBeaconBlockBySlot(header.Slot)
+	if err != nil {
+		return nil, err
+	}
+
+	maxBlockNumber, err := strconv.ParseUint(block.Data.Message.Body.ExecutionPayload.BlockNumber, 10, 64)
+	if err != nil {
+		return nil, err
+	}
 
 	opts := bind.FilterOpts{
 		Start:   1,
@@ -743,7 +813,7 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		event, err := getEthereumEvent(ctx, gatewayContract, nonce)
+		event, err := getEthereumEvent(ctx, client, gatewayContract, nonce)
 		if err != nil {
 			return err
 		}
@@ -1068,4 +1138,26 @@ func generateDeliveryProofFixtureCmd() *cobra.Command {
 	cmd.Flags().String("execution-config", "/tmp/snowbridge-v2/execution-relay-v2.json", "Path to the beacon relay config")
 	cmd.Flags().Uint32("nonce", 0, "Nonce of the outbound message")
 	return cmd
+}
+
+// parseSecondsPerSlotFromMainnetConfig reads the lodestar mainnet.ts file and extracts the SECONDS_PER_SLOT value
+func parseSecondsPerSlotFromMainnetConfig() (int, error) {
+	content, err := os.ReadFile(pathToLodestarMainnetConfig)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read mainnet config file: %w", err)
+	}
+
+	// Look for SECONDS_PER_SLOT: value pattern
+	re := regexp.MustCompile(`SECONDS_PER_SLOT:\s*(\d+)`)
+	matches := re.FindStringSubmatch(string(content))
+	if len(matches) < 2 {
+		return 0, fmt.Errorf("SECONDS_PER_SLOT not found in mainnet config")
+	}
+
+	value, err := strconv.Atoi(strings.TrimSpace(matches[1]))
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse SECONDS_PER_SLOT value: %w", err)
+	}
+
+	return value, nil
 }

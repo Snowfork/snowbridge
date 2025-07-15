@@ -175,7 +175,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     const latestBlockOfBH = (await bridgeHub.query.system.number()).toPrimitive() as number
     const latestBlockOfEth = await ethereum.getBlockNumber()
 
-    const chains = await subsquid.fetchLatestBlocksSynced()
+    const chains = await subsquid.fetchLatestBlocksSynced(env == "polkadot_mainnet")
     for (let chain of chains?.latestBlocks) {
         let info: status.IndexerServiceStatusInfo = {
             chain: chain.name,
