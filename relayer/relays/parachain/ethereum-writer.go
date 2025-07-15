@@ -115,6 +115,18 @@ func (wr *EthereumWriter) WriteChannels(
 	return nil
 }
 
+func (wr *EthereumWriter) commandGas(command *CommandWrapper) uint64 {
+	var gas uint64
+	switch command.Kind {
+	// Allow transfers even if the attached fee is lower than the estimated gas cost, to remain lenient
+	case 2, 4:
+		gas = uint64(60_000)
+	default:
+		gas = uint64(command.MaxDispatchGas)
+	}
+	return gas
+}
+
 func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *MessageProof) (bool, error) {
 	var result bool
 	gasPrice, err := wr.conn.Client().SuggestGasPrice(ctx)
@@ -124,7 +136,7 @@ func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *M
 	var totalDispatchGas uint64
 	commands := proof.Message.Message.Commands
 	for _, command := range commands {
-		totalDispatchGas = totalDispatchGas + uint64(command.MaxDispatchGas)
+		totalDispatchGas = totalDispatchGas + wr.commandGas(&command)
 	}
 	totalDispatchGas = totalDispatchGas + wr.config.Ethereum.BaseDeliveryGas
 	gasFee := new(big.Int)
