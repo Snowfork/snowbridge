@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.28;
 
-import {AgentExecutor} from "../src/AgentExecutor.sol";
-import {GatewayWithFeeInitializer} from "../src/upgrade/GatewayWithFeeInitializer.sol";
-import {ParaID} from "../src/Types.sol";
+import {AgentExecutor} from "../../src/AgentExecutor.sol";
+import {Gateway202508} from "../../src/upgrade/Gateway202508.sol";
+import {ParaID} from "../../src/Types.sol";
 import {Script} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {console} from "forge-std/console.sol";
@@ -37,10 +37,7 @@ contract DeployGatewayWithFeeInitializer is Script {
 
         AgentExecutor executor = new AgentExecutor();
 
-        GatewayWithFeeInitializer gatewayLogic = new GatewayWithFeeInitializer(
-            address(beefyClient),
-            address(executor)
-        );
+        Gateway202508 gatewayLogic = new Gateway202508(address(beefyClient), address(executor));
 
         console.log("Gateway contract address: %s", address(gatewayLogic));
         console.log("Gateway contract codehash:");

@@ -5,16 +5,8 @@ pragma solidity 0.8.28;
 import "../Gateway.sol";
 
 // New Gateway logic contract with an fee initializer
-contract GatewayWithFeeInitializer is Gateway {
-    constructor(
-        address beefyClient,
-        address agentExecutor
-    )
-        Gateway(
-            beefyClient,
-            agentExecutor
-        )
-    {}
+contract Gateway202508 is Gateway {
+    constructor(address beefyClient, address agentExecutor) Gateway(beefyClient, agentExecutor) {}
 
     struct Config {
         uint8 foreignTokenDecimals;
