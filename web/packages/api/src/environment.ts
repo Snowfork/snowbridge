@@ -12,7 +12,7 @@ export type Config = {
     SECONDARY_GOVERNANCE_CHANNEL_ID: string
     RELAYERS: Relayer[]
     PARACHAINS: { [paraId: string]: string }
-    GRAPHQL_API_URL?: string
+    GRAPHQL_API_URL: string
 }
 
 export type KusamaConfig = {
@@ -177,6 +177,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     type: "ethereum",
                 },
             ],
+            GRAPHQL_API_URL: "http://127.0.0.1/does/not/exist",
         },
     },
     paseo_sepolia: {
@@ -300,6 +301,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     type: "ethereum",
                 },
             ],
+            GRAPHQL_API_URL:
+                "https://snowbridge.squids.live/snowbridge-subsquid-paseo@v1/api/graphql",
         },
     },
     polkadot_mainnet: {
