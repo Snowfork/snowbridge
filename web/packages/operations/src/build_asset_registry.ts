@@ -8,10 +8,7 @@ const run = async () => {
         env = process.env.NODE_ENV
     }
 
-    const options = assetsV2.fromEnvironment(
-        environment.SNOWBRIDGE_ENV[env],
-        process.env.ETHEREUM_API_KEY
-    )
+    const options = assetsV2.fromEnvironment(environment.SNOWBRIDGE_ENV[env])
     const registry = await assetsV2.buildRegistry(options)
     const json = JSON.stringify(
         registry,
