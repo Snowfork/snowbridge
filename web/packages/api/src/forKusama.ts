@@ -419,29 +419,6 @@ export async function validateTransfer(
     }
 
     const logs: ValidationLog[] = []
-    const destAssetHubImpl = await paraImplementation(destAssetHub)
-    const { accountMaxConsumers, accountExists } = await validateAccount(
-        destAssetHubImpl,
-        beneficiaryAddressHex,
-        registry.ethChainId,
-        tokenAddress,
-        destAssetMetadata
-    )
-    if (accountMaxConsumers) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.MaxConsumersReached,
-            message:
-                "Beneficiary account has reached the max consumer limit on the destination chain.",
-        })
-    }
-    if (!accountExists) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.AccountDoesNotExist,
-            message: "Beneficiary account does not exist on the destination chain.",
-        })
-    }
 
     if (amount > tokenBalance) {
         logs.push({
@@ -518,6 +495,31 @@ export async function validateTransfer(
             message: "Dry run call on destination AH failed: " + dryRunAssetHubDest.errorMessage,
         })
         assetHubDryRunError = dryRunAssetHubDest.errorMessage
+
+        // Only run the account validation if the dry run failed.
+        const destAssetHubImpl = await paraImplementation(destAssetHub)
+        const { accountMaxConsumers, accountExists } = await validateAccount(
+            destAssetHubImpl,
+            beneficiaryAddressHex,
+            registry.ethChainId,
+            tokenAddress,
+            destAssetMetadata
+        )
+        if (accountMaxConsumers) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.MaxConsumersReached,
+                message:
+                    "Beneficiary account has reached the max consumer limit on the destination chain.",
+            })
+        }
+        if (!accountExists) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.AccountDoesNotExist,
+                message: "Beneficiary account does not exist on the destination chain.",
+            })
+        }
     }
 
     console.log("sourceExecutionFee:", sourceExecutionFee)
