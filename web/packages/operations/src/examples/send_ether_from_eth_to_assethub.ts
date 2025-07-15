@@ -66,8 +66,8 @@ import { setTimeout } from "timers/promises"
     console.log("validation result", validation)
 
     // Step 4. Check validation logs for dry errors
-    if (validation.logs.find((l) => l.kind == toPolkadotV2.ValidationKind.Error)) {
-        console.error(validation)
+    if (!validation.success) {
+        console.error(validation.logs)
         throw Error(`validation has one of more errors.`)
     }
 
