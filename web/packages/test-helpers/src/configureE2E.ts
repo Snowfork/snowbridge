@@ -49,8 +49,6 @@ const sendBatchTransactionsOnBridgehub = async () => {
     const unsub = await batchTx.signAndSend(sender, ({ status }) => {
         if (status.isInBlock) {
             console.log(`✅ Transaction included in block: ${status.asInBlock}`)
-        } else if (status.isFinalized) {
-            console.log(`🎉 Transaction finalized in block: ${status.asFinalized}`)
             unsub()
         }
     })
@@ -104,8 +102,6 @@ const sendBatchTransactionsOnAssethub = async () => {
     const unsub = await batchTx.signAndSend(sender, ({ status }) => {
         if (status.isInBlock) {
             console.log(`✅ Transaction included in block: ${status.asInBlock}`)
-        } else if (status.isFinalized) {
-            console.log(`🎉 Transaction finalized in block: ${status.asFinalized}`)
             unsub()
         }
     })
@@ -138,8 +134,6 @@ const buildHrmpChannels = async () => {
     const unsub = await sudoTx.signAndSend(sender, ({ status }) => {
         if (status.isInBlock) {
             console.log(`✅ Transaction included in block: ${status.asInBlock}`)
-        } else if (status.isFinalized) {
-            console.log(`🎉 Transaction finalized in block: ${status.asFinalized}`)
             unsub()
         }
     })
@@ -193,8 +187,6 @@ const sendBatchTransactionsOnPenpal = async () => {
     const unsub = await batchTx.signAndSend(sender, ({ status }) => {
         if (status.isInBlock) {
             console.log(`✅ Transaction included in block: ${status.asInBlock}`)
-        } else if (status.isFinalized) {
-            console.log(`🎉 Transaction finalized in block: ${status.asFinalized}`)
             unsub()
         }
     })
