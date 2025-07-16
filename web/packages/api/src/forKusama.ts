@@ -23,13 +23,8 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import {
-    Asset,
-    AssetRegistry,
-    Parachain,
-    getAssetHubConversationPalletSwap,
-    AssetMap,
-} from "./assets_v2"
+import { getAssetHubConversationPalletSwap } from "./assets_v2"
+import { Asset, AssetRegistry, Parachain, AssetMap } from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
     EventRecord,
@@ -37,7 +32,7 @@ import {
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import { beneficiaryMultiAddress } from "./utils"
+import { beneficiaryMultiAddress, padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
 import { ParachainBase } from "./parachains/parachainBase"
 
@@ -241,13 +236,13 @@ export async function getDeliveryFee(
         destinationFeeInDestNative
     )
     // pad destination XCM fee
-    destinationFee = destinationFee + (destinationFee * 33n) / 100n
+    destinationFee = padFeeByPercentage(destinationFee, 33n)
 
     // add minimum balance to the dest fee, to avoid not being able to deposit leftover fees
     destinationFee = destinationFee + BigInt(minBalanceFeeDest)
 
     // pad destination XCM fee
-    totalXcmBridgeFee = totalXcmBridgeFee + (totalXcmBridgeFee * 33n) / 100n
+    totalXcmBridgeFee = padFeeByPercentage(totalXcmBridgeFee, 33n)
 
     let totalFee = totalXcmBridgeFee + bridgeHubDeliveryFee + destinationFee
 
@@ -424,29 +419,6 @@ export async function validateTransfer(
     }
 
     const logs: ValidationLog[] = []
-    const destAssetHubImpl = await paraImplementation(destAssetHub)
-    const { accountMaxConsumers, accountExists } = await validateAccount(
-        destAssetHubImpl,
-        beneficiaryAddressHex,
-        registry.ethChainId,
-        tokenAddress,
-        destAssetMetadata
-    )
-    if (accountMaxConsumers) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.MaxConsumersReached,
-            message:
-                "Beneficiary account has reached the max consumer limit on the destination chain.",
-        })
-    }
-    if (!accountExists) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.AccountDoesNotExist,
-            message: "Beneficiary account does not exist on the destination chain.",
-        })
-    }
 
     if (amount > tokenBalance) {
         logs.push({
@@ -523,6 +495,31 @@ export async function validateTransfer(
             message: "Dry run call on destination AH failed: " + dryRunAssetHubDest.errorMessage,
         })
         assetHubDryRunError = dryRunAssetHubDest.errorMessage
+
+        // Only run the account validation if the dry run failed.
+        const destAssetHubImpl = await paraImplementation(destAssetHub)
+        const { accountMaxConsumers, accountExists } = await validateAccount(
+            destAssetHubImpl,
+            beneficiaryAddressHex,
+            registry.ethChainId,
+            tokenAddress,
+            destAssetMetadata
+        )
+        if (accountMaxConsumers) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.MaxConsumersReached,
+                message:
+                    "Beneficiary account has reached the max consumer limit on the destination chain.",
+            })
+        }
+        if (!accountExists) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.AccountDoesNotExist,
+                message: "Beneficiary account does not exist on the destination chain.",
+            })
+        }
     }
 
     console.log("sourceExecutionFee:", sourceExecutionFee)
@@ -567,7 +564,9 @@ export async function signAndSend(
                     console.error(c)
                     reject(c.internalError || c.dispatchError || c)
                 }
-                if (c.isInBlock) {
+                // We have to check for finalization here because re-orgs will produce a different messageId on Asset Hub.
+                // TODO: Change back to isInBlock when we switch to pallet-xcm.execute for Asset Hub and we can generate the messageId offchain.
+                if (c.isFinalized) {
                     const result = {
                         txHash: u8aToHex(c.txHash),
                         txIndex: c.txIndex || 0,
@@ -605,6 +604,7 @@ export async function signAndSend(
     })
 
     result.blockHash = u8aToHex(await parachain.rpc.chain.getBlockHash(result.blockNumber))
+    result.messageId = transfer.computed.messageId ?? result.messageId
 
     return result
 }

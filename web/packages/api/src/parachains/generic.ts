@@ -1,4 +1,5 @@
-import { PNAMap, AssetMap } from "../assets_v2"
+import { PNAMap } from "../assets_v2"
+import { AssetMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
 
 export class GenericChain extends ParachainBase {

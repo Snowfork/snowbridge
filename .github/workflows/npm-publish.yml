@@ -42,6 +42,11 @@ jobs:
         run: |
           pnpm install
           pnpm build
+      
+      - name: Publish Base Types
+        working-directory: web/packages/base-types
+        run: |
+          pnpm publish --no-git-checks --access public
 
       - name: Publish Contracts
         working-directory: web/packages/contracts
@@ -55,5 +60,10 @@ jobs:
 
       - name: Publish API
         working-directory: web/packages/api
+        run: |
+          pnpm publish --no-git-checks --access public
+      
+      - name: Publish Registry
+        working-directory: web/packages/registry
         run: |
           pnpm publish --no-git-checks --access public

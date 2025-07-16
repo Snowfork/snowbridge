@@ -8,7 +8,9 @@ import { MythosParachain } from "./mythos"
 import { GenericChain } from "./generic"
 import { AssetHubKusamaParachain } from "./assethubKusama"
 import { AcalaParachain } from "./acala"
+import { FrequencyParachain } from "./frequency"
 import { PenpalParachain } from "./penpal"
+import { JamtonParachain } from "./jamton"
 
 export async function paraImplementation(provider: ApiPromise): Promise<ParachainBase> {
     let parachainId = 0
@@ -41,6 +43,9 @@ export async function paraImplementation(provider: ApiPromise): Promise<Parachai
         case "muse":
         case "mythos":
             return new MythosParachain(provider, parachainId, specName, specVersion)
+        case "frequency":
+        case "frequency-testnet":
+            return new FrequencyParachain(provider, parachainId, specName, specVersion)
         case "westend":
         case "paseo":
         case "polkadot":
@@ -48,6 +53,8 @@ export async function paraImplementation(provider: ApiPromise): Promise<Parachai
         case "bridge-hub-westend":
         case "bridge-hub-polkadot":
             return new GenericChain(provider, parachainId, specName, specVersion)
+        case "jamton-runtime":
+            return new JamtonParachain(provider, parachainId, specName, specVersion)
         default:
             throw Error(
                 `No parachain provider for ParaId = ${parachainId}, Spec = ${specName}, Version = ${specVersion}`

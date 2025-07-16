@@ -1,4 +1,5 @@
-import { AssetMap, PNAMap } from "../assets_v2"
+import { PNAMap } from "../assets_v2"
+import { AssetMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
 import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
@@ -29,11 +30,12 @@ export class AssetHubParachain extends ParachainBase {
     }
 
     getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap> {
-        return this.getAssetsFiltered(ethChainId, pnas, bridgeablePNAsOnAH)
+        return this.getAssetsFiltered(ethChainId, bridgeableENAsOnAH, pnas, bridgeablePNAsOnAH)
     }
 
     async getAssetsFiltered(
         ethChainId: number,
+        enaFilter: (address: string) => boolean,
         pnas: PNAMap,
         pnaFilter: (location: any, assetHubParaId: number, env: string) => any
     ) {
@@ -51,6 +53,13 @@ export class AssetHubParachain extends ParachainBase {
                 }
                 const token = getTokenFromLocation(location, ethChainId)
                 if (!token) {
+                    continue
+                }
+                const isBridgeable = enaFilter(token)
+                if (!isBridgeable) {
+                    console.warn(
+                        `Location ${JSON.stringify(token)} is filtered out on ${this.specName}`
+                    )
                     continue
                 }
 
@@ -142,6 +151,7 @@ export class AssetHubParachain extends ParachainBase {
                         ])
                     ).map((encoded) => encoded.toPrimitive() as any)
                     if (!assetInfo) {
+                        // Query assets using XCM V5, if XCM V4 did not return anything
                         assetType = this.provider.registry.createType(
                             "StagingXcmV5Location",
                             locationOnAH
@@ -298,4 +308,9 @@ function bridgeablePNAsOnAH(location: any, assetHubParaId: number, env: string):
             }
         }
     }
+}
+
+// All ERC-20s are bridgeable on AH
+function bridgeableENAsOnAH(_token: string): boolean {
+    return true
 }
