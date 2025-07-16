@@ -11,6 +11,7 @@ use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Instruction::Univ
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Instruction::{
     DescendOrigin, ReserveAssetDeposited, SetHints, PayFees, WithdrawAsset
 };
+use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::traits::Outcome;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Xcm;
 use asset_hub_westend_runtime::runtime_types::bounded_collections::bounded_vec::BoundedVec;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Hint::AssetClaimer;
@@ -46,6 +47,7 @@ lazy_static! { // TODO extract to config file or something
 const CHAIN_ID: u64 = 11155111; // TODO switch on env
 const INBOUND_PALLET_V2: u8 = 91; // TODO switch on env
 const ASSET_HUB_PARA_ID: u32 = 1000;
+const BRIDGE_HUB_PARA_ID: u32 = 1002;
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
@@ -108,6 +110,15 @@ pub struct GasEstimation {
     pub delivery_fee_in_dot: u128,
     pub delivery_fee_in_ether: u128,
     pub asset_hub_xcm: String,
+    pub dry_run_success: bool,
+    pub dry_run_error: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DryRunResult {
+    pub success: bool,
+    pub error_message: Option<String>,
+    pub forwarded_destination: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -167,12 +178,16 @@ pub async fn estimate_gas(
         true,
     ).await?;
 
+    let dry_run_result = dry_run_xcm_on_asset_hub(clients, &destination_xcm).await?;
+
     Ok(GasEstimation {
         fee_in_dot,
         fee_in_ether,
         delivery_fee_in_dot,
         delivery_fee_in_ether,
         asset_hub_xcm,
+        dry_run_success: dry_run_result.success,
+        dry_run_error: dry_run_result.error_message,
     })
 }
 
@@ -354,6 +369,60 @@ async fn calculate_delivery_fee_in_dot(
     }
 
     Err(EstimatorError::InvalidCommand("Could not find DOT asset in delivery fees result".to_string()))
+}
+
+async fn dry_run_xcm_on_asset_hub(
+    clients: &Clients,
+    xcm: &VersionedXcm,
+) -> Result<DryRunResult, EstimatorError> {
+    // Create bridge hub location (parents: 1, interior: X1([Parachain(1002)]))
+    let bridge_hub_location = asset_hub_westend_runtime::runtime_types::xcm::VersionedLocation::V5(
+        Location {
+            parents: 1,
+            interior: X1([
+                asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::Junction::Parachain(BRIDGE_HUB_PARA_ID)
+            ]),
+        }
+    );
+
+    // Query dry run XCM using Asset Hub's dry run API
+    let runtime_api_call = asset_hub_westend_runtime::runtime::apis()
+        .dry_run_api()
+        .dry_run_xcm(bridge_hub_location, xcm.clone());
+
+    let dry_run_result = clients.asset_hub_client
+        .runtime_api()
+        .at_latest()
+        .await.map_err(|e| EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e)))?
+        .call(runtime_api_call)
+        .await
+        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to dry run XCM: {:?}", e)))?;
+
+    match dry_run_result {
+        Ok(effects) => {
+            let success = matches!(effects.execution_result,
+                Outcome::Complete { .. });
+
+            let error_message = if success {
+                None
+            } else {
+                Some(format!("XCM execution failed: {:?}", effects.execution_result))
+            };
+
+            Ok(DryRunResult {
+                success,
+                error_message,
+                forwarded_destination: None, // TODO: Parse forwarded XCMs
+            })
+        }
+        Err(e) => {
+            Ok(DryRunResult {
+                success: false,
+                error_message: Some(format!("Dry run API error: {:?}", e)),
+                forwarded_destination: None,
+            })
+        }
+    }
 }
 
 async fn lookup_foreign_asset_location(
