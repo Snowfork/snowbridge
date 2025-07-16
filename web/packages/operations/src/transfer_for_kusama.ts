@@ -1,7 +1,6 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
 import { Context, contextConfigFor, environment, forKusama } from "@snowbridge/api"
-import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { assetRegistryFor } from "@snowbridge/registry"
 import { Direction } from "@snowbridge/api/dist/forKusama"
 
