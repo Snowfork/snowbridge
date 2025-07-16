@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment, toEthereumV2, assetsV2, contextConfigFor } from "@snowbridge/api"
+import { Context, environment, toEthereumSnowbridgeV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
@@ -15,9 +15,33 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     }
     console.log(`Using environment '${env}'`)
 
+    const { name, config, ethChainId } = snwobridgeEnv
     await cryptoWaitReady()
 
-    const context = new Context(contextConfigFor(env))
+    const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
+    const ethChains: { [ethChainId: string]: string } = {}
+    Object.keys(config.ETHEREUM_CHAINS).forEach(
+        (ethChainId) =>
+            (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
+    )
+    const context = new Context({
+        environment: name,
+        ethereum: {
+            ethChainId,
+            ethChains,
+            beacon_url: config.BEACON_HTTP_API,
+        },
+        polkadot: {
+            assetHubParaId: config.ASSET_HUB_PARAID,
+            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
+            relaychain: config.RELAY_CHAIN_URL,
+            parachains: config.PARACHAINS,
+        },
+        appContracts: {
+            gateway: config.GATEWAY_CONTRACT,
+            beefy: config.BEEFY_CONTRACT,
+        },
+    })
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -45,8 +69,12 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     console.log("Asset Hub to Ethereum")
     {
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toEthereumV2.getDeliveryFee(
-            { assetHub: await context.assetHub(), source: await context.parachain(sourceParaId) },
+        const fee = await toEthereumSnowbridgeV2.getDeliveryFee(
+            {
+                assetHub: await context.assetHub(),
+                source: await context.parachain(sourceParaId),
+                ethereum: await context.ethereum(),
+            },
             sourceParaId,
             registry,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -54,8 +82,8 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         )
 
         // Step 2. Create a transfer tx
-        const transfer = await toEthereumV2.createTransfer(
-            { sourceParaId, context },
+        const transfer = await toEthereumSnowbridgeV2.createTransfer(
+            await context.parachain(sourceParaId),
             registry,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
@@ -84,18 +112,29 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         // )
 
         // Step 4. Validate the transaction.
-        const validation = await toEthereumV2.validateTransfer(context, transfer)
+        const validation = await toEthereumSnowbridgeV2.validateTransfer(
+            {
+                sourceParachain: await context.parachain(sourceParaId),
+                assetHub: await context.assetHub(),
+                gateway: context.gateway(),
+                bridgeHub: await context.bridgeHub(),
+            },
+            transfer
+        )
         console.log("validation result", validation)
 
         // Step 5. Check validation logs for errors
-        if (validation.logs.find((l) => l.kind == toEthereumV2.ValidationKind.Error)) {
+        if (validation.logs.find((l) => l.kind == toEthereumSnowbridgeV2.ValidationKind.Error)) {
             throw Error(`validation has one of more errors.`)
         }
         if (process.env["DRY_RUN"] != "true") {
             // Step 6. Submit transaction and get receipt for tracking
-            const response = await toEthereumV2.signAndSend(context, transfer, POLKADOT_ACCOUNT, {
-                withSignedTransaction: true,
-            })
+            const response = await toEthereumSnowbridgeV2.signAndSend(
+                await context.parachain(sourceParaId),
+                transfer,
+                POLKADOT_ACCOUNT,
+                { withSignedTransaction: true }
+            )
             if (!response) {
                 throw Error(`Transaction ${response} not included.`)
             }

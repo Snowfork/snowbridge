@@ -10,6 +10,7 @@ import { AssetHubKusamaParachain } from "./assethubKusama"
 import { AcalaParachain } from "./acala"
 import { FrequencyParachain } from "./frequency"
 import { JamtonParachain } from "./jamton"
+import { PenpalParachain } from "./penpal"
 
 export async function paraImplementation(provider: ApiPromise): Promise<ParachainBase> {
     let parachainId = 0
@@ -24,9 +25,10 @@ export async function paraImplementation(provider: ApiPromise): Promise<Parachai
         case "basilisk":
         case "hydradx":
             return new HydrationParachain(provider, parachainId, specName, specVersion)
+        case "penpal-parachain":
+            return new PenpalParachain(provider, parachainId, specName, specVersion)
         case "asset-hub-paseo":
         case "westmint":
-        case "penpal-parachain":
         case "statemint":
             return new AssetHubParachain(provider, parachainId, specName, specVersion)
         case "statemine":
