@@ -5,8 +5,6 @@ import { AbstractProvider, Contract, ethers, LogDescription, Wallet } from "ethe
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 
 export const registerERC20 = async (tokenAddress: string) => {
-    await cryptoWaitReady()
-
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV

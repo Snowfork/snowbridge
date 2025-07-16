@@ -8,6 +8,7 @@ import {
     IGatewayV1__factory as IGateway__factory,
 } from "@snowbridge/contract-types"
 import { SNOWBRIDGE_ENV } from "./environment"
+
 export * as toPolkadot from "./toPolkadot"
 export * as toPolkadotV2 from "./toPolkadot_v2"
 export * as toEthereum from "./toEthereum"
