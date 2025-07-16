@@ -51,7 +51,7 @@ export const transferToPolkadot = async (
             const depositResult = await weth9.deposit({ value: amount })
             const depositReceipt = await depositResult.wait()
 
-            const approveResult = await weth9.approve(config.GATEWAY_CONTRACT, amount)
+            const approveResult = await weth9.approve(context.gateway().getAddress(), amount)
             const approveReceipt = await approveResult.wait()
 
             console.log("deposit tx", depositReceipt?.hash, "approve tx", approveReceipt?.hash)

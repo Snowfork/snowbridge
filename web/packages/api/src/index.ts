@@ -24,6 +24,7 @@ export * as subsquid from "./subsquid"
 export * as forKusama from "./forKusama"
 export * as toEthereumFromEVMV2 from "./toEthereumFromEVM_v2"
 export * as parachains from "./parachains"
+export * as toEthereumSnowbridgeV2 from "./toEthereumSnowbridgeV2"
 
 interface Parachains {
     [paraId: string]: ApiPromise
