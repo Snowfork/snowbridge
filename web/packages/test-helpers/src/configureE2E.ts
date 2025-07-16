@@ -78,22 +78,6 @@ const sendBatchTransactionsOnAssethub = async () => {
         },
     })
 
-    const versionedLocation = api.createType("XcmVersionedLocation", {
-        v4: {
-            parents: 1,
-            interior: {
-                x1: [
-                    {
-                        accountId32: {
-                            network: null,
-                            id: SudoPubKey,
-                        },
-                    },
-                ],
-            },
-        },
-    })
-
     // Define recipient addresses and amounts (replace with real addresses)
     const transactions = [
         //Account for penpal (Sibling parachain 2000)
