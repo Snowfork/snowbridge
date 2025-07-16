@@ -104,7 +104,7 @@ import { setTimeout } from "timers/promises"
     }
     console.log(
         `Success message with message id: ${message.messageId}
-                block number: ${message.blockNumber}  
+                block number: ${message.blockNumber}
                 tx hash: ${message.txHash}`
     )
 
