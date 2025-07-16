@@ -1,4 +1,5 @@
 {
+  "timestamp": "2025-07-16T02:46:56.078Z",
   "environment": "local_e2e",
   "ethChainId": 11155111,
   "gatewayAddress": "0xb1185ede04202fe62d38f5db72f71e38ff3e8305",
@@ -6,13 +7,13 @@
   "bridgeHubParaId": 1002,
   "relaychain": {
     "tokenSymbols": "WND",
-    "tokenDecimals": null,
+    "tokenDecimals": 12,
     "ss58Format": 42,
     "isEthereum": false,
     "accountType": "AccountId32",
     "name": "Westend Local Testnet",
     "specName": "westend",
-    "specVersion": 1018002
+    "specVersion": 1018012
   },
   "bridgeHub": {
     "tokenSymbols": "WND",
@@ -22,7 +23,7 @@
     "accountType": "AccountId32",
     "name": "Westend BridgeHub Local",
     "specName": "bridge-hub-westend",
-    "specVersion": 1019000
+    "specVersion": 1018002
   },
   "ethereumChains": {
     "11155111": {
@@ -40,8 +41,8 @@
           "symbol": "WETH",
           "decimals": 18
         },
-        "0x805c5a7d4e97908a8ec726dccc94a047d073eb7e": {
-          "token": "0x805c5a7d4e97908a8ec726dccc94a047d073eb7e",
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
           "name": "roc",
           "symbol": "roc",
           "decimals": 12,
@@ -54,8 +55,8 @@
           "decimals": 12,
           "foreignId": "0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7"
         },
-        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
-          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
+        "0x805c5a7d4e97908a8ec726dccc94a047d073eb7e": {
+          "token": "0x805c5a7d4e97908a8ec726dccc94a047d073eb7e",
           "name": "pal-2",
           "symbol": "pal-2",
           "decimals": 12,
@@ -83,7 +84,7 @@
         "accountType": "AccountId32",
         "name": "Westend Asset Hub Local",
         "specName": "westmint",
-        "specVersion": 1019000
+        "specVersion": 1018012
       },
       "assets": {
         "0x0000000000000000000000000000000000000000": {
@@ -102,8 +103,8 @@
           "decimals": 18,
           "isSufficient": true
         },
-        "0x805c5a7d4e97908a8ec726dccc94a047d073eb7e": {
-          "token": "0x805c5a7d4e97908a8ec726dccc94a047d073eb7e",
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
           "name": "Roc",
           "symbol": "Roc",
           "decimals": 12,
@@ -176,8 +177,8 @@
           "minimumBalance": "bigint:1000000000",
           "isSufficient": true
         },
-        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
-          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
+        "0x805c5a7d4e97908a8ec726dccc94a047d073eb7e": {
+          "token": "0x805c5a7d4e97908a8ec726dccc94a047d073eb7e",
           "name": "pal-2",
           "symbol": "pal-2",
           "decimals": 12,
@@ -278,8 +279,8 @@
           "decimals": 18,
           "isSufficient": true
         },
-        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
-          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
+        "0x805c5a7d4e97908a8ec726dccc94a047d073eb7e": {
+          "token": "0x805c5a7d4e97908a8ec726dccc94a047d073eb7e",
           "name": "pal-2",
           "symbol": "pal-2",
           "decimals": 12,
