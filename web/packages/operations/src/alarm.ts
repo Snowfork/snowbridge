@@ -64,10 +64,10 @@ export const AlarmEvaluationConfiguration = {
     ToPolkadotStale: {
         EvaluationPeriods: process.env["ToPolkadotEvaluationPeriods"]
             ? parseInt(process.env["ToPolkadotEvaluationPeriods"])
-            : 12,
+            : 18,
         DatapointsToAlarm: process.env["ToPolkadotDatapointsToAlarm"]
             ? parseInt(process.env["ToPolkadotDatapointsToAlarm"])
-            : 10,
+            : 15,
     },
 }
 

@@ -274,6 +274,12 @@ pub fn token_registrations() -> Vec<AssetHubRuntimeCall> {
         false,
         1,
     ));
+    // Curio
+    calls.push(register_erc20(
+        hex!("0e186357c323c806c1efdad36d217f7a54b63d18"),
+        false,
+        1,
+    ));
 
     calls
 }

@@ -1,8 +1,10 @@
-import { AssetMap, PNAMap } from "../assets_v2"
+import { PNAMap } from "../assets_v2"
+import { AssetMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
 import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
 export const WESTEND_GENESIS = "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
+export const ROCOCO_GENESIS = "0x6408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e"
 
 export class AssetHubParachain extends ParachainBase {
     getXC20DOT() {
@@ -35,7 +37,7 @@ export class AssetHubParachain extends ParachainBase {
         ethChainId: number,
         enaFilter: (address: string) => boolean,
         pnas: PNAMap,
-        pnaFilter: (location: any, assetHubParaId: number) => any
+        pnaFilter: (location: any, assetHubParaId: number, env: string) => any
     ) {
         const assets: AssetMap = {}
         // ERC20
@@ -81,7 +83,11 @@ export class AssetHubParachain extends ParachainBase {
             for (const { token, foreignId, ethereumlocation } of Object.keys(pnas).map(
                 (p) => pnas[p]
             )) {
-                const locationOnAH: any = pnaFilter(ethereumlocation, this.parachainId)
+                const locationOnAH: any = pnaFilter(
+                    ethereumlocation,
+                    this.parachainId,
+                    this.specName
+                )
                 if (!locationOnAH) {
                     console.warn(
                         `Location ${JSON.stringify(ethereumlocation)} is not bridgeable on ${
@@ -134,23 +140,37 @@ export class AssetHubParachain extends ParachainBase {
                         isSufficient: true,
                     }
                 } else {
-                    const assetType = this.provider.registry.createType(
+                    let assetType = this.provider.registry.createType(
                         "StagingXcmV4Location",
                         locationOnAH
                     )
-                    const [assetInfo, assetMeta] = (
+                    let [assetInfo, assetMeta] = (
                         await Promise.all([
                             this.provider.query.foreignAssets.asset(assetType),
                             this.provider.query.foreignAssets.metadata(assetType),
                         ])
                     ).map((encoded) => encoded.toPrimitive() as any)
                     if (!assetInfo) {
-                        console.warn(
-                            `Asset '${JSON.stringify(
-                                locationOnAH
-                            )}' is not a registered foregin asset on ${this.specName}.`
+                        // Query assets using XCM V5, if XCM V4 did not return anything
+                        assetType = this.provider.registry.createType(
+                            "StagingXcmV5Location",
+                            locationOnAH
                         )
-                        continue
+                        assetInfo = (
+                            await this.provider.query.foreignAssets.asset(assetType)
+                        ).toPrimitive()
+                        assetMeta = (
+                            await this.provider.query.foreignAssets.metadata(assetType)
+                        ).toPrimitive()
+
+                        if (!assetInfo) {
+                            console.warn(
+                                `Asset '${JSON.stringify(
+                                    locationOnAH
+                                )}' is not a registered foregin asset on ${this.specName}.`
+                            )
+                            continue
+                        }
                     }
 
                     assets[token.toLowerCase()] = {
@@ -174,7 +194,7 @@ export class AssetHubParachain extends ParachainBase {
 
 // Currently, the bridgeable assets are limited to KSM, DOT, native assets on AH
 // and TEER
-function bridgeablePNAsOnAH(location: any, assetHubParaId: number): any {
+function bridgeablePNAsOnAH(location: any, assetHubParaId: number, env: string): any {
     if (location.parents != 1) {
         return
     }
@@ -238,25 +258,54 @@ function bridgeablePNAsOnAH(location: any, assetHubParaId: number): any {
         }
     }
     // Add assets for Westend
-    if (
-        location.interior.x1 &&
-        location.interior.x1[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS
-    ) {
-        return DOT_LOCATION
-    } else if (
-        location.interior.x2 &&
-        location.interior.x2[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS &&
-        location.interior.x2[1]?.parachain != undefined
-    ) {
-        return {
-            parents: 1,
-            interior: {
-                x1: [
-                    {
-                        parachain: location.interior.x2[1]?.parachain,
-                    },
-                ],
-            },
+    if (env == "westmint") {
+        if (
+            location.interior.x1 &&
+            location.interior.x1[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS
+        ) {
+            return DOT_LOCATION
+        } else if (
+            location.interior.x2 &&
+            location.interior.x2[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS &&
+            location.interior.x2[1]?.parachain != undefined
+        ) {
+            return {
+                parents: 1,
+                interior: {
+                    x1: [
+                        {
+                            parachain: location.interior.x2[1]?.parachain,
+                        },
+                    ],
+                },
+            }
+        } else if (
+            location.interior.x4 &&
+            location.interior.x4[0]?.globalConsensus?.byGenesis === WESTEND_GENESIS &&
+            location.interior.x4[1]?.parachain &&
+            location.interior.x4[2]?.palletInstance &&
+            location.interior.x4[3]?.generalIndex != undefined
+        ) {
+            return {
+                parents: 1,
+                interior: {
+                    x3: [
+                        { parachain: location.interior.x4[1]?.parachain },
+                        { palletInstance: location.interior.x4[2].palletInstance },
+                        { generalIndex: location.interior.x4[3].generalIndex },
+                    ],
+                },
+            }
+        } else if (
+            location.interior.x1 &&
+            location.interior.x1[0]?.globalConsensus?.byGenesis === ROCOCO_GENESIS
+        ) {
+            return {
+                parents: 2,
+                interior: {
+                    x1: [{ globalConsensus: { byGenesis: ROCOCO_GENESIS } }],
+                },
+            }
         }
     }
 }

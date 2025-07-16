@@ -1,8 +1,8 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment, toEthereumV2, assetsV2 } from "@snowbridge/api"
+import { Context, environment, toEthereumV2, assetsV2, contextConfigFor } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
-import { fetchRegistry } from "./registry"
+import { assetRegistryFor } from "@snowbridge/registry"
 
 export const transferToEthereum = async (sourceParaId: number, symbol: string, amount: bigint) => {
     let env = "local_e2e"
@@ -15,54 +15,32 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     }
     console.log(`Using environment '${env}'`)
 
-    const { name, config, ethChainId } = snwobridgeEnv
     await cryptoWaitReady()
 
-    const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
-    const ethChains: { [ethChainId: string]: string } = {}
-    Object.keys(config.ETHEREUM_CHAINS).forEach(
-        (ethChainId) =>
-            (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
-    )
-    const context = new Context({
-        environment: name,
-        ethereum: {
-            ethChainId,
-            ethChains,
-            beacon_url: config.BEACON_HTTP_API,
-        },
-        polkadot: {
-            assetHubParaId: config.ASSET_HUB_PARAID,
-            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
-            relaychain: config.RELAY_CHAIN_URL,
-            parachains: config.PARACHAINS,
-        },
-        appContracts: {
-            gateway: config.GATEWAY_CONTRACT,
-            beefy: config.BEEFY_CONTRACT,
-        },
-    })
+    const context = new Context(contextConfigFor(env))
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        process.env.ETHEREUM_KEY ?? "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
+        process.env.ETHEREUM_KEY ??
+            "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
         context.ethereum()
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
-    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(
-        process.env.SUBSTRATE_KEY ?? "//Ferdie"
-    )
+    const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
-    const registry = await fetchRegistry(env, context)
+    const registry = assetRegistryFor(env)
 
     const assets = registry.ethereumChains[registry.ethChainId].assets
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
+    if (!TOKEN_CONTRACT) {
+        console.log("no token contract exists, check it and rebuild asset registry.")
+    }
 
     console.log("Asset Hub to Ethereum")
     {
@@ -77,7 +55,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
 
         // Step 2. Create a transfer tx
         const transfer = await toEthereumV2.createTransfer(
-            await context.parachain(sourceParaId),
+            { sourceParaId, context },
             registry,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
@@ -106,15 +84,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         // )
 
         // Step 4. Validate the transaction.
-        const validation = await toEthereumV2.validateTransfer(
-            {
-                sourceParachain: await context.parachain(sourceParaId),
-                assetHub: await context.assetHub(),
-                gateway: context.gateway(),
-                bridgeHub: await context.bridgeHub(),
-            },
-            transfer
-        )
+        const validation = await toEthereumV2.validateTransfer(context, transfer)
         console.log("validation result", validation)
 
         // Step 5. Check validation logs for errors
@@ -123,12 +93,9 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         }
         if (process.env["DRY_RUN"] != "true") {
             // Step 6. Submit transaction and get receipt for tracking
-            const response = await toEthereumV2.signAndSend(
-                await context.parachain(sourceParaId),
-                transfer,
-                POLKADOT_ACCOUNT,
-                { withSignedTransaction: true }
-            )
+            const response = await toEthereumV2.signAndSend(context, transfer, POLKADOT_ACCOUNT, {
+                withSignedTransaction: true,
+            })
             if (!response) {
                 throw Error(`Transaction ${response} not included.`)
             }

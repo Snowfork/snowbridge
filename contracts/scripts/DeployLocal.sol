@@ -59,16 +59,8 @@ contract DeployLocal is Script {
         AgentExecutor executor = new AgentExecutor();
         Gateway gatewayLogic = new Gateway(address(beefyClient), address(executor));
 
-        bool rejectOutboundMessages = vm.envBool("REJECT_OUTBOUND_MESSAGES");
-        OperatingMode defaultOperatingMode;
-        if (rejectOutboundMessages) {
-            defaultOperatingMode = OperatingMode.RejectingOutboundMessages;
-        } else {
-            defaultOperatingMode = OperatingMode.Normal;
-        }
-
         Initializer.Config memory config = Initializer.Config({
-            mode: defaultOperatingMode,
+            mode: OperatingMode.Normal,
             deliveryCost: uint128(vm.envUint("DELIVERY_COST")),
             registerTokenFee: uint128(vm.envUint("REGISTER_TOKEN_FEE")),
             assetHubCreateAssetFee: uint128(vm.envUint("CREATE_ASSET_FEE")),

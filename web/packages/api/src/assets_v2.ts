@@ -8,32 +8,24 @@ import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-t
 import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID } from "./parachains/mythos"
 import { paraImplementation } from "./parachains"
 import { ParachainBase } from "./parachains/parachainBase"
-
-export type ERC20Metadata = {
-    token: string
-    name: string
-    symbol: string
-    decimals: number
-    foreignId?: string
-}
+import {
+    Asset,
+    AssetRegistry,
+    ChainProperties,
+    ERC20Metadata,
+    ERC20MetadataMap,
+    EthereumChain,
+    KusamaConfig,
+    Parachain,
+    ParachainMap,
+    XC20TokenMap,
+} from "@snowbridge/base-types"
 
 export type ERC20MetadataOverride = {
     name?: string
     symbol?: string
     decimals?: number
 }
-
-export type EthereumChain = {
-    chainId: number
-    id: string
-    evmParachainId?: number
-    assets: ERC20MetadataMap
-    precompile?: `0x${string}`
-    xcDOT?: string
-    xcTokenMap?: XC20TokenMap
-}
-
-export type AccountType = "AccountId20" | "AccountId32"
 
 export type SubstrateAccount = {
     nonce: bigint
@@ -45,56 +37,6 @@ export type SubstrateAccount = {
         reserved: bigint
         frozen: bigint
     }
-}
-
-export type ChainProperties = {
-    tokenSymbols: string
-    tokenDecimals: number
-    ss58Format: number
-    isEthereum: boolean
-    accountType: AccountType
-    evmChainId?: number
-    name: string
-    specName: string
-    specVersion: number
-}
-
-export type Parachain = {
-    parachainId: number
-    info: ChainProperties
-    features: {
-        hasPalletXcm: boolean
-        hasDryRunApi: boolean
-        hasTxPaymentApi: boolean
-        hasDryRunRpc: boolean
-        hasDotBalance: boolean
-    }
-    assets: AssetMap
-    estimatedExecutionFeeDOT: bigint
-    estimatedDeliveryFeeDOT: bigint
-    xcDOT?: string
-}
-
-export type Asset = {
-    token: string
-    name: string
-    minimumBalance: bigint
-    symbol: string
-    decimals: number
-    isSufficient: boolean
-    xc20?: string
-    // Location on source Parachain
-    location?: any
-    // Location reanchored on AH
-    locationOnAH?: any
-    // Location reanchored on Ethereum
-    locationOnEthereum?: any
-    // For chains that use `Assets` pallet to manage local assets
-    // the asset_id is normally represented as u32, but on Moonbeam,
-    // it is u128, so use string here to avoid overflow
-    assetId?: string
-    // Identifier of the PNA
-    foreignId?: string
 }
 
 export type RegistryOptions = {
@@ -119,28 +61,6 @@ export type KusamaOptions = {
     assetHub: string | ApiPromise
 }
 
-export type AssetRegistry = {
-    timestamp: string
-    environment: string
-    gatewayAddress: string
-    ethChainId: number
-    assetHubParaId: number
-    bridgeHubParaId: number
-    relaychain: ChainProperties
-    bridgeHub: ChainProperties
-    ethereumChains: {
-        [chainId: string]: EthereumChain
-    }
-    parachains: ParachainMap
-    kusama: KusamaConfig | undefined
-}
-
-export type KusamaConfig = {
-    assetHubParaId: number
-    bridgeHubParaId: number
-    parachains: ParachainMap
-}
-
 export interface PNAMap {
     [token: string]: {
         token: string
@@ -149,28 +69,12 @@ export interface PNAMap {
     }
 }
 
-export interface AssetMap {
-    [token: string]: Asset
-}
-
-export interface ParachainMap {
-    [paraId: string]: Parachain
-}
-
 export interface PrecompileMap {
     [chainId: string]: `0x${string}`
 }
 
 export interface AssetOverrideMap {
     [paraId: string]: Asset[]
-}
-
-export interface XC20TokenMap {
-    [xc20: string]: string
-}
-
-export interface ERC20MetadataMap {
-    [token: string]: ERC20Metadata
 }
 
 export interface ERC20MetadataOverrideMap {
@@ -581,10 +485,12 @@ export function getTransferLocations(
     return results
 }
 
-export function fromEnvironment(
-    { name, config, kusamaConfig, ethChainId }: SnowbridgeEnvironment,
-    ethereumApiKey?: string
-): RegistryOptions {
+export function fromEnvironment({
+    name,
+    config,
+    kusamaConfig,
+    ethChainId,
+}: SnowbridgeEnvironment): RegistryOptions {
     let result: RegistryOptions = {
         environment: name,
         assetHubParaId: config.ASSET_HUB_PARAID,
@@ -593,7 +499,7 @@ export function fromEnvironment(
         relaychain: config.RELAY_CHAIN_URL,
         ethChainId,
         gatewayAddress: config.GATEWAY_CONTRACT,
-        ethchains: Object.values(config.ETHEREUM_CHAINS).map((x) => x(ethereumApiKey ?? "")),
+        ethchains: Object.values(config.ETHEREUM_CHAINS),
         parachains: Object.keys(config.PARACHAINS)
             .filter((paraId) => paraId !== config.BRIDGE_HUB_PARAID.toString())
             .map((paraId) => config.PARACHAINS[paraId]),
@@ -976,6 +882,15 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                     path.asset === MYTHOS_TOKEN_ID &&
                     ((path.destination !== 3369 && path.type === "ethereum") ||
                         (path.source !== 3369 && path.type === "substrate"))
+                ) {
+                    return false
+                }
+
+                // Disable TRAC from going to any but hydration
+                if (
+                    path.asset === "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f" &&
+                    ((path.destination !== 2034 && path.type === "ethereum") ||
+                        (path.source !== 2034 && path.type === "substrate"))
                 ) {
                     return false
                 }
