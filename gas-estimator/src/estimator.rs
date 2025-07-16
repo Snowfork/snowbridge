@@ -44,7 +44,8 @@ lazy_static! { // TODO extract to config file or something
 }
 
 const CHAIN_ID: u64 = 11155111; // TODO switch on env
-const INBOUND_PALLET_V2: u64 = 91; // TODO switch on env
+const INBOUND_PALLET_V2: u8 = 91; // TODO switch on env
+const ASSET_HUB_PARA_ID: u32 = 1000;
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
@@ -104,6 +105,8 @@ pub struct Clients {
 pub struct GasEstimation {
     pub fee_in_dot: u128,
     pub fee_in_ether: u128,
+    pub delivery_fee_in_dot: u128,
+    pub delivery_fee_in_ether: u128,
     pub asset_hub_xcm: String,
 }
 
@@ -134,7 +137,7 @@ pub async fn estimate_gas(
 
     let asset_hub_xcm = format!("{:?}", destination_xcm);
 
-    let _weight = query_xcm_weight(clients, destination_xcm).await?;
+    let _weight = query_xcm_weight(clients, destination_xcm.clone()).await?;
     let fee_in_dot = query_weight_to_asset_fee(clients, &_weight).await?;
 
     let dot_asset = Location {
@@ -149,15 +152,26 @@ pub async fn estimate_gas(
 
     let fee_in_ether = quote_price_exact_tokens_for_tokens(
         clients,
+        dot_asset.clone(),
+        ether_asset.clone(),
+        fee_in_dot.clone(),
+        true,
+    ).await?;
+
+    let delivery_fee_in_dot = calculate_delivery_fee_in_dot(clients, &destination_xcm).await?;
+    let delivery_fee_in_ether = quote_price_exact_tokens_for_tokens(
+        clients,
         dot_asset,
         ether_asset,
-        fee_in_dot,
+        delivery_fee_in_dot,
         true,
     ).await?;
 
     Ok(GasEstimation {
         fee_in_dot,
         fee_in_ether,
+        delivery_fee_in_dot,
+        delivery_fee_in_ether,
         asset_hub_xcm,
     })
 }
@@ -285,6 +299,61 @@ pub async fn quote_price_exact_tokens_for_tokens(
         .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to quote price for tokens: {:?}", e)))?;
 
     quote_result.ok_or_else(|| EstimatorError::InvalidCommand("Quote price query returned None".to_string()))
+}
+
+async fn calculate_delivery_fee_in_dot(
+    clients: &Clients,
+    xcm: &VersionedXcm,
+) -> Result<u128, EstimatorError> {
+    let destination = bridge_hub_westend_runtime::runtime_types::staging_xcm::v5::location::Location {
+        parents: 1,
+        interior: bridge_hub_westend_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::X1([
+            bridge_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::Junction::Parachain(ASSET_HUB_PARA_ID)
+        ]),
+    };
+
+    // Convert XCM to bridge hub types for the query
+    let encoded_xcm = codec::Encode::encode(xcm);
+    let bridge_hub_xcm: bridge_hub_westend_runtime::runtime_types::xcm::VersionedXcm =
+        codec::Decode::decode(&mut &encoded_xcm[..])
+            .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to convert XCM types: {:?}", e)))?;
+
+    let versioned_destination =
+        bridge_hub_westend_runtime::runtime_types::xcm::VersionedLocation::V5(destination);
+
+    // Query delivery fees using XCM Payment API
+    let runtime_api_call = bridge_hub_westend_runtime::runtime::apis()
+        .xcm_payment_api()
+        .query_delivery_fees(
+            versioned_destination,
+            bridge_hub_xcm
+        );
+
+    let fees_result = clients.bridge_hub_client
+        .runtime_api()
+        .at_latest()
+        .await.map_err(|e| EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e)))?
+        .call(runtime_api_call)
+        .await
+        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to query delivery fees: {:?}", e)))?;
+
+    let fees = fees_result.map_err(|e| EstimatorError::InvalidCommand(format!("Delivery fees query returned error: {:?}", e)))?;
+
+    // Find DOT asset in the result (parents: 1, interior: Here)
+    let assets = match fees {
+        bridge_hub_westend_runtime::runtime_types::xcm::VersionedAssets::V5(assets) => assets,
+        _ => return Err(EstimatorError::InvalidCommand("Unsupported VersionedAssets version".to_string())),
+    };
+
+    for asset in assets.0.iter() {
+        if asset.id.0.parents == 1 && matches!(asset.id.0.interior, bridge_hub_westend_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::Here) {
+            if let bridge_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Fungibility::Fungible(amount) = asset.fun {
+                return Ok(amount);
+            }
+        }
+    }
+
+    Err(EstimatorError::InvalidCommand("Could not find DOT asset in delivery fees result".to_string()))
 }
 
 async fn lookup_foreign_asset_location(
