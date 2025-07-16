@@ -9,8 +9,10 @@ import (
 	"math"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
+	gethRawDB "github.com/ethereum/go-ethereum/core/rawdb"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
+	gethTrieDB "github.com/ethereum/go-ethereum/triedb"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -139,10 +141,9 @@ func (s *HeaderCache) GetReceiptTrie(ctx context.Context, hash gethCommon.Hash) 
 		return nil, fmt.Errorf("get all receipts: %w", err)
 	}
 
-	receiptTrie, err = MakeTrie(receipts)
-	if err != nil {
-		return nil, fmt.Errorf("make trie: %w", err)
-	}
+	receiptTrie = gethTrie.NewEmpty(gethTrieDB.NewDatabase(gethRawDB.NewMemoryDatabase(), nil))
+
+	gethTypes.DeriveSha(receipts, receiptTrie)
 
 	if receiptTrie.Hash() != block.ReceiptHash() {
 		return nil, fmt.Errorf("receipt trie does not match block receipt hash")
