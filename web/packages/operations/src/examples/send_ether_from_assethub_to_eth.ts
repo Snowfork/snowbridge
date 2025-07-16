@@ -80,8 +80,9 @@ import { setTimeout } from "timers/promises"
     )
     console.log("validation result", validation)
 
-    // Step 5. Check validation logs for errors
-    if (validation.logs.find((l) => l.kind == toEthereumV2.ValidationKind.Error)) {
+    // Step 5. Check validation for dry run errors
+    if (!validation.success) {
+        console.error(validation.logs)
         throw Error(`validation has one of more errors.`)
     }
 

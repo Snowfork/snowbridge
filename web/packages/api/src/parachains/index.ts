@@ -9,8 +9,8 @@ import { GenericChain } from "./generic"
 import { AssetHubKusamaParachain } from "./assethubKusama"
 import { AcalaParachain } from "./acala"
 import { FrequencyParachain } from "./frequency"
-import { JamtonParachain } from "./jamton"
 import { PenpalParachain } from "./penpal"
+import { JamtonParachain } from "./jamton"
 
 export async function paraImplementation(provider: ApiPromise): Promise<ParachainBase> {
     let parachainId = 0

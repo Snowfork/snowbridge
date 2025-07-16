@@ -1,22 +1,17 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, contextConfigFor, environment, toEthereumSnowbridgeV2 } from "@snowbridge/api"
+import { Context, toEthereumSnowbridgeV2, contextConfigFor } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
 
 export const transferToEthereum = async (sourceParaId: number, symbol: string, amount: bigint) => {
+    await cryptoWaitReady()
+
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snwobridgeEnv = environment.SNOWBRIDGE_ENV[env]
-    if (snwobridgeEnv === undefined) {
-        throw Error(`Unknown environment '${env}'`)
-    }
     console.log(`Using environment '${env}'`)
-
-    const { name, config, ethChainId } = snwobridgeEnv
-    await cryptoWaitReady()
 
     const context = new Context(contextConfigFor(env))
 
@@ -40,31 +35,26 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
     if (!TOKEN_CONTRACT) {
-        console.log("no token contract exists, check it and rebuild asset registry.")
+        console.error("no token contract exists, check it and rebuild asset registry.")
+        throw Error(`No token found for ${symbol}`)
     }
 
     console.log("Asset Hub to Ethereum")
     {
         // Step 1. Get the delivery fee for the transaction
         const fee = await toEthereumSnowbridgeV2.getDeliveryFee(
-            {
-                assetHub: await context.assetHub(),
-                source: await context.parachain(sourceParaId),
-                ethereum: await context.ethereum(),
-            },
-            sourceParaId,
+            { sourceParaId, context },
             registry,
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            TOKEN_CONTRACT!
+            TOKEN_CONTRACT
         )
 
         // Step 2. Create a transfer tx
         const transfer = await toEthereumSnowbridgeV2.createTransfer(
-            await context.parachain(sourceParaId),
+            { sourceParaId, context },
             registry,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
-            TOKEN_CONTRACT!,
+            TOKEN_CONTRACT,
             amount,
             fee
         )
@@ -89,15 +79,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         // )
 
         // Step 4. Validate the transaction.
-        const validation = await toEthereumSnowbridgeV2.validateTransfer(
-            {
-                sourceParachain: await context.parachain(sourceParaId),
-                assetHub: await context.assetHub(),
-                gateway: context.gateway(),
-                bridgeHub: await context.bridgeHub(),
-            },
-            transfer
-        )
+        const validation = await toEthereumSnowbridgeV2.validateTransfer(context, transfer)
         console.log("validation result", validation)
 
         // Step 5. Check validation logs for errors

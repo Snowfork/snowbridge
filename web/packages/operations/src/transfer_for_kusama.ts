@@ -1,6 +1,6 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment, forKusama } from "@snowbridge/api"
+import { Context, contextConfigFor, environment, forKusama } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { assetRegistryFor } from "@snowbridge/registry"
 import { Direction } from "@snowbridge/api/dist/forKusama"
@@ -20,42 +20,7 @@ export const transferForKusama = async (
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const { config, kusamaConfig, ethChainId, name } = snowbridgeEnv
-    await cryptoWaitReady()
-
-    if (!kusamaConfig) {
-        throw Error(`Kusama config should be set`)
-    }
-
-    const kusamaParachains: { [paraId: string]: string } = {}
-    kusamaParachains[kusamaConfig?.BRIDGE_HUB_PARAID.toString()] =
-        kusamaConfig?.PARACHAINS[config.BRIDGE_HUB_PARAID.toString()]
-    kusamaParachains[kusamaConfig?.ASSET_HUB_PARAID.toString()] =
-        kusamaConfig?.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
-
-    const context = new Context({
-        environment: name,
-        ethereum: {
-            ethChainId,
-            ethChains: config.ETHEREUM_CHAINS,
-            beacon_url: process.env["BEACON_NODE_URL"] || config.BEACON_HTTP_API,
-        },
-        polkadot: {
-            assetHubParaId: config.ASSET_HUB_PARAID,
-            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
-            parachains: config.PARACHAINS,
-            relaychain: process.env["RELAY_CHAIN_URL"] || config.RELAY_CHAIN_URL,
-        },
-        kusama: {
-            assetHubParaId: kusamaConfig.ASSET_HUB_PARAID,
-            bridgeHubParaId: kusamaConfig.BRIDGE_HUB_PARAID,
-            parachains: kusamaParachains,
-        },
-        appContracts: {
-            gateway: config.GATEWAY_CONTRACT,
-            beefy: config.BEEFY_CONTRACT,
-        },
-    })
+    const context = new Context(contextConfigFor(env))
 
     const [polkadotAssetHub, kusamaAssetHub] = await Promise.all([
         context.assetHub(),
