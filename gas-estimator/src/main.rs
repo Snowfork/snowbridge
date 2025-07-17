@@ -1,11 +1,11 @@
 mod estimator;
 
-use crate::estimator::{EstimatorError, clients, estimate_gas, decode_assets};
-use clap::{Parser, Subcommand, ValueEnum};
-use std::process;
-use hex;
-use codec;
+use crate::estimator::{clients, decode_assets, estimate_gas, EstimatorError};
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::location::Location;
+use clap::{Parser, Subcommand, ValueEnum};
+use codec;
+use hex;
+use std::process;
 
 #[derive(Parser)]
 #[command(name = "snowbridge-gas-estimator")]
@@ -68,31 +68,49 @@ async fn main() {
     }
 }
 
-async fn estimate(
-    cli: Cli
-) -> Result<String, EstimatorError> {
+async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
     let clients = clients().await?;
 
     let (xcm_hex, assets_json, claimer_hex, origin_hex, execution_fee) = match cli.command {
-        Commands::V2SendMessage { xcm, assets, claimer, origin, execution_fee, .. } => (xcm, assets, claimer, origin, execution_fee),
+        Commands::V2SendMessage {
+            xcm,
+            assets,
+            claimer,
+            origin,
+            execution_fee,
+            ..
+        } => (xcm, assets, claimer, origin, execution_fee),
     };
 
     let xcm_bytes = hex::decode(&xcm_hex[2..]).map_err(|_| EstimatorError::InvalidHexFormat)?;
-    let claimer_bytes = hex::decode(&claimer_hex[2..]).map_err(|_| EstimatorError::InvalidHexFormat)?;
-    let origin_bytes = hex::decode(&origin_hex[2..]).map_err(|_| EstimatorError::InvalidHexFormat)?;
+    let claimer_bytes =
+        hex::decode(&claimer_hex[2..]).map_err(|_| EstimatorError::InvalidHexFormat)?;
+    let origin_bytes =
+        hex::decode(&origin_hex[2..]).map_err(|_| EstimatorError::InvalidHexFormat)?;
     let assets = decode_assets(&assets_json)?;
 
     let claimer: Location = codec::Decode::decode(&mut &claimer_bytes[..])
         .map_err(|_| EstimatorError::InvalidCommand("Failed to decode claimer".to_string()))?;
-    
+
     if origin_bytes.len() != 20 {
-        return Err(EstimatorError::InvalidCommand("Origin must be 20 bytes (Ethereum address)".to_string()));
+        return Err(EstimatorError::InvalidCommand(
+            "Origin must be 20 bytes (Ethereum address)".to_string(),
+        ));
     }
     let mut origin = [0u8; 20];
     origin.copy_from_slice(&origin_bytes);
 
-    let estimation = estimate_gas(&clients, &xcm_bytes, claimer, origin, execution_fee, &assets).await?;
+    let estimation = estimate_gas(
+        &clients,
+        &xcm_bytes,
+        claimer,
+        origin,
+        execution_fee,
+        &assets,
+    )
+    .await?;
 
-    serde_json::to_string_pretty(&estimation)
-        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to serialize result to JSON: {}", e)))
+    serde_json::to_string_pretty(&estimation).map_err(|e| {
+        EstimatorError::InvalidCommand(format!("Failed to serialize result to JSON: {}", e))
+    })
 }

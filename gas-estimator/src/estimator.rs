@@ -1,30 +1,33 @@
+use asset_hub_westend_runtime::runtime_types::bounded_collections::bounded_vec::BoundedVec;
+use asset_hub_westend_runtime::runtime_types::sp_weights::weight_v2::Weight;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Fungibility::Fungible;
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::{
-    AssetId, Assets,
+use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::{AssetId, Assets};
+use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::Junction::{
+    AccountKey20, GlobalConsensus, PalletInstance,
 };
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::Junction::{GlobalConsensus, PalletInstance, AccountKey20};
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::NetworkId;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::NetworkId::Ethereum;
+use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::Here;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::{X1, X2};
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::location::Location;
+use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::traits::Outcome;
+use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Hint::AssetClaimer;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Instruction::UniversalOrigin;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Instruction::{
-    DescendOrigin, ReserveAssetDeposited, SetHints, PayFees, WithdrawAsset
+    DescendOrigin, PayFees, ReserveAssetDeposited, SetHints, WithdrawAsset,
 };
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::traits::Outcome;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Xcm;
-use asset_hub_westend_runtime::runtime_types::bounded_collections::bounded_vec::BoundedVec;
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Hint::AssetClaimer;
-use subxt::{Config, OnlineClient, PolkadotConfig, config::DefaultExtrinsicParams};
-use lazy_static::lazy_static;
-use asset_hub_westend_runtime::runtime_types::xcm::VersionedXcm;
 use asset_hub_westend_runtime::runtime_types::xcm::VersionedAssetId;
-use asset_hub_westend_runtime::runtime_types::sp_weights::weight_v2::Weight;
-use std::env;
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::Here;
+use asset_hub_westend_runtime::runtime_types::xcm::VersionedXcm;
 use codec::DecodeLimit;
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
+use std::env;
+use subxt::{
+    config::substrate::AccountId32, config::DefaultExtrinsicParams, Config, OnlineClient,
+    PolkadotConfig,
+};
 
 lazy_static! { // TODO extract to config file or something
     pub static ref ASSET_HUB_WS_URL: String = {
@@ -85,12 +88,16 @@ pub async fn clients() -> Result<Clients, EstimatorError> {
     let asset_hub_client: OnlineClient<AssetHubConfig> =
         OnlineClient::from_url((*ASSET_HUB_WS_URL).to_string())
             .await
-            .map_err(|e| EstimatorError::ConnectionError(format!("Cannot connect to asset hub: {}", e)))?;
+            .map_err(|e| {
+                EstimatorError::ConnectionError(format!("Cannot connect to asset hub: {}", e))
+            })?;
 
     let bridge_hub_client: OnlineClient<PolkadotConfig> =
         OnlineClient::from_url((*BRIDGE_HUB_WS_URL).to_string())
             .await
-            .map_err(|e| EstimatorError::ConnectionError(format!("Cannot connect to bridge hub: {}", e)))?;
+            .map_err(|e| {
+                EstimatorError::ConnectionError(format!("Cannot connect to bridge hub: {}", e))
+            })?;
 
     Ok(Clients {
         asset_hub_client: Box::new(asset_hub_client),
@@ -109,6 +116,8 @@ pub struct GasEstimation {
     pub fee_in_ether: u128,
     pub delivery_fee_in_dot: u128,
     pub delivery_fee_in_ether: u128,
+    pub extrinsic_fee_in_dot: u128,
+    pub extrinsic_fee_in_ether: u128,
     pub asset_hub_xcm: String,
     pub dry_run_success: bool,
     pub dry_run_error: Option<String>,
@@ -125,15 +134,9 @@ pub struct DryRunResult {
 #[serde(tag = "kind")]
 pub enum BridgeAsset {
     #[serde(rename = "native")]
-    NativeToken {
-        token: String,
-        amount: String,
-    },
+    NativeToken { token: String, amount: String },
     #[serde(rename = "foreign")]
-    ForeignToken {
-        foreign_id: String,
-        amount: String,
-    },
+    ForeignToken { foreign_id: String, amount: String },
 }
 
 pub async fn estimate_gas(
@@ -144,7 +147,8 @@ pub async fn estimate_gas(
     execution_fee: u128,
     assets: &[BridgeAsset],
 ) -> Result<GasEstimation, EstimatorError> {
-    let destination_xcm = build_asset_hub_xcm(clients, xcm_bytes, claimer, origin, execution_fee, assets).await?;
+    let destination_xcm =
+        build_asset_hub_xcm(clients, xcm_bytes, claimer, origin, execution_fee, assets).await?;
 
     let asset_hub_xcm = format!("{:?}", destination_xcm);
 
@@ -167,47 +171,72 @@ pub async fn estimate_gas(
         ether_asset.clone(),
         fee_in_dot.clone(),
         true,
-    ).await?;
+    )
+    .await?;
 
     let delivery_fee_in_dot = calculate_delivery_fee_in_dot(clients, &destination_xcm).await?;
     let delivery_fee_in_ether = quote_price_exact_tokens_for_tokens(
         clients,
-        dot_asset,
-        ether_asset,
+        dot_asset.clone(),
+        ether_asset.clone(),
         delivery_fee_in_dot,
         true,
-    ).await?;
+    )
+    .await?;
 
     let dry_run_result = dry_run_xcm_on_asset_hub(clients, &destination_xcm).await?;
+
+    let extrinsic_fee_in_dot =
+        calculate_extrinsic_fee_in_dot(clients, &destination_xcm, origin).await?;
+    let extrinsic_fee_in_ether = quote_price_exact_tokens_for_tokens(
+        clients,
+        dot_asset.clone(),
+        ether_asset.clone(),
+        extrinsic_fee_in_dot,
+        true,
+    )
+    .await?;
 
     Ok(GasEstimation {
         fee_in_dot,
         fee_in_ether,
         delivery_fee_in_dot,
         delivery_fee_in_ether,
+        extrinsic_fee_in_dot,
+        extrinsic_fee_in_ether,
         asset_hub_xcm,
         dry_run_success: dry_run_result.success,
         dry_run_error: dry_run_result.error_message,
     })
 }
 
-pub async fn build_asset_hub_xcm(clients: &Clients, xcm_bytes: &[u8], claimer: Location, origin: [u8; 20], execution_fee: u128, assets: &[BridgeAsset]) -> Result<VersionedXcm, EstimatorError> {
+pub async fn build_asset_hub_xcm(
+    clients: &Clients,
+    xcm_bytes: &[u8],
+    claimer: Location,
+    origin: [u8; 20],
+    execution_fee: u128,
+    assets: &[BridgeAsset],
+) -> Result<VersionedXcm, EstimatorError> {
     let mut instructions = vec![
         DescendOrigin(X1([PalletInstance(INBOUND_PALLET_V2)])),
         UniversalOrigin(GlobalConsensus(Ethereum { chain_id: CHAIN_ID })),
-        ReserveAssetDeposited(Assets(vec![
-            asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset {
-                id: AssetId(Location {
-                    parents: 2,
-                    interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
-                }),
-                fun: Fungible(execution_fee),
-            }
-        ].into())),
+        ReserveAssetDeposited(Assets(
+            vec![
+                asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset {
+                    id: AssetId(Location {
+                        parents: 2,
+                        interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
+                    }),
+                    fun: Fungible(execution_fee),
+                },
+            ]
+            .into(),
+        )),
     ];
 
     instructions.push(SetHints {
-        hints: BoundedVec([AssetClaimer { location: claimer }].into())
+        hints: BoundedVec([AssetClaimer { location: claimer }].into()),
     });
 
     instructions.push(PayFees {
@@ -217,7 +246,7 @@ pub async fn build_asset_hub_xcm(clients: &Clients, xcm_bytes: &[u8], claimer: L
                 interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
             }),
             fun: Fungible(execution_fee),
-        }
+        },
     });
 
     let mut reserve_deposit_assets = vec![];
@@ -241,7 +270,7 @@ pub async fn build_asset_hub_xcm(clients: &Clients, xcm_bytes: &[u8], claimer: L
 
     instructions.push(DescendOrigin(X1([AccountKey20 {
         key: origin,
-        network: None
+        network: None,
     }])));
 
     let remote_xcm = extract_remote_xcm(xcm_bytes);
@@ -251,9 +280,7 @@ pub async fn build_asset_hub_xcm(clients: &Clients, xcm_bytes: &[u8], claimer: L
 }
 
 fn extract_remote_xcm(raw: &[u8]) -> Xcm {
-    if let Ok(versioned_xcm) =
-        VersionedXcm::decode_with_depth_limit(8, &mut &raw[..])
-    {
+    if let Ok(versioned_xcm) = VersionedXcm::decode_with_depth_limit(8, &mut &raw[..]) {
         if let VersionedXcm::V5(xcm) = versioned_xcm {
             return xcm;
         }
@@ -261,37 +288,63 @@ fn extract_remote_xcm(raw: &[u8]) -> Xcm {
     Xcm(vec![])
 }
 
-pub async fn query_xcm_weight(clients: &Clients, destination_xcm: VersionedXcm) -> Result<Weight, EstimatorError> {
-    let runtime_api_call = asset_hub_westend_runtime::runtime::apis().xcm_payment_api().query_xcm_weight(destination_xcm);
+pub async fn query_xcm_weight(
+    clients: &Clients,
+    destination_xcm: VersionedXcm,
+) -> Result<Weight, EstimatorError> {
+    let runtime_api_call = asset_hub_westend_runtime::runtime::apis()
+        .xcm_payment_api()
+        .query_xcm_weight(destination_xcm);
 
-    let weight_result = clients.asset_hub_client
+    let weight_result = clients
+        .asset_hub_client
         .runtime_api()
         .at_latest()
-        .await.map_err(|e| EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e)))?
+        .await
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
+        })?
         .call(runtime_api_call)
         .await
-        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to query XCM weight: {:?}", e)))?;
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to query XCM weight: {:?}", e))
+        })?;
 
-    weight_result.map_err(|e| EstimatorError::InvalidCommand(format!("XCM weight query returned error: {:?}", e)))
+    weight_result.map_err(|e| {
+        EstimatorError::InvalidCommand(format!("XCM weight query returned error: {:?}", e))
+    })
 }
 
-pub async fn query_weight_to_asset_fee(clients: &Clients, weight: &Weight) -> Result<u128, EstimatorError> {
+pub async fn query_weight_to_asset_fee(
+    clients: &Clients,
+    weight: &Weight,
+) -> Result<u128, EstimatorError> {
     let dot_asset = VersionedAssetId::V5(AssetId(Location {
         parents: 1,
         interior: Here,
     }));
 
-    let runtime_api_call = asset_hub_westend_runtime::runtime::apis().xcm_payment_api().query_weight_to_asset_fee(weight.clone(), dot_asset);
+    let runtime_api_call = asset_hub_westend_runtime::runtime::apis()
+        .xcm_payment_api()
+        .query_weight_to_asset_fee(weight.clone(), dot_asset);
 
-    let fee_result = clients.asset_hub_client
+    let fee_result = clients
+        .asset_hub_client
         .runtime_api()
         .at_latest()
-        .await.map_err(|e| EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e)))?
+        .await
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
+        })?
         .call(runtime_api_call)
         .await
-        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to query weight to asset fee: {:?}", e)))?;
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to query weight to asset fee: {:?}", e))
+        })?;
 
-    fee_result.map_err(|e| EstimatorError::InvalidCommand(format!("Weight to asset fee query returned error: {:?}", e)))
+    fee_result.map_err(|e| {
+        EstimatorError::InvalidCommand(format!("Weight to asset fee query returned error: {:?}", e))
+    })
 }
 
 pub async fn quote_price_exact_tokens_for_tokens(
@@ -305,15 +358,23 @@ pub async fn quote_price_exact_tokens_for_tokens(
         .asset_conversion_api()
         .quote_price_exact_tokens_for_tokens(asset1, asset2, asset1_balance, include_fee);
 
-    let quote_result = clients.asset_hub_client
+    let quote_result = clients
+        .asset_hub_client
         .runtime_api()
         .at_latest()
-        .await.map_err(|e| EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e)))?
+        .await
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
+        })?
         .call(runtime_api_call)
         .await
-        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to quote price for tokens: {:?}", e)))?;
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to quote price for tokens: {:?}", e))
+        })?;
 
-    quote_result.ok_or_else(|| EstimatorError::InvalidCommand("Quote price query returned None".to_string()))
+    quote_result.ok_or_else(|| {
+        EstimatorError::InvalidCommand("Quote price query returned None".to_string())
+    })
 }
 
 async fn calculate_delivery_fee_in_dot(
@@ -330,8 +391,9 @@ async fn calculate_delivery_fee_in_dot(
     // Convert XCM to bridge hub types for the query
     let encoded_xcm = codec::Encode::encode(xcm);
     let bridge_hub_xcm: bridge_hub_westend_runtime::runtime_types::xcm::VersionedXcm =
-        codec::Decode::decode(&mut &encoded_xcm[..])
-            .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to convert XCM types: {:?}", e)))?;
+        codec::Decode::decode(&mut &encoded_xcm[..]).map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to convert XCM types: {:?}", e))
+        })?;
 
     let versioned_destination =
         bridge_hub_westend_runtime::runtime_types::xcm::VersionedLocation::V5(destination);
@@ -339,25 +401,34 @@ async fn calculate_delivery_fee_in_dot(
     // Query delivery fees using XCM Payment API
     let runtime_api_call = bridge_hub_westend_runtime::runtime::apis()
         .xcm_payment_api()
-        .query_delivery_fees(
-            versioned_destination,
-            bridge_hub_xcm
-        );
+        .query_delivery_fees(versioned_destination, bridge_hub_xcm);
 
-    let fees_result = clients.bridge_hub_client
+    let fees_result = clients
+        .bridge_hub_client
         .runtime_api()
         .at_latest()
-        .await.map_err(|e| EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e)))?
+        .await
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
+        })?
         .call(runtime_api_call)
         .await
-        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to query delivery fees: {:?}", e)))?;
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to query delivery fees: {:?}", e))
+        })?;
 
-    let fees = fees_result.map_err(|e| EstimatorError::InvalidCommand(format!("Delivery fees query returned error: {:?}", e)))?;
+    let fees = fees_result.map_err(|e| {
+        EstimatorError::InvalidCommand(format!("Delivery fees query returned error: {:?}", e))
+    })?;
 
     // Find DOT asset in the result (parents: 1, interior: Here)
     let assets = match fees {
         bridge_hub_westend_runtime::runtime_types::xcm::VersionedAssets::V5(assets) => assets,
-        _ => return Err(EstimatorError::InvalidCommand("Unsupported VersionedAssets version".to_string())),
+        _ => {
+            return Err(EstimatorError::InvalidCommand(
+                "Unsupported VersionedAssets version".to_string(),
+            ))
+        }
     };
 
     for asset in assets.0.iter() {
@@ -368,7 +439,9 @@ async fn calculate_delivery_fee_in_dot(
         }
     }
 
-    Err(EstimatorError::InvalidCommand("Could not find DOT asset in delivery fees result".to_string()))
+    Err(EstimatorError::InvalidCommand(
+        "Could not find DOT asset in delivery fees result".to_string(),
+    ))
 }
 
 async fn dry_run_xcm_on_asset_hub(
@@ -390,23 +463,29 @@ async fn dry_run_xcm_on_asset_hub(
         .dry_run_api()
         .dry_run_xcm(bridge_hub_location, xcm.clone());
 
-    let dry_run_result = clients.asset_hub_client
+    let dry_run_result = clients
+        .asset_hub_client
         .runtime_api()
         .at_latest()
-        .await.map_err(|e| EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e)))?
+        .await
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
+        })?
         .call(runtime_api_call)
         .await
         .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to dry run XCM: {:?}", e)))?;
 
     match dry_run_result {
         Ok(effects) => {
-            let success = matches!(effects.execution_result,
-                Outcome::Complete { .. });
+            let success = matches!(effects.execution_result, Outcome::Complete { .. });
 
             let error_message = if success {
                 None
             } else {
-                Some(format!("XCM execution failed: {:?}", effects.execution_result))
+                Some(format!(
+                    "XCM execution failed: {:?}",
+                    effects.execution_result
+                ))
             };
 
             Ok(DryRunResult {
@@ -415,14 +494,59 @@ async fn dry_run_xcm_on_asset_hub(
                 forwarded_destination: None, // TODO: Parse forwarded XCMs
             })
         }
-        Err(e) => {
-            Ok(DryRunResult {
-                success: false,
-                error_message: Some(format!("Dry run API error: {:?}", e)),
-                forwarded_destination: None,
-            })
-        }
+        Err(e) => Ok(DryRunResult {
+            success: false,
+            error_message: Some(format!("Dry run API error: {:?}", e)),
+            forwarded_destination: None,
+        }),
     }
+}
+
+async fn calculate_extrinsic_fee_in_dot(
+    clients: &Clients,
+    xcm: &VersionedXcm,
+    origin: [u8; 20],
+) -> Result<u128, EstimatorError> {
+    // Use the fixture to get a realistic EventProof structure
+    let fixture = snowbridge_pallet_ethereum_client_fixtures::make_inbound_fixture();
+
+    // Convert the EventProof from the fixture to the runtime type
+    let encoded_event_proof = codec::Encode::encode(&fixture.event);
+    let runtime_event_proof: bridge_hub_westend_runtime::runtime_types::snowbridge_verification_primitives::EventProof =
+        codec::Decode::decode(&mut &encoded_event_proof[..])
+            .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to convert EventProof: {:?}", e)))?;
+
+    // Create the submit call with the converted EventProof
+    let submit_call = bridge_hub_westend_runtime::runtime::tx()
+        .ethereum_inbound_queue_v2()
+        .submit(runtime_event_proof);
+
+    // Create account ID for fee calculation (extend origin to 32 bytes)
+    let mut account_bytes = [0u8; 32];
+    account_bytes[..20].copy_from_slice(&origin);
+    let account_id = AccountId32(account_bytes);
+
+    // Use the runtime API to get transaction payment info
+    let payment_info_call = bridge_hub_westend_runtime::runtime::apis()
+        .transaction_payment_api()
+        .query_info(submit_call, 0); // 0 for encoded length
+
+    let payment_info = clients
+        .bridge_hub_client
+        .runtime_api()
+        .at_latest()
+        .await
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
+        })?
+        .call(payment_info_call)
+        .await
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to query payment info: {:?}", e))
+        })?;
+
+    // Return the partial fee (base fee + length fee + weight fee)
+    Ok(payment_info.partial_fee)
 }
 
 async fn lookup_foreign_asset_location(
@@ -432,9 +556,10 @@ async fn lookup_foreign_asset_location(
     let foreign_id_bytes = parse_hex_string(foreign_id)?;
 
     if foreign_id_bytes.len() != 32 {
-        return Err(EstimatorError::InvalidCommand(
-            format!("Foreign ID must be 32 bytes, got {}", foreign_id_bytes.len())
-        ));
+        return Err(EstimatorError::InvalidCommand(format!(
+            "Foreign ID must be 32 bytes, got {}",
+            foreign_id_bytes.len()
+        )));
     }
 
     let h256 = H256::from_slice(&foreign_id_bytes);
@@ -443,35 +568,47 @@ async fn lookup_foreign_asset_location(
         .ethereum_system()
         .foreign_to_native_id(h256);
 
-    let bridge_location_result = clients.bridge_hub_client
+    let bridge_location_result = clients
+        .bridge_hub_client
         .storage()
         .at_latest()
-        .await.map_err(|e| EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e)))?
+        .await
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
+        })?
         .fetch(&storage_query)
         .await
-        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to query foreign asset location: {:?}", e)))?;
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!(
+                "Failed to query foreign asset location: {:?}",
+                e
+            ))
+        })?;
 
-    let bridge_location = bridge_location_result.ok_or_else(|| EstimatorError::InvalidCommand(
-        format!("Foreign asset ID not found: {}", foreign_id)
-    ))?;
+    let bridge_location = bridge_location_result.ok_or_else(|| {
+        EstimatorError::InvalidCommand(format!("Foreign asset ID not found: {}", foreign_id))
+    })?;
 
     // Convert from bridge hub Location to asset hub Location
     let encoded = codec::Encode::encode(&bridge_location);
-    let decoded_location: Location = codec::Decode::decode(&mut &encoded[..])
-        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to convert Location types: {:?}", e)))?;
+    let decoded_location: Location = codec::Decode::decode(&mut &encoded[..]).map_err(|e| {
+        EstimatorError::InvalidCommand(format!("Failed to convert Location types: {:?}", e))
+    })?;
 
     Ok(decoded_location)
 }
 
 pub fn decode_assets(assets_json: &str) -> Result<Vec<BridgeAsset>, EstimatorError> {
-    let assets: Vec<BridgeAsset> = serde_json::from_str(assets_json)
-        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to parse assets JSON: {}", e)))?;
+    let assets: Vec<BridgeAsset> = serde_json::from_str(assets_json).map_err(|e| {
+        EstimatorError::InvalidCommand(format!("Failed to parse assets JSON: {}", e))
+    })?;
 
     Ok(assets)
 }
 
 fn parse_amount_string(amount_str: &str) -> Result<u128, EstimatorError> {
-    amount_str.parse::<u128>()
+    amount_str
+        .parse::<u128>()
         .map_err(|e| EstimatorError::InvalidCommand(format!("Invalid amount: {}", e)))
 }
 
@@ -489,16 +626,18 @@ fn parse_hex_string(hex_str: &str) -> Result<Vec<u8>, EstimatorError> {
 async fn convert_asset_to_xcm(
     clients: &Clients,
     asset: &BridgeAsset,
-) -> Result<asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset, EstimatorError> {
+) -> Result<asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset, EstimatorError>
+{
     match asset {
         BridgeAsset::NativeToken { token, amount } => {
             let amount_value = parse_amount_string(amount)?;
             let token_bytes = parse_hex_string(token)?;
 
             if token_bytes.len() != 20 {
-                return Err(EstimatorError::InvalidCommand(
-                    format!("Token address must be 20 bytes, got {}", token_bytes.len())
-                ));
+                return Err(EstimatorError::InvalidCommand(format!(
+                    "Token address must be 20 bytes, got {}",
+                    token_bytes.len()
+                )));
             }
 
             let mut address_bytes = [0u8; 20];
@@ -522,11 +661,12 @@ async fn convert_asset_to_xcm(
             let amount_value = parse_amount_string(amount)?;
             let location = lookup_foreign_asset_location(clients, foreign_id).await?;
 
-            Ok(asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset {
-                id: AssetId(location),
-                fun: Fungible(amount_value),
-            })
+            Ok(
+                asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset {
+                    id: AssetId(location),
+                    fun: Fungible(amount_value),
+                },
+            )
         }
     }
 }
-

@@ -59,3 +59,4 @@ lazy_static = "1.4.0"
 asset-hub-westend-runtime = { path = "runtimes/asset-hub-westend" }
 bridge-hub-westend-runtime = { path = "runtimes/bridge-hub-westend" }
 westend-runtime = { path = "runtimes/westend" }
+snowbridge-pallet-ethereum-client-fixtures = { version = "0.22.0" }
