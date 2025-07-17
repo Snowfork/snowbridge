@@ -28,6 +28,8 @@ use subxt::{
     config::substrate::AccountId32, config::DefaultExtrinsicParams, Config, OnlineClient,
     PolkadotConfig,
 };
+use subxt_signer::sr25519::dev;
+use subxt::tx::Payload;
 
 lazy_static! { // TODO extract to config file or something
     pub static ref ASSET_HUB_WS_URL: String = {
@@ -507,31 +509,37 @@ async fn calculate_extrinsic_fee_in_dot(
     xcm: &VersionedXcm,
     origin: [u8; 20],
 ) -> Result<u128, EstimatorError> {
-    // Use the fixture to get a realistic EventProof structure
+    use bridge_hub_westend_runtime::runtime_types::snowbridge_verification_primitives::EventProof;
     let fixture = snowbridge_pallet_ethereum_client_fixtures::make_inbound_fixture();
-
-    // Convert the EventProof from the fixture to the runtime type
     let encoded_event_proof = codec::Encode::encode(&fixture.event);
-    let runtime_event_proof: bridge_hub_westend_runtime::runtime_types::snowbridge_verification_primitives::EventProof =
-        codec::Decode::decode(&mut &encoded_event_proof[..])
-            .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to convert EventProof: {:?}", e)))?;
 
-    // Create the submit call with the converted EventProof
+    let runtime_event_proof: EventProof = codec::Decode::decode(&mut &encoded_event_proof[..])
+        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to decode EventProof: {:?}", e)))?;
+
     let submit_call = bridge_hub_westend_runtime::runtime::tx()
         .ethereum_inbound_queue_v2()
         .submit(runtime_event_proof);
 
-    // Create account ID for fee calculation (extend origin to 32 bytes)
-    let mut account_bytes = [0u8; 32];
-    account_bytes[..20].copy_from_slice(&origin);
-    let account_id = AccountId32(account_bytes);
+    let alice = dev::alice();
+    let unsigned_extrinsic = clients
+        .bridge_hub_client
+        .tx()
+        .create_unsigned(&submit_call)
+        .unwrap().encoded().to_vec();
 
-    // Use the runtime API to get transaction payment info
+    //let info = clients
+    //    .bridge_hub_client
+    //    .tx()
+    //    .create_unsigned(&submit_call)
+    //    .unwrap()
+    //    .partial_fee_estimate()
+    //    .await
+    //    .unwrap();
+
     let payment_info_call = bridge_hub_westend_runtime::runtime::apis()
         .transaction_payment_api()
-        .query_info(submit_call, 0); // 0 for encoded length
-
-    let payment_info = clients
+        .query_info(unsigned_extrinsic.into(), 0); // 0 for encoded length
+    let info = clients
         .bridge_hub_client
         .runtime_api()
         .at_latest()
@@ -542,11 +550,10 @@ async fn calculate_extrinsic_fee_in_dot(
         .call(payment_info_call)
         .await
         .map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to query payment info: {:?}", e))
+            EstimatorError::InvalidCommand(format!("Failed to query delivery fees: {:?}", e))
         })?;
 
-    // Return the partial fee (base fee + length fee + weight fee)
-    Ok(payment_info.partial_fee)
+    Ok(info.partial_fee)
 }
 
 async fn lookup_foreign_asset_location(
