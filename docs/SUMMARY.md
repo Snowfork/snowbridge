@@ -3,6 +3,10 @@
 * [Introduction](README.md)
 * [Concepts](concepts.md)
 
+## Developer Docs
+
+* [Typescript SDK](developer-docs/typescript-sdk.md)
+
 ## Architecture
 
 * [Overview](architecture/overview.md)
