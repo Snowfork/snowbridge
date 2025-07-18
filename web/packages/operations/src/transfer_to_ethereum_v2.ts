@@ -1,10 +1,15 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toEthereumSnowbridgeV2, contextConfigFor } from "@snowbridge/api"
+import { Context, toEthereumSnowbridgeV2, contextConfigFor, toEthereumV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
 
-export const transferToEthereum = async (sourceParaId: number, symbol: string, amount: bigint) => {
+export const transferToEthereum = async (
+    sourceParaId: number,
+    symbol: string,
+    amount: bigint,
+    feeTokenLocation?: any
+) => {
     await cryptoWaitReady()
 
     let env = "local_e2e"
@@ -42,11 +47,21 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     console.log("Asset Hub to Ethereum")
     {
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toEthereumSnowbridgeV2.getDeliveryFee(
-            { sourceParaId, context },
-            registry,
-            TOKEN_CONTRACT
-        )
+        let fee: toEthereumV2.DeliveryFee
+        if (feeTokenLocation) {
+            fee = await toEthereumSnowbridgeV2.getDeliveryFee(
+                { sourceParaId, context },
+                registry,
+                TOKEN_CONTRACT,
+                { feeTokenLocation, slippagePadPercentage: 20n }
+            )
+        } else {
+            fee = await toEthereumSnowbridgeV2.getDeliveryFee(
+                { sourceParaId, context },
+                registry,
+                TOKEN_CONTRACT
+            )
+        }
 
         // Step 2. Create a transfer tx
         const transfer = await toEthereumSnowbridgeV2.createTransfer(
@@ -73,10 +88,6 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
             `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
             formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals)
         )
-        // console.log(
-        //     "dryRun: ",
-        //     (await transfer.tx.dryRun(POLKADOT_ACCOUNT, { withSignedTransaction: true })).toHuman()
-        // )
 
         // Step 4. Validate the transaction.
         const validation = await toEthereumSnowbridgeV2.validateTransfer(context, transfer)

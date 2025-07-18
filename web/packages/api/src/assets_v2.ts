@@ -938,7 +938,7 @@ async function getRegisteredPnas(
     return pnas
 }
 
-export async function getAssetHubConversationPalletSwap(
+export async function getAssetHubConversionPalletSwap(
     assetHub: ApiPromise,
     asset1: any,
     asset2: any,
