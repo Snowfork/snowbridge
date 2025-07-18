@@ -3,7 +3,14 @@ import { SubmittableExtrinsic } from "@polkadot/api/types"
 import { Codec, ISubmittableResult } from "@polkadot/types/types"
 import { BN, hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
 import { blake2AsHex, decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
-import { DOT_LOCATION, parachainLocation, HERE_LOCATION } from "./xcmBuilder"
+import {
+    DOT_LOCATION,
+    parachainLocation,
+    HERE_LOCATION,
+    bridgeLocation,
+    isNative,
+    isParachainNative,
+} from "./xcmBuilder"
 import {
     buildResultXcmAssetHubERC20TransferFromParachain,
     buildParachainERC20ReceivedXcmOnDestination,
@@ -12,9 +19,12 @@ import {
     buildExportXcm,
     buildTransferXcmFromParachain,
     buildTransferXcmFromAssetHub,
+    buildTransferXcmFromParachainWithNativeAssetFee,
+    buildTransferXcmFromParachainWithDOTAsFee,
+    buildTransferXcmFromAssetHubWithDOTAsFee,
 } from "./xcmV5Builder"
 import { Asset, AssetRegistry } from "@snowbridge/base-types"
-import { ETHER_TOKEN_ADDRESS, getAssetHubConversationPalletSwap } from "./assets_v2"
+import { ETHER_TOKEN_ADDRESS, getAssetHubConversionPalletSwap } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
 import { getOperatingStatus } from "./status"
 import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
@@ -76,9 +86,8 @@ export async function createTransfer(
             beneficiaryAccount,
             ahAssetMetadata,
             amount,
-            fee.totalFeeInDot,
-            fee.ethereumExecutionFee!,
-            messageId
+            messageId,
+            fee
         )
     } else {
         tx = createSourceParachainTx(
@@ -90,14 +99,8 @@ export async function createTransfer(
             beneficiaryAccount,
             sourceAssetMetadata,
             amount,
-            fee.localExecutionFeeDOT! + fee.returnToSenderExecutionFeeDOT,
-            fee.totalFeeInDot,
-            fee.assetHubExecutionFeeDOT +
-                fee.returnToSenderDeliveryFeeDOT +
-                fee.snowbridgeDeliveryFeeDOT +
-                fee.bridgeHubDeliveryFeeDOT,
-            fee.ethereumExecutionFee!,
-            messageId
+            messageId,
+            fee
         )
     }
 
@@ -129,8 +132,12 @@ export async function getDeliveryFee(
         | { assetHub: ApiPromise; parachain: ApiPromise; ethereum: AbstractProvider },
     registry: AssetRegistry,
     tokenAddress: string,
-    padPercentage?: bigint,
-    defaultFee?: bigint
+    options?: {
+        padPercentage?: bigint
+        slippagePadPercentage?: bigint
+        defaultFee?: bigint
+        feeTokenLocation?: any
+    }
 ): Promise<DeliveryFee> {
     const { assetHub, parachain, ethereum } =
         "sourceParaId" in source
@@ -141,7 +148,8 @@ export async function getDeliveryFee(
               }
             : source
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
-    const feePadPercentage = padPercentage ?? 33n
+    const feePadPercentage = options?.padPercentage ?? 33n
+    const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFeeV2:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
     let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
@@ -149,7 +157,7 @@ export async function getDeliveryFee(
     let snowbridgeDeliveryFeeDOT = 0n
     if (leFee.eqn(0)) {
         console.warn("Asset Hub onchain BridgeHubEthereumBaseFeeV2 not set. Using default fee.")
-        snowbridgeDeliveryFeeDOT = defaultFee ?? 150_000_000_000n
+        snowbridgeDeliveryFeeDOT = options?.defaultFee ?? 150_000_000_000n
     } else {
         snowbridgeDeliveryFeeDOT = BigInt(leFee.toString())
     }
@@ -161,6 +169,19 @@ export async function getDeliveryFee(
         tokenAddress,
         sourceParachainImpl.parachainId
     )
+
+    // Currently, we only support DOT or Parachain native asset as the fee token.
+    let feeLocation = options?.feeTokenLocation
+    if (feeLocation) {
+        if (
+            !isNative(feeLocation) &&
+            !isParachainNative(feeLocation, sourceParachainImpl.parachainId)
+        ) {
+            throw new Error(
+                `Fee token as ${feeLocation} is not supported. Only DOT or native asset is allowed.`
+            )
+        }
+    }
 
     let forwardXcmToAH: any, forwardedXcmToBH: any, returnToSenderXcm: any, localXcm: any
 
@@ -260,13 +281,12 @@ export async function getDeliveryFee(
             sourceParachainImpl.parachainId,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
             sourceAssetMetadata,
             1n,
             1n,
-            1n,
-            1n,
-            1n,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            10n,
+            1n
         )
     } else {
         localXcm = buildTransferXcmFromAssetHub(
@@ -274,11 +294,11 @@ export async function getDeliveryFee(
             registry.ethChainId,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
             sourceAssetMetadata,
             1n,
             1n,
-            1n,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            1n
         )
     }
 
@@ -303,7 +323,7 @@ export async function getDeliveryFee(
         feePadPercentage
     )
 
-    const totalFeeInDot =
+    let totalFeeInDot =
         localExecutionFeeDOT +
         snowbridgeDeliveryFeeDOT +
         assetHubExecutionFeeDOT +
@@ -311,42 +331,66 @@ export async function getDeliveryFee(
         returnToSenderDeliveryFeeDOT +
         bridgeHubDeliveryFeeDOT
 
-    // calculate the cost of swapping for DOT
-    let totalFeeInNative: bigint | undefined = undefined
-    let assetHubExecutionFeeNative: bigint | undefined = undefined
-    let returnToSenderExecutionFeeNative: bigint | undefined = undefined
-    if (!registry.parachains[sourceParachainImpl.parachainId].features.hasDotBalance) {
-        const paraLoc = parachainLocation(sourceParachainImpl.parachainId)
-        const [
-            totalFeeInNativeRes,
-            assetHubExecutionFeeNativeRes,
-            returnToSenderExecutionFeeNativeRes,
-        ] = await Promise.all([
-            getAssetHubConversationPalletSwap(assetHub, paraLoc, DOT_LOCATION, totalFeeInDot),
-            getAssetHubConversationPalletSwap(
-                assetHub,
-                paraLoc,
-                DOT_LOCATION,
-                assetHubExecutionFeeDOT
-            ),
-            getAssetHubConversationPalletSwap(
-                assetHub,
-                paraLoc,
-                DOT_LOCATION,
-                returnToSenderExecutionFeeDOT
-            ),
-        ])
-        totalFeeInNative = totalFeeInNativeRes
-        assetHubExecutionFeeNative = assetHubExecutionFeeNativeRes
-        returnToSenderExecutionFeeNative = returnToSenderExecutionFeeNativeRes
-    }
-
     // Calculate execution cost on ethereum
     let ethereumChain = registry.ethereumChains[registry.ethChainId.toString()]
     let feeData = await ethereum.getFeeData()
     let ethereumExecutionFee =
         (feeData.gasPrice ?? 2_000_000_000n) *
         ((tokenErcMetadata.deliveryGas ?? 80_000n) + (ethereumChain.baseDeliveryGas ?? 120_000n))
+
+    // calculate the cost of swapping in native asset
+    let totalFeeInNative: bigint | undefined = undefined
+    let assetHubExecutionFeeNative: bigint | undefined = undefined
+    let returnToSenderExecutionFeeNative: bigint | undefined = undefined
+    let ethereumExecutionFeeInNative: bigint | undefined
+    let localExecutionFeeInNative: bigint | undefined
+    if (feeLocation) {
+        // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
+        if (isNative(feeLocation)) {
+            ethereumExecutionFeeInNative = await getAssetHubConversionPalletSwap(
+                assetHub,
+                DOT_LOCATION,
+                bridgeLocation(registry.ethChainId),
+                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage)
+            )
+            totalFeeInDot += ethereumExecutionFeeInNative
+        }
+        // On Parachains, we can use their native asset as the fee token.
+        // If the fee is in native, we need to swap it to DOT first, then swap DOT to Ether to cover the ethereum execution fee.
+        else {
+            localExecutionFeeInNative = await getAssetHubConversionPalletSwap(
+                assetHub,
+                feeLocation,
+                DOT_LOCATION,
+                localExecutionFeeDOT
+            )
+            returnToSenderExecutionFeeNative = await getAssetHubConversionPalletSwap(
+                assetHub,
+                feeLocation,
+                DOT_LOCATION,
+                returnToSenderExecutionFeeDOT
+            )
+            let ethereumExecutionFeeInDOT = await getAssetHubConversionPalletSwap(
+                assetHub,
+                DOT_LOCATION,
+                bridgeLocation(registry.ethChainId),
+                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage)
+            )
+            ethereumExecutionFeeInNative = await getAssetHubConversionPalletSwap(
+                assetHub,
+                feeLocation,
+                DOT_LOCATION,
+                padFeeByPercentage(ethereumExecutionFeeInDOT, feeSlippagePadPercentage)
+            )
+            totalFeeInDot += ethereumExecutionFeeInDOT
+            totalFeeInNative = await getAssetHubConversionPalletSwap(
+                assetHub,
+                feeLocation,
+                DOT_LOCATION,
+                padFeeByPercentage(totalFeeInDot, feeSlippagePadPercentage)
+            )
+        }
+    }
 
     return {
         localExecutionFeeDOT,
@@ -356,10 +400,13 @@ export async function getDeliveryFee(
         returnToSenderDeliveryFeeDOT,
         returnToSenderExecutionFeeDOT,
         totalFeeInDot,
-        totalFeeInNative,
+        ethereumExecutionFee,
+        feeLocation,
         assetHubExecutionFeeNative,
         returnToSenderExecutionFeeNative,
-        ethereumExecutionFee,
+        ethereumExecutionFeeInNative,
+        localExecutionFeeInNative,
+        totalFeeInNative,
     }
 }
 
@@ -445,18 +492,20 @@ export async function validateTransfer(
         }
     }
 
-    let etherBalance = await sourceParachainImpl.getTokenBalance(
-        sourceAccountHex,
-        registry.ethChainId,
-        ETHER_TOKEN_ADDRESS
-    )
+    if (!fee.feeLocation) {
+        let etherBalance = await sourceParachainImpl.getTokenBalance(
+            sourceAccountHex,
+            registry.ethChainId,
+            ETHER_TOKEN_ADDRESS
+        )
 
-    if (fee.ethereumExecutionFee! > etherBalance) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.InsufficientEtherBalance,
-            message: "Insufficient ether balance to submit transaction.",
-        })
+        if (fee.ethereumExecutionFee! > etherBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientEtherBalance,
+                message: "Insufficient ether balance to submit transaction.",
+            })
+        }
     }
 
     let sourceDryRunError
@@ -826,21 +875,39 @@ function createAssetHubTx(
     beneficiaryAccount: string,
     asset: Asset,
     amount: bigint,
-    totalDOTFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint,
-    messageId: string
+    messageId: string,
+    fee: DeliveryFee
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
-    let xcm = buildTransferXcmFromAssetHub(
-        parachain.registry,
-        ethChainId,
-        sourceAccount,
-        beneficiaryAccount,
-        asset,
-        amount,
-        totalDOTFeeAmount,
-        remoteEtherFeeAmount,
-        messageId
-    )
+    let xcm: any
+    // If there is no fee specified, we assume that Ether is available in user's wallet on source chain,
+    // thus no swap required on Asset Hub.
+    if (!fee.feeLocation) {
+        xcm = buildTransferXcmFromAssetHub(
+            parachain.registry,
+            ethChainId,
+            sourceAccount,
+            beneficiaryAccount,
+            messageId,
+            asset,
+            amount,
+            fee.totalFeeInDot,
+            fee.ethereumExecutionFee!
+        )
+    } // If the fee asset is in DOT, we need to swap it to Ether on Asset Hub.
+    else {
+        xcm = buildTransferXcmFromAssetHubWithDOTAsFee(
+            parachain.registry,
+            ethChainId,
+            sourceAccount,
+            beneficiaryAccount,
+            messageId,
+            asset,
+            amount,
+            fee.localExecutionFeeDOT! + fee.bridgeHubDeliveryFeeDOT + fee.snowbridgeDeliveryFeeDOT,
+            fee.totalFeeInDot,
+            fee.ethereumExecutionFee!
+        )
+    }
     console.log("xcm on AH:", xcm.toHuman())
     return parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
 }
@@ -854,27 +921,66 @@ function createSourceParachainTx(
     beneficiaryAccount: string,
     asset: Asset,
     amount: bigint,
-    localDOTFeeAmount: bigint,
-    totalDOTFeeAmount: bigint,
-    assethubDOTFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint,
-    messageId: string
+    messageId: string,
+    fee: DeliveryFee
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
-    let xcm = buildTransferXcmFromParachain(
-        parachain.registry,
-        ethChainId,
-        assetHubParaId,
-        sourceParachainId,
-        sourceAccount,
-        beneficiaryAccount,
-        asset,
-        amount,
-        localDOTFeeAmount,
-        totalDOTFeeAmount,
-        assethubDOTFeeAmount,
-        remoteEtherFeeAmount,
-        messageId
-    )
+    let xcm: any
+    // No swap
+    if (!fee.feeLocation) {
+        xcm = buildTransferXcmFromParachain(
+            parachain.registry,
+            ethChainId,
+            assetHubParaId,
+            sourceParachainId,
+            sourceAccount,
+            beneficiaryAccount,
+            messageId,
+            asset,
+            amount,
+            fee.localExecutionFeeDOT! + fee.returnToSenderExecutionFeeDOT,
+            fee.totalFeeInDot,
+            fee.ethereumExecutionFee!
+        )
+    } // One swap from DOT to Ether on Asset Hub.
+    else if (isNative(fee.feeLocation)) {
+        xcm = buildTransferXcmFromParachainWithDOTAsFee(
+            parachain.registry,
+            ethChainId,
+            assetHubParaId,
+            sourceParachainId,
+            sourceAccount,
+            beneficiaryAccount,
+            messageId,
+            asset,
+            amount,
+            fee.localExecutionFeeDOT! + fee.returnToSenderExecutionFeeDOT,
+            fee.totalFeeInDot,
+            fee.ethereumExecutionFee!,
+            fee.ethereumExecutionFeeInNative!
+        )
+    }
+    // If the fee asset is in native asset, we need to swap it to DOT first, then a second swap from DOT to Ether
+    else if (isParachainNative(fee.feeLocation, sourceParachainId)) {
+        xcm = buildTransferXcmFromParachainWithNativeAssetFee(
+            parachain.registry,
+            ethChainId,
+            assetHubParaId,
+            sourceParachainId,
+            sourceAccount,
+            beneficiaryAccount,
+            messageId,
+            asset,
+            amount,
+            fee.localExecutionFeeInNative! + fee.returnToSenderExecutionFeeNative!,
+            fee.totalFeeInNative!,
+            fee.ethereumExecutionFee!,
+            fee.ethereumExecutionFeeInNative!
+        )
+    } else {
+        throw new Error(
+            `Fee token as ${fee.feeLocation} is not supported. Only DOT or native asset is allowed.`
+        )
+    }
     console.log("xcm on source chain:", xcm.toHuman())
     return parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
 }

@@ -19,7 +19,7 @@ import {
     HERE_LOCATION,
     buildAssetHubERC20TransferFromParachainWithNativeFee,
 } from "./xcmBuilder"
-import { getAssetHubConversationPalletSwap } from "./assets_v2"
+import { getAssetHubConversionPalletSwap } from "./assets_v2"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
@@ -63,11 +63,14 @@ export type DeliveryFee = {
     returnToSenderExecutionFeeDOT: bigint
     returnToSenderDeliveryFeeDOT: bigint
     totalFeeInDot: bigint
+    localExecutionFeeDOT?: bigint
+    ethereumExecutionFee?: bigint
+    feeLocation?: any
     totalFeeInNative?: bigint
     assetHubExecutionFeeNative?: bigint
     returnToSenderExecutionFeeNative?: bigint
-    localExecutionFeeDOT?: bigint
-    ethereumExecutionFee?: bigint
+    localExecutionFeeInNative?: bigint
+    ethereumExecutionFeeInNative?: bigint
 }
 
 export type FeeInfo = {
@@ -368,14 +371,14 @@ export async function getDeliveryFee(
             assetHubExecutionFeeNativeRes,
             returnToSenderExecutionFeeNativeRes,
         ] = await Promise.all([
-            getAssetHubConversationPalletSwap(assetHub, paraLoc, DOT_LOCATION, totalFeeInDot),
-            getAssetHubConversationPalletSwap(
+            getAssetHubConversionPalletSwap(assetHub, paraLoc, DOT_LOCATION, totalFeeInDot),
+            getAssetHubConversionPalletSwap(
                 assetHub,
                 paraLoc,
                 DOT_LOCATION,
                 assetHubExecutionFeeDOT
             ),
-            getAssetHubConversationPalletSwap(
+            getAssetHubConversionPalletSwap(
                 assetHub,
                 paraLoc,
                 DOT_LOCATION,
