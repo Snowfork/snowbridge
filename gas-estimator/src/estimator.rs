@@ -24,12 +24,8 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use std::env;
-use subxt::{
-    config::substrate::AccountId32, config::DefaultExtrinsicParams, Config, OnlineClient,
-    PolkadotConfig,
-};
+use subxt::{config::DefaultExtrinsicParams, Config, OnlineClient, PolkadotConfig};
 use subxt_signer::sr25519::dev;
-use subxt::tx::Payload;
 
 lazy_static! { // TODO extract to config file or something
     pub static ref ASSET_HUB_WS_URL: String = {
@@ -44,7 +40,7 @@ lazy_static! { // TODO extract to config file or something
         if let Ok(val) = env::var("BRIDGE_HUB_WS_URL") {
             val
         } else {
-            "ws://127.0.0.1:13144".to_string()
+            "ws://127.0.0.1:11144".to_string()
         }
     };
 }
@@ -506,15 +502,17 @@ async fn dry_run_xcm_on_asset_hub(
 
 async fn calculate_extrinsic_fee_in_dot(
     clients: &Clients,
-    xcm: &VersionedXcm,
-    origin: [u8; 20],
+    _xcm: &VersionedXcm,
+    _origin: [u8; 20],
 ) -> Result<u128, EstimatorError> {
     use bridge_hub_westend_runtime::runtime_types::snowbridge_verification_primitives::EventProof;
     let fixture = snowbridge_pallet_ethereum_client_fixtures::make_inbound_fixture();
     let encoded_event_proof = codec::Encode::encode(&fixture.event);
 
     let runtime_event_proof: EventProof = codec::Decode::decode(&mut &encoded_event_proof[..])
-        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to decode EventProof: {:?}", e)))?;
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to decode EventProof: {:?}", e))
+        })?;
 
     let submit_call = bridge_hub_westend_runtime::runtime::tx()
         .ethereum_inbound_queue_v2()
@@ -525,35 +523,24 @@ async fn calculate_extrinsic_fee_in_dot(
         .bridge_hub_client
         .tx()
         .create_unsigned(&submit_call)
-        .unwrap().encoded().to_vec();
+        .unwrap()
+        .encoded()
+        .to_vec();
 
-    //let info = clients
-    //    .bridge_hub_client
-    //    .tx()
-    //    .create_unsigned(&submit_call)
-    //    .unwrap()
-    //    .partial_fee_estimate()
-    //    .await
-    //    .unwrap();
+    let hex_call = hex::encode(&unsigned_extrinsic);
+    println!("{}", hex_call);
 
-    let payment_info_call = bridge_hub_westend_runtime::runtime::apis()
-        .transaction_payment_api()
-        .query_info(unsigned_extrinsic.into(), 0); // 0 for encoded length
-    let info = clients
+    let fee = clients
         .bridge_hub_client
-        .runtime_api()
-        .at_latest()
+        .tx()
+        .create_signed(&submit_call, &alice, Default::default())
         .await
-        .map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
-        })?
-        .call(payment_info_call)
+        .unwrap()
+        .partial_fee_estimate()
         .await
-        .map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to query delivery fees: {:?}", e))
-        })?;
+        .unwrap();
 
-    Ok(info.partial_fee)
+    Ok(fee)
 }
 
 async fn lookup_foreign_asset_location(
