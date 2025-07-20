@@ -312,14 +312,14 @@ async fn malicious_payload_inner(
 		&validator_proofs,
 	);
 
+	let suggested_gas_price = test_clients.ethereum_client.get_gas_price().await;
+	let higher_gas_price = suggested_gas_price.unwrap() * 3; // 200% higher
 	if test_config.submit_initial {
-		let call =
-			test_clients
-				.beefy_client
-				.submitInitial(commitment.clone(), bitfield.clone(), proof);
-		let result = call.send().await;
 
-		println!("{:?}", result);
+		let call = test_clients
+			.beefy_client
+			.submitInitial(commitment.clone(), bitfield.clone(), proof);
+		let result = call.gas_price(higher_gas_price).send().await;
 		if result.is_ok() {
 			println!("successful submitInit: {:?}", result.as_ref().unwrap());
 		} else {
@@ -343,8 +343,11 @@ async fn malicious_payload_inner(
 		while let Some(_block) = stream.next().await {}
 
 		let call = test_clients.beefy_client.commitPrevRandao(FixedBytes(*hashed_commitment));
-		let result = call.send().await.expect("commit valid");
-		println!("{:?}", result);
+		let result_raw = call.gas_price(higher_gas_price).send().await;
+		let result = result_raw.expect("commit valid");
+		println!("result (commitPrevRandao): {:?}", result);
+		let receipt = result.get_receipt().await.expect("get receipt");
+		println!("receipt (commitPrevRandao): {:?}", receipt);
 	}
 
 	if test_config.submit_final {
@@ -393,8 +396,11 @@ async fn malicious_payload_inner(
 			vec![],
 			U256::from(0),
 		);
-		let result = call.send().await;
+		let result = call.gas_price(higher_gas_price).send().await;
 		// println!("{:?}", result);
+		if !result.is_ok() {
+			println!("result (submitFinal): {:?}", result)
+		}
 		assert!(result.is_ok());
 	}
 
