@@ -177,18 +177,18 @@ start_relayer() {
     ) &
 
     # Launch equivocation fisherman
-    (
-        : >"$output_dir"/equivocation-fisherman.log
-        while :; do
-            echo "Starting equivocation fisherman at $(date)"
-            "${relayer_v2}" run fisherman \
-                --config "$output_dir/parachain-relay.json" \
-                --ethereum.private-key $parachain_relay_primary_gov_eth_key \
-                --substrate.private-key "//ExecutionRelayAssetHub" \
-                >>"$output_dir"/equivocation-fisherman.log 2>&1 || true
-            sleep 20
-        done
-    ) &
+    # (
+    #     : >"$output_dir"/equivocation-fisherman.log
+    #     while :; do
+    #         echo "Starting equivocation fisherman at $(date)"
+    #         "${relayer_v2}" run fisherman \
+    #             --config "$output_dir/parachain-relay.json" \
+    #             --ethereum.private-key $parachain_relay_primary_gov_eth_key \
+    #             --substrate.private-key "//ExecutionRelayAssetHub" \
+    #             >>"$output_dir"/equivocation-fisherman.log 2>&1 || true
+    #         sleep 20
+    #     done
+    # ) &
 
     # Launch beacon relay
     (
