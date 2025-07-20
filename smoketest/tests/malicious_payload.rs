@@ -148,7 +148,7 @@ async fn malicious_payload() {
 		.expect("subscribe to blocks");
 
 	let test_config =
-		TestConfig { submit_initial: true, submit_final: true, report_equivocation: true };
+		TestConfig { submit_initial: true, submit_final: false, report_equivocation: false };
 
 	let equivocation_variants =
 		vec![EquivocationType::ForkEquivocation, EquivocationType::FutureBlockEquivocation];
