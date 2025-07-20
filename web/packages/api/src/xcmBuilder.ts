@@ -1358,7 +1358,26 @@ export function isNative(location: any) {
 }
 
 export function isParachainNative(location: any, parachainId: number) {
-    return JSON.stringify(location) == JSON.stringify(parachainLocation(parachainId))
+    return (
+        location.parents === 1 &&
+        location.interior &&
+        location.interior.x1 &&
+        location.interior.x1[0] &&
+        location.interior.x1[0].Parachain &&
+        location.interior.x1[0].Parachain === parachainId
+    )
+}
+
+export function isEthereumNative(location: any, ethChainId: number) {
+    return (
+        location.parents === 2 &&
+        location.interior &&
+        location.interior.x1 &&
+        location.interior.x1[0] &&
+        location.interior.x1[0].GlobalConsensus &&
+        location.interior.x1[0].GlobalConsensus.Ethereum &&
+        location.interior.x1[0].GlobalConsensus.Ethereum.chain_id === ethChainId
+    )
 }
 
 export const accountToLocation = (account: string) => {
