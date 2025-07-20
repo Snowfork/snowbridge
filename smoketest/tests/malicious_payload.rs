@@ -376,7 +376,7 @@ async fn malicious_payload_inner(
 			.await
 			.unwrap()
 			.into_result_stream()
-			.take(5);
+			.take(1);
 		while let Some(_block) = stream.next().await {}
 
 		let signer: PrivateKeySigner = (*ETHEREUM_KEY).to_string().parse().unwrap();
