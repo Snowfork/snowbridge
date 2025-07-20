@@ -41,7 +41,7 @@ import {
     dryRunOnSourceParachain,
     getSnowbridgeDeliveryFee,
     MaxWeight,
-} from "src/toEthereumSnowbridgeV2"
+} from "../../toEthereumSnowbridgeV2"
 
 export class ERC20FromParachain implements TransferInterface {
     async getDeliveryFee(

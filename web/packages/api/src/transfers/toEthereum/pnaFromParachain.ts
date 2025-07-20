@@ -34,7 +34,7 @@ import {
     dryRunOnSourceParachain,
     getSnowbridgeDeliveryFee,
     MaxWeight,
-} from "src/toEthereumSnowbridgeV2"
+} from "../../toEthereumSnowbridgeV2"
 
 export class PNAFromParachain implements TransferInterface {
     async getDeliveryFee(

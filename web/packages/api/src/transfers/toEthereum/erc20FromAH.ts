@@ -29,7 +29,6 @@ import { TransferInterface } from "./transferInterface"
 import {
     dryRunOnSourceParachain,
     getSnowbridgeDeliveryFee,
-    isFeeAllowed,
     MaxWeight,
 } from "../../toEthereumSnowbridgeV2"
 
