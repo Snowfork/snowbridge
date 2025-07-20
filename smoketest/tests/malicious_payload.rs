@@ -195,13 +195,6 @@ async fn malicious_payload_inner(
 		Result<subxt::blocks::Block<PolkadotConfig, OnlineClient<PolkadotConfig>>, subxt::Error>,
 	>,
 ) {
-	let current_validator_set = test_clients
-		.beefy_client
-		.currentValidatorSet()
-		.call()
-		.await
-		.expect("beefy client initialized");
-
 	let block_number = test_clients
 		.beefy_client
 		.latestBeefyBlock()
@@ -234,6 +227,13 @@ async fn malicious_payload_inner(
 		EquivocationType::ForkEquivocation => (block_number as u32) + 1,
 		EquivocationType::FutureBlockEquivocation => (block_number as u32) + 1000,
 	};
+	let current_validator_set = test_clients
+		.beefy_client
+		.currentValidatorSet()
+		.call()
+		.await
+		.expect("beefy client initialized");
+
 	let commitment = Commitment {
 		payload: payload.clone(),
 		blockNumber: equivocation_block,
@@ -413,8 +413,8 @@ async fn malicious_payload_inner(
 			vec![],
 			U256::from(0),
 		);
+
 		let result = call.gas_price(higher_gas_price).send().await;
-		// println!("{:?}", result);
 		if !result.is_ok() {
 			println!("result (submitFinal): {:?}", result)
 		}
