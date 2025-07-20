@@ -120,18 +120,18 @@ config_relayer() {
         config/execution-relay-v1.json >$output_dir/execution-relay-v1.json
 
     # Configure execution relay v2
-      jq \
-          --arg eth_endpoint_ws $eth_endpoint_ws \
-          --arg k1 "$(address_for GatewayProxy)" \
-          --argjson electra_forked_epoch $electra_forked_epoch \
-          '
+    jq \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --argjson electra_forked_epoch $electra_forked_epoch \
+        '
         .source.ethereum.endpoint = $eth_endpoint_ws
       | .source.contracts.Gateway = $k1
       | .schedule.id = 0
       | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
 
       ' \
-          config/execution-relay.json >$output_dir/execution-relay.json
+        config/execution-relay.json >$output_dir/execution-relay.json
 }
 
 start_relayer() {

@@ -5,8 +5,6 @@ use alloy::providers::{DynProvider, Provider, ProviderBuilder, WsConnect};
 use alloy::signers::local::PrivateKeySigner;
 use codec::{DecodeAll, Encode};
 use futures::StreamExt;
-use k256::ecdsa::SigningKey;
-
 use jsonrpsee::core::client::ClientT;
 use jsonrpsee::ws_client::WsClientBuilder;
 use serde_json::Value;
@@ -22,7 +20,7 @@ use snowbridge_smoketest::{
 		self,
 		api::{
 			beefy_mmr_leaf::storage::types::beefy_authorities,
-			runtime_apis::{beefy_api, beefy_mmr_api},
+			runtime_apis::beefy_api,
 			runtime_types::{
 				sp_consensus_beefy::{
 					commitment::Commitment as spCommitment,
@@ -31,10 +29,7 @@ use snowbridge_smoketest::{
 					ForkVotingProof, FutureBlockVotingProof, VoteMessage,
 				},
 				sp_mmr_primitives::AncestryProof,
-				sp_runtime::generic::{
-					digest::{Digest, DigestItem},
-					header::Header,
-				},
+				sp_runtime::generic::{digest::Digest, header::Header},
 				sp_session::MembershipProof,
 			},
 		},
@@ -326,16 +321,17 @@ async fn malicious_payload_inner(
 
 		println!("{:?}", result);
 		if result.is_ok() {
-			println!("success!");
+			println!("successful submitInit: {:?}", result.as_ref().unwrap());
 		} else {
 			println!(
 				"{:?}",
-				result.as_ref().err().unwrap().as_revert_data().expect("is revert error")
+				result.as_ref().err().unwrap()
 			);
 		}
 		assert!(result.is_ok());
-		tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
-
+		println!("waiting for receipt");
+		let receipt = result.unwrap().get_receipt().await.expect("get receipt");
+		println!("receipt (submitInitial): {:?}", receipt);
 		let mut stream = test_clients
 			.ethereum_client
 			.subscribe_blocks()
