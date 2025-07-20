@@ -76,19 +76,17 @@ export class PNAFromAH implements TransferInterface {
         let bridgeHubDeliveryFeeDOT = 0n
 
         const assetHubImpl = await paraImplementation(assetHub)
-        {
-            localXcm = buildTransferXcmFromAssetHub(
-                assetHub.registry,
-                registry.ethChainId,
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                sourceAssetMetadata,
-                1n,
-                1n,
-                1n
-            )
-        }
+        localXcm = buildTransferXcmFromAssetHub(
+            assetHub.registry,
+            registry.ethChainId,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            sourceAssetMetadata,
+            1n,
+            1n,
+            1n
+        )
 
         forwardedXcmToBH = buildExportXcm(
             assetHub.registry,

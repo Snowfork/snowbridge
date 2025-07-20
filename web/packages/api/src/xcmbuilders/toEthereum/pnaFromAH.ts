@@ -113,7 +113,7 @@ export function buildTransferXcmFromAssetHub(
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let tokenLocation = asset.location
     let assets = []
     if (isNative(tokenLocation)) {
         assets.push({
@@ -129,24 +129,47 @@ export function buildTransferXcmFromAssetHub(
             },
         })
     } else {
-        assets.push({
-            id: tokenLocation,
-            fun: {
-                Fungible: tokenAmount,
-            },
-        })
-        assets.push({
-            id: DOT_LOCATION,
-            fun: {
-                Fungible: totalDOTFeeAmount,
-            },
-        })
-        assets.push({
-            id: bridgeLocation(ethChainId),
-            fun: {
-                Fungible: remoteEtherFeeAmount,
-            },
-        })
+        // native asset first
+        if (tokenLocation.parents == 0) {
+            assets.push({
+                id: tokenLocation,
+                fun: {
+                    Fungible: tokenAmount,
+                },
+            })
+            assets.push({
+                id: DOT_LOCATION,
+                fun: {
+                    Fungible: totalDOTFeeAmount,
+                },
+            })
+            assets.push({
+                id: bridgeLocation(ethChainId),
+                fun: {
+                    Fungible: remoteEtherFeeAmount,
+                },
+            })
+        } // KSM assets
+        else if (tokenLocation.parents == 2) {
+            assets.push({
+                id: DOT_LOCATION,
+                fun: {
+                    Fungible: totalDOTFeeAmount + remoteEtherFeeAmount,
+                },
+            })
+            assets.push({
+                id: tokenLocation,
+                fun: {
+                    Fungible: tokenAmount,
+                },
+            })
+            assets.push({
+                id: bridgeLocation(ethChainId),
+                fun: {
+                    Fungible: remoteEtherFeeAmount,
+                },
+            })
+        }
     }
     let instructions: any[] = [
         {
