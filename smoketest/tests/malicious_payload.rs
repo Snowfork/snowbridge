@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use alloy::primitives::{Address, Bytes, U256};
 use alloy::providers::{DynProvider, Provider, ProviderBuilder, WsConnect};
@@ -368,8 +368,7 @@ async fn malicious_payload_inner(
 			.unwrap()
 			.into_result_stream()
 			.take(5);
-		while let Some(_block) = stream.next().await {
-		}
+		while let Some(_block) = stream.next().await {}
 
 		let signer: PrivateKeySigner = (*ETHEREUM_KEY).to_string().parse().unwrap();
 		let address = signer.address();
@@ -523,7 +522,7 @@ async fn malicious_payload_inner(
 				let tx = test_clients
 					.relaychain_client
 					.tx()
-					.sign_and_submit_default(&report, &dev::alice())
+					.sign_and_submit_default(&report, &dev::bob())
 					.await
 					.expect("submit report");
 
