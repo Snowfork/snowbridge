@@ -327,6 +327,13 @@ async fn malicious_payload_inner(
 	let suggested_gas_price = test_clients.ethereum_client.get_gas_price().await;
 	let higher_gas_price = suggested_gas_price.unwrap() * 3; // 200% higher
 	if test_config.submit_initial {
+		let commit_delay = test_clients
+			.beefy_client
+			.randaoCommitDelay()
+			.call()
+			.await
+			.expect("get randao commit delay");
+		println!("RANDAO commit delay: {:?}", commit_delay);
 
 		let call = test_clients
 			.beefy_client
@@ -350,7 +357,7 @@ async fn malicious_payload_inner(
 			.await
 			.unwrap()
 			.into_result_stream()
-			.take(3);
+			.take(commit_delay.try_into().expect("commit_delay fits usize"));
 
 		while let Some(_block) = stream.next().await {}
 
