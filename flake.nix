@@ -4,8 +4,7 @@
     inputs = {
         nixpkgs.url = "nixpkgs/nixos-unstable";
         flake-utils.url  = "github:numtide/flake-utils";
-        # pin to 2024-09-03 monthly
-        foundry.url = "github:shazow/foundry.nix?rev=671672bd60a0d2e5f6757638fdf27e806df755a4";
+        foundry.url = "github:shazow/foundry.nix";
     };
 
     outputs = { self, nixpkgs, flake-utils, foundry }:
@@ -57,6 +56,7 @@
                     gotools
                     gopls
                     go-outline
+                    go-ethereum
                     gopkgs
                     godef
                     golint
@@ -72,6 +72,8 @@
                     # NOTE: when upgrading rustup, check for a command to install the version in the toolchain file:
                     # https://github.com/rust-lang/rustup/issues/2686
                     rustup
+                    # convenience for clearing unused build outputs
+                    cargo-sweep
 
                     cowsay
 
