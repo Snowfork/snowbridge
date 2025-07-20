@@ -20,6 +20,9 @@ register_weth_on_ah() {
     # Mint weth to Penpal Sovereign on AH
     local call="0x3506020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d007369626cd00700000000000000000000000000000000000000000000000000001300002cf61a24a229"
     send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
+    # Mint weth to Ferdie
+    local call='0x3506020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
+    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 
 register_weth_on_penpal() {
@@ -123,16 +126,6 @@ function transfer_local_balance() {
             "${amount}"
 }
 
-function configure_all() {
-    configure_bridge
-    register_ether
-    register_weth
-    register_pal
-    mint_wnd_as_fee
-    register_wnd_on_bh
-    register_roc_on_ah
-}
-
 
 add_liquidity_on_ah() {
     # Mint Ether to Alice
@@ -148,9 +141,13 @@ add_liquidity_on_ah() {
     send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
 }
 
-function configure_all() {
-    register_roc_on_ah
+configure_others_on_ah() {
     add_liquidity_on_ah
+    register_roc_on_ah
+}
+
+function configure_all() {
+    configure_others_on_ah
     configure_bridge
     register_ether
     register_weth
