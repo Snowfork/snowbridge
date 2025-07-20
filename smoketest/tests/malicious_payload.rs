@@ -48,6 +48,16 @@ use subxt::{
 	OnlineClient, PolkadotConfig,
 };
 
+fn create_ticket_id(account: Address, commitment_hash: [u8; 32]) -> [u8; 32] {
+	let mut buf = [0u8; 64];
+	// account is 20 bytes -> left-pad to 32 bytes
+	buf[12..32].copy_from_slice(account.as_slice());
+	buf[32..64].copy_from_slice(&commitment_hash);
+	let hash = keccak_256(&buf);
+	let mut ticket_id = [0u8; 32];
+	ticket_id.copy_from_slice(&hash);
+	ticket_id
+}
 // const GATEWAY_V2_ADDRESS: [u8; 20] = hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0");
 
 pub struct TestClients {
@@ -356,8 +366,16 @@ async fn malicious_payload_inner(
 			.subscribe_blocks()
 			.await
 			.unwrap()
-			.into_result_stream();
-		while let Some(_block) = stream.next().await {}
+			.into_result_stream()
+			.take(5);
+		while let Some(_block) = stream.next().await {
+		}
+
+		let signer: PrivateKeySigner = (*ETHEREUM_KEY).to_string().parse().unwrap();
+		let address = signer.address();
+		let ticket_id = create_ticket_id(address, *hashed_commitment);
+		let ticket = test_clients.beefy_client.tickets(FixedBytes(ticket_id)).call().await.unwrap();
+		println!("ticket: {:?}", ticket);
 
 		let call = test_clients
 			.beefy_client
