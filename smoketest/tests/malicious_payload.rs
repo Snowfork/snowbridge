@@ -121,6 +121,7 @@ fn validator_proof(
 }
 
 // TODO: reuse from polkadot-sdk
+#[derive(Clone, Debug)]
 enum EquivocationType {
 	FutureBlockEquivocation,
 	ForkEquivocation,
@@ -147,11 +148,12 @@ async fn malicious_payload() {
 		.expect("subscribe to blocks");
 
 	let test_config =
-		TestConfig { submit_initial: true, submit_final: false, report_equivocation: false };
+		TestConfig { submit_initial: true, submit_final: true, report_equivocation: true };
 
-	for equivocation_variant in
-		[EquivocationType::FutureBlockEquivocation, EquivocationType::ForkEquivocation]
-	{
+	let equivocation_variants =
+		vec![EquivocationType::ForkEquivocation, EquivocationType::FutureBlockEquivocation];
+	for equivocation_variant in equivocation_variants.clone() {
+		println!("Testing malicious payload with equivocation variant: {:?}", equivocation_variant);
 		malicious_payload_inner(
 			equivocation_variant,
 			test_config.clone(),
@@ -180,7 +182,7 @@ async fn malicious_payload() {
 			println!("Slashed events found in block #{}: {:?}", block_number, slashed_events);
 			slashed_event_count += slashed_events.len();
 		}
-		if slashed_event_count >= 2 {
+		if slashed_event_count >= equivocation_variants.len() {
 			println!("Slashed event count reached: {}", slashed_event_count);
 			break;
 		}
