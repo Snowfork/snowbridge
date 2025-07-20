@@ -2,12 +2,10 @@ package fisherman
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -57,7 +55,12 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	var config fisherman.Config
-	err := config.Validate()
+	err := viper.UnmarshalExact(&config)
+	if err != nil {
+		return err
+	}
+
+	err = config.Validate()
 	if err != nil {
 		return fmt.Errorf("config file validation failed: %w", err)
 	}
@@ -110,21 +113,4 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
-}
-
-// HexDecodeString decodes bytes from a hex string. Contrary to hex.DecodeString, this function does not error if "0x"
-// is prefixed, and adds an extra 0 if the hex string has an odd length.
-func HexDecodeString(s string) ([]byte, error) {
-	s = strings.TrimPrefix(s, "0x")
-
-	if len(s)%2 != 0 {
-		s = "0" + s
-	}
-
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
 }
