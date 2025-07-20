@@ -63,7 +63,10 @@ register_pal() {
     # register pal-2 on bh
     local call='0x240105010300411f043205081470616c2d321470616c2d320c020109079edaa8020002286bee'
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
-    # mint Pal-2 to Ferdie
+    # mint Pal-2 to Ferdie on AH
+    local call='0x3506010300411f04320508001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0f0080c6a47e8d03'
+    send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
+    # mint Pal-2 to Ferdie on Penpal
     local call='0x320608001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0b0030ef7dba02'
     send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
     # register native pal

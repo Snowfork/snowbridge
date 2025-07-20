@@ -82,7 +82,6 @@ export const transferToEthereum = async (
 
         // Step 3. Estimate the cost of the execution cost of the transaction
         console.log("call: ", transfer.tx.inner.toHex())
-        console.log("utx: ", transfer.tx.toHex())
         const feePayment = (
             await transfer.tx.paymentInfo(POLKADOT_ACCOUNT, { withSignedTransaction: true })
         ).toPrimitive() as any

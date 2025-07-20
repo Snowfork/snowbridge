@@ -149,8 +149,8 @@ export function buildTransferXcmFromAssetHub(
                     Fungible: remoteEtherFeeAmount,
                 },
             })
-        } // KSM assets
-        else if (tokenLocation.parents == 2) {
+        } // Parachain assets or KSM assets
+        else if (tokenLocation.parents == 1 || tokenLocation.parents == 2) {
             assets.push({
                 id: DOT_LOCATION,
                 fun: {
