@@ -17,8 +17,6 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const { config, name, ethChainId } = snowbridgeEnv
 
-    const infuraKey = process.env.REACT_APP_INFURA_KEY || ""
-
     const parachains: { [paraId: string]: string } = {}
     parachains[config.BRIDGE_HUB_PARAID.toString()] =
         process.env["BRIDGE_HUB_URL"] ?? config.PARACHAINS[config.BRIDGE_HUB_PARAID.toString()]
@@ -27,8 +25,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const ethChains: { [ethChainId: string]: string | AbstractProvider } = {}
     Object.keys(config.ETHEREUM_CHAINS).forEach(
-        (ethChainId) =>
-            (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](infuraKey))
+        (ethChainId) => (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId])
     )
     if (process.env["EXECUTION_NODE_URL"]) {
         ethChains[ethChainId.toString()] = process.env["EXECUTION_NODE_URL"]
@@ -175,7 +172,10 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     const latestBlockOfBH = (await bridgeHub.query.system.number()).toPrimitive() as number
     const latestBlockOfEth = await ethereum.getBlockNumber()
 
-    const chains = await subsquid.fetchLatestBlocksSynced(env == "polkadot_mainnet")
+    const chains = await subsquid.fetchLatestBlocksSynced(
+        context.graphqlApiUrl(),
+        env == "polkadot_mainnet"
+    )
     for (let chain of chains?.latestBlocks) {
         let info: status.IndexerServiceStatusInfo = {
             chain: chain.name,

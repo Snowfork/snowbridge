@@ -31,8 +31,9 @@ wait_beacon_chain_ready() {
     done
 }
 
-configure_others() {
-    echo "Configure others"
+# A batch call to create all HRMP channels and provide some initial funding
+configure_from_test_helper() {
+    echo "Configure from test helper"
     pushd ../test-helpers
     pnpm configureE2E
     popd
@@ -55,16 +56,17 @@ configure_ah() {
     # Create Ether
     local call="0x28020c1f04020109079edaa802040000003501020109079edaa80200ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d01043513020109079edaa8021445746865721445746865721200"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
-    # Mint Ether
-    local call="0x3506020109079edaa802001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229"
-    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
+
+    # register Wnd on BH
+    local call="0x24010501000c776e640c776e640c020109079edaa8020002286bee"
+    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 
+
 configure_substrate() {
+    configure_from_test_helper
     configure_bh
     configure_ah
-    configure_others
-    # The beacon checkpoint is a large call and should be separated.
     wait_beacon_chain_ready
     config_beacon_checkpoint
 }

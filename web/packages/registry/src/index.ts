@@ -2,6 +2,7 @@ import { AssetRegistry } from "@snowbridge/base-types";
 import polkadot_mainnet from "./polkadot_mainnet.registry.json";
 import westend_sepolia from "./westend_sepolia.registry.json";
 import paseo_sepolia from "./paseo_sepolia.registry.json";
+import local_e2e from "./local_e2e.registry.json";
 
 function transformBigInt(obj: any): any {
   // Regex to match strings like "bigint:123"
@@ -50,6 +51,9 @@ export function assetRegistryFor(
       break;
     case "paseo_sepolia":
       json = paseo_sepolia;
+      break;
+    case "local_e2e":
+      json = local_e2e;
       break;
     default:
       throw Error(`Unkown env '${env}'`);

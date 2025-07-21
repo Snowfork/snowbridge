@@ -1,53 +1,24 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment, toPolkadotV2 } from "@snowbridge/api"
+import { Context, contextConfigFor, environment, toPolkadotV2 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { assetRegistryFor } from "@snowbridge/registry"
+import { WETH9__factory } from "@snowbridge/contract-types"
 
 export const transferToPolkadot = async (
     destinationChainId: number,
     symbol: string,
     amount: bigint
 ) => {
+    await cryptoWaitReady()
+
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snwobridgeEnv = environment.SNOWBRIDGE_ENV[env]
-    if (snwobridgeEnv === undefined) {
-        throw Error(`Unknown environment '${env}'`)
-    }
     console.log(`Using environment '${env}'`)
 
-    const { name, config, ethChainId } = snwobridgeEnv
-    await cryptoWaitReady()
-
-    const ethApikey = process.env.REACT_APP_INFURA_KEY || ""
-    const ethChains: { [ethChainId: string]: string } = {}
-    Object.keys(config.ETHEREUM_CHAINS).forEach(
-        (ethChainId) =>
-            (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId](ethApikey))
-    )
-    const context = new Context({
-        environment: name,
-        ethereum: {
-            ethChainId,
-            ethChains,
-            beacon_url: config.BEACON_HTTP_API,
-        },
-        polkadot: {
-            assetHubParaId: config.ASSET_HUB_PARAID,
-            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
-            relaychain: config.RELAY_CHAIN_URL,
-            parachains: config.PARACHAINS,
-        },
-        appContracts: {
-            gateway: config.GATEWAY_CONTRACT,
-            beefy: config.BEEFY_CONTRACT,
-        },
-    })
-
-    const polkadot_keyring = new Keyring({ type: "sr25519" })
+    const context = new Context(contextConfigFor(env))
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ??
@@ -55,6 +26,8 @@ export const transferToPolkadot = async (
         context.ethereum()
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
+
+    const polkadot_keyring = new Keyring({ type: "sr25519" })
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
@@ -66,6 +39,24 @@ export const transferToPolkadot = async (
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
+    if (!TOKEN_CONTRACT) {
+        console.log("no token contract exists, check it and rebuild asset registry.")
+        return
+    }
+
+    if (symbol.toLowerCase().startsWith("weth")) {
+        console.log("# Deposit and Approve WETH")
+        {
+            const weth9 = WETH9__factory.connect(TOKEN_CONTRACT, ETHEREUM_ACCOUNT)
+            const depositResult = await weth9.deposit({ value: amount })
+            const depositReceipt = await depositResult.wait()
+
+            const approveResult = await weth9.approve(context.config.appContracts.gateway, amount)
+            const approveReceipt = await approveResult.wait()
+
+            console.log("deposit tx", depositReceipt?.hash, "approve tx", approveReceipt?.hash)
+        }
+    }
 
     console.log("# Ethereum to Asset Hub")
     {
@@ -148,7 +139,7 @@ export const transferToPolkadot = async (
             }
             console.log(
                 `Success message with message id: ${message.messageId}
-                block number: ${message.blockNumber}  
+                block number: ${message.blockNumber}
                 tx hash: ${message.txHash}`
             )
         }

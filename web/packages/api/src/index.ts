@@ -7,6 +7,25 @@ import {
     IGatewayV1 as IGateway,
     IGatewayV1__factory as IGateway__factory,
 } from "@snowbridge/contract-types"
+import { SNOWBRIDGE_ENV } from "./environment"
+
+export * as toPolkadot from "./toPolkadot"
+export * as toPolkadotV2 from "./toPolkadot_v2"
+export * as toEthereum from "./toEthereum"
+export * as toEthereumV2 from "./toEthereum_v2"
+export * as utils from "./utils"
+export * as status from "./status"
+export * as assets from "./assets"
+export * as assetsV2 from "./assets_v2"
+export * as environment from "./environment"
+export * as subscan from "./subscan"
+export * as history from "./history"
+export * as historyV2 from "./history_v2"
+export * as subsquid from "./subsquid"
+export * as forKusama from "./forKusama"
+export * as toEthereumFromEVMV2 from "./toEthereumFromEVM_v2"
+export * as parachains from "./parachains"
+export * as toEthereumSnowbridgeV2 from "./toEthereumSnowbridgeV2"
 
 interface Parachains {
     [paraId: string]: ApiPromise
@@ -37,7 +56,7 @@ interface Config {
         gateway: string
         beefy: string
     }
-    graphqlApiUrl?: string
+    graphqlApiUrl: string
 }
 
 export class Context {
@@ -210,6 +229,10 @@ export class Context {
         return BeefyClient__factory.connect(this.config.appContracts.beefy, this.ethereum())
     }
 
+    graphqlApiUrl(): string {
+        return this.config.graphqlApiUrl
+    }
+
     async destroyContext(): Promise<void> {
         // clean up contract listeners
         if (this.#beefyClient) await this.beefyClient().removeAllListeners()
@@ -238,19 +261,68 @@ export class Context {
     }
 }
 
-export * as toPolkadot from "./toPolkadot"
-export * as toPolkadotV2 from "./toPolkadot_v2"
-export * as toEthereum from "./toEthereum"
-export * as toEthereumV2 from "./toEthereum_v2"
-export * as utils from "./utils"
-export * as status from "./status"
-export * as assets from "./assets"
-export * as assetsV2 from "./assets_v2"
-export * as environment from "./environment"
-export * as subscan from "./subscan"
-export * as history from "./history"
-export * as historyV2 from "./history_v2"
-export * as subsquid from "./subsquid"
-export * as forKusama from "./forKusama"
-export * as toEthereumFromEVMV2 from "./toEthereumFromEVM_v2"
-export * as parachains from "./parachains"
+export function contextConfigFor(
+    env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {})
+): Config {
+    if (!(env in SNOWBRIDGE_ENV)) {
+        throw Error(`Unknown environment '${env}'.`)
+    }
+    const {
+        ethChainId,
+        config: {
+            ASSET_HUB_PARAID,
+            BEACON_HTTP_API,
+            BEEFY_CONTRACT,
+            BRIDGE_HUB_PARAID,
+            ETHEREUM_CHAINS,
+            GATEWAY_CONTRACT,
+            PARACHAINS,
+            RELAY_CHAIN_URL,
+            GRAPHQL_API_URL,
+        },
+        kusamaConfig,
+    } = SNOWBRIDGE_ENV[env]
+
+    let kusama:
+        | {
+              assetHubParaId: number
+              bridgeHubParaId: number
+              parachains: { [paraId: string]: string }
+          }
+        | undefined = undefined
+
+    if (kusamaConfig) {
+        const kusamaParachains: { [paraId: string]: string } = {}
+        kusamaParachains[kusamaConfig?.BRIDGE_HUB_PARAID.toString()] =
+            kusamaConfig?.PARACHAINS[BRIDGE_HUB_PARAID.toString()]
+        kusamaParachains[kusamaConfig?.ASSET_HUB_PARAID.toString()] =
+            kusamaConfig?.PARACHAINS[ASSET_HUB_PARAID.toString()]
+
+        kusama = {
+            assetHubParaId: kusamaConfig.ASSET_HUB_PARAID,
+            bridgeHubParaId: kusamaConfig.BRIDGE_HUB_PARAID,
+            parachains: kusamaParachains,
+        }
+    }
+
+    return {
+        environment: env,
+        ethereum: {
+            ethChainId,
+            ethChains: ETHEREUM_CHAINS,
+            beacon_url: BEACON_HTTP_API,
+        },
+        polkadot: {
+            assetHubParaId: ASSET_HUB_PARAID,
+            bridgeHubParaId: BRIDGE_HUB_PARAID,
+            parachains: PARACHAINS,
+            relaychain: RELAY_CHAIN_URL,
+        },
+        kusama,
+        appContracts: {
+            gateway: GATEWAY_CONTRACT,
+            beefy: BEEFY_CONTRACT,
+        },
+        graphqlApiUrl: GRAPHQL_API_URL,
+    }
+}
