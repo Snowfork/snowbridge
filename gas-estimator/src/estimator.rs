@@ -274,17 +274,17 @@ pub async fn build_asset_hub_xcm(
     });
 
     let net_value = value.saturating_sub(execution_fee.saturating_add(relayer_fee));
-    if value > 0 {
+    if net_value > 0 {
         // Asset for remaining ether
-        instructions.push(PayFees {
-            asset: asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset {
-                id: AssetId(Location {
-                    parents: 2,
-                    interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
-                }),
-                fun: Fungible(value),
-            },
-        });
+        instructions.push(ReserveAssetDeposited(Assets(vec![asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset {
+            id: AssetId(Location {
+                parents: 2,
+                interior: X1([
+                    GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID }),
+                ]),
+            }),
+            fun: Fungible(net_value),
+        }].into())));
     }
 
     let mut reserve_deposit_assets = vec![];
