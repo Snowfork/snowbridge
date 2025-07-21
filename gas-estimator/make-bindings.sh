@@ -6,6 +6,7 @@ forge bind --module --overwrite \
     --root ../contracts
 
 # Substrate chains metadata
-subxt metadata --url wss://westend-rpc.polkadot.io -o runtimes/westend/polkadot-metadata.bin
-subxt metadata --url wss://westend-asset-hub-rpc.polkadot.io -o runtimes/asset-hub-westend/asset-hub-metadata.bin
-subxt metadata --url wss://westend-bridge-hub-rpc.polkadot.io -o runtimes/bridge-hub-westend/bridge-hub-metadata.bin
+subxt metadata --url ws://127.0.0.1:9944 -o runtimes/westend/polkadot-metadata.bin
+subxt metadata --url ws://127.0.0.1:12144 -o runtimes/asset-hub-westend/asset-hub-metadata.bin
+subxt metadata --url ws://127.0.0.1:11144 -o runtimes/bridge-hub-westend/bridge-hub-metadata.bin
+subxt metadata --url ws://127.0.0.1:11144 -o runtimes/bridge-hub-westend/bridge-hub-metadata.bin

@@ -483,6 +483,13 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 reg_call
             }
         }
+        Command::PenpalSetup(GovUpdate202501Args {
+                                     pricing_parameters,
+                                     register_ether,
+                                 }) => {
+            let (register_ether_call, set_ether_metadata_call) = commands::register_ether(&params);
+            send_xcm_asset_hub(&context, vec![register_ether_call, set_ether_metadata_call]).await?
+        }
     };
 
     #[cfg(any(feature = "westend", feature = "paseo"))]

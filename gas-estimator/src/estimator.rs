@@ -43,12 +43,21 @@ lazy_static! { // TODO extract to config file or something
             "ws://127.0.0.1:11144".to_string()
         }
     };
+
+    pub static ref PENPAL_HUB_WS_URL: String = {
+        if let Ok(val) = env::var("PENPAL_HUB_WS_URL") {
+            val
+        } else {
+            "ws://127.0.0.1:13144".to_string()
+        }
+    };
 }
 
 const CHAIN_ID: u64 = 11155111; // TODO switch on env
 const INBOUND_PALLET_V2: u8 = 91; // TODO switch on env
 const ASSET_HUB_PARA_ID: u32 = 1000;
 const BRIDGE_HUB_PARA_ID: u32 = 1002;
+const PENPAL_PARA_ID: u32 = 2000;
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
@@ -68,6 +77,8 @@ pub enum EstimatorError {
     InvalidHexFormat,
     InvalidCommand(String),
     ConnectionError(String),
+    /// The value provided does not cover the execution and relayer fee.
+    ValueTooLow,
 }
 
 impl std::fmt::Display for EstimatorError {
@@ -76,6 +87,7 @@ impl std::fmt::Display for EstimatorError {
             EstimatorError::InvalidHexFormat => write!(f, "Command must start with 0x"),
             EstimatorError::InvalidCommand(cmd) => write!(f, "Invalid command: {}", cmd),
             EstimatorError::ConnectionError(msg) => write!(f, "Connection error: {}", msg),
+            EstimatorError::ValueTooLow => write!(f, "Value provided to low to cover execution and relayer fee"),
         }
     }
 }
@@ -142,11 +154,15 @@ pub async fn estimate_gas(
     xcm_bytes: &[u8],
     claimer: Location,
     origin: [u8; 20],
+    value: u128,
     execution_fee: u128,
+    relayer_fee: u128,
     assets: &[BridgeAsset],
 ) -> Result<GasEstimation, EstimatorError> {
+    validate(value, execution_fee, relayer_fee)?;
+
     let destination_xcm =
-        build_asset_hub_xcm(clients, xcm_bytes, claimer, origin, execution_fee, assets).await?;
+        build_asset_hub_xcm(clients, xcm_bytes, claimer, origin, value, execution_fee, relayer_fee, assets).await?;
 
     let asset_hub_xcm = format!("{:?}", destination_xcm);
 
@@ -208,12 +224,22 @@ pub async fn estimate_gas(
     })
 }
 
+fn validate(value: u128, execution_fee: u128, relayer_fee: u128) -> Result<(), EstimatorError> {
+    if execution_fee.saturating_add(relayer_fee) > value {
+        return Err(EstimatorError::ValueTooLow)
+    }
+
+    Ok(())
+}
+
 pub async fn build_asset_hub_xcm(
     clients: &Clients,
     xcm_bytes: &[u8],
     claimer: Location,
     origin: [u8; 20],
+    value: u128,
     execution_fee: u128,
+    relayer_fee: u128,
     assets: &[BridgeAsset],
 ) -> Result<VersionedXcm, EstimatorError> {
     let mut instructions = vec![
@@ -246,6 +272,20 @@ pub async fn build_asset_hub_xcm(
             fun: Fungible(execution_fee),
         },
     });
+
+    let net_value = value.saturating_sub(execution_fee.saturating_add(relayer_fee));
+    if value > 0 {
+        // Asset for remaining ether
+        instructions.push(PayFees {
+            asset: asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset {
+                id: AssetId(Location {
+                    parents: 2,
+                    interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
+                }),
+                fun: Fungible(value),
+            },
+        });
+    }
 
     let mut reserve_deposit_assets = vec![];
     let mut reserve_withdraw_assets = vec![];
@@ -519,16 +559,6 @@ async fn calculate_extrinsic_fee_in_dot(
         .submit(runtime_event_proof);
 
     let alice = dev::alice();
-    let unsigned_extrinsic = clients
-        .bridge_hub_client
-        .tx()
-        .create_unsigned(&submit_call)
-        .unwrap()
-        .encoded()
-        .to_vec();
-
-    let hex_call = hex::encode(&unsigned_extrinsic);
-    println!("{}", hex_call);
 
     let fee = clients
         .bridge_hub_client

@@ -88,6 +88,49 @@ pub async fn send_xcm_bridge_hub(
     Ok(call)
 }
 
+pub async fn send_xcm_penpal(
+    context: &Context,
+    calls: Vec<AssetHubRuntimeCall>,
+) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
+    let mut accum: Vec<(u64, u64, Vec<u8>)> = vec![];
+
+    for call in calls.iter() {
+        let (mut ref_time, mut proof_size) =
+            query_weight_asset_hub(&context.asset_hub_api, call.clone()).await?;
+        increase_weight(&mut ref_time, &mut proof_size);
+        accum.push((ref_time, proof_size, call.encode()));
+    }
+
+    let mut instructions: Vec<Instruction> = vec![UnpaidExecution {
+        weight_limit: WeightLimit::Unlimited,
+        check_origin: None,
+    }];
+
+    for (ref_time, proof_size, encoded) in accum.into_iter() {
+        instructions.append(&mut vec![
+            Transact {
+                origin_kind: OriginKind::Superuser,
+                require_weight_at_most: Weight {
+                    ref_time: ref_time,
+                    proof_size: proof_size,
+                },
+                call: DoubleEncoded { encoded },
+            },
+            ExpectTransactStatus(MaybeErrorCode::Success),
+        ]);
+    }
+
+    let call = RelayRuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
+        dest: Box::new(VersionedLocation::V4(Location {
+            parents: 0,
+            interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
+        })),
+        message: Box::new(VersionedXcm::V4(Xcm(instructions))),
+    });
+
+    Ok(call)
+}
+
 pub async fn send_xcm_asset_hub(
     context: &Context,
     calls: Vec<AssetHubRuntimeCall>,

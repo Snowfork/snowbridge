@@ -35,6 +35,9 @@ enum Commands {
         /// Origin address (hex string)
         #[arg(long)]
         origin: String,
+        /// The full Ether value supplied to cover the transaction, including execution and relayer fee
+        #[arg(long)]
+        value: u128,
         /// Execution fee in wei
         #[arg(long)]
         execution_fee: u128,
@@ -71,15 +74,17 @@ async fn main() {
 async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
     let clients = clients().await?;
 
-    let (xcm_hex, assets_json, claimer_hex, origin_hex, execution_fee) = match cli.command {
+    let (xcm_hex, assets_json, claimer_hex, origin_hex, value, execution_fee, relayer_fee) = match cli.command {
         Commands::V2SendMessage {
             xcm,
             assets,
             claimer,
             origin,
+            value,
             execution_fee,
+            relayer_fee,
             ..
-        } => (xcm, assets, claimer, origin, execution_fee),
+        } => (xcm, assets, claimer, origin, value, execution_fee, relayer_fee),
     };
 
     let xcm_bytes = hex::decode(&xcm_hex[2..]).map_err(|_| EstimatorError::InvalidHexFormat)?;
@@ -105,7 +110,9 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
         &xcm_bytes,
         claimer,
         origin,
+        value,
         execution_fee,
+        relayer_fee,
         &assets,
     )
     .await?;

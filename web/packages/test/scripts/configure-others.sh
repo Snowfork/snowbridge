@@ -123,17 +123,6 @@ function transfer_local_balance() {
             "${amount}"
 }
 
-function configure_all() {
-    configure_bridge
-    register_ether
-    register_weth
-    register_pal
-    mint_wnd_as_fee
-    register_wnd_on_bh
-    register_roc_on_ah
-}
-
-
 add_liquidity_on_ah() {
     # Mint Ether to Alice
     local call="0x3506020109079edaa80200d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d1300002cf61a24a229"

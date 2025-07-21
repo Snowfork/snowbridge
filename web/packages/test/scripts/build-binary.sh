@@ -18,7 +18,7 @@ build_polkadot_binaries() {
     # Check that all 3 binaries are available and no changes made in the polkadot and substrate dirs
     if [[ ! -e "target/release/polkadot" || ! -e "target/release/polkadot-execute-worker" || ! -e "target/release/polkadot-prepare-worker" || "$changes_detected" -eq 1 ]]; then
         echo "Building polkadot binary, due to changes detected in polkadot or substrate, or binaries not found"
-        cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker $features
+        cargo build --release --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker $features
     else
         echo "No changes detected in polkadot or substrate and binaries are available, not rebuilding relaychain binaries."
     fi
@@ -30,7 +30,7 @@ build_polkadot_binaries() {
     cp target/release/polkadot-prepare-worker $output_bin_dir/polkadot-prepare-worker
 
     echo "Building polkadot-parachain binary"
-    cargo build --release --locked -p polkadot-parachain-bin --bin polkadot-parachain $features
+    cargo build --release -p polkadot-parachain-bin --bin polkadot-parachain $features
     cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
 
     popd
