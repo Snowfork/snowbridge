@@ -56,10 +56,12 @@ const sendBatchTransactions = async (wsPort: number, txs: TransactionConfig[]) =
 const sendBatchTransactionsOnPenpal = async () => {
     // Connect to node
     const api = await ApiPromise.create({ provider: new WsProvider("ws://127.0.0.1:13144") })
+    await api.isReady
 
     // Initialize Keyring and add an account (Replace with your private key or use mnemonic)
     const keyring = new Keyring({ type: "sr25519" })
     const sender = keyring.addFromUri(sudoAccount)
+    await cryptoWaitReady()
 
     const versionedLocation = api.createType("XcmVersionedLocation", {
         v4: {
@@ -92,17 +94,44 @@ const sendBatchTransactionsOnPenpal = async () => {
         api.tx.polkadotXcm.addAuthorizedAlias(versionedLocation, null),
     ]
 
-    // Create a batch transaction
-    const batchTx = api.tx.utility.batchAll(transactions)
+    if (api.tx.utility) {
+        // Create a batch transaction
+        const batchTx = api.tx.utility.batchAll(transactions)
 
-    console.log("Sending batch transaction...")
+        console.log("Sending batch transaction...")
 
-    // Sign and send the batch transaction
-    batchTx.signAndSend(sender, ({ status }) => {
-        if (status.isInBlock) {
-            console.log(`✅ Transaction included in block: ${status.asInBlock}`)
+        // Sign and send the batch transaction
+        batchTx.signAndSend(sender, ({ status }) => {
+            if (status.isInBlock) {
+                console.log(`✅ Transaction included in block: ${status.asInBlock}`)
+            }
+        })
+    } else {
+        console.log("Utility module is not available on this network (Penpal).")
+        for (let i = 0; i < transactions.length; i++) {
+            const tx = transactions[i]
+            try {
+                console.log(`Sending transaction ${i + 1}/${transactions.length}...`)
+                await new Promise((resolve, reject) => {
+                    tx.signAndSend(sender, ({ status, events, dispatchError }) => {
+                        if (status.isInBlock) {
+                            console.log(
+                                `✅ Transaction ${i + 1} included in block: ${status.asInBlock}`
+                            )
+                        } else if (status.isFinalized) {
+                            resolve(status)
+                        }
+                    }).catch((error) => {
+                        console.error(
+                            `❌ Error signing/sending transaction ${i + 1}:`,
+                            error.message
+                        )
+                        reject(error)
+                    })
+                })
+            } catch (error) {}
         }
-    })
+    }
 }
 
 const sleep = async (ms: number) => {
@@ -111,6 +140,7 @@ const sleep = async (ms: number) => {
 
 const main = async () => {
     // HRMP channel opening
+    console.log("sending HRMP channel opening txs")
     await sendBatchTransactions(9944, [
         { recipient: "1002", senderParaId: 1000 },
         { recipient: "1000", senderParaId: 1002 },
@@ -118,20 +148,24 @@ const main = async () => {
         { recipient: "1000", senderParaId: 2000 },
     ])
     // BridgeHub funding
+    console.log("sending BridgeHub txs")
     await sendBatchTransactions(11144, [
         { recipient: "5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV" },
         { recipient: "5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c" },
         { recipient: "5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV" },
     ])
     // AssetHub funding
+    console.log("sending AssetHub txs")
     await sendBatchTransactions(12144, [
         { recipient: "5Eg2fntJ27qsari4FGrGhrMqKFDRnkNSR6UshkZYBGXmSuC8" },
         { recipient: "5GjRnmh5o3usSYzVmsxBWzHEpvJyHK4tKNPhjpUR3ASrruBy" },
     ])
     // Relaychain funding
+    console.log("sending Relay txs")
     await sendBatchTransactions(9944, [
         { recipient: "5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV" },
     ])
+    console.log("sending Penpal txs")
     await sendBatchTransactionsOnPenpal()
 }
 
