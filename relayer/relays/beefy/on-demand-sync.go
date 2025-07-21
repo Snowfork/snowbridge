@@ -86,10 +86,11 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 		return fmt.Errorf("create gateway client: %w", err)
 	}
 	relay.gatewayContract = gatewayContract
-	// Check the on-demand sync every 30 minutes
-	ticker := time.NewTicker(time.Minute * 30)
+
+	ticker := time.NewTicker(time.Second * 60)
 
 	eg.Go(func() error {
+		defer ticker.Stop()
 		for {
 			log.Info("Starting check")
 
