@@ -208,7 +208,6 @@ async fn malicious_payload_inner(
 
 	let call = test_clients.beefy_client.latestMMRRoot();
 	let current_mmr_root = call.call().await.expect("commit valid");
-	println!("current mmr root: {:?}", current_mmr_root);
 	let payload_data = FixedBytes([0; 32]);
 
 	if current_mmr_root == *payload_data {
