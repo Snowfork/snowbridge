@@ -16,6 +16,7 @@ use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Instruction::Univ
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Instruction::{
     DescendOrigin, PayFees, ReserveAssetDeposited, SetHints, WithdrawAsset,
 };
+use asset_hub_westend_runtime::runtime_types::xcm::VersionedLocation;
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Xcm;
 use asset_hub_westend_runtime::runtime_types::xcm::VersionedAssetId;
 use asset_hub_westend_runtime::runtime_types::xcm::VersionedXcm;
@@ -26,6 +27,8 @@ use sp_core::H256;
 use std::env;
 use subxt::{config::DefaultExtrinsicParams, Config, OnlineClient, PolkadotConfig};
 use subxt_signer::sr25519::dev;
+
+use crate::penpal;
 
 lazy_static! { // TODO extract to config file or something
     pub static ref ASSET_HUB_WS_URL: String = {
@@ -44,8 +47,8 @@ lazy_static! { // TODO extract to config file or something
         }
     };
 
-    pub static ref PENPAL_HUB_WS_URL: String = {
-        if let Ok(val) = env::var("PENPAL_HUB_WS_URL") {
+    pub static ref PENPAL_WS_URL: String = {
+        if let Ok(val) = env::var("PENPAL_WS_URL") {
             val
         } else {
             "ws://127.0.0.1:13144".to_string()
@@ -69,6 +72,19 @@ impl Config for AssetHubConfig {
     type Hasher = <PolkadotConfig as Config>::Hasher;
     type Header = <PolkadotConfig as Config>::Header;
     type ExtrinsicParams = DefaultExtrinsicParams<AssetHubConfig>;
+    type AssetId = <PolkadotConfig as Config>::AssetId;
+}
+
+/// Custom config for Penpal
+pub enum PenpalConfig {}
+
+impl Config for PenpalConfig {
+    type AccountId = <PolkadotConfig as Config>::AccountId;
+    type Address = <PolkadotConfig as Config>::Address;
+    type Signature = <PolkadotConfig as Config>::Signature;
+    type Hasher = <PolkadotConfig as Config>::Hasher;
+    type Header = <PolkadotConfig as Config>::Header;
+    type ExtrinsicParams = DefaultExtrinsicParams<PenpalConfig>;
     type AssetId = <PolkadotConfig as Config>::AssetId;
 }
 
@@ -109,15 +125,24 @@ pub async fn clients() -> Result<Clients, EstimatorError> {
                 EstimatorError::ConnectionError(format!("Cannot connect to bridge hub: {}", e))
             })?;
 
+    let penpal_client: OnlineClient<PenpalConfig> =
+        OnlineClient::from_url((*PENPAL_WS_URL).to_string())
+            .await
+            .map_err(|e| {
+                EstimatorError::ConnectionError(format!("Cannot connect to penpal: {}", e))
+            })?;
+
     Ok(Clients {
         asset_hub_client: Box::new(asset_hub_client),
         bridge_hub_client: Box::new(bridge_hub_client),
+        penpal_client: Box::new(penpal_client),
     })
 }
 
 pub struct Clients {
     pub asset_hub_client: Box<OnlineClient<AssetHubConfig>>,
     pub bridge_hub_client: Box<OnlineClient<PolkadotConfig>>,
+    pub penpal_client: Box<OnlineClient<PenpalConfig>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -131,13 +156,16 @@ pub struct GasEstimation {
     pub asset_hub_xcm: String,
     pub dry_run_success: bool,
     pub dry_run_error: Option<String>,
+    pub destination_dry_run_success: Option<bool>,
+    pub destination_dry_run_error: Option<String>,
+    pub destination_para_id: Option<u32>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct DryRunResult {
     pub success: bool,
     pub error_message: Option<String>,
-    pub forwarded_destination: Option<String>,
+    pub forwarded_xcm: Option<(VersionedLocation, Vec<VersionedXcm>)>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -198,8 +226,6 @@ pub async fn estimate_gas(
     )
     .await?;
 
-    let dry_run_result = dry_run_xcm_on_asset_hub(clients, &destination_xcm).await?;
-
     let extrinsic_fee_in_dot =
         calculate_extrinsic_fee_in_dot(clients, &destination_xcm, origin).await?;
     let extrinsic_fee_in_ether = quote_price_exact_tokens_for_tokens(
@@ -209,7 +235,27 @@ pub async fn estimate_gas(
         extrinsic_fee_in_dot,
         true,
     )
-    .await?;
+        .await?;
+
+    let ah_dry_run_result = dry_run_xcm_on_asset_hub(clients, &destination_xcm).await?;
+
+    // Run destination dry run if there's a forwarded XCM
+    let (destination_dry_run_success, destination_dry_run_error, destination_para_id) = if ah_dry_run_result.forwarded_xcm.is_some() {
+        let forwarded_xcm = ah_dry_run_result.forwarded_xcm.unwrap();
+        
+        // Extract destination parachain ID before running dry run
+        let para_id = match extract_parachain_id(&forwarded_xcm.0) {
+            Ok(id) => Some(id),
+            Err(_) => None,
+        };
+        
+        match dry_run_xcm_on_destination(clients, forwarded_xcm).await {
+            Ok(dest_result) => (Some(dest_result.success), dest_result.error_message, para_id),
+            Err(e) => (Some(false), Some(format!("Destination dry run failed: {}", e)), para_id),
+        }
+    } else {
+        (None, None, None)
+    };
 
     Ok(GasEstimation {
         fee_in_dot,
@@ -219,8 +265,11 @@ pub async fn estimate_gas(
         extrinsic_fee_in_dot,
         extrinsic_fee_in_ether,
         asset_hub_xcm,
-        dry_run_success: dry_run_result.success,
-        dry_run_error: dry_run_result.error_message,
+        dry_run_success: ah_dry_run_result.success,
+        dry_run_error: ah_dry_run_result.error_message,
+        destination_dry_run_success,
+        destination_dry_run_error,
+        destination_para_id,
     })
 }
 
@@ -486,7 +535,6 @@ async fn dry_run_xcm_on_asset_hub(
     clients: &Clients,
     xcm: &VersionedXcm,
 ) -> Result<DryRunResult, EstimatorError> {
-    // Create bridge hub location (parents: 1, interior: X1([Parachain(1002)]))
     let bridge_hub_location = asset_hub_westend_runtime::runtime_types::xcm::VersionedLocation::V5(
         Location {
             parents: 1,
@@ -496,7 +544,6 @@ async fn dry_run_xcm_on_asset_hub(
         }
     );
 
-    // Query dry run XCM using Asset Hub's dry run API
     let runtime_api_call = asset_hub_westend_runtime::runtime::apis()
         .dry_run_api()
         .dry_run_xcm(bridge_hub_location, xcm.clone());
@@ -526,19 +573,81 @@ async fn dry_run_xcm_on_asset_hub(
                 ))
             };
 
+            let forwarded_xcms = effects.forwarded_xcms;
+
+            let forwarded_xcm = if forwarded_xcms.is_empty() {
+                None
+            } else {
+                Some(forwarded_xcms[0].clone())
+            };
+
             Ok(DryRunResult {
                 success,
                 error_message,
-                forwarded_destination: None, // TODO: Parse forwarded XCMs
+                forwarded_xcm,
             })
         }
         Err(e) => Ok(DryRunResult {
             success: false,
             error_message: Some(format!("Dry run API error: {:?}", e)),
-            forwarded_destination: None,
+            forwarded_xcm: None,
         }),
     }
 }
+
+async fn dry_run_xcm_on_destination(
+    clients: &Clients,
+    forwarded_xcm: (VersionedLocation, Vec<VersionedXcm>),
+) -> Result<DryRunResult, EstimatorError> {
+    let (destination_location, xcms) = forwarded_xcm;
+
+    println!("=== FORWARDED XCM TO DESTINATION ===");
+    println!("Destination location: {:?}", destination_location);
+    println!("Number of forwarded XCMs: {}", xcms.len());
+
+    // Extract parachain ID from the destination location
+    let para_id = extract_parachain_id(&destination_location)?;
+    println!("Extracted destination parachain ID: {}", para_id);
+
+    // Get the first XCM from the vec (assuming single XCM for now)
+    let xcm = xcms.into_iter().next()
+        .ok_or_else(|| EstimatorError::InvalidCommand("No XCM to forward".to_string()))?;
+
+    println!("XCM to be executed on destination: {:?}", xcm);
+    println!("=== END FORWARDED XCM INFO ===");
+
+    match para_id {
+        PENPAL_PARA_ID => {
+            println!("Dry running XCM on Penpal (parachain {})", para_id);
+            penpal::dry_run_xcm(clients, xcm).await
+        },
+        _ => {
+            Err(EstimatorError::InvalidCommand(
+                format!("Unsupported destination parachain: {}", para_id)
+            ))
+        }
+    }
+}
+
+fn extract_parachain_id(location: &VersionedLocation) -> Result<u32, EstimatorError> {
+    match location {
+        VersionedLocation::V5(loc) => {
+            match &loc.interior {
+                asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::X1(junction_array) => {
+                    match &junction_array[0] {
+                        asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::Junction::Parachain(para_id) => {
+                            Ok(*para_id)
+                        },
+                        _ => Err(EstimatorError::InvalidCommand("Location does not contain parachain junction".to_string()))
+                    }
+                },
+                _ => Err(EstimatorError::InvalidCommand("Unsupported location format".to_string()))
+            }
+        },
+        _ => Err(EstimatorError::InvalidCommand("Unsupported location version".to_string()))
+    }
+}
+
 
 async fn calculate_extrinsic_fee_in_dot(
     clients: &Clients,

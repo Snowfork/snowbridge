@@ -1,4 +1,5 @@
 mod estimator;
+mod penpal;
 
 use crate::estimator::{clients, decode_assets, estimate_gas, EstimatorError};
 use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::location::Location;

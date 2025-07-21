@@ -9,4 +9,4 @@ forge bind --module --overwrite \
 subxt metadata --url ws://127.0.0.1:9944 -o runtimes/westend/polkadot-metadata.bin
 subxt metadata --url ws://127.0.0.1:12144 -o runtimes/asset-hub-westend/asset-hub-metadata.bin
 subxt metadata --url ws://127.0.0.1:11144 -o runtimes/bridge-hub-westend/bridge-hub-metadata.bin
-subxt metadata --url ws://127.0.0.1:11144 -o runtimes/bridge-hub-westend/bridge-hub-metadata.bin
+subxt metadata --url ws://127.0.0.1:13144 -o runtimes/penpal-westend/penpal-metadata.bin

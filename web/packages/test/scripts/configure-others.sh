@@ -137,6 +137,20 @@ add_liquidity_on_ah() {
     send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
 }
 
+add_liquidity_on_penpal() {
+    # Mint Ether to Alice
+    local call="0x3306020109079edaa80200d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d1300002cf61a24a229"
+    send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
+    # Mint Ether to Ferdie
+    local call="0x3306020109079edaa802001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229"
+    send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
+    # Create Pool for Ether<->pal and add liquidity
+    local call="0x35000100020109079edaa802"
+    send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
+    local call="0x35010100020109079edaa8020010a5d4e8000000000000000000000000c817a804000000000000000000000001000000000000000000000000000000010000000000000000000000000000001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c"
+    send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
+}
+
 function configure_all() {
     register_roc_on_ah
     add_liquidity_on_ah
@@ -145,6 +159,13 @@ function configure_all() {
     register_weth
     register_pal
     mint_wnd_as_fee
+    echo "++++++++++++++++++++++++++++++++++++++++++++++"
+    echo "++++++++++++++++++++++++++++++++++++++++++++++"
+    echo "++++++++++++++++++++++++++++++++++++++++++++++"
+    add_liquidity_on_penpal
+    echo "++++++++++++++++++++++++++++++++++++++++++++++"
+    echo "++++++++++++++++++++++++++++++++++++++++++++++"
+    echo "++++++++++++++++++++++++++++++++++++++++++++++"
 }
 
 
