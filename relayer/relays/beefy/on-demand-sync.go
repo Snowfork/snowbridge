@@ -2,7 +2,6 @@ package beefy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
+	"golang.org/x/sync/errgroup"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -62,7 +62,7 @@ func NewOnDemandRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*OnDe
 	return &relay, nil
 }
 
-func (relay *OnDemandRelay) Start(ctx context.Context) error {
+func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error {
 	err := relay.ethereumConn.Connect(ctx)
 	if err != nil {
 		return fmt.Errorf("connect to ethereum: %w", err)
@@ -87,97 +87,75 @@ func (relay *OnDemandRelay) Start(ctx context.Context) error {
 	}
 	relay.gatewayContract = gatewayContract
 
-	relay.tokenBucket.Start(ctx)
+	ticker := time.NewTicker(time.Second * 60)
 
-	for {
-		sleep(ctx, time.Minute*1)
-		log.Info("Starting check")
+	eg.Go(func() error {
+		defer ticker.Stop()
+		for {
+			log.Info("Starting check")
 
-		paraNonce, ethNonce, err := relay.queryNonces(ctx)
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
+			paraNonce, ethNonce, err := relay.queryNonces(ctx)
+			if err != nil {
+				return fmt.Errorf("Query nonces: %w", err)
+			}
+
+			log.WithFields(log.Fields{
+				"paraNonce": paraNonce,
+				"ethNonce":  ethNonce,
+			}).Info("Nonces checked")
+
+			if paraNonce > ethNonce {
+
+				log.Info("Performing sync")
+
+				// sleep to ensure that beefy head newer than relay chain block in which the parachain block was accepted.
+				time.Sleep(time.Minute * 1)
+
+				beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
+
+				if err != nil {
+					return fmt.Errorf("Fetch latest beefy block hash: %w", err)
+				}
+
+				header, err := relay.relaychainConn.API().RPC.Chain.GetHeader(beefyBlockHash)
+				if err != nil {
+					return fmt.Errorf("Fetch latest beefy block header: %w", err)
+				}
+
+				err = relay.sync(ctx, uint64(header.Number))
+				if err != nil {
+					return fmt.Errorf("Sync failed: %w", err)
+				}
+
+				log.Info("Sync completed")
+
+				err = relay.waitUntilMessagesSynced(ctx, paraNonce)
+				if err != nil {
+					return fmt.Errorf("wait until messages synced: %w", err)
+				}
+			}
+			select {
+			case <-ctx.Done():
 				return nil
+			case <-ticker.C:
+				continue
 			}
-			log.WithError(err).Error("Query nonces")
-			continue
 		}
-
-		log.WithFields(log.Fields{
-			"paraNonce": paraNonce,
-			"ethNonce":  ethNonce,
-		}).Info("Nonces checked")
-
-		if paraNonce > ethNonce {
-
-			// Check if we are rate-limited
-			if !relay.tokenBucket.TryConsume(1) {
-				log.Info("Rate-limit exceeded")
-				continue
-			}
-
-			log.Info("Performing sync")
-			// sleep to ensure that beefy head newer than relay chain block in which the parachain block was accepted.
-			sleep(ctx, time.Minute*1)
-
-			beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
-			if err != nil {
-				if errors.Is(err, context.Canceled) {
-					return nil
-				}
-				log.WithError(err).Error("Fetch latest beefy block hash")
-				continue
-			}
-
-			header, err := relay.relaychainConn.API().RPC.Chain.GetHeader(beefyBlockHash)
-			if err != nil {
-				if errors.Is(err, context.Canceled) {
-					return nil
-				}
-				log.WithError(err).Error("Fetch latest beefy block header")
-				continue
-			}
-
-			err = relay.sync(ctx, uint64(header.Number))
-			if err != nil {
-				if errors.Is(err, context.Canceled) {
-					return nil
-				}
-				log.WithError(err).Error("Sync failed")
-				continue
-			}
-
-			log.Info("Sync completed")
-
-			relay.waitUntilMessagesSynced(ctx, paraNonce)
-		}
-	}
+	})
+	return nil
 }
 
-func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, paraNonce uint64) {
-	sleep(ctx, time.Minute*10)
+func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, paraNonce uint64) error {
 	for {
 		ethNonce, err := relay.fetchEthereumNonce(ctx)
 		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return
-			}
-			log.WithError(err).Error("fetch latest ethereum nonce")
-			sleep(ctx, time.Minute*1)
-			continue
+			return fmt.Errorf("fetch latest ethereum nonce: %w", err)
 		}
 
 		if ethNonce >= paraNonce {
-			return
+			return nil
 		}
-	}
-
-}
-
-func sleep(ctx context.Context, d time.Duration) {
-	select {
-	case <-ctx.Done():
-		return
-	case <-time.After(d):
+		time.Sleep(time.Second * 30)
 	}
 }
 
