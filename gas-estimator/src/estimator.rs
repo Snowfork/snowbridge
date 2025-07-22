@@ -147,8 +147,8 @@ pub struct Clients {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GasEstimation {
-    pub fee_in_dot: u128,
-    pub fee_in_ether: u128,
+    pub asset_hub_execution_fee_in_dot: u128,
+    pub asset_hub_execution_fee_in_ether: u128,
     pub delivery_fee_in_dot: u128,
     pub delivery_fee_in_ether: u128,
     pub extrinsic_fee_in_dot: u128,
@@ -159,6 +159,8 @@ pub struct GasEstimation {
     pub destination_dry_run_success: Option<bool>,
     pub destination_dry_run_error: Option<String>,
     pub destination_para_id: Option<u32>,
+    pub destination_execution_fee_in_dot: Option<u128>,
+    pub destination_execution_fee_in_ether: Option<u128>,
 }
 
 #[derive(Debug)]
@@ -194,8 +196,8 @@ pub async fn estimate_gas(
 
     let asset_hub_xcm = format!("{:?}", destination_xcm);
 
-    let _weight = query_xcm_weight(clients, destination_xcm.clone()).await?;
-    let fee_in_dot = query_weight_to_asset_fee(clients, &_weight).await?;
+    let weight = query_xcm_weight(clients, destination_xcm.clone()).await?;
+    let asset_hub_execution_fee_in_dot = query_weight_to_asset_fee(clients, &weight).await?;
 
     let dot_asset = Location {
         parents: 1,
@@ -207,11 +209,11 @@ pub async fn estimate_gas(
         interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
     };
 
-    let fee_in_ether = quote_price_exact_tokens_for_tokens(
+    let asset_hub_execution_fee_in_ether = quote_price_exact_tokens_for_tokens(
         clients,
         dot_asset.clone(),
         ether_asset.clone(),
-        fee_in_dot.clone(),
+        asset_hub_execution_fee_in_dot.clone(),
         true,
     )
     .await?;
@@ -240,26 +242,39 @@ pub async fn estimate_gas(
     let ah_dry_run_result = dry_run_xcm_on_asset_hub(clients, &destination_xcm).await?;
 
     // Run destination dry run if there's a forwarded XCM
-    let (destination_dry_run_success, destination_dry_run_error, destination_para_id) = if ah_dry_run_result.forwarded_xcm.is_some() {
+    let (destination_dry_run_success, destination_dry_run_error, destination_para_id, destination_execution_fee_in_dot, destination_execution_fee_in_ether) = if ah_dry_run_result.forwarded_xcm.is_some() {
         let forwarded_xcm = ah_dry_run_result.forwarded_xcm.unwrap();
-        
+
         // Extract destination parachain ID before running dry run
         let para_id = match extract_parachain_id(&forwarded_xcm.0) {
             Ok(id) => Some(id),
             Err(_) => None,
         };
-        
+
+        // Calculate destination execution fee (separate from dry run, like Asset Hub)
+        let (dest_fee_dot, dest_fee_ether) = if let Some(para_id_val) = para_id {
+            match calculate_destination_execution_fee(clients, &forwarded_xcm, para_id_val, &dot_asset, &ether_asset).await {
+                Ok((fee_dot, fee_ether)) => (Some(fee_dot), Some(fee_ether)),
+                Err(e) => {
+                    println!("Failed to calculate destination execution fee: {}", e);
+                    (None, None)
+                }
+            }
+        } else {
+            (None, None)
+        };
+
         match dry_run_xcm_on_destination(clients, forwarded_xcm).await {
-            Ok(dest_result) => (Some(dest_result.success), dest_result.error_message, para_id),
-            Err(e) => (Some(false), Some(format!("Destination dry run failed: {}", e)), para_id),
+            Ok(dest_result) => (Some(dest_result.success), dest_result.error_message, para_id, dest_fee_dot, dest_fee_ether),
+            Err(e) => (Some(false), Some(format!("Destination dry run failed: {}", e)), para_id, dest_fee_dot, dest_fee_ether),
         }
     } else {
-        (None, None, None)
+        (None, None, None, None, None)
     };
 
     Ok(GasEstimation {
-        fee_in_dot,
-        fee_in_ether,
+        asset_hub_execution_fee_in_dot,
+        asset_hub_execution_fee_in_ether,
         delivery_fee_in_dot,
         delivery_fee_in_ether,
         extrinsic_fee_in_dot,
@@ -270,6 +285,8 @@ pub async fn estimate_gas(
         destination_dry_run_success,
         destination_dry_run_error,
         destination_para_id,
+        destination_execution_fee_in_dot,
+        destination_execution_fee_in_ether,
     })
 }
 
@@ -601,20 +618,10 @@ async fn dry_run_xcm_on_destination(
 ) -> Result<DryRunResult, EstimatorError> {
     let (destination_location, xcms) = forwarded_xcm;
 
-    println!("=== FORWARDED XCM TO DESTINATION ===");
-    println!("Destination location: {:?}", destination_location);
-    println!("Number of forwarded XCMs: {}", xcms.len());
-
-    // Extract parachain ID from the destination location
     let para_id = extract_parachain_id(&destination_location)?;
-    println!("Extracted destination parachain ID: {}", para_id);
 
-    // Get the first XCM from the vec (assuming single XCM for now)
     let xcm = xcms.into_iter().next()
         .ok_or_else(|| EstimatorError::InvalidCommand("No XCM to forward".to_string()))?;
-
-    println!("XCM to be executed on destination: {:?}", xcm);
-    println!("=== END FORWARDED XCM INFO ===");
 
     match para_id {
         PENPAL_PARA_ID => {
@@ -626,6 +633,36 @@ async fn dry_run_xcm_on_destination(
                 format!("Unsupported destination parachain: {}", para_id)
             ))
         }
+    }
+}
+
+async fn calculate_destination_execution_fee(
+    clients: &Clients,
+    forwarded_xcm: &(VersionedLocation, Vec<VersionedXcm>),
+    para_id: u32,
+    dot_asset: &Location,
+    ether_asset: &Location,
+) -> Result<(u128, u128), EstimatorError> {
+    let (_, xcms) = forwarded_xcm;
+    let xcm = xcms.iter().next()
+        .ok_or_else(|| EstimatorError::InvalidCommand("No XCM to calculate fee for".to_string()))?;
+
+    match para_id {
+        PENPAL_PARA_ID => {
+            let fee_dot = crate::penpal::calculate_execution_fee(clients, xcm).await?;
+            let fee_ether = quote_price_exact_tokens_for_tokens(
+                clients,
+                dot_asset.clone(),
+                ether_asset.clone(),
+                fee_dot,
+                true,
+            ).await?;
+
+            Ok((fee_dot, fee_ether))
+        },
+        _ => Err(EstimatorError::InvalidCommand(
+            format!("Fee calculation not supported for parachain: {}", para_id)
+        )),
     }
 }
 
