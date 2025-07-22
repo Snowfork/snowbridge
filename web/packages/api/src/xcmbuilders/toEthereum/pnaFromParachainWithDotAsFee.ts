@@ -5,7 +5,6 @@ import {
     erc20Location,
     parachainLocation,
     accountToLocation,
-    HERE_LOCATION,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
 

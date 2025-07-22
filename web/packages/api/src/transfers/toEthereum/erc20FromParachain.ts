@@ -340,7 +340,7 @@ export class ERC20FromParachain implements TransferInterface {
     }
 
     async validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult> {
-        const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
+        const { registry, fee, tokenAddress, amount } = transfer.input
         const {
             sourceAccountHex,
             sourceParaId,

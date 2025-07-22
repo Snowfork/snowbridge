@@ -7,7 +7,6 @@ import {
     erc20LocationReanchored,
     parachainLocation,
     accountToLocation,
-    HERE_LOCATION,
     isEthereumNative,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
