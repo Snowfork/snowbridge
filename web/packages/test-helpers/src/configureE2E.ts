@@ -8,8 +8,9 @@ const SudoPubKey =
 const sudoAccount = "//Alice"
 
 interface TransactionConfig {
-    recipient: string
+    recipient?: string
     senderParaId?: number
+    authorizedAlias?: any
 }
 
 const sendBatchTransactions = async (wsPort: number, txs: TransactionConfig[]) => {
@@ -31,10 +32,12 @@ const sendBatchTransactions = async (wsPort: number, txs: TransactionConfig[]) =
 
     // Define recipient addresses and amounts (replace with real addresses)
     // Create transactions
-    const transactions = txs.map(({ recipient, senderParaId }) =>
-        senderParaId
-            ? api.tx.hrmp.forceOpenHrmpChannel(senderParaId, parseInt(recipient), 8, 512)
-            : api.tx.balances.transferAllowDeath(recipient, InitialFund)
+    const transactions = txs.map(({ recipient, senderParaId, authorizedAlias }) =>
+        recipient
+            ? senderParaId
+                ? api.tx.hrmp.forceOpenHrmpChannel(senderParaId, parseInt(recipient), 8, 512)
+                : api.tx.balances.transferAllowDeath(recipient, InitialFund)
+            : api.createType("XcmVersionedLocation", authorizedAlias)
     )
 
     console.log("Transactions: ", transactions)
@@ -51,87 +54,6 @@ const sendBatchTransactions = async (wsPort: number, txs: TransactionConfig[]) =
             console.log(`✅ Transaction included in block: ${status.asInBlock}`)
         }
     })
-}
-
-const sendBatchTransactionsOnPenpal = async () => {
-    // Connect to node
-    const api = await ApiPromise.create({ provider: new WsProvider("ws://127.0.0.1:13144") })
-    await api.isReady
-
-    // Initialize Keyring and add an account (Replace with your private key or use mnemonic)
-    const keyring = new Keyring({ type: "sr25519" })
-    const sender = keyring.addFromUri(sudoAccount)
-    await cryptoWaitReady()
-
-    const versionedLocation = api.createType("XcmVersionedLocation", {
-        v4: {
-            parents: 1,
-            interior: {
-                x1: [
-                    {
-                        accountId32: {
-                            network: null,
-                            id: SudoPubKey,
-                        },
-                    },
-                ],
-            },
-        },
-    })
-
-    // Define recipient addresses and amounts (replace with real addresses)
-    const transactions = [
-        //Account for AH sovereign
-        api.tx.balances.transferAllowDeath(
-            "5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV",
-            InitialFund
-        ),
-        //Checking account
-        api.tx.balances.transferAllowDeath(
-            "5EYCAe5ijiYgWYWi1fs8Xz1td1djEtJVVnNfzvDRP4VtLL7Y",
-            InitialFund
-        ),
-        api.tx.polkadotXcm.addAuthorizedAlias(versionedLocation, null),
-    ]
-
-    if (api.tx.utility) {
-        // Create a batch transaction
-        const batchTx = api.tx.utility.batchAll(transactions)
-
-        console.log("Sending batch transaction...")
-
-        // Sign and send the batch transaction
-        batchTx.signAndSend(sender, ({ status }) => {
-            if (status.isInBlock) {
-                console.log(`✅ Transaction included in block: ${status.asInBlock}`)
-            }
-        })
-    } else {
-        console.log("Utility module is not available on this network (Penpal).")
-        for (let i = 0; i < transactions.length; i++) {
-            const tx = transactions[i]
-            try {
-                console.log(`Sending transaction ${i + 1}/${transactions.length}...`)
-                await new Promise((resolve, reject) => {
-                    tx.signAndSend(sender, ({ status, events, dispatchError }) => {
-                        if (status.isInBlock) {
-                            console.log(
-                                `✅ Transaction ${i + 1} included in block: ${status.asInBlock}`
-                            )
-                        } else if (status.isFinalized) {
-                            resolve(status)
-                        }
-                    }).catch((error) => {
-                        console.error(
-                            `❌ Error signing/sending transaction ${i + 1}:`,
-                            error.message
-                        )
-                        reject(error)
-                    })
-                })
-            } catch (error) {}
-        }
-    }
 }
 
 const sleep = async (ms: number) => {
@@ -166,7 +88,28 @@ const main = async () => {
         { recipient: "5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV" },
     ])
     console.log("sending Penpal txs")
-    await sendBatchTransactionsOnPenpal()
+    // Penpal funding
+    await sendBatchTransactions(13144, [
+        { recipient: "5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV" },
+        { recipient: "5EYCAe5ijiYgWYWi1fs8Xz1td1djEtJVVnNfzvDRP4VtLL7Y" },
+        {
+            authorizedAlias: {
+                v4: {
+                    parents: 1,
+                    interior: {
+                        x1: [
+                            {
+                                accountId32: {
+                                    network: null,
+                                    id: SudoPubKey,
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        },
+    ])
 }
 
 // Run the script
