@@ -22,6 +22,8 @@ type Relay struct {
 	beefyListener     *BeefyListener
 }
 
+// TODO: the secp256k1 keypair is not used atm, but not refactoring out for now since we may use this
+// with reactive fiat-shamir to thwart a subsampling attack
 func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keypair) (*Relay, error) {
 	log.Info("Creating fisherman worker")
 
