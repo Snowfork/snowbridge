@@ -1,25 +1,24 @@
-use asset_hub_westend_runtime::runtime_types::bounded_collections::bounded_vec::BoundedVec;
-use asset_hub_westend_runtime::runtime_types::sp_weights::weight_v2::Weight;
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Fungibility::Fungible;
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::{AssetId, Assets};
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::Junction::{
-    AccountKey20, GlobalConsensus, PalletInstance,
+#[cfg(feature = "local")]
+use asset_hub_westend_local_runtime::runtime_types::{
+    bounded_collections::bounded_vec::BoundedVec,
+    sp_weights::weight_v2::Weight,
+    staging_xcm::v5::{
+        asset::{AssetId, Assets, Fungibility::Fungible},
+        junction::{
+            Junction::{AccountKey20, GlobalConsensus, PalletInstance},
+            NetworkId::{self, Ethereum},
+        },
+        junctions::Junctions::{Here, X1, X2},
+        location::Location,
+        traits::Outcome,
+        Hint::AssetClaimer,
+        Instruction::{
+            DescendOrigin, PayFees, ReserveAssetDeposited, SetHints, UniversalOrigin, WithdrawAsset,
+        },
+        Xcm,
+    },
+    xcm::{VersionedAssetId, VersionedLocation, VersionedXcm},
 };
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::NetworkId;
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::NetworkId::Ethereum;
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::Here;
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::{X1, X2};
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::location::Location;
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::traits::Outcome;
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Hint::AssetClaimer;
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Instruction::UniversalOrigin;
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Instruction::{
-    DescendOrigin, PayFees, ReserveAssetDeposited, SetHints, WithdrawAsset,
-};
-use asset_hub_westend_runtime::runtime_types::xcm::VersionedLocation;
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::Xcm;
-use asset_hub_westend_runtime::runtime_types::xcm::VersionedAssetId;
-use asset_hub_westend_runtime::runtime_types::xcm::VersionedXcm;
 use codec::DecodeLimit;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
@@ -103,7 +102,10 @@ impl std::fmt::Display for EstimatorError {
             EstimatorError::InvalidHexFormat => write!(f, "Command must start with 0x"),
             EstimatorError::InvalidCommand(cmd) => write!(f, "Invalid command: {}", cmd),
             EstimatorError::ConnectionError(msg) => write!(f, "Connection error: {}", msg),
-            EstimatorError::ValueTooLow => write!(f, "Value provided to low to cover execution and relayer fee"),
+            EstimatorError::ValueTooLow => write!(
+                f,
+                "Value provided to low to cover execution and relayer fee"
+            ),
         }
     }
 }
@@ -146,21 +148,30 @@ pub struct Clients {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GasEstimation {
-    pub asset_hub_execution_fee_in_dot: u128,
-    pub asset_hub_execution_fee_in_ether: u128,
+pub struct AssetHubInfo {
+    pub execution_fee_in_dot: u128,
+    pub execution_fee_in_ether: u128,
     pub delivery_fee_in_dot: u128,
     pub delivery_fee_in_ether: u128,
-    pub extrinsic_fee_in_dot: u128,
-    pub extrinsic_fee_in_ether: u128,
-    pub asset_hub_xcm: String,
     pub dry_run_success: bool,
     pub dry_run_error: Option<String>,
-    pub destination_dry_run_success: Option<bool>,
-    pub destination_dry_run_error: Option<String>,
-    pub destination_para_id: Option<u32>,
-    pub destination_execution_fee_in_dot: Option<u128>,
-    pub destination_execution_fee_in_ether: Option<u128>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DestinationInfo {
+    pub execution_fee_in_dot: Option<u128>,
+    pub execution_fee_in_ether: Option<u128>,
+    pub dry_run_success: Option<bool>,
+    pub dry_run_error: Option<String>,
+    pub para_id: Option<u32>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GasEstimation {
+    pub extrinsic_fee_in_dot: u128,
+    pub extrinsic_fee_in_ether: u128,
+    pub asset_hub: AssetHubInfo,
+    pub destination: DestinationInfo,
 }
 
 #[derive(Debug)]
@@ -191,10 +202,17 @@ pub async fn estimate_gas(
 ) -> Result<GasEstimation, EstimatorError> {
     validate(value, execution_fee, relayer_fee)?;
 
-    let destination_xcm =
-        build_asset_hub_xcm(clients, xcm_bytes, claimer, origin, value, execution_fee, relayer_fee, assets).await?;
-
-    let asset_hub_xcm = format!("{:?}", destination_xcm);
+    let destination_xcm = build_asset_hub_xcm(
+        clients,
+        xcm_bytes,
+        claimer,
+        origin,
+        value,
+        execution_fee,
+        relayer_fee,
+        assets,
+    )
+    .await?;
 
     let weight = query_xcm_weight(clients, destination_xcm.clone()).await?;
     let asset_hub_execution_fee_in_dot = query_weight_to_asset_fee(clients, &weight).await?;
@@ -237,12 +255,18 @@ pub async fn estimate_gas(
         extrinsic_fee_in_dot,
         true,
     )
-        .await?;
+    .await?;
 
     let ah_dry_run_result = dry_run_xcm_on_asset_hub(clients, &destination_xcm).await?;
 
     // Run destination dry run if there's a forwarded XCM
-    let (destination_dry_run_success, destination_dry_run_error, destination_para_id, destination_execution_fee_in_dot, destination_execution_fee_in_ether) = if ah_dry_run_result.forwarded_xcm.is_some() {
+    let (
+        destination_dry_run_success,
+        destination_dry_run_error,
+        destination_para_id,
+        destination_execution_fee_in_dot,
+        destination_execution_fee_in_ether,
+    ) = if ah_dry_run_result.forwarded_xcm.is_some() {
         let forwarded_xcm = ah_dry_run_result.forwarded_xcm.unwrap();
 
         // Extract destination parachain ID before running dry run
@@ -253,7 +277,15 @@ pub async fn estimate_gas(
 
         // Calculate destination execution fee (separate from dry run, like Asset Hub)
         let (dest_fee_dot, dest_fee_ether) = if let Some(para_id_val) = para_id {
-            match calculate_destination_execution_fee(clients, &forwarded_xcm, para_id_val, &dot_asset, &ether_asset).await {
+            match calculate_destination_execution_fee(
+                clients,
+                &forwarded_xcm,
+                para_id_val,
+                &dot_asset,
+                &ether_asset,
+            )
+            .await
+            {
                 Ok((fee_dot, fee_ether)) => (Some(fee_dot), Some(fee_ether)),
                 Err(e) => {
                     println!("Failed to calculate destination execution fee: {}", e);
@@ -265,34 +297,49 @@ pub async fn estimate_gas(
         };
 
         match dry_run_xcm_on_destination(clients, forwarded_xcm).await {
-            Ok(dest_result) => (Some(dest_result.success), dest_result.error_message, para_id, dest_fee_dot, dest_fee_ether),
-            Err(e) => (Some(false), Some(format!("Destination dry run failed: {}", e)), para_id, dest_fee_dot, dest_fee_ether),
+            Ok(dest_result) => (
+                Some(dest_result.success),
+                dest_result.error_message,
+                para_id,
+                dest_fee_dot,
+                dest_fee_ether,
+            ),
+            Err(e) => (
+                Some(false),
+                Some(format!("Destination dry run failed: {}", e)),
+                para_id,
+                dest_fee_dot,
+                dest_fee_ether,
+            ),
         }
     } else {
         (None, None, None, None, None)
     };
 
     Ok(GasEstimation {
-        asset_hub_execution_fee_in_dot,
-        asset_hub_execution_fee_in_ether,
-        delivery_fee_in_dot,
-        delivery_fee_in_ether,
         extrinsic_fee_in_dot,
         extrinsic_fee_in_ether,
-        asset_hub_xcm,
-        dry_run_success: ah_dry_run_result.success,
-        dry_run_error: ah_dry_run_result.error_message,
-        destination_dry_run_success,
-        destination_dry_run_error,
-        destination_para_id,
-        destination_execution_fee_in_dot,
-        destination_execution_fee_in_ether,
+        asset_hub: AssetHubInfo {
+            execution_fee_in_dot: asset_hub_execution_fee_in_dot,
+            execution_fee_in_ether: asset_hub_execution_fee_in_ether,
+            delivery_fee_in_dot,
+            delivery_fee_in_ether,
+            dry_run_success: ah_dry_run_result.success,
+            dry_run_error: ah_dry_run_result.error_message,
+        },
+        destination: DestinationInfo {
+            dry_run_success: destination_dry_run_success,
+            dry_run_error: destination_dry_run_error,
+            para_id: destination_para_id,
+            execution_fee_in_dot: destination_execution_fee_in_dot,
+            execution_fee_in_ether: destination_execution_fee_in_ether,
+        },
     })
 }
 
 fn validate(value: u128, execution_fee: u128, relayer_fee: u128) -> Result<(), EstimatorError> {
     if execution_fee.saturating_add(relayer_fee) > value {
-        return Err(EstimatorError::ValueTooLow)
+        return Err(EstimatorError::ValueTooLow);
     }
 
     Ok(())
@@ -313,7 +360,7 @@ pub async fn build_asset_hub_xcm(
         UniversalOrigin(GlobalConsensus(Ethereum { chain_id: CHAIN_ID })),
         ReserveAssetDeposited(Assets(
             vec![
-                asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset {
+                asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::asset::Asset {
                     id: AssetId(Location {
                         parents: 2,
                         interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
@@ -330,7 +377,7 @@ pub async fn build_asset_hub_xcm(
     });
 
     instructions.push(PayFees {
-        asset: asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset {
+        asset: asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::asset::Asset {
             id: AssetId(Location {
                 parents: 2,
                 interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
@@ -342,15 +389,18 @@ pub async fn build_asset_hub_xcm(
     let net_value = value.saturating_sub(execution_fee.saturating_add(relayer_fee));
     if net_value > 0 {
         // Asset for remaining ether
-        instructions.push(ReserveAssetDeposited(Assets(vec![asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset {
-            id: AssetId(Location {
-                parents: 2,
-                interior: X1([
-                    GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID }),
-                ]),
-            }),
-            fun: Fungible(net_value),
-        }].into())));
+        instructions.push(ReserveAssetDeposited(Assets(
+            vec![
+                asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::asset::Asset {
+                    id: AssetId(Location {
+                        parents: 2,
+                        interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
+                    }),
+                    fun: Fungible(net_value),
+                },
+            ]
+            .into(),
+        )));
     }
 
     let mut reserve_deposit_assets = vec![];
@@ -396,7 +446,7 @@ pub async fn query_xcm_weight(
     clients: &Clients,
     destination_xcm: VersionedXcm,
 ) -> Result<Weight, EstimatorError> {
-    let runtime_api_call = asset_hub_westend_runtime::runtime::apis()
+    let runtime_api_call = asset_hub_westend_local_runtime::runtime::apis()
         .xcm_payment_api()
         .query_xcm_weight(destination_xcm);
 
@@ -428,7 +478,7 @@ pub async fn query_weight_to_asset_fee(
         interior: Here,
     }));
 
-    let runtime_api_call = asset_hub_westend_runtime::runtime::apis()
+    let runtime_api_call = asset_hub_westend_local_runtime::runtime::apis()
         .xcm_payment_api()
         .query_weight_to_asset_fee(weight.clone(), dot_asset);
 
@@ -458,7 +508,7 @@ pub async fn quote_price_exact_tokens_for_tokens(
     asset1_balance: u128,
     include_fee: bool,
 ) -> Result<u128, EstimatorError> {
-    let runtime_api_call = asset_hub_westend_runtime::runtime::apis()
+    let runtime_api_call = asset_hub_westend_local_runtime::runtime::apis()
         .asset_conversion_api()
         .quote_price_exact_tokens_for_tokens(asset1, asset2, asset1_balance, include_fee);
 
@@ -485,25 +535,25 @@ async fn calculate_delivery_fee_in_dot(
     clients: &Clients,
     xcm: &VersionedXcm,
 ) -> Result<u128, EstimatorError> {
-    let destination = bridge_hub_westend_runtime::runtime_types::staging_xcm::v5::location::Location {
+    let destination = bridge_hub_westend_local_runtime::runtime_types::staging_xcm::v5::location::Location {
         parents: 1,
-        interior: bridge_hub_westend_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::X1([
-            bridge_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::Junction::Parachain(ASSET_HUB_PARA_ID)
+        interior: bridge_hub_westend_local_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::X1([
+            bridge_hub_westend_local_runtime::runtime_types::staging_xcm::v5::junction::Junction::Parachain(ASSET_HUB_PARA_ID)
         ]),
     };
 
     // Convert XCM to bridge hub types for the query
     let encoded_xcm = codec::Encode::encode(xcm);
-    let bridge_hub_xcm: bridge_hub_westend_runtime::runtime_types::xcm::VersionedXcm =
+    let bridge_hub_xcm: bridge_hub_westend_local_runtime::runtime_types::xcm::VersionedXcm =
         codec::Decode::decode(&mut &encoded_xcm[..]).map_err(|e| {
             EstimatorError::InvalidCommand(format!("Failed to convert XCM types: {:?}", e))
         })?;
 
     let versioned_destination =
-        bridge_hub_westend_runtime::runtime_types::xcm::VersionedLocation::V5(destination);
+        bridge_hub_westend_local_runtime::runtime_types::xcm::VersionedLocation::V5(destination);
 
     // Query delivery fees using XCM Payment API
-    let runtime_api_call = bridge_hub_westend_runtime::runtime::apis()
+    let runtime_api_call = bridge_hub_westend_local_runtime::runtime::apis()
         .xcm_payment_api()
         .query_delivery_fees(versioned_destination, bridge_hub_xcm);
 
@@ -527,7 +577,7 @@ async fn calculate_delivery_fee_in_dot(
 
     // Find DOT asset in the result (parents: 1, interior: Here)
     let assets = match fees {
-        bridge_hub_westend_runtime::runtime_types::xcm::VersionedAssets::V5(assets) => assets,
+        bridge_hub_westend_local_runtime::runtime_types::xcm::VersionedAssets::V5(assets) => assets,
         _ => {
             return Err(EstimatorError::InvalidCommand(
                 "Unsupported VersionedAssets version".to_string(),
@@ -536,8 +586,8 @@ async fn calculate_delivery_fee_in_dot(
     };
 
     for asset in assets.0.iter() {
-        if asset.id.0.parents == 1 && matches!(asset.id.0.interior, bridge_hub_westend_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::Here) {
-            if let bridge_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Fungibility::Fungible(amount) = asset.fun {
+        if asset.id.0.parents == 1 && matches!(asset.id.0.interior, bridge_hub_westend_local_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::Here) {
+            if let bridge_hub_westend_local_runtime::runtime_types::staging_xcm::v5::asset::Fungibility::Fungible(amount) = asset.fun {
                 return Ok(amount);
             }
         }
@@ -552,16 +602,16 @@ async fn dry_run_xcm_on_asset_hub(
     clients: &Clients,
     xcm: &VersionedXcm,
 ) -> Result<DryRunResult, EstimatorError> {
-    let bridge_hub_location = asset_hub_westend_runtime::runtime_types::xcm::VersionedLocation::V5(
+    let bridge_hub_location = asset_hub_westend_local_runtime::runtime_types::xcm::VersionedLocation::V5(
         Location {
             parents: 1,
             interior: X1([
-                asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::Junction::Parachain(BRIDGE_HUB_PARA_ID)
+                asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::junction::Junction::Parachain(BRIDGE_HUB_PARA_ID)
             ]),
         }
     );
 
-    let runtime_api_call = asset_hub_westend_runtime::runtime::apis()
+    let runtime_api_call = asset_hub_westend_local_runtime::runtime::apis()
         .dry_run_api()
         .dry_run_xcm(bridge_hub_location, xcm.clone());
 
@@ -612,6 +662,7 @@ async fn dry_run_xcm_on_asset_hub(
     }
 }
 
+#[cfg(feature = "local")]
 async fn dry_run_xcm_on_destination(
     clients: &Clients,
     forwarded_xcm: (VersionedLocation, Vec<VersionedXcm>),
@@ -620,22 +671,21 @@ async fn dry_run_xcm_on_destination(
 
     let para_id = extract_parachain_id(&destination_location)?;
 
-    let xcm = xcms.into_iter().next()
+    let xcm = xcms
+        .into_iter()
+        .next()
         .ok_or_else(|| EstimatorError::InvalidCommand("No XCM to forward".to_string()))?;
 
     match para_id {
-        PENPAL_PARA_ID => {
-            println!("Dry running XCM on Penpal (parachain {})", para_id);
-            penpal::dry_run_xcm(clients, xcm).await
-        },
-        _ => {
-            Err(EstimatorError::InvalidCommand(
-                format!("Unsupported destination parachain: {}", para_id)
-            ))
-        }
+        PENPAL_PARA_ID => penpal::dry_run_xcm(clients, xcm).await,
+        _ => Err(EstimatorError::InvalidCommand(format!(
+            "Unsupported destination parachain for local network: {}",
+            para_id
+        ))),
     }
 }
 
+#[cfg(feature = "local")]
 async fn calculate_destination_execution_fee(
     clients: &Clients,
     forwarded_xcm: &(VersionedLocation, Vec<VersionedXcm>),
@@ -644,7 +694,9 @@ async fn calculate_destination_execution_fee(
     ether_asset: &Location,
 ) -> Result<(u128, u128), EstimatorError> {
     let (_, xcms) = forwarded_xcm;
-    let xcm = xcms.iter().next()
+    let xcm = xcms
+        .iter()
+        .next()
         .ok_or_else(|| EstimatorError::InvalidCommand("No XCM to calculate fee for".to_string()))?;
 
     match para_id {
@@ -656,13 +708,15 @@ async fn calculate_destination_execution_fee(
                 ether_asset.clone(),
                 fee_dot,
                 true,
-            ).await?;
+            )
+            .await?;
 
             Ok((fee_dot, fee_ether))
-        },
-        _ => Err(EstimatorError::InvalidCommand(
-            format!("Fee calculation not supported for parachain: {}", para_id)
-        )),
+        }
+        _ => Err(EstimatorError::InvalidCommand(format!(
+            "Fee calculation not supported for parachain {} on local network",
+            para_id
+        ))),
     }
 }
 
@@ -670,9 +724,9 @@ fn extract_parachain_id(location: &VersionedLocation) -> Result<u32, EstimatorEr
     match location {
         VersionedLocation::V5(loc) => {
             match &loc.interior {
-                asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::X1(junction_array) => {
+                asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::X1(junction_array) => {
                     match &junction_array[0] {
-                        asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::Junction::Parachain(para_id) => {
+                        asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::junction::Junction::Parachain(para_id) => {
                             Ok(*para_id)
                         },
                         _ => Err(EstimatorError::InvalidCommand("Location does not contain parachain junction".to_string()))
@@ -685,13 +739,12 @@ fn extract_parachain_id(location: &VersionedLocation) -> Result<u32, EstimatorEr
     }
 }
 
-
 async fn calculate_extrinsic_fee_in_dot(
     clients: &Clients,
     _xcm: &VersionedXcm,
     _origin: [u8; 20],
 ) -> Result<u128, EstimatorError> {
-    use bridge_hub_westend_runtime::runtime_types::snowbridge_verification_primitives::EventProof;
+    use bridge_hub_westend_local_runtime::runtime_types::snowbridge_verification_primitives::EventProof;
     let fixture = snowbridge_pallet_ethereum_client_fixtures::make_inbound_fixture();
     let encoded_event_proof = codec::Encode::encode(&fixture.event);
 
@@ -700,7 +753,7 @@ async fn calculate_extrinsic_fee_in_dot(
             EstimatorError::InvalidCommand(format!("Failed to decode EventProof: {:?}", e))
         })?;
 
-    let submit_call = bridge_hub_westend_runtime::runtime::tx()
+    let submit_call = bridge_hub_westend_local_runtime::runtime::tx()
         .ethereum_inbound_queue_v2()
         .submit(runtime_event_proof);
 
@@ -734,7 +787,7 @@ async fn lookup_foreign_asset_location(
 
     let h256 = H256::from_slice(&foreign_id_bytes);
 
-    let storage_query = bridge_hub_westend_runtime::runtime::storage()
+    let storage_query = bridge_hub_westend_local_runtime::runtime::storage()
         .ethereum_system()
         .foreign_to_native_id(h256);
 
@@ -796,8 +849,10 @@ fn parse_hex_string(hex_str: &str) -> Result<Vec<u8>, EstimatorError> {
 async fn convert_asset_to_xcm(
     clients: &Clients,
     asset: &BridgeAsset,
-) -> Result<asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset, EstimatorError>
-{
+) -> Result<
+    asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::asset::Asset,
+    EstimatorError,
+> {
     match asset {
         BridgeAsset::NativeToken { token, amount } => {
             let amount_value = parse_amount_string(amount)?;
@@ -813,12 +868,12 @@ async fn convert_asset_to_xcm(
             let mut address_bytes = [0u8; 20];
             address_bytes.copy_from_slice(&token_bytes);
 
-            Ok(asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset {
+            Ok(asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::asset::Asset {
                 id: AssetId(Location {
                     parents: 2,
                     interior: X2([
                         GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID }),
-                        asset_hub_westend_runtime::runtime_types::staging_xcm::v5::junction::Junction::AccountKey20 {
+                        asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::junction::Junction::AccountKey20 {
                             network: None,
                             key: address_bytes,
                         }
@@ -832,7 +887,7 @@ async fn convert_asset_to_xcm(
             let location = lookup_foreign_asset_location(clients, foreign_id).await?;
 
             Ok(
-                asset_hub_westend_runtime::runtime_types::staging_xcm::v5::asset::Asset {
+                asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::asset::Asset {
                     id: AssetId(location),
                     fun: Fungible(amount_value),
                 },

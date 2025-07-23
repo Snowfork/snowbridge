@@ -1,9 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
-    "runtimes/polkadot",
-    "runtimes/bridge-hub-polkadot",
-    "runtimes/asset-hub-polkadot",
+    "runtimes/asset-hub-westend-local",
+    "runtimes/bridge-hub-westend-local",
+    "runtimes/westend-local",
+    "runtimes/penpal-westend-local",
 ]
 
 [package]
@@ -55,9 +56,18 @@ env_logger = "0.11"
 # Utilities
 lazy_static = "1.4.0"
 
-# Runtime bindings
-asset-hub-westend-runtime = { path = "runtimes/asset-hub-westend" }
-bridge-hub-westend-runtime = { path = "runtimes/bridge-hub-westend" }
-westend-runtime = { path = "runtimes/westend" }
-penpal-westend-runtime = { path = "runtimes/penpal-westend" }
+# Runtime bindings  
+asset-hub-westend-local-runtime = { path = "runtimes/asset-hub-westend-local", optional = true }
+bridge-hub-westend-local-runtime = { path = "runtimes/bridge-hub-westend-local", optional = true }
+westend-local-runtime = { path = "runtimes/westend-local", optional = true }
+penpal-westend-local-runtime = { path = "runtimes/penpal-westend-local", optional = true }
 snowbridge-pallet-ethereum-client-fixtures = { version = "0.22.0" }
+
+[features]
+default = ["local"]
+local = [
+    "asset-hub-westend-local-runtime",
+    "bridge-hub-westend-local-runtime", 
+    "westend-local-runtime",
+    "penpal-westend-local-runtime",
+]

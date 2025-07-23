@@ -1310,18 +1310,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "asset-hub-polkadot-runtime"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-arithmetic 26.1.0",
- "subxt",
-]
-
-[[package]]
-name = "asset-hub-westend-runtime"
+name = "asset-hub-westend-local-runtime"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
@@ -1760,19 +1749,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bridge-hub-polkadot-runtime"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "scale-info",
- "serde",
- "snowbridge-beacon-primitives 0.2.0",
- "sp-arithmetic 26.1.0",
- "subxt",
-]
-
-[[package]]
-name = "bridge-hub-westend-runtime"
+name = "bridge-hub-westend-local-runtime"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
@@ -4812,7 +4789,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "penpal-westend-runtime"
+name = "penpal-westend-local-runtime"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
@@ -4908,16 +4885,6 @@ name = "pkg-config"
 version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
-
-[[package]]
-name = "polkadot-runtime"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "scale-info",
- "serde",
- "subxt",
-]
 
 [[package]]
 name = "polkavm-common"
@@ -6544,8 +6511,8 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "anyhow",
- "asset-hub-westend-runtime",
- "bridge-hub-westend-runtime",
+ "asset-hub-westend-local-runtime",
+ "bridge-hub-westend-local-runtime",
  "clap",
  "env_logger",
  "futures",
@@ -6554,7 +6521,7 @@ dependencies = [
  "lazy_static",
  "log",
  "parity-scale-codec",
- "penpal-westend-runtime",
+ "penpal-westend-local-runtime",
  "scale-info",
  "serde",
  "serde_json",
@@ -6566,7 +6533,7 @@ dependencies = [
  "subxt-signer",
  "thiserror 1.0.69",
  "tokio",
- "westend-runtime",
+ "westend-local-runtime",
  "xcm",
 ]
 
@@ -9256,7 +9223,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "westend-runtime"
+name = "westend-local-runtime"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",

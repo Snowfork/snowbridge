@@ -2,7 +2,8 @@ mod estimator;
 mod penpal;
 
 use crate::estimator::{clients, decode_assets, estimate_gas, EstimatorError};
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::location::Location;
+#[cfg(feature = "local")]
+use asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::location::Location;
 use clap::{Parser, Subcommand, ValueEnum};
 use codec;
 use hex;
@@ -75,18 +76,27 @@ async fn main() {
 async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
     let clients = clients().await?;
 
-    let (xcm_hex, assets_json, claimer_hex, origin_hex, value, execution_fee, relayer_fee) = match cli.command {
-        Commands::V2SendMessage {
-            xcm,
-            assets,
-            claimer,
-            origin,
-            value,
-            execution_fee,
-            relayer_fee,
-            ..
-        } => (xcm, assets, claimer, origin, value, execution_fee, relayer_fee),
-    };
+    let (xcm_hex, assets_json, claimer_hex, origin_hex, value, execution_fee, relayer_fee) =
+        match cli.command {
+            Commands::V2SendMessage {
+                xcm,
+                assets,
+                claimer,
+                origin,
+                value,
+                execution_fee,
+                relayer_fee,
+                ..
+            } => (
+                xcm,
+                assets,
+                claimer,
+                origin,
+                value,
+                execution_fee,
+                relayer_fee,
+            ),
+        };
 
     let xcm_bytes = hex::decode(&xcm_hex[2..]).map_err(|_| EstimatorError::InvalidHexFormat)?;
     let claimer_bytes =
