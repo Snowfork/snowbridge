@@ -45,7 +45,9 @@ sp-crypto-hashing = { version = "0.1.0" }
 sp-runtime = { version = "41.1.0" }
 
 # XCM - simplified to avoid version conflicts for now
-xcm = { version = "0.0.1" }
+xcm = { version = "17.0.0", package = "staging-xcm" }
+xcm-builder = { version = "21.0.0", package = "staging-xcm-builder" }
+xcm-executor = { version = "20.0.0", package = "staging-xcm-executor" }
 
 # Error handling and logging
 anyhow = "1.0"
@@ -56,7 +58,7 @@ env_logger = "0.11"
 # Utilities
 lazy_static = "1.4.0"
 
-# Runtime bindings  
+# Runtime bindings
 asset-hub-westend-local-runtime = { path = "runtimes/asset-hub-westend-local", optional = true }
 bridge-hub-westend-local-runtime = { path = "runtimes/bridge-hub-westend-local", optional = true }
 westend-local-runtime = { path = "runtimes/westend-local", optional = true }
@@ -67,7 +69,7 @@ snowbridge-pallet-ethereum-client-fixtures = { version = "0.22.0" }
 default = ["local"]
 local = [
     "asset-hub-westend-local-runtime",
-    "bridge-hub-westend-local-runtime", 
+    "bridge-hub-westend-local-runtime",
     "westend-local-runtime",
     "penpal-westend-local-runtime",
 ]

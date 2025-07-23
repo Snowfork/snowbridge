@@ -3,9 +3,15 @@ use asset_hub_westend_local_runtime::runtime_types::{
     bounded_collections::bounded_vec::BoundedVec,
     sp_weights::weight_v2::Weight,
     staging_xcm::v5::{
-        asset::{AssetId, Assets, Fungibility::Fungible},
+        asset::{
+            Asset,
+            AssetFilter::{Definite, Wild},
+            AssetId, Assets,
+            Fungibility::Fungible,
+            WildAsset::AllCounted,
+        },
         junction::{
-            Junction::{AccountKey20, GlobalConsensus, PalletInstance},
+            Junction::{AccountId32, AccountKey20, GlobalConsensus, PalletInstance, Parachain},
             NetworkId::{self, Ethereum},
         },
         junctions::Junctions::{Here, X1, X2},
@@ -13,16 +19,22 @@ use asset_hub_westend_local_runtime::runtime_types::{
         traits::Outcome,
         Hint::AssetClaimer,
         Instruction::{
-            DescendOrigin, PayFees, ReserveAssetDeposited, SetHints, UniversalOrigin, WithdrawAsset,
+            DepositAsset, DescendOrigin, ExchangeAsset, PayFees, RefundSurplus,
+            ReserveAssetDeposited, SetHints, Transact, UniversalOrigin, WithdrawAsset,
         },
         Xcm,
     },
+    xcm::v3::OriginKind,
     xcm::{VersionedAssetId, VersionedLocation, VersionedXcm},
 };
 use codec::DecodeLimit;
+use hex;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use sp_core::parameter_types;
 use sp_core::H256;
+use sp_crypto_hashing;
+use sp_runtime::AccountId32 as RuntimeAccountId32;
 use std::env;
 use subxt::{config::DefaultExtrinsicParams, Config, OnlineClient, PolkadotConfig};
 use subxt_signer::sr25519::dev;
@@ -60,6 +72,15 @@ const INBOUND_PALLET_V2: u8 = 91; // TODO switch on env
 const ASSET_HUB_PARA_ID: u32 = 1000;
 const BRIDGE_HUB_PARA_ID: u32 = 1002;
 const PENPAL_PARA_ID: u32 = 2000;
+
+// Register token constants
+const CREATE_ASSET_DEPOSIT: u128 = 100_000_000_000;
+const CREATE_ASSET_CALL: [u8; 2] = [53, 0]; // ForeignAssets::create call index
+const MINIMUM_DEPOSIT: u128 = 1;
+
+// Network constants
+const RELAY_NETWORK: NetworkId = NetworkId::Polkadot;
+const ETHEREUM_NETWORK: NetworkId = Ethereum { chain_id: CHAIN_ID };
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
@@ -894,4 +915,170 @@ async fn convert_asset_to_xcm(
             )
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum Network {
+    Polkadot = 0,
+}
+
+impl Network {
+    pub fn from_u8(value: u8) -> Result<Self, EstimatorError> {
+        match value {
+            0 => Ok(Network::Polkadot),
+            _ => Err(EstimatorError::InvalidCommand(format!(
+                "Unsupported network: {}. Only network 0 (Polkadot) is supported",
+                value
+            ))),
+        }
+    }
+}
+
+/// Get sovereign account of Ethereum on Asset Hub.
+fn bridge_owner() -> Result<RuntimeAccountId32, EstimatorError> {
+    use xcm::opaque::latest::InteriorLocation;
+    use xcm::opaque::latest::WESTEND_GENESIS_HASH;
+    use xcm::prelude::*;
+    use xcm_builder::ExternalConsensusLocationsConverterFor;
+    use xcm_executor::traits::ConvertLocation;
+    parameter_types! {
+        pub AssetHubUniversalLocation: InteriorLocation = [GlobalConsensus(NetworkId::ByGenesis(WESTEND_GENESIS_HASH)), Parachain(ASSET_HUB_PARA_ID)].into();
+    }
+
+    let bridge_owner = ExternalConsensusLocationsConverterFor::<
+        AssetHubUniversalLocation,
+        [u8; 32],
+    >::convert_location(&Location::new(
+        2,
+        [GlobalConsensus(Ethereum{ chain_id: CHAIN_ID })],
+    ))
+        .unwrap();
+
+    Ok(bridge_owner.into())
+}
+
+/// Construct the remote XCM needed to create a new asset in the `ForeignAssets` pallet
+/// on AssetHub. Polkadot is the only supported network at the moment.
+pub fn construct_register_token_xcm(
+    token_address_hex: &str,
+    network: u8,
+    eth_value: u128,
+    claimer: Location,
+) -> Result<Vec<u8>, EstimatorError> {
+    let network = Network::from_u8(network)?;
+
+    // Parse token address
+    let token_bytes =
+        hex::decode(&token_address_hex[2..]).map_err(|_| EstimatorError::InvalidHexFormat)?;
+    if token_bytes.len() != 20 {
+        return Err(EstimatorError::InvalidCommand(
+            "Token address must be 20 bytes (H160)".to_string(),
+        ));
+    }
+    let mut token = [0u8; 20];
+    token.copy_from_slice(&token_bytes);
+
+    let xcm = make_create_asset_xcm(&token, network, eth_value, claimer)?;
+    let versioned_xcm = VersionedXcm::V5(xcm);
+    let xcm_bytes = codec::Encode::encode(&versioned_xcm);
+    Ok(xcm_bytes)
+}
+
+/// Construct the remote XCM needed to create a new asset in the `ForeignAssets` pallet
+/// on AssetHub. Polkadot is the only supported network at the moment.
+fn make_create_asset_xcm(
+    token: &[u8; 20],
+    network: Network,
+    eth_value: u128,
+    claimer: Location,
+) -> Result<Xcm, EstimatorError> {
+    let dot_asset = Location {
+        parents: 1,
+        interior: Here,
+    };
+    let dot_fee_asset =
+        asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::asset::Asset {
+            id: AssetId(dot_asset),
+            fun: Fungible(CREATE_ASSET_DEPOSIT),
+        };
+
+    let eth_asset = asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::asset::Asset {
+        id: AssetId(Location {
+            parents: 2,
+            interior: X1([GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]),
+        }),
+        fun: Fungible(eth_value),
+    };
+
+    let asset_id = Location {
+        parents: 2,
+        interior: X2([
+            GlobalConsensus(Ethereum { chain_id: CHAIN_ID }),
+            AccountKey20 {
+                network: None,
+                key: *token,
+            },
+        ]),
+    };
+
+    let bridge_owner = bridge_owner()?;
+
+    match network {
+        Network::Polkadot => Ok(make_create_asset_xcm_for_polkadot(
+            CREATE_ASSET_CALL,
+            asset_id,
+            dot_fee_asset,
+            eth_asset,
+            claimer,
+            bridge_owner,
+        )),
+    }
+}
+
+/// Construct the asset creation XCM for the Polkadot network.
+fn make_create_asset_xcm_for_polkadot(
+    create_call_index: [u8; 2],
+    asset_id: Location,
+    dot_fee_asset: Asset,
+    eth_asset: Asset,
+    claimer: Location,
+    bridge_owner: RuntimeAccountId32,
+) -> Xcm {
+    let bridge_owner_bytes: [u8; 32] = bridge_owner.into();
+    use sp_runtime::MultiAddress;
+    Xcm(vec![
+        ExchangeAsset {
+            give: Definite(Assets(vec![eth_asset])),
+            want: Assets(vec![dot_fee_asset.clone()]),
+            maximal: false,
+        },
+        DepositAsset {
+            assets: Definite(Assets(vec![dot_fee_asset.clone()].into())),
+            beneficiary: Location {
+                parents: 0,
+                interior: X1([AccountId32 {
+                    network: None,
+                    id: bridge_owner_bytes,
+                }]),
+            },
+        },
+        Transact {
+            origin_kind: OriginKind::Xcm,
+            fallback_max_weight: None,
+            call:
+                asset_hub_westend_local_runtime::runtime_types::xcm::double_encoded::DoubleEncoded {
+                    encoded: codec::Encode::encode(&(
+                        create_call_index,
+                        asset_id.clone(),
+                        MultiAddress::<[u8; 32], ()>::Id(bridge_owner_bytes.into()),
+                        MINIMUM_DEPOSIT,
+                    )),
+                },
+        },
+        RefundSurplus,
+        DepositAsset {
+            assets: Wild(AllCounted(2)).into(),
+            beneficiary: claimer,
+        },
+    ])
 }
