@@ -3,10 +3,10 @@ package fisherman
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	ancestryTypes "github.com/lederstrumpf/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/go-substrate-rpc-client/v4/client"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
@@ -181,8 +181,7 @@ func constructVotePayload(commitment contracts.BeefyClientCommitment, offenderPu
 // construct ancestry proof payload
 func (li *BeefyListener) constructAncestryProofPayload(commitment contracts.BeefyClientCommitment) ([]byte, error) {
 
-	// TODO: move to go-substrate-rpc-client
-	var ancestryProof GenerateAncestryProofResponse
+	var ancestryProof ancestryTypes.GenerateAncestryProofResponse
 	err := client.CallWithBlockHash(li.relaychainConn.API().Client, &ancestryProof, "mmr_generateAncestryProof", nil, commitment.BlockNumber, nil)
 	if err != nil {
 		return nil, fmt.Errorf("generate MMR ancestry proof: %w", err)
@@ -227,7 +226,6 @@ func (li *BeefyListener) getLatestBlockInfo() (types.Hash, *types.SignedBlock, e
 		return types.Hash{}, nil, fmt.Errorf("get block: %w", err)
 	}
 
-
 	return latestHash, latestBlock, nil
 }
 
@@ -266,7 +264,6 @@ func (li *BeefyListener) signedExtrinsicFromCall(meta *types.Metadata, call type
 		TransactionVersion: rv.TransactionVersion,
 	}
 
-
 	err = ext.Sign(*signer, o)
 	if err != nil {
 		return ext, fmt.Errorf("sign extrinsic: %w", err)
@@ -300,73 +297,3 @@ func (li *BeefyListener) watchExtrinsicSubscription(sub *author.ExtrinsicStatusS
 	}
 	return nil
 }
-
-type ProofItem struct {
-	Position types.U64
-	Hash     types.H256
-}
-
-type ProofItemMarshal struct {
-	Position uint64
-	Hash     string
-}
-
-type GenerateAncestryProofResponse struct {
-	PrevPeaks     []types.H256
-	PrevLeafCount types.U64
-	LeafCount     types.U64
-	Items         []ProofItem
-}
-
-// UnmarshalJSON fills u with the JSON encoded byte array given by b
-func (d *GenerateAncestryProofResponse) UnmarshalJSON(bz []byte) error {
-	var tmp struct {
-		PrevPeaks     []string         `json:"prev_peaks"`
-		PrevLeafCount uint64           `json:"prev_leaf_count"`
-		LeafCount     uint64           `json:"leaf_count"`
-		Items         [][2]interface{} `json:"items"`
-	}
-	if err := json.Unmarshal(bz, &tmp); err != nil {
-		return fmt.Errorf("unmarshal JSON: %w", err)
-	}
-
-	d.PrevPeaks = make([]types.H256, len(tmp.PrevPeaks))
-	for i, prevPeak := range tmp.PrevPeaks {
-		err := types.DecodeFromHexString(prevPeak, &d.PrevPeaks[i])
-		if err != nil {
-			return err
-		}
-	}
-
-
-	d.PrevLeafCount = types.NewU64(tmp.PrevLeafCount)
-	d.LeafCount = types.NewU64(tmp.LeafCount)
-
-
-	d.Items = make([]ProofItem, len(tmp.Items))
-	for i, item := range tmp.Items {
-		if len(item) != 2 {
-			return fmt.Errorf("invalid item %d: expected [position, hash], got %v", i, item)
-		}
-
-		// Extract position (JSON number unmarshals as float64)
-		position, ok := item[0].(float64)
-		if !ok {
-			return fmt.Errorf("invalid position in item %d: expected number, got %v", i, item[0])
-		}
-
-		// Extract hash (string)
-		hash, ok := item[1].(string)
-		if !ok {
-			return fmt.Errorf("invalid hash in item %d: expected string, got %v", i, item[1])
-		}
-
-		// Assign to d.Items
-		d.Items[i].Position = types.NewU64(uint64(position))
-		if err := types.DecodeFromHexString(hash, &d.Items[i].Hash); err != nil {
-			return fmt.Errorf("decode hash in item %d: %w", i, err)
-		}
-	}
-	return nil
-}
-
