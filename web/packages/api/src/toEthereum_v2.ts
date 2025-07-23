@@ -64,12 +64,14 @@ export type DeliveryFee = {
     returnToSenderDeliveryFeeDOT: bigint
     totalFeeInDot: bigint
     localExecutionFeeDOT?: bigint
+    localDeliveryFeeDOT?: bigint
     ethereumExecutionFee?: bigint
     feeLocation?: any
     totalFeeInNative?: bigint
     assetHubExecutionFeeNative?: bigint
     returnToSenderExecutionFeeNative?: bigint
     localExecutionFeeInNative?: bigint
+    localDeliveryFeeInNative?: bigint
     ethereumExecutionFeeInNative?: bigint
 }
 

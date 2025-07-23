@@ -65,7 +65,7 @@ export class PNAFromParachain implements TransferInterface {
         )
 
         const sourceParachainImpl = await paraImplementation(parachain)
-        const { tokenErcMetadata, sourceAssetMetadata } = resolveInputs(
+        const { tokenErcMetadata, sourceAssetMetadata, sourceParachain } = resolveInputs(
             registry,
             tokenAddress,
             sourceParachainImpl.parachainId
@@ -74,6 +74,7 @@ export class PNAFromParachain implements TransferInterface {
         let forwardXcmToAH: any, forwardedXcmToBH: any, returnToSenderXcm: any, localXcm: any
 
         let localExecutionFeeDOT = 0n
+        let localDeliveryFeeDOT = 0n
         let assetHubExecutionFeeDOT = 0n
         let returnToSenderExecutionFeeDOT = 0n
         let returnToSenderDeliveryFeeDOT = 0n
@@ -142,9 +143,19 @@ export class PNAFromParachain implements TransferInterface {
         )
 
         localExecutionFeeDOT = padFeeByPercentage(
-            await assetHubImpl.calculateXcmFee(localXcm, DOT_LOCATION),
+            await sourceParachainImpl.calculateXcmFee(localXcm, DOT_LOCATION),
             feePadPercentage
         )
+
+        if (sourceParachain.features.hasDotBalance) {
+            localDeliveryFeeDOT = padFeeByPercentage(
+                await sourceParachainImpl.calculateDeliveryFeeInDOT(
+                    registry.assetHubParaId,
+                    forwardXcmToAH
+                ),
+                feePadPercentage
+            )
+        }
 
         bridgeHubDeliveryFeeDOT = padFeeByPercentage(
             await assetHubImpl.calculateDeliveryFeeInDOT(
@@ -156,6 +167,7 @@ export class PNAFromParachain implements TransferInterface {
 
         let totalFeeInDot =
             localExecutionFeeDOT +
+            localDeliveryFeeDOT +
             snowbridgeDeliveryFeeDOT +
             assetHubExecutionFeeDOT +
             returnToSenderExecutionFeeDOT +
@@ -176,6 +188,7 @@ export class PNAFromParachain implements TransferInterface {
         let returnToSenderExecutionFeeNative: bigint | undefined = undefined
         let ethereumExecutionFeeInNative: bigint | undefined
         let localExecutionFeeInNative: bigint | undefined
+        let localDeliveryFeeInNative: bigint | undefined
         let feeLocation = options?.feeTokenLocation
         if (feeLocation) {
             // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
@@ -193,6 +206,12 @@ export class PNAFromParachain implements TransferInterface {
             // If the fee is in native, we need to swap it to DOT first, then swap DOT to Ether to cover the ethereum execution fee.
             else if (isParachainNative(feeLocation, sourceParachainImpl.parachainId)) {
                 localExecutionFeeInNative = await getAssetHubConversionPalletSwap(
+                    assetHub,
+                    feeLocation,
+                    DOT_LOCATION,
+                    localExecutionFeeDOT
+                )
+                localDeliveryFeeInNative = await getAssetHubConversionPalletSwap(
                     assetHub,
                     feeLocation,
                     DOT_LOCATION,
@@ -228,6 +247,7 @@ export class PNAFromParachain implements TransferInterface {
 
         return {
             localExecutionFeeDOT,
+            localDeliveryFeeDOT,
             snowbridgeDeliveryFeeDOT,
             assetHubExecutionFeeDOT,
             bridgeHubDeliveryFeeDOT,
@@ -240,6 +260,7 @@ export class PNAFromParachain implements TransferInterface {
             returnToSenderExecutionFeeNative,
             ethereumExecutionFeeInNative,
             localExecutionFeeInNative,
+            localDeliveryFeeInNative,
             totalFeeInNative,
         }
     }
@@ -491,7 +512,9 @@ export class PNAFromParachain implements TransferInterface {
                 messageId,
                 asset,
                 amount,
-                fee.localExecutionFeeDOT! + fee.returnToSenderExecutionFeeDOT,
+                fee.localExecutionFeeDOT! +
+                    fee.localDeliveryFeeDOT! +
+                    fee.returnToSenderExecutionFeeDOT,
                 fee.totalFeeInDot,
                 fee.ethereumExecutionFee!
             )
@@ -507,7 +530,9 @@ export class PNAFromParachain implements TransferInterface {
                 messageId,
                 asset,
                 amount,
-                fee.localExecutionFeeDOT! + fee.returnToSenderExecutionFeeDOT,
+                fee.localExecutionFeeDOT! +
+                    fee.localDeliveryFeeDOT! +
+                    fee.returnToSenderExecutionFeeDOT,
                 fee.totalFeeInDot,
                 fee.ethereumExecutionFee!,
                 fee.ethereumExecutionFeeInNative!
@@ -525,7 +550,9 @@ export class PNAFromParachain implements TransferInterface {
                 messageId,
                 asset,
                 amount,
-                fee.localExecutionFeeInNative! + fee.returnToSenderExecutionFeeNative!,
+                fee.localExecutionFeeInNative! +
+                    fee.localDeliveryFeeInNative! +
+                    fee.returnToSenderExecutionFeeNative!,
                 fee.totalFeeInNative!,
                 fee.ethereumExecutionFee!,
                 fee.ethereumExecutionFeeInNative!
