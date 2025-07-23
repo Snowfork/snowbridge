@@ -9,9 +9,7 @@ import {
 } from "@snowbridge/contract-types"
 import { SNOWBRIDGE_ENV } from "./environment"
 
-export * as toPolkadot from "./toPolkadot"
 export * as toPolkadotV2 from "./toPolkadot_v2"
-export * as toEthereum from "./toEthereum"
 export * as toEthereumV2 from "./toEthereum_v2"
 export * as utils from "./utils"
 export * as status from "./status"
