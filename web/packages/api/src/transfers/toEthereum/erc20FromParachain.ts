@@ -86,6 +86,10 @@ export class ERC20FromParachain implements TransferInterface {
         let returnToSenderDeliveryFeeDOT = 0n
         let bridgeHubDeliveryFeeDOT = 0n
 
+        let localExecutionFeeInNative: bigint | undefined = undefined
+        let localDeliveryFeeInNative: bigint | undefined = undefined
+        let returnToSenderExecutionFeeNative: bigint | undefined = undefined
+
         const assetHubImpl = await paraImplementation(assetHub)
 
         if (sourceParachain.features.hasDotBalance) {
@@ -136,10 +140,6 @@ export class ERC20FromParachain implements TransferInterface {
             sourceParachainImpl.parachainId,
             returnToSenderXcm
         )
-        returnToSenderExecutionFeeDOT = padFeeByPercentage(
-            await sourceParachainImpl.calculateXcmFee(returnToSenderXcm, DOT_LOCATION),
-            feePadPercentage
-        )
         assetHubExecutionFeeDOT = padFeeByPercentage(
             await assetHubImpl.calculateXcmFee(forwardXcmToAH, DOT_LOCATION),
             feePadPercentage
@@ -170,17 +170,36 @@ export class ERC20FromParachain implements TransferInterface {
             1n
         )
 
-        localExecutionFeeDOT = padFeeByPercentage(
-            await sourceParachainImpl.calculateXcmFee(localXcm, DOT_LOCATION),
-            feePadPercentage
-        )
-
         if (sourceParachain.features.hasDotBalance) {
+            localExecutionFeeDOT = padFeeByPercentage(
+                await sourceParachainImpl.calculateXcmFee(localXcm, DOT_LOCATION),
+                feePadPercentage
+            )
             localDeliveryFeeDOT = padFeeByPercentage(
                 await sourceParachainImpl.calculateDeliveryFeeInDOT(
                     registry.assetHubParaId,
                     forwardXcmToAH
                 ),
+                feePadPercentage
+            )
+            returnToSenderExecutionFeeDOT = padFeeByPercentage(
+                await sourceParachainImpl.calculateXcmFee(returnToSenderXcm, DOT_LOCATION),
+                feePadPercentage
+            )
+        } else {
+            localExecutionFeeInNative = padFeeByPercentage(
+                await sourceParachainImpl.calculateXcmFee(localXcm, HERE_LOCATION),
+                feePadPercentage
+            )
+            localDeliveryFeeInNative = padFeeByPercentage(
+                await sourceParachainImpl.calculateDeliveryFeeInNative(
+                    registry.assetHubParaId,
+                    forwardXcmToAH
+                ),
+                feePadPercentage
+            )
+            returnToSenderExecutionFeeNative = padFeeByPercentage(
+                await sourceParachainImpl.calculateXcmFee(returnToSenderXcm, HERE_LOCATION),
                 feePadPercentage
             )
         }
@@ -213,10 +232,7 @@ export class ERC20FromParachain implements TransferInterface {
         // calculate the cost of swapping in native asset
         let totalFeeInNative: bigint | undefined = undefined
         let assetHubExecutionFeeNative: bigint | undefined = undefined
-        let returnToSenderExecutionFeeNative: bigint | undefined = undefined
         let ethereumExecutionFeeInNative: bigint | undefined
-        let localExecutionFeeInNative: bigint | undefined
-        let localDeliveryFeeInNative: bigint | undefined
         let feeLocation = options?.feeTokenLocation
         if (feeLocation) {
             // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
@@ -232,26 +248,7 @@ export class ERC20FromParachain implements TransferInterface {
             }
             // On Parachains, we can use their native asset as the fee token.
             // If the fee is in native, we need to swap it to DOT first, then swap DOT to Ether to cover the ethereum execution fee.
-            else {
-                localExecutionFeeInNative = await getAssetHubConversionPalletSwap(
-                    assetHub,
-                    feeLocation,
-                    DOT_LOCATION,
-                    localExecutionFeeDOT
-                )
-                //Todo: The delivery fee should be dry-run in the native asset directly, rather than through a swap.
-                localDeliveryFeeInNative = await getAssetHubConversionPalletSwap(
-                    assetHub,
-                    feeLocation,
-                    DOT_LOCATION,
-                    localExecutionFeeDOT
-                )
-                returnToSenderExecutionFeeNative = await getAssetHubConversionPalletSwap(
-                    assetHub,
-                    feeLocation,
-                    DOT_LOCATION,
-                    returnToSenderExecutionFeeDOT
-                )
+            else if (isParachainNative(feeLocation, sourceParachainImpl.parachainId)) {
                 let ethereumExecutionFeeInDOT = await getAssetHubConversionPalletSwap(
                     assetHub,
                     DOT_LOCATION,
@@ -271,6 +268,15 @@ export class ERC20FromParachain implements TransferInterface {
                     DOT_LOCATION,
                     padFeeByPercentage(totalFeeInDot, feeSlippagePadPercentage)
                 )
+                if (localExecutionFeeInNative) {
+                    totalFeeInNative += localExecutionFeeInNative
+                }
+                if (localDeliveryFeeInNative) {
+                    totalFeeInNative += localDeliveryFeeInNative
+                }
+                if (returnToSenderExecutionFeeNative) {
+                    totalFeeInNative += returnToSenderExecutionFeeNative
+                }
             }
         }
 
