@@ -2,6 +2,7 @@
 use asset_hub_westend_local_runtime::runtime_types::{
     bounded_collections::bounded_vec::BoundedVec,
     sp_weights::weight_v2::Weight,
+    xcm::VersionedAssets,
     staging_xcm::v5::{
         asset::{
             Asset,
@@ -182,6 +183,8 @@ pub struct AssetHubInfo {
 pub struct DestinationInfo {
     pub execution_fee_in_dot: Option<u128>,
     pub execution_fee_in_ether: Option<u128>,
+    pub delivery_fee_in_dot: Option<u128>,
+    pub delivery_fee_in_ether: Option<u128>,
     pub dry_run_success: Option<bool>,
     pub dry_run_error: Option<String>,
     pub para_id: Option<u32>,
@@ -287,6 +290,8 @@ pub async fn estimate_gas(
         destination_para_id,
         destination_execution_fee_in_dot,
         destination_execution_fee_in_ether,
+        destination_delivery_fee_in_dot,
+        destination_delivery_fee_in_ether,
     ) = if ah_dry_run_result.forwarded_xcm.is_some() {
         let forwarded_xcm = ah_dry_run_result.forwarded_xcm.unwrap();
 
@@ -317,6 +322,42 @@ pub async fn estimate_gas(
             (None, None)
         };
 
+        // Calculate AssetHub to destination delivery fee
+        let (dest_delivery_fee_dot, dest_delivery_fee_ether) = if let Some(para_id_val) = para_id {
+            match calculate_asset_hub_to_destination_delivery_fee(
+                clients,
+                &forwarded_xcm,
+                para_id_val,
+            )
+            .await
+            {
+                Ok(delivery_fee_dot) => {
+                    // Convert delivery fee to Ether
+                    match quote_price_exact_tokens_for_tokens(
+                        clients,
+                        dot_asset.clone(),
+                        ether_asset.clone(),
+                        delivery_fee_dot,
+                        true,
+                    )
+                    .await
+                    {
+                        Ok(delivery_fee_ether) => (Some(delivery_fee_dot), Some(delivery_fee_ether)),
+                        Err(e) => {
+                            println!("Failed to convert destination delivery fee to Ether: {}", e);
+                            (Some(delivery_fee_dot), None)
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("Failed to calculate destination delivery fee: {}", e);
+                    (None, None)
+                }
+            }
+        } else {
+            (None, None)
+        };
+
         match dry_run_xcm_on_destination(clients, forwarded_xcm).await {
             Ok(dest_result) => (
                 Some(dest_result.success),
@@ -324,6 +365,8 @@ pub async fn estimate_gas(
                 para_id,
                 dest_fee_dot,
                 dest_fee_ether,
+                dest_delivery_fee_dot,
+                dest_delivery_fee_ether,
             ),
             Err(e) => (
                 Some(false),
@@ -331,10 +374,12 @@ pub async fn estimate_gas(
                 para_id,
                 dest_fee_dot,
                 dest_fee_ether,
+                dest_delivery_fee_dot,
+                dest_delivery_fee_ether,
             ),
         }
     } else {
-        (None, None, None, None, None)
+        (None, None, None, None, None, None, None)
     };
 
     Ok(GasEstimation {
@@ -354,6 +399,8 @@ pub async fn estimate_gas(
             para_id: destination_para_id,
             execution_fee_in_dot: destination_execution_fee_in_dot,
             execution_fee_in_ether: destination_execution_fee_in_ether,
+            delivery_fee_in_dot: destination_delivery_fee_in_dot,
+            delivery_fee_in_ether: destination_delivery_fee_in_ether,
         },
     })
 }
@@ -616,6 +663,79 @@ async fn calculate_delivery_fee_in_dot(
 
     Err(EstimatorError::InvalidCommand(
         "Could not find DOT asset in delivery fees result".to_string(),
+    ))
+}
+
+async fn calculate_asset_hub_to_destination_delivery_fee(
+    clients: &Clients,
+    forwarded_xcm: &(VersionedLocation, Vec<VersionedXcm>),
+    destination_para_id: u32,
+) -> Result<u128, EstimatorError> {
+    let (destination_location, xcms) = forwarded_xcm;
+
+    // Get the first XCM that will be sent to the destination
+    let xcm = xcms
+        .iter()
+        .next()
+        .ok_or_else(|| EstimatorError::InvalidCommand("No XCM to calculate delivery fee for".to_string()))?;
+
+    // Convert XCM to asset hub types for the query
+    let encoded_xcm = codec::Encode::encode(xcm);
+    let asset_hub_xcm: VersionedXcm =
+        codec::Decode::decode(&mut &encoded_xcm[..]).map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to convert XCM types: {:?}", e))
+        })?;
+
+    // Convert destination location to asset hub types
+    let encoded_destination = codec::Encode::encode(destination_location);
+    let asset_hub_destination: VersionedLocation =
+        codec::Decode::decode(&mut &encoded_destination[..]).map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to convert destination location types: {:?}", e))
+        })?;
+
+    // Query delivery fees using AssetHub's XCM Payment API
+    let runtime_api_call = asset_hub_westend_local_runtime::runtime::apis()
+        .xcm_payment_api()
+        .query_delivery_fees(asset_hub_destination, asset_hub_xcm);
+
+    let fees_result = clients
+        .asset_hub_client
+        .runtime_api()
+        .at_latest()
+        .await
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
+        })?
+        .call(runtime_api_call)
+        .await
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to query AssetHub delivery fees to para {}: {:?}", destination_para_id, e))
+        })?;
+
+    let fees = fees_result.map_err(|e| {
+        EstimatorError::InvalidCommand(format!("AssetHub delivery fees query returned error: {:?}", e))
+    })?;
+
+    // Find DOT asset in the result (parents: 1, interior: Here)
+    let assets = match fees {
+        VersionedAssets::V5(assets) => assets,
+        _ => {
+            return Err(EstimatorError::InvalidCommand(
+                "Unsupported VersionedAssets version for AssetHub delivery fees".to_string(),
+            ))
+        }
+    };
+
+    for asset in assets.0.iter() {
+        if asset.id.0.parents == 1 && matches!(asset.id.0.interior, Here) {
+            if let Fungible(amount) = asset.fun {
+                return Ok(amount);
+            }
+        }
+    }
+
+    Err(EstimatorError::InvalidCommand(
+        format!("Could not find DOT asset in AssetHub delivery fees result for para {}", destination_para_id),
     ))
 }
 
