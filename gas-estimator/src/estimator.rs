@@ -2,7 +2,6 @@
 use asset_hub_westend_local_runtime::runtime_types::{
     bounded_collections::bounded_vec::BoundedVec,
     sp_weights::weight_v2::Weight,
-    xcm::VersionedAssets,
     staging_xcm::v5::{
         asset::{
             Asset,
@@ -12,7 +11,7 @@ use asset_hub_westend_local_runtime::runtime_types::{
             WildAsset::AllCounted,
         },
         junction::{
-            Junction::{AccountId32, AccountKey20, GlobalConsensus, PalletInstance, Parachain},
+            Junction::{AccountId32, AccountKey20, GlobalConsensus, PalletInstance},
             NetworkId::{self, Ethereum},
         },
         junctions::Junctions::{Here, X1, X2},
@@ -26,6 +25,7 @@ use asset_hub_westend_local_runtime::runtime_types::{
         Xcm,
     },
     xcm::v3::OriginKind,
+    xcm::VersionedAssets,
     xcm::{VersionedAssetId, VersionedLocation, VersionedXcm},
 };
 use codec::DecodeLimit;
@@ -34,7 +34,6 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use sp_core::parameter_types;
 use sp_core::H256;
-use sp_crypto_hashing;
 use sp_runtime::AccountId32 as RuntimeAccountId32;
 use std::env;
 use subxt::{config::DefaultExtrinsicParams, Config, OnlineClient, PolkadotConfig};
@@ -78,10 +77,6 @@ const PENPAL_PARA_ID: u32 = 2000;
 const CREATE_ASSET_DEPOSIT: u128 = 100_000_000_000;
 const CREATE_ASSET_CALL: [u8; 2] = [53, 0]; // ForeignAssets::create call index
 const MINIMUM_DEPOSIT: u128 = 1;
-
-// Network constants
-const RELAY_NETWORK: NetworkId = NetworkId::Polkadot;
-const ETHEREUM_NETWORK: NetworkId = Ethereum { chain_id: CHAIN_ID };
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
@@ -342,7 +337,9 @@ pub async fn estimate_gas(
                     )
                     .await
                     {
-                        Ok(delivery_fee_ether) => (Some(delivery_fee_dot), Some(delivery_fee_ether)),
+                        Ok(delivery_fee_ether) => {
+                            (Some(delivery_fee_dot), Some(delivery_fee_ether))
+                        }
                         Err(e) => {
                             println!("Failed to convert destination delivery fee to Ether: {}", e);
                             (Some(delivery_fee_dot), None)
@@ -674,10 +671,9 @@ async fn calculate_asset_hub_to_destination_delivery_fee(
     let (destination_location, xcms) = forwarded_xcm;
 
     // Get the first XCM that will be sent to the destination
-    let xcm = xcms
-        .iter()
-        .next()
-        .ok_or_else(|| EstimatorError::InvalidCommand("No XCM to calculate delivery fee for".to_string()))?;
+    let xcm = xcms.iter().next().ok_or_else(|| {
+        EstimatorError::InvalidCommand("No XCM to calculate delivery fee for".to_string())
+    })?;
 
     // Convert XCM to asset hub types for the query
     let encoded_xcm = codec::Encode::encode(xcm);
@@ -690,7 +686,10 @@ async fn calculate_asset_hub_to_destination_delivery_fee(
     let encoded_destination = codec::Encode::encode(destination_location);
     let asset_hub_destination: VersionedLocation =
         codec::Decode::decode(&mut &encoded_destination[..]).map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to convert destination location types: {:?}", e))
+            EstimatorError::InvalidCommand(format!(
+                "Failed to convert destination location types: {:?}",
+                e
+            ))
         })?;
 
     // Query delivery fees using AssetHub's XCM Payment API
@@ -709,11 +708,17 @@ async fn calculate_asset_hub_to_destination_delivery_fee(
         .call(runtime_api_call)
         .await
         .map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to query AssetHub delivery fees to para {}: {:?}", destination_para_id, e))
+            EstimatorError::InvalidCommand(format!(
+                "Failed to query AssetHub delivery fees to para {}: {:?}",
+                destination_para_id, e
+            ))
         })?;
 
     let fees = fees_result.map_err(|e| {
-        EstimatorError::InvalidCommand(format!("AssetHub delivery fees query returned error: {:?}", e))
+        EstimatorError::InvalidCommand(format!(
+            "AssetHub delivery fees query returned error: {:?}",
+            e
+        ))
     })?;
 
     // Find DOT asset in the result (parents: 1, interior: Here)
@@ -734,9 +739,10 @@ async fn calculate_asset_hub_to_destination_delivery_fee(
         }
     }
 
-    Err(EstimatorError::InvalidCommand(
-        format!("Could not find DOT asset in AssetHub delivery fees result for para {}", destination_para_id),
-    ))
+    Err(EstimatorError::InvalidCommand(format!(
+        "Could not find DOT asset in AssetHub delivery fees result for para {}",
+        destination_para_id
+    )))
 }
 
 async fn dry_run_xcm_on_asset_hub(

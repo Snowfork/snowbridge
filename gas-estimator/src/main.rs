@@ -126,7 +126,7 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                 relayer_fee,
             } => {
                 // Parse common parameters
-                let xcm_bytes = parse_hex_address(&xcm, "xcm")?;
+                let xcm_bytes = parse_hex_address(&xcm)?;
                 let claimer = parse_claimer(&claimer)?;
                 let origin = parse_origin(&origin)?;
                 let assets = parse_assets(&assets)?;
@@ -200,18 +200,18 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
     }
 }
 
-fn parse_hex_address(hex_str: &str, name: &str) -> Result<Vec<u8>, EstimatorError> {
+fn parse_hex_address(hex_str: &str) -> Result<Vec<u8>, EstimatorError> {
     hex::decode(&hex_str[2..]).map_err(|_| EstimatorError::InvalidHexFormat)
 }
 
 fn parse_claimer(claimer_hex: &str) -> Result<Location, EstimatorError> {
-    let claimer_bytes = parse_hex_address(claimer_hex, "claimer")?;
+    let claimer_bytes = parse_hex_address(claimer_hex)?;
     codec::Decode::decode(&mut &claimer_bytes[..])
         .map_err(|_| EstimatorError::InvalidCommand("Failed to decode claimer".to_string()))
 }
 
 fn parse_origin(origin_hex: &str) -> Result<[u8; 20], EstimatorError> {
-    let origin_bytes = parse_hex_address(origin_hex, "origin")?;
+    let origin_bytes = parse_hex_address(origin_hex)?;
     if origin_bytes.len() != 20 {
         return Err(EstimatorError::InvalidCommand(
             "Origin must be 20 bytes (Ethereum address)".to_string(),
@@ -224,16 +224,4 @@ fn parse_origin(origin_hex: &str) -> Result<[u8; 20], EstimatorError> {
 
 fn parse_assets(assets_json: &str) -> Result<Vec<BridgeAsset>, EstimatorError> {
     decode_assets(assets_json)
-}
-
-fn parse_token_address(token_address_hex: &str) -> Result<[u8; 20], EstimatorError> {
-    let token_bytes = parse_hex_address(token_address_hex, "token_address")?;
-    if token_bytes.len() != 20 {
-        return Err(EstimatorError::InvalidCommand(
-            "Token address must be 20 bytes (H160)".to_string(),
-        ));
-    }
-    let mut token_address = [0u8; 20];
-    token_address.copy_from_slice(&token_bytes);
-    Ok(token_address)
 }
