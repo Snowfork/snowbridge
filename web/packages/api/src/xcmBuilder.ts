@@ -1357,6 +1357,14 @@ export function isNative(location: any) {
     return location.parents == DOT_LOCATION.parents && location.interior == DOT_LOCATION.interior
 }
 
+export function isParachainNative(location: any, parachainId: number) {
+    return JSON.stringify(location) == JSON.stringify(parachainLocation(parachainId))
+}
+
+export function isEthereumNative(location: any, ethChainId: number) {
+    return JSON.stringify(location) == JSON.stringify(bridgeLocation(ethChainId))
+}
+
 export const accountToLocation = (account: string) => {
     let {
         hexAddress,
