@@ -675,7 +675,7 @@ export const trackSendProgressPolling = async (
     }
 
     if (success.bridgeHub.events === undefined) {
-        console.log(`Waiting for messageId ${success.messageId} to be recieved on Bridge Hub.`)
+        console.log(`Waiting for messageId ${success.messageId} to be received on Bridge Hub.`)
         let messageQueueFound = false
         let { found, lastScannedBlock, events } = await scanSubstrateEvents(
             bridgeHub,
@@ -732,7 +732,7 @@ export const trackSendProgressPolling = async (
             success.plan.success.assetHub.paraId !== success.plan.success.destinationParaId
                 ? paraIdToSovereignAccount("sibl", success.plan.success.destinationParaId)
                 : success.plan?.success.beneficiaryAddress
-        console.log(`Waiting for messageId ${success.messageId} to be recieved on Asset Hub.`)
+        console.log(`Waiting for messageId ${success.messageId} to be received on Asset Hub.`)
         let transferBlockHash = ""
         let { found, lastScannedBlock, events } = await scanSubstrateEvents(
             assetHub,
@@ -790,7 +790,7 @@ export const trackSendProgressPolling = async (
         let extrinsicSuccess = false
         let messageQueueProcessedAt
         console.log(
-            `Waiting for messageId ${success.messageId} to be recieved on Parachain ${success.plan.success.destinationParaId}.`
+            `Waiting for messageId ${success.messageId} to be received on Parachain ${success.plan.success.destinationParaId}.`
         )
         let { found, lastScannedBlock, events } = await scanSubstrateEvents(
             destParaApi,

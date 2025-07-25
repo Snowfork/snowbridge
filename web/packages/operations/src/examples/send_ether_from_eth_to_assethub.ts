@@ -97,7 +97,7 @@ import { setTimeout } from "timers/promises"
         throw Error(`Transaction ${response.hash} not included.`)
     }
 
-    // Step 6. Get the message reciept for tracking purposes
+    // Step 6. Get the message receipt for tracking purposes
     const message = await toPolkadotV2.getMessageReceipt(receipt)
     if (!message) {
         throw Error(`Transaction ${receipt.hash} did not emit a message.`)
