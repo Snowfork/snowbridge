@@ -7,6 +7,22 @@ const SudoPubKey =
     "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 const sudoAccount = "//Alice"
 
+const authorizedAliasLocation = {
+    v4: {
+        parents: 1,
+        interior: {
+            x1: [
+                {
+                    accountId32: {
+                        network: null,
+                        id: SudoPubKey,
+                    },
+                },
+            ],
+        },
+    },
+}
+
 interface TransactionConfig {
     recipient?: string
     senderParaId?: number
@@ -37,7 +53,10 @@ const sendBatchTransactions = async (wsPort: number, txs: TransactionConfig[]) =
             ? senderParaId
                 ? api.tx.hrmp.forceOpenHrmpChannel(senderParaId, parseInt(recipient), 8, 512)
                 : api.tx.balances.transferAllowDeath(recipient, InitialFund)
-            : api.createType("XcmVersionedLocation", authorizedAlias)
+            : (function () {
+                  const versionedLocation = api.createType("XcmVersionedLocation", authorizedAlias)
+                  return api.tx.polkadotXcm.addAuthorizedAlias(versionedLocation, null)
+              })()
     )
 
     console.log("Transactions: ", transactions)
@@ -92,23 +111,7 @@ const main = async () => {
     await sendBatchTransactions(13144, [
         { recipient: "5Eg2fntNprdN3FgH4sfEaaZhYtddZQSQUqvYJ1f2mLtinVhV" },
         { recipient: "5EYCAe5ijiYgWYWi1fs8Xz1td1djEtJVVnNfzvDRP4VtLL7Y" },
-        {
-            authorizedAlias: {
-                v4: {
-                    parents: 1,
-                    interior: {
-                        x1: [
-                            {
-                                accountId32: {
-                                    network: null,
-                                    id: SudoPubKey,
-                                },
-                            },
-                        ],
-                    },
-                },
-            },
-        },
+        { authorizedAlias: authorizedAliasLocation },
     ])
 }
 
