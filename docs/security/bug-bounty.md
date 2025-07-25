@@ -97,7 +97,7 @@ Any bugs around:
 
 There are six stages in the process:
 
-* **Submission:** Reporter sends submission to [security@snowbridge.com](mailto:security@snowbridge.com) or our security Telegram group as per [https://docs.snowbridge.network/security/exploit-reporting](https://docs.snowbridge.network/security/exploit-reporting)
+* **Submission:** Reporter sends submission to [security@snowbridge.com](mailto:security@snowbridge.com).
 * **Initial Sanity Check**
   * Check for completeness, collect missing or incomplete information
   * Confirm submission, assign first reviewer
