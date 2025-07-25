@@ -39,7 +39,7 @@
                     # convenience for developing relayer
                     killall
 
-                    # typescript
+                    typescript
                     python311
                     nodePackages.pnpm
                     nodejs_22
