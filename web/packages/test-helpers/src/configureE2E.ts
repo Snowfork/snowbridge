@@ -100,6 +100,8 @@ const main = async () => {
     await sendBatchTransactions(12144, [
         { recipient: "5Eg2fntJ27qsari4FGrGhrMqKFDRnkNSR6UshkZYBGXmSuC8" },
         { recipient: "5GjRnmh5o3usSYzVmsxBWzHEpvJyHK4tKNPhjpUR3ASrruBy" },
+        { recipient: "5EYCAe5ijiYgWYWi1fs8Xz1td1djEtJVVnNfzvDRP4VtLL7Y" },
+        { authorizedAlias: authorizedAliasLocation },
     ])
     // Relaychain funding
     console.log("sending Relay txs")
