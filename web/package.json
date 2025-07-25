@@ -16,10 +16,10 @@
     "remixd": "./node_modules/.bin/remixd"
   },
   "devDependencies": {
-    "@remix-project/remixd": "^0.6.14",
-    "turbo": "^1.9.4",
+    "@remix-project/remixd": "^0.6.50",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.4.5"
+    "turbo": "^1.13.4",
+    "typescript": "^5.8.3"
   }
 }
