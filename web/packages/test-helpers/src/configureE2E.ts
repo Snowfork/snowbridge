@@ -7,6 +7,22 @@ const SudoPubKey =
     "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
 const sudoAccount = "//Alice"
 
+const authorizedAliasLocation = {
+    v4: {
+        parents: 1,
+        interior: {
+            x1: [
+                {
+                    accountId32: {
+                        network: null,
+                        id: SudoPubKey,
+                    },
+                },
+            ],
+        },
+    },
+}
+
 const sendBatchTransactionsOnBridgehub = async () => {
     // Connect to node
     let api = await ApiPromise.create({ provider: new WsProvider("ws://127.0.0.1:11144") })
@@ -62,21 +78,7 @@ const sendBatchTransactionsOnAssethub = async () => {
     const keyring = new Keyring({ type: "sr25519" })
     const sender = keyring.addFromUri(sudoAccount)
 
-    const versionedLocation = api.createType("XcmVersionedLocation", {
-        v4: {
-            parents: 1,
-            interior: {
-                x1: [
-                    {
-                        accountId32: {
-                            network: null,
-                            id: SudoPubKey,
-                        },
-                    },
-                ],
-            },
-        },
-    })
+    const versionedLocation = api.createType("XcmVersionedLocation", authorizedAliasLocation)
 
     // Define recipient addresses and amounts (replace with real addresses)
     const transactions = [
@@ -150,21 +152,7 @@ const sendBatchTransactionsOnPenpal = async () => {
     const keyring = new Keyring({ type: "sr25519" })
     const sender = keyring.addFromUri(sudoAccount)
 
-    const versionedLocation = api.createType("XcmVersionedLocation", {
-        v4: {
-            parents: 1,
-            interior: {
-                x1: [
-                    {
-                        accountId32: {
-                            network: null,
-                            id: SudoPubKey,
-                        },
-                    },
-                ],
-            },
-        },
-    })
+    const versionedLocation = api.createType("XcmVersionedLocation", authorizedAliasLocation)
 
     // Define recipient addresses and amounts (replace with real addresses)
     const transactions = [
