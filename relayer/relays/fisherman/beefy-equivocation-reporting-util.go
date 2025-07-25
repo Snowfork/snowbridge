@@ -179,10 +179,10 @@ func constructVotePayload(commitment contracts.BeefyClientCommitment, offenderPu
 }
 
 // construct ancestry proof payload
-func (li *BeefyListener) constructAncestryProofPayload(commitment contracts.BeefyClientCommitment) ([]byte, error) {
+func (li *BeefyListener) constructAncestryProofPayload(commitment contracts.BeefyClientCommitment, latestHash types.Hash) ([]byte, error) {
 
 	var ancestryProof ancestryTypes.GenerateAncestryProofResponse
-	err := client.CallWithBlockHash(li.relaychainConn.API().Client, &ancestryProof, "mmr_generateAncestryProof", nil, commitment.BlockNumber, nil)
+	err := client.CallWithBlockHash(li.relaychainConn.API().Client, &ancestryProof, "mmr_generateAncestryProof", &latestHash, commitment.BlockNumber, nil)
 	if err != nil {
 		return nil, fmt.Errorf("generate MMR ancestry proof: %w", err)
 	}

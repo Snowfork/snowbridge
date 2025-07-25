@@ -233,7 +233,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 								payload1 := constructVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
 
 								// Ancestry Proof
-								payload2, err := li.constructAncestryProofPayload(commitment)
+								payload2, err := li.constructAncestryProofPayload(commitment, latestHash)
 								if err != nil {
 									return fmt.Errorf("build ancestry proof payload: %w", err)
 								}
