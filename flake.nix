@@ -36,6 +36,8 @@
                     tree
                     # ps for zombienet, required in pure shells on Linux
                     ps
+                    # convenience for developing relayer
+                    killall
 
                     # typescript
                     python311
@@ -70,6 +72,8 @@
                     # NOTE: when upgrading rustup, check for a command to install the version in the toolchain file:
                     # https://github.com/rust-lang/rustup/issues/2686
                     rustup
+                    # convenience for clearing unused build outputs
+                    cargo-sweep
 
                     cowsay
 
