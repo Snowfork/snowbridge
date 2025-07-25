@@ -107,6 +107,12 @@ build_v1() {
     popd
 }
 
+build_gas_estimator() {
+    pushd $gas_estimator_dir
+    cargo build --release
+    popd
+}
+
 install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
@@ -116,6 +122,7 @@ install_binary() {
     build_relayer
     build_web_packages
     build_v1
+    build_gas_estimator
 }
 
 if [ -z "${from_start_services:-}" ]; then

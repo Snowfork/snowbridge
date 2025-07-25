@@ -212,7 +212,7 @@ pub enum BridgeAsset {
 pub async fn estimate_gas(
     clients: &Clients,
     xcm_bytes: &[u8],
-    claimer: Location,
+    claimer: Option<Location>,
     origin: [u8; 20],
     value: u128,
     execution_fee: u128,
@@ -220,11 +220,12 @@ pub async fn estimate_gas(
     assets: &[BridgeAsset],
 ) -> Result<GasEstimation, EstimatorError> {
     validate(value, execution_fee, relayer_fee)?;
+    let claimer_location = get_claimer_location(claimer)?;
 
     let destination_xcm = build_asset_hub_xcm(
         clients,
         xcm_bytes,
-        claimer,
+        claimer_location,
         origin,
         value,
         execution_fee,
@@ -1089,8 +1090,9 @@ pub fn construct_register_token_xcm(
     token_address_hex: &str,
     network: u8,
     eth_value: u128,
-    claimer: Location,
+    claimer: Option<Location>,
 ) -> Result<Vec<u8>, EstimatorError> {
+    let claimer_location = get_claimer_location(claimer)?;
     let network = Network::from_u8(network)?;
 
     // Parse token address
@@ -1104,7 +1106,7 @@ pub fn construct_register_token_xcm(
     let mut token = [0u8; 20];
     token.copy_from_slice(&token_bytes);
 
-    let xcm = make_create_asset_xcm(&token, network, eth_value, claimer)?;
+    let xcm = make_create_asset_xcm(&token, network, eth_value, claimer_location)?;
     let versioned_xcm = VersionedXcm::V5(xcm);
     let xcm_bytes = codec::Encode::encode(&versioned_xcm);
     Ok(xcm_bytes)
@@ -1207,4 +1209,14 @@ fn make_create_asset_xcm_for_polkadot(
             beneficiary: claimer,
         },
     ])
+}
+
+fn get_claimer_location(claimer: Option<Location>) -> Result<Location, EstimatorError> {
+   match claimer {
+        Some(loc) => Ok(loc),
+        None => Ok(Location {
+            parents: 0,
+            interior: X1([AccountId32 { network: None, id: bridge_owner()?.into() }]),
+        })
+    }
 }

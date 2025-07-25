@@ -125,7 +125,6 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                 execution_fee,
                 relayer_fee,
             } => {
-                // Parse common parameters
                 let xcm_bytes = parse_hex_address(&xcm)?;
                 let claimer = parse_claimer(&claimer)?;
                 let origin = parse_origin(&origin)?;
@@ -160,7 +159,6 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                 execution_fee,
                 relayer_fee,
             } => {
-                // Validate network
                 if network != 0 {
                     return Err(EstimatorError::InvalidCommand(format!(
                         "Unsupported network: {}. Currently only network 0 is supported",
@@ -168,12 +166,10 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                     )));
                 }
 
-                // Parse common parameters
                 let claimer = parse_claimer(&claimer)?;
                 let origin = parse_origin(&origin)?;
                 let assets = parse_assets(&assets)?;
 
-                // Construct register token XCM
                 let xcm_bytes =
                     construct_register_token_xcm(&token_address, network, value, claimer.clone())?;
 
@@ -201,13 +197,20 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
 }
 
 fn parse_hex_address(hex_str: &str) -> Result<Vec<u8>, EstimatorError> {
+    if hex_str.len() < 2 {
+        return Ok(vec![]);
+    }
     hex::decode(&hex_str[2..]).map_err(|_| EstimatorError::InvalidHexFormat)
 }
 
-fn parse_claimer(claimer_hex: &str) -> Result<Location, EstimatorError> {
+fn parse_claimer(claimer_hex: &str) -> Result<Option<Location>, EstimatorError> {
     let claimer_bytes = parse_hex_address(claimer_hex)?;
-    codec::Decode::decode(&mut &claimer_bytes[..])
-        .map_err(|_| EstimatorError::InvalidCommand("Failed to decode claimer".to_string()))
+    if claimer_bytes.len() < 2 {
+        return Ok(None);
+    }
+    let location = codec::Decode::decode(&mut &claimer_bytes[..])
+        .map_err(|_| EstimatorError::InvalidCommand("Failed to decode claimer".to_string()))?;
+    Ok(Some(location))
 }
 
 fn parse_origin(origin_hex: &str) -> Result<[u8; 20], EstimatorError> {
