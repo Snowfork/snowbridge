@@ -72,6 +72,10 @@
                     rustup
 
                     cowsay
+
+                    # smoketest
+                    openssl.dev
+                    pkg-config
                 ];
 
                 shellHook = ''
