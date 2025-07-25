@@ -53,6 +53,7 @@
                     go
                     gotools
                     gopls
+                    go-ethereum
                     go-outline
                     gopkgs
                     godef
