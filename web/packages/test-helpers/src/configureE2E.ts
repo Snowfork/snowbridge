@@ -135,9 +135,10 @@ const buildHrmpChannels = async () => {
     console.log("Sending sudo transaction...")
 
     // Sign and send the batch transaction
-    sudoTx.signAndSend(sender, ({ status }) => {
+    const unsub = await sudoTx.signAndSend(sender, ({ status }) => {
         if (status.isInBlock) {
             console.log(`✅ Transaction included in block: ${status.asInBlock}`)
+            unsub()
         }
     })
 }
@@ -199,16 +200,15 @@ const sleep = async (ms: number) => {
 }
 
 const main = async () => {
-    await buildHrmpChannels()
     await sendBatchTransactionsOnBridgehub()
     await sendBatchTransactionsOnAssethub()
     await sendBatchTransactionsOnPenpal()
+    await buildHrmpChannels()
 }
 
 // Run the script
 main()
     .then(async () => {
-        await sleep(3000) // Wait for transactions to be processed
         console.log("All transactions sent successfully.")
         process.exit(0)
     })
