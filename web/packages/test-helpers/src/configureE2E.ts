@@ -29,7 +29,12 @@ interface TransactionConfig {
     authorizedAlias?: any
 }
 
-const sendBatchTransactions = async (wsPort: number, txs: TransactionConfig[]) => {
+const sendBatchTransactions = async (
+    wsPort: number,
+    txs: TransactionConfig[],
+    senderAddress?: string,
+    noSending?: boolean
+) => {
     // Connect to node
     let api = await ApiPromise.create({
         provider: new WsProvider("ws://127.0.0.1:" + wsPort.toString()),
@@ -38,9 +43,13 @@ const sendBatchTransactions = async (wsPort: number, txs: TransactionConfig[]) =
 
     // Initialize Keyring and add an account (Replace with your private key or use mnemonic)
     const keyring = new Keyring({ type: "sr25519" })
-    const sender = keyring.addFromUri(sudoAccount)
-    await cryptoWaitReady()
-
+    let sender
+    if (senderAddress) {
+        console.log("Using provided sender account:", senderAddress)
+        sender = keyring.addFromUri(senderAddress)
+    } else {
+        sender = keyring.addFromUri(sudoAccount)
+    }
     // Check if 'balances' is available in the API
     if (!api.tx.balances || !api.tx.balances.transferAllowDeath) {
         throw new Error("Balances module is not available in this network.")
@@ -58,15 +67,16 @@ const sendBatchTransactions = async (wsPort: number, txs: TransactionConfig[]) =
                   return api.tx.polkadotXcm.addAuthorizedAlias(versionedLocation, null)
               })()
     )
-
-    console.log("Transactions: ", transactions)
-
     // Create a batch transaction
     const batchTx = api.tx.utility.batchAll(transactions)
     const finalTx = txs.some((tx) => tx.senderParaId)
-        ? (console.log("Sending sudo transaction..."), api.tx.sudo.sudo(batchTx))
-        : (console.log("Sending batch transaction..."), batchTx)
+        ? (console.log("Building sudo transaction..."), api.tx.sudo.sudo(batchTx))
+        : (console.log("Building batch transaction..."), batchTx)
 
+    if (noSending) {
+        console.log("Transaction not sent due to noSending flag.")
+        return Promise.resolve({ sender, tx: finalTx })
+    }
     // Sign and send the batch transaction
     finalTx.signAndSend(sender, ({ status }) => {
         if (status.isInBlock) {
@@ -75,19 +85,15 @@ const sendBatchTransactions = async (wsPort: number, txs: TransactionConfig[]) =
     })
 }
 
-const sleep = async (ms: number) => {
-    return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
 const main = async () => {
-    // HRMP channel opening
-    console.log("sending HRMP channel opening txs")
-    await sendBatchTransactions(9944, [
-        { recipient: "1002", senderParaId: 1000 },
-        { recipient: "1000", senderParaId: 1002 },
-        { recipient: "2000", senderParaId: 1000 },
-        { recipient: "1000", senderParaId: 2000 },
-    ])
+    await cryptoWaitReady()
+    // Relaychain funding, use a different account and leave sudo account for sudo txs
+    console.log("sending Relay txs")
+    await sendBatchTransactions(
+        9944,
+        [{ recipient: "5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV" }],
+        "//Bob"
+    )
     // BridgeHub funding
     console.log("sending BridgeHub txs")
     await sendBatchTransactions(11144, [
@@ -110,13 +116,33 @@ const main = async () => {
         { recipient: "5EYCAe5ijiYgWYWi1fs8Xz1td1djEtJVVnNfzvDRP4VtLL7Y" },
         { authorizedAlias: authorizedAliasLocation },
     ])
+    // HRMP channel opening
+    console.log("sending HRMP channel opening txs")
+    return (await sendBatchTransactions(
+        9944,
+        [
+            { recipient: "1002", senderParaId: 1000 },
+            { recipient: "1000", senderParaId: 1002 },
+            { recipient: "2000", senderParaId: 1000 },
+            { recipient: "1000", senderParaId: 2000 },
+        ],
+        sudoAccount,
+        true
+    ))!
 }
 
 // Run the script
 main()
-    .then(async () => {
-        await sleep(3000) // Wait for transactions to be processed
-        console.log("All transactions sent successfully.")
-        process.exit(0)
+    .then(async ({ tx, sender }) => {
+        console.log("Waiting for the last transaction to be included...")
+        const unsub = await tx?.signAndSend(sender, ({ status }) => {
+            if (status.isInBlock) {
+                console.log(
+                    `✅ Final Transaction included in block: ${status.asInBlock}, all transactions sent successfully.`
+                )
+                unsub!()
+                process.exit(0)
+            }
+        })
     })
     .catch(console.error)
