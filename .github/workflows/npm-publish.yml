@@ -65,7 +65,8 @@ jobs:
         run: |
           # Get the most recent tag in the format web-api-v<version>
           current_tag=$(git tag --list "web-api-v*" --sort=-v:refname | head -n 1)
-          current_version=$(git tag --list "web-api-v*" --sort=-v:refname | head -n 1 | sed -E 's/web-api-v//')
+          echo "Current tag: $current_tag"
+          current_version=$(echo $current_tag | sed -E 's/web-api-v//')
           echo "Current version: $current_version"
 
           # If there is no current version, set it to 1.0.0
