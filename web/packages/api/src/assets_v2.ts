@@ -4,7 +4,10 @@ import { isFunction } from "@polkadot/util"
 import { SnowbridgeEnvironment } from "./environment"
 import { Context } from "./index"
 import { buildParachainERC20ReceivedXcmOnDestination, DOT_LOCATION } from "./xcmBuilder"
-import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
+import {
+    IERC20__factory,
+    IGatewayV1__factory as IGateway__factory,
+} from "@snowbridge/contract-types"
 import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID } from "./parachains/mythos"
 import { paraImplementation } from "./parachains"
 import { ParachainBase } from "./parachains/parachainBase"
@@ -1027,4 +1030,26 @@ export async function getAssetHubConversionPalletSwap(
         )
     }
     return BigInt(asset1Balance)
+}
+
+export const assetErc20Balance = async (
+    context: Context,
+    token: string,
+    owner: string
+): Promise<{
+    balance: bigint
+    gatewayAllowance: bigint
+}> => {
+    const [ethereum, gateway] = await Promise.all([context.ethereum(), context.gateway()])
+
+    const tokenContract = IERC20__factory.connect(token, ethereum)
+    const gatewayAddress = await gateway.getAddress()
+    const [balance, gatewayAllowance] = await Promise.all([
+        tokenContract.balanceOf(owner),
+        tokenContract.allowance(owner, gatewayAddress),
+    ])
+    return {
+        balance,
+        gatewayAllowance,
+    }
 }
