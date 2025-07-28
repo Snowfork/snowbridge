@@ -964,7 +964,7 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                 ) {
                     return false
                 }
-                // Disable para to para transfers
+                // Disable para to para transfers except for hydration
                 if (
                     path.type === "substrate" &&
                     path.destinationType === "substrate" &&
