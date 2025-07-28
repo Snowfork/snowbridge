@@ -23,7 +23,7 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import { getAssetHubConversationPalletSwap } from "./assets_v2"
+import { getAssetHubConversionPalletSwap } from "./assets_v2"
 import { Asset, AssetRegistry, Parachain, AssetMap } from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
@@ -229,7 +229,7 @@ export async function getDeliveryFee(
             "polkadot"
         )
     }
-    let destinationFee = await getAssetHubConversationPalletSwap(
+    let destinationFee = await getAssetHubConversionPalletSwap(
         destAssetHub,
         feeAssetOnDest,
         NATIVE_TOKEN_LOCATION,
