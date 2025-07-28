@@ -71,10 +71,12 @@ jobs:
           echo "Current version: $current_version"
 
           # If there is no current version, set it to 1.0.0
-          if [ -z "$current_version" ]; then
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            new_version="${{ github.event.inputs.version }}"
+          elif [ -z "$current_version" ]; then
             new_version="1.0.0"
           else
-            new_version=${{ github.event.inputs.version }} || $(npx semver $current_version -i patch)
+            new_version=$(npx semver $current_version -i patch)
           fi
             
           echo "New version: $new_version"
