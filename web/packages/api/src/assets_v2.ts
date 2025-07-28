@@ -87,6 +87,7 @@ export type Path = {
     type: SourceType
     id: string
     source: number
+    destinationType: SourceType
     destination: number
     asset: string
 }
@@ -95,7 +96,7 @@ export type Source = {
     type: SourceType
     id: string
     key: string
-    destinations: { [destination: string]: string[] }
+    destinations: { [destination: string]: { type: SourceType; assets: string[] } }
 }
 
 export type TransferLocation = {
@@ -417,17 +418,20 @@ export function getTransferLocations(
     const pathFilter = filter ?? defaultPathFilter(registry.environment)
 
     const locations: Path[] = []
+
+    const ethAssets = Object.keys(ethChain.assets)
+    // Bridged paths
     for (const parachain of parachains) {
-        const sourceAssets = Object.keys(ethChain.assets)
         const destinationAssets = Object.keys(parachain.assets)
         const commonAssets = new Set(
-            sourceAssets.filter((sa) => destinationAssets.find((da) => da === sa))
+            ethAssets.filter((sa) => destinationAssets.find((da) => da === sa))
         )
         for (const asset of commonAssets) {
             const p1: Path = {
                 type: "ethereum",
                 id: "ethereum",
                 source: ethChain.chainId,
+                destinationType: "substrate",
                 destination: parachain.parachainId,
                 asset,
             }
@@ -438,6 +442,7 @@ export function getTransferLocations(
                 type: "substrate",
                 id: parachain.info.specName,
                 source: parachain.parachainId,
+                destinationType: "ethereum",
                 destination: ethChain.chainId,
                 asset,
             }
@@ -449,6 +454,7 @@ export function getTransferLocations(
                     type: "ethereum",
                     id: `${parachain.info.specName}_evm`,
                     source: parachain.info.evmChainId,
+                    destinationType: "ethereum",
                     destination: ethChain.chainId,
                     asset,
                 }
@@ -458,6 +464,48 @@ export function getTransferLocations(
             }
         }
     }
+
+    // Local paths
+    const assetHub = registry.parachains[registry.assetHubParaId]
+    for (const parachain of parachains) {
+        if (parachain.parachainId === assetHub.parachainId) continue
+        const assetHubAssets = Object.keys(assetHub.assets)
+        const destinationAssets = Object.keys(parachain.assets)
+
+        // The asset exists on ethereum, parachain and asset hub
+        const commonAssets = new Set(
+            ethAssets.filter(
+                (sa) =>
+                    assetHubAssets.find((da) => da === sa) &&
+                    destinationAssets.find((da) => da === sa)
+            )
+        )
+        for (const asset of commonAssets) {
+            const p1: Path = {
+                type: "substrate",
+                id: assetHub.info.specName,
+                source: assetHub.parachainId,
+                destinationType: "substrate",
+                destination: parachain.parachainId,
+                asset,
+            }
+            if (pathFilter(p1)) {
+                locations.push(p1)
+            }
+            const p2: Path = {
+                type: "substrate",
+                id: parachain.info.specName,
+                source: parachain.parachainId,
+                destinationType: "substrate",
+                destination: assetHub.parachainId,
+                asset,
+            }
+            if (pathFilter(p2)) {
+                locations.push(p2)
+            }
+        }
+    }
+
     const results: Source[] = []
     for (const location of locations) {
         let source = results.find(
@@ -475,12 +523,13 @@ export function getTransferLocations(
             }
             results.push(source)
         }
-        let destination: string[] = source.destinations[location.destination]
+        let destination: { type: SourceType; assets: string[] } =
+            source.destinations[location.destination]
         if (!destination) {
-            destination = []
+            destination = { type: location.destinationType, assets: [] }
             source.destinations[location.destination] = destination
         }
-        destination.push(location.asset)
+        destination.assets.push(location.asset)
     }
     return results
 }
@@ -860,6 +909,10 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                 if (path.asset === "0x72c610e05eaafcdf1fa7a2da15374ee90edb1620") {
                     return false
                 }
+                // Disable para to para transfers
+                if (path.type === "substrate" && path.destinationType === "substrate") {
+                    return false
+                }
                 return true
             }
         }
@@ -871,6 +924,10 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                     ((path.destination !== 3369 && path.type === "ethereum") ||
                         (path.source !== 3369 && path.type === "substrate"))
                 ) {
+                    return false
+                }
+                // Disable para to para transfers
+                if (path.type === "substrate" && path.destinationType === "substrate") {
                     return false
                 }
                 return true
@@ -901,6 +958,17 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                         path.asset === "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd" || // Savings USD
                         path.asset === "0x6b175474e89094c44da98b954eedeac495271d0f") && // DAI
                     path.destination === 2034 // Hydration
+                ) {
+                    return false
+                }
+                // Disable para to para transfers
+                if (
+                    path.type === "substrate" &&
+                    path.destinationType === "substrate" &&
+                    !(
+                        (path.source === 2034 && path.destination == 1000) ||
+                        (path.source === 1000 && path.destination === 2034)
+                    )
                 ) {
                     return false
                 }
