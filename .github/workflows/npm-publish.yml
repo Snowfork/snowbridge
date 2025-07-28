@@ -70,12 +70,16 @@ jobs:
           current_version=$(echo $current_tag | sed -E 's/web-api-v//')
           echo "Current version: $current_version"
 
-          # If there is no current version, set it to 1.0.0
-          if [ -n "${{ github.event.inputs.version }}" ]; then
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            echo "Using version from release tag: ${{ github.event.release.tag_name }}"
+            new_version="${{ github.event.release.tag_name }}"
+          elif [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "Using version from input: ${{ github.event.inputs.version }}"
             new_version="${{ github.event.inputs.version }}"
           elif [ -z "$current_version" ]; then
             new_version="1.0.0"
           else
+            echo "No release tag or input version provided, incrementing patch version."
             new_version=$(npx semver $current_version -i patch)
           fi
             
