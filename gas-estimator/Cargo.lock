@@ -6724,6 +6724,7 @@ name = "snowbridge-gas-estimator"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "alloy-sol-types",
  "anyhow",
  "asset-hub-westend-local-runtime",
  "bridge-hub-westend-local-runtime",

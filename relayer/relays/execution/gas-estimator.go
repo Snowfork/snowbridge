@@ -77,25 +77,6 @@ func (g GasEstimatorConfig) Validate() error {
 	return nil
 }
 
-// EstimationCommand represents a gas estimation command for the binary
-type EstimationCommand struct {
-	Type         string  `json:"type"`
-	XCM          string  `json:"xcm,omitempty"`
-	Assets       *string `json:"assets,omitempty"`
-	Claimer      string  `json:"claimer"`
-	Origin       string  `json:"origin"`
-	Value        string  `json:"value"`
-	ExecutionFee string  `json:"execution_fee"`
-	RelayerFee   string  `json:"relayer_fee"`
-	TokenAddress string  `json:"token_address,omitempty"`
-	Network      *uint8  `json:"network,omitempty"`
-}
-
-// EstimationConfig represents the JSON configuration for the gas estimator binary
-type EstimationConfig struct {
-	Environment string            `json:"environment"`
-	Command     EstimationCommand `json:"command"`
-}
 
 // GasEstimator provides gas estimation functionality
 type GasEstimator struct {
@@ -143,8 +124,9 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 	// Build command arguments
 	args := []string{
 		"estimate",
-		"send-message",
-		"--xcm", xcmHex,
+		"message",
+		"--xcm-kind", fmt.Sprintf("%d", ev.Payload.Xcm.Kind),
+		"--xcm-data", xcmHex,
 		"--claimer", claimerHex,
 		"--origin", originHex,
 		"--value", value,

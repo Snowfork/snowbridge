@@ -6,10 +6,19 @@ use crate::estimator::{
 };
 #[cfg(feature = "local")]
 use asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::location::Location;
+use alloy_sol_types::{sol, SolValue};
 use clap::{Parser, Subcommand, ValueEnum};
 use codec;
 use hex;
 use std::process;
+
+// Define the AsCreateAsset struct from the Solidity contract
+sol! {
+    struct AsCreateAsset {
+        address token;
+        uint8 network;
+    }
+}
 
 #[derive(Parser)]
 #[command(name = "snowbridge-gas-estimator")]
@@ -34,38 +43,14 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum EstimateCommands {
-    /// Estimate gas for sending a message
-    SendMessage {
-        /// XCM payload bytes
+    /// Estimate gas for a message (handles both raw XCM and create asset based on XCM kind)
+    Message {
+        /// XCM kind (0 = Raw, 1 = CreateAsset)
         #[arg(long)]
-        xcm: String,
-        /// Asset transfer data (JSON array of asset objects)
-        #[arg(long, default_value = "[]")]
-        assets: String,
-        /// Claimer address (hex string)
+        xcm_kind: u8,
+        /// XCM data (hex string) - raw XCM bytes for kind=0, ABI-encoded AsCreateAsset for kind=1
         #[arg(long)]
-        claimer: String,
-        /// Origin address (hex string)
-        #[arg(long)]
-        origin: String,
-        /// The full Ether value supplied to cover the transaction, including execution and relayer fee
-        #[arg(long)]
-        value: u128,
-        /// Execution fee in wei
-        #[arg(long)]
-        execution_fee: u128,
-        /// Relayer fee in wei
-        #[arg(long)]
-        relayer_fee: u128,
-    },
-    /// Estimate gas for registering a token
-    RegisterToken {
-        /// Token address (hex string)
-        #[arg(long)]
-        token_address: String,
-        /// Network ID (currently only 0 is supported)
-        #[arg(long, default_value = "0")]
-        network: u8,
+        xcm_data: String,
         /// Asset transfer data (JSON array of asset objects)
         #[arg(long, default_value = "[]")]
         assets: String,
@@ -116,8 +101,9 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
 
     match cli.command {
         Commands::Estimate { command } => match command {
-            EstimateCommands::SendMessage {
-                xcm,
+            EstimateCommands::Message {
+                xcm_kind,
+                xcm_data,
                 assets,
                 claimer,
                 origin,
@@ -125,53 +111,29 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                 execution_fee,
                 relayer_fee,
             } => {
-                let xcm_bytes = parse_hex_address(&xcm)?;
                 let claimer = parse_claimer(&claimer)?;
                 let origin = parse_origin(&origin)?;
                 let assets = parse_assets(&assets)?;
 
-                let estimation = estimate_gas(
-                    &clients,
-                    &xcm_bytes,
-                    claimer,
-                    origin,
-                    value,
-                    execution_fee,
-                    relayer_fee,
-                    &assets,
-                )
-                .await?;
-
-                serde_json::to_string_pretty(&estimation).map_err(|e| {
-                    EstimatorError::InvalidCommand(format!(
-                        "Failed to serialize result to JSON: {}",
-                        e
-                    ))
-                })
-            }
-            EstimateCommands::RegisterToken {
-                token_address,
-                network,
-                assets,
-                claimer,
-                origin,
-                value,
-                execution_fee,
-                relayer_fee,
-            } => {
-                if network != 0 {
-                    return Err(EstimatorError::InvalidCommand(format!(
-                        "Unsupported network: {}. Currently only network 0 is supported",
-                        network
-                    )));
-                }
-
-                let claimer = parse_claimer(&claimer)?;
-                let origin = parse_origin(&origin)?;
-                let assets = parse_assets(&assets)?;
-
-                let xcm_bytes =
-                    construct_register_token_xcm(&token_address, network, value, claimer.clone())?;
+                // Process XCM based on kind
+                let xcm_bytes = match xcm_kind {
+                    0 => {
+                        // Raw XCM bytes
+                        parse_hex_address(&xcm_data)?
+                    }
+                    1 => {
+                        // CreateAsset - decode token address and network from ABI-encoded data
+                        let create_asset_data = parse_hex_address(&xcm_data)?;
+                        let (token_address, network) = decode_create_asset_data(&create_asset_data)?;
+                        construct_register_token_xcm(&format!("0x{}", hex::encode(token_address)), network, value, claimer.clone())?
+                    }
+                    _ => {
+                        return Err(EstimatorError::InvalidCommand(format!(
+                            "Unsupported XCM kind: {}. Must be 0 (Raw) or 1 (CreateAsset)",
+                            xcm_kind
+                        )));
+                    }
+                };
 
                 let estimation = estimate_gas(
                     &clients,
@@ -227,4 +189,15 @@ fn parse_origin(origin_hex: &str) -> Result<[u8; 20], EstimatorError> {
 
 fn parse_assets(assets_json: &str) -> Result<Vec<BridgeAsset>, EstimatorError> {
     decode_assets(assets_json)
+}
+
+fn decode_create_asset_data(data: &[u8]) -> Result<([u8; 20], u8), EstimatorError> {
+    // Decode the ABI-encoded AsCreateAsset struct using alloy
+    let decoded = AsCreateAsset::abi_decode(data)
+        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to decode AsCreateAsset: {}", e)))?;
+
+    // Convert alloy Address to [u8; 20]
+    let token_address: [u8; 20] = decoded.token.into();
+
+    Ok((token_address, decoded.network))
 }
