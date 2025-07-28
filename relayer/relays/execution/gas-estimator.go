@@ -7,15 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/big"
-	"os"
-	"os/exec"
-	"path/filepath"
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/contracts"
+	"math/big"
+	"os"
+	"os/exec"
 )
 
 // GasEstimate represents the gas estimation results from the Rust binary
@@ -77,7 +75,6 @@ func (g GasEstimatorConfig) Validate() error {
 	return nil
 }
 
-
 // GasEstimator provides gas estimation functionality
 type GasEstimator struct {
 	config GasEstimatorConfig
@@ -91,7 +88,7 @@ func NewGasEstimator(config GasEstimatorConfig) *GasEstimator {
 }
 
 // EstimateGas estimates the gas cost for processing a message
-func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted, source common.Address) (*GasEstimate, error) {
+func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted, source string) (*GasEstimate, error) {
 	if !g.config.Enabled {
 		log.Debug("Gas estimation disabled, skipping")
 		return &GasEstimate{}, nil
@@ -108,9 +105,6 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 		claimerHex = fmt.Sprintf("0x%x", ev.Payload.Claimer)
 	}
 
-	originHex := source.Hex()
-
-	// Determine values from the event payload
 	value := ev.Payload.Value.String()
 	executionFee := ev.Payload.ExecutionFee.String()
 	relayerFee := ev.Payload.RelayerFee.String()
@@ -121,24 +115,21 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 		return nil, fmt.Errorf("failed to convert assets to JSON: %w", err)
 	}
 
-	// Build command arguments
 	args := []string{
 		"estimate",
 		"message",
 		"--xcm-kind", fmt.Sprintf("%d", ev.Payload.Xcm.Kind),
 		"--xcm-data", xcmHex,
 		"--claimer", claimerHex,
-		"--origin", originHex,
+		"--origin", source,
 		"--value", value,
 		"--execution-fee", executionFee,
 		"--relayer-fee", relayerFee,
 		"--assets", assetsJSON,
 	}
 
-	// Set up the command
 	cmd := exec.CommandContext(ctx, g.config.BinaryPath, args...)
 
-	// Add environment variables
 	if g.config.Environment != nil {
 		env := make([]string, 0, len(g.config.Environment))
 		for key, value := range g.config.Environment {
@@ -170,17 +161,13 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 		return nil, fmt.Errorf("gas estimator execution failed: %w", err)
 	}
 
-	// Parse the JSON response
 	var estimate GasEstimate
 	if err := json.Unmarshal(output, &estimate); err != nil {
 		return nil, fmt.Errorf("failed to parse gas estimation response: %w", err)
 	}
 
 	log.WithFields(log.Fields{
-		"extrinsic_fee_dot":   estimate.ExtrinsicFeeInDot,
-		"extrinsic_fee_ether": estimate.ExtrinsicFeeInEther,
-		"asset_hub_success":   estimate.AssetHub.DryRunSuccess,
-		"destination_success": estimate.Destination.DryRunSuccess,
+		"estimate": estimate,
 	}).Debug("gas estimation completed")
 
 	return &estimate, nil
@@ -192,7 +179,6 @@ func (g *GasEstimator) IsGasAcceptable(estimate *GasEstimate) bool {
 		return true // If estimation is disabled, accept all messages
 	}
 
-	// Check if dry runs were successful
 	if !estimate.AssetHub.DryRunSuccess {
 		log.WithField("error", estimate.AssetHub.DryRunError).Warn("Asset hub dry run failed")
 		return false
@@ -248,23 +234,6 @@ func (g *GasEstimator) IsGasAcceptable(estimate *GasEstimate) bool {
 	}
 
 	return true
-}
-
-// GetDefaultGasEstimatorConfig returns a default configuration for the gas estimator
-func GetDefaultGasEstimatorConfig() GasEstimatorConfig {
-	binaryPath, _ := filepath.Abs("../gas-estimator/target/release/snowbridge-gas-estimator")
-
-	return GasEstimatorConfig{
-		BinaryPath:    binaryPath,
-		MaxGasInDot:   1000000000000,        // 100 DOT in planck (10^10 planck = 1 DOT)
-		MaxGasInEther: 10000000000000000000, // 10 ETH in wei
-		Enabled:       true,
-		Environment: map[string]string{
-			"ASSET_HUB_WS_URL":  "ws://127.0.0.1:12144",
-			"BRIDGE_HUB_WS_URL": "ws://127.0.0.1:11144",
-			"PENPAL_WS_URL":     "ws://127.0.0.1:13144",
-		},
-	}
 }
 
 // BridgeAssetJSON represents the JSON structure expected by the Rust gas estimator

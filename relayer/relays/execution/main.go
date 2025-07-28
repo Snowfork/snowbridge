@@ -525,45 +525,17 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	}
 
 	if r.gasEstimator.config.Enabled {
-		sourceAddress := common.HexToAddress(source)
-
-		gasEstimate, err := r.gasEstimator.EstimateGas(ctx, ev, sourceAddress)
+		gasEstimate, err := r.gasEstimator.EstimateGas(ctx, ev, source)
 		if err != nil {
-			logger.WithError(err).Error("Gas estimation failed")
 			return fmt.Errorf("gas estimation failed: %w", err)
 		}
 
 		if !r.gasEstimator.IsGasAcceptable(gasEstimate) {
-			totalGas := gasEstimate.ExtrinsicFeeInDot + gasEstimate.AssetHub.ExecutionFeeInDot + gasEstimate.AssetHub.DeliveryFeeInDot
-			if gasEstimate.Destination.ExecutionFeeInDot != nil {
-				totalGas += *gasEstimate.Destination.ExecutionFeeInDot
-			}
-			if gasEstimate.Destination.DeliveryFeeInDot != nil {
-				totalGas += *gasEstimate.Destination.DeliveryFeeInDot
-			}
-
-			logger.WithFields(log.Fields{
-				"extrinsic_fee_dot":         gasEstimate.ExtrinsicFeeInDot,
-				"extrinsic_fee_ether":       gasEstimate.ExtrinsicFeeInEther,
-				"asset_hub_execution_fee":   gasEstimate.AssetHub.ExecutionFeeInDot,
-				"asset_hub_delivery_fee":    gasEstimate.AssetHub.DeliveryFeeInDot,
-				"destination_execution_fee": gasEstimate.Destination.ExecutionFeeInDot,
-				"destination_delivery_fee":  gasEstimate.Destination.DeliveryFeeInDot,
-				"total_gas_estimate":        totalGas,
-			}).Info("Message rejected due to high gas cost")
+			logger.WithField("nonce", ev.Nonce).Info("message will not be relayed due to not being profitable")
 			return nil // Skip this message without error
 		}
 
-		logger.WithFields(log.Fields{
-			"extrinsic_fee_dot":         gasEstimate.ExtrinsicFeeInDot,
-			"extrinsic_fee_ether":       gasEstimate.ExtrinsicFeeInEther,
-			"asset_hub_execution_fee":   gasEstimate.AssetHub.ExecutionFeeInDot,
-			"asset_hub_delivery_fee":    gasEstimate.AssetHub.DeliveryFeeInDot,
-			"destination_execution_fee": gasEstimate.Destination.ExecutionFeeInDot,
-			"destination_delivery_fee":  gasEstimate.Destination.DeliveryFeeInDot,
-			"asset_hub_success":         gasEstimate.AssetHub.DryRunSuccess,
-			"destination_success":       gasEstimate.Destination.DryRunSuccess,
-		}).Info("Gas estimation passed, proceeding with message relay")
+		logger.WithField("nonce", ev.Nonce).Info("message relaying is profitable, proceeding with message relay")
 	}
 
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
