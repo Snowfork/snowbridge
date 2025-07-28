@@ -94,7 +94,7 @@ jobs:
 
       - name: Create new tag
         id: create_tag
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'release'
         run: |
           tag_name="web-api-v${{ steps.new_version.outputs.version }}"
           echo "Tag name: $tag_name"
@@ -103,13 +103,13 @@ jobs:
 
       - name: Push new tag
         id: push_tag
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'release'
         run: |
           git push origin --tags
 
       - name: "Build Changelog"
         id: build_changelog
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'release'
         uses: mikepenz/release-changelog-builder-action@v4
         with:
           configurationJson: |
@@ -127,7 +127,7 @@ jobs:
 
       - name: Create a GitHub Release
         id: create_release
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'release'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
