@@ -1,7 +1,7 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, contextConfigFor, environment } from "@snowbridge/api"
+import { Context, contextConfigFor } from "@snowbridge/api"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
-import { AbstractProvider, Contract, ethers, LogDescription, Wallet } from "ethers"
+import { Contract, ethers, LogDescription, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 
 export const registerERC20 = async (tokenAddress: string) => {
@@ -10,6 +10,7 @@ export const registerERC20 = async (tokenAddress: string) => {
         env = process.env.NODE_ENV
     }
     console.log(`Using environment '${env}'`)
+    await cryptoWaitReady()
 
     const context = new Context(contextConfigFor(env))
 

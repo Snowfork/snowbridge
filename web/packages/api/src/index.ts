@@ -9,22 +9,18 @@ import {
 } from "@snowbridge/contract-types"
 import { SNOWBRIDGE_ENV } from "./environment"
 
-export * as toPolkadot from "./toPolkadot"
 export * as toPolkadotV2 from "./toPolkadot_v2"
-export * as toEthereum from "./toEthereum"
 export * as toEthereumV2 from "./toEthereum_v2"
 export * as utils from "./utils"
 export * as status from "./status"
-export * as assets from "./assets"
 export * as assetsV2 from "./assets_v2"
 export * as environment from "./environment"
-export * as subscan from "./subscan"
-export * as history from "./history"
 export * as historyV2 from "./history_v2"
 export * as subsquid from "./subsquid"
 export * as forKusama from "./forKusama"
 export * as toEthereumFromEVMV2 from "./toEthereumFromEVM_v2"
 export * as parachains from "./parachains"
+export * as xcmBuilder from "./xcmBuilder"
 export * as toEthereumSnowbridgeV2 from "./toEthereumSnowbridgeV2"
 
 interface Parachains {

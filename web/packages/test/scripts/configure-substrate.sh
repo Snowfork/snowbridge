@@ -56,17 +56,13 @@ configure_ah() {
     # Create Ether
     local call="0x28020c1f04020109079edaa802040000003501020109079edaa80200ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d01043513020109079edaa8021445746865721445746865721200"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
-
-    # register Wnd on BH
-    local call="0x24010501000c776e640c776e640c020109079edaa8020002286bee"
-    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 
 
 configure_substrate() {
-    configure_from_test_helper
     configure_bh
     configure_ah
+    configure_from_test_helper
     wait_beacon_chain_ready
     config_beacon_checkpoint
 }
