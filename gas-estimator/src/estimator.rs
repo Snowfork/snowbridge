@@ -40,6 +40,20 @@ use subxt::{config::DefaultExtrinsicParams, Config, OnlineClient, PolkadotConfig
 use subxt_signer::sr25519::dev;
 
 use crate::penpal;
+use crate::contracts::r#i_gateway_v2::IGatewayV2;
+use alloy_sol_types::{sol, SolValue};
+
+sol! {
+    struct AsNativeTokenERC20 {
+        address token;
+        uint128 amount;
+    }
+
+    struct AsForeignTokenERC20 {
+        bytes32 foreignID;
+        uint128 amount;
+    }
+}
 
 lazy_static! { // TODO extract to config file or something
     pub static ref ASSET_HUB_WS_URL: String = {
@@ -969,12 +983,68 @@ async fn lookup_foreign_asset_location(
     Ok(decoded_location)
 }
 
-pub fn decode_assets(assets_json: &str) -> Result<Vec<BridgeAsset>, EstimatorError> {
-    let assets: Vec<BridgeAsset> = serde_json::from_str(assets_json).map_err(|e| {
-        EstimatorError::InvalidCommand(format!("Failed to parse assets JSON: {}", e))
+pub fn decode_assets_from_hex(assets_hex: &str) -> Result<Vec<BridgeAsset>, EstimatorError> {
+    if assets_hex == "" || assets_hex.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let hex_str = if assets_hex.starts_with("0x") {
+        &assets_hex[2..]
+    } else {
+        assets_hex
+    };
+
+    let data = hex::decode(hex_str).map_err(|e| {
+        EstimatorError::InvalidCommand(format!("Failed to decode hex assets: {}", e))
     })?;
 
-    Ok(assets)
+    let assets_vec = Vec::<IGatewayV2::Asset>::abi_decode(&data).map_err(|e| {
+        EstimatorError::InvalidCommand(format!("Failed to ABI decode assets: {}", e))
+    })?;
+
+    let mut bridge_assets = Vec::new();
+    for (i, asset) in assets_vec.iter().enumerate() {
+        let bridge_asset = match asset.kind {
+            0 => {
+                // Native token - decode the inner data
+                let decoded = AsNativeTokenERC20::abi_decode(&asset.data).map_err(|e| {
+                    EstimatorError::InvalidCommand(format!(
+                        "Failed to decode native token data for asset {}: {}",
+                        i, e
+                    ))
+                })?;
+
+                BridgeAsset::NativeToken {
+                    token: format!("{:?}", decoded.token),
+                    amount: decoded.amount.to_string(),
+                }
+            }
+            1 => {
+                // Foreign token - decode the inner data
+                let decoded = AsForeignTokenERC20::abi_decode(&asset.data).map_err(|e| {
+                    EstimatorError::InvalidCommand(format!(
+                        "Failed to decode foreign token data for asset {}: {}",
+                        i, e
+                    ))
+                })?;
+
+                BridgeAsset::ForeignToken {
+                    foreign_id: format!("0x{}", hex::encode(decoded.foreignID)),
+                    amount: decoded.amount.to_string(),
+                }
+            }
+            _ => {
+                return Err(EstimatorError::InvalidCommand(format!(
+                    "Unknown asset kind {} for asset {}",
+                    asset.kind, i
+                )));
+            }
+        };
+
+        bridge_assets.push(bridge_asset);
+    }
+
+    Ok(bridge_assets)
 }
 
 fn parse_amount_string(amount_str: &str) -> Result<u128, EstimatorError> {

@@ -1,8 +1,9 @@
 mod estimator;
 mod penpal;
+mod contracts;
 
 use crate::estimator::{
-    clients, construct_register_token_xcm, decode_assets, estimate_gas, BridgeAsset, EstimatorError,
+    clients, construct_register_token_xcm, decode_assets_from_hex, estimate_gas, BridgeAsset, EstimatorError,
 };
 #[cfg(feature = "local")]
 use asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::location::Location;
@@ -51,8 +52,8 @@ enum EstimateCommands {
         /// XCM data (hex string) - raw XCM bytes for kind=0, ABI-encoded AsCreateAsset for kind=1
         #[arg(long)]
         xcm_data: String,
-        /// Asset transfer data (JSON array of asset objects)
-        #[arg(long, default_value = "[]")]
+        /// Asset transfer data (hex-encoded asset data)
+        #[arg(long, default_value = "")]
         assets: String,
         /// Claimer address (hex string)
         #[arg(long)]
@@ -187,8 +188,8 @@ fn parse_origin(origin_hex: &str) -> Result<[u8; 20], EstimatorError> {
     Ok(origin)
 }
 
-fn parse_assets(assets_json: &str) -> Result<Vec<BridgeAsset>, EstimatorError> {
-    decode_assets(assets_json)
+fn parse_assets(assets_hex: &str) -> Result<Vec<BridgeAsset>, EstimatorError> {
+    decode_assets_from_hex(assets_hex)
 }
 
 fn decode_create_asset_data(data: &[u8]) -> Result<([u8; 20], u8), EstimatorError> {

@@ -5,10 +5,10 @@ package execution
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"math/big"
@@ -109,10 +109,9 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 	executionFee := ev.Payload.ExecutionFee.String()
 	relayerFee := ev.Payload.RelayerFee.String()
 
-	// Convert assets to JSON format expected by the gas estimator
-	assetsJSON, err := assetsToJSON(ev.Payload.Assets)
+	assetsHex, err := assetsToHex(ev.Payload.Assets)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert assets to JSON: %w", err)
+		return nil, fmt.Errorf("failed to convert assets to hex: %w", err)
 	}
 
 	args := []string{
@@ -125,7 +124,7 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 		"--value", value,
 		"--execution-fee", executionFee,
 		"--relayer-fee", relayerFee,
-		"--assets", assetsJSON,
+		"--assets", assetsHex,
 	}
 
 	cmd := exec.CommandContext(ctx, g.config.BinaryPath, args...)
@@ -253,111 +252,38 @@ func (g *GasEstimator) IsProfitable(estimate *GasEstimate, ev *contracts.Gateway
 	return nil
 }
 
-// BridgeAssetJSON represents the JSON structure expected by the Rust gas estimator
-type BridgeAssetJSON struct {
-	Kind      string `json:"kind"`
-	Token     string `json:"token,omitempty"`      // For native tokens
-	Amount    string `json:"amount"`               // Always present
-	ForeignID string `json:"foreign_id,omitempty"` // For foreign tokens
-}
-
-// AsNativeTokenERC20 represents the ABI structure for native ERC20 assets (kind = 0)
-type AsNativeTokenERC20 struct {
-	Token  common.Address
-	Amount *big.Int
-}
-
-// AsForeignTokenERC20 represents the ABI structure for foreign ERC20 assets (kind = 1)
-type AsForeignTokenERC20 struct {
-	ForeignID [32]byte
-	Amount    *big.Int
-}
-
-const (
-	AssetKindNativeTokenERC20  = 0
-	AssetKindForeignTokenERC20 = 1
-)
-
-func assetsToJSON(assets []contracts.Asset) (string, error) {
-	bridgeAssets := make([]BridgeAssetJSON, 0, len(assets))
-
-	// Define ABI types for decoding asset data
-	nativeTokenType, err := abi.NewType("tuple", "AsNativeTokenERC20", []abi.ArgumentMarshaling{
-		{Name: "token", Type: "address"},
-		{Name: "amount", Type: "uint128"},
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to create native token ABI type: %w", err)
+// assetsToHex encodes assets as ABI-encoded hex
+func assetsToHex(assets []contracts.Asset) (string, error) {
+	if len(assets) == 0 {
+		return "", nil
 	}
 
-	foreignTokenType, err := abi.NewType("tuple", "AsForeignTokenERC20", []abi.ArgumentMarshaling{
-		{Name: "foreignID", Type: "bytes32"},
-		{Name: "amount", Type: "uint128"},
+	assetArrayType, err := abi.NewType("tuple[]", "Asset[]", []abi.ArgumentMarshaling{
+		{Name: "kind", Type: "uint8"},
+		{Name: "data", Type: "bytes"},
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to create foreign token ABI type: %w", err)
+		return "", fmt.Errorf("failed to create asset array ABI type: %w", err)
 	}
 
-	nativeArgs := abi.Arguments{{Type: nativeTokenType}}
-	foreignArgs := abi.Arguments{{Type: foreignTokenType}}
+	type AssetStruct struct {
+		Kind uint8
+		Data []byte
+	}
 
+	values := make([]AssetStruct, len(assets))
 	for i, asset := range assets {
-		switch asset.Kind {
-		case AssetKindNativeTokenERC20:
-			// Decode native token data
-			values, err := nativeArgs.Unpack(asset.Data)
-			if err != nil {
-				return "", fmt.Errorf("failed to decode native token asset %d: %w", i, err)
-			}
-
-			if len(values) != 1 {
-				return "", fmt.Errorf("expected 1 value from native token unpack, got %d", len(values))
-			}
-
-			// The unpacked value is a struct with Token and Amount fields
-			nativeStruct := values[0].(struct {
-				Token  common.Address `json:"token"`
-				Amount *big.Int       `json:"amount"`
-			})
-
-			bridgeAssets = append(bridgeAssets, BridgeAssetJSON{
-				Kind:   "native",
-				Token:  nativeStruct.Token.Hex(),
-				Amount: nativeStruct.Amount.String(),
-			})
-
-		case AssetKindForeignTokenERC20:
-			// Decode foreign token data
-			values, err := foreignArgs.Unpack(asset.Data)
-			if err != nil {
-				return "", fmt.Errorf("failed to decode foreign token asset %d: %w", i, err)
-			}
-
-			if len(values) != 1 {
-				return "", fmt.Errorf("expected 1 value from foreign token unpack, got %d", len(values))
-			}
-
-			// The unpacked value is a struct with ForeignID and Amount fields
-			foreignStruct := values[0].(struct {
-				ForeignID [32]byte `json:"foreignID"`
-				Amount    *big.Int `json:"amount"`
-			})
-
-			bridgeAssets = append(bridgeAssets, BridgeAssetJSON{
-				Kind:      "foreign",
-				ForeignID: fmt.Sprintf("0x%x", foreignStruct.ForeignID),
-				Amount:    foreignStruct.Amount.String(),
-			})
-
-		default:
-			return "", fmt.Errorf("unknown asset kind %d for asset %d", asset.Kind, i)
+		values[i] = AssetStruct{
+			Kind: asset.Kind,
+			Data: asset.Data,
 		}
 	}
 
-	jsonBytes, err := json.Marshal(bridgeAssets)
+	args := abi.Arguments{{Type: assetArrayType}}
+	encoded, err := args.Pack(values)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal assets to JSON: %w", err)
+		return "", fmt.Errorf("failed to ABI encode assets: %w", err)
 	}
 
-	return string(jsonBytes), nil
+	return "0x" + hex.EncodeToString(encoded), nil
 }
