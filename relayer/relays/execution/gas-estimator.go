@@ -44,9 +44,9 @@ type GasEstimatorConfig struct {
 	// Path to the gas estimator binary
 	BinaryPath string `mapstructure:"binary-path"`
 	// Maximum acceptable gas in DOT (10^10 planck = 1 DOT)
-	MaxGasInDot big.Int `mapstructure:"max-gas-in-dot"`
+	MaxGasInDot string `mapstructure:"max-gas-in-dot"`
 	// Maximum acceptable gas in Ether (wei)
-	MaxGasInEther big.Int `mapstructure:"max-gas-in-ether"`
+	MaxGasInEther string `mapstructure:"max-gas-in-ether"`
 	// Whether to enable gas estimation (can be disabled for testing)
 	Enabled bool `mapstructure:"enabled"`
 	// Environment variables to pass to the binary (like WS URLs)
@@ -174,23 +174,21 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 }
 
 // IsProfitable checks if the ether provided with the message is sufficient to cover costs.
-func (g *GasEstimator) IsProfitable(estimate *GasEstimate, ev *contracts.GatewayOutboundMessageAccepted) bool {
+func (g *GasEstimator) IsProfitable(estimate *GasEstimate, ev *contracts.GatewayOutboundMessageAccepted) error {
 	if !g.config.Enabled {
-		return true // If estimation is disabled, accept all messages
+		return nil // If estimation is disabled, accept all messages
 	}
 
 	if !estimate.AssetHub.DryRunSuccess {
-		log.WithField("error", estimate.AssetHub.DryRunError).Warn("Asset hub dry run failed")
-		return false
+		return fmt.Errorf("asset hub dry run failed: %s", *estimate.AssetHub.DryRunError)
 	}
 
 	if estimate.Destination.DryRunSuccess != nil && !*estimate.Destination.DryRunSuccess {
-		log.WithField("error", estimate.Destination.DryRunError).Warn("Destination dry run failed")
-		return false
+		return fmt.Errorf("destination hub dry run failed: %s", *estimate.Destination.DryRunError)
 	}
 
 	var totalGasInDot big.Int
-	totalGasInDot.Set(&estimate.ExtrinsicFeeInDot) // Initialize with first value
+	totalGasInDot.Set(&estimate.ExtrinsicFeeInDot)
 
 	totalGasInDot.Add(&totalGasInDot, &estimate.AssetHub.ExecutionFeeInDot)
 	totalGasInDot.Add(&totalGasInDot, &estimate.AssetHub.DeliveryFeeInDot)
@@ -203,13 +201,14 @@ func (g *GasEstimator) IsProfitable(estimate *GasEstimate, ev *contracts.Gateway
 		totalGasInDot.Add(&totalGasInDot, estimate.Destination.DeliveryFeeInDot)
 	}
 
+	maxGasInDotInt := new(big.Int)
+	if _, ok := maxGasInDotInt.SetString(g.config.MaxGasInDot, 10); !ok {
+		return fmt.Errorf("config MaxGasInDot could not be converted to Int")
+	}
+
 	// Check DOT limit
-	if totalGasInDot.Cmp(&g.config.MaxGasInDot) == 1 {
-		log.WithFields(log.Fields{
-			"estimated_gas_dot": totalGasInDot,
-			"max_gas_dot":       g.config.MaxGasInDot,
-		}).Warn("message rejected: gas cost in DOT exceeds limit")
-		return false
+	if totalGasInDot.Cmp(maxGasInDotInt) == 1 {
+		return fmt.Errorf("gas cost in DOT exceeds limit, estimated gas cost %s max gas dot %s", totalGasInDot.String(), g.config.MaxGasInDot)
 	}
 
 	var totalGasInEther big.Int
@@ -225,22 +224,19 @@ func (g *GasEstimator) IsProfitable(estimate *GasEstimate, ev *contracts.Gateway
 		totalGasInEther.Add(&totalGasInEther, estimate.Destination.DeliveryFeeInEther)
 	}
 
+	MaxGasInEther := new(big.Int)
+	if _, ok := MaxGasInEther.SetString(g.config.MaxGasInEther, 10); !ok {
+		return fmt.Errorf("config MaxGasInEther could not be converted to Int")
+	}
+
 	// Check Ether limit
-	if totalGasInEther.Cmp(&g.config.MaxGasInEther) == 1 {
-		log.WithFields(log.Fields{
-			"estimated_gas_ether": totalGasInEther.String(),
-			"max_gas_ether":       g.config.MaxGasInEther.String(),
-		}).Warn("message rejected: gas cost in Ether exceeds limit")
-		return false
+	if totalGasInEther.Cmp(MaxGasInEther) == 1 {
+		return fmt.Errorf("gas cost in Ether exceeds limit, estimated gas cost %s max gas dot %s", totalGasInEther.String(), g.config.MaxGasInEther)
 	}
 
 	// Check if AssetHub execution fee actually covers expected AssetHub execution
 	if estimate.AssetHub.ExecutionFeeInEther.Cmp(ev.Payload.ExecutionFee) == 1 {
-		log.WithFields(log.Fields{
-			"estimated_asset_hub_execution": estimate.AssetHub.ExecutionFeeInEther.String(),
-			"provided_asset_hub_execution":  ev.Payload.ExecutionFee.String(),
-		}).Warn("ether value provided not profitable to relay")
-		return false
+		return fmt.Errorf("asset hub execution fee does not cover estimated execution cost, estimated asset hub execution %s provided asset hub execution %s", estimate.AssetHub.ExecutionFeeInEther.String(), ev.Payload.ExecutionFee.String())
 	}
 
 	var profitability big.Int
@@ -251,14 +247,10 @@ func (g *GasEstimator) IsProfitable(estimate *GasEstimate, ev *contracts.Gateway
 	profitability.Add(&profitability, ev.Payload.RelayerFee)
 
 	if profitability.Cmp(ev.Payload.Value) == 1 {
-		log.WithFields(log.Fields{
-			"profitability": profitability.String(),
-			"messageValue":  ev.Payload.Value.String(),
-		}).Warn("ether value provided not profitable to relay")
-		return false
+		return fmt.Errorf("ether value provided not profitable to relay, profitability %s messageValue %s", profitability.String(), ev.Payload.Value.String())
 	}
 
-	return true
+	return nil
 }
 
 // BridgeAssetJSON represents the JSON structure expected by the Rust gas estimator
