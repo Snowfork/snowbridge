@@ -245,7 +245,6 @@ pub async fn estimate_gas(
     relayer_fee: u128,
     assets: &[BridgeAsset],
 ) -> Result<GasEstimation, EstimatorError> {
-    validate(value, execution_fee, relayer_fee)?;
     let claimer_location = get_claimer_location(claimer)?;
 
     let destination_xcm = build_asset_hub_xcm(
@@ -427,14 +426,6 @@ pub async fn estimate_gas(
             delivery_fee_in_ether: destination_delivery_fee_in_ether,
         },
     })
-}
-
-fn validate(value: u128, execution_fee: u128, relayer_fee: u128) -> Result<(), EstimatorError> {
-    if execution_fee.saturating_add(relayer_fee) > value {
-        return Err(EstimatorError::ValueTooLow);
-    }
-
-    Ok(())
 }
 
 pub async fn build_asset_hub_xcm(

@@ -238,17 +238,6 @@ func (g *GasEstimator) IsProfitable(estimate *GasEstimate, ev *contracts.Gateway
 		return fmt.Errorf("asset hub execution fee does not cover estimated execution cost, estimated asset hub execution %s provided asset hub execution %s", estimate.AssetHub.ExecutionFeeInEther.String(), ev.Payload.ExecutionFee.String())
 	}
 
-	var profitability big.Int
-	profitability.Set(&estimate.ExtrinsicFeeInEther)
-
-	profitability.Add(&profitability, &estimate.AssetHub.DeliveryFeeInEther)
-	profitability.Add(&profitability, &estimate.AssetHub.ExecutionFeeInEther)
-	profitability.Add(&profitability, ev.Payload.RelayerFee)
-
-	if profitability.Cmp(ev.Payload.Value) == 1 {
-		return fmt.Errorf("ether value provided not profitable to relay, profitability %s messageValue %s", profitability.String(), ev.Payload.Value.String())
-	}
-
 	return nil
 }
 
