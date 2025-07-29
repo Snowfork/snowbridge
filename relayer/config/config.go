@@ -17,6 +17,10 @@ type EthereumConfig struct {
 	GasLimit  uint64 `mapstructure:"gas-limit"`
 	// The gas cost of v2_submit excludes command execution, mainly covers the verification
 	BaseDeliveryGas uint64 `mapstructure:"base-delivery-gas"`
+	// The gas cost of unlock ERC20 token
+	BaseUnlockGas uint64 `mapstructure:"base-unlock-gas"`
+	// The gas cost of mint Polkadot native asset
+	BaseMintGas uint64 `mapstructure:"base-mint-gas"`
 }
 
 type OFACConfig struct {

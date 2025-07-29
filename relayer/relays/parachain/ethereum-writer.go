@@ -118,9 +118,13 @@ func (wr *EthereumWriter) WriteChannels(
 func (wr *EthereumWriter) commandGas(command *CommandWrapper) uint64 {
 	var gas uint64
 	switch command.Kind {
-	// Allow transfers even if the attached fee is lower than the estimated gas cost, to remain lenient
-	case 2, 4:
-		gas = uint64(60_000)
+	// ERC20 transfer
+	case 2:
+		// BaseUnlockGas should cover most of the ERC20 token. Specific gas costs can be set per token if needed
+		gas = wr.config.Ethereum.BaseUnlockGas
+	// PNA transfer
+	case 4:
+		gas = wr.config.Ethereum.BaseMintGas
 	default:
 		gas = uint64(command.MaxDispatchGas)
 	}
