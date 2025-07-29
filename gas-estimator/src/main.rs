@@ -1,14 +1,15 @@
 mod config;
+mod contracts;
 mod estimator;
 mod penpal;
-mod contracts;
 
 use crate::estimator::{
-    clients, construct_register_token_xcm, decode_assets_from_hex, estimate_gas, BridgeAsset, EstimatorError,
+    clients, construct_register_token_xcm, decode_assets_from_hex, estimate_gas, BridgeAsset,
+    EstimatorError,
 };
+use alloy_sol_types::{sol, SolValue};
 #[cfg(feature = "local")]
 use asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::location::Location;
-use alloy_sol_types::{sol, SolValue};
 use clap::{Parser, Subcommand, ValueEnum};
 use codec;
 use hex;
@@ -126,8 +127,14 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                     1 => {
                         // CreateAsset - decode token address and network from ABI-encoded data
                         let create_asset_data = parse_hex_address(&xcm_data)?;
-                        let (token_address, network) = decode_create_asset_data(&create_asset_data)?;
-                        construct_register_token_xcm(&format!("0x{}", hex::encode(token_address)), network, value, claimer.clone())?
+                        let (token_address, network) =
+                            decode_create_asset_data(&create_asset_data)?;
+                        construct_register_token_xcm(
+                            &format!("0x{}", hex::encode(token_address)),
+                            network,
+                            value,
+                            claimer.clone(),
+                        )?
                     }
                     _ => {
                         return Err(EstimatorError::InvalidCommand(format!(
@@ -195,8 +202,9 @@ fn parse_assets(assets_hex: &str) -> Result<Vec<BridgeAsset>, EstimatorError> {
 
 fn decode_create_asset_data(data: &[u8]) -> Result<([u8; 20], u8), EstimatorError> {
     // Decode the ABI-encoded AsCreateAsset struct using alloy
-    let decoded = AsCreateAsset::abi_decode(data)
-        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to decode AsCreateAsset: {}", e)))?;
+    let decoded = AsCreateAsset::abi_decode(data).map_err(|e| {
+        EstimatorError::InvalidCommand(format!("Failed to decode AsCreateAsset: {}", e))
+    })?;
 
     // Convert alloy Address to [u8; 20]
     let token_address: [u8; 20] = decoded.token.into();
