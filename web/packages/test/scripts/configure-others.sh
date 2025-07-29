@@ -15,8 +15,8 @@ register_weth_on_ah() {
     local call="0x3506020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d007369626cd00700000000000000000000000000000000000000000000000000001300002cf61a24a229"
     send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
     # Mint weth to Ferdie
-   # local call='0x3506020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
-  #  send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
+    local call='0x3506020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229'
+    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
 }
 
 register_wnd_on_ethereum() {
@@ -63,8 +63,8 @@ register_pal() {
     local call='0x240105010300411f043205081470616c2d321470616c2d320c020109079edaa8020002286bee'
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
     # mint Pal-2 to Ferdie on AH
-   # local call='0x3506010300411f04320508001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0f0080c6a47e8d03'
-  #  send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
+    local call='0x3506010300411f04320508001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0f0080c6a47e8d03'
+    send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"
     # mint Pal-2 to Ferdie on Penpal
     local call='0x320608001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0b0030ef7dba02'
     send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
@@ -88,10 +88,8 @@ mint_wnd_as_fee() {
 }
 
 register_roc_on_ah() {
-  #  # Set admin of Roc to Alice
-  #  local call="0x3515020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d040100"
-    # Register Roc on AH
-    local call="0x28020c1f04020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e050000003501020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d01043513020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e0c526f630c526f630c00"
+    # Set admin of Roc to Alice
+    local call="0x3515020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d040100"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
     # Register Roc on BH
     local call="0x240105020109006408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e0c726f630c726f630c020109079edaa8020002286bee"
@@ -158,6 +156,13 @@ add_liquidity_on_penpal() {
     send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
 }
 
+configure_on_ah() {
+    register_weth_on_ah
+    register_wnd_on_ethereum
+    register_roc_on_ah
+    add_liquidity_on_ah
+}
+
 configure_on_penpal() {
     configure_bridge
     register_ether
@@ -165,13 +170,6 @@ configure_on_penpal() {
     register_pal
     mint_wnd_as_fee
     add_liquidity_on_penpal
-}
-
-configure_on_ah() {
-    register_weth_on_ah
-    register_wnd_on_ethereum
-    register_roc_on_ah
-    add_liquidity_on_ah
 }
 
 function configure_all() {

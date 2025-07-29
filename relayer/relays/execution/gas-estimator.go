@@ -18,24 +18,24 @@ import (
 
 // GasEstimate represents the gas estimation results from the Rust binary
 type GasEstimate struct {
-	ExtrinsicFeeInDot   uint64 `json:"extrinsic_fee_in_dot"`
-	ExtrinsicFeeInEther uint64 `json:"extrinsic_fee_in_ether"`
+	ExtrinsicFeeInDot   big.Int `json:"extrinsic_fee_in_dot"`
+	ExtrinsicFeeInEther big.Int `json:"extrinsic_fee_in_ether"`
 	AssetHub            struct {
-		ExecutionFeeInDot   uint64  `json:"execution_fee_in_dot"`
-		ExecutionFeeInEther uint64  `json:"execution_fee_in_ether"`
-		DeliveryFeeInDot    uint64  `json:"delivery_fee_in_dot"`
-		DeliveryFeeInEther  uint64  `json:"delivery_fee_in_ether"`
+		ExecutionFeeInDot   big.Int `json:"execution_fee_in_dot"`
+		ExecutionFeeInEther big.Int `json:"execution_fee_in_ether"`
+		DeliveryFeeInDot    big.Int `json:"delivery_fee_in_dot"`
+		DeliveryFeeInEther  big.Int `json:"delivery_fee_in_ether"`
 		DryRunSuccess       bool    `json:"dry_run_success"`
 		DryRunError         *string `json:"dry_run_error"`
 	} `json:"asset_hub"`
 	Destination struct {
-		ExecutionFeeInDot   *uint64 `json:"execution_fee_in_dot"`
-		ExecutionFeeInEther *uint64 `json:"execution_fee_in_ether"`
-		DeliveryFeeInDot    *uint64 `json:"delivery_fee_in_dot"`
-		DeliveryFeeInEther  *uint64 `json:"delivery_fee_in_ether"`
-		DryRunSuccess       *bool   `json:"dry_run_success"`
-		DryRunError         *string `json:"dry_run_error"`
-		ParaID              *uint32 `json:"para_id"`
+		ExecutionFeeInDot   *big.Int `json:"execution_fee_in_dot"`
+		ExecutionFeeInEther *big.Int `json:"execution_fee_in_ether"`
+		DeliveryFeeInDot    *big.Int `json:"delivery_fee_in_dot"`
+		DeliveryFeeInEther  *big.Int `json:"delivery_fee_in_ether"`
+		DryRunSuccess       *bool    `json:"dry_run_success"`
+		DryRunError         *string  `json:"dry_run_error"`
+		ParaID              *uint32  `json:"para_id"`
 	} `json:"destination"`
 }
 
@@ -44,9 +44,9 @@ type GasEstimatorConfig struct {
 	// Path to the gas estimator binary
 	BinaryPath string `mapstructure:"binary-path"`
 	// Maximum acceptable gas in DOT (10^10 planck = 1 DOT)
-	MaxGasInDot uint64 `mapstructure:"max-gas-in-dot"`
+	MaxGasInDot big.Int `mapstructure:"max-gas-in-dot"`
 	// Maximum acceptable gas in Ether (wei)
-	MaxGasInEther uint64 `mapstructure:"max-gas-in-ether"`
+	MaxGasInEther big.Int `mapstructure:"max-gas-in-ether"`
 	// Whether to enable gas estimation (can be disabled for testing)
 	Enabled bool `mapstructure:"enabled"`
 	// Environment variables to pass to the binary (like WS URLs)
@@ -173,8 +173,8 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 	return &estimate, nil
 }
 
-// IsGasAcceptable checks if the estimated gas is within acceptable limits
-func (g *GasEstimator) IsGasAcceptable(estimate *GasEstimate) bool {
+// IsProfitable checks if the ether provided with the message is sufficient to cover costs.
+func (g *GasEstimator) IsProfitable(estimate *GasEstimate, ev *contracts.GatewayOutboundMessageAccepted) bool {
 	if !g.config.Enabled {
 		return true // If estimation is disabled, accept all messages
 	}
@@ -189,47 +189,72 @@ func (g *GasEstimator) IsGasAcceptable(estimate *GasEstimate) bool {
 		return false
 	}
 
-	// Calculate total gas cost in DOT
-	totalGasInDot := estimate.ExtrinsicFeeInDot +
-		estimate.AssetHub.ExecutionFeeInDot +
-		estimate.AssetHub.DeliveryFeeInDot
+	var totalGasInDot big.Int
+	totalGasInDot.Set(&estimate.ExtrinsicFeeInDot) // Initialize with first value
+
+	totalGasInDot.Add(&totalGasInDot, &estimate.AssetHub.ExecutionFeeInDot)
+	totalGasInDot.Add(&totalGasInDot, &estimate.AssetHub.DeliveryFeeInDot)
 
 	if estimate.Destination.ExecutionFeeInDot != nil {
-		totalGasInDot += *estimate.Destination.ExecutionFeeInDot
+		totalGasInDot.Add(&totalGasInDot, estimate.Destination.ExecutionFeeInDot)
 	}
 
 	if estimate.Destination.DeliveryFeeInDot != nil {
-		totalGasInDot += *estimate.Destination.DeliveryFeeInDot
+		totalGasInDot.Add(&totalGasInDot, estimate.Destination.DeliveryFeeInDot)
 	}
 
 	// Check DOT limit
-	if totalGasInDot > g.config.MaxGasInDot {
+	if totalGasInDot.Cmp(&g.config.MaxGasInDot) == 1 {
 		log.WithFields(log.Fields{
 			"estimated_gas_dot": totalGasInDot,
 			"max_gas_dot":       g.config.MaxGasInDot,
-		}).Warn("Message rejected: gas cost in DOT exceeds limit")
+		}).Warn("message rejected: gas cost in DOT exceeds limit")
 		return false
 	}
 
-	// Calculate total gas cost in Ether
-	totalGasInEther := estimate.ExtrinsicFeeInEther +
-		estimate.AssetHub.ExecutionFeeInEther +
-		estimate.AssetHub.DeliveryFeeInEther
+	var totalGasInEther big.Int
+	totalGasInEther.Set(&estimate.ExtrinsicFeeInEther)
+	totalGasInEther.Add(&totalGasInEther, &estimate.AssetHub.ExecutionFeeInEther)
+	totalGasInEther.Add(&totalGasInEther, &estimate.AssetHub.DeliveryFeeInEther)
 
 	if estimate.Destination.ExecutionFeeInEther != nil {
-		totalGasInEther += *estimate.Destination.ExecutionFeeInEther
+		totalGasInEther.Add(&totalGasInEther, estimate.Destination.ExecutionFeeInEther)
 	}
 
 	if estimate.Destination.DeliveryFeeInEther != nil {
-		totalGasInEther += *estimate.Destination.DeliveryFeeInEther
+		totalGasInEther.Add(&totalGasInEther, estimate.Destination.DeliveryFeeInEther)
 	}
 
 	// Check Ether limit
-	if totalGasInEther > g.config.MaxGasInEther {
+	if totalGasInEther.Cmp(&g.config.MaxGasInEther) == 1 {
 		log.WithFields(log.Fields{
-			"estimated_gas_ether": totalGasInEther,
-			"max_gas_ether":       g.config.MaxGasInEther,
-		}).Warn("Message rejected: gas cost in Ether exceeds limit")
+			"estimated_gas_ether": totalGasInEther.String(),
+			"max_gas_ether":       g.config.MaxGasInEther.String(),
+		}).Warn("message rejected: gas cost in Ether exceeds limit")
+		return false
+	}
+
+	// Check if AssetHub execution fee actually covers expected AssetHub execution
+	if estimate.AssetHub.ExecutionFeeInEther.Cmp(ev.Payload.ExecutionFee) == 1 {
+		log.WithFields(log.Fields{
+			"estimated_asset_hub_execution": estimate.AssetHub.ExecutionFeeInEther.String(),
+			"provided_asset_hub_execution":  ev.Payload.ExecutionFee.String(),
+		}).Warn("ether value provided not profitable to relay")
+		return false
+	}
+
+	var profitability big.Int
+	profitability.Set(&estimate.ExtrinsicFeeInEther)
+
+	profitability.Add(&profitability, &estimate.AssetHub.DeliveryFeeInEther)
+	profitability.Add(&profitability, &estimate.AssetHub.ExecutionFeeInEther)
+	profitability.Add(&profitability, ev.Payload.RelayerFee)
+
+	if profitability.Cmp(ev.Payload.Value) == 1 {
+		log.WithFields(log.Fields{
+			"profitability": profitability.String(),
+			"messageValue":  ev.Payload.Value.String(),
+		}).Warn("ether value provided not profitable to relay")
 		return false
 	}
 

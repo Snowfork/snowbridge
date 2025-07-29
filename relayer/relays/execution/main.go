@@ -530,7 +530,7 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 			return fmt.Errorf("gas estimation failed: %w", err)
 		}
 
-		if !r.gasEstimator.IsGasAcceptable(gasEstimate) {
+		if !r.gasEstimator.IsProfitable(gasEstimate, ev) {
 			logger.WithField("nonce", ev.Nonce).Info("message will not be relayed due to not being profitable")
 			return nil // Skip this message without error
 		}
