@@ -1,3 +1,4 @@
+mod config;
 mod estimator;
 mod penpal;
 mod contracts;

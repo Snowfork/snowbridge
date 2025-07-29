@@ -1,7 +1,8 @@
 
 # Generate Rust bindings for contracts
+# Only generate bindings for contracts actually used by the gas estimator
 forge bind --module --overwrite \
-    --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token' \
+    --select 'IGatewayV2' \
     --bindings-path src/contracts \
     --root ../contracts
 

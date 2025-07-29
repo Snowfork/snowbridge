@@ -38,10 +38,11 @@ use sp_runtime::AccountId32 as RuntimeAccountId32;
 use std::env;
 use subxt::{config::DefaultExtrinsicParams, Config, OnlineClient, PolkadotConfig};
 use subxt_signer::sr25519::dev;
-
 use crate::penpal;
 use crate::contracts::r#i_gateway_v2::IGatewayV2;
 use alloy_sol_types::{sol, SolValue};
+#[cfg(feature = "local")]
+use crate::config::local::*;
 
 sol! {
     struct AsNativeTokenERC20 {
@@ -55,7 +56,7 @@ sol! {
     }
 }
 
-lazy_static! { // TODO extract to config file or something
+lazy_static! {
     pub static ref ASSET_HUB_WS_URL: String = {
         if let Ok(val) = env::var("ASSET_HUB_WS_URL") {
             val
@@ -81,16 +82,6 @@ lazy_static! { // TODO extract to config file or something
     };
 }
 
-const CHAIN_ID: u64 = 11155111; // TODO switch on env
-const INBOUND_PALLET_V2: u8 = 91; // TODO switch on env
-const ASSET_HUB_PARA_ID: u32 = 1000;
-const BRIDGE_HUB_PARA_ID: u32 = 1002;
-const PENPAL_PARA_ID: u32 = 2000;
-
-// Register token constants
-const CREATE_ASSET_DEPOSIT: u128 = 100_000_000_000;
-const CREATE_ASSET_CALL: [u8; 2] = [53, 0]; // ForeignAssets::create call index
-const MINIMUM_DEPOSIT: u128 = 1;
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
