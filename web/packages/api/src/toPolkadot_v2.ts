@@ -275,7 +275,7 @@ async function validateAccount(
     assetMetadata?: Asset,
     maxConsumers?: bigint
 ) {
-    // Check if the acocunt is created
+    // Check if the account is created
     const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
         parachainImpl.getNativeAccount(beneficiaryAddress),
         parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
@@ -327,7 +327,7 @@ export async function validateTransfer(
         logs.push({
             kind: ValidationKind.Error,
             reason: ValidationReason.MinimumAmountValidation,
-            message: "The amount transfered is less than the minimum amount.",
+            message: "The amount transferred is less than the minimum amount.",
         })
     }
     const etherBalance = await ethereum.getBalance(sourceAccount)
@@ -511,7 +511,7 @@ export async function validateTransfer(
                     !destParachain.features.hasDryRunApi)
             ) {
                 const destParachainImpl = await paraImplementation(destParachainApi)
-                // Check if the acocunt is created
+                // Check if the account is created
                 const { accountMaxConumers, accountExists } = await validateAccount(
                     destParachainImpl,
                     beneficiaryAddressHex,
