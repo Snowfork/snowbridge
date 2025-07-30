@@ -20,4 +20,3 @@ for network in ${networks[@]}; do
   subxt metadata --url $bh_url -f bytes -o $bh_metadata
 done
 
-subxt metadata --url wss://westend-penpal-rpc.polkadot.io  -f bytes -o runtimes/penpal-westend/penpal-metadata.bin
