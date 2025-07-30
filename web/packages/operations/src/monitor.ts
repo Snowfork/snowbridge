@@ -59,7 +59,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     })
     console.log("Bridge Status:", bridgeStatus)
 
-    const assethubChannelStatus = await status.channelStatusInfo(
+    let assethubChannelStatus = await status.channelStatusInfo(
         context,
         utils.paraIdToChannelId(config.ASSET_HUB_PARAID),
         {
@@ -191,6 +191,16 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         indexerInfos.push(info)
     }
     console.log("Indexer service status:", indexerInfos)
+
+    try {
+        const latencies = await subsquid.fetchUndelivedLatency(context.graphqlApiUrl())
+        if (latencies && latencies.length) {
+            assethubChannelStatus.toEthereum.undeliveredElapse = latencies[0].elapse
+        }
+    } catch (error) {
+        console.error("Failed to fetch undelivered latency:", error)
+    }
+    console.log("Asset Hub Channel:", assethubChannelStatus)
 
     const allMetrics: status.AllMetrics = {
         name,

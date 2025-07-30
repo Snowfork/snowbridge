@@ -177,6 +177,18 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
             ],
             Value: channel.toEthereum.outbound - channel.toEthereum.inbound,
         })
+        if (channel.toEthereum.undeliveredElapse) {
+            metricData.push({
+                MetricName: "ToEthereumUndeliveredElapse",
+                Dimensions: [
+                    {
+                        Name: "ChannelName",
+                        Value: channel.name,
+                    },
+                ],
+                Value: channel.toEthereum.undeliveredElapse,
+            })
+        }
         metricData.push({
             MetricName: AlarmReason.ToEthereumChannelStale.toString(),
             Value: Number(
@@ -492,4 +504,18 @@ export const initializeAlarms = async () => {
         ...alarmCommandSharedInput,
     })
     await client.send(indexerAlarm)
+
+    let undeliveredElapseAlarm = new PutMetricAlarmCommand({
+        AlarmName: "ToEthereumUndeliveredElapse-" + name,
+        MetricName: "ToEthereumUndeliveredElapse",
+        Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
+        AlarmDescription: LatencyDashboard,
+        Statistic: "Maximum",
+        ComparisonOperator: "GreaterThanThreshold",
+        AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+        EvaluationPeriods: 3,
+        Period: ScanInterval,
+        Threshold: 5400, // 1.5 hour
+    })
+    await client.send(undeliveredElapseAlarm)
 }

@@ -47,6 +47,7 @@ export type ChannelStatusInfo = {
         previousOutbound: number
         previousInbound: number
         estimatedDeliveryTime?: number
+        undeliveredElapse?: number
     }
     toPolkadot: {
         operatingMode: {
@@ -57,6 +58,7 @@ export type ChannelStatusInfo = {
         previousOutbound: number
         previousInbound: number
         estimatedDeliveryTime?: number
+        undeliveredElapse?: number
     }
 }
 
