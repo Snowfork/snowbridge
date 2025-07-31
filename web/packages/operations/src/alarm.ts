@@ -39,6 +39,10 @@ export const InsufficientBalanceThreshold = {
         : 300_000_000_000_000_000,
 }
 
+// This configuration is for setting up a CloudWatch alarm.
+// EvaluationPeriods: The number of most recent periods (data points) to evaluate when determining the alarm state.
+// DatapointsToAlarm: The number of data points within the evaluation periods that must breach the threshold to trigger the alarm.
+// For more details, see: https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html
 export const AlarmEvaluationConfiguration = {
     ToEthereumStale: {
         EvaluationPeriods: process.env["ToEthereumEvaluationPeriods"]
