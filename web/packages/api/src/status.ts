@@ -42,7 +42,9 @@ export type ChannelStatusInfo = {
     toEthereum: {
         outbound: number
         inbound: number
+        // The estimated average delivery time for the most recent 10 messages.
         estimatedDeliveryTime?: number
+        // The timeout duration of the oldest undelivered message.
         undeliveredTimeout?: number
     }
     toPolkadot: {
