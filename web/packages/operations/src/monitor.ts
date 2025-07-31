@@ -179,11 +179,10 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         if (latencies && latencies.length) {
             assethubChannelStatus.toEthereum.undeliveredTimeout = latencies[0].elapse
         }
-        // Todo: add this when Squid is back to normal
-        // latencies = await subsquid.fetchToPolkadotUndelivedLatency(context.graphqlApiUrl())
-        // if (latencies && latencies.length) {
-        //     assethubChannelStatus.toPolkadot.undeliveredTimeout = latencies[0].elapse
-        // }
+        latencies = await subsquid.fetchToPolkadotUndelivedLatency(context.graphqlApiUrl())
+        if (latencies && latencies.length) {
+            assethubChannelStatus.toPolkadot.undeliveredTimeout = latencies[0].elapse
+        }
     } catch (error) {
         console.error("Failed to fetch undelivered latency:", error)
     }
