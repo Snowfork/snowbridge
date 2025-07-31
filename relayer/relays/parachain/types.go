@@ -92,7 +92,7 @@ type OutboundQueueMessage struct {
 }
 
 type OutboundQueueMessageWithFee struct {
-	Message OutboundQueueMessage
+	OriginalMessage OutboundQueueMessage
 	// Attached fee in Ether
 	Fee big.Int
 }

@@ -187,7 +187,7 @@ func (s *Scanner) filterTasks(
 			}
 			messages = append(messages, m)
 			var messageWithFee OutboundQueueMessageWithFee
-			messageWithFee.Message = m
+			messageWithFee.OriginalMessage = m
 			messageWithFee.Fee = order.Fee
 			messagesWithFee = append(messagesWithFee, messageWithFee)
 		}

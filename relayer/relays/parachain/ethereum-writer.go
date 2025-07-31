@@ -138,7 +138,7 @@ func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *M
 		return result, err
 	}
 	var totalDispatchGas uint64
-	commands := proof.Message.Message.Commands
+	commands := proof.Message.OriginalMessage.Commands
 	for _, command := range commands {
 		totalDispatchGas = totalDispatchGas + wr.commandGas(&command)
 	}
@@ -158,7 +158,7 @@ func (wr *EthereumWriter) WriteChannel(
 	commitmentProof *MessageProof,
 	proof *ProofOutput,
 ) error {
-	message := commitmentProof.Message.Message.IntoInboundMessage()
+	message := commitmentProof.Message.OriginalMessage.IntoInboundMessage()
 
 	convertedHeader, err := convertHeader(proof.Header)
 	if err != nil {
