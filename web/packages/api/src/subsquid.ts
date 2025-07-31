@@ -416,8 +416,16 @@ export const fetchLatestBlocksSynced = async (graphqlApiUrl: string, includePKBr
     return result
 }
 
-export const fetchUndelivedLatency = async (graphqlApiUrl: string) => {
+export const fetchToEthereumUndelivedLatency = async (graphqlApiUrl: string) => {
     let query = `query { toEthereumUndeliveredElapse {
+                   elapse
+                }}`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.toEthereumUndeliveredElapse
+}
+
+export const fetchToPolkadotUndelivedLatency = async (graphqlApiUrl: string) => {
+    let query = `query { toPolkadotUndeliveredElapse {
                    elapse
                 }}`
     let result = await queryByGraphQL(graphqlApiUrl, query)
