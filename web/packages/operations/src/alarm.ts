@@ -289,11 +289,18 @@ export const initializeAlarms = async () => {
         new PutMetricAlarmCommand({
             AlarmName: AlarmReason.ToEthereumChannelStale.toString() + "-" + name,
             MetricName: "ToEthereumUndeliveredTimeout",
+            Dimensions: [
+                {
+                    Name: "ChannelName",
+                    Value: "AssetHub",
+                },
+            ],
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             EvaluationPeriods: AlarmEvaluationConfiguration.ToEthereumStale.EvaluationPeriods,
             DatapointsToAlarm: AlarmEvaluationConfiguration.ToEthereumStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
+            Statistic: "Maximum",
             Threshold: 5400, // 1.5 hours at most
         })
     )
@@ -303,11 +310,18 @@ export const initializeAlarms = async () => {
         new PutMetricAlarmCommand({
             AlarmName: AlarmReason.ToPolkadotChannelStale.toString() + "-" + name,
             MetricName: "ToPolkadotUndeliveredTimeout",
+            Dimensions: [
+                {
+                    Name: "ChannelName",
+                    Value: "AssetHub",
+                },
+            ],
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             EvaluationPeriods: AlarmEvaluationConfiguration.ToPolkadotStale.EvaluationPeriods,
             DatapointsToAlarm: AlarmEvaluationConfiguration.ToPolkadotStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
+            Statistic: "Maximum",
             Threshold: 1800, // 0.5 hour
         })
     )
