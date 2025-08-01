@@ -1,3 +1,4 @@
+import { forInterParachain } from "src"
 import {
     fetchToPolkadotTransfers,
     fetchToEthereumTransfers,
@@ -120,6 +121,31 @@ export type ToEthereumTransferResult = {
         channelId: string
         nonce: number
         success: boolean
+    }
+}
+
+export type InterParachainTransfer = {
+    sourceType: "substrate"
+    id: string
+    status: TransferStatus
+    info: TransferInfo
+    submitted: {
+        sourceParachainId: number
+        extrinsic_hash: string
+        account_id: string
+        block_num: number
+        block_timestamp: number
+        messageId: string
+        bridgeHubMessageId: string
+        success: boolean
+    }
+    destinationReceived?: {
+        paraId: number
+        success: boolean
+        messageId: string
+        event_index: string
+        block_timestamp: string
+        blockNumber: number
     }
 }
 
