@@ -10,7 +10,7 @@ import { TransferInterface } from "./transfers/toEthereum/transferInterface"
 import { ERC20FromAH } from "./transfers/toEthereum/erc20FromAH"
 import { PNAFromParachain } from "./transfers/toEthereum/pnaFromParachain"
 import { ERC20FromParachain } from "./transfers/toEthereum/erc20FromParachain"
-import { isNative, isParachainNative } from "./xcmBuilder"
+import { isRelaychainLocation, isParachainNative } from "./xcmBuilder"
 import { xxhashAsHex } from "@polkadot/util-crypto"
 import { BN } from "@polkadot/util"
 
@@ -170,7 +170,7 @@ export async function dryRunAssetHub(
 export const MaxWeight = { refTime: 15_000_000_000n, proofSize: 800_000 }
 
 export const isFeeAllowed = (feeLocation: any, sourceParaId: number) => {
-    return isNative(feeLocation) || isParachainNative(feeLocation, sourceParaId)
+    return isRelaychainLocation(feeLocation) || isParachainNative(feeLocation, sourceParaId)
 }
 
 export const getSnowbridgeDeliveryFee = async (assetHub: ApiPromise, defaultFee?: bigint) => {

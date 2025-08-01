@@ -13,6 +13,7 @@ import {
     IERC20__factory,
     IGatewayV1 as IGateway,
     IGatewayV1__factory as IGateway__factory,
+    WETH9__factory,
 } from "@snowbridge/contract-types"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
@@ -605,6 +606,28 @@ export async function getMessageReceipt(
         txIndex: receipt.index,
     }
 }
+
+export const approveTokenSpend = (
+    context: Context,
+    sourceAddress: string,
+    tokenAddress: string,
+    amount: bigint
+): Promise<ContractTransaction> =>
+    IERC20__factory.connect(tokenAddress)
+        .getFunction("approve")
+        .populateTransaction(context.config.appContracts.gateway, amount, {
+            from: sourceAddress,
+        })
+
+export const depositWeth = (
+    sourceAddress: string,
+    tokenAddress: string,
+    amount: bigint
+): Promise<ContractTransaction> =>
+    WETH9__factory.connect(tokenAddress).getFunction("deposit").populateTransaction({
+        from: sourceAddress,
+        value: amount,
+    })
 
 async function erc20Balance(
     ethereum: AbstractProvider,

@@ -6,7 +6,7 @@ import {
     isDOTOnOtherConsensusSystem,
     isEthereumAsset,
     isKSMOnOtherConsensusSystem,
-    isNative,
+    isRelaychainLocation,
     ksmLocationOnPolkadotAssetHub,
     kusamaNetwork,
     NATIVE_TOKEN_LOCATION,
@@ -43,7 +43,7 @@ export function buildTransferKusamaToPolkadotExportXCM(
     ]
     let withdrawAssetsDest: any[] = []
 
-    if (isNative(transferTokenLocation)) {
+    if (isRelaychainLocation(transferTokenLocation)) {
         // If the asset transferred is KSM, only add the transfer amount to the asset
         withdrawAssetsOnSource[0].fun.Fungible =
             withdrawAssetsOnSource[0].fun.Fungible + transferAmount
@@ -163,7 +163,7 @@ export function buildPolkadotToKusamaDestAssetHubXCM(
             },
         },
     ]
-    if (isNative(transferTokenLocation)) {
+    if (isRelaychainLocation(transferTokenLocation)) {
         // If the asset transferred is DOT, only add the transfer amount to the asset
         reserveAssetsDeposited[0].fun.Fungible =
             reserveAssetsDeposited[0].fun.Fungible + transferAmount
@@ -251,7 +251,7 @@ export function buildKusamaToPolkadotDestAssetHubXCM(
             },
         },
     ]
-    if (isNative(transferTokenLocation)) {
+    if (isRelaychainLocation(transferTokenLocation)) {
         // If the asset transferred is KSM, only add the transfer amount to the asset
         reserveAssetsDeposited[0].fun.Fungible =
             reserveAssetsDeposited[0].fun.Fungible + transferAmount
@@ -352,7 +352,7 @@ export function buildTransferPolkadotToKusamaExportXCM(
     ]
     let withdrawAssetsDest: any[] = []
 
-    if (isNative(transferTokenLocation)) {
+    if (isRelaychainLocation(transferTokenLocation)) {
         // If the asset transferred is DOT, only add the transfer amount to the asset
         withdrawAssetsOnSource[0].fun.Fungible =
             withdrawAssetsOnSource[0].fun.Fungible + transferAmount
