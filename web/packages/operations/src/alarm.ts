@@ -300,7 +300,6 @@ export const initializeAlarms = async () => {
             EvaluationPeriods: AlarmEvaluationConfiguration.ToEthereumStale.EvaluationPeriods,
             DatapointsToAlarm: AlarmEvaluationConfiguration.ToEthereumStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
-            Statistic: "Maximum",
             Threshold: 5400, // 1.5 hours at most
         })
     )
@@ -321,7 +320,6 @@ export const initializeAlarms = async () => {
             EvaluationPeriods: AlarmEvaluationConfiguration.ToPolkadotStale.EvaluationPeriods,
             DatapointsToAlarm: AlarmEvaluationConfiguration.ToPolkadotStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
-            Statistic: "Maximum",
             Threshold: 1800, // 0.5 hour
         })
     )
