@@ -331,21 +331,40 @@ export const initializeAlarms = async () => {
     }
 
     // Insufficient balance in the relay account
-    let relayAccountBalanceAlarm = new PutMetricAlarmCommand({
-        AlarmName: AlarmReason.RelayAccountBalanceInsufficient.toString() + "-" + name,
-        MetricName: "BalanceOfRelayer",
-        AlarmDescription: BalanceDashboard,
-        AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
-        EvaluationPeriods: 6,
-        ...alarmCommandSharedInput,
-        Threshold: InsufficientBalanceThreshold.Substrate,
-    })
-    await client.send(relayAccountBalanceAlarm)
+    for (const relayName of ["beacon", "execution-assethub"]) {
+        let relayAccountBalanceAlarm = new PutMetricAlarmCommand({
+            AlarmName:
+                AlarmReason.RelayAccountBalanceInsufficient.toString() +
+                "-" +
+                name +
+                "-" +
+                relayName,
+            MetricName: "BalanceOfRelayer",
+            Dimensions: [
+                {
+                    Name: "RelayerName",
+                    Value: relayName,
+                },
+            ],
+            AlarmDescription: BalanceDashboard,
+            AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
+            EvaluationPeriods: 6,
+            ...alarmCommandSharedInput,
+            Threshold: InsufficientBalanceThreshold.Substrate,
+        })
+        await client.send(relayAccountBalanceAlarm)
+    }
 
     // Insufficient balance in the sovereign account
     let sovereignAccountBalanceAlarm = new PutMetricAlarmCommand({
         AlarmName: AlarmReason.SovereignAccountBalanceInsufficient.toString() + "-" + name,
         MetricName: "BalanceOfSovereign",
+        Dimensions: [
+            {
+                Name: "SovereignName",
+                Value: "AssetHub",
+            },
+        ],
         AlarmDescription: BalanceDashboard,
         AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
         EvaluationPeriods: 6,
@@ -355,17 +374,25 @@ export const initializeAlarms = async () => {
     await client.send(sovereignAccountBalanceAlarm)
 
     // Indexer service stale
-    let indexerAlarm = new PutMetricAlarmCommand({
-        AlarmName: AlarmReason.IndexServiceStale.toString() + "-" + name,
-        MetricName: "IndexerLatency",
-        AlarmDescription: AlarmReason.IndexServiceStale.toString(),
-        ComparisonOperator: "GreaterThanThreshold",
-        AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-        EvaluationPeriods: 6,
-        ...alarmCommandSharedInput,
-        Threshold: IndexerLatencyThreshold,
-    })
-    await client.send(indexerAlarm)
+    for (const chain of ["assethub", "bridgehub", "ethereum", "kusama_assethub"]) {
+        let indexerAlarm = new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.IndexServiceStale.toString() + "-" + name + "-" + chain,
+            MetricName: "IndexerLatency",
+            Dimensions: [
+                {
+                    Name: "ChainName",
+                    Value: chain,
+                },
+            ],
+            AlarmDescription: AlarmReason.IndexServiceStale.toString(),
+            ComparisonOperator: "GreaterThanThreshold",
+            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            EvaluationPeriods: 6,
+            ...alarmCommandSharedInput,
+            Threshold: IndexerLatencyThreshold,
+        })
+        await client.send(indexerAlarm)
+    }
 
     // Heartbeat lost
     let heartbeartAlarm = new PutMetricAlarmCommand({
