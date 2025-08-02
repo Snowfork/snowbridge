@@ -47,18 +47,18 @@ export const AlarmEvaluationConfiguration = {
     ToEthereumStale: {
         EvaluationPeriods: process.env["ToEthereumEvaluationPeriods"]
             ? parseInt(process.env["ToEthereumEvaluationPeriods"])
-            : 8,
+            : 6,
         DatapointsToAlarm: process.env["ToEthereumDatapointsToAlarm"]
             ? parseInt(process.env["ToEthereumDatapointsToAlarm"])
-            : 6,
+            : 4,
     },
     ToPolkadotStale: {
         EvaluationPeriods: process.env["ToPolkadotEvaluationPeriods"]
             ? parseInt(process.env["ToPolkadotEvaluationPeriods"])
-            : 8,
+            : 6,
         DatapointsToAlarm: process.env["ToPolkadotDatapointsToAlarm"]
             ? parseInt(process.env["ToPolkadotDatapointsToAlarm"])
-            : 6,
+            : 4,
     },
 }
 
@@ -280,7 +280,7 @@ export const initializeAlarms = async () => {
             EvaluationPeriods: AlarmEvaluationConfiguration.ToPolkadotStale.EvaluationPeriods,
             DatapointsToAlarm: AlarmEvaluationConfiguration.ToPolkadotStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
-            Threshold: 3 * 32 * 12, // 3 epochs = 3 * 6.4 mins ~= 20 mins
+            Threshold: 1200, // 3 epochs = 3 * 6.4 mins ~= 20 mins
         })
     )
 
