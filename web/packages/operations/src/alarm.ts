@@ -350,6 +350,7 @@ export const initializeAlarms = async () => {
             AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
             EvaluationPeriods: 6,
             ...alarmCommandSharedInput,
+            ComparisonOperator: "LessThanThreshold",
             Threshold: InsufficientBalanceThreshold.Substrate,
         })
         await client.send(relayAccountBalanceAlarm)
@@ -369,6 +370,7 @@ export const initializeAlarms = async () => {
         AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
         EvaluationPeriods: 6,
         ...alarmCommandSharedInput,
+        ComparisonOperator: "LessThanThreshold",
         Threshold: InsufficientBalanceThreshold.Substrate,
     })
     await client.send(sovereignAccountBalanceAlarm)
