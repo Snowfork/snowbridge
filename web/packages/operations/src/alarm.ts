@@ -7,7 +7,6 @@ import {
 
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
 const BRIDGE_STALE_SNS_TOPIC = process.env["BRIDGE_STALE_SNS_TOPIC"] || ""
-const BRIDGE_ATTACKED_SNS_TOPIC = process.env["BRIDGE_ATTACKED_SNS_TOPIC"] || ""
 const ACCOUNT_BALANCE_SNS_TOPIC = process.env["ACCOUNT_BALANCE_SNS_TOPIC"] || ""
 
 const LatencyDashboard =
@@ -44,22 +43,12 @@ export const InsufficientBalanceThreshold = {
 // DatapointsToAlarm: The number of data points within the evaluation periods that must breach the threshold to trigger the alarm.
 // For more details, see: https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html
 export const AlarmEvaluationConfiguration = {
-    ToEthereumStale: {
-        EvaluationPeriods: process.env["ToEthereumEvaluationPeriods"]
-            ? parseInt(process.env["ToEthereumEvaluationPeriods"])
-            : 6,
-        DatapointsToAlarm: process.env["ToEthereumDatapointsToAlarm"]
-            ? parseInt(process.env["ToEthereumDatapointsToAlarm"])
-            : 4,
-    },
-    ToPolkadotStale: {
-        EvaluationPeriods: process.env["ToPolkadotEvaluationPeriods"]
-            ? parseInt(process.env["ToPolkadotEvaluationPeriods"])
-            : 6,
-        DatapointsToAlarm: process.env["ToPolkadotDatapointsToAlarm"]
-            ? parseInt(process.env["ToPolkadotDatapointsToAlarm"])
-            : 4,
-    },
+    EvaluationPeriods: process.env["EvaluationPeriods"]
+        ? parseInt(process.env["EvaluationPeriods"])
+        : 4,
+    DatapointsToAlarm: process.env["DatapointsToAlarm"]
+        ? parseInt(process.env["DatapointsToAlarm"])
+        : 3,
 }
 
 export const IndexerLatencyThreshold = process.env["IndexerLatencyThreshold"]
@@ -255,6 +244,8 @@ export const initializeAlarms = async () => {
         Period: ScanInterval,
         Statistic: "Average",
         ComparisonOperator: "GreaterThanThreshold",
+        EvaluationPeriods: AlarmEvaluationConfiguration.EvaluationPeriods,
+        DatapointsToAlarm: AlarmEvaluationConfiguration.DatapointsToAlarm,
     }
 
     // Beefy stale
@@ -264,8 +255,6 @@ export const initializeAlarms = async () => {
             MetricName: "BeefyLatency",
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            EvaluationPeriods: AlarmEvaluationConfiguration.ToEthereumStale.EvaluationPeriods,
-            DatapointsToAlarm: AlarmEvaluationConfiguration.ToEthereumStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
             Threshold: 3600 * 4, // 1 epoch = 4 hours
         })
@@ -277,8 +266,6 @@ export const initializeAlarms = async () => {
             MetricName: "BeaconLatency",
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            EvaluationPeriods: AlarmEvaluationConfiguration.ToPolkadotStale.EvaluationPeriods,
-            DatapointsToAlarm: AlarmEvaluationConfiguration.ToPolkadotStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
             Threshold: 1200, // 3 epochs = 3 * 6.4 mins ~= 20 mins
         })
@@ -297,8 +284,6 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            EvaluationPeriods: AlarmEvaluationConfiguration.ToEthereumStale.EvaluationPeriods,
-            DatapointsToAlarm: AlarmEvaluationConfiguration.ToEthereumStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
             Threshold: 5400, // 1.5 hours at most
         })
@@ -317,8 +302,6 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            EvaluationPeriods: AlarmEvaluationConfiguration.ToPolkadotStale.EvaluationPeriods,
-            DatapointsToAlarm: AlarmEvaluationConfiguration.ToPolkadotStale.DatapointsToAlarm,
             ...alarmCommandSharedInput,
             Threshold: 1800, // 0.5 hour
         })
@@ -346,7 +329,6 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: BalanceDashboard,
             AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
-            EvaluationPeriods: 6,
             ...alarmCommandSharedInput,
             ComparisonOperator: "LessThanThreshold",
             Threshold: InsufficientBalanceThreshold.Substrate,
@@ -366,7 +348,6 @@ export const initializeAlarms = async () => {
         ],
         AlarmDescription: BalanceDashboard,
         AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
-        EvaluationPeriods: 6,
         ...alarmCommandSharedInput,
         ComparisonOperator: "LessThanThreshold",
         Threshold: InsufficientBalanceThreshold.Substrate,
@@ -387,7 +368,6 @@ export const initializeAlarms = async () => {
             AlarmDescription: AlarmReason.IndexServiceStale.toString(),
             ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            EvaluationPeriods: 6,
             ...alarmCommandSharedInput,
             Threshold: IndexerLatencyThreshold,
         })
@@ -400,7 +380,6 @@ export const initializeAlarms = async () => {
         MetricName: "Heartbeat",
         AlarmDescription: AlarmReason.HeartbeatLost.toString(),
         AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-        EvaluationPeriods: 6,
         ...alarmCommandSharedInput,
         Threshold: 1,
         TreatMissingData: "breaching",
