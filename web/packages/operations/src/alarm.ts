@@ -267,7 +267,7 @@ export const initializeAlarms = async () => {
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
-            Threshold: 1200, // 3 epochs = 3 * 6.4 mins ~= 20 mins
+            Threshold: 1500, // 3 epochs = 3 * 6.4 mins ~= 20 mins
         })
     )
 
