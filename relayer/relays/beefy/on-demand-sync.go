@@ -63,7 +63,7 @@ func NewOnDemandRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*OnDe
 }
 
 func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error {
-	err := relay.ethereumConn.Connect(ctx)
+	err := relay.ethereumConn.ConnectWithHeartBeat(ctx, eg, 180*time.Second)
 	if err != nil {
 		return fmt.Errorf("connect to ethereum: %w", err)
 	}
@@ -280,7 +280,7 @@ func (relay *OnDemandRelay) sync(ctx context.Context, blockNumber uint64) error 
 
 func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber uint64) error {
 	eg, ctx := errgroup.WithContext(ctx)
-	err := relay.ethereumConn.Connect(ctx)
+	err := relay.ethereumConn.ConnectWithHeartBeat(ctx, eg, 180*time.Second)
 	if err != nil {
 		return fmt.Errorf("connect to ethereum: %w", err)
 	}

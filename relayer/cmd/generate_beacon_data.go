@@ -22,6 +22,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	executionConf "github.com/snowfork/snowbridge/relayer/relays/execution"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/cbroglie/mustache"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -219,7 +220,8 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		ethconn := ethereum.NewConnection(&executionConfig.Source.Ethereum, nil)
-		err = ethconn.Connect(ctx)
+		eg, ctx := errgroup.WithContext(ctx)
+		err = ethconn.ConnectWithHeartBeat(ctx, eg, 30*time.Second)
 		if err != nil {
 			return err
 		}
@@ -721,7 +723,8 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		ethconn := ethereum.NewConnection(&executionConf.Source.Ethereum, nil)
-		err = ethconn.Connect(ctx)
+		eg, ctx := errgroup.WithContext(ctx)
+		err = ethconn.ConnectWithHeartBeat(ctx, eg, 30*time.Second)
 		if err != nil {
 			return err
 		}

@@ -50,7 +50,7 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return fmt.Errorf("create relaychain connection: %w", err)
 	}
 
-	err = relay.ethereumConn.Connect(ctx)
+	err = relay.ethereumConn.ConnectWithHeartBeat(ctx, eg, 180*time.Second)
 	if err != nil {
 		return fmt.Errorf("create ethereum connection: %w", err)
 	}

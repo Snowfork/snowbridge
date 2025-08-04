@@ -61,7 +61,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	r.paraconn = paraconn
 
-	err = ethconn.Connect(ctx)
+	err = ethconn.ConnectWithHeartBeat(ctx, eg, 180*time.Second)
 	if err != nil {
 		return err
 	}
