@@ -451,24 +451,21 @@ pub async fn build_asset_hub_xcm(
             }]
             .into(),
         )),
+        SetHints {
+            hints: BoundedVec([AssetClaimer { location: claimer }].into()),
+        },
+        PayFees {
+            asset: Asset {
+                id: AssetId(Location {
+                    parents: 2,
+                    interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
+                }),
+                fun: Fungible(execution_fee),
+            },
+        },
     ];
 
-    instructions.push(SetHints {
-        hints: BoundedVec([AssetClaimer { location: claimer }].into()),
-    });
-
-    instructions.push(PayFees {
-        asset: Asset {
-            id: AssetId(Location {
-                parents: 2,
-                interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
-            }),
-            fun: Fungible(execution_fee),
-        },
-    });
-
-    let net_value = value.saturating_sub(execution_fee.saturating_add(relayer_fee));
-    if net_value > 0 {
+    if value > 0 {
         // Asset for remaining ether
         instructions.push(ReserveAssetDeposited(Assets(
             vec![Asset {
@@ -476,7 +473,7 @@ pub async fn build_asset_hub_xcm(
                     parents: 2,
                     interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
                 }),
-                fun: Fungible(net_value),
+                fun: Fungible(value),
             }]
             .into(),
         )));
