@@ -1,26 +1,20 @@
 import { Registry } from "@polkadot/types/types"
-import {
-    bridgeLocation,
-    DOT_LOCATION,
-    erc20Location,
-    erc20LocationReanchored,
-    accountToLocation,
-    HERE_LOCATION,
-    isEthereumNative, ethereumNetwork,
-} from "../../xcmBuilder"
-import { Asset } from "@snowbridge/base-types"
-import {beneficiaryMultiAddress} from "../../utils";
-import {ETHER_TOKEN_ADDRESS} from "../../assets_v2";
+import { erc20Location, ethereumNetwork, accountId32Location } from "../../xcmBuilder"
+import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 
 export function buildAssetHubXcm(
     registry: Registry,
     ethChainId: number,
+    tokenAddress: string,
     executionFee: bigint,
+    value: bigint,
     claimer: any,
-    exe: any,
+    origin: string,
+    beneficiary: string,
+    topic: string
 ) {
-    let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS);
-    let instructions =  registry.createType("XcmVersionedXcm", {
+    let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
+    return registry.createType("XcmVersionedXcm", {
         v5: [
             {
                 descendOrigin: { x1: [{ PalletInstance: 91 }] },
@@ -39,25 +33,60 @@ export function buildAssetHubXcm(
                 ],
             },
             {
-                setHints: [
-                    {
-                        hints: [ {
-                            assetClaimer: {
-                                location: claimer,
-                            }
-                        }]
-                    },
-                ],
+                setHints: {
+                    hints: [{ assetClaimer: { location: claimer } }],
+                },
             },
             {
                 payFees: {
                     asset: {
                         id: ether,
                         fun: {
-                            Fungible: localDOTFeeAmount,
+                            Fungible: executionFee,
                         },
                     },
                 },
+            },
+            {
+                reserveAssetDeposited: [
+                    {
+                        id: ether,
+                        fun: {
+                            Fungible: value,
+                        },
+                    },
+                    //{
+                    //    id: erc20Location(ethChainId, tokenAddress),
+                    //    fun: {
+                    //        Fungible: value,
+                    //    },
+                    //}
+                ],
+            },
+            {
+                descendOrigin: {
+                    x1: [
+                        {
+                            AccountKey20: {
+                                key: origin,
+                                network: null,
+                            },
+                        },
+                    ],
+                },
+            },
+            {
+                depositAsset: {
+                    assets: {
+                        wild: {
+                            allCounted: 2,
+                        },
+                    },
+                    beneficiary: accountId32Location(beneficiary),
+                },
+            },
+            {
+                setTopic: topic,
             },
         ],
     })

@@ -1,8 +1,8 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toPolkadotSnowbridgeV2"
 import { Context } from "../../index"
-import {IGatewayV2 as IGateway} from "@snowbridge/contract-types";
-import {ApiPromise} from "@polkadot/api";
+import { IGatewayV2 as IGateway } from "@snowbridge/contract-types"
+import { ApiPromise } from "@polkadot/api"
 
 export interface TransferInterface {
     getDeliveryFee(

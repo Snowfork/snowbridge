@@ -127,6 +127,7 @@ export abstract class ParachainBase {
             )
         ).toPrimitive() as any
         if (!result.ok) {
+            console.log(result)
             throw Error(`Can not query XCM Weight.`)
         }
         let dotAsset = undefined
@@ -171,28 +172,6 @@ export abstract class ParachainBase {
         const deliveryFee = BigInt(nativeAsset.fun.fungible.toString())
 
         return deliveryFee
-    }
-
-    async getConversationPalletSwap(
-        asset1: any,
-        asset2: any,
-        exactAsset2Balance: bigint
-    ): Promise<bigint> {
-        const result = await this.provider.call.assetConversionApi.quotePriceTokensForExactTokens(
-            asset1,
-            asset2,
-            exactAsset2Balance,
-            true
-        )
-        const asset1Balance = result.toPrimitive() as any
-        if (asset1Balance == null) {
-            throw Error(
-                `No pool set up in asset conversion pallet for '${JSON.stringify(
-                    asset1
-                )}' and '${JSON.stringify(asset2)}'.`
-            )
-        }
-        return BigInt(asset1Balance)
     }
 
     abstract getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint>
