@@ -94,7 +94,6 @@ func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Gro
 					log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
 					return err
 				}
-				log.WithField("endpoint", co.endpoint).Info("Connection heartbeat success")
 			}
 		}
 	})
