@@ -67,11 +67,11 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 	if err != nil {
 		return fmt.Errorf("connect to ethereum: %w", err)
 	}
-	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, eg, 30*time.Second)
 	if err != nil {
 		return fmt.Errorf("connect to relaychain: %w", err)
 	}
-	err = relay.parachainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err = relay.parachainConn.ConnectWithHeartBeat(ctx, eg, 30*time.Second)
 	if err != nil {
 		return fmt.Errorf("connect to parachain: %w", err)
 	}
@@ -279,15 +279,16 @@ func (relay *OnDemandRelay) sync(ctx context.Context, blockNumber uint64) error 
 }
 
 func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber uint64) error {
+	eg, ctx := errgroup.WithContext(ctx)
 	err := relay.ethereumConn.Connect(ctx)
 	if err != nil {
 		return fmt.Errorf("connect to ethereum: %w", err)
 	}
-	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, eg, 30*time.Second)
 	if err != nil {
 		return fmt.Errorf("connect to relaychain: %w", err)
 	}
-	err = relay.parachainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err = relay.parachainConn.ConnectWithHeartBeat(ctx, eg, 30*time.Second)
 	if err != nil {
 		return fmt.Errorf("connect to parachain: %w", err)
 	}

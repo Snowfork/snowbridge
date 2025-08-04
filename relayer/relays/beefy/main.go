@@ -45,7 +45,7 @@ func NewRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*Relay, error
 }
 
 func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
-	err := relay.relaychainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err := relay.relaychainConn.ConnectWithHeartBeat(ctx, eg, 30*time.Second)
 	if err != nil {
 		return fmt.Errorf("create relaychain connection: %w", err)
 	}
