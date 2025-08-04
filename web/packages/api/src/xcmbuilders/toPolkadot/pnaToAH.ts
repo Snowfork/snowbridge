@@ -5,7 +5,7 @@ import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 export function buildAssetHubXcm(
     registry: Registry,
     ethChainId: number,
-    tokenAddress: string,
+    tokenLocation: any,
     executionFee: bigint,
     value: bigint,
     claimer: any,
@@ -14,22 +14,6 @@ export function buildAssetHubXcm(
     topic: string
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
-    let reserveAssetDeposited = [
-        {
-            id: ether,
-            fun: {
-                Fungible: value,
-            },
-        },
-    ]
-    if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
-        reserveAssetDeposited.push({
-            id: erc20Location(ethChainId, tokenAddress),
-            fun: {
-                Fungible: value,
-            },
-        },)
-    }
     return registry.createType("XcmVersionedXcm", {
         v5: [
             {
@@ -64,7 +48,14 @@ export function buildAssetHubXcm(
                 },
             },
             {
-                reserveAssetDeposited: reserveAssetDeposited
+                withdrawAsset: [
+                    {
+                        id: tokenLocation,
+                        fun: {
+                            Fungible: value,
+                        },
+                    },
+                ],
             },
             {
                 descendOrigin: {
