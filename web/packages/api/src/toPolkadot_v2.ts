@@ -623,7 +623,7 @@ async function erc20Balance(
     }
 }
 
-function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinationParaId: number) {
+export function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinationParaId: number) {
     const tokenErcMetadata =
         registry.ethereumChains[registry.ethChainId.toString()].assets[tokenAddress.toLowerCase()]
     if (!tokenErcMetadata) {
