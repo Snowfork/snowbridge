@@ -1,7 +1,9 @@
 import { TransferInterface } from "./transfers/toPolkadot/transferInterface"
 import { ERC20ToAH } from "./transfers/toPolkadot/erc20ToAH"
 import { AssetRegistry } from "@snowbridge/base-types"
-import {PNAToAH} from "./transfers/toPolkadot/pnaToAH";
+import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
+import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
+import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 export { ValidationKind } from "./toPolkadot_v2"
 
 export type DeliveryFee = {
@@ -20,20 +22,19 @@ export function createTransferImplementation(
     const { ahAssetMetadata } = resolveInputs(registry, tokenAddress, destinationParaId)
 
     let transferImpl: TransferInterface
-    //if (destinationParaId == registry.assetHubParaId) {
+    if (destinationParaId == registry.assetHubParaId) {
         if (ahAssetMetadata.location) {
             transferImpl = new PNAToAH()
         } else {
             transferImpl = new ERC20ToAH()
         }
-    //}
-    // } else {
-    //     if (ahAssetMetadata.location) {
-    // transferImpl = new PNAFromParachain()
-    //     } else {
-    // transferImpl = new ERC20FromParachain()
-    //    }
-    //}
+    } else {
+        if (ahAssetMetadata.location) {
+            transferImpl = new PNAToParachain()
+        } else {
+            transferImpl = new ERC20ToParachain()
+        }
+    }
     return transferImpl
 }
 

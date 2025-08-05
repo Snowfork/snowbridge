@@ -1,5 +1,6 @@
 import { Registry } from "@polkadot/types/types"
-import { erc20Location, ethereumNetwork, accountId32Location } from "../../xcmBuilder"
+import {accountId32Location, erc20Location, ethereumNetwork} from "../../xcmBuilder"
+import { beneficiaryMultiAddress } from "../../utils"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 
 export function buildAssetHubXcm(
@@ -91,6 +92,84 @@ export function buildAssetHubXcm(
             {
                 setTopic: topic,
             },
+        ],
+    })
+}
+
+export function buildParachainERC20ReceivedXcmOnDestination(
+    registry: Registry,
+    ethChainId: number,
+    tokenAddress: string,
+    transferAmount: bigint,
+    feeInEther: bigint,
+    beneficiary: string,
+    topic: string
+) {
+    let {
+        hexAddress,
+        address: { kind },
+    } = beneficiaryMultiAddress(beneficiary)
+    let beneficiaryLocation
+    switch (kind) {
+        case 1:
+            // 32 byte addresses
+            beneficiaryLocation = { accountId32: { id: hexAddress } }
+            break
+        case 2:
+            // 20 byte addresses
+            beneficiaryLocation = { accountKey20: { key: hexAddress } }
+            break
+        default:
+            throw Error(`Could not parse beneficiary address ${beneficiary}`)
+    }
+    let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
+    let reserveAssetDeposited = []
+    if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
+        reserveAssetDeposited.push({
+            id: erc20Location(ethChainId, tokenAddress),
+            fun: {
+                Fungible: transferAmount,
+            },
+        })
+    } else {
+        reserveAssetDeposited.push({
+            id: ether,
+            fun: {
+                Fungible: feeInEther + transferAmount,
+            },
+        })
+    }
+    return registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                reserveAssetDeposited: reserveAssetDeposited,
+            },
+            { clearOrigin: null },
+            {
+                buyExecution: {
+                    fees: {
+                        id: ether,
+                        fun: {
+                            Fungible: feeInEther,
+                        },
+                    },
+                    weightLimit: "Unlimited",
+                },
+            },
+            {
+                depositAsset: {
+                    assets: {
+                        wild: {
+                            allCounted: 2,
+                        },
+                    },
+                    beneficiary: {
+                        parents: 0,
+                        interior: { x1: [beneficiaryLocation] },
+                    },
+                },
+            },
+            { setTopic: topic },
         ],
     })
 }
