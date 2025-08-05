@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -143,6 +144,10 @@ func (wr *EthereumWriter) WriteChannel(
 		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 
+	// Add a timeout when calling submit
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(time.Second*60))
+	options.Context = ctx
+	defer cancel()
 	tx, err := wr.gateway.SubmitV1(
 		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
 	)
