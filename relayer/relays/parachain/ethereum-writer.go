@@ -145,7 +145,7 @@ func (wr *EthereumWriter) WriteChannel(
 	}
 
 	// Add a timeout when calling submit
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(time.Second*60))
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(time.Second*180))
 	options.Context = ctx
 	defer cancel()
 	tx, err := wr.gateway.SubmitV1(
