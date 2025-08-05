@@ -366,7 +366,6 @@ export const initializeAlarms = async () => {
                 },
             ],
             AlarmDescription: AlarmReason.IndexServiceStale.toString(),
-            ComparisonOperator: "GreaterThanThreshold",
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             Threshold: IndexerLatencyThreshold,
@@ -381,6 +380,7 @@ export const initializeAlarms = async () => {
         AlarmDescription: AlarmReason.HeartbeatLost.toString(),
         AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
         ...alarmCommandSharedInput,
+        ComparisonOperator: "LessThanThreshold",
         Threshold: 1,
         TreatMissingData: "breaching",
     })
