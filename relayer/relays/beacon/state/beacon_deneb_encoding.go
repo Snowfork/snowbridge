@@ -66,7 +66,6 @@ func (e *ExecutionPayloadDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error)
 
 	// Offset (14) 'Withdrawals'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(e.Withdrawals) * 44
 
 	// Field (15) 'BlobGasUsed'
 	dst = ssz.MarshalUint64(dst, e.BlobGasUsed)
@@ -161,7 +160,7 @@ func (e *ExecutionPayloadDeneb) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o10 < 528 {
+	if o10 != 528 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -438,7 +437,6 @@ func (e *ExecutionPayloadHeaderDeneb) MarshalSSZTo(buf []byte) (dst []byte, err 
 
 	// Offset (10) 'ExtraData'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(e.ExtraData)
 
 	// Field (11) 'BaseFeePerGas'
 	if size := len(e.BaseFeePerGas); size != 32 {
@@ -548,7 +546,7 @@ func (e *ExecutionPayloadHeaderDeneb) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o10 < 584 {
+	if o10 != 584 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -736,7 +734,6 @@ func (s *SignedBeaconBlockDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error
 
 	// Offset (0) 'Message'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += s.Message.SizeSSZ()
 
 	// Field (1) 'Signature'
 	dst = append(dst, s.Signature[:]...)
@@ -765,7 +762,7 @@ func (s *SignedBeaconBlockDeneb) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o0 < 100 {
+	if o0 != 100 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -850,10 +847,6 @@ func (b *BeaconBlockDenebMainnet) MarshalSSZTo(buf []byte) (dst []byte, err erro
 
 	// Offset (4) 'Body'
 	dst = ssz.WriteOffset(dst, offset)
-	if b.Body == nil {
-		b.Body = new(BeaconBlockBodyDenebMainnet)
-	}
-	offset += b.Body.SizeSSZ()
 
 	// Field (4) 'Body'
 	if dst, err = b.Body.MarshalSSZTo(dst); err != nil {
@@ -897,7 +890,7 @@ func (b *BeaconBlockDenebMainnet) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o4 < 84 {
+	if o4 != 84 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -1045,7 +1038,6 @@ func (b *BeaconBlockBodyDenebMainnet) MarshalSSZTo(buf []byte) (dst []byte, err 
 
 	// Offset (11) 'BlobKzgCommitments'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.BlobKzgCommitments) * 48
 
 	// Field (3) 'ProposerSlashings'
 	if size := len(b.ProposerSlashings); size > 16 {
@@ -1177,7 +1169,7 @@ func (b *BeaconBlockBodyDenebMainnet) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o3 < 392 {
+	if o3 != 392 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -1753,7 +1745,6 @@ func (b *BeaconStateDenebMainnet) MarshalSSZTo(buf []byte) (dst []byte, err erro
 
 	// Offset (27) 'HistoricalSummaries'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.HistoricalSummaries) * 64
 
 	// Field (7) 'HistoricalRoots'
 	if size := len(b.HistoricalRoots); size > 16777216 {
@@ -1903,7 +1894,7 @@ func (b *BeaconStateDenebMainnet) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o7 < 2736653 {
+	if o7 != 2736653 {
 		return ssz.ErrInvalidVariableOffset
 	}
 

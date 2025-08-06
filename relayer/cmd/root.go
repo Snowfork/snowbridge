@@ -27,7 +27,6 @@ func init() {
 	rootCmd.AddCommand(scanSingleBeefyBlockCmd())
 	rootCmd.AddCommand(leafCmd())
 	rootCmd.AddCommand(basicChannelLeafProofCmd())
-	rootCmd.AddCommand(parachainHeadProofCmd())
 	rootCmd.AddCommand(importExecutionHeaderCmd())
 	rootCmd.AddCommand(generateBeaconFixtureCmd())
 	rootCmd.AddCommand(generateBeaconCheckpointCmd())

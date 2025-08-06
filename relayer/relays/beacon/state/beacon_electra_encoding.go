@@ -351,7 +351,6 @@ func (s *SignedBeaconBlockElectra) MarshalSSZTo(buf []byte) (dst []byte, err err
 
 	// Offset (0) 'Message'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += s.Message.SizeSSZ()
 
 	// Field (1) 'Signature'
 	dst = append(dst, s.Signature[:]...)
@@ -380,7 +379,7 @@ func (s *SignedBeaconBlockElectra) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o0 < 100 {
+	if o0 != 100 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -465,10 +464,6 @@ func (b *BeaconBlockElectra) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Offset (4) 'Body'
 	dst = ssz.WriteOffset(dst, offset)
-	if b.Body == nil {
-		b.Body = new(BeaconBlockBodyElectra)
-	}
-	offset += b.Body.SizeSSZ()
 
 	// Field (4) 'Body'
 	if dst, err = b.Body.MarshalSSZTo(dst); err != nil {
@@ -512,7 +507,7 @@ func (b *BeaconBlockElectra) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o4 < 84 {
+	if o4 != 84 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -664,10 +659,6 @@ func (b *BeaconBlockBodyElectra) MarshalSSZTo(buf []byte) (dst []byte, err error
 
 	// Offset (12) 'ExecutionRequests'
 	dst = ssz.WriteOffset(dst, offset)
-	if b.ExecutionRequests == nil {
-		b.ExecutionRequests = new(ExecutionRequests)
-	}
-	offset += b.ExecutionRequests.SizeSSZ()
 
 	// Field (3) 'ProposerSlashings'
 	if size := len(b.ProposerSlashings); size > 16 {
@@ -804,7 +795,7 @@ func (b *BeaconBlockBodyElectra) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o3 < 396 {
+	if o3 != 396 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -1437,7 +1428,6 @@ func (b *BeaconStateElectra) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Offset (36) 'PendingConsolidations'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.PendingConsolidations) * 16
 
 	// Field (7) 'HistoricalRoots'
 	if size := len(b.HistoricalRoots); size > 16777216 {
@@ -1620,7 +1610,7 @@ func (b *BeaconStateElectra) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o7 < 2736713 {
+	if o7 != 2736713 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -2386,7 +2376,6 @@ func (a *AttestationElectra) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Offset (0) 'AggregationBits'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(a.AggregationBits)
 
 	// Field (1) 'Data'
 	if a.Data == nil {
@@ -2432,7 +2421,7 @@ func (a *AttestationElectra) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o0 < 236 {
+	if o0 != 236 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -2539,10 +2528,6 @@ func (a *AttesterSlashingElectra) MarshalSSZTo(buf []byte) (dst []byte, err erro
 
 	// Offset (1) 'Attestation2'
 	dst = ssz.WriteOffset(dst, offset)
-	if a.Attestation2 == nil {
-		a.Attestation2 = new(IndexedAttestationElectra)
-	}
-	offset += a.Attestation2.SizeSSZ()
 
 	// Field (0) 'Attestation1'
 	if dst, err = a.Attestation1.MarshalSSZTo(dst); err != nil {
@@ -2573,7 +2558,7 @@ func (a *AttesterSlashingElectra) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o0 < 8 {
+	if o0 != 8 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -2665,7 +2650,6 @@ func (i *IndexedAttestationElectra) MarshalSSZTo(buf []byte) (dst []byte, err er
 
 	// Offset (0) 'AttestationIndices'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(i.AttestationIndices) * 8
 
 	// Field (1) 'Data'
 	if i.Data == nil {
@@ -2706,7 +2690,7 @@ func (i *IndexedAttestationElectra) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o0 < 228 {
+	if o0 != 228 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -2949,7 +2933,6 @@ func (e *ExecutionRequests) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Offset (2) 'Consolidations'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(e.Consolidations) * 116
 
 	// Field (0) 'Deposits'
 	if size := len(e.Deposits); size > 8192 {
@@ -3003,7 +2986,7 @@ func (e *ExecutionRequests) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o0 < 12 {
+	if o0 != 12 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
