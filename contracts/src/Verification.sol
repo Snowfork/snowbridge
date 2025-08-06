@@ -54,14 +54,12 @@ library Verification {
 
     /// @dev A chain of proofs
     struct Proof {
-        // The parachain header containing the message commitment as a digest item
-        ParachainHeader header;
-        // The proof used to generate a merkle root of parachain heads
-        HeadProof headProof;
         // The MMR leaf to be proven
         MMRLeafPartial leafPartial;
         // The MMR leaf prove
         bytes32[] leafProof;
+        // Parachain heads root
+        bytes32 parachainHeadsRoot;
         // The order in which proof items should be combined
         uint256 leafProofOrder;
     }
@@ -97,39 +95,23 @@ library Verification {
     ///
     /// @param beefyClient The address of the BEEFY light client
     /// @param encodedParaID The SCALE-encoded parachain ID of BridgeHub
-    /// @param commitment The message commitment root expected to be contained within the
+    /// @param messageCommitment The message commitment root expected to be contained within the
     ///                   digest of BridgeHub parachain header.
     /// @param proof The chain of proofs described above
-    function verifyCommitment(address beefyClient, bytes4 encodedParaID, bytes32 commitment, Proof calldata proof)
-        external
-        view
-        returns (bool)
-    {
-        // Verify that parachain header contains the commitment
-        if (!isCommitmentInHeaderDigest(commitment, proof.header)) {
-            return false;
-        }
-
-        // Compute the merkle leaf hash of our parachain
-        bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(encodedParaID, proof.header);
-
-        if (proof.headProof.pos >= proof.headProof.width) {
-            return false;
-        }
-
-        // Compute the merkle root hash of all parachain heads
-        bytes32 parachainHeadsRoot = SubstrateMerkleProof.computeRoot(
-            parachainHeadHash, proof.headProof.pos, proof.headProof.width, proof.headProof.proof
-        );
-
-        bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
+    function verifyCommitment(
+        address beefyClient,
+        bytes4 encodedParaID,
+        bytes32 messageCommitment,
+        Proof calldata proof
+    ) external view returns (bool) {
+        bytes32 leafHash = createMMRLeaf(proof.leafPartial, proof.parachainHeadsRoot, messageCommitment);
 
         // Verify that the MMR leaf is part of the MMR maintained by the BEEFY light client
         return BeefyClient(beefyClient).verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
     }
 
     // Verify that a message commitment is in the header digest
-    function isCommitmentInHeaderDigest(bytes32 commitment, ParachainHeader calldata header)
+    function isCommitmentInHeaderDigest(bytes32 messageCommitment, ParachainHeader calldata header)
         internal
         pure
         returns (bool)
@@ -138,7 +120,7 @@ library Verification {
             if (
                 header.digestItems[i].kind == DIGEST_ITEM_OTHER && header.digestItems[i].data.length == 33
                     && header.digestItems[i].data[0] == DIGEST_ITEM_OTHER_SNOWBRIDGE
-                    && commitment == bytes32(header.digestItems[i].data[1:])
+                    && messageCommitment == bytes32(header.digestItems[i].data[1:])
             ) {
                 return true;
             }
@@ -221,7 +203,11 @@ library Verification {
 
     // SCALE-encode: MMRLeaf
     // Reference: https://github.com/paritytech/substrate/blob/14e0a0b628f9154c5a2c870062c3aac7df8983ed/primitives/consensus/beefy/src/mmr.rs#L52
-    function createMMRLeaf(MMRLeafPartial memory leaf, bytes32 parachainHeadsRoot) internal pure returns (bytes32) {
+    function createMMRLeaf(MMRLeafPartial memory leaf, bytes32 parachainHeadsRoot, bytes32 messageCommitment)
+        internal
+        pure
+        returns (bytes32)
+    {
         bytes memory encodedLeaf = bytes.concat(
             ScaleCodec.encodeU8(leaf.version),
             ScaleCodec.encodeU32(leaf.parentNumber),
@@ -229,7 +215,8 @@ library Verification {
             ScaleCodec.encodeU64(leaf.nextAuthoritySetID),
             ScaleCodec.encodeU32(leaf.nextAuthoritySetLen),
             leaf.nextAuthoritySetRoot,
-            parachainHeadsRoot
+            parachainHeadsRoot,
+            messageCommitment
         );
         return keccak256(encodedLeaf);
     }
