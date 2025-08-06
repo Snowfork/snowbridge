@@ -120,6 +120,8 @@ contract BeefyClient {
         bytes32 nextAuthoritySetRoot;
         // Merkle root of all parachain headers in this block
         bytes32 parachainHeadsRoot;
+        // Message commitment
+        bytes32 messageCommitment;
     }
 
     /**
@@ -565,7 +567,8 @@ contract BeefyClient {
             ScaleCodec.encodeU64(leaf.nextAuthoritySetID),
             ScaleCodec.encodeU32(leaf.nextAuthoritySetLen),
             leaf.nextAuthoritySetRoot,
-            leaf.parachainHeadsRoot
+            leaf.parachainHeadsRoot,
+            leaf.messageCommitment
         );
     }
 
