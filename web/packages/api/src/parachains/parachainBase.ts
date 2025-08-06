@@ -137,14 +137,12 @@ export abstract class ParachainBase {
             }
         }
         if (!dotAsset) {
-            console.warn(
-                "Could not find DOT in result",
-                result,
-                "using 0 as delivery fee. Dry run will fail if this is incorrect."
-            )
-            return 0n
+            console.info("Could not find DOT in result", result)
+            throw Error(`Can not query XCM Weight.`)
         }
+
         const deliveryFee = BigInt(dotAsset.fun.fungible.toString())
+
         return deliveryFee
     }
 
