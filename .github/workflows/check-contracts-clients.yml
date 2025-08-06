@@ -3,7 +3,8 @@ name: Check Contracts Clients
 
 on:
   pull_request:
-    branches: [ "main" ]
+    # TODO: Remove test branch after testing
+    branches: [ "main", "tanssi-relay-v1.0.41-custom" ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -36,6 +37,11 @@ jobs:
 
     - name: Check abigen
       run: abigen --version
+
+    - name: Build Contracts
+      working-directory: contracts
+      run: |
+        forge build
 
     - name: Generate clients
       working-directory: relayer
