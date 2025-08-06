@@ -1353,7 +1353,7 @@ export function isEthereumAsset(location: any): boolean {
     )
 }
 
-export function isNative(location: any) {
+export function isRelaychainLocation(location: any) {
     return location.parents == DOT_LOCATION.parents && location.interior == DOT_LOCATION.interior
 }
 
@@ -1561,4 +1561,126 @@ function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
             setTopic: topic,
         },
     ]
+}
+
+export function buildERC20ToAssetHubFromParachain(
+    registry: Registry,
+    ethChainId: number,
+    sourceAccount: string,
+    beneficiary: string,
+    tokenAddress: string,
+    topic: string,
+    transferAmount: bigint,
+    totalFee: bigint,
+    destinationFee: bigint,
+    feeAssetIdReanchored: any
+) {
+    let {
+        hexAddress,
+        address: { kind },
+    } = beneficiaryMultiAddress(beneficiary)
+    let beneficiaryAccountLocation
+    switch (kind) {
+        case 1:
+            // 32 byte addresses
+            beneficiaryAccountLocation = { accountId32: { id: hexAddress } }
+            break
+        case 2:
+            // 20 byte addresses
+            beneficiaryAccountLocation = { accountKey20: { key: hexAddress } }
+            break
+        default:
+            throw Error(`Could not parse source address ${sourceAccount}`)
+    }
+    return registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                withdrawAsset: [
+                    {
+                        id: feeAssetIdReanchored,
+                        fun: {
+                            Fungible: totalFee,
+                        },
+                    },
+                    {
+                        id: erc20Location(ethChainId, tokenAddress),
+                        fun: {
+                            Fungible: transferAmount,
+                        },
+                    },
+                ],
+            },
+            { clearOrigin: null },
+            {
+                buyExecution: {
+                    fees: {
+                        id: feeAssetIdReanchored,
+                        fun: {
+                            Fungible: destinationFee,
+                        },
+                    },
+                    weightLimit: "Unlimited",
+                },
+            },
+            {
+                depositAsset: {
+                    assets: {
+                        Wild: {
+                            AllCounted: 2,
+                        },
+                    },
+                    beneficiary: {
+                        parents: 0,
+                        interior: { x1: [beneficiaryAccountLocation] },
+                    },
+                },
+            },
+            {
+                setTopic: topic,
+            },
+        ],
+    })
+}
+export function buildDepositAllAssetsWithTopic(
+    registry: Registry,
+    beneficiary: string,
+    topic: string
+) {
+    let {
+        hexAddress,
+        address: { kind },
+    } = beneficiaryMultiAddress(beneficiary)
+    let beneficiaryAccountLocation
+    switch (kind) {
+        case 1:
+            // 32 byte addresses
+            beneficiaryAccountLocation = { accountId32: { id: hexAddress } }
+            break
+        case 2:
+            // 20 byte addresses
+            beneficiaryAccountLocation = { accountKey20: { key: hexAddress } }
+            break
+        default:
+            throw Error(`Could not parse source address ${beneficiary}`)
+    }
+    return registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                depositAsset: {
+                    assets: {
+                        Wild: {
+                            AllCounted: 2,
+                        },
+                    },
+                    beneficiary: {
+                        parents: 0,
+                        interior: { x1: [beneficiaryAccountLocation] },
+                    },
+                },
+            },
+            {
+                setTopic: topic,
+            },
+        ],
+    })
 }
