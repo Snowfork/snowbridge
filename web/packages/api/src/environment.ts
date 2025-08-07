@@ -340,6 +340,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                         address: "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
                         minimumTransferAmount: 1n,
                     },
+                    {
+                        id: "AAVE",
+                        address: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                        minimumTransferAmount: 1n,
+                    },
                 ],
             },
             {
@@ -409,6 +414,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     {
                         id: "KILT",
                         address: "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
+                        minimumTransferAmount: 1n,
+                    },
+                    {
+                        id: "AAVE",
+                        address: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
                         minimumTransferAmount: 1n,
                     },
                 ],

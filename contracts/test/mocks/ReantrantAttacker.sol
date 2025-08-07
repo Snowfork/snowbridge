@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {ParaID, MultiAddress, multiAddressFromBytes32} from "../../src/Types.sol";

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IGateway} from "./interfaces/IGateway.sol";
@@ -11,7 +11,7 @@ import {AssetsStorage, TokenInfo} from "./storage/AssetsStorage.sol";
 import {CoreStorage} from "./storage/CoreStorage.sol";
 
 import {SubstrateTypes} from "./SubstrateTypes.sol";
-import {ParaID, MultiAddress, Ticket, Costs} from "./Types.sol";
+import {ChannelID, ParaID, MultiAddress, Ticket, Costs} from "./Types.sol";
 import {Address} from "./utils/Address.sol";
 import {SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
@@ -270,7 +270,7 @@ library Assets {
         // It means that registration can be retried.
         // But register a PNA here is not allowed
         TokenInfo storage info = $.tokenRegistry[token];
-        if(info.foreignID != bytes32(0)) {
+        if (info.foreignID != bytes32(0)) {
             revert TokenAlreadyRegistered();
         }
         info.isRegistered = true;
