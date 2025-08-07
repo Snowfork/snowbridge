@@ -8,7 +8,7 @@ import {
     parachainLocation,
     HERE_LOCATION,
     bridgeLocation,
-    isNative,
+    isRelaychainLocation,
     isParachainNative,
 } from "../../xcmBuilder"
 import { buildExportXcm } from "../../xcmbuilders/toEthereum/erc20FromAH"
@@ -236,7 +236,7 @@ export class ERC20FromParachain implements TransferInterface {
         let feeLocation = options?.feeTokenLocation
         if (feeLocation) {
             // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
-            if (isNative(feeLocation)) {
+            if (isRelaychainLocation(feeLocation)) {
                 ethereumExecutionFeeInNative = await getAssetHubConversionPalletSwap(
                     assetHub,
                     DOT_LOCATION,
@@ -533,7 +533,7 @@ export class ERC20FromParachain implements TransferInterface {
                 fee.ethereumExecutionFee!
             )
         } // One swap from DOT to Ether on Asset Hub.
-        else if (isNative(fee.feeLocation)) {
+        else if (isRelaychainLocation(fee.feeLocation)) {
             xcm = buildTransferXcmFromParachainWithDOTAsFee(
                 parachain.registry,
                 ethChainId,

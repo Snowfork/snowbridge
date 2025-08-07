@@ -35,10 +35,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
       ...
 ]
  **/
-export const fetchToPolkadotTransfers = async (
-    graphqlApiUrl: string,
-    graphqlQuerySize: number = 100
-) => {
+export const fetchToPolkadotTransfers = async (graphqlApiUrl: string, graphqlQuerySize = 100) => {
     let query = `query { transferStatusToPolkadots(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC) {
             id
             status
@@ -122,10 +119,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
       ...
 ]
  **/
-export const fetchToEthereumTransfers = async (
-    graphqlApiUrl: string,
-    graphqlQuerySize: number = 100
-) => {
+export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQuerySize = 100) => {
     let query = `query { transferStatusToEthereums(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC) {
             id
             status
@@ -416,6 +410,63 @@ export const fetchLatestBlocksSynced = async (graphqlApiUrl: string, includePKBr
     return result
 }
 
+/**
+ * Query messages processed on parachains.
+
+```
+curl -H 'Content-Type: application/json' \
+-X POST -d \
+'query { messageProcessedOnPolkadots(limit: 1, where: {messageId_eq: "${id}"}) { id blockNumber timestamp messageId paraId success eventId network } }' \
+$graphqlApiUrl --no-progress-meter | jq "."
+```
+
+* @param id - internal identifier for the message
+* @param status - true or false
+* @param messageId - a global index to trace the transfer in different chains
+* @param timestamp - When the message was processed.
+* @param paraId - The parachain the message was processed on.
+* @param eventId - The id of the message processed/failed event.
+* @param network - The chain it was received on.
+*
+"messageProcessedOnPolkadots": [
+    {
+    "id": "0007409855-e807a-000010",
+    "blockNumber": 7409855,
+    "timestamp": "2024-11-22T15:53:00.000000Z",
+    "messageId": "0x67f2e507665b5a22b302f8ed998ff6f40afd967c974457d6610e795776611c85",
+    "paraId": 2000,
+    "success": true,
+    "eventId": "7409855-10",
+    "network": null
+    }
+]
+ **/
+export const fetchInterParachainMessageById = async (graphqlApiUrl: string, id: string) => {
+    let query = `query { messageProcessedOnPolkadots(limit: 1, where: {messageId_eq: "${id}"}) {
+                        id
+                        blockNumber
+                        timestamp
+                        messageId
+                        paraId
+                        success
+                        eventId
+                        network
+                    }
+                }`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.messageProcessedOnPolkadots
+}
+
+/*
+ * Query the maximum latency of pending transfers from P->E.
+ * {
+    "toEthereumUndeliveredTimeout": [
+      {
+        "elapse": 1034.273011
+      }
+    ]
+}
+*/
 export const fetchToEthereumUndelivedLatency = async (graphqlApiUrl: string) => {
     let query = `query { toEthereumUndeliveredTimeout {
                    elapse
@@ -424,6 +475,15 @@ export const fetchToEthereumUndelivedLatency = async (graphqlApiUrl: string) => 
     return result?.toEthereumUndeliveredTimeout
 }
 
+/* Query the maximum latency of pending transfers from E->P.
+ * {
+    "toPolkadotUndeliveredTimeout": [
+      {
+        "elapse": 1201.23
+      }
+    ]
+}
+*/
 export const fetchToPolkadotUndelivedLatency = async (graphqlApiUrl: string) => {
     let query = `query { toPolkadotUndeliveredTimeout {
                    elapse
