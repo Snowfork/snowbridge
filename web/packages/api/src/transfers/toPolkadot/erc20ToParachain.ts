@@ -2,7 +2,7 @@ import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
 import {
-    IGatewayV1__factory as IGateway__factory,
+    IGatewayV2__factory as IGateway__factory,
     IGatewayV2 as IGateway,
 } from "@snowbridge/contract-types"
 import { Context } from "../../index"
@@ -184,14 +184,12 @@ export class ERC20ToParachain implements TransferInterface {
                 topic
             ).toHex()
         )
-        let assets: any = [encodeNativeAsset(tokenAddress, amount)]
-        let claimer: any = []
-        const executionFee = fee.assetHubExecutionFeeEther
-        const relayerFee = 1_000_000_000_000_000n // TODO configure
+        let assets = [encodeNativeAsset(tokenAddress, amount)]
+        let claimer = hexToBytes("0x") // TODO
 
         const tx = await con
-            .getFunction("sendMessageV2")
-            .populateTransaction(xcm, assets, claimer, executionFee, relayerFee, {
+            .getFunction("v2_sendMessage")
+            .populateTransaction(xcm, assets, claimer, fee.assetHubExecutionFeeEther, fee.relayerFee, {
                 value,
                 from: sourceAccount,
             })

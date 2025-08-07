@@ -130,8 +130,8 @@ export class ERC20ToAH implements TransferInterface {
         const xcm = hexToBytes(
             sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic).toHex()
         )
-        let assets: any = [encodeNativeAsset(tokenAddress, amount)]
-        let claimer = hexToBytes("0x")
+        let assets = [encodeNativeAsset(tokenAddress, amount)]
+        let claimer = hexToBytes("0x") // TODO
 
         const tx = await con
             .getFunction("v2_sendMessage")

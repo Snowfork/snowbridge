@@ -2,7 +2,7 @@ import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
 import {
-    IGatewayV1__factory as IGateway__factory,
+    IGatewayV2__factory as IGateway__factory,
     IGatewayV2 as IGateway,
 } from "@snowbridge/contract-types"
 import { Context } from "../../index"
@@ -10,7 +10,6 @@ import {
     buildMessageId,
     DeliveryFee,
     encodeForeignAsset,
-    encodeNativeAsset,
     hexToBytes,
     Transfer,
 } from "../../toPolkadotSnowbridgeV2"
@@ -125,6 +124,10 @@ export class PNAToAH implements TransferInterface {
         const ifce = IGateway__factory.createInterface()
         const con = new Contract(registry.gatewayAddress, ifce)
 
+        if (!ahAssetMetadata.foreignId) {
+            throw Error("asset foreign ID not set in metadata")
+        }
+
         const topic = buildMessageId(
             destinationParaId,
             sourceAccount,
@@ -136,11 +139,11 @@ export class PNAToAH implements TransferInterface {
         const xcm = hexToBytes(
             sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic).toHex()
         )
-        let assets: any = [encodeForeignAsset(tokenAddress, amount)]
-        let claimer: any = []
+        let assets = [encodeForeignAsset(ahAssetMetadata.foreignId, amount)]
+        let claimer = hexToBytes("0x") // TODO
 
         const tx = await con
-            .getFunction("sendMessageV2")
+            .getFunction("v2_sendMessage")
             .populateTransaction(
                 xcm,
                 assets,

@@ -2,7 +2,7 @@ import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
 import {
-    IGatewayV1__factory as IGateway__factory,
+    IGatewayV2__factory as IGateway__factory,
     IGatewayV2 as IGateway,
 } from "@snowbridge/contract-types"
 import { Context } from "../../index"
@@ -183,11 +183,11 @@ export class PNAToParachain implements TransferInterface {
                 topic
             ).toHex()
         )
-        let assets: any = [encodeForeignAsset(tokenAddress, amount)]
-        let claimer: any = []
+        let assets = [encodeForeignAsset(tokenAddress, amount)]
+        let claimer = hexToBytes("0x") // TODO
 
         const tx = await con
-            .getFunction("sendMessageV2")
+            .getFunction("v2_sendMessage")
             .populateTransaction(
                 xcm,
                 assets,
