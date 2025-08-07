@@ -163,6 +163,10 @@ export class PNAToParachain implements TransferInterface {
         const ifce = IGateway__factory.createInterface()
         const con = new Contract(registry.gatewayAddress, ifce)
 
+        if (!ahAssetMetadata.foreignId) {
+            throw Error("asset foreign ID not set in metadata")
+        }
+
         const topic = buildMessageId(
             destinationParaId,
             sourceAccount,
@@ -183,7 +187,7 @@ export class PNAToParachain implements TransferInterface {
                 topic
             ).toHex()
         )
-        let assets = [encodeForeignAsset(tokenAddress, amount)]
+        let assets = [encodeForeignAsset(ahAssetMetadata.foreignId, amount)]
         let claimer = hexToBytes("0x") // TODO
 
         const tx = await con
