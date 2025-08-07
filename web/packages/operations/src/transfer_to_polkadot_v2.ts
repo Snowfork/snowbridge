@@ -5,7 +5,7 @@ import { formatUnits, Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
 
 export const transferToPolkadot = async (
-    sourceParaId: number,
+    destParaId: number,
     symbol: string,
     amount: bigint,
     feeTokenLocation?: any
@@ -48,7 +48,7 @@ export const transferToPolkadot = async (
     {
         // Step 0. Create a transfer implementation
         const transferImpl = toPolkadotSnowbridgeV2.createTransferImplementation(
-            sourceParaId,
+            destParaId,
             registry,
             TOKEN_CONTRACT
         )
@@ -62,15 +62,16 @@ export const transferToPolkadot = async (
 
         console.log("fee: ", fee)
         //// Step 2. Create a transfer tx
-        //const transfer = await transferImpl.createTransfer(
-        //    { sourceParaId, context },
-        //    registry,
-        //    POLKADOT_ACCOUNT_PUBLIC,
-        //    ETHEREUM_ACCOUNT_PUBLIC,
-        //    TOKEN_CONTRACT,
-        //    amount,
-        //    fee
-        //)
+        const transfer = await transferImpl.createTransfer(
+            await context.assetHub(),
+            registry,
+            destParaId,
+            ETHEREUM_ACCOUNT_PUBLIC,
+            POLKADOT_ACCOUNT_PUBLIC,
+            TOKEN_CONTRACT,
+            amount,
+            fee
+        )
         //
         //// Step 3. Estimate the cost of the execution cost of the transaction
         //console.log("call: ", transfer.tx.inner.toHex())

@@ -1,5 +1,10 @@
 import { Registry } from "@polkadot/types/types"
-import {accountId32Location, erc20Location, ethereumNetwork} from "../../xcmBuilder"
+import {
+    accountId32Location,
+    erc20Location,
+    ethereumNetwork,
+    parachainLocation,
+} from "../../xcmBuilder"
 import { beneficiaryMultiAddress } from "../../utils"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 
@@ -87,7 +92,6 @@ export function buildAssetHubXcm(
     })
 }
 
-
 export function buildParachainPNAReceivedXcmOnDestination(
     registry: Registry,
     ethChainId: number,
@@ -163,6 +167,109 @@ export function buildParachainPNAReceivedXcmOnDestination(
                 },
             },
             { setTopic: topic },
+        ],
+    })
+}
+
+export function sendMessageXCM(
+    registry: Registry,
+    ethChainId: number,
+    destinationParaId: number,
+    tokenLocation: any,
+    beneficiary: string,
+    tokenAmount: bigint,
+    remoteEtherFeeAmount: bigint,
+    topic: string
+) {
+    let {
+        hexAddress,
+        address: { kind },
+    } = beneficiaryMultiAddress(beneficiary)
+    let beneficiaryLocation
+    switch (kind) {
+        case 1:
+            // 32 byte addresses
+            beneficiaryLocation = { accountId32: { id: hexAddress } }
+            break
+        case 2:
+            // 20 byte addresses
+            beneficiaryLocation = { accountKey20: { key: hexAddress } }
+            break
+        default:
+            throw Error(`Could not parse beneficiary address ${beneficiary}`)
+    }
+    let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
+    return registry.createType("XcmVersionedXcm", {
+        v5: [
+            {
+                initiateTransfer: {
+                    destination: parachainLocation(destinationParaId),
+                    remote_fees: {
+                        reserveDeposit: {
+                            definite: [
+                                {
+                                    id: ether,
+                                    fun: {
+                                        Fungible: remoteEtherFeeAmount,
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                    preserveOrigin: true,
+                    assets: [
+                        {
+                            reserveDeposit: {
+                                definite: [
+                                    {
+                                        id: tokenLocation,
+                                        fun: {
+                                            Fungible: tokenAmount,
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                    remoteXcm: [
+                        {
+                            refundSurplus: null,
+                        },
+                        {
+                            depositAsset: {
+                                assets: {
+                                    wild: {
+                                        allCounted: 3,
+                                    },
+                                },
+                                beneficiary: {
+                                    parents: 0,
+                                    interior: { x1: [beneficiaryLocation] },
+                                },
+                            },
+                        },
+                        {
+                            setTopic: topic,
+                        },
+                    ],
+                },
+            },
+            {
+                refundSurplus: null,
+            },
+            {
+                depositAsset: {
+                    assets: {
+                        wild: {
+                            allOf: { id: ether, fun: "Fungible" },
+                        },
+                    },
+                    beneficiary: beneficiaryLocation,
+                },
+            },
+            {
+                setTopic: topic,
+            },
         ],
     })
 }
