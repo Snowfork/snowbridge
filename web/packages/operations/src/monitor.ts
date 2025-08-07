@@ -2,7 +2,6 @@ import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
 import { Context, environment, status, utils, subsquid } from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
-import { BlockLatencyThreshold } from "./alarm"
 import { AbstractProvider } from "ethers"
 
 export const monitor = async (): Promise<status.AllMetrics> => {
@@ -54,40 +53,23 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     const bridgeStatus = await status.bridgeStatusInfo(context, {
         polkadotBlockTimeInSeconds: 6,
         ethereumBlockTimeInSeconds: 12,
-        toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
-        toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
     })
     console.log("Bridge Status:", bridgeStatus)
 
-    const assethubChannelStatus = await status.channelStatusInfo(
+    let assethubChannelStatus = await status.channelStatusInfo(
         context,
-        utils.paraIdToChannelId(config.ASSET_HUB_PARAID),
-        {
-            toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
-            toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
-        }
+        utils.paraIdToChannelId(config.ASSET_HUB_PARAID)
     )
     assethubChannelStatus.name = status.ChannelKind.AssetHub
     console.log("Asset Hub Channel:", assethubChannelStatus)
 
-    const primaryGov = await status.channelStatusInfo(
-        context,
-        config.PRIMARY_GOVERNANCE_CHANNEL_ID,
-        {
-            toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
-            toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
-        }
-    )
+    const primaryGov = await status.channelStatusInfo(context, config.PRIMARY_GOVERNANCE_CHANNEL_ID)
     primaryGov.name = status.ChannelKind.Primary
     console.log("Primary Governance Channel:", primaryGov)
 
     const secondaryGov = await status.channelStatusInfo(
         context,
-        config.SECONDARY_GOVERNANCE_CHANNEL_ID,
-        {
-            toPolkadotCheckIntervalInBlock: BlockLatencyThreshold.ToPolkadot,
-            toEthereumCheckIntervalInBlock: BlockLatencyThreshold.ToEthereum,
-        }
+        config.SECONDARY_GOVERNANCE_CHANNEL_ID
     )
     secondaryGov.name = status.ChannelKind.Secondary
     console.log("Secondary Governance Channel:", secondaryGov)
@@ -191,6 +173,20 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         indexerInfos.push(info)
     }
     console.log("Indexer service status:", indexerInfos)
+
+    try {
+        let latencies = await subsquid.fetchToEthereumUndelivedLatency(context.graphqlApiUrl())
+        if (latencies && latencies.length) {
+            assethubChannelStatus.toEthereum.undeliveredTimeout = latencies[0].elapse
+        }
+        latencies = await subsquid.fetchToPolkadotUndelivedLatency(context.graphqlApiUrl())
+        if (latencies && latencies.length) {
+            assethubChannelStatus.toPolkadot.undeliveredTimeout = latencies[0].elapse
+        }
+    } catch (error) {
+        console.error("Failed to fetch undelivered latency:", error)
+    }
+    console.log("Asset Hub Channel with delivery timeout:", assethubChannelStatus)
 
     const allMetrics: status.AllMetrics = {
         name,

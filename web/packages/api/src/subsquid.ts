@@ -35,10 +35,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
       ...
 ]
  **/
-export const fetchToPolkadotTransfers = async (
-    graphqlApiUrl: string,
-    graphqlQuerySize: number = 100
-) => {
+export const fetchToPolkadotTransfers = async (graphqlApiUrl: string, graphqlQuerySize = 100) => {
     let query = `query { transferStatusToPolkadots(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC) {
             id
             status
@@ -122,10 +119,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
       ...
 ]
  **/
-export const fetchToEthereumTransfers = async (
-    graphqlApiUrl: string,
-    graphqlQuerySize: number = 100
-) => {
+export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQuerySize = 100) => {
     let query = `query { transferStatusToEthereums(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC) {
             id
             status
@@ -461,4 +455,39 @@ export const fetchInterParachainMessageById = async (graphqlApiUrl: string, id: 
                 }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.messageProcessedOnPolkadots
+}
+
+/*
+ * Query the maximum latency of pending transfers from P->E.
+ * {
+    "toEthereumUndeliveredTimeout": [
+      {
+        "elapse": 1034.273011
+      }
+    ]
+}
+*/
+export const fetchToEthereumUndelivedLatency = async (graphqlApiUrl: string) => {
+    let query = `query { toEthereumUndeliveredTimeout {
+                   elapse
+                }}`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.toEthereumUndeliveredTimeout
+}
+
+/* Query the maximum latency of pending transfers from E->P.
+ * {
+    "toPolkadotUndeliveredTimeout": [
+      {
+        "elapse": 1201.23
+      }
+    ]
+}
+*/
+export const fetchToPolkadotUndelivedLatency = async (graphqlApiUrl: string) => {
+    let query = `query { toPolkadotUndeliveredTimeout {
+                   elapse
+                }}`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.toPolkadotUndeliveredTimeout
 }
