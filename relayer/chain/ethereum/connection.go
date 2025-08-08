@@ -147,6 +147,7 @@ func (co *Connection) queryFailingError(ctx context.Context, hash common.Hash) e
 }
 
 func (co *Connection) waitForTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
+	var cnt uint64
 	for {
 		receipt, err := co.pollTransaction(ctx, tx, confirmations)
 		if err != nil {
@@ -161,6 +162,13 @@ func (co *Connection) waitForTransaction(ctx context.Context, tx *types.Transact
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		case <-time.After(6 * time.Second):
+			if co.config.CallTimeoutSecs > 0 {
+				cnt++
+				log.Info(fmt.Sprintf("waiting for receipt: %d seconds elapsed", cnt*6))
+				if cnt*6 > co.config.CallTimeoutSecs {
+					return nil, fmt.Errorf("wait receipt timeout")
+				}
+			}
 		}
 	}
 }
