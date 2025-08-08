@@ -144,12 +144,20 @@ func (wr *EthereumWriter) WriteChannel(
 		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 
+	// Use latest nonce to avoid "tx rejected: nonce too high"
+	nonce, err := wr.conn.Client().NonceAt(ctx, wr.conn.Keypair().CommonAddress(), nil)
+	if err != nil {
+		return fmt.Errorf("get latest nonce: %w", err)
+	}
+	options.Nonce = big.NewInt(0).SetUint64(nonce)
+
 	// Add a timeout when calling submit
 	if wr.config.Ethereum.CallTimeoutSecs > 0 {
 		ctx, cancel := context.WithTimeout(ctx, time.Second*time.Duration(wr.config.Ethereum.CallTimeoutSecs))
 		options.Context = ctx
 		defer cancel()
 	}
+
 	tx, err := wr.gateway.SubmitV1(
 		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
 	)
