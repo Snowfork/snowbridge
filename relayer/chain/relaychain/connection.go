@@ -11,6 +11,7 @@ import (
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"golang.org/x/sync/errgroup"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -66,7 +67,7 @@ func (co *Connection) Connect(_ context.Context) error {
 	return nil
 }
 
-func (co *Connection) ConnectWithHeartBeat(ctx context.Context, heartBeat time.Duration) error {
+func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Group, heartBeat time.Duration) error {
 	err := co.Connect(ctx)
 	if err != nil {
 		return err
@@ -74,21 +75,21 @@ func (co *Connection) ConnectWithHeartBeat(ctx context.Context, heartBeat time.D
 
 	ticker := time.NewTicker(heartBeat)
 
-	go func() {
+	eg.Go(func() error {
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
-				return
+				return ctx.Err()
 			case <-ticker.C:
 				_, err := co.API().RPC.System.Version()
 				if err != nil {
 					log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
-					return
+					return err
 				}
 			}
 		}
-	}()
+	})
 
 	return nil
 }
