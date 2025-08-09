@@ -1,6 +1,8 @@
 package parachain
 
 import (
+	"math/big"
+
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
@@ -89,6 +91,12 @@ type OutboundQueueMessage struct {
 	Commands []CommandWrapper
 }
 
+type OutboundQueueMessageWithFee struct {
+	OriginalMessage OutboundQueueMessage
+	// Attached fee in Ether
+	Fee big.Int
+}
+
 type CommandWrapper struct {
 	Kind           types.U8
 	MaxDispatchGas types.U64
@@ -117,6 +125,6 @@ func (m OutboundQueueMessage) IntoInboundMessage() contracts.InboundMessage {
 }
 
 type MessageProof struct {
-	Message OutboundQueueMessage
+	Message OutboundQueueMessageWithFee
 	Proof   MerkleProof
 }
