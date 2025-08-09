@@ -525,7 +525,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             RELAYERS: [
                 {
                     name: "beacon",
-                    account: "5HHDmTHN4FZYhuMSt3oP8YySDxzPLj9ZGBwxZjSdKf29qcnj",
+                    account: "16DWunYRv2q29SMxqgrPGhob5az332hhLggSj2Rysk3g1rvk",
                     type: "substrate",
                 },
                 {
@@ -545,7 +545,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 },
                 {
                     name: "execution-assethub",
-                    account: "5HHDmTHN4FZYhuMSt3oP8YySDxzPLj9ZGBwxZjSdKf29qcnj",
+                    account: "13Dbqvh6nLCRckyfsBr8wEJzxbi34KELwdYQFKKchN4NedGh",
                     type: "substrate",
                 },
                 {
