@@ -22,7 +22,7 @@ Snowbridge V1 is a token bridge which supports ERC20 assets and Polkadot assets.
 
 #### ERC20 Token Bridge  (ENA)&#x20;
 
-1. Register the ERC20 token contract with the Snowbridge Gateway. This process will automatically set the ERC20 on Asset Hub as well.
+1. Register the ERC20 token contract with the [Snowbridge Gateway.](../rococo-testnet/rococo-sepolia-token-transfers.md#registering-tokens) This process will automatically set the ERC20 on Asset Hub as well.
 2. Your parachain must support a pallet which can register assets such as `orml-tokens` or `pallet-xcm`. The ERC20 token must be registered with that pallet.
 3. You can reach out to the Snowbridge team on github to enable your token in our UI and SDK.
 
