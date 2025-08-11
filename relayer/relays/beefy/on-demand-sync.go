@@ -67,15 +67,15 @@ func NewOnDemandRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*OnDe
 }
 
 func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error {
-	err := relay.ethereumConn.Connect(ctx)
+	err := relay.ethereumConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Sink.Ethereum.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to ethereum: %w", err)
 	}
-	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.Polkadot.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to relaychain: %w", err)
 	}
-	err = relay.parachainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err = relay.parachainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.BridgeHub.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to parachain: %w", err)
 	}
@@ -500,15 +500,16 @@ func (relay *OnDemandRelay) isV2NonceRelayed(ctx context.Context, nonce uint64) 
 }
 
 func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber uint64) error {
-	err := relay.ethereumConn.Connect(ctx)
+	eg, ctx := errgroup.WithContext(ctx)
+	err := relay.ethereumConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Sink.Ethereum.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to ethereum: %w", err)
 	}
-	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.Polkadot.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to relaychain: %w", err)
 	}
-	err = relay.parachainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err = relay.parachainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.BridgeHub.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to parachain: %w", err)
 	}
