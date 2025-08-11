@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -150,13 +149,6 @@ func (wr *EthereumWriter) WriteChannel(
 		return fmt.Errorf("get latest nonce: %w", err)
 	}
 	options.Nonce = big.NewInt(0).SetUint64(nonce)
-
-	// Add a timeout when calling submit
-	if wr.config.Ethereum.CallTimeoutSecs > 0 {
-		ctx, cancel := context.WithTimeout(ctx, time.Second*time.Duration(wr.config.Ethereum.CallTimeoutSecs))
-		options.Context = ctx
-		defer cancel()
-	}
 
 	tx, err := wr.gateway.SubmitV1(
 		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
