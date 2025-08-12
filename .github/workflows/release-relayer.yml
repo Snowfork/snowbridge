@@ -69,7 +69,7 @@ jobs:
           else
           new_version=$(npx semver $current_version -i patch)
           fi
-          
+            
           echo "New version: $new_version"
           echo "version=$new_version" >> $GITHUB_OUTPUT
           echo "from_tag=$current_tag" >> $GITHUB_OUTPUT
