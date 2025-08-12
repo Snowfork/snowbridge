@@ -22,7 +22,8 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
     localNativeFeeAmount: bigint,
     totalNativeFeeAmount: bigint,
     remoteEtherFeeAmount: bigint,
-    remoteEtherFeeNativeAmount: bigint
+    remoteEtherFeeNativeAmount: bigint,
+    claimerLocation?: any
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
@@ -42,9 +43,15 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
         },
     ]
 
+    claimerLocation = claimerLocation ?? sourceLocation
     let remoteInstructionsOnAH: any[] = [
         {
             setAppendix: [
+                {
+                    setHints: {
+                        hints: [{ assetClaimer: { location: claimerLocation } }],
+                    },
+                },
                 {
                     refundSurplus: null,
                 },
@@ -57,7 +64,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                         },
                         beneficiary: {
                             parents: 0,
-                            interior: { x1: [sourceLocation] },
+                            interior: { x1: [claimerLocation] },
                         },
                     },
                 },
@@ -164,6 +171,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
             setTopic: topic,
         },
     ]
+    claimerLocation = claimerLocation ?? sourceLocation
     return registry.createType("XcmVersionedXcm", {
         v5: [
             {
@@ -181,6 +189,11 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
             },
             {
                 setAppendix: [
+                    {
+                        setHints: {
+                            hints: [{ assetClaimer: { location: sourceLocation } }],
+                        },
+                    },
                     {
                         refundSurplus: null,
                     },

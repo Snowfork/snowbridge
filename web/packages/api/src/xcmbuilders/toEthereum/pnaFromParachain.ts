@@ -335,7 +335,8 @@ export function buildTransferXcmFromParachain(
     tokenAmount: bigint,
     localDOTFeeAmount: bigint,
     totalDOTFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint
+    remoteEtherFeeAmount: bigint,
+    claimerLocation?: any
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
@@ -359,9 +360,15 @@ export function buildTransferXcmFromParachain(
             Fungible: remoteEtherFeeAmount,
         },
     })
+    claimerLocation = claimerLocation ?? sourceLocation
     let remoteInstructionsOnAH: any[] = [
         {
             setAppendix: [
+                {
+                    setHints: {
+                        hints: [{ assetClaimer: { location: claimerLocation } }],
+                    },
+                },
                 {
                     refundSurplus: null,
                 },
@@ -374,7 +381,7 @@ export function buildTransferXcmFromParachain(
                         },
                         beneficiary: {
                             parents: 0,
-                            interior: { x1: [sourceLocation] },
+                            interior: { x1: [claimerLocation] },
                         },
                     },
                 },

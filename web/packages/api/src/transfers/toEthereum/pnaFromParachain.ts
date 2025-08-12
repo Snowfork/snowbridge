@@ -45,6 +45,7 @@ export class PNAFromParachain implements TransferInterface {
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
+            claimerLocation?: any
         }
     ): Promise<DeliveryFee> {
         const { assetHub, parachain } =
@@ -135,7 +136,8 @@ export class PNAFromParachain implements TransferInterface {
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
-        fee: DeliveryFee
+        fee: DeliveryFee,
+        claimerLocation?: any
     ): Promise<Transfer> {
         const { ethChainId, assetHubParaId } = registry
 
@@ -171,7 +173,8 @@ export class PNAFromParachain implements TransferInterface {
             sourceAssetMetadata,
             amount,
             messageId,
-            fee
+            fee,
+            claimerLocation
         )
 
         return {
@@ -360,7 +363,8 @@ export class PNAFromParachain implements TransferInterface {
         asset: Asset,
         amount: bigint,
         messageId: string,
-        fee: DeliveryFee
+        fee: DeliveryFee,
+        claimerLocation?: any
     ): SubmittableExtrinsic<"promise", ISubmittableResult> {
         let xcm: any
         // No swap
@@ -379,7 +383,8 @@ export class PNAFromParachain implements TransferInterface {
                     fee.localDeliveryFeeDOT! +
                     fee.returnToSenderExecutionFeeDOT,
                 fee.totalFeeInDot,
-                fee.ethereumExecutionFee!
+                fee.ethereumExecutionFee!,
+                claimerLocation
             )
         } // One swap from DOT to Ether on Asset Hub.
         else if (isRelaychainLocation(fee.feeLocation)) {
@@ -398,7 +403,8 @@ export class PNAFromParachain implements TransferInterface {
                     fee.returnToSenderExecutionFeeDOT,
                 fee.totalFeeInDot,
                 fee.ethereumExecutionFee!,
-                fee.ethereumExecutionFeeInNative!
+                fee.ethereumExecutionFeeInNative!,
+                claimerLocation
             )
         }
         // If the fee asset is in native asset, we need to swap it to DOT first, then a second swap from DOT to Ether
@@ -418,7 +424,8 @@ export class PNAFromParachain implements TransferInterface {
                     fee.returnToSenderExecutionFeeNative!,
                 fee.totalFeeInNative!,
                 fee.ethereumExecutionFee!,
-                fee.ethereumExecutionFeeInNative!
+                fee.ethereumExecutionFeeInNative!,
+                claimerLocation
             )
         } else {
             throw new Error(
