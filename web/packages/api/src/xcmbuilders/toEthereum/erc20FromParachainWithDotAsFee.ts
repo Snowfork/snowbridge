@@ -52,7 +52,10 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
         })
     }
 
-    claimerLocation = claimerLocation ?? sourceLocation
+    claimerLocation = claimerLocation ?? {
+        parents: 0,
+        interior: { x1: [sourceLocation] },
+    }
 
     let remoteInstructionsOnAH: any[] = [
         {
@@ -72,10 +75,7 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
                                 allCounted: 3,
                             },
                         },
-                        beneficiary: {
-                            parents: 0,
-                            interior: { x1: [claimerLocation] },
-                        },
+                        beneficiary: claimerLocation,
                     },
                 },
             ],

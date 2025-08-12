@@ -43,7 +43,10 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
         },
     ]
 
-    claimerLocation = claimerLocation ?? sourceLocation
+    claimerLocation = claimerLocation ?? {
+        parents: 0,
+        interior: { x1: [sourceLocation] },
+    }
     let remoteInstructionsOnAH: any[] = [
         {
             setAppendix: [
@@ -62,10 +65,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                                 allCounted: 3,
                             },
                         },
-                        beneficiary: {
-                            parents: 0,
-                            interior: { x1: [claimerLocation] },
-                        },
+                        beneficiary: claimerLocation,
                     },
                 },
             ],
