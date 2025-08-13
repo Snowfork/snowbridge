@@ -5,12 +5,13 @@ package ethereum
 
 import (
 	"context"
+
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	log "github.com/sirupsen/logrus"
 )
 
-// Fetch all receipts for the given block in batches of `receiptFetchBatchSize`
+// GetAllReceipts fetches all the transaction receipts in the given block.
 func GetAllReceipts(ctx context.Context, conn *Connection, block *etypes.Block) (etypes.Receipts, error) {
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{
