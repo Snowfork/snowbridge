@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// 100 messages distrubuted to 10 relayers, check waitingPeriod for each relayer
+// 100 messages distributed to 10 relayers, check waitingPeriod for each relayer
 func TestModuloSchedule(t *testing.T) {
 	message_count := 100
 	total_count := 10

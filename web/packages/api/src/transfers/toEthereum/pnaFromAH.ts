@@ -3,7 +3,7 @@ import { SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
 import { decodeAddress } from "@polkadot/util-crypto"
-import { DOT_LOCATION, bridgeLocation, isNative } from "../../xcmBuilder"
+import { DOT_LOCATION, bridgeLocation, isRelaychainLocation } from "../../xcmBuilder"
 import {
     buildExportXcm,
     buildTransferXcmFromAssetHub,
@@ -137,7 +137,7 @@ export class PNAFromAH implements TransferInterface {
         let feeLocation = options?.feeTokenLocation
         if (feeLocation) {
             // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
-            if (isNative(feeLocation)) {
+            if (isRelaychainLocation(feeLocation)) {
                 ethereumExecutionFeeInNative = await getAssetHubConversionPalletSwap(
                     assetHub,
                     DOT_LOCATION,
@@ -258,7 +258,7 @@ export class PNAFromAH implements TransferInterface {
         let tokenBalance: any
         let isNativeBalance = false
         // For DOT on AH, get it from the native balance pallet.
-        if (isNative(transfer.computed.ahAssetMetadata.location)) {
+        if (isRelaychainLocation(transfer.computed.ahAssetMetadata.location)) {
             tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
             isNativeBalance = true
         } else {
@@ -396,7 +396,7 @@ export class PNAFromAH implements TransferInterface {
                 fee.ethereumExecutionFee!
             )
         } // If the fee asset is in DOT, we need to swap it to Ether on Asset Hub.
-        else if (isNative(fee.feeLocation)) {
+        else if (isRelaychainLocation(fee.feeLocation)) {
             xcm = buildTransferXcmFromAssetHubWithDOTAsFee(
                 parachain.registry,
                 ethChainId,

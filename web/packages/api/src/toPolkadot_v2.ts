@@ -13,6 +13,7 @@ import {
     IERC20__factory,
     IGatewayV1 as IGateway,
     IGatewayV1__factory as IGateway__factory,
+    WETH9__factory,
 } from "@snowbridge/contract-types"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
@@ -275,7 +276,7 @@ async function validateAccount(
     assetMetadata?: Asset,
     maxConsumers?: bigint
 ) {
-    // Check if the acocunt is created
+    // Check if the account is created
     const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
         parachainImpl.getNativeAccount(beneficiaryAddress),
         parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
@@ -327,7 +328,7 @@ export async function validateTransfer(
         logs.push({
             kind: ValidationKind.Error,
             reason: ValidationReason.MinimumAmountValidation,
-            message: "The amount transfered is less than the minimum amount.",
+            message: "The amount transferred is less than the minimum amount.",
         })
     }
     const etherBalance = await ethereum.getBalance(sourceAccount)
@@ -511,7 +512,7 @@ export async function validateTransfer(
                     !destParachain.features.hasDryRunApi)
             ) {
                 const destParachainImpl = await paraImplementation(destParachainApi)
-                // Check if the acocunt is created
+                // Check if the account is created
                 const { accountMaxConumers, accountExists } = await validateAccount(
                     destParachainImpl,
                     beneficiaryAddressHex,
@@ -605,6 +606,28 @@ export async function getMessageReceipt(
         txIndex: receipt.index,
     }
 }
+
+export const approveTokenSpend = (
+    context: Context,
+    sourceAddress: string,
+    tokenAddress: string,
+    amount: bigint
+): Promise<ContractTransaction> =>
+    IERC20__factory.connect(tokenAddress)
+        .getFunction("approve")
+        .populateTransaction(context.config.appContracts.gateway, amount, {
+            from: sourceAddress,
+        })
+
+export const depositWeth = (
+    sourceAddress: string,
+    tokenAddress: string,
+    amount: bigint
+): Promise<ContractTransaction> =>
+    WETH9__factory.connect(tokenAddress).getFunction("deposit").populateTransaction({
+        from: sourceAddress,
+        value: amount,
+    })
 
 async function erc20Balance(
     ethereum: AbstractProvider,
