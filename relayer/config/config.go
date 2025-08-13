@@ -13,12 +13,12 @@ type ParachainConfig struct {
 }
 
 type EthereumConfig struct {
-	Endpoint        string `mapstructure:"endpoint"`
-	GasFeeCap       uint64 `mapstructure:"gas-fee-cap"`
-	GasTipCap       uint64 `mapstructure:"gas-tip-cap"`
-	GasLimit        uint64 `mapstructure:"gas-limit"`
-	HeartbeatSecs   uint64 `mapstructure:"heartbeat-secs"`
-	CallTimeoutSecs uint64 `mapstructure:"call-timeout-secs"`
+	Endpoint             string `mapstructure:"endpoint"`
+	GasFeeCap            uint64 `mapstructure:"gas-fee-cap"`
+	GasTipCap            uint64 `mapstructure:"gas-tip-cap"`
+	GasLimit             uint64 `mapstructure:"gas-limit"`
+	HeartbeatSecs        uint64 `mapstructure:"heartbeat-secs"`
+	PendingTxTimeoutSecs uint64 `mapstructure:"pending-tx-timeout-secs"`
 }
 
 type OFACConfig struct {
