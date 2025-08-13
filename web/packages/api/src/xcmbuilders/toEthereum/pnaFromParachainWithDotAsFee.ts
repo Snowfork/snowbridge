@@ -26,7 +26,7 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let tokenLocation = asset.location
     let assets = [
         {
             id: tokenLocation,

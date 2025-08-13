@@ -282,7 +282,7 @@ export function buildTransferXcmFromParachain(
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let tokenLocation = erc20Location(ethChainId, asset.token)
     let assets = []
 
     assets.push({
