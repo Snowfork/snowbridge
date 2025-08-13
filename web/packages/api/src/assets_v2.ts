@@ -769,6 +769,7 @@ async function indexEthChain(
             chainId: networkChainId,
             assets,
             id: id ?? `chain_${networkChainId}`,
+            baseDeliveryGas: 120_000n,
         }
     } else {
         let evmParachainChain: Parachain | undefined
@@ -879,12 +880,16 @@ async function assetErc20Metadata(
         erc20Metadata.symbol(),
         erc20Metadata.decimals(),
     ])
+    // LDO gas from https://etherscan.io/tx/0x4e984250beacf693e7407c6cfdcb51229f6a549aa857d601db868b572ee2364b
+    // Other ERC20 token transfer on Ethereum typically ranges from 45,000 to 65,000 gas units; use 80_000 to leave a margin
+    let deliveryGas = symbol == "LDO" ? 150_000n : 80_000n
     return {
         token,
         name: String(name),
         symbol: String(symbol),
         decimals: Number(decimals),
         foreignId: foreignId,
+        deliveryGas,
     }
 }
 
