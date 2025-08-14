@@ -65,7 +65,6 @@ export class ERC20ToParachain implements TransferInterface {
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
-        console.dir(assetHubXcm.toHuman(), { depth: 100 })
         const bridgeHubImpl = await paraImplementation(bridgeHub)
         const assetHubImpl = await paraImplementation(assetHub)
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
@@ -101,7 +100,6 @@ export class ERC20ToParachain implements TransferInterface {
                 : "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
-        console.dir(destinationXcm.toHuman(), { depth: 100 })
         const destinationImpl = await paraImplementation(destination)
         // Delivery fee AssetHub to Destination
         let destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
