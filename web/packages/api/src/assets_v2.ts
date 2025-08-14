@@ -1053,3 +1053,26 @@ export const assetErc20Balance = async (
         gatewayAllowance,
     }
 }
+
+export async function swapAsset1ForAsset2(
+    assetHub: ApiPromise,
+    asset1: any,
+    asset2: any,
+    exactAsset1Balance: bigint
+) {
+    const result = await assetHub.call.assetConversionApi.quotePriceExactTokensForTokens(
+        asset1,
+        asset2,
+        exactAsset1Balance,
+        true
+    )
+    const asset2Balance = result.toPrimitive() as any
+    if (asset2Balance == null) {
+        throw Error(
+            `No pool set up in asset conversion pallet for '${JSON.stringify(
+                asset1
+            )}' and '${JSON.stringify(asset2)}'.`
+        )
+    }
+    return BigInt(asset2Balance)
+}

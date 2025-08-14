@@ -338,6 +338,35 @@
           "minimumBalance": "bigint:1000000000",
           "isSufficient": false,
           "assetId": "2"
+        },
+        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
+          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
+          "name": "",
+          "symbol": "WND",
+          "decimals": 12,
+          "locationOnEthereum": {
+            "parents": 1,
+            "interior": {
+              "x1": [
+                {
+                  "globalConsensus": {
+                    "byGenesis": "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
+                  }
+                }
+              ]
+            }
+          },
+          "location": {
+            "parents": 1,
+            "interior": "Here"
+          },
+          "locationOnAH": {
+            "parents": 1,
+            "interior": "Here"
+          },
+          "foreignId": "0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7",
+          "minimumBalance": "bigint:1000000000",
+          "isSufficient": true
         }
       },
       "estimatedExecutionFeeDOT": "bigint:3276800000",
