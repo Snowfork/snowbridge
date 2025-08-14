@@ -160,6 +160,7 @@ func (s *Scanner) filterTasks(
 		}
 
 		var messages []OutboundQueueMessage
+		var messagesWithFee []OutboundQueueMessageWithFee
 		raw, err := s.paraConn.API().RPC.State.GetStorageRaw(messagesKey, blockHash)
 		if err != nil {
 			return nil, fmt.Errorf("fetch committed messages for block %v: %w", blockHash.Hex(), err)
@@ -185,6 +186,10 @@ func (s *Scanner) filterTasks(
 				return nil, errors.New("banned address found")
 			}
 			messages = append(messages, m)
+			var messageWithFee OutboundQueueMessageWithFee
+			messageWithFee.OriginalMessage = m
+			messageWithFee.Fee = order.Fee
+			messagesWithFee = append(messagesWithFee, messageWithFee)
 		}
 
 		// For the outbound channel, the commitment hash is the merkle root of the messages
@@ -194,7 +199,7 @@ func (s *Scanner) filterTasks(
 			s.paraConn.API(),
 			blockHash,
 			*commitmentHash,
-			messages,
+			messagesWithFee,
 		)
 		if err != nil {
 			return nil, err
@@ -303,7 +308,7 @@ func scanForOutboundQueueProofs(
 	api *gsrpc.SubstrateAPI,
 	blockHash types.Hash,
 	commitmentHash types.H256,
-	messages []OutboundQueueMessage,
+	messages []OutboundQueueMessageWithFee,
 ) (*struct {
 	proofs []MessageProof
 }, error) {
@@ -340,7 +345,7 @@ func fetchMessageProof(
 	api *gsrpc.SubstrateAPI,
 	blockHash types.Hash,
 	messageIndex uint64,
-	message OutboundQueueMessage,
+	message OutboundQueueMessageWithFee,
 ) (MessageProof, error) {
 	var proofHex string
 	var proof MessageProof
