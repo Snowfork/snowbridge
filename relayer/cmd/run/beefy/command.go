@@ -2,7 +2,6 @@ package beefy
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -61,7 +60,8 @@ func run(_ *cobra.Command, _ []string) error {
 
 	err = config.Validate()
 	if err != nil {
-		return fmt.Errorf("config file validation failed: %w", err)
+		logrus.WithError(err).Fatal("Configuration file validation failed")
+		return err
 	}
 
 	keypair, err := ethereum.ResolvePrivateKey(privateKey, privateKeyFile, privateKeyID)
