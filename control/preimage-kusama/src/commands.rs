@@ -5,10 +5,9 @@ use subxt::utils::MultiAddress;
 use crate::xcm_helper;
 
 pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
-    junction::Junction::AccountKey20,
-    junction::Junction::GlobalConsensus,
+    junction::Junction::{AccountKey20, GeneralIndex, GlobalConsensus, PalletInstance, Parachain},
     junction::NetworkId,
-    junctions::Junctions::{X1, X2},
+    junctions::Junctions::{X1, X2, X4},
     location::Location,
 };
 use hex_literal::hex;
@@ -118,168 +117,188 @@ pub fn register_asset_with_metadata(
 pub fn token_registrations() -> Vec<AssetHubRuntimeCall> {
     let mut calls = Vec::new();
 
-    // Ether
-    let (ether_create, ether_metadata) = register_ether(
-        15_000_000_000_000,
-        "Ether".to_string(),
-        "ETH".to_string(),
-        18,
-        true,
+    //// Ether
+    //let (ether_create, ether_metadata) = register_ether(
+    //    15_000_000_000_000,
+    //    "Ether".to_string(),
+    //    "ETH".to_string(),
+    //    18,
+    //    true,
+    //);
+    //calls.push(ether_create);
+    //calls.push(ether_metadata);
+
+    //// Wrapped Ether (WETH)
+    //let (weth_create, weth_metadata) = register_erc20_with_metadata(
+    //    hex!("c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"),
+    //    15_000_000_000_000,
+    //    "Wrapped Ether".to_string(),
+    //    "WETH".to_string(),
+    //    18,
+    //    true,
+    //);
+    //calls.push(weth_create);
+    //calls.push(weth_metadata);
+
+    //// USDT
+    //let (usdt_create, usdt_metadata) = register_erc20_with_metadata(
+    //    hex!("dac17f958d2ee523a2206206994597c13d831ec7"),
+    //    10_000,
+    //    "USDT (Snowbridge)".to_string(),
+    //    "USDT".to_string(),
+    //    6,
+    //    true,
+    //);
+    //calls.push(usdt_create);
+    //calls.push(usdt_metadata);
+
+    //// USDC
+    //let (usdc_create, usdc_metadata) = register_erc20_with_metadata(
+    //    hex!("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
+    //    10_000,
+    //    "USDC (Snowbridge)".to_string(),
+    //    "USDC".to_string(),
+    //    6,
+    //    true,
+    //);
+
+    //calls.push(usdc_create);
+    //calls.push(usdc_metadata);
+
+    //// Staked USDe
+    //calls.push(register_erc20(
+    //    hex!("9d39a5de30e57443bff2a8307a4256c8797a3497"),
+    //    false,
+    //    1,
+    //));
+    //// Pepe
+    //calls.push(register_erc20(
+    //    hex!("6982508145454ce325ddbe47a25d4ec3d2311933"),
+    //    false,
+    //    1,
+    //));
+    //// LDO
+    //calls.push(register_erc20(
+    //    hex!("5a98fcbea516cf06857215779fd812ca3bef1b32"),
+    //    false,
+    //    1,
+    //));
+    //// Savings USDS
+    //calls.push(register_erc20(
+    //    hex!("a3931d71877c0e7a3148cb7eb4463524fec27fbd"),
+    //    false,
+    //    1,
+    //));
+    //// LBTC
+    //calls.push(register_erc20(
+    //    hex!("8236a87084f8b84306f72007f36f2618a5634494"),
+    //    false,
+    //    1,
+    //));
+    //// EurC
+    //calls.push(register_erc20(
+    //    hex!("1abaea1f7c830bd89acc67ec4af516284b1bc33c"),
+    //    false,
+    //    1,
+    //));
+    //// Sky
+    //calls.push(register_erc20(
+    //    hex!("56072c95faa701256059aa122697b133aded9279"),
+    //    false,
+    //    1,
+    //));
+    //// Myth
+    //calls.push(register_erc20(
+    //    hex!("ba41ddf06b7ffd89d1267b5a93bfef2424eb2003"),
+    //    false,
+    //    1,
+    //));
+    //// tBTC v2
+    //calls.push(register_erc20(
+    //    hex!("18084fba666a33d37592fa2633fd49a74dd93a88"),
+    //    false,
+    //    1,
+    //));
+    //// wstETH
+    //calls.push(register_erc20(
+    //    hex!("7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"),
+    //    false,
+    //    1,
+    //));
+    //// TONCOIN
+    //calls.push(register_erc20(
+    //    hex!("582d872a1b094fc48f5de31d3b73f2d9be47def1"),
+    //    false,
+    //    1,
+    //));
+    //// DAI
+    //calls.push(register_erc20(
+    //    hex!("6b175474e89094c44da98b954eedeac495271d0f"),
+    //    false,
+    //    1,
+    //));
+    //// SHIB
+    //calls.push(register_erc20(
+    //    hex!("95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce"),
+    //    false,
+    //    1,
+    //));
+    //// WBTC
+    //calls.push(register_erc20(
+    //    hex!("2260fac5e5542a773aa44fbcfedf7c193bc2c599"),
+    //    false,
+    //    1,
+    //));
+    //// tBTC
+    //calls.push(register_erc20(
+    //    hex!("8daebade922df735c38c80c7ebd708af50815faa"),
+    //    false,
+    //    1,
+    //));
+    //// Kilt
+    //calls.push(register_erc20(
+    //    hex!("5d3d01fd6d2ad1169b17918eb4f153c6616288eb"),
+    //    false,
+    //    1,
+    //));
+    //// LINK
+    //calls.push(register_erc20(
+    //    hex!("514910771af9ca656af840dff83e8264ecf986ca"),
+    //    false,
+    //    1,
+    //));
+    //// AAVE
+    //calls.push(register_erc20(
+    //    hex!("7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"),
+    //    false,
+    //    1,
+    //));
+    //// Curio
+    //calls.push(register_erc20(
+    //    hex!("0e186357c323c806c1efdad36d217f7a54b63d18"),
+    //    false,
+    //    1,
+    //));
+
+    // Gavun WUD
+    let (wud_create, wud_meta) = register_asset_with_metadata(
+        Location {
+            parents: 2,
+            interior: X4([
+                GlobalConsensus(NetworkId::Polkadot),
+                Parachain(1000),
+                PalletInstance(50),
+                GeneralIndex(31337),
+            ]),
+        },
+        10_000_000,
+        "GAVUN WUD".to_string(),
+        "WUD".to_string(),
+        10,
+        false,
     );
-    calls.push(ether_create);
-    calls.push(ether_metadata);
-
-    // Wrapped Ether (WETH)
-    let (weth_create, weth_metadata) = register_erc20_with_metadata(
-        hex!("c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"),
-        15_000_000_000_000,
-        "Wrapped Ether".to_string(),
-        "WETH".to_string(),
-        18,
-        true,
-    );
-    calls.push(weth_create);
-    calls.push(weth_metadata);
-
-    // USDT
-    let (usdt_create, usdt_metadata) = register_erc20_with_metadata(
-        hex!("dac17f958d2ee523a2206206994597c13d831ec7"),
-        10_000,
-        "USDT (Snowbridge)".to_string(),
-        "USDT".to_string(),
-        6,
-        true,
-    );
-    calls.push(usdt_create);
-    calls.push(usdt_metadata);
-
-    // USDC
-    let (usdc_create, usdc_metadata) = register_erc20_with_metadata(
-        hex!("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
-        10_000,
-        "USDC (Snowbridge)".to_string(),
-        "USDC".to_string(),
-        6,
-        true,
-    );
-
-    calls.push(usdc_create);
-    calls.push(usdc_metadata);
-
-    // Staked USDe
-    calls.push(register_erc20(
-        hex!("9d39a5de30e57443bff2a8307a4256c8797a3497"),
-        false,
-        1,
-    ));
-    // Pepe
-    calls.push(register_erc20(
-        hex!("6982508145454ce325ddbe47a25d4ec3d2311933"),
-        false,
-        1,
-    ));
-    // LDO
-    calls.push(register_erc20(
-        hex!("5a98fcbea516cf06857215779fd812ca3bef1b32"),
-        false,
-        1,
-    ));
-    // Savings USDS
-    calls.push(register_erc20(
-        hex!("a3931d71877c0e7a3148cb7eb4463524fec27fbd"),
-        false,
-        1,
-    ));
-    // LBTC
-    calls.push(register_erc20(
-        hex!("8236a87084f8b84306f72007f36f2618a5634494"),
-        false,
-        1,
-    ));
-    // EurC
-    calls.push(register_erc20(
-        hex!("1abaea1f7c830bd89acc67ec4af516284b1bc33c"),
-        false,
-        1,
-    ));
-    // Sky
-    calls.push(register_erc20(
-        hex!("56072c95faa701256059aa122697b133aded9279"),
-        false,
-        1,
-    ));
-    // Myth
-    calls.push(register_erc20(
-        hex!("ba41ddf06b7ffd89d1267b5a93bfef2424eb2003"),
-        false,
-        1,
-    ));
-    // tBTC v2
-    calls.push(register_erc20(
-        hex!("18084fba666a33d37592fa2633fd49a74dd93a88"),
-        false,
-        1,
-    ));
-    // wstETH
-    calls.push(register_erc20(
-        hex!("7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"),
-        false,
-        1,
-    ));
-    // TONCOIN
-    calls.push(register_erc20(
-        hex!("582d872a1b094fc48f5de31d3b73f2d9be47def1"),
-        false,
-        1,
-    ));
-    // DAI
-    calls.push(register_erc20(
-        hex!("6b175474e89094c44da98b954eedeac495271d0f"),
-        false,
-        1,
-    ));
-    // SHIB
-    calls.push(register_erc20(
-        hex!("95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce"),
-        false,
-        1,
-    ));
-    // WBTC
-    calls.push(register_erc20(
-        hex!("2260fac5e5542a773aa44fbcfedf7c193bc2c599"),
-        false,
-        1,
-    ));
-    // tBTC
-    calls.push(register_erc20(
-        hex!("8daebade922df735c38c80c7ebd708af50815faa"),
-        false,
-        1,
-    ));
-    // Kilt
-    calls.push(register_erc20(
-        hex!("5d3d01fd6d2ad1169b17918eb4f153c6616288eb"),
-        false,
-        1,
-    ));
-    // LINK
-    calls.push(register_erc20(
-        hex!("514910771af9ca656af840dff83e8264ecf986ca"),
-        false,
-        1,
-    ));
-    // AAVE
-    calls.push(register_erc20(
-        hex!("7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"),
-        false,
-        1,
-    ));
-    // Curio
-    calls.push(register_erc20(
-        hex!("0e186357c323c806c1efdad36d217f7a54b63d18"),
-        false,
-        1,
-    ));
+    calls.push(wud_create);
+    calls.push(wud_meta);
 
     calls
 }
