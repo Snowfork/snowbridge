@@ -44,9 +44,10 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
     ]
 
     claimerLocation = claimerLocation ?? {
-        parents: 0,
-        interior: { x1: [sourceLocation] },
+        parents: 1,
+        interior: { x2: [{ parachain: sourceParachainId }, sourceLocation] },
     }
+
     let remoteInstructionsOnAH: any[] = [
         {
             setAppendix: [
@@ -171,7 +172,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
             setTopic: topic,
         },
     ]
-    claimerLocation = claimerLocation ?? sourceLocation
+
     return registry.createType("XcmVersionedXcm", {
         v5: [
             {
@@ -189,11 +190,6 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
             },
             {
                 setAppendix: [
-                    {
-                        setHints: {
-                            hints: [{ assetClaimer: { location: sourceLocation } }],
-                        },
-                    },
                     {
                         refundSurplus: null,
                     },
