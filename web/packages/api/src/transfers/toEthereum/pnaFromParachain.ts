@@ -89,6 +89,7 @@ export class PNAFromParachain implements TransferInterface {
 
         localXcm = buildTransferXcmFromParachain(
             assetHub.registry,
+            registry.environment,
             registry.ethChainId,
             registry.assetHubParaId,
             sourceParachainImpl.parachainId,
@@ -139,7 +140,7 @@ export class PNAFromParachain implements TransferInterface {
         fee: DeliveryFee,
         claimerLocation?: any
     ): Promise<Transfer> {
-        const { ethChainId, assetHubParaId } = registry
+        const { ethChainId, assetHubParaId, environment } = registry
 
         let sourceAccountHex = sourceAccount
         if (!isHex(sourceAccountHex)) {
@@ -165,6 +166,7 @@ export class PNAFromParachain implements TransferInterface {
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult>
         tx = this.createTx(
             parachain,
+            environment,
             ethChainId,
             assetHubParaId,
             sourceParachainImpl.parachainId,
@@ -355,6 +357,7 @@ export class PNAFromParachain implements TransferInterface {
 
     createTx(
         parachain: ApiPromise,
+        envName: string,
         ethChainId: number,
         assetHubParaId: number,
         sourceParachainId: number,
@@ -371,6 +374,7 @@ export class PNAFromParachain implements TransferInterface {
         if (!fee.feeLocation) {
             xcm = buildTransferXcmFromParachain(
                 parachain.registry,
+                envName,
                 ethChainId,
                 assetHubParaId,
                 sourceParachainId,
@@ -390,6 +394,7 @@ export class PNAFromParachain implements TransferInterface {
         else if (isRelaychainLocation(fee.feeLocation)) {
             xcm = buildTransferXcmFromParachainWithDOTAsFee(
                 parachain.registry,
+                envName,
                 ethChainId,
                 assetHubParaId,
                 sourceParachainId,
@@ -411,6 +416,7 @@ export class PNAFromParachain implements TransferInterface {
         else if (isParachainNative(fee.feeLocation, sourceParachainId)) {
             xcm = buildTransferXcmFromParachainWithNativeAssetFee(
                 parachain.registry,
+                envName,
                 ethChainId,
                 assetHubParaId,
                 sourceParachainId,

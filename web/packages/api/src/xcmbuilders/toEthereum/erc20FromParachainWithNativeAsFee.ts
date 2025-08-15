@@ -6,11 +6,13 @@ import {
     parachainLocation,
     accountToLocation,
     HERE_LOCATION,
+    buildAppendixInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
 
 export function buildTransferXcmFromParachainWithNativeAssetFee(
     registry: Registry,
+    envName: string,
     ethChainId: number,
     assetHubParaId: number,
     sourceParachainId: number,
@@ -43,33 +45,16 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
         },
     ]
 
-    claimerLocation = claimerLocation ?? {
-        parents: 1,
-        interior: { x2: [{ parachain: sourceParachainId }, sourceLocation] },
-    }
+    let appendixInstructions = buildAppendixInstructions(
+        envName,
+        sourceParachainId,
+        sourceAccount,
+        claimerLocation
+    )
 
     let remoteInstructionsOnAH: any[] = [
         {
-            setAppendix: [
-                {
-                    setHints: {
-                        hints: [{ assetClaimer: { location: claimerLocation } }],
-                    },
-                },
-                {
-                    refundSurplus: null,
-                },
-                {
-                    depositAsset: {
-                        assets: {
-                            wild: {
-                                allCounted: 3,
-                            },
-                        },
-                        beneficiary: claimerLocation,
-                    },
-                },
-            ],
+            setAppendix: appendixInstructions,
         },
         // The first swap native asset to DOT
         {

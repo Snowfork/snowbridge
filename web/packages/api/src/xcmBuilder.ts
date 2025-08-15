@@ -1386,6 +1386,75 @@ export const accountToLocation = (account: string) => {
     return beneficiaryLocation
 }
 
+export const WESTEND_GENESIS = "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
+export const ROCOCO_GENESIS = "0x6408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e"
+export const PASEO_GENESIS = "0x77afd6190f1554ad45fd0d31aee62aacc33c6db0ea801129acb813f913e0764f"
+
+export const accountToLocationWithNetwork = (account: string, envName: string) => {
+    let {
+        hexAddress,
+        address: { kind },
+    } = beneficiaryMultiAddress(account)
+    let beneficiaryLocation
+    switch (kind) {
+        case 1:
+            // 32 byte addresses
+            switch (envName) {
+                case "polkadot_mainnet": {
+                    beneficiaryLocation = {
+                        accountId32: { id: hexAddress, network: { Polkadot: { network: null } } },
+                    }
+                    break
+                }
+                case "paseo_sepolia": {
+                    beneficiaryLocation = {
+                        accountId32: { id: hexAddress, network: { byGenesis: PASEO_GENESIS } },
+                    }
+                    break
+                }
+                case "westend_sepolia": {
+                    beneficiaryLocation = {
+                        accountId32: { id: hexAddress, network: { byGenesis: WESTEND_GENESIS } },
+                    }
+                    break
+                }
+                case "local_e2e": {
+                    beneficiaryLocation = {
+                        accountId32: { id: hexAddress, network: { byGenesis: WESTEND_GENESIS } },
+                    }
+                    break
+                }
+            }
+            break
+        case 2:
+            // 20 byte addresses
+            switch (envName) {
+                case "polkadot_mainnet": {
+                    beneficiaryLocation = {
+                        accountKey20: { key: hexAddress, network: { Polkadot: { network: null } } },
+                    }
+                    break
+                }
+                case "paseo_sepolia": {
+                    beneficiaryLocation = {
+                        accountKey20: { key: hexAddress, network: { Polkadot: { network: null } } },
+                    }
+                    break
+                }
+                case "westend_sepolia": {
+                    beneficiaryLocation = {
+                        accountKey20: { key: hexAddress, network: { Polkadot: { network: null } } },
+                    }
+                    break
+                }
+            }
+            break
+        default:
+            throw Error(`Could not parse beneficiary address ${account}`)
+    }
+    return beneficiaryLocation
+}
+
 export function buildAssetHubERC20TransferFromParachainWithNativeFee(
     registry: Registry,
     ethChainId: number,
@@ -1683,4 +1752,40 @@ export function buildDepositAllAssetsWithTopic(
             },
         ],
     })
+}
+
+export function buildAppendixInstructions(
+    envName: string,
+    sourceParachainId: number,
+    sourceAccount: string,
+    claimerLocation?: any
+) {
+    let sourceLocation = accountToLocationWithNetwork(sourceAccount, envName)
+    let appendixInstructions: any[] = []
+    if (claimerLocation) {
+        appendixInstructions.push({
+            setHints: {
+                hints: [{ assetClaimer: { location: claimerLocation } }],
+            },
+        })
+    }
+    appendixInstructions.push({
+        refundSurplus: null,
+    })
+    appendixInstructions.push({
+        depositAsset: {
+            assets: {
+                wild: {
+                    allCounted: 3,
+                },
+            },
+            beneficiary: claimerLocation ?? {
+                parents: 1,
+                interior: {
+                    x2: [{ parachain: sourceParachainId }, sourceLocation],
+                },
+            },
+        },
+    })
+    return appendixInstructions
 }

@@ -2,10 +2,10 @@ import { Registry } from "@polkadot/types/types"
 import {
     bridgeLocation,
     DOT_LOCATION,
-    erc20Location,
     ethereumNetwork,
     parachainLocation,
     accountToLocation,
+    buildAppendixInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
 
@@ -325,6 +325,7 @@ export function buildParachainPNAReceivedXcmOnAssetHub(
 
 export function buildTransferXcmFromParachain(
     registry: Registry,
+    envName: string,
     ethChainId: number,
     assetHubParaId: number,
     sourceParachainId: number,
@@ -361,33 +362,16 @@ export function buildTransferXcmFromParachain(
         },
     })
 
-    claimerLocation = claimerLocation ?? {
-        parents: 1,
-        interior: { x2: [{ parachain: sourceParachainId }, sourceLocation] },
-    }
+    let appendixInstructions = buildAppendixInstructions(
+        envName,
+        sourceParachainId,
+        sourceAccount,
+        claimerLocation
+    )
 
     let remoteInstructionsOnAH: any[] = [
         {
-            setAppendix: [
-                {
-                    setHints: {
-                        hints: [{ assetClaimer: { location: claimerLocation } }],
-                    },
-                },
-                {
-                    refundSurplus: null,
-                },
-                {
-                    depositAsset: {
-                        assets: {
-                            wild: {
-                                allCounted: 3,
-                            },
-                        },
-                        beneficiary: claimerLocation,
-                    },
-                },
-            ],
+            setAppendix: appendixInstructions,
         },
         {
             initiateTransfer: {
