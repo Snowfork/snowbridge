@@ -8,6 +8,7 @@ import {
     parachainLocation,
     accountToLocation,
     isEthereumNative,
+    buildAppendixInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
 
@@ -267,6 +268,7 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
 
 export function buildTransferXcmFromParachain(
     registry: Registry,
+    envName: string,
     ethChainId: number,
     assetHubParaId: number,
     sourceParachainId: number,
@@ -277,11 +279,12 @@ export function buildTransferXcmFromParachain(
     tokenAmount: bigint,
     localDOTFeeAmount: bigint,
     totalDOTFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint
+    remoteEtherFeeAmount: bigint,
+    claimerLocation?: any
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let tokenLocation = erc20Location(ethChainId, asset.token)
     let assets = []
 
     assets.push({
@@ -312,26 +315,16 @@ export function buildTransferXcmFromParachain(
         })
     }
 
+    let appendixInstructions = buildAppendixInstructions(
+        envName,
+        sourceParachainId,
+        sourceAccount,
+        claimerLocation
+    )
+
     let remoteInstructionsOnAH: any[] = [
         {
-            setAppendix: [
-                {
-                    refundSurplus: null,
-                },
-                {
-                    depositAsset: {
-                        assets: {
-                            wild: {
-                                allCounted: 3,
-                            },
-                        },
-                        beneficiary: {
-                            parents: 0,
-                            interior: { x1: [sourceLocation] },
-                        },
-                    },
-                },
-            ],
+            setAppendix: appendixInstructions,
         },
         {
             initiateTransfer: {

@@ -3,15 +3,14 @@ import { SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
 import { decodeAddress } from "@polkadot/util-crypto"
-import { DOT_LOCATION, bridgeLocation, isRelaychainLocation } from "../../xcmBuilder"
+import { isRelaychainLocation } from "../../xcmBuilder"
 import {
     buildExportXcm,
     buildTransferXcmFromAssetHub,
 } from "../../xcmbuilders/toEthereum/erc20FromAH"
 import { buildTransferXcmFromAssetHubWithDOTAsFee } from "../../xcmbuilders/toEthereum/erc20FromAHWithDotAsFee"
 import { Asset, AssetRegistry } from "@snowbridge/base-types"
-import { ETHER_TOKEN_ADDRESS, getAssetHubConversionPalletSwap } from "../../assets_v2"
-import { padFeeByPercentage } from "../../utils"
+import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { getOperatingStatus } from "../../status"
 import { paraImplementation } from "../../parachains"
 import {
@@ -28,7 +27,7 @@ import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
 import {
     dryRunOnSourceParachain,
-    getSnowbridgeDeliveryFee,
+    estimateFeesFromAssetHub,
     MaxWeight,
 } from "../../toEthereumSnowbridgeV2"
 
@@ -44,33 +43,15 @@ export class ERC20FromAH implements TransferInterface {
             feeTokenLocation?: any
         }
     ): Promise<DeliveryFee> {
-        const { assetHub, ethereum } =
+        const { assetHub } =
             "sourceParaId" in source
                 ? {
                       assetHub: await source.context.assetHub(),
-                      ethereum: source.context.ethereum(),
                   }
                 : source
 
-        const feePadPercentage = options?.padPercentage ?? 33n
-        const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
-        const snowbridgeDeliveryFeeDOT = await getSnowbridgeDeliveryFee(
-            assetHub,
-            options?.defaultFee
-        )
-        const { tokenErcMetadata, sourceAssetMetadata } = resolveInputs(
-            registry,
-            tokenAddress,
-            source.sourceParaId
-        )
+        const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, source.sourceParaId)
 
-        let localExecutionFeeDOT = 0n
-        let assetHubExecutionFeeDOT = 0n
-        let returnToSenderExecutionFeeDOT = 0n
-        let returnToSenderDeliveryFeeDOT = 0n
-        let bridgeHubDeliveryFeeDOT = 0n
-
-        const assetHubImpl = await paraImplementation(assetHub)
         let localXcm = buildTransferXcmFromAssetHub(
             assetHub.registry,
             registry.ethChainId,
@@ -94,72 +75,17 @@ export class ERC20FromAH implements TransferInterface {
             1n
         )
 
-        localExecutionFeeDOT = padFeeByPercentage(
-            await assetHubImpl.calculateXcmFee(localXcm, DOT_LOCATION),
-            feePadPercentage
+        const fees = await estimateFeesFromAssetHub(
+            source.context,
+            registry,
+            tokenAddress,
+            {
+                localXcm,
+                forwardedXcmToBH,
+            },
+            options
         )
-
-        bridgeHubDeliveryFeeDOT = padFeeByPercentage(
-            await assetHubImpl.calculateDeliveryFeeInDOT(
-                registry.bridgeHubParaId,
-                forwardedXcmToBH
-            ),
-            feePadPercentage
-        )
-
-        let totalFeeInDot =
-            localExecutionFeeDOT +
-            snowbridgeDeliveryFeeDOT +
-            assetHubExecutionFeeDOT +
-            returnToSenderExecutionFeeDOT +
-            returnToSenderDeliveryFeeDOT +
-            bridgeHubDeliveryFeeDOT
-
-        // Calculate execution cost on ethereum
-        let ethereumChain = registry.ethereumChains[registry.ethChainId.toString()]
-        let feeData = await ethereum.getFeeData()
-        let ethereumExecutionFee =
-            (feeData.gasPrice ?? 2_000_000_000n) *
-            ((tokenErcMetadata.deliveryGas ?? 80_000n) +
-                (ethereumChain.baseDeliveryGas ?? 120_000n))
-
-        // calculate the cost of swapping in native asset
-        let totalFeeInNative: bigint | undefined = undefined
-        let assetHubExecutionFeeNative: bigint | undefined = undefined
-        let returnToSenderExecutionFeeNative: bigint | undefined = undefined
-        let ethereumExecutionFeeInNative: bigint | undefined
-        let localExecutionFeeInNative: bigint | undefined
-        let feeLocation = options?.feeTokenLocation
-        if (feeLocation) {
-            // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
-            if (isRelaychainLocation(feeLocation)) {
-                ethereumExecutionFeeInNative = await getAssetHubConversionPalletSwap(
-                    assetHub,
-                    DOT_LOCATION,
-                    bridgeLocation(registry.ethChainId),
-                    padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage)
-                )
-                totalFeeInDot += ethereumExecutionFeeInNative
-                totalFeeInNative = totalFeeInDot
-            }
-        }
-
-        return {
-            localExecutionFeeDOT,
-            snowbridgeDeliveryFeeDOT,
-            assetHubExecutionFeeDOT,
-            bridgeHubDeliveryFeeDOT,
-            returnToSenderDeliveryFeeDOT,
-            returnToSenderExecutionFeeDOT,
-            totalFeeInDot,
-            ethereumExecutionFee,
-            feeLocation,
-            assetHubExecutionFeeNative,
-            returnToSenderExecutionFeeNative,
-            ethereumExecutionFeeInNative,
-            localExecutionFeeInNative,
-            totalFeeInNative,
-        }
+        return fees
     }
 
     async createTransfer(
