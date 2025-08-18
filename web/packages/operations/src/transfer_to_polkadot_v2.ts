@@ -1,14 +1,13 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toPolkadotSnowbridgeV2, contextConfigFor } from "@snowbridge/api"
+import { Context, toPolkadotSnowbridgeV2, contextConfigFor, toPolkadotV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import { formatUnits, Wallet } from "ethers"
+import { Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
 
 export const transferToPolkadot = async (
     destParaId: number,
     symbol: string,
     amount: bigint,
-    feeTokenLocation?: any
 ) => {
     await cryptoWaitReady()
 
@@ -61,7 +60,7 @@ export const transferToPolkadot = async (
         )
 
         console.log("fee: ", fee)
-        //// Step 2. Create a transfer tx
+        // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
             await context.assetHub(),
             registry,
@@ -72,48 +71,25 @@ export const transferToPolkadot = async (
             amount,
             fee
         )
-        //
-        //// Step 3. Estimate the cost of the execution cost of the transaction
-        //console.log("call: ", transfer.tx.inner.toHex())
-        //const feePayment = (
-        //    await transfer.tx.paymentInfo(POLKADOT_ACCOUNT, { withSignedTransaction: true })
-        //).toPrimitive() as any
-        //console.log(
-        //    `execution fee (${transfer.computed.sourceParachain.info.tokenSymbols}):`,
-        //    formatUnits(feePayment.partialFee, transfer.computed.sourceParachain.info.tokenDecimals)
-        //)
-        //console.log(
-        //    `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
-        //    formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals)
-        //)
-        //
-        //// Step 4. Validate the transaction.
-        //const validation = await transferImpl.validateTransfer(context, transfer)
-        //console.log("validation result", validation)
-        //
-        //// Step 5. Check validation logs for errors
-        //if (validation.logs.find((l) => l.kind == toEthereumSnowbridgeV2.ValidationKind.Error)) {
-        //    throw Error(`validation has one of more errors.`)
-        //}
-        //if (process.env["DRY_RUN"] != "true") {
-        //    // Step 6. Submit transaction and get receipt for tracking
-        //    const response = await toEthereumSnowbridgeV2.signAndSend(
-        //        context,
-        //        transfer,
-        //        POLKADOT_ACCOUNT,
-        //        {
-        //            withSignedTransaction: true,
-        //        }
-        //    )
-        //    if (!response) {
-        //        throw Error(`Transaction ${response} not included.`)
-        //    }
-        //    console.log(
-        //        `Success message with message id: ${response.messageId}
-        //        block number: ${response.blockNumber}
-        //        tx hash: ${response.txHash}`
-        //    )
-        //}
+
+        // Step 3. Validate the transaction.
+        const validation = await transferImpl.validateTransfer(
+            {
+                ethereum: context.ethereum(),
+                gateway: context.gatewayV2(),
+                bridgeHub: await context.bridgeHub(),
+                assetHub: await context.assetHub(),
+                destParachain:
+                    destParaId !== 1000 ? await context.parachain(destParaId) : undefined,
+            },
+            transfer
+        )
+        console.log("validation result", validation)
+
+        // Step 4. Check validation logs for errors
+        if (validation.logs.find((l) => l.kind == toPolkadotV2.ValidationKind.Error)) {
+            throw Error(`validation has one of more errors.`)
+        }
     }
     await context.destroyContext()
 }

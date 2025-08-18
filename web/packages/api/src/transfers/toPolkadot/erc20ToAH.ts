@@ -1,6 +1,6 @@
 import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
-import { TransferInterface } from "./transferInterface"
+import { Connections, TransferInterface } from "./transferInterface"
 import {
     IGatewayV2__factory as IGateway__factory,
     IGatewayV2 as IGateway,
@@ -9,17 +9,30 @@ import { Context } from "../../index"
 import {
     DeliveryFee,
     encodeNativeAsset,
-    encodeAssetsArray,
     hexToBytes,
+    validateAccount,
+    ValidationKind,
 } from "../../toPolkadotSnowbridgeV2"
-import { buildAssetHubXcm, sendMessageXCM } from "../../xcmbuilders/toPolkadot/erc20ToAH"
+import {
+    buildAssetHubXcm,
+    sendMessageXCM,
+    buildAssetHubERC20ReceivedXcm,
+} from "../../xcmbuilders/toPolkadot/erc20ToAH"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
 import { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
-import { Contract, AbiCoder } from "ethers"
-import { resolveInputs } from "../../toPolkadot_v2"
-import { buildMessageId, Transfer } from "../../toPolkadotSnowbridgeV2"
+import { Contract } from "ethers"
+import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
+import {
+    buildMessageId,
+    Transfer,
+    erc20Balance,
+    ValidationResult,
+} from "../../toPolkadotSnowbridgeV2"
+import { getOperatingStatus } from "../../status"
+import { Result } from "@polkadot/types"
+import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 
 export class ERC20ToAH implements TransferInterface {
     async getDeliveryFee(
@@ -113,8 +126,11 @@ export class ERC20ToAH implements TransferInterface {
         let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
             beneficiaryMultiAddress(beneficiaryAccount)
         let value = fee.totalFeeInWei
+        let assets: any = []
         if (tokenAddress === ETHER_TOKEN_ADDRESS) {
             value += amount
+        } else {
+            assets = [encodeNativeAsset(tokenAddress, amount)]
         }
         const ifce = IGateway__factory.createInterface()
         const con = new Contract(registry.gatewayAddress, ifce)
@@ -130,7 +146,7 @@ export class ERC20ToAH implements TransferInterface {
         const xcm = hexToBytes(
             sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic).toHex()
         )
-        let assets = [encodeNativeAsset(tokenAddress, amount)]
+
         let claimer = hexToBytes("0x") // TODO
 
         const tx = await con
@@ -171,5 +187,211 @@ export class ERC20ToAH implements TransferInterface {
             },
             tx,
         }
+    }
+
+    async validateTransfer(
+        context: Context | Connections,
+        transfer: Transfer
+    ): Promise<ValidationResult> {
+        const { tx } = transfer
+        const { amount, sourceAccount, tokenAddress, registry } = transfer.input
+        const { ethereum, gateway, bridgeHub, assetHub } =
+            context instanceof Context
+                ? {
+                      ethereum: context.ethereum(),
+                      gateway: context.gateway(),
+                      bridgeHub: await context.bridgeHub(),
+                      assetHub: await context.assetHub(),
+                  }
+                : context
+
+        const { totalValue, minimalBalance, ahAssetMetadata, beneficiaryAddressHex } =
+            transfer.computed
+
+        const logs: ValidationLog[] = []
+        if (amount < minimalBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.MinimumAmountValidation,
+                message: "The amount transferred is less than the minimum amount.",
+            })
+        }
+        const etherBalance = await ethereum.getBalance(sourceAccount)
+
+        let tokenBalance: { balance: bigint; gatewayAllowance: bigint }
+        if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
+            tokenBalance = await erc20Balance(
+                ethereum,
+                tokenAddress,
+                sourceAccount,
+                registry.gatewayAddress
+            )
+        } else {
+            tokenBalance = {
+                balance: etherBalance,
+                // u128 max
+                gatewayAllowance: 340282366920938463463374607431768211455n,
+            }
+        }
+
+        if (tokenBalance.balance < amount) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: "The amount transferred is greater than the users token balance.",
+            })
+        }
+        let feeInfo: FeeInfo | undefined
+        if (logs.length === 0) {
+            const [estimatedGas, feeData] = await Promise.all([
+                ethereum.estimateGas(tx),
+                ethereum.getFeeData(),
+            ])
+            const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
+            if (executionFee === 0n) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.FeeEstimationError,
+                    message: "Could not get fetch fee details.",
+                })
+            }
+            const totalTxCost = totalValue + executionFee
+            if (etherBalance < totalTxCost) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientEther,
+                    message: "Insufficient ether to submit transaction.",
+                })
+            }
+            feeInfo = {
+                estimatedGas,
+                feeData,
+                executionFee,
+                totalTxCost,
+            }
+        }
+        const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+        if (
+            bridgeStatus.toPolkadot.outbound !== "Normal" ||
+            bridgeStatus.toPolkadot.beacon !== "Normal"
+        ) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.BridgeStatusNotOperational,
+                message: "Bridge operations have been paused by onchain governance.",
+            })
+        }
+
+        // Check if asset can be received on asset hub (dry run)
+        const ahParachain = registry.parachains[registry.assetHubParaId]
+        let dryRunAhSuccess, assetHubDryRunError
+        if (!ahParachain.features.hasDryRunApi) {
+            logs.push({
+                kind: ValidationKind.Warning,
+                reason: ValidationReason.DryRunNotSupportedOnDestination,
+                message:
+                    "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
+            })
+        } else {
+            // build asset hub packet and dryRun
+            let result = await dryRunAssetHub(assetHub, transfer)
+            dryRunAhSuccess = result.success
+            assetHubDryRunError = result.errorMessage
+            if (!dryRunAhSuccess) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.DryRunFailed,
+                    message: "Dry run on Asset Hub failed.",
+                })
+            }
+        }
+
+        const assetHubImpl = await paraImplementation(assetHub)
+
+        if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
+            const { accountMaxConumers, accountExists } = await validateAccount(
+                assetHubImpl,
+                beneficiaryAddressHex,
+                registry.ethChainId,
+                tokenAddress,
+                ahAssetMetadata
+            )
+
+            if (accountMaxConumers) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.MaxConsumersReached,
+                    message: "Beneficiary account has reached the max consumer limit on Asset Hub.",
+                })
+            }
+            if (!accountExists) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.AccountDoesNotExist,
+                    message: "Beneficiary account does not exist on Asset Hub.",
+                })
+            }
+        }
+
+        const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
+
+        return {
+            logs,
+            success,
+            data: {
+                etherBalance,
+                tokenBalance,
+                feeInfo,
+                bridgeStatus,
+                assetHubDryRunError,
+            },
+            transfer,
+        }
+    }
+}
+
+async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
+    const { registry, amount, tokenAddress, beneficiaryAccount, destinationParaId } = transfer.input
+    const bridgeHubLocation = {
+        v4: { parents: 1, interior: { x1: [{ parachain: registry.bridgeHubParaId }] } },
+    }
+    const assetHubFee =
+        transfer.input.fee.assetHubDeliveryFeeEther + transfer.input.fee.assetHubExecutionFeeEther
+
+    const xcm = buildAssetHubERC20ReceivedXcm(
+        assetHub.registry,
+        registry.ethChainId,
+        tokenAddress,
+        amount,
+        assetHubFee,
+        beneficiaryAccount,
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    )
+
+    const result = await assetHub.call.dryRunApi.dryRunXcm<
+        Result<XcmDryRunEffects, XcmDryRunApiError>
+    >(bridgeHubLocation, xcm)
+
+    const resultHuman = result.toHuman() as any
+
+    const success = result.isOk && result.asOk.executionResult.isComplete
+    let forwardedDestination
+    if (!success) {
+        console.error("Error during dry run on asset hub:", xcm.toHuman(), result.toHuman())
+    } else {
+        forwardedDestination = result.asOk.forwardedXcms.find((x) => {
+            return (
+                x[0].isV4 &&
+                x[0].asV4.parents.toNumber() === 1 &&
+                x[0].asV4.interior.isX1 &&
+                x[0].asV4.interior.asX1[0].isParachain &&
+                x[0].asV4.interior.asX1[0].asParachain.toNumber() === destinationParaId
+            )
+        })
+    }
+    return {
+        success,
+        errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
+        forwardedDestination,
     }
 }

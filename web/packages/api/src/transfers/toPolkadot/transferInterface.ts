@@ -4,6 +4,16 @@ import { Context } from "../../index"
 import { IGatewayV2 as IGateway } from "@snowbridge/contract-types"
 import { ApiPromise } from "@polkadot/api"
 import { Transfer } from "../../toPolkadotSnowbridgeV2"
+import { ValidationResult } from "../../toPolkadotSnowbridgeV2"
+import { AbstractProvider } from "ethers"
+
+export interface Connections {
+    ethereum: AbstractProvider
+    gateway: IGateway
+    bridgeHub: ApiPromise
+    assetHub: ApiPromise
+    destParachain?: ApiPromise
+}
 
 export interface TransferInterface {
     getDeliveryFee(
@@ -24,4 +34,6 @@ export interface TransferInterface {
         amount: bigint,
         fee: DeliveryFee
     ): Promise<Transfer>
+
+    validateTransfer(context: Context | Connections, transfer: Transfer): Promise<ValidationResult>
 }

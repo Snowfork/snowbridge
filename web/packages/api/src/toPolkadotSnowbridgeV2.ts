@@ -5,9 +5,13 @@ import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { MultiAddressStruct } from "@snowbridge/contract-types/dist/IGateway.sol/IGatewayV1"
-import { AbiCoder, ContractTransaction } from "ethers"
+import { AbiCoder, AbstractProvider, ContractTransaction } from "ethers"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
+import { IERC20__factory } from "@snowbridge/contract-types"
+import { ParachainBase } from "./parachains/parachainBase"
+import { OperationStatus } from "./status"
+import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
 export { ValidationKind } from "./toPolkadot_v2"
 
 export type DeliveryFee = {
@@ -42,6 +46,23 @@ export type Transfer = {
         topic: string
     }
     tx: ContractTransaction
+}
+
+export type ValidationResult = {
+    logs: ValidationLog[]
+    success: boolean
+    data: {
+        etherBalance: bigint
+        tokenBalance: {
+            balance: bigint
+            gatewayAllowance: bigint
+        }
+        feeInfo?: FeeInfo
+        bridgeStatus: OperationStatus
+        assetHubDryRunError?: string
+        destinationParachainDryRunError?: string
+    }
+    transfer: Transfer
 }
 
 export function createTransferImplementation(
@@ -127,6 +148,23 @@ export function hexToBytes(hexString: string): Uint8Array {
     return bytes
 }
 
+export async function erc20Balance(
+    ethereum: AbstractProvider,
+    tokenAddress: string,
+    owner: string,
+    spender: string
+) {
+    const tokenContract = IERC20__factory.connect(tokenAddress, ethereum)
+    const [balance, gatewayAllowance] = await Promise.all([
+        tokenContract.balanceOf(owner),
+        tokenContract.allowance(owner, spender),
+    ])
+    return {
+        balance,
+        gatewayAllowance,
+    }
+}
+
 // ERC20 asset: abi.encode(0, tokenAddress, amount)
 // 0 = AssetKind.NativeTokenERC20 from Solidity Types.sol
 export function encodeNativeAsset(tokenAddress: string, amount: bigint) {
@@ -148,4 +186,28 @@ export function encodeForeignAsset(foreignID: string, amount: bigint) {
 // Encode assets array as bytes[] for the gateway contract
 export function encodeAssetsArray(encodedAssets: string[]) {
     return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [encodedAssets])
+}
+
+export async function validateAccount(
+    parachainImpl: ParachainBase,
+    beneficiaryAddress: string,
+    ethChainId: number,
+    tokenAddress: string,
+    assetMetadata?: Asset,
+    maxConsumers?: bigint
+) {
+    // Check if the account is created
+    const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
+        parachainImpl.getNativeAccount(beneficiaryAddress),
+        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
+    ])
+    return {
+        accountExists: !(
+            beneficiaryAccount.consumers === 0n &&
+            beneficiaryAccount.providers === 0n &&
+            beneficiaryAccount.sufficients === 0n
+        ),
+        accountMaxConumers:
+            beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n,
+    }
 }
