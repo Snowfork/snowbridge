@@ -487,10 +487,9 @@ async fn malicious_payload_inner(
 					}
 				};
 
-				// TODO: use block_hash from prior to ensure same call
 				let ancestry_proof = {
 					let ancestry_proof_substrate: MmrAncestryProof<subxt::utils::H256> = client
-						.request("mmr_generateAncestryProof", vec![equivocation_block])
+						.request("mmr_generateAncestryProof", vec![equivocation_block, header.number])
 						.await
 						.expect("get ancestry proof");
 
