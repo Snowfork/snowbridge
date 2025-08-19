@@ -11,7 +11,7 @@ description: Steps to set up your own Snowbridge message relayers.
 
 ### 1.1 AWS account
 
-The first thing you will need is an AWS account. [Register](https://signin.aws.amazon.com/signup?request\_type=register) if you do not have an account yet.
+The first thing you will need is an AWS account. [Register](https://signin.aws.amazon.com/signup?request_type=register) if you do not have an account yet.
 
 ### 1.2 Clone infra repo
 
@@ -128,7 +128,28 @@ Once the relayer has started up successfully, all relaying parties should increm
 
 ### 1.12 Monitoring
 
-TODO
+To set up monitoring, register an account with [PagerDuty](https://www.pagerduty.com/).
+
+Once registered, create a new service: **Services** -> **Services Directory**. Click on **New**. Call the service "Snowbridge Message Relayers"
+
+Under service "Snowbridge Message Relayers", click on **Integrations**. Add a new **Amazon Cloudwatch** integration. Copy the integration URL.
+
+In your `snowbridge-relayers-infra` project, copy the URL to your .envrc file:
+
+```
+export PAGER_URL=https://events.eu.pagerduty.com/integration/xxx/enqueue
+```
+
+Now run the Ansible script to create all the necessary metrics, alarms, topic and subscription on AWS:
+
+```
+git pull
+ssh-agent bash
+ssh-add /path/to/snowbridge-relayers-key.pem
+ansible-playbook -i inventory/message-relayers/aws_ec2.yml alarm.yml
+```
+
+Test the alarms by trigging a failure condition (i.e. change the URL of one of the service endpoints to an invalid value).
 
 ## 2. Upgrade
 

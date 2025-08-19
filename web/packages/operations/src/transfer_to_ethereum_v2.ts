@@ -1,10 +1,15 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toEthereumSnowbridgeV2, contextConfigFor } from "@snowbridge/api"
+import { Context, toEthereumSnowbridgeV2, contextConfigFor, toEthereumV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
 
-export const transferToEthereum = async (sourceParaId: number, symbol: string, amount: bigint) => {
+export const transferToEthereum = async (
+    sourceParaId: number,
+    symbol: string,
+    amount: bigint,
+    feeTokenLocation?: any
+) => {
     await cryptoWaitReady()
 
     let env = "local_e2e"
@@ -41,15 +46,31 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
 
     console.log("Asset Hub to Ethereum")
     {
-        // Step 1. Get the delivery fee for the transaction
-        const fee = await toEthereumSnowbridgeV2.getDeliveryFee(
-            { sourceParaId, context },
+        // Step 0. Create a transfer implementation
+        const transferImpl = await toEthereumSnowbridgeV2.createTransferImplementation(
+            sourceParaId,
             registry,
             TOKEN_CONTRACT
         )
+        // Step 1. Get the delivery fee for the transaction
+        let fee: toEthereumV2.DeliveryFee
+        if (feeTokenLocation) {
+            fee = await transferImpl.getDeliveryFee(
+                { sourceParaId, context },
+                registry,
+                TOKEN_CONTRACT,
+                { feeTokenLocation, slippagePadPercentage: 20n }
+            )
+        } else {
+            fee = await transferImpl.getDeliveryFee(
+                { sourceParaId, context },
+                registry,
+                TOKEN_CONTRACT
+            )
+        }
 
         // Step 2. Create a transfer tx
-        const transfer = await toEthereumSnowbridgeV2.createTransfer(
+        const transfer = await transferImpl.createTransfer(
             { sourceParaId, context },
             registry,
             POLKADOT_ACCOUNT_PUBLIC,
@@ -61,7 +82,6 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
 
         // Step 3. Estimate the cost of the execution cost of the transaction
         console.log("call: ", transfer.tx.inner.toHex())
-        console.log("utx: ", transfer.tx.toHex())
         const feePayment = (
             await transfer.tx.paymentInfo(POLKADOT_ACCOUNT, { withSignedTransaction: true })
         ).toPrimitive() as any
@@ -73,13 +93,9 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
             `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
             formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals)
         )
-        // console.log(
-        //     "dryRun: ",
-        //     (await transfer.tx.dryRun(POLKADOT_ACCOUNT, { withSignedTransaction: true })).toHuman()
-        // )
 
         // Step 4. Validate the transaction.
-        const validation = await toEthereumSnowbridgeV2.validateTransfer(context, transfer)
+        const validation = await transferImpl.validateTransfer(context, transfer)
         console.log("validation result", validation)
 
         // Step 5. Check validation logs for errors
@@ -92,7 +108,9 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
                 context,
                 transfer,
                 POLKADOT_ACCOUNT,
-                { withSignedTransaction: true }
+                {
+                    withSignedTransaction: true,
+                }
             )
             if (!response) {
                 throw Error(`Transaction ${response} not included.`)
