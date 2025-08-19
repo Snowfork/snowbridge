@@ -1,7 +1,7 @@
 import { Keyring } from "@polkadot/keyring"
 import { Context, toPolkadotSnowbridgeV2, contextConfigFor, toPolkadotV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import { Wallet } from "ethers"
+import {formatEther, Wallet} from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
 
 export const transferToPolkadot = async (destParaId: number, symbol: string, amount: bigint) => {
@@ -85,6 +85,47 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
         // Step 4. Check validation logs for errors
         if (validation.logs.find((l) => l.kind == toPolkadotV2.ValidationKind.Error)) {
             throw Error(`validation has one of more errors.`)
+        }
+
+        // Step 5. Estimate the cost of the execution cost of the transaction
+        const {
+            tx,
+            computed: { totalValue },
+        } = transfer
+        const estimatedGas = await context.ethereum().estimateGas(tx)
+        const feeData = await context.ethereum().getFeeData()
+        const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
+
+        console.log("tx:", tx)
+        console.log("feeData:", feeData.toJSON())
+        console.log("gas:", estimatedGas)
+        console.log("delivery cost:", formatEther(fee.totalFeeInWei))
+        console.log("execution cost:", formatEther(executionFee))
+        console.log("total cost:", formatEther(fee.totalFeeInWei + executionFee))
+        console.log("ether sent:", formatEther(totalValue - fee.totalFeeInWei))
+        console.log("dry run:", await context.ethereum().call(tx))
+
+        if (process.env["DRY_RUN"] != "true") {
+            console.log("sending tx")
+            // Step 5. Submit the transaction
+            const response = await ETHEREUM_ACCOUNT.sendTransaction(tx)
+            console.log("sent transaction")
+            const receipt = await response.wait(1)
+            console.log("got receipt")
+            if (!receipt) {
+                throw Error(`Transaction ${response.hash} not included.`)
+            }
+
+            // Step 7. Get the message receipt for tracking purposes
+            const message = await toPolkadotV2.getMessageReceipt(receipt)
+            if (!message) {
+                throw Error(`Transaction ${receipt.hash} did not emit a message.`)
+            }
+            console.log(
+                `Success message with message id: ${message.messageId}
+                block number: ${message.blockNumber}
+                tx hash: ${message.txHash}`
+            )
         }
     }
     await context.destroyContext()
