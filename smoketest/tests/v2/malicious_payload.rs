@@ -396,9 +396,7 @@ async fn malicious_payload_inner(
 			.enumerate()
 			.filter(|(i, _)| bitfield[0].bit(*i))
 			.map(|(i, sig)| {
-				//TODO: deduplicate with init sig
 				let sig_bytes = sig.0.as_slice();
-
 				validator_proof(sig_bytes, i, &validator_secp256k1_bytes, &validator_proofs)
 			})
 			.collect::<Vec<_>>();
