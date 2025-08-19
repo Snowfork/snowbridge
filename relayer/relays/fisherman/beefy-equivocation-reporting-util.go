@@ -68,17 +68,14 @@ func (li *BeefyListener) getKeyOwnershipProof(meta *types.Metadata, latestHash t
 	// }
 	// var epochDuration uint64
 
-	// ok, err = li.relaychainConn.API().RPC.State.GetStorage(epochDurationKey, &epochDuration, latestHash)
-	// if err != nil {
-	// 	return err
-	// }
-	// if !ok {
-	// 	return fmt.Errorf("DEBUG: No value for Epoch key: %x", epochDurationKey.Hex())
-	// }
-	// log.Info("DEBUG epochDuration: ", epochDuration)
-	// TODO: hardcoded atm, and also fragile since slots can be skipped
-	epochDuration := uint64(20)
-	// TODO: handle if offender claims to be in nextSession
+	epochDurationRaw, err := meta.FindConstantValue("Babe", "EpochDuration")
+	if err != nil {
+		return nil, fmt.Errorf("couldn't find const: %w", err)
+	}
+	epochDuration := binary.LittleEndian.Uint64(epochDurationRaw)
+	log.Debug("epochDuration: ", epochDuration)
+
+	// TODO: handle if offender claims to be in nextSession. Also, check whether slot skips are an issue.
 	blockInOffenderSession := latestBlockNumber - epochDuration*uint64(currentSession-offenderSession)
 
 	// a block in offender's session - only used for getting key ownership proof
