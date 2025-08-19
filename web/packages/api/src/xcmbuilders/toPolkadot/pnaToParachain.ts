@@ -13,13 +13,14 @@ export function buildAssetHubPNAReceivedXcm(
     registry: Registry,
     ethChainId: number,
     tokenLocation: any,
-    executionFee: bigint,
+    etherAmount: bigint,
+    totalAssetHubFeeInEther: bigint,
+    remoteExecutionFee: bigint,
     value: bigint,
     claimer: any,
     origin: string,
     beneficiary: string,
     destinationParaId: number,
-    remoteEtherFeeAmount: bigint,
     topic: string
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -37,7 +38,7 @@ export function buildAssetHubPNAReceivedXcm(
                     {
                         id: ether,
                         fun: {
-                            Fungible: executionFee + remoteEtherFeeAmount, // TODO calculate using extra value
+                            Fungible: totalAssetHubFeeInEther,
                         },
                     },
                 ],
@@ -52,10 +53,20 @@ export function buildAssetHubPNAReceivedXcm(
                     asset: {
                         id: ether,
                         fun: {
-                            Fungible: executionFee,
+                            Fungible: totalAssetHubFeeInEther,
                         },
                     },
                 },
+            },
+            {
+                reserveAssetDeposited: [
+                    {
+                        id: ether,
+                        fun: {
+                            Fungible: etherAmount,
+                        },
+                    },
+                ],
             },
             {
                 withdrawAsset: [
@@ -88,7 +99,7 @@ export function buildAssetHubPNAReceivedXcm(
                                 {
                                     id: ether,
                                     fun: {
-                                        Fungible: remoteEtherFeeAmount,
+                                        Fungible: remoteExecutionFee,
                                     },
                                 },
                             ],

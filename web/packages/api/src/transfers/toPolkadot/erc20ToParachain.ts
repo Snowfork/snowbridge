@@ -63,6 +63,7 @@ export class ERC20ToParachain implements TransferInterface {
             assetHub.registry,
             registry.ethChainId,
             tokenAddress,
+            3000000000000n,
             1000000000000n,
             1000000000000n,
             accountId32Location(
@@ -360,6 +361,7 @@ export class ERC20ToParachain implements TransferInterface {
                 assetHub.registry,
                 registry.ethChainId,
                 tokenAddress,
+                transfer.computed.totalValue - assetHubFee,
                 assetHubFee,
                 amount,
                 accountId32Location(

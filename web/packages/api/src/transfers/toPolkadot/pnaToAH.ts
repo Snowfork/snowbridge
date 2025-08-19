@@ -24,7 +24,7 @@ import { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { Contract } from "ethers"
-import { buildAssetHubERC20ReceivedXcm, sendMessageXCM } from "../../xcmbuilders/toPolkadot/pnaToAH"
+import { buildAssetHubPNAReceivedXcm, sendMessageXCM } from "../../xcmbuilders/toPolkadot/pnaToAH"
 import { getOperatingStatus } from "../../status"
 
 export class PNAToAH implements TransferInterface {
@@ -56,10 +56,11 @@ export class PNAToAH implements TransferInterface {
             throw Error(`Token ${tokenAddress} not registered on asset hub.`)
         }
 
-        let assetHubXcm = buildAssetHubERC20ReceivedXcm(
+        let assetHubXcm = buildAssetHubPNAReceivedXcm(
             assetHub.registry,
             registry.ethChainId,
             ahAssetMetadata.location,
+            3000000000000n,
             1000000000000n,
             1000000000000n,
             accountId32Location(
@@ -291,14 +292,14 @@ export class PNAToAH implements TransferInterface {
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
-            // build asset hub packet and dryRun
             const assetHubFee =
                 transfer.input.fee.assetHubDeliveryFeeEther +
                 transfer.input.fee.assetHubExecutionFeeEther
-            const xcm = buildAssetHubERC20ReceivedXcm(
+            const xcm = buildAssetHubPNAReceivedXcm(
                 assetHub.registry,
                 registry.ethChainId,
                 ahAssetMetadata.location,
+                transfer.computed.totalValue - assetHubFee,
                 assetHubFee,
                 amount,
                 accountId32Location(

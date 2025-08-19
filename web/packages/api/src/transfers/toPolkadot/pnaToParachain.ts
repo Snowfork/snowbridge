@@ -68,13 +68,14 @@ export class PNAToParachain implements TransferInterface {
             destAssetMetadata.location,
             1000000000000n,
             1000000000000n,
+            1000000000000n,
+            1000000000000n,
             accountId32Location(
                 "0x0000000000000000000000000000000000000000000000000000000000000000"
             ),
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             destinationParaId,
-            1000000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
         const bridgeHubImpl = await paraImplementation(bridgeHub)
@@ -355,7 +356,6 @@ export class PNAToParachain implements TransferInterface {
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
-            // build asset hub packet and dryRun
             const assetHubFee =
                 transfer.input.fee.assetHubDeliveryFeeEther +
                 transfer.input.fee.assetHubExecutionFeeEther
@@ -363,7 +363,9 @@ export class PNAToParachain implements TransferInterface {
                 assetHub.registry,
                 registry.ethChainId,
                 destAssetMetadata.location,
+                transfer.computed.totalValue - assetHubFee,
                 assetHubFee,
+                transfer.input.fee.destinationExecutionFeeEther,
                 amount,
                 accountId32Location(
                     "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -371,7 +373,6 @@ export class PNAToParachain implements TransferInterface {
                 transfer.input.sourceAccount,
                 transfer.computed.beneficiaryAddressHex,
                 destinationParaId,
-                transfer.input.fee.destinationExecutionFeeEther,
                 "0x0000000000000000000000000000000000000000000000000000000000000000"
             )
             let result = await dryRunAssetHub(

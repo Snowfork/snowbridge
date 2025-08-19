@@ -12,8 +12,9 @@ export function buildAssetHubERC20ReceivedXcm(
     registry: Registry,
     ethChainId: number,
     tokenAddress: string,
-    executionFee: bigint,
-    value: bigint,
+    etherAmount: bigint,
+    totalAssetHubFeeInEther: bigint,
+    tokenAmount: bigint,
     claimer: any,
     origin: string,
     beneficiary: string,
@@ -23,19 +24,27 @@ export function buildAssetHubERC20ReceivedXcm(
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
-    let reserveAssetDeposited = [
-        {
+    let reserveAssetDeposited = []
+    if (tokenAddress === ETHER_TOKEN_ADDRESS) {
+        reserveAssetDeposited.push({
             id: ether,
             fun: {
-                Fungible: value,
+                Fungible: tokenAmount + etherAmount,
             },
-        },
-    ]
-    if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
+        })
+    } else if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
+        if (etherAmount > 0) {
+            reserveAssetDeposited.push({
+                id: ether,
+                fun: {
+                    Fungible: etherAmount,
+                },
+            })
+        }
         reserveAssetDeposited.push({
             id: erc20Location(ethChainId, tokenAddress),
             fun: {
-                Fungible: value,
+                Fungible: tokenAmount,
             },
         })
     }
@@ -52,7 +61,7 @@ export function buildAssetHubERC20ReceivedXcm(
                     {
                         id: ether,
                         fun: {
-                            Fungible: executionFee,
+                            Fungible: totalAssetHubFeeInEther,
                         },
                     },
                 ],
@@ -67,7 +76,7 @@ export function buildAssetHubERC20ReceivedXcm(
                     asset: {
                         id: ether,
                         fun: {
-                            Fungible: executionFee,
+                            Fungible: totalAssetHubFeeInEther,
                         },
                     },
                 },
@@ -110,7 +119,7 @@ export function buildAssetHubERC20ReceivedXcm(
                                     {
                                         id: erc20Location(ethChainId, tokenAddress),
                                         fun: {
-                                            Fungible: value,
+                                            Fungible: tokenAmount,
                                         },
                                     },
                                 ],

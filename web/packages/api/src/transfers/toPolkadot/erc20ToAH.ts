@@ -61,6 +61,7 @@ export class ERC20ToAH implements TransferInterface {
             assetHub.registry,
             registry.ethChainId,
             tokenAddress,
+            2000000000000n,
             1000000000000n,
             1000000000000n,
             accountId32Location(
@@ -70,6 +71,7 @@ export class ERC20ToAH implements TransferInterface {
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
+        console.dir(assetHubXcm.toHuman(), { depth: 100 })
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
 
         // Delivery fee BridgeHub to AssetHub
@@ -78,8 +80,6 @@ export class ERC20ToAH implements TransferInterface {
             registry.assetHubParaId,
             assetHubXcm
         )
-
-        console.log("CALCULATED DELIVER FEE")
 
         const assetHubImpl = await paraImplementation(assetHub)
         const deliveryFeeInEther = await swapAsset1ForAsset2(
@@ -195,7 +195,6 @@ export class ERC20ToAH implements TransferInterface {
         context: Context | Connections,
         transfer: Transfer
     ): Promise<ValidationResult> {
-        console.log("VALIDATED")
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry } = transfer.input
         const { ethereum, gateway, bridgeHub, assetHub } =
@@ -297,7 +296,6 @@ export class ERC20ToAH implements TransferInterface {
             })
         } else {
             // build asset hub packet and dryRun
-
             const assetHubFee =
                 transfer.input.fee.assetHubDeliveryFeeEther +
                 transfer.input.fee.assetHubExecutionFeeEther
@@ -305,6 +303,7 @@ export class ERC20ToAH implements TransferInterface {
                 assetHub.registry,
                 registry.ethChainId,
                 tokenAddress,
+                transfer.computed.totalValue - assetHubFee,
                 assetHubFee,
                 amount,
                 accountId32Location(
@@ -314,6 +313,8 @@ export class ERC20ToAH implements TransferInterface {
                 transfer.computed.beneficiaryAddressHex,
                 "0x0000000000000000000000000000000000000000000000000000000000000000"
             )
+
+            console.dir(xcm.toHuman(), { depth: 100 })
 
             let result = await dryRunAssetHub(assetHub, registry.bridgeHubParaId, 0, xcm)
             dryRunAhSuccess = result.success

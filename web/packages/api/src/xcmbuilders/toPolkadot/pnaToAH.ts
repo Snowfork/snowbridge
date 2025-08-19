@@ -8,12 +8,13 @@ import {
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { beneficiaryMultiAddress } from "../../utils"
 
-export function buildAssetHubERC20ReceivedXcm(
+export function buildAssetHubPNAReceivedXcm(
     registry: Registry,
     ethChainId: number,
     tokenLocation: any,
-    executionFee: bigint,
-    value: bigint,
+    etherAmount: bigint,
+    totalAssetHubFeeInEther: bigint,
+    tokenValue: bigint,
     claimer: any,
     origin: string,
     beneficiary: string,
@@ -34,7 +35,7 @@ export function buildAssetHubERC20ReceivedXcm(
                     {
                         id: ether,
                         fun: {
-                            Fungible: executionFee,
+                            Fungible: totalAssetHubFeeInEther,
                         },
                     },
                 ],
@@ -49,17 +50,27 @@ export function buildAssetHubERC20ReceivedXcm(
                     asset: {
                         id: ether,
                         fun: {
-                            Fungible: executionFee,
+                            Fungible: totalAssetHubFeeInEther,
                         },
                     },
                 },
+            },
+            {
+                reserveAssetDeposited: [
+                    {
+                        id: ether,
+                        fun: {
+                            Fungible: etherAmount,
+                        },
+                    },
+                ],
             },
             {
                 withdrawAsset: [
                     {
                         id: tokenLocation,
                         fun: {
-                            Fungible: value,
+                            Fungible: tokenValue,
                         },
                     },
                 ],
