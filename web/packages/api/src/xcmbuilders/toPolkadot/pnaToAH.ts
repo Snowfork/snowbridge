@@ -1,5 +1,10 @@
 import { Registry } from "@polkadot/types/types"
-import {erc20Location, ethereumNetwork, accountId32Location, accountToLocation} from "../../xcmBuilder"
+import {
+    erc20Location,
+    ethereumNetwork,
+    accountId32Location,
+    accountToLocation,
+} from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { beneficiaryMultiAddress } from "../../utils"
 
@@ -49,16 +54,16 @@ export function buildAssetHubERC20ReceivedXcm(
                     },
                 },
             },
-           {
-               withdrawAsset: [
-                   {
-                       id: tokenLocation,
-                       fun: {
-                           Fungible: value,
-                       },
-                   },
-               ],
-           },
+            {
+                withdrawAsset: [
+                    {
+                        id: tokenLocation,
+                        fun: {
+                            Fungible: value,
+                        },
+                    },
+                ],
+            },
             {
                 descendOrigin: {
                     x1: [

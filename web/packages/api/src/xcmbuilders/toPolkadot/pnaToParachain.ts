@@ -1,6 +1,7 @@
 import { Registry } from "@polkadot/types/types"
 import {
     accountId32Location,
+    accountToLocation,
     erc20Location,
     ethereumNetwork,
     parachainLocation,
@@ -8,7 +9,7 @@ import {
 import { beneficiaryMultiAddress } from "../../utils"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 
-export function buildAssetHubXcm(
+export function buildAssetHubPNAReceivedXcm(
     registry: Registry,
     ethChainId: number,
     tokenLocation: any,
@@ -17,9 +18,12 @@ export function buildAssetHubXcm(
     claimer: any,
     origin: string,
     beneficiary: string,
+    destinationParaId: number,
+    remoteEtherFeeAmount: bigint,
     topic: string
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
+    let beneficiaryLocation = accountToLocation(beneficiary)
     return registry.createType("XcmVersionedXcm", {
         v5: [
             {
@@ -33,7 +37,7 @@ export function buildAssetHubXcm(
                     {
                         id: ether,
                         fun: {
-                            Fungible: executionFee,
+                            Fungible: executionFee + remoteEtherFeeAmount, // TODO calculate using extra value
                         },
                     },
                 ],
@@ -76,13 +80,72 @@ export function buildAssetHubXcm(
                 },
             },
             {
+                initiateTransfer: {
+                    destination: parachainLocation(destinationParaId),
+                    remote_fees: {
+                        reserveDeposit: {
+                            definite: [
+                                {
+                                    id: ether,
+                                    fun: {
+                                        Fungible: remoteEtherFeeAmount,
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                    preserveOrigin: true,
+                    assets: [
+                        {
+                            reserveDeposit: {
+                                definite: [
+                                    {
+                                        id: tokenLocation,
+                                        fun: {
+                                            Fungible: value,
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                    remoteXcm: [
+                        {
+                            refundSurplus: null,
+                        },
+                        {
+                            depositAsset: {
+                                assets: {
+                                    wild: {
+                                        allCounted: 3,
+                                    },
+                                },
+                                beneficiary: {
+                                    parents: 0,
+                                    interior: { x1: [beneficiaryLocation] },
+                                },
+                            },
+                        },
+                        {
+                            setTopic: topic,
+                        },
+                    ],
+                },
+            },
+            {
+                refundSurplus: null,
+            },
+            {
                 depositAsset: {
                     assets: {
                         wild: {
-                            allCounted: 2,
+                            allOf: { id: ether, fun: "Fungible" },
                         },
                     },
-                    beneficiary: accountId32Location(beneficiary),
+                    beneficiary: {
+                        parents: 0,
+                        interior: { x1: [beneficiaryLocation] },
+                    },
                 },
             },
             {

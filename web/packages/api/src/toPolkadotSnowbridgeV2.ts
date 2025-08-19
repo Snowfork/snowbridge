@@ -233,6 +233,8 @@ export async function dryRunAssetHub(
 
     const resultHuman = result.toHuman() as any
 
+    console.dir(resultHuman, { depth: 100 })
+
     const success = result.isOk && result.asOk.executionResult.isComplete
     let forwardedDestination
     if (!success) {
