@@ -120,7 +120,6 @@ fn validator_proof(
 	}
 }
 
-// TODO: reuse from polkadot-sdk
 #[derive(Clone, Debug)]
 enum EquivocationType {
 	FutureBlockEquivocation,
