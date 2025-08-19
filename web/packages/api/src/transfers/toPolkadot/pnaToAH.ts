@@ -9,6 +9,7 @@ import { Context } from "../../index"
 import {
     buildMessageId,
     DeliveryFee,
+    dryRunAssetHub,
     encodeForeignAsset,
     erc20Balance,
     hexToBytes,
@@ -17,22 +18,14 @@ import {
     ValidationKind,
     ValidationResult,
 } from "../../toPolkadotSnowbridgeV2"
-import { buildAssetHubXcm } from "../../xcmbuilders/toPolkadot/pnaToAH"
-import {
-    accountId32Location,
-    buildAssetHubERC20ReceivedXcm,
-    DOT_LOCATION,
-    erc20Location,
-} from "../../xcmBuilder"
+import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
 import { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { Contract } from "ethers"
-import { sendMessageXCM } from "../../xcmbuilders/toPolkadot/pnaToAH"
+import { buildAssetHubERC20ReceivedXcm, sendMessageXCM } from "../../xcmbuilders/toPolkadot/pnaToAH"
 import { getOperatingStatus } from "../../status"
-import { Result } from "@polkadot/types"
-import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 
 export class PNAToAH implements TransferInterface {
     async getDeliveryFee(
@@ -63,7 +56,7 @@ export class PNAToAH implements TransferInterface {
             throw Error(`Token ${tokenAddress} not registered on asset hub.`)
         }
 
-        let assetHubXcm = buildAssetHubXcm(
+        let assetHubXcm = buildAssetHubERC20ReceivedXcm(
             assetHub.registry,
             registry.ethChainId,
             ahAssetMetadata.location,
@@ -299,7 +292,24 @@ export class PNAToAH implements TransferInterface {
             })
         } else {
             // build asset hub packet and dryRun
-            let result = await dryRunAssetHub(assetHub, transfer)
+            const assetHubFee =
+                transfer.input.fee.assetHubDeliveryFeeEther +
+                transfer.input.fee.assetHubExecutionFeeEther
+            const xcm = buildAssetHubERC20ReceivedXcm(
+                assetHub.registry,
+                registry.ethChainId,
+                ahAssetMetadata.location,
+                assetHubFee,
+                amount,
+                accountId32Location(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000"
+                ),
+                transfer.input.sourceAccount,
+                transfer.computed.beneficiaryAddressHex,
+                "0x0000000000000000000000000000000000000000000000000000000000000000"
+            )
+
+            let result = await dryRunAssetHub(assetHub, registry.bridgeHubParaId, 0, xcm)
             dryRunAhSuccess = result.success
             assetHubDryRunError = result.errorMessage
             if (!dryRunAhSuccess) {
@@ -352,51 +362,5 @@ export class PNAToAH implements TransferInterface {
             },
             transfer,
         }
-    }
-}
-
-async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
-    const { registry, amount, tokenAddress, beneficiaryAccount, destinationParaId } = transfer.input
-    const bridgeHubLocation = {
-        v4: { parents: 1, interior: { x1: [{ parachain: registry.bridgeHubParaId }] } },
-    }
-    const assetHubFee =
-        transfer.input.fee.assetHubDeliveryFeeEther + transfer.input.fee.assetHubExecutionFeeEther
-
-    const xcm = buildAssetHubERC20ReceivedXcm(
-        assetHub.registry,
-        registry.ethChainId,
-        tokenAddress,
-        amount,
-        assetHubFee,
-        beneficiaryAccount,
-        "0x0000000000000000000000000000000000000000000000000000000000000000"
-    )
-
-    const result = await assetHub.call.dryRunApi.dryRunXcm<
-        Result<XcmDryRunEffects, XcmDryRunApiError>
-    >(bridgeHubLocation, xcm)
-
-    const resultHuman = result.toHuman() as any
-
-    const success = result.isOk && result.asOk.executionResult.isComplete
-    let forwardedDestination
-    if (!success) {
-        console.error("Error during dry run on asset hub:", xcm.toHuman(), result.toHuman())
-    } else {
-        forwardedDestination = result.asOk.forwardedXcms.find((x) => {
-            return (
-                x[0].isV4 &&
-                x[0].asV4.parents.toNumber() === 1 &&
-                x[0].asV4.interior.isX1 &&
-                x[0].asV4.interior.asX1[0].isParachain &&
-                x[0].asV4.interior.asX1[0].asParachain.toNumber() === destinationParaId
-            )
-        })
-    }
-    return {
-        success,
-        errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
-        forwardedDestination,
     }
 }
