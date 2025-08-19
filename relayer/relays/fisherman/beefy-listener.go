@@ -279,7 +279,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 							}
 						}
 					}
-					// TODO: should this also invoke a scan? I reckon not, since the scan's purpose in my understanding is to check which parachain messages have to be relayed (stale or new), and an update to the MMR root would necessitate creating proofs against the new MMR root, rather than the old one.
 				}
 			}
 		}
