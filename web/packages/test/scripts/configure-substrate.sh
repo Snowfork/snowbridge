@@ -60,9 +60,9 @@ configure_ah() {
 
 
 configure_substrate() {
-    configure_from_test_helper
     configure_bh
     configure_ah
+    configure_from_test_helper
     wait_beacon_chain_ready
     config_beacon_checkpoint
 }

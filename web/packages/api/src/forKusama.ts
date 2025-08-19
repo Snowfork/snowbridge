@@ -10,7 +10,7 @@ import {
     polkadotAssetHubLocation,
     isDOTOnOtherConsensusSystem,
     isKSMOnOtherConsensusSystem,
-    isNative,
+    isRelaychainLocation,
     NATIVE_TOKEN_LOCATION,
     dotLocationOnKusamaAssetHub,
     ksmLocationOnPolkadotAssetHub,
@@ -23,7 +23,7 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import { getAssetHubConversationPalletSwap } from "./assets_v2"
+import { getAssetHubConversionPalletSwap } from "./assets_v2"
 import { Asset, AssetRegistry, Parachain, AssetMap } from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
@@ -229,7 +229,7 @@ export async function getDeliveryFee(
             "polkadot"
         )
     }
-    let destinationFee = await getAssetHubConversationPalletSwap(
+    let destinationFee = await getAssetHubConversionPalletSwap(
         destAssetHub,
         feeAssetOnDest,
         NATIVE_TOKEN_LOCATION,
@@ -245,12 +245,6 @@ export async function getDeliveryFee(
     totalXcmBridgeFee = padFeeByPercentage(totalXcmBridgeFee, 33n)
 
     let totalFee = totalXcmBridgeFee + bridgeHubDeliveryFee + destinationFee
-
-    console.info("totalXcmBridgeFee:", totalXcmBridgeFee)
-    console.info("destinationFeeInDestAsset:", destinationFeeInDestNative)
-    console.info("destinationFee:", destinationFee)
-    console.info("bridgeHubDeliveryFee:", bridgeHubDeliveryFee)
-    console.info("Total fee in native:", totalFee)
 
     return {
         xcmBridgeFee: totalXcmBridgeFee,
@@ -397,8 +391,6 @@ export async function validateTransfer(
     } = transfer.computed
     const { tx } = transfer
 
-    console.log("beneficiaryAddressHex:", beneficiaryAddressHex)
-
     let tokenLocation = getTokenLocation(registry, direction, tokenAddress)
 
     const sourceAssetHubImpl = await paraImplementation(sourceAssetHub)
@@ -407,7 +399,7 @@ export async function validateTransfer(
     let tokenAsset = getTransferAsset(direction, tokenAddress, transfer.input.registry)
 
     let tokenBalance: bigint
-    if (isNative(tokenLocation)) {
+    if (isRelaychainLocation(tokenLocation)) {
         tokenBalance = nativeBalance
     } else {
         tokenBalance = await sourceAssetHubImpl.getTokenBalance(
@@ -521,9 +513,6 @@ export async function validateTransfer(
             })
         }
     }
-
-    console.log("sourceExecutionFee:", sourceExecutionFee)
-    console.log("TOTAL FEE", sourceExecutionFee + fee.totalFeeInNative)
 
     const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
 
@@ -873,7 +862,7 @@ function isDOT(direction: Direction, location: any) {
     if (direction == Direction.ToPolkadot) {
         return isDOTOnOtherConsensusSystem(location)
     } else {
-        return isNative(location)
+        return isRelaychainLocation(location)
     }
 }
 
@@ -881,7 +870,7 @@ function isKSM(direction: Direction, location: any) {
     if (direction == Direction.ToKusama) {
         return isKSMOnOtherConsensusSystem(location)
     } else {
-        return isNative(location)
+        return isRelaychainLocation(location)
     }
 }
 

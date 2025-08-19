@@ -5,7 +5,14 @@
 
 ## Developer Docs
 
+* [Parachain Integration](developer-docs/parachain-integration.md)
 * [Typescript SDK](developer-docs/typescript-sdk.md)
+* [Local Development Guide](developer-docs/quick-start-guide.md)
+
+## Security
+
+* [Bug Bounty](security/bug-bounty.md)
+* [Audits](security/audits.md)
 
 ## Architecture
 
@@ -24,14 +31,8 @@
 
 * [Token Transfers](applications/token-transfers.md)
 
-## Security
-
-* [Exploit Reporting](security/exploit-reporting.md)
-* [Audits](security/audits.md)
-
 ## Other
 
-* [Quick Start Guide](other/quick-start-guide.md)
 * [Processes for keeping track of dependency changes](other/processes-for-keeping-track-of-dependency-changes.md)
 * [Bridges Workshop](other/bridge-workshop.md)
 
