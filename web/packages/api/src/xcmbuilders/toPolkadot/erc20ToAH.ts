@@ -1,9 +1,9 @@
 import { Registry } from "@polkadot/types/types"
-import { erc20Location, ethereumNetwork, accountId32Location } from "../../xcmBuilder"
+import { erc20Location, ethereumNetwork, accountId32Location, DOT_LOCATION } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { beneficiaryMultiAddress } from "../../utils"
 
-export function buildAssetHubXcm(
+export function buildAssetHubERC20ReceivedXcm(
     registry: Registry,
     ethChainId: number,
     tokenAddress: string,

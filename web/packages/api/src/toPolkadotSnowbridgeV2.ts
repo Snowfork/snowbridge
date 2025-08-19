@@ -12,6 +12,11 @@ import { IERC20__factory } from "@snowbridge/contract-types"
 import { ParachainBase } from "./parachains/parachainBase"
 import { OperationStatus } from "./status"
 import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
+import { ApiPromise } from "@polkadot/api"
+import { buildAssetHubERC20ReceivedXcm } from "./xcmbuilders/toPolkadot/erc20ToAH"
+import { accountId32Location } from "./xcmBuilder"
+import { Result } from "@polkadot/types"
+import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 export { ValidationKind } from "./toPolkadot_v2"
 
 export type DeliveryFee = {
@@ -209,5 +214,77 @@ export async function validateAccount(
         ),
         accountMaxConumers:
             beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n,
+    }
+}
+
+export async function dryRunAssetHub(
+    assetHub: ApiPromise,
+    bridgeHubParaId: number,
+    destinationParaId: number,
+    xcm: any
+) {
+    const bridgeHubLocation = {
+        v4: { parents: 1, interior: { x1: [{ parachain: bridgeHubParaId }] } },
+    }
+
+    const result = await assetHub.call.dryRunApi.dryRunXcm<
+        Result<XcmDryRunEffects, XcmDryRunApiError>
+    >(bridgeHubLocation, xcm)
+
+    const resultHuman = result.toHuman() as any
+
+    const success = result.isOk && result.asOk.executionResult.isComplete
+    let forwardedDestination
+    if (!success) {
+        console.error("Error during dry run on asset hub:", xcm.toHuman(), result.toHuman())
+    } else {
+        forwardedDestination = result.asOk.forwardedXcms.find((x) => {
+            return (
+                x[0].isV4 &&
+                x[0].asV4.parents.toNumber() === 1 &&
+                x[0].asV4.interior.isX1 &&
+                x[0].asV4.interior.asX1[0].isParachain &&
+                x[0].asV4.interior.asX1[0].asParachain.toNumber() === destinationParaId
+            )
+        })
+        if (!forwardedDestination) {
+            forwardedDestination = result.asOk.forwardedXcms.find((x) => {
+                return (
+                    x[0].isV5 &&
+                    x[0].asV5.parents.toNumber() === 1 &&
+                    x[0].asV5.interior.isX1 &&
+                    x[0].asV5.interior.asX1[0].isParachain &&
+                    x[0].asV5.interior.asX1[0].asParachain.toNumber() === destinationParaId
+                )
+            })
+        }
+    }
+    return {
+        success,
+        errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
+        forwardedDestination,
+    }
+}
+
+export async function dryRunDestination(destination: ApiPromise, transfer: Transfer, xcm: any) {
+    const { registry } = transfer.input
+    const assetHubOrigin = {
+        v4: { parents: 1, interior: { x1: [{ parachain: registry.assetHubParaId }] } },
+    }
+    const result = await destination.call.dryRunApi.dryRunXcm<
+        Result<XcmDryRunEffects, XcmDryRunApiError>
+    >(assetHubOrigin, xcm)
+
+    const resultHuman = result.toHuman() as any
+
+    const success = result.isOk && result.asOk.executionResult.isComplete
+
+    if (!success) {
+        console.error("Error during dry run on source parachain:", xcm.toHuman(), result.toHuman())
+    }
+
+    return {
+        success,
+        errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
     }
 }

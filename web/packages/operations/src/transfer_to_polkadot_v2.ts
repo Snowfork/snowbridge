@@ -4,11 +4,7 @@ import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
 
-export const transferToPolkadot = async (
-    destParaId: number,
-    symbol: string,
-    amount: bigint,
-) => {
+export const transferToPolkadot = async (destParaId: number, symbol: string, amount: bigint) => {
     await cryptoWaitReady()
 
     let env = "local_e2e"

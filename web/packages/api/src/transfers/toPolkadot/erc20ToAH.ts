@@ -8,13 +8,13 @@ import {
 import { Context } from "../../index"
 import {
     DeliveryFee,
+    dryRunAssetHub,
     encodeNativeAsset,
     hexToBytes,
     validateAccount,
     ValidationKind,
 } from "../../toPolkadotSnowbridgeV2"
 import {
-    buildAssetHubXcm,
     sendMessageXCM,
     buildAssetHubERC20ReceivedXcm,
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
@@ -57,7 +57,7 @@ export class ERC20ToAH implements TransferInterface {
                   }
                 : context
 
-        let assetHubXcm = buildAssetHubXcm(
+        let assetHubXcm = buildAssetHubERC20ReceivedXcm(
             assetHub.registry,
             registry.ethChainId,
             tokenAddress,
@@ -78,6 +78,8 @@ export class ERC20ToAH implements TransferInterface {
             registry.assetHubParaId,
             assetHubXcm
         )
+
+        console.log("CALCULATED DELIVER FEE")
 
         const assetHubImpl = await paraImplementation(assetHub)
         const deliveryFeeInEther = await swapAsset1ForAsset2(
@@ -193,6 +195,7 @@ export class ERC20ToAH implements TransferInterface {
         context: Context | Connections,
         transfer: Transfer
     ): Promise<ValidationResult> {
+        console.log("VALIDATED")
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry } = transfer.input
         const { ethereum, gateway, bridgeHub, assetHub } =
@@ -294,7 +297,25 @@ export class ERC20ToAH implements TransferInterface {
             })
         } else {
             // build asset hub packet and dryRun
-            let result = await dryRunAssetHub(assetHub, transfer)
+
+            const assetHubFee =
+                transfer.input.fee.assetHubDeliveryFeeEther +
+                transfer.input.fee.assetHubExecutionFeeEther
+            const xcm = buildAssetHubERC20ReceivedXcm(
+                assetHub.registry,
+                registry.ethChainId,
+                tokenAddress,
+                assetHubFee,
+                amount,
+                accountId32Location(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000"
+                ),
+                transfer.input.sourceAccount,
+                transfer.computed.beneficiaryAddressHex,
+                "0x0000000000000000000000000000000000000000000000000000000000000000"
+            )
+
+            let result = await dryRunAssetHub(assetHub, registry.bridgeHubParaId, 0, xcm)
             dryRunAhSuccess = result.success
             assetHubDryRunError = result.errorMessage
             if (!dryRunAhSuccess) {
@@ -347,51 +368,5 @@ export class ERC20ToAH implements TransferInterface {
             },
             transfer,
         }
-    }
-}
-
-async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
-    const { registry, amount, tokenAddress, beneficiaryAccount, destinationParaId } = transfer.input
-    const bridgeHubLocation = {
-        v4: { parents: 1, interior: { x1: [{ parachain: registry.bridgeHubParaId }] } },
-    }
-    const assetHubFee =
-        transfer.input.fee.assetHubDeliveryFeeEther + transfer.input.fee.assetHubExecutionFeeEther
-
-    const xcm = buildAssetHubERC20ReceivedXcm(
-        assetHub.registry,
-        registry.ethChainId,
-        tokenAddress,
-        amount,
-        assetHubFee,
-        beneficiaryAccount,
-        "0x0000000000000000000000000000000000000000000000000000000000000000"
-    )
-
-    const result = await assetHub.call.dryRunApi.dryRunXcm<
-        Result<XcmDryRunEffects, XcmDryRunApiError>
-    >(bridgeHubLocation, xcm)
-
-    const resultHuman = result.toHuman() as any
-
-    const success = result.isOk && result.asOk.executionResult.isComplete
-    let forwardedDestination
-    if (!success) {
-        console.error("Error during dry run on asset hub:", xcm.toHuman(), result.toHuman())
-    } else {
-        forwardedDestination = result.asOk.forwardedXcms.find((x) => {
-            return (
-                x[0].isV4 &&
-                x[0].asV4.parents.toNumber() === 1 &&
-                x[0].asV4.interior.isX1 &&
-                x[0].asV4.interior.asX1[0].isParachain &&
-                x[0].asV4.interior.asX1[0].asParachain.toNumber() === destinationParaId
-            )
-        })
-    }
-    return {
-        success,
-        errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
-        forwardedDestination,
     }
 }

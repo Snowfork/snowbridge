@@ -1,6 +1,6 @@
 import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
-import { TransferInterface } from "./transferInterface"
+import { Connections, TransferInterface } from "./transferInterface"
 import {
     IGatewayV2__factory as IGateway__factory,
     IGatewayV2 as IGateway,
@@ -9,21 +9,28 @@ import { Context } from "../../index"
 import {
     buildMessageId,
     DeliveryFee,
+    dryRunAssetHub,
+    dryRunDestination,
     encodeNativeAsset,
+    erc20Balance,
     hexToBytes,
     Transfer,
+    validateAccount,
+    ValidationKind,
+    ValidationResult,
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
 import { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "../../assets_v2"
-import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
-import { resolveInputs } from "../../toPolkadot_v2"
+import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
+import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import {
-    buildAssetHubXcm,
+    buildAssetHubERC20ReceivedXcm,
     buildParachainERC20ReceivedXcmOnDestination,
 } from "../../xcmbuilders/toPolkadot/erc20ToParachain"
 import { Contract } from "ethers"
 import { sendMessageXCM } from "../../xcmbuilders/toPolkadot/erc20ToParachain"
+import { getOperatingStatus } from "../../status"
 
 export class ERC20ToParachain implements TransferInterface {
     async getDeliveryFee(
@@ -52,7 +59,7 @@ export class ERC20ToParachain implements TransferInterface {
         const { destParachain } = resolveInputs(registry, tokenAddress, destinationParaId)
 
         // AssetHub fees
-        let assetHubXcm = buildAssetHubXcm(
+        let assetHubXcm = buildAssetHubERC20ReceivedXcm(
             assetHub.registry,
             registry.ethChainId,
             tokenAddress,
@@ -63,6 +70,8 @@ export class ERC20ToParachain implements TransferInterface {
             ),
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
+            destinationParaId,
+            1000000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
         const bridgeHubImpl = await paraImplementation(bridgeHub)
@@ -156,8 +165,11 @@ export class ERC20ToParachain implements TransferInterface {
         let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
             beneficiaryMultiAddress(beneficiaryAccount)
         let value = fee.totalFeeInWei
+        let assets: any = []
         if (tokenAddress === ETHER_TOKEN_ADDRESS) {
             value += amount
+        } else {
+            assets = [encodeNativeAsset(tokenAddress, amount)]
         }
         const ifce = IGateway__factory.createInterface()
         const con = new Contract(registry.gatewayAddress, ifce)
@@ -182,15 +194,21 @@ export class ERC20ToParachain implements TransferInterface {
                 topic
             ).toHex()
         )
-        let assets = [encodeNativeAsset(tokenAddress, amount)]
         let claimer = hexToBytes("0x") // TODO
 
         const tx = await con
             .getFunction("v2_sendMessage")
-            .populateTransaction(xcm, assets, claimer, fee.assetHubExecutionFeeEther, fee.relayerFee, {
-                value,
-                from: sourceAccount,
-            })
+            .populateTransaction(
+                xcm,
+                assets,
+                claimer,
+                fee.assetHubExecutionFeeEther,
+                fee.relayerFee,
+                {
+                    value,
+                    from: sourceAccount,
+                }
+            )
 
         return {
             input: {
@@ -215,6 +233,282 @@ export class ERC20ToParachain implements TransferInterface {
                 topic,
             },
             tx,
+        }
+    }
+
+    async validateTransfer(
+        context: Context | Connections,
+        transfer: Transfer
+    ): Promise<ValidationResult> {
+        const { tx } = transfer
+        const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
+        const {
+            ethereum,
+            gateway,
+            bridgeHub,
+            assetHub,
+            destParachain: destParachainApi,
+        } = context instanceof Context
+            ? {
+                  ethereum: context.ethereum(),
+                  gateway: context.gateway(),
+                  bridgeHub: await context.bridgeHub(),
+                  assetHub: await context.assetHub(),
+                  destParachain: await context.parachain(destinationParaId),
+              }
+            : context
+
+        const {
+            totalValue,
+            minimalBalance,
+            destParachain,
+            destAssetMetadata,
+            ahAssetMetadata,
+            beneficiaryAddressHex,
+        } = transfer.computed
+
+        const logs: ValidationLog[] = []
+        if (amount < minimalBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.MinimumAmountValidation,
+                message: "The amount transferred is less than the minimum amount.",
+            })
+        }
+        const etherBalance = await ethereum.getBalance(sourceAccount)
+
+        let tokenBalance: { balance: bigint; gatewayAllowance: bigint }
+        if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
+            tokenBalance = await erc20Balance(
+                ethereum,
+                tokenAddress,
+                sourceAccount,
+                registry.gatewayAddress
+            )
+        } else {
+            tokenBalance = {
+                balance: etherBalance,
+                // u128 max
+                gatewayAllowance: 340282366920938463463374607431768211455n,
+            }
+        }
+
+        if (tokenBalance.balance < amount) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: "The amount transferred is greater than the users token balance.",
+            })
+        }
+        let feeInfo: FeeInfo | undefined
+        if (logs.length === 0) {
+            const [estimatedGas, feeData] = await Promise.all([
+                ethereum.estimateGas(tx),
+                ethereum.getFeeData(),
+            ])
+            const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
+            if (executionFee === 0n) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.FeeEstimationError,
+                    message: "Could not get fetch fee details.",
+                })
+            }
+            const totalTxCost = totalValue + executionFee
+            if (etherBalance < totalTxCost) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientEther,
+                    message: "Insufficient ether to submit transaction.",
+                })
+            }
+            feeInfo = {
+                estimatedGas,
+                feeData,
+                executionFee,
+                totalTxCost,
+            }
+        }
+        const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+        if (
+            bridgeStatus.toPolkadot.outbound !== "Normal" ||
+            bridgeStatus.toPolkadot.beacon !== "Normal"
+        ) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.BridgeStatusNotOperational,
+                message: "Bridge operations have been paused by onchain governance.",
+            })
+        }
+
+        // Check if asset can be received on asset hub (dry run)
+        const ahParachain = registry.parachains[registry.assetHubParaId]
+        let dryRunAhSuccess, forwardedDestination, assetHubDryRunError
+        if (!ahParachain.features.hasDryRunApi) {
+            logs.push({
+                kind: ValidationKind.Warning,
+                reason: ValidationReason.DryRunNotSupportedOnDestination,
+                message:
+                    "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
+            })
+        } else {
+            // build asset hub packet and dryRun
+            const assetHubFee =
+                transfer.input.fee.assetHubDeliveryFeeEther +
+                transfer.input.fee.assetHubExecutionFeeEther
+            const xcm = buildAssetHubERC20ReceivedXcm(
+                assetHub.registry,
+                registry.ethChainId,
+                tokenAddress,
+                assetHubFee,
+                amount,
+                accountId32Location(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000"
+                ),
+                transfer.input.sourceAccount,
+                transfer.computed.beneficiaryAddressHex,
+                destinationParaId,
+                transfer.input.fee.destinationExecutionFeeEther,
+                "0x0000000000000000000000000000000000000000000000000000000000000000"
+            )
+            let result = await dryRunAssetHub(
+                assetHub,
+                registry.bridgeHubParaId,
+                destinationParaId,
+                xcm
+            )
+            dryRunAhSuccess = result.success
+            assetHubDryRunError = result.errorMessage
+            forwardedDestination = result.forwardedDestination
+            if (!dryRunAhSuccess) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.DryRunFailed,
+                    message: "Dry run on Asset Hub failed.",
+                })
+            }
+        }
+
+        const assetHubImpl = await paraImplementation(assetHub)
+        let destinationParachainDryRunError: string | undefined
+        // Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
+        if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
+            const sovereignAccountId = paraIdToSovereignAccount("sibl", destinationParaId)
+            const { accountMaxConumers, accountExists } = await validateAccount(
+                assetHubImpl,
+                sovereignAccountId,
+                registry.ethChainId,
+                tokenAddress,
+                ahAssetMetadata
+            )
+
+            if (!accountExists) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.MaxConsumersReached,
+                    message: "Sovereign account does not exist on Asset Hub.",
+                })
+            }
+            if (accountMaxConumers) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.MaxConsumersReached,
+                    message:
+                        "Sovereign account for destination parachain has reached the max consumer limit on Asset Hub.",
+                })
+            }
+        }
+        if (!destParachainApi) {
+            logs.push({
+                kind: ValidationKind.Warning,
+                reason: ValidationReason.NoDestinationParachainConnection,
+                message:
+                    "The destination parachain connection was not supplied. Transaction success cannot be confirmed.",
+            })
+        } else {
+            if (destParachain.features.hasDryRunApi) {
+                if (!forwardedDestination) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.DryRunFailed,
+                        message:
+                            "Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.",
+                    })
+                } else {
+                    const xcm = forwardedDestination[1]
+                    if (xcm.length !== 1) {
+                        logs.push({
+                            kind: ValidationKind.Error,
+                            reason: ValidationReason.DryRunFailed,
+                            message:
+                                "Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.",
+                        })
+                    }
+                    const { success: dryRunDestinationSuccess, errorMessage: destMessage } =
+                        await dryRunDestination(destParachainApi, transfer, xcm[0])
+                    if (!dryRunDestinationSuccess) {
+                        logs.push({
+                            kind: ValidationKind.Error,
+                            reason: ValidationReason.DryRunFailed,
+                            message: "Dry run on destination parachain failed.",
+                        })
+                    }
+                    destinationParachainDryRunError = destMessage
+                }
+            } else {
+                logs.push({
+                    kind: ValidationKind.Warning,
+                    reason: ValidationReason.DryRunNotSupportedOnDestination,
+                    message:
+                        "The destination parachain does not support dry running of XCM. Transaction success cannot be confirmed.",
+                })
+            }
+            if (
+                !destAssetMetadata.isSufficient &&
+                ((destParachain.features.hasDryRunApi && destinationParachainDryRunError) ||
+                    !destParachain.features.hasDryRunApi)
+            ) {
+                const destParachainImpl = await paraImplementation(destParachainApi)
+                // Check if the account is created
+                const { accountMaxConumers, accountExists } = await validateAccount(
+                    destParachainImpl,
+                    beneficiaryAddressHex,
+                    registry.ethChainId,
+                    tokenAddress,
+                    destAssetMetadata
+                )
+                if (accountMaxConumers) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.MaxConsumersReached,
+                        message:
+                            "Beneficiary account has reached the max consumer limit on the destination chain.",
+                    })
+                }
+                if (!accountExists) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.AccountDoesNotExist,
+                        message: "Beneficiary account does not exist on the destination chain.",
+                    })
+                }
+            }
+        }
+
+        const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
+
+        return {
+            logs,
+            success,
+            data: {
+                etherBalance,
+                tokenBalance,
+                feeInfo,
+                bridgeStatus,
+                assetHubDryRunError,
+                destinationParachainDryRunError,
+            },
+            transfer,
         }
     }
 }
