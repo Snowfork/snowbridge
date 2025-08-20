@@ -4,7 +4,7 @@ import {PNAMap} from "../assets_v2";
 import {AssetMap} from "@snowbridge/base-types";
 
 export const NEUROWEB_TEST_CHAIN_ID = 11155111 // Sepolia
-export const NEUROWEB_TEST_TOKEN_ID = "" // TODO
+export const NEUROWEB_TEST_TOKEN_ID = "0xef32abea56beff54f61da319a7311098d6fbcea9" // TODO
 export const NEUROWEB_CHAIN_ID = 1 // Ethereum Mainnet
 export const NEUROWEB_TOKEN_ID = "" // TODO
 
