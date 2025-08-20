@@ -5,16 +5,20 @@ import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { MultiAddressStruct } from "@snowbridge/contract-types/dist/IGateway.sol/IGatewayV1"
-import { AbiCoder, AbstractProvider, ContractTransaction } from "ethers"
+import {
+    AbiCoder,
+    AbstractProvider,
+    ContractTransaction,
+    LogDescription,
+    TransactionReceipt,
+} from "ethers"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
-import { IERC20__factory } from "@snowbridge/contract-types"
+import { IERC20__factory, IGatewayV2__factory } from "@snowbridge/contract-types"
 import { ParachainBase } from "./parachains/parachainBase"
 import { OperationStatus } from "./status"
 import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
 import { ApiPromise } from "@polkadot/api"
-import { buildAssetHubERC20ReceivedXcm } from "./xcmbuilders/toPolkadot/erc20ToAH"
-import { accountId32Location } from "./xcmBuilder"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 export { ValidationKind } from "./toPolkadot_v2"
@@ -68,6 +72,15 @@ export type ValidationResult = {
         destinationParachainDryRunError?: string
     }
     transfer: Transfer
+}
+
+export type MessageReceipt = {
+    nonce: bigint
+    payload: any
+    blockNumber: number
+    blockHash: string
+    txHash: string
+    txIndex: number
 }
 
 export function createTransferImplementation(
@@ -289,5 +302,32 @@ export async function dryRunDestination(destination: ApiPromise, transfer: Trans
     return {
         success,
         errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
+    }
+}
+
+export async function getMessageReceipt(
+    receipt: TransactionReceipt
+): Promise<MessageReceipt | null> {
+    const events: LogDescription[] = []
+    const gatewayInterface = IGatewayV2__factory.createInterface()
+    receipt.logs.forEach((log) => {
+        let event = gatewayInterface.parseLog({
+            topics: [...log.topics],
+            data: log.data,
+        })
+        if (event !== null) {
+            events.push(event)
+        }
+    })
+
+    const messageAccepted = events.find((log) => log.name === "OutboundMessageAccepted")
+    if (!messageAccepted) return null
+    return {
+        nonce: BigInt(messageAccepted.args[0]),
+        payload: messageAccepted.args[1],
+        blockNumber: receipt.blockNumber,
+        blockHash: receipt.blockHash,
+        txHash: receipt.hash,
+        txIndex: receipt.index,
     }
 }

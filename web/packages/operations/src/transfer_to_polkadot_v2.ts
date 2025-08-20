@@ -1,8 +1,9 @@
 import { Keyring } from "@polkadot/keyring"
 import { Context, toPolkadotSnowbridgeV2, contextConfigFor, toPolkadotV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import {formatEther, Wallet} from "ethers"
+import { formatEther, Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
+import { WETH9__factory } from "@snowbridge/contract-types"
 
 export const transferToPolkadot = async (destParaId: number, symbol: string, amount: bigint) => {
     await cryptoWaitReady()
@@ -37,6 +38,20 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
     if (!TOKEN_CONTRACT) {
         console.error("no token contract exists, check it and rebuild asset registry.")
         throw Error(`No token found for ${symbol}`)
+    }
+
+    if (symbol.toLowerCase().startsWith("weth")) {
+        console.log("# Deposit and Approve WETH")
+        {
+            const weth9 = WETH9__factory.connect(TOKEN_CONTRACT, ETHEREUM_ACCOUNT)
+            const depositResult = await weth9.deposit({ value: amount })
+            const depositReceipt = await depositResult.wait()
+
+            const approveResult = await weth9.approve(context.config.appContracts.gateway, amount)
+            const approveReceipt = await approveResult.wait()
+
+            console.log("deposit tx", depositReceipt?.hash, "approve tx", approveReceipt?.hash)
+        }
     }
 
     console.log("Ethereum to Polkadot")
@@ -117,12 +132,12 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             }
 
             // Step 7. Get the message receipt for tracking purposes
-            const message = await toPolkadotV2.getMessageReceipt(receipt)
+            const message = await toPolkadotSnowbridgeV2.getMessageReceipt(receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }
             console.log(
-                `Success message with message id: ${message.messageId}
+                `Success message with nonce: ${message.nonce}
                 block number: ${message.blockNumber}
                 tx hash: ${message.txHash}`
             )
