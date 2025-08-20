@@ -11,6 +11,7 @@ import { AcalaParachain } from "./acala"
 import { FrequencyParachain } from "./frequency"
 import { PenpalParachain } from "./penpal"
 import { JamtonParachain } from "./jamton"
+import {NeurowebParachain} from "./neuroweb";
 
 export async function paraImplementation(provider: ApiPromise): Promise<ParachainBase> {
     let parachainId = 0
@@ -55,6 +56,8 @@ export async function paraImplementation(provider: ApiPromise): Promise<Parachai
             return new GenericChain(provider, parachainId, specName, specVersion)
         case "jamton-runtime":
             return new JamtonParachain(provider, parachainId, specName, specVersion)
+        case "origintrail-parachain":
+            return new NeurowebParachain(provider, parachainId, specName, specVersion)
         default:
             throw Error(
                 `No parachain provider for ParaId = ${parachainId}, Spec = ${specName}, Version = ${specVersion}`
