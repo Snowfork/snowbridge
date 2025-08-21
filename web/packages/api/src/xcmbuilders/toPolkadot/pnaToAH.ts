@@ -2,11 +2,9 @@ import { Registry } from "@polkadot/types/types"
 import {
     erc20Location,
     ethereumNetwork,
-    accountId32Location,
     accountToLocation,
 } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { beneficiaryMultiAddress } from "../../utils"
 
 export function buildAssetHubPNAReceivedXcm(
     registry: Registry,
@@ -108,23 +106,7 @@ export function buildAssetHubPNAReceivedXcm(
 }
 
 export function sendMessageXCM(registry: Registry, beneficiary: string, topic: string) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
-    let beneficiaryLocation
-    switch (kind) {
-        case 1:
-            // 32 byte addresses
-            beneficiaryLocation = { accountId32: { id: hexAddress } }
-            break
-        case 2:
-            // 20 byte addresses
-            beneficiaryLocation = { accountKey20: { key: hexAddress } }
-            break
-        default:
-            throw Error(`Could not parse beneficiary address ${beneficiary}`)
-    }
+    let beneficiaryLocation = accountToLocation(beneficiary)
     return registry.createType("XcmVersionedXcm", {
         v5: [
             {
@@ -137,7 +119,10 @@ export function sendMessageXCM(registry: Registry, beneficiary: string, topic: s
                             allCounted: 2,
                         },
                     },
-                    beneficiary: beneficiaryLocation,
+                    beneficiary: {
+                        parents: 0,
+                        interior: { x1: [beneficiaryLocation] },
+                    },
                 },
             },
             {

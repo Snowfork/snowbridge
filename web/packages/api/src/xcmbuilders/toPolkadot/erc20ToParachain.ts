@@ -5,7 +5,6 @@ import {
     ethereumNetwork,
     parachainLocation,
 } from "../../xcmBuilder"
-import { beneficiaryMultiAddress } from "../../utils"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 
 export function buildAssetHubERC20ReceivedXcm(
@@ -178,23 +177,7 @@ export function buildParachainERC20ReceivedXcmOnDestination(
     beneficiary: string,
     topic: string
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
-    let beneficiaryLocation
-    switch (kind) {
-        case 1:
-            // 32 byte addresses
-            beneficiaryLocation = { accountId32: { id: hexAddress } }
-            break
-        case 2:
-            // 20 byte addresses
-            beneficiaryLocation = { accountKey20: { key: hexAddress } }
-            break
-        default:
-            throw Error(`Could not parse beneficiary address ${beneficiary}`)
-    }
+    let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let reserveAssetDeposited = []
     if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
@@ -257,23 +240,7 @@ export function sendMessageXCM(
     remoteEtherFeeAmount: bigint,
     topic: string
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
-    let beneficiaryLocation
-    switch (kind) {
-        case 1:
-            // 32 byte addresses
-            beneficiaryLocation = { accountId32: { id: hexAddress } }
-            break
-        case 2:
-            // 20 byte addresses
-            beneficiaryLocation = { accountKey20: { key: hexAddress } }
-            break
-        default:
-            throw Error(`Could not parse beneficiary address ${beneficiary}`)
-    }
+    let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     return registry.createType("XcmVersionedXcm", {
         v5: [
@@ -340,7 +307,10 @@ export function sendMessageXCM(
                             allOf: { id: ether, fun: "Fungible" },
                         },
                     },
-                    beneficiary: beneficiaryLocation,
+                    beneficiary: {
+                        parents: 0,
+                        interior: { x1: [beneficiaryLocation] },
+                    },
                 },
             },
             {

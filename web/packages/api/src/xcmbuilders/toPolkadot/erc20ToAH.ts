@@ -1,7 +1,10 @@
 import { Registry } from "@polkadot/types/types"
-import { erc20Location, ethereumNetwork, accountId32Location, DOT_LOCATION } from "../../xcmBuilder"
+import {
+    erc20Location,
+    ethereumNetwork,
+    accountToLocation,
+} from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { beneficiaryMultiAddress } from "../../utils"
 
 export function buildAssetHubERC20ReceivedXcm(
     registry: Registry,
@@ -16,6 +19,7 @@ export function buildAssetHubERC20ReceivedXcm(
     topic: string
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
+    let beneficiaryLocation = accountToLocation(beneficiary)
     let reserveAssetDeposited = []
     if (tokenAddress === ETHER_TOKEN_ADDRESS) {
         reserveAssetDeposited.push({
@@ -95,7 +99,10 @@ export function buildAssetHubERC20ReceivedXcm(
                             allCounted: 2,
                         },
                     },
-                    beneficiary: accountId32Location(beneficiary),
+                    beneficiary: {
+                        parents: 0,
+                        interior: { x1: [beneficiaryLocation] },
+                    },
                 },
             },
             {
@@ -106,23 +113,7 @@ export function buildAssetHubERC20ReceivedXcm(
 }
 
 export function sendMessageXCM(registry: Registry, beneficiary: string, topic: string) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
-    let beneficiaryLocation
-    switch (kind) {
-        case 1:
-            // 32 byte addresses
-            beneficiaryLocation = { accountId32: { id: hexAddress } }
-            break
-        case 2:
-            // 20 byte addresses
-            beneficiaryLocation = { accountKey20: { key: hexAddress } }
-            break
-        default:
-            throw Error(`Could not parse beneficiary address ${beneficiary}`)
-    }
+    let beneficiaryLocation = accountToLocation(beneficiary)
     return registry.createType("XcmVersionedXcm", {
         v5: [
             {
@@ -135,7 +126,10 @@ export function sendMessageXCM(registry: Registry, beneficiary: string, topic: s
                             allCounted: 2,
                         },
                     },
-                    beneficiary: beneficiaryLocation,
+                    beneficiary: {
+                        parents: 0,
+                        interior: { x1: [beneficiaryLocation] },
+                    },
                 },
             },
             {
