@@ -75,8 +75,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
         const transfer = await transferImpl.createTransfer(
             {
                 assetHub: await context.assetHub(),
-                destination:
-                    destParaId !== 1000 ? await context.parachain(destParaId) : undefined,
+                destination: destParaId !== 1000 ? await context.parachain(destParaId) : undefined,
             },
             registry,
             destParaId,
@@ -94,8 +93,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
                 gateway: context.gatewayV2(),
                 bridgeHub: await context.bridgeHub(),
                 assetHub: await context.assetHub(),
-                destination:
-                    destParaId !== 1000 ? await context.parachain(destParaId) : undefined,
+                destination: destParaId !== 1000 ? await context.parachain(destParaId) : undefined,
             },
             transfer
         )

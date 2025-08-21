@@ -7,7 +7,8 @@ import {
 } from "@snowbridge/contract-types"
 import { Context } from "../../index"
 import {
-    buildMessageId, claimerFromBeneficiary,
+    buildMessageId,
+    claimerFromBeneficiary,
     DeliveryFee,
     dryRunAssetHub,
     dryRunDestination,
@@ -153,9 +154,9 @@ export class PNAToParachain implements TransferInterface {
         context:
             | Context
             | {
-            assetHub: ApiPromise
-            destination: ApiPromise
-        },
+                  assetHub: ApiPromise
+                  destination: ApiPromise
+              },
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
@@ -167,9 +168,9 @@ export class PNAToParachain implements TransferInterface {
         const { assetHub, destination } =
             context instanceof Context
                 ? {
-                    assetHub: await context.assetHub(),
-                    destination: await context.parachain(destinationParaId),
-                }
+                      assetHub: await context.assetHub(),
+                      destination: await context.parachain(destinationParaId),
+                  }
                 : context
         if (!destination) {
             throw Error(`Unable to connect to destination parachain with ID ${destinationParaId}.`)
@@ -273,7 +274,7 @@ export class PNAToParachain implements TransferInterface {
                   gateway: context.gateway(),
                   bridgeHub: await context.bridgeHub(),
                   assetHub: await context.assetHub(),
-                destination: await context.parachain(destinationParaId),
+                  destination: await context.parachain(destinationParaId),
               }
             : context
 

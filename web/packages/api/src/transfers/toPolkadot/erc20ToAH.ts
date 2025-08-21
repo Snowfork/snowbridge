@@ -111,9 +111,9 @@ export class ERC20ToAH implements TransferInterface {
         context:
             | Context
             | {
-            assetHub: ApiPromise
-            destination: ApiPromise
-        },
+                  assetHub: ApiPromise
+                  destination: ApiPromise
+              },
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
@@ -125,8 +125,8 @@ export class ERC20ToAH implements TransferInterface {
         const { assetHub } =
             context instanceof Context
                 ? {
-                    assetHub: await context.assetHub(),
-                }
+                      assetHub: await context.assetHub(),
+                  }
                 : context
 
         const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =

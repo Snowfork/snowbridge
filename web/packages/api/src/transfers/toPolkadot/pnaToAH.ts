@@ -7,7 +7,8 @@ import {
 } from "@snowbridge/contract-types"
 import { Context } from "../../index"
 import {
-    buildMessageId, claimerFromBeneficiary,
+    buildMessageId,
+    claimerFromBeneficiary,
     DeliveryFee,
     dryRunAssetHub,
     encodeForeignAsset,
@@ -110,9 +111,9 @@ export class PNAToAH implements TransferInterface {
         context:
             | Context
             | {
-            assetHub: ApiPromise
-            destination: ApiPromise
-        },
+                  assetHub: ApiPromise
+                  destination: ApiPromise
+              },
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
@@ -124,8 +125,8 @@ export class PNAToAH implements TransferInterface {
         const { assetHub } =
             context instanceof Context
                 ? {
-                    assetHub: await context.assetHub(),
-                }
+                      assetHub: await context.assetHub(),
+                  }
                 : context
 
         const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =

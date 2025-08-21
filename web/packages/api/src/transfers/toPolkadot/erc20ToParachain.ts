@@ -7,7 +7,8 @@ import {
 } from "@snowbridge/contract-types"
 import { Context } from "../../index"
 import {
-    buildMessageId, claimerFromBeneficiary,
+    buildMessageId,
+    claimerFromBeneficiary,
     DeliveryFee,
     dryRunAssetHub,
     dryRunDestination,
@@ -19,7 +20,12 @@ import {
     ValidationKind,
     ValidationResult,
 } from "../../toPolkadotSnowbridgeV2"
-import {accountId32Location, accountToLocation, DOT_LOCATION, erc20Location} from "../../xcmBuilder"
+import {
+    accountId32Location,
+    accountToLocation,
+    DOT_LOCATION,
+    erc20Location,
+} from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
 import { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
@@ -150,9 +156,9 @@ export class ERC20ToParachain implements TransferInterface {
         context:
             | Context
             | {
-            assetHub: ApiPromise
-            destination: ApiPromise
-        },
+                  assetHub: ApiPromise
+                  destination: ApiPromise
+              },
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
@@ -164,9 +170,9 @@ export class ERC20ToParachain implements TransferInterface {
         const { assetHub, destination } =
             context instanceof Context
                 ? {
-                    assetHub: await context.assetHub(),
-                    destination: await context.parachain(destinationParaId),
-                }
+                      assetHub: await context.assetHub(),
+                      destination: await context.parachain(destinationParaId),
+                  }
                 : context
 
         if (!destination) {
