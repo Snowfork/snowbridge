@@ -233,7 +233,7 @@ pub async fn ensure_penpal_asset_exists(
 	penpal_client: &mut OnlineClient<PenpalConfig>,
 	asset: PenpalLocation,
 ) {
-	let existing_asset = penpal::api::storage().foreign_assets().asset(&asset);
+	let existing_asset = penpal::api::storage().foreign_assets().asset(asset.clone());
 	let result = penpal_client
 		.storage()
 		.at_latest()
@@ -244,11 +244,11 @@ pub async fn ensure_penpal_asset_exists(
 		.unwrap();
 
 	if result.is_some() {
-		println!("asset {:?} exists on penpal.", asset);
+		println!("asset exists on penpal.");
 		return
 	}
 
-	println!("creating asset {:?} on penpal.", asset);
+	println!("creating asset on penpal.");
 	let admin = MultiAddress::Id(ASSET_HUB_SOVEREIGN.into());
 	let signer: PairSigner = PairSigner::new((*ALICE).clone());
 
