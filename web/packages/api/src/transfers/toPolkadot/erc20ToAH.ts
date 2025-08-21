@@ -46,6 +46,7 @@ export class ERC20ToAH implements TransferInterface {
         registry: AssetRegistry,
         tokenAddress: string,
         _destinationParaId: number,
+        relayerFee: bigint,
         paddFeeByPercentage?: bigint
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub } =
@@ -95,7 +96,7 @@ export class ERC20ToAH implements TransferInterface {
             paddFeeByPercentage ?? 33n
         )
 
-        const relayerFee = 1_000_000_000_000_000n // TODO configure
+        registry.environment
         const totalFeeInWei = deliveryFeeInEther + assetHubExecutionFeeEther + relayerFee
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,

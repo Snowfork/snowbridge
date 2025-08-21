@@ -21,6 +21,7 @@ export interface TransferInterface {
         registry: AssetRegistry,
         tokenAddress: string,
         destinationParaId: number,
+        relayerFee: bigint,
         paddFeeByPercentage?: bigint
     ): Promise<DeliveryFee>
 

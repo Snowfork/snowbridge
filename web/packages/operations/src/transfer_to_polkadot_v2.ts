@@ -40,6 +40,8 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
         throw Error(`No token found for ${symbol}`)
     }
 
+    const relayerFee = 100_000_000_000_000n // 0.000100000000000000 ETH (~ $.5)
+
     if (symbol.toLowerCase().startsWith("weth")) {
         console.log("# Deposit and Approve WETH")
         {
@@ -67,7 +69,8 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             context,
             registry,
             TOKEN_CONTRACT,
-            registry.assetHubParaId
+            destParaId,
+            relayerFee
         )
 
         console.log("fee: ", fee)
@@ -75,7 +78,10 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
         const transfer = await transferImpl.createTransfer(
             {
                 assetHub: await context.assetHub(),
-                destination: destParaId !== 1000 ? await context.parachain(destParaId) : undefined,
+                destination:
+                    destParaId !== registry.assetHubParaId
+                        ? await context.parachain(destParaId)
+                        : undefined,
             },
             registry,
             destParaId,
@@ -93,7 +99,10 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
                 gateway: context.gatewayV2(),
                 bridgeHub: await context.bridgeHub(),
                 assetHub: await context.assetHub(),
-                destination: destParaId !== 1000 ? await context.parachain(destParaId) : undefined,
+                destination:
+                    destParaId !== registry.assetHubParaId
+                        ? await context.parachain(destParaId)
+                        : undefined,
             },
             transfer
         )
