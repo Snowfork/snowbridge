@@ -438,6 +438,7 @@ export type ValidationResult = {
         tokenBalance: bigint
         sourceDryRunError: any
         assetHubDryRunError: any
+        bridgeHubDryRunError?: any
     }
     transfer: Transfer
 }

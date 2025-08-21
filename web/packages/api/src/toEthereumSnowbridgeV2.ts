@@ -4,7 +4,15 @@ import { Codec, ISubmittableResult } from "@polkadot/types/types"
 import { AssetRegistry } from "@snowbridge/base-types"
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import { DeliveryFee, resolveInputs } from "./toEthereum_v2"
+import {
+    DeliveryFee,
+    resolveInputs,
+    Transfer,
+    ValidationKind,
+    ValidationLog,
+    ValidationReason,
+    ValidationResult,
+} from "./toEthereum_v2"
 import { PNAFromAH } from "./transfers/toEthereum/pnaFromAH"
 import { TransferInterface } from "./transfers/toEthereum/transferInterface"
 import { ERC20FromAH } from "./transfers/toEthereum/erc20FromAH"
@@ -22,7 +30,8 @@ import { BN } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
 import { Context } from "./index"
-import { getAssetHubConversionPalletSwap } from "./assets_v2"
+import { ETHER_TOKEN_ADDRESS, getAssetHubConversionPalletSwap } from "./assets_v2"
+import { getOperatingStatus } from "./status"
 
 export { ValidationKind, signAndSend } from "./toEthereum_v2"
 
@@ -173,6 +182,27 @@ export async function dryRunAssetHub(
         success: success && bridgeHubForwarded,
         sourceParachainForwarded,
         bridgeHubForwarded,
+        errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
+    }
+}
+
+export async function dryRunBridgeHub(bridgeHub: ApiPromise, assetHubParaId: number, xcm: any) {
+    const sourceParachain = {
+        v5: { parents: 1, interior: { x1: [{ parachain: assetHubParaId }] } },
+    }
+    const result = await bridgeHub.call.dryRunApi.dryRunXcm<
+        Result<XcmDryRunEffects, XcmDryRunApiError>
+    >(sourceParachain, xcm)
+
+    const resultHuman = result.toHuman() as any
+
+    const success = result.isOk && result.asOk.executionResult.isComplete
+
+    if (!success) {
+        console.error("Error during dry run on bridge hub:", xcm.toHuman(), result.toHuman())
+    }
+    return {
+        success,
         errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
     }
 }
@@ -485,5 +515,334 @@ export const estimateFeesFromParachains = async (
         localExecutionFeeInNative,
         localDeliveryFeeInNative,
         totalFeeInNative,
+    }
+}
+
+export const validateTransferFromAssetHub = async (
+    context: Context,
+    transfer: Transfer
+): Promise<ValidationResult> => {
+    const { registry, fee, tokenAddress, amount } = transfer.input
+    const { sourceAccountHex, sourceParaId, sourceAssetMetadata } = transfer.computed
+    const { tx } = transfer
+
+    const { sourceParachain, gateway, bridgeHub } =
+        context instanceof Context
+            ? {
+                  sourceParachain: await context.parachain(sourceParaId),
+                  gateway: context.gateway(),
+                  bridgeHub: await context.bridgeHub(),
+              }
+            : context
+
+    const logs: ValidationLog[] = []
+    const sourceParachainImpl = await paraImplementation(sourceParachain)
+    const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+    let dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
+    let tokenBalance: any
+    let isNativeBalance = false
+    // For DOT on AH, get it from the native balance pallet.
+    if (
+        transfer.computed.sourceAssetMetadata.location &&
+        isRelaychainLocation(transfer.computed.sourceAssetMetadata.location)
+    ) {
+        tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+        isNativeBalance = true
+    } else {
+        tokenBalance = await sourceParachainImpl.getTokenBalance(
+            sourceAccountHex,
+            registry.ethChainId,
+            tokenAddress,
+            sourceAssetMetadata
+        )
+    }
+    if (isNativeBalance && fee.totalFeeInNative) {
+        if (amount + fee.totalFeeInNative > tokenBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: "Insufficient token balance to submit transaction.",
+            })
+        }
+    } else {
+        if (amount > tokenBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: "Insufficient token balance to submit transaction.",
+            })
+        }
+    }
+
+    // No fee specified means that the fee.ethereumExecutionFee is paid in Ether on source chain.
+    if (!fee.feeLocation) {
+        let etherBalance = await sourceParachainImpl.getTokenBalance(
+            sourceAccountHex,
+            registry.ethChainId,
+            ETHER_TOKEN_ADDRESS
+        )
+
+        if (fee.ethereumExecutionFee! > etherBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientEtherBalance,
+                message: "Insufficient ether balance to submit transaction.",
+            })
+        }
+    }
+
+    let sourceDryRunError
+    let assetHubDryRunError
+    let bridgeHubDryRunError
+    // do the dry run, get the forwarded xcm and dry run that
+    const dryRunResultAssetHub = await dryRunOnSourceParachain(
+        sourceParachain,
+        registry.assetHubParaId,
+        registry.bridgeHubParaId,
+        transfer.tx,
+        sourceAccountHex
+    )
+    if (dryRunResultAssetHub.success && dryRunResultAssetHub.bridgeHubForwarded) {
+        const dryRunResultBridgeHub = await dryRunBridgeHub(
+            bridgeHub,
+            registry.assetHubParaId,
+            dryRunResultAssetHub.bridgeHubForwarded[1][0]
+        )
+        if (!dryRunResultBridgeHub.success) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.DryRunFailed,
+                message: "Dry run failed on Bridge Hub.",
+            })
+            bridgeHubDryRunError = dryRunResultBridgeHub.errorMessage
+        }
+    } else {
+        logs.push({
+            kind: ValidationKind.Error,
+            reason: ValidationReason.DryRunFailed,
+            message: "Dry run call failed on Asset Hub.",
+        })
+        assetHubDryRunError = dryRunResultAssetHub.error
+    }
+
+    const paymentInfo = await tx.paymentInfo(sourceAccountHex)
+    const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
+
+    // recheck total after fee estimation
+    if (isNativeBalance && fee.totalFeeInNative) {
+        if (amount + fee.totalFeeInNative + sourceExecutionFee > tokenBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: "Insufficient token balance to submit transaction.",
+            })
+        }
+    }
+    if (sourceExecutionFee + fee.totalFeeInDot > dotBalance) {
+        logs.push({
+            kind: ValidationKind.Error,
+            reason: ValidationReason.InsufficientDotFee,
+            message: "Insufficient DOT balance to submit transaction on the source parachain.",
+        })
+    }
+    const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+    if (bridgeStatus.toEthereum.outbound !== "Normal") {
+        logs.push({
+            kind: ValidationKind.Error,
+            reason: ValidationReason.BridgeStatusNotOperational,
+            message: "Bridge operations have been paused by onchain governance.",
+        })
+    }
+
+    const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
+
+    return {
+        logs,
+        success,
+        data: {
+            bridgeStatus,
+            nativeBalance,
+            dotBalance,
+            sourceExecutionFee,
+            tokenBalance,
+            sourceDryRunError,
+            assetHubDryRunError,
+            bridgeHubDryRunError,
+        },
+        transfer,
+    }
+}
+
+export const validateTransferFromParachain = async (
+    context: Context,
+    transfer: Transfer
+): Promise<ValidationResult> => {
+    const { registry, fee, tokenAddress, amount } = transfer.input
+    const {
+        sourceAccountHex,
+        sourceParaId,
+        sourceParachain: source,
+        sourceAssetMetadata,
+    } = transfer.computed
+    const { tx } = transfer
+
+    const { sourceParachain, gateway, bridgeHub, assetHub } =
+        context instanceof Context
+            ? {
+                  sourceParachain: await context.parachain(sourceParaId),
+                  gateway: context.gateway(),
+                  bridgeHub: await context.bridgeHub(),
+                  assetHub: await context.assetHub(),
+              }
+            : context
+
+    const logs: ValidationLog[] = []
+    const sourceParachainImpl = await paraImplementation(sourceParachain)
+    const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+    let dotBalance: bigint | undefined = undefined
+    if (source.features.hasDotBalance) {
+        dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
+    }
+    let tokenBalance: any
+    let isNativeBalance = false
+
+    isNativeBalance =
+        sourceAssetMetadata.decimals === source.info.tokenDecimals &&
+        sourceAssetMetadata.symbol == source.info.tokenSymbols
+    if (isNativeBalance) {
+        tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+    } else {
+        tokenBalance = await sourceParachainImpl.getTokenBalance(
+            sourceAccountHex,
+            registry.ethChainId,
+            tokenAddress,
+            sourceAssetMetadata
+        )
+    }
+
+    if (isNativeBalance && fee.totalFeeInNative) {
+        if (amount + fee.totalFeeInNative > tokenBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: "Insufficient token balance to submit transaction.",
+            })
+        }
+    } else {
+        if (amount > tokenBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: "Insufficient token balance to submit transaction.",
+            })
+        }
+    }
+
+    if (!fee.feeLocation) {
+        let etherBalance = await sourceParachainImpl.getTokenBalance(
+            sourceAccountHex,
+            registry.ethChainId,
+            ETHER_TOKEN_ADDRESS
+        )
+
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        if (fee.ethereumExecutionFee! > etherBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientEtherBalance,
+                message: "Insufficient ether balance to submit transaction.",
+            })
+        }
+    }
+
+    let sourceDryRunError
+    let assetHubDryRunError
+    let bridgeHubDryRunError
+    if (source.features.hasDryRunApi) {
+        // do the dry run, get the forwarded xcm and dry run that
+        const dryRunSource = await dryRunOnSourceParachain(
+            sourceParachain,
+            registry.assetHubParaId,
+            registry.bridgeHubParaId,
+            transfer.tx,
+            sourceAccountHex
+        )
+        if (!dryRunSource.success) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.DryRunFailed,
+                message: "Dry run call on source failed.",
+            })
+            sourceDryRunError = dryRunSource.error
+        }
+
+        if (dryRunSource.success) {
+            if (!dryRunSource.assetHubForwarded) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.DryRunFailed,
+                    message: "Dry run call did not provide a forwared xcm.",
+                })
+            } else {
+                const dryRunResultAssetHub = await dryRunAssetHub(
+                    assetHub,
+                    sourceParaId,
+                    registry.bridgeHubParaId,
+                    dryRunSource.assetHubForwarded[1][0]
+                )
+                if (dryRunResultAssetHub.success && dryRunResultAssetHub.bridgeHubForwarded) {
+                    const dryRunResultBridgeHub = await dryRunBridgeHub(
+                        bridgeHub,
+                        registry.assetHubParaId,
+                        dryRunResultAssetHub.bridgeHubForwarded[1][0]
+                    )
+                    if (!dryRunResultBridgeHub.success) {
+                        logs.push({
+                            kind: ValidationKind.Error,
+                            reason: ValidationReason.DryRunFailed,
+                            message: "Dry run failed on Bridge Hub.",
+                        })
+                        bridgeHubDryRunError = dryRunResultBridgeHub.errorMessage
+                    }
+                } else {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.DryRunFailed,
+                        message: "Dry run failed on Asset Hub.",
+                    })
+                    assetHubDryRunError = dryRunResultAssetHub.errorMessage
+                }
+            }
+        }
+    }
+
+    const paymentInfo = await tx.paymentInfo(sourceAccountHex)
+    const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
+
+    const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+    if (bridgeStatus.toEthereum.outbound !== "Normal") {
+        logs.push({
+            kind: ValidationKind.Error,
+            reason: ValidationReason.BridgeStatusNotOperational,
+            message: "Bridge operations have been paused by onchain governance.",
+        })
+    }
+
+    const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
+
+    return {
+        logs,
+        success,
+        data: {
+            bridgeStatus,
+            nativeBalance,
+            dotBalance,
+            sourceExecutionFee,
+            tokenBalance,
+            sourceDryRunError,
+            assetHubDryRunError,
+            bridgeHubDryRunError,
+        },
+        transfer,
     }
 }
