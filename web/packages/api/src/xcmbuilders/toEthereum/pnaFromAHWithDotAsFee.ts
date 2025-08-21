@@ -22,7 +22,7 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let tokenLocation = asset.location
     let assets = []
     if (isRelaychainLocation(tokenLocation)) {
         assets.push({

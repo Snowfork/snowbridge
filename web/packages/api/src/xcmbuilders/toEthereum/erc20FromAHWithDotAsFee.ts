@@ -16,7 +16,7 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let tokenLocation = erc20Location(ethChainId, asset.token)
     let assets = []
 
     assets.push({
@@ -25,21 +25,12 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
             Fungible: totalDOTFeeAmount,
         },
     })
-    if (JSON.stringify(tokenLocation) == JSON.stringify(bridgeLocation(ethChainId))) {
-        assets.push({
-            id: bridgeLocation(ethChainId),
-            fun: {
-                Fungible: tokenAmount + remoteEtherFeeAmount,
-            },
-        })
-    } else {
-        assets.push({
-            id: tokenLocation,
-            fun: {
-                Fungible: tokenAmount,
-            },
-        })
-    }
+    assets.push({
+        id: tokenLocation,
+        fun: {
+            Fungible: tokenAmount,
+        },
+    })
     let instructions: any[] = [
         {
             withdrawAsset: assets,
