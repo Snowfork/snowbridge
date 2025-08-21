@@ -12,7 +12,7 @@ export interface Connections {
     gateway: IGateway
     bridgeHub: ApiPromise
     assetHub: ApiPromise
-    destParachain?: ApiPromise
+    destination?: ApiPromise
 }
 
 export interface TransferInterface {
@@ -25,7 +25,7 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        destination: ApiPromise,
+        context: Context | { assetHub: ApiPromise; destination: ApiPromise | undefined },
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,

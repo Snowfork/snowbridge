@@ -21,6 +21,7 @@ import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
 import { ApiPromise } from "@polkadot/api"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
+import {accountToLocation} from "./xcmBuilder";
 export { ValidationKind } from "./toPolkadot_v2"
 
 export type DeliveryFee = {
@@ -330,4 +331,12 @@ export async function getMessageReceipt(
         txHash: receipt.hash,
         txIndex: receipt.index,
     }
+}
+
+export function claimerFromBeneficiary(assetHub: ApiPromise,beneficiaryAddressHex : string) {
+    return hexToBytes(
+        assetHub.registry
+            .createType("StagingXcmV5Location", accountToLocation(beneficiaryAddressHex))
+            .toHex()
+    )
 }

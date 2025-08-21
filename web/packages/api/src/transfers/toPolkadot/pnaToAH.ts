@@ -7,7 +7,7 @@ import {
 } from "@snowbridge/contract-types"
 import { Context } from "../../index"
 import {
-    buildMessageId,
+    buildMessageId, claimerFromBeneficiary,
     DeliveryFee,
     dryRunAssetHub,
     encodeForeignAsset,
@@ -107,7 +107,12 @@ export class PNAToAH implements TransferInterface {
     }
 
     async createTransfer(
-        assetHub: ApiPromise,
+        context:
+            | Context
+            | {
+            assetHub: ApiPromise
+            destination: ApiPromise
+        },
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
@@ -116,6 +121,13 @@ export class PNAToAH implements TransferInterface {
         amount: bigint,
         fee: DeliveryFee
     ): Promise<Transfer> {
+        const { assetHub } =
+            context instanceof Context
+                ? {
+                    assetHub: await context.assetHub(),
+                }
+                : context
+
         const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
             resolveInputs(registry, tokenAddress, destinationParaId)
         const minimalBalance =
@@ -146,7 +158,7 @@ export class PNAToAH implements TransferInterface {
             sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic).toHex()
         )
         let assets = [encodeForeignAsset(ahAssetMetadata.foreignId, amount)]
-        let claimer = hexToBytes("0x") // TODO
+        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
         const tx = await con
             .getFunction("v2_sendMessage")

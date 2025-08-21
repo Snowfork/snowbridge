@@ -7,7 +7,7 @@ import {
 } from "@snowbridge/contract-types"
 import { Context } from "../../index"
 import {
-    buildMessageId,
+    buildMessageId, claimerFromBeneficiary,
     DeliveryFee,
     dryRunAssetHub,
     dryRunDestination,
@@ -150,7 +150,12 @@ export class PNAToParachain implements TransferInterface {
     }
 
     async createTransfer(
-        destination: ApiPromise,
+        context:
+            | Context
+            | {
+            assetHub: ApiPromise
+            destination: ApiPromise
+        },
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
@@ -159,6 +164,16 @@ export class PNAToParachain implements TransferInterface {
         amount: bigint,
         fee: DeliveryFee
     ): Promise<Transfer> {
+        const { assetHub, destination } =
+            context instanceof Context
+                ? {
+                    assetHub: await context.assetHub(),
+                    destination: await context.parachain(destinationParaId),
+                }
+                : context
+        if (!destination) {
+            throw Error(`Unable to connect to destination parachain with ID ${destinationParaId}.`)
+        }
         const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
             resolveInputs(registry, tokenAddress, destinationParaId)
         const minimalBalance =
@@ -198,7 +213,7 @@ export class PNAToParachain implements TransferInterface {
             ).toHex()
         )
         let assets = [encodeForeignAsset(ahAssetMetadata.foreignId, amount)]
-        let claimer = hexToBytes("0x") // TODO
+        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
         const tx = await con
             .getFunction("v2_sendMessage")
@@ -251,14 +266,14 @@ export class PNAToParachain implements TransferInterface {
             gateway,
             bridgeHub,
             assetHub,
-            destParachain: destParachainApi,
+            destination: destParachainApi,
         } = context instanceof Context
             ? {
                   ethereum: context.ethereum(),
                   gateway: context.gateway(),
                   bridgeHub: await context.bridgeHub(),
                   assetHub: await context.assetHub(),
-                  destParachain: await context.parachain(destinationParaId),
+                destination: await context.parachain(destinationParaId),
               }
             : context
 

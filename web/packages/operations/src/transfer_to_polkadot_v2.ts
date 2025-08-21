@@ -73,7 +73,11 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
         console.log("fee: ", fee)
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            await context.assetHub(),
+            {
+                assetHub: await context.assetHub(),
+                destination:
+                    destParaId !== 1000 ? await context.parachain(destParaId) : undefined,
+            },
             registry,
             destParaId,
             ETHEREUM_ACCOUNT_PUBLIC,
@@ -90,7 +94,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
                 gateway: context.gatewayV2(),
                 bridgeHub: await context.bridgeHub(),
                 assetHub: await context.assetHub(),
-                destParachain:
+                destination:
                     destParaId !== 1000 ? await context.parachain(destParaId) : undefined,
             },
             transfer

@@ -7,6 +7,7 @@ import {
 } from "@snowbridge/contract-types"
 import { Context } from "../../index"
 import {
+    claimerFromBeneficiary,
     DeliveryFee,
     dryRunAssetHub,
     encodeNativeAsset,
@@ -31,8 +32,6 @@ import {
     ValidationResult,
 } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
-import { Result } from "@polkadot/types"
-import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 
 export class ERC20ToAH implements TransferInterface {
     async getDeliveryFee(
@@ -109,7 +108,12 @@ export class ERC20ToAH implements TransferInterface {
     }
 
     async createTransfer(
-        assetHub: ApiPromise,
+        context:
+            | Context
+            | {
+            assetHub: ApiPromise
+            destination: ApiPromise
+        },
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
@@ -118,6 +122,13 @@ export class ERC20ToAH implements TransferInterface {
         amount: bigint,
         fee: DeliveryFee
     ): Promise<Transfer> {
+        const { assetHub } =
+            context instanceof Context
+                ? {
+                    assetHub: await context.assetHub(),
+                }
+                : context
+
         const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
             resolveInputs(registry, tokenAddress, destinationParaId)
         const minimalBalance =
@@ -148,8 +159,7 @@ export class ERC20ToAH implements TransferInterface {
         const xcm = hexToBytes(
             sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic).toHex()
         )
-
-        let claimer = hexToBytes("0x") // TODO
+        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
         const tx = await con
             .getFunction("v2_sendMessage")
