@@ -244,11 +244,11 @@ pub async fn ensure_penpal_asset_exists(
 		.unwrap();
 
 	if result.is_some() {
-		println!("asset exists on penpal.");
+		println!("asset {:?} exists on penpal.", asset);
 		return
 	}
 
-	println!("creating asset on penpal.");
+	println!("creating asset {:?} on penpal.", asset);
 	let admin = MultiAddress::Id(ASSET_HUB_SOVEREIGN.into());
 	let signer: PairSigner = PairSigner::new((*ALICE).clone());
 
