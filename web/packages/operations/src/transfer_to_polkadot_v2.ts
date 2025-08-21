@@ -42,6 +42,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
 
     const relayerFee = 100_000_000_000_000n // 0.000100000000000000 ETH (~ $.5)
 
+    console.log("TOKEN_CONTRACT", TOKEN_CONTRACT)
     if (symbol.toLowerCase().startsWith("weth")) {
         console.log("# Deposit and Approve WETH")
         {

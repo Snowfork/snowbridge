@@ -11,7 +11,7 @@ import {
     claimerFromBeneficiary,
     DeliveryFee,
     dryRunAssetHub,
-    encodeForeignAsset,
+    encodeNativeAsset,
     erc20Balance,
     hexToBytes,
     Transfer,
@@ -158,7 +158,7 @@ export class PNAToAH implements TransferInterface {
         const xcm = hexToBytes(
             sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic).toHex()
         )
-        let assets = [encodeForeignAsset(ahAssetMetadata.foreignId, amount)]
+        let assets = [encodeNativeAsset(tokenAddress, amount)]
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
         const tx = await con

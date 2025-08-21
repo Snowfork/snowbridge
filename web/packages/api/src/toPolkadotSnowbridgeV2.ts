@@ -193,15 +193,6 @@ export function encodeNativeAsset(tokenAddress: string, amount: bigint) {
     )
 }
 
-// Foreign asset: abi.encode(1, foreignID, amount)
-// 1 = AssetKind.ForeignTokenERC20 from Solidity Types.sol
-export function encodeForeignAsset(foreignID: string, amount: bigint) {
-    return AbiCoder.defaultAbiCoder().encode(
-        ["uint8", "bytes32", "uint128"],
-        [1, foreignID, amount]
-    )
-}
-
 // Encode assets array as bytes[] for the gateway contract
 export function encodeAssetsArray(encodedAssets: string[]) {
     return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [encodedAssets])
