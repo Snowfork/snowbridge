@@ -80,23 +80,25 @@ func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Gro
 		return err
 	}
 
-	ticker := time.NewTicker(heartBeat)
+	if heartBeat.Abs() > 0 {
+		ticker := time.NewTicker(heartBeat)
 
-	eg.Go(func() error {
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-ticker.C:
-				_, err := co.API().RPC.System.Version()
-				if err != nil {
-					log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
-					return err
+		eg.Go(func() error {
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-ticker.C:
+					_, err := co.API().RPC.System.Version()
+					if err != nil {
+						log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
+						return err
+					}
 				}
 			}
-		}
-	})
+		})
+	}
 
 	return nil
 }

@@ -30,9 +30,6 @@ func (p ParachainConfig) Validate() error {
 	if p.Endpoint == "" {
 		return errors.New("[endpoint] is not set")
 	}
-	if p.HeartbeatSecs == 0 {
-		return errors.New("[heartbeatSecs] config is not set")
-	}
 	return nil
 }
 
@@ -40,18 +37,12 @@ func (e EthereumConfig) Validate() error {
 	if e.Endpoint == "" {
 		return errors.New("[endpoint] config is not set")
 	}
-	if e.HeartbeatSecs == 0 {
-		return errors.New("[heartbeatSecs] config is not set")
-	}
 	return nil
 }
 
 func (p PolkadotConfig) Validate() error {
 	if p.Endpoint == "" {
 		return errors.New("[endpoint] config is not set")
-	}
-	if p.HeartbeatSecs == 0 {
-		return errors.New("[heartbeatSecs] config is not set")
 	}
 	return nil
 }
