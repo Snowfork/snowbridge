@@ -13,7 +13,7 @@
     "accountType": "AccountId32",
     "name": "Westend Local Testnet",
     "specName": "westend",
-    "specVersion": 1018012
+    "specVersion": 1019002
   },
   "bridgeHub": {
     "tokenSymbols": "WND",
@@ -23,7 +23,7 @@
     "accountType": "AccountId32",
     "name": "Westend BridgeHub Local",
     "specName": "bridge-hub-westend",
-    "specVersion": 1018002
+    "specVersion": 1019002
   },
   "ethereumChains": {
     "11155111": {
@@ -41,15 +41,15 @@
           "symbol": "WETH",
           "decimals": 18
         },
-        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
-          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
+        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
+          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
           "name": "roc",
           "symbol": "roc",
           "decimals": 12,
           "foreignId": "0xbcd4282ca0c30cbd9c578b5c790e88c803d80cd9cc91f28686f24ac25a61e06e"
         },
-        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
-          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
           "name": "wnd",
           "symbol": "wnd",
           "decimals": 12,
@@ -84,7 +84,7 @@
         "accountType": "AccountId32",
         "name": "Westend Asset Hub Local",
         "specName": "westmint",
-        "specVersion": 1018012
+        "specVersion": 1019002
       },
       "assets": {
         "0x0000000000000000000000000000000000000000": {
@@ -103,11 +103,11 @@
           "decimals": 18,
           "isSufficient": true
         },
-        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
-          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
+        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
+          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
           "name": "Roc",
           "symbol": "Roc",
-          "decimals": 12,
+          "decimals": 0,
           "locationOnEthereum": {
             "parents": 1,
             "interior": {
@@ -148,8 +148,8 @@
           "minimumBalance": "bigint:1",
           "isSufficient": true
         },
-        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
-          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
           "name": "",
           "symbol": "WND",
           "decimals": 12,
@@ -339,8 +339,8 @@
           "isSufficient": false,
           "assetId": "2"
         },
-        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
-          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
           "name": "",
           "symbol": "WND",
           "decimals": 12,
