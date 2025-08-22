@@ -105,8 +105,5 @@ func (p ParachainConfig) Validate() error {
 	if p.HeaderRedundancy == 0 {
 		return errors.New("[headerRedundancy] is not set")
 	}
-	if p.HeartbeatSecs == 0 {
-		return errors.New("[heartBeatSecs] is not set")
-	}
 	return nil
 }
