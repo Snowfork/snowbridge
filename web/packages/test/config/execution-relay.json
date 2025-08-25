@@ -41,5 +41,17 @@
   "ofac": {
     "enabled": false,
     "apiKey": ""
+  },
+  "gasEstimation": {
+    "enabled": true,
+    "binary-path": "../../../gas-estimator/target/release/snowbridge-gas-estimator",
+    "max-gas-in-dot": 1000000000000,
+    "max-gas-in-ether": 10000000000000000000,
+    "estimator-environment": "westend_sepolia",
+    "environment": {
+      "ASSET_HUB_WS_URL": "ws://127.0.0.1:12144",
+      "BRIDGE_HUB_WS_URL": "ws://127.0.0.1:11144",
+      "PENPAL_WS_URL": "ws://127.0.0.1:13144"
+    }
   }
 }
