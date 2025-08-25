@@ -11,7 +11,7 @@ import { AcalaParachain } from "./acala"
 import { FrequencyParachain } from "./frequency"
 import { PenpalParachain } from "./penpal"
 import { JamtonParachain } from "./jamton"
-import {NeurowebParachain} from "./neuroweb";
+import { NeurowebParachain } from "./neuroweb"
 
 export async function paraImplementation(provider: ApiPromise): Promise<ParachainBase> {
     let parachainId = 0
