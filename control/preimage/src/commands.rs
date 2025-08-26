@@ -398,7 +398,6 @@ pub fn register_erc20_token_metadata() -> Vec<AssetHubRuntimeCall> {
         (hex!("8236a87084f8b84306f72007f36f2618a5634494"), "Lombard Staked Bitcoin", "LBTC", 8),
         (hex!("1abaea1f7c830bd89acc67ec4af516284b1bc33c"), "Euro Coin", "EURC", 6),
         (hex!("56072c95faa701256059aa122697b133aded9279"), "SKY Governance Token", "SKY", 18),
-        (hex!("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"), "USD Coin", "USDC", 6),
         (hex!("ba41ddf06b7ffd89d1267b5a93bfef2424eb2003"), "Mythos", "MYTH", 18),
         (hex!("0e186357c323c806c1efdad36d217f7a54b63d18"), "Curio Gas Token", "CGT2.0", 18),
         (hex!("aa7a9ca87d3694b5755f213b5d04094b8d0f0a6f"), "OriginTrail TRAC", "TRAC", 18),
@@ -411,7 +410,6 @@ pub fn register_erc20_token_metadata() -> Vec<AssetHubRuntimeCall> {
         (hex!("2260fac5e5542a773aa44fbcfedf7c193bc2c599"), "Wrapped BTC", "WBTC", 8),
         (hex!("8daebade922df735c38c80c7ebd708af50815faa"), "tBTC", "TBTC", 18),
         (hex!("5d3d01fd6d2ad1169b17918eb4f153c6616288eb"), "KILT", "KILT", 15),
-        (hex!("dac17f958d2ee523a2206206994597c13d831ec7"), "Tether USD", "USDT", 6),
         (hex!("514910771af9ca656af840dff83e8264ecf986ca"), "ChainLink Token", "LINK", 18),
         (hex!("7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"), "Aave Token", "AAVE", 18),
     ];

@@ -319,8 +319,6 @@ pub fn register_erc20_token_metadata_and_wud() -> Vec<AssetHubRuntimeCall> {
     let tokens = vec![
         (hex!("0000000000000000000000000000000000000000"), "Ether", "ETH", 18),
         (hex!("c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"), "Wrapped Ether", "WETH", 18),
-        (hex!("dac17f958d2ee523a2206206994597c13d831ec7"), "Tether USD", "USDT", 6),
-        (hex!("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"), "USD Coin", "USDC", 6),
         (hex!("9d39a5de30e57443bff2a8307a4256c8797a3497"), "Staked USDe", "sUSDe", 18),
         (hex!("6982508145454ce325ddbe47a25d4ec3d2311933"), "Pepe", "PEPE", 18),
         (hex!("5a98fcbea516cf06857215779fd812ca3bef1b32"), "Lido DAO Token", "LDO", 18),
