@@ -5,11 +5,11 @@ mod helpers;
 mod relay_runtime;
 mod xcm_helper;
 
-use snowbridge_preimage_chopsticks::generate_chopsticks_script;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
 use constants::{ASSET_HUB_API, RELAY_API};
 use helpers::send_xcm_asset_hub;
+use snowbridge_preimage_chopsticks::generate_chopsticks_script;
 use sp_crypto_hashing::blake2_256;
 use std::io::Write;
 use subxt::{OnlineClient, PolkadotConfig};
