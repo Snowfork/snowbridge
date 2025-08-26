@@ -61,7 +61,7 @@ import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 import {HelloWorld} from "./mocks/HelloWorld.sol";
 
 contract GatewayV2Test is Test {
-    // Emitted when token minted/burnt/transfered
+    // Emitted when token minted/burnt/transferred
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     address public assetHubAgent;

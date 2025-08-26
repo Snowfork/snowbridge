@@ -167,7 +167,7 @@ export class AssetHubParachain extends ParachainBase {
                             console.warn(
                                 `Asset '${JSON.stringify(
                                     locationOnAH
-                                )}' is not a registered foregin asset on ${this.specName}.`
+                                )}' is not a registered foreign asset on ${this.specName}.`
                             )
                             continue
                         }
