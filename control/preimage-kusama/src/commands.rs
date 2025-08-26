@@ -5,10 +5,9 @@ use subxt::utils::MultiAddress;
 use crate::xcm_helper;
 
 pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
-    junction::Junction::AccountKey20,
-    junction::Junction::GlobalConsensus,
+    junction::Junction::{AccountKey20, GeneralIndex, GlobalConsensus, PalletInstance, Parachain},
     junction::NetworkId,
-    junctions::Junctions::{X1, X2},
+    junctions::Junctions::{X1, X2, X4},
     location::Location,
 };
 use hex_literal::hex;
@@ -280,6 +279,26 @@ pub fn token_registrations() -> Vec<AssetHubRuntimeCall> {
         false,
         1,
     ));
+
+    // Gavun WUD
+    let (wud_create, wud_meta) = register_asset_with_metadata(
+        Location {
+            parents: 2,
+            interior: X4([
+                GlobalConsensus(NetworkId::Polkadot),
+                Parachain(1000),
+                PalletInstance(50),
+                GeneralIndex(31337),
+            ]),
+        },
+        10_000_000,
+        "GAVUN WUD".to_string(),
+        "WUD".to_string(),
+        10,
+        false,
+    );
+    calls.push(wud_create);
+    calls.push(wud_meta);
 
     calls
 }
