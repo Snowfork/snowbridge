@@ -492,7 +492,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             #[cfg(feature = "polkadot")]
             {
                 let metadata_calls = commands::register_erc20_token_metadata();
-                send_xcm_asset_hub(&context, metadata_calls).await?
+                let reg_call = commands::frequency_token_registrations();
+                utility_force_batch(vec![
+                    send_xcm_asset_hub(&context, metadata_calls).await?,
+                    send_xcm_bridge_hub(&context, reg_call).await?,
+                ])
             }
         }
     };
