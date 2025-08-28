@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-08-20T14:17:28.882Z",
+  "timestamp": "2025-08-28T06:45:53.537Z",
   "environment": "paseo_sepolia",
   "ethChainId": 11155111,
   "gatewayAddress": "0x1607C1368bc943130258318c91bBd8cFf3D063E6",
@@ -13,7 +13,7 @@
     "accountType": "AccountId32",
     "name": "Paseo Testnet",
     "specName": "paseo",
-    "specVersion": 1005001
+    "specVersion": 1006001
   },
   "bridgeHub": {
     "tokenSymbols": "PAS",
@@ -23,7 +23,7 @@
     "accountType": "AccountId32",
     "name": "Paseo Bridge Hub",
     "specName": "bridge-hub-paseo",
-    "specVersion": 1005001
+    "specVersion": 1006000
   },
   "ethereumChains": {
     "11155111": {
@@ -81,7 +81,7 @@
         "accountType": "AccountId32",
         "name": "Paseo Asset Hub",
         "specName": "asset-hub-paseo",
-        "specVersion": 1005001
+        "specVersion": 1006002
       },
       "assets": {
         "0x0000000000000000000000000000000000000000": {
@@ -143,15 +143,15 @@
         "ss58Format": 101,
         "isEthereum": false,
         "accountType": "AccountId32",
-        "name": "NeuroWeb Testnet",
+        "name": "Neuro Testnet",
         "specName": "origintrail-parachain",
-        "specVersion": 139
+        "specVersion": 142
       },
       "assets": {
         "0xef32abea56beff54f61da319a7311098d6fbcea9": {
           "token": "0xef32abea56beff54f61da319a7311098d6fbcea9",
           "name": "Trac",
-          "minimumBalance": "bigint:10000000000000000",
+          "minimumBalance": "bigint:1000000000000000",
           "symbol": "TRAC",
           "decimals": 18,
           "isSufficient": true

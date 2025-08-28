@@ -195,6 +195,7 @@ export async function getDeliveryFee(
         )
     }
     const totalFeeInDOT = destinationExecutionFeeDOT + destinationDeliveryFeeDOT
+    console.log("totalFeeInDOT", totalFeeInDOT)
     return {
         destinationExecutionFeeDOT,
         destinationDeliveryFeeDOT,

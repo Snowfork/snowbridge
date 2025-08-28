@@ -41,7 +41,7 @@ export class NeurowebParachain extends ParachainBase {
             assets[NEUROWEB_TEST_TOKEN_ID.toLowerCase()] = {
                 token: NEUROWEB_TEST_TOKEN_ID.toLowerCase(),
                 name: "Trac",
-                minimumBalance: 10_000_000_000_000_000n,
+                minimumBalance: 1_000_000_000_000_000n,
                 symbol: "TRAC",
                 decimals: 18,
                 isSufficient: true,
@@ -50,7 +50,7 @@ export class NeurowebParachain extends ParachainBase {
             assets[NEUROWEB_TOKEN_ID.toLowerCase()] = {
                 token: NEUROWEB_TOKEN_ID.toLowerCase(),
                 name: "Trac",
-                minimumBalance: 10_000_000_000_000_000n,
+                minimumBalance: 1_000_000_000_000_000n,
                 symbol: "TRAC",
                 decimals: 18,
                 isSufficient: true,
@@ -68,7 +68,7 @@ export class NeurowebParachain extends ParachainBase {
                     asset
                 )}'. Using default.`
             )
-            return 200_000_000_000n // TODO
+            return 10_000_000_000n // TODO
         }
         return await this.calculateXcmFee(destinationXcm, asset)
     }
