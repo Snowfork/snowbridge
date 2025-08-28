@@ -841,7 +841,7 @@ pub fn frequency_token_registrations() -> Vec<BridgeHubRuntimeCall> {
             interior: X1([Parachain(2091)]),
         }),
         "Frequency",
-        "XRQCY",
+        "FRQCY",
         8u8,
     )];
 }
