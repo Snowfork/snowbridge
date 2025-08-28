@@ -127,6 +127,10 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return err
 	}
+	err = relay.ethereumChannelWriter.conn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.Parachain.HeartbeatSecs))
+	if err != nil {
+		return err
+	}
 
 	log.Info("Starting beefy listener")
 	err = relay.beefyListener.Start(ctx, eg)

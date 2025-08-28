@@ -969,7 +969,8 @@ func generateDeliveryProofFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		ethconn := ethereum.NewConnection(&executionConf.Source.Ethereum, nil)
-		err = ethconn.Connect(ctx)
+		eg, ctx := errgroup.WithContext(ctx)
+		err = ethconn.ConnectWithHeartBeat(ctx, eg, 30*time.Second)
 		if err != nil {
 			return err
 		}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -49,10 +48,6 @@ func NewParachainWriter(
 }
 
 func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error {
-	err := wr.conn.ConnectWithHeartBeat(ctx, 30*time.Second)
-	if err != nil {
-		return err
-	}
 	nonce, err := wr.queryAccountNonce()
 	if err != nil {
 		return err
