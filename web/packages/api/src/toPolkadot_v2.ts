@@ -243,6 +243,8 @@ export async function createTransfer(
             from: sourceAccount,
         })
 
+    console.dir(tx, {depth: 100})
+
     return {
         input: {
             registry,
