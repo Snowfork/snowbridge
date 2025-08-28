@@ -842,6 +842,6 @@ pub fn frequency_token_registrations() -> Vec<BridgeHubRuntimeCall> {
         }),
         "Frequency",
         "XRQCY",
-        10u8,
+        8u8,
     )];
 }
