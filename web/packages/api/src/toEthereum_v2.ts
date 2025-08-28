@@ -853,18 +853,35 @@ function createAssetHubTx(
             },
         ],
     }
-    const destination = { v4: bridgeLocation(ethChainId) }
-    const beneficiaryLocation = {
-        v4: {
-            parents: 0,
-            interior: { x1: [{ accountKey20: { key: beneficiaryAccount } }] },
-        },
+    const feeAsset = {
+        v4: assetLocation,
     }
-    return parachain.tx.polkadotXcm.transferAssets(
+    const destination = { v4: bridgeLocation(ethChainId) }
+    let customXcm = parachain.registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                depositAsset: {
+                    assets: {
+                        Wild: {
+                            AllCounted: 1,
+                        },
+                    },
+                    beneficiary: {
+                        parents: 0,
+                        interior: { x1: [{ accountKey20: { key: beneficiaryAccount } }] },
+                    },
+                },
+            },
+        ],
+    })
+    let reserveType = asset.location ? "LocalReserve" : "DestinationReserve"
+    return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
-        beneficiaryLocation,
         assets,
-        0,
+        reserveType,
+        feeAsset,
+        reserveType,
+        customXcm,
         "Unlimited"
     )
 }
