@@ -20,8 +20,6 @@ async function buildRegistry(env: string, options: assetsV2.RegistryOptions) {
 
 (async () => {
     const envs = [
-        "polkadot_mainnet",
-        "westend_sepolia",
         "paseo_sepolia",
     ]
     const apiKey = process.env.ETHEREUM_API_KEY

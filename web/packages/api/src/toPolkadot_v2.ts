@@ -195,6 +195,7 @@ export async function getDeliveryFee(
         )
     }
     const totalFeeInDOT = destinationExecutionFeeDOT + destinationDeliveryFeeDOT
+    console.log("totalFeeInDOT", totalFeeInDOT)
     return {
         destinationExecutionFeeDOT,
         destinationDeliveryFeeDOT,
@@ -241,6 +242,8 @@ export async function createTransfer(
             value,
             from: sourceAccount,
         })
+
+    console.dir(tx, {depth: 100})
 
     return {
         input: {
