@@ -25,6 +25,9 @@ use crate::relay_runtime::runtime_types::{
 use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
 use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 
+use bridge_hub_runtime::runtime_types::snowbridge_outbound_queue_primitives::v1::message::{
+    AgentExecuteCommand, Command, Fee,
+};
 use sp_arithmetic::helpers_128bit::multiply_by_rational_with_rounding;
 use sp_arithmetic::per_things::Rounding;
 
@@ -177,12 +180,12 @@ pub fn sudo(call: Box<RelayRuntimeCall>) -> RelayRuntimeCall {
 }
 
 pub fn force_xcm_version() -> AssetHubRuntimeCall {
-    #[cfg(any(feature = "paseo", feature = "polkadot"))]
+    #[cfg(feature = "paseo")]
     use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
         junction::Junction::GlobalConsensus, junction::NetworkId, junctions::Junctions::X1,
         location::Location,
     };
-    #[cfg(feature = "westend")]
+    #[cfg(any(feature = "westend", feature = "polkadot"))]
     use crate::asset_hub_runtime::runtime_types::staging_xcm::v5::{
         junction::Junction::GlobalConsensus, junction::NetworkId, junctions::Junctions::X1,
         location::Location,
@@ -200,10 +203,6 @@ pub fn force_xcm_version() -> AssetHubRuntimeCall {
         },
     )
 }
-
-use bridge_hub_runtime::runtime_types::snowbridge_core::outbound::v1::AgentExecuteCommand;
-use bridge_hub_runtime::runtime_types::snowbridge_core::outbound::v1::Command;
-use bridge_hub_runtime::runtime_types::snowbridge_core::outbound::Fee;
 
 pub async fn calculate_delivery_fee(
     api: &OnlineClient<PolkadotConfig>,
