@@ -49,6 +49,7 @@ type ParachainConfig struct {
 	// The max number of header in the FinalizedBeaconStateBuffer on-chain.
 	// https://github.com/paritytech/polkadot-sdk/blob/master/bridges/snowbridge/pallets/ethereum-client/src/types.rs#L23
 	HeaderRedundancy uint64 `mapstructure:"headerRedundancy"`
+	HeartbeatSecs    uint64 `mapstructure:"heartbeat-secs"`
 }
 
 func (c Config) Validate() error {

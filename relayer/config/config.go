@@ -3,18 +3,22 @@ package config
 import "errors"
 
 type PolkadotConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
+	Endpoint      string `mapstructure:"endpoint"`
+	HeartbeatSecs uint64 `mapstructure:"heartbeat-secs"`
 }
 
 type ParachainConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
+	Endpoint      string `mapstructure:"endpoint"`
+	HeartbeatSecs uint64 `mapstructure:"heartbeat-secs"`
 }
 
 type EthereumConfig struct {
-	Endpoint  string `mapstructure:"endpoint"`
-	GasFeeCap uint64 `mapstructure:"gas-fee-cap"`
-	GasTipCap uint64 `mapstructure:"gas-tip-cap"`
-	GasLimit  uint64 `mapstructure:"gas-limit"`
+	Endpoint             string `mapstructure:"endpoint"`
+	GasFeeCap            uint64 `mapstructure:"gas-fee-cap"`
+	GasTipCap            uint64 `mapstructure:"gas-tip-cap"`
+	GasLimit             uint64 `mapstructure:"gas-limit"`
+	HeartbeatSecs        uint64 `mapstructure:"heartbeat-secs"`
+	PendingTxTimeoutSecs uint64 `mapstructure:"pending-tx-timeout-secs"`
 }
 
 type OFACConfig struct {

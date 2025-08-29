@@ -118,7 +118,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (li *BeefyListener) subscribeNewMMRRoots(ctx context.Context) error {
-	headers := make(chan *gethTypes.Header, 5)
+	headers := make(chan *gethTypes.Header, 1)
 
 	sub, err := li.ethereumConn.Client().SubscribeNewHead(ctx, headers)
 	if err != nil {

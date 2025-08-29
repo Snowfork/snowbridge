@@ -49,7 +49,7 @@ func NewParachainWriter(
 }
 
 func (wr *ParachainWriter) Start(ctx context.Context, eg *errgroup.Group) error {
-	err := wr.conn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err := wr.conn.ConnectWithHeartBeat(ctx, eg, time.Second*60)
 	if err != nil {
 		return err
 	}
