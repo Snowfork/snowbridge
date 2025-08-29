@@ -505,13 +505,25 @@ func (r *Relay) isMessageProcessed(eventNonce uint64) (bool, error) {
 	return false, nil
 }
 
+var (
+	ErrNotFound = errors.New("not found")
+)
+
 // isInFinalizedBlock checks if the block containing the event is a finalized block.
 func (r *Relay) isInFinalizedBlock(ctx context.Context, event *contracts.GatewayOutboundMessageAccepted) error {
 	nextBlockNumber := new(big.Int).SetUint64(event.Raw.BlockNumber + 1)
 
 	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
 	if err != nil {
-		return fmt.Errorf("get block header: %w", err)
+		// If not found, retry fetching the block header after a delay
+		if err != ErrNotFound {
+			return fmt.Errorf("get block header: %w", err)
+		}
+		time.Sleep(30 * time.Second)
+		blockHeader, err = r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
+		if err != nil {
+			return fmt.Errorf("get block header: %w", err)
+		}
 	}
 
 	return r.beaconHeader.CheckHeaderFinalized(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
