@@ -516,13 +516,13 @@ func (r *Relay) isInFinalizedBlock(ctx context.Context, event *contracts.Gateway
 	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
 	if err != nil {
 		// If not found, retry fetching the block header after a delay
-		if err != ErrNotFound {
-			return fmt.Errorf("get block header: %w", err)
+		if !errors.Is(err, ErrNotFound) {
+			return fmt.Errorf("get block header before retry: %w", err)
 		}
 		time.Sleep(30 * time.Second)
 		blockHeader, err = r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
 		if err != nil {
-			return fmt.Errorf("get block header: %w", err)
+			return fmt.Errorf("get block header after retry: %w", err)
 		}
 	}
 
