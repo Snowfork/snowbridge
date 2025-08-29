@@ -132,7 +132,6 @@ export const bridgeStatusInfo = async (
     // Beefy status
     const latestBeefyBlock = Number(await beefyClient.latestBeefyBlock())
     const latestPolkadotBlock = (await relaychain.query.system.number()).toPrimitive() as number
-    const latestBeaconSlot = await ethereum.getBlockNumber()
     const latestFinalizedBeefyBlock = (
         await relaychain.rpc.chain.getHeader(
             (await relaychain.rpc.beefy.getFinalizedHead()).toU8a()
@@ -153,7 +152,8 @@ export const bridgeStatusInfo = async (
         (await fetchBeaconSlot(context.config.ethereum.beacon_url, latestBeaconBlockRoot)).data
             .message.slot
     )
-    const beaconBlockLatency = latestBeaconBlock.data.message.slot - latestBeaconBlockOnPolkadot
+    const beaconBlockLatency =
+        latestFinalizedBeaconBlock.finalized_slot - latestBeaconBlockOnPolkadot
     const beaconLatencySeconds = beaconBlockLatency * options.ethereumBlockTimeInSeconds
 
     // Operating mode
