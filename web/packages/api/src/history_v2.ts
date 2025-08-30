@@ -1,4 +1,3 @@
-import { forInterParachain } from "src"
 import {
     fetchToPolkadotTransfers,
     fetchToEthereumTransfers,

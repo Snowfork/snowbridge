@@ -2,10 +2,10 @@ import { Registry } from "@polkadot/types/types"
 import {
     bridgeLocation,
     DOT_LOCATION,
-    erc20Location,
     ethereumNetwork,
     parachainLocation,
     accountToLocation,
+    buildAppendixInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
 
@@ -325,6 +325,7 @@ export function buildParachainPNAReceivedXcmOnAssetHub(
 
 export function buildTransferXcmFromParachain(
     registry: Registry,
+    envName: string,
     ethChainId: number,
     assetHubParaId: number,
     sourceParachainId: number,
@@ -335,11 +336,12 @@ export function buildTransferXcmFromParachain(
     tokenAmount: bigint,
     localDOTFeeAmount: bigint,
     totalDOTFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint
+    remoteEtherFeeAmount: bigint,
+    claimerLocation?: any
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let tokenLocation = asset.location
     let assets = []
     assets.push({
         id: tokenLocation,
@@ -359,26 +361,17 @@ export function buildTransferXcmFromParachain(
             Fungible: remoteEtherFeeAmount,
         },
     })
+
+    let appendixInstructions = buildAppendixInstructions(
+        envName,
+        sourceParachainId,
+        sourceAccount,
+        claimerLocation
+    )
+
     let remoteInstructionsOnAH: any[] = [
         {
-            setAppendix: [
-                {
-                    refundSurplus: null,
-                },
-                {
-                    depositAsset: {
-                        assets: {
-                            wild: {
-                                allCounted: 3,
-                            },
-                        },
-                        beneficiary: {
-                            parents: 0,
-                            interior: { x1: [sourceLocation] },
-                        },
-                    },
-                },
-            ],
+            setAppendix: appendixInstructions,
         },
         {
             initiateTransfer: {
