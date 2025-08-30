@@ -1,3 +1,5 @@
+#[path = "v2/malicious_payload.rs"]
+mod malicious_payload;
 #[path = "v2/register_ena.rs"]
 mod register_ena;
 #[path = "v2/register_pna.rs"]

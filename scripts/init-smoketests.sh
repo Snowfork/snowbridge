@@ -4,10 +4,12 @@ set -eux
 
 echo "Checkout lodestar"
 pushd ..
-git clone https://github.com/ChainSafe/lodestar
-pushd lodestar
-  git fetch && git checkout $LODESTAR_VERSION
-popd
+  if [ ! -d "lodestar" ]; then
+    git clone https://github.com/ChainSafe/lodestar
+  fi
+  pushd lodestar
+    git fetch && git checkout $LODESTAR_VERSION
+  popd
 popd
 
 echo "Setting up git hooks"
