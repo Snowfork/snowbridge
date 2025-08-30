@@ -100,13 +100,55 @@ func (wr *EthereumWriter) WriteChannels(
 	task *Task,
 ) error {
 	for _, proof := range *task.MessageProofs {
-		err := wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
+		profitable, err := wr.isRelayMessageProfitable(ctx, &proof)
 		if err != nil {
-			return fmt.Errorf("write eth gateway: %w", err)
+			return fmt.Errorf("check message profitable: %w", err)
+		}
+		if profitable {
+			err = wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
+			if err != nil {
+				return fmt.Errorf("write eth gateway: %w", err)
+			}
 		}
 	}
 
 	return nil
+}
+
+func (wr *EthereumWriter) commandGas(command *CommandWrapper) uint64 {
+	var gas uint64
+	switch command.Kind {
+	// ERC20 transfer
+	case 2:
+		// BaseUnlockGas should cover most of the ERC20 token. Specific gas costs can be set per token if needed
+		gas = wr.config.Ethereum.BaseUnlockGas
+	// PNA transfer
+	case 4:
+		gas = wr.config.Ethereum.BaseMintGas
+	default:
+		gas = uint64(command.MaxDispatchGas)
+	}
+	return gas
+}
+
+func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *MessageProof) (bool, error) {
+	var result bool
+	gasPrice, err := wr.conn.Client().SuggestGasPrice(ctx)
+	if err != nil {
+		return result, err
+	}
+	var totalDispatchGas uint64
+	commands := proof.Message.OriginalMessage.Commands
+	for _, command := range commands {
+		totalDispatchGas = totalDispatchGas + wr.commandGas(&command)
+	}
+	totalDispatchGas = totalDispatchGas + wr.config.Ethereum.BaseDeliveryGas
+	gasFee := new(big.Int)
+	gasFee.Mul(gasPrice, big.NewInt(int64(totalDispatchGas)))
+	if proof.Message.Fee.Cmp(gasFee) >= 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
@@ -116,7 +158,7 @@ func (wr *EthereumWriter) WriteChannel(
 	commitmentProof *MessageProof,
 	proof *ProofOutput,
 ) error {
-	message := commitmentProof.Message.IntoInboundMessage()
+	message := commitmentProof.Message.OriginalMessage.IntoInboundMessage()
 
 	convertedHeader, err := convertHeader(proof.Header)
 	if err != nil {
