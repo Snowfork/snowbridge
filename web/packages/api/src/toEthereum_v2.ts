@@ -968,6 +968,10 @@ export async function dryRunOnSourceParachain(
             tx.toHuman(),
             result.toHuman()
         )
+        console.dir(
+            result.toHuman(),
+            {depth: 100}
+        )
     } else {
         bridgeHubForwarded =
             result.asOk.forwardedXcms.find((x) => {
