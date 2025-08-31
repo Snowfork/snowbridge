@@ -6,6 +6,8 @@ import {
     BeefyClient__factory,
     IGatewayV1 as IGateway,
     IGatewayV1__factory as IGateway__factory,
+    IGatewayV2,
+    IGatewayV2__factory,
 } from "@snowbridge/contract-types"
 import { SNOWBRIDGE_ENV } from "./environment"
 
@@ -62,6 +64,7 @@ export class Context {
     // Ethereum
     #ethChains: EthereumChains
     #gateway?: IGateway
+    #gatewayV2?: IGatewayV2
     #beefyClient?: BeefyClient
 
     // Substrate
@@ -219,6 +222,13 @@ export class Context {
         return IGateway__factory.connect(this.config.appContracts.gateway, this.ethereum())
     }
 
+    gatewayV2(): IGatewayV2 {
+        if (this.#gatewayV2) {
+            return this.#gatewayV2
+        }
+        return IGatewayV2__factory.connect(this.config.appContracts.gateway, this.ethereum())
+    }
+
     beefyClient(): BeefyClient {
         if (this.#beefyClient) {
             return this.#beefyClient
@@ -234,6 +244,7 @@ export class Context {
         // clean up contract listeners
         if (this.#beefyClient) await this.beefyClient().removeAllListeners()
         if (this.#gateway) await this.gateway().removeAllListeners()
+        if (this.#gatewayV2) await this.gatewayV2().removeAllListeners()
 
         // clean up etheruem
         for (const ethChainKey of Object.keys(this.config.ethereum.ethChains)) {

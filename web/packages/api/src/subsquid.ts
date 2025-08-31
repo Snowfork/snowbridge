@@ -192,6 +192,15 @@ export const fetchEstimatedDeliveryTime = async (graphqlApiUrl: string, channelI
 }
 
 /**
+ * Query the estimated delivery time for transfers to both directions (v2)
+ **/
+export const fetchV2EstimatedDeliveryTime = async (graphqlApiUrl: string) => {
+    let query = `query { toEthereumElapseV2 { elapse } toPolkadotElapseV2 { elapse } }`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result
+}
+
+/**
  * Query with a raw graphql
  **/
 export const queryByGraphQL = async (graphqlApiUrl: string, query: string) => {
@@ -490,4 +499,39 @@ export const fetchToPolkadotUndelivedLatency = async (graphqlApiUrl: string) => 
                 }}`
     let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.toPolkadotUndeliveredTimeout
+}
+
+/*
+ * Query the maximum latency of pending transfers from V2 P->E.
+ * {
+    "toEthereumUndeliveredTimeout": [
+      {
+        "elapse": 1034.273011
+      }
+    ]
+}
+*/
+export const fetchToEthereumV2UndelivedLatency = async (graphqlApiUrl: string) => {
+    let query = `query { toEthereumV2UndeliveredTimeout {
+                   elapse
+                }}`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.toEthereumV2UndeliveredTimeout
+}
+
+/* Query the maximum latency of pending transfers from V2 E->P.
+ * {
+    "toPolkadotUndeliveredTimeout": [
+      {
+        "elapse": 1201.23
+      }
+    ]
+}
+*/
+export const fetchToPolkadotV2UndelivedLatency = async (graphqlApiUrl: string) => {
+    let query = `query { toPolkadotV2UndeliveredTimeout {
+                   elapse
+                }}`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.toPolkadotV2UndeliveredTimeout
 }
