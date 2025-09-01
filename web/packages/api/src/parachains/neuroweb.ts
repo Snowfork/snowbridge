@@ -68,39 +68,8 @@ export class NeurowebParachain extends ParachainBase {
                     asset
                 )}'. Using default.`
             )
-            return 10_000_000_000n // TODO
+            return 14_742_750_000n // TODO10,000,000
         }
         return await this.calculateXcmFee(destinationXcm, asset)
-    }
-
-    async wrapExecutionFeeInNative(parachain: ApiPromise) {
-        // Mock transaction to get extrinsic fee
-        let tx = parachain.tx.wrapper.tracWrap(100000000)
-        const paymentInfo = await tx.paymentInfo(
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        )
-        const executionFee = paymentInfo["partialFee"].toBigInt()
-        console.log("wrap execution fee:", executionFee)
-        return executionFee
-    }
-
-    snowTRACBalance(account: string, ethChainId: number) {
-        if (ethChainId === NEUROWEB_TEST_CHAIN_ID) {
-            return this.getLocationBalance(
-                erc20Location(ethChainId, NEUROWEB_TEST_TOKEN_ID),
-                account
-            )
-        } else if (ethChainId === NEUROWEB_CHAIN_ID) {
-            return this.getLocationBalance(erc20Location(ethChainId, NEUROWEB_TOKEN_ID), account)
-        } else {
-            throw Error(`Cannot get snowTRAC balance for chain ID ${ethChainId}.`)
-        }
-    }
-
-    createWrapTx(
-        parachain: ApiPromise,
-        amount: bigint
-    ): SubmittableExtrinsic<"promise", ISubmittableResult> {
-        return parachain.tx.wrapper.tracWrap(amount)
     }
 }
