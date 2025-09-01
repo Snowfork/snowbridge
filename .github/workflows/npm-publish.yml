@@ -3,13 +3,6 @@ name: npm-publish
 on:
   release:
     types: [published]
-  push:
-    paths:
-      - "web/packages/api/**"
-      - "web/packages/base-types/**"
-      - "web/packages/registry/**"
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       version:
@@ -63,12 +56,16 @@ jobs:
 
       - name: Determine new version
         id: new_version
+        if: github.event_name != 'release'
         run: |
-          # Get the most recent tag in the format web-api-v<version>
-          current_tag=$(git tag --list "web-api-v*" --sort=-v:refname | head -n 1)
+          # Get the most recent tag in the format @snowbridge/api@<version>
+          current_tag=$(git tag --list "@snowbridge/api@*" --sort=-v:refname | head -n 1)
           echo "Current tag: $current_tag"
-          current_version=$(echo $current_tag | sed -E 's/web-api-v//')
+          current_version=$(echo $current_tag | sed -E 's/@snowbridge\/api@//')
           echo "Current version: $current_version"
+
+          # Install semver
+          npm install semver
 
           if [ -n "${{ github.event.release.tag_name }}" ]; then
             echo "Using version from release tag: ${{ github.event.release.tag_name }}"
@@ -77,7 +74,7 @@ jobs:
             echo "Using version from input: ${{ github.event.inputs.version }}"
             new_version="${{ github.event.inputs.version }}"
           elif [ -z "$current_version" ]; then
-            new_version="1.0.0"
+            new_version="0.2.1"
           else
             echo "No release tag or input version provided, incrementing patch version."
             new_version=$(npx semver $current_version -i patch)
@@ -89,55 +86,9 @@ jobs:
 
       - name: Set version in package.json
         working-directory: web
+        if: github.event_name != 'release'
         run: |
           /bin/bash set-version.sh ${{ steps.new_version.outputs.version }}
-
-      - name: Create new tag
-        id: create_tag
-        if: github.ref == 'refs/heads/main' && github.event_name != 'release'
-        run: |
-          tag_name="web-api-v${{ steps.new_version.outputs.version }}"
-          echo "Tag name: $tag_name"
-          echo "tag=$tag_name" >> $GITHUB_OUTPUT
-          git tag $tag_name
-
-      - name: Push new tag
-        id: push_tag
-        if: github.ref == 'refs/heads/main' && github.event_name != 'release'
-        run: |
-          git push origin --tags
-
-      - name: "Build Changelog"
-        id: build_changelog
-        if: github.ref == 'refs/heads/main' && github.event_name != 'release'
-        uses: mikepenz/release-changelog-builder-action@v4
-        with:
-          configurationJson: |
-            {
-              "template": "#{{CHANGELOG}}\n\n<details>\n</details>",
-              "categories": [
-                {
-                    "title": "## Web API Changes",
-                    "labels": ["Component: Web API"]
-                }
-              ]
-            }
-          fromTag: ${{ steps.new_version.outputs.from_tag }}
-          toTag: ${{ steps.create_tag.outputs.tag }}
-
-      - name: Create a GitHub Release
-        id: create_release
-        if: github.ref == 'refs/heads/main' && github.event_name != 'release'
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.create_tag.outputs.tag }}
-          release_name: ${{ steps.create_tag.outputs.tag }}
-          body: |
-            ${{steps.build_changelog.outputs.changelog}}
-          draft: false
-          prerelease: false
 
       - name: Publish Base Types
         working-directory: web/packages/base-types
@@ -163,3 +114,50 @@ jobs:
         working-directory: web/packages/registry
         run: |
           pnpm publish --no-git-checks --access public
+
+      - name: Create new tag
+        id: create_tag
+        if: github.event_name != 'release'
+        run: |
+          tag_name="@snowbridge/api@${{ steps.new_version.outputs.version }}"
+          echo "Tag name: $tag_name"
+          echo "tag=$tag_name" >> $GITHUB_OUTPUT
+          git tag $tag_name
+
+      - name: Push new tag
+        id: push_tag
+        if: github.event_name != 'release'
+        run: |
+          git push origin --tags
+
+      - name: Build Changelog
+        id: build_changelog
+        if: github.event_name != 'release'
+        uses: mikepenz/release-changelog-builder-action@v4
+        with:
+          configurationJson: |
+            {
+              "template": "#{{CHANGELOG}}\n\n<details>\n</details>",
+              "categories": [
+                {
+                    "title": "## Web API Changes",
+                    "labels": ["Component: Web API"]
+                }
+              ]
+            }
+          fromTag: ${{ steps.new_version.outputs.from_tag }}
+          toTag: ${{ steps.create_tag.outputs.tag }}
+
+      - name: Create a GitHub Release
+        id: create_release
+        if: github.event_name != 'release'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.create_tag.outputs.tag }}
+          release_name: ${{ steps.create_tag.outputs.tag }}
+          body: |
+            ${{steps.build_changelog.outputs.changelog}}
+          draft: false
+          prerelease: false
