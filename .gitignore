@@ -41,4 +41,3 @@ lodestar
 db.sqlite*
 .pnpm-store
 deploy
-gas-estimator/target
