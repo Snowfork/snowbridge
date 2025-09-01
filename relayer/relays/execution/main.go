@@ -511,7 +511,12 @@ func (r *Relay) isInFinalizedBlock(ctx context.Context, event *contracts.Gateway
 
 	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
 	if err != nil {
-		return fmt.Errorf("get block header: %w", err)
+		log.WithField("blockNumber", nextBlockNumber.Uint64()).Info("block not found, retrying after 30 seconds")
+		time.Sleep(30 * time.Second)
+		blockHeader, err = r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
+		if err != nil {
+			return fmt.Errorf("get block header after retry: %w", err)
+		}
 	}
 
 	return r.beaconHeader.CheckHeaderFinalized(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
