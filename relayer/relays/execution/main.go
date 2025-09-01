@@ -505,10 +505,6 @@ func (r *Relay) isMessageProcessed(eventNonce uint64) (bool, error) {
 	return false, nil
 }
 
-var (
-	ErrNotFound = errors.New("not found")
-)
-
 // isInFinalizedBlock checks if the block containing the event is a finalized block.
 func (r *Relay) isInFinalizedBlock(ctx context.Context, event *contracts.GatewayOutboundMessageAccepted) error {
 	nextBlockNumber := new(big.Int).SetUint64(event.Raw.BlockNumber + 1)
