@@ -195,7 +195,6 @@ export async function getDeliveryFee(
         )
     }
     const totalFeeInDOT = destinationExecutionFeeDOT + destinationDeliveryFeeDOT
-    console.log("totalFeeInDOT", totalFeeInDOT)
     return {
         destinationExecutionFeeDOT,
         destinationDeliveryFeeDOT,
@@ -242,8 +241,6 @@ export async function createTransfer(
             value,
             from: sourceAccount,
         })
-
-    console.dir(tx, {depth: 100})
 
     return {
         input: {
@@ -438,14 +435,8 @@ export async function validateTransfer(
     let destinationParachainDryRunError: string | undefined
     if (destinationParaId !== registry.assetHubParaId) {
         // Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
-        const sovereignAccountId2 = paraIdToSovereignAccount("sibl", 1000)
-
-        console.log("sovereignAccountId2", sovereignAccountId2)
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
             const sovereignAccountId = paraIdToSovereignAccount("sibl", destinationParaId)
-            const sovereignAccountId2 = paraIdToSovereignAccount("sibl", 1000)
-
-            console.log("sovereignAccountId NEURO", paraIdToSovereignAccount("sibl", 2043))
             const { accountMaxConumers, accountExists } = await validateAccount(
                 assetHubImpl,
                 sovereignAccountId,
