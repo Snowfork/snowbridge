@@ -324,6 +324,8 @@ export const estimateFeesFromAssetHub = async (
             )
             totalFeeInDot += ethereumExecutionFeeInNative
             totalFeeInNative = totalFeeInDot
+        } else {
+            throw new Error("Unsupported fee token location")
         }
     }
 
@@ -495,6 +497,8 @@ export const estimateFeesFromParachains = async (
             if (returnToSenderExecutionFeeNative) {
                 totalFeeInNative += returnToSenderExecutionFeeNative
             }
+        } else {
+            throw new Error("Unsupported fee token location")
         }
     }
 

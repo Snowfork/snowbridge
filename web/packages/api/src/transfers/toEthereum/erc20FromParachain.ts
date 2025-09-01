@@ -3,13 +3,7 @@ import { SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
 import { decodeAddress } from "@polkadot/util-crypto"
-import {
-    DOT_LOCATION,
-    parachainLocation,
-    HERE_LOCATION,
-    isRelaychainLocation,
-    isParachainNative,
-} from "../../xcmBuilder"
+import { DOT_LOCATION, isRelaychainLocation, isParachainNative } from "../../xcmBuilder"
 import { buildExportXcm } from "../../xcmbuilders/toEthereum/erc20FromAH"
 import {
     buildResultXcmAssetHubERC20TransferFromParachain,
@@ -57,54 +51,32 @@ export class ERC20FromParachain implements TransferInterface {
                 : source
 
         const sourceParachainImpl = await paraImplementation(parachain)
-        const { sourceAssetMetadata, sourceParachain } = resolveInputs(
-            registry,
-            tokenAddress,
-            source.sourceParaId
-        )
+        const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, source.sourceParaId)
 
         let forwardXcmToAH: any, forwardedXcmToBH: any, returnToSenderXcm: any, localXcm: any
 
-        if (sourceParachain.features.hasDotBalance) {
-            forwardXcmToAH = buildResultXcmAssetHubERC20TransferFromParachain(
-                assetHub.registry,
-                registry.ethChainId,
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                340282366920938463463374607431768211455n,
-                340282366920938463463374607431768211455n,
-                340282366920938463463374607431768211455n,
-                sourceParachainImpl.parachainId,
-                340282366920938463463374607431768211455n,
-                DOT_LOCATION,
-                DOT_LOCATION
-            )
-        } else {
-            forwardXcmToAH = buildResultXcmAssetHubERC20TransferFromParachain(
-                assetHub.registry,
-                registry.ethChainId,
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                340282366920938463463374607431768211455n,
-                340282366920938463463374607431768211455n,
-                340282366920938463463374607431768211455n,
-                sourceParachainImpl.parachainId,
-                340282366920938463463374607431768211455n,
-                HERE_LOCATION,
-                parachainLocation(sourceParachain.parachainId)
-            )
-        }
+        forwardXcmToAH = buildResultXcmAssetHubERC20TransferFromParachain(
+            assetHub.registry,
+            registry.ethChainId,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            1n,
+            1n,
+            1n,
+            sourceParachainImpl.parachainId,
+            1n,
+            DOT_LOCATION,
+            DOT_LOCATION
+        )
 
         returnToSenderXcm = buildParachainERC20ReceivedXcmOnDestination(
             parachain.registry,
             registry.ethChainId,
             "0x0000000000000000000000000000000000000000",
-            340282366920938463463374607431768211455n,
-            340282366920938463463374607431768211455n,
+            1n,
+            1n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         )
