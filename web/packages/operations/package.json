@@ -51,7 +51,8 @@
     "transferPenpalTokenToEthereumV2WithNativeFee": "npx ts-node src/transfer_from_p2e_v2_with_fee.ts 2000 pal 1 2000000000",
     "transferTRACToNeuroWeb": "npx ts-node src/transfer_from_e2p.ts 2043 TRACE 3000000000000000",
     "transferTRACFromNeuroWebtoEthereum": "npx ts-node src/transfer_from_p2e.ts 2043 TRACE 3000000000000000",
-    "wrapSnowTRAC": "npx ts-node src/wrap_snow_trac.ts"
+    "wrapSnowTRAC": "npx ts-node src/wrap_snow_trac.ts",
+    "unwrapSnowTRAC": "npx ts-node src/unwrap_snow_trac.ts"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.62.0",

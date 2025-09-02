@@ -113,7 +113,7 @@ export class NeurowebParachain extends ParachainBase {
 
     async tracBalance(account: string) {
         const accountData = (
-            await this.provider.query.assets.account(location, account)
+            await this.provider.query.assets.account(1, account)
         ).toPrimitive() as any
         return BigInt(accountData?.balance ?? 0n)
     }
