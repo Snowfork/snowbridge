@@ -23,8 +23,11 @@ export class NeurowebParachain extends ParachainBase {
         return BigInt(accountData?.balance ?? 0n)
     }
 
-    getDotBalance(_account: string): Promise<bigint> {
-        throw Error(`Cannot get DOT balance for spec ${this.specName}.`)
+    async getDotBalance(account: string): Promise<bigint> {
+        const accountData = (
+            await this.provider.query.foreignAssets.account(DOT_LOCATION, account)
+        ).toPrimitive() as any
+        return BigInt(accountData?.balance ?? 0n)
     }
 
     async getAssets(ethChainId: number, _pnas: PNAMap): Promise<AssetMap> {
@@ -84,6 +87,17 @@ export class NeurowebParachain extends ParachainBase {
         return executionFee
     }
 
+    async unwrapExecutionFeeInNative(parachain: ApiPromise) {
+        // Mock transaction to get extrinsic fee
+        let tx = parachain.tx.wrapper.tracUnwrap(100000000)
+        const paymentInfo = await tx.paymentInfo(
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        )
+        const executionFee = paymentInfo["partialFee"].toBigInt()
+        console.log("unwrap execution fee:", executionFee)
+        return executionFee
+    }
+
     snowTRACBalance(account: string, ethChainId: number) {
         if (ethChainId === NEUROWEB_TEST_CHAIN_ID) {
             return this.getLocationBalance(
@@ -97,10 +111,24 @@ export class NeurowebParachain extends ParachainBase {
         }
     }
 
+    async tracBalance(account: string) {
+        const accountData = (
+            await this.provider.query.assets.account(location, account)
+        ).toPrimitive() as any
+        return BigInt(accountData?.balance ?? 0n)
+    }
+
     createWrapTx(
         parachain: ApiPromise,
         amount: bigint
     ): SubmittableExtrinsic<"promise", ISubmittableResult> {
         return parachain.tx.wrapper.tracWrap(amount)
+    }
+
+    createUnwrapTx(
+        parachain: ApiPromise,
+        amount: bigint
+    ): SubmittableExtrinsic<"promise", ISubmittableResult> {
+        return parachain.tx.wrapper.tracUnwrap(amount)
     }
 }

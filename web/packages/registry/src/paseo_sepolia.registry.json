@@ -135,7 +135,7 @@
         "hasDryRunApi": false,
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
-        "hasDotBalance": false
+        "hasDotBalance": true
       },
       "info": {
         "tokenSymbols": "NEURO",
