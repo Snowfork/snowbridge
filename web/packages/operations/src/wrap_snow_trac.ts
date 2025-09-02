@@ -4,7 +4,7 @@ import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { assetRegistryFor } from "@snowbridge/registry"
 import { NeurowebParachain } from "@snowbridge/api/dist/parachains/neuroweb"
 
-const wrapSnowTRAC = async (amount: bigint) => {
+const wrapSnowTRAC = async () => {
     await cryptoWaitReady()
 
     let env = "local_e2e"
@@ -46,7 +46,12 @@ const wrapSnowTRAC = async (amount: bigint) => {
         const balance = await neuroWeb.snowTRACBalance(POLKADOT_ACCOUNT_PUBLIC, registry.ethChainId)
         console.log("SnowTRAC balance:", balance)
 
-        const wrapTx = neuroWeb.createWrapTx(parachain, amount)
+        if (balance == 0n) {
+            console.error("SnowTRAC balance is 0, nothing to wrap")
+            process.exit(1)
+        }
+
+        const wrapTx = neuroWeb.createWrapTx(parachain, balance)
 
         await wrapTx.signAndSend(POLKADOT_ACCOUNT, { nonce: -1 }, (result) => {
             console.log(`Transaction status: ${result.status}`)
@@ -60,12 +65,12 @@ const wrapSnowTRAC = async (amount: bigint) => {
     }
 }
 
-if (process.argv.length != 3) {
-    console.error("Expected arguments: `amount`")
+if (process.argv.length != 2) {
+    console.error("Invalid arguments")
     process.exit(1)
 }
 
-wrapSnowTRAC(BigInt(process.argv[2]))
+wrapSnowTRAC()
     .then(() => process.exit(0))
     .catch((error) => {
         console.error("Error:", error)
