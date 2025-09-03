@@ -276,13 +276,13 @@ export const v2Status = async (context: Context): Promise<V2StatusInfo> => {
         toEthereum: {
             outbound: outbound_nonce_sub,
             estimatedDeliveryTime: Math.ceil(
-                Number(estimatedDeliveryTime?.toEthereumElapse?.elapse)
+                Number(estimatedDeliveryTime?.toEthereumV2Elapse?.elapse)
             ),
         },
         toPolkadot: {
             outbound: Number(outbound_nonce_eth),
             estimatedDeliveryTime: Math.ceil(
-                Number(estimatedDeliveryTime?.toPolkadotElapse?.elapse)
+                Number(estimatedDeliveryTime?.toPolkadotV2Elapse?.elapse)
             ),
         },
     }
