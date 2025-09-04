@@ -9,11 +9,12 @@ import (
 )
 
 type Config struct {
-	Source              SourceConfig      `mapstructure:"source"`
-	Sink                SinkConfig        `mapstructure:"sink"`
-	InstantVerification bool              `mapstructure:"instantVerification"`
-	Schedule            ScheduleConfig    `mapstructure:"schedule"`
-	OFAC                config.OFACConfig `mapstructure:"ofac"`
+	Source              SourceConfig       `mapstructure:"source"`
+	Sink                SinkConfig         `mapstructure:"sink"`
+	InstantVerification bool               `mapstructure:"instantVerification"`
+	Schedule            ScheduleConfig     `mapstructure:"schedule"`
+	OFAC                config.OFACConfig  `mapstructure:"ofac"`
+	GasEstimation       GasEstimatorConfig `mapstructure:"gasEstimation"`
 }
 
 type ScheduleConfig struct {
@@ -71,6 +72,10 @@ func (c Config) Validate() error {
 	err = c.OFAC.Validate()
 	if err != nil {
 		return fmt.Errorf("ofac config: %w", err)
+	}
+	err = c.GasEstimation.Validate()
+	if err != nil {
+		return fmt.Errorf("gas estimation config: %w", err)
 	}
 	return nil
 }

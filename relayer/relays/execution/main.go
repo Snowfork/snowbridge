@@ -39,6 +39,7 @@ type Relay struct {
 	headerCache     *ethereum.HeaderCache
 	ofac            *ofac.OFAC
 	chainID         *big.Int
+	gasEstimator    *GasEstimator
 }
 
 func NewRelay(
@@ -46,8 +47,9 @@ func NewRelay(
 	keypair *sr25519.Keypair,
 ) *Relay {
 	return &Relay{
-		config:  config,
-		keypair: keypair,
+		config:       config,
+		keypair:      keypair,
+		gasEstimator: NewGasEstimator(config.GasEstimation),
 	}
 }
 
@@ -520,6 +522,21 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		return errors.New("banned address found")
 	} else {
 		log.Info("address is not banned, continuing")
+	}
+
+	if r.gasEstimator.config.Enabled {
+		gasEstimate, err := r.gasEstimator.EstimateGas(ctx, ev, source)
+		if err != nil {
+			return fmt.Errorf("gas estimation failed: %w", err)
+		}
+
+		err = r.gasEstimator.IsProfitable(gasEstimate, ev)
+		if err != nil {
+			logger.WithField("nonce", ev.Nonce).Info("message will not be relayed due to not being profitable")
+			return nil // Skip this message without error
+		}
+
+		logger.WithField("nonce", ev.Nonce).Info("message relaying is profitable, proceeding with message relay")
 	}
 
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
