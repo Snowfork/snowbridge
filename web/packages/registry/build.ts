@@ -18,18 +18,11 @@ async function buildRegistry(env: string, options: assetsV2.RegistryOptions) {
     await writeFile(filepath, json)
 }
 
-(async () => {
-    const envs = [
-        "polkadot_mainnet",
-        "westend_sepolia",
-        "paseo_sepolia",
-    ]
-    const apiKey = process.env.ETHEREUM_API_KEY
-    if(!apiKey || apiKey.trim().length === 0) {
-        throw Error(`ETHEREUM_API_KEY env variable not set.`)
+;(async () => {
+    let env = "local_e2e"
+    if (process.env.NODE_ENV !== undefined) {
+        env = process.env.NODE_ENV
     }
-    await Promise.all(envs.map(async env => {
-        const options = assetsV2.fromEnvironment(environment.SNOWBRIDGE_ENV[env])
-        await buildRegistry(env, options)
-    }))
+    const options = assetsV2.fromEnvironment(environment.SNOWBRIDGE_ENV[env])
+    await buildRegistry(env, options)
 })()

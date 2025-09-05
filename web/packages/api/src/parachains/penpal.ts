@@ -1,8 +1,7 @@
 import { AssetMap } from "@snowbridge/base-types"
 import { PNAMap } from "../assets_v2"
 import { ParachainBase } from "./parachainBase"
-import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
-import { WESTEND_GENESIS } from "./assethub"
+import { DOT_LOCATION, getTokenFromLocation, WESTEND_GENESIS } from "../xcmBuilder"
 
 export class PenpalParachain extends ParachainBase {
     getXC20DOT() {
