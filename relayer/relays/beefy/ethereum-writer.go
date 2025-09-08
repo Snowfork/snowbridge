@@ -68,7 +68,7 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 				// the beefy light client
 				task.ValidatorsRoot = state.NextValidatorSetRoot
 
-				err = wr.submitFiatShamir(ctx, task)
+				err = wr.submit(ctx, task)
 				if err != nil {
 					return fmt.Errorf("submit request: %w", err)
 				}
