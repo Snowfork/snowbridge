@@ -1,4 +1,4 @@
-use ethers::{core::types::Address, types::Bytes};
+use alloy::primitives::{Address, Bytes, U256};
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
@@ -25,15 +25,15 @@ use subxt::{ext::codec::Encode, tx::Payload};
 #[tokio::test]
 async fn transact_e2p() {
 	let test_clients = initial_clients().await.expect("initialize clients");
-	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
+	let ethereum_client = test_clients.ethereum_client;
 	let assethub = *(test_clients.asset_hub_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
 	let gateway = i_gateway::IGatewayV2::new(gateway_addr, ethereum_client.clone());
 
-	let execution_fee = 2_000_000_000u128;
+	let execution_fee = 2_000_000_000_000u128;
 	let relayer_fee = 2_000_000_000u128;
-	let fee = 9_000_000_000u128;
+	let fee = 9_000_000_000_000u128;
 
 	let remark_message = b"Hey there";
 	let mut encoded = Vec::new();
@@ -58,14 +58,15 @@ async fn transact_e2p() {
 	let assets = vec![];
 
 	let receipt = gateway
-		.v_2_send_message(xcm, assets, claimer, execution_fee, relayer_fee)
-		.value(fee)
+		.v2_sendMessage(xcm, assets, claimer, execution_fee, relayer_fee)
+		.value(U256::from(fee))
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
 		.unwrap()
+		.get_receipt()
 		.await
-		.unwrap()
-		.unwrap();
+		.expect("get receipt");
 
 	println!(
 		"receipt transaction hash: {:#?}, transaction block: {:#?}",
@@ -73,11 +74,11 @@ async fn transact_e2p() {
 		receipt.block_number
 	);
 
-	let outbound_message_accepted_log = receipt.logs.last().unwrap();
+	let outbound_message_accepted_log = receipt.logs().last().unwrap().as_ref();
 
 	print_event_log_for_unit_tests(outbound_message_accepted_log);
 
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
+	assert_eq!(receipt.status(), true);
 
 	let wait_for_blocks = (*WAIT_PERIOD) as usize;
 	let mut blocks = assethub

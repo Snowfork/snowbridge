@@ -11,6 +11,7 @@ import (
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	"golang.org/x/sync/errgroup"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -66,29 +67,31 @@ func (co *Connection) Connect(_ context.Context) error {
 	return nil
 }
 
-func (co *Connection) ConnectWithHeartBeat(ctx context.Context, heartBeat time.Duration) error {
+func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Group, heartBeat time.Duration) error {
 	err := co.Connect(ctx)
 	if err != nil {
 		return err
 	}
 
-	ticker := time.NewTicker(heartBeat)
+	if heartBeat.Abs() > 0 {
+		ticker := time.NewTicker(heartBeat)
 
-	go func() {
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				_, err := co.API().RPC.System.Version()
-				if err != nil {
-					log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
-					return
+		eg.Go(func() error {
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-ticker.C:
+					_, err := co.API().RPC.System.Version()
+					if err != nil {
+						log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
+						return err
+					}
 				}
 			}
-		}
-	}()
+		})
+	}
 
 	return nil
 }
@@ -356,3 +359,6 @@ func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlo
 	}
 	return heads, nil
 }
+
+// The process for finalizing a backed parachain header times out after these many blocks
+const FinalizationTimeout = 8

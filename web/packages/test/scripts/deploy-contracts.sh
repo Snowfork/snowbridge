@@ -6,20 +6,29 @@ source scripts/set-env.sh
 deploy_command() {
     local deploy_script=$1
 
-    pushd "$contract_dir"
+    if [ "$snowbridge_v1" = "true" ]; then
+        pushd "$v1_contract_dir"
+        rm -rf $v1_contract_dir/broadcast
+    else
+        pushd "$contract_dir"
+        rm -rf $contract_dir/broadcast
+    fi
+
+
     if [ "$eth_network" != "localhost" ]; then
         forge script \
             --rpc-url $eth_endpoint_http \
             --broadcast \
             --verify \
-            --etherscan-api-key $etherscan_api_key \
+            --etherscan-api-key $ETHERSCAN_API_KEY \
             -vvv \
             $deploy_script
     else
         RUST_LOG=forge forge script \
             --rpc-url $eth_endpoint_http \
             --broadcast \
-            -vvv \
+            --legacy \
+            -vvvv \
             $deploy_script
     fi
     popd

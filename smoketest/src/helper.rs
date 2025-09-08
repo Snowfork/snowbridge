@@ -1,6 +1,5 @@
 use crate::{
 	constants::*,
-	contracts::i_gateway_v1 as i_gateway,
 	parachains::{
 		relaychain,
 		relaychain::api::runtime_types::{
@@ -33,30 +32,37 @@ use crate::{
 		},
 	},
 };
-use ethers::{
-	prelude::{
-		Address, EthEvent, LocalWallet, Middleware, Provider, Signer, SignerMiddleware,
-		TransactionRequest, Ws, U256,
-	},
-	providers::Http,
-	types::Log,
+use alloy::{
+	dyn_abi::DynSolValue,
+	eips::BlockNumberOrTag,
+	network::TransactionBuilder,
+	primitives::{Address, Bytes, FixedBytes, Log, B256, U256},
+	providers::{DynProvider, Provider, ProviderBuilder, WsConnect},
+	rpc::types::{Filter, TransactionRequest},
+	signers::local::PrivateKeySigner,
+	sol_types::SolEvent,
 };
 use futures::StreamExt;
-use std::{ops::Deref, sync::Arc, time::Duration};
+use pair_signer::PairSigner;
+use sp_core::{sr25519::Pair, Pair as PairT};
 use subxt::{
 	config::DefaultExtrinsicParams,
 	events::StaticEvent,
-	ext::sp_core::{sr25519::Pair, Pair as PairT},
-	tx::PairSigner,
 	utils::{AccountId32, MultiAddress, H256},
 	Config, OnlineClient, PolkadotConfig,
 };
+
+#[cfg(feature = "legacy-v1")]
+use crate::contracts::i_gateway::IGateway;
+#[cfg(not(feature = "legacy-v1"))]
+use crate::contracts::i_gateway_v1::IGatewayV1 as IGateway;
+#[cfg(not(feature = "legacy-v1"))]
+use crate::contracts::i_gateway_v2::IGatewayV2;
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}
 
 impl Config for AssetHubConfig {
-	type Hash = <PolkadotConfig as Config>::Hash;
 	type AccountId = <PolkadotConfig as Config>::AccountId;
 	type Address = <PolkadotConfig as Config>::Address;
 	type Signature = <PolkadotConfig as Config>::Signature;
@@ -66,12 +72,66 @@ impl Config for AssetHubConfig {
 	type AssetId = <PolkadotConfig as Config>::AssetId;
 }
 
+/// A concrete PairSigner implementation which relies on `sr25519::Pair` for signing
+/// and that PolkadotConfig is the runtime configuration.
+pub mod pair_signer {
+	use super::*;
+	use sp_core::sr25519;
+	use sp_runtime::{
+		traits::{IdentifyAccount, Verify},
+		MultiSignature as SpMultiSignature,
+	};
+	use subxt::{
+		config::substrate::{AccountId32, MultiSignature},
+		tx::Signer,
+	};
+
+	/// A [`Signer`] implementation for [`polkadot_sdk::sp_core::sr25519::Pair`].
+	#[derive(Clone)]
+	pub struct PairSigner {
+		account_id: <PolkadotConfig as Config>::AccountId,
+		signer: sr25519::Pair,
+	}
+
+	impl PairSigner {
+		/// Creates a new [`Signer`] from an [`sp_core::sr25519::Pair`].
+		pub fn new(signer: sr25519::Pair) -> Self {
+			let account_id =
+				<SpMultiSignature as Verify>::Signer::from(signer.public()).into_account();
+			Self {
+				// Convert `sp_core::AccountId32` to `subxt::config::substrate::AccountId32`.
+				//
+				// This is necessary because we use `subxt::config::substrate::AccountId32` and no
+				// From/Into impls are provided between `sp_core::AccountId32` because
+				// `polkadot-sdk` isn't a direct dependency in subxt.
+				//
+				// This can also be done by provided a wrapper type around
+				// `subxt::config::substrate::AccountId32` to implement such conversions but
+				// that also most likely requires a custom `Config` with a separate `AccountId` type
+				// to work properly without additional hacks.
+				account_id: AccountId32(account_id.into()),
+				signer,
+			}
+		}
+	}
+
+	impl Signer<PolkadotConfig> for PairSigner {
+		fn account_id(&self) -> <PolkadotConfig as Config>::AccountId {
+			self.account_id.clone()
+		}
+
+		fn sign(&self, signer_payload: &[u8]) -> <PolkadotConfig as Config>::Signature {
+			let signature = self.signer.sign(signer_payload);
+			MultiSignature::Sr25519(signature.0)
+		}
+	}
+}
+
 pub struct TestClients {
 	pub asset_hub_client: Box<OnlineClient<AssetHubConfig>>,
 	pub bridge_hub_client: Box<OnlineClient<PolkadotConfig>>,
 	pub relaychain_client: Box<OnlineClient<PolkadotConfig>>,
-	pub ethereum_client: Box<Arc<Provider<Ws>>>,
-	pub ethereum_signed_client: Box<Arc<SignerMiddleware<Provider<Http>, LocalWallet>>>,
+	pub ethereum_client: Box<DynProvider>,
 }
 
 pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>> {
@@ -90,21 +150,19 @@ pub async fn initial_clients() -> Result<TestClients, Box<dyn std::error::Error>
 			.await
 			.expect("can not connect to relaychain");
 
-	let ethereum_provider = Provider::<Ws>::connect((*ETHEREUM_API).to_string())
-		.await
-		.unwrap()
-		.interval(Duration::from_millis(10u64));
+	// Initialize a signer with a private key
+	let signer: PrivateKeySigner = (*ETHEREUM_KEY).to_string().parse()?;
 
-	let ethereum_client = Arc::new(ethereum_provider);
+	// Create the provider.
+	let ws = WsConnect::new((*ETHEREUM_API).to_string());
 
-	let ethereum_signed_client = initialize_wallet().await.expect("initialize wallet");
+	let ethereum_provider = ProviderBuilder::new().wallet(signer).connect_ws(ws).await?.erased();
 
 	Ok(TestClients {
 		asset_hub_client: Box::new(asset_hub_client),
 		bridge_hub_client: Box::new(bridge_hub_client),
 		relaychain_client: Box::new(relaychain_client),
-		ethereum_client: Box::new(ethereum_client),
-		ethereum_signed_client: Box::new(Arc::new(ethereum_signed_client)),
+		ethereum_client: Box::new(ethereum_provider),
 	})
 }
 
@@ -167,22 +225,30 @@ pub async fn wait_for_assethub_event<Ev: StaticEvent>(
 	assert!(substrate_event_found);
 }
 
-pub async fn wait_for_ethereum_event<Ev: EthEvent>(ethereum_client: &Box<Arc<Provider<Ws>>>) {
-	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = i_gateway::IGatewayV1::new(gateway_addr, (*ethereum_client).deref().clone());
+pub async fn wait_for_ethereum_event<Ev: SolEvent>(
+	ethereum_client: Box<dyn Provider>,
+	contract_address: Address,
+) {
+	let filter = Filter::new()
+		// By NOT specifying an `event` or `event_signature` we listen to ALL events of the
+		// contract.
+		.address(contract_address)
+		.from_block(BlockNumberOrTag::Latest);
 
-	let wait_for_blocks = 500;
-	let mut stream = ethereum_client.subscribe_blocks().await.unwrap().take(wait_for_blocks);
+	let logs = ethereum_client.subscribe_logs(&filter).await.expect("logs");
+	let mut stream = logs.into_stream();
 
 	let mut ethereum_event_found = false;
-	while let Some(block) = stream.next().await {
-		println!("Polling ethereum block {:?} for expected event", block.number.unwrap());
-		if let Ok(events) = gateway.event::<Ev>().at_block_hash(block.hash.unwrap()).query().await {
-			for _ in events {
-				println!("Event found at ethereum block {:?}", block.number.unwrap());
-				ethereum_event_found = true;
-				break
-			}
+	let expected_topic0: B256 = Ev::SIGNATURE_HASH.into();
+	while let Some(log) = stream.next().await {
+		match log.topic0() {
+			Some(&topic0) =>
+				if topic0 == expected_topic0 {
+					println!("Event found at ethereum block {:?}", log.block_number);
+					ethereum_event_found = true;
+					break
+				},
+			_ => (),
 		}
 		if ethereum_event_found {
 			break
@@ -196,42 +262,32 @@ pub struct SudoResult {
 	pub extrinsic_hash: H256,
 }
 
-pub async fn initialize_wallet(
-) -> Result<SignerMiddleware<Provider<Http>, LocalWallet>, Box<dyn std::error::Error>> {
-	let provider = Provider::<Http>::try_from((*ETHEREUM_HTTP_API).to_string())
-		.unwrap()
-		.interval(Duration::from_millis(10u64));
-
-	let wallet: LocalWallet = (*ETHEREUM_KEY)
-		.to_string()
-		.parse::<LocalWallet>()
-		.unwrap()
-		.with_chain_id(ETHEREUM_CHAIN_ID);
-
-	Ok(SignerMiddleware::new(provider.clone(), wallet.clone()))
-}
-
 pub async fn get_balance(
-	client: &Box<Arc<SignerMiddleware<Provider<Http>, LocalWallet>>>,
+	client: Box<DynProvider>,
 	who: Address,
 ) -> Result<U256, Box<dyn std::error::Error>> {
-	let balance = client.get_balance(who, None).await?;
-
+	let balance = client.get_balance(who).await?;
 	Ok(balance)
 }
 
 pub async fn fund_account(
-	client: &Box<Arc<SignerMiddleware<Provider<Http>, LocalWallet>>>,
+	client: Box<dyn Provider>,
 	address_to: Address,
 	amount: u128,
 ) -> Result<(), Box<dyn std::error::Error>> {
-	let tx = TransactionRequest::new()
+	let tx = TransactionRequest::default()
 		.to(address_to)
-		.from(client.address())
+		.with_gas_price(GAS_PRICE)
 		.value(U256::from(amount));
-	let tx = client.send_transaction(tx, None).await?.await?;
-	assert_eq!(tx.clone().unwrap().status.unwrap().as_u64(), 1u64);
-	println!("receipt: {:#?}", hex::encode(tx.unwrap().transaction_hash));
+	let pending_tx = client.send_transaction(tx).await?;
+	println!("Pending transaction... {}", pending_tx.tx_hash());
+
+	// Wait for the transaction to be included and get the receipt
+	let receipt = pending_tx.get_receipt().await?;
+	println!(
+		"Transaction included in block {}",
+		receipt.block_number.expect("Failed to get block number")
+	);
 	Ok(())
 }
 
@@ -242,7 +298,7 @@ pub async fn governance_bridgehub_call_from_relay_chain(
 
 	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 
-	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+	let signer: PairSigner = PairSigner::new(sudo);
 
 	let weight = 180000000000;
 	let proof_size = 900000;
@@ -289,7 +345,7 @@ pub async fn snowbridge_assethub_call_from_relay_chain(
 
 	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 
-	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+	let signer: PairSigner = PairSigner::new(sudo);
 
 	let weight = 180000000000;
 	let proof_size = 900000;
@@ -345,7 +401,7 @@ pub async fn assethub_deposit_eth_on_penpal_call_from_relay_chain(
 
 	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 
-	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+	let signer: PairSigner = PairSigner::new(sudo);
 
 	let weight = 180000000000;
 	let proof_size = 900000;
@@ -475,7 +531,7 @@ pub async fn governance_assethub_call_from_relay_chain_sudo_as(
 
 	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 
-	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+	let signer: PairSigner = PairSigner::new(sudo);
 
 	let weight = 180000000000;
 	let proof_size = 900000;
@@ -533,28 +589,27 @@ pub async fn fund_agent(
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let test_clients = initial_clients().await.expect("initialize clients");
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let ethereum_client = *(test_clients.ethereum_client.clone());
-	let gateway = i_gateway::IGatewayV1::new(gateway_addr, ethereum_client.clone());
-	let agent_address = gateway.agent_of(agent_id).await.expect("find agent");
+	let gateway = IGateway::new(gateway_addr, *(test_clients.ethereum_client.clone()));
+	let agent_address = gateway.agentOf(FixedBytes::from(agent_id)).call().await?;
 
 	println!("agent address {}", hex::encode(agent_address));
 
-	fund_account(&test_clients.ethereum_signed_client, agent_address, amount)
+	fund_account(test_clients.ethereum_client, agent_address, amount)
 		.await
 		.expect("fund account");
 	Ok(())
 }
 
 pub fn print_event_log_for_unit_tests(log: &Log) {
-	let topics: Vec<String> = log.topics.iter().map(|t| hex::encode(t.as_ref())).collect();
+	let topics: Vec<String> = log.topics().iter().map(|t| hex::encode(t.0.as_slice())).collect();
 	println!("Log {{");
-	println!("	address: hex!(\"{}\").into(),", hex::encode(log.address.as_ref()));
+	println!("	address: hex!(\"{}\").into(),", hex::encode(log.address));
 	println!("	topics: vec![");
 	for topic in topics.iter() {
 		println!("		hex!(\"{}\").into(),", topic);
 	}
 	println!("	],");
-	println!("	data: hex!(\"{}\").into(),", hex::encode(&log.data));
+	println!("	data: hex!(\"{}\").into(),", hex::encode(&log.data.data));
 
 	println!("}}")
 }
@@ -566,7 +621,7 @@ pub async fn governance_assethub_call_from_relay_chain(
 
 	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
 
-	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
+	let signer: PairSigner = PairSigner::new(sudo);
 
 	let weight = 180000000000;
 	let proof_size = 900000;
@@ -604,4 +659,121 @@ pub async fn governance_assethub_call_from_relay_chain(
 	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
 
 	Ok(())
+}
+
+pub async fn deposit_eth_to_penpal(
+	account: [u8; 32],
+	amount: u128,
+) -> Result<(), Box<dyn std::error::Error>> {
+	let test_clients = initial_clients().await.expect("initialize clients");
+
+	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
+
+	let signer: PairSigner = PairSigner::new(sudo);
+
+	let weight = 180000000000;
+	let proof_size = 900000;
+
+	let account_location: RelaychainMultiLocation = RelaychainMultiLocation {
+		parents: 0,
+		interior: RelaychainJunctions::X1(RelaychainAccountId32 {
+			network: None,
+			id: account.into(),
+		}),
+	};
+	let dest = Box::new(RelaychainVersionedLocation::V3(RelaychainMultiLocation {
+		parents: 0,
+		interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(PENPAL_PARA_ID)),
+	}));
+
+	let message = Box::new(RelaychainVersionedXcm::V3(RelaychainXcm(vec![
+		RelaychainInstruction::BuyExecution {
+			fees: RelaychainMultiAsset {
+				id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
+					parents: 0,
+					interior: RelaychainJunctions::Here,
+				}),
+				fun: RelaychainFungibility::Fungible(amount),
+			},
+			weight_limit: RelaychainWeightLimit::Limited(RelaychainWeight {
+				ref_time: weight,
+				proof_size,
+			}),
+		},
+		RelaychainInstruction::ReserveAssetDeposited(RelaychainMultiAssets(vec![
+			RelaychainMultiAsset {
+				id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
+					parents: 2,
+					interior: RelaychainJunctions::X1(RelaychainJunction::GlobalConsensus(
+						RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID },
+					)),
+				}),
+				fun: RelaychainFungibility::Fungible(amount),
+			},
+		])),
+		RelaychainInstruction::DepositAsset {
+			assets: RelaychainMultiAssetFilter::Wild(RelaychainWildMultiAsset::AllCounted(2)),
+			beneficiary: account_location,
+		},
+	])));
+
+	let sudo_api = relaychain::api::sudo::calls::TransactionApi;
+	let sudo_call = sudo_api
+		.sudo(RelaychainRuntimeCall::XcmPallet(RelaychainPalletXcmCall::send { dest, message }));
+
+	let result = test_clients
+		.relaychain_client
+		.tx()
+		.sign_and_submit_then_watch_default(&sudo_call, &signer)
+		.await
+		.expect("send through sudo call.")
+		.wait_for_finalized_success()
+		.await
+		.expect("sudo call success");
+
+	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
+
+	Ok(())
+}
+
+pub fn build_native_asset(token: Address, amount: u128) -> Bytes {
+	let kind_token = DynSolValue::Uint(U256::from(0u8), 256);
+	let token_token = DynSolValue::Address(token);
+	let amount_token = DynSolValue::Uint(U256::from(amount), 256);
+	Bytes::from(DynSolValue::Tuple(vec![kind_token, token_token, amount_token]).abi_encode())
+}
+
+pub async fn fund_agent_v2(
+	agent_id: [u8; 32],
+	amount: u128,
+) -> Result<(), Box<dyn std::error::Error>> {
+	let test_clients = initial_clients().await.expect("initialize clients");
+	let agent_address = get_agent_address(test_clients.ethereum_client.clone(), agent_id)
+		.await
+		.expect("get agent address");
+
+	fund_account(test_clients.ethereum_client, agent_address, amount)
+		.await
+		.expect("fund account");
+	Ok(())
+}
+
+pub async fn get_agent_address(
+	ethereum_client: Box<DynProvider>,
+	agent_id: [u8; 32],
+) -> Result<Address, Box<dyn std::error::Error>> {
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
+	let gateway = IGatewayV2::new(gateway_addr, *ethereum_client);
+	let agent_address = gateway.agentOf(FixedBytes::from(agent_id)).call().await?;
+	Ok(agent_address)
+}
+
+pub async fn get_token_address(
+	ethereum_client: Box<DynProvider>,
+	token_id: [u8; 32],
+) -> Result<Address, Box<dyn std::error::Error>> {
+	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
+	let gateway = IGateway::new(gateway_addr, *ethereum_client);
+	let token_address = gateway.tokenAddressOf(FixedBytes::from(token_id)).call().await?;
+	Ok(token_address)
 }

@@ -166,7 +166,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         // Make sure relayers provide enough gas so that inner message dispatch
         // does not run out of gas.
         uint256 maxDispatchGas = message.maxDispatchGas;
-        if (gasleft() < maxDispatchGas + DISPATCH_OVERHEAD_GAS_V1) {
+        if (gasleft() * 63 / 64 < maxDispatchGas + DISPATCH_OVERHEAD_GAS_V1) {
             revert IGatewayBase.NotEnoughGas();
         }
 
@@ -428,9 +428,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             revert IGatewayBase.InvalidProof();
         }
 
-        // Dispatch the message payload
+        // Dispatch the message payload. The boolean returned indicates whether all commands succeeded.
         bool success = v2_dispatch(message);
 
+        // Emit the event with a success value "true" if all commands successfully executed, otherwise "false"
+        // if all or some of the commands failed.
         emit IGatewayV2.InboundMessageDispatched(
             message.nonce, message.topic, success, rewardAddress
         );
@@ -509,56 +511,66 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
      * APIv2 Internal functions
      */
 
-    // Dispatch all the commands within the batch of commands in the message payload. If a single
-    // command fails, dispatches of subsequent commands are aborted.
-    function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {
-        for (uint256 i = 0; i < message.commands.length; i++) {
-            // check that there is enough gas available to forward to the command handler
-            if (gasleft() * 63 / 64 < message.commands[i].gas + DISPATCH_OVERHEAD_GAS_V2) {
-                revert IGatewayV2.InsufficientGasLimit();
-            }
-            if (message.commands[i].kind == CommandKind.Upgrade) {
-                try Gateway(this).v2_handleUpgrade{gas: message.commands[i].gas}(
-                    message.commands[i].payload
-                ) {} catch {
-                    return false;
-                }
-            } else if (message.commands[i].kind == CommandKind.SetOperatingMode) {
-                try Gateway(this).v2_handleSetOperatingMode{gas: message.commands[i].gas}(
-                    message.commands[i].payload
-                ) {} catch {
-                    return false;
-                }
-            } else if (message.commands[i].kind == CommandKind.UnlockNativeToken) {
-                try Gateway(this).v2_handleUnlockNativeToken{gas: message.commands[i].gas}(
-                    message.commands[i].payload
-                ) {} catch {
-                    return false;
-                }
-            } else if (message.commands[i].kind == CommandKind.RegisterForeignToken) {
-                try Gateway(this).v2_handleRegisterForeignToken{gas: message.commands[i].gas}(
-                    message.commands[i].payload
-                ) {} catch {
-                    return false;
-                }
-            } else if (message.commands[i].kind == CommandKind.MintForeignToken) {
-                try Gateway(this).v2_handleMintForeignToken{gas: message.commands[i].gas}(
-                    message.commands[i].payload
-                ) {} catch {
-                    return false;
-                }
-            } else if (message.commands[i].kind == CommandKind.CallContract) {
-                try Gateway(this).v2_handleCallContract{gas: message.commands[i].gas}(
-                    message.origin, message.commands[i].payload
-                ) {} catch {
-                    return false;
-                }
-            } else {
-                // Unknown command
+    // Internal helper to dispatch a single command
+    function _dispatchCommand(CommandV2 calldata command, bytes32 origin)
+        internal
+        returns (bool)
+    {
+        // check that there is enough gas available to forward to the command handler
+        if (gasleft() * 63 / 64 < command.gas + DISPATCH_OVERHEAD_GAS_V2) {
+            revert IGatewayV2.InsufficientGasLimit();
+        }
+
+        if (command.kind == CommandKind.Upgrade) {
+            try Gateway(this).v2_handleUpgrade{gas: command.gas}(command.payload) {}
+            catch {
                 return false;
             }
+        } else if (command.kind == CommandKind.SetOperatingMode) {
+            try Gateway(this).v2_handleSetOperatingMode{gas: command.gas}(command.payload) {}
+            catch {
+                return false;
+            }
+        } else if (command.kind == CommandKind.UnlockNativeToken) {
+            try Gateway(this).v2_handleUnlockNativeToken{gas: command.gas}(command.payload) {}
+            catch {
+                return false;
+            }
+        } else if (command.kind == CommandKind.RegisterForeignToken) {
+            try Gateway(this).v2_handleRegisterForeignToken{gas: command.gas}(command.payload) {}
+            catch {
+                return false;
+            }
+        } else if (command.kind == CommandKind.MintForeignToken) {
+            try Gateway(this).v2_handleMintForeignToken{gas: command.gas}(command.payload) {}
+            catch {
+                return false;
+            }
+        } else if (command.kind == CommandKind.CallContract) {
+            try Gateway(this).v2_handleCallContract{gas: command.gas}(origin, command.payload) {}
+            catch {
+                return false;
+            }
+        } else {
+            // Unknown command
+            return false;
         }
         return true;
+    }
+
+    // Dispatch all the commands within the batch of commands in the message payload. Each command is processed
+    // independently, such that failures emit a `CommandFailed` event without stopping execution of subsequent commands.
+    function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {
+        bool allCommandsSucceeded = true;
+
+        for (uint256 i = 0; i < message.commands.length; i++) {
+            if (!_dispatchCommand(message.commands[i], message.origin)) {
+                emit IGatewayV2.CommandFailed(message.nonce, i);
+                allCommandsSucceeded = false;
+            }
+        }
+
+        return allCommandsSucceeded;
     }
 
     /**

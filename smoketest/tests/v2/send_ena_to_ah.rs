@@ -1,14 +1,9 @@
-use ethers::{
-	core::types::Address,
-	types::{Bytes, U256},
-	utils::parse_units,
-};
+use alloy::primitives::{utils::parse_units, Address, Bytes, U256};
 use futures::StreamExt;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::{i_gateway_v2 as i_gateway, weth9},
-	helper::{initial_clients, print_event_log_for_unit_tests},
-	helper_v2::build_native_asset,
+	helper::{build_native_asset, initial_clients, print_event_log_for_unit_tests},
 	parachains::assethub::api::{
 		foreign_assets::events::Issued,
 		runtime_types::{
@@ -32,7 +27,7 @@ use subxt::{ext::codec::Encode, utils::AccountId32 as AccountId32Substrate};
 #[tokio::test]
 async fn send_ena_to_ah() {
 	let test_clients = initial_clients().await.expect("initialize clients");
-	let ethereum_client = *(test_clients.ethereum_signed_client.clone());
+	let ethereum_client = test_clients.ethereum_client;
 	let assethub = *(test_clients.asset_hub_client.clone());
 
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
@@ -42,29 +37,41 @@ async fn send_ena_to_ah() {
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
 	// Mint WETH tokens
-	let value = parse_units("0.01", "ether").unwrap();
-	let receipt = weth.deposit().value(value).send().await.unwrap().await.unwrap().unwrap();
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
-
-	// Approve token spend
-	weth.approve(gateway_addr, value.into())
+	let value = parse_units("0.01", "ether").unwrap().get_absolute();
+	let mut receipt = weth
+		.deposit()
+		.value(value)
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
 		.unwrap()
+		.get_receipt()
+		.await
+		.expect("get receipt");
+	assert_eq!(receipt.status(), true);
+
+	// Approve token spend
+	receipt = weth
+		.approve(gateway_addr, value.into())
+		.gas_price(GAS_PRICE)
+		.send()
 		.await
 		.unwrap()
-		.unwrap();
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
+		.get_receipt()
+		.await
+		.expect("get receipt");
 
-	let execution_fee = 2_000_000_000u128;
+	assert_eq!(receipt.status(), true);
+
+	let execution_fee = 2_000_000_000_000u128;
 	let relayer_fee = 2_000_000_000u128;
-	let fee = 9_000_000_000u128;
+	let fee = 9_000_000_000_000u128;
 
 	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
-	let amount: u128 = U256::from(value).low_u128();
-	let weth_asset = build_native_asset(weth.address(), amount);
+	let amount: u128 = value.to::<u128>();
+	let weth_asset = build_native_asset(*weth.address(), amount);
 	let beneficiary = Location {
 		parents: 0,
 		interior: Junctions::X1([AccountId32 { network: None, id: (*SUBSTRATE_RECEIVER).into() }]),
@@ -74,7 +81,7 @@ async fn send_ena_to_ah() {
 		parents: 2,
 		interior: Junctions::X2([
 			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
-			AccountKey20 { network: None, key: weth.address().into() },
+			AccountKey20 { network: None, key: (*weth.address()).into() },
 		]),
 	};
 	let message = VersionedXcm::V5(Xcm(vec![DepositAsset {
@@ -88,14 +95,15 @@ async fn send_ena_to_ah() {
 	let assets = vec![weth_asset];
 
 	let receipt = gateway
-		.v_2_send_message(xcm, assets, claimer, execution_fee, relayer_fee)
-		.value(fee)
+		.v2_sendMessage(xcm, assets, claimer, execution_fee, relayer_fee)
+		.value(U256::from(fee))
+		.gas_price(GAS_PRICE)
 		.send()
 		.await
 		.unwrap()
+		.get_receipt()
 		.await
-		.unwrap()
-		.unwrap();
+		.expect("get receipt");
 
 	println!(
 		"receipt transaction hash: {:#?}, transaction block: {:#?}",
@@ -104,12 +112,12 @@ async fn send_ena_to_ah() {
 	);
 
 	// Log for OutboundMessageAccepted
-	let outbound_message_accepted_log = receipt.logs.last().unwrap();
+	let outbound_message_accepted_log = receipt.logs().last().unwrap().as_ref();
 
 	// print log for unit tests
 	print_event_log_for_unit_tests(outbound_message_accepted_log);
 
-	assert_eq!(receipt.status.unwrap().as_u64(), 1u64);
+	assert_eq!(receipt.status(), true);
 
 	let wait_for_blocks = (*WAIT_PERIOD) as usize;
 	let mut blocks = assethub
@@ -126,40 +134,24 @@ async fn send_ena_to_ah() {
 			AccountKey20 { network: None, key: (*WETH_CONTRACT).into() },
 		]),
 	};
-	let expected_eth_id: Location = Location {
-		parents: 2,
-		interior: Junctions::X1([GlobalConsensus(NetworkId::Ethereum {
-			chain_id: ETHEREUM_CHAIN_ID,
-		})]),
-	};
 	let expected_owner: AccountId32Substrate = (*SUBSTRATE_RECEIVER).into();
 
 	let mut issued_weth_event_found = false;
-	let mut issued_eth_event_found = false;
-	let mut event_count = 0;
 	while let Some(Ok(block)) = blocks.next().await {
 		println!("Polling assethub block {} for issued event.", block.number());
 
 		let events = block.events().await.unwrap();
 		for issued in events.find::<Issued>() {
 			let issued = issued.unwrap();
-			event_count = event_count + 1;
-			if event_count == 1 {
-				// Issued weth token
-				assert_eq!(issued.asset_id.encode(), expected_weth_id.encode());
-				assert_eq!(issued.owner, expected_owner);
-				assert_eq!(issued.amount, amount);
-				issued_weth_event_found = true;
-			} else if event_count == 2 {
-				// Refunded eth fees
-				assert_eq!(issued.asset_id.encode(), expected_eth_id.encode());
-				issued_eth_event_found = true;
-			}
+			// Issued weth token
+			assert_eq!(issued.asset_id.encode(), expected_weth_id.encode());
+			assert_eq!(issued.owner, expected_owner);
+			assert_eq!(issued.amount, amount);
+			issued_weth_event_found = true;
 		}
-		if event_count >= 2 {
-			break
+		if issued_weth_event_found {
+			break;
 		}
 	}
 	assert!(issued_weth_event_found);
-	assert!(issued_eth_event_found);
 }

@@ -12,11 +12,25 @@
     "muirGlacierBlock": 0,
     "berlinBlock": 0,
     "londonBlock": 0,
-    "ethash": {},
-    "terminalTotalDifficulty": 0,
+    "arrowGlacierBlock": 0,
+    "grayGlacierBlock": 0,
     "ShanghaiTime": 0,
     "CancunTime": 0,
-    "terminalTotalDifficultyPassed": true
+    "PragueTime": 0,
+    "terminalTotalDifficultyPassed": true,
+    "terminalTotalDifficulty": 0,
+    "blobSchedule": {
+      "cancun": {
+        "max": 0,
+        "target": 0,
+        "baseFeeUpdateFraction": 1
+      },
+      "prague": {
+        "max": 0,
+        "target": 0,
+        "baseFeeUpdateFraction": 1
+      }
+    }
   },
   "difficulty": "0x9FFE0",
   "gasLimit": "80000000",

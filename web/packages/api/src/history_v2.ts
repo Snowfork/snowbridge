@@ -19,10 +19,13 @@ export type TransferInfo = {
     tokenAddress: string
     destinationParachain?: number
     amount: string
+    sourceNetwork?: string
+    destinationNetwork?: string
+    sourceParachain?: number
 }
 
 export type ToPolkadotTransferResult = {
-    sourceType: "ethereum"
+    sourceType: string
     id: string
     status: TransferStatus
     info: TransferInfo
@@ -120,8 +123,33 @@ export type ToEthereumTransferResult = {
     }
 }
 
+export type InterParachainTransfer = {
+    sourceType: "substrate"
+    id: string
+    status: TransferStatus
+    info: TransferInfo
+    submitted: {
+        sourceParachainId: number
+        extrinsic_hash: string
+        account_id: string
+        block_num: number
+        block_timestamp: number
+        messageId: string
+        bridgeHubMessageId: string
+        success: boolean
+    }
+    destinationReceived?: {
+        paraId: number
+        success: boolean
+        messageId: string
+        event_index: string
+        block_timestamp: string
+        blockNumber: number
+    }
+}
+
 const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult => {
-    const result: ToPolkadotTransferResult = {
+    let result: ToPolkadotTransferResult = {
         sourceType: "ethereum",
         id: transfer.id,
         status: TransferStatus.Pending,
@@ -132,6 +160,9 @@ const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult 
             tokenAddress: transfer.tokenAddress,
             destinationParachain: transfer.destinationParaId,
             amount: transfer.amount,
+            sourceNetwork: transfer.sourceNetwork,
+            destinationNetwork: transfer.destinationNetwork,
+            sourceParachain: transfer.sourceParaId,
         },
         submitted: {
             blockNumber: transfer.blockNumber,
@@ -140,6 +171,9 @@ const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult 
             messageId: transfer.messageId,
             nonce: transfer.nonce,
         },
+    }
+    if (transfer.sourceNetwork == "kusama" || transfer.destinationNetwork == "kusama") {
+        result.sourceType = "kusama"
     }
     let inboundMessageReceived = transfer.toBridgeHubInboundQueue
     if (inboundMessageReceived) {
@@ -245,8 +279,11 @@ const buildToEthereumTransferResult = (transfer: any): ToEthereumTransferResult 
     return result
 }
 
-export const toPolkadotHistory = async (): Promise<ToPolkadotTransferResult[]> => {
-    const allTransfers = await fetchToPolkadotTransfers()
+export const toPolkadotHistory = async (
+    graphqlApiUrl: string,
+    graphqlQuerySize: number = 100
+): Promise<ToPolkadotTransferResult[]> => {
+    const allTransfers = await fetchToPolkadotTransfers(graphqlApiUrl, graphqlQuerySize)
     const results: ToPolkadotTransferResult[] = []
     for (const transfer of allTransfers) {
         let result = buildToPolkadotTransferResult(transfer)
@@ -255,8 +292,11 @@ export const toPolkadotHistory = async (): Promise<ToPolkadotTransferResult[]> =
     return results
 }
 
-export const toEthereumHistory = async (): Promise<ToEthereumTransferResult[]> => {
-    const allTransfers = await fetchToEthereumTransfers()
+export const toEthereumHistory = async (
+    graphqlApiUrl: string,
+    graphqlQuerySize: number = 100
+): Promise<ToEthereumTransferResult[]> => {
+    const allTransfers = await fetchToEthereumTransfers(graphqlApiUrl, graphqlQuerySize)
     const results: ToEthereumTransferResult[] = []
     for (const transfer of allTransfers) {
         let result = buildToEthereumTransferResult(transfer)
@@ -266,9 +306,10 @@ export const toEthereumHistory = async (): Promise<ToEthereumTransferResult[]> =
 }
 
 export const toPolkadotTransferById = async (
+    graphqlApiUrl: string,
     id: string
 ): Promise<ToPolkadotTransferResult | undefined> => {
-    const transfers = await fetchToPolkadotTransferById(id)
+    const transfers = await fetchToPolkadotTransferById(graphqlApiUrl, id)
     if (transfers?.length > 0) {
         let result = buildToPolkadotTransferResult(transfers[0])
         return result
@@ -277,9 +318,10 @@ export const toPolkadotTransferById = async (
 }
 
 export const toEthereumTransferById = async (
+    graphqlApiUrl: string,
     id: string
 ): Promise<ToEthereumTransferResult | undefined> => {
-    const transfers = await fetchToEthereumTransferById(id)
+    const transfers = await fetchToEthereumTransferById(graphqlApiUrl, id)
     if (transfers?.length > 0) {
         let result = buildToEthereumTransferResult(transfers[0])
         return result

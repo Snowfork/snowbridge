@@ -1,20 +1,25 @@
 #!/usr/bin/env bash
 
 set -eu
-
 rm -rf src/contracts
 mkdir -p src/contracts
 
+contracts_root="../contracts"
+if [ "$snowbridge_v1" = "true" ]; then
+        # Deploy legacy V1 contracts
+        contracts_root="../../snowbridge-v1/contracts"
+fi
+
 # Generate Rust bindings for contracts
-forge bind --module --overwrite --ethers\
+forge bind --module --overwrite \
     --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token|HelloWorld' \
     --bindings-path src/contracts \
-    --root ../contracts
+    --root $contracts_root
 
 # Install subxt
 command -v subxt || cargo install subxt-cli \
     --git https://github.com/paritytech/subxt.git \
-    --tag v0.38.0
+    --tag v0.42.1
 
 eth_network="${ETH_NETWORK:-localhost}"
 polkadot_network="${POLKADOT_NETWORK:-localhost}"

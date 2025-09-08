@@ -15,7 +15,7 @@
     "generateContracts": "npx ts-node src/generateContractInfo.ts",
     "generateBeefyValidatorSet": "npx ts-node src/generateBeefyTestFixture.ts GenerateInitialSet",
     "generateBeefyFinalProof": "npx ts-node src/generateBeefyTestFixture.ts GenerateProofs",
-    "batchTransfer": "npx ts-node src/batchTransfer.ts",
+    "configureE2E": "npx ts-node src/configureE2E.ts",
     "format": "prettier src --write"
   },
   "devDependencies": {
@@ -29,12 +29,12 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
-    "@polkadot/keyring": "^13.4.3",
-    "@polkadot/util": "^13.4.3",
-    "@polkadot/util-crypto": "^13.4.3",
-    "@polkadot/api": "^15.7.2",
-    "@polkadot/types": "^15.7.2",
-    "@polkadot/types-codec": "^15.7.2",
+    "@polkadot/keyring": "^13.4.4",
+    "@polkadot/util": "^13.4.4",
+    "@polkadot/util-crypto": "^13.4.4",
+    "@polkadot/api": "^15.10.2",
+    "@polkadot/types": "^15.10.2",
+    "@polkadot/types-codec": "^15.10.2",
     "@snowbridge/contract-types": "workspace:*",
     "@typechain/ethers-v6": "^0.5.1",
     "@types/keccak": "^3.0.1",

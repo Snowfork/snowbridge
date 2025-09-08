@@ -1,0 +1,196 @@
+{
+  "timestamp": "2025-08-28T06:45:53.537Z",
+  "environment": "paseo_sepolia",
+  "ethChainId": 11155111,
+  "gatewayAddress": "0x1607C1368bc943130258318c91bBd8cFf3D063E6",
+  "assetHubParaId": 1000,
+  "bridgeHubParaId": 1002,
+  "relaychain": {
+    "tokenSymbols": "PAS",
+    "tokenDecimals": 10,
+    "ss58Format": 0,
+    "isEthereum": false,
+    "accountType": "AccountId32",
+    "name": "Paseo Testnet",
+    "specName": "paseo",
+    "specVersion": 1006001
+  },
+  "bridgeHub": {
+    "tokenSymbols": "PAS",
+    "tokenDecimals": 10,
+    "ss58Format": 0,
+    "isEthereum": false,
+    "accountType": "AccountId32",
+    "name": "Paseo Bridge Hub",
+    "specName": "bridge-hub-paseo",
+    "specVersion": 1006000
+  },
+  "ethereumChains": {
+    "11155111": {
+      "chainId": 11155111,
+      "assets": {
+        "0x0000000000000000000000000000000000000000": {
+          "token": "0x0000000000000000000000000000000000000000",
+          "name": "Ether",
+          "symbol": "ETH",
+          "decimals": 18
+        },
+        "0x22e12ed4e6bcde652a73552dde340fcb972eef89": {
+          "token": "0x22e12ed4e6bcde652a73552dde340fcb972eef89",
+          "name": "Wrapped PILT",
+          "symbol": "wPILT",
+          "decimals": 15
+        },
+        "0xef32abea56beff54f61da319a7311098d6fbcea9": {
+          "token": "0xef32abea56beff54f61da319a7311098d6fbcea9",
+          "name": "Trace token",
+          "symbol": "TRACE",
+          "decimals": 18
+        },
+        "0x99e743964c036bc28931fb564817db428aa7f752": {
+          "token": "0x99e743964c036bc28931fb564817db428aa7f752",
+          "name": "KILT",
+          "symbol": "KILT",
+          "decimals": 15
+        },
+        "0xfff9976782d46cc05630d1f6ebab18b2324d6b14": {
+          "token": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+          "name": "Wrapped Ether",
+          "symbol": "WETH",
+          "decimals": 18
+        }
+      },
+      "id": "sepolia"
+    }
+  },
+  "parachains": {
+    "1000": {
+      "parachainId": 1000,
+      "features": {
+        "hasPalletXcm": true,
+        "hasDryRunApi": true,
+        "hasTxPaymentApi": true,
+        "hasDryRunRpc": true,
+        "hasDotBalance": true
+      },
+      "info": {
+        "tokenSymbols": "PAS",
+        "tokenDecimals": 10,
+        "ss58Format": 0,
+        "isEthereum": false,
+        "accountType": "AccountId32",
+        "name": "Paseo Asset Hub",
+        "specName": "asset-hub-paseo",
+        "specVersion": 1006002
+      },
+      "assets": {
+        "0x0000000000000000000000000000000000000000": {
+          "token": "0x0000000000000000000000000000000000000000",
+          "name": "Ether",
+          "minimumBalance": "bigint:15000000000000",
+          "symbol": "ETH",
+          "decimals": 18,
+          "isSufficient": true
+        },
+        "0x22e12ed4e6bcde652a73552dde340fcb972eef89": {
+          "token": "0x22e12ed4e6bcde652a73552dde340fcb972eef89",
+          "name": "",
+          "minimumBalance": "bigint:1",
+          "symbol": "",
+          "decimals": 0,
+          "isSufficient": false
+        },
+        "0xef32abea56beff54f61da319a7311098d6fbcea9": {
+          "token": "0xef32abea56beff54f61da319a7311098d6fbcea9",
+          "name": "",
+          "minimumBalance": "bigint:1",
+          "symbol": "",
+          "decimals": 0,
+          "isSufficient": false
+        },
+        "0x99e743964c036bc28931fb564817db428aa7f752": {
+          "token": "0x99e743964c036bc28931fb564817db428aa7f752",
+          "name": "",
+          "minimumBalance": "bigint:1",
+          "symbol": "",
+          "decimals": 0,
+          "isSufficient": false
+        },
+        "0xfff9976782d46cc05630d1f6ebab18b2324d6b14": {
+          "token": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+          "name": "Wrapped Ether",
+          "minimumBalance": "bigint:15000000000000",
+          "symbol": "WETH",
+          "decimals": 18,
+          "isSufficient": true
+        }
+      },
+      "estimatedExecutionFeeDOT": "bigint:0",
+      "estimatedDeliveryFeeDOT": "bigint:0"
+    },
+    "2043": {
+      "parachainId": 2043,
+      "features": {
+        "hasPalletXcm": true,
+        "hasDryRunApi": false,
+        "hasTxPaymentApi": true,
+        "hasDryRunRpc": true,
+        "hasDotBalance": true
+      },
+      "info": {
+        "tokenSymbols": "NEURO",
+        "tokenDecimals": 12,
+        "ss58Format": 101,
+        "isEthereum": false,
+        "accountType": "AccountId32",
+        "name": "Neuro Testnet",
+        "specName": "origintrail-parachain",
+        "specVersion": 142
+      },
+      "assets": {
+        "0xef32abea56beff54f61da319a7311098d6fbcea9": {
+          "token": "0xef32abea56beff54f61da319a7311098d6fbcea9",
+          "name": "Trac",
+          "minimumBalance": "bigint:1000000000000000",
+          "symbol": "TRAC",
+          "decimals": 18,
+          "isSufficient": true
+        }
+      },
+      "estimatedExecutionFeeDOT": "bigint:200000000000",
+      "estimatedDeliveryFeeDOT": "bigint:307250000"
+    },
+    "3369": {
+      "parachainId": 3369,
+      "features": {
+        "hasPalletXcm": true,
+        "hasDryRunApi": true,
+        "hasTxPaymentApi": true,
+        "hasDryRunRpc": true,
+        "hasDotBalance": false
+      },
+      "info": {
+        "tokenSymbols": "MUSE",
+        "tokenDecimals": 18,
+        "ss58Format": 29972,
+        "isEthereum": true,
+        "accountType": "AccountId20",
+        "name": "Muse Testnet",
+        "specName": "muse",
+        "specVersion": 1029
+      },
+      "assets": {
+        "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee": {
+          "token": "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee",
+          "name": "Muse",
+          "minimumBalance": "bigint:10000000000000000",
+          "symbol": "MUSE",
+          "decimals": 18,
+          "isSufficient": true
+        }
+      },
+      "estimatedExecutionFeeDOT": "bigint:200000000000",
+      "estimatedDeliveryFeeDOT": "bigint:306650000"
+    }
+  }
+}

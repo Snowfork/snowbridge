@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
 set -eu
 
-is_electra=false
-
 source scripts/set-env.sh
 source scripts/xcm-helper.sh
 
 config_beacon_checkpoint() {
     # Configure beacon relay
-    local electra_forked_epoch=2000000
-    if [ "$is_electra" == "true" ]; then
-        electra_forked_epoch=0
-    fi
+    local electra_forked_epoch=0
     jq \
         --argjson electra_forked_epoch $electra_forked_epoch \
         '
@@ -36,56 +31,12 @@ wait_beacon_chain_ready() {
     done
 }
 
-fund_accounts() {
-    echo "Funding substrate accounts"
+# A batch call to create all HRMP channels and provide some initial funding
+configure_from_test_helper() {
+    echo "Configure from test helper"
     pushd ../test-helpers
-    pnpm batchTransfer
+    pnpm configureE2E
     popd
-}
-
-register_native_eth() {
-    # Registers Eth and makes it sufficient
-    # https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:12144#/extrinsics/decode/0x3501020109079edaa80200ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d0104
-    local call="0x3501020109079edaa80200ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d0104"
-    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
-}
-
-open_hrmp_channel() {
-    local relay_url=$1
-    local relay_chain_seed=$2
-    local sender_para_id=$3
-    local recipient_para_id=$4
-    local max_capacity=$5
-    local max_message_size=$6
-    echo "  calling open_hrmp_channels:"
-    echo "      relay_url: ${relay_url}"
-    echo "      relay_chain_seed: ${relay_chain_seed}"
-    echo "      sender_para_id: ${sender_para_id}"
-    echo "      recipient_para_id: ${recipient_para_id}"
-    echo "      max_capacity: ${max_capacity}"
-    echo "      max_message_size: ${max_message_size}"
-    echo "      params:"
-    echo "--------------------------------------------------"
-
-    call_polkadot_js_api \
-        --ws "${relay_url?}" \
-        --seed "${relay_chain_seed?}" \
-        --sudo \
-        tx.hrmp.forceOpenHrmpChannel \
-        ${sender_para_id} \
-        ${recipient_para_id} \
-        ${max_capacity} \
-        ${max_message_size}
-}
-
-open_hrmp_channels() {
-    echo "Opening HRMP channels"
-    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1000 1002 8 512 # Assethub -> BridgeHub
-    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1002 1000 8 512 # BridgeHub -> Assethub
-    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 2000 1002 8 512 # Penpal -> BridgeHub
-    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1002 2000 8 512 # BridgeHub -> Penpal
-    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 1000 2000 8 512 # Penpal -> AssetHub
-    open_hrmp_channel "${relaychain_ws_url}" "${relaychain_sudo_seed}" 2000 1000 8 512 # Assethub -> Penpal
 }
 
 set_gateway() {
@@ -96,27 +47,28 @@ set_gateway() {
     send_governance_transact_from_relaychain $BRIDGE_HUB_PARAID "$transact_call"
 }
 
-config_xcm_version() {
-    local call="0x1f04020109079edaa80204000000"
-    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+
+configure_bh() {
+   set_gateway
 }
 
-register_native_eth() {
-    # Registers Eth and makes it sufficient
-    # https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:12144#/extrinsics/decode/0x3501020109079edaa80200ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d0104
-    local call="0x3501020109079edaa80200ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d0104"
+configure_ah() {
+    # Create Ether
+    local call="0x28020c1f04020109079edaa802040000003501020109079edaa80200ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d01043513020109079edaa8021445746865721445746865721200"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
-    # set metadata
-    local call="0x3513020109079edaa8021445746865721445746865721200"
-    send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+    # Mint Ether to Alice
+    local call="0x3506020109079edaa80200d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d1300002cf61a24a229"
+    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
+    # Mint Ether to Ferdie
+    local call="0x3506020109079edaa802001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229"
+    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
 }
+
 
 configure_substrate() {
-    set_gateway
-    open_hrmp_channels
-    config_xcm_version
-    register_native_eth
-    fund_accounts
+    configure_bh
+    configure_ah
+    configure_from_test_helper
     wait_beacon_chain_ready
     config_beacon_checkpoint
 }

@@ -1,55 +1,24 @@
 use crate::{
 	asset_hub_helper::mint_eth,
 	constants::*,
-	helper::{
-		assethub_deposit_eth_on_penpal_call_from_relay_chain, initial_clients, AssetHubConfig,
-	},
-	parachains::{
-		penpal::{
-			self,
-			api::{
-				runtime_types as penpalTypes,
-				runtime_types::staging_xcm::v5::{
-					junction::{
-						Junction::{AccountKey20, GlobalConsensus},
-						NetworkId,
-					},
-					junctions::{Junctions, Junctions::Here},
+	helper::{assethub_deposit_eth_on_penpal_call_from_relay_chain, AssetHubConfig},
+	parachains::penpal::{
+		self,
+		api::{
+			runtime_types as penpalTypes,
+			runtime_types::staging_xcm::v5::{
+				junction::{
+					Junction::{AccountKey20, GlobalConsensus},
+					NetworkId,
 				},
-			},
-		},
-		relaychain,
-		relaychain::api::runtime_types::{
-			pallet_xcm::pallet::Call as RelaychainPalletXcmCall,
-			sp_weights::weight_v2::Weight as RelaychainWeight,
-			staging_xcm::v3::multilocation::MultiLocation as RelaychainMultiLocation,
-			westend_runtime::RuntimeCall as RelaychainRuntimeCall,
-			xcm::{
-				v3::{
-					junction::{
-						Junction as RelaychainJunction,
-						Junction::AccountId32 as RelaychainAccountId32,
-						NetworkId as RelaychainNetworkId,
-					},
-					junctions::Junctions as RelaychainJunctions,
-					multiasset::{
-						AssetId as RelaychainAssetId, Fungibility as RelaychainFungibility,
-						MultiAsset as RelaychainMultiAsset,
-						MultiAssetFilter as RelaychainMultiAssetFilter,
-						MultiAssets as RelaychainMultiAssets,
-						WildMultiAsset as RelaychainWildMultiAsset,
-					},
-					Instruction as RelaychainInstruction, WeightLimit as RelaychainWeightLimit,
-					Xcm as RelaychainXcm,
-				},
-				VersionedLocation as RelaychainVersionedLocation,
-				VersionedXcm as RelaychainVersionedXcm,
+				junctions::{Junctions, Junctions::Here},
 			},
 		},
 	},
 	penpal_helper::penpal::api::asset_conversion::events::{LiquidityAdded, PoolCreated},
 };
 use futures::StreamExt;
+use pair_signer::PairSigner;
 use penpalTypes::{
 	penpal_runtime::RuntimeCall as PenpalRuntimeCall,
 	staging_xcm::v5::{
@@ -58,6 +27,7 @@ use penpalTypes::{
 	},
 	xcm::{VersionedLocation as PenpalVersionedLocation, VersionedXcm as PenpalVersionedXcm},
 };
+use sp_core::{sr25519::Pair, Pair as PairT};
 use sp_crypto_hashing::twox_128;
 use subxt::{
 	config::{
@@ -65,20 +35,70 @@ use subxt::{
 		DefaultExtrinsicParams,
 	},
 	events::StaticEvent,
-	ext::{
-		codec::Encode,
-		sp_core::{sr25519::Pair, Pair as PairT},
-	},
-	tx::PairSigner,
+	ext::codec::Encode,
 	utils::H256,
 	Config, OnlineClient, PolkadotConfig,
 };
+
+/// A concrete PairSigner implementation which relies on `sr25519::Pair` for signing
+/// and that PolkadotConfig is the runtime configuration.
+mod pair_signer {
+	use super::*;
+	use sp_core::sr25519;
+	use sp_runtime::{
+		traits::{IdentifyAccount, Verify},
+		MultiSignature as SpMultiSignature,
+	};
+	use subxt::{
+		config::substrate::{AccountId32, MultiSignature},
+		tx::Signer,
+	};
+
+	/// A [`Signer`] implementation for [`polkadot_sdk::sp_core::sr25519::Pair`].
+	#[derive(Clone)]
+	pub struct PairSigner {
+		account_id: <PenpalConfig as Config>::AccountId,
+		signer: sr25519::Pair,
+	}
+
+	impl PairSigner {
+		/// Creates a new [`Signer`] from an [`sp_core::sr25519::Pair`].
+		pub fn new(signer: sr25519::Pair) -> Self {
+			let account_id =
+				<SpMultiSignature as Verify>::Signer::from(signer.public()).into_account();
+			Self {
+				// Convert `sp_core::AccountId32` to `subxt::config::substrate::AccountId32`.
+				//
+				// This is necessary because we use `subxt::config::substrate::AccountId32` and no
+				// From/Into impls are provided between `sp_core::AccountId32` because
+				// `polkadot-sdk` isn't a direct dependency in subxt.
+				//
+				// This can also be done by provided a wrapper type around
+				// `subxt::config::substrate::AccountId32` to implement such conversions but
+				// that also most likely requires a custom `Config` with a separate `AccountId` type
+				// to work properly without additional hacks.
+				account_id: AccountId32(account_id.into()),
+				signer,
+			}
+		}
+	}
+
+	impl Signer<PenpalConfig> for PairSigner {
+		fn account_id(&self) -> <PenpalConfig as Config>::AccountId {
+			self.account_id.clone()
+		}
+
+		fn sign(&self, signer_payload: &[u8]) -> <PenpalConfig as Config>::Signature {
+			let signature = self.signer.sign(signer_payload);
+			MultiSignature::Sr25519(signature.0)
+		}
+	}
+}
 
 /// Custom config that works with Penpal
 pub enum PenpalConfig {}
 
 impl Config for PenpalConfig {
-	type Hash = <PolkadotConfig as Config>::Hash;
 	type AccountId = <PolkadotConfig as Config>::AccountId;
 	type Address = <PolkadotConfig as Config>::Address;
 	type AssetId = <PolkadotConfig as Config>::AssetId;
@@ -115,7 +135,7 @@ pub async fn send_sudo_xcm_transact(
 
 	let owner = Pair::from_string("//Alice", None).expect("cannot create keypair");
 
-	let signer: PairSigner<PenpalConfig, _> = PairSigner::new(owner);
+	let signer: PairSigner = PairSigner::new(owner);
 
 	let result = penpal_client
 		.tx()
@@ -173,7 +193,7 @@ pub async fn create_asset_pool(
 	// Create the pool
 	let create_pool_call =
 		penpal::api::tx().asset_conversion().create_pool(dot_location(), eth_location());
-	let signer: PairSigner<PenpalConfig, _> = PairSigner::new((*FERDIE).clone());
+	let signer: PairSigner = PairSigner::new((*FERDIE).clone());
 	penpal_client
 		.tx()
 		.sign_and_submit_then_watch_default(&create_pool_call, &signer)
@@ -196,7 +216,7 @@ pub async fn create_asset_pool(
 		1,
 		ferdie_account,
 	);
-	let signer: PairSigner<PenpalConfig, _> = PairSigner::new((*FERDIE).clone());
+	let signer: PairSigner = PairSigner::new((*FERDIE).clone());
 	penpal_client
 		.tx()
 		.sign_and_submit_then_watch_default(&create_liquidity, &signer)
@@ -230,7 +250,7 @@ pub async fn ensure_penpal_asset_exists(
 
 	println!("creating asset {:?} on penpal.", asset);
 	let admin = MultiAddress::Id(ASSET_HUB_SOVEREIGN.into());
-	let signer: PairSigner<PenpalConfig, _> = PairSigner::new((*ALICE).clone());
+	let signer: PairSigner = PairSigner::new((*ALICE).clone());
 
 	let sudo_call = penpal::api::tx().sudo().sudo(PenpalRuntimeCall::ForeignAssets(
 		penpalTypes::pallet_assets::pallet::Call2::force_create {
@@ -263,7 +283,7 @@ pub async fn set_reserve_asset_storage(penpal_client: &mut OnlineClient<PenpalCo
 	.encode();
 
 	println!("setting CustomizableAssetFromSystemAssetHub storage on penpal.");
-	let signer: PairSigner<PenpalConfig, _> = PairSigner::new((*ALICE).clone());
+	let signer: PairSigner = PairSigner::new((*ALICE).clone());
 
 	let items = vec![(storage_key, reserve_location)];
 
@@ -279,81 +299,6 @@ pub async fn set_reserve_asset_storage(penpal_client: &mut OnlineClient<PenpalCo
 		.wait_for_finalized_success()
 		.await
 		.expect("reserve location set");
-}
-
-pub async fn deposit_eth(
-	account: [u8; 32],
-	amount: u128,
-) -> Result<(), Box<dyn std::error::Error>> {
-	let test_clients = initial_clients().await.expect("initialize clients");
-
-	let sudo = Pair::from_string("//Alice", None).expect("cannot create sudo keypair");
-
-	let signer: PairSigner<PolkadotConfig, _> = PairSigner::new(sudo);
-
-	let weight = 180000000000;
-	let proof_size = 900000;
-
-	let account_location: RelaychainMultiLocation = RelaychainMultiLocation {
-		parents: 0,
-		interior: RelaychainJunctions::X1(RelaychainAccountId32 {
-			network: None,
-			id: account.into(),
-		}),
-	};
-	let dest = Box::new(RelaychainVersionedLocation::V3(RelaychainMultiLocation {
-		parents: 0,
-		interior: RelaychainJunctions::X1(RelaychainJunction::Parachain(PENPAL_PARA_ID)),
-	}));
-
-	let message = Box::new(RelaychainVersionedXcm::V3(RelaychainXcm(vec![
-		RelaychainInstruction::BuyExecution {
-			fees: RelaychainMultiAsset {
-				id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
-					parents: 0,
-					interior: RelaychainJunctions::Here,
-				}),
-				fun: RelaychainFungibility::Fungible(amount),
-			},
-			weight_limit: RelaychainWeightLimit::Limited(RelaychainWeight {
-				ref_time: weight,
-				proof_size,
-			}),
-		},
-		RelaychainInstruction::ReserveAssetDeposited(RelaychainMultiAssets(vec![
-			RelaychainMultiAsset {
-				id: RelaychainAssetId::Concrete(RelaychainMultiLocation {
-					parents: 2,
-					interior: RelaychainJunctions::X1(RelaychainJunction::GlobalConsensus(
-						RelaychainNetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID },
-					)),
-				}),
-				fun: RelaychainFungibility::Fungible(amount),
-			},
-		])),
-		RelaychainInstruction::DepositAsset {
-			assets: RelaychainMultiAssetFilter::Wild(RelaychainWildMultiAsset::AllCounted(2)),
-			beneficiary: account_location,
-		},
-	])));
-
-	let sudo_api = relaychain::api::sudo::calls::TransactionApi;
-	let sudo_call = sudo_api
-		.sudo(RelaychainRuntimeCall::XcmPallet(RelaychainPalletXcmCall::send { dest, message }));
-
-	let result = test_clients
-		.relaychain_client
-		.tx()
-		.sign_and_submit_then_watch_default(&sudo_call, &signer)
-		.await
-		.expect("send through sudo call.")
-		.wait_for_finalized_success()
-		.await
-		.expect("sudo call success");
-
-	println!("Sudo call issued at relaychain block hash {:?}", result.extrinsic_hash());
-
-	Ok(())
 }
 
 pub async fn wait_for_penpal_event<Ev: StaticEvent>(

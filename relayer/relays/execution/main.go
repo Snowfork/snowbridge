@@ -55,13 +55,13 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
 	ethconn := ethereum.NewConnection(&r.config.Source.Ethereum, nil)
 
-	err := paraconn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err := paraconn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(r.config.Sink.Parachain.HeartbeatSecs))
 	if err != nil {
 		return err
 	}
 	r.paraconn = paraconn
 
-	err = ethconn.Connect(ctx)
+	err = ethconn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(r.config.Source.Ethereum.HeartbeatSecs))
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (r *Relay) fetchUnprocessedParachainNonces(latest uint64) ([]uint64, error)
 	latestBucket := latest / 128
 
 	for b := uint64(0); b <= latestBucket; b++ {
-		encodedBucket, err := types.EncodeToBytes(types.NewU128(*big.NewInt(int64(b))))
+		encodedBucket, err := types.EncodeToBytes(types.NewU64(b))
 		bucketKey, _ := types.CreateStorageKey(
 			r.paraconn.Metadata(),
 			"EthereumInboundQueueV2",
@@ -261,7 +261,7 @@ func (r *Relay) isParachainNonceSet(index uint64) (bool, error) {
 	bucket := index / 128
 	bitPosition := index % 128
 
-	encodedBucket, err := types.EncodeToBytes(types.NewU128(*big.NewInt(int64(bucket))))
+	encodedBucket, err := types.EncodeToBytes(types.NewU64(bucket))
 	bucketKey, err := types.CreateStorageKey(r.paraconn.Metadata(), "EthereumInboundQueueV2", "NonceBitmap", encodedBucket)
 	if err != nil {
 		return false, fmt.Errorf("create storage key for EthereumInboundQueueV2.NonceBitmap: %w", err)
@@ -585,7 +585,12 @@ func (r *Relay) isInFinalizedBlock(ctx context.Context, event *contracts.Gateway
 
 	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
 	if err != nil {
-		return fmt.Errorf("get block header: %w", err)
+		log.WithField("blockNumber", nextBlockNumber.Uint64()).Info("block not found, retrying after 30 seconds")
+		time.Sleep(30 * time.Second)
+		blockHeader, err = r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
+		if err != nil {
+			return fmt.Errorf("get block header after retry: %w", err)
+		}
 	}
 
 	return r.beaconHeader.CheckHeaderFinalized(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)

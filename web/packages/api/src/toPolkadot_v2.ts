@@ -8,24 +8,15 @@ import {
     parseUnits,
     TransactionReceipt,
 } from "ethers"
-import { beneficiaryMultiAddress, paraIdToSovereignAccount } from "./utils"
+import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "./utils"
 import {
     IERC20__factory,
     IGatewayV1 as IGateway,
     IGatewayV1__factory as IGateway__factory,
+    WETH9__factory,
 } from "@snowbridge/contract-types"
-import {
-    Asset,
-    AssetRegistry,
-    calculateDeliveryFee,
-    calculateDestinationFee,
-    ERC20Metadata,
-    ETHER_TOKEN_ADDRESS,
-    getNativeAccount,
-    getTokenBalance,
-    padFeeByPercentage,
-    Parachain,
-} from "./assets_v2"
+import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { ApiPromise } from "@polkadot/api"
 import {
@@ -35,9 +26,13 @@ import {
     buildParachainERC20ReceivedXcmOnDestination,
     buildParachainPNAReceivedXcmOnAssetHub,
     buildParachainPNAReceivedXcmOnDestination,
+    DOT_LOCATION,
 } from "./xcmBuilder"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
+import { paraImplementation } from "./parachains"
+import { ParachainBase } from "./parachains/parachainBase"
+import { Context } from "./index"
 
 export type Transfer = {
     input: {
@@ -138,13 +133,21 @@ export type MessageReceipt = {
 }
 
 export async function getDeliveryFee(
-    connections: { gateway: IGateway; assetHub: ApiPromise; destination: ApiPromise },
+    context: Context | { gateway: IGateway; assetHub: ApiPromise; destination: ApiPromise },
     registry: AssetRegistry,
     tokenAddress: string,
     destinationParaId: number,
     paddFeeByPercentage?: bigint
 ): Promise<DeliveryFee> {
-    const { gateway, assetHub, destination } = connections
+    const { gateway, assetHub, destination } =
+        context instanceof Context
+            ? {
+                  gateway: context.gateway(),
+                  assetHub: await context.assetHub(),
+                  destination: await context.parachain(destinationParaId),
+              }
+            : context
+
     const { destParachain, destAssetMetadata } = resolveInputs(
         registry,
         tokenAddress,
@@ -180,25 +183,16 @@ export async function getDeliveryFee(
             )
         }
 
-        destinationDeliveryFeeDOT = await calculateDeliveryFee(
-            assetHub,
+        const assetHubImpl = await paraImplementation(assetHub)
+        destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
             destinationParaId,
             destinationXcm
         )
-        if (destParachain.features.hasXcmPaymentApi) {
-            destinationExecutionFeeDOT = padFeeByPercentage(
-                await calculateDestinationFee(destination, destinationXcm),
-                paddFeeByPercentage ?? 33n
-            )
-        } else {
-            console.warn(
-                `Parachain ${destinationParaId} does not support payment apis. Using a high estimated fee.`
-            )
-            destinationExecutionFeeDOT = padFeeByPercentage(
-                destParachain.estimatedExecutionFeeDOT,
-                100n
-            )
-        }
+        const destinationImpl = await paraImplementation(destination)
+        destinationExecutionFeeDOT = padFeeByPercentage(
+            await destinationImpl.calculateXcmFee(destinationXcm, DOT_LOCATION),
+            paddFeeByPercentage ?? 33n
+        )
     }
     const totalFeeInDOT = destinationExecutionFeeDOT + destinationDeliveryFeeDOT
     return {
@@ -275,25 +269,17 @@ export async function createTransfer(
 }
 
 async function validateAccount(
-    parachain: ApiPromise,
-    specName: string,
+    parachainImpl: ParachainBase,
     beneficiaryAddress: string,
     ethChainId: number,
     tokenAddress: string,
     assetMetadata?: Asset,
     maxConsumers?: bigint
 ) {
-    // Check if the acocunt is created
+    // Check if the account is created
     const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
-        getNativeAccount(parachain, beneficiaryAddress),
-        getTokenBalance(
-            parachain,
-            specName,
-            beneficiaryAddress,
-            ethChainId,
-            tokenAddress,
-            assetMetadata
-        ),
+        parachainImpl.getNativeAccount(beneficiaryAddress),
+        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
     ])
     return {
         accountExists: !(
@@ -307,12 +293,27 @@ async function validateAccount(
 }
 
 export async function validateTransfer(
-    connections: Connections,
+    context: Context | Connections,
     transfer: Transfer
 ): Promise<ValidationResult> {
     const { tx } = transfer
-    const { ethereum, gateway, bridgeHub, assetHub, destParachain: destParachainApi } = connections
     const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
+    const {
+        ethereum,
+        gateway,
+        bridgeHub,
+        assetHub,
+        destParachain: destParachainApi,
+    } = context instanceof Context
+        ? {
+              ethereum: context.ethereum(),
+              gateway: context.gateway(),
+              bridgeHub: await context.bridgeHub(),
+              assetHub: await context.assetHub(),
+              destParachain: await context.parachain(destinationParaId),
+          }
+        : context
+
     const {
         totalValue,
         minimalBalance,
@@ -327,7 +328,7 @@ export async function validateTransfer(
         logs.push({
             kind: ValidationKind.Error,
             reason: ValidationReason.MinimumAmountValidation,
-            message: "The amount transfered is less than the minimum amount.",
+            message: "The amount transferred is less than the minimum amount.",
         })
     }
     const etherBalance = await ethereum.getBalance(sourceAccount)
@@ -430,14 +431,14 @@ export async function validateTransfer(
         }
     }
 
+    const assetHubImpl = await paraImplementation(assetHub)
     let destinationParachainDryRunError: string | undefined
     if (destinationParaId !== registry.assetHubParaId) {
         // Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
             const sovereignAccountId = paraIdToSovereignAccount("sibl", destinationParaId)
             const { accountMaxConumers, accountExists } = await validateAccount(
-                assetHub,
-                ahParachain.info.specName,
+                assetHubImpl,
                 sovereignAccountId,
                 registry.ethChainId,
                 tokenAddress,
@@ -510,10 +511,10 @@ export async function validateTransfer(
                 ((destParachain.features.hasDryRunApi && destinationParachainDryRunError) ||
                     !destParachain.features.hasDryRunApi)
             ) {
-                // Check if the acocunt is created
+                const destParachainImpl = await paraImplementation(destParachainApi)
+                // Check if the account is created
                 const { accountMaxConumers, accountExists } = await validateAccount(
-                    destParachainApi,
-                    destParachain.info.specName,
+                    destParachainImpl,
                     beneficiaryAddressHex,
                     registry.ethChainId,
                     tokenAddress,
@@ -538,8 +539,7 @@ export async function validateTransfer(
         }
     } else if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
         const { accountMaxConumers, accountExists } = await validateAccount(
-            assetHub,
-            ahParachain.info.specName,
+            assetHubImpl,
             beneficiaryAddressHex,
             registry.ethChainId,
             tokenAddress,
@@ -606,6 +606,28 @@ export async function getMessageReceipt(
         txIndex: receipt.index,
     }
 }
+
+export const approveTokenSpend = (
+    context: Context,
+    sourceAddress: string,
+    tokenAddress: string,
+    amount: bigint
+): Promise<ContractTransaction> =>
+    IERC20__factory.connect(tokenAddress)
+        .getFunction("approve")
+        .populateTransaction(context.config.appContracts.gateway, amount, {
+            from: sourceAddress,
+        })
+
+export const depositWeth = (
+    sourceAddress: string,
+    tokenAddress: string,
+    amount: bigint
+): Promise<ContractTransaction> =>
+    WETH9__factory.connect(tokenAddress).getFunction("deposit").populateTransaction({
+        from: sourceAddress,
+        value: amount,
+    })
 
 async function erc20Balance(
     ethereum: AbstractProvider,

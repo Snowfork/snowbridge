@@ -123,7 +123,7 @@ The transfer process takes about ±30 minutes to get to the other side of the br
 
 ### Sending Tokens to a User-specified Destination Parachain
 
-Snowbridge supports sending tokens to a user-specified destination parachain. When specifying a destination chain the funds are transfered to Asset Hub and then a reserve transfer is done from Asset Hub to the destination parachain.
+Snowbridge supports sending tokens to a user-specified destination parachain. When specifying a destination chain the funds are transferred to Asset Hub and then a reserve transfer is done from Asset Hub to the destination parachain.
 
 #### 1. Destination Parachain Requirements
 
