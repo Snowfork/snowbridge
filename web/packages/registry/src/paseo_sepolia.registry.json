@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-08-28T06:45:53.537Z",
+  "timestamp": "2025-09-09T21:32:39.144Z",
   "environment": "paseo_sepolia",
   "ethChainId": 11155111,
   "gatewayAddress": "0x1607C1368bc943130258318c91bBd8cFf3D063E6",
@@ -13,7 +13,7 @@
     "accountType": "AccountId32",
     "name": "Paseo Testnet",
     "specName": "paseo",
-    "specVersion": 1006001
+    "specVersion": 1006002
   },
   "bridgeHub": {
     "tokenSymbols": "PAS",
@@ -43,8 +43,8 @@
         },
         "0xef32abea56beff54f61da319a7311098d6fbcea9": {
           "token": "0xef32abea56beff54f61da319a7311098d6fbcea9",
-          "name": "Trace token",
-          "symbol": "TRACE",
+          "name": "OriginTrail TRAC",
+          "symbol": "TRAC",
           "decimals": 18
         },
         "0x99e743964c036bc28931fb564817db428aa7f752": {
@@ -145,7 +145,7 @@
         "accountType": "AccountId32",
         "name": "Neuro Testnet",
         "specName": "origintrail-parachain",
-        "specVersion": 142
+        "specVersion": 146
       },
       "assets": {
         "0xef32abea56beff54f61da319a7311098d6fbcea9": {
@@ -157,7 +157,7 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:200000000000",
+      "estimatedExecutionFeeDOT": "bigint:10000000000",
       "estimatedDeliveryFeeDOT": "bigint:307250000"
     },
     "3369": {

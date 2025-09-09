@@ -905,6 +905,15 @@ function addOverrides(envName: string, result: RegistryOptions) {
             }
             break
         }
+        case "paseo_sepolia": {
+            result.metadataOverrides = {}
+            // Change the name of TRAC
+            result.metadataOverrides["0xef32abea56beff54f61da319a7311098d6fbcea9".toLowerCase()] = {
+                name: "OriginTrail TRAC",
+                symbol: "TRAC"
+            }
+            break
+        }
     }
 }
 
