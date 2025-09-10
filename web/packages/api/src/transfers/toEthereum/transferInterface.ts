@@ -13,6 +13,7 @@ export interface TransferInterface {
             defaultFee?: bigint
             feeTokenLocation?: any
             claimerLocation?: any
+            accelerated?: boolean
         }
     ): Promise<DeliveryFee>
 

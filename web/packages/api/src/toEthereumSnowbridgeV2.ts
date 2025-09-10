@@ -237,7 +237,8 @@ export const estimateEthereumExecutionFee = async (
     context: Context,
     registry: AssetRegistry,
     sourceParaId: number,
-    tokenAddress: string
+    tokenAddress: string,
+    accelerated: boolean
 ): Promise<bigint> => {
     const ethereum = await context.ethereum()
     const { tokenErcMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
@@ -247,7 +248,9 @@ export const estimateEthereumExecutionFee = async (
     let feeData = await ethereum.getFeeData()
     let ethereumExecutionFee =
         (feeData.gasPrice ?? 2_000_000_000n) *
-        ((tokenErcMetadata.deliveryGas ?? 80_000n) + (ethereumChain.baseDeliveryGas ?? 120_000n))
+        ((tokenErcMetadata.deliveryGas ?? 80_000n) +
+            (ethereumChain.baseDeliveryGas ?? 120_000n) +
+            (accelerated ? ethereumChain.submitFiatShamirGas ?? 2_000_000n : 0n))
     return ethereumExecutionFee
 }
 
@@ -261,6 +264,7 @@ export const estimateFeesFromAssetHub = async (
         slippagePadPercentage?: bigint
         defaultFee?: bigint
         feeTokenLocation?: any
+        accelerated?: boolean
     }
 ): Promise<DeliveryFee> => {
     const assetHub = await context.parachain(registry.assetHubParaId)
@@ -299,11 +303,13 @@ export const estimateFeesFromAssetHub = async (
         returnToSenderDeliveryFeeDOT +
         bridgeHubDeliveryFeeDOT
 
+    const accelerated = options?.accelerated ?? false
     let ethereumExecutionFee = await estimateEthereumExecutionFee(
         context,
         registry,
         registry.assetHubParaId,
-        tokenAddress
+        tokenAddress,
+        accelerated
     )
 
     // calculate the cost of swapping in native asset
@@ -358,6 +364,7 @@ export const estimateFeesFromParachains = async (
         slippagePadPercentage?: bigint
         defaultFee?: bigint
         feeTokenLocation?: any
+        accelerated?: boolean
     }
 ): Promise<DeliveryFee> => {
     const sourceParachain = registry.parachains[sourceParaId.toString()]
@@ -442,11 +449,13 @@ export const estimateFeesFromParachains = async (
         returnToSenderDeliveryFeeDOT +
         bridgeHubDeliveryFeeDOT
 
+    const accelerated = options?.accelerated ?? false
     let ethereumExecutionFee = await estimateEthereumExecutionFee(
         context,
         registry,
         sourceParaId,
-        tokenAddress
+        tokenAddress,
+        accelerated
     )
 
     // calculate the cost of swapping in native asset
