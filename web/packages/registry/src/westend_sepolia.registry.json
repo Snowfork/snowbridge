@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-06-25T21:17:17.386Z",
+  "timestamp": "2025-07-22T06:42:51.575Z",
   "environment": "westend_sepolia",
   "ethChainId": 11155111,
   "gatewayAddress": "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
@@ -13,7 +13,7 @@
     "accountType": "AccountId32",
     "name": "Westend",
     "specName": "westend",
-    "specVersion": 1018011
+    "specVersion": 1018013
   },
   "bridgeHub": {
     "tokenSymbols": "WND",
@@ -23,7 +23,7 @@
     "accountType": "AccountId32",
     "name": "Westend BridgeHub",
     "specName": "bridge-hub-westend",
-    "specVersion": 1018000
+    "specVersion": 1019000
   },
   "ethereumChains": {
     "11155111": {
@@ -54,13 +54,6 @@
           "decimals": 8,
           "foreignId": "0xaf13384cf9612ef1ff4b87470ab247d6f8d8110d4f5af2fe290ce6767818712c"
         },
-        "0xb8a0f2703ac6bdd352096c90c2945a097e8f4055": {
-          "token": "0xb8a0f2703ac6bdd352096c90c2945a097e8f4055",
-          "name": "WND",
-          "symbol": "WND",
-          "decimals": 12,
-          "foreignId": "0x2121cfe35065c0c33465fbada265f08e9613428a4b9eb4bb717cd7db2abf622e"
-        },
         "0xf50fb50d65c8c1f6c72e4d8397c984933afc8f7e": {
           "token": "0xf50fb50d65c8c1f6c72e4d8397c984933afc8f7e",
           "name": "WND",
@@ -90,7 +83,7 @@
         "accountType": "AccountId32",
         "name": "Westend Asset Hub",
         "specName": "westmint",
-        "specVersion": 1018012
+        "specVersion": 1018013
       },
       "assets": {
         "0x0000000000000000000000000000000000000000": {
@@ -103,10 +96,10 @@
         },
         "0x72c610e05eaafcdf1fa7a2da15374ee90edb1620": {
           "token": "0x72c610e05eaafcdf1fa7a2da15374ee90edb1620",
-          "name": "",
+          "name": "Frequency",
+          "symbol": "eFRQCY",
           "minimumBalance": "bigint:1",
-          "symbol": "",
-          "decimals": 0,
+          "decimals": 12,
           "isSufficient": false
         },
         "0xfff9976782d46cc05630d1f6ebab18b2324d6b14": {
@@ -119,9 +112,9 @@
         },
         "0x23838b1bb57cecf4422a57dd8e7f8a087b30d54f": {
           "token": "0x23838b1bb57cecf4422a57dd8e7f8a087b30d54f",
-          "name": "",
-          "symbol": "",
-          "decimals": 0,
+          "name": "XRQCY",
+          "symbol": "XRQCY",
+          "decimals": 8,
           "locationOnEthereum": {
             "parents": 1,
             "interior": {
@@ -161,38 +154,9 @@
           "minimumBalance": "bigint:1",
           "isSufficient": false
         },
-        "0xb8a0f2703ac6bdd352096c90c2945a097e8f4055": {
-          "token": "0xb8a0f2703ac6bdd352096c90c2945a097e8f4055",
-          "name": "",
-          "symbol": "WND",
-          "decimals": 12,
-          "locationOnEthereum": {
-            "parents": 1,
-            "interior": {
-              "x1": [
-                {
-                  "globalConsensus": {
-                    "byGenesis": "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
-                  }
-                }
-              ]
-            }
-          },
-          "location": {
-            "parents": 1,
-            "interior": "Here"
-          },
-          "locationOnAH": {
-            "parents": 1,
-            "interior": "Here"
-          },
-          "foreignId": "0x2121cfe35065c0c33465fbada265f08e9613428a4b9eb4bb717cd7db2abf622e",
-          "minimumBalance": "bigint:1000000000",
-          "isSufficient": true
-        },
         "0xf50fb50d65c8c1f6c72e4d8397c984933afc8f7e": {
           "token": "0xf50fb50d65c8c1f6c72e4d8397c984933afc8f7e",
-          "name": "",
+          "name": "WND",
           "symbol": "WND",
           "decimals": 12,
           "locationOnEthereum": {
@@ -222,6 +186,67 @@
       },
       "estimatedExecutionFeeDOT": "bigint:0",
       "estimatedDeliveryFeeDOT": "bigint:0"
+    },
+    "2313": {
+      "parachainId": 2313,
+      "features": {
+        "hasPalletXcm": true,
+        "hasDryRunApi": true,
+        "hasTxPaymentApi": true,
+        "hasDryRunRpc": true,
+        "hasDotBalance": true
+      },
+      "info": {
+        "tokenSymbols": "XRQCY",
+        "tokenDecimals": 8,
+        "ss58Format": 42,
+        "isEthereum": false,
+        "accountType": "AccountId32",
+        "name": "Frequency Westend",
+        "specName": "frequency-testnet",
+        "specVersion": 164
+      },
+      "assets": {
+        "0x23838b1bb57cecf4422a57dd8e7f8a087b30d54f": {
+          "token": "0x23838b1bb57cecf4422a57dd8e7f8a087b30d54f",
+          "name": "XRQCY",
+          "minimumBalance": "bigint:1000000",
+          "symbol": "XRQCY",
+          "decimals": 8,
+          "isSufficient": true,
+          "location": {
+            "parents": 0,
+            "interior": "Here"
+          },
+          "locationOnAH": {
+            "parents": 1,
+            "interior": {
+              "x1": [
+                {
+                  "parachain": 2313
+                }
+              ]
+            }
+          },
+          "locationOnEthereum": {
+            "parents": 1,
+            "interior": {
+              "x2": [
+                {
+                  "globalConsensus": {
+                    "byGenesis": "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
+                  }
+                },
+                {
+                  "parachain": 2313
+                }
+              ]
+            }
+          }
+        }
+      },
+      "estimatedExecutionFeeDOT": "bigint:465450000",
+      "estimatedDeliveryFeeDOT": "bigint:31450000000"
     }
   }
 }

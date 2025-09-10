@@ -51,4 +51,33 @@ export class HydrationParachain extends ParachainBase {
         }
         return assets
     }
+
+    async calculateDeliveryFeeInDOT(destParachainId: number, xcm: any): Promise<bigint> {
+        const result = (
+            await this.provider.call.xcmPaymentApi.queryDeliveryFees(
+                { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
+                xcm
+            )
+        ).toPrimitive() as any
+        if (!result.ok) {
+            throw Error(`Can not query XCM Weight.`)
+        }
+        let dotAsset = undefined
+        const assets = result.ok.v4 || result.ok.v5
+        for (const asset of assets) {
+            if (asset.id.parents === 1 && asset.id.interior.here === null) {
+                dotAsset = asset
+            }
+        }
+        if (!dotAsset) {
+            console.warn(
+                "Could not find DOT in result",
+                result,
+                "using 0 as delivery fee. Dry run will fail if this is incorrect."
+            )
+            return 0n
+        }
+        const deliveryFee = BigInt(dotAsset.fun.fungible.toString())
+        return deliveryFee
+    }
 }

@@ -56,7 +56,7 @@ export function assetRegistryFor(
       json = local_e2e;
       break;
     default:
-      throw Error(`Unkown env '${env}'`);
+      throw Error(`Unknown env '${env}'`);
   }
   cache[env] = transformBigInt(json);
   return cache[env];

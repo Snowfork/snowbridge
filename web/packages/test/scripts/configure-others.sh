@@ -133,12 +133,6 @@ function transfer_local_balance() {
 
 
 configure_on_ah() {
-    # Mint Ether to Alice
-    local call="0x3506020109079edaa80200d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d1300002cf61a24a229"
-    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
-    # Mint Ether to Ferdie
-    local call="0x3506020109079edaa802001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c1300002cf61a24a229"
-    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
     # Create Pool for Ether<->Wnd and add liquidity
     local call="0x38000100020109079edaa802"
     send_transact_through_user_origin_from_relaychain $ASSET_HUB_PARAID "$sudo_pubkey" "$call"

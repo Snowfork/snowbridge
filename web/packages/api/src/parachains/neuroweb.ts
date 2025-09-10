@@ -1,0 +1,134 @@
+import { ParachainBase } from "./parachainBase"
+import { DOT_LOCATION, erc20Location } from "../xcmBuilder"
+import { PNAMap } from "../assets_v2"
+import { AssetMap } from "@snowbridge/base-types"
+import { ApiPromise } from "@polkadot/api"
+import { SubmittableExtrinsic } from "@polkadot/api/types"
+import { ISubmittableResult } from "@polkadot/types/types"
+
+export const NEUROWEB_TEST_CHAIN_ID = 11155111 // Sepolia
+export const NEUROWEB_TEST_TOKEN_ID = "0xef32abea56beff54f61da319a7311098d6fbcea9"
+export const NEUROWEB_CHAIN_ID = 1 // Ethereum Mainnet
+export const NEUROWEB_TOKEN_ID = "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f"
+
+export class NeurowebParachain extends ParachainBase {
+    getXC20DOT() {
+        return undefined
+    }
+
+    async getLocationBalance(location: any, account: string, _pnaAssetId?: any): Promise<bigint> {
+        const accountData = (
+            await this.provider.query.foreignAssets.account(location, account)
+        ).toPrimitive() as any
+        return BigInt(accountData?.balance ?? 0n)
+    }
+
+    async getDotBalance(account: string): Promise<bigint> {
+        const accountData = (
+            await this.provider.query.foreignAssets.account(DOT_LOCATION, account)
+        ).toPrimitive() as any
+        return BigInt(accountData?.balance ?? 0n)
+    }
+
+    async getAssets(ethChainId: number, _pnas: PNAMap): Promise<AssetMap> {
+        const assets: AssetMap = {}
+        if (this.specName !== "origintrail-parachain") {
+            throw Error(
+                `Cannot get balance for spec ${this.specName}. Location = ${JSON.stringify(
+                    location
+                )}`
+            )
+        }
+
+        if (ethChainId === NEUROWEB_TEST_CHAIN_ID) {
+            assets[NEUROWEB_TEST_TOKEN_ID.toLowerCase()] = {
+                token: NEUROWEB_TEST_TOKEN_ID.toLowerCase(),
+                name: "Trac",
+                minimumBalance: 1_000_000_000_000_000n,
+                symbol: "TRAC",
+                decimals: 18,
+                isSufficient: true,
+            }
+        } else if (ethChainId === NEUROWEB_CHAIN_ID) {
+            assets[NEUROWEB_TOKEN_ID.toLowerCase()] = {
+                token: NEUROWEB_TOKEN_ID.toLowerCase(),
+                name: "Trac",
+                minimumBalance: 1_000_000_000_000_000n,
+                symbol: "TRAC",
+                decimals: 18,
+                isSufficient: true,
+            }
+        } else {
+            throw Error(`Cannot get assets for chain ID ${ethChainId}.`)
+        }
+        return assets
+    }
+
+    async calculateXcmFee(destinationXcm: any, asset: any): Promise<bigint> {
+        if (JSON.stringify(asset) == JSON.stringify(DOT_LOCATION)) {
+            console.warn(
+                `${this.specName} does not support calculating fee for asset '${JSON.stringify(
+                    asset
+                )}'. Using default.`
+            )
+            return 10_000_000_000n // TODO
+        }
+        return await this.calculateXcmFee(destinationXcm, asset)
+    }
+
+    async wrapExecutionFeeInNative(parachain: ApiPromise) {
+        // Mock transaction to get extrinsic fee
+        let tx = parachain.tx.wrapper.tracWrap(100000000)
+        const paymentInfo = await tx.paymentInfo(
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        )
+        const executionFee = paymentInfo["partialFee"].toBigInt()
+        console.log("wrap execution fee:", executionFee)
+        return executionFee
+    }
+
+    async unwrapExecutionFeeInNative(parachain: ApiPromise) {
+        // Mock transaction to get extrinsic fee
+        let tx = parachain.tx.wrapper.tracUnwrap(100000000)
+        const paymentInfo = await tx.paymentInfo(
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        )
+        const executionFee = paymentInfo["partialFee"].toBigInt()
+        console.log("unwrap execution fee:", executionFee)
+        return executionFee
+    }
+
+    snowTRACBalance(account: string, ethChainId: number) {
+        if (ethChainId === NEUROWEB_TEST_CHAIN_ID) {
+            return this.getLocationBalance(
+                erc20Location(ethChainId, NEUROWEB_TEST_TOKEN_ID),
+                account
+            )
+        } else if (ethChainId === NEUROWEB_CHAIN_ID) {
+            return this.getLocationBalance(erc20Location(ethChainId, NEUROWEB_TOKEN_ID), account)
+        } else {
+            throw Error(`Cannot get snowTRAC balance for chain ID ${ethChainId}.`)
+        }
+    }
+
+    async tracBalance(account: string) {
+        const accountData = (
+            await this.provider.query.assets.account(1, account)
+        ).toPrimitive() as any
+        return BigInt(accountData?.balance ?? 0n)
+    }
+
+    createWrapTx(
+        parachain: ApiPromise,
+        amount: bigint
+    ): SubmittableExtrinsic<"promise", ISubmittableResult> {
+        return parachain.tx.wrapper.tracWrap(amount)
+    }
+
+    createUnwrapTx(
+        parachain: ApiPromise,
+        amount: bigint
+    ): SubmittableExtrinsic<"promise", ISubmittableResult> {
+        return parachain.tx.wrapper.tracUnwrap(amount)
+    }
+}

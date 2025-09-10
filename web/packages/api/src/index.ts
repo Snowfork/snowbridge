@@ -18,10 +18,12 @@ export * as environment from "./environment"
 export * as historyV2 from "./history_v2"
 export * as subsquid from "./subsquid"
 export * as forKusama from "./forKusama"
+export * as forInterParachain from "./forInterParachain"
 export * as toEthereumFromEVMV2 from "./toEthereumFromEVM_v2"
 export * as parachains from "./parachains"
 export * as xcmBuilder from "./xcmBuilder"
 export * as toEthereumSnowbridgeV2 from "./toEthereumSnowbridgeV2"
+export * as neuroWeb from "./parachains/neuroweb"
 
 interface Parachains {
     [paraId: string]: ApiPromise

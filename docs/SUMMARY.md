@@ -5,6 +5,7 @@
 
 ## Developer Docs
 
+* [Parachain Integration](developer-docs/parachain-integration.md)
 * [Typescript SDK](developer-docs/typescript-sdk.md)
 * [Local Development Guide](developer-docs/quick-start-guide.md)
 

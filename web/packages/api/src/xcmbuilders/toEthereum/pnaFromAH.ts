@@ -2,10 +2,9 @@ import { Registry } from "@polkadot/types/types"
 import {
     bridgeLocation,
     DOT_LOCATION,
-    erc20Location,
     accountToLocation,
     HERE_LOCATION,
-    isNative,
+    isRelaychainLocation,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
 
@@ -115,7 +114,7 @@ export function buildTransferXcmFromAssetHub(
     let sourceLocation = accountToLocation(sourceAccount)
     let tokenLocation = asset.location
     let assets = []
-    if (isNative(tokenLocation)) {
+    if (isRelaychainLocation(tokenLocation)) {
         assets.push({
             id: DOT_LOCATION,
             fun: {

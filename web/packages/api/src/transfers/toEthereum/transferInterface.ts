@@ -12,6 +12,7 @@ export interface TransferInterface {
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
+            claimerLocation?: any
         }
     ): Promise<DeliveryFee>
 
@@ -22,7 +23,8 @@ export interface TransferInterface {
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
-        fee: DeliveryFee
+        fee: DeliveryFee,
+        claimerLocation?: any
     ): Promise<Transfer>
 
     validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult>

@@ -4,7 +4,7 @@ import {
     DOT_LOCATION,
     erc20Location,
     accountToLocation,
-    isNative,
+    isRelaychainLocation,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
 
@@ -22,9 +22,9 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let tokenLocation = asset.location
     let assets = []
-    if (isNative(tokenLocation)) {
+    if (isRelaychainLocation(tokenLocation)) {
         assets.push({
             id: DOT_LOCATION,
             fun: {
