@@ -188,9 +188,10 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     }
     console.log("Asset Hub Channel with delivery timeout:", assethubChannelStatus)
 
-    let v2Status = await status.v2Status(context)
+    let v2Status
 
     try {
+        v2Status = await status.v2Status(context)
         let latencies = await subsquid.fetchToEthereumV2UndelivedLatency(context.graphqlApiUrl())
         if (latencies && latencies.length) {
             v2Status.toEthereum.undeliveredTimeout = latencies[0].elapse

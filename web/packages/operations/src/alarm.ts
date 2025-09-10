@@ -249,6 +249,7 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
         MetricData: metricData,
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + metrics.name,
     })
+    console.log("Sent metrics:", JSON.stringify(metricData, null, 2))
     await client.send(command)
 }
 
