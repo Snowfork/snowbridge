@@ -164,7 +164,7 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 		return err
 	}
 	for _, task := range tasks {
-		paraNonce := (*task.MessageProofs)[0].Message.Nonce
+		paraNonce := (*task.MessageProofs)[0].Message.OriginalMessage.Nonce
 		waitingPeriod := (uint64(paraNonce) + li.scheduleConfig.TotalRelayerCount - li.scheduleConfig.ID) % li.scheduleConfig.TotalRelayerCount
 		err = li.waitAndSend(ctx, task, waitingPeriod)
 		if err != nil {
@@ -326,7 +326,7 @@ func (li *BeefyListener) generateAndValidateParasHeadsMerkleProof(input *ProofIn
 }
 
 func (li *BeefyListener) waitAndSend(ctx context.Context, task *Task, waitingPeriod uint64) error {
-	paraNonce := (*task.MessageProofs)[0].Message.Nonce
+	paraNonce := (*task.MessageProofs)[0].Message.OriginalMessage.Nonce
 	log.Info(fmt.Sprintf("waiting for nonce %d to be picked up by another relayer", paraNonce))
 	var cnt uint64
 	var err error
