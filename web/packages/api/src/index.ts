@@ -6,26 +6,26 @@ import {
     BeefyClient__factory,
     IGatewayV1 as IGateway,
     IGatewayV1__factory as IGateway__factory,
+    IGatewayV2,
+    IGatewayV2__factory,
 } from "@snowbridge/contract-types"
 import { SNOWBRIDGE_ENV } from "./environment"
 
-export * as toPolkadot from "./toPolkadot"
 export * as toPolkadotV2 from "./toPolkadot_v2"
-export * as toEthereum from "./toEthereum"
 export * as toEthereumV2 from "./toEthereum_v2"
 export * as utils from "./utils"
 export * as status from "./status"
-export * as assets from "./assets"
 export * as assetsV2 from "./assets_v2"
 export * as environment from "./environment"
-export * as subscan from "./subscan"
-export * as history from "./history"
 export * as historyV2 from "./history_v2"
 export * as subsquid from "./subsquid"
 export * as forKusama from "./forKusama"
+export * as forInterParachain from "./forInterParachain"
 export * as toEthereumFromEVMV2 from "./toEthereumFromEVM_v2"
 export * as parachains from "./parachains"
+export * as xcmBuilder from "./xcmBuilder"
 export * as toEthereumSnowbridgeV2 from "./toEthereumSnowbridgeV2"
+export * as neuroWeb from "./parachains/neuroweb"
 
 interface Parachains {
     [paraId: string]: ApiPromise
@@ -65,6 +65,7 @@ export class Context {
     // Ethereum
     #ethChains: EthereumChains
     #gateway?: IGateway
+    #gatewayV2?: IGatewayV2
     #beefyClient?: BeefyClient
 
     // Substrate
@@ -222,6 +223,13 @@ export class Context {
         return IGateway__factory.connect(this.config.appContracts.gateway, this.ethereum())
     }
 
+    gatewayV2(): IGatewayV2 {
+        if (this.#gatewayV2) {
+            return this.#gatewayV2
+        }
+        return IGatewayV2__factory.connect(this.config.appContracts.gateway, this.ethereum())
+    }
+
     beefyClient(): BeefyClient {
         if (this.#beefyClient) {
             return this.#beefyClient
@@ -237,6 +245,7 @@ export class Context {
         // clean up contract listeners
         if (this.#beefyClient) await this.beefyClient().removeAllListeners()
         if (this.#gateway) await this.gateway().removeAllListeners()
+        if (this.#gatewayV2) await this.gatewayV2().removeAllListeners()
 
         // clean up etheruem
         for (const ethChainKey of Object.keys(this.config.ethereum.ethChains)) {

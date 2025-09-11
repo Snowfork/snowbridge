@@ -260,6 +260,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 "1000": "wss://asset-hub-paseo-rpc.dwellir.com",
                 "1002": "wss://bridge-hub-paseo.dotters.network",
                 "3369": "wss://paseo-muse-rpc.polkadot.io",
+                "2043": `wss://parachain-testnet-rpc.origin-trail.network`,
             },
             GATEWAY_CONTRACT: "0x1607C1368bc943130258318c91bBd8cFf3D063E6",
             BEEFY_CONTRACT: "0x2c780945beb1241fE9c645800110cb9C4bBbb639",
@@ -525,7 +526,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             RELAYERS: [
                 {
                     name: "beacon",
-                    account: "5HHDmTHN4FZYhuMSt3oP8YySDxzPLj9ZGBwxZjSdKf29qcnj",
+                    account: "16DWunYRv2q29SMxqgrPGhob5az332hhLggSj2Rysk3g1rvk",
                     type: "substrate",
                 },
                 {
@@ -545,7 +546,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 },
                 {
                     name: "execution-assethub",
-                    account: "5HHDmTHN4FZYhuMSt3oP8YySDxzPLj9ZGBwxZjSdKf29qcnj",
+                    account: "13Dbqvh6nLCRckyfsBr8wEJzxbi34KELwdYQFKKchN4NedGh",
                     type: "substrate",
                 },
                 {

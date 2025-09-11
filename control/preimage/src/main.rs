@@ -7,11 +7,11 @@ mod relay_runtime;
 mod treasury_commands;
 
 use alloy_primitives::{utils::parse_units, Address, Bytes, FixedBytes, U128, U256};
-use snowbridge_preimage_chopsticks::generate_chopsticks_script;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use codec::Encode;
 use constants::{ASSET_HUB_API, BRIDGE_HUB_API, POLKADOT_DECIMALS, POLKADOT_SYMBOL, RELAY_API};
 use helpers::{force_xcm_version, send_xcm_asset_hub, send_xcm_bridge_hub, utility_force_batch};
+use snowbridge_preimage_chopsticks::generate_chopsticks_script;
 use sp_crypto_hashing::blake2_256;
 use std::{io::Write, path::PathBuf};
 use subxt::{OnlineClient, PolkadotConfig};
@@ -62,6 +62,8 @@ pub enum Command {
     GovUpdate202501(GovUpdate202501Args),
     /// Register PNA
     RegisterPnaBatch202503,
+    /// Register all ERC20 tokens metadata
+    RegisterErc20TokenMetadata,
 }
 
 #[derive(Debug, Args)]
@@ -481,6 +483,20 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 let reg_call =
                     send_xcm_bridge_hub(&context, commands::token_registrations()).await?;
                 reg_call
+            }
+        }
+        Command::RegisterErc20TokenMetadata => {
+            #[cfg(not(feature = "polkadot"))]
+            panic!("RegisterErc20TokenMetadata only for polkadot runtime.");
+
+            #[cfg(feature = "polkadot")]
+            {
+                let metadata_calls = commands::register_erc20_token_metadata();
+                let reg_call = commands::frequency_token_registrations();
+                utility_force_batch(vec![
+                    send_xcm_asset_hub(&context, metadata_calls).await?,
+                    send_xcm_bridge_hub(&context, reg_call).await?,
+                ])
             }
         }
     };

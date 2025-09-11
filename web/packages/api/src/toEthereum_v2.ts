@@ -19,7 +19,7 @@ import {
     HERE_LOCATION,
     buildAssetHubERC20TransferFromParachainWithNativeFee,
 } from "./xcmBuilder"
-import { getAssetHubConversationPalletSwap } from "./assets_v2"
+import { getAssetHubConversionPalletSwap } from "./assets_v2"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
@@ -63,11 +63,16 @@ export type DeliveryFee = {
     returnToSenderExecutionFeeDOT: bigint
     returnToSenderDeliveryFeeDOT: bigint
     totalFeeInDot: bigint
+    localExecutionFeeDOT?: bigint
+    localDeliveryFeeDOT?: bigint
+    ethereumExecutionFee?: bigint
+    feeLocation?: any
     totalFeeInNative?: bigint
     assetHubExecutionFeeNative?: bigint
     returnToSenderExecutionFeeNative?: bigint
-    localExecutionFeeDOT?: bigint
-    ethereumExecutionFee?: bigint
+    localExecutionFeeInNative?: bigint
+    localDeliveryFeeInNative?: bigint
+    ethereumExecutionFeeInNative?: bigint
 }
 
 export type FeeInfo = {
@@ -368,14 +373,14 @@ export async function getDeliveryFee(
             assetHubExecutionFeeNativeRes,
             returnToSenderExecutionFeeNativeRes,
         ] = await Promise.all([
-            getAssetHubConversationPalletSwap(assetHub, paraLoc, DOT_LOCATION, totalFeeInDot),
-            getAssetHubConversationPalletSwap(
+            getAssetHubConversionPalletSwap(assetHub, paraLoc, DOT_LOCATION, totalFeeInDot),
+            getAssetHubConversionPalletSwap(
                 assetHub,
                 paraLoc,
                 DOT_LOCATION,
                 assetHubExecutionFeeDOT
             ),
-            getAssetHubConversationPalletSwap(
+            getAssetHubConversionPalletSwap(
                 assetHub,
                 paraLoc,
                 DOT_LOCATION,
@@ -433,6 +438,7 @@ export type ValidationResult = {
         tokenBalance: bigint
         sourceDryRunError: any
         assetHubDryRunError: any
+        bridgeHubDryRunError?: any
     }
     transfer: Transfer
 }
@@ -848,18 +854,35 @@ function createAssetHubTx(
             },
         ],
     }
-    const destination = { v4: bridgeLocation(ethChainId) }
-    const beneficiaryLocation = {
-        v4: {
-            parents: 0,
-            interior: { x1: [{ accountKey20: { key: beneficiaryAccount } }] },
-        },
+    const feeAsset = {
+        v4: assetLocation,
     }
-    return parachain.tx.polkadotXcm.transferAssets(
+    const destination = { v4: bridgeLocation(ethChainId) }
+    let customXcm = parachain.registry.createType("XcmVersionedXcm", {
+        v4: [
+            {
+                depositAsset: {
+                    assets: {
+                        Wild: {
+                            AllCounted: 1,
+                        },
+                    },
+                    beneficiary: {
+                        parents: 0,
+                        interior: { x1: [{ accountKey20: { key: beneficiaryAccount } }] },
+                    },
+                },
+            },
+        ],
+    })
+    let reserveType = asset.location ? "LocalReserve" : "DestinationReserve"
+    return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
-        beneficiaryLocation,
         assets,
-        0,
+        reserveType,
+        feeAsset,
+        reserveType,
+        customXcm,
         "Unlimited"
     )
 }

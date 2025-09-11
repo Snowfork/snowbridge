@@ -3,18 +3,28 @@ package config
 import "errors"
 
 type PolkadotConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
+	Endpoint      string `mapstructure:"endpoint"`
+	HeartbeatSecs uint64 `mapstructure:"heartbeat-secs"`
 }
 
 type ParachainConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
+	Endpoint      string `mapstructure:"endpoint"`
+	HeartbeatSecs uint64 `mapstructure:"heartbeat-secs"`
 }
 
 type EthereumConfig struct {
-	Endpoint  string `mapstructure:"endpoint"`
-	GasFeeCap uint64 `mapstructure:"gas-fee-cap"`
-	GasTipCap uint64 `mapstructure:"gas-tip-cap"`
-	GasLimit  uint64 `mapstructure:"gas-limit"`
+	Endpoint             string `mapstructure:"endpoint"`
+	GasFeeCap            uint64 `mapstructure:"gas-fee-cap"`
+	GasTipCap            uint64 `mapstructure:"gas-tip-cap"`
+	GasLimit             uint64 `mapstructure:"gas-limit"`
+	HeartbeatSecs        uint64 `mapstructure:"heartbeat-secs"`
+	PendingTxTimeoutSecs uint64 `mapstructure:"pending-tx-timeout-secs"`
+	// The gas cost of v2_submit excludes command execution, mainly covers the verification
+	BaseDeliveryGas uint64 `mapstructure:"base-delivery-gas"`
+	// The gas cost of unlock ERC20 token
+	BaseUnlockGas uint64 `mapstructure:"base-unlock-gas"`
+	// The gas cost of mint Polkadot native asset
+	BaseMintGas uint64 `mapstructure:"base-mint-gas"`
 }
 
 type OFACConfig struct {

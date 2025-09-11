@@ -136,12 +136,41 @@ export abstract class ParachainBase {
                 dotAsset = asset
             }
         }
+        let deliveryFee
         if (!dotAsset) {
-            console.info("Could not find DOT in result", result)
+            console.warn("Could not find DOT in result", result)
+            deliveryFee = 0n
+        } else {
+            deliveryFee = BigInt(dotAsset.fun.fungible.toString())
+        }
+        return deliveryFee
+    }
+
+    async calculateDeliveryFeeInNative(destParachainId: number, xcm: any): Promise<bigint> {
+        const result = (
+            await this.provider.call.xcmPaymentApi.queryDeliveryFees(
+                { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
+                xcm
+            )
+        ).toPrimitive() as any
+        if (!result.ok) {
             throw Error(`Can not query XCM Weight.`)
         }
+        let nativeAsset = undefined
+        const assets = result.ok.v4 || result.ok.v5
+        for (const asset of assets) {
+            if (asset.id.parents === 0 && asset.id.interior.here === null) {
+                nativeAsset = asset
+            }
+        }
 
-        const deliveryFee = BigInt(dotAsset.fun.fungible.toString())
+        let deliveryFee
+        if (!nativeAsset) {
+            console.warn("Could not find NATIVE in result", result)
+            deliveryFee = 0n
+        } else {
+            deliveryFee = BigInt(nativeAsset.fun.fungible.toString())
+        }
 
         return deliveryFee
     }

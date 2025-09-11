@@ -233,7 +233,7 @@ pub async fn ensure_penpal_asset_exists(
 	penpal_client: &mut OnlineClient<PenpalConfig>,
 	asset: PenpalLocation,
 ) {
-	let existing_asset = penpal::api::storage().foreign_assets().asset(&asset);
+	let existing_asset = penpal::api::storage().foreign_assets().asset(asset.clone());
 	let result = penpal_client
 		.storage()
 		.at_latest()
