@@ -51,7 +51,7 @@ const wrapSnowTRAC = async () => {
             process.exit(1)
         }
 
-        const wrapTx = neuroWeb.createWrapTx(parachain, balance)
+        const wrapTx = neuroWeb.createWrapTx(balance)
 
         await wrapTx.signAndSend(POLKADOT_ACCOUNT, { nonce: -1 }, (result) => {
             console.log(`Transaction status: ${result.status}`)

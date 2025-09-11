@@ -10,6 +10,7 @@ export const NEUROWEB_TEST_CHAIN_ID = 11155111 // Sepolia
 export const NEUROWEB_TEST_TOKEN_ID = "0xef32abea56beff54f61da319a7311098d6fbcea9"
 export const NEUROWEB_CHAIN_ID = 1 // Ethereum Mainnet
 export const NEUROWEB_TOKEN_ID = "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f"
+const TRAC_ASSET_ID = 1
 
 export class NeurowebParachain extends ParachainBase {
     getXC20DOT() {
@@ -71,7 +72,7 @@ export class NeurowebParachain extends ParachainBase {
                     asset
                 )}'. Using default.`
             )
-            return 10_000_000_000n // TODO
+            return 1_000_000_000n
         }
         return await this.calculateXcmFee(destinationXcm, asset)
     }
@@ -113,22 +114,25 @@ export class NeurowebParachain extends ParachainBase {
 
     async tracBalance(account: string) {
         const accountData = (
-            await this.provider.query.assets.account(1, account)
+            await this.provider.query.assets.account(TRAC_ASSET_ID, account)
         ).toPrimitive() as any
         return BigInt(accountData?.balance ?? 0n)
     }
 
-    createWrapTx(
-        parachain: ApiPromise,
-        amount: bigint
-    ): SubmittableExtrinsic<"promise", ISubmittableResult> {
-        return parachain.tx.wrapper.tracWrap(amount)
+    createWrapTx(amount: bigint): SubmittableExtrinsic<"promise", ISubmittableResult> {
+        // TODO: Delete, unused
+        return this.provider.tx.wrapper.tracWrap(amount)
     }
 
-    createUnwrapTx(
-        parachain: ApiPromise,
-        amount: bigint
-    ): SubmittableExtrinsic<"promise", ISubmittableResult> {
-        return parachain.tx.wrapper.tracUnwrap(amount)
+    createUnwrapTx(amount: bigint): SubmittableExtrinsic<"promise", ISubmittableResult> {
+        // TODO: Delete, unused
+        return this.provider.tx.wrapper.tracUnwrap(amount)
+    }
+
+    async calculateDeliveryFeeInDOT(_destParachainId: number, _xcm: any): Promise<bigint> {
+            console.warn(
+                `${this.specName} does not support calculating xcm delivery fee. Using default.`
+            )
+            return 1_000_000_000n
     }
 }
