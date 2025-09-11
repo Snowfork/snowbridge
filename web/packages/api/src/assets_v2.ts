@@ -942,14 +942,8 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                 ) {
                     return false
                 }
-                // Disable para to para transfers except for nueroweb
-                if (
-                    path.type === "substrate" &&
-                    path.destinationType === "substrate" &&
-                    !(
-                        (path.source === 1000 && path.destination === 2043)
-                    )
-                ) {
+                // Disable para to para transfers
+                if (path.type === "substrate" && path.destinationType === "substrate") {
                     return false
                 }
                 return true
