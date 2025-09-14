@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	para "github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/relays/beefy"
 	"github.com/snowfork/snowbridge/relayer/relays/parachain"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -27,6 +28,7 @@ var (
 	privateKeyFile      string
 	privateKeyID        string
 	parachainPrivateKey string
+	onDemand            bool
 )
 
 func Command() *cobra.Command {
@@ -45,6 +47,7 @@ func Command() *cobra.Command {
 	cmd.Flags().StringVar(&privateKeyID, "ethereum.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
 
 	cmd.Flags().StringVar(&parachainPrivateKey, "substrate.private-key", "", "substrate private key")
+	cmd.Flags().BoolVarP(&onDemand, "on-demand", "", false, "Synchronize beefy commitments on demand together with parachain messages")
 
 	return cmd
 }
@@ -79,11 +82,6 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	relay, err := parachain.NewRelay(&config, keypair, keypair2)
-	if err != nil {
-		return err
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
 
@@ -103,11 +101,34 @@ func run(_ *cobra.Command, _ []string) error {
 		return nil
 	})
 
-	err = relay.Start(ctx, eg)
+	var beefyConfig beefy.Config
+	err = viper.UnmarshalExact(&beefyConfig)
 	if err != nil {
-		logrus.WithError(err).Fatal("Unhandled error")
-		cancel()
 		return err
+	}
+
+	if !onDemand {
+		relay, err := parachain.NewRelay(&config, keypair, keypair2)
+		if err != nil {
+			return err
+		}
+		err = relay.Start(ctx, eg)
+		if err != nil {
+			logrus.WithError(err).Fatal("Unhandled error")
+			cancel()
+			return err
+		}
+	} else {
+		relay, err := parachain.NewOnDemandRelay(&config, &beefyConfig, keypair)
+		if err != nil {
+			return err
+		}
+		err = relay.Start(ctx, eg)
+		if err != nil {
+			logrus.WithError(err).Fatal("Unhandled error")
+			cancel()
+			return err
+		}
 	}
 
 	err = eg.Wait()
