@@ -28,6 +28,7 @@ var (
 	privateKeyFile      string
 	privateKeyID        string
 	parachainPrivateKey string
+	beefyConfigFile     string
 	onDemand            bool
 )
 
@@ -41,6 +42,8 @@ func Command() *cobra.Command {
 
 	cmd.Flags().StringVar(&configFile, "config", "", "Path to configuration file")
 	cmd.MarkFlagRequired("config")
+
+	cmd.Flags().StringVar(&beefyConfigFile, "beefy.config", "", "Path to beefy configuration file")
 
 	cmd.Flags().StringVar(&privateKey, "ethereum.private-key", "", "Ethereum private key")
 	cmd.Flags().StringVar(&privateKeyFile, "ethereum.private-key-file", "", "The file from which to read the private key")
@@ -101,12 +104,6 @@ func run(_ *cobra.Command, _ []string) error {
 		return nil
 	})
 
-	var beefyConfig beefy.Config
-	err = viper.UnmarshalExact(&beefyConfig)
-	if err != nil {
-		return err
-	}
-
 	if !onDemand {
 		relay, err := parachain.NewRelay(&config, keypair, keypair2)
 		if err != nil {
@@ -119,6 +116,16 @@ func run(_ *cobra.Command, _ []string) error {
 			return err
 		}
 	} else {
+		viper.SetConfigFile(beefyConfigFile)
+		if err := viper.ReadInConfig(); err != nil {
+			return err
+		}
+
+		var beefyConfig beefy.Config
+		err = viper.UnmarshalExact(&beefyConfig)
+		if err != nil {
+			return err
+		}
 		relay, err := parachain.NewOnDemandRelay(&config, &beefyConfig, keypair)
 		if err != nil {
 			return err

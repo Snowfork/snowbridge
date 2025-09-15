@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy"
 	"golang.org/x/sync/errgroup"
 )
@@ -26,7 +27,13 @@ func NewBeefyInstantSyncer(
 
 // Todo: consider using subscription to listen for new finalized beefy headers
 func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) error {
-	ticker := time.NewTicker(time.Second * 30)
+	// Initialize the beefy listener to setup the scanner
+	err := li.beefyListener.initialize(ctx)
+	if err != nil {
+		return fmt.Errorf("initialize beefy listener: %w", err)
+	}
+
+	ticker := time.NewTicker(time.Second * 10)
 
 	eg.Go(func() error {
 
@@ -69,7 +76,7 @@ func (li *BeefyInstantSyncer) doScanAndUpdate(ctx context.Context, beefyBlockNum
 		// before submitting any messages to the parachain
 		// This is to ensure the light client has the necessary BEEFY proofs
 		// to verify the parachain headers being submitted
-		fmt.Printf("Syncing light client to BEEFY block number %d\n", beefyBlockNumber)
+		log.Info(fmt.Sprintf("Syncing light client to BEEFY block number %d\n", beefyBlockNumber))
 		err = li.beefyOnDemandRelay.OneShotStart(ctx, beefyBlockNumber)
 		if err != nil {
 			return fmt.Errorf("sync beefy update on demand: %w", err)
