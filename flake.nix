@@ -55,6 +55,7 @@
                     go
                     gotools
                     gopls
+                    go-ethereum
                     go-outline
                     go-ethereum
                     gopkgs

@@ -188,6 +188,22 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     }
     console.log("Asset Hub Channel with delivery timeout:", assethubChannelStatus)
 
+    let v2Status
+
+    try {
+        v2Status = await status.v2Status(context)
+        let latencies = await subsquid.fetchToEthereumV2UndelivedLatency(context.graphqlApiUrl())
+        if (latencies && latencies.length) {
+            v2Status.toEthereum.undeliveredTimeout = latencies[0].elapse
+        }
+        latencies = await subsquid.fetchToPolkadotV2UndelivedLatency(context.graphqlApiUrl())
+        if (latencies && latencies.length) {
+            v2Status.toPolkadot.undeliveredTimeout = latencies[0].elapse
+        }
+    } catch (error) {
+        console.error("Failed to fetch undelivered latency:", error)
+    }
+
     const allMetrics: status.AllMetrics = {
         name,
         bridgeStatus,
@@ -195,6 +211,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         relayers,
         sovereigns,
         indexerStatus: indexerInfos,
+        v2Status,
     }
 
     await sendMetrics(allMetrics)

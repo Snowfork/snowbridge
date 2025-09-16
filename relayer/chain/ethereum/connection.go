@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/snowbridge/relayer/config"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
@@ -47,7 +48,7 @@ func NewConnection(config *config.EthereumConfig, kp *secp256k1.Keypair) *Connec
 	}
 }
 
-func (co *Connection) Connect(ctx context.Context) error {
+func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Group, heartBeat time.Duration) error {
 	client, err := ethclient.Dial(co.endpoint)
 	if err != nil {
 		return err
@@ -65,6 +66,27 @@ func (co *Connection) Connect(ctx context.Context) error {
 
 	co.client = client
 	co.chainID = chainID
+
+	if heartBeat.Abs() > 0 {
+		ticker := time.NewTicker(heartBeat)
+
+		eg.Go(func() error {
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-ticker.C:
+					_, err := client.NetworkID(ctx)
+					if err != nil {
+						log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
+						return err
+					}
+					log.WithField("endpoint", co.endpoint).Info("Connection heartbeat received")
+				}
+			}
+		})
+	}
 
 	return nil
 }
@@ -127,6 +149,7 @@ func (co *Connection) queryFailingError(ctx context.Context, hash common.Hash) e
 }
 
 func (co *Connection) waitForTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
+	var cnt uint64
 	for {
 		receipt, err := co.pollTransaction(ctx, tx, confirmations)
 		if err != nil {
@@ -141,6 +164,13 @@ func (co *Connection) waitForTransaction(ctx context.Context, tx *types.Transact
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		case <-time.After(6 * time.Second):
+			if co.config.PendingTxTimeoutSecs > 0 {
+				cnt++
+				log.Info(fmt.Sprintf("waiting for receipt: %d seconds elapsed", cnt*6))
+				if cnt*6 > co.config.PendingTxTimeoutSecs {
+					return nil, fmt.Errorf("wait receipt timeout")
+				}
+			}
 		}
 	}
 }

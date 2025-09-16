@@ -34,7 +34,10 @@
   "sink": {
     "ethereum": {
       "endpoint": "ws://127.0.0.1:8546",
-      "gas-limit": null
+      "gas-limit": null,
+      "base-delivery-gas": 100000,
+      "base-unlock-gas": 60000,
+      "base-mint-gas": 60000
     },
     "contracts": {
       "Gateway": null
