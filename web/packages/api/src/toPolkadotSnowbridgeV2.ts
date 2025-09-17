@@ -167,23 +167,6 @@ export function hexToBytes(hexString: string): Uint8Array {
     return bytes
 }
 
-export async function erc20Balance(
-    ethereum: AbstractProvider,
-    tokenAddress: string,
-    owner: string,
-    spender: string
-) {
-    const tokenContract = IERC20__factory.connect(tokenAddress, ethereum)
-    const [balance, gatewayAllowance] = await Promise.all([
-        tokenContract.balanceOf(owner),
-        tokenContract.allowance(owner, spender),
-    ])
-    return {
-        balance,
-        gatewayAllowance,
-    }
-}
-
 // ERC20 asset: abi.encode(0, tokenAddress, amount)
 // 0 = AssetKind.NativeTokenERC20 from Solidity Types.sol
 export function encodeNativeAsset(tokenAddress: string, amount: bigint) {

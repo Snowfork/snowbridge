@@ -12,7 +12,6 @@ import {
     DeliveryFee,
     dryRunAssetHub,
     encodeNativeAsset,
-    erc20Balance,
     hexToBytes,
     Transfer,
     validateAccount,
@@ -21,7 +20,7 @@ import {
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "../../assets_v2"
+import { erc20Balance, ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { Contract } from "ethers"

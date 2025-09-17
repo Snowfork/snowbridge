@@ -21,16 +21,11 @@ import {
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "../../assets_v2"
+import { erc20Balance, ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
 import { Contract } from "ethers"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import {
-    buildMessageId,
-    Transfer,
-    erc20Balance,
-    ValidationResult,
-} from "../../toPolkadotSnowbridgeV2"
+import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
 
 export class ERC20ToAH implements TransferInterface {

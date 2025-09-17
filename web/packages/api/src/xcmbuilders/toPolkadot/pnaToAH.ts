@@ -1,9 +1,5 @@
 import { Registry } from "@polkadot/types/types"
-import {
-    erc20Location,
-    ethereumNetwork,
-    accountToLocation,
-} from "../../xcmBuilder"
+import { erc20Location, ethereumNetwork, accountToLocation } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 
 export function buildAssetHubPNAReceivedXcm(
