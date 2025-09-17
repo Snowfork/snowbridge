@@ -1071,3 +1071,27 @@ export async function swapAsset1ForAsset2(
     }
     return BigInt(asset2Balance)
 }
+
+export async function validateAccount(
+    parachainImpl: ParachainBase,
+    beneficiaryAddress: string,
+    ethChainId: number,
+    tokenAddress: string,
+    assetMetadata?: Asset,
+    maxConsumers?: bigint
+) {
+    // Check if the account is created
+    const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
+        parachainImpl.getNativeAccount(beneficiaryAddress),
+        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
+    ])
+    return {
+        accountExists: !(
+            beneficiaryAccount.consumers === 0n &&
+            beneficiaryAccount.providers === 0n &&
+            beneficiaryAccount.sufficients === 0n
+        ),
+        accountMaxConsumers:
+            beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n,
+    }
+}

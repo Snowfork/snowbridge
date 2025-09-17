@@ -15,7 +15,6 @@ import {
     encodeNativeAsset,
     hexToBytes,
     Transfer,
-    validateAccount,
     ValidationKind,
     ValidationResult,
 } from "../../toPolkadotSnowbridgeV2"
@@ -26,7 +25,12 @@ import {
     erc20Location,
 } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import { erc20Balance, ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "../../assets_v2"
+import {
+    erc20Balance,
+    ETHER_TOKEN_ADDRESS,
+    swapAsset1ForAsset2,
+    validateAccount,
+} from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import {
@@ -417,7 +421,7 @@ export class ERC20ToParachain implements TransferInterface {
         // Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
             const sovereignAccountId = paraIdToSovereignAccount("sibl", destinationParaId)
-            const { accountMaxConumers, accountExists } = await validateAccount(
+            const { accountMaxConsumers, accountExists } = await validateAccount(
                 assetHubImpl,
                 sovereignAccountId,
                 registry.ethChainId,
@@ -432,7 +436,7 @@ export class ERC20ToParachain implements TransferInterface {
                     message: "Sovereign account does not exist on Asset Hub.",
                 })
             }
-            if (accountMaxConumers) {
+            if (accountMaxConsumers) {
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.MaxConsumersReached,
@@ -493,14 +497,14 @@ export class ERC20ToParachain implements TransferInterface {
             ) {
                 const destParachainImpl = await paraImplementation(destParachainApi)
                 // Check if the account is created
-                const { accountMaxConumers, accountExists } = await validateAccount(
+                const { accountMaxConsumers, accountExists } = await validateAccount(
                     destParachainImpl,
                     beneficiaryAddressHex,
                     registry.ethChainId,
                     tokenAddress,
                     destAssetMetadata
                 )
-                if (accountMaxConumers) {
+                if (accountMaxConsumers) {
                     logs.push({
                         kind: ValidationKind.Error,
                         reason: ValidationReason.MaxConsumersReached,

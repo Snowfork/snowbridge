@@ -15,7 +15,7 @@ import {
     IGatewayV1__factory as IGateway__factory,
     WETH9__factory,
 } from "@snowbridge/contract-types"
-import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { ETHER_TOKEN_ADDRESS, validateAccount } from "./assets_v2"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { ApiPromise } from "@polkadot/api"
@@ -268,30 +268,6 @@ export async function createTransfer(
     }
 }
 
-async function validateAccount(
-    parachainImpl: ParachainBase,
-    beneficiaryAddress: string,
-    ethChainId: number,
-    tokenAddress: string,
-    assetMetadata?: Asset,
-    maxConsumers?: bigint
-) {
-    // Check if the account is created
-    const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
-        parachainImpl.getNativeAccount(beneficiaryAddress),
-        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
-    ])
-    return {
-        accountExists: !(
-            beneficiaryAccount.consumers === 0n &&
-            beneficiaryAccount.providers === 0n &&
-            beneficiaryAccount.sufficients === 0n
-        ),
-        accountMaxConumers:
-            beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n,
-    }
-}
-
 export async function validateTransfer(
     context: Context | Connections,
     transfer: Transfer
@@ -437,7 +413,7 @@ export async function validateTransfer(
         // Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
             const sovereignAccountId = paraIdToSovereignAccount("sibl", destinationParaId)
-            const { accountMaxConumers, accountExists } = await validateAccount(
+            const { accountMaxConsumers, accountExists } = await validateAccount(
                 assetHubImpl,
                 sovereignAccountId,
                 registry.ethChainId,
@@ -452,7 +428,7 @@ export async function validateTransfer(
                     message: "Sovereign account does not exist on Asset Hub.",
                 })
             }
-            if (accountMaxConumers) {
+            if (accountMaxConsumers) {
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.MaxConsumersReached,
@@ -513,14 +489,14 @@ export async function validateTransfer(
             ) {
                 const destParachainImpl = await paraImplementation(destParachainApi)
                 // Check if the account is created
-                const { accountMaxConumers, accountExists } = await validateAccount(
+                const { accountMaxConsumers, accountExists } = await validateAccount(
                     destParachainImpl,
                     beneficiaryAddressHex,
                     registry.ethChainId,
                     tokenAddress,
                     destAssetMetadata
                 )
-                if (accountMaxConumers) {
+                if (accountMaxConsumers) {
                     logs.push({
                         kind: ValidationKind.Error,
                         reason: ValidationReason.MaxConsumersReached,
@@ -538,7 +514,7 @@ export async function validateTransfer(
             }
         }
     } else if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
-        const { accountMaxConumers, accountExists } = await validateAccount(
+        const { accountMaxConsumers, accountExists } = await validateAccount(
             assetHubImpl,
             beneficiaryAddressHex,
             registry.ethChainId,
@@ -546,7 +522,7 @@ export async function validateTransfer(
             ahAssetMetadata
         )
 
-        if (accountMaxConumers) {
+        if (accountMaxConsumers) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.MaxConsumersReached,

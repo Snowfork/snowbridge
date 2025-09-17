@@ -181,30 +181,6 @@ export function encodeAssetsArray(encodedAssets: string[]) {
     return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [encodedAssets])
 }
 
-export async function validateAccount(
-    parachainImpl: ParachainBase,
-    beneficiaryAddress: string,
-    ethChainId: number,
-    tokenAddress: string,
-    assetMetadata?: Asset,
-    maxConsumers?: bigint
-) {
-    // Check if the account is created
-    const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
-        parachainImpl.getNativeAccount(beneficiaryAddress),
-        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
-    ])
-    return {
-        accountExists: !(
-            beneficiaryAccount.consumers === 0n &&
-            beneficiaryAccount.providers === 0n &&
-            beneficiaryAccount.sufficients === 0n
-        ),
-        accountMaxConumers:
-            beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n,
-    }
-}
-
 export async function dryRunAssetHub(
     assetHub: ApiPromise,
     bridgeHubParaId: number,

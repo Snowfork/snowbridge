@@ -12,7 +12,6 @@ import {
     dryRunAssetHub,
     encodeNativeAsset,
     hexToBytes,
-    validateAccount,
     ValidationKind,
 } from "../../toPolkadotSnowbridgeV2"
 import {
@@ -21,7 +20,12 @@ import {
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import { erc20Balance, ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "../../assets_v2"
+import {
+    erc20Balance,
+    ETHER_TOKEN_ADDRESS,
+    swapAsset1ForAsset2,
+    validateAccount,
+} from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
 import { Contract } from "ethers"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
@@ -334,7 +338,7 @@ export class ERC20ToAH implements TransferInterface {
         const assetHubImpl = await paraImplementation(assetHub)
 
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
-            const { accountMaxConumers, accountExists } = await validateAccount(
+            const { accountMaxConsumers, accountExists } = await validateAccount(
                 assetHubImpl,
                 beneficiaryAddressHex,
                 registry.ethChainId,
@@ -342,7 +346,7 @@ export class ERC20ToAH implements TransferInterface {
                 ahAssetMetadata
             )
 
-            if (accountMaxConumers) {
+            if (accountMaxConsumers) {
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.MaxConsumersReached,
