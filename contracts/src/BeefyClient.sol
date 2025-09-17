@@ -289,7 +289,7 @@ contract BeefyClient {
 
         // For the initial submission, the supplied bitfield should claim that more than
         // two thirds of the validator set have sign the commitment
-        if (Bitfield.countSetBits(bitfield) < computeQuorum(vset.length)) {
+        if (Bitfield.countSetBits(bitfield, vset.length) < computeQuorum(vset.length)) {
             revert NotEnoughClaims();
         }
 

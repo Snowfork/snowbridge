@@ -19,4 +19,8 @@ contract BitfieldWrapper {
     {
         return Bitfield.subsample(seed, prior, n, length);
     }
+
+    function countSetBits(uint256[] memory self, uint256 maxBits) public pure returns (uint256) {
+        return Bitfield.countSetBits(self, maxBits);
+    }
 }
