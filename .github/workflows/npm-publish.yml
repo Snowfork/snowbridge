@@ -4,6 +4,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish"
+        required: false
+        type: "string"
 
 env:
   NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
@@ -42,7 +47,49 @@ jobs:
         run: |
           pnpm install
           pnpm build
-      
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git fetch --tags
+
+      - name: Determine new version
+        id: new_version
+        if: github.event_name != 'release'
+        run: |
+          # Get the most recent tag in the format @snowbridge/api@<version>
+          current_tag=$(git tag --list "@snowbridge/api@*" --sort=-v:refname | head -n 1)
+          echo "Current tag: $current_tag"
+          current_version=$(echo $current_tag | sed -E 's/@snowbridge\/api@//')
+          echo "Current version: $current_version"
+
+          # Install semver
+          npm install semver
+
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            echo "Using version from release tag: ${{ github.event.release.tag_name }}"
+            new_version="${{ github.event.release.tag_name }}"
+          elif [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "Using version from input: ${{ github.event.inputs.version }}"
+            new_version="${{ github.event.inputs.version }}"
+          elif [ -z "$current_version" ]; then
+            new_version="0.2.1"
+          else
+            echo "No release tag or input version provided, incrementing patch version."
+            new_version=$(npx semver $current_version -i patch)
+          fi
+            
+          echo "New version: $new_version"
+          echo "version=$new_version" >> $GITHUB_OUTPUT
+          echo "from_tag=$current_tag" >> $GITHUB_OUTPUT
+
+      - name: Set version in package.json
+        working-directory: web
+        if: github.event_name != 'release'
+        run: |
+          /bin/bash set-version.sh ${{ steps.new_version.outputs.version }}
+
       - name: Publish Base Types
         working-directory: web/packages/base-types
         run: |
@@ -62,8 +109,55 @@ jobs:
         working-directory: web/packages/api
         run: |
           pnpm publish --no-git-checks --access public
-      
+
       - name: Publish Registry
         working-directory: web/packages/registry
         run: |
           pnpm publish --no-git-checks --access public
+
+      - name: Create new tag
+        id: create_tag
+        if: github.event_name != 'release'
+        run: |
+          tag_name="@snowbridge/api@${{ steps.new_version.outputs.version }}"
+          echo "Tag name: $tag_name"
+          echo "tag=$tag_name" >> $GITHUB_OUTPUT
+          git tag $tag_name
+
+      - name: Push new tag
+        id: push_tag
+        if: github.event_name != 'release'
+        run: |
+          git push origin --tags
+
+      - name: Build Changelog
+        id: build_changelog
+        if: github.event_name != 'release'
+        uses: mikepenz/release-changelog-builder-action@v4
+        with:
+          configurationJson: |
+            {
+              "template": "#{{CHANGELOG}}\n\n<details>\n</details>",
+              "categories": [
+                {
+                    "title": "## Web API Changes",
+                    "labels": ["Component: Web API"]
+                }
+              ]
+            }
+          fromTag: ${{ steps.new_version.outputs.from_tag }}
+          toTag: ${{ steps.create_tag.outputs.tag }}
+
+      - name: Create a GitHub Release
+        id: create_release
+        if: github.event_name != 'release'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.create_tag.outputs.tag }}
+          release_name: ${{ steps.create_tag.outputs.tag }}
+          body: |
+            ${{steps.build_changelog.outputs.changelog}}
+          draft: false
+          prerelease: false

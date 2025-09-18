@@ -137,13 +137,13 @@ export abstract class ParachainBase {
                 dotAsset = asset
             }
         }
+        let deliveryFee
         if (!dotAsset) {
-            console.info("Could not find DOT in result", result)
-            throw Error(`Can not query XCM Weight.`)
+            console.warn("Could not find DOT in result", result)
+            deliveryFee = 0n
+        } else {
+            deliveryFee = BigInt(dotAsset.fun.fungible.toString())
         }
-
-        const deliveryFee = BigInt(dotAsset.fun.fungible.toString())
-
         return deliveryFee
     }
 
@@ -164,12 +164,14 @@ export abstract class ParachainBase {
                 nativeAsset = asset
             }
         }
-        if (!nativeAsset) {
-            console.info("Could not find NATIVE in result", result)
-            throw Error(`Can not query XCM Weight.`)
-        }
 
-        const deliveryFee = BigInt(nativeAsset.fun.fungible.toString())
+        let deliveryFee
+        if (!nativeAsset) {
+            console.warn("Could not find NATIVE in result", result)
+            deliveryFee = 0n
+        } else {
+            deliveryFee = BigInt(nativeAsset.fun.fungible.toString())
+        }
 
         return deliveryFee
     }

@@ -25,6 +25,7 @@ export * as toEthereumFromEVMV2 from "./toEthereumFromEVM_v2"
 export * as parachains from "./parachains"
 export * as xcmBuilder from "./xcmBuilder"
 export * as toEthereumSnowbridgeV2 from "./toEthereumSnowbridgeV2"
+export * as neuroWeb from "./parachains/neuroweb"
 export * as toPolkadotSnowbridgeV2 from "./toPolkadotSnowbridgeV2"
 
 interface Parachains {
@@ -245,6 +246,7 @@ export class Context {
         // clean up contract listeners
         if (this.#beefyClient) await this.beefyClient().removeAllListeners()
         if (this.#gateway) await this.gateway().removeAllListeners()
+        if (this.#gatewayV2) await this.gatewayV2().removeAllListeners()
 
         // clean up etheruem
         for (const ethChainKey of Object.keys(this.config.ethereum.ethChains)) {

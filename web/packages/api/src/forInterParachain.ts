@@ -312,7 +312,7 @@ export async function validateTransfer(
         logs.push({
             kind: ValidationKind.Error,
             reason: ValidationReason.MinimumAmountValidation,
-            message: "The amount transfered is less than the minimum amount.",
+            message: "The amount transferred is less than the minimum amount.",
         })
     }
 
