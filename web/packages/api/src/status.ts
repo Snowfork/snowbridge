@@ -3,7 +3,7 @@ import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
 import { fetchEstimatedDeliveryTime, fetchV2EstimatedDeliveryTime } from "./subsquid"
 import { Relayer, SourceType } from "./environment"
 import { ApiPromise } from "@polkadot/api"
-import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
+import { IGatewayV1, IGatewayV2 } from "@snowbridge/contract-types"
 
 export type OperatingMode = "Normal" | "Halted"
 export type BridgeStatusInfo = {
@@ -104,7 +104,7 @@ export async function getOperatingStatus({
     gateway,
     bridgeHub,
 }: {
-    gateway: IGateway
+    gateway: IGatewayV1 | IGatewayV2
     bridgeHub: ApiPromise
 }): Promise<OperationStatus> {
     const ethereumOperatingMode = await gateway.operatingMode()

@@ -1,15 +1,11 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, contextConfigFor, environment, toPolkadotV2 } from "@snowbridge/api"
-import { formatEther, Wallet } from "ethers"
+import { Context, toPolkadotSnowbridgeV2, contextConfigFor, toPolkadotV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
+import { formatEther, Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
-import { IERC20__factory, WETH9__factory } from "@snowbridge/contract-types"
+import { WETH9__factory } from "@snowbridge/contract-types"
 
-export const transferToPolkadot = async (
-    destinationChainId: number,
-    symbol: string,
-    amount: bigint
-) => {
+export const transferToPolkadot = async (destParaId: number, symbol: string, amount: bigint) => {
     await cryptoWaitReady()
 
     let env = "local_e2e"
@@ -20,14 +16,14 @@ export const transferToPolkadot = async (
 
     const context = new Context(contextConfigFor(env))
 
+    const polkadot_keyring = new Keyring({ type: "sr25519" })
+
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ??
             "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
         context.ethereum()
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
-
-    const polkadot_keyring = new Keyring({ type: "sr25519" })
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
@@ -40,10 +36,13 @@ export const transferToPolkadot = async (
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
     if (!TOKEN_CONTRACT) {
-        console.log("no token contract exists, check it and rebuild asset registry.")
-        return
+        console.error("no token contract exists, check it and rebuild asset registry.")
+        throw Error(`No token found for ${symbol}`)
     }
 
+    const relayerFee = 100_000_000_000_000n // 0.000100000000000000 ETH (~ $.5)
+
+    console.log("TOKEN_CONTRACT", TOKEN_CONTRACT)
     if (symbol.toLowerCase().startsWith("weth")) {
         console.log("# Deposit and Approve WETH")
         {
@@ -56,82 +55,54 @@ export const transferToPolkadot = async (
 
             console.log("deposit tx", depositReceipt?.hash, "approve tx", approveReceipt?.hash)
         }
-    } else if (symbol.toLowerCase().startsWith("trac")) {
-        console.log("# Approve TRAC (two-step approval)")
-        const erc20 = IERC20__factory.connect(TOKEN_CONTRACT, ETHEREUM_ACCOUNT)
-        const [balance, allowance] = await Promise.all([
-            erc20.balanceOf(ETHEREUM_ACCOUNT_PUBLIC),
-            erc20.allowance(ETHEREUM_ACCOUNT_PUBLIC, registry.gatewayAddress),
-        ])
-
-        if (allowance < amount) {
-            // Step 1: Reset allowance to 0 (required by this ERC20 implementation)
-            console.log("Resetting allowance to 0...")
-            const resetTx = await erc20.approve(context.config.appContracts.gateway, 0n)
-            await resetTx.wait()
-
-            // Step 2: Set new allowance (higher than transfer amount for gateway fees)
-            const approveAmount = amount * 5n // 5x buffer for gateway operations
-            console.log("Setting new allowance to", approveAmount.toString())
-            const approveTx = await erc20.approve(
-                context.config.appContracts.gateway,
-                approveAmount
-            )
-            await approveTx.wait()
-
-            const newAllowance = await erc20.allowance(
-                ETHEREUM_ACCOUNT_PUBLIC,
-                context.config.appContracts.gateway
-            )
-            console.log("newAllowance", newAllowance.toString())
-        }
-
-        console.log("token", TOKEN_CONTRACT)
-        console.log("gateway", registry.gatewayAddress)
-        console.log("context gateway", context.config.appContracts.gateway)
-        console.log("owner", ETHEREUM_ACCOUNT_PUBLIC)
-        console.log("balance", balance.toString())
-        console.log("allowance", allowance.toString())
-        console.log("amount", amount.toString())
     }
 
-    console.log("# Ethereum to Asset Hub")
+    console.log("Ethereum to Polkadot")
     {
-        // Step 1. Get the delivery fee for the transaction
-        const fee = await toPolkadotV2.getDeliveryFee(
-            {
-                gateway: context.gateway(),
-                assetHub: await context.assetHub(),
-                destination: await context.parachain(destinationChainId),
-            },
+        // Step 0. Create a transfer implementation
+        const transferImpl = toPolkadotSnowbridgeV2.createTransferImplementation(
+            destParaId,
             registry,
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            TOKEN_CONTRACT!,
-            destinationChainId
+            TOKEN_CONTRACT
+        )
+        // Step 1. Get the delivery fee for the transaction
+        let fee = await transferImpl.getDeliveryFee(
+            context,
+            registry,
+            TOKEN_CONTRACT,
+            destParaId,
+            relayerFee
         )
 
+        console.log("fee: ", fee)
         // Step 2. Create a transfer tx
-        const transfer = await toPolkadotV2.createTransfer(
+        const transfer = await transferImpl.createTransfer(
+            {
+                assetHub: await context.assetHub(),
+                destination:
+                    destParaId !== registry.assetHubParaId
+                        ? await context.parachain(destParaId)
+                        : undefined,
+            },
             registry,
+            destParaId,
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            TOKEN_CONTRACT!,
-            destinationChainId,
+            TOKEN_CONTRACT,
             amount,
             fee
         )
 
         // Step 3. Validate the transaction.
-        const validation = await toPolkadotV2.validateTransfer(
+        const validation = await transferImpl.validateTransfer(
             {
                 ethereum: context.ethereum(),
-                gateway: context.gateway(),
+                gateway: context.gatewayV2(),
                 bridgeHub: await context.bridgeHub(),
                 assetHub: await context.assetHub(),
-                destParachain:
-                    destinationChainId !== 1000
-                        ? await context.parachain(destinationChainId)
+                destination:
+                    destParaId !== registry.assetHubParaId
+                        ? await context.parachain(destParaId)
                         : undefined,
             },
             transfer
@@ -162,20 +133,23 @@ export const transferToPolkadot = async (
         console.log("dry run:", await context.ethereum().call(tx))
 
         if (process.env["DRY_RUN"] != "true") {
-            // Step 6. Submit the transaction
+            console.log("sending tx")
+            // Step 5. Submit the transaction
             const response = await ETHEREUM_ACCOUNT.sendTransaction(tx)
+            console.log("sent transaction")
             const receipt = await response.wait(1)
+            console.log("got receipt")
             if (!receipt) {
                 throw Error(`Transaction ${response.hash} not included.`)
             }
 
             // Step 7. Get the message receipt for tracking purposes
-            const message = await toPolkadotV2.getMessageReceipt(receipt)
+            const message = await toPolkadotSnowbridgeV2.getMessageReceipt(receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }
             console.log(
-                `Success message with message id: ${message.messageId}
+                `Success message with nonce: ${message.nonce}
                 block number: ${message.blockNumber}
                 tx hash: ${message.txHash}`
             )
