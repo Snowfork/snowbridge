@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-08-15T03:20:22.213Z",
+  "timestamp": "2025-09-18T11:54:06.754Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -13,7 +13,7 @@
     "accountType": "AccountId32",
     "name": "Polkadot",
     "specName": "polkadot",
-    "specVersion": 1006001
+    "specVersion": 1006002
   },
   "bridgeHub": {
     "tokenSymbols": "DOT",
@@ -23,7 +23,7 @@
     "accountType": "AccountId32",
     "name": "Polkadot BridgeHub",
     "specName": "bridge-hub-polkadot",
-    "specVersion": 1005001
+    "specVersion": 1006001
   },
   "ethereumChains": {
     "1": {
@@ -348,7 +348,7 @@
         "accountType": "AccountId32",
         "name": "Polkadot Asset Hub",
         "specName": "statemint",
-        "specVersion": 1005001
+        "specVersion": 1006000
       },
       "assets": {
         "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -433,10 +433,10 @@
         },
         "0x0e186357c323c806c1efdad36d217f7a54b63d18": {
           "token": "0x0e186357c323c806c1efdad36d217f7a54b63d18",
-          "name": "Curio Gas Token",
-          "symbol": "CGT2.0",
-          "decimals": 18,
+          "name": "",
           "minimumBalance": "bigint:1",
+          "symbol": "",
+          "decimals": 0,
           "isSufficient": false
         },
         "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f": {
@@ -1040,7 +1040,7 @@
         "evmChainId": 996,
         "name": "Bifrost Polkadot",
         "specName": "bifrost_polkadot",
-        "specVersion": 20002
+        "specVersion": 21001
       },
       "assets": {
         "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
@@ -1060,7 +1060,7 @@
           "isSufficient": false
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:67285511",
+      "estimatedExecutionFeeDOT": "bigint:54617721",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2034": {
@@ -1081,7 +1081,7 @@
         "evmChainId": 222222,
         "name": "Hydration",
         "specName": "hydradx",
-        "specVersion": 335
+        "specVersion": 347
       },
       "assets": {
         "0x0000000000000000000000000000000000000000": {
@@ -1205,7 +1205,39 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:1695406",
+      "estimatedExecutionFeeDOT": "bigint:1668122",
+      "estimatedDeliveryFeeDOT": "bigint:307100000"
+    },
+    "2043": {
+      "parachainId": 2043,
+      "features": {
+        "hasPalletXcm": true,
+        "hasDryRunApi": false,
+        "hasTxPaymentApi": true,
+        "hasDryRunRpc": true,
+        "hasDotBalance": true
+      },
+      "info": {
+        "tokenSymbols": "NEURO",
+        "tokenDecimals": 12,
+        "ss58Format": 101,
+        "isEthereum": false,
+        "accountType": "AccountId32",
+        "name": "NeuroWeb",
+        "specName": "origintrail-parachain",
+        "specVersion": 146
+      },
+      "assets": {
+        "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f": {
+          "token": "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
+          "name": "Trac",
+          "minimumBalance": "bigint:1000000000000000",
+          "symbol": "TRAC",
+          "decimals": 18,
+          "isSufficient": true
+        }
+      },
+      "estimatedExecutionFeeDOT": "bigint:1000000000",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "3369": {
@@ -1260,15 +1292,15 @@
           "accountType": "AccountId32",
           "name": "Kusama Asset Hub",
           "specName": "statemine",
-          "specVersion": 1006001
+          "specVersion": 1007001
         },
         "assets": {
           "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
             "token": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
-            "name": "",
+            "name": "Staked USDe",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "sUSDe",
+            "decimals": 18,
             "isSufficient": false
           },
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
@@ -1281,50 +1313,50 @@
           },
           "0x6982508145454ce325ddbe47a25d4ec3d2311933": {
             "token": "0x6982508145454ce325ddbe47a25d4ec3d2311933",
-            "name": "",
+            "name": "Pepe",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "PEPE",
+            "decimals": 18,
             "isSufficient": false
           },
           "0x5a98fcbea516cf06857215779fd812ca3bef1b32": {
             "token": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
-            "name": "",
+            "name": "Lido DAO Token",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "LDO",
+            "decimals": 18,
             "isSufficient": false
           },
           "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd": {
             "token": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
-            "name": "",
+            "name": "Savings USDS",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "sUSDS",
+            "decimals": 18,
             "isSufficient": false
           },
           "0x8236a87084f8b84306f72007f36f2618a5634494": {
             "token": "0x8236a87084f8b84306f72007f36f2618a5634494",
-            "name": "",
+            "name": "Lombard Staked Bitcoin",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "LBTC",
+            "decimals": 8,
             "isSufficient": false
           },
           "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c": {
             "token": "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
-            "name": "",
+            "name": "Euro Coin",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "EURC",
+            "decimals": 6,
             "isSufficient": false
           },
           "0x56072c95faa701256059aa122697b133aded9279": {
             "token": "0x56072c95faa701256059aa122697b133aded9279",
-            "name": "",
+            "name": "SKY Governance Token",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "SKY",
+            "decimals": 18,
             "isSufficient": false
           },
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": {
@@ -1338,65 +1370,65 @@
           "0x0e186357c323c806c1efdad36d217f7a54b63d18": {
             "token": "0x0e186357c323c806c1efdad36d217f7a54b63d18",
             "name": "Curio Gas Token",
+            "minimumBalance": "bigint:1",
             "symbol": "CGT2.0",
             "decimals": 18,
-            "minimumBalance": "bigint:1",
             "isSufficient": false
           },
           "0x18084fba666a33d37592fa2633fd49a74dd93a88": {
             "token": "0x18084fba666a33d37592fa2633fd49a74dd93a88",
-            "name": "",
+            "name": "tBTC v2",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "tBTC",
+            "decimals": 18,
             "isSufficient": false
           },
           "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": {
             "token": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-            "name": "",
+            "name": "Wrapped liquid staked Ether 2.0",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "wstETH",
+            "decimals": 18,
             "isSufficient": false
           },
           "0x582d872a1b094fc48f5de31d3b73f2d9be47def1": {
             "token": "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
-            "name": "",
+            "name": "Wrapped TON Coin",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "TONCOIN",
+            "decimals": 9,
             "isSufficient": false
           },
           "0x6b175474e89094c44da98b954eedeac495271d0f": {
             "token": "0x6b175474e89094c44da98b954eedeac495271d0f",
-            "name": "",
+            "name": "Dai Stablecoin",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "DAI",
+            "decimals": 18,
             "isSufficient": false
           },
           "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce": {
             "token": "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
-            "name": "",
+            "name": "SHIBA INU",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "SHIB",
+            "decimals": 18,
             "isSufficient": false
           },
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": {
             "token": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
-            "name": "",
+            "name": "Wrapped BTC",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "WBTC",
+            "decimals": 8,
             "isSufficient": false
           },
           "0x8daebade922df735c38c80c7ebd708af50815faa": {
             "token": "0x8daebade922df735c38c80c7ebd708af50815faa",
-            "name": "",
+            "name": "tBTC",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "TBTC",
+            "decimals": 18,
             "isSufficient": false
           },
           "0x0000000000000000000000000000000000000000": {
@@ -1409,10 +1441,10 @@
           },
           "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb": {
             "token": "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
-            "name": "",
+            "name": "KILT",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "KILT",
+            "decimals": 15,
             "isSufficient": false
           },
           "0xdac17f958d2ee523a2206206994597c13d831ec7": {
@@ -1425,18 +1457,18 @@
           },
           "0x514910771af9ca656af840dff83e8264ecf986ca": {
             "token": "0x514910771af9ca656af840dff83e8264ecf986ca",
-            "name": "",
+            "name": "ChainLink Token",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "LINK",
+            "decimals": 18,
             "isSufficient": false
           },
           "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9": {
             "token": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
-            "name": "",
+            "name": "Aave Token",
             "minimumBalance": "bigint:1",
-            "symbol": "",
-            "decimals": 0,
+            "symbol": "AAVE",
+            "decimals": 18,
             "isSufficient": false
           },
           "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14": {
@@ -1512,6 +1544,78 @@
             "foreignId": "0x03b6054d0c576dd8391e34e1609cf398f68050c23009d19ce93c000922bcd852",
             "minimumBalance": "bigint:3333333",
             "isSufficient": true
+          },
+          "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5": {
+            "token": "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
+            "name": "GAVUN WUD",
+            "symbol": "WUD",
+            "decimals": 10,
+            "locationOnEthereum": {
+              "parents": 1,
+              "interior": {
+                "x4": [
+                  {
+                    "globalConsensus": {
+                      "polkadot": null
+                    }
+                  },
+                  {
+                    "parachain": 1000
+                  },
+                  {
+                    "palletInstance": 50
+                  },
+                  {
+                    "generalIndex": 31337
+                  }
+                ]
+              }
+            },
+            "location": {
+              "parents": 2,
+              "interior": {
+                "x4": [
+                  {
+                    "globalConsensus": {
+                      "Polkadot": null
+                    }
+                  },
+                  {
+                    "parachain": 1000
+                  },
+                  {
+                    "palletInstance": 50
+                  },
+                  {
+                    "generalIndex": 31337
+                  }
+                ]
+              }
+            },
+            "locationOnAH": {
+              "parents": 2,
+              "interior": {
+                "x4": [
+                  {
+                    "globalConsensus": {
+                      "Polkadot": null
+                    }
+                  },
+                  {
+                    "parachain": 1000
+                  },
+                  {
+                    "palletInstance": 50
+                  },
+                  {
+                    "generalIndex": 31337
+                  }
+                ]
+              }
+            },
+            "foreignId": "0x7ca757304cac2ff0881de18dc6a1dfa7f10e51b0cba0297e0e762f8072049c98",
+            "minimumBalance": "bigint:10000000",
+            "isSufficient": false
           }
         },
         "estimatedExecutionFeeDOT": "bigint:0",
