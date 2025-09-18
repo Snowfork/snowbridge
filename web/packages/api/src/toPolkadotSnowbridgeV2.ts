@@ -14,8 +14,7 @@ import {
 } from "ethers"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
-import { IERC20__factory, IGatewayV2__factory } from "@snowbridge/contract-types"
-import { ParachainBase } from "./parachains/parachainBase"
+import { IGatewayV2__factory } from "@snowbridge/contract-types"
 import { OperationStatus } from "./status"
 import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
 import { ApiPromise } from "@polkadot/api"
@@ -25,6 +24,7 @@ import { accountToLocation } from "./xcmBuilder"
 export { ValidationKind } from "./toPolkadot_v2"
 
 export type DeliveryFee = {
+    feeAsset: any
     assetHubDeliveryFeeEther: bigint
     assetHubExecutionFeeEther: bigint
     destinationDeliveryFeeEther: bigint

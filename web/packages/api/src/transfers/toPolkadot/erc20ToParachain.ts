@@ -35,10 +35,14 @@ import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount }
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import {
     buildAssetHubERC20ReceivedXcm,
+    buildParachainERC20ReceivedXcmOnDestWithDOTFee,
     buildParachainERC20ReceivedXcmOnDestination,
 } from "../../xcmbuilders/toPolkadot/erc20ToParachain"
 import { Contract } from "ethers"
-import { sendMessageXCM } from "../../xcmbuilders/toPolkadot/erc20ToParachain"
+import {
+    sendMessageXCM,
+    sendMessageXCMWithDOTDestFee,
+} from "../../xcmbuilders/toPolkadot/erc20ToParachain"
 import { getOperatingStatus } from "../../status"
 
 export class ERC20ToParachain implements TransferInterface {
@@ -55,7 +59,10 @@ export class ERC20ToParachain implements TransferInterface {
         tokenAddress: string,
         destinationParaId: number,
         relayerFee: bigint,
-        paddFeeByPercentage?: bigint
+        options?: {
+            paddFeeByPercentage?: bigint
+            feeAsset?: any
+        }
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub, destination } =
             context instanceof Context
@@ -88,6 +95,8 @@ export class ERC20ToParachain implements TransferInterface {
         const bridgeHubImpl = await paraImplementation(bridgeHub)
         const assetHubImpl = await paraImplementation(assetHub)
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
+        const paddFeeByPercentage = options?.paddFeeByPercentage
+        const feeAsset = options?.feeAsset || ether
 
         // Delivery fee BridgeHub to AssetHub
         const deliveryFeeInDOT = await bridgeHubImpl.calculateDeliveryFeeInDOT(
@@ -152,6 +161,7 @@ export class ERC20ToParachain implements TransferInterface {
             destinationExecutionFeeEther: destinationExecutionFeeEther,
             relayerFee: relayerFee,
             totalFeeInWei: totalFeeInWei,
+            feeAsset: feeAsset,
         }
     }
 
@@ -208,18 +218,45 @@ export class ERC20ToParachain implements TransferInterface {
             amount
         )
 
-        const xcm = hexToBytes(
-            sendMessageXCM(
-                destination.registry,
-                registry.ethChainId,
-                destinationParaId,
-                tokenAddress,
-                beneficiaryAddressHex,
-                amount,
-                fee.destinationExecutionFeeEther,
-                topic
-            ).toHex()
+        const isMythosOrMuse = isMythosOrMuseParachain(
+            registry.parachains[destinationParaId].info.specName
         )
+        let xcm
+        if (isMythosOrMuse && fee.feeAsset === DOT_LOCATION) {
+            // For Mythos/Muse, we need to calculate the DOT fee amount for the swap
+            const dotFeeAmount = await swapAsset1ForAsset2(
+                assetHub,
+                erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS),
+                DOT_LOCATION,
+                fee.destinationExecutionFeeEther
+            )
+            xcm = hexToBytes(
+                sendMessageXCMWithDOTDestFee(
+                    destination.registry,
+                    registry.ethChainId,
+                    destinationParaId,
+                    tokenAddress,
+                    beneficiaryAddressHex,
+                    amount,
+                    fee.destinationExecutionFeeEther,
+                    dotFeeAmount,
+                    topic
+                ).toHex()
+            )
+        } else {
+            xcm = hexToBytes(
+                sendMessageXCM(
+                    destination.registry,
+                    registry.ethChainId,
+                    destinationParaId,
+                    tokenAddress,
+                    beneficiaryAddressHex,
+                    amount,
+                    fee.destinationExecutionFeeEther,
+                    topic
+                ).toHex()
+            )
+        }
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
         const tx = await con
@@ -382,22 +419,53 @@ export class ERC20ToParachain implements TransferInterface {
             const assetHubFee =
                 transfer.input.fee.assetHubDeliveryFeeEther +
                 transfer.input.fee.assetHubExecutionFeeEther
-            const xcm = buildAssetHubERC20ReceivedXcm(
-                assetHub.registry,
-                registry.ethChainId,
-                tokenAddress,
-                transfer.computed.totalValue - assetHubFee,
-                assetHubFee,
-                amount,
-                accountId32Location(
-                    "0x0000000000000000000000000000000000000000000000000000000000000000"
-                ),
-                transfer.input.sourceAccount,
-                transfer.computed.beneficiaryAddressHex,
-                destinationParaId,
-                transfer.input.fee.destinationExecutionFeeEther,
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+            const isMythosOrMuse = isMythosOrMuseParachain(
+                registry.parachains[destinationParaId].info.specName
             )
+
+            let xcm
+            if (isMythosOrMuse && transfer.input.fee.feeAsset === DOT_LOCATION) {
+                const dotFeeAmount = await swapAsset1ForAsset2(
+                    assetHub,
+                    erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS),
+                    DOT_LOCATION,
+                    transfer.input.fee.destinationExecutionFeeEther
+                )
+                xcm = buildParachainERC20ReceivedXcmOnDestWithDOTFee(
+                    assetHub.registry,
+                    registry.ethChainId,
+                    tokenAddress,
+                    transfer.computed.totalValue - assetHubFee,
+                    assetHubFee,
+                    amount,
+                    accountId32Location(
+                        "0x0000000000000000000000000000000000000000000000000000000000000000"
+                    ),
+                    transfer.input.sourceAccount,
+                    transfer.computed.beneficiaryAddressHex,
+                    destinationParaId,
+                    transfer.input.fee.destinationExecutionFeeEther,
+                    dotFeeAmount,
+                    "0x0000000000000000000000000000000000000000000000000000000000000000"
+                )
+            } else {
+                xcm = buildAssetHubERC20ReceivedXcm(
+                    assetHub.registry,
+                    registry.ethChainId,
+                    tokenAddress,
+                    transfer.computed.totalValue - assetHubFee,
+                    assetHubFee,
+                    amount,
+                    accountId32Location(
+                        "0x0000000000000000000000000000000000000000000000000000000000000000"
+                    ),
+                    transfer.input.sourceAccount,
+                    transfer.computed.beneficiaryAddressHex,
+                    destinationParaId,
+                    transfer.input.fee.destinationExecutionFeeEther,
+                    "0x0000000000000000000000000000000000000000000000000000000000000000"
+                )
+            }
             let result = await dryRunAssetHub(
                 assetHub,
                 registry.bridgeHubParaId,
@@ -538,4 +606,13 @@ export class ERC20ToParachain implements TransferInterface {
             transfer,
         }
     }
+}
+
+/**
+ * Check if the destination parachain is Mythos or Muse based on spec name.
+ * These parachains require DOT for fees instead of Ether, so we use ExchangeAsset
+ * instructions to swap Ether to DOT before paying fees.
+ */
+function isMythosOrMuseParachain(destinationSpec: string): boolean {
+    return destinationSpec === "mythos" || destinationSpec === "muse"
 }

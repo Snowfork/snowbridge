@@ -50,7 +50,10 @@ export class PNAToParachain implements TransferInterface {
         tokenAddress: string,
         destinationParaId: number,
         relayerFee: bigint,
-        paddFeeByPercentage?: bigint
+        options?: {
+            paddFeeByPercentage?: bigint
+            feeAsset?: any
+        }
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub, destination } =
             context instanceof Context
@@ -86,6 +89,12 @@ export class PNAToParachain implements TransferInterface {
         const bridgeHubImpl = await paraImplementation(bridgeHub)
         const assetHubImpl = await paraImplementation(assetHub)
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
+        const paddFeeByPercentage = options?.paddFeeByPercentage
+        const feeAsset = options?.feeAsset || ether
+
+        if (feeAsset !== ether) {
+            throw new Error("only ether is supported as fee asset in this version of the API")
+        }
 
         // Delivery fee BridgeHub to AssetHub
         const deliveryFeeInDOT = await bridgeHubImpl.calculateDeliveryFeeInDOT(
@@ -150,6 +159,7 @@ export class PNAToParachain implements TransferInterface {
             destinationExecutionFeeEther: destinationExecutionFeeEther,
             relayerFee: relayerFee,
             totalFeeInWei: totalFeeInWei,
+            feeAsset: feeAsset,
         }
     }
 

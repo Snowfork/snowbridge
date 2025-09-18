@@ -22,7 +22,10 @@ export interface TransferInterface {
         tokenAddress: string,
         destinationParaId: number,
         relayerFee: bigint,
-        paddFeeByPercentage?: bigint
+        options?: {
+            paddFeeByPercentage?: bigint
+            feeAsset?: any
+        }
     ): Promise<DeliveryFee>
 
     createTransfer(
