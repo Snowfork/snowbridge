@@ -6,13 +6,31 @@ source scripts/set-env.sh
 start_geth() {
     pushd "$root_dir/.."
 
+    GETH_PATH="go-ethereum/build/bin/geth"
+
+    # Install Electra geth binary
+    if [ ! -f "$GETH_PATH" ]; then
+      echo "Local geth binary not found at $GETH_PATH."
+      echo "Cloning and building go-ethereum..."
+
+      git clone https://github.com/ethereum/go-ethereum/ go-ethereum
+      pushd go-ethereum
+      git checkout $GETH_VERSION
+      make geth
+      popd
+    else
+      echo "Local geth binary already exists at $GETH_PATH. Skipping clone and build."
+    fi
+
+    pushd go-ethereum
+
     echo "Starting geth local node"
-    geth version
-    geth \
+    ./build/bin/geth version
+    ./build/bin/geth \
       --datadir "$output_dir/ethereum" \
       --state.scheme=hash \
       init "$config_dir/genesis.json"
-    geth \
+    ./build/bin/geth \
       --networkid 11155111 \
       --vmdebug \
       --datadir "$output_dir/ethereum" \
@@ -38,6 +56,8 @@ start_geth() {
       --syncmode=full \
       --state.scheme=hash \
       > "$output_dir/geth.log" 2>&1 &
+
+      popd
 
     popd
 }
