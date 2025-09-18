@@ -512,6 +512,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 "2030": "wss://bifrost-polkadot.ibp.network",
                 "2004": "wss://moonbeam-rpc.n.dwellir.com",
                 "2000": "wss://acala-rpc.dwellir.com",
+                "2043": `wss://parachain-rpc.origin-trail.network`,
                 // TODO: Add back in jampton once we have an indexer in place.
                 //"3397": "wss://rpc.jamton.network",
             },
