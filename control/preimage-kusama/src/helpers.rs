@@ -1,4 +1,5 @@
 use codec::Encode;
+use subxt::utils::Encoded;
 use subxt::{OnlineClient, PolkadotConfig};
 
 use crate::constants::ASSET_HUB_ID;
