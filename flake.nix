@@ -54,6 +54,7 @@
                     gotools
                     gopls
                     go-outline
+                    go-ethereum
                     gopkgs
                     godef
                     golint

@@ -12,7 +12,7 @@ fi
 
 # Generate Rust bindings for contracts
 forge bind --module --overwrite \
-    --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token|HelloWorld' \
+    --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token|HelloWorld|BeefyClient' \
     --bindings-path src/contracts \
     --root $contracts_root
 
@@ -32,8 +32,8 @@ if [ "$polkadot_network" == "westend" ]; then
   subxt codegen --url wss://westend-penpal-rpc.polkadot.io >src/parachains/penpal.rs
 else
   if ! lsof -Pi :11144 -sTCP:LISTEN -t >/dev/null; then
-      echo "substrate nodes not running, please start with the e2e setup and rerun this script"
-      exit 1
+    echo "substrate nodes not running, please start with the e2e setup and rerun this script"
+    exit 1
   fi
   # Fetch metadata from BridgeHub and generate client
   subxt codegen --url ws://localhost:11144 >src/parachains/bridgehub.rs \
@@ -56,7 +56,4 @@ else
   --derive-for-type staging_xcm::v5::asset::Assets=Clone,recursive \
   --derive ::subxt::ext::subxt_core::ext::codec::Encode \
   --derive ::subxt::ext::subxt_core::ext::codec::Decode
-
 fi
-
-
