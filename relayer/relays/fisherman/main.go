@@ -46,12 +46,12 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 }
 
 func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
-	err := relay.ethereumConnBeefy.Connect(ctx)
+	err := relay.ethereumConnBeefy.ConnectWithHeartBeat(ctx, eg, 30*time.Second)
 	if err != nil {
 		return fmt.Errorf("unable to connect to ethereum: beefy: %w", err)
 	}
 
-	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, eg, 30*time.Second)
 	if err != nil {
 		return err
 	}
