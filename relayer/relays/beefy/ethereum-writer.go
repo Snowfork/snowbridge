@@ -131,6 +131,21 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return err
 	}
 
+	state, err := wr.queryBeefyClientState(ctx)
+	if err != nil {
+		return fmt.Errorf("query beefy client state: %w", err)
+	}
+
+	// Ignore beefy block already synced
+	if uint64(task.SignedCommitment.Commitment.BlockNumber) <= state.LatestBeefyBlock {
+		log.WithFields(log.Fields{
+			"validatorSetID": state.CurrentValidatorSetID,
+			"beefyBlock":     state.LatestBeefyBlock,
+			"relayBlock":     task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Beefy block already synced, just ignore")
+		return nil
+	}
+
 	commitmentHash, err := task.CommitmentHash()
 	if err != nil {
 		return fmt.Errorf("generate commitment hash: %w", err)
@@ -147,6 +162,20 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	if err != nil {
 		log.WithError(err).Error("Failed to CommitPrevRandao")
 		return err
+	}
+
+	state, err = wr.queryBeefyClientState(ctx)
+	if err != nil {
+		return fmt.Errorf("query beefy client state: %w", err)
+	}
+
+	if uint64(task.SignedCommitment.Commitment.BlockNumber) <= state.LatestBeefyBlock {
+		log.WithFields(log.Fields{
+			"validatorSetID": state.CurrentValidatorSetID,
+			"beefyBlock":     state.LatestBeefyBlock,
+			"relayBlock":     task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Beefy block already synced, just ignore")
+		return nil
 	}
 
 	// Final submission
@@ -296,6 +325,94 @@ func (wr *EthereumWriter) initialize(ctx context.Context) error {
 	}
 	wr.blockWaitPeriod = blockWaitPeriod.Uint64()
 	log.WithField("randaoCommitDelay", wr.blockWaitPeriod).Trace("Fetched randaoCommitDelay")
+
+	return nil
+}
+
+func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task Request) error {
+	signedValidators := []*big.Int{}
+	for i, signature := range task.SignedCommitment.Signatures {
+		if signature.IsSome() {
+			signedValidators = append(signedValidators, big.NewInt(int64(i)))
+		}
+	}
+	validatorCount := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
+
+	// Pick a random validator who signs beefy commitment
+	chosenValidator := signedValidators[rand.Intn(len(signedValidators))].Int64()
+
+	log.WithFields(logrus.Fields{
+		"validatorCount":       validatorCount,
+		"signedValidators":     signedValidators,
+		"signedValidatorCount": len(signedValidators),
+		"chosenValidator":      chosenValidator,
+	}).Info("Creating initial bitfield")
+
+	initialBitfield, err := wr.contract.CreateInitialBitfield(
+		&bind.CallOpts{
+			Pending: true,
+			From:    wr.conn.Keypair().CommonAddress(),
+		},
+		signedValidators, validatorCount,
+	)
+	if err != nil {
+		return fmt.Errorf("create initial bitfield: %w", err)
+	}
+
+	commitment := toBeefyClientCommitment(&task.SignedCommitment.Commitment)
+
+	finalBitfield, err := wr.contract.CreateFiatShamirFinalBitfield(
+		&bind.CallOpts{
+			Pending: true,
+			From:    wr.conn.Keypair().CommonAddress(),
+		},
+		*commitment,
+		initialBitfield,
+	)
+
+	if err != nil {
+		return fmt.Errorf("create validator final bitfield: %w", err)
+	}
+
+	validatorIndices := bitfield.New(finalBitfield).Members()
+
+	params, err := task.MakeSubmitFinalParams(validatorIndices, initialBitfield)
+	if err != nil {
+		return fmt.Errorf("make submit final params: %w", err)
+	}
+
+	logFields, err := wr.makeSubmitFinalLogFields(&task, params)
+	if err != nil {
+		return fmt.Errorf("logging params: %w", err)
+	}
+
+	tx, err := wr.contract.SubmitFiatShamir(
+		wr.conn.MakeTxOpts(ctx),
+		params.Commitment,
+		params.Bitfield,
+		params.Proofs,
+		params.Leaf,
+		params.LeafProof,
+		params.LeafProofOrder,
+	)
+	if err != nil {
+		return fmt.Errorf("final submission: %w", err)
+	}
+
+	log.WithField("txHash", tx.Hash().Hex()).
+		WithFields(logFields).
+		Info("Sent submitFiatShamir transaction")
+
+	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
+	if err != nil {
+		log.WithError(err).Error("Failed to submitFiatShamir")
+		return err
+	}
+
+	log.WithFields(logrus.Fields{
+		"tx":          tx.Hash().Hex(),
+		"blockNumber": task.SignedCommitment.Commitment.BlockNumber,
+	}).Debug("Transaction submitFiatShamir succeeded")
 
 	return nil
 }
