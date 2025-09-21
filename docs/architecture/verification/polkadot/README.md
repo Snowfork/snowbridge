@@ -1,6 +1,6 @@
 # Polkadot
 
-We use Polkadot’s[ BEEFY](https://github.com/paritytech/grandpa-bridge-gadget/blob/master/docs/walkthrough.md) gadget to implement an efficient light client that only needs to verify a very small subset of relay chain validator signatures. BEEFY is live on Rococo, and is awaiting deployment on Kusama and Polkadot.
+We use Polkadot’s [BEEFY](https://eprint.iacr.org/2025/057.pdf) protocol to implement an efficient light client that only needs to verify a very small subset of relay chain validator signatures. BEEFY is live on Rococo, and is awaiting deployment on Kusama and Polkadot.
 
 Fundamentally, the BEEFY light client allows the bridge to prove that a specified parachain header was finalized by the relay chain.
 
@@ -31,7 +31,7 @@ In the EVM there is no cryptographically secure source of randomness. Instead, w
 
 ## Signature Sampling
 
-The choice $$N$$ is described by the [formal analysis of signature sampling from W3F](https://hackmd.io/c6STzrvfQGyN2P2rVmTmoA). It consists of the following variables.
+The choice $$N$$ is described by the [formal analysis of signature sampling from W3F](https://eprint.iacr.org/2025/057.pdf). It consists of the following variables.
 
 $$
 N = \lceil log_2(R * V * \frac{1}{S} *(75+E)*172.8)\rceil + 1 + 2 \lceil log_2(C) \rceil
@@ -48,9 +48,9 @@ $$
 
 From the list above 1 and 2 are known in the light client and can be calculated on-chain. Variables 3, 4.1, and 4.2 are not known by the light client and are instead calculated off-chain and set as a minimum number of required signatures during the initialization of the light client. This minimum is immutable for the life time of the light client.
 
-* [Minimum required signatures](../../../../contracts/src/BeefyClient.sol#L185-L190)
-* [Dynamic signature calculation](../../../../contracts/src/BeefyClient.sol#L444)
-* [Python implementation of required signatures](../../../../scripts/beefy\_signature\_sampling.py#L9)
+## Slashing of BEEFY validators who produce equivocations
+
+The BEEFY protocol includes a mechanism to slash validators who commit fraud. For example, the entire set of active validators could maliciously sign a fraudulent commitment, and collude with a relayer to submit it to our light client. We have equivocation fishermen that can detect such activity and submit [proof-of-equivocation](https://docs.rs/pallet-beefy/latest/pallet_beefy/struct.EquivocationOffence.html) back to the Polkadot relay chain. This is vital to ensuring that all BEEFY validators act honestly.
 
 ## Message Verification
 
