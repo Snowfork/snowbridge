@@ -148,7 +148,7 @@ contract BeefyClientTest is Test {
         console.log("print initialBitField");
         printBitArray(bitfield);
         prevRandao = uint32(vm.envOr("PREV_RANDAO", prevRandao));
-        finalBitfield = Bitfield.subsample(prevRandao, bitfield, numRequiredSignatures, setSize);
+        finalBitfield = Bitfield.subsample(prevRandao, bitfield, setSize, numRequiredSignatures);
         console.log("print finalBitField");
         printBitArray(finalBitfield);
 

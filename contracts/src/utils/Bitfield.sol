@@ -31,41 +31,41 @@ library Bitfield {
     uint256 internal constant ONE = uint256(1);
 
     /**
-     * @notice Core subsampling algorithm. Draws a random number, derives an index in the bitfield, and sets the bit if it is in the `prior` and not
-     * yet set. Repeats that `n` times.
+     * @dev Core subsampling algorithm. Draws a random number, derives an index in the bitfield,
+     * and sets the bit if it is in the `priorBitfield` and not yet set. Repeats that `n` times.
      * @param seed Source of randomness for selecting validator signatures.
-     * @param prior Bitfield indicating which validators claim to have signed the commitment.
-     * @param n Number of unique bits in prior that must be set in the result. Must be <= number of set bits in `prior`.
-     * @param length Length of the bitfield prior to draw bits from. Must be <= prior.length * 256.
+     * @param priorBitfield Bitfield indicating which validators claim to have signed the commitment.
+     * @param priorBitfieldSize Number of bits in priorBitfield Must be <= priorBitfield.length * 256.
+     * @param n Number of unique bits in priorBitfield that must be set in the output.
+     *          Must be <= number of set bits in priorBitfield.
      */
-    function subsample(uint256 seed, uint256[] memory prior, uint256 n, uint256 length)
-        internal
-        pure
-        returns (uint256[] memory bitfield)
-    {
-        bitfield = new uint256[](prior.length);
+    function subsample(
+        uint256 seed,
+        uint256[] memory priorBitfield,
+        uint256 priorBitfieldSize,
+        uint256 n
+    ) internal pure returns (uint256[] memory outputBitfield) {
+        outputBitfield = new uint256[](priorBitfield.length);
         uint256 found = 0;
 
         for (uint256 i = 0; found < n;) {
-            uint256 index = makeIndex(seed, i, length);
+            uint256 index = makeIndex(seed, i, priorBitfieldSize);
 
-            // require randomly selected bit to be set in prior and not yet set in bitfield
-            if (!isSet(prior, index) || isSet(bitfield, index)) {
+            // require randomly selected bit to be set in priorBitfield and not yet set in bitfield
+            if (!isSet(priorBitfield, index) || isSet(outputBitfield, index)) {
                 unchecked {
                     i++;
                 }
                 continue;
             }
 
-            set(bitfield, index);
+            set(outputBitfield, index);
 
             unchecked {
                 found++;
                 i++;
             }
         }
-
-        return bitfield;
     }
 
     /**
@@ -76,10 +76,7 @@ library Bitfield {
         pure
         returns (uint256[] memory bitfield)
     {
-        // Calculate length of uint256 array based on rounding up to number of uint256 needed
-        uint256 arrayLength = (length + 255) / 256;
-
-        bitfield = new uint256[](arrayLength);
+        bitfield = new uint256[](containerLength(length));
 
         for (uint256 i = 0; i < bitsToSet.length; i++) {
             set(bitfield, bitsToSet[i]);
@@ -203,5 +200,10 @@ library Bitfield {
             mstore(0x20, iteration)
             index := mod(keccak256(0x00, 0x40), length)
         }
+    }
+
+    // Calculate length of uint256 bitfield array based on rounding up to number of uint256 needed
+    function containerLength(uint256 length) internal pure returns (uint256) {
+        return (length + 255) / 256;
     }
 }
