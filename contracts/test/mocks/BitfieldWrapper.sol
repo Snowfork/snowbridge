@@ -12,12 +12,12 @@ contract BitfieldWrapper {
         return Bitfield.createBitfield(bitsToSet, length);
     }
 
-    function subsample(uint256 seed, uint256[] memory prior, uint256 n, uint256 length)
+    function subsample(uint256 seed, uint256[] memory prior, uint256 length, uint256 n)
         public
         pure
         returns (uint256[] memory bitfield)
     {
-        return Bitfield.subsample(seed, prior, n, length);
+        return Bitfield.subsample(seed, prior, length, n);
     }
 
     function countSetBits(uint256[] memory self, uint256 maxBits) public pure returns (uint256) {

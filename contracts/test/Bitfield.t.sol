@@ -11,6 +11,8 @@ import {stdJson} from "forge-std/StdJson.sol";
 contract BitfieldTest is Test {
     using stdJson for string;
 
+     uint256 public constant SEED = 2954466101346023252933346884990731083400112195551952331583346342070284928184;
+
     function testBitfieldSubsampling() public {
         BitfieldWrapper bw = new BitfieldWrapper();
 
@@ -20,7 +22,7 @@ contract BitfieldTest is Test {
         uint256[] memory bitSetArray = json.readUintArray(".participants");
 
         uint256[] memory initialBitField = bw.createBitfield(bitSetArray, setSize);
-        uint256[] memory finalBitfield = bw.subsample(67, initialBitField, setSize, 30);
+        uint256[] memory finalBitfield = bw.subsample(SEED, initialBitField, setSize, 30);
 
         uint256 counter = 0;
         for (uint256 i = 0; i < bitSetArray.length; i++) {
@@ -138,5 +140,31 @@ contract BitfieldTest is Test {
         // Bounded count should be <= unbounded count
         assertTrue(bw.countSetBits(bitfield, setSize / 2) <= Bitfield.countSetBits(bitfield));
         assertTrue(bw.countSetBits(bitfield, 10) <= Bitfield.countSetBits(bitfield));
+    }
+
+    function testBitfieldSubsamplingWithInvalidParams() public {
+        BitfieldWrapper bw = new BitfieldWrapper();
+
+        string memory json =
+            vm.readFile(string.concat(vm.projectRoot(), "/test/data/beefy-validator-set.json"));
+        uint32 setSize = uint32(json.readUint(".validatorSetSize"));
+
+        uint256 length = (setSize+255) / 256;
+        uint256 N = 26;
+        uint256[] memory initialBitField = new uint256[](length);
+        for (uint256 i = 0; i < N; i++) {
+            Bitfield.set(initialBitField, i);
+        }
+
+        uint256[] memory finalBitfield = bw.subsample(SEED, initialBitField, setSize, N);
+        assertEq(Bitfield.countSetBits(finalBitfield), N);
+
+        // Test setSize overflow
+        vm.expectRevert(Bitfield.InvalidSamplingParams.selector);
+        finalBitfield = bw.subsample(SEED, initialBitField, setSize * 2, N);
+
+        // Test N overflow
+        vm.expectRevert(Bitfield.InvalidSamplingParams.selector);
+        finalBitfield = bw.subsample(SEED, initialBitField, setSize, N+1);
     }
 }
