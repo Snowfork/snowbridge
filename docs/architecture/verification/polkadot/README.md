@@ -50,7 +50,7 @@ From the list above 1 and 2 are known in the light client and can be calculated 
 
 ## Slashing of BEEFY validators who produce equivocations
 
-The BEEFY protocol includes a mechanism to slash validators who commit fraud. For example, the entire set of active validators could maliciously sign a fraudulent commitment, and collude with a relayer to submit it to our light client. We have equivocation fishermen that can detect such activity and submit [proof-of-equivocation](https://docs.rs/pallet-beefy/latest/pallet_beefy/struct.EquivocationOffence.html) back to the Polkadot relay chain. This is vital to ensuring that all BEEFY validators act honestly.
+The BEEFY protocol includes a mechanism to slash validators who commit fraud. For example, a subset of active validators could maliciously sign a fraudulent commitment, and collude with a relayer to submit it to our light client. However, we have an equivocation fisherman that can detect such activity and submit [proof-of-equivocation](https://docs.rs/pallet-beefy/latest/pallet_beefy/struct.EquivocationOffence.html) back to the Polkadot relay chain, whereupon these validators will be slashed 50% of their stake.
 
 ## Message Verification
 
