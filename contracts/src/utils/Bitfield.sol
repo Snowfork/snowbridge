@@ -211,7 +211,7 @@ library Bitfield {
     }
 
     // Calculate length of uint256 bitfield array based on rounding up to number of uint256 needed
-    function containerLength(uint256 length) internal pure returns (uint256) {
-        return (length + 255) / 256;
+    function containerLength(uint256 bitfieldSize) internal pure returns (uint256) {
+        return (bitfieldSize + 255) / 256;
     }
 }
