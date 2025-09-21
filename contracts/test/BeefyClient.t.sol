@@ -775,7 +775,7 @@ contract BeefyClientTest is Test {
         uint256[] memory initialBits = absentBitfield;
         Bitfield.set(initialBits, finalValidatorProofs[0].index);
         printBitArray(initialBits);
-        vm.expectRevert(BeefyClient.NotEnoughClaims.selector);
+        vm.expectRevert(BeefyClient.InvalidBitfield.selector);
         beefyClient.submitInitial(commitment, initialBits, finalValidatorProofs[0]);
     }
 

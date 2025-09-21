@@ -207,7 +207,6 @@ contract BeefyClient {
     error InvalidValidatorProof();
     error InvalidValidatorProofLength();
     error CommitmentNotRelevant();
-    error NotEnoughClaims();
     error PrevRandaoAlreadyCaptured();
     error PrevRandaoNotCaptured();
     error StaleCommitment();
@@ -286,14 +285,11 @@ contract BeefyClient {
             revert InvalidSignature();
         }
 
-        if (bitfield.length != Bitfield.containerLength(vset.length)) {
-            revert InvalidBitfield();
-        }
-
         // For the initial submission, the supplied bitfield should claim that more than
         // two thirds of the validator set have sign the commitment
-        if (Bitfield.countSetBits(bitfield, vset.length) < computeQuorum(vset.length)) {
-            revert NotEnoughClaims();
+        if (bitfield.length != Bitfield.containerLength(vset.length)
+            || Bitfield.countSetBits(bitfield, vset.length) < computeQuorum(vset.length)) {
+            revert InvalidBitfield();
         }
 
         tickets[createTicketID(msg.sender, commitmentHash)] = Ticket({
