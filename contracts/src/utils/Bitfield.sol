@@ -7,7 +7,6 @@ import {Bits} from "./Bits.sol";
 library Bitfield {
     using Bits for uint256;
 
-
     error InvalidSamplingParams();
 
     /**
