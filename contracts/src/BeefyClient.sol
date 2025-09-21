@@ -13,7 +13,8 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
 /**
  * @title BeefyClient
  *
- * High-level documentation at https://docs.snowbridge.network/architecture/verification/polkadot
+ * The BEEFY protocol is defined in https://eprint.iacr.org/2025/057.pdf. Higher level documentation
+ * is available at https://docs.snowbridge.network/architecture/verification/polkadot.
  *
  * To submit new commitments, relayers must call the following methods sequentially:
  * 1. submitInitial: Setup the session for the interactive submission
@@ -189,9 +190,8 @@ contract BeefyClient {
     uint256 public immutable randaoCommitExpiration;
 
     /**
-     * @dev Minimum number of signatures required to validate a new commitment. This parameter
-     * is calculated based on `randaoCommitExpiration`. See ~/scripts/beefy_signature_sampling.py
-     * for the calculation.
+     * @dev The lower bound on the number of signatures required to validate a new commitment. Note
+     * that the final number of signatures is calculated dynamically.
      */
     uint256 public immutable minNumRequiredSignatures;
 
@@ -207,7 +207,6 @@ contract BeefyClient {
     error InvalidValidatorProof();
     error InvalidValidatorProofLength();
     error CommitmentNotRelevant();
-    error NotEnoughClaims();
     error PrevRandaoAlreadyCaptured();
     error PrevRandaoNotCaptured();
     error StaleCommitment();
@@ -256,14 +255,13 @@ contract BeefyClient {
             revert StaleCommitment();
         }
 
-        ValidatorSetState storage vset;
+        ValidatorSetState storage vset = currentValidatorSet;
         uint16 signatureUsageCount;
         if (commitment.validatorSetID == currentValidatorSet.id) {
             signatureUsageCount = currentValidatorSet.usageCounters.get(proof.index);
             currentValidatorSet.usageCounters.set(
                 proof.index, signatureUsageCount.saturatingAdd(1)
             );
-            vset = currentValidatorSet;
         } else if (commitment.validatorSetID == nextValidatorSet.id) {
             signatureUsageCount = nextValidatorSet.usageCounters.get(proof.index);
             nextValidatorSet.usageCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
@@ -275,7 +273,7 @@ contract BeefyClient {
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
         if (
             !isValidatorInSet(vset, proof.account, proof.index, proof.proof)
-                || !Bitfield.isSet(bitfield, proof.index)
+            || !Bitfield.isSet(bitfield, proof.index)
         ) {
             revert InvalidValidatorProof();
         }
@@ -289,8 +287,9 @@ contract BeefyClient {
 
         // For the initial submission, the supplied bitfield should claim that more than
         // two thirds of the validator set have sign the commitment
-        if (Bitfield.countSetBits(bitfield) < computeQuorum(vset.length)) {
-            revert NotEnoughClaims();
+        if (bitfield.length != Bitfield.containerLength(vset.length)
+            || Bitfield.countSetBits(bitfield, vset.length) < computeQuorum(vset.length)) {
+            revert InvalidBitfield();
         }
 
         tickets[createTicketID(msg.sender, commitmentHash)] = Ticket({
@@ -361,13 +360,11 @@ contract BeefyClient {
         validateTicket(ticketID, commitment, bitfield);
 
         bool is_next_session = false;
-        ValidatorSetState storage vset;
+        ValidatorSetState storage vset = currentValidatorSet;
         if (commitment.validatorSetID == nextValidatorSet.id) {
             is_next_session = true;
             vset = nextValidatorSet;
-        } else if (commitment.validatorSetID == currentValidatorSet.id) {
-            vset = currentValidatorSet;
-        } else {
+        } else if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
         }
 
@@ -444,7 +441,7 @@ contract BeefyClient {
             revert InvalidBitfield();
         }
         return Bitfield.subsample(
-            ticket.prevRandao, bitfield, ticket.numRequiredSignatures, ticket.validatorSetLen
+            ticket.prevRandao, bitfield, ticket.validatorSetLen, ticket.numRequiredSignatures
         );
     }
 
@@ -488,11 +485,14 @@ contract BeefyClient {
     }
 
     /**
-     * @dev Calculates 2/3 majority required for quorum for a given number of validators.
+     * @dev Calculates majority required for quorum for a given number of validators.
      * @param numValidators The number of validators in the validator set.
      */
     function computeQuorum(uint256 numValidators) internal pure returns (uint256) {
-        return numValidators - (numValidators - 1) / 3;
+        if (numValidators > 3) {
+            return numValidators - (numValidators - 1) / 3;
+        }
+        return numValidators;
     }
 
     /**
@@ -514,18 +514,18 @@ contract BeefyClient {
 
         // Generate final bitfield indicating which validators need to be included in the proofs.
         uint256[] memory finalbitfield =
-            Bitfield.subsample(ticket.prevRandao, bitfield, numRequiredSignatures, vset.length);
+            Bitfield.subsample(ticket.prevRandao, bitfield, vset.length, numRequiredSignatures);
 
         for (uint256 i = 0; i < proofs.length; i++) {
             ValidatorProof calldata proof = proofs[i];
 
-            // Check that validator is in bitfield
-            if (!Bitfield.isSet(finalbitfield, proof.index)) {
+            // Check that validator is actually in a validator set
+            if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
                 revert InvalidValidatorProof();
             }
 
-            // Check that validator is actually in a validator set
-            if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
+            // Check that validator is in bitfield
+            if (!Bitfield.isSet(finalbitfield, proof.index)) {
                 revert InvalidValidatorProof();
             }
 
