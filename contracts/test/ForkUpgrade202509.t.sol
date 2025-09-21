@@ -21,11 +21,10 @@ contract ForkUpgradeTest is Test {
     address private constant GATEWAY_PROXY = 0x27ca963C279c93801941e1eB8799c23f407d68e7;
     address private constant BEEFY_CLIENT = 0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C;
 
-    // Check foundry deployment logs for address of Verification
-    address private constant VERIFICATION_ADDR = 0x515c0817005b2F3383B7D8837d6DCc15c0d71C56;
+    // NOTE: Can use tenderly transaction debugger to retrieve existing library address
+    address private constant VERIFICATION_ADDR = 0x90c7f378e9ced5dd268f0df987c0838469846da1;
 
-    ChannelID constant internal PRIMARY_GOVERNANCE_CHANNEL = ChannelID.wrap(0x0000000000000000000000000000000000000000000000000000000000000001);
-    ChannelID constant internal SECONDARY_GOVERNANCE_CHANNEL = ChannelID.wrap(0x0000000000000000000000000000000000000000000000000000000000000002);
+    ChannelID constant internal GOVERNANCE_CHANNEL = ChannelID.wrap(0x0000000000000000000000000000000000000000000000000000000000000001);
 
     function setUp() public {
         vm.createSelectFork("https://rpc.tenderly.co/fork/cdff755d-46fc-47e2-8a9d-b1269fa86e72", 21945142);
@@ -57,7 +56,7 @@ contract ForkUpgradeTest is Test {
         // Issue the upgrade
         IGateway(GATEWAY_PROXY).submitV1(
             InboundMessage(
-                PRIMARY_GOVERNANCE_CHANNEL,
+                GOVERNANCE_CHANNEL,
                 nonce + 1,
                 Command.Upgrade,
                 abi.encode(params),
