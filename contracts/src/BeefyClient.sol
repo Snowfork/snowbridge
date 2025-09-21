@@ -271,14 +271,9 @@ contract BeefyClient {
             revert InvalidCommitment();
         }
 
-        if (bitfield.length != Bitfield.containerLength(vset.length)) {
-            revert InvalidBitfield();
-        }
-
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
         if (
             !isValidatorInSet(vset, proof.account, proof.index, proof.proof)
-            || proof.index >= vset.length
             || !Bitfield.isSet(bitfield, proof.index)
         ) {
             revert InvalidValidatorProof();
@@ -289,6 +284,10 @@ contract BeefyClient {
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
         if (ECDSA.recover(commitmentHash, proof.v, proof.r, proof.s) != proof.account) {
             revert InvalidSignature();
+        }
+
+        if (bitfield.length != Bitfield.containerLength(vset.length)) {
+            revert InvalidBitfield();
         }
 
         // For the initial submission, the supplied bitfield should claim that more than
@@ -371,10 +370,6 @@ contract BeefyClient {
             vset = nextValidatorSet;
         } else if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
-        }
-
-        if (bitfield.length != Bitfield.containerLength(vset.length)) {
-            revert InvalidBitfield();
         }
 
         verifyCommitment(commitmentHash, ticketID, bitfield, vset, proofs);
@@ -528,13 +523,13 @@ contract BeefyClient {
         for (uint256 i = 0; i < proofs.length; i++) {
             ValidatorProof calldata proof = proofs[i];
 
-            // Check that validator is in bitfield
-            if (proof.index >= vset.length || !Bitfield.isSet(finalbitfield, proof.index)) {
+            // Check that validator is actually in a validator set
+            if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
                 revert InvalidValidatorProof();
             }
 
-            // Check that validator is actually in a validator set
-            if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
+            // Check that validator is in bitfield
+            if (!Bitfield.isSet(finalbitfield, proof.index)) {
                 revert InvalidValidatorProof();
             }
 

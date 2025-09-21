@@ -7,6 +7,9 @@ import {Bits} from "./Bits.sol";
 library Bitfield {
     using Bits for uint256;
 
+
+    error InvalidSamplingParams();
+
     /**
      * @dev Constants used to efficiently calculate the hamming weight of a bitfield. See
      * https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation for an explanation of those constants.
@@ -45,6 +48,11 @@ library Bitfield {
         uint256 priorBitfieldSize,
         uint256 n
     ) internal pure returns (uint256[] memory outputBitfield) {
+        if (priorBitfield.length != Bitfield.containerLength(priorBitfieldSize)
+            || n > countSetBits(priorBitfield, priorBitfieldSize)) {
+            revert InvalidSamplingParams();
+        }
+
         outputBitfield = new uint256[](priorBitfield.length);
         uint256 found = 0;
 
