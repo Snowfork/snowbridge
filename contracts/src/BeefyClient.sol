@@ -272,6 +272,10 @@ contract BeefyClient {
             revert InvalidCommitment();
         }
 
+        if (bitfield.length != (vset.length + 255) / 256) {
+            revert InvalidBitfieldLength();
+        }
+
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
         if (
             !isValidatorInSet(vset, proof.account, proof.index, proof.proof)
