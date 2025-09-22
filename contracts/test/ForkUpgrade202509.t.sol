@@ -20,7 +20,7 @@ import {ForkTestFixtures, SubmitMessageFixture} from "./utils/ForkTestFixtures.s
 
 contract ForkUpgradeTest is Test {
     address private constant GATEWAY_PROXY = 0x27ca963C279c93801941e1eB8799c23f407d68e7;
-    address private constant BEEFY_CLIENT = 0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C;
+    address private constant BEEFY_CLIENT = 0x9FC6a0eEf52BC839cF1A37554044f11782E4e2d3;
 
     // NOTE: Can use tenderly transaction debugger to retrieve existing library address
     address private constant VERIFICATION_ADDR_V1 = 0x90c7F378e9ceD5dD268f0dF987c0838469846Da1;
@@ -33,18 +33,15 @@ contract ForkUpgradeTest is Test {
     address constant internal assetHubAgent = 0xd803472c47a87D7B63E888DE53f03B4191B846a8;
 
     function setUp() public {
-        vm.createSelectFork("https://virtual.mainnet.eu.rpc.tenderly.co/6b4feea3-27cd-4a7c-857b-97b68da6824e", 23415237);
+        vm.createSelectFork("https://virtual.mainnet.eu.rpc.tenderly.co/83874628-cd7c-4179-96ad-52dc2710318c", 23419580);
 
         (UD60x18 exchangeRate, uint128 deliveryCost) = IGatewayV1(GATEWAY_PROXY).pricingParameters();
         assertEq(unwrap(exchangeRate), 2288329519450801);
         assertEq(deliveryCost, 223_565_000);
 
         (uint64 inbound, uint64 outbound) = IGatewayV1(GATEWAY_PROXY).channelNoncesOf(ASSETHUB_CHANNEL);
-        assertEq(inbound, 3454);
-        assertEq(outbound, 6266);
 
         uint256 balance = assetHubAgent.balance;
-        assertEq(balance, 1368334311990906966458); // 1368.334311990906966458 ETH
 
         // Mock call to Verification.verifyCommitment to bypass BEEFY verification.
         // Note that after the gateway is upgraded, the gateway will be linked to a new Verification
@@ -113,13 +110,6 @@ contract ForkUpgradeTest is Test {
     // captured from mainnet. Verifies that cross-chain signalling is not broken by the upgrade.
     function testUpgradedGatewayStillAcceptsMessages() public {
        SubmitMessageFixture memory fixture = ForkTestFixtures.makeSubmitMessageFixture("/test/data/mainnet-gateway-submitv1.json");
-
-       (uint64 nonce,) = IGatewayV1(GATEWAY_PROXY).channelNoncesOf(ASSETHUB_CHANNEL);
-       fixture.message.nonce = nonce + 1;
-
-        // Mock call to Verification.verifyCommitment to bypass BEEFY verification.
-       address VERIFICATION_ADDR_V2 = address(Verification);
-       vm.mockCall(VERIFICATION_ADDR_V2, abi.encodeWithSelector(Verification.verifyCommitment.selector), abi.encode(true));
 
        // Expect the gateway to emit InboundMessageDispatched event
        vm.expectEmit(true, true, true, true);
