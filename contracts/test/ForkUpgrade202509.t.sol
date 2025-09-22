@@ -5,6 +5,7 @@ import {Vm} from "forge-std/Vm.sol";
 import {Test} from "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {console} from "forge-std/console.sol";
+import {UD60x18, ud60x18, unwrap} from "prb/math/src/UD60x18.sol";
 
 import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
 import {IGatewayV1} from "../src/v1/IGateway.sol";
@@ -27,9 +28,23 @@ contract ForkUpgradeTest is Test {
 
     ChannelID constant internal GOVERNANCE_CHANNEL = ChannelID.wrap(0x0000000000000000000000000000000000000000000000000000000000000001);
     ChannelID constant internal ASSETHUB_CHANNEL = ChannelID.wrap(0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539);
+    bytes32 constant internal ASSETHUB_AGENT_ID =
+        0x81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79;
+    address constant internal assetHubAgent = 0xd803472c47a87D7B63E888DE53f03B4191B846a8;
 
     function setUp() public {
         vm.createSelectFork("https://virtual.mainnet.eu.rpc.tenderly.co/6b4feea3-27cd-4a7c-857b-97b68da6824e", 23415237);
+
+        (UD60x18 exchangeRate, uint128 deliveryCost) = IGatewayV1(GATEWAY_PROXY).pricingParameters();
+        assertEq(unwrap(exchangeRate), 2288329519450801);
+        assertEq(deliveryCost, 223_565_000);
+
+        (uint64 inbound, uint64 outbound) = IGatewayV1(GATEWAY_PROXY).channelNoncesOf(ASSETHUB_CHANNEL);
+        assertEq(inbound, 3454);
+        assertEq(outbound, 6266);
+
+        uint256 balance = assetHubAgent.balance;
+        assertEq(balance, 1368334311990906966458); // 1368.334311990906966458 ETH
 
         // Mock call to Verification.verifyCommitment to bypass BEEFY verification.
         // Note that after the gateway is upgraded, the gateway will be linked to a new Verification
@@ -70,6 +85,28 @@ contract ForkUpgradeTest is Test {
             proof1,
             proof2
         );
+
+        
+        // Pricing parameters should be unchanged
+        (UD60x18 exchangeRateAfter, uint128 deliveryCostAfter) = IGatewayV1(GATEWAY_PROXY).pricingParameters();
+        assertEq(unwrap(exchangeRateAfter), unwrap(exchangeRate));
+        assertEq(deliveryCostAfter, deliveryCost);
+
+        // Governance channel inbound nonce should have incremented by 1
+        (uint64 nonceAfter,) = IGatewayV1(GATEWAY_PROXY).channelNoncesOf(GOVERNANCE_CHANNEL);
+        assertEq(nonceAfter, nonce + 1);
+
+        // Asset hub channel nonces should be unchanged
+        (uint64 inboundAfter, uint64 outboundAfter) = IGatewayV1(GATEWAY_PROXY).channelNoncesOf(ASSETHUB_CHANNEL);
+        assertEq(inboundAfter, inbound);
+        assertEq(outboundAfter, outbound);
+
+        address agent = IGatewayV1(GATEWAY_PROXY).agentOf(ASSETHUB_AGENT_ID);
+        assertEq(agent, assetHubAgent);
+
+        // Asset hub agent balance should be unchanged
+        uint256 balanceAfter = assetHubAgent.balance;
+        assertEq(balanceAfter, balance);
     }
 
     // Submit a cross-chain message to the upgraded Gateway, using a real-world data
