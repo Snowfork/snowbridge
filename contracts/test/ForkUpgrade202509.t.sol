@@ -22,22 +22,24 @@ contract ForkUpgradeTest is Test {
     address private constant BEEFY_CLIENT = 0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C;
 
     // NOTE: Can use tenderly transaction debugger to retrieve existing library address
-    address private constant VERIFICATION_ADDR = 0x90c7f378e9ced5dd268f0df987c0838469846da1;
+    address private constant VERIFICATION_ADDR_V1 = 0x90c7F378e9ceD5dD268f0dF987c0838469846Da1;
+    bytes4 private constant VERIFICATION_SELECTOR_V1 = 0xbc9535d4;
 
     ChannelID constant internal GOVERNANCE_CHANNEL = ChannelID.wrap(0x0000000000000000000000000000000000000000000000000000000000000001);
+    ChannelID constant internal ASSETHUB_CHANNEL = ChannelID.wrap(0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539);
 
     function setUp() public {
-        vm.createSelectFork("https://rpc.tenderly.co/fork/cdff755d-46fc-47e2-8a9d-b1269fa86e72", 21945142);
+        vm.createSelectFork("https://virtual.mainnet.eu.rpc.tenderly.co/6b4feea3-27cd-4a7c-857b-97b68da6824e", 23415237);
 
         // Mock call to Verification.verifyCommitment to bypass BEEFY verification.
         // Note that after the gateway is upgraded, the gateway will be linked to a new Verification
         // library, essentially undoing this mock.
-        vm.mockCall(VERIFICATION_ADDR, abi.encodeWithSelector(Verification.verifyCommitment.selector), abi.encode(true));
-
+        vm.mockCall(VERIFICATION_ADDR_V1, abi.encodeWithSelector(VERIFICATION_SELECTOR_V1), abi.encode(true));
+        
         // Deploy new implementation contract
         Gateway202509 newLogic = new Gateway202509(
             BEEFY_CLIENT,
-            address(new AgentExecutor()),
+            address(new AgentExecutor())
         );
 
         // Prepare upgrade command
@@ -48,13 +50,13 @@ contract ForkUpgradeTest is Test {
         });
 
         (bytes32[] memory proof1, Verification.Proof memory proof2) = ForkTestFixtures.makeMockProofs();
-        (uint64 nonce,) = IGateway(GATEWAY_PROXY).channelNoncesOf(PRIMARY_GOVERNANCE_CHANNEL);
+        (uint64 nonce,) = IGatewayV1(GATEWAY_PROXY).channelNoncesOf(GOVERNANCE_CHANNEL);
 
         vm.expectEmit();
         emit IUpgradable.Upgraded(address(newLogic));
 
         // Issue the upgrade
-        IGateway(GATEWAY_PROXY).submitV1(
+        IGatewayV1(GATEWAY_PROXY).submitV1(
             InboundMessage(
                 GOVERNANCE_CHANNEL,
                 nonce + 1,
@@ -73,25 +75,58 @@ contract ForkUpgradeTest is Test {
     // Submit a cross-chain message to the upgraded Gateway, using a real-world data
     // captured from mainnet. Verifies that cross-chain signalling is not broken by the upgrade.
     function testUpgradedGatewayStillAcceptsMessages() public {
-        SubmitMessageFixture memory fixture = ForkTestFixtures.makeSubmitMessageFixture("/test/data/mainnet-gateway-submitv1.json");
+       SubmitMessageFixture memory fixture = ForkTestFixtures.makeSubmitMessageFixture("/test/data/mainnet-gateway-submitv1.json");
 
-        // Expect the gateway to emit InboundMessageDispatched event
-        vm.expectEmit(true, true, true, true);
-        emit IGateway.InboundMessageDispatched(
-            fixture.message.channelID,
-            fixture.message.nonce,
-            fixture.message.id,
-            true
+       (uint64 nonce,) = IGatewayV1(GATEWAY_PROXY).channelNoncesOf(ASSETHUB_CHANNEL);
+       fixture.message.nonce = nonce + 1;
+
+        // Mock call to Verification.verifyCommitment to bypass BEEFY verification.
+       address VERIFICATION_ADDR_V2 = address(Verification);
+       vm.mockCall(VERIFICATION_ADDR_V2, abi.encodeWithSelector(Verification.verifyCommitment.selector), abi.encode(true));
+
+       // Expect the gateway to emit InboundMessageDispatched event
+       vm.expectEmit(true, true, true, true);
+       emit IGatewayV1.InboundMessageDispatched(
+           fixture.message.channelID,
+           fixture.message.nonce,
+           fixture.message.id,
+           true
+       );
+
+       address relayer = makeAddr("relayer");
+       vm.deal(relayer, 10 ether);
+
+       vm.prank(relayer);
+       IGatewayV1(address(GATEWAY_PROXY)).submitV1(
+           fixture.message,
+           fixture.leafProof,
+           fixture.headerProof
+       );
+    }
+
+    // Send token can work with the upgraded Gateway
+    function testUpgradedGatewayStillCanSendToken() public {
+       // Create a mock user
+        address user = makeAddr("user");
+        uint128 amount = 1;
+        ParaID paraID = ParaID.wrap(1000);
+
+        MultiAddress memory recipientAddress32 = multiAddressFromBytes32(keccak256("recipient"));
+
+        uint128 fee =
+            uint128(IGatewayV1(address(GATEWAY_PROXY)).quoteSendTokenFee(address(0), paraID, 1));
+        assertTrue(fee > 0);
+        // This addresses the missing AssetsStorage.Layout migration bug, which was causing the fee to be unreasonably high.
+        assertTrue(fee < 0.01 ether);
+  
+        vm.expectEmit();
+        emit IGatewayV1.TokenSent(address(0), user, paraID, recipientAddress32, amount);
+        vm.expectEmit(true, false, false, false);
+        emit IGatewayV1.OutboundMessageAccepted(paraID.into(), 1, bytes32('0x'), hex"");
+        hoax(user, amount + fee);
+        IGatewayV1(address(GATEWAY_PROXY)).sendToken{value: amount + fee}(
+            address(0), paraID, recipientAddress32, 1, amount
         );
-
-        address relayer = makeAddr("relayer");
-        vm.deal(relayer, 10 ether);
-
-        vm.prank(relayer);
-        IGateway(address(GATEWAY_PROXY)).submitV1(
-            fixture.message,
-            fixture.leafProof,
-            fixture.headerProof
-        );
+        assertEq(user.balance, 0);
     }
 }
