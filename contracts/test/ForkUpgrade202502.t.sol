@@ -20,7 +20,8 @@ contract ForkUpgradeTest is Test {
     bytes32 private constant AssetHubAgent = 0x81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79;
 
     function setUp() public {
-        vm.createSelectFork("https://ethereum-rpc.publicnode.com", 20645700);
+        string memory rpc = vm.envOr("RPC_URL", string("https://ethereum-rpc.publicnode.com"));
+        vm.createSelectFork(rpc, 20645700);
         vm.allowCheatcodes(GatewayProxy);
         vm.startPrank(GatewayProxy);
         forkUpgrade();
