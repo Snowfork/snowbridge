@@ -829,12 +829,11 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
 pub fn frequency_token_registrations() -> Vec<BridgeHubRuntimeCall> {
     use crate::bridge_hub_runtime::runtime_types::{
         staging_xcm::v4::{
-            junction::Junction::*, junction::NetworkId::*, junctions::Junctions::*,
+            junction::Junction::*, junctions::Junctions::*,
             location::Location,
         },
         xcm::VersionedLocation,
     };
-    use hex_literal::hex;
     return vec![register_polkadot_native_asset(
         VersionedLocation::V4(Location {
             parents: 1,
