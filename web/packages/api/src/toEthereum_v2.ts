@@ -356,7 +356,7 @@ export async function getDeliveryFee(
     let totalFeeInNative: bigint | undefined = undefined
     let assetHubExecutionFeeNative: bigint | undefined = undefined
     let returnToSenderExecutionFeeNative: bigint | undefined = undefined
-    if (!registry.parachains[parachain].features.hasDotBalance) {
+    if (!registry.parachains[parachain].features.hasDotBalance || registry.parachains[parachain].info.specName == "origintrail-parachain") {
         // padding the bridging fee and bridge hub delivery by the slippage fee to make sure the trade goes through.
         totalFeeInDot =
             padFeeByPercentage(
