@@ -27,7 +27,7 @@ import {
 } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { Contract } from "ethers"
+import { AbstractProvider, Contract } from "ethers"
 import { buildAssetHubPNAReceivedXcm, sendMessageXCM } from "../../xcmbuilders/toPolkadot/pnaToAH"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
@@ -125,6 +125,7 @@ export class PNAToAH implements TransferInterface {
         context:
             | Context
             | {
+                  ethereum: AbstractProvider
                   assetHub: ApiPromise
                   destination: ApiPromise
               },
@@ -136,9 +137,10 @@ export class PNAToAH implements TransferInterface {
         amount: bigint,
         fee: DeliveryFee
     ): Promise<Transfer> {
-        const { assetHub } =
+        const { ethereum, assetHub } =
             context instanceof Context
                 ? {
+                      ethereum: context.ethereum(),
                       assetHub: await context.assetHub(),
                   }
                 : context
@@ -161,12 +163,14 @@ export class PNAToAH implements TransferInterface {
             throw Error("asset foreign ID not set in metadata")
         }
 
+        const accountNonce = await ethereum.getTransactionCount(sourceAccount)
         const topic = buildMessageId(
             destinationParaId,
             sourceAccount,
             tokenAddress,
             beneficiaryAddressHex,
-            amount
+            amount,
+            accountNonce
         )
 
         const xcm = hexToU8a(

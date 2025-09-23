@@ -33,7 +33,7 @@ import {
     buildParachainPNAReceivedXcmOnDestination,
     sendMessageXCM,
 } from "../../xcmbuilders/toPolkadot/pnaToParachain"
-import { Contract } from "ethers"
+import { AbstractProvider, Contract } from "ethers"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 
@@ -168,6 +168,7 @@ export class PNAToParachain implements TransferInterface {
         context:
             | Context
             | {
+                  ethereum: AbstractProvider
                   assetHub: ApiPromise
                   destination: ApiPromise
               },
@@ -179,9 +180,10 @@ export class PNAToParachain implements TransferInterface {
         amount: bigint,
         fee: DeliveryFee
     ): Promise<Transfer> {
-        const { assetHub, destination } =
+        const { ethereum, assetHub, destination } =
             context instanceof Context
                 ? {
+                      ethereum: context.ethereum(),
                       assetHub: await context.assetHub(),
                       destination: await context.parachain(destinationParaId),
                   }
@@ -207,12 +209,14 @@ export class PNAToParachain implements TransferInterface {
             throw Error("asset foreign ID not set in metadata")
         }
 
+        const accountNonce = await ethereum.getTransactionCount(sourceAccount)
         const topic = buildMessageId(
             destinationParaId,
             sourceAccount,
             tokenAddress,
             beneficiaryAddressHex,
-            amount
+            amount,
+            accountNonce
         )
 
         const xcm = hexToU8a(

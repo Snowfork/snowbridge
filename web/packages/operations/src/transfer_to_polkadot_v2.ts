@@ -78,6 +78,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
             {
+                ethereum: context.ethereum(),
                 assetHub: await context.assetHub(),
                 destination:
                     destParaId !== registry.assetHubParaId

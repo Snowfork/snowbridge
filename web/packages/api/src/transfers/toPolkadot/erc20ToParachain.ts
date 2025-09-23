@@ -33,7 +33,7 @@ import {
     buildParachainERC20ReceivedXcmOnDestWithDOTFee,
     buildParachainERC20ReceivedXcmOnDestination,
 } from "../../xcmbuilders/toPolkadot/erc20ToParachain"
-import { Contract } from "ethers"
+import { AbstractProvider, Contract } from "ethers"
 import {
     sendMessageXCM,
     sendMessageXCMWithDOTDestFee,
@@ -165,6 +165,7 @@ export class ERC20ToParachain implements TransferInterface {
         context:
             | Context
             | {
+                  ethereum: AbstractProvider
                   assetHub: ApiPromise
                   destination: ApiPromise
               },
@@ -176,9 +177,10 @@ export class ERC20ToParachain implements TransferInterface {
         amount: bigint,
         fee: DeliveryFee
     ): Promise<Transfer> {
-        const { assetHub, destination } =
+        const { ethereum, assetHub, destination } =
             context instanceof Context
                 ? {
+                      ethereum: context.ethereum(),
                       assetHub: await context.assetHub(),
                       destination: await context.parachain(destinationParaId),
                   }
@@ -206,12 +208,14 @@ export class ERC20ToParachain implements TransferInterface {
         const ifce = IGateway__factory.createInterface()
         const con = new Contract(registry.gatewayAddress, ifce)
 
+        const accountNonce = await ethereum.getTransactionCount(sourceAccount)
         const topic = buildMessageId(
             destinationParaId,
             sourceAccount,
             tokenAddress,
             beneficiaryAddressHex,
-            amount
+            amount,
+            accountNonce
         )
 
         let xcm

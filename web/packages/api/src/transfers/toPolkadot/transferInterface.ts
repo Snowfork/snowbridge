@@ -29,7 +29,13 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        context: Context | { assetHub: ApiPromise; destination: ApiPromise | undefined },
+        context:
+            | Context
+            | {
+                  ethereum: AbstractProvider
+                  assetHub: ApiPromise
+                  destination: ApiPromise | undefined
+              },
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,

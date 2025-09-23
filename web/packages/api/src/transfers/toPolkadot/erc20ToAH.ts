@@ -27,7 +27,7 @@ import {
     validateAccount,
 } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
-import { Contract } from "ethers"
+import { AbstractProvider, Contract } from "ethers"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
@@ -121,6 +121,7 @@ export class ERC20ToAH implements TransferInterface {
         context:
             | Context
             | {
+                  ethereum: AbstractProvider
                   assetHub: ApiPromise
                   destination: ApiPromise
               },
@@ -132,9 +133,10 @@ export class ERC20ToAH implements TransferInterface {
         amount: bigint,
         fee: DeliveryFee
     ): Promise<Transfer> {
-        const { assetHub } =
+        const { ethereum, assetHub } =
             context instanceof Context
                 ? {
+                      ethereum: context.ethereum(),
                       assetHub: await context.assetHub(),
                   }
                 : context
@@ -157,13 +159,15 @@ export class ERC20ToAH implements TransferInterface {
         }
         const ifce = IGateway__factory.createInterface()
         const con = new Contract(registry.gatewayAddress, ifce)
+        const accountNonce = await ethereum.getTransactionCount(sourceAccount)
 
         const topic = buildMessageId(
             destinationParaId,
             sourceAccount,
             tokenAddress,
             beneficiaryAddressHex,
-            amount
+            amount,
+            accountNonce
         )
 
         const xcm = hexToU8a(

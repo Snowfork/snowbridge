@@ -135,7 +135,8 @@ export function buildMessageId(
     sourceAccountHex: string,
     tokenAddress: string,
     beneficiaryAccount: string,
-    amount: bigint
+    amount: bigint,
+    accountNonce: number
 ) {
     const entropy = new Uint8Array([
         ...stringToU8a(destParaId.toString()),
@@ -143,6 +144,7 @@ export function buildMessageId(
         ...hexToU8a(tokenAddress),
         ...stringToU8a(beneficiaryAccount),
         ...stringToU8a(amount.toString()),
+        ...stringToU8a(accountNonce.toString()),
     ])
     return blake2AsHex(entropy)
 }
