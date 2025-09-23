@@ -4,7 +4,7 @@ name: Check Contracts Clients
 on:
   pull_request:
     # TODO: Remove test branch after testing
-    branches: [ "main", "tanssi-relay-v1.0.41-custom" ]
+    branches: [ "tanssi-main" ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
