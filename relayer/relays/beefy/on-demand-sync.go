@@ -37,7 +37,7 @@ type OnDemandRelay struct {
 
 func NewOnDemandRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*OnDemandRelay, error) {
 	ethereumConn := ethereum.NewConnection(&config.Sink.Ethereum, ethereumKeypair)
-	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
+	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint, nil)
 	parachainConn := parachain.NewConnection(config.Source.BridgeHub.Endpoint, nil)
 
 	polkadotListener := NewPolkadotListener(&config.Source, relaychainConn)
