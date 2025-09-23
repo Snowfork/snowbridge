@@ -57,27 +57,27 @@ pub mod asset_hub_polkadot_types {
 
 #[cfg(feature = "paseo")]
 pub mod asset_hub_paseo_types {
-    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation as Location;
-    pub use crate::asset_hub_runtime::runtime_types::xcm::v3::{
+    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
         junction::Junction::AccountKey20,
         junction::Junction::GlobalConsensus,
         junction::NetworkId,
         junctions::Junctions::{X1, X2},
+        location::Location,
     };
 
     pub fn get_ether_id(chain_id: u64) -> Location {
         return Location {
             parents: 2,
-            interior: X1(GlobalConsensus(NetworkId::Ethereum { chain_id })),
+            interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id })]),
         };
     }
     pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> Location {
         return Location {
             parents: 2,
-            interior: X2(
+            interior: X2([
                 GlobalConsensus(NetworkId::Ethereum { chain_id }),
                 AccountKey20 { network: None, key },
-            ),
+            ]),
         };
     }
 }
@@ -828,13 +828,9 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
 #[cfg(feature = "polkadot")]
 pub fn frequency_token_registrations() -> Vec<BridgeHubRuntimeCall> {
     use crate::bridge_hub_runtime::runtime_types::{
-        staging_xcm::v4::{
-            junction::Junction::*, junction::NetworkId::*, junctions::Junctions::*,
-            location::Location,
-        },
+        staging_xcm::v4::{junction::Junction::*, junctions::Junctions::*, location::Location},
         xcm::VersionedLocation,
     };
-    use hex_literal::hex;
     return vec![register_polkadot_native_asset(
         VersionedLocation::V4(Location {
             parents: 1,
