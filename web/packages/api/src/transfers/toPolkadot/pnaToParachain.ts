@@ -11,8 +11,6 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    dryRunAssetHub,
-    dryRunDestination,
     encodeNativeAsset,
     Transfer,
     ValidationKind,
@@ -383,6 +381,7 @@ export class PNAToParachain implements TransferInterface {
 
         // Check if asset can be received on asset hub (dry run)
         const ahParachain = registry.parachains[registry.assetHubParaId]
+        const assetHubImpl = await paraImplementation(assetHub)
         let dryRunAhSuccess, forwardedDestination, assetHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {
             logs.push({
@@ -409,11 +408,10 @@ export class PNAToParachain implements TransferInterface {
                 destinationParaId,
                 "0x0000000000000000000000000000000000000000000000000000000000000000"
             )
-            let result = await dryRunAssetHub(
-                assetHub,
+            let result = await assetHubImpl.dryRunXcm(
                 registry.bridgeHubParaId,
-                destinationParaId,
-                xcm
+                xcm,
+                destinationParaId
             )
             dryRunAhSuccess = result.success
             assetHubDryRunError = result.errorMessage
@@ -427,7 +425,6 @@ export class PNAToParachain implements TransferInterface {
             }
         }
 
-        const assetHubImpl = await paraImplementation(assetHub)
         let destinationParachainDryRunError: string | undefined
         // Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
@@ -482,8 +479,9 @@ export class PNAToParachain implements TransferInterface {
                                 "Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.",
                         })
                     }
+                    const destParachainImpl = await paraImplementation(destParachainApi)
                     const { success: dryRunDestinationSuccess, errorMessage: destMessage } =
-                        await dryRunDestination(destParachainApi, transfer, xcm[0])
+                        await destParachainImpl.dryRunXcm(registry.assetHubParaId, xcm[0])
                     if (!dryRunDestinationSuccess) {
                         logs.push({
                             kind: ValidationKind.Error,

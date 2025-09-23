@@ -2,6 +2,8 @@ import { ApiPromise } from "@polkadot/api"
 import { Asset, AssetMap, ChainProperties } from "@snowbridge/base-types"
 import { PNAMap, SubstrateAccount } from "../assets_v2"
 import { erc20Location } from "../xcmBuilder"
+import { Result } from "@polkadot/types"
+import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 
 export abstract class ParachainBase {
     provider: ApiPromise
@@ -174,6 +176,52 @@ export abstract class ParachainBase {
         }
 
         return deliveryFee
+    }
+
+    async dryRunXcm(originParaId: number, xcm: any, findForwardedDestination?: number) {
+        const originLocation = {
+            v4: { parents: 1, interior: { x1: [{ parachain: originParaId }] } },
+        }
+
+        const result = await this.provider.call.dryRunApi.dryRunXcm<
+            Result<XcmDryRunEffects, XcmDryRunApiError>
+        >(originLocation, xcm)
+
+        const resultHuman = result.toHuman() as any
+        const success = result.isOk && result.asOk.executionResult.isComplete
+
+        let forwardedDestination
+        if (!success) {
+            console.error(`Error during dry run:`, xcm.toHuman(), result.toHuman())
+        } else if (findForwardedDestination) {
+            const destinationParaId = findForwardedDestination
+            forwardedDestination = result.asOk.forwardedXcms.find((x) => {
+                return (
+                    x[0].isV4 &&
+                    x[0].asV4.parents.toNumber() === 1 &&
+                    x[0].asV4.interior.isX1 &&
+                    x[0].asV4.interior.asX1[0].isParachain &&
+                    x[0].asV4.interior.asX1[0].asParachain.toNumber() === destinationParaId
+                )
+            })
+            if (!forwardedDestination) {
+                forwardedDestination = result.asOk.forwardedXcms.find((x) => {
+                    return (
+                        x[0].isV5 &&
+                        x[0].asV5.parents.toNumber() === 1 &&
+                        x[0].asV5.interior.isX1 &&
+                        x[0].asV5.interior.asX1[0].isParachain &&
+                        x[0].asV5.interior.asX1[0].asParachain.toNumber() === destinationParaId
+                    )
+                })
+            }
+        }
+
+        return {
+            success,
+            errorMessage: resultHuman.Ok?.executionResult.Incomplete?.error,
+            forwardedDestination,
+        }
     }
 
     abstract getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint>

@@ -11,7 +11,6 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    dryRunAssetHub,
     encodeNativeAsset,
     Transfer,
     ValidationKind,
@@ -315,6 +314,7 @@ export class PNAToAH implements TransferInterface {
 
         // Check if asset can be received on asset hub (dry run)
         const ahParachain = registry.parachains[registry.assetHubParaId]
+        const assetHubImpl = await paraImplementation(assetHub)
         let dryRunAhSuccess, assetHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {
             logs.push({
@@ -340,7 +340,7 @@ export class PNAToAH implements TransferInterface {
                 "0x0000000000000000000000000000000000000000000000000000000000000000"
             )
 
-            let result = await dryRunAssetHub(assetHub, registry.bridgeHubParaId, 0, xcm)
+            let result = await assetHubImpl.dryRunXcm(registry.bridgeHubParaId, xcm)
             dryRunAhSuccess = result.success
             assetHubDryRunError = result.errorMessage
             if (!dryRunAhSuccess) {
@@ -351,8 +351,6 @@ export class PNAToAH implements TransferInterface {
                 })
             }
         }
-
-        const assetHubImpl = await paraImplementation(assetHub)
 
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
             const { accountMaxConsumers, accountExists } = await validateAccount(

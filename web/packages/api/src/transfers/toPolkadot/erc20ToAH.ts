@@ -10,7 +10,6 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    dryRunAssetHub,
     encodeNativeAsset,
     ValidationKind,
 } from "../../toPolkadotSnowbridgeV2"
@@ -309,6 +308,8 @@ export class ERC20ToAH implements TransferInterface {
             })
         }
 
+        const assetHubImpl = await paraImplementation(assetHub)
+
         // Check if asset can be received on asset hub (dry run)
         const ahParachain = registry.parachains[registry.assetHubParaId]
         let dryRunAhSuccess, assetHubDryRunError
@@ -337,7 +338,7 @@ export class ERC20ToAH implements TransferInterface {
                 "0x0000000000000000000000000000000000000000000000000000000000000000"
             )
 
-            let result = await dryRunAssetHub(assetHub, registry.bridgeHubParaId, 0, xcm)
+            let result = await assetHubImpl.dryRunXcm(registry.bridgeHubParaId, xcm)
             dryRunAhSuccess = result.success
             assetHubDryRunError = result.errorMessage
             if (!dryRunAhSuccess) {
@@ -348,8 +349,6 @@ export class ERC20ToAH implements TransferInterface {
                 })
             }
         }
-
-        const assetHubImpl = await paraImplementation(assetHub)
 
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
             const { accountMaxConsumers, accountExists } = await validateAccount(
