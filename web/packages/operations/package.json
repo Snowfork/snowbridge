@@ -25,6 +25,8 @@
     "transferEthFromKusamaToPolkadot": "npx ts-node src/transfer_for_kusama_entry.ts EthKToP 1 ETH 200000000000000",
     "transferDotFromKusamaToPolkadot": "npx ts-node src/transfer_for_kusama_entry.ts DotKToP 1 DOT 200000000000000",
     "transferKsmFromKusamaToPolkadot": "npx ts-node src/transfer_for_kusama_entry.ts KsmKToP 1 KSM 200000000000000",
+    "transferWudFromPolkadotToKusama": "npx ts-node src/transfer_for_kusama_entry.ts WudPToK 0 WUD 200000000000000",
+    "transferWudFromKusamaToPolkadot": "npx ts-node src/transfer_for_kusama_entry.ts WudKToP 1 WUD 200000000000000",
     "transferEtherToAH": "npx ts-node src/transfer_from_e2p.ts 1000 Eth 200000000000000",
     "transferEtherFromAH": "npx ts-node src/transfer_from_p2e.ts 1000 Eth 100000000000000",
     "transferDotToEthereum": "npx ts-node src/transfer_from_p2e.ts 1000 DOT 2000000000",

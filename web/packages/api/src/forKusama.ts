@@ -8,7 +8,6 @@ import {
     kusamaAssetHubLocation,
     buildAssetHubERC20TransferToKusama,
     polkadotAssetHubLocation,
-    isDOTOnOtherConsensusSystem,
     isKSMOnOtherConsensusSystem,
     isRelaychainLocation,
     NATIVE_TOKEN_LOCATION,
@@ -294,13 +293,13 @@ export async function createTransfer(
         amount
     )
 
-    let tokenLocation = getTokenLocation(registry, direction, tokenAddress)
+    let tokenLocationOnSource = getTokenLocation(registry, direction, tokenAddress)
     let tx
     if (direction == Direction.ToPolkadot) {
         tx = createERC20ToPolkadotTx(
             sourceParaId,
             parachain,
-            tokenLocation,
+            tokenLocationOnSource,
             beneficiaryAddressHex,
             amount,
             fee.destinationFee,
@@ -310,7 +309,7 @@ export async function createTransfer(
         tx = createERC20ToKusamaTx(
             destParaId,
             parachain,
-            tokenLocation,
+            tokenLocationOnSource,
             beneficiaryAddressHex,
             amount,
             fee.destinationFee,
@@ -608,7 +607,8 @@ export function createERC20ToKusamaTx(
     topic: string
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any
-    if (isDOT(Direction.ToKusama, tokenLocation)) {
+    // is DOT
+    if (isRelaychainLocation(tokenLocation)) {
         assets = {
             v4: [
                 {
@@ -621,13 +621,13 @@ export function createERC20ToKusamaTx(
         assets = {
             v4: [
                 {
-                    id: NATIVE_TOKEN_LOCATION,
-                    fun: { Fungible: destFeeInSourceNative },
-                },
-                {
                     id: tokenLocation,
                     fun: { Fungible: amount },
                 },
+                {
+                    id: NATIVE_TOKEN_LOCATION,
+                    fun: { Fungible: destFeeInSourceNative },
+                }
             ],
         }
     }
@@ -668,7 +668,8 @@ export function createERC20ToPolkadotTx(
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any
     let reserveTypeAsset = "DestinationReserve"
-    if (isKSM(Direction.ToPolkadot, tokenLocation)) {
+    // is KSM
+    if (isRelaychainLocation(tokenLocation)) {
         assets = {
             v4: [
                 {
@@ -856,14 +857,6 @@ function getTokenLocation(registry: AssetRegistry, direction: Direction, tokenAd
     }
 
     return location
-}
-
-function isDOT(direction: Direction, location: any) {
-    if (direction == Direction.ToPolkadot) {
-        return isDOTOnOtherConsensusSystem(location)
-    } else {
-        return isRelaychainLocation(location)
-    }
 }
 
 function isKSM(direction: Direction, location: any) {
