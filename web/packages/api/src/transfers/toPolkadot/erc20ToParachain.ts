@@ -214,12 +214,8 @@ export class ERC20ToParachain implements TransferInterface {
             amount
         )
 
-        const isMythosOrMuse = isMythosOrMuseParachain(
-            registry.parachains[destinationParaId].info.specName
-        )
         let xcm
-        if (isMythosOrMuse && fee.feeAsset === DOT_LOCATION) {
-            // For Mythos/Muse, we need to calculate the DOT fee amount for the swap
+        if (fee.feeAsset === DOT_LOCATION) {
             const dotFeeAmount = await swapAsset1ForAsset2(
                 assetHub,
                 erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS),
@@ -417,12 +413,9 @@ export class ERC20ToParachain implements TransferInterface {
             const assetHubFee =
                 transfer.input.fee.assetHubDeliveryFeeEther +
                 transfer.input.fee.assetHubExecutionFeeEther
-            const isMythosOrMuse = isMythosOrMuseParachain(
-                registry.parachains[destinationParaId].info.specName
-            )
 
             let xcm
-            if (isMythosOrMuse && transfer.input.fee.feeAsset === DOT_LOCATION) {
+            if (transfer.input.fee.feeAsset === DOT_LOCATION) {
                 const dotFeeAmount = await swapAsset1ForAsset2(
                     assetHub,
                     erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS),
@@ -600,13 +593,4 @@ export class ERC20ToParachain implements TransferInterface {
             transfer,
         }
     }
-}
-
-/**
- * Check if the destination parachain is Mythos or Muse based on spec name.
- * These parachains require DOT for fees instead of Ether, so we use ExchangeAsset
- * instructions to swap Ether to DOT before paying fees.
- */
-function isMythosOrMuseParachain(destinationSpec: string): boolean {
-    return destinationSpec === "mythos" || destinationSpec === "muse"
 }
