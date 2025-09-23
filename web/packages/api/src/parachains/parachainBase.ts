@@ -127,7 +127,7 @@ export abstract class ParachainBase {
             )
         ).toPrimitive() as any
         if (!result.ok) {
-            console.log(result)
+            console.error(result)
             throw Error(`Can not query XCM Weight.`)
         }
         let dotAsset = undefined
