@@ -24,7 +24,7 @@
     "prettier": "2.8.8",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
-    "typescript": "5.4.5"
+    "typescript": "5.5.4"
   },
   "dependencies": {
     "@polkadot/api": "16.4.7",
