@@ -5,13 +5,7 @@ import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { MultiAddressStruct } from "@snowbridge/contract-types/dist/IGateway.sol/IGatewayV1"
-import {
-    AbiCoder,
-    AbstractProvider,
-    ContractTransaction,
-    LogDescription,
-    TransactionReceipt,
-} from "ethers"
+import { AbiCoder, ContractTransaction, LogDescription, TransactionReceipt } from "ethers"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
 import { IGatewayV2__factory } from "@snowbridge/contract-types"
@@ -21,6 +15,7 @@ import { ApiPromise } from "@polkadot/api"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { accountToLocation } from "./xcmBuilder"
+import { Codec } from "@polkadot/types/types"
 export { ValidationKind } from "./toPolkadot_v2"
 
 export type DeliveryFee = {
@@ -53,6 +48,7 @@ export type Transfer = {
         destAssetMetadata: Asset
         destParachain: Parachain
         minimalBalance: bigint
+        claimer: any
         topic: string
     }
     tx: ContractTransaction
@@ -149,22 +145,6 @@ export function buildMessageId(
         ...stringToU8a(amount.toString()),
     ])
     return blake2AsHex(entropy)
-}
-
-export function hexToBytes(hexString: string): Uint8Array {
-    // Ensure the string has an even number of characters
-    if (hexString.length % 2 !== 0) {
-        throw new Error("Hex string must have an even number of characters.")
-    }
-
-    const bytes = new Uint8Array(hexString.length / 2)
-
-    for (let i = 0; i < hexString.length; i += 2) {
-        const byteString = hexString.substring(i, i + 2)
-        bytes[i / 2] = parseInt(byteString, 16)
-    }
-
-    return bytes
 }
 
 // ERC20 asset: abi.encode(0, tokenAddress, amount)
@@ -281,9 +261,13 @@ export async function getMessageReceipt(
 }
 
 export function claimerFromBeneficiary(assetHub: ApiPromise, beneficiaryAddressHex: string) {
-    return hexToBytes(
-        assetHub.registry
-            .createType("StagingXcmV5Location", accountToLocation(beneficiaryAddressHex))
-            .toHex()
-    )
+    let accountLocation = {
+        parents: 0,
+        interior: { x1: [accountToLocation(beneficiaryAddressHex)] },
+    }
+    return assetHub.registry.createType("StagingXcmV5Location", accountLocation)
+}
+
+export function claimerLocationToBytes(claimerLocation: Codec) {
+    return hexToU8a(claimerLocation.toHex())
 }

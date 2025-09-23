@@ -9,10 +9,10 @@ import { Context } from "../../index"
 import {
     buildMessageId,
     claimerFromBeneficiary,
+    claimerLocationToBytes,
     DeliveryFee,
     dryRunAssetHub,
     encodeNativeAsset,
-    hexToBytes,
     Transfer,
     ValidationKind,
     ValidationResult,
@@ -30,6 +30,7 @@ import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../t
 import { Contract } from "ethers"
 import { buildAssetHubPNAReceivedXcm, sendMessageXCM } from "../../xcmbuilders/toPolkadot/pnaToAH"
 import { getOperatingStatus } from "../../status"
+import { hexToU8a } from "@polkadot/util"
 
 export class PNAToAH implements TransferInterface {
     async getDeliveryFee(
@@ -168,7 +169,7 @@ export class PNAToAH implements TransferInterface {
             amount
         )
 
-        const xcm = hexToBytes(
+        const xcm = hexToU8a(
             sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic).toHex()
         )
         let assets = [encodeNativeAsset(tokenAddress, amount)]
@@ -179,7 +180,7 @@ export class PNAToAH implements TransferInterface {
             .populateTransaction(
                 xcm,
                 assets,
-                claimer,
+                claimerLocationToBytes(claimer),
                 fee.assetHubExecutionFeeEther,
                 fee.relayerFee,
                 {
@@ -208,6 +209,7 @@ export class PNAToAH implements TransferInterface {
                 destAssetMetadata,
                 minimalBalance,
                 destParachain,
+                claimer,
                 topic,
             },
             tx,
@@ -230,7 +232,7 @@ export class PNAToAH implements TransferInterface {
                   }
                 : context
 
-        const { totalValue, minimalBalance, ahAssetMetadata, beneficiaryAddressHex } =
+        const { totalValue, minimalBalance, ahAssetMetadata, beneficiaryAddressHex, claimer } =
             transfer.computed
 
         const logs: ValidationLog[] = []
@@ -328,9 +330,7 @@ export class PNAToAH implements TransferInterface {
                 transfer.computed.totalValue - assetHubFee,
                 assetHubFee,
                 amount,
-                accountId32Location(
-                    "0x0000000000000000000000000000000000000000000000000000000000000000"
-                ),
+                claimer,
                 transfer.input.sourceAccount,
                 transfer.computed.beneficiaryAddressHex,
                 "0x0000000000000000000000000000000000000000000000000000000000000000"

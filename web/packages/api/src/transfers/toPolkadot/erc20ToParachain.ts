@@ -9,21 +9,16 @@ import { Context } from "../../index"
 import {
     buildMessageId,
     claimerFromBeneficiary,
+    claimerLocationToBytes,
     DeliveryFee,
     dryRunAssetHub,
     dryRunDestination,
     encodeNativeAsset,
-    hexToBytes,
     Transfer,
     ValidationKind,
     ValidationResult,
 } from "../../toPolkadotSnowbridgeV2"
-import {
-    accountId32Location,
-    accountToLocation,
-    DOT_LOCATION,
-    erc20Location,
-} from "../../xcmBuilder"
+import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
 import {
     erc20Balance,
@@ -44,6 +39,7 @@ import {
     sendMessageXCMWithDOTDestFee,
 } from "../../xcmbuilders/toPolkadot/erc20ToParachain"
 import { getOperatingStatus } from "../../status"
+import { hexToU8a } from "@polkadot/util"
 
 export class ERC20ToParachain implements TransferInterface {
     async getDeliveryFee(
@@ -230,7 +226,7 @@ export class ERC20ToParachain implements TransferInterface {
                 DOT_LOCATION,
                 fee.destinationExecutionFeeEther
             )
-            xcm = hexToBytes(
+            xcm = hexToU8a(
                 sendMessageXCMWithDOTDestFee(
                     destination.registry,
                     registry.ethChainId,
@@ -244,7 +240,7 @@ export class ERC20ToParachain implements TransferInterface {
                 ).toHex()
             )
         } else {
-            xcm = hexToBytes(
+            xcm = hexToU8a(
                 sendMessageXCM(
                     destination.registry,
                     registry.ethChainId,
@@ -264,7 +260,7 @@ export class ERC20ToParachain implements TransferInterface {
             .populateTransaction(
                 xcm,
                 assets,
-                claimer,
+                claimerLocationToBytes(claimer),
                 fee.assetHubExecutionFeeEther,
                 fee.relayerFee,
                 {
@@ -293,6 +289,7 @@ export class ERC20ToParachain implements TransferInterface {
                 destAssetMetadata,
                 minimalBalance,
                 destParachain,
+                claimer,
                 topic,
             },
             tx,
@@ -328,6 +325,7 @@ export class ERC20ToParachain implements TransferInterface {
             destAssetMetadata,
             ahAssetMetadata,
             beneficiaryAddressHex,
+            claimer,
         } = transfer.computed
 
         const logs: ValidationLog[] = []
@@ -438,9 +436,7 @@ export class ERC20ToParachain implements TransferInterface {
                     transfer.computed.totalValue - assetHubFee,
                     assetHubFee,
                     amount,
-                    accountId32Location(
-                        "0x0000000000000000000000000000000000000000000000000000000000000000"
-                    ),
+                    claimer,
                     transfer.input.sourceAccount,
                     transfer.computed.beneficiaryAddressHex,
                     destinationParaId,
@@ -456,9 +452,7 @@ export class ERC20ToParachain implements TransferInterface {
                     transfer.computed.totalValue - assetHubFee,
                     assetHubFee,
                     amount,
-                    accountId32Location(
-                        "0x0000000000000000000000000000000000000000000000000000000000000000"
-                    ),
+                    claimer,
                     transfer.input.sourceAccount,
                     transfer.computed.beneficiaryAddressHex,
                     destinationParaId,

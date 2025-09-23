@@ -9,11 +9,11 @@ import { Context } from "../../index"
 import {
     buildMessageId,
     claimerFromBeneficiary,
+    claimerLocationToBytes,
     DeliveryFee,
     dryRunAssetHub,
     dryRunDestination,
     encodeNativeAsset,
-    hexToBytes,
     Transfer,
     ValidationKind,
     ValidationResult,
@@ -35,6 +35,7 @@ import {
 } from "../../xcmbuilders/toPolkadot/pnaToParachain"
 import { Contract } from "ethers"
 import { getOperatingStatus } from "../../status"
+import { hexToU8a } from "@polkadot/util"
 
 export class PNAToParachain implements TransferInterface {
     async getDeliveryFee(
@@ -214,7 +215,7 @@ export class PNAToParachain implements TransferInterface {
             amount
         )
 
-        const xcm = hexToBytes(
+        const xcm = hexToU8a(
             sendMessageXCM(
                 destination.registry,
                 registry.ethChainId,
@@ -234,7 +235,7 @@ export class PNAToParachain implements TransferInterface {
             .populateTransaction(
                 xcm,
                 assets,
-                claimer,
+                claimerLocationToBytes(claimer),
                 fee.assetHubExecutionFeeEther,
                 fee.relayerFee,
                 {
@@ -263,6 +264,7 @@ export class PNAToParachain implements TransferInterface {
                 destAssetMetadata,
                 minimalBalance,
                 destParachain,
+                claimer,
                 topic,
             },
             tx,
@@ -298,6 +300,7 @@ export class PNAToParachain implements TransferInterface {
             destAssetMetadata,
             ahAssetMetadata,
             beneficiaryAddressHex,
+            claimer,
         } = transfer.computed
 
         const logs: ValidationLog[] = []
@@ -396,9 +399,7 @@ export class PNAToParachain implements TransferInterface {
                 assetHubFee,
                 transfer.input.fee.destinationExecutionFeeEther,
                 amount,
-                accountId32Location(
-                    "0x0000000000000000000000000000000000000000000000000000000000000000"
-                ),
+                claimer,
                 transfer.input.sourceAccount,
                 transfer.computed.beneficiaryAddressHex,
                 destinationParaId,

@@ -8,10 +8,10 @@ import {
 import { Context } from "../../index"
 import {
     claimerFromBeneficiary,
+    claimerLocationToBytes,
     DeliveryFee,
     dryRunAssetHub,
     encodeNativeAsset,
-    hexToBytes,
     ValidationKind,
 } from "../../toPolkadotSnowbridgeV2"
 import {
@@ -31,6 +31,7 @@ import { Contract } from "ethers"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
+import { hexToU8a } from "@polkadot/util"
 
 export class ERC20ToAH implements TransferInterface {
     async getDeliveryFee(
@@ -165,7 +166,7 @@ export class ERC20ToAH implements TransferInterface {
             amount
         )
 
-        const xcm = hexToBytes(
+        const xcm = hexToU8a(
             sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic).toHex()
         )
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
@@ -175,7 +176,7 @@ export class ERC20ToAH implements TransferInterface {
             .populateTransaction(
                 xcm,
                 assets,
-                claimer,
+                claimerLocationToBytes(claimer),
                 fee.assetHubExecutionFeeEther,
                 fee.relayerFee,
                 {
@@ -204,6 +205,7 @@ export class ERC20ToAH implements TransferInterface {
                 destAssetMetadata,
                 minimalBalance,
                 destParachain,
+                claimer,
                 topic,
             },
             tx,
@@ -226,7 +228,7 @@ export class ERC20ToAH implements TransferInterface {
                   }
                 : context
 
-        const { totalValue, minimalBalance, ahAssetMetadata, beneficiaryAddressHex } =
+        const { totalValue, minimalBalance, ahAssetMetadata, beneficiaryAddressHex, claimer } =
             transfer.computed
 
         const logs: ValidationLog[] = []
@@ -325,9 +327,7 @@ export class ERC20ToAH implements TransferInterface {
                 transfer.computed.totalValue - assetHubFee,
                 assetHubFee,
                 amount,
-                accountId32Location(
-                    "0x0000000000000000000000000000000000000000000000000000000000000000"
-                ),
+                claimer,
                 transfer.input.sourceAccount,
                 transfer.computed.beneficiaryAddressHex,
                 "0x0000000000000000000000000000000000000000000000000000000000000000"
