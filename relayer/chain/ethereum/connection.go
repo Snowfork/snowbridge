@@ -188,7 +188,7 @@ func (co *Connection) pollTransaction(ctx context.Context, tx *types.Transaction
 		return nil, err
 	}
 
-	if latestHeader.Number.Uint64()-receipt.BlockNumber.Uint64() >= confirmations {
+	if latestHeader != nil && receipt != nil && latestHeader.Number.Uint64()-receipt.BlockNumber.Uint64() >= confirmations {
 		return receipt, nil
 	}
 
