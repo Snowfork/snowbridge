@@ -4,7 +4,7 @@ use subxt::utils::MultiAddress;
 
 use crate::xcm_helper;
 
-pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
+pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v5::{
     junction::Junction::{AccountKey20, GeneralIndex, GlobalConsensus, PalletInstance, Parachain},
     junction::NetworkId,
     junctions::Junctions::{X1, X2, X4},

@@ -959,11 +959,21 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                     return false
                 }
 
-                // Disable TRAC from going to any but hydration
+                // Allow TRAC to go to Hydration (2034) and Neuroweb (2043) only
                 if (
                     path.asset === "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f" &&
-                    ((path.destination !== 2034 && path.type === "ethereum") ||
+                    ((path.destination !== 2034 && path.destination !== 2043 && path.type === "ethereum") ||
                         (path.source !== 2034 && path.type === "substrate"))
+                ) {
+                    return false
+                }
+
+                // Disallow TRAC from Neuroweb back to Ethereum
+                if (
+                    path.asset === "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f" &&
+                    path.source === 2043 &&
+                    path.type === "substrate" &&
+                    path.destinationType === "ethereum"
                 ) {
                     return false
                 }
