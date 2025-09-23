@@ -1,10 +1,14 @@
 package fisherman
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"os"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/ethereum/go-ethereum/crypto"
 	ancestryTypes "github.com/lederstrumpf/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/go-substrate-rpc-client/v4/client"
@@ -16,6 +20,8 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 
 	log "github.com/sirupsen/logrus"
+
+	cloudwatchTypes "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
 func (li *BeefyListener) getKeyOwnershipProof(meta *types.Metadata, latestHash types.Hash, latestBlockNumber uint64, offenderPubKeyCompressed []byte, validatorSetID uint64) ([]byte, error) {
@@ -293,4 +299,29 @@ func (li *BeefyListener) watchExtrinsicSubscription(sub *author.ExtrinsicStatusS
 		}
 	}
 	return nil
+}
+
+type AlarmType string
+
+const (
+	FutureBlockVoting AlarmType = "FutureBlockVoting" // StateIdle will be 0
+	ForkVoting        AlarmType = "ForkVoting"        // StateConnected will be 1
+)
+
+func (li *BeefyListener) sendAlarm(ctx context.Context, blockNumber uint32, alarmType AlarmType) error {
+	nameSpace := os.Getenv("ALARM_NAMESPACE")
+	if nameSpace == "" {
+		nameSpace = "SnowbridgeMetrics-polkadot_mainnet"
+	}
+	_, err := li.awsClient.PutMetricData(ctx, &cloudwatch.PutMetricDataInput{
+		Namespace: aws.String(nameSpace),
+		MetricData: []cloudwatchTypes.MetricDatum{
+			{
+				MetricName: aws.String(string(alarmType)),
+				Value:      aws.Float64(float64(blockNumber)),
+				Unit:       cloudwatchTypes.StandardUnitNone,
+			},
+		},
+	})
+	return err
 }

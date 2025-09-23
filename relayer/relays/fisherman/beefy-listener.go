@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -26,17 +27,20 @@ type BeefyListener struct {
 	ethereumConn        *ethereum.Connection
 	beefyClientContract *contracts.BeefyClient
 	relaychainConn      *relaychain.Connection
+	awsClient           *cloudwatch.Client
 }
 
 func NewBeefyListener(
 	config *SourceConfig,
 	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
+	awsClient *cloudwatch.Client,
 ) *BeefyListener {
 	return &BeefyListener{
 		config:         config,
 		ethereumConn:   ethereumConn,
 		relaychainConn: relaychainConn,
+		awsClient:      awsClient,
 	}
 }
 
@@ -134,6 +138,10 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 					latestBlockNumber := uint64(latestBlock.Block.Header.Number)
 
 					if event.BlockNumber > uint64(latestBlockNumber) {
+						err = li.sendAlarm(ctx, commitment.BlockNumber, FutureBlockVoting)
+						if err != nil {
+							log.Error(fmt.Sprint("send alarm error:%w", err))
+						}
 						validatorProof, err := li.parseSubmitInitialProof(callData)
 						if err != nil {
 							log.WithError(err).Warning("Failed to decode transaction call data")
@@ -211,6 +219,10 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 								"correspondingMMRRootHash": canonicalMmrRootHash,
 							}).Debug("Decoded transaction call data for NewTicket event")
 							if canonicalMmrRootHash != types.NewHash(commitment.Payload[0].Data) {
+								err = li.sendAlarm(ctx, commitment.BlockNumber, ForkVoting)
+								if err != nil {
+									log.Error(fmt.Sprint("send alarm error:%w", err))
+								}
 								log.WithFields(log.Fields{
 									"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
 									"proof":                    validatorProof,

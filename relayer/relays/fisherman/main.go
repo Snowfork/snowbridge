@@ -7,12 +7,15 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 
 	log "github.com/sirupsen/logrus"
+
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 )
 
 type Relay struct {
@@ -31,10 +34,17 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 
 	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
 
+	cfg, err := awsconfig.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		return nil, fmt.Errorf("load AWS config: %w", err)
+	}
+	awsClient := cloudwatch.NewFromConfig(cfg)
+
 	beefyListener := NewBeefyListener(
 		&config.Source,
 		ethereumConnBeefy,
 		relaychainWriterConn,
+		awsClient,
 	)
 
 	return &Relay{
