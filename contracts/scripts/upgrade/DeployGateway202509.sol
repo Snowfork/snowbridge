@@ -12,12 +12,10 @@ import {console} from "forge-std/console.sol";
 contract DeployGateway202509 is Script {
     using stdJson for string;
 
-    address beefyClient = 0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C;
+    address beefyClient = 0x1817874feAb3ce053d0F40AbC23870DB35C2AFfc;
 
     function run() public {
-        uint256 privateKey = vm.envUint("PRIVATE_KEY");
-        address deployer = vm.rememberKey(privateKey);
-        vm.startBroadcast(deployer);
+        vm.startBroadcast();
 
         AgentExecutor executor = new AgentExecutor();
         Gateway202509 gatewayLogic = new Gateway202509(address(beefyClient), address(executor));
@@ -25,7 +23,5 @@ contract DeployGateway202509 is Script {
         console.log("Gateway contract address: %s", address(gatewayLogic));
         console.log("Gateway contract codehash:");
         console.logBytes32(address(gatewayLogic).codehash);
-
-        vm.stopBroadcast();
     }
 }

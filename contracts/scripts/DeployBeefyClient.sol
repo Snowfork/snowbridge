@@ -21,12 +21,12 @@ contract DeployBeefyClient is Script {
             startBlock: 27895089,
             current: BeefyClient.ValidatorSet({
                 id: 3494,
-                length: 297,
+                length: 600,
                 root: 0xa9860350770648563c3cc25f2121500db9b858b9fa401d8dfb0ed73f2f1c4ce0
             }),
             next: BeefyClient.ValidatorSet({
                 id: 3495,
-                length: 297,
+                length: 600,
                 root: 0xa9860350770648563c3cc25f2121500db9b858b9fa401d8dfb0ed73f2f1c4ce0
             }),
             randaoCommitDelay: 128,
