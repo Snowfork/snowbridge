@@ -376,7 +376,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
      * APIv1 Internal functions
      */
 
-    // Best-effort attempt at estimating the base gas use of `submitInbound` transaction, outside
+    // Best-effort attempt at estimating the base gas use of `submitV1` transaction, outside
     // the block of code that is metered.
     // This includes:
     // * Cost paid for every transaction: 21000 gas
@@ -387,9 +387,12 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     // (including the message payload) Since the merkle proofs are hashes, they are much more
     // likely to be composed of more non-zero bytes than zero bytes.
     //
+    // Analysis shows that valid calldata objects are generally no more than
+    // bytes in length, and so we bound the refunds to that length.
+    //
     // Reference: Ethereum Yellow Paper
     function v1_transactionBaseGas() internal pure returns (uint256) {
-        return 21_000 + 14_698 + (msg.data.length * 16);
+        return 21_000 + 14_698 + (Math.min(msg.data.length, 3000) * 16);
     }
 
     /*
