@@ -20,7 +20,7 @@ import {ForkTestFixtures, SubmitMessageFixture} from "./utils/ForkTestFixtures.s
 
 contract ForkUpgradeTest is Test {
     address private constant GATEWAY_PROXY = 0x27ca963C279c93801941e1eB8799c23f407d68e7;
-    address private constant BEEFY_CLIENT = 0x9FC6a0eEf52BC839cF1A37554044f11782E4e2d3;
+    address private constant BEEFY_CLIENT = 0x1817874feAb3ce053d0F40AbC23870DB35C2AFfc;
 
     // NOTE: Can use tenderly transaction debugger to retrieve existing library address
     address private constant VERIFICATION_ADDR_V1 = 0x90c7F378e9ceD5dD268f0dF987c0838469846Da1;
@@ -33,7 +33,7 @@ contract ForkUpgradeTest is Test {
     address constant internal assetHubAgent = 0xd803472c47a87D7B63E888DE53f03B4191B846a8;
 
     function setUp() public {
-        vm.createSelectFork("https://virtual.mainnet.eu.rpc.tenderly.co/83874628-cd7c-4179-96ad-52dc2710318c", 23419580);
+        vm.createSelectFork("https://virtual.mainnet.eu.rpc.tenderly.co/dc7e68d7-5fac-4a88-a797-01ed4155f437", 23432697);
 
         (UD60x18 exchangeRate, uint128 deliveryCost) = IGatewayV1(GATEWAY_PROXY).pricingParameters();
         assertEq(unwrap(exchangeRate), 2288329519450801);
