@@ -163,16 +163,12 @@ func (li *PolkadotListener) findNextBeefyBlock(blockNumber uint64) (types.Hash, 
 			return nextBeefyBlockHash, fmt.Errorf("fetch block header: %w", err)
 		}
 		latestBeefyBlockNumber := uint64(finalizedBeefyBlockHeader.Number)
-		if latestBeefyBlockNumber <= nextBeefyBlockNumber {
+		if latestBeefyBlockNumber < nextBeefyBlockNumber {
 			// The relay block not finalized yet, just wait and retry
 			time.Sleep(6 * time.Second)
 			continue
-		} else if latestBeefyBlockNumber <= nextBeefyBlockNumber+600 {
-			// The relay block has been finalized not long ago(1 hour), just return the finalized block
-			nextBeefyBlockHash = finalizedBeefyBlockHash
-			break
 		} else {
-			// The relay block has been finalized for a long time, in this case return the next block
+			// The relay block has been finalized, just return the next block
 			// which contains a beefy justification
 			for {
 				if nextBeefyBlockNumber == latestBeefyBlockNumber {
@@ -208,6 +204,6 @@ func (li *PolkadotListener) findNextBeefyBlock(blockNumber uint64) (types.Hash, 
 				nextBeefyBlockNumber++
 			}
 		}
+		return nextBeefyBlockHash, nil
 	}
-	return nextBeefyBlockHash, nil
 }
