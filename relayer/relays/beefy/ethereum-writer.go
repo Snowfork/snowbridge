@@ -122,10 +122,22 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		log.WithError(err).Error("Failed to send initial signature commitment")
 		return err
 	}
+	// Wait for receipt of submitInitial
+	receipt, err := wr.conn.WatchTransaction(ctx, tx, 1)
+	if err != nil {
+		log.WithError(err).Error("Failed to wait for submitInitial")
+		return err
+	}
+	log.WithFields(logrus.Fields{
+		"tx":      tx.Hash().Hex(),
+		"receipt": receipt.BlockNumber,
+	}).Debug("Transaction submitInitial succeeded")
+
+	log.Debug(fmt.Sprintf("Waiting RandaoCommitDelay by %d blocks", wr.blockWaitPeriod+1))
 
 	// Wait RandaoCommitDelay before submit CommitPrevRandao to prevent attacker from manipulating committee memberships
 	// Details in https://eth2book.info/altair/part3/config/preset/#max_seed_lookahead
-	_, err = wr.conn.WatchTransaction(ctx, tx, wr.blockWaitPeriod+1)
+	err = wr.conn.WaitForFutureBlock(ctx, receipt.BlockNumber.Uint64(), wr.blockWaitPeriod+1)
 	if err != nil {
 		log.WithError(err).Error("Failed to wait for RandaoCommitDelay")
 		return err
