@@ -11,7 +11,7 @@ if (process.argv.length != 3) {
 if (process.argv[2] == "monitor") {
     monitor()
         .then(() => {
-            console.log("Oneshot monitoring success.")
+            console.log("One-shot monitoring succeeded.")
             process.exit(0)
         })
         .catch((error) => {
@@ -21,7 +21,7 @@ if (process.argv[2] == "monitor") {
 } else if (process.argv[2] == "init") {
     initializeAlarms()
         .then(() => {
-            console.log("Initialize alarm rules for monitoring success.")
+            console.log("Initialize alarm rules succeeded.")
             process.exit(0)
         })
         .catch((error) => {
@@ -32,7 +32,7 @@ if (process.argv[2] == "monitor") {
     fisherman
         .run()
         .then(() => {
-            console.log("Initialize alarm rules for monitoring success.")
+            console.log("One-shot fisherman succeeded.")
             process.exit(0)
         })
         .catch((error) => {

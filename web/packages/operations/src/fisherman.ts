@@ -4,10 +4,27 @@ import { AbstractProvider } from "ethers"
 import { existsSync } from "fs"
 import { readFile, writeFile } from "fs/promises"
 import { ApiPromise } from "@polkadot/api"
-import { sendForkVotingAlarm } from "./alarm"
+import { sendForkVotingAlarm, sendFutureBlockVotingAlarm } from "./alarm"
+import { pino, type Logger } from "pino"
 
 const CheckpointFilepath = `checkpoint.json`
-const CheckpointInterval = 1000 // blocks
+const CheckpointInterval = process.env["FISHERMAN_CHECKPOINT_INTERVAL"] || "5000" // blocks
+
+const getLogger = (): Logger => {
+    return pino({
+        transport: {
+            target: "pino-pretty",
+            options: {
+                colorize: true,
+            },
+        },
+        level: process.env.PINO_LOG_LEVEL || "info",
+
+        redact: [], // prevent logging of sensitive data
+    })
+}
+
+let logger = getLogger()
 
 export const run = async (): Promise<void> => {
     let env = "local_e2e"
@@ -32,22 +49,31 @@ export const run = async (): Promise<void> => {
         )
     ).number.toNumber()
     const startBlock = await loadCheckPoint()
-    let endBlock = Math.min(latestFinalizedBeefyBlock, startBlock + CheckpointInterval)
-    console.log(
+    let endBlock = Math.min(latestFinalizedBeefyBlock, startBlock + parseInt(CheckpointInterval))
+    logger.info(
         "Scaning NewTicket event from Beefy Client, blocks from %d to %d",
         startBlock,
         endBlock
     )
-    await scanNewTicket(snowbridgeEnv.name, relaychain, ethereum, beefyClient, startBlock, endBlock)
+    await scanNewTicket(
+        snowbridgeEnv.name,
+        relaychain,
+        ethereum,
+        beefyClient,
+        startBlock,
+        endBlock,
+        latestFinalizedBeefyBlock
+    )
     await scanNewMMRRoot(
         snowbridgeEnv.name,
         relaychain,
         ethereum,
         beefyClient,
         startBlock,
-        endBlock
+        endBlock,
+        latestFinalizedBeefyBlock
     )
-    console.log("Saving checkpoint at block %d", endBlock)
+    logger.info("Saving checkpoint at block %d", endBlock)
     await saveCheckPoint(endBlock)
 }
 
@@ -73,7 +99,6 @@ const saveCheckPoint = async (blockNumber: number) => {
         null,
         2
     )
-    console.log("Save Checkpoint:", json)
     await writeFile(CheckpointFilepath, json)
 }
 
@@ -83,7 +108,8 @@ const scanNewTicket = async (
     ethereum: AbstractProvider,
     beefyClient: BeefyClient,
     startBlock: number,
-    endBlock: number
+    endBlock: number,
+    latestBlock: number
 ) => {
     const pastEvents = await beefyClient.queryFilter(
         beefyClient.filters.NewTicket(),
@@ -91,8 +117,7 @@ const scanNewTicket = async (
         endBlock
     )
     for (let event of pastEvents) {
-        console.log("Past NewTicket:", event.args.relayer, event.args.blockNumber)
-        console.log("tx:", event.transactionHash)
+        logger.info("Past NewTicket: %o", event.args)
         let tx = await ethereum.getTransaction(event.transactionHash)
         const parseTransaction = beefyClient.interface.parseTransaction({
             data: tx?.data || "",
@@ -100,17 +125,17 @@ const scanNewTicket = async (
         const commitment = parseTransaction?.args[0]
         const beefyBlockNumber = commitment?.blockNumber
         const beefyMMRRoot = commitment?.payload[0].data
-        console.log("Beefy Block Number:", beefyBlockNumber)
-        console.log("Beefy MMR Root:", beefyMMRRoot)
+        logger.info("Beefy Commitment: %o", commitment)
         const beefyBlockHash = await relaychain.rpc.chain.getBlockHash(beefyBlockNumber)
-        console.log("Beefy Block Hash:", beefyBlockHash.toHex())
         const canonicalMMRRoot = await relaychain.rpc.mmr.root(beefyBlockHash)
-        console.log("Canonical MMR Root:", canonicalMMRRoot.toHex())
+        logger.info("Canonical MMR Root: %s", canonicalMMRRoot.toHex())
         if (canonicalMMRRoot.toHex() != beefyMMRRoot) {
-            console.error("MMR Root mismatch!")
+            logger.fatal("MMR Root mismatch!")
             await sendForkVotingAlarm(network, beefyBlockNumber)
-        } else {
-            console.log("MMR Root match.")
+        }
+        if (beefyBlockNumber > latestBlock) {
+            logger.fatal("Voting on a future block!")
+            await sendFutureBlockVotingAlarm(network, beefyBlockNumber)
         }
     }
 }
@@ -121,7 +146,8 @@ const scanNewMMRRoot = async (
     ethereum: AbstractProvider,
     beefyClient: BeefyClient,
     startBlock: number,
-    endBlock: number
+    endBlock: number,
+    latestBlock: number
 ) => {
     const pastEvents = await beefyClient.queryFilter(
         beefyClient.filters.NewMMRRoot(),
@@ -131,16 +157,17 @@ const scanNewMMRRoot = async (
     for (let event of pastEvents) {
         const beefyMMRRoot = event.args.mmrRoot
         const beefyBlockNumber = event.args.blockNumber
-        console.log("Past NewMMRRoot:", beefyMMRRoot, beefyBlockNumber)
+        logger.info("Past NewMMRRoot: %o", event.args)
         const beefyBlockHash = await relaychain.rpc.chain.getBlockHash(beefyBlockNumber)
-        console.log("Beefy Block Hash:", beefyBlockHash.toHex())
         const canonicalMMRRoot = await relaychain.rpc.mmr.root(beefyBlockHash)
-        console.log("Canonical MMR Root:", canonicalMMRRoot.toHex())
+        logger.info("Canonical MMR Root: %s", canonicalMMRRoot.toHex())
         if (canonicalMMRRoot.toHex() != beefyMMRRoot) {
-            console.error("MMR Root mismatch!")
+            logger.fatal("MMR Root mismatch!")
             await sendForkVotingAlarm(network, Number(beefyBlockNumber))
-        } else {
-            console.log("MMR Root match.")
+        }
+        if (beefyBlockNumber > latestBlock) {
+            logger.fatal("Voting on a future block!")
+            await sendFutureBlockVotingAlarm(network, Number(beefyBlockNumber))
         }
     }
 }
