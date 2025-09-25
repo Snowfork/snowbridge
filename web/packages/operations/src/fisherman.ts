@@ -48,8 +48,9 @@ export const run = async (): Promise<void> => {
             (await relaychain.rpc.beefy.getFinalizedHead()).toU8a()
         )
     ).number.toNumber()
+    const latestEthereumBlock = await ethereum.getBlockNumber()
     const startBlock = await loadCheckPoint()
-    let endBlock = Math.min(latestFinalizedBeefyBlock, startBlock + parseInt(CheckpointInterval))
+    let endBlock = Math.min(latestEthereumBlock, startBlock + parseInt(CheckpointInterval))
     logger.info(
         "Scaning NewTicket event from Beefy Client, blocks from %d to %d",
         startBlock,
