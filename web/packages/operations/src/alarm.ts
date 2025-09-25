@@ -469,3 +469,18 @@ export const initializeAlarms = async () => {
         })
     )
 }
+
+export const sendForkVotingAlarm = async (nameSpace: string, blockNumber: number) => {
+    let client = new CloudWatchClient({})
+    let metricData = [] // Fisherman metrics
+    metricData.push({
+        MetricName: AlarmReason.ForkVoting.toString(),
+        Value: blockNumber,
+    })
+    const command = new PutMetricDataCommand({
+        MetricData: metricData,
+        Namespace: CLOUD_WATCH_NAME_SPACE + "-" + nameSpace,
+    })
+    console.log("Sent fisherman alarm:", JSON.stringify(metricData, null, 2))
+    await client.send(command)
+}
