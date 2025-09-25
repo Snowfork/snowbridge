@@ -617,6 +617,21 @@ export function createERC20ToKusamaTx(
                 },
             ],
         }
+        // hack for bug, to do log issue. Order of assets matter.
+    } else if (isKSM(Direction.ToKusama, tokenLocation)) {
+        assets = {
+            v4: [
+                {
+                    id: NATIVE_TOKEN_LOCATION,
+                    fun: { Fungible: destFeeInSourceNative },
+                },
+                {
+                    id: tokenLocation,
+                    fun: { Fungible: amount },
+                },
+
+            ],
+        }
     } else {
         assets = {
             v4: [
@@ -627,7 +642,7 @@ export function createERC20ToKusamaTx(
                 {
                     id: NATIVE_TOKEN_LOCATION,
                     fun: { Fungible: destFeeInSourceNative },
-                }
+                },
             ],
         }
     }

@@ -104,7 +104,6 @@ export const transferForKusama = async (
             transfer
         )
 
-        console.log(validation.data)
         // Step 4. Check validation logs for errors
         if (validation.logs.find((l) => l.kind == forKusama.ValidationKind.Error)) {
             console.error("validation errors", validation.logs)
@@ -112,13 +111,13 @@ export const transferForKusama = async (
         }
 
         // Step 5. Submit transaction and get receipt for tracking
-        //const response = await forKusama.signAndSend(sourceAssetHub, transfer, SOURCE_ACCOUNT, {
-        //    withSignedTransaction: true,
-        //})
-       // if (!response) {
-        //    throw Error(`Transaction ${response} not included.`)
-       // }
-       // console.log("Success message", response.messageId)
+        const response = await forKusama.signAndSend(sourceAssetHub, transfer, SOURCE_ACCOUNT, {
+            withSignedTransaction: true,
+        })
+        if (!response) {
+            throw Error(`Transaction ${response} not included.`)
+        }
+        console.log("Success message", response.messageId)
 
         await context.destroyContext()
     }
