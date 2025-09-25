@@ -617,7 +617,7 @@ export function createERC20ToKusamaTx(
                 },
             ],
         }
-        // hack for bug, to do log issue. Order of assets matter.
+        // Hack for https://github.com/polkadot-js/api/issues/6214.
     } else if (isKSM(Direction.ToKusama, tokenLocation)) {
         assets = {
             v4: [
