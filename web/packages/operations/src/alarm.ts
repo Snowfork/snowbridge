@@ -337,10 +337,6 @@ export const initializeAlarms = async () => {
         })
     )
 
-    for (let alarm of cloudWatchAlarms) {
-        await client.send(alarm)
-    }
-
     // Insufficient balance in the relay account
     for (const relayName of ["beacon", "execution-assethub"]) {
         let relayAccountBalanceAlarm = new PutMetricAlarmCommand({
@@ -363,7 +359,7 @@ export const initializeAlarms = async () => {
             ComparisonOperator: "LessThanThreshold",
             Threshold: InsufficientBalanceThreshold.Substrate,
         })
-        await client.send(relayAccountBalanceAlarm)
+        cloudWatchAlarms.push(relayAccountBalanceAlarm)
     }
 
     // Insufficient balance in the sovereign account
@@ -382,7 +378,7 @@ export const initializeAlarms = async () => {
         ComparisonOperator: "LessThanThreshold",
         Threshold: InsufficientBalanceThreshold.Substrate,
     })
-    await client.send(sovereignAccountBalanceAlarm)
+    cloudWatchAlarms.push(sovereignAccountBalanceAlarm)
 
     // Indexer service stale
     for (const chain of ["assethub", "bridgehub", "ethereum", "kusama_assethub"]) {
@@ -400,7 +396,7 @@ export const initializeAlarms = async () => {
             ...alarmCommandSharedInput,
             Threshold: IndexerLatencyThreshold,
         })
-        await client.send(indexerAlarm)
+        cloudWatchAlarms.push(indexerAlarm)
     }
 
     // Heartbeat lost
@@ -414,7 +410,7 @@ export const initializeAlarms = async () => {
         Threshold: 1,
         TreatMissingData: "breaching",
     })
-    await client.send(heartbeartAlarm)
+    cloudWatchAlarms.push(heartbeartAlarm)
 
     // To Ethereum V2 stale
     cloudWatchAlarms.push(
@@ -468,6 +464,11 @@ export const initializeAlarms = async () => {
             Threshold: 0,
         })
     )
+
+    // Send all alarms
+    for (let alarm of cloudWatchAlarms) {
+        await client.send(alarm)
+    }
 }
 
 const sendFishermanAlarm = async (nameSpace: string, reason: AlarmReason, blockNumber: number) => {
