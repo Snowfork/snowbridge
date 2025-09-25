@@ -130,9 +130,9 @@ export class NeurowebParachain extends ParachainBase {
     }
 
     async calculateDeliveryFeeInDOT(_destParachainId: number, _xcm: any): Promise<bigint> {
-            console.warn(
-                `${this.specName} does not support calculating xcm delivery fee. Using default.`
-            )
-            return 1_000_000_000n
+        console.warn(
+            `${this.specName} does not support calculating xcm delivery fee. Using default.`
+        )
+        return 1_000_000_000n
     }
 }
