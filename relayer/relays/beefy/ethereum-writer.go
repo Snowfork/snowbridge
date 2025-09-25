@@ -133,7 +133,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		"receipt": receipt.BlockNumber,
 	}).Debug("Transaction submitInitial succeeded")
 
-	log.Debug(fmt.Printf("Waiting RandaoCommitDelay by %d blocks", wr.blockWaitPeriod+1))
+	log.Debug(fmt.Sprintf("Waiting RandaoCommitDelay by %d blocks", wr.blockWaitPeriod+1))
 
 	// Wait RandaoCommitDelay before submit CommitPrevRandao to prevent attacker from manipulating committee memberships
 	// Details in https://eth2book.info/altair/part3/config/preset/#max_seed_lookahead
