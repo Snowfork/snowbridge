@@ -390,6 +390,8 @@ export async function getDeliveryFee(
         totalFeeInNative = totalFeeInNativeRes
         assetHubExecutionFeeNative = assetHubExecutionFeeNativeRes
         returnToSenderExecutionFeeNative = returnToSenderExecutionFeeNativeRes
+    } else if (registry.parachains[parachain].info.specName == "origintrail-parachain") {
+       // Use trac for fee asset
     }
 
     return {

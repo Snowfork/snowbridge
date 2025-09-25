@@ -119,16 +119,6 @@ export class NeurowebParachain extends ParachainBase {
         return BigInt(accountData?.balance ?? 0n)
     }
 
-    createWrapTx(amount: bigint): SubmittableExtrinsic<"promise", ISubmittableResult> {
-        // TODO: Delete, unused
-        return this.provider.tx.wrapper.tracWrap(amount)
-    }
-
-    createUnwrapTx(amount: bigint): SubmittableExtrinsic<"promise", ISubmittableResult> {
-        // TODO: Delete, unused
-        return this.provider.tx.wrapper.tracUnwrap(amount)
-    }
-
     async calculateDeliveryFeeInDOT(_destParachainId: number, _xcm: any): Promise<bigint> {
         console.warn(
             `${this.specName} does not support calculating xcm delivery fee. Using default.`
