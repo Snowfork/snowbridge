@@ -149,7 +149,7 @@ ssh-add /path/to/snowbridge-relayers-key.pem
 ansible-playbook -i inventory/message-relayers/aws_ec2.yml alarm.yml
 ```
 
-Test the alarms by trigging a failure condition (i.e. change the URL of one of the service endpoints to an invalid value).
+Test the alarms by triggering a failure condition (i.e. change the URL of one of the service endpoints to an invalid value).
 
 ## 2. Upgrade
 
