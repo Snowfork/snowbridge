@@ -121,9 +121,18 @@ fn validator_proof(
 }
 
 #[derive(Clone, Debug)]
+/// The type of equivocation to perform - either an equivocation against a
+/// finalized block, or against a future block height.
 enum EquivocationType {
 	FutureBlockEquivocation,
 	ForkEquivocation,
+}
+
+#[derive(Clone, Debug)]
+/// The session that the equivocation's payload claims to be part of.
+enum EquivocationSession {
+	CurrentSession,
+	NextSession,
 }
 
 #[derive(Clone)]
@@ -131,6 +140,7 @@ struct TestConfig {
 	submit_initial: bool,
 	submit_final: bool,
 	report_equivocation: bool,
+	report_session_delay: u32,
 }
 
 #[tokio::test]
@@ -146,16 +156,37 @@ async fn malicious_payload() {
 		.await
 		.expect("subscribe to blocks");
 
-	let test_config =
-		TestConfig { submit_initial: true, submit_final: false, report_equivocation: false };
-
-	let equivocation_variants =
-		vec![EquivocationType::ForkEquivocation, EquivocationType::FutureBlockEquivocation];
-	for equivocation_variant in equivocation_variants.clone() {
-		println!("Testing malicious payload with equivocation variant: {:?}", equivocation_variant);
+	let equivocation_variants = vec![
+		(EquivocationType::ForkEquivocation, EquivocationSession::CurrentSession, 0),
+		(EquivocationType::ForkEquivocation, EquivocationSession::NextSession, 0),
+		(EquivocationType::ForkEquivocation, EquivocationSession::CurrentSession, 1),
+		(EquivocationType::ForkEquivocation, EquivocationSession::NextSession, 1),
+		// (EquivocationType::ForkEquivocation, EquivocationSession::CurrentSession, 5),
+		// (EquivocationType::ForkEquivocation, EquivocationSession::NextSession, 5),
+		(EquivocationType::FutureBlockEquivocation, EquivocationSession::CurrentSession, 0),
+		(EquivocationType::FutureBlockEquivocation, EquivocationSession::NextSession, 0),
+		(EquivocationType::FutureBlockEquivocation, EquivocationSession::CurrentSession, 1),
+		(EquivocationType::FutureBlockEquivocation, EquivocationSession::NextSession, 1),
+		// (EquivocationType::ForkEquivocation, EquivocationSession::CurrentSession, 5),
+		// (EquivocationType::ForkEquivocation, EquivocationSession::NextSession, 5),
+	];
+	for (equivocation_variant, equivocation_claimed_session, report_session_delay) in
+		equivocation_variants.clone()
+	{
+		println!(
+			"Testing malicious payload with {:?} {:?}, reporting delay: {}",
+			equivocation_variant, equivocation_claimed_session, report_session_delay
+		);
+		println!("Testing with report_next_session = {}", report_session_delay);
 		malicious_payload_inner(
-			equivocation_variant,
-			test_config.clone(),
+			equivocation_variant.clone(),
+			equivocation_claimed_session.clone(),
+			TestConfig {
+				submit_initial: true,
+				submit_final: false,
+				report_equivocation: false,
+				report_session_delay,
+			},
 			&test_clients,
 			&mut blocks_sub,
 		)
@@ -190,6 +221,7 @@ async fn malicious_payload() {
 
 async fn malicious_payload_inner(
 	equivocation_type: EquivocationType,
+	equivocation_session: EquivocationSession,
 	test_config: TestConfig,
 	test_clients: &TestClients,
 	blocks_sub: &mut subxt::backend::StreamOf<
@@ -234,10 +266,15 @@ async fn malicious_payload_inner(
 		.await
 		.expect("beefy client initialized");
 
+	let equivocation_session = match equivocation_session {
+		EquivocationSession::CurrentSession => current_validator_set.id as u64,
+		EquivocationSession::NextSession => (current_validator_set.id as u64) + 1,
+	};
+
 	let commitment = Commitment {
 		payload: payload.clone(),
 		blockNumber: equivocation_block,
-		validatorSetID: (current_validator_set.id as u64),
+		validatorSetID: equivocation_session,
 	};
 
 	let malicious_suris = vec!["//Westend04", "//Westend01", "//Westend02"];
@@ -333,17 +370,15 @@ async fn malicious_payload_inner(
 			.expect("get randao commit delay");
 		println!("RANDAO commit delay: {:?}", commit_delay);
 
-		let call = test_clients
-			.beefy_client
-			.submitInitial(commitment.clone(), bitfield.clone(), proof);
+		let call =
+			test_clients
+				.beefy_client
+				.submitInitial(commitment.clone(), bitfield.clone(), proof);
 		let result = call.gas_price(higher_gas_price).send().await;
 		if result.is_ok() {
 			println!("successful submitInit: {:?}", result.as_ref().unwrap());
 		} else {
-			println!(
-				"{:?}",
-				result.as_ref().err().unwrap()
-			);
+			println!("{:?}", result.as_ref().err().unwrap());
 		}
 		assert!(result.is_ok());
 		println!("waiting for receipt");
@@ -431,11 +466,44 @@ async fn malicious_payload_inner(
 		// let validator_set_id = beefy_storage_api.validator_set_id();
 		// println!("validator_set_id: {:?}", validator_set_id);
 
+		if test_config.report_session_delay > 0 {
+			println!("Waiting for next session...");
+			let session_storage_api = relaychain::api::session::storage::StorageApi;
+			let current_session_index_address = session_storage_api.current_index();
+			let current_session_index = test_clients
+				.relaychain_client
+				.storage()
+				.at_latest()
+				.await
+				.expect("can not connect to relaychain")
+				.fetch(&current_session_index_address)
+				.await
+				.expect("fetch current session index")
+				.expect("current session index is not None");
+
+			let mut iter_session_index = current_session_index;
+			let target_session_index = current_session_index + test_config.report_session_delay;
+			while iter_session_index < target_session_index {
+				println!("Waiting for validator set to change to {}...", target_session_index);
+				iter_session_index = test_clients
+					.relaychain_client
+					.storage()
+					.at_latest()
+					.await
+					.expect("can not connect to relaychain")
+					.fetch(&current_session_index_address)
+					.await
+					.expect("fetch current session index")
+					.expect("current session index is not None");
+				std::thread::sleep(std::time::Duration::from_secs(6));
+			}
+		}
+
 		let key_ownership_proof = {
 			let proof_query = beefy_api::BeefyApi::generate_key_ownership_proof(
 				&beefy_api::BeefyApi,
 				// validator_set_id,
-				current_validator_set.id as u64,
+				equivocation_session,
 				// 0,
 				Public { 0: malicious_authority.public().0 },
 			);
@@ -488,7 +556,10 @@ async fn malicious_payload_inner(
 
 				let ancestry_proof = {
 					let ancestry_proof_substrate: MmrAncestryProof<subxt::utils::H256> = client
-						.request("mmr_generateAncestryProof", vec![equivocation_block, header.number])
+						.request(
+							"mmr_generateAncestryProof",
+							vec![equivocation_block, header.number],
+						)
 						.await
 						.expect("get ancestry proof");
 
