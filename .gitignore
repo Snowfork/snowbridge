@@ -10,6 +10,8 @@ node_modules/
 #Intellij project file
 .idea
 
+.history
+
 # asdf plugin versions
 .tool-versions
 
@@ -24,6 +26,7 @@ node_modules/
 
 .direnv
 .envrc
+.env
 parachain/build_rs_cov.profraw
 compiler_config.json
 contracts/beefy-state.json

@@ -6,7 +6,7 @@ import {console2} from "forge-std/console2.sol";
 import {Script} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
-import {GatewayTanssi202506} from "../src/upgrades/GatewayTanssi202506.sol";
+import {GatewayTanssi202509} from "../src/upgrades/GatewayTanssi202509.sol";
 import {HelperConfig} from "./HelperConfig.sol";
 import {UpgradeParams} from "../src/Params.sol";
 
@@ -29,7 +29,7 @@ contract DeployLocal is Script {
         vm.startBroadcast();
         HelperConfig.GatewayConfig memory gatewayConfig = helperConfig.getGatewayConfig();
 
-        GatewayTanssi202506 gatewayLogic = new GatewayTanssi202506(
+        GatewayTanssi202509 gatewayLogic = new GatewayTanssi202509(
             address(gatewayConfig.beefyClient),
             address(gatewayConfig.agentExecutor),
             gatewayConfig.bridgeHubParaID,
