@@ -156,6 +156,13 @@ async fn malicious_payload() {
 		.await
 		.expect("subscribe to blocks");
 
+	let mut blocks_sub_best = test_clients
+		.relaychain_client
+		.blocks()
+		.subscribe_best()
+		.await
+		.expect("subscribe to blocks");
+
 	let equivocation_variants = vec![
 		(EquivocationType::ForkEquivocation, EquivocationSession::CurrentSession, 0),
 		(EquivocationType::ForkEquivocation, EquivocationSession::NextSession, 0),
@@ -188,13 +195,13 @@ async fn malicious_payload() {
 				report_session_delay,
 			},
 			&test_clients,
-			&mut blocks_sub,
+			&mut blocks_sub_best,
 		)
 		.await;
 	}
 
 	let mut slashed_event_count = 0;
-	// Watch blocks until offence & slash are reported
+	// Watch blocks until all offenders are slashed
 	while let Some(block) = blocks_sub.next().await {
 		let block = block.expect("get block");
 		let block_number = block.header().number;
@@ -211,6 +218,11 @@ async fn malicious_payload() {
 		if slashed_events.len() > 0 {
 			println!("Slashed events found in block #{}: {:?}", block_number, slashed_events);
 			slashed_event_count += slashed_events.len();
+			println!(
+				"Total slashed event count: {} / {}",
+				slashed_event_count,
+				equivocation_variants.len()
+			);
 		}
 		if slashed_event_count >= equivocation_variants.len() {
 			println!("Slashed event count reached: {}", slashed_event_count);
