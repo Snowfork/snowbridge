@@ -55,7 +55,7 @@ export const transferForKusama = async (
     }
 
     let tokenAddress
-    if (tokenName == "DOT" || tokenName == "KSM") {
+    if (tokenName == "DOT" || tokenName == "KSM" ||  tokenName == "WUD") {
         const assets = registry.parachains[registry.assetHubParaId].assets
         for (const [token, asset] of Object.entries(assets)) {
             if (asset.symbol === tokenName) {
