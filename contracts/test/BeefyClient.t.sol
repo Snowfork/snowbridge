@@ -835,7 +835,7 @@ contract BeefyClientTest is Test {
         beefyClient.copyCounters();
         (,,, Uint16Array memory currentUsageCounters) = beefyClient.currentValidatorSet();
         (,,, Uint16Array memory nextUsageCounters) = beefyClient.nextValidatorSet();
-        // assert(currentUsageCounters.data.length == nextUsageCounters.data.length);
+        assert(currentUsageCounters.data.length == nextUsageCounters.data.length);
         assert(beefyClient.getValidatorCounter(false, 799) == 7);
         assert(beefyClient.getValidatorCounter(true, 799) == 0);
     }
