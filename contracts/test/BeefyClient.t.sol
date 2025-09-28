@@ -10,6 +10,7 @@ import {BeefyClient} from "../src/BeefyClient.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
+import {Uint16Array} from "../src/utils/Uint16Array.sol";
 
 contract BeefyClientTest is Test {
     using stdJson for string;
@@ -832,6 +833,17 @@ contract BeefyClientTest is Test {
 
     function testStorageToStorageCopies() public {
         beefyClient.copyCounters();
+        (,,, Uint16Array memory currentUsageCounters) = beefyClient.currentValidatorSet();
+        (,,, Uint16Array memory nextUsageCounters) = beefyClient.nextValidatorSet();
+        // assert(currentUsageCounters.data.length == nextUsageCounters.data.length);
+        assert(beefyClient.getValidatorCounter(false, 799) == 7);
+        assert(beefyClient.getValidatorCounter(true, 799) == 0);
+    }
+
+    function testCounterByStorageDeepCopy() public {
+        beefyClient.copyCountersByDeepCopy();
+        assert(beefyClient.getValidatorCounter(false, 799) == 7);
+        assert(beefyClient.getValidatorCounter(true, 799) == 0);
     }
 
     function testFuzzInitializationValidation(uint128 currentId, uint128 nextId) public {

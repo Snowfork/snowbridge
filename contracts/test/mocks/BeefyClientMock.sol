@@ -67,12 +67,28 @@ contract BeefyClientMock is BeefyClient {
 
         // Perform the copy
         currentValidatorSet = nextValidatorSet;
+        nextValidatorSet.id = nextValidatorSet.id + 1;
+        nextValidatorSet.usageCounters = createUint16Array(800);
+    }
 
-        assert(
-            currentValidatorSet.usageCounters.data.length
-                == nextValidatorSet.usageCounters.data.length
-        );
-        assert(currentValidatorSet.usageCounters.get(799) == 7);
+    function copyCountersByDeepCopy() external {
+        currentValidatorSet.usageCounters = createUint16Array(1000);
+        for (uint256 i = 0; i < 1000; i++) {
+            currentValidatorSet.usageCounters.set(i, 5);
+        }
+        nextValidatorSet.usageCounters = createUint16Array(800);
+        for (uint256 i = 0; i < 800; i++) {
+            nextValidatorSet.usageCounters.set(i, 7);
+        }
+
+        // Perform the replacement by deep copy
+        currentValidatorSet.id = nextValidatorSet.id;
+        currentValidatorSet.length = nextValidatorSet.length;
+        currentValidatorSet.root = nextValidatorSet.root;
+        currentValidatorSet.usageCounters.data = nextValidatorSet.usageCounters.data;
+        currentValidatorSet.usageCounters.length = nextValidatorSet.usageCounters.length;
+        nextValidatorSet.id = nextValidatorSet.id + 1;
+        nextValidatorSet.usageCounters = createUint16Array(800);
     }
 
     function getValidatorCounter(bool next, uint256 index) public view returns (uint16) {
