@@ -10,6 +10,7 @@ use jsonrpsee::ws_client::WsClientBuilder;
 use serde_json::Value;
 
 use alloy::primitives::FixedBytes;
+use libsecp256k1::PublicKey;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::beefy_client::{
@@ -326,34 +327,62 @@ async fn malicious_payload_inner(
 
 	let bitfield: Vec<U256> = vec![U256::from(0b0111)];
 
-	let (validator_secp256k1_bytes, validator_set_root, validator_proofs) = {
-		let validator_secp256k1_bytes = vec![
-			hex2array!("fd4de54fb46fb25358323c12484dea951da5db48"),
-			hex2array!("96fade2050ee5b75c01964e556b49a7c53de0bc5"),
-			hex2array!("054426fc7aab50156c0dfcdcd607e7045cc58d9e"),
-			hex2array!("a601c19ad010f21031f7317f08b4f0046db6ce2a"),
-		];
+	let (validator_eth_address_bytes, validator_set_root, validator_proofs) = {
+		let validator_set_query = beefy_api::BeefyApi::validator_set(&beefy_api::BeefyApi);
+		let validator_set_keys = test_clients
+			.relaychain_client
+			.runtime_api()
+			.at_latest()
+			.await
+			.expect("can not connect to relaychain")
+			.call(validator_set_query)
+			.await
+			.expect("runtime query failed")
+			.expect("validator set is not Some");
 
-		let keccak_validator_secp256k1_bytes: Vec<FixedBytes<32>> = validator_secp256k1_bytes
+		let validator_eth_address_bytes = validator_set_keys
+			.validators
+			.iter()
+			.map(|key| {
+				let pubkey = PublicKey::parse_compressed(&key.0).expect("valid public key");
+				let uncompressed = pubkey.serialize();
+				let address = Address::from_raw_public_key(&uncompressed[1..65]);
+				*address.0
+			})
+			.collect::<Vec<[u8; 20]>>();
+
+		assert_eq!(
+			validator_eth_address_bytes,
+			vec![
+				hex2array!("fd4de54fb46fb25358323c12484dea951da5db48"),
+				hex2array!("96fade2050ee5b75c01964e556b49a7c53de0bc5"),
+				hex2array!("054426fc7aab50156c0dfcdcd607e7045cc58d9e"),
+				hex2array!("a601c19ad010f21031f7317f08b4f0046db6ce2a"),
+			]
+		);
+
+		let keccak_validator_eth_address_bytes: Vec<FixedBytes<32>> = validator_eth_address_bytes
 			.iter()
 			.map(|key| FixedBytes(keccak_256(key)))
 			.collect();
 
 		let keccak01 = FixedBytes(keccak_256(
-			&[keccak_validator_secp256k1_bytes[0], keccak_validator_secp256k1_bytes[1]].concat(),
+			&[keccak_validator_eth_address_bytes[0], keccak_validator_eth_address_bytes[1]]
+				.concat(),
 		));
 		let keccak23 = FixedBytes(keccak_256(
-			&[keccak_validator_secp256k1_bytes[2], keccak_validator_secp256k1_bytes[3]].concat(),
+			&[keccak_validator_eth_address_bytes[2], keccak_validator_eth_address_bytes[3]]
+				.concat(),
 		));
 		let validator_set_root = keccak_256(&[keccak01, keccak23].concat());
 
 		let validator_proofs = [
-			[keccak_validator_secp256k1_bytes[1], keccak23],
-			[keccak_validator_secp256k1_bytes[0], keccak23],
-			[keccak_validator_secp256k1_bytes[3], keccak01],
-			[keccak_validator_secp256k1_bytes[2], keccak01],
+			[keccak_validator_eth_address_bytes[1], keccak23],
+			[keccak_validator_eth_address_bytes[0], keccak23],
+			[keccak_validator_eth_address_bytes[3], keccak01],
+			[keccak_validator_eth_address_bytes[2], keccak01],
 		];
-		(validator_secp256k1_bytes, validator_set_root, validator_proofs)
+		(validator_eth_address_bytes, validator_set_root, validator_proofs)
 	};
 
 	println!("validator proofs: {:?}", validator_proofs);
@@ -367,7 +396,7 @@ async fn malicious_payload_inner(
 	let proof = validator_proof(
 		malicious_signatures[signer_index].0.as_slice(),
 		signer_index,
-		&validator_secp256k1_bytes,
+		&validator_eth_address_bytes,
 		&validator_proofs,
 	);
 
@@ -443,7 +472,7 @@ async fn malicious_payload_inner(
 			.filter(|(i, _)| bitfield[0].bit(*i))
 			.map(|(i, sig)| {
 				let sig_bytes = sig.0.as_slice();
-				validator_proof(sig_bytes, i, &validator_secp256k1_bytes, &validator_proofs)
+				validator_proof(sig_bytes, i, &validator_eth_address_bytes, &validator_proofs)
 			})
 			.collect::<Vec<_>>();
 
