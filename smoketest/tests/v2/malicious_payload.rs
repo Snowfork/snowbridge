@@ -10,7 +10,7 @@ use jsonrpsee::ws_client::WsClientBuilder;
 use serde_json::Value;
 
 use alloy::primitives::FixedBytes;
-use libsecp256k1::PublicKey;
+use k256::ecdsa::VerifyingKey;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::beefy_client::{
@@ -344,8 +344,8 @@ async fn malicious_payload_inner(
 			.validators
 			.iter()
 			.map(|key| {
-				let pubkey = PublicKey::parse_compressed(&key.0).expect("valid public key");
-				let uncompressed = pubkey.serialize();
+				let pubkey = VerifyingKey::from_sec1_bytes(&key.0).expect("valid pubkey");
+				let uncompressed = pubkey.to_encoded_point(false).to_bytes();
 				let address = Address::from_raw_public_key(&uncompressed[1..65]);
 				*address.0
 			})

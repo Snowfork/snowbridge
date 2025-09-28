@@ -25,7 +25,7 @@ sp-application-crypto = "40.1.0"
 sp-mmr-primitives = { git = "https://github.com/Lederstrumpf/polkadot-sdk", branch = "rhmb/add-generate-ancestry-proof-mmr-rpc-call" }
 jsonrpsee = { version = "0.25.1", features = ["client"] }
 serde_json = "1.0"
-libsecp256k1 = {version = "0.7.2"}
+k256 = {version = "0.13.4", features = ["serde"]}
 
 [features]
 legacy-v1 = []
