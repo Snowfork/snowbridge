@@ -109,7 +109,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 				log.Info("Performing sync")
 
 				// sleep to ensure that beefy head newer than relay chain block in which the parachain block was accepted.
-				time.Sleep(time.Minute * 1)
+				time.Sleep(time.Minute * 2)
 
 				beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
 
@@ -146,16 +146,18 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 }
 
 func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, paraNonce uint64) error {
+	var cnt uint64
 	for {
 		ethNonce, err := relay.fetchEthereumNonce(ctx)
-		if err != nil {
-			return fmt.Errorf("fetch latest ethereum nonce: %w", err)
-		}
 
-		if ethNonce >= paraNonce {
+		if err == nil && ethNonce >= paraNonce {
 			return nil
 		}
 		time.Sleep(time.Second * 30)
+		cnt++
+		if cnt > 10 {
+			return fmt.Errorf("timeout waiting for messages to be relayed")
+		}
 	}
 }
 
