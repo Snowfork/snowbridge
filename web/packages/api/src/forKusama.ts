@@ -629,7 +629,6 @@ export function createERC20ToKusamaTx(
                     id: tokenLocation,
                     fun: { Fungible: amount },
                 },
-
             ],
         }
     } else {
