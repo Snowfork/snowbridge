@@ -185,14 +185,14 @@ async fn malicious_payload() {
 			"Testing malicious payload with {:?} {:?}, reporting delay: {}",
 			equivocation_variant, equivocation_claimed_session, report_session_delay
 		);
-		println!("Testing with report_next_session = {}", report_session_delay);
+		println!("Testing with report_session_delay = {}", report_session_delay);
 		malicious_payload_inner(
 			equivocation_variant.clone(),
 			equivocation_claimed_session.clone(),
 			TestConfig {
 				submit_initial: true,
 				submit_final: false,
-				report_equivocation: false,
+				report_equivocation: true,
 				report_session_delay,
 			},
 			&test_clients,
@@ -281,7 +281,7 @@ async fn malicious_payload_inner(
 
 	let equivocation_session = match equivocation_session {
 		EquivocationSession::CurrentSession => current_validator_set.id as u64,
-		EquivocationSession::NextSession => (current_validator_set.id as u64) + 1,
+		EquivocationSession::NextSession => current_validator_set.id as u64,
 	};
 
 	let commitment = Commitment {
@@ -290,13 +290,13 @@ async fn malicious_payload_inner(
 		validatorSetID: equivocation_session,
 	};
 
-	let malicious_suris = vec!["//Westend04", "//Westend01", "//Westend02"];
+	let suris = vec!["//Westend04", "//Westend01", "//Westend02", "//Westend03"];
+	let authorities = suris.iter().map(|suri| Pair::from_string(suri, None).unwrap());
 
-	let malicious_authorities =
-		malicious_suris.iter().map(|suri| Pair::from_string(suri, None).unwrap());
+	let malicious_authorities = authorities.take(3).collect::<Vec<_>>();
 	println!(
 		"malicious_authorities: {:?}",
-		malicious_authorities.clone().map(|auth| auth.public()).collect::<Vec<_>>()
+		malicious_authorities.iter().map(|auth| auth.public()).collect::<Vec<_>>(),
 	);
 
 	let sp_payload = sp_consensus_beefy::Payload::from_single_entry(
@@ -316,6 +316,7 @@ async fn malicious_payload_inner(
 	println!("hashed commitment hex: {:?}", hex::encode(hashed_commitment));
 
 	let malicious_signatures = malicious_authorities
+		.iter()
 		.map(|pair| pair.sign_prehashed(hashed_commitment))
 		.collect::<Vec<_>>();
 
@@ -389,9 +390,8 @@ async fn malicious_payload_inner(
 
 	let signer_index = match equivocation_type {
 		EquivocationType::ForkEquivocation => 0, // Fork equivocation uses first signer
-		EquivocationType::FutureBlockEquivocation => 2, // Future block equivocation uses second signer
+		EquivocationType::FutureBlockEquivocation => 2, // Future block equivocation uses third signer
 	};
-	let malicious_authority: Pair = Pair::from_string(malicious_suris[signer_index], None).unwrap();
 
 	let proof = validator_proof(
 		malicious_signatures[signer_index].0.as_slice(),
@@ -546,7 +546,7 @@ async fn malicious_payload_inner(
 				// validator_set_id,
 				equivocation_session,
 				// 0,
-				Public { 0: malicious_authority.public().0 },
+				Public { 0: malicious_authorities[signer_index].public().0 },
 			);
 
 			let key_ownership_proof_bytes = test_clients
@@ -626,7 +626,7 @@ async fn malicious_payload_inner(
 							)]),
 							validator_set_id: sp_commitment.validator_set_id,
 						},
-						id: Public { 0: malicious_authority.public().0 },
+						id: Public { 0: malicious_authorities[signer_index].public().0 },
 						signature: Signature(malicious_signatures[signer_index].0),
 					},
 				};
@@ -655,7 +655,7 @@ async fn malicious_payload_inner(
 							)]),
 							validator_set_id: sp_commitment.validator_set_id,
 						},
-						id: Public { 0: malicious_authority.public().0 },
+						id: Public { 0: malicious_authorities[signer_index].public().0 },
 						signature: Signature(malicious_signatures[signer_index].0),
 					},
 				};
