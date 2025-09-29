@@ -4,14 +4,14 @@ import { initializeAlarms } from "./alarm"
 import * as fisherman from "./fisherman"
 
 if (process.argv.length != 3) {
-    console.error("Expected one argument with Enum from `start|cron|init`")
+    console.error("Expected one argument with Enum from `monitor|init|fisherman`")
     process.exit(1)
 }
 
-if (process.argv[2] == "start") {
+if (process.argv[2] == "monitor") {
     monitor()
         .then(() => {
-            console.log("Oneshot monitoring success.")
+            console.log("One-shot monitoring succeeded.")
             process.exit(0)
         })
         .catch((error) => {
@@ -21,7 +21,7 @@ if (process.argv[2] == "start") {
 } else if (process.argv[2] == "init") {
     initializeAlarms()
         .then(() => {
-            console.log("Initialize alarm rules for monitoring success.")
+            console.log("Initialize alarm rules succeeded.")
             process.exit(0)
         })
         .catch((error) => {
@@ -32,7 +32,7 @@ if (process.argv[2] == "start") {
     fisherman
         .run()
         .then(() => {
-            console.log("Initialize alarm rules for monitoring success.")
+            console.log("One-shot fisherman succeeded.")
             process.exit(0)
         })
         .catch((error) => {

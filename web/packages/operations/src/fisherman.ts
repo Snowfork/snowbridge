@@ -1,5 +1,30 @@
-import { Context, environment } from "@snowbridge/api"
+import { Context, contextConfigFor, environment } from "@snowbridge/api"
+import { BeefyClient } from "@snowbridge/contract-types"
 import { AbstractProvider } from "ethers"
+import { existsSync } from "fs"
+import { readFile, writeFile } from "fs/promises"
+import { ApiPromise } from "@polkadot/api"
+import { sendForkVotingAlarm, sendFutureBlockVotingAlarm } from "./alarm"
+import { pino, type Logger } from "pino"
+
+const CheckpointFilepath = `checkpoint.json`
+const CheckpointInterval = process.env["FISHERMAN_CHECKPOINT_INTERVAL"] || "5000" // blocks
+
+const getLogger = (): Logger => {
+    return pino({
+        transport: {
+            target: "pino-pretty",
+            options: {
+                colorize: true,
+            },
+        },
+        level: process.env.PINO_LOG_LEVEL || "info",
+
+        redact: [], // prevent logging of sensitive data
+    })
+}
+
+let logger = getLogger()
 
 export const run = async (): Promise<void> => {
     let env = "local_e2e"
@@ -11,74 +36,139 @@ export const run = async (): Promise<void> => {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const { config, name, ethChainId } = snowbridgeEnv
+    const ctx = new Context(contextConfigFor(env))
 
-    const parachains: { [paraId: string]: string } = {}
-    parachains[config.BRIDGE_HUB_PARAID.toString()] =
-        process.env["BRIDGE_HUB_URL"] ?? config.PARACHAINS[config.BRIDGE_HUB_PARAID.toString()]
-    parachains[config.ASSET_HUB_PARAID.toString()] =
-        process.env["ASSET_HUB_URL"] ?? config.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
-
-    const ethChains: { [ethChainId: string]: string | AbstractProvider } = {}
-    Object.keys(config.ETHEREUM_CHAINS).forEach(
-        (ethChainId) => (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId])
-    )
-    if (process.env["EXECUTION_NODE_URL"]) {
-        ethChains[ethChainId.toString()] = process.env["EXECUTION_NODE_URL"]
-    }
-
-    const ctx = new Context({
-        environment: name,
-        ethereum: {
-            ethChainId,
-            ethChains,
-            beacon_url: process.env["BEACON_NODE_URL"] || config.BEACON_HTTP_API,
-        },
-        polkadot: {
-            assetHubParaId: config.ASSET_HUB_PARAID,
-            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
-            parachains: parachains,
-            relaychain: process.env["RELAY_CHAIN_URL"] || config.RELAY_CHAIN_URL,
-        },
-        appContracts: {
-            gateway: config.GATEWAY_CONTRACT,
-            beefy: config.BEEFY_CONTRACT,
-        },
-        graphqlApiUrl: process.env["GRAPHQL_API_URL"] || config.GRAPHQL_API_URL,
-    })
     const relaychain = await ctx.relaychain()
     await relaychain.isReady
-    console.log("Connected to relaychain:", relaychain.runtimeChain.toString())
+    const ethereum = await ctx.ethereum()
     const beefyClient = await ctx.beefyClient()
-    const startBlock = process.env["FISHERMAN_START_BLOCK"]
-        ? parseInt(process.env["FISHERMAN_START_BLOCK"])
-        : 23423100
+
+    const latestFinalizedBeefyBlock = (
+        await relaychain.rpc.chain.getHeader(
+            (await relaychain.rpc.beefy.getFinalizedHead()).toU8a()
+        )
+    ).number.toNumber()
+    const latestEthereumBlock = await ethereum.getBlockNumber()
+    const startBlock = await loadCheckPoint()
+    let endBlock = Math.min(latestEthereumBlock, startBlock + parseInt(CheckpointInterval))
+    logger.info(
+        "Scaning NewTicket event from Beefy Client, blocks from %d to %d",
+        startBlock,
+        endBlock
+    )
+    await scanNewTicket(
+        snowbridgeEnv.name,
+        relaychain,
+        ethereum,
+        beefyClient,
+        startBlock,
+        endBlock,
+        latestFinalizedBeefyBlock
+    )
+    await scanNewMMRRoot(
+        snowbridgeEnv.name,
+        relaychain,
+        ethereum,
+        beefyClient,
+        startBlock,
+        endBlock,
+        latestFinalizedBeefyBlock
+    )
+    logger.info("Saving checkpoint at block %d", endBlock)
+    await saveCheckPoint(endBlock)
+}
+
+const loadCheckPoint = async () => {
+    let checkpointBlock
+    if (existsSync(CheckpointFilepath)) {
+        const json = await readFile(CheckpointFilepath, "utf-8")
+        const obj = JSON.parse(json)
+        checkpointBlock = obj.lastProcessedBlock
+    } else {
+        checkpointBlock = process.env["FISHERMAN_START_BLOCK"]
+            ? parseInt(process.env["FISHERMAN_START_BLOCK"])
+            : 23423100
+    }
+    return checkpointBlock
+}
+
+const saveCheckPoint = async (blockNumber: number) => {
+    const json = JSON.stringify(
+        {
+            lastProcessedBlock: blockNumber,
+        },
+        null,
+        2
+    )
+    await writeFile(CheckpointFilepath, json)
+}
+
+const scanNewTicket = async (
+    network: string,
+    relaychain: ApiPromise,
+    ethereum: AbstractProvider,
+    beefyClient: BeefyClient,
+    startBlock: number,
+    endBlock: number,
+    latestBlock: number
+) => {
     const pastEvents = await beefyClient.queryFilter(
         beefyClient.filters.NewTicket(),
         startBlock,
-        startBlock + 1000
+        endBlock
     )
     for (let event of pastEvents) {
-        console.log("Past NewTicket:", event.args.relayer, event.args.blockNumber)
-        console.log("tx:", event.transactionHash)
-        let tx = await ctx.ethereum().getTransaction(event.transactionHash)
+        logger.info("Past NewTicket: %o", event.args)
+        let tx = await ethereum.getTransaction(event.transactionHash)
         const parseTransaction = beefyClient.interface.parseTransaction({
             data: tx?.data || "",
         })
         const commitment = parseTransaction?.args[0]
         const beefyBlockNumber = commitment?.blockNumber
         const beefyMMRRoot = commitment?.payload[0].data
-        console.log("Beefy Block Number:", beefyBlockNumber)
-        console.log("Beefy MMR Root:", beefyMMRRoot)
+        logger.info("Beefy Commitment: %o", commitment)
         const beefyBlockHash = await relaychain.rpc.chain.getBlockHash(beefyBlockNumber)
-        console.log("Beefy Block Hash:", beefyBlockHash.toHex())
         const canonicalMMRRoot = await relaychain.rpc.mmr.root(beefyBlockHash)
-        console.log("Canonical MMR Root:", canonicalMMRRoot.toHex())
+        logger.info("Canonical MMR Root: %s", canonicalMMRRoot.toHex())
         if (canonicalMMRRoot.toHex() != beefyMMRRoot) {
-            console.error("MMR Root mismatch!")
-            //Todo: send alarms
-        } else {
-            console.log("MMR Root match.")
+            logger.fatal("MMR Root mismatch!")
+            await sendForkVotingAlarm(network, beefyBlockNumber)
+        }
+        if (beefyBlockNumber > latestBlock) {
+            logger.fatal("Voting on a future block!")
+            await sendFutureBlockVotingAlarm(network, beefyBlockNumber)
+        }
+    }
+}
+
+const scanNewMMRRoot = async (
+    network: string,
+    relaychain: ApiPromise,
+    ethereum: AbstractProvider,
+    beefyClient: BeefyClient,
+    startBlock: number,
+    endBlock: number,
+    latestBlock: number
+) => {
+    const pastEvents = await beefyClient.queryFilter(
+        beefyClient.filters.NewMMRRoot(),
+        startBlock,
+        endBlock
+    )
+    for (let event of pastEvents) {
+        const beefyMMRRoot = event.args.mmrRoot
+        const beefyBlockNumber = event.args.blockNumber
+        logger.info("Past NewMMRRoot: %o", event.args)
+        const beefyBlockHash = await relaychain.rpc.chain.getBlockHash(beefyBlockNumber)
+        const canonicalMMRRoot = await relaychain.rpc.mmr.root(beefyBlockHash)
+        logger.info("Canonical MMR Root: %s", canonicalMMRRoot.toHex())
+        if (canonicalMMRRoot.toHex() != beefyMMRRoot) {
+            logger.fatal("MMR Root mismatch!")
+            await sendForkVotingAlarm(network, Number(beefyBlockNumber))
+        }
+        if (beefyBlockNumber > latestBlock) {
+            logger.fatal("Voting on a future block!")
+            await sendFutureBlockVotingAlarm(network, Number(beefyBlockNumber))
         }
     }
 }
