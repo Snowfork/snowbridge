@@ -53,7 +53,7 @@ const unwrapSnowTRAC = async () => {
 
         const wrapTx = neuroWeb.createUnwrapTx(balance)
 
-       /* await wrapTx.signAndSend(POLKADOT_ACCOUNT, { nonce: -1 }, (result) => {
+        /* await wrapTx.signAndSend(POLKADOT_ACCOUNT, { nonce: -1 }, (result) => {
             console.log(`Transaction status: ${result.status}`)
             if (result.status.isInBlock) {
                 console.log(`Transaction included in block: ${result.status.asInBlock}`)
