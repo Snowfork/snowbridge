@@ -11,10 +11,10 @@ const ACCOUNT_BALANCE_SNS_TOPIC = process.env["ACCOUNT_BALANCE_SNS_TOPIC"] || ""
 
 const LatencyDashboard =
     process.env["LATENCY_DASHBOARD_URL"] ||
-    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Latency"
+    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Latency?start=PT168H&end=null"
 const BalanceDashboard =
     process.env["BALANCE_DASHBOARD_URL"] ||
-    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Balance"
+    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Balance?start=PT168H&end=null"
 
 export enum AlarmReason {
     BeefyStale = "BeefyStale",
@@ -27,6 +27,8 @@ export enum AlarmReason {
     HeartbeatLost = "HeartbeatLost",
     ToPolkadotV2Stale = "ToPolkadotV2Stale",
     ToEthereumV2Stale = "ToEthereumV2Stale",
+    FutureBlockVoting = "FutureBlockVoting",
+    ForkVoting = "ForkVoting",
 }
 
 export const InsufficientBalanceThreshold = {
@@ -335,10 +337,6 @@ export const initializeAlarms = async () => {
         })
     )
 
-    for (let alarm of cloudWatchAlarms) {
-        await client.send(alarm)
-    }
-
     // Insufficient balance in the relay account
     for (const relayName of ["beacon", "execution-assethub"]) {
         let relayAccountBalanceAlarm = new PutMetricAlarmCommand({
@@ -361,7 +359,7 @@ export const initializeAlarms = async () => {
             ComparisonOperator: "LessThanThreshold",
             Threshold: InsufficientBalanceThreshold.Substrate,
         })
-        await client.send(relayAccountBalanceAlarm)
+        cloudWatchAlarms.push(relayAccountBalanceAlarm)
     }
 
     // Insufficient balance in the sovereign account
@@ -380,7 +378,7 @@ export const initializeAlarms = async () => {
         ComparisonOperator: "LessThanThreshold",
         Threshold: InsufficientBalanceThreshold.Substrate,
     })
-    await client.send(sovereignAccountBalanceAlarm)
+    cloudWatchAlarms.push(sovereignAccountBalanceAlarm)
 
     // Indexer service stale
     for (const chain of ["assethub", "bridgehub", "ethereum", "kusama_assethub"]) {
@@ -398,7 +396,7 @@ export const initializeAlarms = async () => {
             ...alarmCommandSharedInput,
             Threshold: IndexerLatencyThreshold,
         })
-        await client.send(indexerAlarm)
+        cloudWatchAlarms.push(indexerAlarm)
     }
 
     // Heartbeat lost
@@ -412,7 +410,7 @@ export const initializeAlarms = async () => {
         Threshold: 1,
         TreatMissingData: "breaching",
     })
-    await client.send(heartbeartAlarm)
+    cloudWatchAlarms.push(heartbeartAlarm)
 
     // To Ethereum V2 stale
     cloudWatchAlarms.push(
@@ -437,4 +435,61 @@ export const initializeAlarms = async () => {
             Threshold: 1800, // 0.5 hour
         })
     )
+
+    // Fisherman FutureBlockVoting equivocation alarm
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.FutureBlockVoting.toString() + "-" + name,
+            MetricName: AlarmReason.FutureBlockVoting.toString(),
+            AlarmDescription: AlarmReason.FutureBlockVoting.toString(),
+            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            ...alarmCommandSharedInput,
+            Period: 120,
+            EvaluationPeriods: 1,
+            DatapointsToAlarm: 1,
+            Threshold: 0,
+        })
+    )
+    // Fisherman ForkVoting equivocation alarm
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.ForkVoting.toString() + "-" + name,
+            MetricName: AlarmReason.ForkVoting.toString(),
+            AlarmDescription: AlarmReason.ForkVoting.toString(),
+            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            ...alarmCommandSharedInput,
+            Period: 120,
+            EvaluationPeriods: 1,
+            DatapointsToAlarm: 1,
+            Threshold: 0,
+        })
+    )
+
+    // Send all alarms
+    for (let alarm of cloudWatchAlarms) {
+        await client.send(alarm)
+    }
+}
+
+const sendFishermanAlarm = async (nameSpace: string, reason: AlarmReason, blockNumber: number) => {
+    let client = new CloudWatchClient({})
+    let metricData = [] // Fisherman metrics
+    metricData.push({
+        MetricName: reason.toString(),
+        Value: blockNumber,
+    })
+    const command = new PutMetricDataCommand({
+        MetricData: metricData,
+        Namespace: CLOUD_WATCH_NAME_SPACE + "-" + nameSpace,
+    })
+    console.log("Sent fisherman alarm:", JSON.stringify(metricData, null, 2))
+    await client.send(command)
+}
+
+export const sendForkVotingAlarm = async (nameSpace: string, blockNumber: number) => {
+    await sendFishermanAlarm(nameSpace, AlarmReason.ForkVoting, blockNumber)
+}
+
+export const sendFutureBlockVotingAlarm = async (nameSpace: string, blockNumber: number) => {
+    await sendFishermanAlarm(nameSpace, AlarmReason.FutureBlockVoting, blockNumber)
 }
