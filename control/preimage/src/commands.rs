@@ -265,6 +265,21 @@ pub fn set_assethub_fee(fee: u128) -> AssetHubRuntimeCall {
     )
 }
 
+pub fn set_assethub_fee_v2(fee: u128) -> AssetHubRuntimeCall {
+    let asset_hub_outbound_fee_storage_key: Vec<u8> =
+        twox_128(b":BridgeHubEthereumBaseFeeV2:").to_vec();
+    let asset_hub_outbound_fee_encoded: Vec<u8> = fee.encode();
+
+    AssetHubRuntimeCall::System(
+        crate::asset_hub_runtime::runtime_types::frame_system::pallet::Call::set_storage {
+            items: vec![(
+                asset_hub_outbound_fee_storage_key,
+                asset_hub_outbound_fee_encoded,
+            )],
+        },
+    )
+}
+
 pub fn force_checkpoint(params: &ForceCheckpointArgs) -> BridgeHubRuntimeCall {
     let mut file = File::open(params.checkpoint.clone()).expect("File not found");
     let mut data = String::new();
