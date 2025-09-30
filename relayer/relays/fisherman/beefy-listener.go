@@ -126,7 +126,6 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 					if err != nil {
 						log.WithError(err).Warning("Failed to decode transaction call data")
 					}
-					// TODO: handle tickets submitted for future blocks
 					latestHash, latestBlock, err := li.getLatestBlockInfo()
 					if err != nil {
 						return fmt.Errorf("get latest block info: %w", err)
@@ -134,6 +133,7 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 					latestBlockNumber := uint64(latestBlock.Block.Header.Number)
 
 					if event.BlockNumber > uint64(latestBlockNumber) {
+						// Future block equivocation handling
 						validatorProof, err := li.parseSubmitInitialProof(callData)
 						if err != nil {
 							log.WithError(err).Warning("Failed to decode transaction call data")
