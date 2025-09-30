@@ -25,6 +25,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
+	"github.com/snowfork/snowbridge/relayer/relays/error_tracking"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -39,6 +40,7 @@ type Relay struct {
 	headerCache     *ethereum.HeaderCache
 	ofac            *ofac.OFAC
 	chainID         *big.Int
+	errorTracker    *error_tracking.ErrorTracker
 }
 
 func NewRelay(
@@ -46,8 +48,9 @@ func NewRelay(
 	keypair *sr25519.Keypair,
 ) *Relay {
 	return &Relay{
-		config:  config,
-		keypair: keypair,
+		config:       config,
+		keypair:      keypair,
+		errorTracker: error_tracking.NewErrorTracker(10),
 	}
 }
 
@@ -169,12 +172,13 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				}).Info("Found events for nonce")
 
 				for _, ev := range events {
-					err := r.waitAndSend(ctx, ev)
+					err := r.waitAndSendWithRetry(ctx, ev)
 					if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
 						log.WithField("nonce", ev.Nonce).Info("beacon header not finalized yet")
 						continue
 					} else if err != nil {
-						return fmt.Errorf("submit event: %w", err)
+						log.WithFields(log.Fields{"nonce": ev.Nonce, "error": err}).Warn("submit event: message was not processed")
+						continue
 					}
 				}
 			}
@@ -449,6 +453,19 @@ func (r *Relay) makeInboundMessage(
 	}).Info("found message")
 
 	return msg, nil
+}
+
+// waitAndSendWithRetry wraps waitAndSend with retry logic for transient errors
+func (r *Relay) waitAndSendWithRetry(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) error {
+	config := error_tracking.DefaultRetryConfig()
+	logFields := log.Fields{"nonce": ev.Nonce}
+
+	return error_tracking.RetryWithTracking(
+		r.errorTracker,
+		config,
+		func() error { return r.waitAndSend(ctx, ev) },
+		logFields,
+	)
 }
 
 func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) (err error) {
