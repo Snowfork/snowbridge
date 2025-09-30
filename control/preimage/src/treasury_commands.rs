@@ -4,7 +4,7 @@ use crate::helpers::utility_force_batch;
 use crate::relay_runtime::runtime_types::{
     pallet_treasury,
     polkadot_runtime_common::impls::VersionedLocatableAsset,
-    staging_xcm::v4::{
+    staging_xcm::v5::{
         asset::AssetId, junction::Junction, junctions::Junctions, location::Location,
     },
     xcm::VersionedLocation,
@@ -199,14 +199,14 @@ fn make_treasury_spend(
     valid_from: Option<u32>,
 ) -> RelayRuntimeCall {
     let call = RelayRuntimeCall::Treasury(pallet_treasury::pallet::Call::spend {
-        asset_kind: Box::new(VersionedLocatableAsset::V4 {
+        asset_kind: Box::new(VersionedLocatableAsset::V5 {
             location: Location {
                 parents: 0,
                 interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
             },
             asset_id: AssetId(asset),
         }),
-        beneficiary: Box::new(VersionedLocation::V4(Location {
+        beneficiary: Box::new(VersionedLocation::V5(Location {
             parents: 0,
             interior: Junctions::X1([Junction::AccountId32 {
                 network: None,
