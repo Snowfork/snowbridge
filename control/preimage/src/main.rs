@@ -529,7 +529,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Command::ReplaySep2025 => {
-            commands::replay_sep_2025_xcm()
+            let asset_hub_call = commands::replay_sep_2025_xcm();
+            send_xcm_asset_hub(&context, vec![asset_hub_call]).await?
         }
     };
 

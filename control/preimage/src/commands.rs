@@ -840,8 +840,8 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
     ];
 }
 
-pub fn replay_sep_2025_xcm() -> crate::relay_runtime::RuntimeCall {
-    use crate::relay_runtime::runtime_types::{
+pub fn replay_sep_2025_xcm() -> crate::asset_hub_runtime::RuntimeCall {
+    use crate::asset_hub_runtime::runtime_types::{
         pallet_xcm,
         staging_xcm::v5::{
             asset::{Asset, AssetId, Assets, Fungibility, WildAsset},
@@ -911,7 +911,6 @@ pub fn replay_sep_2025_xcm() -> crate::relay_runtime::RuntimeCall {
             weight_limit: WeightLimit::Unlimited,
             check_origin: None,
         },
-        DescendOrigin(Junctions::X1([Junction::Parachain(1000)])),
     ];
 
     // Add all failed messages as separate ExportMessage instructions
@@ -931,7 +930,7 @@ pub fn replay_sep_2025_xcm() -> crate::relay_runtime::RuntimeCall {
         };
 
         all_instructions.push(ExportMessage {
-            network: crate::relay_runtime::runtime_types::staging_xcm::v5::junction::NetworkId::Ethereum {
+            network: crate::asset_hub_runtime::runtime_types::staging_xcm::v5::junction::NetworkId::Ethereum {
                 chain_id: crate::bridge_hub_runtime::CHAIN_ID,
             },
             destination: Junctions::Here,
@@ -949,7 +948,7 @@ pub fn replay_sep_2025_xcm() -> crate::relay_runtime::RuntimeCall {
                     weight_limit: WeightLimit::Unlimited,
                 },
                 DepositAsset {
-                    assets: polkadot_runtime::runtime_types::staging_xcm::v5::asset::AssetFilter::Wild(WildAsset::AllCounted(1)),
+                    assets: asset_hub_polkadot_runtime::runtime_types::staging_xcm::v5::asset::AssetFilter::Wild(WildAsset::AllCounted(1)),
                     beneficiary: Location {
                         parents: 0,
                         interior: Junctions::X1([Junction::AccountKey20 {
@@ -964,13 +963,14 @@ pub fn replay_sep_2025_xcm() -> crate::relay_runtime::RuntimeCall {
         all_instructions.push(SetTopic(*topic));
     }
 
-    crate::relay_runtime::RuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
+    let asset_hub_xcm = crate::asset_hub_runtime::RuntimeCall::PolkadotXcm(pallet_xcm::pallet::Call::send {
         dest: Box::new(VersionedLocation::V5(Location {
             parents: 0,
             interior: Junctions::X1([Junction::Parachain(crate::constants::BRIDGE_HUB_ID)]),
         })),
         message: Box::new(VersionedXcm::V5(Xcm(all_instructions))),
-    })
+    });
+    asset_hub_xcm
 }
 
 #[cfg(feature = "polkadot")]
