@@ -965,7 +965,7 @@ pub fn replay_sep_2025_xcm() -> crate::asset_hub_runtime::RuntimeCall {
 
     let asset_hub_xcm = crate::asset_hub_runtime::RuntimeCall::PolkadotXcm(pallet_xcm::pallet::Call::send {
         dest: Box::new(VersionedLocation::V5(Location {
-            parents: 0,
+            parents: 1,
             interior: Junctions::X1([Junction::Parachain(crate::constants::BRIDGE_HUB_ID)]),
         })),
         message: Box::new(VersionedXcm::V5(Xcm(all_instructions))),
