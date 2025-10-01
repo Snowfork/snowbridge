@@ -10,7 +10,7 @@ use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 use crate::relay_runtime::runtime_types::{
     pallet_xcm,
     sp_weights::weight_v2::Weight,
-    staging_xcm::v4::{
+    staging_xcm::v5::{
         junction::Junction,
         junctions::Junctions,
         location::Location,
@@ -70,10 +70,10 @@ pub async fn send_xcm_bridge_hub(
         instructions.append(&mut vec![
             Transact {
                 origin_kind: OriginKind::Superuser,
-                require_weight_at_most: Weight {
+                fallback_max_weight: Some(Weight {
                     ref_time: ref_time,
                     proof_size: proof_size,
-                },
+                }),
                 call: DoubleEncoded { encoded },
             },
             ExpectTransactStatus(MaybeErrorCode::Success),
@@ -81,11 +81,11 @@ pub async fn send_xcm_bridge_hub(
     }
 
     let call = RelayRuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
-        dest: Box::new(VersionedLocation::V4(Location {
+        dest: Box::new(VersionedLocation::V5(Location {
             parents: 0,
             interior: Junctions::X1([Junction::Parachain(BRIDGE_HUB_ID)]),
         })),
-        message: Box::new(VersionedXcm::V4(Xcm(instructions))),
+        message: Box::new(VersionedXcm::V5(Xcm(instructions))),
     });
 
     Ok(call)
@@ -113,10 +113,10 @@ pub async fn send_xcm_asset_hub(
         instructions.append(&mut vec![
             Transact {
                 origin_kind: OriginKind::Superuser,
-                require_weight_at_most: Weight {
+                fallback_max_weight: Some(Weight {
                     ref_time: ref_time,
                     proof_size: proof_size,
-                },
+                }),
                 call: DoubleEncoded { encoded },
             },
             ExpectTransactStatus(MaybeErrorCode::Success),
@@ -124,11 +124,11 @@ pub async fn send_xcm_asset_hub(
     }
 
     let call = RelayRuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
-        dest: Box::new(VersionedLocation::V4(Location {
+        dest: Box::new(VersionedLocation::V5(Location {
             parents: 0,
             interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
         })),
-        message: Box::new(VersionedXcm::V4(Xcm(instructions))),
+        message: Box::new(VersionedXcm::V5(Xcm(instructions))),
     });
 
     Ok(call)

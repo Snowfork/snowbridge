@@ -66,6 +66,8 @@ pub enum Command {
     RegisterErc20TokenMetadata,
     /// Upgrade to V2
     UpgradeV2,
+    /// Replay failed XCM messages from September 2025
+    ReplaySep2025,
 }
 
 #[derive(Debug, Args)]
@@ -525,6 +527,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
                 utility_force_batch(vec![bh_xcm_call, ah_xcm_call])
             }
+        }
+        Command::ReplaySep2025 => {
+            let asset_hub_call = commands::replay_sep_2025_xcm();
+            send_xcm_asset_hub(&context, vec![asset_hub_call]).await?
         }
     };
 
