@@ -84,11 +84,11 @@ contract ForkUpgradeForAssetRecovery202510 is Test {
     }
 
     function testUpgradeForAssetRecovery202510Success() public {
-       // Asset hub agent balance should be unchanged
-        uint256 balanceAfter = assetHubAgent.balance;
-        assertEq(balanceAfter, balanceInAgentBefore - 350000000000000000); // 0.35 ETH sent to hardcoded recipient
+       // Asset hub agent balance should have decreased by 0.35 ETH
+        uint256 balanceInAgentAfter = assetHubAgent.balance;
+        assertEq(balanceInAgentAfter, balanceInAgentBefore - 350000000000000000);
 
-        // Hardcoded recipient balance should have increased
+        // Hardcoded recipient balance should have increased by 0.35 ETH
         uint256 balanceInRecipientAfter = hardcodedRecipient.balance;
         assertEq(balanceInRecipientAfter, balanceInRecipientBefore + 350000000000000000);
     }
