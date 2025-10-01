@@ -69,7 +69,7 @@ contract ForkUpgradeForAssetRecovery202510 is Test {
                 nonce + 1,
                 Command.Upgrade,
                 abi.encode(params),
-                100_000,
+                1_000_000,
                 block.basefee,
                 0,
                 keccak256("message-id")
