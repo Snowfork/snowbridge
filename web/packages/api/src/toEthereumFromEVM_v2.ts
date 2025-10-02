@@ -297,7 +297,7 @@ export async function validateTransferEvm(
 
     // Create a mock tx that calls the substrate extrinsic on pallet-xcm with the same parameters so that we can dry run.
     const mockTx = createERC20SourceParachainTx(
-        sourceParachain,
+        sourceParachainImpl,
         registry.ethChainId,
         registry.assetHubParaId,
         sourceAccountHex,

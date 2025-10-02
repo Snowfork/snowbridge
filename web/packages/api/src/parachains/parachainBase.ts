@@ -1,9 +1,9 @@
 import { ApiPromise } from "@polkadot/api"
 import { Asset, AssetMap, ChainProperties } from "@snowbridge/base-types"
 import { PNAMap, SubstrateAccount } from "../assets_v2"
-import { erc20Location } from "../xcmBuilder"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
+import { erc20Location, HERE_LOCATION, parachainLocation } from "../xcmBuilder"
 
 export abstract class ParachainBase {
     provider: ApiPromise
@@ -78,6 +78,15 @@ export abstract class ParachainBase {
     async getNativeBalance(account: string): Promise<bigint> {
         const acc = await this.getNativeAccount(account)
         return acc.data.free
+    }
+
+    getNativeBalanceLocation(relativeTo: "here" | "sibling"): any {
+        switch (relativeTo) {
+            case "sibling":
+                return parachainLocation(this.parachainId)
+            case "here":
+                return HERE_LOCATION
+        }
     }
 
     getTokenBalance(
