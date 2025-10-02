@@ -44,13 +44,13 @@ importers:
       '@snowbridge/contract-types':
         specifier: workspace:*
         version: link:../contract-types
-      '@typechain/ethers-v6':
-        specifier: 0.5.1
-        version: 0.5.1(ethers@6.13.5)(typechain@8.3.2(typescript@5.5.4))(typescript@5.5.4)
       ethers:
         specifier: 6.13.5
         version: 6.13.5
     devDependencies:
+      '@typechain/ethers-v6':
+        specifier: 0.5.1
+        version: 0.5.1(ethers@6.13.5)(typechain@8.3.2(typescript@5.5.4))(typescript@5.5.4)
       '@types/node':
         specifier: 18.19.31
         version: 18.19.31
@@ -252,8 +252,8 @@ importers:
         specifier: 0.62.1
         version: 0.62.1
       '@zombienet/cli':
-        specifier: 1.3.128
-        version: 1.3.128(@polkadot/util@13.5.6)(@types/node@22.7.5)(chokidar@3.6.0)
+        specifier: 1.3.133
+        version: 1.3.133(@polkadot/util@13.5.6)(@types/node@22.7.5)(chokidar@3.6.0)
 
   packages/test-helpers:
     dependencies:
@@ -548,8 +548,8 @@ packages:
     resolution: {integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==}
     engines: {node: '>=6.0.0'}
 
-  '@jridgewell/sourcemap-codec@1.5.0':
-    resolution: {integrity: sha512-gv3ZRaISU3fjPAgNsriBRqGWQL6quFx04YMPW/zD8XMLsU32mhCCbfbO6KZFLjvYpCZ8zyDEgqsgf+PwPaM7GQ==}
+  '@jridgewell/sourcemap-codec@1.5.5':
+    resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
@@ -1241,20 +1241,24 @@ packages:
   '@ungap/structured-clone@1.2.0':
     resolution: {integrity: sha512-zuVdFrMJiuCDQUMCzQaD6KL28MjnqqN8XnAqiEq9PNm/hCPTSGfrXCOfwj1ow4LFb/tNymJPwsNbVePc1xFqrQ==}
 
-  '@zombienet/cli@1.3.128':
-    resolution: {integrity: sha512-ZeaJAXGYnI9rx0MqgUkqez20fbM+/vJ9XFtLD089fDb7AVM7Z8nG+KEHwjOcVA431MZhIrdzs3OIii/+gGZNWg==}
+  '@zombienet/cli@1.3.133':
+    resolution: {integrity: sha512-YibWzi12g6gfwwipW4hI9gRSfHzzV/huaKQMbWL8FZjSvcbqihmo2N2oBi1XwGg5C4Mt+hDa1VVS7DB1eXKVCg==}
     engines: {node: '>=18'}
     hasBin: true
 
   '@zombienet/dsl-parser-wrapper@0.1.11':
     resolution: {integrity: sha512-gUDuFLMjB30ghUFWeOIP4i7S+XthPik07tkmg0EJR5Jm2WWAfHP7zaaPFGrxBFlsCwlgLlbDOLRvNfKUNMXnfg==}
 
-  '@zombienet/orchestrator@0.0.105':
-    resolution: {integrity: sha512-vw+Pt1N9oChdA+2WHgwygG4wpXaKnPJPIRbm3OWbhscCwHbWlmcVVZhZN3khC4+WMo+kvFt3XhzV6hZrZI5Bug==}
+  '@zombienet/orchestrator@0.0.110':
+    resolution: {integrity: sha512-qEIfKdm8LaXlTMiltDBZfoxEFsoQ0ngzJXRSnsf4zHoL6tOP+pk7YTFP0fsP9jUqwN2mj/0POsQNugWSD80k5w==}
     engines: {node: '>=18'}
 
   '@zombienet/utils@0.0.28':
     resolution: {integrity: sha512-0AvQgSmz8UeVoSPXQRjibk4picMdqfo4q86wYbuJzg951Np82nodzEMGTssBC6JFm/8Bb/M1N6bCh5Wi2d0fxg==}
+    engines: {node: '>=18'}
+
+  '@zombienet/utils@0.0.29':
+    resolution: {integrity: sha512-FPQknd8tbbtsbfaKV8ElrpzBZijY4LgKe0w2Pex5fI0DkK+OYfom91HA/2STR5E9b51nj+JyTI+tBys8BtrOLg==}
     engines: {node: '>=18'}
 
   JSONStream@1.3.5:
@@ -1279,6 +1283,11 @@ packages:
 
   acorn@8.14.0:
     resolution: {integrity: sha512-cl669nCJTZBsL97OF4kUQm5g5hC2uihk0NxY3WENAC0TYdILVkAyHymAntgxGkl7K+t0cXIrH5siy5S4XkFycA==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
+
+  acorn@8.15.0:
+    resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
     engines: {node: '>=0.4.0'}
     hasBin: true
 
@@ -2112,6 +2121,7 @@ packages:
   node-domexception@1.0.0:
     resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
     engines: {node: '>=10.5.0'}
+    deprecated: Use your platform's native DOMException instead
 
   node-fetch@3.3.2:
     resolution: {integrity: sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA==}
@@ -3207,12 +3217,12 @@ snapshots:
 
   '@jridgewell/resolve-uri@3.1.2': {}
 
-  '@jridgewell/sourcemap-codec@1.5.0': {}
+  '@jridgewell/sourcemap-codec@1.5.5': {}
 
   '@jridgewell/trace-mapping@0.3.9':
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
-      '@jridgewell/sourcemap-codec': 1.5.0
+      '@jridgewell/sourcemap-codec': 1.5.5
 
   '@noble/curves@1.2.0':
     dependencies:
@@ -4486,11 +4496,11 @@ snapshots:
 
   '@ungap/structured-clone@1.2.0': {}
 
-  '@zombienet/cli@1.3.128(@polkadot/util@13.5.6)(@types/node@22.7.5)(chokidar@3.6.0)':
+  '@zombienet/cli@1.3.133(@polkadot/util@13.5.6)(@types/node@22.7.5)(chokidar@3.6.0)':
     dependencies:
       '@zombienet/dsl-parser-wrapper': 0.1.11
-      '@zombienet/orchestrator': 0.0.105(@polkadot/util@13.5.6)(@types/node@22.7.5)(chokidar@3.6.0)
-      '@zombienet/utils': 0.0.28(@types/node@22.7.5)(chokidar@3.6.0)(typescript@5.5.4)
+      '@zombienet/orchestrator': 0.0.110(@polkadot/util@13.5.6)(@types/node@22.7.5)(chokidar@3.6.0)
+      '@zombienet/utils': 0.0.29(@types/node@22.7.5)(chokidar@3.6.0)(typescript@5.5.4)
       cli-progress: 3.12.0
       commander: 11.1.0
       debug: 4.3.6(supports-color@8.1.1)
@@ -4509,7 +4519,7 @@ snapshots:
 
   '@zombienet/dsl-parser-wrapper@0.1.11': {}
 
-  '@zombienet/orchestrator@0.0.105(@polkadot/util@13.5.6)(@types/node@22.7.5)(chokidar@3.6.0)':
+  '@zombienet/orchestrator@0.0.110(@polkadot/util@13.5.6)(@types/node@22.7.5)(chokidar@3.6.0)':
     dependencies:
       '@polkadot/api': 14.3.1
       '@polkadot/keyring': 13.5.6(@polkadot/util-crypto@13.5.6(@polkadot/util@13.5.6))(@polkadot/util@13.5.6)
@@ -4557,6 +4567,22 @@ snapshots:
       - supports-color
       - typescript
 
+  '@zombienet/utils@0.0.29(@types/node@22.7.5)(chokidar@3.6.0)(typescript@5.5.4)':
+    dependencies:
+      cli-table3: 0.6.5
+      debug: 4.3.6(supports-color@8.1.1)
+      mocha: 10.8.2
+      nunjucks: 3.2.4(chokidar@3.6.0)
+      toml: https://codeload.github.com/pepoviola/toml-node/tar.gz/5e17114f1af5b5b70e4f2ec10cd007623c928988
+      ts-node: 10.9.2(@types/node@22.7.5)(typescript@5.5.4)
+    transitivePeerDependencies:
+      - '@swc/core'
+      - '@swc/wasm'
+      - '@types/node'
+      - chokidar
+      - supports-color
+      - typescript
+
   JSONStream@1.3.5:
     dependencies:
       jsonparse: 1.3.1
@@ -4574,9 +4600,11 @@ snapshots:
 
   acorn-walk@8.3.4:
     dependencies:
-      acorn: 8.14.0
+      acorn: 8.15.0
 
   acorn@8.14.0: {}
+
+  acorn@8.15.0: {}
 
   aes-js@4.0.0-beta.5: {}
 
@@ -5847,7 +5875,7 @@ snapshots:
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
       '@types/node': 18.19.31
-      acorn: 8.14.0
+      acorn: 8.15.0
       acorn-walk: 8.3.4
       arg: 4.1.3
       create-require: 1.1.1
@@ -5865,7 +5893,7 @@ snapshots:
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
       '@types/node': 18.19.45
-      acorn: 8.14.0
+      acorn: 8.15.0
       acorn-walk: 8.3.4
       arg: 4.1.3
       create-require: 1.1.1
@@ -5883,7 +5911,7 @@ snapshots:
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
       '@types/node': 22.7.5
-      acorn: 8.14.0
+      acorn: 8.15.0
       acorn-walk: 8.3.4
       arg: 4.1.3
       create-require: 1.1.1
