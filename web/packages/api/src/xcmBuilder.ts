@@ -588,38 +588,77 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
     sourceParachainId: number,
     returnToSenderFee: bigint,
     feeAssetId: any,
-    feeAssetIdReanchored: any
+    feeAssetIdReanchored: any,
+    teleportFee: boolean
 ) {
     return registry.createType("XcmVersionedXcm", {
         v4: [
-            {
-                withdrawAsset: [
-                    {
-                        id: feeAssetIdReanchored,
-                        fun: {
-                            Fungible: totalFee,
-                        },
-                    },
-                    {
-                        id: erc20Location(ethChainId, tokenAddress),
-                        fun: {
-                            Fungible: transferAmount,
-                        },
-                    },
-                ],
-            },
+            ...(teleportFee
+                ? // Teleport Fee
+                  [
+                      {
+                          receiveTeleportedAsset: [
+                              {
+                                  id: feeAssetIdReanchored,
+                                  fun: {
+                                      Fungible: totalFee,
+                                  },
+                              },
+                          ],
+                      },
+                      {
+                          buyExecution: {
+                              fees: {
+                                  id: feeAssetIdReanchored,
+                                  fun: {
+                                      Fungible: destinationFee,
+                                  },
+                              },
+                              weightLimit: "Unlimited",
+                          },
+                      },
+                      {
+                          withdrawAsset: [
+                              {
+                                  id: erc20Location(ethChainId, tokenAddress),
+                                  fun: {
+                                      Fungible: transferAmount,
+                                  },
+                              },
+                          ],
+                      },
+                  ]
+                : // Reserve Transfer Fee
+                  [
+                      {
+                          withdrawAsset: [
+                              {
+                                  id: feeAssetIdReanchored,
+                                  fun: {
+                                      Fungible: totalFee,
+                                  },
+                              },
+                              {
+                                  id: erc20Location(ethChainId, tokenAddress),
+                                  fun: {
+                                      Fungible: transferAmount,
+                                  },
+                              },
+                          ],
+                      },
+                      {
+                          buyExecution: {
+                              fees: {
+                                  id: feeAssetIdReanchored,
+                                  fun: {
+                                      Fungible: destinationFee,
+                                  },
+                              },
+                              weightLimit: "Unlimited",
+                          },
+                      },
+                  ]),
             { clearOrigin: null },
-            {
-                buyExecution: {
-                    fees: {
-                        id: feeAssetIdReanchored,
-                        fun: {
-                            Fungible: destinationFee,
-                        },
-                    },
-                    weightLimit: "Unlimited",
-                },
-            },
             ...buildAssetHubXcmFromParachain(
                 ethChainId,
                 sourceAccount,

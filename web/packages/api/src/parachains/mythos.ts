@@ -75,7 +75,7 @@ export class MythosParachain extends ParachainBase {
                     asset
                 )}'. Using default.`
             )
-            return this.specName === "muse" ? 200_000_000_000n : 1_000_000_000n
+            return 1_000_000_000n
         }
         return await this.calculateXcmFee(destinationXcm, asset)
     }

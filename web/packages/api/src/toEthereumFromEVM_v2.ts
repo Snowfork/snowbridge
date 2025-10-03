@@ -379,7 +379,8 @@ export async function validateTransferEvm(
                     sourceParaId,
                     fee.returnToSenderExecutionFeeDOT,
                     DOT_LOCATION, // TODO: Support native fee for EVM
-                    DOT_LOCATION
+                    DOT_LOCATION,
+                    false
                 )
             )
             if (!dryRunResultAssetHub.success) {

@@ -269,7 +269,8 @@ export async function getDeliveryFee(
                 parachain,
                 340282366920938463463374607431768211455n,
                 DOT_LOCATION,
-                DOT_LOCATION
+                DOT_LOCATION,
+                false
             )
         } else {
             xcm = buildResultXcmAssetHubERC20TransferFromParachain(
@@ -285,7 +286,8 @@ export async function getDeliveryFee(
                 parachain,
                 340282366920938463463374607431768211455n,
                 sourceParachainImpl.getNativeBalanceLocation("here"),
-                sourceParachainImpl.getNativeBalanceLocation("sibling")
+                sourceParachainImpl.getNativeBalanceLocation("sibling"),
+                true
             )
         }
         forwardedXcm = buildExportXcmForERC20(
@@ -615,7 +617,8 @@ export async function validateTransfer(
                             sourceParaId,
                             fee.returnToSenderExecutionFeeNative ?? 0n,
                             sourceParachainImpl.getNativeBalanceLocation("here"),
-                            sourceParachainImpl.getNativeBalanceLocation("sibling")
+                            sourceParachainImpl.getNativeBalanceLocation("sibling"),
+                            true
                         )
                     )
                 } else {
@@ -636,7 +639,8 @@ export async function validateTransfer(
                             sourceParaId,
                             fee.returnToSenderExecutionFeeDOT,
                             DOT_LOCATION,
-                            DOT_LOCATION
+                            DOT_LOCATION,
+                            false
                         )
                     )
                 }

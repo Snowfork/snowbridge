@@ -39,12 +39,12 @@ export class NeurowebParachain extends ParachainBase {
             case "here":
                 return {
                     parents: 0,
-                    interior: { x1: [{ palletIndex: 10 }] },
+                    interior: { x1: [{ palletInstance: 10 }] },
                 }
             case "sibling":
                 return {
                     parents: 1,
-                    interior: { x2: [{ parachain: this.parachainId }, { palletIndex: 10 }] },
+                    interior: { x2: [{ parachain: this.parachainId }, { palletInstance: 10 }] },
                 }
         }
     }
