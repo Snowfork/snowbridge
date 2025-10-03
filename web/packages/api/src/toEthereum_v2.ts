@@ -936,7 +936,8 @@ export function createERC20SourceParachainTx(
             messageId,
             sourceParaId,
             amount,
-            returnToSenderFeeInDOT
+            returnToSenderFeeInDOT,
+            parachain.getNativeBalanceLocation("sibling")
         )
     } else {
         customXcm = buildAssetHubERC20TransferFromParachain(

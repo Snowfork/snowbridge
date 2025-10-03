@@ -1503,7 +1503,8 @@ export function buildAssetHubERC20TransferFromParachainWithNativeFee(
     topic: string,
     sourceParachainId: number,
     amount: bigint,
-    returnToSenderFeeInDot: bigint
+    returnToSenderFeeInDot: bigint,
+    feeAssetId: any
 ) {
     return registry.createType("XcmVersionedXcm", {
         v4: buildAssetHubXcmFromParachainWithNativeAssetAsFee(
@@ -1514,7 +1515,8 @@ export function buildAssetHubERC20TransferFromParachainWithNativeFee(
             topic,
             sourceParachainId,
             amount,
-            returnToSenderFeeInDot
+            returnToSenderFeeInDot,
+            feeAssetId,
         ),
     })
 }
@@ -1527,7 +1529,8 @@ function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
     topic: string,
     sourceParachainId: number,
     amount: bigint,
-    destinationFeeInDot: bigint
+    destinationFeeInDot: bigint,
+    feeAssetId: any
 ) {
     let {
         hexAddress,
@@ -1553,10 +1556,7 @@ function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
                 give: {
                     Wild: {
                         AllOf: {
-                            id: {
-                                parents: 1,
-                                interior: { x1: [{ parachain: sourceParachainId }] },
-                            },
+                            id: feeAssetId,
                             fun: "Fungible",
                         },
                     },
