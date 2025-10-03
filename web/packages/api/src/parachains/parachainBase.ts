@@ -26,8 +26,8 @@ export abstract class ParachainBase {
             this.provider.rpc.system.properties(),
             this.provider.rpc.system.chain(),
         ])
-        const tokenSymbols = properties.tokenSymbol.unwrapOrDefault().at(0)?.toString()
-        const tokenDecimals = properties.tokenDecimals.unwrapOrDefault().at(0)?.toNumber()
+        const tokenSymbols = properties.tokenSymbol.unwrapOrDefault()[0]?.toString()
+        const tokenDecimals = properties.tokenDecimals.unwrapOrDefault()[0]?.toNumber()
         const isEthereum = properties.isEthereum.toPrimitive()
         const ss58Format =
             (this.provider.consts.system.ss58Prefix.toPrimitive() as number) ??

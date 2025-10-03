@@ -111,7 +111,7 @@ export class MoonbeamParachain extends ParachainBase {
         for (const [key, value] of foreignEntries) {
             const location = value.toJSON() as any
 
-            const assetId = BigInt(key.args.at(0)?.toPrimitive() as any)
+            const assetId = BigInt(key.args[0]?.toPrimitive() as any)
             const xc20 = toMoonbeamXC20(assetId)
 
             if (location.parents === 1 && location.interior.here !== undefined) {
