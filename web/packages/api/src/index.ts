@@ -4,8 +4,8 @@ import { AbstractProvider, JsonRpcProvider, WebSocketProvider } from "ethers"
 import {
     BeefyClient,
     BeefyClient__factory,
-    IGatewayV1 as IGateway,
-    IGatewayV1__factory as IGateway__factory,
+    IGatewayV1,
+    IGatewayV1__factory,
     IGatewayV2,
     IGatewayV2__factory,
 } from "@snowbridge/contract-types"
@@ -26,6 +26,7 @@ export * as parachains from "./parachains"
 export * as xcmBuilder from "./xcmBuilder"
 export * as toEthereumSnowbridgeV2 from "./toEthereumSnowbridgeV2"
 export * as neuroWeb from "./parachains/neuroweb"
+export * as toPolkadotSnowbridgeV2 from "./toPolkadotSnowbridgeV2"
 
 interface Parachains {
     [paraId: string]: ApiPromise
@@ -64,7 +65,7 @@ export class Context {
 
     // Ethereum
     #ethChains: EthereumChains
-    #gateway?: IGateway
+    #gateway?: IGatewayV1
     #gatewayV2?: IGatewayV2
     #beefyClient?: BeefyClient
 
@@ -216,11 +217,11 @@ export class Context {
         return this.ethChain(this.config.ethereum.ethChainId)
     }
 
-    gateway(): IGateway {
+    gateway(): IGatewayV1 {
         if (this.#gateway) {
             return this.#gateway
         }
-        return IGateway__factory.connect(this.config.appContracts.gateway, this.ethereum())
+        return IGatewayV1__factory.connect(this.config.appContracts.gateway, this.ethereum())
     }
 
     gatewayV2(): IGatewayV2 {
