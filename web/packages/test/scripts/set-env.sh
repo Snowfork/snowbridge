@@ -14,8 +14,8 @@ zombienet_data_dir="$output_dir/zombienet"
 export PATH="$output_bin_dir:$PATH"
 polkadot_sdk_dir="${POLKADOT_SDK_DIR:-../polkadot-sdk}"
 
-export GETH_VERSION=v1.15.11
-export LODESTAR_VERSION=v1.31.0
+export GETH_VERSION=v1.16.4
+export LODESTAR_VERSION=v1.35.0-rc.1
 export snowbridge_v1="${BUILD_V1:-false}"
 v1_root_dir="$root_dir/../snowbridge-v1"
 export v1_contract_dir="$v1_root_dir/contracts"
