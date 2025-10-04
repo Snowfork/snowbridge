@@ -765,7 +765,7 @@ async function indexEthChain(
         }
         if ((await provider.getCode(gatewayAddress)) === undefined) {
             throw Error(
-                `Could not fetch code for gatway address ${gatewayAddress} on ethereum chain ${networkChainId}.`
+                `Could not fetch code for gateway address ${gatewayAddress} on ethereum chain ${networkChainId}.`
             )
         }
         return {
