@@ -63,30 +63,30 @@
     "transferWndToPenpalV2": "npx ts-node src/transfer_from_e2p_v2.ts 2000 WND 1000000000"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^5.62.0",
-    "@typescript-eslint/parser": "^5.62.0",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^8.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
+    "eslint": "^9.37.0",
+    "eslint-config-prettier": "^10.1.8",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.5.4"
+    "typescript": "5.9.3"
   },
   "dependencies": {
-    "@aws-sdk/client-cloudwatch": "^3.574.0",
-    "@polkadot/api": "16.4.7",
+    "@aws-sdk/client-cloudwatch": "^3.901.0",
+    "@polkadot/api": "16.4.8",
     "@polkadot/keyring": "13.5.6",
-    "@polkadot/types": "16.4.7",
-    "@polkadot/types-codec": "16.4.7",
+    "@polkadot/types": "16.4.8",
+    "@polkadot/types-codec": "16.4.8",
     "@polkadot/util": "13.5.6",
     "@polkadot/util-crypto": "13.5.6",
     "@snowbridge/api": "workspace:*",
-    "@snowbridge/registry": "workspace:*",
     "@snowbridge/contract-types": "workspace:*",
-    "dotenv": "^16.4.5",
-    "ethers": "^6.13.5",
-    "lodash": "^4.17.21",
-    "pino": "^9.11.0",
+    "@snowbridge/registry": "workspace:*",
     "@types/pino": "^7.0.5",
-    "pino-pretty": "^9.0.0"
+    "dotenv": "^17.2.3",
+    "ethers": "^6.15.0",
+    "lodash": "^4.17.21",
+    "pino": "^10.0.0",
+    "pino-pretty": "^13.1.1"
   }
 }

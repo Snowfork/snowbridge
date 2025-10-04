@@ -612,10 +612,10 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ETHEREUM_CHAINS: {
                 "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
             },
-            RELAY_CHAIN_URL: "wss://westend-rpc.dwellir.com",
+            RELAY_CHAIN_URL: "wss://westend-rpc.n.dwellir.com",
             PARACHAINS: {
-                "1000": "wss://asset-hub-westend-rpc.dwellir.com",
-                "1002": "wss://bridge-hub-westend-rpc.dwellir.com",
+                "1000": "wss://asset-hub-westend-rpc.n.dwellir.com",
+                "1002": "wss://bridge-hub-westend-rpc.n.dwellir.com",
                 "2313": `wss://node-7330371704012918784.nv.onfinality.io/ws?apikey=${
                     process.env["FREQUENCY_NODE_KEY"] ||
                     process.env["NEXT_PUBLIC_FREQUENCY_NODE_KEY"]

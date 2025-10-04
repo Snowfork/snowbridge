@@ -1023,7 +1023,7 @@ async function getRegisteredPnas(
             console.warn(`Could not convert ${key.toHuman()} to location`)
             continue
         }
-        const tokenId = (key.args.at(0)?.toPrimitive() as string).toLowerCase()
+        const tokenId = (key.args[0]?.toPrimitive() as string).toLowerCase()
         const token = await gateway.tokenAddressOf(tokenId)
         pnas[token.toLowerCase()] = {
             token: token.toLowerCase(),

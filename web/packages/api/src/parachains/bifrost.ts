@@ -35,7 +35,7 @@ export class BifrostParachain extends ParachainBase {
                 continue
             }
 
-            const assetId: any = key.args.at(0)
+            const assetId: any = key.args[0]
             const asset: any = (
                 await this.provider.query.assetRegistry.currencyMetadatas(assetId)
             ).toPrimitive()
