@@ -6,6 +6,7 @@ import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkado
 import { Result } from "@polkadot/types"
 import {
     DeliveryFee,
+    dryRunBridgeHub,
     resolveInputs,
     Transfer,
     ValidationKind,
@@ -182,27 +183,6 @@ export async function dryRunAssetHub(
         success: success && bridgeHubForwarded,
         sourceParachainForwarded,
         bridgeHubForwarded,
-        errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
-    }
-}
-
-export async function dryRunBridgeHub(bridgeHub: ApiPromise, assetHubParaId: number, xcm: any) {
-    const sourceParachain = {
-        v5: { parents: 1, interior: { x1: [{ parachain: assetHubParaId }] } },
-    }
-    const result = await bridgeHub.call.dryRunApi.dryRunXcm<
-        Result<XcmDryRunEffects, XcmDryRunApiError>
-    >(sourceParachain, xcm)
-
-    const resultHuman = result.toHuman() as any
-
-    const success = result.isOk && result.asOk.executionResult.isComplete
-
-    if (!success) {
-        console.error("Error during dry run on bridge hub:", xcm.toHuman(), result.toHuman())
-    }
-    return {
-        success,
         errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
     }
 }
