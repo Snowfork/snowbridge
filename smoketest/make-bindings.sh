@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -eu
+source ../web/packages/test/scripts/set-env.sh
 rm -rf src/contracts
 mkdir -p src/contracts
 
@@ -52,11 +53,12 @@ else
   --derive ::subxt::ext::subxt_core::ext::codec::Decode
   subxt codegen --url ws://localhost:13144 >src/parachains/penpal.rs \
   --derive-for-type staging_xcm::v5::location::Location=Clone,recursive \
+  --derive-for-type staging_xcm::v5::location::Location=::subxt::ext::codec::Encode,recursive \
+  --derive-for-type staging_xcm::v5::location::Location=::subxt::ext::codec::Decode,recursive \
+  --derive-for-type xcm::VersionedXcm=::subxt::ext::codec::Encode,recursive \
+  --derive-for-type xcm::VersionedXcm=::subxt::ext::codec::Decode,recursive \
   --derive-for-type staging_xcm::v5::asset::AssetId=Clone,recursive \
-  --derive-for-type staging_xcm::v5::asset::Assets=Clone,recursive \
-  --derive ::subxt::ext::subxt_core::ext::codec::Encode \
-  --derive ::subxt::ext::subxt_core::ext::codec::Decode
-
+  --derive-for-type staging_xcm::v5::asset::Assets=Clone,recursive
 fi
 
 
