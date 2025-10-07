@@ -38,7 +38,7 @@ type BeaconStateFulu struct {
 	PendingDeposits               []*PendingDeposit            `json:"pending_deposits,omitempty" ssz-max:"134217728"`
 	PendingPartialWithdrawals     []*PendingPartialWithdrawal  `json:"pending_partial_withdrawals,omitempty" ssz-max:"134217728"`
 	PendingConsolidations         []*PendingConsolidation      `json:"pending_consolidations,omitempty" ssz-max:"262144"`
-	ProposerLookahead             []uint64                     `json:"proposer_lookahead,omitempty" ssz-max:"64"` // New in Fulu:EIP7917
+	ProposerLookahead             []uint64                     `json:"proposer_lookahead,omitempty" ssz-size:"64"` // New in Fulu:EIP7917
 }
 
 func (b *BeaconStateFulu) GetSlot() uint64 {

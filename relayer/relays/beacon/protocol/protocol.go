@@ -86,13 +86,15 @@ const (
 
 func (p *Protocol) ForkVersion(slot uint64) ForkVersion {
 	epoch := p.ComputeEpochAtSlot(slot)
+	fv := Deneb
 	if epoch >= p.Settings.ForkVersions.Fulu {
-		return Fulu
+		fv = Fulu
 	}
 	if epoch >= p.Settings.ForkVersions.Electra {
-		return Electra
+		fv = Electra
 	}
-	return Deneb
+	log.WithField("fork_version", fv).Info("Found fork version")
+	return fv
 }
 
 func (p *Protocol) BlockRootGeneralizedIndex(slot uint64) int {
