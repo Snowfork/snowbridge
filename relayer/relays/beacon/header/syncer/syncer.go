@@ -317,13 +317,10 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 
 	blockRootsContainer = &state.BlockRootsContainerMainnet{}
 	if forkVersion == protocol.Fulu {
-		log.WithField("fork", "fulu").Info("Using fork version")
 		beaconState = &state.BeaconStateFulu{}
 	} else if forkVersion == protocol.Electra {
-		log.WithField("fork", "electra").Info("Using fork version")
 		beaconState = &state.BeaconStateElectra{}
 	} else {
-		log.WithField("fork", "deneb").Info("Using fork version")
 		beaconState = &state.BeaconStateDenebMainnet{}
 	}
 
