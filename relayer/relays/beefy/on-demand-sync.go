@@ -88,7 +88,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 	eg.Go(func() error {
 		defer ticker.Stop()
 		for {
-			log.Info("Starting check")
+			log.Info("Starting check nonces")
 
 			paraNonce, ethNonce, err := relay.queryNonces(ctx)
 			if err != nil {
@@ -101,24 +101,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 			}).Info("Nonces checked")
 
 			if paraNonce > ethNonce {
-
-				log.Info("Performing queue")
-
-				// sleep to ensure that beefy head newer than relay chain block in which the parachain block was accepted.
-				time.Sleep(time.Minute * 2)
-
-				beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
-
-				if err != nil {
-					return fmt.Errorf("Fetch latest beefy block hash: %w", err)
-				}
-
-				header, err := relay.relaychainConn.API().RPC.Chain.GetHeader(beefyBlockHash)
-				if err != nil {
-					return fmt.Errorf("Fetch latest beefy block header: %w", err)
-				}
-
-				err = relay.queue(ctx, uint64(header.Number), paraNonce)
+				err = relay.queue(ctx, paraNonce)
 				if err != nil {
 					return fmt.Errorf("Queue failed: %w", err)
 				}
@@ -135,6 +118,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 	eg.Go(func() error {
 		defer ticker.Stop()
 		for {
+			log.Info("Starting schedule nonces")
 			err = relay.schedule(ctx, eg)
 			if err != nil {
 				return fmt.Errorf("Schedule failed: %w", err)
@@ -335,7 +319,7 @@ func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber u
 	return nil
 }
 
-func (relay *OnDemandRelay) queue(ctx context.Context, blockNumber uint64, nonce uint64) error {
+func (relay *OnDemandRelay) queue(ctx context.Context, nonce uint64) error {
 	if relay.activeTasks.Full() {
 		log.Info("Task queue full, wait for scheduling")
 		return nil
@@ -343,27 +327,40 @@ func (relay *OnDemandRelay) queue(ctx context.Context, blockNumber uint64, nonce
 	_, ok := relay.activeTasks.Load(nonce)
 	if ok {
 		log.WithFields(log.Fields{
-			"nonce":      nonce,
-			"relayBlock": blockNumber,
+			"nonce": nonce,
 		}).Info("nonce in syncing, just ignore")
 		return nil
 	}
+	log.Info("Performing queue")
+
+	// sleep to ensure that beefy head newer than relay chain block in which the parachain block was accepted.
+	time.Sleep(time.Second * 90)
+
+	beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
+	if err != nil {
+		return fmt.Errorf("Fetch latest beefy block hash: %w", err)
+	}
+	header, err := relay.relaychainConn.API().RPC.Chain.GetHeader(beefyBlockHash)
+	if err != nil {
+		return fmt.Errorf("Fetch latest beefy block header: %w", err)
+	}
+	beefyBlockNumber := uint64(header.Number)
 	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
 	if err != nil {
 		return fmt.Errorf("query beefy client state: %w", err)
 	}
 	// Ignore relay block already synced
-	if blockNumber <= state.LatestBeefyBlock {
+	if beefyBlockNumber <= state.LatestBeefyBlock {
 		log.WithFields(log.Fields{
 			"validatorSetID": state.CurrentValidatorSetID,
 			"beefyBlock":     state.LatestBeefyBlock,
-			"relayBlock":     blockNumber,
+			"relayBlock":     header.Number,
 		}).Info("Relay block already synced, just ignore")
 		return nil
 	}
 
 	// generate beefy update for that specific relay block
-	task, err := relay.polkadotListener.generateBeefyUpdate(blockNumber)
+	task, err := relay.polkadotListener.generateBeefyUpdate(beefyBlockNumber)
 	if err != nil {
 		return fmt.Errorf("fail to generate next beefy request: %w", err)
 	}
