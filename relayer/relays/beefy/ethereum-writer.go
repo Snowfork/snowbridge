@@ -119,13 +119,13 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	// Initial submission
 	tx, initialBitfield, err := wr.doSubmitInitial(ctx, &task)
 	if err != nil {
-		log.WithError(err).Error("Failed to send initial signature commitment")
+		log.WithError(err).Error("Failed to call submitInitial")
 		return err
 	}
 	// Wait for receipt of submitInitial
 	receipt, err := wr.conn.WatchTransaction(ctx, tx, 1)
 	if err != nil {
-		log.WithError(err).Error("Failed to wait for submitInitial")
+		log.WithError(err).Error("Failed to get receipt of submitInitial")
 		return err
 	}
 	log.WithFields(logrus.Fields{
@@ -154,23 +154,27 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		wr.conn.MakeTxOpts(ctx),
 		*commitmentHash,
 	)
+	if err != nil {
+		log.WithError(err).Error("Failed to call CommitPrevRandao")
+		return err
+	}
 
 	_, err = wr.conn.WatchTransaction(ctx, tx, 1)
 	if err != nil {
-		log.WithError(err).Error("Failed to CommitPrevRandao")
+		log.WithError(err).Error("Failed to get receipt of CommitPrevRandao")
 		return err
 	}
 
 	// Final submission
 	tx, err = wr.doSubmitFinal(ctx, *commitmentHash, initialBitfield, &task)
 	if err != nil {
-		log.WithError(err).Error("Failed to send final signature commitment")
+		log.WithError(err).Error("Failed to call submitFinal")
 		return err
 	}
 
 	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
-		log.WithError(err).Error("Failed to submitFinal")
+		log.WithError(err).Error("Failed to get receipt of submitFinal")
 		return err
 	}
 
