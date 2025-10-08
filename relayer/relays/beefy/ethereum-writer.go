@@ -123,7 +123,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return err
 	}
 	// Wait for receipt of submitInitial
-	receipt, err := wr.conn.WatchTransaction(ctx, tx, 1)
+	receipt, err := wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
 		log.WithError(err).Error("Failed to get receipt of submitInitial")
 		return err
@@ -159,7 +159,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return err
 	}
 
-	_, err = wr.conn.WatchTransaction(ctx, tx, 1)
+	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
 		log.WithError(err).Error("Failed to get receipt of CommitPrevRandao")
 		return err
