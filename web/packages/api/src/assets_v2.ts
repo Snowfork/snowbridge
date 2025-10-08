@@ -965,7 +965,9 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                     ((path.destination !== 2034 &&
                         path.destination !== 2043 &&
                         path.type === "ethereum") ||
-                        (path.source !== 2034 && path.type === "substrate"))
+                        (path.source !== 2034 &&
+                            path.source !== 2043 &&
+                            path.type === "substrate"))
                 ) {
                     return false
                 }
