@@ -970,16 +970,6 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                     return false
                 }
 
-                // Disallow TRAC from Neuroweb back to Ethereum
-                if (
-                    path.asset === "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f" &&
-                    path.source === 2043 &&
-                    path.type === "substrate" &&
-                    path.destinationType === "ethereum"
-                ) {
-                    return false
-                }
-
                 // Disable stable coins in the UI from Ethereum to Polkadot
                 if (
                     (path.asset === "0x9d39a5de30e57443bff2a8307a4256c8797a3497" || // Staked USDe
