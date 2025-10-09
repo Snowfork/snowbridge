@@ -400,13 +400,9 @@ func (relay *OnDemandRelay) queue(ctx context.Context, nonce uint64) error {
 }
 
 func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) error {
-	task, ok := relay.activeTasks.Pop()
+	task := relay.activeTasks.Pop()
 	if task == nil {
-		if !ok {
-			log.Info("Task queue empty, wait for enqueuing")
-		} else {
-			log.Info("Task all syncing, wait for completion")
-		}
+		log.Info("No task available, wait for enqueuing")
 		return nil
 	}
 	err := relay.activeTasks.sem.Acquire(ctx, 1)
@@ -417,13 +413,19 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 		defer relay.activeTasks.sem.Release(1)
 		err := relay.sync(ctx, uint64(task.req.SignedCommitment.Commitment.BlockNumber))
 		if err != nil {
-			return fmt.Errorf("fail to sync beefy update: %w", err)
+			log.WithFields(log.Fields{
+				"nonce":      task.nonce,
+				"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
+				"error":      err,
+			}).Error("Sync beefy failed")
+			relay.activeTasks.SetStatus(task.nonce, TaskFailed)
+		} else {
+			relay.activeTasks.Delete(task.nonce)
+			log.WithFields(log.Fields{
+				"nonce":      task.nonce,
+				"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Sync beefy completed")
 		}
-		relay.activeTasks.Delete(task.nonce)
-		log.WithFields(log.Fields{
-			"nonce":      task.nonce,
-			"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
-		}).Info("Sync beefy completed")
 		return nil
 	})
 	return nil

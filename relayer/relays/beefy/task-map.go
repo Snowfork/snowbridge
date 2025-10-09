@@ -75,11 +75,11 @@ func (tm *TaskMap) Full() bool {
 	return false
 }
 
-func (tm *TaskMap) Pop() (*TaskInfo, bool) {
+func (tm *TaskMap) Pop() *TaskInfo {
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
 	if len(tm.data) == 0 {
-		return nil, false
+		return nil
 	}
 	keys := make([]int, 0, len(tm.data))
 	for k := range tm.data {
@@ -87,10 +87,20 @@ func (tm *TaskMap) Pop() (*TaskInfo, bool) {
 	}
 	sort.Ints(keys)
 	for _, k := range keys {
-		if tm.data[uint64(k)].status == TaskPending {
-			tm.data[uint64(k)].status = TaskInProgress
-			return tm.data[uint64(k)], true
+		task := tm.data[uint64(k)]
+		if task.status == TaskPending || task.status == TaskFailed {
+			task.status = TaskInProgress
+			return task
 		}
 	}
-	return nil, true
+	return nil
+}
+
+func (tm *TaskMap) SetStatus(key uint64, status TaskState) {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+	val, ok := tm.data[key]
+	if ok {
+		val.status = status
+	}
 }
