@@ -148,7 +148,7 @@ contract BeefyClientTest is Test {
         console.log("print initialBitField");
         printBitArray(bitfield);
         prevRandao = uint32(vm.envOr("PREV_RANDAO", prevRandao));
-        finalBitfield = Bitfield.subsample(prevRandao, bitfield, numRequiredSignatures, setSize);
+        finalBitfield = Bitfield.subsample(prevRandao, bitfield, setSize, numRequiredSignatures);
         console.log("print finalBitField");
         printBitArray(finalBitfield);
 
@@ -775,7 +775,7 @@ contract BeefyClientTest is Test {
         uint256[] memory initialBits = absentBitfield;
         Bitfield.set(initialBits, finalValidatorProofs[0].index);
         printBitArray(initialBits);
-        vm.expectRevert(BeefyClient.NotEnoughClaims.selector);
+        vm.expectRevert(BeefyClient.InvalidBitfield.selector);
         beefyClient.submitInitial(commitment, initialBits, finalValidatorProofs[0]);
     }
 

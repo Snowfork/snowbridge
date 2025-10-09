@@ -2,7 +2,6 @@ import { Registry } from "@polkadot/types/types"
 import {
     bridgeLocation,
     DOT_LOCATION,
-    erc20Location,
     accountToLocation,
     HERE_LOCATION,
     isRelaychainLocation,

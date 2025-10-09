@@ -20,9 +20,9 @@ use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
 use crate::bridge_hub_runtime::runtime_types::{
     snowbridge_core::{
         operating_mode::BasicOperatingMode,
-        outbound::v1::{Initializer, OperatingMode},
         pricing::{PricingParameters, Rewards},
     },
+    snowbridge_outbound_queue_primitives::{v1::message::Initializer, OperatingMode},
     snowbridge_pallet_ethereum_client, snowbridge_pallet_inbound_queue,
     snowbridge_pallet_outbound_queue, snowbridge_pallet_system,
 };
@@ -30,7 +30,7 @@ use crate::bridge_hub_runtime::RuntimeCall as BridgeHubRuntimeCall;
 
 #[cfg(feature = "polkadot")]
 pub mod asset_hub_polkadot_types {
-    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
+    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v5::{
         junction::Junction::AccountKey20,
         junction::Junction::GlobalConsensus,
         junction::NetworkId,
@@ -57,27 +57,27 @@ pub mod asset_hub_polkadot_types {
 
 #[cfg(feature = "paseo")]
 pub mod asset_hub_paseo_types {
-    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v3::multilocation::MultiLocation as Location;
-    pub use crate::asset_hub_runtime::runtime_types::xcm::v3::{
+    pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v5::{
         junction::Junction::AccountKey20,
         junction::Junction::GlobalConsensus,
         junction::NetworkId,
         junctions::Junctions::{X1, X2},
+        location::Location,
     };
 
     pub fn get_ether_id(chain_id: u64) -> Location {
         return Location {
             parents: 2,
-            interior: X1(GlobalConsensus(NetworkId::Ethereum { chain_id })),
+            interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id })]),
         };
     }
     pub fn get_asset_id(chain_id: u64, key: [u8; 20]) -> Location {
         return Location {
             parents: 2,
-            interior: X2(
+            interior: X2([
                 GlobalConsensus(NetworkId::Ethereum { chain_id }),
                 AccountKey20 { network: None, key },
-            ),
+            ]),
         };
     }
 }
@@ -265,6 +265,21 @@ pub fn set_assethub_fee(fee: u128) -> AssetHubRuntimeCall {
     )
 }
 
+pub fn set_assethub_fee_v2(fee: u128) -> AssetHubRuntimeCall {
+    let asset_hub_outbound_fee_storage_key: Vec<u8> =
+        twox_128(b":BridgeHubEthereumBaseFeeV2:").to_vec();
+    let asset_hub_outbound_fee_encoded: Vec<u8> = fee.encode();
+
+    AssetHubRuntimeCall::System(
+        crate::asset_hub_runtime::runtime_types::frame_system::pallet::Call::set_storage {
+            items: vec![(
+                asset_hub_outbound_fee_storage_key,
+                asset_hub_outbound_fee_encoded,
+            )],
+        },
+    )
+}
+
 pub fn force_checkpoint(params: &ForceCheckpointArgs) -> BridgeHubRuntimeCall {
     let mut file = File::open(params.checkpoint.clone()).expect("File not found");
     let mut data = String::new();
@@ -385,9 +400,166 @@ fn register_polkadot_native_asset(
 }
 
 #[cfg(feature = "polkadot")]
+pub fn register_erc20_token_metadata() -> Vec<AssetHubRuntimeCall> {
+    use alloy_primitives::Address;
+    use hex_literal::hex;
+
+    let tokens = vec![
+        (
+            hex!("9d39a5de30e57443bff2a8307a4256c8797a3497"),
+            "Staked USDe",
+            "sUSDe",
+            18,
+        ),
+        (
+            hex!("c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"),
+            "Wrapped Ether",
+            "WETH",
+            18,
+        ),
+        (
+            hex!("6982508145454ce325ddbe47a25d4ec3d2311933"),
+            "Pepe",
+            "PEPE",
+            18,
+        ),
+        (
+            hex!("5a98fcbea516cf06857215779fd812ca3bef1b32"),
+            "Lido DAO Token",
+            "LDO",
+            18,
+        ),
+        (
+            hex!("a3931d71877c0e7a3148cb7eb4463524fec27fbd"),
+            "Savings USDS",
+            "sUSDS",
+            18,
+        ),
+        (
+            hex!("8236a87084f8b84306f72007f36f2618a5634494"),
+            "Lombard Staked Bitcoin",
+            "LBTC",
+            8,
+        ),
+        (
+            hex!("1abaea1f7c830bd89acc67ec4af516284b1bc33c"),
+            "Euro Coin",
+            "EURC",
+            6,
+        ),
+        (
+            hex!("56072c95faa701256059aa122697b133aded9279"),
+            "SKY Governance Token",
+            "SKY",
+            18,
+        ),
+        (
+            hex!("ba41ddf06b7ffd89d1267b5a93bfef2424eb2003"),
+            "Mythos",
+            "MYTH",
+            18,
+        ),
+        (
+            hex!("0e186357c323c806c1efdad36d217f7a54b63d18"),
+            "Curio Gas Token",
+            "CGT2.0",
+            18,
+        ),
+        (
+            hex!("aa7a9ca87d3694b5755f213b5d04094b8d0f0a6f"),
+            "OriginTrail TRAC",
+            "TRAC",
+            18,
+        ),
+        (
+            hex!("18084fba666a33d37592fa2633fd49a74dd93a88"),
+            "tBTC v2",
+            "tBTC",
+            18,
+        ),
+        (
+            hex!("7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"),
+            "Wrapped liquid staked Ether 2.0",
+            "wstETH",
+            18,
+        ),
+        (
+            hex!("582d872a1b094fc48f5de31d3b73f2d9be47def1"),
+            "Wrapped TON Coin",
+            "TONCOIN",
+            9,
+        ),
+        (
+            hex!("6b175474e89094c44da98b954eedeac495271d0f"),
+            "Dai Stablecoin",
+            "DAI",
+            18,
+        ),
+        (
+            hex!("95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce"),
+            "SHIBA INU",
+            "SHIB",
+            18,
+        ),
+        (
+            hex!("7de91b204c1c737bcee6f000aaa6569cf7061cb7"),
+            "Robonomics",
+            "XRT",
+            9,
+        ),
+        (
+            hex!("2260fac5e5542a773aa44fbcfedf7c193bc2c599"),
+            "Wrapped BTC",
+            "WBTC",
+            8,
+        ),
+        (
+            hex!("8daebade922df735c38c80c7ebd708af50815faa"),
+            "tBTC",
+            "TBTC",
+            18,
+        ),
+        (
+            hex!("5d3d01fd6d2ad1169b17918eb4f153c6616288eb"),
+            "KILT",
+            "KILT",
+            15,
+        ),
+        (
+            hex!("514910771af9ca656af840dff83e8264ecf986ca"),
+            "ChainLink Token",
+            "LINK",
+            18,
+        ),
+        (
+            hex!("7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"),
+            "Aave Token",
+            "AAVE",
+            18,
+        ),
+    ];
+
+    tokens
+        .into_iter()
+        .map(|(contract_address, name, symbol, decimals)| {
+            let params = UpdateAssetArgs {
+                contract_id: Address::from(contract_address),
+                name: name.to_string(),
+                symbol: symbol.to_string(),
+                decimals,
+                min_balance: 1,
+                is_sufficient: false,
+                is_frozen: false,
+            };
+            force_set_metadata(&params)
+        })
+        .collect()
+}
+
+#[cfg(feature = "polkadot")]
 pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
     use crate::bridge_hub_runtime::runtime_types::{
-        staging_xcm::v4::{
+        staging_xcm::v5::{
             junction::Junction::*, junction::NetworkId::*, junctions::Junctions::*,
             location::Location,
         },
@@ -396,7 +568,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
     use hex_literal::hex;
     return vec![
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: Here,
             }),
@@ -405,7 +577,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             10u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 2,
                 interior: X1([GlobalConsensus(Kusama)]),
             }),
@@ -417,7 +589,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
          * Parachains
          */
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X2([Parachain(2004), PalletInstance(10)]),
             }),
@@ -426,7 +598,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             18u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X2([
                     Parachain(2030),
@@ -443,7 +615,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             12u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X2([
                     Parachain(2030),
@@ -460,7 +632,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             10u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X2([Parachain(2034), GeneralIndex(0)]),
             }),
@@ -469,7 +641,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             12u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X1([Parachain(2039)]),
             }),
@@ -478,7 +650,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             12u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X1([Parachain(2051)]),
             }),
@@ -487,7 +659,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             12u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X1([Parachain(3344)]),
             }),
@@ -496,7 +668,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             10u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X1([Parachain(3370)]),
             }),
@@ -505,7 +677,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             18u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X1([Parachain(2086)]),
             }),
@@ -514,7 +686,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             15u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X1([Parachain(2006)]),
             }),
@@ -523,7 +695,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             18u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X2([
                     Parachain(2031),
@@ -540,7 +712,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             18u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X1([Parachain(2101)]),
             }),
@@ -549,7 +721,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             10u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X1([Parachain(2035)]),
             }),
@@ -558,7 +730,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             12u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X2([
                     Parachain(2012),
@@ -575,7 +747,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             12u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X1([Parachain(2008)]),
             }),
@@ -584,7 +756,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             12u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X1([Parachain(2104)]),
             }),
@@ -593,7 +765,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             18u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X2([
                     Parachain(2000),
@@ -610,7 +782,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             12u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X2([
                     Parachain(2000),
@@ -630,7 +802,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
          * Meme coins
          */
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(30)]),
             }),
@@ -639,7 +811,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             10u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(23)]),
             }),
@@ -648,7 +820,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             10u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(86)]),
             }),
@@ -657,7 +829,7 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             12u8,
         ),
         register_polkadot_native_asset(
-            VersionedLocation::V4(Location {
+            VersionedLocation::V5(Location {
                 parents: 1,
                 interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(31337)]),
             }),
@@ -666,4 +838,154 @@ pub fn token_registrations() -> Vec<BridgeHubRuntimeCall> {
             10u8,
         ),
     ];
+}
+
+pub fn replay_sep_2025_xcm() -> crate::asset_hub_runtime::RuntimeCall {
+    use crate::asset_hub_runtime::runtime_types::{
+        pallet_xcm,
+        staging_xcm::v5::{
+            asset::{Asset, AssetId, Assets, Fungibility, WildAsset},
+            junction::Junction,
+            junctions::Junctions,
+            location::Location,
+            Instruction::*,
+            Xcm,
+        },
+        xcm::{VersionedLocation, VersionedXcm, v3::WeightLimit},
+    };
+    use hex_literal::hex;
+
+    enum AssetType {
+        Erc20([u8; 20]),
+        Eth,
+    }
+
+    // Failed XCM messages to replay - each contains asset, amount, beneficiary, and topic
+    let failed_messages: Vec<(AssetType, u128, [u8; 20], [u8; 32])> = vec![
+        // SKY token transfer
+        (
+            AssetType::Erc20(hex!("56072c95faa701256059aa122697b133aded9279")),
+            90413710543975890000000,
+            hex!("601d579ecd0464a1a090ceef81a703465a1679cd"),
+            hex!("f701fb349a04e4c923e26aab4e0288975d904507cdc32a3d3bdab8105507c736"),
+        ),
+        // sUSDe token transfer
+        (
+            AssetType::Erc20(hex!("9d39a5de30e57443bff2a8307a4256c8797a3497")),
+            16716000000000000000000,
+            hex!("9117900a3794ad6d167dd97853f82a1aa07f9bbc"),
+            hex!("e4cff6bf2217eb4cf9332d2daee1ada70b405402414a2249a6e9b42ab759f93f"),
+        ),
+        // tBTC v2 token transfer
+        (
+            AssetType::Erc20(hex!("18084fba666a33d37592fa2633fd49a74dd93a88")),
+            250830765728855800,
+            hex!("601d579ecd0464a1a090ceef81a703465a1679cd"),
+            hex!("d289d29c0ccbca0fe47be2a0bf8d09af3a90d719ce62129d75714a342750b6e4"),
+        ),
+        // AAVE token transfer 1
+        (
+            AssetType::Erc20(hex!("7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9")),
+            33044703802651993696,
+            hex!("2265a7503597ab32bab72eaa186e6329fb7b68f3"),
+            hex!("c8864869cd4ed5921d5cc251290357ffb24f905e1a475a2ba6c9ecd96c55df71"),
+        ),
+        // AAVE token transfer 2
+        (
+            AssetType::Erc20(hex!("7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9")),
+            212116067921877821839,
+            hex!("a9c415d6881e1a992861a7fa6bef3ed4736152c2"),
+            hex!("e259e4fb1c24f7cf4e6d2a9d50e13794de5fd6863083addc3d55ddff3b3d58cd"),
+        ),
+        // ETH transfer
+        (
+            AssetType::Eth,
+            350000000000000000,
+            hex!("ad8d4c544a6ce24b89841354b2738e026a12bca4"),
+            hex!("1ae83a0cba8f448c466fb0863fc25827b6978b7c3b3f93785184412cb2632e31"),
+        ),
+    ];
+
+    let mut all_instructions = vec![
+        UnpaidExecution {
+            weight_limit: WeightLimit::Unlimited,
+            check_origin: None,
+        },
+    ];
+
+    // Add all failed messages as separate ExportMessage instructions
+    for (asset_type, amount, beneficiary_address, topic) in failed_messages.iter() {
+        let asset_location = match asset_type {
+            AssetType::Erc20(token_address) => Location {
+                parents: 0,
+                interior: Junctions::X1([Junction::AccountKey20 {
+                    network: None,
+                    key: *token_address,
+                }]),
+            },
+            AssetType::Eth => Location {
+                parents: 0,
+                interior: Junctions::Here,
+            },
+        };
+
+        all_instructions.push(ExportMessage {
+            network: crate::asset_hub_runtime::runtime_types::staging_xcm::v5::junction::NetworkId::Ethereum {
+                chain_id: crate::bridge_hub_runtime::CHAIN_ID,
+            },
+            destination: Junctions::Here,
+            xcm: Xcm(vec![
+                WithdrawAsset(Assets(vec![Asset {
+                    id: AssetId(asset_location.clone()),
+                    fun: Fungibility::Fungible(*amount),
+                }])),
+                ClearOrigin,
+                BuyExecution {
+                    fees: Asset {
+                        id: AssetId(asset_location.clone()),
+                        fun: Fungibility::Fungible(1),
+                    },
+                    weight_limit: WeightLimit::Unlimited,
+                },
+                DepositAsset {
+                    assets: asset_hub_polkadot_runtime::runtime_types::staging_xcm::v5::asset::AssetFilter::Wild(WildAsset::AllCounted(1)),
+                    beneficiary: Location {
+                        parents: 0,
+                        interior: Junctions::X1([Junction::AccountKey20 {
+                            network: None,
+                            key: *beneficiary_address,
+                        }]),
+                    },
+                },
+                SetTopic(*topic),
+            ]),
+        });
+        all_instructions.push(SetTopic(*topic));
+    }
+
+    let asset_hub_xcm = crate::asset_hub_runtime::RuntimeCall::PolkadotXcm(pallet_xcm::pallet::Call::send {
+        dest: Box::new(VersionedLocation::V5(Location {
+            parents: 1,
+            interior: Junctions::X1([Junction::Parachain(crate::constants::BRIDGE_HUB_ID)]),
+        })),
+        message: Box::new(VersionedXcm::V5(Xcm(all_instructions))),
+    });
+    asset_hub_xcm
+}
+
+#[cfg(feature = "polkadot")]
+pub fn frequency_token_registrations() -> Vec<BridgeHubRuntimeCall> {
+    use crate::bridge_hub_runtime::runtime_types::{
+        staging_xcm::v5::{junction::Junction::*, junctions::Junctions::*, location::Location},
+        xcm::VersionedLocation,
+    };
+    return vec![register_polkadot_native_asset(
+        VersionedLocation::V5(Location {
+            parents: 1,
+            interior: X1([Parachain(2091)]),
+        }),
+        "Frequency",
+        "FRQCY",
+        8u8,
+    )];
 }

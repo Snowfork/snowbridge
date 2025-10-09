@@ -3,7 +3,7 @@ import { Context, contextConfigFor, environment, toPolkadotV2 } from "@snowbridg
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { assetRegistryFor } from "@snowbridge/registry"
-import { WETH9__factory } from "@snowbridge/contract-types"
+import { IERC20__factory, WETH9__factory } from "@snowbridge/contract-types"
 
 export const transferToPolkadot = async (
     destinationChainId: number,
@@ -56,6 +56,43 @@ export const transferToPolkadot = async (
 
             console.log("deposit tx", depositReceipt?.hash, "approve tx", approveReceipt?.hash)
         }
+    } else if (symbol.toLowerCase().startsWith("trac")) {
+        console.log("# Approve TRAC (two-step approval)")
+        const erc20 = IERC20__factory.connect(TOKEN_CONTRACT, ETHEREUM_ACCOUNT)
+        const [balance, allowance] = await Promise.all([
+            erc20.balanceOf(ETHEREUM_ACCOUNT_PUBLIC),
+            erc20.allowance(ETHEREUM_ACCOUNT_PUBLIC, registry.gatewayAddress),
+        ])
+
+        if (allowance < amount) {
+            // Step 1: Reset allowance to 0 (required by this ERC20 implementation)
+            console.log("Resetting allowance to 0...")
+            const resetTx = await erc20.approve(context.config.appContracts.gateway, 0n)
+            await resetTx.wait()
+
+            // Step 2: Set new allowance (higher than transfer amount for gateway fees)
+            const approveAmount = amount * 5n // 5x buffer for gateway operations
+            console.log("Setting new allowance to", approveAmount.toString())
+            const approveTx = await erc20.approve(
+                context.config.appContracts.gateway,
+                approveAmount
+            )
+            await approveTx.wait()
+
+            const newAllowance = await erc20.allowance(
+                ETHEREUM_ACCOUNT_PUBLIC,
+                context.config.appContracts.gateway
+            )
+            console.log("newAllowance", newAllowance.toString())
+        }
+
+        console.log("token", TOKEN_CONTRACT)
+        console.log("gateway", registry.gatewayAddress)
+        console.log("context gateway", context.config.appContracts.gateway)
+        console.log("owner", ETHEREUM_ACCOUNT_PUBLIC)
+        console.log("balance", balance.toString())
+        console.log("allowance", allowance.toString())
+        console.log("amount", amount.toString())
     }
 
     console.log("# Ethereum to Asset Hub")

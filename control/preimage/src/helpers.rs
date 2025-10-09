@@ -10,7 +10,7 @@ use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 use crate::relay_runtime::runtime_types::{
     pallet_xcm,
     sp_weights::weight_v2::Weight,
-    staging_xcm::v4::{
+    staging_xcm::v5::{
         junction::Junction,
         junctions::Junctions,
         location::Location,
@@ -25,6 +25,9 @@ use crate::relay_runtime::runtime_types::{
 use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
 use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 
+use bridge_hub_runtime::runtime_types::snowbridge_outbound_queue_primitives::v1::message::{
+    AgentExecuteCommand, Command, Fee,
+};
 use sp_arithmetic::helpers_128bit::multiply_by_rational_with_rounding;
 use sp_arithmetic::per_things::Rounding;
 
@@ -67,10 +70,10 @@ pub async fn send_xcm_bridge_hub(
         instructions.append(&mut vec![
             Transact {
                 origin_kind: OriginKind::Superuser,
-                require_weight_at_most: Weight {
+                fallback_max_weight: Some(Weight {
                     ref_time: ref_time,
                     proof_size: proof_size,
-                },
+                }),
                 call: DoubleEncoded { encoded },
             },
             ExpectTransactStatus(MaybeErrorCode::Success),
@@ -78,11 +81,11 @@ pub async fn send_xcm_bridge_hub(
     }
 
     let call = RelayRuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
-        dest: Box::new(VersionedLocation::V4(Location {
+        dest: Box::new(VersionedLocation::V5(Location {
             parents: 0,
             interior: Junctions::X1([Junction::Parachain(BRIDGE_HUB_ID)]),
         })),
-        message: Box::new(VersionedXcm::V4(Xcm(instructions))),
+        message: Box::new(VersionedXcm::V5(Xcm(instructions))),
     });
 
     Ok(call)
@@ -110,10 +113,10 @@ pub async fn send_xcm_asset_hub(
         instructions.append(&mut vec![
             Transact {
                 origin_kind: OriginKind::Superuser,
-                require_weight_at_most: Weight {
+                fallback_max_weight: Some(Weight {
                     ref_time: ref_time,
                     proof_size: proof_size,
-                },
+                }),
                 call: DoubleEncoded { encoded },
             },
             ExpectTransactStatus(MaybeErrorCode::Success),
@@ -121,11 +124,11 @@ pub async fn send_xcm_asset_hub(
     }
 
     let call = RelayRuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
-        dest: Box::new(VersionedLocation::V4(Location {
+        dest: Box::new(VersionedLocation::V5(Location {
             parents: 0,
             interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
         })),
-        message: Box::new(VersionedXcm::V4(Xcm(instructions))),
+        message: Box::new(VersionedXcm::V5(Xcm(instructions))),
     });
 
     Ok(call)
@@ -177,12 +180,6 @@ pub fn sudo(call: Box<RelayRuntimeCall>) -> RelayRuntimeCall {
 }
 
 pub fn force_xcm_version() -> AssetHubRuntimeCall {
-    #[cfg(any(feature = "paseo", feature = "polkadot"))]
-    use crate::asset_hub_runtime::runtime_types::staging_xcm::v4::{
-        junction::Junction::GlobalConsensus, junction::NetworkId, junctions::Junctions::X1,
-        location::Location,
-    };
-    #[cfg(feature = "westend")]
     use crate::asset_hub_runtime::runtime_types::staging_xcm::v5::{
         junction::Junction::GlobalConsensus, junction::NetworkId, junctions::Junctions::X1,
         location::Location,
@@ -200,10 +197,6 @@ pub fn force_xcm_version() -> AssetHubRuntimeCall {
         },
     )
 }
-
-use bridge_hub_runtime::runtime_types::snowbridge_core::outbound::v1::AgentExecuteCommand;
-use bridge_hub_runtime::runtime_types::snowbridge_core::outbound::v1::Command;
-use bridge_hub_runtime::runtime_types::snowbridge_core::outbound::Fee;
 
 pub async fn calculate_delivery_fee(
     api: &OnlineClient<PolkadotConfig>,

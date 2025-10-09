@@ -744,6 +744,9 @@ async function indexEthChain(
                         "0x0000000000000000000000000000000000000000000000000000000000000000"
                             ? foreignId
                             : undefined,
+                    // LDO gas from https://etherscan.io/tx/0x4e984250beacf693e7407c6cfdcb51229f6a549aa857d601db868b572ee2364b
+                    // Other ERC20 token transfer on Ethereum typically ranges from 45,000 to 65,000 gas units; use 80_000 to leave a margin
+                    deliveryGas: asset.symbol == "LDO" ? 150_000n : 80_000n,
                 }
             }
             if (token in metadataOverrides) {
@@ -769,6 +772,7 @@ async function indexEthChain(
             chainId: networkChainId,
             assets,
             id: id ?? `chain_${networkChainId}`,
+            baseDeliveryGas: 120_000n,
         }
     } else {
         let evmParachainChain: Parachain | undefined
@@ -901,6 +905,15 @@ function addOverrides(envName: string, result: RegistryOptions) {
             }
             break
         }
+        case "paseo_sepolia": {
+            result.metadataOverrides = {}
+            // Change the name of TRAC
+            result.metadataOverrides["0xef32abea56beff54f61da319a7311098d6fbcea9".toLowerCase()] = {
+                name: "OriginTrail TRAC",
+                symbol: "TRAC",
+            }
+            break
+        }
     }
 }
 
@@ -946,11 +959,15 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                     return false
                 }
 
-                // Disable TRAC from going to any but hydration
+                // Allow TRAC to go to Hydration (2034) and Neuroweb (2043) only
                 if (
                     path.asset === "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f" &&
-                    ((path.destination !== 2034 && path.type === "ethereum") ||
-                        (path.source !== 2034 && path.type === "substrate"))
+                    ((path.destination !== 2034 &&
+                        path.destination !== 2043 &&
+                        path.type === "ethereum") ||
+                        (path.source !== 2034 &&
+                            path.source !== 2043 &&
+                            path.type === "substrate"))
                 ) {
                     return false
                 }
@@ -998,7 +1015,7 @@ async function getRegisteredPnas(
             console.warn(`Could not convert ${key.toHuman()} to location`)
             continue
         }
-        const tokenId = (key.args.at(0)?.toPrimitive() as string).toLowerCase()
+        const tokenId = (key.args[0]?.toPrimitive() as string).toLowerCase()
         const token = await gateway.tokenAddressOf(tokenId)
         pnas[token.toLowerCase()] = {
             token: token.toLowerCase(),
@@ -1032,24 +1049,66 @@ export async function getAssetHubConversionPalletSwap(
     return BigInt(asset1Balance)
 }
 
-export const assetErc20Balance = async (
-    context: Context,
-    token: string,
-    owner: string
-): Promise<{
-    balance: bigint
-    gatewayAllowance: bigint
-}> => {
-    const [ethereum, gateway] = await Promise.all([context.ethereum(), context.gateway()])
-
-    const tokenContract = IERC20__factory.connect(token, ethereum)
-    const gatewayAddress = await gateway.getAddress()
+export async function erc20Balance(
+    ethereum: AbstractProvider,
+    tokenAddress: string,
+    owner: string,
+    spender: string
+) {
+    const tokenContract = IERC20__factory.connect(tokenAddress, ethereum)
     const [balance, gatewayAllowance] = await Promise.all([
         tokenContract.balanceOf(owner),
-        tokenContract.allowance(owner, gatewayAddress),
+        tokenContract.allowance(owner, spender),
     ])
     return {
         balance,
         gatewayAllowance,
+    }
+}
+
+export async function swapAsset1ForAsset2(
+    assetHub: ApiPromise,
+    asset1: any,
+    asset2: any,
+    exactAsset1Balance: bigint
+) {
+    const result = await assetHub.call.assetConversionApi.quotePriceExactTokensForTokens(
+        asset1,
+        asset2,
+        exactAsset1Balance,
+        true
+    )
+    const asset2Balance = result.toPrimitive() as any
+    if (asset2Balance == null) {
+        throw Error(
+            `No pool set up in asset conversion pallet for '${JSON.stringify(
+                asset1
+            )}' and '${JSON.stringify(asset2)}'.`
+        )
+    }
+    return BigInt(asset2Balance)
+}
+
+export async function validateAccount(
+    parachainImpl: ParachainBase,
+    beneficiaryAddress: string,
+    ethChainId: number,
+    tokenAddress: string,
+    assetMetadata?: Asset,
+    maxConsumers?: bigint
+) {
+    // Check if the account is created
+    const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
+        parachainImpl.getNativeAccount(beneficiaryAddress),
+        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
+    ])
+    return {
+        accountExists: !(
+            beneficiaryAccount.consumers === 0n &&
+            beneficiaryAccount.providers === 0n &&
+            beneficiaryAccount.sufficients === 0n
+        ),
+        accountMaxConsumers:
+            beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n,
     }
 }

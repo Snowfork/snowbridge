@@ -68,7 +68,7 @@ import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 import "./mocks/HighGasToken.sol";
 
 contract GatewayV1Test is Test {
-    // Emitted when token minted/burnt/transfered
+    // Emitted when token minted/burnt/transferred
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     ParaID public bridgeHubParaID = ParaID.wrap(1013);
@@ -1339,5 +1339,38 @@ contract GatewayV1Test is Test {
         // Verify that the token transfer didn't happen (indicating the handler failed due to out of gas)
         assertEq(highGasToken.balanceOf(account1), 0);
         assertEq(highGasToken.balanceOf(assetHubAgent), 1000);
+    }
+
+    function testCalldataPaddingVulnerability() public {
+        // Test 1: Minimal calldata (4 bytes)
+        bytes memory shortCalldata = abi.encodeWithSelector(MockGateway.transactionBaseGas.selector);
+        (bool success1, bytes memory result1) = address(gateway).staticcall(shortCalldata);
+        require(success1, "Short call failed");
+        uint256 shortGas = abi.decode(result1, (uint256));
+
+        // Test 2: Same call + 1,000 zero bytes padding
+        uint256 paddingSize = 1000;
+        bytes memory paddedCalldata = bytes.concat(shortCalldata, new bytes(paddingSize));
+        (bool success2, bytes memory result2) = address(gateway).staticcall(paddedCalldata);
+        require(success2, "Padded call failed");
+        uint256 paddedGas = abi.decode(result2, (uint256));
+
+        // Test 2: Same call + 3,000 zero bytes padding and gas consumed should increase
+        paddingSize = 3000;
+        paddedCalldata = bytes.concat(shortCalldata, new bytes(paddingSize));
+        (success2, result2) = address(gateway).staticcall(paddedCalldata);
+        require(success2, "Padded call failed");
+        uint256 paddedGas2 = abi.decode(result2, (uint256));
+
+        require(paddedGas < paddedGas2, "gas should increase");
+
+        // Test 3: Same call + 50,000 zero-byte padding. Although padding increase, gas usage does not grow beyond the maximum bound.
+        paddingSize = 50000;
+        paddedCalldata = bytes.concat(shortCalldata, new bytes(paddingSize));
+        (success2, result2) = address(gateway).staticcall(paddedCalldata);
+        require(success2, "Padded call failed");
+        uint256 paddedGas3 = abi.decode(result2, (uint256));
+
+        require(paddedGas3 == paddedGas2, "gas won't increased");
     }
 }

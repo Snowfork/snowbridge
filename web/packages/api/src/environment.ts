@@ -260,6 +260,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 "1000": "wss://asset-hub-paseo-rpc.dwellir.com",
                 "1002": "wss://bridge-hub-paseo.dotters.network",
                 "3369": "wss://paseo-muse-rpc.polkadot.io",
+                "2043": `wss://parachain-testnet-rpc.origin-trail.network`,
             },
             GATEWAY_CONTRACT: "0x1607C1368bc943130258318c91bBd8cFf3D063E6",
             BEEFY_CONTRACT: "0x2c780945beb1241fE9c645800110cb9C4bBbb639",
@@ -510,7 +511,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 "2034": "wss://hydration-rpc.n.dwellir.com",
                 "2030": "wss://bifrost-polkadot.ibp.network",
                 "2004": "wss://moonbeam-rpc.n.dwellir.com",
-                "2000": "wss://acala-rpc.dwellir.com",
+                "2000": "wss://acala-rpc-0.aca-api.network",
+                "2043": "wss://parachain-rpc.origin-trail.network",
                 // TODO: Add back in jampton once we have an indexer in place.
                 //"3397": "wss://rpc.jamton.network",
             },
@@ -610,10 +612,10 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ETHEREUM_CHAINS: {
                 "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
             },
-            RELAY_CHAIN_URL: "wss://westend-rpc.dwellir.com",
+            RELAY_CHAIN_URL: "wss://westend-rpc.n.dwellir.com",
             PARACHAINS: {
-                "1000": "wss://asset-hub-westend-rpc.dwellir.com",
-                "1002": "wss://bridge-hub-westend-rpc.dwellir.com",
+                "1000": "wss://asset-hub-westend-rpc.n.dwellir.com",
+                "1002": "wss://bridge-hub-westend-rpc.n.dwellir.com",
                 "2313": `wss://node-7330371704012918784.nv.onfinality.io/ws?apikey=${
                     process.env["FREQUENCY_NODE_KEY"] ||
                     process.env["NEXT_PUBLIC_FREQUENCY_NODE_KEY"]

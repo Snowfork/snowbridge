@@ -763,7 +763,7 @@ pub async fn get_agent_address(
 	agent_id: [u8; 32],
 ) -> Result<Address, Box<dyn std::error::Error>> {
 	let gateway_addr: Address = (*GATEWAY_PROXY_CONTRACT).into();
-	let gateway = IGatewayV2::new(gateway_addr, *ethereum_client);
+	let gateway = IGateway::new(gateway_addr, *ethereum_client);
 	let agent_address = gateway.agentOf(FixedBytes::from(agent_id)).call().await?;
 	Ok(agent_address)
 }

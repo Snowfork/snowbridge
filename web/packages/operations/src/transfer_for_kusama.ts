@@ -55,19 +55,26 @@ export const transferForKusama = async (
     }
 
     let tokenAddress
-    if (tokenName == "DOT" || tokenName == "KSM") {
+    if (tokenName == "ETH") {
+        tokenAddress = "0x0000000000000000000000000000000000000000"
+    } else {
+        // look for Ethereum assets
+        const assets = registry.ethereumChains[registry.ethChainId].assets
+        for (const [token, asset] of Object.entries(assets)) {
+            if (asset.symbol === tokenName) {
+                tokenAddress = token
+            }
+        }
+    }
+
+    if (!tokenAddress) {
+        // look for Parachain assets
         const assets = registry.parachains[registry.assetHubParaId].assets
         for (const [token, asset] of Object.entries(assets)) {
             if (asset.symbol === tokenName) {
                 tokenAddress = token
             }
         }
-    } else if (tokenName == "ETH") {
-        tokenAddress = "0x0000000000000000000000000000000000000000"
-    } else {
-        tokenAddress = snowbridgeEnv.locations[0].erc20tokensReceivable.find(
-            (t) => t.id === tokenName
-        )!.address
     }
 
     if (!tokenAddress) {

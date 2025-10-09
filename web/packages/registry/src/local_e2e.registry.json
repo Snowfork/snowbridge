@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-07-16T02:46:56.078Z",
+  "timestamp": "2025-08-13T06:09:22.989Z",
   "environment": "local_e2e",
   "ethChainId": 11155111,
   "gatewayAddress": "0xb1185ede04202fe62d38f5db72f71e38ff3e8305",
@@ -13,7 +13,7 @@
     "accountType": "AccountId32",
     "name": "Westend Local Testnet",
     "specName": "westend",
-    "specVersion": 1018012
+    "specVersion": 1019002
   },
   "bridgeHub": {
     "tokenSymbols": "WND",
@@ -23,7 +23,7 @@
     "accountType": "AccountId32",
     "name": "Westend BridgeHub Local",
     "specName": "bridge-hub-westend",
-    "specVersion": 1018002
+    "specVersion": 1019002
   },
   "ethereumChains": {
     "11155111": {
@@ -39,31 +39,36 @@
           "token": "0xb8ea8cb425d85536b158d661da1ef0895bb92f1d",
           "name": "Wrapped Ether",
           "symbol": "WETH",
-          "decimals": 18
-        },
-        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
-          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
-          "name": "roc",
-          "symbol": "roc",
-          "decimals": 12,
-          "foreignId": "0xbcd4282ca0c30cbd9c578b5c790e88c803d80cd9cc91f28686f24ac25a61e06e"
+          "decimals": 18,
+          "deliveryGas": "bigint:80000"
         },
         "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
           "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
+          "name": "roc",
+          "symbol": "roc",
+          "decimals": 12,
+          "foreignId": "0xbcd4282ca0c30cbd9c578b5c790e88c803d80cd9cc91f28686f24ac25a61e06e",
+          "deliveryGas": "bigint:80000"
+        },
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
           "name": "wnd",
           "symbol": "wnd",
           "decimals": 12,
-          "foreignId": "0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7"
+          "foreignId": "0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7",
+          "deliveryGas": "bigint:80000"
         },
         "0x805c5a7d4e97908a8ec726dccc94a047d073eb7e": {
           "token": "0x805c5a7d4e97908a8ec726dccc94a047d073eb7e",
           "name": "pal-2",
           "symbol": "pal-2",
           "decimals": 12,
-          "foreignId": "0x17444ededa61bdbfcb1e5c39b2aed47f73b8970b65bbb0574c0a0ab1b0c99279"
+          "foreignId": "0x17444ededa61bdbfcb1e5c39b2aed47f73b8970b65bbb0574c0a0ab1b0c99279",
+          "deliveryGas": "bigint:80000"
         }
       },
-      "id": "sepolia"
+      "id": "sepolia",
+      "baseDeliveryGas": "bigint:120000"
     }
   },
   "parachains": {
@@ -84,7 +89,7 @@
         "accountType": "AccountId32",
         "name": "Westend Asset Hub Local",
         "specName": "westmint",
-        "specVersion": 1018012
+        "specVersion": 1019002
       },
       "assets": {
         "0x0000000000000000000000000000000000000000": {
@@ -103,11 +108,11 @@
           "decimals": 18,
           "isSufficient": true
         },
-        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
-          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
+        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
+          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
           "name": "Roc",
           "symbol": "Roc",
-          "decimals": 12,
+          "decimals": 0,
           "locationOnEthereum": {
             "parents": 1,
             "interior": {
@@ -148,8 +153,8 @@
           "minimumBalance": "bigint:1",
           "isSufficient": true
         },
-        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
-          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
           "name": "",
           "symbol": "WND",
           "decimals": 12,
@@ -338,6 +343,35 @@
           "minimumBalance": "bigint:1000000000",
           "isSufficient": false,
           "assetId": "2"
+        },
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
+          "name": "",
+          "symbol": "WND",
+          "decimals": 12,
+          "locationOnEthereum": {
+            "parents": 1,
+            "interior": {
+              "x1": [
+                {
+                  "globalConsensus": {
+                    "byGenesis": "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
+                  }
+                }
+              ]
+            }
+          },
+          "location": {
+            "parents": 1,
+            "interior": "Here"
+          },
+          "locationOnAH": {
+            "parents": 1,
+            "interior": "Here"
+          },
+          "foreignId": "0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7",
+          "minimumBalance": "bigint:1000000000",
+          "isSufficient": true
         }
       },
       "estimatedExecutionFeeDOT": "bigint:3276800000",

@@ -17,6 +17,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	contractV1 "github.com/snowfork/snowbridge/relayer/contracts/v1"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
+	"golang.org/x/sync/errgroup"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -65,16 +66,16 @@ func NewOnDemandRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*OnDe
 	return &relay, nil
 }
 
-func (relay *OnDemandRelay) Start(ctx context.Context) error {
-	err := relay.ethereumConn.Connect(ctx)
+func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error {
+	err := relay.ethereumConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Sink.Ethereum.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to ethereum: %w", err)
 	}
-	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.Polkadot.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to relaychain: %w", err)
 	}
-	err = relay.parachainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err = relay.parachainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.BridgeHub.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to parachain: %w", err)
 	}
@@ -96,26 +97,30 @@ func (relay *OnDemandRelay) Start(ctx context.Context) error {
 	}
 	relay.gatewayContractV1 = gatewayContractV1
 
-	relay.tokenBucket.Start(ctx)
+	ticker := time.NewTicker(time.Second * 60)
 
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-time.After(time.Second * 30):
-			log.Info("Starting check")
-			err = relay.syncV1(ctx)
-			if err != nil {
-				return fmt.Errorf("sync for v1 message: %w", err)
-			}
-			if relay.isV2Enabled(ctx) {
-				err = relay.syncV2(ctx)
+	eg.Go(func() error {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-ticker.C:
+				log.Info("Starting check")
+				err = relay.syncV1(ctx)
 				if err != nil {
-					return fmt.Errorf("sync for v2 message: %w", err)
+					return fmt.Errorf("sync for v1 message: %w", err)
+				}
+				if relay.isV2Enabled(ctx) {
+					err = relay.syncV2(ctx)
+					if err != nil {
+						return fmt.Errorf("sync for v2 message: %w", err)
+					}
 				}
 			}
 		}
-	}
+	})
+	return nil
 }
 
 func (relay *OnDemandRelay) syncV1(ctx context.Context) error {
@@ -131,12 +136,10 @@ func (relay *OnDemandRelay) syncV1(ctx context.Context) error {
 
 	if paraNonce > ethNonce {
 
-		// Check if we are rate-limited
-		if !relay.tokenBucket.TryConsume(1) {
-			return fmt.Errorf("Rate-limit exceeded")
-		}
-
 		log.Info("Performing sync v1")
+
+		// sleep to ensure that beefy head newer than relay chain block in which the parachain block was accepted.
+		time.Sleep(time.Minute * 2)
 
 		beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
 		if err != nil {
@@ -155,22 +158,27 @@ func (relay *OnDemandRelay) syncV1(ctx context.Context) error {
 
 		log.Info("Sync completed")
 
-		relay.waitUntilMessagesSynced(ctx, paraNonce)
+		err = relay.waitUntilMessagesSynced(ctx, paraNonce)
+		if err != nil {
+			return fmt.Errorf("wait until messages synced: %w", err)
+		}
 	}
 	return nil
 }
 
-func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, paraNonce uint64) {
+func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, paraNonce uint64) error {
+	var cnt uint64
 	for {
 		ethNonce, err := relay.fetchEthereumNonce(ctx)
-		if err != nil {
-			log.WithError(err).Error("fetch latest ethereum nonce")
-			return
+
+		if err == nil && ethNonce >= paraNonce {
+			return nil
 		}
-		if ethNonce >= paraNonce {
-			return
+		time.Sleep(time.Second * 30)
+		cnt++
+		if cnt > 10 {
+			return fmt.Errorf("timeout waiting for messages to be relayed")
 		}
-		time.Sleep(time.Second * 10)
 	}
 }
 
@@ -497,15 +505,16 @@ func (relay *OnDemandRelay) isV2NonceRelayed(ctx context.Context, nonce uint64) 
 }
 
 func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber uint64) error {
-	err := relay.ethereumConn.Connect(ctx)
+	eg, ctx := errgroup.WithContext(ctx)
+	err := relay.ethereumConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Sink.Ethereum.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to ethereum: %w", err)
 	}
-	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.Polkadot.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to relaychain: %w", err)
 	}
-	err = relay.parachainConn.ConnectWithHeartBeat(ctx, 30*time.Second)
+	err = relay.parachainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.BridgeHub.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to parachain: %w", err)
 	}

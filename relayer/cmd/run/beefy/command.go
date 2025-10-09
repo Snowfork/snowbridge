@@ -101,10 +101,12 @@ func run(_ *cobra.Command, _ []string) error {
 			return err
 		}
 
-		eg.Go(func() error {
-			err = relay.Start(ctx)
+		err = relay.Start(ctx, eg)
+		if err != nil {
+			logrus.WithError(err).Fatal("Unhandled error")
+			cancel()
 			return err
-		})
+		}
 	}
 
 	err = eg.Wait()

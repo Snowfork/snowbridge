@@ -1,8 +1,7 @@
 import { AssetMap } from "@snowbridge/base-types"
 import { PNAMap } from "../assets_v2"
 import { ParachainBase } from "./parachainBase"
-import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
-import { WESTEND_GENESIS } from "./assethub"
+import { DOT_LOCATION, getTokenFromLocation, WESTEND_GENESIS } from "../xcmBuilder"
 
 export class PenpalParachain extends ParachainBase {
     getXC20DOT() {
@@ -41,7 +40,7 @@ export class PenpalParachain extends ParachainBase {
         {
             const entries = await this.provider.query.foreignAssets.asset.entries()
             for (const [key, value] of entries) {
-                const location: any = key.args.at(0)?.toJSON()
+                const location: any = key.args[0]?.toJSON()
                 if (!location) {
                     console.warn(
                         `Could not convert ${key.toHuman()} to location for ${this.specName}.`

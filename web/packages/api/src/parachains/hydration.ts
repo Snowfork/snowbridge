@@ -35,7 +35,7 @@ export class HydrationParachain extends ParachainBase {
                 continue
             }
 
-            const assetId = Number(id.args.at(0)?.toString())
+            const assetId = Number(id.args[0]?.toString())
             const asset: any = (
                 await this.provider.query.assetRegistry.assets(assetId)
             ).toPrimitive()

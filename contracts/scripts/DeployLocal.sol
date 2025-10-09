@@ -75,7 +75,14 @@ contract DeployLocal is Script {
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
 
         // Deploy WETH for testing
-        new WETH9();
+        WETH9 weth = new WETH9();
+
+        // Mint 10 ether worth of WETH to the deployer
+        weth.deposit{value: 10 ether}();
+
+        // Transfer WETH to the user
+        address user = 0x90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe;
+        weth.transfer(user, 10 ether);
 
         // For testing call contract
         new HelloWorld();
