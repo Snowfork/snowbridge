@@ -52,7 +52,7 @@ func NewOnDemandRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*OnDe
 		ethereumWriter:    ethereumWriter,
 		gatewayContract:   nil,
 		assetHubChannelID: *(*[32]byte)(assetHubChannelID),
-		activeTasks:       *NewTaskMap(3),
+		activeTasks:       *NewTaskMap(3, 300),
 	}
 
 	return &relay, nil
@@ -421,6 +421,8 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 		log.Info("No task available, waiting for new tasks to be queued or for the ongoing task to complete")
 		return nil
 	}
+	// Try to merge the previous tasks
+	relay.activeTasks.Merge(task.nonce)
 	err := relay.activeTasks.sem.Acquire(ctx, 1)
 	if err != nil {
 		return err

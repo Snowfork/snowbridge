@@ -25,24 +25,26 @@ type TaskInfo struct {
 }
 
 type TaskMap struct {
-	mu    sync.RWMutex
-	data  map[uint64]*TaskInfo
-	limit int64 // Maximum number of tasks allowed
-	sem   *semaphore.Weighted
+	mu           sync.RWMutex
+	data         map[uint64]*TaskInfo
+	limit        uint64 // Maximum number of tasks allowed
+	skipInterval uint64 // Merge tasks based upon the interval if the new task is close to the previous one
+	sem          *semaphore.Weighted
 }
 
-func NewTaskMap(limit int64) *TaskMap {
+func NewTaskMap(limit uint64, interval uint64) *TaskMap {
 	return &TaskMap{
-		data:  make(map[uint64]*TaskInfo),
-		limit: limit,
-		sem:   semaphore.NewWeighted(limit),
+		data:         make(map[uint64]*TaskInfo),
+		limit:        limit,
+		sem:          semaphore.NewWeighted(int64(limit)),
+		skipInterval: interval,
 	}
 }
 
 func (tm *TaskMap) Store(key uint64, task *Request) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
-	if int64(len(tm.data)) >= tm.limit {
+	if len(tm.data) >= int(tm.limit) {
 		return
 	}
 	tm.data[key] = &TaskInfo{
@@ -69,12 +71,13 @@ func (tm *TaskMap) Delete(key uint64) {
 func (tm *TaskMap) Full() bool {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
-	if int64(len(tm.data)) >= tm.limit {
+	if len(tm.data) >= int(tm.limit) {
 		return true
 	}
 	return false
 }
 
+// Pop the next available task, or return nil if none are available.
 func (tm *TaskMap) Pop() *TaskInfo {
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
@@ -119,4 +122,25 @@ func (tm *TaskMap) InspectAll() []*TaskInfo {
 		tasks = append(tasks, task)
 	}
 	return tasks
+}
+
+// Merge previous tasks and mark them as skippable if the new task occurs close in time.
+func (tm *TaskMap) Merge(key uint64) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	val, ok := tm.data[key]
+	if !ok {
+		return
+	}
+	if len(tm.data) < 2 {
+		return
+	}
+	for k := range tm.data {
+		if k != key {
+			preVal, _ := tm.data[k]
+			if val.timestamp > preVal.timestamp && val.timestamp-preVal.timestamp < tm.skipInterval {
+				preVal.req.Skippable = true
+			}
+		}
+	}
 }

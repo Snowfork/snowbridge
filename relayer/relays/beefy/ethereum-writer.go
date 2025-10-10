@@ -148,6 +148,12 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return fmt.Errorf("generate commitment hash: %w", err)
 	}
 
+	if task.Skippable {
+		log.WithFields(logrus.Fields{
+			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Beefy commitment is skipped, indicating that a newer and closely timed update is already in progress.")
+		return nil
+	}
 	// Commit PrevRandao which will be used as seed to randomly select subset of validators
 	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L446-L447
 	tx, err = wr.contract.CommitPrevRandao(
@@ -165,6 +171,12 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return err
 	}
 
+	if task.Skippable {
+		log.WithFields(logrus.Fields{
+			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Beefy commitment is skipped, indicating that a newer and closely timed update is already in progress.")
+		return nil
+	}
 	// Final submission
 	tx, err = wr.doSubmitFinal(ctx, *commitmentHash, initialBitfield, &task)
 	if err != nil {
