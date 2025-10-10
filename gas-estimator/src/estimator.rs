@@ -1,7 +1,6 @@
 #[cfg(feature = "local")]
 use crate::config::local::*;
 use crate::contracts::r#i_gateway_v2::IGatewayV2;
-use crate::penpal;
 use alloy_sol_types::{sol, SolValue};
 #[cfg(feature = "local")]
 use asset_hub_westend_local_runtime::{
@@ -97,13 +96,6 @@ lazy_static! {
             "ws://127.0.0.1:11144".to_string()
         }
     };
-    pub static ref PENPAL_WS_URL: String = {
-        if let Ok(val) = env::var("PENPAL_WS_URL") {
-            val
-        } else {
-            "ws://127.0.0.1:13144".to_string()
-        }
-    };
 }
 
 pub enum AssetHubConfig {}
@@ -115,18 +107,6 @@ impl Config for AssetHubConfig {
     type Hasher = <PolkadotConfig as Config>::Hasher;
     type Header = <PolkadotConfig as Config>::Header;
     type ExtrinsicParams = DefaultExtrinsicParams<AssetHubConfig>;
-    type AssetId = <PolkadotConfig as Config>::AssetId;
-}
-
-pub enum PenpalConfig {}
-
-impl Config for PenpalConfig {
-    type AccountId = <PolkadotConfig as Config>::AccountId;
-    type Address = <PolkadotConfig as Config>::Address;
-    type Signature = <PolkadotConfig as Config>::Signature;
-    type Hasher = <PolkadotConfig as Config>::Hasher;
-    type Header = <PolkadotConfig as Config>::Header;
-    type ExtrinsicParams = DefaultExtrinsicParams<PenpalConfig>;
     type AssetId = <PolkadotConfig as Config>::AssetId;
 }
 
@@ -170,24 +150,15 @@ pub async fn clients() -> Result<Clients, EstimatorError> {
                 EstimatorError::ConnectionError(format!("Cannot connect to bridge hub: {}", e))
             })?;
 
-    let penpal_client: OnlineClient<PenpalConfig> =
-        OnlineClient::from_url((*PENPAL_WS_URL).to_string())
-            .await
-            .map_err(|e| {
-                EstimatorError::ConnectionError(format!("Cannot connect to penpal: {}", e))
-            })?;
-
     Ok(Clients {
         asset_hub_client: Box::new(asset_hub_client),
         bridge_hub_client: Box::new(bridge_hub_client),
-        penpal_client: Box::new(penpal_client),
     })
 }
 
 pub struct Clients {
     pub asset_hub_client: Box<OnlineClient<AssetHubConfig>>,
     pub bridge_hub_client: Box<OnlineClient<PolkadotConfig>>,
-    pub penpal_client: Box<OnlineClient<PenpalConfig>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -343,64 +314,6 @@ pub async fn estimate_gas(
             (None, None)
         };
 
-        // Calculate AssetHub to destination delivery fee
-        let (dest_delivery_fee_dot, dest_delivery_fee_ether) = if let Some(para_id_val) = para_id {
-            match calculate_asset_hub_to_destination_delivery_fee(
-                clients,
-                &forwarded_xcm,
-                para_id_val,
-            )
-            .await
-            {
-                Ok(delivery_fee_dot) => {
-                    // Convert delivery fee to Ether
-                    match quote_price_exact_tokens_for_tokens(
-                        clients,
-                        dot_asset.clone(),
-                        ether_asset.clone(),
-                        delivery_fee_dot,
-                        true,
-                    )
-                    .await
-                    {
-                        Ok(delivery_fee_ether) => {
-                            (Some(delivery_fee_dot), Some(delivery_fee_ether))
-                        }
-                        Err(e) => {
-                            println!("Failed to convert destination delivery fee to Ether: {}", e);
-                            (Some(delivery_fee_dot), None)
-                        }
-                    }
-                }
-                Err(e) => {
-                    println!("Failed to calculate destination delivery fee: {}", e);
-                    (None, None)
-                }
-            }
-        } else {
-            (None, None)
-        };
-
-        match dry_run_xcm_on_destination(clients, forwarded_xcm).await {
-            Ok(dest_result) => (
-                Some(dest_result.success),
-                dest_result.error_message,
-                para_id,
-                dest_fee_dot,
-                dest_fee_ether,
-                dest_delivery_fee_dot,
-                dest_delivery_fee_ether,
-            ),
-            Err(e) => (
-                Some(false),
-                Some(format!("Destination dry run failed: {}", e)),
-                para_id,
-                dest_fee_dot,
-                dest_fee_ether,
-                dest_delivery_fee_dot,
-                dest_delivery_fee_ether,
-            ),
-        }
     } else {
         (None, None, None, None, None, None, None)
     };
@@ -810,64 +723,6 @@ async fn dry_run_xcm_on_asset_hub(
             error_message: Some(format!("Dry run API error: {:?}", e)),
             forwarded_xcm: None,
         }),
-    }
-}
-
-#[cfg(feature = "local")]
-async fn dry_run_xcm_on_destination(
-    clients: &Clients,
-    forwarded_xcm: (VersionedLocation, Vec<VersionedXcm>),
-) -> Result<DryRunResult, EstimatorError> {
-    let (destination_location, xcms) = forwarded_xcm;
-
-    let para_id = extract_parachain_id(&destination_location)?;
-
-    let xcm = xcms
-        .into_iter()
-        .next()
-        .ok_or_else(|| EstimatorError::InvalidCommand("No XCM to forward".to_string()))?;
-
-    match para_id {
-        PENPAL_PARA_ID => penpal::dry_run_xcm(clients, xcm).await,
-        _ => Err(EstimatorError::InvalidCommand(format!(
-            "Unsupported destination parachain for local network: {}",
-            para_id
-        ))),
-    }
-}
-
-#[cfg(feature = "local")]
-async fn calculate_destination_execution_fee(
-    clients: &Clients,
-    forwarded_xcm: &(VersionedLocation, Vec<VersionedXcm>),
-    para_id: u32,
-    dot_asset: &Location,
-    ether_asset: &Location,
-) -> Result<(u128, u128), EstimatorError> {
-    let (_, xcms) = forwarded_xcm;
-    let xcm = xcms
-        .iter()
-        .next()
-        .ok_or_else(|| EstimatorError::InvalidCommand("No XCM to calculate fee for".to_string()))?;
-
-    match para_id {
-        PENPAL_PARA_ID => {
-            let fee_dot = crate::penpal::calculate_execution_fee(clients, xcm).await?;
-            let fee_ether = quote_price_exact_tokens_for_tokens(
-                clients,
-                dot_asset.clone(),
-                ether_asset.clone(),
-                fee_dot,
-                true,
-            )
-            .await?;
-
-            Ok((fee_dot, fee_ether))
-        }
-        _ => Err(EstimatorError::InvalidCommand(format!(
-            "Fee calculation not supported for parachain {} on local network",
-            para_id
-        ))),
     }
 }
 

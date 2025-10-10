@@ -11,9 +11,6 @@ pub mod local {
     /// Para ID for Bridge Hub
     pub const BRIDGE_HUB_PARA_ID: u32 = 1002;
 
-    /// Para ID for Penpal parachain
-    pub const PENPAL_PARA_ID: u32 = 2000;
-
     /// Deposit required for creating assets
     pub const CREATE_ASSET_DEPOSIT: u128 = 100_000_000_000;
 
