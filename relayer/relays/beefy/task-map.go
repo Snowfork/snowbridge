@@ -104,3 +104,19 @@ func (tm *TaskMap) SetStatus(key uint64, status TaskState) {
 		val.status = status
 	}
 }
+
+func (tm *TaskMap) InspectAll() []*TaskInfo {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+	tasks := make([]*TaskInfo, 0, len(tm.data))
+	keys := make([]int, 0, len(tm.data))
+	for k := range tm.data {
+		keys = append(keys, int(k))
+	}
+	sort.Ints(keys)
+	for _, k := range keys {
+		task := tm.data[uint64(k)]
+		tasks = append(tasks, task)
+	}
+	return tasks
+}
