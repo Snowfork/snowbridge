@@ -83,10 +83,10 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 	}
 	relay.gatewayContract = gatewayContract
 
-	ticker := time.NewTicker(time.Second * 60)
+	enqueueTicker := time.NewTicker(time.Second * 120)
 
 	eg.Go(func() error {
-		defer ticker.Stop()
+		defer enqueueTicker.Stop()
 		for {
 			log.Info("Starting check nonces")
 
@@ -109,14 +109,15 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 			select {
 			case <-ctx.Done():
 				return nil
-			case <-ticker.C:
+			case <-enqueueTicker.C:
 				continue
 			}
 		}
 	})
 
+	scheduleTicker := time.NewTicker(time.Second * 60)
 	eg.Go(func() error {
-		defer ticker.Stop()
+		defer scheduleTicker.Stop()
 		for {
 			log.Info("Scheduling pending nonces")
 			tasks := relay.activeTasks.InspectAll()
@@ -139,7 +140,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 			select {
 			case <-ctx.Done():
 				return nil
-			case <-ticker.C:
+			case <-scheduleTicker.C:
 				continue
 			}
 		}
