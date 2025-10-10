@@ -129,6 +129,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 					"nonce":      task.nonce,
 					"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
 					"status":     task.status,
+					"skipped":    task.req.Skippable,
 				}).Info("Task info")
 			}
 			if len(tasks) > 0 {
@@ -446,7 +447,16 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 				"nonce":      task.nonce,
 				"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
 			}).Info("Sync beefy completed")
-			relay.activeTasks.Delete(task.nonce)
+			err = relay.waitUntilMessagesSynced(ctx, task.nonce)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"nonce":      task.nonce,
+					"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
+				}).Warn("Beefy sync completed, but the nonce task failed to sync in time. It will be cleaned up in the next loop")
+				relay.activeTasks.SetStatus(task.nonce, TaskCompleted)
+			} else {
+				relay.activeTasks.Delete(task.nonce)
+			}
 		}
 		return nil
 	})

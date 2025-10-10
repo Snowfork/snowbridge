@@ -91,6 +91,9 @@ func (tm *TaskMap) Pop() *TaskInfo {
 	sort.Ints(keys)
 	for _, k := range keys {
 		task := tm.data[uint64(k)]
+		if task.status == TaskCompleted {
+			delete(tm.data, uint64(k))
+		}
 		if task.status == TaskPending || task.status == TaskFailed {
 			task.status = TaskInProgress
 			return task
