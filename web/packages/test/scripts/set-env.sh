@@ -92,8 +92,15 @@ export ETHERSCAN_API_KEY="${ETHERSCAN_API_KEY:-0x0}"
 # but for rococo-local each session is only 20 slots=120s
 # so relax somehow here just for quick test
 # for production deployment ETH_RANDAO_DELAY should be configured in a more reasonable sense
-export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-3}"
-export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
+# When running in fast mode (1s slots vs 12s slots), we need longer expiration
+# to account for the 12x faster block production
+if [ "$eth_fast_mode" == "true" ]; then
+    export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-3}"
+    export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-40}"
+else
+    export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-3}"
+    export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
+fi
 export MINIMUM_REQUIRED_SIGNATURES="${MINIMUM_REQUIRED_SIGNATURES:-16}"
 
 ## Fee
