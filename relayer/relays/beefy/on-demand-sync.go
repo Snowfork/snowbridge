@@ -52,7 +52,7 @@ func NewOnDemandRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*OnDe
 		ethereumWriter:    ethereumWriter,
 		gatewayContract:   nil,
 		assetHubChannelID: *(*[32]byte)(assetHubChannelID),
-		activeTasks:       *NewTaskMap(3, 300),
+		activeTasks:       *NewTaskMap(config.OnDemandSync.MaxTasks, config.OnDemandSync.MergePeriod),
 	}
 
 	return &relay, nil

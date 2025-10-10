@@ -25,19 +25,19 @@ type TaskInfo struct {
 }
 
 type TaskMap struct {
-	mu           sync.RWMutex
-	data         map[uint64]*TaskInfo
-	limit        uint64 // Maximum number of tasks allowed
-	skipInterval uint64 // Merge tasks based upon the interval if the new task is close to the previous one
-	sem          *semaphore.Weighted
+	mu          sync.RWMutex
+	data        map[uint64]*TaskInfo
+	limit       uint64 // Maximum number of tasks allowed
+	mergePeriod uint64 // Merge tasks based upon the interval if the new task is close to the previous one
+	sem         *semaphore.Weighted
 }
 
-func NewTaskMap(limit uint64, interval uint64) *TaskMap {
+func NewTaskMap(limit uint64, mergePeriod uint64) *TaskMap {
 	return &TaskMap{
-		data:         make(map[uint64]*TaskInfo),
-		limit:        limit,
-		sem:          semaphore.NewWeighted(int64(limit)),
-		skipInterval: interval,
+		data:        make(map[uint64]*TaskInfo),
+		limit:       limit,
+		sem:         semaphore.NewWeighted(int64(limit)),
+		mergePeriod: mergePeriod,
 	}
 }
 
@@ -141,7 +141,7 @@ func (tm *TaskMap) Merge(key uint64) {
 	for k := range tm.data {
 		if k != key {
 			preVal, _ := tm.data[k]
-			if val.timestamp > preVal.timestamp && val.timestamp-preVal.timestamp < tm.skipInterval {
+			if val.timestamp > preVal.timestamp && val.timestamp-preVal.timestamp < tm.mergePeriod {
 				preVal.req.Skippable = true
 			}
 		}

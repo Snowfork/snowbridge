@@ -31,12 +31,10 @@ type ContractsConfig struct {
 type OnDemandSyncConfig struct {
 	// ID of the AssetHub channel
 	AssetHubChannelID string `mapstructure:"asset-hub-channel-id"`
-	// Maximum number of tokens available to consume
-	MaxTokens uint64 `mapstructure:"max-tokens"`
-	// Number of tokens added each `RefillPeriod`
-	RefillAmount uint64 `mapstructure:"refill-amount"`
-	// Period between token refills
-	RefillPeriod uint64 `mapstructure:"refill-period"`
+	// Maximum number of tasks that can run concurrently
+	MaxTasks uint64 `mapstructure:"max-tasks"`
+	// Time Period (in seconds) within which tasks are merged if a new task is close to the previous one
+	MergePeriod uint64 `mapstructure:"merge-period"`
 }
 
 func (c Config) Validate() error {
@@ -60,14 +58,11 @@ func (c Config) Validate() error {
 	if c.OnDemandSync.AssetHubChannelID == "" {
 		return fmt.Errorf("`on-demand-sync.asset-hub-channel-id` not set")
 	}
-	if c.OnDemandSync.MaxTokens == 0 {
-		return fmt.Errorf("`on-demand-sync.max-tokens` not set")
+	if c.OnDemandSync.MaxTasks == 0 {
+		return fmt.Errorf("`on-demand-sync.max-tasks` not set")
 	}
-	if c.OnDemandSync.RefillAmount == 0 {
-		return fmt.Errorf("`on-demand-sync.refill-amount` not set")
-	}
-	if c.OnDemandSync.RefillPeriod == 0 {
-		return fmt.Errorf("`on-demand-sync.refill-period` not set")
+	if c.OnDemandSync.MergePeriod == 0 {
+		return fmt.Errorf("`on-demand-sync.merge-period` not set")
 	}
 	return nil
 }
