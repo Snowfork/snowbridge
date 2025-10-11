@@ -23,7 +23,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		ForkVersions:                 getForkVersions(),
+		ForkVersions:                 forkVersions(),
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
@@ -81,7 +81,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		ForkVersions:                 getForkVersions(),
+		ForkVersions:                 forkVersions(),
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
@@ -147,7 +147,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		ForkVersions:                 getForkVersions(),
+		ForkVersions:                 forkVersions(),
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
@@ -213,7 +213,7 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		ForkVersions:                 getForkVersions(),
+		ForkVersions:                 forkVersions(),
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
@@ -257,7 +257,7 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-		ForkVersions:                 getForkVersions(),
+		ForkVersions:                 forkVersions(),
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
@@ -426,7 +426,7 @@ func TestFindLatestCheckPoint(t *testing.T) {
 	assert.Equal(t, uint64(46), header.BeaconSlot)
 }
 
-func getForkVersions() config.ForkVersions {
+func forkVersions() config.ForkVersions {
 	return config.ForkVersions{
 		Deneb:   0,
 		Electra: 800000,
