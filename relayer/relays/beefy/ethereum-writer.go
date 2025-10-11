@@ -68,7 +68,7 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 				// the beefy light client
 				task.ValidatorsRoot = state.NextValidatorSetRoot
 
-				err = wr.submit(ctx, task)
+				err = wr.submit(ctx, &task)
 				if err != nil {
 					return fmt.Errorf("submit request: %w", err)
 				}
@@ -115,18 +115,16 @@ func (wr *EthereumWriter) queryBeefyClientState(ctx context.Context) (*BeefyClie
 	}, nil
 }
 
-func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
+func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	// Initial submission
-	tx, initialBitfield, err := wr.doSubmitInitial(ctx, &task)
+	tx, initialBitfield, err := wr.doSubmitInitial(ctx, task)
 	if err != nil {
-		log.WithError(err).Error("Failed to call submitInitial")
-		return err
+		return fmt.Errorf("Failed to call submitInitial: %w", err)
 	}
 	// Wait for receipt of submitInitial
 	receipt, err := wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
-		log.WithError(err).Error("Failed to get receipt of submitInitial")
-		return err
+		return fmt.Errorf("Failed to get receipt of submitInitial: %w", err)
 	}
 	log.WithFields(logrus.Fields{
 		"tx":      tx.Hash().Hex(),
@@ -139,8 +137,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 	// Details in https://eth2book.info/altair/part3/config/preset/#max_seed_lookahead
 	err = wr.conn.WaitForFutureBlock(ctx, receipt.BlockNumber.Uint64(), wr.blockWaitPeriod+1)
 	if err != nil {
-		log.WithError(err).Error("Failed to wait for RandaoCommitDelay")
-		return err
+		return fmt.Errorf("Failed to wait for RandaoCommitDelay: %w", err)
 	}
 
 	commitmentHash, err := task.CommitmentHash()
@@ -161,14 +158,12 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		*commitmentHash,
 	)
 	if err != nil {
-		log.WithError(err).Error("Failed to call CommitPrevRandao")
-		return err
+		return fmt.Errorf("Failed to call CommitPrevRandao: %w", err)
 	}
 
 	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
-		log.WithError(err).Error("Failed to get receipt of CommitPrevRandao")
-		return err
+		return fmt.Errorf("Failed to get receipt of CommitPrevRandao: %w", err)
 	}
 
 	if task.Skippable {
@@ -178,16 +173,14 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return nil
 	}
 	// Final submission
-	tx, err = wr.doSubmitFinal(ctx, *commitmentHash, initialBitfield, &task)
+	tx, err = wr.doSubmitFinal(ctx, *commitmentHash, initialBitfield, task)
 	if err != nil {
-		log.WithError(err).Error("Failed to call submitFinal")
-		return err
+		return fmt.Errorf("Failed to call submitFinal: %w", err)
 	}
 
 	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
-		log.WithError(err).Error("Failed to get receipt of submitFinal")
-		return err
+		return fmt.Errorf("Failed to get receipt of submitFinal: %w", err)
 	}
 
 	log.WithFields(logrus.Fields{

@@ -144,7 +144,7 @@ func (tm *TaskMap) Merge(key uint64) {
 		return current.timestamp > prev.timestamp && current.timestamp-prev.timestamp < tm.mergePeriod
 	}
 	closeToLastUpdated := func(task *TaskInfo) bool {
-		return tm.lastUpdated > 0 && task.timestamp > tm.lastUpdated && task.timestamp-tm.lastUpdated < 8*tm.mergePeriod
+		return tm.lastUpdated > 0 && task.timestamp > tm.lastUpdated && task.timestamp-tm.lastUpdated < (tm.limit+1)*tm.mergePeriod
 	}
 	outdated := func(task *TaskInfo) bool {
 		return task.timestamp < tm.lastUpdated
