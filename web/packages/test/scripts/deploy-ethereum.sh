@@ -53,30 +53,32 @@ start_lodestar() {
 
         export LODESTAR_PRESET="mainnet"
 
-        pushd $root_dir/lodestar
-        ./lodestar dev \
-            --genesisValidators 8 \
-            --genesisTime $timestamp \
-            --startValidators "0..7" \
-            --enr.ip6 "127.0.0.1" \
-            --rest.address "0.0.0.0" \
-            --eth1.providerUrls "http://127.0.0.1:8545" \
-            --execution.urls "http://127.0.0.1:8551" \
-            --dataDir "$ethereum_data_dir" \
-            --reset \
-            --terminal-total-difficulty-override 0 \
-            --genesisEth1Hash $genesisHash \
-            --params.ALTAIR_FORK_EPOCH 0 \
-            --params.BELLATRIX_FORK_EPOCH 0 \
-            --params.CAPELLA_FORK_EPOCH 0 \
-            --params.DENEB_FORK_EPOCH 0 \
-            --eth1=true \
-            --rest.namespace="*" \
-            --jwt-secret $config_dir/jwtsecret \
-            --chain.archiveStateEpochFrequency 1 \
-            >"$output_dir/lodestar.log" 2>&1 &
-        popd
-    fi
+    pushd $root_dir/../lodestar
+    ./lodestar --version
+    ./lodestar dev \
+        --genesisValidators 8 \
+        --genesisTime $timestamp \
+        --startValidators "0..7" \
+        --enr.ip6 "127.0.0.1" \
+        --rest.address "0.0.0.0" \
+        --eth1.providerUrls "http://127.0.0.1:8545" \
+        --execution.urls "http://127.0.0.1:8551" \
+        --dataDir "$ethereum_data_dir" \
+        --reset \
+        --terminal-total-difficulty-override 0 \
+        --genesisEth1Hash $genesisHash \
+        --params.ALTAIR_FORK_EPOCH 0 \
+        --params.BELLATRIX_FORK_EPOCH 0 \
+        --params.CAPELLA_FORK_EPOCH 0 \
+        --params.DENEB_FORK_EPOCH 0 \
+        --params.ELECTRA_FORK_EPOCH 0 \
+        --params.FULU_FORK_EPOCH 50000000 \
+        --rest.namespace="*" \
+        --jwt-secret $config_dir/jwtsecret \
+        --chain.archiveStateEpochFrequency 1 \
+        --serveHistoricalState true \
+        >"$output_dir/lodestar.log" 2>&1 &
+    popd
 }
 
 deploy_local() {

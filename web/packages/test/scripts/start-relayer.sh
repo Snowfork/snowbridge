@@ -4,10 +4,8 @@ set -eu
 source scripts/set-env.sh
 
 config_relayer() {
-    local electra_forked_epoch=2000000
-    if [ "$is_electra" == "true" ]; then
-        electra_forked_epoch=0
-    fi
+    local electra_forked_epoch=0
+    local fulu_forked_epoch=50000000
     # Configure beefy relay
     jq \
         --arg k1 "$(address_for BeefyClient)" \
@@ -145,9 +143,11 @@ config_relayer() {
     jq \
         --arg beacon_endpoint_http $beacon_endpoint_http \
         --argjson electra_forked_epoch $electra_forked_epoch \
+        --argjson fulu_forked_epoch $fulu_forked_epoch \
         '
       .source.beacon.endpoint = $beacon_endpoint_http
     | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
+    | .source.beacon.spec.forkVersions.fulu = $fulu_forked_epoch
     ' \
         config/beacon-relay.json >$output_dir/beacon-relay.json
 
@@ -157,19 +157,7 @@ config_relayer() {
         --arg k1 "$(address_for GatewayProxy)" \
         --arg channelID $ASSET_HUB_CHANNEL_ID \
         --argjson electra_forked_epoch $electra_forked_epoch \
-        '
-      .source.ethereum.endpoint = $eth_endpoint_ws
-    | .source.contracts.Gateway = $k1
-    | .source."channel-id" = $channelID
-    | .schedule.id = 0
-    | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
-    ' \
-        config/execution-relay.json >$output_dir/execution-relay-asset-hub-0.json
-
-    # Configure execution relay for assethub-1
-    jq \
-        --arg eth_endpoint_ws $eth_endpoint_ws \
-        --arg k1 "$(address_for GatewayProxy)" \
+        --argjson fulu_forked_epoch $fulu_forked_epoch \
         --arg channelID $ASSET_HUB_CHANNEL_ID \
         --argjson electra_forked_epoch $electra_forked_epoch \
         '
@@ -178,37 +166,26 @@ config_relayer() {
     | .source."channel-id" = $channelID
     | .schedule.id = 1
     | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
-    ' \
-        config/execution-relay.json >$output_dir/execution-relay-asset-hub-1.json
-
-    # Configure execution relay for assethub-2
-    jq \
-        --arg eth_endpoint_ws $eth_endpoint_ws \
-        --arg k1 "$(address_for GatewayProxy)" \
-        --arg channelID $ASSET_HUB_CHANNEL_ID \
-        --argjson electra_forked_epoch $electra_forked_epoch \
-        '
-      .source.ethereum.endpoint = $eth_endpoint_ws
-    | .source.contracts.Gateway = $k1
+    | .source.beacon.spec.forkVersions.fulu = $fulu_forked_epoch
     | .source."channel-id" = $channelID
     | .schedule.id = 2
     | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
     ' \
         config/execution-relay.json >$output_dir/execution-relay-asset-hub-2.json
 
-    # Configure execution relay for penpal
-    jq \
-        --arg eth_endpoint_ws $eth_endpoint_ws \
-        --arg k1 "$(address_for GatewayProxy)" \
-        --arg channelID $PENPAL_CHANNEL_ID \
-        --argjson electra_forked_epoch $electra_forked_epoch \
-        '
-              .source.ethereum.endpoint = $eth_endpoint_ws
-            | .source.contracts.Gateway = $k1
-            | .source."channel-id" = $channelID
-            | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
-            ' \
-        config/execution-relay.json >$output_dir/execution-relay-penpal.json
+    # Configure execution relay v2
+      jq \
+          --arg eth_endpoint_ws $eth_endpoint_ws \
+          --arg k1 "$(address_for GatewayProxy)" \
+          --argjson electra_forked_epoch $electra_forked_epoch \
+          '
+        .source.ethereum.endpoint = $eth_endpoint_ws
+      | .source.contracts.Gateway = $k1
+      | .schedule.id = 0
+      | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
+
+      ' \
+          config/execution-relay.json >$output_dir/execution-relay.json
 }
 
 start_relayer() {

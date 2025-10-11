@@ -10,7 +10,16 @@ export output_bin_dir="$output_dir/bin"
 ethereum_data_dir="$output_dir/ethereum"
 zombienet_data_dir="$output_dir/zombienet"
 export PATH="$output_bin_dir:$PATH"
-export polkadot_sdk_dir="${POLKADOT_SDK_DIR:-../polkadot-sdk}"
+polkadot_sdk_dir="${POLKADOT_SDK_DIR:-../polkadot-sdk}"
+
+export GETH_VERSION=v1.16.4
+export LODESTAR_VERSION=v1.35.0
+export snowbridge_v1="${BUILD_V1:-false}"
+v1_root_dir="$root_dir/../snowbridge-v1"
+export v1_contract_dir="$v1_root_dir/contracts"
+v1_relay_dir="$v1_root_dir/relayer"
+rebuild_web_packages="${REBUILD_WEB_API:-false}"
+
 
 eth_network="${ETH_NETWORK:-localhost}"
 eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
