@@ -86,12 +86,13 @@ const (
 
 func (p *Protocol) ForkVersion(slot uint64) ForkVersion {
 	epoch := p.ComputeEpochAtSlot(slot)
-	fv := Deneb
+	var fv ForkVersion
 	if epoch >= p.Settings.ForkVersions.Fulu {
 		fv = Fulu
-	}
-	if epoch >= p.Settings.ForkVersions.Electra {
+	} else if epoch >= p.Settings.ForkVersions.Electra {
 		fv = Electra
+	} else {
+		fv = Deneb
 	}
 	log.WithField("fork_version", fv).Info("Found fork version")
 	return fv
