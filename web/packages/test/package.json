@@ -9,7 +9,7 @@
     "directory": "web/packages/test"
   },
   "devDependencies": {
-    "@zombienet/cli": "1.3.128",
-    "@polkadot/api-cli": "0.62.1"
+    "@polkadot/api-cli": "0.63.16",
+    "@zombienet/cli": "1.3.133"
   }
 }

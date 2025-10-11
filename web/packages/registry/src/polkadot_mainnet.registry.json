@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-09-29T09:39:36.813Z",
+  "timestamp": "2025-10-07T21:35:27.436Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -13,7 +13,7 @@
     "accountType": "AccountId32",
     "name": "Polkadot",
     "specName": "polkadot",
-    "specVersion": 1006002
+    "specVersion": 1007001
   },
   "bridgeHub": {
     "tokenSymbols": "DOT",
@@ -23,7 +23,7 @@
     "accountType": "AccountId32",
     "name": "Polkadot BridgeHub",
     "specName": "bridge-hub-polkadot",
-    "specVersion": 1006001
+    "specVersion": 1007001
   },
   "ethereumChains": {
     "1": {
@@ -57,10 +57,24 @@
           "decimals": 18,
           "deliveryGas": "bigint:150000"
         },
+        "0x45804880de22913dafe09f4980848ece6ecbaf78": {
+          "token": "0x45804880de22913dafe09f4980848ece6ecbaf78",
+          "name": "Paxos Gold",
+          "symbol": "PAXG",
+          "decimals": 18,
+          "deliveryGas": "bigint:80000"
+        },
         "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd": {
           "token": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
           "name": "Savings USDS",
           "symbol": "sUSDS",
+          "decimals": 18,
+          "deliveryGas": "bigint:80000"
+        },
+        "0x57e114b691db790c35207b2e685d4a43181e6061": {
+          "token": "0x57e114b691db790c35207b2e685d4a43181e6061",
+          "name": "ENA",
+          "symbol": "ENA",
           "decimals": 18,
           "deliveryGas": "bigint:80000"
         },
@@ -348,7 +362,7 @@
         "accountType": "AccountId32",
         "name": "Polkadot Asset Hub",
         "specName": "statemint",
-        "specVersion": 1006000
+        "specVersion": 1007001
       },
       "assets": {
         "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -1076,7 +1090,7 @@
           "isSufficient": false
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:57678525",
+      "estimatedExecutionFeeDOT": "bigint:59041372",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2034": {
@@ -1100,6 +1114,22 @@
         "specVersion": 347
       },
       "assets": {
+        "0x45804880de22913dafe09f4980848ece6ecbaf78": {
+          "token": "0x45804880de22913dafe09f4980848ece6ecbaf78",
+          "name": "PAX Gold",
+          "minimumBalance": "bigint:41209923349543",
+          "symbol": "PAXG",
+          "decimals": 18,
+          "isSufficient": true
+        },
+        "0x57e114b691db790c35207b2e685d4a43181e6061": {
+          "token": "0x57e114b691db790c35207b2e685d4a43181e6061",
+          "name": "Ethena",
+          "minimumBalance": "bigint:17337031900138700",
+          "symbol": "ENA",
+          "decimals": 18,
+          "isSufficient": true
+        },
         "0x0000000000000000000000000000000000000000": {
           "token": "0x0000000000000000000000000000000000000000",
           "name": "Ethereum",
@@ -1221,7 +1251,7 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:1704242",
+      "estimatedExecutionFeeDOT": "bigint:1510291",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2043": {
@@ -1231,7 +1261,7 @@
         "hasDryRunApi": false,
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
-        "hasDotBalance": true
+        "hasDotBalance": false
       },
       "info": {
         "tokenSymbols": "NEURO",
@@ -1241,7 +1271,7 @@
         "accountType": "AccountId32",
         "name": "NeuroWeb",
         "specName": "origintrail-parachain",
-        "specVersion": 146
+        "specVersion": 147
       },
       "assets": {
         "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f": {
@@ -1308,7 +1338,7 @@
           "accountType": "AccountId32",
           "name": "Kusama Asset Hub",
           "specName": "statemine",
-          "specVersion": 1007001
+          "specVersion": 1009001
         },
         "assets": {
           "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {

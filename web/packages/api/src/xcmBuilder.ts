@@ -588,38 +588,77 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
     sourceParachainId: number,
     returnToSenderFee: bigint,
     feeAssetId: any,
-    feeAssetIdReanchored: any
+    feeAssetIdReanchored: any,
+    teleportFee: boolean
 ) {
     return registry.createType("XcmVersionedXcm", {
         v4: [
-            {
-                withdrawAsset: [
-                    {
-                        id: feeAssetIdReanchored,
-                        fun: {
-                            Fungible: totalFee,
-                        },
-                    },
-                    {
-                        id: erc20Location(ethChainId, tokenAddress),
-                        fun: {
-                            Fungible: transferAmount,
-                        },
-                    },
-                ],
-            },
+            ...(teleportFee
+                ? // Teleport Fee
+                  [
+                      {
+                          receiveTeleportedAsset: [
+                              {
+                                  id: feeAssetIdReanchored,
+                                  fun: {
+                                      Fungible: totalFee,
+                                  },
+                              },
+                          ],
+                      },
+                      {
+                          buyExecution: {
+                              fees: {
+                                  id: feeAssetIdReanchored,
+                                  fun: {
+                                      Fungible: destinationFee,
+                                  },
+                              },
+                              weightLimit: "Unlimited",
+                          },
+                      },
+                      {
+                          withdrawAsset: [
+                              {
+                                  id: erc20Location(ethChainId, tokenAddress),
+                                  fun: {
+                                      Fungible: transferAmount,
+                                  },
+                              },
+                          ],
+                      },
+                  ]
+                : // Reserve Transfer Fee
+                  [
+                      {
+                          withdrawAsset: [
+                              {
+                                  id: feeAssetIdReanchored,
+                                  fun: {
+                                      Fungible: totalFee,
+                                  },
+                              },
+                              {
+                                  id: erc20Location(ethChainId, tokenAddress),
+                                  fun: {
+                                      Fungible: transferAmount,
+                                  },
+                              },
+                          ],
+                      },
+                      {
+                          buyExecution: {
+                              fees: {
+                                  id: feeAssetIdReanchored,
+                                  fun: {
+                                      Fungible: destinationFee,
+                                  },
+                              },
+                              weightLimit: "Unlimited",
+                          },
+                      },
+                  ]),
             { clearOrigin: null },
-            {
-                buyExecution: {
-                    fees: {
-                        id: feeAssetIdReanchored,
-                        fun: {
-                            Fungible: destinationFee,
-                        },
-                    },
-                    weightLimit: "Unlimited",
-                },
-            },
             ...buildAssetHubXcmFromParachain(
                 ethChainId,
                 sourceAccount,
@@ -1464,7 +1503,8 @@ export function buildAssetHubERC20TransferFromParachainWithNativeFee(
     topic: string,
     sourceParachainId: number,
     amount: bigint,
-    returnToSenderFeeInDot: bigint
+    returnToSenderFeeInDot: bigint,
+    feeAssetId: any
 ) {
     return registry.createType("XcmVersionedXcm", {
         v4: buildAssetHubXcmFromParachainWithNativeAssetAsFee(
@@ -1475,7 +1515,8 @@ export function buildAssetHubERC20TransferFromParachainWithNativeFee(
             topic,
             sourceParachainId,
             amount,
-            returnToSenderFeeInDot
+            returnToSenderFeeInDot,
+            feeAssetId,
         ),
     })
 }
@@ -1488,7 +1529,8 @@ function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
     topic: string,
     sourceParachainId: number,
     amount: bigint,
-    destinationFeeInDot: bigint
+    destinationFeeInDot: bigint,
+    feeAssetId: any
 ) {
     let {
         hexAddress,
@@ -1514,10 +1556,7 @@ function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
                 give: {
                     Wild: {
                         AllOf: {
-                            id: {
-                                parents: 1,
-                                interior: { x1: [{ parachain: sourceParachainId }] },
-                            },
+                            id: feeAssetId,
                             fun: "Fungible",
                         },
                     },

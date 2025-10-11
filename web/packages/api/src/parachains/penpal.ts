@@ -40,7 +40,7 @@ export class PenpalParachain extends ParachainBase {
         {
             const entries = await this.provider.query.foreignAssets.asset.entries()
             for (const [key, value] of entries) {
-                const location: any = key.args.at(0)?.toJSON()
+                const location: any = key.args[0]?.toJSON()
                 if (!location) {
                     console.warn(
                         `Could not convert ${key.toHuman()} to location for ${this.specName}.`

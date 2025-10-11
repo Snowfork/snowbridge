@@ -29,7 +29,7 @@ export class JamtonParachain extends ParachainBase {
         const assets: AssetMap = {}
         const entries = await this.provider.query.assetRegistry.locationToAssetId.entries()
         for (const [id, value] of entries) {
-            const location: any = id.args.at(0)?.toPrimitive()
+            const location: any = id.args[0]?.toPrimitive()
             const token = getTokenFromLocation(location, ethChainId)
             if (!token) {
                 continue

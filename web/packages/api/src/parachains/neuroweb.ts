@@ -25,10 +25,28 @@ export class NeurowebParachain extends ParachainBase {
     }
 
     async getDotBalance(account: string): Promise<bigint> {
-        const accountData = (
-            await this.provider.query.foreignAssets.account(DOT_LOCATION, account)
-        ).toPrimitive() as any
-        return BigInt(accountData?.balance ?? 0n)
+        // Neuro web supports DOT but we disable it to allow fee payment in Neuro
+        // const accountData = (
+        //     await this.provider.query.foreignAssets.account(DOT_LOCATION, account)
+        // ).toPrimitive() as any
+        // return BigInt(accountData?.balance ?? 0n)
+
+        throw Error(`Spec ${this.specName} supports DOT but is disabled.`)
+    }
+
+    getNativeBalanceLocation(relativeTo: "here" | "sibling"): any {
+        switch (relativeTo) {
+            case "here":
+                return {
+                    parents: 0,
+                    interior: { x1: [{ palletInstance: 10 }] },
+                }
+            case "sibling":
+                return {
+                    parents: 1,
+                    interior: { x2: [{ parachain: this.parachainId }, { palletInstance: 10 }] },
+                }
+        }
     }
 
     async getAssets(ethChainId: number, _pnas: PNAMap): Promise<AssetMap> {

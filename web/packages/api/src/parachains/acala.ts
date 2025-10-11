@@ -42,7 +42,7 @@ export class AcalaParachain extends ParachainBase {
                 continue
             }
 
-            const assetId: any = value.args.at(0)?.toPrimitive()
+            const assetId: any = value.args[0]?.toPrimitive()
             const asset: any = (
                 await this.provider.query.assetRegistry.assetMetadatas({ foreignAssetId: assetId })
             ).toPrimitive()
