@@ -122,14 +122,16 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 			log.Info("Scheduling pending nonces")
 			tasks := relay.activeTasks.InspectAll()
 			log.WithFields(log.Fields{
-				"numTasks": len(tasks),
-			}).Info("Pending nonces")
+				"pendingTasks": len(tasks),
+				"lastUpdate":   time.Unix(int64(relay.activeTasks.lastUpdated), 0),
+			}).Info("Queue info")
 			for _, task := range tasks {
 				log.WithFields(log.Fields{
 					"nonce":      task.nonce,
 					"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
 					"status":     task.status,
 					"skipped":    task.req.Skippable,
+					"timestamp":  time.Unix(int64(task.timestamp), 0),
 				}).Info("Task info")
 			}
 			if len(tasks) > 0 {
@@ -443,19 +445,28 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 			}).Error("Sync beefy failed")
 			relay.activeTasks.SetStatus(task.nonce, TaskFailed)
 		} else {
-			log.WithFields(log.Fields{
-				"nonce":      task.nonce,
-				"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
-			}).Info("Sync beefy completed")
-			err = relay.waitUntilMessagesSynced(ctx, task.nonce)
-			if err != nil {
+			if task.req.Skippable {
 				log.WithFields(log.Fields{
 					"nonce":      task.nonce,
 					"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
-				}).Warn("Beefy sync completed, but the nonce task failed to sync in time. It will be cleaned up in the next loop")
-				relay.activeTasks.SetStatus(task.nonce, TaskCompleted)
+				}).Warn("Sync beefy skipped")
+				relay.activeTasks.SetStatus(task.nonce, TaskCanceled)
 			} else {
-				relay.activeTasks.Delete(task.nonce)
+				log.WithFields(log.Fields{
+					"nonce":      task.nonce,
+					"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
+				}).Info("Sync beefy completed")
+				relay.activeTasks.SetLastUpdated(task.nonce)
+				err = relay.waitUntilMessagesSynced(ctx, task.nonce)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"nonce":      task.nonce,
+						"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
+					}).Warn("Sync beefy completed, but the parachain relay failed to sync the pending nonce in time.")
+					relay.activeTasks.SetStatus(task.nonce, TaskCompleted)
+				} else {
+					relay.activeTasks.Delete(task.nonce)
+				}
 			}
 		}
 		return nil

@@ -15,6 +15,7 @@ const (
 	TaskInProgress
 	TaskCompleted
 	TaskFailed
+	TaskCanceled
 )
 
 type TaskInfo struct {
@@ -30,6 +31,7 @@ type TaskMap struct {
 	limit       uint64 // Maximum number of tasks allowed
 	mergePeriod uint64 // Merge tasks based upon the interval if the new task is close to the previous one
 	sem         *semaphore.Weighted
+	lastUpdated uint64 // Last updated timestamp of a successful task
 }
 
 func NewTaskMap(limit uint64, mergePeriod uint64) *TaskMap {
@@ -91,7 +93,7 @@ func (tm *TaskMap) Pop() *TaskInfo {
 	sort.Ints(keys)
 	for _, k := range keys {
 		task := tm.data[uint64(k)]
-		if task.status == TaskCompleted {
+		if task.status == TaskCompleted || task.status == TaskCanceled {
 			delete(tm.data, uint64(k))
 		}
 		if task.status == TaskPending || task.status == TaskFailed {
@@ -138,12 +140,30 @@ func (tm *TaskMap) Merge(key uint64) {
 	if len(tm.data) < 2 {
 		return
 	}
+	closeToPrevious := func(current, prev *TaskInfo) bool {
+		return current.timestamp > prev.timestamp && current.timestamp-prev.timestamp < tm.mergePeriod
+	}
+	closeToLastUpdated := func(task *TaskInfo) bool {
+		return tm.lastUpdated > 0 && task.timestamp > tm.lastUpdated && task.timestamp-tm.lastUpdated < 8*tm.mergePeriod
+	}
+	outdated := func(task *TaskInfo) bool {
+		return task.timestamp < tm.lastUpdated
+	}
 	for k := range tm.data {
 		if k != key {
-			preVal, _ := tm.data[k]
-			if val.timestamp > preVal.timestamp && val.timestamp-preVal.timestamp < tm.mergePeriod {
-				preVal.req.Skippable = true
+			toSkip, _ := tm.data[k]
+			if outdated(toSkip) || (closeToPrevious(val, toSkip) && closeToLastUpdated(toSkip)) {
+				toSkip.req.Skippable = true
 			}
 		}
+	}
+}
+
+func (tm *TaskMap) SetLastUpdated(key uint64) {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+	val, ok := tm.data[key]
+	if ok && val.timestamp > tm.lastUpdated {
+		tm.lastUpdated = val.timestamp
 	}
 }
