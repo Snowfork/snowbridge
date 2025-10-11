@@ -53,7 +53,8 @@ start_lodestar() {
 
         export LODESTAR_PRESET="mainnet"
 
-        pushd $root_dir/lodestar
+        pushd $root_dir/../lodestar
+        ./lodestar --version
         ./lodestar dev \
             --genesisValidators 8 \
             --genesisTime $timestamp \
@@ -70,10 +71,12 @@ start_lodestar() {
             --params.BELLATRIX_FORK_EPOCH 0 \
             --params.CAPELLA_FORK_EPOCH 0 \
             --params.DENEB_FORK_EPOCH 0 \
-            --eth1=true \
+            --params.ELECTRA_FORK_EPOCH 0 \
+            --params.FULU_FORK_EPOCH 50000000 \
             --rest.namespace="*" \
             --jwt-secret $config_dir/jwtsecret \
             --chain.archiveStateEpochFrequency 1 \
+            --serveHistoricalState true \
             >"$output_dir/lodestar.log" 2>&1 &
         popd
     fi
