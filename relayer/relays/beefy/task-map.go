@@ -80,6 +80,10 @@ func (tm *TaskMap) Full() bool {
 }
 
 // Pop the next available task, clean up any completed or canceled tasks, and return nil if none are available.
+// Merge previous tasks and mark them as skippable if any of the conditions are met:
+// a. Outdated
+// b. Just updated
+// c. Can be replaced by a newer one while still unexpired
 func (tm *TaskMap) Pop() *TaskInfo {
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
@@ -91,6 +95,44 @@ func (tm *TaskMap) Pop() *TaskInfo {
 		keys = append(keys, int(k))
 	}
 	sort.Ints(keys)
+	findNextTask := func(current *TaskInfo) *TaskInfo {
+		for index, key := range keys {
+			if index < len(keys)-1 {
+				task := tm.data[uint64(key)]
+				if task.nonce == current.nonce {
+					return tm.data[uint64(keys[index+1])]
+				}
+			}
+		}
+		return nil
+	}
+	outdated := func(task *TaskInfo) bool {
+		return task.timestamp < tm.lastUpdated
+	}
+	justUpdated := func(task *TaskInfo) bool {
+		nextTask := findNextTask(task)
+		if nextTask != nil {
+			return tm.lastUpdated > 0 && task.timestamp > tm.lastUpdated && task.timestamp-tm.lastUpdated < tm.mergePeriod
+		}
+		return false
+	}
+	canBeReplaced := func(task *TaskInfo) bool {
+		nextTask := findNextTask(task)
+		if nextTask != nil {
+			return nextTask.timestamp > task.timestamp && nextTask.timestamp-task.timestamp < tm.mergePeriod
+		}
+		return false
+	}
+	unexpired := func(task *TaskInfo) bool {
+		return tm.lastUpdated > 0 && task.timestamp > tm.lastUpdated && task.timestamp-tm.lastUpdated < (tm.limit+1)*tm.mergePeriod
+	}
+	for _, key := range keys {
+		task, _ := tm.data[uint64(key)]
+		if outdated(task) || justUpdated(task) || (canBeReplaced(task) && unexpired(task)) {
+			task.req.Skippable = true
+		}
+	}
+
 	for _, k := range keys {
 		task := tm.data[uint64(k)]
 		if task.status == TaskCompleted || task.status == TaskCanceled {
@@ -127,42 +169,6 @@ func (tm *TaskMap) InspectAll() []*TaskInfo {
 		tasks = append(tasks, task)
 	}
 	return tasks
-}
-
-// Merge previous tasks and mark them as skippable if any of the conditions are met:
-// a. Outdated
-// b. Just updated
-// c. Can be replaced by a newer one while still unexpired
-func (tm *TaskMap) Merge(key uint64) {
-	tm.mu.Lock()
-	defer tm.mu.Unlock()
-	val, ok := tm.data[key]
-	if !ok {
-		return
-	}
-	if len(tm.data) < 2 {
-		return
-	}
-	canBeReplaced := func(current, prev *TaskInfo) bool {
-		return current.timestamp > prev.timestamp && current.timestamp-prev.timestamp < tm.mergePeriod
-	}
-	justUpdated := func(task *TaskInfo) bool {
-		return tm.lastUpdated > 0 && task.timestamp > tm.lastUpdated && task.timestamp-tm.lastUpdated < tm.mergePeriod
-	}
-	unexpired := func(task *TaskInfo) bool {
-		return tm.lastUpdated > 0 && task.timestamp > tm.lastUpdated && task.timestamp-tm.lastUpdated < (tm.limit+1)*tm.mergePeriod
-	}
-	outdated := func(task *TaskInfo) bool {
-		return task.timestamp < tm.lastUpdated
-	}
-	for mergeKey := range tm.data {
-		if mergeKey != key {
-			mergeVal, _ := tm.data[mergeKey]
-			if outdated(mergeVal) || justUpdated(mergeVal) || (canBeReplaced(val, mergeVal) && unexpired(mergeVal)) {
-				mergeVal.req.Skippable = true
-			}
-		}
-	}
 }
 
 func (tm *TaskMap) SetLastUpdated(key uint64) {

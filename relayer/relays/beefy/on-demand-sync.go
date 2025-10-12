@@ -370,11 +370,9 @@ func (relay *OnDemandRelay) queue(ctx context.Context, nonce uint64) error {
 func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) error {
 	task := relay.activeTasks.Pop()
 	if task == nil {
-		log.Info("No task available, waiting for new tasks to be queued or for the ongoing task to complete")
+		log.Info("No task available, waiting for new tasks to be queued or for ongoing tasks to complete")
 		return nil
 	}
-	// Try to merge the previous tasks
-	relay.activeTasks.Merge(task.nonce)
 	err := relay.activeTasks.sem.Acquire(ctx, 1)
 	if err != nil {
 		return err
@@ -398,7 +396,7 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 				log.WithFields(log.Fields{
 					"nonce":      task.nonce,
 					"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
-				}).Warn("Sync beefy skipped")
+				}).Info("Sync beefy skipped")
 				relay.activeTasks.SetStatus(task.nonce, TaskCanceled)
 			} else {
 				log.WithFields(log.Fields{
