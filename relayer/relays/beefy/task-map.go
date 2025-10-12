@@ -29,7 +29,7 @@ type TaskMap struct {
 	mu          sync.RWMutex
 	data        map[uint64]*TaskInfo
 	limit       uint64 // Maximum number of tasks allowed
-	mergePeriod uint64 // Merge tasks based upon the interval if the new task is close to the previous one
+	mergePeriod uint64 // The time window used to merge previous tasks
 	sem         *semaphore.Weighted
 	lastUpdated uint64 // Last updated timestamp of a successful task
 }
@@ -79,7 +79,7 @@ func (tm *TaskMap) Full() bool {
 	return false
 }
 
-// Pop the next available task, or return nil if none are available.
+// Pop the next available task, clean up any completed or canceled tasks, and return nil if none are available.
 func (tm *TaskMap) Pop() *TaskInfo {
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
@@ -129,7 +129,10 @@ func (tm *TaskMap) InspectAll() []*TaskInfo {
 	return tasks
 }
 
-// Merge previous tasks and mark them as skippable if the new task occurs close in time.
+// Merge previous tasks and mark them as skippable if any of the conditions are met:
+// a. Outdated
+// b. Just updated
+// c. Can be replaced by a newer one while still unexpired
 func (tm *TaskMap) Merge(key uint64) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
@@ -140,20 +143,23 @@ func (tm *TaskMap) Merge(key uint64) {
 	if len(tm.data) < 2 {
 		return
 	}
-	closeToPrevious := func(current, prev *TaskInfo) bool {
+	canBeReplaced := func(current, prev *TaskInfo) bool {
 		return current.timestamp > prev.timestamp && current.timestamp-prev.timestamp < tm.mergePeriod
 	}
-	closeToLastUpdated := func(task *TaskInfo) bool {
+	justUpdated := func(task *TaskInfo) bool {
+		return tm.lastUpdated > 0 && task.timestamp > tm.lastUpdated && task.timestamp-tm.lastUpdated < tm.mergePeriod
+	}
+	unexpired := func(task *TaskInfo) bool {
 		return tm.lastUpdated > 0 && task.timestamp > tm.lastUpdated && task.timestamp-tm.lastUpdated < (tm.limit+1)*tm.mergePeriod
 	}
 	outdated := func(task *TaskInfo) bool {
 		return task.timestamp < tm.lastUpdated
 	}
-	for k := range tm.data {
-		if k != key {
-			toSkip, _ := tm.data[k]
-			if outdated(toSkip) || (closeToPrevious(val, toSkip) && closeToLastUpdated(toSkip)) {
-				toSkip.req.Skippable = true
+	for mergeKey := range tm.data {
+		if mergeKey != key {
+			mergeVal, _ := tm.data[mergeKey]
+			if outdated(mergeVal) || justUpdated(mergeVal) || (canBeReplaced(val, mergeVal) && unexpired(mergeVal)) {
+				mergeVal.req.Skippable = true
 			}
 		}
 	}
