@@ -138,7 +138,7 @@ func (tm *TaskMap) Pop() *TaskInfo {
 
 	for _, k := range keys {
 		task := tm.data[uint64(k)]
-		if task.status == Completed || task.status == Canceled {
+		if task.status == Completed || task.status == Canceled || outdated(task) {
 			delete(tm.data, uint64(k))
 		}
 		if task.status == Pending || task.status == Failed {
