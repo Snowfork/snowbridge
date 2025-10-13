@@ -66,9 +66,9 @@ set_slot_time() {
     echo "Hack lodestar for faster slot time"
     local preset_mainnet_config_file="$root_dir/../lodestar/packages/config/src/chainConfig/configs/mainnet.ts"
     if [[ "$(uname)" == "Darwin" && -z "${IN_NIX_SHELL:-}" ]]; then
-        gsed -i "s/SECONDS_PER_SLOT: .*/SECONDS_PER_SLOT: $new_value,/g" $preset_mainnet_config_file
+        gsed -i "s/SLOT_DURATION_MS: .*/SLOT_DURATION_MS: $new_value,/g" $preset_mainnet_config_file
     else
-        sed -i "s/SECONDS_PER_SLOT: .*/SECONDS_PER_SLOT: $new_value,/g" $preset_mainnet_config_file
+        sed -i "s/SLOT_DURATION_MS: .*/SLOT_DURATION_MS: $new_value,/g" $preset_mainnet_config_file
     fi
 }
 
@@ -76,9 +76,9 @@ build_lodestar() {
     if [ "$rebuild_lodestar" == "true" ]; then
         pushd $root_dir/../lodestar
         if [ "$eth_fast_mode" == "true" ]; then
-            set_slot_time 1
+            set_slot_time 1000
         else
-            set_slot_time 12
+            set_slot_time 12000
         fi
         yarn install && yarn run build
         popd
