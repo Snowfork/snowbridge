@@ -33,8 +33,10 @@ type OnDemandSyncConfig struct {
 	AssetHubChannelID string `mapstructure:"asset-hub-channel-id"`
 	// Maximum number of tasks that can run concurrently
 	MaxTasks uint64 `mapstructure:"max-tasks"`
-	// Time Period (in seconds) within which tasks are merged if a new task is close to the previous one
+	// Time Period (in seconds) during which a previous task can be merged
 	MergePeriod uint64 `mapstructure:"merge-period"`
+	// Time period (in seconds) after which merging is not allowed
+	ExpiredPeriod uint64 `mapstructure:"expired-period"`
 }
 
 func (c Config) Validate() error {
@@ -58,11 +60,14 @@ func (c Config) Validate() error {
 	if c.OnDemandSync.AssetHubChannelID == "" {
 		return fmt.Errorf("`on-demand-sync.asset-hub-channel-id` not set")
 	}
-	if c.OnDemandSync.MaxTasks == 0 {
-		return fmt.Errorf("`on-demand-sync.max-tasks` not set")
+	if c.OnDemandSync.MaxTasks == 0 || c.OnDemandSync.MaxTasks > 8 {
+		return fmt.Errorf("`on-demand-sync.max-tasks` should be configured non zero and no more than 8")
 	}
-	if c.OnDemandSync.MergePeriod == 0 {
-		return fmt.Errorf("`on-demand-sync.merge-period` not set")
+	if c.OnDemandSync.MergePeriod == 0 || c.OnDemandSync.MergePeriod > 1800 {
+		return fmt.Errorf("`on-demand-sync.merge-period` should be configured non zero and no more than 1800 seconds")
+	}
+	if c.OnDemandSync.ExpiredPeriod == 0 || c.OnDemandSync.ExpiredPeriod > 14400 || c.OnDemandSync.ExpiredPeriod < c.OnDemandSync.MergePeriod {
+		return fmt.Errorf("`on-demand-sync.expired-period` should be configured non zero and no more than 14400 seconds, and more than MergePeriod")
 	}
 	return nil
 }

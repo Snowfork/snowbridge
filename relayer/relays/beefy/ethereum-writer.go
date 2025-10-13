@@ -148,7 +148,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	if task.Skippable {
 		log.WithFields(logrus.Fields{
 			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
-		}).Info("Beefy commitment is skipped, indicating that a newer and closely timed update is already in progress.")
+		}).Info("CommitPrevRandao is skipped, indicating that a newer update is already in progress.")
 		return nil
 	}
 	// Commit PrevRandao which will be used as seed to randomly select subset of validators
@@ -169,7 +169,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	if task.Skippable {
 		log.WithFields(logrus.Fields{
 			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
-		}).Info("Beefy commitment is skipped, indicating that a newer and closely timed update is already in progress.")
+		}).Info("SubmitFinal is skipped, indicating that a newer update is already in progress.")
 		return nil
 	}
 	// Final submission

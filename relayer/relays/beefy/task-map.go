@@ -11,11 +11,11 @@ import (
 type TaskState uint
 
 const (
-	TaskPending TaskState = iota
-	TaskInProgress
-	TaskCompleted
-	TaskFailed
-	TaskCanceled
+	Pending TaskState = iota
+	InProgress
+	Completed
+	Failed
+	Canceled
 )
 
 type TaskInfo struct {
@@ -26,35 +26,38 @@ type TaskInfo struct {
 }
 
 type TaskMap struct {
-	mu          sync.RWMutex
-	data        map[uint64]*TaskInfo
-	limit       uint64 // Maximum number of tasks allowed
-	mergePeriod uint64 // The time window used to merge previous tasks
-	sem         *semaphore.Weighted
-	lastUpdated uint64 // Last updated timestamp of a successful task
+	mu            sync.RWMutex
+	data          map[uint64]*TaskInfo
+	limit         uint64 // Maximum number of tasks allowed
+	mergePeriod   uint64 // The merge period during which a previous task can be merged
+	expiredPeriod uint64 // The expiration period after which merging is not allowed
+	sem           *semaphore.Weighted
+	lastUpdated   uint64 // Last updated timestamp of a successful task
 }
 
-func NewTaskMap(limit uint64, mergePeriod uint64) *TaskMap {
+func NewTaskMap(limit, mergePeriod, expiredPeriod uint64) *TaskMap {
 	return &TaskMap{
-		data:        make(map[uint64]*TaskInfo),
-		limit:       limit,
-		sem:         semaphore.NewWeighted(int64(limit)),
-		mergePeriod: mergePeriod,
+		data:          make(map[uint64]*TaskInfo),
+		limit:         limit,
+		sem:           semaphore.NewWeighted(int64(limit)),
+		mergePeriod:   mergePeriod,
+		expiredPeriod: expiredPeriod,
 	}
 }
 
-func (tm *TaskMap) Store(key uint64, task *Request) {
+func (tm *TaskMap) Store(key uint64, req *Request) bool {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 	if len(tm.data) >= int(tm.limit) {
-		return
+		return false
 	}
 	tm.data[key] = &TaskInfo{
 		nonce:     key,
-		req:       task,
-		status:    TaskPending,
+		req:       req,
+		status:    Pending,
 		timestamp: uint64(time.Now().Unix()),
 	}
+	return true
 }
 
 func (tm *TaskMap) Load(key uint64) (*TaskInfo, bool) {
@@ -124,7 +127,7 @@ func (tm *TaskMap) Pop() *TaskInfo {
 		return false
 	}
 	unexpired := func(task *TaskInfo) bool {
-		return tm.lastUpdated > 0 && task.timestamp > tm.lastUpdated && task.timestamp-tm.lastUpdated < (tm.limit+1)*tm.mergePeriod
+		return tm.lastUpdated > 0 && task.timestamp > tm.lastUpdated && task.timestamp-tm.lastUpdated < tm.expiredPeriod
 	}
 	for _, key := range keys {
 		task, _ := tm.data[uint64(key)]
@@ -135,11 +138,11 @@ func (tm *TaskMap) Pop() *TaskInfo {
 
 	for _, k := range keys {
 		task := tm.data[uint64(k)]
-		if task.status == TaskCompleted || task.status == TaskCanceled {
+		if task.status == Completed || task.status == Canceled {
 			delete(tm.data, uint64(k))
 		}
-		if task.status == TaskPending || task.status == TaskFailed {
-			task.status = TaskInProgress
+		if task.status == Pending || task.status == Failed {
+			task.status = InProgress
 			return task
 		}
 	}

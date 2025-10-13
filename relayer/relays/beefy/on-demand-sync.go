@@ -52,7 +52,7 @@ func NewOnDemandRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*OnDe
 		ethereumWriter:    ethereumWriter,
 		gatewayContract:   nil,
 		assetHubChannelID: *(*[32]byte)(assetHubChannelID),
-		activeTasks:       *NewTaskMap(config.OnDemandSync.MaxTasks, config.OnDemandSync.MergePeriod),
+		activeTasks:       *NewTaskMap(config.OnDemandSync.MaxTasks, config.OnDemandSync.MergePeriod, config.OnDemandSync.ExpiredPeriod),
 	}
 
 	return &relay, nil
@@ -83,10 +83,10 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 	}
 	relay.gatewayContract = gatewayContract
 
-	enqueueTicker := time.NewTicker(time.Second * 120)
+	ticker := time.NewTicker(time.Second * 60)
 
 	eg.Go(func() error {
-		defer enqueueTicker.Stop()
+		defer ticker.Stop()
 		for {
 			log.Info("Starting check nonces")
 
@@ -109,7 +109,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 			select {
 			case <-ctx.Done():
 				return nil
-			case <-enqueueTicker.C:
+			case <-ticker.C:
 				continue
 			}
 		}
@@ -120,25 +120,9 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 		defer scheduleTicker.Stop()
 		for {
 			log.Info("Scheduling pending nonces")
-			tasks := relay.activeTasks.InspectAll()
-			log.WithFields(log.Fields{
-				"pendingTasks": len(tasks),
-				"lastUpdate":   time.Unix(int64(relay.activeTasks.lastUpdated), 0),
-			}).Info("Queue info")
-			for _, task := range tasks {
-				log.WithFields(log.Fields{
-					"nonce":      task.nonce,
-					"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
-					"status":     task.status,
-					"skipped":    task.req.Skippable,
-					"timestamp":  time.Unix(int64(task.timestamp), 0),
-				}).Info("Task info")
-			}
-			if len(tasks) > 0 {
-				err = relay.schedule(ctx, eg)
-				if err != nil {
-					return fmt.Errorf("Schedule failed: %w", err)
-				}
+			err = relay.schedule(ctx, eg)
+			if err != nil {
+				return fmt.Errorf("Schedule failed: %w", err)
 			}
 			select {
 			case <-ctx.Done():
@@ -223,15 +207,60 @@ func (relay *OnDemandRelay) fetchEthereumNonce(ctx context.Context) (uint64, err
 }
 
 func (relay *OnDemandRelay) sync(ctx context.Context, blockNumber uint64) error {
-	// generate beefy update for that specific relay block
-	req, err := relay.polkadotListener.generateBeefyUpdate(blockNumber)
+	task, err := relay.polkadotListener.generateBeefyUpdate(blockNumber)
 	if err != nil {
 		return fmt.Errorf("fail to generate next beefy request: %w", err)
 	}
-	err = relay.syncRequest(ctx, &req)
+	err = relay.syncBeefyUpdate(ctx, &task)
 	if err != nil {
 		return fmt.Errorf("Sync beefy request failed: %w", err)
 	}
+	return nil
+}
+
+func (relay *OnDemandRelay) syncBeefyUpdate(ctx context.Context, task *Request) error {
+	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
+	if err != nil {
+		return fmt.Errorf("query beefy client state: %w", err)
+	}
+	logger := log.WithFields(log.Fields{
+		"commitmentBlock":       task.SignedCommitment.Commitment.BlockNumber,
+		"latestBeefyBlock":      state.LatestBeefyBlock,
+		"currentValidatorSetID": state.CurrentValidatorSetID,
+		"nextValidatorSetID":    state.NextValidatorSetID,
+	})
+	// Ignore commitment earlier than LatestBeefyBlock which is outdated
+	if uint64(task.SignedCommitment.Commitment.BlockNumber) <= state.LatestBeefyBlock {
+		logger.Info("Commitment outdated, just ignore")
+		return nil
+	}
+
+	if task.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
+		logger.Warn("Task unexpected, wait for mandatory updates to catch up first")
+		return nil
+	}
+
+	// Submit the task
+	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
+		task.ValidatorsRoot = state.CurrentValidatorSetRoot
+	} else {
+		task.ValidatorsRoot = state.NextValidatorSetRoot
+	}
+	err = relay.ethereumWriter.submit(ctx, task)
+	if err != nil {
+		return fmt.Errorf("fail to submit beefy update: %w", err)
+	}
+
+	updatedState, err := relay.ethereumWriter.queryBeefyClientState(ctx)
+	if err != nil {
+		return fmt.Errorf("query beefy client state: %w", err)
+	}
+	logger.WithFields(log.Fields{
+		"commitmentBlock":           task.SignedCommitment.Commitment.BlockNumber,
+		"updatedBeefyBlock":         updatedState.LatestBeefyBlock,
+		"updatedValidatorSetID":     updatedState.CurrentValidatorSetID,
+		"updatedNextValidatorSetID": updatedState.NextValidatorSetID,
+	}).Info("Sync beefy update success")
 	return nil
 }
 
@@ -263,19 +292,6 @@ func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber u
 
 	log.Info("Performing sync")
 
-	if beefyBlockNumber == 0 {
-		beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
-		if err != nil {
-			return fmt.Errorf("Fetch latest beefy block hash: %w", err)
-		}
-
-		header, err := relay.relaychainConn.API().RPC.Chain.GetHeader(beefyBlockHash)
-		if err != nil {
-			return fmt.Errorf("Fetch latest beefy block header: %w", err)
-		}
-		beefyBlockNumber = uint64(header.Number)
-	}
-
 	err = relay.sync(ctx, beefyBlockNumber)
 	if err != nil {
 		return fmt.Errorf("Sync failed: %w", err)
@@ -285,6 +301,7 @@ func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber u
 	return nil
 }
 
+// Enqueue a nonce task into the queue
 func (relay *OnDemandRelay) queue(ctx context.Context, nonce uint64) error {
 	if relay.activeTasks.Full() {
 		log.Info("Task queue full, wait for scheduling")
@@ -304,70 +321,66 @@ func (relay *OnDemandRelay) queue(ctx context.Context, nonce uint64) error {
 	// sleep to ensure that beefy head newer than relay chain block in which the parachain block was accepted.
 	time.Sleep(time.Second * 90)
 
-	beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
-	if err != nil {
-		return fmt.Errorf("Fetch latest beefy block hash: %w", err)
-	}
-	header, err := relay.relaychainConn.API().RPC.Chain.GetHeader(beefyBlockHash)
-	if err != nil {
-		return fmt.Errorf("Fetch latest beefy block header: %w", err)
-	}
-	beefyBlockNumber := uint64(header.Number)
 	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
 	if err != nil {
 		return fmt.Errorf("query beefy client state: %w", err)
 	}
-	// Ignore relay block already synced
-	if beefyBlockNumber <= state.LatestBeefyBlock {
-		log.WithFields(log.Fields{
-			"validatorSetID": state.CurrentValidatorSetID,
-			"beefyBlock":     state.LatestBeefyBlock,
-			"relayBlock":     header.Number,
-		}).Info("Relay block already synced, just ignore")
-		return nil
-	}
 
-	// generate beefy update for that specific relay block
-	task, err := relay.polkadotListener.generateBeefyUpdate(beefyBlockNumber)
+	// Generate a Beefy request for the latest finalized block (Specify zero for latest)
+	req, err := relay.polkadotListener.generateBeefyUpdate(0)
 	if err != nil {
 		return fmt.Errorf("fail to generate next beefy request: %w", err)
 	}
 
-	// Ignore commitment earlier than LatestBeefyBlock which is outdated
-	if task.SignedCommitment.Commitment.BlockNumber <= uint32(state.LatestBeefyBlock) {
-		log.WithFields(log.Fields{
-			"latestBeefyBlock":      state.LatestBeefyBlock,
-			"currentValidatorSetID": state.CurrentValidatorSetID,
-			"nextValidatorSetID":    state.NextValidatorSetID,
-			"blockNumberToSync":     task.SignedCommitment.Commitment.BlockNumber,
-		}).Info("Commitment outdated, just ignore")
+	logger := log.WithFields(log.Fields{
+		"latestBeefyBlock":         state.LatestBeefyBlock,
+		"currentValidatorSetID":    state.CurrentValidatorSetID,
+		"nextValidatorSetID":       state.NextValidatorSetID,
+		"commitmentBlock":          req.SignedCommitment.Commitment.BlockNumber,
+		"commitmentValidatorSetID": req.SignedCommitment.Commitment.ValidatorSetID,
+		"nonce":                    nonce,
+	})
+
+	// Ignore commitment earlier than LatestBeefyBlock
+	if req.SignedCommitment.Commitment.BlockNumber <= uint32(state.LatestBeefyBlock) {
+		logger.Info("Commitment outdated, just ignore")
 		return nil
 	}
-	if task.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
-		log.WithFields(log.Fields{
-			"latestBeefyBlock":      state.LatestBeefyBlock,
-			"currentValidatorSetID": state.CurrentValidatorSetID,
-			"nextValidatorSetID":    state.NextValidatorSetID,
-			"validatorSetIDToSync":  task.SignedCommitment.Commitment.ValidatorSetID,
-		}).Warn("Task unexpected, wait for mandatory updates to catch up first")
+	if req.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
+		logger.Warn("Task unexpected, wait for mandatory updates to catch up first")
 		return nil
 	}
 
-	// Submit the task
-	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
-		task.ValidatorsRoot = state.CurrentValidatorSetRoot
+	if req.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
+		req.ValidatorsRoot = state.CurrentValidatorSetRoot
 	} else {
-		task.ValidatorsRoot = state.NextValidatorSetRoot
+		req.ValidatorsRoot = state.NextValidatorSetRoot
 	}
-	relay.activeTasks.Store(nonce, &task)
-	log.WithFields(log.Fields{
-		"nonce":      nonce,
-		"commitment": task.SignedCommitment.Commitment.BlockNumber,
-	}).Info("Task enqueued")
+	ok = relay.activeTasks.Store(nonce, &req)
+	if ok {
+		logger.Info("Task enqueued")
+	} else {
+		logger.Warn("Task not enqueued because the queue is full")
+	}
 	return nil
 }
 
+// Schedule an available task for execution
 func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) error {
+	tasks := relay.activeTasks.InspectAll()
+	log.WithFields(log.Fields{
+		"pendingTasks": len(tasks),
+		"lastUpdate":   time.Unix(int64(relay.activeTasks.lastUpdated), 0),
+	}).Info("Queue info")
+	for _, task := range tasks {
+		log.WithFields(log.Fields{
+			"nonce":      task.nonce,
+			"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
+			"status":     task.status,
+			"skipped":    task.req.Skippable,
+			"timestamp":  time.Unix(int64(task.timestamp), 0),
+		}).Info("Task info")
+	}
 	task := relay.activeTasks.Pop()
 	if task == nil {
 		log.Info("No task available, waiting for new tasks to be queued or for ongoing tasks to complete")
@@ -375,42 +388,30 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 	}
 	err := relay.activeTasks.sem.Acquire(ctx, 1)
 	if err != nil {
-		return err
+		return fmt.Errorf("Acquires the semaphore: %w", err)
 	}
+	logger := log.WithFields(log.Fields{
+		"nonce":      task.nonce,
+		"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
+	})
 	eg.Go(func() error {
 		defer relay.activeTasks.sem.Release(1)
-		log.WithFields(log.Fields{
-			"nonce":      task.nonce,
-			"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
-		}).Info("Starting beefy sync")
-		err := relay.syncRequest(ctx, task.req)
+		logger.Info("Starting beefy sync")
+		err := relay.syncBeefyUpdate(ctx, task.req)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"nonce":      task.nonce,
-				"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
-				"error":      err,
-			}).Error("Sync beefy failed")
-			relay.activeTasks.SetStatus(task.nonce, TaskFailed)
+			logger.Error(fmt.Sprintf("Sync beefy failed, %v", err))
+			relay.activeTasks.SetStatus(task.nonce, Failed)
 		} else {
 			if task.req.Skippable {
-				log.WithFields(log.Fields{
-					"nonce":      task.nonce,
-					"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
-				}).Info("Sync beefy skipped")
-				relay.activeTasks.SetStatus(task.nonce, TaskCanceled)
+				logger.Info("Sync beefy skipped")
+				relay.activeTasks.SetStatus(task.nonce, Canceled)
 			} else {
-				log.WithFields(log.Fields{
-					"nonce":      task.nonce,
-					"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
-				}).Info("Sync beefy completed")
+				logger.Info("Sync beefy completed")
 				relay.activeTasks.SetLastUpdated(task.nonce)
 				err = relay.waitUntilMessagesSynced(ctx, task.nonce)
 				if err != nil {
-					log.WithFields(log.Fields{
-						"nonce":      task.nonce,
-						"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
-					}).Warn("Sync beefy completed, but the parachain relay failed to sync the pending nonce in time.")
-					relay.activeTasks.SetStatus(task.nonce, TaskCompleted)
+					logger.Warn("Beefy sync completed, but pending nonce not synced in time")
+					relay.activeTasks.SetStatus(task.nonce, Completed)
 				} else {
 					relay.activeTasks.Delete(task.nonce)
 				}
@@ -418,64 +419,5 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 		}
 		return nil
 	})
-	return nil
-}
-
-func (relay *OnDemandRelay) syncRequest(ctx context.Context, req *Request) error {
-	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
-	if err != nil {
-		return fmt.Errorf("query beefy client state: %w", err)
-	}
-	// Ignore relay block already synced
-	if uint64(req.SignedCommitment.Commitment.BlockNumber) <= state.LatestBeefyBlock {
-		log.WithFields(log.Fields{
-			"validatorSetID": state.CurrentValidatorSetID,
-			"beefyBlock":     state.LatestBeefyBlock,
-			"relayBlock":     req.SignedCommitment.Commitment.BlockNumber,
-		}).Info("Relay block already synced, just ignore")
-		return nil
-	}
-
-	// Ignore commitment earlier than LatestBeefyBlock which is outdated
-	if req.SignedCommitment.Commitment.BlockNumber <= uint32(state.LatestBeefyBlock) {
-		log.WithFields(log.Fields{
-			"latestBeefyBlock":      state.LatestBeefyBlock,
-			"currentValidatorSetID": state.CurrentValidatorSetID,
-			"nextValidatorSetID":    state.NextValidatorSetID,
-			"blockNumberToSync":     req.SignedCommitment.Commitment.BlockNumber,
-		}).Info("Commitment outdated, just ignore")
-		return nil
-	}
-	if req.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
-		log.WithFields(log.Fields{
-			"latestBeefyBlock":      state.LatestBeefyBlock,
-			"currentValidatorSetID": state.CurrentValidatorSetID,
-			"nextValidatorSetID":    state.NextValidatorSetID,
-			"validatorSetIDToSync":  req.SignedCommitment.Commitment.ValidatorSetID,
-		}).Warn("Task unexpected, wait for mandatory updates to catch up first")
-		return nil
-	}
-
-	// Submit the task
-	if req.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
-		req.ValidatorsRoot = state.CurrentValidatorSetRoot
-	} else {
-		req.ValidatorsRoot = state.NextValidatorSetRoot
-	}
-	err = relay.ethereumWriter.submit(ctx, req)
-	if err != nil {
-		return fmt.Errorf("fail to submit two phase commitment: %w", err)
-	}
-
-	updatedState, err := relay.ethereumWriter.queryBeefyClientState(ctx)
-	if err != nil {
-		return fmt.Errorf("query beefy client state: %w", err)
-	}
-	log.WithFields(log.Fields{
-		"commitmentBlock":       req.SignedCommitment.Commitment.BlockNumber,
-		"latestBlock":           updatedState.LatestBeefyBlock,
-		"currentValidatorSetID": updatedState.CurrentValidatorSetID,
-		"nextValidatorSetID":    updatedState.NextValidatorSetID,
-	}).Info("Sync beefy update success")
 	return nil
 }
