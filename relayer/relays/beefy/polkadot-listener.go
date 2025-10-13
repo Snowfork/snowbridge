@@ -118,6 +118,10 @@ func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]subst
 	return authorities, nil
 }
 
+// Generate a Beefy update for a specific relay block.
+// If the relay block is set to zero, just return the latest update.
+// Loop until the specified relay block has been Beefy-finalized,
+// or return the next block that contains a Beefy justification.
 func (li *PolkadotListener) generateBeefyUpdate(relayBlockNumber uint64) (Request, error) {
 	api := li.conn.API()
 	meta := li.conn.Metadata()
@@ -167,42 +171,41 @@ func (li *PolkadotListener) findNextBeefyBlock(blockNumber uint64) (types.Hash, 
 			// The relay block not finalized yet, just wait and retry
 			time.Sleep(6 * time.Second)
 			continue
-		} else {
-			// The relay block has been finalized, just return the next block
-			// which contains a beefy justification
-			for {
-				if nextBeefyBlockNumber == latestBeefyBlockNumber {
-					nextBeefyBlockHash = finalizedBeefyBlockHash
-					break
-				}
-				nextBeefyBlockHash, err = api.RPC.Chain.GetBlockHash(nextBeefyBlockNumber)
-				if err != nil {
-					return nextBeefyBlockHash, fmt.Errorf("fetch block hash: %w", err)
-				}
-				block, err := api.RPC.Chain.GetBlock(nextBeefyBlockHash)
-				if err != nil {
-					return nextBeefyBlockHash, fmt.Errorf("fetch block: %w", err)
-				}
+		}
+		// The relay block has been finalized, just return the next block
+		// which contains a beefy justification, return latest if the relay block is zero
+		for {
+			if nextBeefyBlockNumber == 0 || nextBeefyBlockNumber == latestBeefyBlockNumber {
+				nextBeefyBlockHash = finalizedBeefyBlockHash
+				break
+			}
+			nextBeefyBlockHash, err = api.RPC.Chain.GetBlockHash(nextBeefyBlockNumber)
+			if err != nil {
+				return nextBeefyBlockHash, fmt.Errorf("fetch block hash: %w", err)
+			}
+			block, err := api.RPC.Chain.GetBlock(nextBeefyBlockHash)
+			if err != nil {
+				return nextBeefyBlockHash, fmt.Errorf("fetch block: %w", err)
+			}
 
-				var commitment *types.SignedCommitment
-				for j := range block.Justifications {
-					sc := types.OptionalSignedCommitment{}
-					if block.Justifications[j].EngineID() == "BEEF" {
-						err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
-						if err != nil {
-							return nextBeefyBlockHash, fmt.Errorf("decode BEEFY signed commitment: %w", err)
-						}
-						ok, value := sc.Unwrap()
-						if ok {
-							commitment = &value
-						}
+			var commitment *types.SignedCommitment
+			for j := range block.Justifications {
+				sc := types.OptionalSignedCommitment{}
+				if block.Justifications[j].EngineID() == "BEEF" {
+					err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
+					if err != nil {
+						return nextBeefyBlockHash, fmt.Errorf("decode BEEFY signed commitment: %w", err)
+					}
+					ok, value := sc.Unwrap()
+					if ok {
+						commitment = &value
 					}
 				}
-				if commitment != nil {
-					return nextBeefyBlockHash, nil
-				}
-				nextBeefyBlockNumber++
 			}
+			if commitment != nil {
+				return nextBeefyBlockHash, nil
+			}
+			nextBeefyBlockNumber++
 		}
 		return nextBeefyBlockHash, nil
 	}
