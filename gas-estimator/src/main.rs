@@ -1,7 +1,6 @@
 mod config;
 mod contracts;
 mod estimator;
-mod penpal;
 
 use crate::estimator::{
     clients, construct_register_token_xcm, decode_assets_from_hex, estimate_gas, BridgeAsset,

@@ -4946,18 +4946,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "penpal-westend-local-runtime"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "scale-info",
- "serde",
- "snowbridge-beacon-primitives 0.2.0",
- "sp-arithmetic 26.1.0",
- "subxt",
-]
-
-[[package]]
 name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6736,7 +6724,6 @@ dependencies = [
  "lazy_static",
  "log",
  "parity-scale-codec",
- "penpal-westend-local-runtime",
  "scale-info",
  "serde",
  "serde_json",
