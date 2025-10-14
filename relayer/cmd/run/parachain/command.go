@@ -22,11 +22,13 @@ import (
 )
 
 var (
-	configFile          string
-	privateKey          string
-	privateKeyFile      string
-	privateKeyID        string
-	parachainPrivateKey string
+	configFile              string
+	privateKey              string
+	privateKeyFile          string
+	privateKeyID            string
+	parachainPrivateKey     string
+	parachainPrivateKeyFile string
+	parachainPrivateKeyID   string
 )
 
 func Command() *cobra.Command {
@@ -45,6 +47,8 @@ func Command() *cobra.Command {
 	cmd.Flags().StringVar(&privateKeyID, "ethereum.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
 
 	cmd.Flags().StringVar(&parachainPrivateKey, "substrate.private-key", "", "substrate private key")
+	cmd.Flags().StringVar(&parachainPrivateKeyFile, "substrate.private-key-file", "", "The file from which to read the private key")
+	cmd.Flags().StringVar(&parachainPrivateKeyID, "substrate.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
 
 	return cmd
 }
@@ -74,7 +78,7 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	keypair2, err := para.ResolvePrivateKey(parachainPrivateKey, "", "")
+	keypair2, err := para.ResolvePrivateKey(parachainPrivateKey, parachainPrivateKeyFile, parachainPrivateKeyID)
 	if err != nil {
 		return err
 	}
