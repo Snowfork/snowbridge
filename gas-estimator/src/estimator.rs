@@ -7,7 +7,6 @@ use asset_hub_westend_local_runtime::{
     runtime as asset_hub_runtime,
     runtime_types::{
         bounded_collections::bounded_vec::BoundedVec,
-        sp_weights::weight_v2::Weight,
         staging_xcm::v5::{
             asset::{
                 Asset,
@@ -19,16 +18,13 @@ use asset_hub_westend_local_runtime::{
             junction::{
                 Junction::{
                     AccountId32, AccountKey20, GlobalConsensus, PalletInstance,
-                    Parachain as JunctionParachain,
                 },
                 NetworkId::{self, Ethereum},
             },
             junctions::{
-                Junctions as XcmJunctions,
                 Junctions::{Here, X1, X2},
             },
             location::Location,
-            traits::Outcome,
             Hint::AssetClaimer,
             Instruction::{
                 DepositAsset, DescendOrigin, ExchangeAsset, PayFees, RefundSurplus,
@@ -37,8 +33,7 @@ use asset_hub_westend_local_runtime::{
             Xcm,
         },
         xcm::{
-            double_encoded::DoubleEncoded, v3::OriginKind, VersionedAssetId, VersionedAssets,
-            VersionedLocation, VersionedXcm,
+            double_encoded::DoubleEncoded, v3::OriginKind, VersionedXcm,
         },
     },
 };
@@ -63,8 +58,7 @@ use codec::DecodeLimit;
 use hex;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use sp_core::parameter_types;
-use sp_core::H256;
+use sp_core::{parameter_types, H256};
 use sp_runtime::AccountId32 as RuntimeAccountId32;
 use std::env;
 use subxt::{config::DefaultExtrinsicParams, Config, OnlineClient, PolkadotConfig};
@@ -79,6 +73,11 @@ sol! {
     struct AsForeignTokenERC20 {
         bytes32 foreignID;
         uint128 amount;
+    }
+
+    struct AsCreateAsset {
+        address token;
+        uint8 network;
     }
 }
 
@@ -362,65 +361,6 @@ fn extract_remote_xcm(raw: &[u8]) -> Xcm {
         }
     }
     Xcm(vec![])
-}
-
-pub async fn query_xcm_weight(
-    clients: &Clients,
-    destination_xcm: VersionedXcm,
-) -> Result<Weight, EstimatorError> {
-    let runtime_api_call = asset_hub_runtime::apis()
-        .xcm_payment_api()
-        .query_xcm_weight(destination_xcm);
-
-    let weight_result = clients
-        .asset_hub_client
-        .runtime_api()
-        .at_latest()
-        .await
-        .map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
-        })?
-        .call(runtime_api_call)
-        .await
-        .map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to query XCM weight: {:?}", e))
-        })?;
-
-    weight_result.map_err(|e| {
-        EstimatorError::InvalidCommand(format!("XCM weight query returned error: {:?}", e))
-    })
-}
-
-pub async fn query_weight_to_asset_fee(
-    clients: &Clients,
-    weight: &Weight,
-) -> Result<u128, EstimatorError> {
-    let dot_asset = VersionedAssetId::V5(AssetId(Location {
-        parents: 1,
-        interior: Here,
-    }));
-
-    let runtime_api_call = asset_hub_runtime::apis()
-        .xcm_payment_api()
-        .query_weight_to_asset_fee(weight.clone(), dot_asset);
-
-    let fee_result = clients
-        .asset_hub_client
-        .runtime_api()
-        .at_latest()
-        .await
-        .map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
-        })?
-        .call(runtime_api_call)
-        .await
-        .map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to query weight to asset fee: {:?}", e))
-        })?;
-
-    fee_result.map_err(|e| {
-        EstimatorError::InvalidCommand(format!("Weight to asset fee query returned error: {:?}", e))
-    })
 }
 
 pub async fn quote_price_exact_tokens_for_tokens(

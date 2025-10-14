@@ -2,9 +2,10 @@ mod config;
 mod contracts;
 mod estimator;
 
-use crate::estimator::{clients, decode_assets_from_hex, estimate_gas, BridgeAsset, EstimatorError};
+use crate::estimator::{clients, construct_register_token_xcm, decode_assets_from_hex, estimate_gas, BridgeAsset, EstimatorError};
 #[cfg(feature = "local")]
 use asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::location::Location;
+use alloy_sol_types::{sol, SolValue};
 use clap::{Parser, Subcommand, ValueEnum};
 use codec;
 use hex;
@@ -123,10 +124,11 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
 
                 // Process XCM based on kind (this is for delivery fee calculation)
                 let xcm_bytes = if xcm_kind == 1 {
-                    return Err(EstimatorError::InvalidCommand(
-                        "XCM kind 1 (CreateAsset) is no longer supported. Use kind 0 (Raw).".to_string()
-                    ));
+                    // CreateAsset: xcm_data is ABI-encoded AsCreateAsset{token, network}                    let create_asset_data = parse_hex_address(&xcm_data)?;
+                    let decoded = decode_create_asset(&create_asset_data)?;
+                    construct_register_token_xcm(&decoded.token, decoded.network, value, claimer.clone())?
                 } else {
+                    // Raw: xcm_data is SCALE-encoded VersionedXcm
                     parse_hex_address(&xcm_data)?
                 };
 
@@ -188,5 +190,28 @@ fn parse_origin(origin_hex: &str) -> Result<[u8; 20], EstimatorError> {
 
 fn parse_assets(assets_hex: &str) -> Result<Vec<BridgeAsset>, EstimatorError> {
     decode_assets_from_hex(assets_hex)
+}
+
+sol! {
+    struct AsCreateAsset {
+        address token;
+        uint8 network;
+    }
+}
+
+struct CreateAssetData {
+    token: String,
+    network: u8,
+}
+
+fn decode_create_asset(data: &[u8]) -> Result<CreateAssetData, EstimatorError> {
+    let decoded = AsCreateAsset::abi_decode(data).map_err(|e| {
+        EstimatorError::InvalidCommand(format!("Failed to decode CreateAsset data: {}", e))
+    })?;
+
+    Ok(CreateAssetData {
+        token: format!("0x{:x}", decoded.token),
+        network: decoded.network,
+    })
 }
 
