@@ -525,7 +525,7 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	}
 
 	if r.gasEstimator.config.Enabled {
-		gasEstimate, err := r.gasEstimator.EstimateGas(ctx, ev, source)
+		gasEstimate, err := r.gasEstimator.EstimateGas(ctx, ev, inboundMsg, source)
 		if err != nil {
 			return fmt.Errorf("gas estimation failed: %w", err)
 		}

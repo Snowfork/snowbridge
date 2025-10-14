@@ -2,25 +2,13 @@ mod config;
 mod contracts;
 mod estimator;
 
-use crate::estimator::{
-    clients, construct_register_token_xcm, decode_assets_from_hex, estimate_gas, BridgeAsset,
-    EstimatorError,
-};
-use alloy_sol_types::{sol, SolValue};
+use crate::estimator::{clients, decode_assets_from_hex, estimate_gas, BridgeAsset, EstimatorError};
 #[cfg(feature = "local")]
 use asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::location::Location;
 use clap::{Parser, Subcommand, ValueEnum};
 use codec;
 use hex;
 use std::process;
-
-// Define the AsCreateAsset struct from the Solidity contract
-sol! {
-    struct AsCreateAsset {
-        address token;
-        uint8 network;
-    }
-}
 
 #[derive(Parser)]
 #[command(name = "snowbridge-gas-estimator")]
@@ -45,12 +33,24 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum EstimateCommands {
-    /// Estimate gas for a message (handles both raw XCM and create asset based on XCM kind)
+    /// Estimate gas for submitting a message via BridgeHub
     Message {
+        /// Event log address (hex string)
+        #[arg(long)]
+        event_log_address: String,
+        /// Event log topics (comma-separated hex strings)
+        #[arg(long)]
+        event_log_topics: String,
+        /// Event log data (hex string)
+        #[arg(long)]
+        event_log_data: String,
+        /// Proof data (hex-encoded SCALE-encoded proof)
+        #[arg(long)]
+        proof: String,
         /// XCM kind (0 = Raw, 1 = CreateAsset)
         #[arg(long)]
         xcm_kind: u8,
-        /// XCM data (hex string) - raw XCM bytes for kind=0, ABI-encoded AsCreateAsset for kind=1
+        /// XCM data (hex string)
         #[arg(long)]
         xcm_data: String,
         /// Asset transfer data (hex-encoded asset data)
@@ -62,7 +62,7 @@ enum EstimateCommands {
         /// Origin address (hex string)
         #[arg(long)]
         origin: String,
-        /// The full Ether value supplied to cover the transaction, including execution and relayer fee
+        /// The full Ether value supplied to cover the transaction
         #[arg(long)]
         value: u128,
         /// Execution fee in wei
@@ -104,6 +104,10 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
     match cli.command {
         Commands::Estimate { command } => match command {
             EstimateCommands::Message {
+                event_log_address,
+                event_log_topics,
+                event_log_data,
+                proof,
                 xcm_kind,
                 xcm_data,
                 assets,
@@ -117,34 +121,21 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                 let origin = parse_origin(&origin)?;
                 let assets = parse_assets(&assets)?;
 
-                // Process XCM based on kind
-                let xcm_bytes = match xcm_kind {
-                    0 => {
-                        // Raw XCM bytes
-                        parse_hex_address(&xcm_data)?
-                    }
-                    1 => {
-                        // CreateAsset - decode token address and network from ABI-encoded data
-                        let create_asset_data = parse_hex_address(&xcm_data)?;
-                        let (token_address, network) =
-                            decode_create_asset_data(&create_asset_data)?;
-                        construct_register_token_xcm(
-                            &format!("0x{}", hex::encode(token_address)),
-                            network,
-                            value,
-                            claimer.clone(),
-                        )?
-                    }
-                    _ => {
-                        return Err(EstimatorError::InvalidCommand(format!(
-                            "Unsupported XCM kind: {}. Must be 0 (Raw) or 1 (CreateAsset)",
-                            xcm_kind
-                        )));
-                    }
+                // Process XCM based on kind (this is for delivery fee calculation)
+                let xcm_bytes = if xcm_kind == 1 {
+                    return Err(EstimatorError::InvalidCommand(
+                        "XCM kind 1 (CreateAsset) is no longer supported. Use kind 0 (Raw).".to_string()
+                    ));
+                } else {
+                    parse_hex_address(&xcm_data)?
                 };
 
                 let estimation = estimate_gas(
                     &clients,
+                    &event_log_address,
+                    &event_log_topics,
+                    &event_log_data,
+                    &proof,
                     &xcm_bytes,
                     claimer,
                     origin,
@@ -199,14 +190,3 @@ fn parse_assets(assets_hex: &str) -> Result<Vec<BridgeAsset>, EstimatorError> {
     decode_assets_from_hex(assets_hex)
 }
 
-fn decode_create_asset_data(data: &[u8]) -> Result<([u8; 20], u8), EstimatorError> {
-    // Decode the ABI-encoded AsCreateAsset struct using alloy
-    let decoded = AsCreateAsset::abi_decode(data).map_err(|e| {
-        EstimatorError::InvalidCommand(format!("Failed to decode AsCreateAsset: {}", e))
-    })?;
-
-    // Convert alloy Address to [u8; 20]
-    let token_address: [u8; 20] = decoded.token.into();
-
-    Ok((token_address, decoded.network))
-}

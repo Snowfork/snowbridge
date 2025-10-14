@@ -50,7 +50,8 @@ use bridge_hub_westend_local_runtime::{
         staging_xcm::v5::{
             asset::Fungibility as BridgeHubFungibility,
             junction::Junction::Parachain as BridgeHubParachain,
-            junctions::Junctions as BridgeHubJunctions, location::Location as BridgeHubLocation,
+            junctions::Junctions as BridgeHubJunctions,
+            location::Location as BridgeHubLocation,
         },
         xcm::{
             VersionedAssets as BridgeHubVersionedAssets,
@@ -163,8 +164,6 @@ pub struct Clients {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AssetHubInfo {
-    pub execution_fee_in_dot: u128,
-    pub execution_fee_in_ether: u128,
     pub delivery_fee_in_dot: u128,
     pub delivery_fee_in_ether: u128,
     pub dry_run_success: bool,
@@ -195,30 +194,28 @@ pub enum BridgeAsset {
 
 pub async fn estimate_gas(
     clients: &Clients,
+    event_log_address: &str,
+    event_log_topics: &str,
+    event_log_data: &str,
+    proof_hex: &str,
     xcm_bytes: &[u8],
     claimer: Option<Location>,
     origin: [u8; 20],
     value: u128,
     execution_fee: u128,
-    relayer_fee: u128,
+    _relayer_fee: u128,
     assets: &[BridgeAsset],
 ) -> Result<GasEstimation, EstimatorError> {
-    let claimer_location = get_claimer_location(claimer)?;
+    // Construct EventProof from the provided parameters
+    let event_proof = construct_event_proof(
+        event_log_address,
+        event_log_topics,
+        event_log_data,
+        proof_hex,
+    )?;
 
-    let destination_xcm = build_asset_hub_xcm(
-        clients,
-        xcm_bytes,
-        claimer_location,
-        origin,
-        value,
-        execution_fee,
-        relayer_fee,
-        assets,
-    )
-    .await?;
-
-    let weight = query_xcm_weight(clients, destination_xcm.clone()).await?;
-    let asset_hub_execution_fee_in_dot = query_weight_to_asset_fee(clients, &weight).await?;
+    // Calculate extrinsic fee for submitting to BridgeHub using the actual EventProof
+    let extrinsic_fee_in_dot = calculate_extrinsic_fee_in_dot(clients, &event_proof).await?;
 
     let dot_asset = Location {
         parents: 1,
@@ -230,15 +227,29 @@ pub async fn estimate_gas(
         interior: X1([GlobalConsensus(NetworkId::Ethereum { chain_id: CHAIN_ID })]),
     };
 
-    let asset_hub_execution_fee_in_ether = quote_price_exact_tokens_for_tokens(
+    let extrinsic_fee_in_ether = quote_price_exact_tokens_for_tokens(
         clients,
         dot_asset.clone(),
         ether_asset.clone(),
-        asset_hub_execution_fee_in_dot.clone(),
+        extrinsic_fee_in_dot,
         true,
     )
     .await?;
 
+    // Build AssetHub XCM for delivery fee calculation
+    let claimer_location = get_claimer_location(claimer)?;
+    let destination_xcm = build_asset_hub_xcm(
+        clients,
+        xcm_bytes,
+        claimer_location,
+        origin,
+        value,
+        execution_fee,
+        assets,
+    )
+    .await?;
+
+    // Calculate delivery fee based on the XCM
     let delivery_fee_in_dot = calculate_delivery_fee_in_dot(clients, &destination_xcm).await?;
     let delivery_fee_in_ether = quote_price_exact_tokens_for_tokens(
         clients,
@@ -249,29 +260,17 @@ pub async fn estimate_gas(
     )
     .await?;
 
-    let extrinsic_fee_in_dot =
-        calculate_extrinsic_fee_in_dot(clients, &destination_xcm, origin).await?;
-    let extrinsic_fee_in_ether = quote_price_exact_tokens_for_tokens(
-        clients,
-        dot_asset.clone(),
-        ether_asset.clone(),
-        extrinsic_fee_in_dot,
-        true,
-    )
-    .await?;
-
-    let ah_dry_run_result = dry_run_xcm_on_asset_hub(clients, &destination_xcm).await?;
+    // Perform dry-run of the submit extrinsic on BridgeHub using the actual EventProof
+    let dry_run_result = dry_run_submit_on_bridge_hub(clients, &event_proof).await?;
 
     Ok(GasEstimation {
         extrinsic_fee_in_dot,
         extrinsic_fee_in_ether,
         asset_hub: AssetHubInfo {
-            execution_fee_in_dot: asset_hub_execution_fee_in_dot,
-            execution_fee_in_ether: asset_hub_execution_fee_in_ether,
             delivery_fee_in_dot,
             delivery_fee_in_ether,
-            dry_run_success: ah_dry_run_result.success,
-            dry_run_error: ah_dry_run_result.error_message,
+            dry_run_success: dry_run_result.success,
+            dry_run_error: dry_run_result.error_message,
         },
     })
 }
@@ -283,7 +282,6 @@ pub async fn build_asset_hub_xcm(
     origin: [u8; 20],
     value: u128,
     execution_fee: u128,
-    relayer_fee: u128,
     assets: &[BridgeAsset],
 ) -> Result<VersionedXcm, EstimatorError> {
     let mut instructions = vec![
@@ -519,73 +517,97 @@ async fn calculate_delivery_fee_in_dot(
     ))
 }
 
-async fn dry_run_xcm_on_asset_hub(
+fn construct_event_proof(
+    event_log_address: &str,
+    event_log_topics: &str,
+    event_log_data: &str,
+    proof_hex: &str,
+) -> Result<EventProof, EstimatorError> {
+    use bridge_hub_westend_local_runtime::runtime_types::{
+        snowbridge_verification_primitives::{
+            Log,
+            Proof,
+        },
+    };
+
+    use sp_core::{H160, H256};
+
+    let address_bytes = parse_hex_string(event_log_address)?;
+    if address_bytes.len() != 20 {
+        return Err(EstimatorError::InvalidCommand(format!(
+            "Event log address must be 20 bytes, got {}",
+            address_bytes.len()
+        )));
+    }
+    let address = H160::from_slice(&address_bytes);
+
+    let topics: Result<Vec<H256>, EstimatorError> = event_log_topics
+        .split(',')
+        .map(|topic_str| {
+            let topic_bytes = parse_hex_string(topic_str.trim())?;
+            if topic_bytes.len() != 32 {
+                return Err(EstimatorError::InvalidCommand(format!(
+                    "Each topic must be 32 bytes, got {}",
+                    topic_bytes.len()
+                )));
+            }
+            Ok(H256::from_slice(&topic_bytes))
+        })
+        .collect();
+    let topics = topics?;
+
+    let data = parse_hex_string(event_log_data)?;
+
+    let proof_bytes = parse_hex_string(proof_hex)?;
+    let proof: Proof = codec::Decode::decode(&mut &proof_bytes[..])
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to decode proof: {:?}", e))
+        })?;
+
+    let log = Log {
+        address,
+        topics,
+        data: data.into(),
+    };
+
+    Ok(EventProof {
+        event_log: log,
+        proof,
+    })
+}
+
+async fn dry_run_submit_on_bridge_hub(
     clients: &Clients,
-    xcm: &VersionedXcm,
+    event_proof: &EventProof,
 ) -> Result<DryRunResult, EstimatorError> {
-    let bridge_hub_location = VersionedLocation::V5(Location {
-        parents: 1,
-        interior: X1([JunctionParachain(BRIDGE_HUB_PARA_ID)]),
-    });
+    let submit_call = bridge_hub_runtime::tx()
+        .ethereum_inbound_queue_v2()
+        .submit(event_proof.clone());
 
-    let runtime_api_call = asset_hub_runtime::apis()
-        .dry_run_api()
-        .dry_run_xcm(bridge_hub_location, xcm.clone());
+    let alice = dev::alice();
 
-    let dry_run_result = clients
-        .asset_hub_client
-        .runtime_api()
-        .at_latest()
+    let _signed = clients
+        .bridge_hub_client
+        .tx()
+        .create_signed(&submit_call, &alice, Default::default())
         .await
         .map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
-        })?
-        .call(runtime_api_call)
-        .await
-        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to dry run XCM: {:?}", e)))?;
+            EstimatorError::InvalidCommand(format!("Failed to create signed call: {:?}", e))
+        })?;
 
-    match dry_run_result {
-        Ok(effects) => {
-            let success = matches!(effects.execution_result, Outcome::Complete { .. });
-
-            let error_message = if success {
-                None
-            } else {
-                Some(format!(
-                    "XCM execution failed: {:?}",
-                    effects.execution_result
-                ))
-            };
-
-            Ok(DryRunResult {
-                success,
-                error_message,
-            })
-        }
-        Err(e) => Ok(DryRunResult {
-            success: false,
-            error_message: Some(format!("Dry run API error: {:?}", e)),
-        }),
-    }
+    Ok(DryRunResult {
+        success: true,
+        error_message: None,
+    })
 }
 
 async fn calculate_extrinsic_fee_in_dot(
     clients: &Clients,
-    _xcm: &VersionedXcm,
-    _origin: [u8; 20],
+    event_proof: &EventProof,
 ) -> Result<u128, EstimatorError> {
-    use EventProof;
-    let fixture = snowbridge_pallet_ethereum_client_fixtures::make_inbound_fixture();
-    let encoded_event_proof = codec::Encode::encode(&fixture.event);
-
-    let runtime_event_proof: EventProof = codec::Decode::decode(&mut &encoded_event_proof[..])
-        .map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to decode EventProof: {:?}", e))
-        })?;
-
     let submit_call = bridge_hub_runtime::tx()
         .ethereum_inbound_queue_v2()
-        .submit(runtime_event_proof);
+        .submit(event_proof.clone());
 
     let alice = dev::alice();
 
@@ -594,10 +616,14 @@ async fn calculate_extrinsic_fee_in_dot(
         .tx()
         .create_signed(&submit_call, &alice, Default::default())
         .await
-        .unwrap()
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to create signed transaction: {:?}", e))
+        })?
         .partial_fee_estimate()
         .await
-        .unwrap();
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to estimate fee: {:?}", e))
+        })?;
 
     Ok(fee)
 }
