@@ -381,7 +381,7 @@ export const initializeAlarms = async () => {
     cloudWatchAlarms.push(sovereignAccountBalanceAlarm)
 
     // Indexer service stale
-    for (const chain of ["assethub", "bridgehub", "ethereum", "kusama_assethub"]) {
+    for (const chain of ["assethub", "bridgehub", "ethereum", "kusama_assethub", "hydration"]) {
         let indexerAlarm = new PutMetricAlarmCommand({
             AlarmName: AlarmReason.IndexServiceStale.toString() + "-" + name + "-" + chain,
             MetricName: "IndexerLatency",

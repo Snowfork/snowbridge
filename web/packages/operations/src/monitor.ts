@@ -1,8 +1,7 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
-import { Context, environment, status, utils, subsquid } from "@snowbridge/api"
+import { Context, environment, status, utils, subsquid, contextConfigFor } from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
-import { AbstractProvider } from "ethers"
 
 export const monitor = async (): Promise<status.AllMetrics> => {
     let env = "local_e2e"
@@ -14,41 +13,9 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const { config, name, ethChainId } = snowbridgeEnv
+    const { config, name } = snowbridgeEnv
 
-    const parachains: { [paraId: string]: string } = {}
-    parachains[config.BRIDGE_HUB_PARAID.toString()] =
-        process.env["BRIDGE_HUB_URL"] ?? config.PARACHAINS[config.BRIDGE_HUB_PARAID.toString()]
-    parachains[config.ASSET_HUB_PARAID.toString()] =
-        process.env["ASSET_HUB_URL"] ?? config.PARACHAINS[config.ASSET_HUB_PARAID.toString()]
-
-    const ethChains: { [ethChainId: string]: string | AbstractProvider } = {}
-    Object.keys(config.ETHEREUM_CHAINS).forEach(
-        (ethChainId) => (ethChains[ethChainId.toString()] = config.ETHEREUM_CHAINS[ethChainId])
-    )
-    if (process.env["EXECUTION_NODE_URL"]) {
-        ethChains[ethChainId.toString()] = process.env["EXECUTION_NODE_URL"]
-    }
-
-    const context = new Context({
-        environment: name,
-        ethereum: {
-            ethChainId,
-            ethChains,
-            beacon_url: process.env["BEACON_NODE_URL"] || config.BEACON_HTTP_API,
-        },
-        polkadot: {
-            assetHubParaId: config.ASSET_HUB_PARAID,
-            bridgeHubParaId: config.BRIDGE_HUB_PARAID,
-            parachains: parachains,
-            relaychain: process.env["RELAY_CHAIN_URL"] || config.RELAY_CHAIN_URL,
-        },
-        appContracts: {
-            gateway: config.GATEWAY_CONTRACT,
-            beefy: config.BEEFY_CONTRACT,
-        },
-        graphqlApiUrl: process.env["GRAPHQL_API_URL"] || config.GRAPHQL_API_URL,
-    })
+    const context = new Context(contextConfigFor(env))
 
     const bridgeStatus = await status.bridgeStatusInfo(context, {
         polkadotBlockTimeInSeconds: 6,
@@ -158,7 +125,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         context.graphqlApiUrl(),
         env == "polkadot_mainnet"
     )
-    for (let chain of chains?.latestBlocks) {
+    for (let chain of chains) {
         let info: status.IndexerServiceStatusInfo = {
             chain: chain.name,
             latency: 0,
@@ -169,6 +136,17 @@ export const monitor = async (): Promise<status.AllMetrics> => {
             info.latency = latestBlockOfBH - chain.height
         } else if (chain.name == "ethereum") {
             info.latency = latestBlockOfEth - chain.height
+        }
+        indexerInfos.push(info)
+    }
+    if (env == "polkadot_mainnet") {
+        let hydration = await context.parachain(2034)
+        let latestBlockOnHydration = (await hydration.query.system.number()).toPrimitive() as number
+        let status = await subsquid.fetchSyncStatusOfParachain(context.graphqlApiUrl(), 2034)
+        let info: status.IndexerServiceStatusInfo = {
+            chain: status.name,
+            paraid: status.paraid,
+            latency: latestBlockOnHydration - status.height,
         }
         indexerInfos.push(info)
     }
@@ -201,7 +179,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
             v2Status.toPolkadot.undeliveredTimeout = latencies[0].elapse
         }
     } catch (error) {
-        console.error("Failed to fetch undelivered latency:", error)
+        console.error("Failed to fetch V2 undelivered latency:", error)
     }
 
     const allMetrics: status.AllMetrics = {
