@@ -155,13 +155,17 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     }
     console.log("Indexer service status:", indexerInfos)
 
-    let latencies = await subsquid.fetchToEthereumUndelivedLatency(context.graphqlApiUrl())
-    if (latencies && latencies.length) {
-        assethubChannelStatus.toEthereum.undeliveredTimeout = latencies[0].elapse
-    }
-    latencies = await subsquid.fetchToPolkadotUndelivedLatency(context.graphqlApiUrl())
-    if (latencies && latencies.length) {
-        assethubChannelStatus.toPolkadot.undeliveredTimeout = latencies[0].elapse
+    try {
+        let latencies = await subsquid.fetchToEthereumUndelivedLatency(context.graphqlApiUrl())
+        if (latencies && latencies.length) {
+            assethubChannelStatus.toEthereum.undeliveredTimeout = latencies[0].elapse
+        }
+        latencies = await subsquid.fetchToPolkadotUndelivedLatency(context.graphqlApiUrl())
+        if (latencies && latencies.length) {
+            assethubChannelStatus.toPolkadot.undeliveredTimeout = latencies[0].elapse
+        }
+    } catch (error) {
+        console.error("Failed to fetch undelivered latency:", error)
     }
     console.log("Asset Hub Channel with delivery timeout:", assethubChannelStatus)
 
@@ -178,7 +182,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
             v2Status.toPolkadot.undeliveredTimeout = latencies[0].elapse
         }
     } catch (error) {
-        console.error("Failed to fetch V2 undelivered latency:", error)
+        console.error("Failed to fetch undelivered latency:", error)
     }
 
     const allMetrics: status.AllMetrics = {
