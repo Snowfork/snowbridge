@@ -538,13 +538,18 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     type: "ethereum",
                 },
                 {
+                    name: "beefy-on-demand",
+                    account: "0xF3D021D51a725F5DBDCE253248E826A8644Be3c1",
+                    type: "ethereum",
+                },
+                {
                     name: "parachain-primary-gov",
-                    account: "0x1F1819C3C68F9533adbB8E51C8E8428a818D693E",
+                    account: "0x0f51678Ac675C1abf2BeC1DAC9cA701cFcfFF5E2",
                     type: "ethereum",
                 },
                 {
                     name: "parachain-secondary-gov",
-                    account: "0x1F1819C3C68F9533adbB8E51C8E8428a818D693E",
+                    account: "0x0f51678Ac675C1abf2BeC1DAC9cA701cFcfFF5E2",
                     type: "ethereum",
                 },
                 {
