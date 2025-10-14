@@ -13,6 +13,7 @@ export type Config = {
     RELAYERS: Relayer[]
     PARACHAINS: { [paraId: string]: string }
     GRAPHQL_API_URL: string
+    TO_MONITOR_PARACHAINS?: number[]
 }
 
 export type KusamaConfig = {
@@ -559,6 +560,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ],
             GRAPHQL_API_URL:
                 "https://snowbridge.squids.live/snowbridge-subsquid-polkadot:production/api/graphql",
+            TO_MONITOR_PARACHAINS: [2034],
         },
         kusamaConfig: {
             ASSET_HUB_PARAID: 1000,

@@ -139,30 +139,29 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         }
         indexerInfos.push(info)
     }
-    if (env == "polkadot_mainnet") {
-        let hydration = await context.parachain(2034)
-        let latestBlockOnHydration = (await hydration.query.system.number()).toPrimitive() as number
-        let status = await subsquid.fetchSyncStatusOfParachain(context.graphqlApiUrl(), 2034)
-        let info: status.IndexerServiceStatusInfo = {
-            chain: status.name,
-            paraid: status.paraid,
-            latency: latestBlockOnHydration - status.height,
+    let monitorChains = context.monitorChains()
+    if (monitorChains && monitorChains.length) {
+        for (const paraid of monitorChains) {
+            let chain = await context.parachain(paraid)
+            let latestBlockOnHydration = (await chain.query.system.number()).toPrimitive() as number
+            let status = await subsquid.fetchSyncStatusOfParachain(context.graphqlApiUrl(), paraid)
+            let info: status.IndexerServiceStatusInfo = {
+                chain: status.name,
+                paraid: status.paraid,
+                latency: latestBlockOnHydration - status.height,
+            }
+            indexerInfos.push(info)
         }
-        indexerInfos.push(info)
     }
     console.log("Indexer service status:", indexerInfos)
 
-    try {
-        let latencies = await subsquid.fetchToEthereumUndelivedLatency(context.graphqlApiUrl())
-        if (latencies && latencies.length) {
-            assethubChannelStatus.toEthereum.undeliveredTimeout = latencies[0].elapse
-        }
-        latencies = await subsquid.fetchToPolkadotUndelivedLatency(context.graphqlApiUrl())
-        if (latencies && latencies.length) {
-            assethubChannelStatus.toPolkadot.undeliveredTimeout = latencies[0].elapse
-        }
-    } catch (error) {
-        console.error("Failed to fetch undelivered latency:", error)
+    let latencies = await subsquid.fetchToEthereumUndelivedLatency(context.graphqlApiUrl())
+    if (latencies && latencies.length) {
+        assethubChannelStatus.toEthereum.undeliveredTimeout = latencies[0].elapse
+    }
+    latencies = await subsquid.fetchToPolkadotUndelivedLatency(context.graphqlApiUrl())
+    if (latencies && latencies.length) {
+        assethubChannelStatus.toPolkadot.undeliveredTimeout = latencies[0].elapse
     }
     console.log("Asset Hub Channel with delivery timeout:", assethubChannelStatus)
 
