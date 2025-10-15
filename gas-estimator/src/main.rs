@@ -7,8 +7,13 @@ use crate::estimator::{
     EstimatorError,
 };
 use alloy_sol_types::{sol, SolValue};
+
 #[cfg(feature = "local")]
 use asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::location::Location;
+#[cfg(feature = "westend")]
+use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::location::Location;
+#[cfg(feature = "paseo")]
+use asset_hub_paseo_runtime::runtime_types::staging_xcm::v5::location::Location;
 use clap::{Parser, Subcommand, ValueEnum};
 use codec;
 use hex;

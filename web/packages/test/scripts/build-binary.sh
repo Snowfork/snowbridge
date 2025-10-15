@@ -109,7 +109,7 @@ build_v1() {
 
 build_gas_estimator() {
     pushd $gas_estimator_dir
-    cargo build --release
+    cargo build --release --features local
     popd
 }
 

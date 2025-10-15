@@ -1,7 +1,15 @@
+// Config imports
 #[cfg(feature = "local")]
 use crate::config::local::*;
+#[cfg(feature = "westend")]
+use crate::config::westend::*;
+#[cfg(feature = "paseo")]
+use crate::config::paseo::*;
+
 use crate::contracts::r#i_gateway_v2::IGatewayV2;
 use alloy_sol_types::{sol, SolValue};
+
+// Asset Hub runtime imports
 #[cfg(feature = "local")]
 use asset_hub_westend_local_runtime::{
     runtime as asset_hub_runtime,
@@ -31,8 +39,104 @@ use asset_hub_westend_local_runtime::{
         xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedXcm},
     },
 };
+
+#[cfg(feature = "westend")]
+use asset_hub_westend_runtime::{
+    runtime as asset_hub_runtime,
+    runtime_types::{
+        bounded_collections::bounded_vec::BoundedVec,
+        staging_xcm::v5::{
+            asset::{
+                Asset,
+                AssetFilter::{Definite, Wild},
+                AssetId, Assets,
+                Fungibility::Fungible,
+                WildAsset::AllCounted,
+            },
+            junction::{
+                Junction::{AccountId32, AccountKey20, GlobalConsensus, PalletInstance},
+                NetworkId::{self, Ethereum},
+            },
+            junctions::Junctions::{Here, X1, X2},
+            location::Location,
+            Hint::AssetClaimer,
+            Instruction::{
+                DepositAsset, DescendOrigin, ExchangeAsset, PayFees, RefundSurplus,
+                ReserveAssetDeposited, SetHints, Transact, UniversalOrigin, WithdrawAsset,
+            },
+            Xcm,
+        },
+        xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedXcm},
+    },
+};
+
+#[cfg(feature = "paseo")]
+use asset_hub_paseo_runtime::{
+    runtime as asset_hub_runtime,
+    runtime_types::{
+        bounded_collections::bounded_vec::BoundedVec,
+        staging_xcm::v5::{
+            asset::{
+                Asset,
+                AssetFilter::{Definite, Wild},
+                AssetId, Assets,
+                Fungibility::Fungible,
+                WildAsset::AllCounted,
+            },
+            junction::{
+                Junction::{AccountId32, AccountKey20, GlobalConsensus, PalletInstance},
+                NetworkId::{self, Ethereum},
+            },
+            junctions::Junctions::{Here, X1, X2},
+            location::Location,
+            Hint::AssetClaimer,
+            Instruction::{
+                DepositAsset, DescendOrigin, ExchangeAsset, PayFees, RefundSurplus,
+                ReserveAssetDeposited, SetHints, Transact, UniversalOrigin, WithdrawAsset,
+            },
+            Xcm,
+        },
+        xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedXcm},
+    },
+};
+
+// Bridge Hub runtime imports
 #[cfg(feature = "local")]
 use bridge_hub_westend_local_runtime::{
+    runtime as bridge_hub_runtime,
+    runtime_types::{
+        snowbridge_verification_primitives::EventProof,
+        staging_xcm::v5::{
+            asset::Fungibility as BridgeHubFungibility,
+            junction::Junction::Parachain as BridgeHubParachain,
+            junctions::Junctions as BridgeHubJunctions, location::Location as BridgeHubLocation,
+        },
+        xcm::{
+            VersionedAssets as BridgeHubVersionedAssets,
+            VersionedLocation as BridgeHubVersionedLocation, VersionedXcm as BridgeHubVersionedXcm,
+        },
+    },
+};
+
+#[cfg(feature = "westend")]
+use bridge_hub_westend_runtime::{
+    runtime as bridge_hub_runtime,
+    runtime_types::{
+        snowbridge_verification_primitives::EventProof,
+        staging_xcm::v5::{
+            asset::Fungibility as BridgeHubFungibility,
+            junction::Junction::Parachain as BridgeHubParachain,
+            junctions::Junctions as BridgeHubJunctions, location::Location as BridgeHubLocation,
+        },
+        xcm::{
+            VersionedAssets as BridgeHubVersionedAssets,
+            VersionedLocation as BridgeHubVersionedLocation, VersionedXcm as BridgeHubVersionedXcm,
+        },
+    },
+};
+
+#[cfg(feature = "paseo")]
+use bridge_hub_paseo_runtime::{
     runtime as bridge_hub_runtime,
     runtime_types::{
         snowbridge_verification_primitives::EventProof,
@@ -456,7 +560,17 @@ fn construct_event_proof(
     event_log_data: &str,
     proof_hex: &str,
 ) -> Result<EventProof, EstimatorError> {
+    // Import Log and Proof types based on feature flag
+    #[cfg(feature = "local")]
     use bridge_hub_westend_local_runtime::runtime_types::snowbridge_verification_primitives::{
+        Log, Proof,
+    };
+    #[cfg(feature = "westend")]
+    use bridge_hub_westend_runtime::runtime_types::snowbridge_verification_primitives::{
+        Log, Proof,
+    };
+    #[cfg(feature = "paseo")]
+    use bridge_hub_paseo_runtime::runtime_types::snowbridge_verification_primitives::{
         Log, Proof,
     };
 

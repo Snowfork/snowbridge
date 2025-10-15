@@ -4,6 +4,12 @@ members = [
     "runtimes/asset-hub-westend-local",
     "runtimes/bridge-hub-westend-local",
     "runtimes/westend-local",
+    "runtimes/asset-hub-westend",
+    "runtimes/bridge-hub-westend",
+    "runtimes/westend",
+    "runtimes/asset-hub-paseo",
+    "runtimes/bridge-hub-paseo",
+    "runtimes/paseo",
 ]
 
 [package]
@@ -58,16 +64,38 @@ env_logger = "0.11"
 # Utilities
 lazy_static = "1.4.0"
 
-# Runtime bindings
+# Runtime bindings - Local
 asset-hub-westend-local-runtime = { path = "runtimes/asset-hub-westend-local", optional = true }
 bridge-hub-westend-local-runtime = { path = "runtimes/bridge-hub-westend-local", optional = true }
 westend-local-runtime = { path = "runtimes/westend-local", optional = true }
+
+# Runtime bindings - Westend
+asset-hub-westend-runtime = { path = "runtimes/asset-hub-westend", optional = true }
+bridge-hub-westend-runtime = { path = "runtimes/bridge-hub-westend", optional = true }
+westend-runtime = { path = "runtimes/westend", optional = true }
+
+# Runtime bindings - Paseo
+asset-hub-paseo-runtime = { path = "runtimes/asset-hub-paseo", optional = true }
+bridge-hub-paseo-runtime = { path = "runtimes/bridge-hub-paseo", optional = true }
+paseo-runtime = { path = "runtimes/paseo", optional = true }
+
 snowbridge-pallet-ethereum-client-fixtures = { version = "0.22.0" }
 
 [features]
-default = ["local"]
+default = []
+
 local = [
     "asset-hub-westend-local-runtime",
     "bridge-hub-westend-local-runtime",
     "westend-local-runtime",
+]
+westend = [
+    "asset-hub-westend-runtime",
+    "bridge-hub-westend-runtime",
+    "westend-runtime",
+]
+paseo = [
+    "asset-hub-paseo-runtime",
+    "bridge-hub-paseo-runtime",
+    "paseo-runtime",
 ]

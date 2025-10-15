@@ -1319,7 +1319,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "asset-hub-paseo-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic 26.1.0",
+ "subxt",
+]
+
+[[package]]
 name = "asset-hub-westend-local-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic 26.1.0",
+ "subxt",
+]
+
+[[package]]
+name = "asset-hub-westend-runtime"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
@@ -1758,7 +1780,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "bridge-hub-paseo-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "snowbridge-beacon-primitives 0.2.0",
+ "sp-arithmetic 26.1.0",
+ "subxt",
+]
+
+[[package]]
 name = "bridge-hub-westend-local-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "snowbridge-beacon-primitives 0.2.0",
+ "sp-arithmetic 26.1.0",
+ "subxt",
+]
+
+[[package]]
+name = "bridge-hub-westend-runtime"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
@@ -4909,6 +4955,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "paseo-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "subxt",
+]
+
+[[package]]
 name = "password-hash"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6714,8 +6770,12 @@ dependencies = [
  "alloy",
  "alloy-sol-types",
  "anyhow",
+ "asset-hub-paseo-runtime",
  "asset-hub-westend-local-runtime",
+ "asset-hub-westend-runtime",
+ "bridge-hub-paseo-runtime",
  "bridge-hub-westend-local-runtime",
+ "bridge-hub-westend-runtime",
  "clap",
  "env_logger",
  "futures",
@@ -6724,6 +6784,7 @@ dependencies = [
  "lazy_static",
  "log",
  "parity-scale-codec",
+ "paseo-runtime",
  "scale-info",
  "serde",
  "serde_json",
@@ -6739,6 +6800,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "westend-local-runtime",
+ "westend-runtime",
 ]
 
 [[package]]
@@ -9496,6 +9558,16 @@ dependencies = [
 
 [[package]]
 name = "westend-local-runtime"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "subxt",
+]
+
+[[package]]
+name = "westend-runtime"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",

@@ -1,5 +1,5 @@
 [package]
-name = "penpal-westend-local-runtime"
+name = "westend-runtime"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,5 +8,3 @@ codec = { package = "parity-scale-codec", version = "3.7.4", default-features = 
 scale-info = { version = "2.11.6", default-features = false, features = ["derive"] }
 serde = { version = "1.0.210", features = ["derive"] }
 subxt = { version = "0.42.1" }
-snowbridge-beacon-primitives = "0.2.0"
-sp-arithmetic = "26.1.0"
