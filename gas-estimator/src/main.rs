@@ -1,19 +1,9 @@
-mod config;
-mod contracts;
-mod estimator;
-
-use crate::estimator::{
+use snowbridge_gas_estimator::estimator::{
     clients, construct_register_token_xcm, decode_assets_from_hex, estimate_gas, BridgeAsset,
     EstimatorError,
 };
+use snowbridge_gas_estimator::runtimes::Location;
 use alloy_sol_types::{sol, SolValue};
-
-#[cfg(feature = "local")]
-use asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::location::Location;
-#[cfg(feature = "westend")]
-use asset_hub_westend_runtime::runtime_types::staging_xcm::v5::location::Location;
-#[cfg(feature = "paseo")]
-use asset_hub_paseo_runtime::runtime_types::staging_xcm::v5::location::Location;
 use clap::{Parser, Subcommand, ValueEnum};
 use codec;
 use hex;
