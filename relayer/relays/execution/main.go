@@ -8,8 +8,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/snowfork/snowbridge/relayer/ofac"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -20,6 +18,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
+	"github.com/snowfork/snowbridge/relayer/ofac"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
@@ -524,21 +523,6 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		log.Info("address is not banned, continuing")
 	}
 
-	if r.gasEstimator.config.Enabled {
-		gasEstimate, err := r.gasEstimator.EstimateGas(ctx, ev, inboundMsg, source)
-		if err != nil {
-			return fmt.Errorf("gas estimation failed: %w", err)
-		}
-
-		err = r.gasEstimator.IsProfitable(gasEstimate, ev)
-		if err != nil {
-			logger.WithField("nonce", ev.Nonce).Info("message will not be relayed due to not being profitable")
-			return nil // Skip this message without error
-		}
-
-		logger.WithField("nonce", ev.Nonce).Info("message relaying is profitable, proceeding with message relay")
-	}
-
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
 
 	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
@@ -547,12 +531,31 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	}
 
 	// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
+	// Fetch execution proof early so we can use it for gas estimation
 	proof, err := r.beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
 	if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
 		return err
 	}
 	if err != nil {
 		return fmt.Errorf("fetch execution header proof: %w", err)
+	}
+
+	// Set the execution proof on the message for gas estimation
+	inboundMsg.Proof.ExecutionProof = proof.HeaderPayload
+
+	if r.gasEstimator.config.Enabled {
+		gasEstimate, err := r.gasEstimator.EstimateGas(ctx, ev, inboundMsg, source)
+		if err != nil {
+			return fmt.Errorf("gas estimation failed: %w", err)
+		}
+
+		err = r.gasEstimator.IsProfitable(gasEstimate, ev)
+		if err != nil {
+			logger.WithField("nonce", ev.Nonce).WithError(err).Warn("message will not be relayed due to not being profitable")
+			return nil // Skip this message without error
+		}
+
+		logger.WithField("nonce", ev.Nonce).Info("message relaying is profitable, proceeding with message relay")
 	}
 
 	// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state

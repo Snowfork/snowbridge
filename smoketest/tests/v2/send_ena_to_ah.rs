@@ -78,7 +78,7 @@ async fn send_ena_to_ah() {
 	assert_eq!(receipt.status(), true);
 
 	let execution_fee = 2_000_000_000_000u128;
-	let relayer_fee = 2_000_000_000u128;
+	let relayer_fee = 200_000_000_000u128;
 	let fee = 9_000_000_000_000u128;
 
 	let weth_addr: Address = (*WETH_CONTRACT).into();

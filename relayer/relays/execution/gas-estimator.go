@@ -8,14 +8,15 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"os"
+	"os/exec"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
-	"math/big"
-	"os"
-	"os/exec"
 )
 
 // GasEstimate represents the gas estimation results from the Rust binary
@@ -23,10 +24,10 @@ type GasEstimate struct {
 	ExtrinsicFeeInDot   big.Int `json:"extrinsic_fee_in_dot"`
 	ExtrinsicFeeInEther big.Int `json:"extrinsic_fee_in_ether"`
 	AssetHub            struct {
-		DeliveryFeeInDot  big.Int `json:"delivery_fee_in_dot"`
+		DeliveryFeeInDot   big.Int `json:"delivery_fee_in_dot"`
 		DeliveryFeeInEther big.Int `json:"delivery_fee_in_ether"`
-		DryRunSuccess     bool    `json:"dry_run_success"`
-		DryRunError       *string `json:"dry_run_error"`
+		DryRunSuccess      bool    `json:"dry_run_success"`
+		DryRunError        *string `json:"dry_run_error"`
 	} `json:"asset_hub"`
 }
 
@@ -104,8 +105,7 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 
 	eventLogData := fmt.Sprintf("0x%x", inboundMsg.EventLog.Data)
 
-	// Encode the proof using SCALE codec
-	proofEncoded, err := types.EncodeToBytes(inboundMsg.Proof)
+	proofEncoded, err := types.EncodeToBytes(&inboundMsg.Proof)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode proof: %w", err)
 	}
@@ -187,7 +187,11 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 	}
 
 	log.WithFields(log.Fields{
-		"estimate": estimate,
+		"extrinsic_fee_dot":   estimate.ExtrinsicFeeInDot.String(),
+		"extrinsic_fee_ether": estimate.ExtrinsicFeeInEther.String(),
+		"delivery_fee_dot":    estimate.AssetHub.DeliveryFeeInDot.String(),
+		"delivery_fee_ether":  estimate.AssetHub.DeliveryFeeInEther.String(),
+		"dry_run_success":     estimate.AssetHub.DryRunSuccess,
 	}).Debug("gas estimation completed")
 
 	return &estimate, nil

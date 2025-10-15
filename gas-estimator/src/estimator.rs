@@ -16,14 +16,10 @@ use asset_hub_westend_local_runtime::{
                 WildAsset::AllCounted,
             },
             junction::{
-                Junction::{
-                    AccountId32, AccountKey20, GlobalConsensus, PalletInstance,
-                },
+                Junction::{AccountId32, AccountKey20, GlobalConsensus, PalletInstance},
                 NetworkId::{self, Ethereum},
             },
-            junctions::{
-                Junctions::{Here, X1, X2},
-            },
+            junctions::Junctions::{Here, X1, X2},
             location::Location,
             Hint::AssetClaimer,
             Instruction::{
@@ -32,9 +28,7 @@ use asset_hub_westend_local_runtime::{
             },
             Xcm,
         },
-        xcm::{
-            double_encoded::DoubleEncoded, v3::OriginKind, VersionedXcm,
-        },
+        xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedXcm},
     },
 };
 #[cfg(feature = "local")]
@@ -45,8 +39,7 @@ use bridge_hub_westend_local_runtime::{
         staging_xcm::v5::{
             asset::Fungibility as BridgeHubFungibility,
             junction::Junction::Parachain as BridgeHubParachain,
-            junctions::Junctions as BridgeHubJunctions,
-            location::Location as BridgeHubLocation,
+            junctions::Junctions as BridgeHubJunctions, location::Location as BridgeHubLocation,
         },
         xcm::{
             VersionedAssets as BridgeHubVersionedAssets,
@@ -463,11 +456,8 @@ fn construct_event_proof(
     event_log_data: &str,
     proof_hex: &str,
 ) -> Result<EventProof, EstimatorError> {
-    use bridge_hub_westend_local_runtime::runtime_types::{
-        snowbridge_verification_primitives::{
-            Log,
-            Proof,
-        },
+    use bridge_hub_westend_local_runtime::runtime_types::snowbridge_verification_primitives::{
+        Log, Proof,
     };
 
     use sp_core::{H160, H256};
@@ -500,9 +490,7 @@ fn construct_event_proof(
 
     let proof_bytes = parse_hex_string(proof_hex)?;
     let proof: Proof = codec::Decode::decode(&mut &proof_bytes[..])
-        .map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to decode proof: {:?}", e))
-        })?;
+        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to decode proof: {:?}", e)))?;
 
     let log = Log {
         address,
@@ -561,9 +549,7 @@ async fn calculate_extrinsic_fee_in_dot(
         })?
         .partial_fee_estimate()
         .await
-        .map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to estimate fee: {:?}", e))
-        })?;
+        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to estimate fee: {:?}", e)))?;
 
     Ok(fee)
 }

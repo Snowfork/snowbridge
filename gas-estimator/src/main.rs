@@ -2,10 +2,13 @@ mod config;
 mod contracts;
 mod estimator;
 
-use crate::estimator::{clients, construct_register_token_xcm, decode_assets_from_hex, estimate_gas, BridgeAsset, EstimatorError};
+use crate::estimator::{
+    clients, construct_register_token_xcm, decode_assets_from_hex, estimate_gas, BridgeAsset,
+    EstimatorError,
+};
+use alloy_sol_types::{sol, SolValue};
 #[cfg(feature = "local")]
 use asset_hub_westend_local_runtime::runtime_types::staging_xcm::v5::location::Location;
-use alloy_sol_types::{sol, SolValue};
 use clap::{Parser, Subcommand, ValueEnum};
 use codec;
 use hex;
@@ -124,9 +127,15 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
 
                 // Process XCM based on kind (this is for delivery fee calculation)
                 let xcm_bytes = if xcm_kind == 1 {
-                    // CreateAsset: xcm_data is ABI-encoded AsCreateAsset{token, network}                    let create_asset_data = parse_hex_address(&xcm_data)?;
+                    // CreateAsset: xcm_data is ABI-encoded AsCreateAsset{token, network}
+                    let create_asset_data = parse_hex_address(&xcm_data)?;
                     let decoded = decode_create_asset(&create_asset_data)?;
-                    construct_register_token_xcm(&decoded.token, decoded.network, value, claimer.clone())?
+                    construct_register_token_xcm(
+                        &decoded.token,
+                        decoded.network,
+                        value,
+                        claimer.clone(),
+                    )?
                 } else {
                     // Raw: xcm_data is SCALE-encoded VersionedXcm
                     parse_hex_address(&xcm_data)?
@@ -214,4 +223,3 @@ fn decode_create_asset(data: &[u8]) -> Result<CreateAssetData, EstimatorError> {
         network: decoded.network,
     })
 }
-
