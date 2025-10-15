@@ -287,7 +287,7 @@ export const initializeAlarms = async () => {
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             Threshold: 3600 * 4, // 1 epoch = 4 hours
-        })
+        }),
     )
     // Beacon stale
     cloudWatchAlarms.push(
@@ -298,7 +298,7 @@ export const initializeAlarms = async () => {
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             Threshold: 1500, // 3 epochs = 3 * 6.4 mins ~= 20 mins
-        })
+        }),
     )
 
     // To Ethereum channel stale
@@ -316,7 +316,7 @@ export const initializeAlarms = async () => {
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             Threshold: 5400, // 1.5 hours at most
-        })
+        }),
     )
 
     // To Polkadot channel stale
@@ -334,7 +334,7 @@ export const initializeAlarms = async () => {
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             Threshold: 1800, // 0.5 hour
-        })
+        }),
     )
 
     // Insufficient balance in the relay account
@@ -381,7 +381,15 @@ export const initializeAlarms = async () => {
     cloudWatchAlarms.push(sovereignAccountBalanceAlarm)
 
     // Indexer service stale
-    for (const chain of ["assethub", "bridgehub", "ethereum", "kusama_assethub", "hydration"]) {
+    for (const chain of [
+        "assethub",
+        "bridgehub",
+        "ethereum",
+        "kusama_assethub",
+        "hydration",
+        "neuroweb",
+        "mythos",
+    ]) {
         let indexerAlarm = new PutMetricAlarmCommand({
             AlarmName: AlarmReason.IndexServiceStale.toString() + "-" + name + "-" + chain,
             MetricName: "IndexerLatency",
@@ -421,7 +429,7 @@ export const initializeAlarms = async () => {
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             Threshold: 5400, // 1.5 hours at most
-        })
+        }),
     )
 
     // To Polkadot V2 stale
@@ -433,7 +441,7 @@ export const initializeAlarms = async () => {
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             Threshold: 1800, // 0.5 hour
-        })
+        }),
     )
 
     // Fisherman FutureBlockVoting equivocation alarm
@@ -448,7 +456,7 @@ export const initializeAlarms = async () => {
             EvaluationPeriods: 1,
             DatapointsToAlarm: 1,
             Threshold: 0,
-        })
+        }),
     )
     // Fisherman ForkVoting equivocation alarm
     cloudWatchAlarms.push(
@@ -462,7 +470,7 @@ export const initializeAlarms = async () => {
             EvaluationPeriods: 1,
             DatapointsToAlarm: 1,
             Threshold: 0,
-        })
+        }),
     )
 
     // Send all alarms
