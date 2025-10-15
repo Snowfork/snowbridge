@@ -565,7 +565,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ],
             GRAPHQL_API_URL:
                 "https://snowbridge.squids.live/snowbridge-subsquid-polkadot:production/api/graphql",
-            TO_MONITOR_PARACHAINS: [2034],
+            TO_MONITOR_PARACHAINS: [2034, 2043, 3369], // Hydration, OriginTrail, Mythos
         },
         kusamaConfig: {
             ASSET_HUB_PARAID: 1000,
