@@ -21,6 +21,17 @@ jobs:
           target: x86_64-unknown-linux-gnu
           override: true
 
+      - name: Cache Cargo registry and build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            gas-estimator/target
+          key: ${{ runner.os }}-cargo-gas-estimator-${{ hashFiles('gas-estimator/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-gas-estimator-
+
       - name: Install dependencies
         run: |
           sudo apt-get update
