@@ -2,8 +2,6 @@ name: release-gas-estimator
 
 on:
   push:
-    paths:
-      - "gas-estimator/**"
     branches:
       - e-p-gas-estimator
   workflow_dispatch:
