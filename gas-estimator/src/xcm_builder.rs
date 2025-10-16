@@ -5,6 +5,8 @@ use crate::config::local::*;
 use crate::config::westend::*;
 #[cfg(feature = "paseo")]
 use crate::config::paseo::*;
+#[cfg(feature = "polkadot")]
+use crate::config::polkadot::*;
 
 use crate::estimator::{BridgeAsset, Clients, EstimatorError};
 use crate::runtimes::*;

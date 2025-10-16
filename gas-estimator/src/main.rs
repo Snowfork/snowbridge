@@ -4,7 +4,7 @@ use snowbridge_gas_estimator::estimator::{
 use snowbridge_gas_estimator::runtimes::Location;
 use snowbridge_gas_estimator::xcm_builder::construct_register_token_xcm;
 use alloy_sol_types::{sol, SolValue};
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 use codec;
 use hex;
 use std::process;
@@ -14,9 +14,6 @@ use std::process;
 #[command(about = "Off-chain gas estimator for Ethereum -> Polkadot messages via Snowbridge")]
 #[command(version = "0.1.0")]
 struct Cli {
-    /// Environment
-    #[arg(long, value_enum, default_value_t = Environment::PolkadotMainnet)]
-    env: Environment,
     #[command(subcommand)]
     command: Commands,
 }
@@ -71,14 +68,6 @@ enum EstimateCommands {
         #[arg(long)]
         relayer_fee: u128,
     },
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-enum Environment {
-    #[value(name = "polkadot_mainnet")]
-    PolkadotMainnet,
-    #[value(name = "westend_sepolia")]
-    WestendSepolia,
 }
 
 #[tokio::main]

@@ -1,5 +1,5 @@
 #[subxt::subxt(
-    runtime_metadata_path = "polkadot-metadata.bin",
+    runtime_metadata_path = "asset-hub-metadata.bin",
     derive_for_all_types = "Clone"
 )]
 mod runtime {}

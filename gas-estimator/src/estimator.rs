@@ -5,6 +5,8 @@ use crate::config::local::*;
 use crate::config::westend::*;
 #[cfg(feature = "paseo")]
 use crate::config::paseo::*;
+#[cfg(feature = "polkadot")]
+use crate::config::polkadot::*;
 
 use crate::contracts::r#i_gateway_v2::IGatewayV2;
 use crate::runtimes::*;
