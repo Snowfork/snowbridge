@@ -26,6 +26,7 @@ use crate::runtimes::{
 };
 use hex;
 use serde::{Deserialize, Serialize};
+use subxt::tx::Payload;
 use subxt::{config::DefaultExtrinsicParams, Config, OnlineClient, PolkadotConfig};
 use subxt_signer::sr25519::dev;
 
@@ -369,30 +370,28 @@ async fn dry_run_submit_on_bridge_hub(
     clients: &Clients,
     event_proof: &EventProof,
 ) -> Result<DryRunResult, EstimatorError> {
-    use subxt::tx::Payload;
-
     let submit_call = bridge_hub_runtime::tx()
         .ethereum_inbound_queue_v2()
         .submit(event_proof.clone());
 
-    // Encode the submit call into RuntimeCall
-    let call_data = submit_call.encode_call_data(&clients.bridge_hub_client.metadata())
-        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to encode call data: {:?}", e)))?;
+    let call_data = submit_call
+        .encode_call_data(&clients.bridge_hub_client.metadata())
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to encode call data: {:?}", e))
+        })?;
+    let runtime_call: RuntimeCall = codec::Decode::decode(&mut &call_data[..]).map_err(|e| {
+        EstimatorError::InvalidCommand(format!("Failed to decode RuntimeCall: {:?}", e))
+    })?;
 
-    // Decode into RuntimeCall
-    let runtime_call: RuntimeCall = codec::Decode::decode(&mut &call_data[..])
-        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to decode RuntimeCall: {:?}", e)))?;
-
-    // Use a signed origin (user submitting the extrinsic)
-    use subxt_signer::sr25519::dev;
     let ferdie = dev::ferdie();
     let ferdie_account_id: [u8; 32] = ferdie.public_key().0;
 
     let origin = OriginCaller::system(RawOrigin::Signed(ferdie_account_id.into()));
 
-    let runtime_api_call = bridge_hub_runtime::apis()
-        .dry_run_api()
-        .dry_run_call(origin, runtime_call, 5u32);
+    let runtime_api_call =
+        bridge_hub_runtime::apis()
+            .dry_run_api()
+            .dry_run_call(origin, runtime_call, 5u32);
 
     let dry_run_result = clients
         .bridge_hub_client
@@ -408,16 +407,12 @@ async fn dry_run_submit_on_bridge_hub(
 
     match dry_run_result {
         Ok(effects) => {
-            // Check if the extrinsic dispatch succeeded
             let success = effects.execution_result.is_ok();
 
             let error_message = if success {
                 None
             } else {
-                Some(format!(
-                    "Dispatch failed: {:?}",
-                    effects.execution_result
-                ))
+                Some(format!("Dispatch failed: {:?}", effects.execution_result))
             };
 
             Ok(DryRunResult {
