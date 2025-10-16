@@ -519,7 +519,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 //"3397": "wss://rpc.jamton.network",
             },
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
-            BEEFY_CONTRACT: "0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C",
+            BEEFY_CONTRACT: "0x1817874feAb3ce053d0F40AbC23870DB35C2AFfc",
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
             PRIMARY_GOVERNANCE_CHANNEL_ID:
