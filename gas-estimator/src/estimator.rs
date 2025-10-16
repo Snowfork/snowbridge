@@ -1,12 +1,15 @@
-// Config imports
+// Common config imports
+use crate::config::*;
+
+// Environment-specific config imports (CHAIN_ID only)
 #[cfg(feature = "local")]
-use crate::config::local::*;
-#[cfg(feature = "westend")]
-use crate::config::westend::*;
+use crate::config::local::CHAIN_ID;
 #[cfg(feature = "paseo")]
-use crate::config::paseo::*;
+use crate::config::paseo::CHAIN_ID;
 #[cfg(feature = "polkadot")]
-use crate::config::polkadot::*;
+use crate::config::polkadot::CHAIN_ID;
+#[cfg(feature = "westend")]
+use crate::config::westend::CHAIN_ID;
 
 use crate::contracts::r#i_gateway_v2::IGatewayV2;
 use crate::runtimes::*;
@@ -40,7 +43,6 @@ sol! {
         uint8 network;
     }
 }
-
 
 pub enum AssetHubConfig {}
 
@@ -79,20 +81,19 @@ impl std::fmt::Display for EstimatorError {
 
 impl std::error::Error for EstimatorError {}
 
-pub async fn clients(asset_hub_url: String, bridge_hub_url: String) -> Result<Clients, EstimatorError> {
+pub async fn clients(
+    asset_hub_url: String,
+    bridge_hub_url: String,
+) -> Result<Clients, EstimatorError> {
     let asset_hub_client: OnlineClient<AssetHubConfig> =
-        OnlineClient::from_url(asset_hub_url)
-            .await
-            .map_err(|e| {
-                EstimatorError::ConnectionError(format!("Cannot connect to asset hub: {}", e))
-            })?;
+        OnlineClient::from_url(asset_hub_url).await.map_err(|e| {
+            EstimatorError::ConnectionError(format!("Cannot connect to asset hub: {}", e))
+        })?;
 
     let bridge_hub_client: OnlineClient<PolkadotConfig> =
-        OnlineClient::from_url(bridge_hub_url)
-            .await
-            .map_err(|e| {
-                EstimatorError::ConnectionError(format!("Cannot connect to bridge hub: {}", e))
-            })?;
+        OnlineClient::from_url(bridge_hub_url).await.map_err(|e| {
+            EstimatorError::ConnectionError(format!("Cannot connect to bridge hub: {}", e))
+        })?;
 
     Ok(Clients {
         asset_hub_client: Box::new(asset_hub_client),
@@ -217,8 +218,6 @@ pub async fn estimate_gas(
         },
     })
 }
-
-
 
 pub async fn quote_price_exact_tokens_for_tokens(
     clients: &Clients,
@@ -414,7 +413,6 @@ async fn calculate_extrinsic_fee_in_dot(
     Ok(fee)
 }
 
-
 pub fn decode_assets_from_hex(assets_hex: &str) -> Result<Vec<BridgeAsset>, EstimatorError> {
     if assets_hex == "" || assets_hex.is_empty() {
         return Ok(vec![]);
@@ -479,7 +477,6 @@ pub fn decode_assets_from_hex(assets_hex: &str) -> Result<Vec<BridgeAsset>, Esti
     Ok(bridge_assets)
 }
 
-
 fn parse_hex_string(hex_str: &str) -> Result<Vec<u8>, EstimatorError> {
     let hex_str = if hex_str.starts_with("0x") {
         &hex_str[2..]
@@ -490,5 +487,3 @@ fn parse_hex_string(hex_str: &str) -> Result<Vec<u8>, EstimatorError> {
     hex::decode(hex_str)
         .map_err(|e| EstimatorError::InvalidCommand(format!("Invalid hex string: {}", e)))
 }
-
-

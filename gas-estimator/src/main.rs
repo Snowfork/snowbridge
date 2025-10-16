@@ -1,12 +1,12 @@
+use alloy_sol_types::{sol, SolValue};
+use clap::{Parser, Subcommand};
+use codec;
+use hex;
 use snowbridge_gas_estimator::estimator::{
     clients, decode_assets_from_hex, estimate_gas, BridgeAsset, EstimatorError,
 };
 use snowbridge_gas_estimator::runtimes::Location;
 use snowbridge_gas_estimator::xcm_builder::construct_register_token_xcm;
-use alloy_sol_types::{sol, SolValue};
-use clap::{Parser, Subcommand};
-use codec;
-use hex;
 use std::process;
 
 #[derive(Parser)]

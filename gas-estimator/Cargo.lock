@@ -6796,7 +6796,6 @@ dependencies = [
  "futures",
  "hex",
  "hex-literal",
- "lazy_static",
  "log",
  "parity-scale-codec",
  "scale-info",

@@ -1,12 +1,15 @@
-// Config imports
+// Common config imports
+use crate::config::*;
+
+// Environment-specific config imports (CHAIN_ID only)
 #[cfg(feature = "local")]
-use crate::config::local::*;
-#[cfg(feature = "westend")]
-use crate::config::westend::*;
+use crate::config::local::CHAIN_ID;
 #[cfg(feature = "paseo")]
-use crate::config::paseo::*;
+use crate::config::paseo::CHAIN_ID;
 #[cfg(feature = "polkadot")]
-use crate::config::polkadot::*;
+use crate::config::polkadot::CHAIN_ID;
+#[cfg(feature = "westend")]
+use crate::config::westend::CHAIN_ID;
 
 use crate::estimator::{BridgeAsset, Clients, EstimatorError};
 use crate::runtimes::*;
@@ -19,8 +22,8 @@ use crate::runtimes::{
     Fungibility::Fungible,
     Hint::AssetClaimer,
     Instruction::{
-        DepositAsset, DescendOrigin, ExchangeAsset, PayFees, RefundSurplus,
-        ReserveAssetDeposited, SetHints, Transact, UniversalOrigin, WithdrawAsset,
+        DepositAsset, DescendOrigin, ExchangeAsset, PayFees, RefundSurplus, ReserveAssetDeposited,
+        SetHints, Transact, UniversalOrigin, WithdrawAsset,
     },
     Junction::{AccountId32, AccountKey20, GlobalConsensus, PalletInstance},
     Junctions::{Here, X1, X2},

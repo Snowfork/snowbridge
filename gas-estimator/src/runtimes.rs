@@ -4,9 +4,7 @@ pub use asset_hub_westend_local_runtime::{
     runtime_types::{
         bounded_collections::bounded_vec::BoundedVec,
         staging_xcm::v5::{
-            asset::{
-                Asset, AssetFilter, AssetId, Assets, Fungibility, WildAsset,
-            },
+            asset::{Asset, AssetFilter, AssetId, Assets, Fungibility, WildAsset},
             junction::{Junction, NetworkId},
             junctions::Junctions,
             location::Location,
@@ -22,9 +20,7 @@ pub use asset_hub_westend_runtime::{
     runtime_types::{
         bounded_collections::bounded_vec::BoundedVec,
         staging_xcm::v5::{
-            asset::{
-                Asset, AssetFilter, AssetId, Assets, Fungibility, WildAsset,
-            },
+            asset::{Asset, AssetFilter, AssetId, Assets, Fungibility, WildAsset},
             junction::{Junction, NetworkId},
             junctions::Junctions,
             location::Location,
@@ -40,9 +36,7 @@ pub use asset_hub_paseo_runtime::{
     runtime_types::{
         bounded_collections::bounded_vec::BoundedVec,
         staging_xcm::v5::{
-            asset::{
-                Asset, AssetFilter, AssetId, Assets, Fungibility, WildAsset,
-            },
+            asset::{Asset, AssetFilter, AssetId, Assets, Fungibility, WildAsset},
             junction::{Junction, NetworkId},
             junctions::Junctions,
             location::Location,
@@ -57,9 +51,7 @@ pub use asset_hub_polkadot_runtime::{
     runtime_types::{
         bounded_collections::bounded_vec::BoundedVec,
         staging_xcm::v5::{
-            asset::{
-                Asset, AssetFilter, AssetId, Assets, Fungibility, WildAsset,
-            },
+            asset::{Asset, AssetFilter, AssetId, Assets, Fungibility, WildAsset},
             junction::{Junction, NetworkId},
             junctions::Junctions,
             location::Location,
@@ -83,8 +75,7 @@ pub use bridge_hub_westend_local_runtime::{
         },
         xcm::{
             VersionedAssets as BridgeHubVersionedAssets,
-            VersionedLocation as BridgeHubVersionedLocation,
-            VersionedXcm as BridgeHubVersionedXcm,
+            VersionedLocation as BridgeHubVersionedLocation, VersionedXcm as BridgeHubVersionedXcm,
         },
     },
 };
@@ -102,8 +93,7 @@ pub use bridge_hub_westend_runtime::{
         },
         xcm::{
             VersionedAssets as BridgeHubVersionedAssets,
-            VersionedLocation as BridgeHubVersionedLocation,
-            VersionedXcm as BridgeHubVersionedXcm,
+            VersionedLocation as BridgeHubVersionedLocation, VersionedXcm as BridgeHubVersionedXcm,
         },
     },
 };
@@ -121,8 +111,7 @@ pub use bridge_hub_paseo_runtime::{
         },
         xcm::{
             VersionedAssets as BridgeHubVersionedAssets,
-            VersionedLocation as BridgeHubVersionedLocation,
-            VersionedXcm as BridgeHubVersionedXcm,
+            VersionedLocation as BridgeHubVersionedLocation, VersionedXcm as BridgeHubVersionedXcm,
         },
     },
 };
@@ -140,8 +129,7 @@ pub use bridge_hub_polkadot_runtime::{
         },
         xcm::{
             VersionedAssets as BridgeHubVersionedAssets,
-            VersionedLocation as BridgeHubVersionedLocation,
-            VersionedXcm as BridgeHubVersionedXcm,
+            VersionedLocation as BridgeHubVersionedLocation, VersionedXcm as BridgeHubVersionedXcm,
         },
     },
 };
