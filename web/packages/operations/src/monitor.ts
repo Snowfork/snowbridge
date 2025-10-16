@@ -25,7 +25,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     let assethubChannelStatus = await status.channelStatusInfo(
         context,
-        utils.paraIdToChannelId(config.ASSET_HUB_PARAID)
+        utils.paraIdToChannelId(config.ASSET_HUB_PARAID),
     )
     assethubChannelStatus.name = status.ChannelKind.AssetHub
     console.log("Asset Hub Channel:", assethubChannelStatus)
@@ -36,7 +36,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const secondaryGov = await status.channelStatusInfo(
         context,
-        config.SECONDARY_GOVERNANCE_CHANNEL_ID
+        config.SECONDARY_GOVERNANCE_CHANNEL_ID,
     )
     secondaryGov.name = status.ChannelKind.Secondary
     console.log("Secondary Governance Channel:", secondaryGov)
@@ -51,10 +51,10 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         (
             (
                 await bridgeHub.query.system.account(
-                    utils.paraIdToSovereignAccount("sibl", config.ASSET_HUB_PARAID)
+                    utils.paraIdToSovereignAccount("sibl", config.ASSET_HUB_PARAID),
                 )
             ).toPrimitive() as any
-        ).data.free
+        ).data.free,
     )
     console.log("Asset Hub Sovereign balance on bridgehub:", assetHubSovereign)
 
@@ -63,7 +63,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         .getBalance(
             await context
                 .gateway()
-                .agentOf(utils.paraIdToAgentId(bridgeHub.registry, config.ASSET_HUB_PARAID))
+                .agentOf(utils.paraIdToAgentId(bridgeHub.registry, config.ASSET_HUB_PARAID)),
         )
     console.log("Asset Hub Agent balance:", assetHubAgentBalance)
 
@@ -84,7 +84,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
             case "substrate":
                 balance = BigInt(
                     ((await bridgeHub.query.system.account(relayer.account)).toPrimitive() as any)
-                        .data.free
+                        .data.free,
                 )
                 break
         }
@@ -123,7 +123,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const chains = await subsquid.fetchLatestBlocksSynced(
         context.graphqlApiUrl(),
-        env == "polkadot_mainnet"
+        env == "polkadot_mainnet",
     )
     for (let chain of chains) {
         let info: status.IndexerServiceStatusInfo = {
@@ -143,12 +143,12 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     if (monitorChains && monitorChains.length) {
         for (const paraid of monitorChains) {
             let chain = await context.parachain(paraid)
-            let latestBlockOnHydration = (await chain.query.system.number()).toPrimitive() as number
+            let latestBlock = (await chain.query.system.number()).toPrimitive() as number
             let status = await subsquid.fetchSyncStatusOfParachain(context.graphqlApiUrl(), paraid)
             let info: status.IndexerServiceStatusInfo = {
                 chain: status.name,
                 paraid: status.paraid,
-                latency: latestBlockOnHydration - status.height,
+                latency: latestBlock - status.height,
             }
             indexerInfos.push(info)
         }
