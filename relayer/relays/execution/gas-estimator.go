@@ -23,28 +23,24 @@ import (
 type GasEstimate struct {
 	ExtrinsicFeeInDot   big.Int `json:"extrinsic_fee_in_dot"`
 	ExtrinsicFeeInEther big.Int `json:"extrinsic_fee_in_ether"`
-	AssetHub            struct {
+	BridgeHub           struct {
 		DeliveryFeeInDot   big.Int `json:"delivery_fee_in_dot"`
 		DeliveryFeeInEther big.Int `json:"delivery_fee_in_ether"`
 		DryRunSuccess      bool    `json:"dry_run_success"`
 		DryRunError        *string `json:"dry_run_error"`
-	} `json:"asset_hub"`
+	} `json:"bridge_hub"`
 }
 
 // GasEstimatorConfig holds the configuration for gas estimation
 type GasEstimatorConfig struct {
 	// Path to the gas estimator binary
 	BinaryPath string `mapstructure:"binary-path"`
-	// Maximum acceptable gas in DOT (10^10 planck = 1 DOT)
-	MaxGasInDot string `mapstructure:"max-gas-in-dot"`
-	// Maximum acceptable gas in Ether (wei)
-	MaxGasInEther string `mapstructure:"max-gas-in-ether"`
 	// Whether to enable gas estimation (can be disabled for testing)
 	Enabled bool `mapstructure:"enabled"`
-	// Environment variables to pass to the binary (like WS URLs)
-	Environment map[string]string `mapstructure:"environment"`
-	// Environment name for gas estimator (polkadot_mainnet, westend_sepolia)
-	EstimatorEnvironment string `mapstructure:"estimator-environment"`
+	// AssetHub web service
+	AssetHubURL string `mapstructure:"asset-hub-url"`
+	// BridgeHub web service
+	BridgeHubURL string `mapstructure:"bridge-hub-url"`
 }
 
 func (g GasEstimatorConfig) Validate() error {
@@ -60,8 +56,12 @@ func (g GasEstimatorConfig) Validate() error {
 		return fmt.Errorf("gas estimator binary not found at path: %s", g.BinaryPath)
 	}
 
-	if g.EstimatorEnvironment != "" && g.EstimatorEnvironment != "polkadot_mainnet" && g.EstimatorEnvironment != "westend_sepolia" {
-		return fmt.Errorf("invalid estimator environment: %s. Must be 'polkadot_mainnet' or 'westend_sepolia'", g.EstimatorEnvironment)
+	if g.AssetHubURL == "" {
+		return fmt.Errorf("gas estimator asset-hub-url is required when enabled")
+	}
+
+	if g.BridgeHubURL == "" {
+		return fmt.Errorf("gas estimator bridge-hub-url is required when enabled")
 	}
 
 	return nil
@@ -134,6 +134,8 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 	args := []string{
 		"estimate",
 		"message",
+		"--asset-hub-url", g.config.AssetHubURL,
+		"--bridge-hub-url", g.config.BridgeHubURL,
 		"--event-log-address", eventLogAddress,
 		"--event-log-topics", eventLogTopics,
 		"--event-log-data", eventLogData,
@@ -149,14 +151,6 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 	}
 
 	cmd := exec.CommandContext(ctx, g.config.BinaryPath, args...)
-
-	if g.config.Environment != nil {
-		env := make([]string, 0, len(g.config.Environment))
-		for key, value := range g.config.Environment {
-			env = append(env, fmt.Sprintf("%s=%s", key, value))
-		}
-		cmd.Env = env
-	}
 
 	log.WithFields(log.Fields{
 		"binary": g.config.BinaryPath,
@@ -189,9 +183,9 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 	log.WithFields(log.Fields{
 		"extrinsic_fee_dot":   estimate.ExtrinsicFeeInDot.String(),
 		"extrinsic_fee_ether": estimate.ExtrinsicFeeInEther.String(),
-		"delivery_fee_dot":    estimate.AssetHub.DeliveryFeeInDot.String(),
-		"delivery_fee_ether":  estimate.AssetHub.DeliveryFeeInEther.String(),
-		"dry_run_success":     estimate.AssetHub.DryRunSuccess,
+		"delivery_fee_dot":    estimate.BridgeHub.DeliveryFeeInDot.String(),
+		"delivery_fee_ether":  estimate.BridgeHub.DeliveryFeeInEther.String(),
+		"dry_run_success":     estimate.BridgeHub.DryRunSuccess,
 	}).Debug("gas estimation completed")
 
 	return &estimate, nil
@@ -204,39 +198,14 @@ func (g *GasEstimator) IsProfitable(estimate *GasEstimate, ev *contracts.Gateway
 	}
 
 	// Check if BridgeHub dry run succeeded
-	if !estimate.AssetHub.DryRunSuccess {
-		return fmt.Errorf("bridge hub dry run failed: %s", *estimate.AssetHub.DryRunError)
-	}
-
-	// Calculate total fee in DOT (extrinsic fee + delivery fee) - these are paid on Polkadot
-	var totalFeeInDot big.Int
-	totalFeeInDot.Set(&estimate.ExtrinsicFeeInDot)
-	totalFeeInDot.Add(&totalFeeInDot, &estimate.AssetHub.DeliveryFeeInDot)
-
-	maxFeeInDotInt := new(big.Int)
-	if _, ok := maxFeeInDotInt.SetString(g.config.MaxGasInDot, 10); !ok {
-		return fmt.Errorf("config MaxGasInDot could not be converted to Int")
-	}
-
-	// Check DOT limit
-	if totalFeeInDot.Cmp(maxFeeInDotInt) == 1 {
-		return fmt.Errorf("total fee in DOT exceeds limit, estimated fee %s max fee %s", totalFeeInDot.String(), g.config.MaxGasInDot)
+	if !estimate.BridgeHub.DryRunSuccess {
+		return fmt.Errorf("bridge hub dry run failed: %s", *estimate.BridgeHub.DryRunError)
 	}
 
 	// Calculate total fee in Ether equivalent (extrinsic fee + delivery fee converted to ETH)
 	var totalFeeInEther big.Int
 	totalFeeInEther.Set(&estimate.ExtrinsicFeeInEther)
-	totalFeeInEther.Add(&totalFeeInEther, &estimate.AssetHub.DeliveryFeeInEther)
-
-	maxFeeInEther := new(big.Int)
-	if _, ok := maxFeeInEther.SetString(g.config.MaxGasInEther, 10); !ok {
-		return fmt.Errorf("config MaxGasInEther could not be converted to Int")
-	}
-
-	// Check Ether limit
-	if totalFeeInEther.Cmp(maxFeeInEther) == 1 {
-		return fmt.Errorf("total fee in Ether exceeds limit, estimated fee %s max fee %s", totalFeeInEther.String(), g.config.MaxGasInEther)
-	}
+	totalFeeInEther.Add(&totalFeeInEther, &estimate.BridgeHub.DeliveryFeeInEther)
 
 	// Check profitability: relayer fee (reward in ETH) must exceed total costs (in ETH equivalent)
 	if ev.Payload.RelayerFee.Cmp(&totalFeeInEther) <= 0 {

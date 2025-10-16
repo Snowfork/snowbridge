@@ -20,9 +20,7 @@ use crate::runtimes::{
     NetworkId,
 };
 use hex;
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use std::env;
 use subxt::{config::DefaultExtrinsicParams, Config, OnlineClient, PolkadotConfig};
 use subxt_signer::sr25519::dev;
 
@@ -43,22 +41,6 @@ sol! {
     }
 }
 
-lazy_static! {
-    pub static ref ASSET_HUB_WS_URL: String = {
-        if let Ok(val) = env::var("ASSET_HUB_WS_URL") {
-            val
-        } else {
-            "ws://127.0.0.1:12144".to_string()
-        }
-    };
-    pub static ref BRIDGE_HUB_WS_URL: String = {
-        if let Ok(val) = env::var("BRIDGE_HUB_WS_URL") {
-            val
-        } else {
-            "ws://127.0.0.1:11144".to_string()
-        }
-    };
-}
 
 pub enum AssetHubConfig {}
 
@@ -97,16 +79,16 @@ impl std::fmt::Display for EstimatorError {
 
 impl std::error::Error for EstimatorError {}
 
-pub async fn clients() -> Result<Clients, EstimatorError> {
+pub async fn clients(asset_hub_url: String, bridge_hub_url: String) -> Result<Clients, EstimatorError> {
     let asset_hub_client: OnlineClient<AssetHubConfig> =
-        OnlineClient::from_url((*ASSET_HUB_WS_URL).to_string())
+        OnlineClient::from_url(asset_hub_url)
             .await
             .map_err(|e| {
                 EstimatorError::ConnectionError(format!("Cannot connect to asset hub: {}", e))
             })?;
 
     let bridge_hub_client: OnlineClient<PolkadotConfig> =
-        OnlineClient::from_url((*BRIDGE_HUB_WS_URL).to_string())
+        OnlineClient::from_url(bridge_hub_url)
             .await
             .map_err(|e| {
                 EstimatorError::ConnectionError(format!("Cannot connect to bridge hub: {}", e))
@@ -124,7 +106,7 @@ pub struct Clients {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct AssetHubInfo {
+pub struct BridgeHubInfo {
     pub delivery_fee_in_dot: u128,
     pub delivery_fee_in_ether: u128,
     pub dry_run_success: bool,
@@ -135,7 +117,7 @@ pub struct AssetHubInfo {
 pub struct GasEstimation {
     pub extrinsic_fee_in_dot: u128,
     pub extrinsic_fee_in_ether: u128,
-    pub asset_hub: AssetHubInfo,
+    pub bridge_hub: BridgeHubInfo,
 }
 
 #[derive(Debug)]
@@ -227,7 +209,7 @@ pub async fn estimate_gas(
     Ok(GasEstimation {
         extrinsic_fee_in_dot,
         extrinsic_fee_in_ether,
-        asset_hub: AssetHubInfo {
+        bridge_hub: BridgeHubInfo {
             delivery_fee_in_dot,
             delivery_fee_in_ether,
             dry_run_success: dry_run_result.success,

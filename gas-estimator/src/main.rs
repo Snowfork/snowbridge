@@ -14,6 +14,14 @@ use std::process;
 #[command(about = "Off-chain gas estimator for Ethereum -> Polkadot messages via Snowbridge")]
 #[command(version = "0.1.0")]
 struct Cli {
+    /// Asset Hub WebSocket URL
+    #[arg(long, global = true, required = true)]
+    asset_hub_url: String,
+
+    /// Bridge Hub WebSocket URL
+    #[arg(long, global = true, required = true)]
+    bridge_hub_url: String,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -87,7 +95,7 @@ async fn main() {
 }
 
 async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
-    let clients = clients().await?;
+    let clients = clients(cli.asset_hub_url, cli.bridge_hub_url).await?;
 
     match cli.command {
         Commands::Estimate { command } => match command {
