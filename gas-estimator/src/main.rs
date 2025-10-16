@@ -15,11 +15,11 @@ use std::process;
 #[command(version = "0.1.0")]
 struct Cli {
     /// Asset Hub WebSocket URL
-    #[arg(long, global = true, required = true)]
+    #[arg(long, required = true)]
     asset_hub_url: String,
 
     /// Bridge Hub WebSocket URL
-    #[arg(long, global = true, required = true)]
+    #[arg(long, required = true)]
     bridge_hub_url: String,
 
     #[command(subcommand)]

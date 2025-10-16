@@ -109,6 +109,7 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode proof: %w", err)
 	}
+
 	proofHex := fmt.Sprintf("0x%x", proofEncoded)
 
 	// Payload parameters for XCM construction and delivery fee calculation
@@ -132,10 +133,10 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 	}
 
 	args := []string{
-		"estimate",
-		"message",
 		"--asset-hub-url", g.config.AssetHubURL,
 		"--bridge-hub-url", g.config.BridgeHubURL,
+		"estimate",
+		"message",
 		"--event-log-address", eventLogAddress,
 		"--event-log-topics", eventLogTopics,
 		"--event-log-data", eventLogData,

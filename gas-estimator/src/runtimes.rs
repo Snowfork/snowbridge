@@ -66,6 +66,8 @@ pub use asset_hub_polkadot_runtime::{
 pub use bridge_hub_westend_local_runtime::{
     runtime as bridge_hub_runtime,
     runtime_types::{
+        bridge_hub_westend_runtime::{OriginCaller, RuntimeCall},
+        frame_support::dispatch::RawOrigin,
         snowbridge_verification_primitives::{EventProof, Log, Proof},
         staging_xcm::v5::{
             asset::Fungibility as BridgeHubFungibility,
@@ -84,6 +86,8 @@ pub use bridge_hub_westend_local_runtime::{
 pub use bridge_hub_westend_runtime::{
     runtime as bridge_hub_runtime,
     runtime_types::{
+        bridge_hub_westend_runtime::{OriginCaller, RuntimeCall},
+        frame_support::dispatch::RawOrigin,
         snowbridge_verification_primitives::{EventProof, Log, Proof},
         staging_xcm::v5::{
             asset::Fungibility as BridgeHubFungibility,
@@ -102,6 +106,8 @@ pub use bridge_hub_westend_runtime::{
 pub use bridge_hub_paseo_runtime::{
     runtime as bridge_hub_runtime,
     runtime_types::{
+        bridge_hub_paseo_runtime::{OriginCaller, RuntimeCall},
+        frame_support::dispatch::RawOrigin,
         snowbridge_verification_primitives::{EventProof, Log, Proof},
         staging_xcm::v5::{
             asset::Fungibility as BridgeHubFungibility,
@@ -120,6 +126,8 @@ pub use bridge_hub_paseo_runtime::{
 pub use bridge_hub_polkadot_runtime::{
     runtime as bridge_hub_runtime,
     runtime_types::{
+        bridge_hub_polkadot_runtime::{OriginCaller, RuntimeCall},
+        frame_support::dispatch::RawOrigin,
         snowbridge_verification_primitives::{EventProof, Log, Proof},
         staging_xcm::v5::{
             asset::Fungibility as BridgeHubFungibility,

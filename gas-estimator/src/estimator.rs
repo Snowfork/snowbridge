@@ -14,6 +14,8 @@ use crate::config::westend::CHAIN_ID;
 use crate::contracts::r#i_gateway_v2::IGatewayV2;
 use crate::runtimes::*;
 use crate::xcm_builder;
+// Import types needed for dry-run
+use crate::runtimes::{OriginCaller, RawOrigin, RuntimeCall};
 use alloy_sol_types::{sol, SolValue};
 
 // Re-export specific enum variants and types for convenience
@@ -367,25 +369,67 @@ async fn dry_run_submit_on_bridge_hub(
     clients: &Clients,
     event_proof: &EventProof,
 ) -> Result<DryRunResult, EstimatorError> {
+    use subxt::tx::Payload;
+
     let submit_call = bridge_hub_runtime::tx()
         .ethereum_inbound_queue_v2()
         .submit(event_proof.clone());
 
-    let alice = dev::alice();
+    // Encode the submit call into RuntimeCall
+    let call_data = submit_call.encode_call_data(&clients.bridge_hub_client.metadata())
+        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to encode call data: {:?}", e)))?;
 
-    let _signed = clients
+    // Decode into RuntimeCall
+    let runtime_call: RuntimeCall = codec::Decode::decode(&mut &call_data[..])
+        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to decode RuntimeCall: {:?}", e)))?;
+
+    // Use a signed origin (user submitting the extrinsic)
+    use subxt_signer::sr25519::dev;
+    let ferdie = dev::ferdie();
+    let ferdie_account_id: [u8; 32] = ferdie.public_key().0;
+
+    let origin = OriginCaller::system(RawOrigin::Signed(ferdie_account_id.into()));
+
+    let runtime_api_call = bridge_hub_runtime::apis()
+        .dry_run_api()
+        .dry_run_call(origin, runtime_call, 5u32);
+
+    let dry_run_result = clients
         .bridge_hub_client
-        .tx()
-        .create_signed(&submit_call, &alice, Default::default())
+        .runtime_api()
+        .at_latest()
         .await
         .map_err(|e| {
-            EstimatorError::InvalidCommand(format!("Failed to create signed call: {:?}", e))
-        })?;
+            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
+        })?
+        .call(runtime_api_call)
+        .await
+        .map_err(|e| EstimatorError::InvalidCommand(format!("Failed to dry run call: {:?}", e)))?;
 
-    Ok(DryRunResult {
-        success: true,
-        error_message: None,
-    })
+    match dry_run_result {
+        Ok(effects) => {
+            // Check if the extrinsic dispatch succeeded
+            let success = effects.execution_result.is_ok();
+
+            let error_message = if success {
+                None
+            } else {
+                Some(format!(
+                    "Dispatch failed: {:?}",
+                    effects.execution_result
+                ))
+            };
+
+            Ok(DryRunResult {
+                success,
+                error_message,
+            })
+        }
+        Err(e) => Ok(DryRunResult {
+            success: false,
+            error_message: Some(format!("Dry run API error: {:?}", e)),
+        }),
+    }
 }
 
 async fn calculate_extrinsic_fee_in_dot(
