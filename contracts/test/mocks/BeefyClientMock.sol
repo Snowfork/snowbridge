@@ -7,17 +7,20 @@ import "forge-std/console.sol";
 
 contract BeefyClientMock is BeefyClient {
     constructor(
-        uint256 randaoCommitDelay,
-        uint256 randaoCommitExpiration,
-        uint256 minNumRequiredSignatures
+        uint256 _randaoCommitDelay,
+        uint256 _randaoCommitExpiration,
+        uint256 _minNumRequiredSignatures,
+        uint64 _initialBeefyBlock,
+        ValidatorSet memory _initialValidatorSet,
+        ValidatorSet memory _nextValidatorSet
     )
         BeefyClient(
-            randaoCommitDelay,
-            randaoCommitExpiration,
-            minNumRequiredSignatures,
-            0,
-            BeefyClient.ValidatorSet(0, 0, 0x0),
-            BeefyClient.ValidatorSet(1, 0, 0x0)
+            _randaoCommitDelay,
+            _randaoCommitExpiration,
+            _minNumRequiredSignatures,
+            _initialBeefyBlock,
+            _initialValidatorSet,
+            _nextValidatorSet
         )
     {}
 
@@ -92,5 +95,13 @@ contract BeefyClientMock is BeefyClient {
 
     function computeQuorum_public(uint256 numValidators) public pure returns (uint256) {
         return computeQuorum(numValidators);
+    }
+
+    function createTicketID_public(address relayer, bytes32 commitmentHash)
+        public
+        pure
+        returns (bytes32)
+    {
+        return createTicketID(relayer, commitmentHash);
     }
 }
