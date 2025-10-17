@@ -68,6 +68,8 @@ pub enum Command {
     UpgradeV2,
     /// Replay failed XCM messages from September 2025
     ReplaySep2025,
+    /// Set BridgeHubEthereumBaseFeeV2 on Paseo
+    SetPaseoFeeV2,
 }
 
 #[derive(Debug, Args)]
@@ -531,6 +533,17 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         Command::ReplaySep2025 => {
             let asset_hub_call = commands::replay_sep_2025_xcm();
             send_xcm_asset_hub(&context, vec![asset_hub_call]).await?
+        }
+        Command::SetPaseoFeeV2 => {
+            #[cfg(not(feature = "paseo"))]
+            panic!("SetPaseoFeeV2 only for paseo runtime.");
+
+            #[cfg(feature = "paseo")]
+            {
+                // Set bound fee to 0.1 DOT (same as Polkadot V2) on AH
+                let outbound_fee_call = commands::set_assethub_fee_v2(1_000_000_000);
+                send_xcm_asset_hub(&context, vec![outbound_fee_call]).await?
+            }
         }
     };
 
