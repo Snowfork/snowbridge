@@ -87,6 +87,16 @@ pub fn weth_location() -> Location {
 	}
 }
 
+pub fn test_token_location() -> Location {
+	Location {
+		parents: 2,
+		interior: Junctions::X2([
+			GlobalConsensus(NetworkId::Ethereum { chain_id: ETHEREUM_CHAIN_ID }),
+			AccountKey20 { network: None, key: (*TEST_TOKEN_CONTRACT).into() },
+		]),
+	}
+}
+
 pub fn eth_location() -> Location {
 	Location {
 		parents: 2,

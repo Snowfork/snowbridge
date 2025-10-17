@@ -1,0 +1,130 @@
+name: release-gas-estimator
+
+on:
+  push:
+    paths:
+      - "gas-estimator/**"
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-unknown-linux-gnu
+          override: true
+
+      - name: Cache Cargo registry and build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            gas-estimator/target
+          key: ${{ runner.os }}-cargo-gas-estimator-${{ hashFiles('gas-estimator/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-gas-estimator-
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Build gas estimator
+        working-directory: gas-estimator
+        run: |
+          cargo build --release --target x86_64-unknown-linux-gnu --features polkadot
+
+      - name: Rename binary
+        working-directory: gas-estimator
+        run: |
+          cp target/x86_64-unknown-linux-gnu/release/snowbridge-gas-estimator snowbridge-gas-estimator-x86_64-unknown-linux-gnu
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snowbridge-gas-estimator-x86_64-unknown-linux-gnu
+          path: gas-estimator/snowbridge-gas-estimator-x86_64-unknown-linux-gnu
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+
+      - name: Determine new version
+        id: new_version
+        run: |
+          # Get the most recent tag in the format gas-estimator-v<version>
+          current_tag=$(git tag --list "gas-estimator-v*" --sort=-v:refname | head -n 1)
+          current_version=$(git tag --list "gas-estimator-v*" --sort=-v:refname | head -n 1 | sed -E 's/gas-estimator-v//')
+          echo "Current version: $current_version"
+
+          # If there is no current version, set it to 1.0.0
+          if [ -z "$current_version" ]; then
+          new_version="1.0.0"
+          else
+          new_version=$(npx semver $current_version -i patch)
+          fi
+
+          echo "New version: $new_version"
+          echo "version=$new_version" >> $GITHUB_OUTPUT
+          echo "from_tag=$current_tag" >> $GITHUB_OUTPUT
+
+      - name: Create new tag
+        id: create_tag
+        run: |
+          tag_name="gas-estimator-v${{ steps.new_version.outputs.version }}"
+          echo "Tag name: $tag_name"
+          echo "tag=$tag_name" >> $GITHUB_OUTPUT
+          git tag $tag_name
+          git push origin --tags
+
+      - name: "Build Changelog"
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@v4
+        with:
+          configurationJson: |
+            {
+              "template": "#{{CHANGELOG}}\n\n<details>\n</details>",
+              "categories": [
+                {
+                    "title": "## Gas Estimator Changes",
+                    "labels": ["Component: Gas Estimator"]
+                }
+              ]
+            }
+          fromTag: ${{ steps.new_version.outputs.from_tag }}
+          toTag: ${{ steps.create_tag.outputs.tag }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.create_tag.outputs.tag }}
+          name: ${{ steps.create_tag.outputs.tag }}
+          body: ${{steps.build_changelog.outputs.changelog}}
+          draft: false
+          prerelease: false
+          files: |
+            ./artifacts/snowbridge-gas-estimator-x86_64-unknown-linux-gnu/snowbridge-gas-estimator-x86_64-unknown-linux-gnu
