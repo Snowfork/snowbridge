@@ -217,6 +217,13 @@
           "decimals": 18,
           "deliveryGas": "bigint:80000"
         },
+        "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf": {
+          "token": "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+          "name": "vTAO",
+          "symbol": "vTAO",
+          "decimals": 18,
+          "deliveryGas": "bigint:80000"
+        },
         "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14": {
           "token": "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14",
           "name": "Polkadot",
