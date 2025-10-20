@@ -35,6 +35,7 @@ export async function getMoonbeamEvmForeignAssetBalance(
         null,
         null,
         false,
+        null,
         null
     )
     const resultJson = result.toPrimitive() as any
@@ -60,6 +61,7 @@ export async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: strin
         null,
         null,
         false,
+        null,
         null
     )
     const resultJson = result.toPrimitive() as any
