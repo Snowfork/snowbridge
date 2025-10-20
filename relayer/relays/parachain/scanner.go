@@ -19,6 +19,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
+	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"github.com/snowfork/snowbridge/relayer/ofac"
 )
 
@@ -159,7 +160,6 @@ func (s *Scanner) filterTasks(
 			continue
 		}
 
-		var messages []OutboundQueueMessage
 		var messagesWithFee []OutboundQueueMessageWithFee
 		raw, err := s.paraConn.API().RPC.State.GetStorageRaw(messagesKey, blockHash)
 		if err != nil {
@@ -185,21 +185,26 @@ func (s *Scanner) filterTasks(
 				log.Fatal("banned address found")
 				return nil, errors.New("banned address found")
 			}
-			messages = append(messages, m)
 			var messageWithFee OutboundQueueMessageWithFee
 			messageWithFee.OriginalMessage = m
 			messageWithFee.Fee = order.Fee
 			messagesWithFee = append(messagesWithFee, messageWithFee)
 		}
 
-		// For the outbound channel, the commitment hash is the merkle root of the messages
-		// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/parachain/pallets/basic-channel/src/outbound/mod.rs#L275-L277
-		// To verify it we fetch the message proof from the parachain
-		result, err := scanForOutboundQueueProofs(
-			s.paraConn.API(),
-			blockHash,
+		var messageLeaves []types.H256
+		messageLeavesKey, err := types.CreateStorageKey(s.paraConn.Metadata(), "EthereumOutboundQueueV2", "MessageLeaves", nil, nil)
+		if err != nil {
+			return nil, fmt.Errorf("create storage key: %w", err)
+		}
+		_, err = s.paraConn.API().RPC.State.GetStorage(messageLeavesKey, &messageLeaves, blockHash)
+		if err != nil {
+			return nil, fmt.Errorf("fetch message leaves for block %v: %w", blockHash.Hex(), err)
+		}
+
+		result, err := buildOutboundQueueProofs(
 			*commitmentHash,
 			messagesWithFee,
+			messageLeaves,
 		)
 		if err != nil {
 			return nil, err
@@ -510,4 +515,69 @@ func GetDestinations(message OutboundQueueMessage) ([]string, error) {
 	}
 
 	return destinations, nil
+}
+
+func buildOutboundQueueProofs(
+	commitmentHash types.H256,
+	messages []OutboundQueueMessageWithFee,
+	messageLeaves []types.H256,
+) (*struct {
+	proofs []MessageProof
+}, error) {
+
+	Keccak256Contents := []merkle.Content{}
+	for _, leaf := range messageLeaves {
+		var content merkle.Keccak256Content
+		copy(content.X[:], leaf[:])
+		Keccak256Contents = append(Keccak256Contents, content)
+	}
+
+	tree, err := merkle.NewTree2(Keccak256Contents)
+	if err != nil {
+		return nil, err
+	}
+	root := tree.Root.Hash
+	if !bytes.Equal(root, commitmentHash[:]) {
+		return nil, fmt.Errorf(
+			"Halting scan Outbound queue computed merkle root '%v' doesn't match digest item's commitment hash '%v'",
+			root,
+			commitmentHash,
+		)
+	}
+
+	proofs := []MessageProof{}
+
+	for i := len(messages) - 1; i >= 0; i-- {
+		message := messages[i]
+		messageLeaf := messageLeaves[i]
+
+		var content merkle.Keccak256Content
+		copy(content.X[:], messageLeaf[:])
+
+		messagePath, _, err := tree.GetMerklePath(content)
+		if err != nil {
+			return nil, fmt.Errorf("get merkle path: %w", err)
+		}
+
+		byteArrayProof := make([][32]byte, len(messagePath))
+		for i := 0; i < len(messagePath); i++ {
+			byteArrayProof[i] = ([32]byte)(messagePath[i])
+		}
+
+		proof := MerkleProof{
+			Root:        commitmentHash,
+			InnerHashes: byteArrayProof,
+		}
+
+		messageProof := MessageProof{Message: message, Proof: proof}
+
+		// Collect these commitments
+		proofs = append(proofs, messageProof)
+	}
+
+	return &struct {
+		proofs []MessageProof
+	}{
+		proofs: proofs,
+	}, nil
 }
