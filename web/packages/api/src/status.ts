@@ -78,6 +78,7 @@ export type Sovereign = { name: string; account: string; balance: bigint; type: 
 export type IndexerServiceStatusInfo = {
     chain: string
     latency: number
+    paraid?: number
 }
 
 export type AllMetrics = {

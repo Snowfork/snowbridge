@@ -13,6 +13,7 @@ export type Config = {
     RELAYERS: Relayer[]
     PARACHAINS: { [paraId: string]: string }
     GRAPHQL_API_URL: string
+    TO_MONITOR_PARACHAINS?: number[]
 }
 
 export type KusamaConfig = {
@@ -503,10 +504,10 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 "1": "https://ethereum-rpc.publicnode.com",
                 "1284": "https://rpc.api.moonbeam.network",
             },
-            RELAY_CHAIN_URL: "https://polkadot-rpc.dwellir.com",
+            RELAY_CHAIN_URL: "https://polkadot-rpc.n.dwellir.com",
             PARACHAINS: {
-                "1000": "wss://asset-hub-polkadot-rpc.dwellir.com",
-                "1002": "https://bridge-hub-polkadot-rpc.dwellir.com",
+                "1000": "wss://asset-hub-polkadot-rpc.n.dwellir.com",
+                "1002": "https://bridge-hub-polkadot-rpc.n.dwellir.com",
                 "3369": "wss://polkadot-mythos-rpc.polkadot.io",
                 "2034": "wss://hydration-rpc.n.dwellir.com",
                 "2030": "wss://bifrost-polkadot.ibp.network",
@@ -536,13 +537,18 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     type: "ethereum",
                 },
                 {
+                    name: "beefy-on-demand",
+                    account: "0xF3D021D51a725F5DBDCE253248E826A8644Be3c1",
+                    type: "ethereum",
+                },
+                {
                     name: "parachain-primary-gov",
-                    account: "0x1F1819C3C68F9533adbB8E51C8E8428a818D693E",
+                    account: "0x0f51678Ac675C1abf2BeC1DAC9cA701cFcfFF5E2",
                     type: "ethereum",
                 },
                 {
                     name: "parachain-secondary-gov",
-                    account: "0x1F1819C3C68F9533adbB8E51C8E8428a818D693E",
+                    account: "0x0f51678Ac675C1abf2BeC1DAC9cA701cFcfFF5E2",
                     type: "ethereum",
                 },
                 {
@@ -558,6 +564,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ],
             GRAPHQL_API_URL:
                 "https://snowbridge.squids.live/snowbridge-subsquid-polkadot:production/api/graphql",
+            TO_MONITOR_PARACHAINS: [2034, 2043, 3369], // Hydration, OriginTrail, Mythos
         },
         kusamaConfig: {
             ASSET_HUB_PARAID: 1000,

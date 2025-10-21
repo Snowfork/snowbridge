@@ -58,6 +58,7 @@ interface Config {
         beefy: string
     }
     graphqlApiUrl: string
+    monitorChains?: number[]
 }
 
 export class Context {
@@ -242,6 +243,10 @@ export class Context {
         return this.config.graphqlApiUrl
     }
 
+    monitorChains(): number[] | undefined {
+        return this.config.monitorChains
+    }
+
     async destroyContext(): Promise<void> {
         // clean up contract listeners
         if (this.#beefyClient) await this.beefyClient().removeAllListeners()
@@ -289,6 +294,7 @@ export function contextConfigFor(
             PARACHAINS,
             RELAY_CHAIN_URL,
             GRAPHQL_API_URL,
+            TO_MONITOR_PARACHAINS,
         },
         kusamaConfig,
     } = SNOWBRIDGE_ENV[env]
@@ -334,5 +340,6 @@ export function contextConfigFor(
             beefy: BEEFY_CONTRACT,
         },
         graphqlApiUrl: GRAPHQL_API_URL,
+        monitorChains: TO_MONITOR_PARACHAINS,
     }
 }
