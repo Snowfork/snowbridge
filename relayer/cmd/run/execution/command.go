@@ -64,6 +64,7 @@ func run(_ *cobra.Command, _ []string) error {
 
 	err = config.Validate()
 	if err != nil {
+		logrus.WithError(err).Fatal("config file validation failed")
 		return fmt.Errorf("config file validation failed: %w", err)
 	}
 
