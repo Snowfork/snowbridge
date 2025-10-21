@@ -506,7 +506,6 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             },
             RELAY_CHAIN_URL: "https://polkadot-rpc.n.dwellir.com",
             PARACHAINS: {
-                // "1000": "wss://sys.ibp.network/asset-hub-polkadot",
                 "1000": "wss://asset-hub-polkadot-rpc.n.dwellir.com",
                 "1002": "https://bridge-hub-polkadot-rpc.n.dwellir.com",
                 "3369": "wss://polkadot-mythos-rpc.polkadot.io",
