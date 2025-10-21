@@ -74,8 +74,8 @@ func (tm *TaskMap) Delete(key uint64) {
 }
 
 func (tm *TaskMap) Full() bool {
-	tm.mu.Lock()
-	defer tm.mu.Unlock()
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
 	if len(tm.data) >= int(tm.limit) {
 		return true
 	}
@@ -88,8 +88,8 @@ func (tm *TaskMap) Full() bool {
 // b. Just updated
 // c. Can be replaced by a newer one while still unexpired
 func (tm *TaskMap) Pop() *TaskInfo {
-	tm.mu.RLock()
-	defer tm.mu.RUnlock()
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
 	if len(tm.data) == 0 {
 		return nil
 	}
@@ -150,8 +150,8 @@ func (tm *TaskMap) Pop() *TaskInfo {
 }
 
 func (tm *TaskMap) SetStatus(key uint64, status TaskState) {
-	tm.mu.RLock()
-	defer tm.mu.RUnlock()
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
 	val, ok := tm.data[key]
 	if ok {
 		val.status = status
@@ -175,8 +175,8 @@ func (tm *TaskMap) InspectAll() []*TaskInfo {
 }
 
 func (tm *TaskMap) SetLastUpdated(key uint64) {
-	tm.mu.RLock()
-	defer tm.mu.RUnlock()
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
 	val, ok := tm.data[key]
 	if ok && val.timestamp > tm.lastUpdated {
 		tm.lastUpdated = val.timestamp
