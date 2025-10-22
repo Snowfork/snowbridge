@@ -554,7 +554,7 @@ func buildOutboundQueueProofs(
 		var content merkle.Keccak256Content
 		copy(content.X[:], messageLeaf[:])
 
-		messagePath, _, err := tree.GetMerklePath(content)
+		messagePath, _, err := tree.MerklePath(content)
 		if err != nil {
 			return nil, fmt.Errorf("get merkle path: %w", err)
 		}

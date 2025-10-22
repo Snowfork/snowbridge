@@ -93,8 +93,8 @@ func NewTreeWithHashStrategy(cs []Content, hashStrategy func() hash.Hash) (*Merk
 	return t, nil
 }
 
-// GetMerklePath: Get Merkle path and indexes(left leaf or right leaf)
-func (m *MerkleTree) GetMerklePath(content Content) ([][]byte, []int64, error) {
+// MerklePath: Get Merkle path and indexes(left leaf or right leaf)
+func (m *MerkleTree) MerklePath(content Content) ([][]byte, []int64, error) {
 	for _, current := range m.Leafs {
 		ok, err := current.C.Equals(content)
 		if err != nil {
