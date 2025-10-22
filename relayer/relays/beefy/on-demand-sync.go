@@ -582,7 +582,7 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 	}).Info("Queue info")
 	for _, task := range tasks {
 		log.WithFields(log.Fields{
-			"nonce":      task.nonce,
+			"nonce":      task.id,
 			"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
 			"status":     task.status,
 			"skipped":    task.req.Skippable,
@@ -599,7 +599,7 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 		return fmt.Errorf("Acquires the semaphore: %w", err)
 	}
 	logger := log.WithFields(log.Fields{
-		"nonce":      task.nonce,
+		"nonce":      task.id,
 		"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
 	})
 	eg.Go(func() error {
@@ -608,20 +608,20 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 		err := relay.syncBeefyUpdate(ctx, task.req)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Sync beefy failed, %v", err))
-			relay.activeTasks.SetStatus(task.nonce, Failed)
+			relay.activeTasks.SetStatus(task.id, Failed)
 		} else {
 			if task.req.Skippable {
 				logger.Info("Sync beefy skipped")
-				relay.activeTasks.SetStatus(task.nonce, Canceled)
+				relay.activeTasks.SetStatus(task.id, Canceled)
 			} else {
 				logger.Info("Sync beefy completed")
-				relay.activeTasks.SetLastUpdated(task.nonce)
-				err = relay.waitUntilMessagesSynced(ctx, task.nonce)
+				relay.activeTasks.SetLastUpdated(task.id)
+				err = relay.waitUntilMessagesSynced(ctx, task.id)
 				if err != nil {
 					logger.Warn("Beefy sync completed, but pending nonce not synced in time")
-					relay.activeTasks.SetStatus(task.nonce, Completed)
+					relay.activeTasks.SetStatus(task.id, Completed)
 				} else {
-					relay.activeTasks.Delete(task.nonce)
+					relay.activeTasks.Delete(task.id)
 				}
 			}
 		}

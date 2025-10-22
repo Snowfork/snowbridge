@@ -19,7 +19,7 @@ const (
 )
 
 type TaskInfo struct {
-	nonce     uint64 // Unique identifier for the task
+	id        uint64 // Unique identifier for the task
 	req       *Request
 	status    TaskState
 	timestamp uint64 // Unix timestamp of when the task was created
@@ -52,7 +52,7 @@ func (tm *TaskMap) Store(key uint64, req *Request) bool {
 		return false
 	}
 	tm.data[key] = &TaskInfo{
-		nonce:     key,
+		id:        key,
 		req:       req,
 		status:    Pending,
 		timestamp: uint64(time.Now().Unix()),
@@ -102,7 +102,7 @@ func (tm *TaskMap) Pop() *TaskInfo {
 		for index, key := range keys {
 			if index < len(keys)-1 {
 				task := tm.data[uint64(key)]
-				if task.nonce == current.nonce {
+				if task.id == current.id {
 					return tm.data[uint64(keys[index+1])]
 				}
 			}
