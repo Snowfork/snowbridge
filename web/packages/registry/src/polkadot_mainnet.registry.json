@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-10-07T21:35:27.436Z",
+  "timestamp": "2025-10-19T20:14:50.232Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -214,6 +214,13 @@
           "token": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
           "name": "Aave Token",
           "symbol": "AAVE",
+          "decimals": 18,
+          "deliveryGas": "bigint:80000"
+        },
+        "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf": {
+          "token": "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+          "name": "vTAO",
+          "symbol": "vTAO",
           "decimals": 18,
           "deliveryGas": "bigint:80000"
         },
@@ -578,6 +585,14 @@
           "name": "Aave Token",
           "minimumBalance": "bigint:1",
           "symbol": "AAVE",
+          "decimals": 18,
+          "isSufficient": false
+        },
+        "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf": {
+          "token": "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+          "name": "vTAO",
+          "minimumBalance": "bigint:1",
+          "symbol": "vTAO",
           "decimals": 18,
           "isSufficient": false
         },
