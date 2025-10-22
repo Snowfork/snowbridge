@@ -132,5 +132,11 @@ async fn transact_p2e_l2() {
 		.tx()
 		.sign_and_submit_then_watch_default(&transact_call, &signer)
 		.await
-		.expect("call success");
+		.unwrap()
+		.wait_for_finalized_success()
+		.await
+		.expect("finalized");
+	// Todo: No event is emitted in the L2 contract - https://testnet-explorer.optimism.io/address/0x5DE8a2957eddb140567fF90ba5d57bc9769f3055
+	// Consider checking the greetings storage directly instead - or it might be fine for the POC to
+	// verify it manually.
 }
