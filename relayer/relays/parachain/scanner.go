@@ -539,7 +539,7 @@ func buildOutboundQueueProofs(
 	root := tree.Root.Hash
 	if !bytes.Equal(root, commitmentHash[:]) {
 		return nil, fmt.Errorf(
-			"Halting scan Outbound queue computed merkle root '%v' doesn't match digest item's commitment hash '%v'",
+			"outbound queue computed merkle root '%v' doesn't match digest item's commitment hash '%v'",
 			root,
 			commitmentHash,
 		)
