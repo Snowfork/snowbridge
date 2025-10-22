@@ -101,14 +101,14 @@ func (wr *EthereumWriter) WriteChannels(
 ) error {
 	for _, proof := range *task.MessageProofs {
 		profitable, err := wr.isRelayMessageProfitable(ctx, &proof)
-		if err != nil {
-			return fmt.Errorf("check message profitable: %w", err)
-		}
-		if profitable {
+		if profitable || wr.config.Ethereum.SkipFeeCheck {
 			err = wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
 			if err != nil {
 				return fmt.Errorf("write eth gateway: %w", err)
 			}
+		} else {
+			log.WithField("nonce", proof.Message.OriginalMessage.Nonce).
+				Info("Skipping unprofitable message relay to Ethereum")
 		}
 	}
 
