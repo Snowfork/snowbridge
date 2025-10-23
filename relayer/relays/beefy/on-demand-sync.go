@@ -97,7 +97,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 	eg.Go(func() error {
 		defer ticker.Stop()
 		for {
-			log.Info("Starting check nonces")
+			log.Info("Starting check nonces for both V1 and V2")
 			err = relay.queueV1(ctx)
 			if err != nil {
 				return fmt.Errorf("Queue V1 failed: %w", err)
@@ -119,7 +119,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 	eg.Go(func() error {
 		defer scheduleTicker.Stop()
 		for {
-			log.Info("Scheduling pending nonces")
+			log.Info("Scheduling pending tasks")
 			err = relay.schedule(ctx, eg)
 			if err != nil {
 				return fmt.Errorf("Schedule failed: %w", err)
@@ -506,6 +506,8 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 			"status":     task.status,
 			"skipped":    task.req.Skippable,
 			"timestamp":  time.Unix(int64(task.timestamp), 0),
+			"nonce":      task.nonce,
+			"fromV1":     task.fromV1,
 		}).Info("Task info")
 	}
 	task := relay.activeTasks.Pop()
@@ -520,6 +522,8 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 	logger := log.WithFields(log.Fields{
 		"id":         task.id,
 		"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
+		"nonce":      task.nonce,
+		"fromV1":     task.fromV1,
 	})
 	eg.Go(func() error {
 		defer relay.activeTasks.sem.Release(1)
