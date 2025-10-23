@@ -5,6 +5,7 @@ import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
 import { ETHER_TOKEN_ADDRESS } from "@snowbridge/api/src/assets_v2"
+import { DOT_LOCATION } from "@snowbridge/api/src/xcmBuilder"
 
 const MOONBEAM_PARA_ID = 2004
 
@@ -76,6 +77,7 @@ export const transactToMoonbeam = async (amount: bigint, remarkMessage: string) 
         )
 
         // Step 1. Get the delivery fee for the transaction
+        // Use DOT as fee asset since Moonbeam may not accept Ether for fees
         let fee = await transferImpl.getDeliveryFee(
             context,
             registry,
@@ -84,6 +86,7 @@ export const transactToMoonbeam = async (amount: bigint, remarkMessage: string) 
             relayerFee,
             {
                 customXcm: customXcm,
+                feeAsset: DOT_LOCATION,
             }
         )
 
