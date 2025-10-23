@@ -56,6 +56,7 @@ export class ERC20ToParachain implements TransferInterface {
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
+            customXcm?: any[]
         }
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub, destination } =
@@ -121,7 +122,8 @@ export class ERC20ToParachain implements TransferInterface {
             destParachain.info.accountType === "AccountId32"
                 ? "0x0000000000000000000000000000000000000000000000000000000000000000"
                 : "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            options?.customXcm
         )
         const destinationImpl = await paraImplementation(destination)
         // Delivery fee AssetHub to Destination

@@ -81,7 +81,10 @@ export const transactToMoonbeam = async (amount: bigint, remarkMessage: string) 
             registry,
             TOKEN_CONTRACT,
             MOONBEAM_PARA_ID,
-            relayerFee
+            relayerFee,
+            {
+                customXcm: customXcm,
+            }
         )
 
         console.log("fee: ", fee)

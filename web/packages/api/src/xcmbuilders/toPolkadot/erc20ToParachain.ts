@@ -178,48 +178,53 @@ export function buildParachainERC20ReceivedXcmOnDestination(
     transferAmount: bigint,
     feeInEther: bigint,
     beneficiary: string,
-    topic: string
+    topic: string,
+    customXcm?: any[]
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
-    let reserveAssetDeposited = []
-    if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
-        reserveAssetDeposited.push({
-            id: erc20Location(ethChainId, tokenAddress),
-            fun: {
-                Fungible: transferAmount,
-            },
-        })
-    } else {
-        reserveAssetDeposited.push({
-            id: ether,
-            fun: {
-                Fungible: feeInEther + transferAmount,
-            },
-        })
-    }
+
     return registry.createType("XcmVersionedXcm", {
-        v4: [
+        v5: [
             {
-                reserveAssetDeposited: reserveAssetDeposited,
-            },
-            { clearOrigin: null },
-            {
-                buyExecution: {
-                    fees: {
+                reserveAssetDeposited: [
+                    {
                         id: ether,
                         fun: {
                             Fungible: feeInEther,
                         },
                     },
-                    weightLimit: "Unlimited",
+                ],
+            },
+            {
+                payFees: {
+                    asset: {
+                        id: ether,
+                        fun: {
+                            Fungible: feeInEther,
+                        },
+                    },
                 },
             },
+            {
+                reserveAssetDeposited: [
+                    {
+                        id: tokenAddress === ETHER_TOKEN_ADDRESS
+                            ? ether
+                            : erc20Location(ethChainId, tokenAddress),
+                        fun: {
+                            Fungible: transferAmount,
+                        },
+                    },
+                ],
+            },
+            { clearOrigin: null },
+            ...(customXcm || []), // Insert custom XCM instructions if provided
             {
                 depositAsset: {
                     assets: {
                         wild: {
-                            allCounted: 2,
+                            allCounted: 3,
                         },
                     },
                     beneficiary: {
@@ -228,7 +233,9 @@ export function buildParachainERC20ReceivedXcmOnDestination(
                     },
                 },
             },
-            { setTopic: topic },
+            {
+                setTopic: topic,
+            },
         ],
     })
 }
