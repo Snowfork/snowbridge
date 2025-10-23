@@ -26,7 +26,8 @@
     "eslint-config-prettier": "^10.1.8",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "prettier": "3.6.2"
   },
   "dependencies": {
     "@polkadot/api": "16.4.8",
