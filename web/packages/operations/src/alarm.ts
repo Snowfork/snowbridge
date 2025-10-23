@@ -278,11 +278,12 @@ export const initializeAlarms = async () => {
         DatapointsToAlarm: AlarmEvaluationConfiguration.DatapointsToAlarm,
     }
 
-    // For alarms that need to trigger when an absolute value breaches a threshold.
-    // For this case we dont want to wait for 3/4 datapoints in a 15 minute window(45 min)
-    // as it will take a minimum of 45 minutes before we are alerted. We choose 5 minutes.
-    // We use maximum statistic because we can about the maximum value breaching within a
-    // time window.
+    // For alarms that need to trigger when an absolute value breaches a
+    // threshold. For this case dont wait for 3/4 datapoints in a 15 minute
+    // window(45 min) as it will take a minimum of 45 minutes before alarms are
+    // triggered. Use 5 minutes instead. Alarm uses maximum statistic because
+    // so that it alarms when the maximum value is breaching within a time
+    // window.
     // e.g. bridge latency greater than x seconds.
     // e.g. nonce difference greater than x messages.
     let absoluteValueBreachingAlarmConfig: any = {
@@ -290,7 +291,6 @@ export const initializeAlarms = async () => {
         TreatMissingData: "notBreaching",
         Period: 60*5,
         Statistic: "Maximum",
-        ComparisonOperator: "GreaterThanThreshold",
         EvaluationPeriods: 1,
         DatapointsToAlarm: 1,
     }
@@ -331,6 +331,7 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            ComparisonOperator: "GreaterThanThreshold",
             ...absoluteValueBreachingAlarmConfig,
             Threshold: 5400, // 1.5 hours at most
         }),
@@ -349,6 +350,7 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            ComparisonOperator: "GreaterThanThreshold",
             ...absoluteValueBreachingAlarmConfig,
             Threshold: 1800, // 0.5 hour
         }),
