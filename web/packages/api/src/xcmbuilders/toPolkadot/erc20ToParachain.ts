@@ -20,7 +20,8 @@ export function buildAssetHubERC20ReceivedXcm(
     beneficiary: string,
     destinationParaId: number,
     remoteEtherFeeAmount: bigint,
-    topic: string
+    topic: string,
+    customXcm?: any[]
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -111,7 +112,7 @@ export function buildAssetHubERC20ReceivedXcm(
                             ],
                         },
                     },
-                    preserveOrigin: true,
+                    preserveOrigin: false,
                     assets: [
                         {
                             reserveDeposit: {
@@ -127,9 +128,10 @@ export function buildAssetHubERC20ReceivedXcm(
                         },
                     ],
                     remoteXcm: [
-                        {
-                            refundSurplus: null,
-                        },
+                        //{
+                        //    refundSurplus: null,
+                        //},
+                        ...(customXcm || []), // Insert custom XCM here if provided
                         {
                             depositAsset: {
                                 assets: {
@@ -139,13 +141,13 @@ export function buildAssetHubERC20ReceivedXcm(
                                 },
                                 beneficiary: {
                                     parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
+                                    interior: { x1: [accountToLocation("0xc189De708158e75E5C88C0ABfA5F9a26C71F54D1")] },
                                 },
                             },
                         },
-                        {
-                            setTopic: topic,
-                        },
+                        //{
+                        //    setTopic: topic,
+                        //},
                     ],
                 },
             },
@@ -239,10 +241,35 @@ export function sendMessageXCM(
     beneficiary: string,
     tokenAmount: bigint,
     remoteEtherFeeAmount: bigint,
-    topic: string
+    topic: string,
+    customXcm?: any[]
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
+
+    const remoteXcmInstructions = [
+        {
+            refundSurplus: null,
+        },
+        ...(customXcm || []), // Insert custom XCM here if provided
+        {
+            depositAsset: {
+                assets: {
+                    wild: {
+                        allCounted: 3,
+                    },
+                },
+                beneficiary: {
+                    parents: 0,
+                    interior: { x1: [beneficiaryLocation] },
+                },
+            },
+        },
+        {
+            setTopic: topic,
+        },
+    ]
+
     return registry.createType("XcmVersionedXcm", {
         v5: [
             {
@@ -275,27 +302,7 @@ export function sendMessageXCM(
                             },
                         },
                     ],
-                    remoteXcm: [
-                        {
-                            refundSurplus: null,
-                        },
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 3,
-                                    },
-                                },
-                                beneficiary: {
-                                    parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
-                                },
-                            },
-                        },
-                        {
-                            setTopic: topic,
-                        },
-                    ],
+                    remoteXcm: remoteXcmInstructions,
                 },
             },
             {

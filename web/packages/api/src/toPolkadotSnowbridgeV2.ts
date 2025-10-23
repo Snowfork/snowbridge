@@ -5,15 +5,19 @@ import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { MultiAddressStruct } from "@snowbridge/contract-types/dist/IGateway.sol/IGatewayV1"
-import { AbiCoder, ContractTransaction, LogDescription, TransactionReceipt } from "ethers"
+import { AbstractProvider, AbiCoder, Contract, ContractTransaction, LogDescription, TransactionReceipt } from "ethers"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
 import { IGatewayV2__factory } from "@snowbridge/contract-types"
 import { OperationStatus } from "./status"
-import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
+import { FeeInfo, ValidationLog, ValidationKind, ValidationReason } from "./toPolkadot_v2"
 import { ApiPromise } from "@polkadot/api"
-import { accountToLocation } from "./xcmBuilder"
+import { accountToLocation, ethereumNetwork } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
+import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { beneficiaryMultiAddress } from "./utils"
+import { paraImplementation } from "./parachains"
+import { getOperatingStatus } from "./status"
 export { ValidationKind } from "./toPolkadot_v2"
 
 export type DeliveryFee = {
@@ -35,6 +39,7 @@ export type Transfer = {
         destinationParaId: number
         amount: bigint
         fee: DeliveryFee
+        customXcm?: any[] // Optional custom XCM instructions
     }
     computed: {
         gatewayAddress: string
@@ -76,6 +81,16 @@ export type MessageReceipt = {
     blockHash: string
     txHash: string
     txIndex: number
+}
+
+export interface TransactOnPolkadotParams {
+    registry: AssetRegistry
+    sourceAccount: string
+    beneficiaryAccount: string
+    tokenAddress: string
+    amount: bigint
+    fee: DeliveryFee
+    customXcm: any // XCM instructions to be appended to the standard XCM
 }
 
 export function createTransferImplementation(

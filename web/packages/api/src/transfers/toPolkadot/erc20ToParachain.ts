@@ -173,7 +173,8 @@ export class ERC20ToParachain implements TransferInterface {
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
-        fee: DeliveryFee
+        fee: DeliveryFee,
+        customXcm?: any[]
     ): Promise<Transfer> {
         const { ethereum, assetHub, destination } =
             context instanceof Context
@@ -247,7 +248,8 @@ export class ERC20ToParachain implements TransferInterface {
                     beneficiaryAddressHex,
                     amount,
                     fee.destinationExecutionFeeEther,
-                    topic
+                    topic,
+                    customXcm
                 ).toHex()
             )
         }
@@ -276,6 +278,7 @@ export class ERC20ToParachain implements TransferInterface {
                 destinationParaId,
                 amount,
                 fee,
+                customXcm,
             },
             computed: {
                 gatewayAddress: registry.gatewayAddress,
@@ -453,9 +456,11 @@ export class ERC20ToParachain implements TransferInterface {
                     transfer.computed.beneficiaryAddressHex,
                     destinationParaId,
                     transfer.input.fee.destinationExecutionFeeEther,
-                    "0x0000000000000000000000000000000000000000000000000000000000000000"
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    transfer.input.customXcm
                 )
             }
+            console.log("DRY RUNNING ON AH")
             let result = await assetHubImpl.dryRunXcm(
                 registry.bridgeHubParaId,
                 xcm,
@@ -528,6 +533,7 @@ export class ERC20ToParachain implements TransferInterface {
                         })
                     }
                     const destParachainImpl = await paraImplementation(destParachainApi)
+                    console.log("DRY RUNNING ON DEST")
                     const { success: dryRunDestinationSuccess, errorMessage: destMessage } =
                         await destParachainImpl.dryRunXcm(registry.assetHubParaId, xcm[0])
                     if (!dryRunDestinationSuccess) {
