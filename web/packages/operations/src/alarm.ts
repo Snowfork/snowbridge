@@ -289,7 +289,7 @@ export const initializeAlarms = async () => {
     let absoluteValueBreachingAlarmConfig: any = {
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
         TreatMissingData: "notBreaching",
-        Period: 60*5,
+        Period: 60 * 5,
         Statistic: "Maximum",
         EvaluationPeriods: 1,
         DatapointsToAlarm: 1,
