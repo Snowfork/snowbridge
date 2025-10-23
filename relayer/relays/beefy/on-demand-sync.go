@@ -135,13 +135,19 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 	return nil
 }
 
-func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, paraNonce uint64) error {
+func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, task *TaskInfo) error {
 	var cnt uint64
 	for {
-		ethNonce, err := relay.fetchEthereumNonce(ctx)
-
-		if err == nil && ethNonce >= paraNonce {
-			return nil
+		if task.fromV1 {
+			ethNonce, err := relay.fetchEthereumNonce(ctx)
+			if err == nil && ethNonce >= task.nonce {
+				break
+			}
+		} else {
+			relayed, err := relay.isV2NonceRelayed(ctx, task.nonce)
+			if err == nil && relayed {
+				break
+			}
 		}
 		time.Sleep(time.Second * 30)
 		cnt++
@@ -149,6 +155,7 @@ func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, paraNon
 			return fmt.Errorf("timeout waiting for messages to be relayed")
 		}
 	}
+	return nil
 }
 
 func (relay *OnDemandRelay) queryNonces(ctx context.Context) (uint64, uint64, error) {
@@ -262,22 +269,6 @@ func (relay *OnDemandRelay) syncBeefyUpdate(ctx context.Context, task *Request) 
 		"updatedNextValidatorSetID": updatedState.NextValidatorSetID,
 	}).Info("Sync beefy update success")
 	return nil
-}
-
-func (relay *OnDemandRelay) waitUntilV2MessagesSynced(ctx context.Context, paraNonce uint64) {
-	for {
-		log.Info(fmt.Sprintf("waiting for nonce %d picked by parachain relayer", paraNonce))
-		relayed, err := relay.isV2NonceRelayed(ctx, paraNonce)
-		if err != nil {
-			log.WithError(err).Error("check nonce relayed")
-			return
-		}
-
-		if relayed {
-			break
-		}
-		time.Sleep(10 * time.Second)
-	}
 }
 
 func (relay *OnDemandRelay) fetchLatestV2Nonce(_ context.Context) (uint64, error) {
@@ -544,7 +535,7 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 			} else {
 				logger.Info("Sync beefy completed")
 				relay.activeTasks.SetLastUpdated(task.id)
-				err = relay.waitUntilMessagesSynced(ctx, task.id)
+				err = relay.waitUntilMessagesSynced(ctx, task)
 				if err != nil {
 					logger.Warn("Beefy sync completed, but pending nonce not synced in time")
 					relay.activeTasks.SetStatus(task.id, Completed)
