@@ -175,7 +175,7 @@ export class PNAToAH implements TransferInterface {
         )
 
         const xcm = hexToU8a(
-            sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic).toHex()
+            sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic, customXcm).toHex()
         )
         let assets = [encodeNativeAsset(tokenAddress, amount)]
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)

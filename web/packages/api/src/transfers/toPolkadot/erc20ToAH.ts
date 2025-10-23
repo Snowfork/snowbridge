@@ -172,7 +172,7 @@ export class ERC20ToAH implements TransferInterface {
         )
 
         const xcm = hexToU8a(
-            sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic).toHex()
+            sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic, customXcm).toHex()
         )
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
