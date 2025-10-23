@@ -228,6 +228,7 @@ export abstract class ParachainBase {
             }
         }
 
+        console.dir(forwardedDestination?.toHuman(), {depth: 100})
         return {
             success,
             errorMessage: resultHuman.Ok?.executionResult.Incomplete?.error,

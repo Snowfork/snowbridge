@@ -418,7 +418,8 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
     destinationParaId: number,
     remoteEtherFeeAmount: bigint,
     remoteDotFeeAmount: bigint,
-    topic: string
+    topic: string,
+    customXcm?: any[]
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -548,6 +549,7 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                         },
                     ],
                     remoteXcm: [
+                        ...(customXcm || []),
                         {
                             refundSurplus: null,
                         },

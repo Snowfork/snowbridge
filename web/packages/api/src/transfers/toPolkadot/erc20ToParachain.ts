@@ -465,7 +465,8 @@ export class ERC20ToParachain implements TransferInterface {
                     destinationParaId,
                     transfer.input.fee.destinationExecutionFeeEther,
                     dotFeeAmount,
-                    "0x0000000000000000000000000000000000000000000000000000000000000000"
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    transfer.input.customXcm
                 )
             } else {
                 xcm = buildAssetHubERC20ReceivedXcm(
