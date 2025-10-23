@@ -20,6 +20,8 @@ const (
 
 type TaskInfo struct {
 	id        uint64 // Unique identifier for the task
+	nonce     uint64 // Nonce associated with the task
+	fromV1    bool   // Indicates if the task is from V1
 	req       *Request
 	status    TaskState
 	timestamp uint64 // Unix timestamp of when the task was created
@@ -45,7 +47,7 @@ func NewTaskMap(limit, mergePeriod, expiredPeriod uint64) *TaskMap {
 	}
 }
 
-func (tm *TaskMap) Store(key uint64, req *Request) bool {
+func (tm *TaskMap) Store(key uint64, nonce uint64, fromV1 bool, req *Request) bool {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 	if len(tm.data) >= int(tm.limit) {
@@ -56,6 +58,8 @@ func (tm *TaskMap) Store(key uint64, req *Request) bool {
 		req:       req,
 		status:    Pending,
 		timestamp: uint64(time.Now().Unix()),
+		nonce:     nonce,
+		fromV1:    fromV1,
 	}
 	return true
 }
@@ -181,4 +185,22 @@ func (tm *TaskMap) SetLastUpdated(key uint64) {
 	if ok && val.timestamp > tm.lastUpdated {
 		tm.lastUpdated = val.timestamp
 	}
+}
+
+func (tm *TaskMap) Scheduled(key uint64) bool {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+	if len(tm.data) == 0 {
+		return false
+	}
+	_, ok := tm.data[key]
+	if ok {
+		return true
+	}
+	keys := make([]int, 0, len(tm.data))
+	for k := range tm.data {
+		keys = append(keys, int(k))
+	}
+	sort.Ints(keys)
+	return key <= uint64(keys[len(keys)-1])
 }

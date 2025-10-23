@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -99,22 +98,13 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 		defer ticker.Stop()
 		for {
 			log.Info("Starting check nonces")
-
-			paraNonce, ethNonce, err := relay.queryNonces(ctx)
+			err = relay.queueV1(ctx)
 			if err != nil {
-				return fmt.Errorf("Query nonces: %w", err)
+				return fmt.Errorf("Queue V1 failed: %w", err)
 			}
-
-			log.WithFields(log.Fields{
-				"paraNonce": paraNonce,
-				"ethNonce":  ethNonce,
-			}).Info("Nonces checked")
-
-			if paraNonce > ethNonce {
-				err = relay.queue(ctx, paraNonce)
-				if err != nil {
-					return fmt.Errorf("Queue failed: %w", err)
-				}
+			err = relay.queueV2(ctx)
+			if err != nil {
+				return fmt.Errorf("Queue V2 failed: %w", err)
 			}
 			select {
 			case <-ctx.Done():
@@ -274,74 +264,6 @@ func (relay *OnDemandRelay) syncBeefyUpdate(ctx context.Context, task *Request) 
 	return nil
 }
 
-func (relay *OnDemandRelay) syncV2(ctx context.Context) error {
-	paraNonce, err := relay.fetchLatestV2Nonce(ctx)
-
-	if err != nil {
-		return fmt.Errorf("Query latest parachain nonce: %w", err)
-	}
-	if paraNonce == 0 {
-		return nil
-	}
-
-	log.WithFields(log.Fields{
-		"paraNonce": paraNonce,
-	}).Info("V2 nonce checked")
-
-	relayed, err := relay.isV2NonceRelayed(ctx, paraNonce)
-	if err != nil {
-		return fmt.Errorf("Check v2 nonce relayed: %w", err)
-	}
-	if relayed {
-		return nil
-	}
-
-	paraBlock, err := relay.fetchParachainBlockByV2Nonce(ctx, paraNonce)
-	if err != nil {
-		return fmt.Errorf("Fetch paraBlock of v2 nonce: %w", err)
-	}
-
-	inclusionBlock, err := relay.fetchRelaychainInclusionBlock(paraBlock)
-	if err != nil {
-		return fmt.Errorf("Fetch relayBlock of v2 nonce: %d, paraBlock: %d, error: %w", paraNonce, paraBlock, err)
-	}
-
-	log.WithFields(log.Fields{
-		"paraNonce":  paraNonce,
-		"paraBlock":  paraBlock,
-		"relayBlock": inclusionBlock,
-	}).Info("find relaychain block which includes the pending order")
-
-	var header *types.Header
-
-	for {
-		beefyBlockHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
-		if err != nil {
-			return fmt.Errorf("Fetch latest beefy block hash: %w", err)
-		}
-		header, err = relay.relaychainConn.API().RPC.Chain.GetHeader(beefyBlockHash)
-		if err != nil {
-			return fmt.Errorf("Fetch latest beefy block header: %w", err)
-		}
-		if uint64(header.Number) > inclusionBlock {
-			break
-		}
-		time.Sleep(10 * time.Second)
-	}
-
-	log.Info("Performing v2 sync")
-
-	err = relay.sync(ctx, uint64(header.Number))
-	if err != nil {
-		return fmt.Errorf("Sync failed: %w", err)
-	}
-
-	log.Info("Sync completed")
-
-	relay.waitUntilV2MessagesSynced(ctx, paraNonce)
-	return nil
-}
-
 func (relay *OnDemandRelay) waitUntilV2MessagesSynced(ctx context.Context, paraNonce uint64) {
 	for {
 		log.Info(fmt.Sprintf("waiting for nonce %d picked by parachain relayer", paraNonce))
@@ -373,7 +295,7 @@ func (relay *OnDemandRelay) fetchLatestV2Nonce(_ context.Context) (uint64, error
 	ok, err := relay.parachainConn.API().RPC.State.GetStorageLatest(paraNonceKey, &paraOutboundNonce)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"fetch storage EthereumOutboundQueue.Nonce: %w",
+			"fetch storage EthereumOutboundQueueV2.Nonce: %w",
 			err,
 		)
 	}
@@ -509,25 +431,28 @@ func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber u
 	return nil
 }
 
-// Enqueue a nonce task into the queue
-func (relay *OnDemandRelay) queue(ctx context.Context, nonce uint64) error {
+// Enqueue a parachain task into the queue
+func (relay *OnDemandRelay) queue(ctx context.Context, paraBlock uint64, nonce uint64, isV1 bool) error {
 	if relay.activeTasks.Full() {
 		log.Info("Task queue full, wait for scheduling")
 		return nil
 	}
-	_, ok := relay.activeTasks.Load(nonce)
+	logger := log.WithFields(log.Fields{
+		"paraBlock": paraBlock,
+		"nonce":     nonce,
+		"isV1":      isV1,
+	})
+	ok := relay.activeTasks.Scheduled(paraBlock)
 	if ok {
-		log.WithFields(log.Fields{
-			"nonce": nonce,
-		}).Info("nonce in syncing, just ignore")
+		logger.Info("parachain block in syncing, just ignore")
 		return nil
 	}
-	log.WithFields(log.Fields{
-		"nonce": nonce,
-	}).Info("Performing queueing")
+	logger.Info("Performing queueing")
 
-	// sleep to ensure that beefy head newer than relay chain block in which the parachain block was accepted.
-	time.Sleep(time.Second * 90)
+	relayBlock, err := relay.fetchRelaychainInclusionBlock(paraBlock)
+	if err != nil {
+		return fmt.Errorf("fetch relaychain inclusion block: %w", err)
+	}
 
 	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
 	if err != nil {
@@ -535,18 +460,19 @@ func (relay *OnDemandRelay) queue(ctx context.Context, nonce uint64) error {
 	}
 
 	// Generate a Beefy request for the latest finalized block (Specify zero for latest)
-	req, err := relay.polkadotListener.generateBeefyUpdate(0)
+	req, err := relay.polkadotListener.generateBeefyUpdate(relayBlock)
 	if err != nil {
 		return fmt.Errorf("fail to generate next beefy request: %w", err)
 	}
 
-	logger := log.WithFields(log.Fields{
+	logger = log.WithFields(log.Fields{
 		"latestBeefyBlock":         state.LatestBeefyBlock,
 		"currentValidatorSetID":    state.CurrentValidatorSetID,
 		"nextValidatorSetID":       state.NextValidatorSetID,
+		"relayInclusionBlock":      relayBlock,
 		"commitmentBlock":          req.SignedCommitment.Commitment.BlockNumber,
 		"commitmentValidatorSetID": req.SignedCommitment.Commitment.ValidatorSetID,
-		"nonce":                    nonce,
+		"paraBlock":                paraBlock,
 	})
 
 	// Ignore commitment earlier than LatestBeefyBlock
@@ -564,7 +490,7 @@ func (relay *OnDemandRelay) queue(ctx context.Context, nonce uint64) error {
 	} else {
 		req.ValidatorsRoot = state.NextValidatorSetRoot
 	}
-	ok = relay.activeTasks.Store(nonce, &req)
+	ok = relay.activeTasks.Store(paraBlock, nonce, isV1, &req)
 	if ok {
 		logger.Info("Task enqueued")
 	} else {
@@ -582,7 +508,7 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 	}).Info("Queue info")
 	for _, task := range tasks {
 		log.WithFields(log.Fields{
-			"nonce":      task.id,
+			"id":         task.id,
 			"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
 			"status":     task.status,
 			"skipped":    task.req.Skippable,
@@ -599,7 +525,7 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 		return fmt.Errorf("Acquires the semaphore: %w", err)
 	}
 	logger := log.WithFields(log.Fields{
-		"nonce":      task.id,
+		"id":         task.id,
 		"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
 	})
 	eg.Go(func() error {
@@ -630,11 +556,138 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 	return nil
 }
 
-func (relay *OnDemandRelay) isV2Enabled(ctx context.Context) bool {
-	_, err := relay.fetchLatestV2Nonce(ctx)
-
+// Searches from the given parachain block number backwards for all outstanding
+// commitments until it finds the given nonce, returning the parachain block number
+// that contains it.
+func (relay *OnDemandRelay) fetchParachainBlockByV1Nonce(_ context.Context, nonce uint64) (paraBlock uint64, err error) {
+	lastParaBlockNumber, err := relay.parachainConn.GetLatestBlockNumber()
 	if err != nil {
-		return !strings.Contains(err.Error(), "EthereumOutboundQueueV2 not found")
+		return paraBlock, fmt.Errorf("fetch latest parachain block number: %w", err)
 	}
-	return true
+	messagesKey, err := types.CreateStorageKey(relay.parachainConn.Metadata(), "EthereumOutboundQueue", "Messages", nil, nil)
+	if err != nil {
+		return paraBlock, fmt.Errorf("create storage key: %w", err)
+	}
+
+	start := uint64(*lastParaBlockNumber)
+	end := start - 43200 // look back up to 3 days assuming 6s block time
+
+	for currentBlockNumber := start; currentBlockNumber > end; currentBlockNumber-- {
+
+		log.WithFields(log.Fields{
+			"blockNumber": currentBlockNumber,
+		}).Debug("Checking header")
+
+		blockHash, err := relay.parachainConn.API().RPC.Chain.GetBlockHash(currentBlockNumber)
+		if err != nil {
+			return paraBlock, fmt.Errorf("fetch block hash for block %v: %w", currentBlockNumber, err)
+		}
+
+		header, err := relay.parachainConn.API().RPC.Chain.GetHeader(blockHash)
+		if err != nil {
+			return paraBlock, fmt.Errorf("fetch header for block hash %v: %w", blockHash.Hex(), err)
+		}
+
+		commitmentHash, err := relay.ExtractCommitmentFromDigest(header.Digest)
+		if err != nil {
+			return paraBlock, fmt.Errorf("extract commitment from digest %v: %w", blockHash.Hex(), err)
+		}
+		if commitmentHash == nil {
+			continue
+		}
+		raw, err := relay.parachainConn.API().RPC.State.GetStorageRaw(messagesKey, blockHash)
+		if err != nil {
+			return paraBlock, fmt.Errorf("fetch committed messages for block %v: %w", blockHash.Hex(), err)
+		}
+		decoder := scale.NewDecoder(bytes.NewReader(*raw))
+		n, err := decoder.DecodeUintCompact()
+		if err != nil {
+			return paraBlock, fmt.Errorf("decode message length error: %w", err)
+		}
+		for i := uint64(0); i < n.Uint64(); i++ {
+			m := parachain.OutboundQueueMessage{}
+			err = decoder.Decode(&m)
+			if err != nil {
+				return paraBlock, fmt.Errorf("decode message error: %w", err)
+			}
+			if m.Nonce == nonce {
+				return uint64(header.Number), nil
+			}
+		}
+	}
+	return paraBlock, fmt.Errorf("can't find parachain block for nonce %d", nonce)
+}
+
+func (relay *OnDemandRelay) ExtractCommitmentFromDigest(digest types.Digest) (*types.H256, error) {
+	for _, digestItem := range digest {
+		if digestItem.IsOther {
+			digestItemRawBytes := digestItem.AsOther
+			// Prefix 0 reserved for snowbridge
+			if digestItemRawBytes[0] == 0 {
+				var commitment types.H256
+				err := types.DecodeFromBytes(digestItemRawBytes[1:], &commitment)
+				if err != nil {
+					return nil, err
+				}
+				return &commitment, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func (relay *OnDemandRelay) queueV1(ctx context.Context) error {
+	paraNonce, ethNonce, err := relay.queryNonces(ctx)
+	if err != nil {
+		return fmt.Errorf("Query V1 nonces: %w", err)
+	}
+
+	log.WithFields(log.Fields{
+		"paraNonce": paraNonce,
+		"ethNonce":  ethNonce,
+	}).Info("V1 Nonces checked")
+
+	if paraNonce > ethNonce {
+		paraBlock, err := relay.fetchParachainBlockByV1Nonce(ctx, paraNonce)
+		if err != nil {
+			return fmt.Errorf("Fetch parachain block failed: %w", err)
+		}
+		err = relay.queue(ctx, paraBlock, paraNonce, true)
+		if err != nil {
+			return fmt.Errorf("Queue V1 parachain block failed: %w", err)
+		}
+	}
+	return nil
+}
+
+func (relay *OnDemandRelay) queueV2(ctx context.Context) error {
+	paraNonce, err := relay.fetchLatestV2Nonce(ctx)
+	if err != nil {
+		return fmt.Errorf("Query V2 nonce: %w", err)
+	}
+	if paraNonce == 0 {
+		return nil
+	}
+
+	log.WithFields(log.Fields{
+		"paraNonce": paraNonce,
+	}).Info("V2 nonce checked")
+
+	relayed, err := relay.isV2NonceRelayed(ctx, paraNonce)
+	if err != nil {
+		return fmt.Errorf("Check v2 nonce relayed: %w", err)
+	}
+	if relayed {
+		return nil
+	}
+
+	paraBlock, err := relay.fetchParachainBlockByV2Nonce(ctx, paraNonce)
+	if err != nil {
+		return fmt.Errorf("Fetch paraBlock of v2 nonce: %w", err)
+	}
+	err = relay.queue(ctx, paraBlock, paraNonce, false)
+	if err != nil {
+		return fmt.Errorf("Queue V2 parachain block failed: %w", err)
+	}
+	return nil
 }
