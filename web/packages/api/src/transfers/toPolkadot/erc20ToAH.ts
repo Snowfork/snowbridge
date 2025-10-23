@@ -49,6 +49,7 @@ export class ERC20ToAH implements TransferInterface {
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
+            customXcm?: any[]
         }
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub } =
@@ -130,7 +131,8 @@ export class ERC20ToAH implements TransferInterface {
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
-        fee: DeliveryFee
+        fee: DeliveryFee,
+        customXcm?: any[]
     ): Promise<Transfer> {
         const { ethereum, assetHub } =
             context instanceof Context
@@ -197,6 +199,7 @@ export class ERC20ToAH implements TransferInterface {
                 destinationParaId,
                 amount,
                 fee,
+                customXcm,
             },
             computed: {
                 gatewayAddress: registry.gatewayAddress,
@@ -335,7 +338,8 @@ export class ERC20ToAH implements TransferInterface {
                 claimer,
                 transfer.input.sourceAccount,
                 transfer.computed.beneficiaryAddressHex,
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                transfer.input.customXcm
             )
 
             let result = await assetHubImpl.dryRunXcm(registry.bridgeHubParaId, xcm)
