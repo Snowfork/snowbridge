@@ -442,8 +442,8 @@ func (relay *OnDemandRelay) queue(ctx context.Context, paraBlock uint64, nonce u
 		"nonce":     nonce,
 		"isV1":      isV1,
 	})
-	ok := relay.activeTasks.Scheduled(paraBlock)
-	if ok {
+	exist := relay.activeTasks.Exist(paraBlock)
+	if exist {
 		logger.Info("parachain block in syncing, just ignore")
 		return nil
 	}
@@ -459,7 +459,7 @@ func (relay *OnDemandRelay) queue(ctx context.Context, paraBlock uint64, nonce u
 		return fmt.Errorf("query beefy client state: %w", err)
 	}
 
-	// Generate a Beefy request for the latest finalized block (Specify zero for latest)
+	// Generate a Beefy request which includes the commitment at paraBlock
 	req, err := relay.polkadotListener.generateBeefyUpdate(relayBlock)
 	if err != nil {
 		return fmt.Errorf("fail to generate next beefy request: %w", err)
@@ -473,6 +473,8 @@ func (relay *OnDemandRelay) queue(ctx context.Context, paraBlock uint64, nonce u
 		"commitmentBlock":          req.SignedCommitment.Commitment.BlockNumber,
 		"commitmentValidatorSetID": req.SignedCommitment.Commitment.ValidatorSetID,
 		"paraBlock":                paraBlock,
+		"nonce":                    nonce,
+		"isV1":                     isV1,
 	})
 
 	// Ignore commitment earlier than LatestBeefyBlock
@@ -490,7 +492,7 @@ func (relay *OnDemandRelay) queue(ctx context.Context, paraBlock uint64, nonce u
 	} else {
 		req.ValidatorsRoot = state.NextValidatorSetRoot
 	}
-	ok = relay.activeTasks.Store(paraBlock, nonce, isV1, &req)
+	ok := relay.activeTasks.Store(paraBlock, nonce, isV1, &req)
 	if ok {
 		logger.Info("Task enqueued")
 	} else {

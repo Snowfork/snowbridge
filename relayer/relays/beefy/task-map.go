@@ -187,7 +187,7 @@ func (tm *TaskMap) SetLastUpdated(key uint64) {
 	}
 }
 
-func (tm *TaskMap) Scheduled(key uint64) bool {
+func (tm *TaskMap) Exist(key uint64) bool {
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
 	if len(tm.data) == 0 {
