@@ -5,13 +5,15 @@ import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
 import { ETHER_TOKEN_ADDRESS } from "@snowbridge/api/src/assets_v2"
-import { erc20Location } from "@snowbridge/api/src/xcmBuilder"
+import {accountToLocation, erc20Location, ethereumNetwork} from "@snowbridge/api/src/xcmBuilder"
 
 const ASSET_HUB_PARA_ID = 1000
 const DOT_EXCHANGE_RATE = 0.00077 // 1 DOT = 0.00077 ETH
-const WBTC_EXCHANGE_RATE = 0.000027 // 1 DOT = 0.000027 wBTC
+const USDC_EXCHANGE_RATE = 0.14 // 1 DOT = 0.14 USDC (approximate, adjust based on current rates)
+const USDC_TO_ETH_RATE = 0.001 // 1 USDC ≈ 0.001 ETH (approximate $1 USDC, $1000 ETH)
+const USDC_TOKEN_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" // USDC on Ethereum mainnet
 
-export const transactSwapOnAssetHub = async (etherAmount: bigint, wbtcTokenAddress: string) => {
+export const transactSwapOnAssetHub = async (etherAmount: bigint) => {
     await cryptoWaitReady()
 
     let env = "polkadot_mainnet"
@@ -44,37 +46,77 @@ export const transactSwapOnAssetHub = async (etherAmount: bigint, wbtcTokenAddre
     // Calculate expected DOT amount from ETHER
     // DOT exchange rate: 1 DOT = DOT_EXCHANGE_RATE ETH (e.g., 0.00077 ETH)
     // So: expectedDOT = etherAmount / DOT_EXCHANGE_RATE
-    // DOT has 10 decimals, ETH has 18 decimals
-    const expectedDotAmount = (etherAmount * BigInt(1e10)) / BigInt(Math.floor(DOT_EXCHANGE_RATE * 1e18))
+    // ETH has 18 decimals, DOT has 10 decimals
+    // Formula: (etherAmount in wei / (rate * 1e18)) * 1e10
+    const exchangeRateScaled = BigInt(Math.floor(DOT_EXCHANGE_RATE * 1e18))
+    const swapEtherAmount = etherAmount - 1000000000000000n
+    const expectedDotAmount = (swapEtherAmount * BigInt(1e10)) / exchangeRateScaled
 
-    // Calculate expected wBTC amount from DOT
-    // wBTC exchange rate: 1 DOT = WBTC_EXCHANGE_RATE wBTC (e.g., 0.000027 wBTC)
-    // So: expectedWBTC = expectedDOT * WBTC_EXCHANGE_RATE
-    // wBTC has 8 decimals, DOT has 10 decimals
-    const expectedWbtcAmount = (expectedDotAmount * BigInt(Math.floor(WBTC_EXCHANGE_RATE * 1e8))) / BigInt(1e10)
+    // Reserve some DOT for remote fees (keep it as DOT, don't swap)
+    const dotReservedForFees = BigInt(20_000_000_000) // 2 DOT in plancks (10 decimals)
 
-    console.log("Transacting to Asset Hub with custom XCM to swap ETHER → DOT → wBTC → Ethereum")
+    // Calculate DOT available for USDC swap (total DOT - DOT reserved for fees)
+    const dotForUsdcSwap = expectedDotAmount > dotReservedForFees ? expectedDotAmount - dotReservedForFees : 0n
+
+    // Use half of remaining DOT for remote fees, keep the other half on AH for delivery to BH
+    const dotForRemoteFees = dotReservedForFees / 2n
+
+    // Calculate expected USDC amount from remaining DOT
+    // USDC exchange rate: 1 DOT = USDC_EXCHANGE_RATE USDC (e.g., 0.14 USDC)
+    // USDC has 6 decimals, DOT has 10 decimals
+    const expectedUsdcAmount = (expectedDotAmount * BigInt(Math.floor(USDC_EXCHANGE_RATE * 1e6))) / BigInt(1e10)
+
+    // Reserve some USDC to swap back to ETHER for remote fees
+    // Direct USDC → ETHER swap: 1 USDC ≈ 0.001 ETH
+    // For 0.001 ETH, we need: 0.001 / 0.001 = 1 USDC
+    const etherReservedForFees = BigInt(1000000000000000) // 0.001 ETH in wei (18 decimals)
+    const usdcRateScaled = BigInt(Math.floor(USDC_TO_ETH_RATE * 1e18))  // 0.001 ETH per USDC, scaled
+    const usdcToSwapBackToEther = (etherReservedForFees * BigInt(1e6)) / usdcRateScaled  // USDC needed (6 decimals)
+
+    // Calculate USDC available for transfer (total USDC - USDC to swap back)
+    const usdcForTransfer = expectedUsdcAmount > usdcToSwapBackToEther ? expectedUsdcAmount - usdcToSwapBackToEther : 0n
+
+    // Helper function to format USDC with proper decimals
+    const formatUsdc = (usdcUnits: bigint): string => {
+        const usdc = Number(usdcUnits) / 1e6
+        return usdc.toFixed(6)
+    }
+
+    // Helper function to format DOT with proper decimals
+    const formatDot = (plancks: bigint): string => {
+        const dot = Number(plancks) / 1e10
+        return dot.toFixed(4)
+    }
+
+    console.log("Transacting to Asset Hub with custom XCM to swap ETHER → DOT → USDC → ETHER → Ethereum")
     console.log(`  ETHER amount: ${formatEther(etherAmount)} ETH`)
+    console.log(`  USDC token address: ${USDC_TOKEN_ADDRESS}`)
     console.log(`  DOT exchange rate: 1 DOT = ${DOT_EXCHANGE_RATE} ETH`)
-    console.log(`  Expected DOT: ${expectedDotAmount / BigInt(1e10)} DOT (${expectedDotAmount} plancks)`)
-    console.log(`  wBTC exchange rate: 1 DOT = ${WBTC_EXCHANGE_RATE} wBTC`)
-    console.log(`  Expected wBTC: ${expectedWbtcAmount / BigInt(1e8)} wBTC (${expectedWbtcAmount} satoshis)`)
+    console.log(`  Expected DOT from ETHER swap: ${formatDot(expectedDotAmount)} DOT`)
+    console.log(`  USDC exchange rate: 1 DOT = ${USDC_EXCHANGE_RATE} USDC`)
+    console.log(`  Expected USDC from DOT swap: ${formatUsdc(expectedUsdcAmount)} USDC (${expectedUsdcAmount} units)`)
+    console.log(`  USDC→ETH rate: 1 USDC = ${USDC_TO_ETH_RATE} ETH`)
+    console.log(`  DOT available (not swapped to USDC): ${formatDot(dotForUsdcSwap)} DOT`)
+    console.log(`  DOT for remote fees (half of available): ${formatDot(dotForRemoteFees)} DOT`)
+    console.log(`  USDC for transfer: ${formatUsdc(usdcForTransfer)} USDC (${usdcForTransfer} units)`)
     {
         // Build the custom XCM instructions
         const etherLocation = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
-        const wbtcLocation = erc20Location(registry.ethChainId, wbtcTokenAddress)
+        const usdcLocation = erc20Location(registry.ethChainId, USDC_TOKEN_ADDRESS)
 
         const customXcm = [
-            // Step 1: Swap ETHER for DOT on Asset Hub (using all available ETHER)
+            // Step 1: Swap all ETHER for DOT
             {
                 exchangeAsset: {
                     give: {
-                        wild: {
-                            allOf: {
+                        definite: [
+                            {
                                 id: etherLocation,
-                                fun: "Fungible",
+                                fun: {
+                                    Fungible: swapEtherAmount,
+                                },
                             },
-                        },
+                        ],
                     },
                     want: [
                         {
@@ -82,42 +124,48 @@ export const transactSwapOnAssetHub = async (etherAmount: bigint, wbtcTokenAddre
                                 parents: 1,
                                 interior: "Here",
                             },
-                            Fungible: expectedDotAmount,
+                            fun: {
+                                Fungible: expectedDotAmount,
+                            },
                         },
                     ],
                     maximal: true,
                 },
             },
-            // Step 2: Swap DOT for wBTC on Asset Hub (using all available DOT)
+            // Step 2: Swap most DOT for USDC, keeping dotReservedForFees
             {
                 exchangeAsset: {
                     give: {
-                        wild: {
-                            allOf: {
+                        definite: [
+                            {
                                 id: {
                                     parents: 1,
                                     interior: "Here",
                                 },
-                                fun: "Fungible",
+                                fun: {
+                                    Fungible: dotForUsdcSwap,
+                                },
                             },
-                        },
+                        ],
                     },
                     want: [
                         {
-                            id: wbtcLocation,
-                            Fungible: expectedWbtcAmount,
+                            id: usdcLocation,
+                            fun: {
+                                Fungible: expectedUsdcAmount,
+                            },
                         },
                     ],
                     maximal: true,
                 },
             },
-            // Step 3: Send wBTC back to Ethereum
+            // Step 4: Send USDC back to Ethereum using DOT for remote fees
             {
                 initiateTransfer: {
                     destination: {
                         parents: 2,
                         interior: {
-                            x2: [
+                            x1: [
                                 {
                                     GlobalConsensus: {
                                         Ethereum: {
@@ -125,30 +173,58 @@ export const transactSwapOnAssetHub = async (etherAmount: bigint, wbtcTokenAddre
                                         },
                                     },
                                 },
+                            ],
+                        },
+                    },
+                    remoteFees: {
+                        reserveWithdraw: {
+                            definite: [
                                 {
-                                    AccountKey20: {
-                                        key: ETHEREUM_ACCOUNT_PUBLIC,
-                                        network: null,
+                                    id: etherLocation,
+                                    fun: {
+                                        Fungible: 10000000000000000n,
                                     },
                                 },
                             ],
                         },
                     },
-                    remote_fees: {
-                        reserve: null,
-                    },
-                    preserve_origin: false,
+                    preserveOrigin: true,
                     assets: [
                         {
-                            wild: {
-                                allOf: {
-                                    id: wbtcLocation,
-                                    fun: "Fungible",
+                            reserveWithdraw: {
+                                wild: {
+                                    allOf: {
+                                        id: usdcLocation,
+                                        fun: "Fungible",
+                                    },
                                 },
                             },
                         },
                     ],
-                    remote_xcm: [],
+                    remoteXcm: [
+                        {
+                            depositAsset: {
+                                assets: {
+                                    wild: {
+                                        allCounted: 1,
+                                    },
+                                },
+                                beneficiary: {
+                                    parents: 0,
+                                    interior: {
+                                        x1: [
+                                            {
+                                                AccountKey20: {
+                                                    key: ETHEREUM_ACCOUNT_PUBLIC,
+                                                    network: null,
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                    ],
                 },
             },
         ]
@@ -180,7 +256,7 @@ export const transactSwapOnAssetHub = async (etherAmount: bigint, wbtcTokenAddre
             registry,
             ASSET_HUB_PARA_ID,
             ETHEREUM_ACCOUNT_PUBLIC,
-            ETHEREUM_ACCOUNT_PUBLIC, // Beneficiary on Asset Hub (not used since we're swapping and sending back)
+            POLKADOT_ACCOUNT_PUBLIC, // Beneficiary on Asset Hub (not used since we're swapping and sending back)
             TOKEN_CONTRACT,
             etherAmount,
             fee,
@@ -219,7 +295,7 @@ export const transactSwapOnAssetHub = async (etherAmount: bigint, wbtcTokenAddre
             console.log("  Total TX cost:", formatEther(validation.data.feeInfo.totalTxCost))
         }
         console.log("  Ether to swap:", formatEther(etherAmount))
-        console.log("  wBTC token address:", wbtcTokenAddress)
+        console.log("  USDC token address:", USDC_TOKEN_ADDRESS)
         console.log("  Bridge status:", validation.data.bridgeStatus.toPolkadot.outbound)
 
         const { tx } = transfer
@@ -250,15 +326,14 @@ export const transactSwapOnAssetHub = async (etherAmount: bigint, wbtcTokenAddre
     await context.destroyContext()
 }
 
-if (process.argv.length != 4) {
-    console.error("Expected arguments: `etherAmount, wbtcTokenAddress`")
-    console.error(
-        'Example: npm run transactSwapOnAssetHub 1000000000000000000 "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"'
-    )
+if (process.argv.length != 3) {
+    console.error("Expected arguments: `etherAmount`")
+    console.error("Example: npm run transactSwapOnAssetHub 1000000000000000000")
+    console.error("  This will swap 1 ETH for USDC via DOT on Asset Hub")
     process.exit(1)
 }
 
-transactSwapOnAssetHub(BigInt(process.argv[2]), process.argv[3])
+transactSwapOnAssetHub(BigInt(process.argv[2]))
     .then(() => process.exit(0))
     .catch((error) => {
         console.error("Error:", error)

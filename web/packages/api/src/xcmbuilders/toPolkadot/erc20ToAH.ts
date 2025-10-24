@@ -54,7 +54,7 @@ export function buildAssetHubERC20ReceivedXcm(
                     {
                         id: ether,
                         fun: {
-                            Fungible: totalAssetHubFeeInEther,
+                            Fungible: totalAssetHubFeeInEther * 20n,
                         },
                     },
                 ],
@@ -69,7 +69,7 @@ export function buildAssetHubERC20ReceivedXcm(
                     asset: {
                         id: ether,
                         fun: {
-                            Fungible: totalAssetHubFeeInEther,
+                            Fungible: totalAssetHubFeeInEther * 20n,
                         },
                     },
                 },

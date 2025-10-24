@@ -342,6 +342,7 @@ export class ERC20ToAH implements TransferInterface {
                 transfer.input.customXcm
             )
 
+            console.dir(xcm.toHuman(), {depth: 100})
             let result = await assetHubImpl.dryRunXcm(registry.bridgeHubParaId, xcm)
             dryRunAhSuccess = result.success
             assetHubDryRunError = result.errorMessage

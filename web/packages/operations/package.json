@@ -63,6 +63,7 @@
     "transferEtherToPenpalV2": "npx ts-node src/transfer_from_e2p_v2.ts 2000 Eth 100000000000000",
     "transferWndToPenpalV2": "npx ts-node src/transfer_from_e2p_v2.ts 2000 WND 1000000000",
     "transactToMoonbeam": "npx ts-node src/transact_to_moonbeam.ts 2000000000000000 HellofromClara",
+    "transactSwapOnAssetHub": "npx ts-node src/transact_swap_on_assethub.ts 11000000000000000",
     "checkXcmVersion": "npx ts-node src/check_xcm_version.ts"
   },
   "devDependencies": {
