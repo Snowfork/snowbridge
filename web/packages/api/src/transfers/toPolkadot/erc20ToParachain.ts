@@ -155,8 +155,6 @@ export class ERC20ToParachain implements TransferInterface {
             DOT_LOCATION
         )
 
-        console.log("DOT FEE FOR DEST: ", destinationExecutionFeeDOT)
-
         // Swap to ether
         const destinationDeliveryFeeEther = await swapAsset1ForAsset2(
             assetHub,
@@ -241,7 +239,6 @@ export class ERC20ToParachain implements TransferInterface {
 
         let xcm
         if (isDOT(fee.feeAsset)) {
-            console.log("DOT FEE createTransfer")
             const dotFeeAmount = await swapAsset1ForAsset2(
                 assetHub,
                 erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS),

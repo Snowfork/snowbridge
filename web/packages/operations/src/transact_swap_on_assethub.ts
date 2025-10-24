@@ -278,11 +278,6 @@ export const transactSwapOnAssetHub = async (etherAmount: bigint) => {
             console.error(validation.data.assetHubDryRunError)
         }
 
-        if (validation.data.bridgeHubDryRunError) {
-            console.error("\nBridge Hub Dry Run Error:")
-            console.error(validation.data.bridgeHubDryRunError)
-        }
-
         if (!validation.success) {
             console.error("\nValidation FAILED - transaction would likely fail")
             throw Error("Validation failed")
