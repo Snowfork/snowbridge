@@ -12,7 +12,8 @@ export function buildAssetHubPNAReceivedXcm(
     claimer: any,
     origin: string,
     beneficiary: string,
-    topic: string
+    topic: string,
+    customXcm?: any[]
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -81,6 +82,7 @@ export function buildAssetHubPNAReceivedXcm(
                     ],
                 },
             },
+            ...(customXcm || []), // Insert custom XCM instructions if provided
             {
                 depositAsset: {
                     assets: {
@@ -101,13 +103,14 @@ export function buildAssetHubPNAReceivedXcm(
     })
 }
 
-export function sendMessageXCM(registry: Registry, beneficiary: string, topic: string) {
+export function sendMessageXCM(registry: Registry, beneficiary: string, topic: string, customXcm?: any[]) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     return registry.createType("XcmVersionedXcm", {
         v5: [
             {
                 refundSurplus: null,
             },
+            ...(customXcm || []), // Insert custom XCM instructions if provided
             {
                 depositAsset: {
                     assets: {
