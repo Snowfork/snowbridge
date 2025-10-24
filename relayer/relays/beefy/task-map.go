@@ -204,3 +204,17 @@ func (tm *TaskMap) Exist(key uint64) bool {
 	sort.Ints(keys)
 	return key <= uint64(keys[len(keys)-1])
 }
+
+func (tm *TaskMap) NonceExist(nonce uint64, fromV1 bool) bool {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+	if len(tm.data) == 0 {
+		return false
+	}
+	for _, task := range tm.data {
+		if task.nonce == nonce && task.fromV1 == fromV1 {
+			return true
+		}
+	}
+	return false
+}

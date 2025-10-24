@@ -639,12 +639,18 @@ func (relay *OnDemandRelay) queueV1(ctx context.Context) error {
 		return fmt.Errorf("Query V1 nonces: %w", err)
 	}
 
-	log.WithFields(log.Fields{
+	logger := log.WithFields(log.Fields{
 		"paraNonce": paraNonce,
 		"ethNonce":  ethNonce,
-	}).Info("V1 Nonces checked")
+	})
+	logger.Info("V1 Nonces checked")
 
 	if paraNonce > ethNonce {
+		exist := relay.activeTasks.NonceExist(paraNonce, true)
+		if exist {
+			logger.Info("V1 parachain nonce in syncing, just ignore")
+			return nil
+		}
 		paraBlock, err := relay.fetchParachainBlockByV1Nonce(ctx, paraNonce)
 		if err != nil {
 			return fmt.Errorf("Fetch parachain block failed: %w", err)
@@ -675,6 +681,14 @@ func (relay *OnDemandRelay) queueV2(ctx context.Context) error {
 		return fmt.Errorf("Check v2 nonce relayed: %w", err)
 	}
 	if relayed {
+		return nil
+	}
+
+	exist := relay.activeTasks.NonceExist(paraNonce, false)
+	if exist {
+		log.WithFields(log.Fields{
+			"paraNonce": paraNonce,
+		}).Info("V2 parachain nonce in syncing, just ignore")
 		return nil
 	}
 
