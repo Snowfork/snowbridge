@@ -69,6 +69,7 @@ export type ValidationResult = {
         feeInfo?: FeeInfo
         bridgeStatus: OperationStatus
         assetHubDryRunError?: string
+        bridgeHubDryRunError?: string
         destinationParachainDryRunError?: string
     }
     transfer: Transfer

@@ -177,7 +177,7 @@ export const transactSwapOnAssetHub = async (etherAmount: bigint) => {
                         },
                     },
                     remoteFees: {
-                        reserveWithdraw: {
+                        ReserveWithdraw: {
                             definite: [
                                 {
                                     id: etherLocation,
@@ -191,7 +191,7 @@ export const transactSwapOnAssetHub = async (etherAmount: bigint) => {
                     preserveOrigin: true,
                     assets: [
                         {
-                            reserveWithdraw: {
+                            ReserveWithdraw: {
                                 wild: {
                                     allOf: {
                                         id: usdcLocation,
@@ -206,7 +206,7 @@ export const transactSwapOnAssetHub = async (etherAmount: bigint) => {
                             depositAsset: {
                                 assets: {
                                     wild: {
-                                        allCounted: 1,
+                                        allCounted: 2,
                                     },
                                 },
                                 beneficiary: {
@@ -276,6 +276,11 @@ export const transactSwapOnAssetHub = async (etherAmount: bigint) => {
         if (validation.data.assetHubDryRunError) {
             console.error("\nAsset Hub Dry Run Error:")
             console.error(validation.data.assetHubDryRunError)
+        }
+
+        if (validation.data.bridgeHubDryRunError) {
+            console.error("\nBridge Hub Dry Run Error:")
+            console.error(validation.data.bridgeHubDryRunError)
         }
 
         if (!validation.success) {

@@ -315,7 +315,7 @@ export class ERC20ToAH implements TransferInterface {
 
         // Check if asset can be received on asset hub (dry run)
         const ahParachain = registry.parachains[registry.assetHubParaId]
-        let dryRunAhSuccess, assetHubDryRunError
+        let dryRunAhSuccess, assetHubDryRunError, bridgeHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {
             logs.push({
                 kind: ValidationKind.Warning,
@@ -343,7 +343,7 @@ export class ERC20ToAH implements TransferInterface {
             )
 
             console.dir(xcm.toHuman(), {depth: 100})
-            let result = await assetHubImpl.dryRunXcm(registry.bridgeHubParaId, xcm)
+            let result = await assetHubImpl.dryRunXcm(registry.bridgeHubParaId, xcm, registry.bridgeHubParaId)
             dryRunAhSuccess = result.success
             assetHubDryRunError = result.errorMessage
             if (!dryRunAhSuccess) {
@@ -352,6 +352,23 @@ export class ERC20ToAH implements TransferInterface {
                     reason: ValidationReason.DryRunFailed,
                     message: "Dry run on Asset Hub failed.",
                 })
+            }
+
+            // If AssetHub dry run succeeded and there's a forwarded XCM to BridgeHub, dry run it
+            if (dryRunAhSuccess && result.forwardedDestination) {
+                console.log("Found forwarded XCM to BridgeHub, running dry run...")
+                const forwardedXcm = result.forwardedDestination[1][0]
+                const bridgeHubImpl = await paraImplementation(bridgeHub)
+
+                const bhResult = await bridgeHubImpl.dryRunXcm(registry.assetHubParaId, forwardedXcm)
+                if (!bhResult.success) {
+                    bridgeHubDryRunError = bhResult.errorMessage
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.DryRunFailed,
+                        message: "Dry run on BridgeHub failed.",
+                    })
+                }
             }
         }
 
@@ -391,6 +408,7 @@ export class ERC20ToAH implements TransferInterface {
                 feeInfo,
                 bridgeStatus,
                 assetHubDryRunError,
+                bridgeHubDryRunError,
             },
             transfer,
         }
