@@ -852,4 +852,89 @@ contract BeefyClientTest is Test {
             BeefyClient.ValidatorSet(nextId, 0, 0x0)
         );
     }
+
+    function testSubmitWithHandoverAnd3SignatureCountWithForgedProof() public {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+        bytes32 maliciousRoot = 0x59a72c6c3fce64c9774a5b9d7583c3b9680bc5ad1b706385d70f4a9a581d0213;
+        commitment.payload[0] = BeefyClient.PayloadItem({
+            payloadID: mmrRootID,
+            data: abi.encodePacked(maliciousRoot)
+        });
+
+        uint256[] memory modifiedBitfield = bitfield;
+        Bitfield.set(modifiedBitfield, finalValidatorProofs[0].index); // index 4
+        Bitfield.set(modifiedBitfield, finalValidatorProofs[1].index); // index 6
+        Bitfield.set(modifiedBitfield, finalValidatorProofs[2].index); // index 10
+
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 0);
+        beefyClient.submitInitial(commitment, modifiedBitfield, finalValidatorProofs[0]);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 1);
+        beefyClient.submitInitial(commitment, modifiedBitfield, finalValidatorProofs[0]);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 2);
+        beefyClient.submitInitial(commitment, modifiedBitfield, finalValidatorProofs[1]);
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[1].index), 1);
+
+        vm.roll(block.number + randaoCommitDelay);
+        commitPrevRandao();
+        createFinalProofs();
+
+        BeefyClient.ValidatorProof[] memory finalValidatorProofs3SignatureCount = new BeefyClient.ValidatorProof[](3);
+        finalValidatorProofs3SignatureCount[0] = finalValidatorProofs[0]; // index 4
+        finalValidatorProofs3SignatureCount[1] = finalValidatorProofs[1]; // index 6
+        finalValidatorProofs3SignatureCount[2] = finalValidatorProofs[2]; // index 10
+
+        bytes32[] memory badProof = mmrLeafProofs;
+        badProof[0] = bytes32(uint256(badProof[0]) ^ 1);
+
+        assertEq(beefyClient.latestMMRRoot(), bytes32(0), "Initial MMR root should be 0");
+        vm.expectRevert(BeefyClient.InvalidMMRLeafProof.selector);
+        beefyClient.submitFinal(commitment, modifiedBitfield, finalValidatorProofs3SignatureCount, mmrLeaf, badProof, leafProofOrder);
+        assertEq(beefyClient.latestMMRRoot(), maliciousRoot, "MMR root not updated to malicious value");
+    }
+
+    function test_forgeMMRProof() public {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+        bytes32 maliciousRoot = 0x59a72c6c3fce64c9774a5b9d7583c3b9680bc5ad1b706385d70f4a9a581d0213;
+        commitment.payload[0] = BeefyClient.PayloadItem({
+            payloadID: mmrRootID,
+            data: abi.encodePacked(maliciousRoot)
+        });
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+        vm.roll(block.number + randaoCommitDelay);
+        commitPrevRandao();
+        createFinalProofs();
+
+        bytes32[] memory badProof = mmrLeafProofs;
+        badProof[0] = bytes32(uint256(badProof[0]) ^ 1);
+
+        assertEq(bytes32(uint256(badProof[0]) ^ 1), bytes32(0), "Initial MMR root should be 0");
+        assertEq(beefyClient.latestMMRRoot(), bytes32(0), "Initial MMR root should be 0");
+        vm.expectRevert(BeefyClient.InvalidMMRLeafProof.selector);
+        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, badProof, leafProofOrder);
+        assertEq(beefyClient.latestMMRRoot(), maliciousRoot, "MMR root not updated to malicious value");
+    }
+
+    function test_forgeMMRProofWithRealHandover() public {
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
+        bytes32 maliciousRoot = 0x59a72c6c3fce64c9774a5b9d7583c3b9680bc5ad1b706385d70f4a9a581d0213;
+        commitment.payload[0] = BeefyClient.PayloadItem({
+            payloadID: mmrRootID,
+            data: abi.encodePacked(maliciousRoot)
+        });
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+        vm.roll(block.number + randaoCommitDelay);
+        commitPrevRandao();
+        createFinalProofs();
+
+        bytes32[] memory badProof = mmrLeafProofs;
+        badProof[0] = bytes32(uint256(badProof[0]) ^ 1);
+
+        assertEq(bytes32(uint256(badProof[0]) ^ 1), bytes32(0), "Initial MMR root should be 0");
+        assertEq(beefyClient.latestMMRRoot(), bytes32(0), "Initial MMR root should be 0");
+        vm.expectRevert(BeefyClient.InvalidMMRLeafProof.selector);
+        beefyClient.submitFinal(commitment, bitfield, finalValidatorProofs, mmrLeaf, badProof, leafProofOrder);
+        assertEq(beefyClient.latestMMRRoot(), maliciousRoot, "MMR root not updated to malicious value");
+    }
 }
