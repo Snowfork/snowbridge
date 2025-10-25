@@ -178,8 +178,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 						log.WithField("nonce", ev.Nonce).Info("beacon header not finalized yet")
 						continue
 					} else if err != nil {
-						log.WithFields(log.Fields{"nonce": ev.Nonce, "error": err}).Warn("submit event: message was not processed")
-						continue
+						return fmt.Errorf("submit event: %w", err)
 					}
 				}
 			}

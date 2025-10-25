@@ -163,3 +163,54 @@ func (p *PendingOrder) Decode(decoder sc.Decoder) error {
 	p.Fee = *types.U128{Int: decoded}.Int
 	return nil
 }
+
+type OutboundQueueMessage struct {
+	ChannelID      types.H256
+	Nonce          uint64
+	Command        uint8
+	Params         []byte
+	MaxDispatchGas uint64
+	MaxFeePerGas   types.U128
+	Reward         types.U128
+	ID             types.Bytes32
+}
+
+func (m *OutboundQueueMessage) Decode(decoder sc.Decoder) error {
+	err := decoder.Decode(&m.ChannelID)
+	if err != nil {
+		return err
+	}
+	decoded, err := decoder.DecodeUintCompact()
+	if err != nil {
+		return err
+	}
+	m.Nonce = decoded.Uint64()
+	err = decoder.Decode(&m.Command)
+	if err != nil {
+		return err
+	}
+	err = decoder.Decode(&m.Params)
+	if err != nil {
+		return err
+	}
+	decoded, err = decoder.DecodeUintCompact()
+	if err != nil {
+		return err
+	}
+	m.MaxDispatchGas = decoded.Uint64()
+	decoded, err = decoder.DecodeUintCompact()
+	if err != nil {
+		return err
+	}
+	m.MaxFeePerGas = types.U128{Int: decoded}
+	decoded, err = decoder.DecodeUintCompact()
+	if err != nil {
+		return err
+	}
+	m.Reward = types.U128{Int: decoded}
+	err = decoder.Decode(&m.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
