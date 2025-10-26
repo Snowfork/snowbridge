@@ -8,7 +8,7 @@ import { ETHER_TOKEN_ADDRESS } from "@snowbridge/api/src/assets_v2"
 import {accountToLocation, erc20Location, ethereumNetwork} from "@snowbridge/api/src/xcmBuilder"
 
 const ASSET_HUB_PARA_ID = 1000
-const DOT_EXCHANGE_RATE = 0.00077 // 1 DOT = 0.00077 ETH
+const DOT_EXCHANGE_RATE = 0.00087 // 1 DOT = 0.00077 ETH
 const USDC_EXCHANGE_RATE = 0.14 // 1 DOT = 0.14 USDC (approximate, adjust based on current rates)
 const USDC_TO_ETH_RATE = 0.001 // 1 USDC ≈ 0.001 ETH (approximate $1 USDC, $1000 ETH)
 const USDC_TOKEN_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" // USDC on Ethereum mainnet
