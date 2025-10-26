@@ -159,7 +159,7 @@ export const transactSwapOnAssetHub = async (etherAmount: bigint) => {
                     maximal: true,
                 },
             },
-            // Step 4: Send USDC back to Ethereum using DOT for remote fees
+            // Step 3: Send USDC back to Ethereum using Ether for remote fees
             {
                 initiateTransfer: {
                     destination: {
