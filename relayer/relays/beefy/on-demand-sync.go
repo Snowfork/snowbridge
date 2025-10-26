@@ -19,6 +19,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/snowfork/snowbridge/relayer/relays/error_tracking"
 )
 
 type OnDemandRelay struct {
@@ -98,13 +99,13 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 		defer ticker.Stop()
 		for {
 			log.Info("Starting check nonces for both V1 and V2")
-			err = relay.queueV1(ctx)
+			err = relay.queueAll(ctx)
 			if err != nil {
-				return fmt.Errorf("Queue V1 failed: %w", err)
-			}
-			err = relay.queueV2(ctx)
-			if err != nil {
-				return fmt.Errorf("Queue V2 failed: %w", err)
+				if error_tracking.IsTransientError(err) {
+					log.Warnf("Queue all failed with transient error: %v", err)
+					continue
+				}
+				return fmt.Errorf("Queue all failed: %w", err)
 			}
 			select {
 			case <-ctx.Done():
@@ -122,6 +123,10 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 			log.Info("Scheduling pending tasks")
 			err = relay.schedule(ctx, eg)
 			if err != nil {
+				if error_tracking.IsTransientError(err) {
+					log.Warnf("Schedule failed with transient error: %v", err)
+					continue
+				}
 				return fmt.Errorf("Schedule failed: %w", err)
 			}
 			select {
@@ -698,6 +703,16 @@ func (relay *OnDemandRelay) queueV2(ctx context.Context) error {
 	}
 	err = relay.queue(ctx, paraBlock, paraNonce, false)
 	if err != nil {
+		return fmt.Errorf("Queue V2 parachain block failed: %w", err)
+	}
+	return nil
+}
+
+func (relay *OnDemandRelay) queueAll(ctx context.Context) error {
+	if err := relay.queueV1(ctx); err != nil {
+		return fmt.Errorf("Queue V1 parachain block failed: %w", err)
+	}
+	if err := relay.queueV2(ctx); err != nil {
 		return fmt.Errorf("Queue V2 parachain block failed: %w", err)
 	}
 	return nil
