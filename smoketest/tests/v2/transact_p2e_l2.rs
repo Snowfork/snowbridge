@@ -1,5 +1,6 @@
 use alloy::primitives::Address;
 use assethub::api::polkadot_xcm::calls::TransactionApi;
+use chrono::{DateTime, Utc};
 use codec::Encode;
 use hex_literal::hex;
 use snowbridge_smoketest::{
@@ -50,8 +51,10 @@ async fn transact_p2e_l2() {
 			.expect("valid keypair");
 
 	let greeter = Greeter::new(Address::from(L1_GREETER_CONTRACT), ethereum_client.clone());
+	let now: DateTime<Utc> = Utc::now();
+	let formatted_date = now.format("%Y-%m-%d %H:%M:%S").to_string();
 	let encoded_data = greeter
-		.sendGreeting("Hello from end user on Westend!".to_string())
+		.sendGreeting("Hello from end user on Westend at ".to_string() + &formatted_date)
 		.calldata()
 		.to_vec();
 
