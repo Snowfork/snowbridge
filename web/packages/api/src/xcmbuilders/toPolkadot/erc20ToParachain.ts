@@ -128,10 +128,9 @@ export function buildAssetHubERC20ReceivedXcm(
                         },
                     ],
                     remoteXcm: [
-                        //{
-                        //    refundSurplus: null,
-                        //},
-                        ...(customXcm || []), // Insert custom XCM here if provided
+                        {
+                            refundSurplus: null,
+                        },
                         {
                             depositAsset: {
                                 assets: {
@@ -141,13 +140,13 @@ export function buildAssetHubERC20ReceivedXcm(
                                 },
                                 beneficiary: {
                                     parents: 0,
-                                    interior: { x1: [accountToLocation("0xc189De708158e75E5C88C0ABfA5F9a26C71F54D1")] },
+                                    interior: { x1: [beneficiaryLocation] },
                                 },
                             },
                         },
-                        //{
-                        //    setTopic: topic,
-                        //},
+                        {
+                            setTopic: topic,
+                        },
                     ],
                 },
             },
@@ -502,7 +501,7 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                             {
                                 id: ether,
                                 fun: {
-                                    Fungible: 4000000000000000n,
+                                    Fungible: remoteDotFeeAmount,
                                 },
                             },
                         ],
@@ -511,7 +510,7 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                         {
                             id: DOT_LOCATION,
                             fun: {
-                                Fungible: 40000000000n,
+                                Fungible: remoteDotFeeAmount,
                             },
                         },
                     ],
@@ -527,13 +526,13 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                                 {
                                     id: DOT_LOCATION,
                                     fun: {
-                                        Fungible: 30000000000n,
+                                        Fungible: remoteDotFeeAmount,
                                     },
                                 },
                             ],
                         },
                     },
-                    preserveOrigin: false,
+                    preserveOrigin: true,
                     assets: [
                         {
                             reserveDeposit: {
@@ -557,12 +556,12 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                             depositAsset: {
                                 assets: {
                                     wild: {
-                                        allCounted: 2,
+                                        allCounted: 3,
                                     },
                                 },
                                 beneficiary: {
                                     parents: 0,
-                                    interior: { x1: [accountToLocation("0xc189De708158e75E5C88C0ABfA5F9a26C71F54D1")] },
+                                    interior: { x1: [beneficiaryLocation] },
                                 },
                             },
                         },
