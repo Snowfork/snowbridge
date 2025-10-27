@@ -52,6 +52,7 @@ export class PNAToParachain implements TransferInterface {
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
+            customXcm?: any[]
         }
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub, destination } =
@@ -124,7 +125,8 @@ export class PNAToParachain implements TransferInterface {
             destParachain.info.accountType === "AccountId32"
                 ? "0x0000000000000000000000000000000000000000000000000000000000000000"
                 : "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            options?.customXcm
         )
         const destinationImpl = await paraImplementation(destination)
         // Delivery fee AssetHub to Destination
@@ -176,7 +178,8 @@ export class PNAToParachain implements TransferInterface {
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
-        fee: DeliveryFee
+        fee: DeliveryFee,
+        customXcm?: any[]
     ): Promise<Transfer> {
         const { ethereum, assetHub, destination } =
             context instanceof Context
@@ -226,7 +229,8 @@ export class PNAToParachain implements TransferInterface {
                 beneficiaryAddressHex,
                 amount,
                 fee.destinationExecutionFeeEther,
-                topic
+                topic,
+                customXcm
             ).toHex()
         )
         let assets = [encodeNativeAsset(tokenAddress, amount)]
@@ -255,6 +259,7 @@ export class PNAToParachain implements TransferInterface {
                 destinationParaId,
                 amount,
                 fee,
+                customXcm,
             },
             computed: {
                 gatewayAddress: registry.gatewayAddress,
@@ -406,7 +411,8 @@ export class PNAToParachain implements TransferInterface {
                 transfer.input.sourceAccount,
                 transfer.computed.beneficiaryAddressHex,
                 destinationParaId,
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                transfer.input.customXcm
             )
             let result = await assetHubImpl.dryRunXcm(
                 registry.bridgeHubParaId,

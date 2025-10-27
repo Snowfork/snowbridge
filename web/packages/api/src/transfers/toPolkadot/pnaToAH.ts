@@ -48,6 +48,7 @@ export class PNAToAH implements TransferInterface {
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
+            customXcm?: any[]
         }
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub } =
@@ -134,7 +135,8 @@ export class PNAToAH implements TransferInterface {
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
-        fee: DeliveryFee
+        fee: DeliveryFee,
+        customXcm?: any[]
     ): Promise<Transfer> {
         const { ethereum, assetHub } =
             context instanceof Context
@@ -173,7 +175,7 @@ export class PNAToAH implements TransferInterface {
         )
 
         const xcm = hexToU8a(
-            sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic).toHex()
+            sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic, customXcm).toHex()
         )
         let assets = [encodeNativeAsset(tokenAddress, amount)]
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
@@ -201,6 +203,7 @@ export class PNAToAH implements TransferInterface {
                 destinationParaId,
                 amount,
                 fee,
+                customXcm,
             },
             computed: {
                 gatewayAddress: registry.gatewayAddress,
@@ -337,7 +340,8 @@ export class PNAToAH implements TransferInterface {
                 claimer,
                 transfer.input.sourceAccount,
                 transfer.computed.beneficiaryAddressHex,
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                transfer.input.customXcm
             )
 
             let result = await assetHubImpl.dryRunXcm(registry.bridgeHubParaId, xcm)

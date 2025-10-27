@@ -1340,6 +1340,14 @@ export function isDOTOnOtherConsensusSystem(location: any): boolean {
     return matchesConsensusSystem(location, "Polkadot")
 }
 
+export function isDOT(location: any): boolean {
+    if (location.parents !== 1 || !location.interior) return false
+
+    if (location.interior !== "Here" &&  location.interior !== "here") return false
+
+    return true
+}
+
 export function matchesConsensusSystem(location: any, expectedSystem: string): boolean {
     if (location.parents !== 2 || !location.interior) return false
 

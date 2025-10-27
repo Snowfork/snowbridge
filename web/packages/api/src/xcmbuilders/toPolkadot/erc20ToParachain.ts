@@ -20,7 +20,8 @@ export function buildAssetHubERC20ReceivedXcm(
     beneficiary: string,
     destinationParaId: number,
     remoteEtherFeeAmount: bigint,
-    topic: string
+    topic: string,
+    customXcm?: any[]
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -111,7 +112,7 @@ export function buildAssetHubERC20ReceivedXcm(
                             ],
                         },
                     },
-                    preserveOrigin: true,
+                    preserveOrigin: false,
                     assets: [
                         {
                             reserveDeposit: {
@@ -176,48 +177,53 @@ export function buildParachainERC20ReceivedXcmOnDestination(
     transferAmount: bigint,
     feeInEther: bigint,
     beneficiary: string,
-    topic: string
+    topic: string,
+    customXcm?: any[]
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
-    let reserveAssetDeposited = []
-    if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
-        reserveAssetDeposited.push({
-            id: erc20Location(ethChainId, tokenAddress),
-            fun: {
-                Fungible: transferAmount,
-            },
-        })
-    } else {
-        reserveAssetDeposited.push({
-            id: ether,
-            fun: {
-                Fungible: feeInEther + transferAmount,
-            },
-        })
-    }
+
     return registry.createType("XcmVersionedXcm", {
-        v4: [
+        v5: [
             {
-                reserveAssetDeposited: reserveAssetDeposited,
-            },
-            { clearOrigin: null },
-            {
-                buyExecution: {
-                    fees: {
+                reserveAssetDeposited: [
+                    {
                         id: ether,
                         fun: {
                             Fungible: feeInEther,
                         },
                     },
-                    weightLimit: "Unlimited",
+                ],
+            },
+            {
+                payFees: {
+                    asset: {
+                        id: ether,
+                        fun: {
+                            Fungible: feeInEther,
+                        },
+                    },
                 },
             },
+            {
+                reserveAssetDeposited: [
+                    {
+                        id: tokenAddress === ETHER_TOKEN_ADDRESS
+                            ? ether
+                            : erc20Location(ethChainId, tokenAddress),
+                        fun: {
+                            Fungible: transferAmount,
+                        },
+                    },
+                ],
+            },
+            { clearOrigin: null },
+            ...(customXcm || []), // Insert custom XCM instructions if provided
             {
                 depositAsset: {
                     assets: {
                         wild: {
-                            allCounted: 2,
+                            allCounted: 3,
                         },
                     },
                     beneficiary: {
@@ -226,7 +232,79 @@ export function buildParachainERC20ReceivedXcmOnDestination(
                     },
                 },
             },
-            { setTopic: topic },
+            {
+                setTopic: topic,
+            },
+        ],
+    })
+}
+
+export function buildParachainERC20ReceivedXcmOnDestinationWithDOTFee(
+    registry: Registry,
+    ethChainId: number,
+    tokenAddress: string,
+    transferAmount: bigint,
+    feeInDOT: bigint,
+    beneficiary: string,
+    topic: string,
+    customXcm?: any[]
+) {
+    let beneficiaryLocation = accountToLocation(beneficiary)
+    let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
+
+    return registry.createType("XcmVersionedXcm", {
+        v5: [
+            {
+                reserveAssetDeposited: [
+                    {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: feeInDOT,
+                        },
+                    },
+                ],
+            },
+            {
+                payFees: {
+                    asset: {
+                        id: DOT_LOCATION,
+                        fun: {
+                            Fungible: feeInDOT,
+                        },
+                    },
+                },
+            },
+            {
+                reserveAssetDeposited: [
+                    {
+                        id: tokenAddress === ETHER_TOKEN_ADDRESS
+                            ? ether
+                            : erc20Location(ethChainId, tokenAddress),
+                        fun: {
+                            Fungible: transferAmount,
+                        },
+                    },
+                ],
+            },
+            { clearOrigin: null },
+            { refundSurplus: null },
+            ...(customXcm || []), // Insert custom XCM instructions if provided
+            {
+                depositAsset: {
+                    assets: {
+                        wild: {
+                            allCounted: 3,
+                        },
+                    },
+                    beneficiary: {
+                        parents: 0,
+                        interior: { x1: [beneficiaryLocation] },
+                    },
+                },
+            },
+            {
+                setTopic: topic,
+            },
         ],
     })
 }
@@ -239,10 +317,35 @@ export function sendMessageXCM(
     beneficiary: string,
     tokenAmount: bigint,
     remoteEtherFeeAmount: bigint,
-    topic: string
+    topic: string,
+    customXcm?: any[]
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
+
+    const remoteXcmInstructions = [
+        {
+            refundSurplus: null,
+        },
+        ...(customXcm || []), // Insert custom XCM here if provided
+        {
+            depositAsset: {
+                assets: {
+                    wild: {
+                        allCounted: 3,
+                    },
+                },
+                beneficiary: {
+                    parents: 0,
+                    interior: { x1: [beneficiaryLocation] },
+                },
+            },
+        },
+        {
+            setTopic: topic,
+        },
+    ]
+
     return registry.createType("XcmVersionedXcm", {
         v5: [
             {
@@ -275,27 +378,7 @@ export function sendMessageXCM(
                             },
                         },
                     ],
-                    remoteXcm: [
-                        {
-                            refundSurplus: null,
-                        },
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 3,
-                                    },
-                                },
-                                beneficiary: {
-                                    parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
-                                },
-                            },
-                        },
-                        {
-                            setTopic: topic,
-                        },
-                    ],
+                    remoteXcm: remoteXcmInstructions,
                 },
             },
             {
@@ -334,7 +417,8 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
     destinationParaId: number,
     remoteEtherFeeAmount: bigint,
     remoteDotFeeAmount: bigint,
-    topic: string
+    topic: string,
+    customXcm?: any[]
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -440,9 +524,9 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                         reserveDeposit: {
                             definite: [
                                 {
-                                    id: ether,
+                                    id: DOT_LOCATION,
                                     fun: {
-                                        Fungible: remoteEtherFeeAmount,
+                                        Fungible: remoteDotFeeAmount,
                                     },
                                 },
                             ],
@@ -464,6 +548,7 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                         },
                     ],
                     remoteXcm: [
+                        ...(customXcm || []),
                         {
                             refundSurplus: null,
                         },
@@ -528,7 +613,7 @@ export function sendMessageXCMWithDOTDestFee(
                             {
                                 id: ether,
                                 fun: {
-                                    Fungible: remoteDotFeeAmount,
+                                    Fungible: remoteEtherFeeAmount,
                                 },
                             },
                         ],
@@ -551,9 +636,9 @@ export function sendMessageXCMWithDOTDestFee(
                         reserveDeposit: {
                             definite: [
                                 {
-                                    id: ether,
+                                    id: DOT_LOCATION,
                                     fun: {
-                                        Fungible: remoteEtherFeeAmount,
+                                        Fungible: remoteDotFeeAmount,
                                     },
                                 },
                             ],
