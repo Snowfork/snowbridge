@@ -709,6 +709,10 @@ func (relay *OnDemandRelay) queueV2(ctx context.Context) error {
 }
 
 func (relay *OnDemandRelay) queueAll(ctx context.Context) error {
+	if relay.activeTasks.Full() {
+		log.Info("Task queue full, wait for scheduling")
+		return nil
+	}
 	if err := relay.queueV1(ctx); err != nil {
 		return fmt.Errorf("Queue V1 parachain block failed: %w", err)
 	}
