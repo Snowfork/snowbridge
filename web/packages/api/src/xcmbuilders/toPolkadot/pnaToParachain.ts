@@ -19,7 +19,8 @@ export function buildAssetHubPNAReceivedXcm(
     origin: string,
     beneficiary: string,
     destinationParaId: number,
-    topic: string
+    topic: string,
+    customXcm?: any[]
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -122,6 +123,7 @@ export function buildAssetHubPNAReceivedXcm(
                         {
                             refundSurplus: null,
                         },
+                        ...(customXcm || []), // Insert custom XCM instructions if provided
                         {
                             depositAsset: {
                                 assets: {
@@ -171,7 +173,8 @@ export function buildParachainPNAReceivedXcmOnDestination(
     transferAmount: bigint,
     feeInEther: bigint,
     beneficiary: string,
-    topic: string
+    topic: string,
+    customXcm?: any[]
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -209,6 +212,7 @@ export function buildParachainPNAReceivedXcmOnDestination(
                 ],
             },
             { clearOrigin: null },
+            ...(customXcm || []), // Insert custom XCM instructions if provided
             {
                 depositAsset: {
                     assets: {
@@ -235,7 +239,8 @@ export function sendMessageXCM(
     beneficiary: string,
     tokenAmount: bigint,
     remoteEtherFeeAmount: bigint,
-    topic: string
+    topic: string,
+    customXcm?: any[]
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -275,6 +280,7 @@ export function sendMessageXCM(
                         {
                             refundSurplus: null,
                         },
+                        ...(customXcm || []), // Insert custom XCM instructions if provided
                         {
                             depositAsset: {
                                 assets: {
