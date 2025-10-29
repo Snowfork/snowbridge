@@ -2,10 +2,8 @@ name: release-gas-estimator
 
 on:
   push:
-    paths:
-      - "gas-estimator/**"
     branches:
-      - main
+      - clara/gas-estimator-per-env
   workflow_dispatch:
 
 jobs:
