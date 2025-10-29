@@ -2,8 +2,10 @@ name: release-relayer
 
 on:
   push:
+    paths:
+      - "relayer/**"
     branches:
-      - clara/gas-estimator-per-env
+      - main
   workflow_dispatch:
 
 env:
