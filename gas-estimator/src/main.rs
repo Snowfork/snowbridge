@@ -75,6 +75,9 @@ enum EstimateCommands {
         /// Relayer fee in wei
         #[arg(long)]
         relayer_fee: u128,
+        /// Relayer account public key (hex string, 32 bytes)
+        #[arg(long)]
+        relayer_account: String,
     },
 }
 
@@ -112,10 +115,12 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                 value,
                 execution_fee,
                 relayer_fee,
+                relayer_account,
             } => {
                 let claimer = parse_claimer(&claimer)?;
                 let origin = parse_origin(&origin)?;
                 let assets = parse_assets(&assets)?;
+                let relayer_account = parse_relayer_account(&relayer_account)?;
 
                 // Process XCM based on kind (this is for delivery fee calculation)
                 let xcm_bytes = if xcm_kind == 1 {
@@ -146,6 +151,7 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                     execution_fee,
                     relayer_fee,
                     &assets,
+                    relayer_account,
                 )
                 .await?;
 
@@ -191,6 +197,18 @@ fn parse_origin(origin_hex: &str) -> Result<[u8; 20], EstimatorError> {
 
 fn parse_assets(assets_hex: &str) -> Result<Vec<BridgeAsset>, EstimatorError> {
     decode_assets_from_hex(assets_hex)
+}
+
+fn parse_relayer_account(relayer_account_hex: &str) -> Result<[u8; 32], EstimatorError> {
+    let account_bytes = parse_hex_address(relayer_account_hex)?;
+    if account_bytes.len() != 32 {
+        return Err(EstimatorError::InvalidCommand(
+            "Relayer account must be 32 bytes (SR25519 public key)".to_string(),
+        ));
+    }
+    let mut account = [0u8; 32];
+    account.copy_from_slice(&account_bytes);
+    Ok(account)
 }
 
 sol! {
