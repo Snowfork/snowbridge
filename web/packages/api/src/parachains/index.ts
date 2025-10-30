@@ -60,7 +60,7 @@ export async function paraImplementation(provider: ApiPromise): Promise<Parachai
             return new NeurowebParachain(provider, parachainId, specName, specVersion)
         default:
             throw Error(
-                `No parachain provider for ParaId = ${parachainId}, Spec = ${specName}, Version = ${specVersion}`
+                `No parachain provider for ParaId = ${parachainId}, Spec = ${specName}, Version = ${specVersion}`,
             )
     }
 }

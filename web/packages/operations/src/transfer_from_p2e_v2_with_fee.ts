@@ -22,7 +22,7 @@ transfer(
     parseInt(process.argv[2]),
     process.argv[3],
     parseInt(process.argv[4]),
-    BigInt(process.argv[5])
+    BigInt(process.argv[5]),
 )
     .then(() => process.exit(0))
     .catch((error) => {

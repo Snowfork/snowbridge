@@ -82,7 +82,7 @@ export type MessageReceipt = {
 export function createTransferImplementation(
     destinationParaId: number,
     registry: AssetRegistry,
-    tokenAddress: string
+    tokenAddress: string,
 ): TransferInterface {
     const { ahAssetMetadata } = resolveInputs(registry, tokenAddress, destinationParaId)
 
@@ -122,7 +122,7 @@ function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinatio
     const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
     if (!destAssetMetadata) {
         throw Error(
-            `Token ${tokenAddress} not registered on destination parachain ${destinationParaId}.`
+            `Token ${tokenAddress} not registered on destination parachain ${destinationParaId}.`,
         )
     }
 
@@ -135,7 +135,7 @@ export function buildMessageId(
     tokenAddress: string,
     beneficiaryAccount: string,
     amount: bigint,
-    accountNonce: number
+    accountNonce: number,
 ) {
     const entropy = new Uint8Array([
         ...stringToU8a(destParaId.toString()),
@@ -153,7 +153,7 @@ export function buildMessageId(
 export function encodeNativeAsset(tokenAddress: string, amount: bigint) {
     return AbiCoder.defaultAbiCoder().encode(
         ["uint8", "address", "uint128"],
-        [0, tokenAddress, amount]
+        [0, tokenAddress, amount],
     )
 }
 
@@ -163,7 +163,7 @@ export function encodeAssetsArray(encodedAssets: string[]) {
 }
 
 export async function getMessageReceipt(
-    receipt: TransactionReceipt
+    receipt: TransactionReceipt,
 ): Promise<MessageReceipt | null> {
     const events: LogDescription[] = []
     const gatewayInterface = IGatewayV2__factory.createInterface()

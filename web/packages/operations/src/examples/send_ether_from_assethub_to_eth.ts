@@ -18,14 +18,14 @@ import { setTimeout } from "timers/promises"
     // Initialize ethereum wallet.
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
-        context.ethereum()
+        context.ethereum(),
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
 
     // Initialize substrate wallet.
     const polkadot_keyring = new Keyring({ type: "sr25519" })
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(
-        process.env.SUBSTRATE_KEY ?? "Your Key Goes Here"
+        process.env.SUBSTRATE_KEY ?? "Your Key Goes Here",
     )
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
@@ -43,7 +43,7 @@ import { setTimeout } from "timers/promises"
         context, // The context
         SOURCE_PARACHAIN, // Source parachain Id
         registry, // The asset registry
-        TOKEN_CONTRACT // The token being transferred
+        TOKEN_CONTRACT, // The token being transferred
     )
 
     // Step 2. Create a transfer tx
@@ -55,7 +55,7 @@ import { setTimeout } from "timers/promises"
         ETHEREUM_ACCOUNT_PUBLIC, // The destination account
         TOKEN_CONTRACT, // The transfer token
         amount, // The transfer amount
-        fee // The fee
+        fee, // The fee
     )
 
     // Step 3. Estimate the cost of the execution cost of the transaction
@@ -66,17 +66,17 @@ import { setTimeout } from "timers/promises"
     ).toPrimitive() as any
     console.log(
         `execution fee (${transfer.computed.sourceParachain.info.tokenSymbols}):`,
-        formatUnits(feePayment.partialFee, transfer.computed.sourceParachain.info.tokenDecimals)
+        formatUnits(feePayment.partialFee, transfer.computed.sourceParachain.info.tokenDecimals),
     )
     console.log(
         `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
-        formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals)
+        formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals),
     )
 
     // Step 4. Validate the transaction.
     const validation = await toEthereumV2.validateTransfer(
         context, // The context
-        transfer
+        transfer,
     )
     console.log("validation result", validation)
 
@@ -91,27 +91,27 @@ import { setTimeout } from "timers/promises"
         context, // The context
         transfer,
         POLKADOT_ACCOUNT,
-        { withSignedTransaction: true }
+        { withSignedTransaction: true },
     )
     if (!response) {
         throw Error(`Transaction ${response} not included.`)
     }
     if (!response.messageId) {
         throw Error(
-            `Transaction ${response} did not have a message id. Did your transaction revert?`
+            `Transaction ${response} did not have a message id. Did your transaction revert?`,
         )
     }
     console.log(
         `Success message with message id: ${response.messageId}
                 block number: ${response.blockNumber}
-                tx hash: ${response.txHash}`
+                tx hash: ${response.txHash}`,
     )
 
     // Step 7. Poll for message completion
     while (true) {
         const status = await historyV2.toEthereumTransferById(
             context.graphqlApiUrl(), // GraphQL endpoint to query
-            response.messageId
+            response.messageId,
         )
         if (status !== undefined && status.status !== historyV2.TransferStatus.Pending) {
             console.dir(status, { depth: 100 })

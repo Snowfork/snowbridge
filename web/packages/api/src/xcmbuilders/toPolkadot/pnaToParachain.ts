@@ -20,7 +20,7 @@ export function buildAssetHubPNAReceivedXcm(
     beneficiary: string,
     destinationParaId: number,
     topic: string,
-    customXcm?: any[]
+    customXcm?: any[],
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -174,7 +174,7 @@ export function buildParachainPNAReceivedXcmOnDestination(
     feeInEther: bigint,
     beneficiary: string,
     topic: string,
-    customXcm?: any[]
+    customXcm?: any[],
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -240,7 +240,7 @@ export function sendMessageXCM(
     tokenAmount: bigint,
     remoteEtherFeeAmount: bigint,
     topic: string,
-    customXcm?: any[]
+    customXcm?: any[],
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)

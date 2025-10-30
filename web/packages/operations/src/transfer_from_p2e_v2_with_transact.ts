@@ -8,7 +8,7 @@ const transact = async (
     target: string,
     calldata: string,
     value: bigint,
-    gas: bigint
+    gas: bigint,
 ) => {
     await transferToEthereum(sourceParaId, symbol, amount, {
         feeTokenLocation: undefined,
@@ -23,7 +23,7 @@ const transact = async (
 
 if (process.argv.length != 9) {
     console.error(
-        "Expected arguments: `destinationChainId, symbol, amount, target, calldata, value, gas`"
+        "Expected arguments: `destinationChainId, symbol, amount, target, calldata, value, gas`",
     )
     process.exit(1)
 }
@@ -35,7 +35,7 @@ transact(
     process.argv[5],
     process.argv[6],
     BigInt(process.argv[7]),
-    BigInt(process.argv[8])
+    BigInt(process.argv[8]),
 )
     .then(() => process.exit(0))
     .catch((error) => {
