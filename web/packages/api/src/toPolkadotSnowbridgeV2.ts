@@ -35,6 +35,7 @@ export type Transfer = {
         destinationParaId: number
         amount: bigint
         fee: DeliveryFee
+        customXcm?: any[] // Optional custom XCM instructions
     }
     computed: {
         gatewayAddress: string

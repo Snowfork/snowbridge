@@ -24,7 +24,8 @@ type EthereumConfig struct {
 	// The gas cost of unlock ERC20 token
 	BaseUnlockGas uint64 `mapstructure:"base-unlock-gas"`
 	// The gas cost of mint Polkadot native asset
-	BaseMintGas uint64 `mapstructure:"base-mint-gas"`
+	BaseMintGas  uint64 `mapstructure:"base-mint-gas"`
+	SkipFeeCheck bool   `mapstructure:"skip-fee-check"`
 }
 
 type OFACConfig struct {
