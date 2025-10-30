@@ -9,7 +9,7 @@ import {
     buildTransferXcmFromAssetHub,
 } from "../../xcmbuilders/toEthereum/erc20FromAH"
 import { buildTransferXcmFromAssetHubWithDOTAsFee } from "../../xcmbuilders/toEthereum/erc20FromAHWithDotAsFee"
-import { Asset, AssetRegistry } from "@snowbridge/base-types"
+import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { paraImplementation } from "../../parachains"
 import {
     buildMessageId,
@@ -21,8 +21,10 @@ import {
 import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
 import {
+    buildContractCallHex,
     estimateFeesFromAssetHub,
     MaxWeight,
+    mockDeliveryFee,
     validateTransferFromAssetHub,
 } from "../../toEthereumSnowbridgeV2"
 
@@ -36,7 +38,8 @@ export class ERC20FromAH implements TransferInterface {
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
-        }
+            contractCall?: ContractCall
+        },
     ): Promise<DeliveryFee> {
         const { assetHub } =
             "sourceParaId" in source
@@ -55,8 +58,7 @@ export class ERC20FromAH implements TransferInterface {
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             sourceAssetMetadata,
             1n,
-            1n,
-            1n
+            mockDeliveryFee,
         )
 
         let forwardedXcmToBH = buildExportXcm(
@@ -67,7 +69,7 @@ export class ERC20FromAH implements TransferInterface {
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             1n,
-            1n
+            1n,
         )
 
         const fees = await estimateFeesFromAssetHub(
@@ -78,7 +80,7 @@ export class ERC20FromAH implements TransferInterface {
                 localXcm,
                 forwardedXcmToBH,
             },
-            options
+            options,
         )
         return fees
     }
@@ -90,7 +92,11 @@ export class ERC20FromAH implements TransferInterface {
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
-        fee: DeliveryFee
+        fee: DeliveryFee,
+        options?: {
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
     ): Promise<Transfer> {
         const { ethChainId } = registry
 
@@ -113,9 +119,10 @@ export class ERC20FromAH implements TransferInterface {
             sourceAccountHex,
             tokenAddress,
             beneficiaryAccount,
-            amount
+            amount,
         )
-        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = this.createTx(
+        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = await this.createTx(
+            source.context,
             parachain,
             ethChainId,
             sourceAccount,
@@ -123,7 +130,8 @@ export class ERC20FromAH implements TransferInterface {
             ahAssetMetadata,
             amount,
             messageId,
-            fee
+            fee,
+            options,
         )
 
         return {
@@ -152,7 +160,8 @@ export class ERC20FromAH implements TransferInterface {
         return validateTransferFromAssetHub(context, transfer)
     }
 
-    createTx(
+    async createTx(
+        context: Context,
         parachain: ApiPromise,
         ethChainId: number,
         sourceAccount: string,
@@ -160,8 +169,16 @@ export class ERC20FromAH implements TransferInterface {
         asset: Asset,
         amount: bigint,
         messageId: string,
-        fee: DeliveryFee
-    ): SubmittableExtrinsic<"promise", ISubmittableResult> {
+        fee: DeliveryFee,
+        options?: {
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
+    ): Promise<SubmittableExtrinsic<"promise", ISubmittableResult>> {
+        let callHex: string | undefined
+        if (options?.contractCall) {
+            callHex = await buildContractCallHex(context, options.contractCall)
+        }
         let xcm: any
         // If there is no fee specified, we assume that Ether is available in user's wallet on source chain,
         // thus no swap required on Asset Hub.
@@ -174,8 +191,8 @@ export class ERC20FromAH implements TransferInterface {
                 messageId,
                 asset,
                 amount,
-                fee.totalFeeInDot,
-                fee.ethereumExecutionFee!
+                fee,
+                callHex,
             )
         } // If the fee asset is in DOT, we need to swap it to Ether on Asset Hub.
         else if (isRelaychainLocation(fee.feeLocation)) {
@@ -187,11 +204,8 @@ export class ERC20FromAH implements TransferInterface {
                 messageId,
                 asset,
                 amount,
-                fee.localExecutionFeeDOT! +
-                    fee.bridgeHubDeliveryFeeDOT +
-                    fee.snowbridgeDeliveryFeeDOT,
-                fee.totalFeeInDot,
-                fee.ethereumExecutionFee!
+                fee,
+                callHex,
             )
         } else {
             throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)

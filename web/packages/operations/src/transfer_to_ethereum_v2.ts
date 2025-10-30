@@ -3,12 +3,16 @@ import { Context, toEthereumSnowbridgeV2, contextConfigFor, toEthereumV2 } from 
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
+import { ContractCall } from "../../base-types"
 
 export const transferToEthereum = async (
     sourceParaId: number,
     symbol: string,
     amount: bigint,
-    feeTokenLocation?: any
+    options?: {
+        feeTokenLocation?: any
+        contractCall?: ContractCall
+    }
 ) => {
     await cryptoWaitReady()
 
@@ -53,21 +57,16 @@ export const transferToEthereum = async (
             TOKEN_CONTRACT
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee: toEthereumV2.DeliveryFee
-        if (feeTokenLocation) {
-            fee = await transferImpl.getDeliveryFee(
-                { sourceParaId, context },
-                registry,
-                TOKEN_CONTRACT,
-                { feeTokenLocation, slippagePadPercentage: 20n }
-            )
-        } else {
-            fee = await transferImpl.getDeliveryFee(
-                { sourceParaId, context },
-                registry,
-                TOKEN_CONTRACT
-            )
-        }
+        let fee: toEthereumV2.DeliveryFee = await transferImpl.getDeliveryFee(
+            { sourceParaId, context },
+            registry,
+            TOKEN_CONTRACT,
+            {
+                feeTokenLocation: options?.feeTokenLocation,
+                slippagePadPercentage: 20n,
+                contractCall: options?.contractCall,
+            }
+        )
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
@@ -77,7 +76,8 @@ export const transferToEthereum = async (
             ETHEREUM_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT,
             amount,
-            fee
+            fee,
+            options
         )
 
         // Step 3. Estimate the cost of the execution cost of the transaction
