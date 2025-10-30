@@ -24,7 +24,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ??
             "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
-        context.ethereum()
+        context.ethereum(),
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
@@ -50,7 +50,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
             sourceParaId,
             registry,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            TOKEN_CONTRACT!
+            TOKEN_CONTRACT!,
         )
 
         // Step 2. Create a transfer tx
@@ -61,7 +61,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
             ETHEREUM_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT!,
             amount,
-            fee
+            fee,
         )
 
         // Step 3. Estimate the cost of the execution cost of the transaction
@@ -72,11 +72,14 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         ).toPrimitive() as any
         console.log(
             `execution fee (${transfer.computed.sourceParachain.info.tokenSymbols}):`,
-            formatUnits(feePayment.partialFee, transfer.computed.sourceParachain.info.tokenDecimals)
+            formatUnits(
+                feePayment.partialFee,
+                transfer.computed.sourceParachain.info.tokenDecimals,
+            ),
         )
         console.log(
             `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
-            formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals)
+            formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals),
         )
         // console.log(
         //     "dryRun: ",
@@ -102,7 +105,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
             console.log(
                 `Success message with message id: ${response.messageId}
                 block number: ${response.blockNumber}
-                tx hash: ${response.txHash}`
+                tx hash: ${response.txHash}`,
             )
         }
     }

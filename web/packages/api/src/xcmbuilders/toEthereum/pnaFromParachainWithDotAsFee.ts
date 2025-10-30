@@ -23,7 +23,7 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
     totalDOTFeeAmount: bigint,
     remoteEtherFeeAmount: bigint,
     remoteEtherFeeInDOTAmount: bigint,
-    claimerLocation?: any
+    claimerLocation?: any,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
@@ -47,7 +47,7 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
         envName,
         sourceParachainId,
         sourceAccount,
-        claimerLocation
+        claimerLocation,
     )
 
     let remoteInstructionsOnAH: any[] = [

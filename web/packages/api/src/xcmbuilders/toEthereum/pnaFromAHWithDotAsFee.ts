@@ -18,7 +18,7 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
     tokenAmount: bigint,
     localDOTFeeAmount: bigint,
     totalDOTFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint
+    remoteEtherFeeAmount: bigint,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)

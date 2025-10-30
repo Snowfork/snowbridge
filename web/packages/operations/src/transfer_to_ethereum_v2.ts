@@ -8,7 +8,7 @@ export const transferToEthereum = async (
     sourceParaId: number,
     symbol: string,
     amount: bigint,
-    feeTokenLocation?: any
+    feeTokenLocation?: any,
 ) => {
     await cryptoWaitReady()
 
@@ -25,7 +25,7 @@ export const transferToEthereum = async (
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ??
             "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
-        context.ethereum()
+        context.ethereum(),
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
@@ -50,7 +50,7 @@ export const transferToEthereum = async (
         const transferImpl = await toEthereumSnowbridgeV2.createTransferImplementation(
             sourceParaId,
             registry,
-            TOKEN_CONTRACT
+            TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
         let fee: toEthereumV2.DeliveryFee
@@ -59,13 +59,13 @@ export const transferToEthereum = async (
                 { sourceParaId, context },
                 registry,
                 TOKEN_CONTRACT,
-                { feeTokenLocation, slippagePadPercentage: 20n }
+                { feeTokenLocation, slippagePadPercentage: 20n },
             )
         } else {
             fee = await transferImpl.getDeliveryFee(
                 { sourceParaId, context },
                 registry,
-                TOKEN_CONTRACT
+                TOKEN_CONTRACT,
             )
         }
 
@@ -77,7 +77,7 @@ export const transferToEthereum = async (
             ETHEREUM_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT,
             amount,
-            fee
+            fee,
         )
 
         // Step 3. Estimate the cost of the execution cost of the transaction
@@ -87,11 +87,14 @@ export const transferToEthereum = async (
         ).toPrimitive() as any
         console.log(
             `execution fee (${transfer.computed.sourceParachain.info.tokenSymbols}):`,
-            formatUnits(feePayment.partialFee, transfer.computed.sourceParachain.info.tokenDecimals)
+            formatUnits(
+                feePayment.partialFee,
+                transfer.computed.sourceParachain.info.tokenDecimals,
+            ),
         )
         console.log(
             `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
-            formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals)
+            formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals),
         )
 
         // Step 4. Validate the transaction.
@@ -110,7 +113,7 @@ export const transferToEthereum = async (
                 POLKADOT_ACCOUNT,
                 {
                     withSignedTransaction: true,
-                }
+                },
             )
             if (!response) {
                 throw Error(`Transaction ${response} not included.`)
@@ -118,7 +121,7 @@ export const transferToEthereum = async (
             console.log(
                 `Success message with message id: ${response.messageId}
                 block number: ${response.blockNumber}
-                tx hash: ${response.txHash}`
+                tx hash: ${response.txHash}`,
             )
         }
     }

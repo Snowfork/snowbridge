@@ -24,7 +24,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
     totalNativeFeeAmount: bigint,
     remoteEtherFeeAmount: bigint,
     remoteEtherFeeNativeAmount: bigint,
-    claimerLocation?: any
+    claimerLocation?: any,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
@@ -56,7 +56,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
         envName,
         sourceParachainId,
         sourceAccount,
-        claimerLocation
+        claimerLocation,
     )
 
     let remoteInstructionsOnAH: any[] = [

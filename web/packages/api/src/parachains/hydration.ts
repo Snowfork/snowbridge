@@ -56,7 +56,7 @@ export class HydrationParachain extends ParachainBase {
         const result = (
             await this.provider.call.xcmPaymentApi.queryDeliveryFees(
                 { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
-                xcm
+                xcm,
             )
         ).toPrimitive() as any
         if (!result.ok) {
@@ -73,7 +73,7 @@ export class HydrationParachain extends ParachainBase {
             console.warn(
                 "Could not find DOT in result",
                 result,
-                "using 0 as delivery fee. Dry run will fail if this is incorrect."
+                "using 0 as delivery fee. Dry run will fail if this is incorrect.",
             )
             return 0n
         }

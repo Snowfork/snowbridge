@@ -136,7 +136,7 @@ export const bridgeStatusInfo = async (
     options = {
         polkadotBlockTimeInSeconds: 6,
         ethereumBlockTimeInSeconds: 12,
-    }
+    },
 ): Promise<BridgeStatusInfo> => {
     const [bridgeHub, ethereum, gateway, beefyClient, relaychain] = await Promise.all([
         context.bridgeHub(),
@@ -151,7 +151,7 @@ export const bridgeStatusInfo = async (
     const latestPolkadotBlock = (await relaychain.query.system.number()).toPrimitive() as number
     const latestFinalizedBeefyBlock = (
         await relaychain.rpc.chain.getHeader(
-            (await relaychain.rpc.beefy.getFinalizedHead()).toU8a()
+            (await relaychain.rpc.beefy.getFinalizedHead()).toU8a(),
         )
     ).number.toNumber()
     const beefyBlockLatency = latestFinalizedBeefyBlock - latestBeefyBlock
@@ -167,7 +167,7 @@ export const bridgeStatusInfo = async (
     ).toHex()
     const latestBeaconBlockOnPolkadot = Number(
         (await fetchBeaconSlot(context.config.ethereum.beacon_url, latestBeaconBlockRoot)).data
-            .message.slot
+            .message.slot,
     )
     const beaconBlockLatency =
         latestFinalizedBeaconBlock.finalized_slot - latestBeaconBlockOnPolkadot
@@ -198,7 +198,7 @@ export const bridgeStatusInfo = async (
 
 export const channelStatusInfo = async (
     context: Context,
-    channelId: string
+    channelId: string,
 ): Promise<ChannelStatusInfo> => {
     const [bridgeHub, ethereum, gateway] = await Promise.all([
         context.bridgeHub(),
@@ -224,7 +224,7 @@ export const channelStatusInfo = async (
         try {
             estimatedDeliveryTime = await fetchEstimatedDeliveryTime(
                 context.graphqlApiUrl(),
-                channelId
+                channelId,
             )
         } catch (e: any) {
             console.error("estimate api error:" + e.message)
@@ -236,7 +236,7 @@ export const channelStatusInfo = async (
             outbound: outbound_nonce_sub,
             inbound: Number(inbound_nonce_eth),
             estimatedDeliveryTime: Math.ceil(
-                Number(estimatedDeliveryTime?.toEthereumElapse?.elapse)
+                Number(estimatedDeliveryTime?.toEthereumElapse?.elapse),
             ),
         },
         toPolkadot: {
@@ -246,7 +246,7 @@ export const channelStatusInfo = async (
             outbound: Number(outbound_nonce_eth),
             inbound: inbound_nonce_sub,
             estimatedDeliveryTime: Math.ceil(
-                Number(estimatedDeliveryTime?.toPolkadotElapse?.elapse)
+                Number(estimatedDeliveryTime?.toPolkadotElapse?.elapse),
             ),
         },
     }
@@ -277,13 +277,13 @@ export const v2Status = async (context: Context): Promise<V2StatusInfo> => {
         toEthereum: {
             outbound: outbound_nonce_sub,
             estimatedDeliveryTime: Math.ceil(
-                Number(estimatedDeliveryTime?.toEthereumV2Elapse?.elapse)
+                Number(estimatedDeliveryTime?.toEthereumV2Elapse?.elapse),
             ),
         },
         toPolkadot: {
             outbound: Number(outbound_nonce_eth),
             estimatedDeliveryTime: Math.ceil(
-                Number(estimatedDeliveryTime?.toPolkadotV2Elapse?.elapse)
+                Number(estimatedDeliveryTime?.toPolkadotV2Elapse?.elapse),
             ),
         },
     }

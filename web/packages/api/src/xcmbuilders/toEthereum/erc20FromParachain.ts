@@ -19,7 +19,7 @@ export function buildParachainERC20ReceivedXcmOnDestination(
     transferAmount: bigint,
     feeInDot: bigint,
     beneficiary: string,
-    topic: string
+    topic: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     return registry.createType("XcmVersionedXcm", {
@@ -78,7 +78,7 @@ function buildAssetHubXcmFromParachain(
     topic: string,
     sourceParachainId: number,
     destinationFee: bigint,
-    feeAssetId: any
+    feeAssetId: any,
 ) {
     let {
         hexAddress,
@@ -191,7 +191,7 @@ export function buildAssetHubERC20TransferFromParachain(
     topic: string,
     sourceParachainId: number,
     returnToSenderFee: bigint,
-    feeAssetId: any
+    feeAssetId: any,
 ) {
     return registry.createType("XcmVersionedXcm", {
         v5: buildAssetHubXcmFromParachain(
@@ -202,7 +202,7 @@ export function buildAssetHubERC20TransferFromParachain(
             topic,
             sourceParachainId,
             returnToSenderFee,
-            feeAssetId
+            feeAssetId,
         ),
     })
 }
@@ -220,7 +220,7 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
     sourceParachainId: number,
     returnToSenderFee: bigint,
     feeAssetId: any,
-    feeAssetIdReanchored: any
+    feeAssetIdReanchored: any,
 ) {
     return registry.createType("XcmVersionedXcm", {
         v5: [
@@ -260,7 +260,7 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
                 topic,
                 sourceParachainId,
                 returnToSenderFee,
-                feeAssetId
+                feeAssetId,
             ),
         ],
     })
@@ -280,7 +280,7 @@ export function buildTransferXcmFromParachain(
     localDOTFeeAmount: bigint,
     totalDOTFeeAmount: bigint,
     remoteEtherFeeAmount: bigint,
-    claimerLocation?: any
+    claimerLocation?: any,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
@@ -319,7 +319,7 @@ export function buildTransferXcmFromParachain(
         envName,
         sourceParachainId,
         sourceAccount,
-        claimerLocation
+        claimerLocation,
     )
 
     let remoteInstructionsOnAH: any[] = [

@@ -8,7 +8,7 @@ import { IERC20__factory, WETH9__factory } from "@snowbridge/contract-types"
 export const transferToPolkadot = async (
     destinationChainId: number,
     symbol: string,
-    amount: bigint
+    amount: bigint,
 ) => {
     await cryptoWaitReady()
 
@@ -23,7 +23,7 @@ export const transferToPolkadot = async (
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ??
             "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
-        context.ethereum()
+        context.ethereum(),
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
 
@@ -75,13 +75,13 @@ export const transferToPolkadot = async (
             console.log("Setting new allowance to", approveAmount.toString())
             const approveTx = await erc20.approve(
                 context.config.appContracts.gateway,
-                approveAmount
+                approveAmount,
             )
             await approveTx.wait()
 
             const newAllowance = await erc20.allowance(
                 ETHEREUM_ACCOUNT_PUBLIC,
-                context.config.appContracts.gateway
+                context.config.appContracts.gateway,
             )
             console.log("newAllowance", newAllowance.toString())
         }
@@ -107,7 +107,7 @@ export const transferToPolkadot = async (
             registry,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             TOKEN_CONTRACT!,
-            destinationChainId
+            destinationChainId,
         )
 
         // Step 2. Create a transfer tx
@@ -119,7 +119,7 @@ export const transferToPolkadot = async (
             TOKEN_CONTRACT!,
             destinationChainId,
             amount,
-            fee
+            fee,
         )
 
         // Step 3. Validate the transaction.
@@ -134,7 +134,7 @@ export const transferToPolkadot = async (
                         ? await context.parachain(destinationChainId)
                         : undefined,
             },
-            transfer
+            transfer,
         )
         console.log("validation result", validation)
 
@@ -177,7 +177,7 @@ export const transferToPolkadot = async (
             console.log(
                 `Success message with message id: ${message.messageId}
                 block number: ${message.blockNumber}
-                tx hash: ${message.txHash}`
+                tx hash: ${message.txHash}`,
             )
         }
     }
