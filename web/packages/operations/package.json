@@ -40,6 +40,7 @@
     "transferXQCYToEthereum": "npx ts-node src/transfer_from_p2e.ts 2313 xrqcy 1000000",
     "transferXQCYFromEthereumToAH": "npx ts-node src/transfer_from_e2p.ts 1000 xrqcy 100000",
     "registerWeth": "npx ts-node src/register_erc20.ts 0xb8ea8cb425d85536b158d661da1ef0895bb92f1d",
+    "registerTokenV2": "npx ts-node src/register_token_v2.ts 0x163f8c2467924be0ae7b5347228cabf260318753",
     "transferWethToAH": "npx ts-node src/transfer_from_e2p.ts 1000 WETH 200000000000000",
     "transferWndToEthereumV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 WND 2000000000",
     "transferEtherFromAHV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 Eth 100000000000000",

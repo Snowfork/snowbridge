@@ -202,6 +202,8 @@ export abstract class ParachainBase {
         let forwardedDestination
         if (!success) {
             console.error(`Error during dry run:`, xcm.toHuman(), result.toHuman())
+            console.dir(xcm.toHuman(), {depth:100})
+            console.dir(result.toHuman(), {depth:100})
         } else if (findForwardedDestination) {
             const destinationParaId = findForwardedDestination
             forwardedDestination = result.asOk.forwardedXcms.find((x) => {
