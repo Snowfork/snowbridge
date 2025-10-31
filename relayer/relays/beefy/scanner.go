@@ -85,13 +85,10 @@ func scanBlocks(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateA
 			case <-time.After(6 * time.Second):
 			}
 			finalizedHeader, err = fetchFinalizedBeefyHeader()
+			// Transient error, retry until get a valid finalized header
 			if err != nil {
-				if error_tracking.IsTransientError(err) {
-					log.Warnf("fetch BEEFY header with transient error: %v", err)
-					continue
-				}
-				emitError(err)
-				return
+				log.Warnf("%s: fetch finalized beefy header: %v", error_tracking.SnowbridgeTransientError, err)
+				continue
 			}
 			continue
 		}

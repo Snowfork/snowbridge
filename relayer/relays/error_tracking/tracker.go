@@ -104,6 +104,8 @@ func (et *ErrorTracker) logHourlyStats() {
 	}
 }
 
+var SnowbridgeTransientError = "SnowbridgeTransientError"
+
 func IsTransientError(err error) bool {
 	if err == nil {
 		return false
@@ -112,12 +114,11 @@ func IsTransientError(err error) bool {
 	errStr := strings.ToLower(err.Error())
 
 	transientPatterns := []string{
-		"connection", "timeout", "deadline exceeded", "context deadline exceeded",
-		"network", "refused", "unreachable", "unavailable", "busy",
+		SnowbridgeTransientError, "connection timeout", "deadline exceeded", "context deadline exceeded",
+		"refused", "unreachable", "unavailable", "busy",
 		"temporary", "try again", "rate limit", "too many requests",
 		"rpc", "dial", "i/o timeout", "broken pipe", "reset by peer",
-		"finality timeout", "dropped", "invalid", "usurped", "close sent",
-		"fetch relaychain block", "fetch parachain block", "closed network connection",
+		"finality timeout", "close sent", "closed network connection", "websocket: close",
 	}
 
 	for _, pattern := range transientPatterns {

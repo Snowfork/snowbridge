@@ -447,7 +447,7 @@ func (relay *OnDemandRelay) queue(ctx context.Context, paraBlock uint64, nonce u
 
 	relayBlock, err := relay.fetchRelaychainInclusionBlock(paraBlock)
 	if err != nil {
-		return fmt.Errorf("fetch relaychain inclusion block: %w", err)
+		return fmt.Errorf("%s: fetch relaychain inclusion block: %w", error_tracking.SnowbridgeTransientError, err)
 	}
 
 	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
