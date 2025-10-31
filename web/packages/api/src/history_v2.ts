@@ -281,7 +281,7 @@ const buildToEthereumTransferResult = (transfer: any): ToEthereumTransferResult 
 
 export const toPolkadotHistory = async (
     graphqlApiUrl: string,
-    graphqlQuerySize: number = 100
+    graphqlQuerySize: number = 100,
 ): Promise<ToPolkadotTransferResult[]> => {
     const allTransfers = await fetchToPolkadotTransfers(graphqlApiUrl, graphqlQuerySize)
     const results: ToPolkadotTransferResult[] = []
@@ -294,7 +294,7 @@ export const toPolkadotHistory = async (
 
 export const toEthereumHistory = async (
     graphqlApiUrl: string,
-    graphqlQuerySize: number = 100
+    graphqlQuerySize: number = 100,
 ): Promise<ToEthereumTransferResult[]> => {
     const allTransfers = await fetchToEthereumTransfers(graphqlApiUrl, graphqlQuerySize)
     const results: ToEthereumTransferResult[] = []
@@ -307,7 +307,7 @@ export const toEthereumHistory = async (
 
 export const toPolkadotTransferById = async (
     graphqlApiUrl: string,
-    id: string
+    id: string,
 ): Promise<ToPolkadotTransferResult | undefined> => {
     const transfers = await fetchToPolkadotTransferById(graphqlApiUrl, id)
     if (transfers?.length > 0) {
@@ -319,7 +319,7 @@ export const toPolkadotTransferById = async (
 
 export const toEthereumTransferById = async (
     graphqlApiUrl: string,
-    id: string
+    id: string,
 ): Promise<ToEthereumTransferResult | undefined> => {
     const transfers = await fetchToEthereumTransferById(graphqlApiUrl, id)
     if (transfers?.length > 0) {

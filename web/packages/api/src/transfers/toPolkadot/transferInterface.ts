@@ -26,7 +26,7 @@ export interface TransferInterface {
             paddFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[] // Optional custom XCM instructions to append
-        }
+        },
     ): Promise<DeliveryFee>
 
     createTransfer(
@@ -44,7 +44,7 @@ export interface TransferInterface {
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
-        customXcm?: any[] // Optional custom XCM instructions to append
+        customXcm?: any[], // Optional custom XCM instructions to append
     ): Promise<Transfer>
 
     validateTransfer(context: Context | Connections, transfer: Transfer): Promise<ValidationResult>

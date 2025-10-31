@@ -21,7 +21,7 @@ export function toMoonbeamXC20(assetId: bigint) {
 export async function getMoonbeamEvmForeignAssetBalance(
     api: ApiPromise,
     token: string,
-    account: string
+    account: string,
 ) {
     const method = "balanceOf"
     const data = MOONBEAM_ERC20.encodeFunctionData(method, [account])
@@ -36,13 +36,13 @@ export async function getMoonbeamEvmForeignAssetBalance(
         null,
         false,
         null,
-        null
+        null,
     )
     const resultJson = result.toPrimitive() as any
     if (!(resultJson?.ok?.exitReason?.succeed === "Returned")) {
         console.error(resultJson)
         throw Error(
-            `Could not fetch balance for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`
+            `Could not fetch balance for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`,
         )
     }
     const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)
@@ -62,13 +62,13 @@ export async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: strin
         null,
         false,
         null,
-        null
+        null,
     )
     const resultJson = result.toPrimitive() as any
     if (!(resultJson?.ok?.exitReason?.succeed === "Returned")) {
         console.error(resultJson)
         throw Error(
-            `Could not fetch metadata for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`
+            `Could not fetch metadata for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`,
         )
     }
     const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)

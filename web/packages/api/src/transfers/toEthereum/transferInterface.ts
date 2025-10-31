@@ -13,7 +13,7 @@ export interface TransferInterface {
             defaultFee?: bigint
             feeTokenLocation?: any
             claimerLocation?: any
-        }
+        },
     ): Promise<DeliveryFee>
 
     createTransfer(
@@ -24,7 +24,7 @@ export interface TransferInterface {
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
-        claimerLocation?: any
+        claimerLocation?: any,
     ): Promise<Transfer>
 
     validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult>

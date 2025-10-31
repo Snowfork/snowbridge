@@ -58,7 +58,7 @@ function resolveInputs(
     registry: AssetRegistry,
     tokenAddress: string,
     sourceParaId: number,
-    destParaId: number
+    destParaId: number,
 ) {
     const sourceParachain = registry.parachains[sourceParaId.toString()]
     if (!sourceParachain) {
@@ -97,7 +97,7 @@ export async function getDeliveryFee(
     tokenAddress: string,
     options?: {
         padPercentage?: bigint
-    }
+    },
 ): Promise<DeliveryFee> {
     const { sourceParachain, destParachain } =
         "sourceParaId" in connections
@@ -123,7 +123,7 @@ export async function getDeliveryFee(
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
     } else {
         xcm = buildERC20ToAssetHubFromParachain(
@@ -136,17 +136,17 @@ export async function getDeliveryFee(
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
-            DOT_LOCATION
+            DOT_LOCATION,
         )
     }
 
     const deliveryFee = padFeeByPercentage(
         await source.calculateDeliveryFeeInDOT(destination.parachainId, xcm),
-        options?.padPercentage ?? 33n
+        options?.padPercentage ?? 33n,
     )
     const executionFee = padFeeByPercentage(
         await destination.calculateXcmFee(xcm, DOT_LOCATION),
-        options?.padPercentage ?? 33n
+        options?.padPercentage ?? 33n,
     )
 
     return {
@@ -164,7 +164,7 @@ export async function createTransfer(
     destinationParaId: number,
     tokenAddress: string,
     amount: bigint,
-    fee: DeliveryFee
+    fee: DeliveryFee,
 ): Promise<Transfer> {
     const { sourceParachain } =
         "sourceParaId" in connections
@@ -190,7 +190,7 @@ export async function createTransfer(
         sourceAccountHex,
         tokenAddress,
         beneficiaryAccount,
-        amount
+        amount,
     )
 
     const tx = createTx(
@@ -202,7 +202,7 @@ export async function createTransfer(
         messageId,
         amount,
         fee.totalFeeInDot,
-        source.parachainId === registry.assetHubParaId ? "LocalReserve" : "DestinationReserve"
+        source.parachainId === registry.assetHubParaId ? "LocalReserve" : "DestinationReserve",
     )
 
     return {
@@ -265,7 +265,7 @@ export async function validateTransfer(
     connections:
         | { context: Context; sourceParaId: number; destinationParaId: number }
         | { sourceParachain: ApiPromise; destParachain: ApiPromise },
-    transfer: Transfer
+    transfer: Transfer,
 ): Promise<ValidationResult> {
     const { sourceParachain, destParachain } =
         "sourceParaId" in connections
@@ -295,7 +295,7 @@ export async function validateTransfer(
         sourceAccountHex,
         registry.ethChainId,
         tokenAddress,
-        sourceAssetMetadata
+        sourceAssetMetadata,
     )
 
     const logs: ValidationLog[] = []
@@ -323,7 +323,7 @@ export async function validateTransfer(
         destinationParaId,
         transfer.tx,
         sourceAccountHex,
-        source.parachainId === registry.assetHubParaId
+        source.parachainId === registry.assetHubParaId,
     )
     if (!dryRunSource.success) {
         logs.push({
@@ -337,7 +337,7 @@ export async function validateTransfer(
     const dryRunDestination = await dryRunXcm(
         destParachain,
         source.parachainId,
-        dryRunSource.forwardedXcm
+        dryRunSource.forwardedXcm,
     )
     if (!dryRunDestination.success) {
         logs.push({
@@ -353,7 +353,7 @@ export async function validateTransfer(
                 beneficiaryAddressHex,
                 registry.ethChainId,
                 tokenAddress,
-                destAssetMetadata
+                destAssetMetadata,
             )
 
             if (accountMaxConsumers) {
@@ -416,7 +416,7 @@ export async function signAndSend(
     connections: { context: Context; sourceParaId: number } | { sourceParachain: ApiPromise },
     transfer: Transfer,
     account: AddressOrPair,
-    options: Partial<SignerOptions>
+    options: Partial<SignerOptions>,
 ): Promise<MessageReceipt> {
     const { sourceParachain } =
         "sourceParaId" in connections
@@ -483,7 +483,7 @@ function createTx(
     messageId: string,
     amount: bigint,
     feeAmount: bigint,
-    reserveType: "LocalReserve" | "DestinationReserve"
+    reserveType: "LocalReserve" | "DestinationReserve",
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assetLocation = erc20Location(ethChainId, tokenAddress)
     const assets = {
@@ -507,7 +507,7 @@ function createTx(
     const customXcm: any = buildDepositAllAssetsWithTopic(
         parachain.registry,
         beneficiaryAccount,
-        messageId
+        messageId,
     )
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
@@ -516,7 +516,7 @@ function createTx(
         feeAsset,
         reserveType,
         customXcm,
-        "Unlimited"
+        "Unlimited",
     )
 }
 
@@ -525,7 +525,7 @@ export async function dryRunTx(
     destParaId: number,
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>,
     sourceAccount: string,
-    useNewVersion: boolean
+    useNewVersion: boolean,
 ) {
     const origin = { system: { signed: sourceAccount } }
     let result: Result<CallDryRunEffects, XcmDryRunApiError>
@@ -547,7 +547,7 @@ export async function dryRunTx(
             "Error during dry run on source parachain:",
             sourceAccount,
             tx.toHuman(),
-            result.toHuman(true)
+            result.toHuman(true),
         )
         let err =
             result.isOk && result.asOk.executionResult.isErr
@@ -562,7 +562,7 @@ export async function dryRunTx(
                     x[0].asV4.parents.toNumber() === 1 &&
                     x[0].asV4.interior.isX1 &&
                     x[0].asV4.interior.asX1[0].isParachain &&
-                    x[0].asV4.interior.asX1[0].asParachain.toNumber() === destParaId
+                    x[0].asV4.interior.asX1[0].asParachain.toNumber() === destParaId,
             )
             ?.toPrimitive() as any
     }

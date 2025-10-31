@@ -36,7 +36,7 @@ export class ERC20FromAH implements TransferInterface {
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
-        }
+        },
     ): Promise<DeliveryFee> {
         const { assetHub } =
             "sourceParaId" in source
@@ -56,7 +56,7 @@ export class ERC20FromAH implements TransferInterface {
             sourceAssetMetadata,
             1n,
             1n,
-            1n
+            1n,
         )
 
         let forwardedXcmToBH = buildExportXcm(
@@ -67,7 +67,7 @@ export class ERC20FromAH implements TransferInterface {
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             1n,
-            1n
+            1n,
         )
 
         const fees = await estimateFeesFromAssetHub(
@@ -78,7 +78,7 @@ export class ERC20FromAH implements TransferInterface {
                 localXcm,
                 forwardedXcmToBH,
             },
-            options
+            options,
         )
         return fees
     }
@@ -90,7 +90,7 @@ export class ERC20FromAH implements TransferInterface {
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
-        fee: DeliveryFee
+        fee: DeliveryFee,
     ): Promise<Transfer> {
         const { ethChainId } = registry
 
@@ -113,7 +113,7 @@ export class ERC20FromAH implements TransferInterface {
             sourceAccountHex,
             tokenAddress,
             beneficiaryAccount,
-            amount
+            amount,
         )
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = this.createTx(
             parachain,
@@ -123,7 +123,7 @@ export class ERC20FromAH implements TransferInterface {
             ahAssetMetadata,
             amount,
             messageId,
-            fee
+            fee,
         )
 
         return {
@@ -160,7 +160,7 @@ export class ERC20FromAH implements TransferInterface {
         asset: Asset,
         amount: bigint,
         messageId: string,
-        fee: DeliveryFee
+        fee: DeliveryFee,
     ): SubmittableExtrinsic<"promise", ISubmittableResult> {
         let xcm: any
         // If there is no fee specified, we assume that Ether is available in user's wallet on source chain,
@@ -175,7 +175,7 @@ export class ERC20FromAH implements TransferInterface {
                 asset,
                 amount,
                 fee.totalFeeInDot,
-                fee.ethereumExecutionFee!
+                fee.ethereumExecutionFee!,
             )
         } // If the fee asset is in DOT, we need to swap it to Ether on Asset Hub.
         else if (isRelaychainLocation(fee.feeLocation)) {
@@ -191,7 +191,7 @@ export class ERC20FromAH implements TransferInterface {
                     fee.bridgeHubDeliveryFeeDOT +
                     fee.snowbridgeDeliveryFeeDOT,
                 fee.totalFeeInDot,
-                fee.ethereumExecutionFee!
+                fee.ethereumExecutionFee!,
             )
         } else {
             throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)

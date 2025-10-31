@@ -16,7 +16,7 @@ export function buildExportXcm(
     beneficiary: string,
     topic: string,
     transferAmount: bigint,
-    feeInEther: bigint
+    feeInEther: bigint,
 ) {
     let senderLocation = accountToLocation(sender)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -108,7 +108,7 @@ export function buildTransferXcmFromAssetHub(
     asset: Asset,
     tokenAmount: bigint,
     totalDOTFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint
+    remoteEtherFeeAmount: bigint,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)

@@ -137,7 +137,7 @@ export async function getDeliveryFee(
     registry: AssetRegistry,
     tokenAddress: string,
     destinationParaId: number,
-    paddFeeByPercentage?: bigint
+    paddFeeByPercentage?: bigint,
 ): Promise<DeliveryFee> {
     const { gateway, assetHub, destination } =
         context instanceof Context
@@ -151,7 +151,7 @@ export async function getDeliveryFee(
     const { destParachain, destAssetMetadata } = resolveInputs(
         registry,
         tokenAddress,
-        destinationParaId
+        destinationParaId,
     )
 
     let destinationDeliveryFeeDOT = 0n
@@ -167,7 +167,7 @@ export async function getDeliveryFee(
                 destParachain.info.accountType === "AccountId32"
                     ? "0x0000000000000000000000000000000000000000000000000000000000000000"
                     : "0x0000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         } else {
             destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
@@ -179,19 +179,19 @@ export async function getDeliveryFee(
                 destParachain.info.accountType === "AccountId32"
                     ? "0x0000000000000000000000000000000000000000000000000000000000000000"
                     : "0x0000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         }
 
         const assetHubImpl = await paraImplementation(assetHub)
         destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
             destinationParaId,
-            destinationXcm
+            destinationXcm,
         )
         const destinationImpl = await paraImplementation(destination)
         destinationExecutionFeeDOT = padFeeByPercentage(
             await destinationImpl.calculateXcmFee(destinationXcm, DOT_LOCATION),
-            paddFeeByPercentage ?? 33n
+            paddFeeByPercentage ?? 33n,
         )
     }
     const totalFeeInDOT = destinationExecutionFeeDOT + destinationDeliveryFeeDOT
@@ -201,7 +201,7 @@ export async function getDeliveryFee(
         totalFeeInWei: await gateway.quoteSendTokenFee(
             tokenAddress,
             destinationParaId,
-            totalFeeInDOT
+            totalFeeInDOT,
         ),
     }
 }
@@ -213,12 +213,12 @@ export async function createTransfer(
     tokenAddress: string,
     destinationParaId: number,
     amount: bigint,
-    fee: DeliveryFee
+    fee: DeliveryFee,
 ): Promise<Transfer> {
     const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } = resolveInputs(
         registry,
         tokenAddress,
-        destinationParaId
+        destinationParaId,
     )
     const minimalBalance =
         ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
@@ -270,7 +270,7 @@ export async function createTransfer(
 
 export async function validateTransfer(
     context: Context | Connections,
-    transfer: Transfer
+    transfer: Transfer,
 ): Promise<ValidationResult> {
     const { tx } = transfer
     const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
@@ -315,7 +315,7 @@ export async function validateTransfer(
             ethereum,
             tokenAddress,
             sourceAccount,
-            registry.gatewayAddress
+            registry.gatewayAddress,
         )
     } else {
         tokenBalance = {
@@ -418,7 +418,7 @@ export async function validateTransfer(
                 sovereignAccountId,
                 registry.ethChainId,
                 tokenAddress,
-                ahAssetMetadata
+                ahAssetMetadata,
             )
 
             if (!accountExists) {
@@ -494,7 +494,7 @@ export async function validateTransfer(
                     beneficiaryAddressHex,
                     registry.ethChainId,
                     tokenAddress,
-                    destAssetMetadata
+                    destAssetMetadata,
                 )
                 if (accountMaxConsumers) {
                     logs.push({
@@ -519,7 +519,7 @@ export async function validateTransfer(
             beneficiaryAddressHex,
             registry.ethChainId,
             tokenAddress,
-            ahAssetMetadata
+            ahAssetMetadata,
         )
 
         if (accountMaxConsumers) {
@@ -556,7 +556,7 @@ export async function validateTransfer(
 }
 
 export async function getMessageReceipt(
-    receipt: TransactionReceipt
+    receipt: TransactionReceipt,
 ): Promise<MessageReceipt | null> {
     const events: LogDescription[] = []
     const gatewayInterface = IGateway__factory.createInterface()
@@ -587,7 +587,7 @@ export const approveTokenSpend = (
     context: Context,
     sourceAddress: string,
     tokenAddress: string,
-    amount: bigint
+    amount: bigint,
 ): Promise<ContractTransaction> =>
     IERC20__factory.connect(tokenAddress)
         .getFunction("approve")
@@ -598,7 +598,7 @@ export const approveTokenSpend = (
 export const depositWeth = (
     sourceAddress: string,
     tokenAddress: string,
-    amount: bigint
+    amount: bigint,
 ): Promise<ContractTransaction> =>
     WETH9__factory.connect(tokenAddress).getFunction("deposit").populateTransaction({
         from: sourceAddress,
@@ -609,7 +609,7 @@ async function erc20Balance(
     ethereum: AbstractProvider,
     tokenAddress: string,
     owner: string,
-    spender: string
+    spender: string,
 ) {
     const tokenContract = IERC20__factory.connect(tokenAddress, ethereum)
     const [balance, gatewayAllowance] = await Promise.all([
@@ -625,7 +625,7 @@ async function erc20Balance(
 export function resolveInputs(
     registry: AssetRegistry,
     tokenAddress: string,
-    destinationParaId: number
+    destinationParaId: number,
 ) {
     const tokenErcMetadata =
         registry.ethereumChains[registry.ethChainId.toString()].assets[tokenAddress.toLowerCase()]
@@ -645,7 +645,7 @@ export function resolveInputs(
     const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
     if (!destAssetMetadata) {
         throw Error(
-            `Token ${tokenAddress} not registered on destination parachain ${destinationParaId}.`
+            `Token ${tokenAddress} not registered on destination parachain ${destinationParaId}.`,
         )
     }
 
@@ -676,7 +676,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
                 assetHubFee,
                 destinationFeeInDOT,
                 beneficiaryAccount,
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         } else {
             xcm = buildParachainERC20ReceivedXcmOnAssetHub(
@@ -688,7 +688,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
                 assetHubFee,
                 destinationFeeInDOT,
                 beneficiaryAccount,
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         }
     } else {
@@ -700,7 +700,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
                 amount,
                 assetHubFee,
                 beneficiaryAccount,
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         } else {
             xcm = buildAssetHubERC20ReceivedXcm(
@@ -710,7 +710,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
                 amount,
                 assetHubFee,
                 beneficiaryAccount,
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         }
     }

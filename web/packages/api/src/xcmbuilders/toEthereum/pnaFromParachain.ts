@@ -19,7 +19,7 @@ export function buildResultXcmAssetHubPNATransferFromParachain(
     topic: string,
     transferAmount: bigint,
     totalFeeInDot: bigint,
-    destinationFeeInDot: bigint
+    destinationFeeInDot: bigint,
 ) {
     return registry.createType("XcmVersionedXcm", {
         v5: [
@@ -60,7 +60,7 @@ export function buildResultXcmAssetHubPNATransferFromParachain(
                 beneficiary,
                 assetLocationOnAH,
                 assetLocationOnEthereum,
-                topic
+                topic,
             ),
         ],
     })
@@ -71,7 +71,7 @@ function buildAssetHubXcmForPNAFromParachain(
     beneficiary: string,
     assetLocationOnAH: any,
     assetLocationOnEthereum: any,
-    topic: string
+    topic: string,
 ) {
     return [
         // Initiate the bridged transfer
@@ -126,7 +126,7 @@ export function buildParachainPNAReceivedXcmOnDestination(
     transferAmount: bigint,
     feeInDot: bigint,
     beneficiary: string,
-    topic: string
+    topic: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     return registry.createType("XcmVersionedXcm", {
@@ -187,7 +187,7 @@ export function buildAssetHubPNATransferFromParachain(
     beneficiary: string,
     assetLocationOnAH: any,
     assetLocationOnEthereum: any,
-    topic: string
+    topic: string,
 ) {
     return registry.createType("XcmVersionedXcm", {
         v5: buildAssetHubXcmForPNAFromParachain(
@@ -195,7 +195,7 @@ export function buildAssetHubPNATransferFromParachain(
             beneficiary,
             assetLocationOnAH,
             assetLocationOnEthereum,
-            topic
+            topic,
         ),
     })
 }
@@ -209,7 +209,7 @@ export function buildParachainPNAReceivedXcmOnAssetHub(
     totalFeeInDot: bigint,
     destinationFeeInDot: bigint,
     beneficiary: string,
-    topic: string
+    topic: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     return registry.createType("XcmVersionedXcm", {
@@ -337,7 +337,7 @@ export function buildTransferXcmFromParachain(
     localDOTFeeAmount: bigint,
     totalDOTFeeAmount: bigint,
     remoteEtherFeeAmount: bigint,
-    claimerLocation?: any
+    claimerLocation?: any,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
@@ -366,7 +366,7 @@ export function buildTransferXcmFromParachain(
         envName,
         sourceParachainId,
         sourceAccount,
-        claimerLocation
+        claimerLocation,
     )
 
     let remoteInstructionsOnAH: any[] = [

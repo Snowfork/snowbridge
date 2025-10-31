@@ -73,7 +73,7 @@ export const beneficiaryMultiAddress = (beneficiary: string) => {
 
 export const fetchBeaconSlot = async (
     beaconUrl: string,
-    blockId: `0x${string}` | number | "head" | "finalized"
+    blockId: `0x${string}` | number | "head" | "finalized",
 ): Promise<{
     data: {
         message: {
@@ -100,7 +100,7 @@ export const fetchBeaconSlot = async (
 }
 
 export const fetchFinalityUpdate = async (
-    beaconUrl: string
+    beaconUrl: string,
 ): Promise<{ finalized_slot: number; attested_slot: number }> => {
     let url = beaconUrl.trim()
     if (!url.endsWith("/")) {

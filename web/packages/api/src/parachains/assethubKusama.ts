@@ -12,7 +12,7 @@ export class AssetHubKusamaParachain extends AssetHubParachain {
             ethChainId,
             bridgeableENAsOnAH,
             pnas,
-            bridgeablePNAsOnKusamaAH
+            bridgeablePNAsOnKusamaAH,
         )
     }
 }

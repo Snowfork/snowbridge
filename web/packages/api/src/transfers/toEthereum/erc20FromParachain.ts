@@ -40,7 +40,7 @@ export class ERC20FromParachain implements TransferInterface {
             defaultFee?: bigint
             feeTokenLocation?: any
             claimerLocation?: any
-        }
+        },
     ): Promise<DeliveryFee> {
         const { assetHub, parachain } =
             "sourceParaId" in source
@@ -68,7 +68,7 @@ export class ERC20FromParachain implements TransferInterface {
             sourceParachainImpl.parachainId,
             1n,
             DOT_LOCATION,
-            DOT_LOCATION
+            DOT_LOCATION,
         )
 
         returnToSenderXcm = buildParachainERC20ReceivedXcmOnDestination(
@@ -78,7 +78,7 @@ export class ERC20FromParachain implements TransferInterface {
             1n,
             1n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
 
         localXcm = buildTransferXcmFromParachain(
@@ -94,7 +94,7 @@ export class ERC20FromParachain implements TransferInterface {
             1n,
             1n,
             10n,
-            1n
+            1n,
         )
 
         forwardedXcmToBH = buildExportXcm(
@@ -105,7 +105,7 @@ export class ERC20FromParachain implements TransferInterface {
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             1n,
-            1n
+            1n,
         )
 
         const fees = await estimateFeesFromParachains(
@@ -119,7 +119,7 @@ export class ERC20FromParachain implements TransferInterface {
                 forwardedXcmToBH,
                 returnToSenderXcm,
             },
-            options
+            options,
         )
         return fees
     }
@@ -132,7 +132,7 @@ export class ERC20FromParachain implements TransferInterface {
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
-        claimerLocation?: any
+        claimerLocation?: any,
     ): Promise<Transfer> {
         const { ethChainId, assetHubParaId, environment } = registry
 
@@ -155,7 +155,7 @@ export class ERC20FromParachain implements TransferInterface {
             sourceAccountHex,
             tokenAddress,
             beneficiaryAccount,
-            amount
+            amount,
         )
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = this.createTx(
             parachain,
@@ -169,7 +169,7 @@ export class ERC20FromParachain implements TransferInterface {
             amount,
             messageId,
             fee,
-            claimerLocation
+            claimerLocation,
         )
 
         return {
@@ -210,7 +210,7 @@ export class ERC20FromParachain implements TransferInterface {
         amount: bigint,
         messageId: string,
         fee: DeliveryFee,
-        claimerLocation?: any
+        claimerLocation?: any,
     ): SubmittableExtrinsic<"promise", ISubmittableResult> {
         let xcm: any
         // No swap
@@ -231,7 +231,7 @@ export class ERC20FromParachain implements TransferInterface {
                     fee.returnToSenderExecutionFeeDOT,
                 fee.totalFeeInDot,
                 fee.ethereumExecutionFee!,
-                claimerLocation
+                claimerLocation,
             )
         } // One swap from DOT to Ether on Asset Hub.
         else if (isRelaychainLocation(fee.feeLocation)) {
@@ -252,7 +252,7 @@ export class ERC20FromParachain implements TransferInterface {
                 fee.totalFeeInDot,
                 fee.ethereumExecutionFee!,
                 fee.ethereumExecutionFeeInNative!,
-                claimerLocation
+                claimerLocation,
             )
         }
         // If the fee asset is in native asset, we need to swap it to DOT first, then a second swap from DOT to Ether
@@ -274,7 +274,7 @@ export class ERC20FromParachain implements TransferInterface {
                 fee.totalFeeInNative!,
                 fee.ethereumExecutionFee!,
                 fee.ethereumExecutionFeeInNative!,
-                claimerLocation
+                claimerLocation,
             )
         } else {
             throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)

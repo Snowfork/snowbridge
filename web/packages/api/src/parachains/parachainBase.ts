@@ -93,12 +93,12 @@ export abstract class ParachainBase {
         account: string,
         ethChainId: number,
         tokenAddress: string,
-        asset?: Asset
+        asset?: Asset,
     ): Promise<bigint> {
         return this.getLocationBalance(
             asset?.location ?? erc20Location(ethChainId, tokenAddress),
             account,
-            asset?.assetId
+            asset?.assetId,
         )
     }
 
@@ -134,7 +134,7 @@ export abstract class ParachainBase {
         const result = (
             await this.provider.call.xcmPaymentApi.queryDeliveryFees(
                 { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
-                xcm
+                xcm,
             )
         ).toPrimitive() as any
         if (!result.ok) {
@@ -162,7 +162,7 @@ export abstract class ParachainBase {
         const result = (
             await this.provider.call.xcmPaymentApi.queryDeliveryFees(
                 { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
-                xcm
+                xcm,
             )
         ).toPrimitive() as any
         if (!result.ok) {

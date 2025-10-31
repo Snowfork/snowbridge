@@ -145,7 +145,7 @@ export class Context {
             ).toPrimitive() as number
             if (onChainParaId !== paraId) {
                 console.warn(
-                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`
+                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`,
                 )
             }
             this.#polkadotParachains[onChainParaId] = api
@@ -177,7 +177,7 @@ export class Context {
             ).toPrimitive() as number
             if (onChainParaId !== paraId) {
                 console.warn(
-                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`
+                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`,
                 )
             }
             this.#kusamaParachains[onChainParaId] = api
@@ -277,7 +277,7 @@ export class Context {
 }
 
 export function contextConfigFor(
-    env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {})
+    env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {}),
 ): Config {
     if (!(env in SNOWBRIDGE_ENV)) {
         throw Error(`Unknown environment '${env}'.`)
