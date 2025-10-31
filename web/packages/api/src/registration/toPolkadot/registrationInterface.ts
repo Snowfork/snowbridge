@@ -1,4 +1,4 @@
-import { AssetRegistry, ERC20Metadata } from "@snowbridge/base-types"
+import { AssetRegistry } from "@snowbridge/base-types"
 import { Context } from "../../index"
 import { IGatewayV2 as IGateway } from "@snowbridge/contract-types"
 import { ApiPromise } from "@polkadot/api"
@@ -18,9 +18,7 @@ export type TokenRegistration = {
         registry: AssetRegistry
         sourceAccount: string
         tokenAddress: string
-        assetHubDeliveryFeeEther: bigint
-        assetHubExecutionFeeEther: bigint
-        relayerFee: bigint
+        fee: RegistrationFee
     }
     computed: {
         gatewayAddress: string
@@ -46,6 +44,7 @@ export type RegistrationFee = {
     assetHubDeliveryFeeEther: bigint
     assetHubExecutionFeeEther: bigint
     assetDepositEther: bigint
+    assetDepositDOT: bigint
     relayerFee: bigint
     totalFeeInWei: bigint
 }

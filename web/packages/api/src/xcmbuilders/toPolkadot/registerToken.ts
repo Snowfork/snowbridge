@@ -1,8 +1,9 @@
-import { erc20Location, ethereumNetwork, bridgeLocation } from "../../xcmBuilder"
-import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { u8aToHex } from "@polkadot/util"
-import { blake2AsU8a } from "@polkadot/util-crypto"
-import { ApiPromise } from "@polkadot/api"
+import {accountToLocation, bridgeLocation, erc20Location, ethereumNetwork} from "../../xcmBuilder"
+import {ETHER_TOKEN_ADDRESS} from "../../assets_v2"
+import {u8aToHex} from "@polkadot/util"
+import {blake2AsU8a} from "@polkadot/util-crypto"
+import {ApiPromise} from "@polkadot/api"
+import {claimerFromBeneficiary} from "../../toPolkadotSnowbridgeV2";
 
 // Constants from gas-estimator/src/config.rs
 export const MINIMUM_DEPOSIT = 1n
@@ -16,75 +17,49 @@ export const MINIMUM_DEPOSIT = 1n
  *
  * Based on staging-xcm-builder/src/location_conversion.rs
  */
-export function getBridgeOwnerAccount(assetHub: any, ethChainId: number): string {
-    const registry = assetHub.registry
-
-    // Encode "ethereum-chain" as bytes
+export function getBridgeOwnerAccount(ethChainId: number): string {
     const prefix = new TextEncoder().encode("ethereum-chain")
-
-    // Encode chain_id as u64 (little-endian)
     const chainIdBytes = new Uint8Array(8)
     const view = new DataView(chainIdBytes.buffer)
     view.setBigUint64(0, BigInt(ethChainId), true) // true = little-endian
 
-    // Concatenate and hash
     const combined = new Uint8Array([...prefix, ...chainIdBytes])
     const hash = blake2AsU8a(combined, 256)
 
-    const bridgeOwner = u8aToHex(hash)
-    console.log("Bridge Owner Account:", bridgeOwner)
-    console.log("Chain ID:", ethChainId)
-
-    return bridgeOwner
+    return u8aToHex(hash)
 }
 
 /**
- * Build the remote XCM for token registration that will be executed on AssetHub
- * This XCM creates a new foreign asset in AssetHub's ForeignAssets pallet
+ * Build the full XCM message for token registration that will be executed on AssetHub
+ * This combines the BridgeHub wrapper and the remote registration XCM
  *
- * Based on make_create_asset_xcm_for_polkadot in gas-estimator/src/xcm_builder.rs:317-361
+ * Based on:
+ * - build_asset_hub_xcm in gas-estimator/src/xcm_builder.rs:52-130
+ * - make_create_asset_xcm_for_polkadot in gas-estimator/src/xcm_builder.rs:317-361
  */
-export function buildRegisterTokenXcm(
+export function buildAssetHubRegisterTokenXcm(
     assetHub: ApiPromise,
     ethChainId: number,
     tokenAddress: string,
-    ethAmount: bigint,
-    claimer: any,
-    bridgeOwner: string,
-    assetDepositDOT: bigint
+    totalValue: bigint,
+    executionFee: bigint,
+    assetDepositDOT: bigint,
+    bridgeOwner: string
 ) {
     const registry = assetHub.registry
+    const ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
 
-    const dotAsset = {
-        parents: 1,
-        interior: { Here: null },
-    }
+    // Calculate remaining ETH for registration after execution fee
+    const ethAmountForRegistration = totalValue - executionFee
 
-    const ethAsset = {
-        id: bridgeLocation(ethChainId),
-        fun: {
-            Fungible: ethAmount,
-        },
-    }
-
-    const dotFeeAsset = {
-        id: dotAsset,
-        fun: {
-            Fungible: assetDepositDOT,
-        },
-    }
-
-    // Asset ID for the token being registered
     const assetIdLocation =
         tokenAddress === ETHER_TOKEN_ADDRESS
             ? bridgeLocation(ethChainId)
             : erc20Location(ethChainId, tokenAddress)
 
-    // Create the ForeignAssets::create call using the API
     const assetIdLocationTyped = registry.createType("StagingXcmV5Location", assetIdLocation)
     const adminMultiAddress = registry.createType("MultiAddress", { Id: bridgeOwner })
 
-    // Use the API to create the call properly
     const createCall = assetHub.tx.foreignAssets.create(
         assetIdLocationTyped,
         adminMultiAddress,
@@ -92,96 +67,9 @@ export function buildRegisterTokenXcm(
     )
 
     const callData = createCall.method.toU8a()
-    console.log("assetDepositDOT", assetDepositDOT)
+    let bridgeOwnerLocation = accountToLocation(bridgeOwner)
 
-    return registry.createType("XcmVersionedXcm", {
-        V5: [
-            {
-                ExchangeAsset: {
-                    give: { Definite: [ethAsset] },
-                    want: [dotFeeAsset],
-                    maximal: true,
-                },
-            },
-            {
-                DepositAsset: {
-                    assets: { Definite: [dotFeeAsset] },
-                    beneficiary: {
-                        parents: 0,
-                        interior: {
-                            X1: [
-                                {
-                                    AccountId32: {
-                                        network: null,
-                                        id: bridgeOwner,
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                },
-            },
-            {
-                Transact: {
-                    originKind: "Xcm",
-                    fallbackMaxWeight: null,
-                    call: {
-                        encoded: u8aToHex(callData),
-                    },
-                },
-            },
-            {
-                RefundSurplus: null,
-            },
-            {
-                DepositAsset: {
-                    assets: {
-                        Wild: {
-                            AllCounted: 2,
-                        },
-                    },
-                    beneficiary: {
-                        parents: 0,
-                        interior: {
-                            X1: [
-                                {
-                                    AccountId32: {
-                                        network: null,
-                                        id: bridgeOwner,
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                },
-            },
-        ],
-    })
-}
-
-/**
- * Build the full XCM message that will be executed on AssetHub for dry running
- * This mimics what the relayer builds when processing a registration message
- *
- * Based on build_asset_hub_xcm in gas-estimator/src/xcm_builder.rs:52-130
- */
-export function buildAssetHubRegisterTokenXcm(
-    assetHub: ApiPromise,
-    ethChainId: number,
-    totalValue: bigint,
-    executionFee: bigint,
-    claimer: any,
-    origin: string,
-    remoteXcmBytes: Uint8Array
-) {
-    const registry = assetHub.registry
-    const ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
-
-    // Decode the remote XCM
-    const remoteXcm = registry.createType("XcmVersionedXcm", remoteXcmBytes) as any
-    const remoteInstructions = remoteXcm.isV5 ? remoteXcm.asV5 : []
-
-    const instructions = [
+    const instructions: any[] = [
         {
             DescendOrigin: { X1: [{ PalletInstance: 91 }] },
         },
@@ -200,7 +88,7 @@ export function buildAssetHubRegisterTokenXcm(
         },
         {
             SetHints: {
-                hints: [{ AssetClaimer: { location: claimer } }],
+                hints: [{ AssetClaimer: { location: claimerFromBeneficiary(assetHub, bridgeOwner) } }],
             },
         },
         {
@@ -215,26 +103,96 @@ export function buildAssetHubRegisterTokenXcm(
         },
     ]
 
-    // Add remaining ETH if any
-    if (totalValue > executionFee) {
+    if (ethAmountForRegistration > 0n) {
         instructions.push({
             ReserveAssetDeposited: [
                 {
                     id: ether,
                     fun: {
-                        Fungible: totalValue - executionFee,
+                        Fungible: ethAmountForRegistration,
                     },
                 },
             ],
         })
     }
 
-    // For token registration, DO NOT descend to sender's account
-    // The ExchangeAsset and Transact must execute from the Ethereum sovereign account (bridge owner)
-    // so that the Transact can access the deposited DOT
-
-    // Append remote XCM instructions
-    instructions.push(...remoteInstructions)
+    instructions.push(
+        {
+            ExchangeAsset: {
+                give: {
+                    Definite: [
+                        {
+                            id: bridgeLocation(ethChainId),
+                            fun: {
+                                Fungible: ethAmountForRegistration,
+                            },
+                        },
+                    ],
+                },
+                want: [
+                    {
+                        id: { parents: 1, interior: { Here: null } },
+                        fun: {
+                            Fungible: assetDepositDOT,
+                        },
+                    },
+                ],
+                maximal: true,
+            },
+        },
+        {
+            DepositAsset: {
+                assets: {
+                    Definite: [
+                        {
+                            id: { parents: 1, interior: { Here: null } },
+                            fun: {
+                                Fungible: assetDepositDOT,
+                            },
+                        },
+                    ],
+                },
+                beneficiary: {
+                    parents: 0,
+                    interior: { x1: [bridgeOwnerLocation] }
+                },
+            },
+        },
+        {
+            Transact: {
+                originKind: "Xcm",
+                fallbackMaxWeight: null,
+                call: {
+                    encoded: u8aToHex(callData),
+                },
+            },
+        },
+        {
+            RefundSurplus: null,
+        },
+        {
+            DepositAsset: {
+                assets: {
+                    Wild: {
+                        AllCounted: 2,
+                    },
+                },
+                beneficiary: {
+                    parents: 0,
+                    interior: {
+                        X1: [
+                            {
+                                AccountId32: {
+                                    network: null,
+                                    id: bridgeOwner,
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        }
+    )
 
     return registry.createType("XcmVersionedXcm", {
         V5: instructions,

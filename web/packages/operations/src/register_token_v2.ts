@@ -71,6 +71,8 @@ export const registerTokenV2 = async (tokenAddress: string) => {
             throw Error(`validation has one or more errors.`)
         }
 
+        console.log("validation result", validation)
+
         if (process.env["DRY_RUN"] != "true") {
             // Step 5. Submit the transaction
             const response = await ETHEREUM_ACCOUNT.sendTransaction(registration.tx)

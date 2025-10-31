@@ -17,16 +17,11 @@ import { DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { swapAsset1ForAsset2, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { padFeeByPercentage } from "../../utils"
 import { paraImplementation } from "../../parachains"
-import { claimerFromBeneficiary, claimerLocationToBytes } from "../../toPolkadotSnowbridgeV2"
 import {
-    buildRegisterTokenXcm,
     buildAssetHubRegisterTokenXcm,
     getBridgeOwnerAccount,
 } from "../../xcmbuilders/toPolkadot/registerToken"
-/**
- * Fetch the asset deposit value from AssetHub runtime constants
- * This is the DOT deposit required to create a new foreign asset
- */
+
 const getAssetDeposit = (assetHub: ApiPromise): bigint => {
     return BigInt(assetHub.consts.foreignAssets.assetDeposit.toString())
 }
@@ -56,35 +51,15 @@ export class RegisterToken implements RegistrationInterface {
         const paddFeeByPercentage = options?.paddFeeByPercentage ?? 33n
         const ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
 
-        // Fetch the asset deposit required for creating a new asset on AssetHub
         const assetDepositDOT = getAssetDeposit(assetHub)
-
-        // Build a sample XCM message to estimate fees
-        // Use dummy values for claimer and token address since we only need the structure
-        const claimer = claimerFromBeneficiary(
-            assetHub,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        )
-        const bridgeOwner = getBridgeOwnerAccount(assetHub, registry.ethChainId)
-
-        const remoteXcm = buildRegisterTokenXcm(
-            assetHub,
-            registry.ethChainId,
-            "0x0000000000000000000000000000000000000000",
-            1_000_000_000_000n,
-            claimer,
-            bridgeOwner,
-            assetDepositDOT
-        )
-
         const assetHubXcm = buildAssetHubRegisterTokenXcm(
             assetHub,
             registry.ethChainId,
-            1_000_000_000_000n,
-            100_000_000_000n,
-            claimer,
-            "0x0000000000000000000000000000000000000000",
-            remoteXcm.toU8a()
+            "0x0000000000000000000000000000000000000000", // dummy token address
+            1_000_000_000_000n, // dummy total value
+            100_000_000_000n, // dummy execution fee
+            assetDepositDOT,
+            getBridgeOwnerAccount(registry.ethChainId)
         )
 
         // Delivery fee BridgeHub to AssetHub
@@ -125,6 +100,7 @@ export class RegisterToken implements RegistrationInterface {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             assetDepositEther: assetDepositEther,
+            assetDepositDOT: assetDepositDOT,
             relayerFee: relayerFee,
             totalFeeInWei: totalFeeInWei,
         }
@@ -160,9 +136,7 @@ export class RegisterToken implements RegistrationInterface {
                 registry,
                 sourceAccount,
                 tokenAddress,
-                assetHubDeliveryFeeEther: fee.assetHubDeliveryFeeEther,
-                assetHubExecutionFeeEther: fee.assetHubExecutionFeeEther,
-                relayerFee: fee.relayerFee,
+                fee
             },
             computed: {
                 gatewayAddress: registry.gatewayAddress,
@@ -191,17 +165,15 @@ export class RegisterToken implements RegistrationInterface {
         const { totalValue } = registration.computed
         const logs: ValidationLog[] = []
 
-        // Check if token is already registered
         const isTokenAlreadyRegistered = await gateway.isTokenRegistered(tokenAddress)
         if (isTokenAlreadyRegistered) {
             logs.push({
-                kind: ValidationKind.Warning,
+                kind: ValidationKind.Error,
                 reason: ValidationReason.MinimumAmountValidation,
                 message: "Token is already registered on the bridge.",
             })
         }
 
-        // Check ether balance
         const etherBalance = await ethereum.getBalance(sourceAccount)
 
         let feeInfo: FeeInfo | undefined
@@ -259,38 +231,14 @@ export class RegisterToken implements RegistrationInterface {
             })
         } else {
             try {
-                // Build the remote XCM that will be executed on AssetHub
-                const claimer = claimerFromBeneficiary(assetHub, sourceAccount)
-                const bridgeOwner = getBridgeOwnerAccount(assetHub, registry.ethChainId)
-
-                // Fetch the asset deposit required for creating a new asset on AssetHub
-                const assetDepositDOT = getAssetDeposit(assetHub)
-
-                // First build the remote XCM (the registration instructions)
-                const executionFee =
-                    registration.input.assetHubDeliveryFeeEther +
-                    registration.input.assetHubExecutionFeeEther
-                console.log("total value", totalValue)
-                console.log("executionFee", executionFee)
-                const remoteXcm = buildRegisterTokenXcm(
-                    assetHub,
-                    registry.ethChainId,
-                    tokenAddress,
-                    totalValue - executionFee,
-                    claimer,
-                    bridgeOwner,
-                    assetDepositDOT
-                )
-
-                // Then build the full AssetHub XCM (with BridgeHub wrapper)
                 const xcm = buildAssetHubRegisterTokenXcm(
                     assetHub,
                     registry.ethChainId,
+                    tokenAddress,
                     totalValue,
-                    executionFee,
-                    claimer,
-                    sourceAccount,
-                    remoteXcm.toU8a()
+                    registration.input.fee.assetHubDeliveryFeeEther,
+                    registration.input.fee.assetDepositDOT,
+                    getBridgeOwnerAccount(registry.ethChainId)
                 )
 
                 const assetHubImpl = await paraImplementation(assetHub)
