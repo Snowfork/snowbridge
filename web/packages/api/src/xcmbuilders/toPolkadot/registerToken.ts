@@ -100,7 +100,7 @@ export function buildRegisterTokenXcm(
                 ExchangeAsset: {
                     give: { Definite: [ethAsset] },
                     want: [dotFeeAsset],
-                    maximal: false,
+                    maximal: true,
                 },
             },
             {
@@ -140,7 +140,19 @@ export function buildRegisterTokenXcm(
                             AllCounted: 2,
                         },
                     },
-                    beneficiary: claimer,
+                    beneficiary: {
+                        parents: 0,
+                        interior: {
+                            X1: [
+                                {
+                                    AccountId32: {
+                                        network: null,
+                                        id: bridgeOwner,
+                                    },
+                                },
+                            ],
+                        },
+                    },
                 },
             },
         ],
@@ -217,19 +229,9 @@ export function buildAssetHubRegisterTokenXcm(
         })
     }
 
-    // Add descend origin for sender
-    instructions.push({
-        DescendOrigin: {
-            X1: [
-                {
-                    AccountKey20: {
-                        key: origin,
-                        network: null,
-                    },
-                } as any,
-            ],
-        },
-    } as any)
+    // For token registration, DO NOT descend to sender's account
+    // The ExchangeAsset and Transact must execute from the Ethereum sovereign account (bridge owner)
+    // so that the Transact can access the deposited DOT
 
     // Append remote XCM instructions
     instructions.push(...remoteInstructions)

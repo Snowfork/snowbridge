@@ -71,7 +71,7 @@ export class RegisterToken implements RegistrationInterface {
             assetHub,
             registry.ethChainId,
             "0x0000000000000000000000000000000000000000",
-            1_000_000_000_000n, // 1000 ETH dummy amount
+            1_000_000_000_000n,
             claimer,
             bridgeOwner,
             assetDepositDOT
@@ -111,12 +111,12 @@ export class RegisterToken implements RegistrationInterface {
         )
 
         // Convert asset deposit from DOT to Ether
-        const assetDepositEther = await swapAsset1ForAsset2(
+        const assetDepositEther = padFeeByPercentage(await swapAsset1ForAsset2(
             assetHub,
             DOT_LOCATION,
             ether,
             assetDepositDOT
-        )
+        ), 10n)
 
         const totalFeeInWei =
             deliveryFeeInEther + assetHubExecutionFeeEther + assetDepositEther + relayerFee
@@ -146,15 +146,11 @@ export class RegisterToken implements RegistrationInterface {
 
         const totalValue = fee.totalFeeInWei
 
-        // network = 0 for Polkadot (as per Gateway.sol line 470)
         const network = 0
-
-        // The execution fee passed to the gateway includes both delivery and execution
-        const executionFee = fee.assetHubDeliveryFeeEther + fee.assetHubExecutionFeeEther
 
         const tx = await con
             .getFunction("v2_registerToken")
-            .populateTransaction(tokenAddress, network, executionFee, fee.relayerFee, {
+            .populateTransaction(tokenAddress, network, fee.assetHubExecutionFeeEther, fee.relayerFee, {
                 value: totalValue,
                 from: sourceAccount,
             })
