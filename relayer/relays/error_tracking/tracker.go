@@ -117,7 +117,7 @@ func IsTransientError(err error) bool {
 		"temporary", "try again", "rate limit", "too many requests",
 		"rpc", "dial", "i/o timeout", "broken pipe", "reset by peer",
 		"finality timeout", "dropped", "invalid", "usurped", "close sent",
-		"fetch relaychain block", "fetch parachain block",
+		"fetch relaychain block", "fetch parachain block", "closed network connection",
 	}
 
 	for _, pattern := range transientPatterns {

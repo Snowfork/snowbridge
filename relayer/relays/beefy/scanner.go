@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
+	"github.com/snowfork/snowbridge/relayer/relays/error_tracking"
 )
 
 type ScanBlocksResult struct {
@@ -80,10 +82,14 @@ func scanBlocks(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateA
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(3 * time.Second):
+			case <-time.After(6 * time.Second):
 			}
 			finalizedHeader, err = fetchFinalizedBeefyHeader()
 			if err != nil {
+				if error_tracking.IsTransientError(err) {
+					log.Warnf("fetch BEEFY header with transient error: %v", err)
+					continue
+				}
 				emitError(err)
 				return
 			}
@@ -157,7 +163,7 @@ func scanCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.Subst
 	for {
 		select {
 		case <-ctx.Done():
-			emitError(err)
+			emitError(ctx.Err())
 			return
 		case result, ok := <-in:
 			if !ok {
