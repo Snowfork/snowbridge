@@ -5,7 +5,7 @@ import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { MultiAddressStruct } from "@snowbridge/contract-types/dist/IGateway.sol/IGatewayV1"
-import { AbiCoder, ContractTransaction, LogDescription, TransactionReceipt } from "ethers"
+import { AbiCoder, ContractTransaction, LogDescription, TransactionReceipt, Wallet } from "ethers"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
 import { IGatewayV2__factory } from "@snowbridge/contract-types"
@@ -14,6 +14,7 @@ import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
 import { ApiPromise } from "@polkadot/api"
 import { accountToLocation } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
+import { CreateAgent } from "./registration/agent/createAgent"
 export { ValidationKind } from "./toPolkadot_v2"
 
 export type DeliveryFee = {
@@ -199,4 +200,27 @@ export function claimerFromBeneficiary(assetHub: ApiPromise, beneficiaryAddressH
 
 export function claimerLocationToBytes(claimerLocation: Codec) {
     return hexToU8a(claimerLocation.toHex())
+}
+
+// Agent creation exports
+export type {
+    AgentCreation,
+    AgentCreationValidationResult,
+    AgentCreationInterface,
+} from "./registration/agent/agentInterface"
+
+export function createAgentCreationImplementation() {
+    return new CreateAgent()
+}
+
+export async function sendAgentCreation(
+    creation: any,
+    wallet: Wallet
+): Promise<TransactionReceipt> {
+    const response = await wallet.sendTransaction(creation.tx)
+    const receipt = await response.wait(1)
+    if (!receipt) {
+        throw Error(`Transaction ${response.hash} not included.`)
+    }
+    return receipt
 }
