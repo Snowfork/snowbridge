@@ -20,16 +20,14 @@ export class CreateAgent implements AgentCreationInterface {
               },
         registry: AssetRegistry,
         sourceAccount: string,
-        agentId: string
+        agentId: string,
     ): Promise<AgentCreation> {
         const ifce = IGateway__factory.createInterface()
         const con = new Contract(registry.gatewayAddress, ifce)
 
-        const tx = await con
-            .getFunction("v2_createAgent")
-            .populateTransaction(agentId, {
-                from: sourceAccount,
-            })
+        const tx = await con.getFunction("v2_createAgent").populateTransaction(agentId, {
+            from: sourceAccount,
+        })
 
         return {
             input: {
@@ -46,7 +44,7 @@ export class CreateAgent implements AgentCreationInterface {
 
     async validateAgentCreation(
         context: Context | AgentConnections,
-        creation: AgentCreation
+        creation: AgentCreation,
     ): Promise<AgentCreationValidationResult> {
         const { tx } = creation
         const { sourceAccount, agentId } = creation.input

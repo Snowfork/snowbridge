@@ -20,7 +20,7 @@ export const createAgent = async (agentId: string) => {
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ??
             "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
-        context.ethereum()
+        context.ethereum(),
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
 
@@ -42,7 +42,7 @@ export const createAgent = async (agentId: string) => {
             },
             registry,
             ETHEREUM_ACCOUNT_PUBLIC,
-            agentId
+            agentId,
         )
 
         // Step 2. Validate the transaction.
@@ -51,11 +51,13 @@ export const createAgent = async (agentId: string) => {
                 ethereum: context.ethereum(),
                 gateway: context.gatewayV2(),
             },
-            creation
+            creation,
         )
 
         // Check validation logs for errors
-        const errorLogs = validation.logs.filter((l) => l.kind === toPolkadotSnowbridgeV2.ValidationKind.Error)
+        const errorLogs = validation.logs.filter(
+            (l) => l.kind === toPolkadotSnowbridgeV2.ValidationKind.Error,
+        )
         if (errorLogs.length > 0) {
             console.error("Validation failed with errors:")
             errorLogs.forEach((log) => {
@@ -92,7 +94,9 @@ export const createAgent = async (agentId: string) => {
 if (require.main === module) {
     if (process.argv.length != 3) {
         console.error("Expected arguments: `agentId`")
-        console.error("Example: npm run createAgent 0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314")
+        console.error(
+            "Example: npm run createAgent 0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314",
+        )
         process.exit(1)
     }
 

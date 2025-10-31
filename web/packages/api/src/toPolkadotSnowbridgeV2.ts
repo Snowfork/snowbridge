@@ -215,7 +215,7 @@ export function createAgentCreationImplementation() {
 
 export async function sendAgentCreation(
     creation: any,
-    wallet: Wallet
+    wallet: Wallet,
 ): Promise<TransactionReceipt> {
     const response = await wallet.sendTransaction(creation.tx)
     const receipt = await response.wait(1)

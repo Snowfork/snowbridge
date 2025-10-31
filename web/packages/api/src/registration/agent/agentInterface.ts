@@ -43,11 +43,11 @@ export interface AgentCreationInterface {
               },
         registry: AssetRegistry,
         sourceAccount: string,
-        agentId: string
+        agentId: string,
     ): Promise<AgentCreation>
 
     validateAgentCreation(
         context: Context | AgentConnections,
-        creation: AgentCreation
+        creation: AgentCreation,
     ): Promise<AgentCreationValidationResult>
 }
