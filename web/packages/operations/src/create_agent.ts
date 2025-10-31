@@ -4,6 +4,8 @@ import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
 
+// TODO add the ability to specify a location to create a agent from, using the EthereumSystemV2::agent_id API,
+// once https://github.com/polkadot-fellows/runtimes/pull/978 has been released on-chain.
 export const createAgent = async (agentId: string) => {
     await cryptoWaitReady()
 
