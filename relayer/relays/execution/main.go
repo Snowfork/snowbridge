@@ -561,7 +561,8 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	inboundMsg.Proof.ExecutionProof = proof.HeaderPayload
 
 	if r.gasEstimator.config.Enabled {
-		gasEstimate, err := r.gasEstimator.EstimateGas(ctx, ev, inboundMsg, source)
+		relayerPublicKey := r.keypair.PublicKey()
+		gasEstimate, err := r.gasEstimator.EstimateGas(ctx, ev, inboundMsg, source, relayerPublicKey)
 		if err != nil {
 			return fmt.Errorf("gas estimation failed: %w", err)
 		}
