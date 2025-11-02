@@ -104,7 +104,7 @@ func (et *ErrorTracker) logHourlyStats() {
 	}
 }
 
-var SnowbridgeTransientError = "SnowbridgeTransientError"
+var SnowbridgeTransientError = "snowbridge_transient_error"
 
 func IsTransientError(err error) bool {
 	if err == nil {
