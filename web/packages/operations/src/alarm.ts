@@ -420,7 +420,8 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: AlarmReason.IndexServiceStale.toString(),
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            ...alarmCommandSharedInput,
+            ComparisonOperator: "GreaterThanThreshold",
+            ...absoluteValueBreachingAlarmConfig,
             Threshold: IndexerLatencyThreshold,
         })
         cloudWatchAlarms.push(indexerAlarm)
