@@ -1,5 +1,5 @@
 import "dotenv/config"
-import { Context, toPolkadotSnowbridgeV2, contextConfigFor } from "@snowbridge/api"
+import { Context, toEthereumSnowbridgeV2, contextConfigFor } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
@@ -33,7 +33,7 @@ export const createAgent = async (agentId: string) => {
     console.log("Agent Creation on Snowbridge V2")
     {
         // Step 0. Create an agent creation implementation
-        const agentCreationImpl = toPolkadotSnowbridgeV2.createAgentCreationImplementation()
+        const agentCreationImpl = toEthereumSnowbridgeV2.createAgentCreationImplementation()
 
         // Step 1. Create an agent creation tx
         const creation = await agentCreationImpl.createAgentCreation(
@@ -56,7 +56,7 @@ export const createAgent = async (agentId: string) => {
 
         // Check validation logs for errors
         const errorLogs = validation.logs.filter(
-            (l) => l.kind === toPolkadotSnowbridgeV2.ValidationKind.Error,
+            (l) => l.kind === toEthereumSnowbridgeV2.ValidationKind.Error,
         )
         if (errorLogs.length > 0) {
             console.error("Validation failed with errors:")
