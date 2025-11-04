@@ -20,7 +20,6 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target: x86_64-unknown-linux-gnu
           override: true
 
       - name: Cache Cargo registry and build artifacts
@@ -39,21 +38,41 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential
 
-      - name: Build gas estimator
+      - name: Build gas estimator (polkadot)
         working-directory: gas-estimator
         run: |
-          cargo build --release --target x86_64-unknown-linux-gnu --features polkadot
+          cargo build --release --features polkadot
+          cp target/release/snowbridge-gas-estimator snowbridge-gas-estimator-polkadot
 
-      - name: Rename binary
+      - name: Build gas estimator (paseo)
         working-directory: gas-estimator
         run: |
-          cp target/x86_64-unknown-linux-gnu/release/snowbridge-gas-estimator snowbridge-gas-estimator-x86_64-unknown-linux-gnu
+          cargo build --release --features paseo
+          cp target/release/snowbridge-gas-estimator snowbridge-gas-estimator-paseo
 
-      - name: Upload artifact
+      - name: Build gas estimator (westend)
+        working-directory: gas-estimator
+        run: |
+          cargo build --release --features westend
+          cp target/release/snowbridge-gas-estimator snowbridge-gas-estimator-westend
+
+      - name: Upload polkadot artifact
         uses: actions/upload-artifact@v4
         with:
-          name: snowbridge-gas-estimator-x86_64-unknown-linux-gnu
-          path: gas-estimator/snowbridge-gas-estimator-x86_64-unknown-linux-gnu
+          name: snowbridge-gas-estimator-polkadot
+          path: gas-estimator/snowbridge-gas-estimator-polkadot
+
+      - name: Upload paseo artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snowbridge-gas-estimator-paseo
+          path: gas-estimator/snowbridge-gas-estimator-paseo
+
+      - name: Upload westend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snowbridge-gas-estimator-westend
+          path: gas-estimator/snowbridge-gas-estimator-westend
 
   release:
     needs: build
@@ -127,4 +146,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            ./artifacts/snowbridge-gas-estimator-x86_64-unknown-linux-gnu/snowbridge-gas-estimator-x86_64-unknown-linux-gnu
+            ./artifacts/snowbridge-gas-estimator-polkadot/snowbridge-gas-estimator-polkadot
+            ./artifacts/snowbridge-gas-estimator-paseo/snowbridge-gas-estimator-paseo
+            ./artifacts/snowbridge-gas-estimator-westend/snowbridge-gas-estimator-westend

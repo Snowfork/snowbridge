@@ -33,7 +33,8 @@ import { paraImplementation } from "./parachains"
 import { Context } from "./index"
 import { ETHER_TOKEN_ADDRESS, getAssetHubConversionPalletSwap } from "./assets_v2"
 import { getOperatingStatus } from "./status"
-import { AbstractProvider, ethers } from "ethers"
+import { AbstractProvider, ethers, Wallet, TransactionReceipt } from "ethers"
+import { CreateAgent } from "./registration/agent/createAgent"
 
 export { ValidationKind, signAndSend } from "./toEthereum_v2"
 
@@ -912,4 +913,27 @@ export const checkContractAddress = async (ethereum: AbstractProvider, address: 
             "Contract call with invalid target address: " + address + " error: " + String(error),
         )
     }
+}
+
+// Agent creation exports
+export type {
+    AgentCreation,
+    AgentCreationValidationResult,
+    AgentCreationInterface,
+} from "./registration/agent/agentInterface"
+
+export function createAgentCreationImplementation() {
+    return new CreateAgent()
+}
+
+export async function sendAgentCreation(
+    creation: any,
+    wallet: Wallet,
+): Promise<TransactionReceipt> {
+    const response = await wallet.sendTransaction(creation.tx)
+    const receipt = await response.wait(1)
+    if (!receipt) {
+        throw Error(`Transaction ${response.hash} not included.`)
+    }
+    return receipt
 }

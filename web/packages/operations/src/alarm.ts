@@ -278,6 +278,23 @@ export const initializeAlarms = async () => {
         DatapointsToAlarm: AlarmEvaluationConfiguration.DatapointsToAlarm,
     }
 
+    // For alarms that need to trigger when an absolute value breaches a
+    // threshold. For this case dont wait for 3/4 datapoints in a 15 minute
+    // window(45 min) as it will take a minimum of 45 minutes before alarms are
+    // triggered. Use 5 minutes instead. Alarm uses maximum statistic because
+    // so that it alarms when the maximum value is breaching within a time
+    // window.
+    // e.g. bridge latency greater than x seconds.
+    // e.g. nonce difference greater than x messages.
+    let absoluteValueBreachingAlarmConfig: any = {
+        Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
+        TreatMissingData: "notBreaching",
+        Period: 60 * 5,
+        Statistic: "Maximum",
+        EvaluationPeriods: 1,
+        DatapointsToAlarm: 1,
+    }
+
     // Beefy stale
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
@@ -314,7 +331,8 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            ...alarmCommandSharedInput,
+            ComparisonOperator: "GreaterThanThreshold",
+            ...absoluteValueBreachingAlarmConfig,
             Threshold: 5400, // 1.5 hours at most
         }),
     )
@@ -332,7 +350,8 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            ...alarmCommandSharedInput,
+            ComparisonOperator: "GreaterThanThreshold",
+            ...absoluteValueBreachingAlarmConfig,
             Threshold: 1800, // 0.5 hour
         }),
     )
@@ -401,7 +420,8 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: AlarmReason.IndexServiceStale.toString(),
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            ...alarmCommandSharedInput,
+            ComparisonOperator: "GreaterThanThreshold",
+            ...absoluteValueBreachingAlarmConfig,
             Threshold: IndexerLatencyThreshold,
         })
         cloudWatchAlarms.push(indexerAlarm)
