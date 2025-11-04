@@ -5,7 +5,7 @@ on:
     paths:
       - "relayer/**"
     branches:
-      - main
+      - clara/import-beacon-state
   workflow_dispatch:
 
 env:
