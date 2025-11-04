@@ -142,6 +142,7 @@ export class ERC20FromAH implements TransferInterface {
                 tokenAddress,
                 amount,
                 fee,
+                contractCall: options?.contractCall,
             },
             computed: {
                 sourceParaId: sourceParachainImpl.parachainId,

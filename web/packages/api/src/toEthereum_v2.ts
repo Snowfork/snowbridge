@@ -21,7 +21,13 @@ import {
 } from "./xcmBuilder"
 import { getAssetHubConversionPalletSwap } from "./assets_v2"
 import { getOperatingStatus, OperationStatus } from "./status"
-import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
+import {
+    Asset,
+    AssetRegistry,
+    ContractCall,
+    ERC20Metadata,
+    Parachain,
+} from "@snowbridge/base-types"
 import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
 import {
     CallDryRunEffects,
@@ -44,6 +50,7 @@ export type Transfer = {
         tokenAddress: string
         amount: bigint
         fee: DeliveryFee
+        contractCall?: ContractCall
     }
     computed: {
         sourceParaId: number
@@ -421,6 +428,7 @@ export enum ValidationReason {
     DryRunApiNotAvailable,
     DryRunFailed,
     InsufficientEtherBalance,
+    ContractCallInvalidTarget,
 }
 
 export type ValidationLog = {

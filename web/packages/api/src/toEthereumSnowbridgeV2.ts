@@ -33,6 +33,7 @@ import { paraImplementation } from "./parachains"
 import { Context } from "./index"
 import { ETHER_TOKEN_ADDRESS, getAssetHubConversionPalletSwap } from "./assets_v2"
 import { getOperatingStatus } from "./status"
+import { AbstractProvider, ethers } from "ethers"
 
 export { ValidationKind, signAndSend } from "./toEthereum_v2"
 
@@ -517,11 +518,12 @@ export const validateTransferFromAssetHub = async (
     const { sourceAccountHex, sourceParaId, sourceAssetMetadata } = transfer.computed
     const { tx } = transfer
 
-    const { sourceParachain, gateway, bridgeHub } =
+    const { sourceParachain, gateway, ethereum, bridgeHub } =
         context instanceof Context
             ? {
                   sourceParachain: await context.parachain(sourceParaId),
                   gateway: context.gateway(),
+                  ethereum: context.ethereum(),
                   bridgeHub: await context.bridgeHub(),
               }
             : context
@@ -578,6 +580,22 @@ export const validateTransferFromAssetHub = async (
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientEtherBalance,
                 message: "Insufficient ether balance to submit transaction.",
+            })
+        }
+    }
+    let contractCall = transfer.input.contractCall
+    if (contractCall) {
+        try {
+            await checkContractAddress(ethereum, contractCall.target)
+        } catch (error) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.ContractCallInvalidTarget,
+                message:
+                    "Contract call with invalid target address: " +
+                    contractCall.target +
+                    " error: " +
+                    String(error),
             })
         }
     }
@@ -677,11 +695,12 @@ export const validateTransferFromParachain = async (
     } = transfer.computed
     const { tx } = transfer
 
-    const { sourceParachain, gateway, bridgeHub, assetHub } =
+    const { sourceParachain, gateway, ethereum, bridgeHub, assetHub } =
         context instanceof Context
             ? {
                   sourceParachain: await context.parachain(sourceParaId),
                   gateway: context.gateway(),
+                  ethereum: context.ethereum(),
                   bridgeHub: await context.bridgeHub(),
                   assetHub: await context.assetHub(),
               }
@@ -742,6 +761,23 @@ export const validateTransferFromParachain = async (
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientEtherBalance,
                 message: "Insufficient ether balance to submit transaction.",
+            })
+        }
+    }
+
+    let contractCall = transfer.input.contractCall
+    if (contractCall) {
+        try {
+            await checkContractAddress(ethereum, contractCall.target)
+        } catch (error) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.ContractCallInvalidTarget,
+                message:
+                    "Contract call with invalid target address: " +
+                    contractCall.target +
+                    " error: " +
+                    String(error),
             })
         }
     }
@@ -858,4 +894,22 @@ export const mockDeliveryFee: DeliveryFee = {
     returnToSenderExecutionFeeDOT: 1n,
     totalFeeInDot: 10n,
     ethereumExecutionFee: 1n,
+}
+
+export const checkContractAddress = async (ethereum: AbstractProvider, address: string) => {
+    if (!ethers.isAddress(address)) {
+        throw new Error("Invalid contract address: " + address)
+    }
+    try {
+        const code = await ethereum.getCode(address)
+        if (code == "0x") {
+            throw new Error(
+                "Contract call with invalid target address: no contract deployed at " + address,
+            )
+        }
+    } catch (error) {
+        throw new Error(
+            "Contract call with invalid target address: " + address + " error: " + String(error),
+        )
+    }
 }

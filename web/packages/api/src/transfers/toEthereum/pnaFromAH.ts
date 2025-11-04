@@ -150,6 +150,7 @@ export class PNAFromAH implements TransferInterface {
                 tokenAddress,
                 amount,
                 fee,
+                contractCall: options?.contractCall,
             },
             computed: {
                 sourceParaId: sourceParachainImpl.parachainId,

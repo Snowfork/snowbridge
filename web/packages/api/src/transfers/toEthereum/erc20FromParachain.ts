@@ -185,6 +185,7 @@ export class ERC20FromParachain implements TransferInterface {
                 tokenAddress,
                 amount,
                 fee,
+                contractCall: options?.contractCall,
             },
             computed: {
                 sourceParaId: sourceParachainImpl.parachainId,
