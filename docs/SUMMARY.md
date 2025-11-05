@@ -15,7 +15,8 @@
     * [Token transfer Ethereum -> Polkadot](developer-docs/snowbridge-v2/typescript-sdk/e2p.md)
     * [Token transfer Polkadot -> Ethereum](developer-docs/snowbridge-v2/typescript-sdk/e2p-1.md)
     * [Transact on AssetHub & Parachain](developer-docs/snowbridge-v2/typescript-sdk/transact-ah.md)
-    * [Transact on Ethereum & L2s](developer-docs/snowbridge-v2/typescript-sdk/transact-ethereum.md)
+    * [Transact on Ethereum & L2s (WIP)](developer-docs/snowbridge-v2/typescript-sdk/transact-ethereum.md)
+    * [Create Agent](developer-docs/snowbridge-v2/typescript-sdk/create-agent.md)
   * [V2 Parachain Integration](developer-docs/snowbridge-v2/parachain-integration.md)
 * [Local Development Guide](developer-docs/quick-start-guide.md)
 
