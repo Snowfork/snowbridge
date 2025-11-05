@@ -555,7 +555,7 @@ export async function validateTransfer(
                     logs.push({
                         kind: ValidationKind.Error,
                         reason: ValidationReason.DryRunFailed,
-                        message: "Dry run call did not provide a forwared xcm.",
+                        message: "Dry run call did not provide a forwarded xcm.",
                     })
                 } else {
                     const dryRunResultBridgeHub = await dryRunBridgeHub(
