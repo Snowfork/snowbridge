@@ -767,7 +767,7 @@ export const validateTransferFromParachain = async (
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.DryRunFailed,
-                    message: "Dry run call did not provide a forwared xcm.",
+                    message: "Dry run call did not provide a forwarded xcm.",
                 })
             } else {
                 const dryRunResultAssetHub = await dryRunAssetHub(

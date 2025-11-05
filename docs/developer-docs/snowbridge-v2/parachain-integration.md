@@ -6,7 +6,7 @@ description: A guide for parachain integraters.
 
 ### Snowbridge V2 Protocol
 
-Snowbridge V2 is a generalized messaging protocol, that supports token transfers (ERC-20s and Polkadot native assets), as well as arbitratry contract execution in both directions.
+Snowbridge V2 is a generalized messaging protocol, that supports token transfers (ERC-20s and Polkadot native assets), as well as arbitrary contract execution in both directions.
 
 Snowbridge V2 protocol improves upon V1 with better fee handling, batching of messages, unordered message delivery and the ability to execute contract/extrinsics via generalized message passing. It builds on the [requirements for Snowbridge V1](../snowbridge-v1/parachain-integration.md).
 

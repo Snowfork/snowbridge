@@ -52,7 +52,7 @@ export const run = async (): Promise<void> => {
     const startBlock = await loadCheckPoint()
     let endBlock = Math.min(latestEthereumBlock, startBlock + parseInt(CheckpointInterval))
     logger.info(
-        "Scaning NewTicket event from Beefy Client, blocks from %d to %d",
+        "Scanning NewTicket event from Beefy Client, blocks from %d to %d",
         startBlock,
         endBlock,
     )
