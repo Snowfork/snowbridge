@@ -7,8 +7,10 @@ import {
     accountToLocation,
     HERE_LOCATION,
     buildAppendixInstructions,
+    buildEthereumInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
+import { DeliveryFee } from "../../toEthereum_v2"
 
 export function buildTransferXcmFromParachainWithNativeAssetFee(
     registry: Registry,
@@ -21,15 +23,22 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
     topic: string,
     asset: Asset,
     tokenAmount: bigint,
-    localNativeFeeAmount: bigint,
-    totalNativeFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint,
-    remoteEtherFeeNativeAmount: bigint,
+    fee: DeliveryFee,
     claimerLocation?: any,
+    callHex?: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
     let tokenLocation = erc20Location(ethChainId, asset.token)
+
+    let localNativeFeeAmount =
+        fee.localExecutionFeeInNative! +
+        fee.localDeliveryFeeInNative! +
+        fee.returnToSenderExecutionFeeNative!
+    let totalNativeFeeAmount = fee.totalFeeInNative!
+    let remoteEtherFeeAmount = fee.ethereumExecutionFee!
+    let remoteEtherFeeNativeAmount = fee.ethereumExecutionFeeInNative!
+
     let assets = [
         {
             id: HERE_LOCATION,
@@ -51,6 +60,8 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
         sourceAccount,
         claimerLocation,
     )
+
+    let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
 
     let remoteInstructionsOnAH: any[] = [
         {
@@ -133,24 +144,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                         },
                     },
                 ],
-                remoteXcm: [
-                    {
-                        depositAsset: {
-                            assets: {
-                                wild: {
-                                    allCounted: 3,
-                                },
-                            },
-                            beneficiary: {
-                                parents: 0,
-                                interior: { x1: [beneficiaryLocation] },
-                            },
-                        },
-                    },
-                    {
-                        setTopic: topic,
-                    },
-                ],
+                remoteXcm: remoteXcm,
             },
         },
         {

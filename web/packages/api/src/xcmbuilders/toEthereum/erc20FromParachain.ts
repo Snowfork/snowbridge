@@ -9,8 +9,10 @@ import {
     accountToLocation,
     isEthereumNative,
     buildAppendixInstructions,
+    buildEthereumInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
+import { DeliveryFee } from "../../toEthereum_v2"
 
 export function buildParachainERC20ReceivedXcmOnDestination(
     registry: Registry,
@@ -277,14 +279,19 @@ export function buildTransferXcmFromParachain(
     topic: string,
     asset: Asset,
     tokenAmount: bigint,
-    localDOTFeeAmount: bigint,
-    totalDOTFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint,
+    fee: DeliveryFee,
     claimerLocation?: any,
+    callHex?: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
     let tokenLocation = erc20Location(ethChainId, asset.token)
+
+    let localDOTFeeAmount: bigint =
+        fee.localExecutionFeeDOT! + fee.localDeliveryFeeDOT! + fee.returnToSenderExecutionFeeDOT
+    let totalDOTFeeAmount: bigint = fee.totalFeeInDot!
+    let remoteEtherFeeAmount: bigint = fee.ethereumExecutionFee!
+
     let assets = []
 
     assets.push({
@@ -322,6 +329,8 @@ export function buildTransferXcmFromParachain(
         claimerLocation,
     )
 
+    let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
+
     let remoteInstructionsOnAH: any[] = [
         {
             setAppendix: appendixInstructions,
@@ -356,24 +365,7 @@ export function buildTransferXcmFromParachain(
                         },
                     },
                 ],
-                remoteXcm: [
-                    {
-                        depositAsset: {
-                            assets: {
-                                wild: {
-                                    allCounted: 3,
-                                },
-                            },
-                            beneficiary: {
-                                parents: 0,
-                                interior: { x1: [beneficiaryLocation] },
-                            },
-                        },
-                    },
-                    {
-                        setTopic: topic,
-                    },
-                ],
+                remoteXcm: remoteXcm,
             },
         },
         {

@@ -1836,3 +1836,40 @@ export function buildAppendixInstructions(
     })
     return appendixInstructions
 }
+
+export function buildEthereumInstructions(
+    beneficiaryLocation: any,
+    topic: string,
+    callHex?: string,
+) {
+    let remoteXcm: any[] = [
+        {
+            depositAsset: {
+                assets: {
+                    wild: {
+                        allCounted: 3,
+                    },
+                },
+                beneficiary: {
+                    parents: 0,
+                    interior: { x1: [beneficiaryLocation] },
+                },
+            },
+        },
+    ]
+    if (callHex) {
+        remoteXcm.push({
+            transact: {
+                originKind: "SovereignAccount",
+                fallbackMaxWeight: null,
+                call: {
+                    encoded: callHex,
+                },
+            },
+        })
+    }
+    remoteXcm.push({
+        setTopic: topic,
+    })
+    return remoteXcm
+}

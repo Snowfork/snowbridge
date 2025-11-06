@@ -1,7 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { SubmittableExtrinsic } from "@polkadot/api/types"
 import { Codec, ISubmittableResult } from "@polkadot/types/types"
-import { AssetRegistry } from "@snowbridge/base-types"
+import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import {
@@ -27,14 +27,14 @@ import {
     bridgeLocation,
 } from "./xcmBuilder"
 import { xxhashAsHex } from "@polkadot/util-crypto"
-import { BN } from "@polkadot/util"
+import { BN, hexToU8a } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
 import { Context } from "./index"
 import { ETHER_TOKEN_ADDRESS, getAssetHubConversionPalletSwap } from "./assets_v2"
 import { getOperatingStatus } from "./status"
+import { AbstractProvider, ethers, Wallet, TransactionReceipt } from "ethers"
 import { CreateAgent } from "./registration/agent/createAgent"
-import { Wallet, TransactionReceipt } from "ethers"
 
 export { ValidationKind, signAndSend } from "./toEthereum_v2"
 
@@ -220,6 +220,7 @@ export const estimateEthereumExecutionFee = async (
     registry: AssetRegistry,
     sourceParaId: number,
     tokenAddress: string,
+    contractCall?: ContractCall,
 ): Promise<bigint> => {
     const ethereum = await context.ethereum()
     const { tokenErcMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
@@ -229,7 +230,9 @@ export const estimateEthereumExecutionFee = async (
     let feeData = await ethereum.getFeeData()
     let ethereumExecutionFee =
         (feeData.gasPrice ?? 2_000_000_000n) *
-        ((tokenErcMetadata.deliveryGas ?? 80_000n) + (ethereumChain.baseDeliveryGas ?? 120_000n))
+        ((tokenErcMetadata.deliveryGas ?? 80_000n) +
+            (ethereumChain.baseDeliveryGas ?? 120_000n) +
+            (contractCall?.gas ?? 0n))
     return ethereumExecutionFee
 }
 
@@ -243,6 +246,7 @@ export const estimateFeesFromAssetHub = async (
         slippagePadPercentage?: bigint
         defaultFee?: bigint
         feeTokenLocation?: any
+        contractCall?: ContractCall
     },
 ): Promise<DeliveryFee> => {
     const assetHub = await context.parachain(registry.assetHubParaId)
@@ -286,6 +290,7 @@ export const estimateFeesFromAssetHub = async (
         registry,
         registry.assetHubParaId,
         tokenAddress,
+        options?.contractCall,
     )
 
     // calculate the cost of swapping in native asset
@@ -340,6 +345,7 @@ export const estimateFeesFromParachains = async (
         slippagePadPercentage?: bigint
         defaultFee?: bigint
         feeTokenLocation?: any
+        contractCall?: ContractCall
     },
 ): Promise<DeliveryFee> => {
     const sourceParachain = registry.parachains[sourceParaId.toString()]
@@ -429,6 +435,7 @@ export const estimateFeesFromParachains = async (
         registry,
         sourceParaId,
         tokenAddress,
+        options?.contractCall,
     )
 
     // calculate the cost of swapping in native asset
@@ -512,11 +519,12 @@ export const validateTransferFromAssetHub = async (
     const { sourceAccountHex, sourceParaId, sourceAssetMetadata } = transfer.computed
     const { tx } = transfer
 
-    const { sourceParachain, gateway, bridgeHub } =
+    const { sourceParachain, gateway, ethereum, bridgeHub } =
         context instanceof Context
             ? {
                   sourceParachain: await context.parachain(sourceParaId),
                   gateway: context.gateway(),
+                  ethereum: context.ethereum(),
                   bridgeHub: await context.bridgeHub(),
               }
             : context
@@ -573,6 +581,22 @@ export const validateTransferFromAssetHub = async (
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientEtherBalance,
                 message: "Insufficient ether balance to submit transaction.",
+            })
+        }
+    }
+    let contractCall = transfer.input.contractCall
+    if (contractCall) {
+        try {
+            await checkContractAddress(ethereum, contractCall.target)
+        } catch (error) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.ContractCallInvalidTarget,
+                message:
+                    "Contract call with invalid target address: " +
+                    contractCall.target +
+                    " error: " +
+                    String(error),
             })
         }
     }
@@ -672,11 +696,12 @@ export const validateTransferFromParachain = async (
     } = transfer.computed
     const { tx } = transfer
 
-    const { sourceParachain, gateway, bridgeHub, assetHub } =
+    const { sourceParachain, gateway, ethereum, bridgeHub, assetHub } =
         context instanceof Context
             ? {
                   sourceParachain: await context.parachain(sourceParaId),
                   gateway: context.gateway(),
+                  ethereum: context.ethereum(),
                   bridgeHub: await context.bridgeHub(),
                   assetHub: await context.assetHub(),
               }
@@ -737,6 +762,23 @@ export const validateTransferFromParachain = async (
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientEtherBalance,
                 message: "Insufficient ether balance to submit transaction.",
+            })
+        }
+    }
+
+    let contractCall = transfer.input.contractCall
+    if (contractCall) {
+        try {
+            await checkContractAddress(ethereum, contractCall.target)
+        } catch (error) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.ContractCallInvalidTarget,
+                message:
+                    "Contract call with invalid target address: " +
+                    contractCall.target +
+                    " error: " +
+                    String(error),
             })
         }
     }
@@ -830,6 +872,46 @@ export const validateTransferFromParachain = async (
             bridgeHubDryRunError,
         },
         transfer,
+    }
+}
+
+export async function buildContractCallHex(context: Context, contractCall: ContractCall) {
+    const bridgeHub = await context.bridgeHub()
+    const callHex = bridgeHub.createType("ContractCall", {
+        target: contractCall.target,
+        calldata: contractCall.calldata,
+        value: contractCall.value,
+        gas: contractCall.gas,
+    })
+    return "0x00" + callHex.toHex().slice(2)
+}
+
+export const mockDeliveryFee: DeliveryFee = {
+    localExecutionFeeDOT: 1n,
+    snowbridgeDeliveryFeeDOT: 1n,
+    assetHubExecutionFeeDOT: 1n,
+    bridgeHubDeliveryFeeDOT: 1n,
+    returnToSenderDeliveryFeeDOT: 1n,
+    returnToSenderExecutionFeeDOT: 1n,
+    totalFeeInDot: 10n,
+    ethereumExecutionFee: 1n,
+}
+
+export const checkContractAddress = async (ethereum: AbstractProvider, address: string) => {
+    if (!ethers.isAddress(address)) {
+        throw new Error("Invalid contract address: " + address)
+    }
+    try {
+        const code = await ethereum.getCode(address)
+        if (code == "0x") {
+            throw new Error(
+                "Contract call with invalid target address: no contract deployed at " + address,
+            )
+        }
+    } catch (error) {
+        throw new Error(
+            "Contract call with invalid target address: " + address + " error: " + String(error),
+        )
     }
 }
 

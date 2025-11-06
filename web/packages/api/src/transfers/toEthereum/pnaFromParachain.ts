@@ -12,7 +12,7 @@ import {
 } from "../../xcmbuilders/toEthereum/pnaFromParachain"
 import { buildTransferXcmFromParachainWithDOTAsFee } from "../../xcmbuilders/toEthereum/pnaFromParachainWithDotAsFee"
 import { buildTransferXcmFromParachainWithNativeAssetFee } from "../../xcmbuilders/toEthereum/pnaFromParachainWithNativeAsFee"
-import { Asset, AssetRegistry } from "@snowbridge/base-types"
+import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { paraImplementation } from "../../parachains"
 import {
     buildMessageId,
@@ -24,8 +24,10 @@ import {
 import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
 import {
+    buildContractCallHex,
     estimateFeesFromParachains,
     MaxWeight,
+    mockDeliveryFee,
     validateTransferFromParachain,
 } from "../../toEthereumSnowbridgeV2"
 
@@ -40,6 +42,7 @@ export class PNAFromParachain implements TransferInterface {
             defaultFee?: bigint
             feeTokenLocation?: any
             claimerLocation?: any
+            contractCall?: ContractCall
         },
     ): Promise<DeliveryFee> {
         const { assetHub, parachain } =
@@ -92,9 +95,7 @@ export class PNAFromParachain implements TransferInterface {
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             sourceAssetMetadata,
             1n,
-            1n,
-            10n,
-            1n,
+            mockDeliveryFee,
         )
 
         forwardedXcmToBH = buildExportXcm(
@@ -125,14 +126,17 @@ export class PNAFromParachain implements TransferInterface {
     }
 
     async createTransfer(
-        source: { sourceParaId: number; context: Context } | { parachain: ApiPromise },
+        source: { sourceParaId: number; context: Context },
         registry: AssetRegistry,
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
-        claimerLocation?: any,
+        options?: {
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
     ): Promise<Transfer> {
         const { ethChainId, assetHubParaId, environment } = registry
 
@@ -157,8 +161,8 @@ export class PNAFromParachain implements TransferInterface {
             beneficiaryAccount,
             amount,
         )
-        let tx: SubmittableExtrinsic<"promise", ISubmittableResult>
-        tx = this.createTx(
+        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = await this.createTx(
+            source.context,
             parachain,
             environment,
             ethChainId,
@@ -170,7 +174,7 @@ export class PNAFromParachain implements TransferInterface {
             amount,
             messageId,
             fee,
-            claimerLocation,
+            options,
         )
 
         return {
@@ -181,6 +185,7 @@ export class PNAFromParachain implements TransferInterface {
                 tokenAddress,
                 amount,
                 fee,
+                contractCall: options?.contractCall,
             },
             computed: {
                 sourceParaId: sourceParachainImpl.parachainId,
@@ -199,7 +204,8 @@ export class PNAFromParachain implements TransferInterface {
         return validateTransferFromParachain(context, transfer)
     }
 
-    createTx(
+    async createTx(
+        context: Context,
         parachain: ApiPromise,
         envName: string,
         ethChainId: number,
@@ -211,8 +217,16 @@ export class PNAFromParachain implements TransferInterface {
         amount: bigint,
         messageId: string,
         fee: DeliveryFee,
-        claimerLocation?: any,
-    ): SubmittableExtrinsic<"promise", ISubmittableResult> {
+        options?: {
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
+    ): Promise<SubmittableExtrinsic<"promise", ISubmittableResult>> {
+        let claimerLocation = options?.claimerLocation
+        let callHex: string | undefined
+        if (options?.contractCall) {
+            callHex = await buildContractCallHex(context, options.contractCall)
+        }
         let xcm: any
         // No swap
         if (!fee.feeLocation) {
@@ -227,12 +241,9 @@ export class PNAFromParachain implements TransferInterface {
                 messageId,
                 asset,
                 amount,
-                fee.localExecutionFeeDOT! +
-                    fee.localDeliveryFeeDOT! +
-                    fee.returnToSenderExecutionFeeDOT,
-                fee.totalFeeInDot,
-                fee.ethereumExecutionFee!,
+                fee,
                 claimerLocation,
+                callHex,
             )
         } // One swap from DOT to Ether on Asset Hub.
         else if (isRelaychainLocation(fee.feeLocation)) {
@@ -247,13 +258,9 @@ export class PNAFromParachain implements TransferInterface {
                 messageId,
                 asset,
                 amount,
-                fee.localExecutionFeeDOT! +
-                    fee.localDeliveryFeeDOT! +
-                    fee.returnToSenderExecutionFeeDOT,
-                fee.totalFeeInDot,
-                fee.ethereumExecutionFee!,
-                fee.ethereumExecutionFeeInNative!,
+                fee,
                 claimerLocation,
+                callHex,
             )
         }
         // If the fee asset is in native asset, we need to swap it to DOT first, then a second swap from DOT to Ether
@@ -269,13 +276,9 @@ export class PNAFromParachain implements TransferInterface {
                 messageId,
                 asset,
                 amount,
-                fee.localExecutionFeeInNative! +
-                    fee.localDeliveryFeeInNative! +
-                    fee.returnToSenderExecutionFeeNative!,
-                fee.totalFeeInNative!,
-                fee.ethereumExecutionFee!,
-                fee.ethereumExecutionFeeInNative!,
+                fee,
                 claimerLocation,
+                callHex,
             )
         } else {
             throw new Error(
