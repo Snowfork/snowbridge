@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
@@ -80,12 +81,13 @@ func scanBlocks(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateA
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(3 * time.Second):
+			case <-time.After(6 * time.Second):
 			}
 			finalizedHeader, err = fetchFinalizedBeefyHeader()
+			// Transient error, retry until get a valid finalized header
 			if err != nil {
-				emitError(err)
-				return
+				log.Warnf("fetch finalized beefy header: %v", err)
+				continue
 			}
 			continue
 		}
@@ -157,7 +159,7 @@ func scanCommitments(ctx context.Context, meta *types.Metadata, api *gsrpc.Subst
 	for {
 		select {
 		case <-ctx.Done():
-			emitError(err)
+			emitError(ctx.Err())
 			return
 		case result, ok := <-in:
 			if !ok {

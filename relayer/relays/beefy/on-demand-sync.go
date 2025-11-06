@@ -103,6 +103,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 			if err != nil {
 				if error_tracking.IsTransientError(err) {
 					log.Warnf("Queue all failed with transient error: %v", err)
+					time.Sleep(time.Second * 10)
 					continue
 				}
 				return fmt.Errorf("Queue all failed: %w", err)
@@ -125,6 +126,7 @@ func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error
 			if err != nil {
 				if error_tracking.IsTransientError(err) {
 					log.Warnf("Schedule failed with transient error: %v", err)
+					time.Sleep(time.Second * 10)
 					continue
 				}
 				return fmt.Errorf("Schedule failed: %w", err)
@@ -546,7 +548,7 @@ func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) er
 				relay.activeTasks.SetLastUpdated(task.id)
 				err = relay.waitUntilMessagesSynced(ctx, task)
 				if err != nil {
-					logger.Warn("Beefy sync completed, but pending nonce not synced in time")
+					logger.Warn("Sync beefy completed, but pending nonce not synced in time")
 					relay.activeTasks.SetStatus(task.id, Completed)
 				} else {
 					relay.activeTasks.Delete(task.id)
@@ -660,10 +662,7 @@ func (relay *OnDemandRelay) queueV1(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("Fetch parachain block failed: %w", err)
 		}
-		err = relay.queue(ctx, paraBlock, paraNonce, true)
-		if err != nil {
-			return fmt.Errorf("Queue V1 parachain block failed: %w", err)
-		}
+		return relay.queue(ctx, paraBlock, paraNonce, true)
 	}
 	return nil
 }
@@ -701,11 +700,7 @@ func (relay *OnDemandRelay) queueV2(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("Fetch paraBlock of v2 nonce: %w", err)
 	}
-	err = relay.queue(ctx, paraBlock, paraNonce, false)
-	if err != nil {
-		return fmt.Errorf("Queue V2 parachain block failed: %w", err)
-	}
-	return nil
+	return relay.queue(ctx, paraBlock, paraNonce, false)
 }
 
 func (relay *OnDemandRelay) queueAll(ctx context.Context) error {
