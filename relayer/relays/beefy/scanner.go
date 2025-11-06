@@ -10,7 +10,6 @@ import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
-	"github.com/snowfork/snowbridge/relayer/relays/error_tracking"
 )
 
 type ScanBlocksResult struct {
@@ -87,7 +86,7 @@ func scanBlocks(ctx context.Context, meta *types.Metadata, api *gsrpc.SubstrateA
 			finalizedHeader, err = fetchFinalizedBeefyHeader()
 			// Transient error, retry until get a valid finalized header
 			if err != nil {
-				log.Warnf("%s: fetch finalized beefy header: %v", error_tracking.SnowbridgeTransientError, err)
+				log.Warnf("fetch finalized beefy header: %v", err)
 				continue
 			}
 			continue

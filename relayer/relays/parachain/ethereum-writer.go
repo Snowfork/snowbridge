@@ -17,7 +17,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
-	"github.com/snowfork/snowbridge/relayer/relays/error_tracking"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -89,10 +88,6 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 			}
 			err := wr.WriteChannels(ctx, options, task)
 			if err != nil {
-				if error_tracking.IsTransientError(err) {
-					log.Warnf("write message: %v", err)
-					continue
-				}
 				return fmt.Errorf("write message: %w", err)
 			}
 		}
@@ -227,7 +222,8 @@ func (wr *EthereumWriter) WriteChannel(
 	receipt, err := wr.conn.WatchTransaction(ctx, tx, 1)
 
 	if err != nil {
-		return fmt.Errorf("%s: Failed to SubmitInbound: %w", error_tracking.SnowbridgeTransientError, err)
+		log.WithError(err).Error("Failed to SubmitInbound")
+		return err
 	}
 
 	for _, ev := range receipt.Logs {

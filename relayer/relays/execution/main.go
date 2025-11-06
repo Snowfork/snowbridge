@@ -199,7 +199,7 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 	if proof.FinalizedPayload == nil {
 		err := r.writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueueV2.submit", inboundMsg)
 		if err != nil {
-			return fmt.Errorf("%s: submit message to inbound queue: %w", error_tracking.SnowbridgeTransientError, err)
+			return fmt.Errorf("submit message to inbound queue: %w", err)
 		}
 
 		return nil
