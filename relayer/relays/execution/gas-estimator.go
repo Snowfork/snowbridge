@@ -29,6 +29,7 @@ type GasEstimate struct {
 		DryRunSuccess      bool    `json:"dry_run_success"`
 		DryRunError        *string `json:"dry_run_error"`
 	} `json:"bridge_hub"`
+	Beneficiaries []string `json:"beneficiaries"`
 }
 
 // GasEstimatorConfig holds the configuration for gas estimation
