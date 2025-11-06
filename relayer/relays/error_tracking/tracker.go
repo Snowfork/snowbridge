@@ -115,10 +115,9 @@ func IsTransientError(err error) bool {
 
 	transientPatterns := []string{
 		SnowbridgeTransientError, "connection timeout", "deadline exceeded", "context deadline exceeded",
-		"refused", "unreachable", "unavailable", "busy",
-		"temporary", "try again", "rate limit", "too many requests",
-		"rpc", "dial", "i/o timeout", "broken pipe", "reset by peer",
-		"finality timeout", "close sent", "closed network connection", "websocket: close",
+		"refused", "unreachable", "unavailable", "try again", "rate limit", "too many requests",
+		"i/o timeout", "broken pipe", "reset by peer", "finality timeout",
+		"close sent", "closed network connection", "websocket: close",
 	}
 
 	for _, pattern := range transientPatterns {
