@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-10-07T21:35:27.436Z",
+  "timestamp": "2025-11-06T11:20:37.352Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -13,7 +13,7 @@
     "accountType": "AccountId32",
     "name": "Polkadot",
     "specName": "polkadot",
-    "specVersion": 1007001
+    "specVersion": 2000000
   },
   "bridgeHub": {
     "tokenSymbols": "DOT",
@@ -23,7 +23,7 @@
     "accountType": "AccountId32",
     "name": "Polkadot BridgeHub",
     "specName": "bridge-hub-polkadot",
-    "specVersion": 1007001
+    "specVersion": 2000000
   },
   "ethereumChains": {
     "1": {
@@ -64,10 +64,24 @@
           "decimals": 18,
           "deliveryGas": "bigint:80000"
         },
+        "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94": {
+          "token": "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
+          "name": "Centrifuge",
+          "symbol": "CFG",
+          "decimals": 18,
+          "deliveryGas": "bigint:80000"
+        },
         "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd": {
           "token": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
           "name": "Savings USDS",
           "symbol": "sUSDS",
+          "decimals": 18,
+          "deliveryGas": "bigint:80000"
+        },
+        "0x163f8c2467924be0ae7b5347228cabf260318753": {
+          "token": "0x163f8c2467924be0ae7b5347228cabf260318753",
+          "name": "Worldcoin",
+          "symbol": "WLD",
           "decimals": 18,
           "deliveryGas": "bigint:80000"
         },
@@ -138,6 +152,13 @@
           "token": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
           "name": "Wrapped liquid staked Ether 2.0",
           "symbol": "wstETH",
+          "decimals": 18,
+          "deliveryGas": "bigint:80000"
+        },
+        "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf": {
+          "token": "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+          "name": "vTAO",
+          "symbol": "vTAO",
           "decimals": 18,
           "deliveryGas": "bigint:80000"
         },
@@ -362,7 +383,7 @@
         "accountType": "AccountId32",
         "name": "Polkadot Asset Hub",
         "specName": "statemint",
-        "specVersion": 1007001
+        "specVersion": 2000000
       },
       "assets": {
         "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -405,12 +426,28 @@
           "decimals": 0,
           "isSufficient": false
         },
+        "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94": {
+          "token": "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
+          "name": "",
+          "minimumBalance": "bigint:1",
+          "symbol": "",
+          "decimals": 0,
+          "isSufficient": false
+        },
         "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd": {
           "token": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
           "name": "Savings USDS",
           "minimumBalance": "bigint:1",
           "symbol": "sUSDS",
           "decimals": 18,
+          "isSufficient": false
+        },
+        "0x163f8c2467924be0ae7b5347228cabf260318753": {
+          "token": "0x163f8c2467924be0ae7b5347228cabf260318753",
+          "name": "",
+          "minimumBalance": "bigint:1",
+          "symbol": "",
+          "decimals": 0,
           "isSufficient": false
         },
         "0x57e114b691db790c35207b2e685d4a43181e6061": {
@@ -491,6 +528,14 @@
           "minimumBalance": "bigint:1",
           "symbol": "wstETH",
           "decimals": 18,
+          "isSufficient": false
+        },
+        "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf": {
+          "token": "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+          "name": "",
+          "minimumBalance": "bigint:1",
+          "symbol": "",
+          "decimals": 0,
           "isSufficient": false
         },
         "0x582d872a1b094fc48f5de31d3b73f2d9be47def1": {
@@ -935,7 +980,7 @@
       "parachainId": 2000,
       "features": {
         "hasPalletXcm": true,
-        "hasDryRunApi": false,
+        "hasDryRunApi": true,
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
         "hasDotBalance": true
@@ -948,7 +993,7 @@
         "accountType": "AccountId32",
         "name": "Acala",
         "specName": "acala",
-        "specVersion": 2300
+        "specVersion": 2310
       },
       "assets": {
         "0x0000000000000000000000000000000000000000": {
@@ -981,7 +1026,7 @@
         "evmChainId": 1284,
         "name": "Moonbeam",
         "specName": "moonbeam",
-        "specVersion": 3800
+        "specVersion": 3900
       },
       "xcDOT": "0xffffffff1fcacbd218edc0eba20fc2308c778080",
       "assets": {
@@ -1070,7 +1115,7 @@
         "evmChainId": 996,
         "name": "Bifrost Polkadot",
         "specName": "bifrost_polkadot",
-        "specVersion": 21001
+        "specVersion": 22001
       },
       "assets": {
         "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
@@ -1090,7 +1135,7 @@
           "isSufficient": false
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:59041372",
+      "estimatedExecutionFeeDOT": "bigint:67408398",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2034": {
@@ -1117,7 +1162,7 @@
         "0x45804880de22913dafe09f4980848ece6ecbaf78": {
           "token": "0x45804880de22913dafe09f4980848ece6ecbaf78",
           "name": "PAX Gold",
-          "minimumBalance": "bigint:41209923349543",
+          "minimumBalance": "bigint:2374169040836",
           "symbol": "PAXG",
           "decimals": 18,
           "isSufficient": true
@@ -1167,6 +1212,22 @@
           "name": "OriginTrail",
           "minimumBalance": "bigint:27777777777777800",
           "symbol": "TRAC",
+          "decimals": 18,
+          "isSufficient": true
+        },
+        "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf": {
+          "token": "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+          "name": "",
+          "minimumBalance": "bigint:1",
+          "symbol": "",
+          "decimals": 0,
+          "isSufficient": false
+        },
+        "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94": {
+          "token": "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
+          "name": "Centrifuge",
+          "minimumBalance": "bigint:36297640653357500",
+          "symbol": "CFG",
           "decimals": 18,
           "isSufficient": true
         },
@@ -1251,14 +1312,14 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:1510291",
+      "estimatedExecutionFeeDOT": "bigint:1784885",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2043": {
       "parachainId": 2043,
       "features": {
         "hasPalletXcm": true,
-        "hasDryRunApi": false,
+        "hasDryRunApi": true,
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
         "hasDotBalance": false
@@ -1271,7 +1332,7 @@
         "accountType": "AccountId32",
         "name": "NeuroWeb",
         "specName": "origintrail-parachain",
-        "specVersion": 147
+        "specVersion": 149
       },
       "assets": {
         "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f": {
@@ -1283,7 +1344,7 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:1000000000",
+      "estimatedExecutionFeeDOT": "bigint:306833",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "3369": {
@@ -1338,7 +1399,7 @@
           "accountType": "AccountId32",
           "name": "Kusama Asset Hub",
           "specName": "statemine",
-          "specVersion": 1009001
+          "specVersion": 2000001
         },
         "assets": {
           "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {

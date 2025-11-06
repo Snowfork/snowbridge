@@ -570,8 +570,8 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
             PARACHAINS: {
-                "1000": "wss://asset-hub-kusama-rpc.dwellir.com",
-                "1002": "https://bridge-hub-kusama-rpc.dwellir.com",
+                "1000": "wss://asset-hub-kusama-rpc.n.dwellir.com",
+                "1002": "https://bridge-hub-kusama-rpc.n.dwellir.com",
             },
         },
     },
