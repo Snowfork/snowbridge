@@ -1,11 +1,13 @@
 import { TransferInterface } from "./transfers/toPolkadot/transferInterface"
 import { ERC20ToAH } from "./transfers/toPolkadot/erc20ToAH"
+import { RegisterToken } from "./registration/toPolkadot/registerToken"
+import { TokenRegistration } from "./registration/toPolkadot/registrationInterface"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { MultiAddressStruct } from "@snowbridge/contract-types/dist/IGateway.sol/IGatewayV1"
-import { AbiCoder, ContractTransaction, LogDescription, TransactionReceipt } from "ethers"
+import { AbiCoder, ContractTransaction, LogDescription, TransactionReceipt, Wallet } from "ethers"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
 import { IGatewayV2__factory } from "@snowbridge/contract-types"
@@ -78,6 +80,14 @@ export type MessageReceipt = {
     txHash: string
     txIndex: number
 }
+
+// Re-export registration types for convenience
+export type {
+    TokenRegistration,
+    RegistrationValidationResult,
+    RegistrationFee,
+    RegistrationInterface,
+} from "./registration/toPolkadot/registrationInterface"
 
 export function createTransferImplementation(
     destinationParaId: number,
@@ -199,4 +209,22 @@ export function claimerFromBeneficiary(assetHub: ApiPromise, beneficiaryAddressH
 
 export function claimerLocationToBytes(claimerLocation: Codec) {
     return hexToU8a(claimerLocation.toHex())
+}
+
+export function createRegistrationImplementation() {
+    return new RegisterToken()
+}
+
+export async function sendRegistration(
+    registration: TokenRegistration,
+    wallet: Wallet
+): Promise<TransactionReceipt> {
+    const response = await wallet.sendTransaction(registration.tx)
+    const receipt = await response.wait(1)
+
+    if (!receipt) {
+        throw Error(`Transaction ${response.hash} not included.`)
+    }
+
+    return receipt
 }
