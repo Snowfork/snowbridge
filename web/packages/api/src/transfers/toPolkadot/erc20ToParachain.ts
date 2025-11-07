@@ -16,7 +16,7 @@ import {
     ValidationKind,
     ValidationResult,
 } from "../../toPolkadotSnowbridgeV2"
-import {accountId32Location, DOT_LOCATION, erc20Location, isDOT} from "../../xcmBuilder"
+import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
 import {
     erc20Balance,
@@ -29,7 +29,8 @@ import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../t
 import {
     buildAssetHubERC20ReceivedXcm,
     buildParachainERC20ReceivedXcmOnDestWithDOTFee,
-    buildParachainERC20ReceivedXcmOnDestination, buildParachainERC20ReceivedXcmOnDestinationWithDOTFee,
+    buildParachainERC20ReceivedXcmOnDestination,
+    buildParachainERC20ReceivedXcmOnDestinationWithDOTFee,
 } from "../../xcmbuilders/toPolkadot/erc20ToParachain"
 import { AbstractProvider, Contract } from "ethers"
 import {
@@ -57,7 +58,7 @@ export class ERC20ToParachain implements TransferInterface {
             paddFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[]
-        }
+        },
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub, destination } =
             context instanceof Context
@@ -79,13 +80,13 @@ export class ERC20ToParachain implements TransferInterface {
             1000000000000n,
             1000000000000n,
             accountId32Location(
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             ),
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             destinationParaId,
             1000000000000n,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
         const bridgeHubImpl = await paraImplementation(bridgeHub)
         const assetHubImpl = await paraImplementation(assetHub)
@@ -96,7 +97,7 @@ export class ERC20ToParachain implements TransferInterface {
         // Delivery fee BridgeHub to AssetHub
         const deliveryFeeInDOT = await bridgeHubImpl.calculateDeliveryFeeInDOT(
             registry.assetHubParaId,
-            assetHubXcm
+            assetHubXcm,
         )
         // AssetHub execution fee
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
@@ -105,11 +106,11 @@ export class ERC20ToParachain implements TransferInterface {
             assetHub,
             DOT_LOCATION,
             ether,
-            deliveryFeeInDOT
+            deliveryFeeInDOT,
         )
         let assetHubExecutionFeeEther = padFeeByPercentage(
             await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, assetHubExecutionFeeDOT),
-            paddFeeByPercentage ?? 33n
+            paddFeeByPercentage ?? 33n,
         )
 
         let destinationXcm: any
@@ -125,7 +126,7 @@ export class ERC20ToParachain implements TransferInterface {
                     ? "0x0000000000000000000000000000000000000000000000000000000000000000"
                     : "0x0000000000000000000000000000000000000000",
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
-                options?.customXcm
+                options?.customXcm,
             )
         } else {
             destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
@@ -138,21 +139,20 @@ export class ERC20ToParachain implements TransferInterface {
                     ? "0x0000000000000000000000000000000000000000000000000000000000000000"
                     : "0x0000000000000000000000000000000000000000",
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
-                options?.customXcm
+                options?.customXcm,
             )
         }
-
 
         const destinationImpl = await paraImplementation(destination)
         // Delivery fee AssetHub to Destination
         let destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
             destinationParaId,
-            destinationXcm
+            destinationXcm,
         )
         // Destination execution fee
         let destinationExecutionFeeDOT = await destinationImpl.calculateXcmFee(
             destinationXcm,
-            DOT_LOCATION
+            DOT_LOCATION,
         )
 
         // Swap to ether
@@ -160,11 +160,11 @@ export class ERC20ToParachain implements TransferInterface {
             assetHub,
             DOT_LOCATION,
             ether,
-            destinationDeliveryFeeDOT
+            destinationDeliveryFeeDOT,
         )
         let destinationExecutionFeeEther = padFeeByPercentage(
             await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, destinationExecutionFeeDOT),
-            paddFeeByPercentage ?? 33n
+            paddFeeByPercentage ?? 33n,
         )
 
         const totalFeeInWei = deliveryFeeInEther + assetHubExecutionFeeEther + relayerFee
@@ -194,7 +194,7 @@ export class ERC20ToParachain implements TransferInterface {
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
-        customXcm?: any[]
+        customXcm?: any[],
     ): Promise<Transfer> {
         const { ethereum, assetHub, destination } =
             context instanceof Context
@@ -234,7 +234,7 @@ export class ERC20ToParachain implements TransferInterface {
             tokenAddress,
             beneficiaryAddressHex,
             amount,
-            accountNonce
+            accountNonce,
         )
 
         let xcm
@@ -243,7 +243,7 @@ export class ERC20ToParachain implements TransferInterface {
                 assetHub,
                 erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS),
                 DOT_LOCATION,
-                fee.destinationExecutionFeeEther
+                fee.destinationExecutionFeeEther,
             )
             xcm = hexToU8a(
                 sendMessageXCMWithDOTDestFee(
@@ -255,8 +255,8 @@ export class ERC20ToParachain implements TransferInterface {
                     amount,
                     fee.destinationExecutionFeeEther,
                     dotFeeAmount,
-                    topic
-                ).toHex()
+                    topic,
+                ).toHex(),
             )
         } else {
             xcm = hexToU8a(
@@ -269,8 +269,8 @@ export class ERC20ToParachain implements TransferInterface {
                     amount,
                     fee.destinationExecutionFeeEther,
                     topic,
-                    customXcm
-                ).toHex()
+                    customXcm,
+                ).toHex(),
             )
         }
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
@@ -286,7 +286,7 @@ export class ERC20ToParachain implements TransferInterface {
                 {
                     value,
                     from: sourceAccount,
-                }
+                },
             )
 
         return {
@@ -319,7 +319,7 @@ export class ERC20ToParachain implements TransferInterface {
 
     async validateTransfer(
         context: Context | Connections,
-        transfer: Transfer
+        transfer: Transfer,
     ): Promise<ValidationResult> {
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
@@ -365,7 +365,7 @@ export class ERC20ToParachain implements TransferInterface {
                 ethereum,
                 tokenAddress,
                 sourceAccount,
-                registry.gatewayAddress
+                registry.gatewayAddress,
             )
         } else {
             tokenBalance = {
@@ -446,7 +446,7 @@ export class ERC20ToParachain implements TransferInterface {
                     assetHub,
                     erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS),
                     DOT_LOCATION,
-                    transfer.input.fee.destinationExecutionFeeEther
+                    transfer.input.fee.destinationExecutionFeeEther,
                 )
                 xcm = buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                     assetHub.registry,
@@ -462,7 +462,7 @@ export class ERC20ToParachain implements TransferInterface {
                     transfer.input.fee.destinationExecutionFeeEther,
                     dotFeeAmount,
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    transfer.input.customXcm
+                    transfer.input.customXcm,
                 )
             } else {
                 xcm = buildAssetHubERC20ReceivedXcm(
@@ -478,13 +478,13 @@ export class ERC20ToParachain implements TransferInterface {
                     destinationParaId,
                     transfer.input.fee.destinationExecutionFeeEther,
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    transfer.input.customXcm
+                    transfer.input.customXcm,
                 )
             }
             let result = await assetHubImpl.dryRunXcm(
                 registry.bridgeHubParaId,
                 xcm,
-                destinationParaId
+                destinationParaId,
             )
             dryRunAhSuccess = result.success
             assetHubDryRunError = result.errorMessage
@@ -507,7 +507,7 @@ export class ERC20ToParachain implements TransferInterface {
                 sovereignAccountId,
                 registry.ethChainId,
                 tokenAddress,
-                ahAssetMetadata
+                ahAssetMetadata,
             )
 
             if (!accountExists) {
@@ -584,7 +584,7 @@ export class ERC20ToParachain implements TransferInterface {
                     beneficiaryAddressHex,
                     registry.ethChainId,
                     tokenAddress,
-                    destAssetMetadata
+                    destAssetMetadata,
                 )
                 if (accountMaxConsumers) {
                     logs.push({

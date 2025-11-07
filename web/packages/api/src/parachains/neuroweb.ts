@@ -54,8 +54,8 @@ export class NeurowebParachain extends ParachainBase {
         if (this.specName !== "origintrail-parachain") {
             throw Error(
                 `Cannot get balance for spec ${this.specName}. Location = ${JSON.stringify(
-                    location
-                )}`
+                    location,
+                )}`,
             )
         }
 
@@ -83,23 +83,11 @@ export class NeurowebParachain extends ParachainBase {
         return assets
     }
 
-    async calculateXcmFee(destinationXcm: any, asset: any): Promise<bigint> {
-        if (JSON.stringify(asset) == JSON.stringify(DOT_LOCATION)) {
-            console.warn(
-                `${this.specName} does not support calculating fee for asset '${JSON.stringify(
-                    asset
-                )}'. Using default.`
-            )
-            return 1_000_000_000n
-        }
-        return await this.calculateXcmFee(destinationXcm, asset)
-    }
-
     async wrapExecutionFeeInNative(parachain: ApiPromise) {
         // Mock transaction to get extrinsic fee
         let tx = parachain.tx.wrapper.tracWrap(100000000)
         const paymentInfo = await tx.paymentInfo(
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
         const executionFee = paymentInfo["partialFee"].toBigInt()
         console.log("wrap execution fee:", executionFee)
@@ -110,7 +98,7 @@ export class NeurowebParachain extends ParachainBase {
         // Mock transaction to get extrinsic fee
         let tx = parachain.tx.wrapper.tracUnwrap(100000000)
         const paymentInfo = await tx.paymentInfo(
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
         const executionFee = paymentInfo["partialFee"].toBigInt()
         console.log("unwrap execution fee:", executionFee)
@@ -121,7 +109,7 @@ export class NeurowebParachain extends ParachainBase {
         if (ethChainId === NEUROWEB_TEST_CHAIN_ID) {
             return this.getLocationBalance(
                 erc20Location(ethChainId, NEUROWEB_TEST_TOKEN_ID),
-                account
+                account,
             )
         } else if (ethChainId === NEUROWEB_CHAIN_ID) {
             return this.getLocationBalance(erc20Location(ethChainId, NEUROWEB_TOKEN_ID), account)
@@ -145,12 +133,5 @@ export class NeurowebParachain extends ParachainBase {
     createUnwrapTx(amount: bigint): SubmittableExtrinsic<"promise", ISubmittableResult> {
         // TODO: Delete, unused
         return this.provider.tx.wrapper.tracUnwrap(amount)
-    }
-
-    async calculateDeliveryFeeInDOT(_destParachainId: number, _xcm: any): Promise<bigint> {
-        console.warn(
-            `${this.specName} does not support calculating xcm delivery fee. Using default.`
-        )
-        return 1_000_000_000n
     }
 }

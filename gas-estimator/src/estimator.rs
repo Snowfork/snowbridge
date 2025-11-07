@@ -122,6 +122,7 @@ pub struct GasEstimation {
     pub extrinsic_fee_in_dot: u128,
     pub extrinsic_fee_in_ether: u128,
     pub bridge_hub: BridgeHubInfo,
+    pub beneficiaries: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -152,6 +153,7 @@ pub async fn estimate_gas(
     execution_fee: u128,
     _relayer_fee: u128,
     assets: &[BridgeAsset],
+    relayer_account: [u8; 32],
 ) -> Result<GasEstimation, EstimatorError> {
     // Construct EventProof from the provided parameters
     let event_proof = construct_event_proof(
@@ -208,7 +210,10 @@ pub async fn estimate_gas(
     .await?;
 
     // Perform dry-run of the submit extrinsic on BridgeHub using the actual EventProof
-    let dry_run_result = dry_run_submit_on_bridge_hub(clients, &event_proof).await?;
+    let dry_run_result = dry_run_submit_on_bridge_hub(clients, &event_proof, relayer_account).await?;
+
+    // Extract beneficiary addresses for OFAC checks
+    let beneficiaries = extract_beneficiaries(&destination_xcm);
 
     Ok(GasEstimation {
         extrinsic_fee_in_dot,
@@ -219,6 +224,7 @@ pub async fn estimate_gas(
             dry_run_success: dry_run_result.success,
             dry_run_error: dry_run_result.error_message,
         },
+        beneficiaries,
     })
 }
 
@@ -369,6 +375,7 @@ fn construct_event_proof(
 async fn dry_run_submit_on_bridge_hub(
     clients: &Clients,
     event_proof: &EventProof,
+    relayer_account: [u8; 32],
 ) -> Result<DryRunResult, EstimatorError> {
     let submit_call = bridge_hub_runtime::tx()
         .ethereum_inbound_queue_v2()
@@ -383,10 +390,7 @@ async fn dry_run_submit_on_bridge_hub(
         EstimatorError::InvalidCommand(format!("Failed to decode RuntimeCall: {:?}", e))
     })?;
 
-    let ferdie = dev::ferdie();
-    let ferdie_account_id: [u8; 32] = ferdie.public_key().0;
-
-    let origin = OriginCaller::system(RawOrigin::Signed(ferdie_account_id.into()));
+    let origin = OriginCaller::system(RawOrigin::Signed(relayer_account.into()));
 
     let runtime_api_call =
         bridge_hub_runtime::apis()
@@ -525,4 +529,102 @@ fn parse_hex_string(hex_str: &str) -> Result<Vec<u8>, EstimatorError> {
 
     hex::decode(hex_str)
         .map_err(|e| EstimatorError::InvalidCommand(format!("Invalid hex string: {}", e)))
+}
+
+/// Extract beneficiary addresses from XCM instructions
+/// Returns addresses in hex format for OFAC checks
+pub fn extract_beneficiaries(xcm: &VersionedXcm) -> Vec<String> {
+    let mut beneficiaries = Vec::new();
+
+    let instructions = match xcm {
+        VersionedXcm::V5(xcm) => &xcm.0,
+        _ => return beneficiaries,
+    };
+
+    for instruction in instructions {
+        if let Instruction::DepositAsset { beneficiary, .. } = instruction {
+            // Extract address from beneficiary location
+            match &beneficiary.interior {
+                Junctions::X1(junctions) => {
+                    for junction in junctions.iter() {
+                        if let Junction::AccountId32 { id, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(id)));
+                        } else if let Junction::AccountKey20 { key, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(key)));
+                        }
+                    }
+                }
+                Junctions::X2(junctions) => {
+                    for junction in junctions.iter() {
+                        if let Junction::AccountId32 { id, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(id)));
+                        } else if let Junction::AccountKey20 { key, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(key)));
+                        }
+                    }
+                }
+                Junctions::X3(junctions) => {
+                    for junction in junctions.iter() {
+                        if let Junction::AccountId32 { id, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(id)));
+                        } else if let Junction::AccountKey20 { key, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(key)));
+                        }
+                    }
+                }
+                Junctions::X4(junctions) => {
+                    for junction in junctions.iter() {
+                        if let Junction::AccountId32 { id, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(id)));
+                        } else if let Junction::AccountKey20 { key, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(key)));
+                        }
+                    }
+                }
+                Junctions::X5(junctions) => {
+                    for junction in junctions.iter() {
+                        if let Junction::AccountId32 { id, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(id)));
+                        } else if let Junction::AccountKey20 { key, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(key)));
+                        }
+                    }
+                }
+                Junctions::X6(junctions) => {
+                    for junction in junctions.iter() {
+                        if let Junction::AccountId32 { id, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(id)));
+                        } else if let Junction::AccountKey20 { key, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(key)));
+                        }
+                    }
+                }
+                Junctions::X7(junctions) => {
+                    for junction in junctions.iter() {
+                        if let Junction::AccountId32 { id, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(id)));
+                        } else if let Junction::AccountKey20 { key, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(key)));
+                        }
+                    }
+                }
+                Junctions::X8(junctions) => {
+                    for junction in junctions.iter() {
+                        if let Junction::AccountId32 { id, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(id)));
+                        } else if let Junction::AccountKey20 { key, .. } = junction {
+                            beneficiaries.push(format!("0x{}", hex::encode(key)));
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    // Remove duplicates
+    beneficiaries.sort();
+    beneficiaries.dedup();
+
+    beneficiaries
 }

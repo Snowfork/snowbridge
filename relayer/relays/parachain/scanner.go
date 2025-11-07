@@ -444,14 +444,13 @@ func (s *Scanner) IsBanned(m OutboundQueueMessage) (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	var isBanned bool
-	for _, destination := range destinations {
-		isBanned, err = s.ofac.IsBanned("", destination)
-		if isBanned || err != nil {
-			return true, err
-		}
+
+	isBanned, err := s.ofac.IsBanned("", destinations)
+	if err != nil {
+		return true, err
 	}
-	return false, nil
+
+	return isBanned, nil
 }
 
 func GetDestinations(message OutboundQueueMessage) ([]string, error) {

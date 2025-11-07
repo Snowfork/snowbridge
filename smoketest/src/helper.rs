@@ -52,12 +52,7 @@ use subxt::{
 	Config, OnlineClient, PolkadotConfig,
 };
 
-#[cfg(feature = "legacy-v1")]
-use crate::contracts::i_gateway::IGateway;
-#[cfg(not(feature = "legacy-v1"))]
 use crate::contracts::i_gateway_v1::IGatewayV1 as IGateway;
-#[cfg(not(feature = "legacy-v1"))]
-use crate::contracts::i_gateway_v2::IGatewayV2;
 
 /// Custom config that works with Statemint
 pub enum AssetHubConfig {}

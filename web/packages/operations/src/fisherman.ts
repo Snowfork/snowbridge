@@ -45,16 +45,16 @@ export const run = async (): Promise<void> => {
 
     const latestFinalizedBeefyBlock = (
         await relaychain.rpc.chain.getHeader(
-            (await relaychain.rpc.beefy.getFinalizedHead()).toU8a()
+            (await relaychain.rpc.beefy.getFinalizedHead()).toU8a(),
         )
     ).number.toNumber()
     const latestEthereumBlock = await ethereum.getBlockNumber()
     const startBlock = await loadCheckPoint()
     let endBlock = Math.min(latestEthereumBlock, startBlock + parseInt(CheckpointInterval))
     logger.info(
-        "Scaning NewTicket event from Beefy Client, blocks from %d to %d",
+        "Scanning NewTicket event from Beefy Client, blocks from %d to %d",
         startBlock,
-        endBlock
+        endBlock,
     )
     await scanNewTicket(
         snowbridgeEnv.name,
@@ -63,7 +63,7 @@ export const run = async (): Promise<void> => {
         beefyClient,
         startBlock,
         endBlock,
-        latestFinalizedBeefyBlock
+        latestFinalizedBeefyBlock,
     )
     await scanNewMMRRoot(
         snowbridgeEnv.name,
@@ -72,7 +72,7 @@ export const run = async (): Promise<void> => {
         beefyClient,
         startBlock,
         endBlock,
-        latestFinalizedBeefyBlock
+        latestFinalizedBeefyBlock,
     )
     logger.info("Saving checkpoint at block %d", endBlock)
     await saveCheckPoint(endBlock)
@@ -98,7 +98,7 @@ const saveCheckPoint = async (blockNumber: number) => {
             lastProcessedBlock: blockNumber,
         },
         null,
-        2
+        2,
     )
     await writeFile(CheckpointFilepath, json)
 }
@@ -110,12 +110,12 @@ const scanNewTicket = async (
     beefyClient: BeefyClient,
     startBlock: number,
     endBlock: number,
-    latestBlock: number
+    latestBlock: number,
 ) => {
     const pastEvents = await beefyClient.queryFilter(
         beefyClient.filters.NewTicket(),
         startBlock,
-        endBlock
+        endBlock,
     )
     for (let event of pastEvents) {
         logger.info("Past NewTicket: %o", event.args)
@@ -148,12 +148,12 @@ const scanNewMMRRoot = async (
     beefyClient: BeefyClient,
     startBlock: number,
     endBlock: number,
-    latestBlock: number
+    latestBlock: number,
 ) => {
     const pastEvents = await beefyClient.queryFilter(
         beefyClient.filters.NewMMRRoot(),
         startBlock,
-        endBlock
+        endBlock,
     )
     for (let event of pastEvents) {
         const beefyMMRRoot = event.args.mmrRoot

@@ -33,7 +33,7 @@
     },
     "ss58Prefix": 1
   },
-  "instantVerification": false,
+  "instantVerification": true,
   "schedule": {
     "id": null,
     "totalRelayerCount": 1,

@@ -16,7 +16,11 @@ The following packages are used in the Snowbridge SDK:
 * [**@snowbridge/contracts**](https://www.npmjs.com/package/@snowbridge/contracts) Provides deployed contract addresses and metadata for Snowbridge smart contracts on supported networks. This is useful when you need to interact with Snowbridge's **Ethereum-side contracts** directly.
 * [**@snowbridge/base-types**](https://www.npmjs.com/package/@snowbridge/base-types) Defines **common data types** used throughout the SDK, such as asset representations, transfer objects, parachain locations, and more. These types are shared between `@snowbridge/api` and the registry.
 
-## Examples
+### Example Scripts
+
+We have a wide range of scripts using the Snowbridge SDK at [https://github.com/Snowfork/snowbridge/tree/main/web/packages/operations/src](https://github.com/Snowfork/snowbridge/tree/main/web/packages/operations/src), as examples of how to use the SDK and the bridge.
+
+## Demos
 
 The following examples show how to do an Ether transfer from Ethereum to Polkadot, and back. The full example code can be viewed by following the stated links.
 
@@ -235,4 +239,3 @@ if (!response.messageId) {
     )
 }
 ```
-

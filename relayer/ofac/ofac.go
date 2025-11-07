@@ -27,7 +27,7 @@ func New(enabled bool, apiKey string) *OFAC {
 	return &OFAC{enabled, apiKey}
 }
 
-func (o OFAC) IsBanned(source, destination string) (bool, error) {
+func (o OFAC) IsBanned(source string, destinations []string) (bool, error) {
 	if !o.enabled {
 		return false, nil
 	}
@@ -43,14 +43,16 @@ func (o OFAC) IsBanned(source, destination string) (bool, error) {
 		}
 	}
 
-	if destination != "" {
-		isDestinationBanned, err := o.isOFACListed(destination)
-		if err != nil {
-			return true, err
-		}
-		if isDestinationBanned {
-			log.WithField("destination", destination).Warn("found ofac banned destination address")
-			return true, nil
+	for _, destination := range destinations {
+		if destination != "" {
+			isDestinationBanned, err := o.isOFACListed(destination)
+			if err != nil {
+				return true, err
+			}
+			if isDestinationBanned {
+				log.WithField("destination", destination).Warn("found ofac banned destination address")
+				return true, nil
+			}
 		}
 	}
 

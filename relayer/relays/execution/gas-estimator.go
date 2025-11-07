@@ -29,6 +29,7 @@ type GasEstimate struct {
 		DryRunSuccess      bool    `json:"dry_run_success"`
 		DryRunError        *string `json:"dry_run_error"`
 	} `json:"bridge_hub"`
+	Beneficiaries []string `json:"beneficiaries"`
 }
 
 // GasEstimatorConfig holds the configuration for gas estimation
@@ -80,7 +81,7 @@ func NewGasEstimator(config GasEstimatorConfig) *GasEstimator {
 }
 
 // EstimateGas estimates the gas cost for processing a message
-func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted, inboundMsg *parachain.Message, source string) (*GasEstimate, error) {
+func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted, inboundMsg *parachain.Message, source string, relayerPublicKey string) (*GasEstimate, error) {
 	if !g.config.Enabled {
 		log.Debug("Gas estimation disabled, skipping")
 		return &GasEstimate{}, nil
@@ -149,6 +150,7 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 		"--execution-fee", executionFee,
 		"--relayer-fee", relayerFee,
 		"--assets", assetsHex,
+		"--relayer-account", relayerPublicKey,
 	}
 
 	cmd := exec.CommandContext(ctx, g.config.BinaryPath, args...)

@@ -136,16 +136,27 @@ export class Context {
         if (paraIdKey in parachains) {
             const url = parachains[paraIdKey]
             console.log("Connecting to parachain ", paraIdKey, url)
-            const api = await ApiPromise.create({
+            let options: any = {
                 noInitWarn: true,
                 provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
-            })
+            }
+            if (paraId === this.config.polkadot.bridgeHubParaId) {
+                options.types = {
+                    ContractCall: {
+                        target: "[u8; 20]",
+                        calldata: "Vec<u8>",
+                        value: "u128",
+                        gas: "u64",
+                    },
+                }
+            }
+            const api = await ApiPromise.create(options)
             const onChainParaId = (
                 await api.query.parachainInfo.parachainId()
             ).toPrimitive() as number
             if (onChainParaId !== paraId) {
                 console.warn(
-                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`
+                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`,
                 )
             }
             this.#polkadotParachains[onChainParaId] = api
@@ -177,7 +188,7 @@ export class Context {
             ).toPrimitive() as number
             if (onChainParaId !== paraId) {
                 console.warn(
-                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`
+                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`,
                 )
             }
             this.#kusamaParachains[onChainParaId] = api
@@ -277,7 +288,7 @@ export class Context {
 }
 
 export function contextConfigFor(
-    env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {})
+    env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {}),
 ): Config {
     if (!(env in SNOWBRIDGE_ENV)) {
         throw Error(`Unknown environment '${env}'.`)

@@ -23,3 +23,7 @@ We will keep Snowbridge V1 live until all our partners have moved their integrat
 ### Support
 
 To get in touch, please log an [issue on our Github repo](https://github.com/Snowfork/snowbridge/issues). We will be in touch to set up a Telegram group, if necessary.
+
+### Examples
+
+We have a wide range of scripts using the Snowbridge SDK at [https://github.com/Snowfork/snowbridge/tree/main/web/packages/operations/src](https://github.com/Snowfork/snowbridge/tree/main/web/packages/operations/src), as examples of how to use the SDK and the bridge.

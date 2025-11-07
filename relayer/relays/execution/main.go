@@ -529,17 +529,6 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		return err
 	}
 
-	banned, err := r.ofac.IsBanned(source, "")
-	if err != nil {
-		return err
-	}
-	if banned {
-		log.Fatal("banned address found")
-		return errors.New("banned address found")
-	} else {
-		log.Info("address is not banned, continuing")
-	}
-
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
 
 	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
@@ -560,8 +549,11 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	// Set the execution proof on the message for gas estimation
 	inboundMsg.Proof.ExecutionProof = proof.HeaderPayload
 
+	// Extract beneficiaries from gas estimation
+	var beneficiaries []string
 	if r.gasEstimator.config.Enabled {
-		gasEstimate, err := r.gasEstimator.EstimateGas(ctx, ev, inboundMsg, source)
+		relayerPublicKey := r.keypair.PublicKey()
+		gasEstimate, err := r.gasEstimator.EstimateGas(ctx, ev, inboundMsg, source, relayerPublicKey)
 		if err != nil {
 			return fmt.Errorf("gas estimation failed: %w", err)
 		}
@@ -573,6 +565,21 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		}
 
 		logger.WithField("nonce", ev.Nonce).Info("message relaying is profitable, proceeding with message relay")
+
+		// Extract beneficiaries for OFAC check
+		beneficiaries = gasEstimate.Beneficiaries
+	}
+
+	// Perform OFAC check on source and beneficiaries
+	banned, err := r.ofac.IsBanned(source, beneficiaries)
+	if err != nil {
+		return err
+	}
+	if banned {
+		log.Fatal("banned address found")
+		return errors.New("banned address found")
+	} else {
+		log.Info("address is not banned, continuing")
 	}
 
 	// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state

@@ -18,7 +18,7 @@ const run = async () => {
             }
             return value
         },
-        2
+        2,
     )
     console.log("Asset Registry:", json)
     const filepath = `${env}.registry.json`

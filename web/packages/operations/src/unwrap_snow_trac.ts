@@ -37,7 +37,7 @@ const unwrapSnowTRAC = async () => {
             parachain,
             neuroWebParaId,
             parachainInfo.specName,
-            parachainInfo.specVersion
+            parachainInfo.specVersion,
         )
 
         const fee = await neuroWeb.unwrapExecutionFeeInNative(parachain)

@@ -21,7 +21,7 @@ export function buildAssetHubERC20ReceivedXcm(
     destinationParaId: number,
     remoteEtherFeeAmount: bigint,
     topic: string,
-    customXcm?: any[]
+    customXcm?: any[],
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -178,7 +178,7 @@ export function buildParachainERC20ReceivedXcmOnDestination(
     feeInEther: bigint,
     beneficiary: string,
     topic: string,
-    customXcm?: any[]
+    customXcm?: any[],
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -208,9 +208,10 @@ export function buildParachainERC20ReceivedXcmOnDestination(
             {
                 reserveAssetDeposited: [
                     {
-                        id: tokenAddress === ETHER_TOKEN_ADDRESS
-                            ? ether
-                            : erc20Location(ethChainId, tokenAddress),
+                        id:
+                            tokenAddress === ETHER_TOKEN_ADDRESS
+                                ? ether
+                                : erc20Location(ethChainId, tokenAddress),
                         fun: {
                             Fungible: transferAmount,
                         },
@@ -247,7 +248,7 @@ export function buildParachainERC20ReceivedXcmOnDestinationWithDOTFee(
     feeInDOT: bigint,
     beneficiary: string,
     topic: string,
-    customXcm?: any[]
+    customXcm?: any[],
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -277,9 +278,10 @@ export function buildParachainERC20ReceivedXcmOnDestinationWithDOTFee(
             {
                 reserveAssetDeposited: [
                     {
-                        id: tokenAddress === ETHER_TOKEN_ADDRESS
-                            ? ether
-                            : erc20Location(ethChainId, tokenAddress),
+                        id:
+                            tokenAddress === ETHER_TOKEN_ADDRESS
+                                ? ether
+                                : erc20Location(ethChainId, tokenAddress),
                         fun: {
                             Fungible: transferAmount,
                         },
@@ -318,7 +320,7 @@ export function sendMessageXCM(
     tokenAmount: bigint,
     remoteEtherFeeAmount: bigint,
     topic: string,
-    customXcm?: any[]
+    customXcm?: any[],
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -418,7 +420,7 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
     remoteEtherFeeAmount: bigint,
     remoteDotFeeAmount: bigint,
     topic: string,
-    customXcm?: any[]
+    customXcm?: any[],
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -600,7 +602,7 @@ export function sendMessageXCMWithDOTDestFee(
     tokenAmount: bigint,
     remoteEtherFeeAmount: bigint,
     remoteDotFeeAmount: bigint,
-    topic: string
+    topic: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
