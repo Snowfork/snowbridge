@@ -1,0 +1,18 @@
+{
+  "source": {
+    "ethereum": {
+      "endpoint": "ws://127.0.0.1:8546"
+    },
+    "polkadot": {
+      "endpoint": "ws://127.0.0.1:9944"
+    },
+    "contracts": {
+      "BeefyClient": null
+    }
+  },
+  "sink": {
+    "polkadot": {
+      "endpoint": "ws://127.0.0.1:9944"
+    }
+  }
+}
