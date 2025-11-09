@@ -272,7 +272,6 @@ func (li *BeefyListener) signedExtrinsicFromCall(meta *types.Metadata, call type
 func (li *BeefyListener) watchExtrinsicSubscription(sub *author.ExtrinsicStatusSubscription) error {
 	for {
 		status := <-sub.Chan()
-		fmt.Printf("Transaction status: %#v\n", status)
 
 		if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
 			sub.Unsubscribe()

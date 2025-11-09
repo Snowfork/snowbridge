@@ -119,11 +119,6 @@ func (li *BeefyListener) decodeTransactionCallData(callData []byte) (string, map
 	// Convert to map for handling
 	decoded := make(map[string]interface{})
 	for i, param := range params {
-		log.WithFields(log.Fields{
-			"name":      method.Inputs[i].Name,
-			"param":     param,
-			"param raw": param,
-		}).Debug("Decoded transaction call data for NewTicket event")
 		decoded[method.Inputs[i].Name] = param
 	}
 
@@ -144,7 +139,8 @@ func (li *BeefyListener) parseCommitment(callData []byte) (contracts.BeefyClient
 
 	log.WithFields(log.Fields{
 		"raw commitment": decoded["commitment"],
-	}).Debug("Decoded transaction call data for NewTicket event")
+		"method":         methodName,
+	}).Debug("Decoded transaction call data")
 
 	// Extract the commitment
 	commitmentRaw := decoded["commitment"].(struct {
@@ -183,12 +179,6 @@ func (li *BeefyListener) parseSubmitInitialProof(callData []byte) (contracts.Bee
 	if methodName != "submitInitial" {
 		return contracts.BeefyClientValidatorProof{}, fmt.Errorf("unexpected method name: %s", methodName)
 	}
-
-	log.WithFields(log.Fields{
-		// "raw commitment": decoded["commitment"],
-		"raw proof": decoded["proof"],
-	}).Debug("Decoded transaction call data for NewTicket event")
-
 	// bitfield := decoded["bitfield"].([]*big.Int)
 
 	// Extract validator proof
