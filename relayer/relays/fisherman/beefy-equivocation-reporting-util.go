@@ -212,7 +212,7 @@ func (li *BeefyListener) constructAncestryProofPayload(commitment contracts.Beef
 	return payload, nil
 }
 
-func (li *BeefyListener) getLatestBlockInfo() (types.Hash, *types.SignedBlock, error) {
+func (li *BeefyListener) getLatestBeefyBlock() (types.Hash, *types.SignedBlock, error) {
 	latestHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
 	if err != nil {
 		return types.Hash{}, nil, fmt.Errorf("get finalized head: %w", err)
@@ -233,7 +233,7 @@ func (li *BeefyListener) signedExtrinsicFromCall(meta *types.Metadata, call type
 		return ext, fmt.Errorf("get signer info: %w", err)
 	}
 
-	latestHash, latestBlock, err := li.getLatestBlockInfo()
+	latestHash, latestBlock, err := li.getLatestBeefyBlock()
 	if err != nil {
 		return ext, fmt.Errorf("get latest block info: %w", err)
 	}

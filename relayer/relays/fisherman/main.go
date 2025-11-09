@@ -78,7 +78,7 @@ func (relay *Relay) Oneshot(ctx context.Context, eg *errgroup.Group, blockNumber
 		return err
 	}
 
-	err = relay.beefyListener.reportEquivocation(ctx, blockNumber)
+	err = relay.beefyListener.checkEquivocation(ctx, blockNumber)
 	if err != nil {
 		return err
 	}
