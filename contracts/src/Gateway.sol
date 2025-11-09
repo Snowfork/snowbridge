@@ -227,7 +227,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         // in the gateway, then reduce the total amount
         uint256 amount = Math.min(refund + message.reward, address(this).balance);
 
-        // Do the payment if there funds available in the gateway
+        // Do the payment if there are funds available in the gateway
         if (amount > Functions.dustThreshold()) {
             payable(msg.sender).safeNativeTransfer(amount);
         }
@@ -388,7 +388,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     // likely to be composed of more non-zero bytes than zero bytes.
     //
     // Analysis shows that valid calldata objects are generally no more than
-    // bytes in length, and so we bound the refunds to that length.
+    // 3000 bytes in length, and so we bound the refunds to that length.
     //
     // Reference: Ethereum Yellow Paper
     function v1_transactionBaseGas() internal pure returns (uint256) {
@@ -495,7 +495,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         HandlersV2.unlockNativeToken(AGENT_EXECUTOR, data);
     }
 
-    // Mint foreign token from polkadot
+    // Register a new fungible Polkadot token for an agent
     function v2_handleRegisterForeignToken(bytes calldata data) external onlySelf {
         HandlersV2.registerForeignToken(data);
     }
