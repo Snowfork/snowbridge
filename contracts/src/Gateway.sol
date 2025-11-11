@@ -221,7 +221,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
         // that could drain funds unnecessarily. During these spikes, relayers should back off.
         uint256 gasUsed = v1_transactionBaseGas() + (startGas - gasleft());
-        uint256 refund = gasUsed * Math.min(tx.gasprice, message.maxFeePerGas);
+        uint256 refund = Math.min(0.01 ether, gasUsed * Math.min(tx.gasprice, message.maxFeePerGas));
 
         // Add the reward to the refund amount. If the sum is more than the funds available
         // in the gateway, then reduce the total amount
