@@ -94,6 +94,18 @@ config_relayer() {
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay.json
 
+    # Configure fisherman relay
+    jq \
+        --arg k2 "$(address_for BeefyClient)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
+        --arg eth_gas_limit $eth_gas_limit \
+        '
+      .source.contracts.BeefyClient = $k2
+    | .source.ethereum.endpoint = $eth_endpoint_ws
+    ' \
+        config/fisherman-relay.json >$output_dir/fisherman-relay.json
+
     # Configure beacon relay
     jq \
         --arg beacon_endpoint_http $beacon_endpoint_http \
@@ -179,6 +191,20 @@ start_relayer() {
                 --ethereum.private-key $parachain_relay_primary_gov_eth_key \
                 --substrate.private-key "//ExecutionRelayAssetHub" \
                 >>"$output_dir"/parachain-relay-v2.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch equivocation fisherman
+    (
+        : >"$output_dir"/equivocation-fisherman.log
+        while :; do
+            echo "Starting equivocation fisherman at $(date)"
+            "${relayer_v2}" run fisherman \
+                --config "$output_dir/fisherman-relay.json" \
+                --ethereum.private-key $parachain_relay_primary_gov_eth_key \
+                --substrate.private-key "//ExecutionRelayAssetHub" \
+                >>"$output_dir"/equivocation-fisherman.log 2>&1 || true
             sleep 20
         done
     ) &
