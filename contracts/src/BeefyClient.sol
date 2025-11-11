@@ -46,7 +46,7 @@ contract BeefyClient {
     /**
      * @dev Interactive session has expired
      */
-    error TicketExpired();
+    event TicketExpired();
 
     /* Types */
 

@@ -93,4 +93,8 @@ contract BeefyClientMock is BeefyClient {
     function computeQuorum_public(uint256 numValidators) public pure returns (uint256) {
         return computeQuorum(numValidators);
     }
+
+    function getTicket(bytes32 commitmentHash) public view returns (Ticket memory) {
+        return tickets[createTicketID(msg.sender, commitmentHash)];
+    }
 }
