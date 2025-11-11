@@ -7,8 +7,10 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 
@@ -78,9 +80,21 @@ func (relay *Relay) Oneshot(ctx context.Context, eg *errgroup.Group, blockNumber
 		return err
 	}
 
-	err = relay.beefyListener.checkEquivocation(ctx, blockNumber)
+	// Set up light client bridge contract
+	address := common.HexToAddress(relay.beefyListener.config.Contracts.BeefyClient)
+	beefyClientContract, err := contracts.NewBeefyClient(address, relay.ethereumConnBeefy.Client())
 	if err != nil {
 		return err
+	}
+	relay.beefyListener.beefyClientContract = beefyClientContract
+
+	err = relay.beefyListener.checkSubmitInitialEquivocation(ctx, blockNumber)
+	if err != nil {
+		return fmt.Errorf("check submit initial equivocation: %w", err)
+	}
+	err = relay.beefyListener.checkSubmitFinalEquivocation(ctx, blockNumber)
+	if err != nil {
+		return fmt.Errorf("check submit final equivocation: %w", err)
 	}
 
 	log.Info("Oneshot equivocation reporting complete")

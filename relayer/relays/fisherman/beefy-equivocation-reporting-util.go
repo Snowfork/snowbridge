@@ -1,10 +1,14 @@
 package fisherman
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/snowfork/go-substrate-rpc-client/v4/client"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
@@ -282,9 +286,6 @@ func (li *BeefyListener) watchExtrinsicSubscription(sub *author.ExtrinsicStatusS
 			return fmt.Errorf("extrinsic removed from the transaction pool")
 		}
 
-		if status.IsInBlock {
-			log.Info("Completed at block hash ", status.AsInBlock.Hex())
-		}
 		if status.IsFinalized {
 			log.Info("Finalized at block hash ", status.AsFinalized.Hex())
 			sub.Unsubscribe()
@@ -292,4 +293,44 @@ func (li *BeefyListener) watchExtrinsicSubscription(sub *author.ExtrinsicStatusS
 		}
 	}
 	return nil
+}
+
+func decodeTransactionCallData(callData []byte) (string, map[string]interface{}, error) {
+	// Parse the ABI
+	parsedABI, err := abi.JSON(strings.NewReader(contracts.BeefyClientMetaData.ABI))
+	if err != nil {
+		return "", nil, fmt.Errorf("parse ABI: %w", err)
+	}
+
+	// Get the method signature from the first 4 bytes
+	methodSig := callData[:4]
+	method, err := parsedABI.MethodById(methodSig)
+	if err != nil {
+		return "", nil, fmt.Errorf("get method from signature: %w", err)
+	}
+
+	// Decode the parameters
+	params, err := method.Inputs.Unpack(callData[4:])
+	if err != nil {
+		return "", nil, fmt.Errorf("unpack parameters: %w", err)
+	}
+
+	// Convert to map for handling
+	decoded := make(map[string]interface{})
+	for i, param := range params {
+		decoded[method.Inputs[i].Name] = param
+	}
+
+	return method.Name, decoded, nil
+}
+
+func (li *BeefyListener) getTransactionCallData(ctx context.Context, txHash common.Hash) ([]byte, error) {
+	// Get the transaction
+	tx, _, err := li.ethereumConn.Client().TransactionByHash(ctx, txHash)
+	if err != nil {
+		return nil, fmt.Errorf("get transaction: %w", err)
+	}
+
+	// Get the input data
+	return tx.Data(), nil
 }
