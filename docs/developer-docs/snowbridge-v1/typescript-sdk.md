@@ -2,29 +2,33 @@
 description: A guide on using the Snowbridge TypeScript SDK for integration.
 ---
 
-# Typescript SDK
+# V1 SDK
 
 ## Packages
 
 The following packages are used in the Snowbridge SDK:
 
 * [**@snowbridge/api**](https://www.npmjs.com/package/@snowbridge/api) This is the **main entry point** for developers integrating with Snowbridge. It provides all core interfaces and helper functions to initiate, validate, and send cross-chain transactions. It abstracts over the complexities of constructing and handling XCM messages, Ethereum transactions, and relayer coordination.
-  * Use the [`toPolkadotV2`](../../web/packages/api/src/toPolkadot_v2.ts) module for sending packages from Ethereum -> Polkadot.
-  * Use the [`toEthereumV2`](../../web/packages/api/src/toEthereum_v2.ts) module for sending packages from Polkadot -> Ethereum.
+  * Use the [`toPolkadotV2`](../../../web/packages/api/src/toPolkadot_v2.ts) module for sending packages from Ethereum -> Polkadot.
+  * Use the [`toEthereumV2`](../../../web/packages/api/src/toEthereum_v2.ts) module for sending packages from Polkadot -> Ethereum.
 * [**@snowbridge/registry**](https://www.npmjs.com/package/@snowbridge/registry) This package contains the **asset and parachain registry** used by Snowbridge. It defines the list of supported tokens, parachains, and associated metadata (like contract addresses and decimals). It ensures your transfers use valid combinations of assets and destinations.
 * [**@snowbridge/contract-types**](https://www.npmjs.com/package/@snowbridge/contract-types) Contains **TypeScript typings and contract ABIs** for the Ethereum contracts Snowbridge interacts with. Use this package to interact with contracts directly, or to extend SDK functionality.
 * [**@snowbridge/contracts**](https://www.npmjs.com/package/@snowbridge/contracts) Provides deployed contract addresses and metadata for Snowbridge smart contracts on supported networks. This is useful when you need to interact with Snowbridge's **Ethereum-side contracts** directly.
 * [**@snowbridge/base-types**](https://www.npmjs.com/package/@snowbridge/base-types) Defines **common data types** used throughout the SDK, such as asset representations, transfer objects, parachain locations, and more. These types are shared between `@snowbridge/api` and the registry.
 
-## Examples
+### Example Scripts
+
+We have a wide range of scripts using the Snowbridge SDK at [https://github.com/Snowfork/snowbridge/tree/main/web/packages/operations/src](https://github.com/Snowfork/snowbridge/tree/main/web/packages/operations/src), as examples of how to use the SDK and the bridge.
+
+## Demos
 
 The following examples show how to do an Ether transfer from Ethereum to Polkadot, and back. The full example code can be viewed by following the stated links.
 
 ### Ethereum to Polkadot
 
-Full example: [send\_ether\_from\_eth\_to\_assethub.ts](../../web/packages/operations/src/examples/send_ether_from_eth_to_assethub.ts)
+Full example: [send\_ether\_from\_eth\_to\_assethub.ts](../../../web/packages/operations/src/examples/send_ether_from_eth_to_assethub.ts)
 
-Uses the `@snowbridge/api` [`toPolkadotV2`](../../web/packages/api/src/toPolkadot_v2.ts) package to send the transaction.
+Uses the `@snowbridge/api` [`toPolkadotV2`](../../../web/packages/api/src/toPolkadot_v2.ts) package to send the transaction.
 
 #### Setup
 
@@ -125,9 +129,9 @@ if (!receipt) {
 
 ### Polkadot to Ethereum
 
-Full example: [send\_ether\_from\_assethub\_to\_eth.ts](../../web/packages/operations/src/examples/send_ether_from_assethub_to_eth.ts)
+Full example: [send\_ether\_from\_assethub\_to\_eth.ts](../../../web/packages/operations/src/examples/send_ether_from_assethub_to_eth.ts)
 
-Uses the `@snowbridge/api` [`toEthereumV2`](../../web/packages/api/src/toEthereum_v2.ts) module to send the transaction.
+Uses the `@snowbridge/api` [`toEthereumV2`](../../../web/packages/api/src/toEthereum_v2.ts) module to send the transaction.
 
 #### Setup
 
@@ -235,4 +239,3 @@ if (!response.messageId) {
     )
 }
 ```
-

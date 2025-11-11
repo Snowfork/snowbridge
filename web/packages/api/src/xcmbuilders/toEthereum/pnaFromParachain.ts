@@ -6,8 +6,10 @@ import {
     parachainLocation,
     accountToLocation,
     buildAppendixInstructions,
+    buildEthereumInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
+import { DeliveryFee } from "../../toEthereum_v2"
 
 export function buildResultXcmAssetHubPNATransferFromParachain(
     registry: Registry,
@@ -19,7 +21,7 @@ export function buildResultXcmAssetHubPNATransferFromParachain(
     topic: string,
     transferAmount: bigint,
     totalFeeInDot: bigint,
-    destinationFeeInDot: bigint
+    destinationFeeInDot: bigint,
 ) {
     return registry.createType("XcmVersionedXcm", {
         v5: [
@@ -60,7 +62,7 @@ export function buildResultXcmAssetHubPNATransferFromParachain(
                 beneficiary,
                 assetLocationOnAH,
                 assetLocationOnEthereum,
-                topic
+                topic,
             ),
         ],
     })
@@ -71,7 +73,7 @@ function buildAssetHubXcmForPNAFromParachain(
     beneficiary: string,
     assetLocationOnAH: any,
     assetLocationOnEthereum: any,
-    topic: string
+    topic: string,
 ) {
     return [
         // Initiate the bridged transfer
@@ -126,7 +128,7 @@ export function buildParachainPNAReceivedXcmOnDestination(
     transferAmount: bigint,
     feeInDot: bigint,
     beneficiary: string,
-    topic: string
+    topic: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     return registry.createType("XcmVersionedXcm", {
@@ -187,7 +189,7 @@ export function buildAssetHubPNATransferFromParachain(
     beneficiary: string,
     assetLocationOnAH: any,
     assetLocationOnEthereum: any,
-    topic: string
+    topic: string,
 ) {
     return registry.createType("XcmVersionedXcm", {
         v5: buildAssetHubXcmForPNAFromParachain(
@@ -195,7 +197,7 @@ export function buildAssetHubPNATransferFromParachain(
             beneficiary,
             assetLocationOnAH,
             assetLocationOnEthereum,
-            topic
+            topic,
         ),
     })
 }
@@ -209,7 +211,7 @@ export function buildParachainPNAReceivedXcmOnAssetHub(
     totalFeeInDot: bigint,
     destinationFeeInDot: bigint,
     beneficiary: string,
-    topic: string
+    topic: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     return registry.createType("XcmVersionedXcm", {
@@ -334,14 +336,19 @@ export function buildTransferXcmFromParachain(
     topic: string,
     asset: Asset,
     tokenAmount: bigint,
-    localDOTFeeAmount: bigint,
-    totalDOTFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint,
-    claimerLocation?: any
+    fee: DeliveryFee,
+    claimerLocation?: any,
+    callHex?: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
     let tokenLocation = asset.location
+
+    let localDOTFeeAmount: bigint =
+        fee.localExecutionFeeDOT! + fee.localDeliveryFeeDOT! + fee.returnToSenderExecutionFeeDOT
+    let totalDOTFeeAmount: bigint = fee.totalFeeInDot!
+    let remoteEtherFeeAmount: bigint = fee.ethereumExecutionFee!
+
     let assets = []
     assets.push({
         id: tokenLocation,
@@ -366,8 +373,10 @@ export function buildTransferXcmFromParachain(
         envName,
         sourceParachainId,
         sourceAccount,
-        claimerLocation
+        claimerLocation,
     )
+
+    let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
 
     let remoteInstructionsOnAH: any[] = [
         {
@@ -403,24 +412,7 @@ export function buildTransferXcmFromParachain(
                         },
                     },
                 ],
-                remoteXcm: [
-                    {
-                        depositAsset: {
-                            assets: {
-                                wild: {
-                                    allCounted: 3,
-                                },
-                            },
-                            beneficiary: {
-                                parents: 0,
-                                interior: { x1: [beneficiaryLocation] },
-                            },
-                        },
-                    },
-                    {
-                        setTopic: topic,
-                    },
-                ],
+                remoteXcm: remoteXcm,
             },
         },
         {

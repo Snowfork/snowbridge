@@ -1,11 +1,13 @@
 import { TransferInterface } from "./transfers/toPolkadot/transferInterface"
 import { ERC20ToAH } from "./transfers/toPolkadot/erc20ToAH"
+import { RegisterToken } from "./registration/toPolkadot/registerToken"
+import { TokenRegistration } from "./registration/toPolkadot/registrationInterface"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { MultiAddressStruct } from "@snowbridge/contract-types/dist/IGateway.sol/IGatewayV1"
-import { AbiCoder, ContractTransaction, LogDescription, TransactionReceipt } from "ethers"
+import { AbiCoder, ContractTransaction, LogDescription, TransactionReceipt, Wallet } from "ethers"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
 import { IGatewayV2__factory } from "@snowbridge/contract-types"
@@ -35,6 +37,7 @@ export type Transfer = {
         destinationParaId: number
         amount: bigint
         fee: DeliveryFee
+        customXcm?: any[] // Optional custom XCM instructions
     }
     computed: {
         gatewayAddress: string
@@ -78,10 +81,18 @@ export type MessageReceipt = {
     txIndex: number
 }
 
+// Re-export registration types for convenience
+export type {
+    TokenRegistration,
+    RegistrationValidationResult,
+    RegistrationFee,
+    RegistrationInterface,
+} from "./registration/toPolkadot/registrationInterface"
+
 export function createTransferImplementation(
     destinationParaId: number,
     registry: AssetRegistry,
-    tokenAddress: string
+    tokenAddress: string,
 ): TransferInterface {
     const { ahAssetMetadata } = resolveInputs(registry, tokenAddress, destinationParaId)
 
@@ -121,7 +132,7 @@ function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinatio
     const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
     if (!destAssetMetadata) {
         throw Error(
-            `Token ${tokenAddress} not registered on destination parachain ${destinationParaId}.`
+            `Token ${tokenAddress} not registered on destination parachain ${destinationParaId}.`,
         )
     }
 
@@ -134,7 +145,7 @@ export function buildMessageId(
     tokenAddress: string,
     beneficiaryAccount: string,
     amount: bigint,
-    accountNonce: number
+    accountNonce: number,
 ) {
     const entropy = new Uint8Array([
         ...stringToU8a(destParaId.toString()),
@@ -152,7 +163,7 @@ export function buildMessageId(
 export function encodeNativeAsset(tokenAddress: string, amount: bigint) {
     return AbiCoder.defaultAbiCoder().encode(
         ["uint8", "address", "uint128"],
-        [0, tokenAddress, amount]
+        [0, tokenAddress, amount],
     )
 }
 
@@ -162,7 +173,7 @@ export function encodeAssetsArray(encodedAssets: string[]) {
 }
 
 export async function getMessageReceipt(
-    receipt: TransactionReceipt
+    receipt: TransactionReceipt,
 ): Promise<MessageReceipt | null> {
     const events: LogDescription[] = []
     const gatewayInterface = IGatewayV2__factory.createInterface()
@@ -198,4 +209,22 @@ export function claimerFromBeneficiary(assetHub: ApiPromise, beneficiaryAddressH
 
 export function claimerLocationToBytes(claimerLocation: Codec) {
     return hexToU8a(claimerLocation.toHex())
+}
+
+export function createRegistrationImplementation() {
+    return new RegisterToken()
+}
+
+export async function sendRegistration(
+    registration: TokenRegistration,
+    wallet: Wallet
+): Promise<TransactionReceipt> {
+    const response = await wallet.sendTransaction(registration.tx)
+    const receipt = await response.wait(1)
+
+    if (!receipt) {
+        throw Error(`Transaction ${response.hash} not included.`)
+    }
+
+    return receipt
 }

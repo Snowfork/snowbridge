@@ -37,7 +37,7 @@ const wrapSnowTRAC = async () => {
             parachain,
             neuroWebParaId,
             parachainInfo.specName,
-            parachainInfo.specVersion
+            parachainInfo.specVersion,
         )
 
         const fee = await neuroWeb.wrapExecutionFeeInNative(parachain)

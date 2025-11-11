@@ -255,6 +255,11 @@ pub fn set_assethub_fee(fee: u128) -> AssetHubRuntimeCall {
         twox_128(b":BridgeHubEthereumBaseFee:").to_vec();
     let asset_hub_outbound_fee_encoded: Vec<u8> = fee.encode();
 
+    eprintln!(
+        "Storage key for 'BridgeHubEthereumBaseFee': 0x{}",
+        hex::encode(&asset_hub_outbound_fee_storage_key)
+    );
+
     AssetHubRuntimeCall::System(
         crate::asset_hub_runtime::runtime_types::frame_system::pallet::Call::set_storage {
             items: vec![(
@@ -269,6 +274,11 @@ pub fn set_assethub_fee_v2(fee: u128) -> AssetHubRuntimeCall {
     let asset_hub_outbound_fee_storage_key: Vec<u8> =
         twox_128(b":BridgeHubEthereumBaseFeeV2:").to_vec();
     let asset_hub_outbound_fee_encoded: Vec<u8> = fee.encode();
+
+    eprintln!(
+        "Storage key for 'BridgeHubEthereumBaseFeeV2': 0x{}",
+        hex::encode(&asset_hub_outbound_fee_storage_key)
+    );
 
     AssetHubRuntimeCall::System(
         crate::asset_hub_runtime::runtime_types::frame_system::pallet::Call::set_storage {
@@ -948,7 +958,7 @@ pub fn replay_sep_2025_xcm() -> crate::asset_hub_runtime::RuntimeCall {
                     weight_limit: WeightLimit::Unlimited,
                 },
                 DepositAsset {
-                    assets: asset_hub_polkadot_runtime::runtime_types::staging_xcm::v5::asset::AssetFilter::Wild(WildAsset::AllCounted(1)),
+                    assets: crate::asset_hub_runtime::runtime_types::staging_xcm::v5::asset::AssetFilter::Wild(WildAsset::AllCounted(1)),
                     beneficiary: Location {
                         parents: 0,
                         interior: Junctions::X1([Junction::AccountKey20 {

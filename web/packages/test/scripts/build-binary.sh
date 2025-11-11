@@ -18,7 +18,7 @@ build_polkadot_binaries() {
     # Check that all 3 binaries are available and no changes made in the polkadot and substrate dirs
     if [[ ! -e "target/release/polkadot" || ! -e "target/release/polkadot-execute-worker" || ! -e "target/release/polkadot-prepare-worker" || "$changes_detected" -eq 1 ]]; then
         echo "Building polkadot binary, due to changes detected in polkadot or substrate, or binaries not found"
-        cargo build --release --locked --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker $features
+        cargo build --release --bin polkadot --bin polkadot-execute-worker --bin polkadot-prepare-worker $features
     else
         echo "No changes detected in polkadot or substrate and binaries are available, not rebuilding relaychain binaries."
     fi
@@ -30,7 +30,7 @@ build_polkadot_binaries() {
     cp target/release/polkadot-prepare-worker $output_bin_dir/polkadot-prepare-worker
 
     echo "Building polkadot-parachain binary"
-    cargo build --release --locked -p polkadot-parachain-bin --bin polkadot-parachain $features
+    cargo build --release -p polkadot-parachain-bin --bin polkadot-parachain $features
     cp target/release/polkadot-parachain $output_bin_dir/polkadot-parachain
 
     popd
@@ -107,6 +107,12 @@ build_v1() {
     popd
 }
 
+build_gas_estimator() {
+    pushd $gas_estimator_dir
+    cargo build --release --features local
+    popd
+}
+
 install_binary() {
     echo "Building and installing binaries."
     mkdir -p $output_bin_dir
@@ -116,6 +122,7 @@ install_binary() {
     build_relayer
     build_web_packages
     build_v1
+    build_gas_estimator
 }
 
 if [ -z "${from_start_services:-}" ]; then

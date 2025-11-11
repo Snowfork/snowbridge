@@ -47,7 +47,7 @@ class ValidatorSet {
         for (let i = 0; i < length; i++) {
             if (randomSet) {
                 wallet = Wallet.fromPhrase(
-                    ethers.Mnemonic.entropyToPhrase(keccak256(Buffer.from(`${i}`)))
+                    ethers.Mnemonic.entropyToPhrase(keccak256(Buffer.from(`${i}`))),
                 )
             } else {
                 wallet = new ethers.Wallet(privateKeys![i])

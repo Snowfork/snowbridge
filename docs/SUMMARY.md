@@ -5,8 +5,19 @@
 
 ## Developer Docs
 
-* [Parachain Integration](developer-docs/parachain-integration.md)
-* [Typescript SDK](developer-docs/typescript-sdk.md)
+* [Snowbridge Integration Guides](developer-docs/snowbridge-integration-guides.md)
+* [Snowbridge V1](developer-docs/snowbridge-v1/README.md)
+  * [V1 SDK](developer-docs/snowbridge-v1/typescript-sdk.md)
+  * [V1 Parachain Integration](developer-docs/snowbridge-v1/parachain-integration.md)
+* [Snowbridge V2](developer-docs/snowbridge-v2/README.md)
+  * [V2 SDK (BETA)](developer-docs/snowbridge-v2/typescript-sdk/README.md)
+    * [Setup Steps](developer-docs/snowbridge-v2/typescript-sdk/setup-steps.md)
+    * [Token transfer Ethereum -> Polkadot](developer-docs/snowbridge-v2/typescript-sdk/e2p.md)
+    * [Token transfer Polkadot -> Ethereum](developer-docs/snowbridge-v2/typescript-sdk/e2p-1.md)
+    * [Transact on AssetHub & Parachain](developer-docs/snowbridge-v2/typescript-sdk/transact-ah.md)
+    * [Transact on Ethereum & L2s (WIP)](developer-docs/snowbridge-v2/typescript-sdk/transact-ethereum.md)
+    * [Create Agent](developer-docs/snowbridge-v2/typescript-sdk/create-agent.md)
+  * [V2 Parachain Integration](developer-docs/snowbridge-v2/parachain-integration.md)
 * [Local Development Guide](developer-docs/quick-start-guide.md)
 
 ## Security

@@ -8,8 +8,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/snowfork/snowbridge/relayer/ofac"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -20,11 +18,13 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
+	"github.com/snowfork/snowbridge/relayer/ofac"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
+	"github.com/snowfork/snowbridge/relayer/relays/error_tracking"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -39,6 +39,8 @@ type Relay struct {
 	headerCache     *ethereum.HeaderCache
 	ofac            *ofac.OFAC
 	chainID         *big.Int
+	errorTracker    *error_tracking.ErrorTracker
+	gasEstimator    *GasEstimator
 }
 
 func NewRelay(
@@ -46,8 +48,10 @@ func NewRelay(
 	keypair *sr25519.Keypair,
 ) *Relay {
 	return &Relay{
-		config:  config,
-		keypair: keypair,
+		config:       config,
+		keypair:      keypair,
+		gasEstimator: NewGasEstimator(config.GasEstimation),
+		errorTracker: error_tracking.NewErrorTracker(10),
 	}
 }
 
@@ -169,12 +173,13 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 				}).Info("Found events for nonce")
 
 				for _, ev := range events {
-					err := r.waitAndSend(ctx, ev)
+					err := r.waitAndSendWithRetry(ctx, ev)
 					if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
 						log.WithField("nonce", ev.Nonce).Info("beacon header not finalized yet")
 						continue
 					} else if err != nil {
-						return fmt.Errorf("submit event: %w", err)
+						log.WithFields(log.Fields{"nonce": ev.Nonce, "error": err}).Warn("submit event: message was not processed")
+						continue
 					}
 				}
 			}
@@ -451,6 +456,19 @@ func (r *Relay) makeInboundMessage(
 	return msg, nil
 }
 
+// waitAndSendWithRetry wraps waitAndSend with retry logic for transient errors
+func (r *Relay) waitAndSendWithRetry(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) error {
+	config := error_tracking.DefaultRetryConfig()
+	logFields := log.Fields{"nonce": ev.Nonce}
+
+	return error_tracking.RetryWithTracking(
+		r.errorTracker,
+		config,
+		func() error { return r.waitAndSend(ctx, ev) },
+		logFields,
+	)
+}
+
 func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) (err error) {
 	ethNonce := ev.Nonce
 	waitingPeriod := (ethNonce + r.config.Schedule.TotalRelayerCount - r.config.Schedule.ID) % r.config.Schedule.TotalRelayerCount
@@ -511,17 +529,6 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		return err
 	}
 
-	banned, err := r.ofac.IsBanned(source, "")
-	if err != nil {
-		return err
-	}
-	if banned {
-		log.Fatal("banned address found")
-		return errors.New("banned address found")
-	} else {
-		log.Info("address is not banned, continuing")
-	}
-
 	nextBlockNumber := new(big.Int).SetUint64(ev.Raw.BlockNumber + 1)
 
 	blockHeader, err := r.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
@@ -530,12 +537,49 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	}
 
 	// ParentBeaconRoot in https://eips.ethereum.org/EIPS/eip-4788 from Deneb onward
+	// Fetch execution proof early so we can use it for gas estimation
 	proof, err := r.beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot, r.config.InstantVerification)
 	if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
 		return err
 	}
 	if err != nil {
 		return fmt.Errorf("fetch execution header proof: %w", err)
+	}
+
+	// Set the execution proof on the message for gas estimation
+	inboundMsg.Proof.ExecutionProof = proof.HeaderPayload
+
+	// Extract beneficiaries from gas estimation
+	var beneficiaries []string
+	if r.gasEstimator.config.Enabled {
+		relayerPublicKey := r.keypair.PublicKey()
+		gasEstimate, err := r.gasEstimator.EstimateGas(ctx, ev, inboundMsg, source, relayerPublicKey)
+		if err != nil {
+			return fmt.Errorf("gas estimation failed: %w", err)
+		}
+
+		err = r.gasEstimator.IsProfitable(gasEstimate, ev)
+		if err != nil {
+			logger.WithField("nonce", ev.Nonce).WithError(err).Warn("message will not be relayed due to not being profitable")
+			return nil // Skip this message without error
+		}
+
+		logger.WithField("nonce", ev.Nonce).Info("message relaying is profitable, proceeding with message relay")
+
+		// Extract beneficiaries for OFAC check
+		beneficiaries = gasEstimate.Beneficiaries
+	}
+
+	// Perform OFAC check on source and beneficiaries
+	banned, err := r.ofac.IsBanned(source, beneficiaries)
+	if err != nil {
+		return err
+	}
+	if banned {
+		log.Fatal("banned address found")
+		return errors.New("banned address found")
+	} else {
+		log.Info("address is not banned, continuing")
 	}
 
 	// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state

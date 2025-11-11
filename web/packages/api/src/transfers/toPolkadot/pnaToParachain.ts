@@ -52,7 +52,8 @@ export class PNAToParachain implements TransferInterface {
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
-        }
+            customXcm?: any[]
+        },
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub, destination } =
             context instanceof Context
@@ -66,7 +67,7 @@ export class PNAToParachain implements TransferInterface {
         const { destParachain, destAssetMetadata } = resolveInputs(
             registry,
             tokenAddress,
-            destinationParaId
+            destinationParaId,
         )
         // AssetHub fees
         let assetHubXcm = buildAssetHubPNAReceivedXcm(
@@ -78,12 +79,12 @@ export class PNAToParachain implements TransferInterface {
             1000000000000n,
             1000000000000n,
             accountId32Location(
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             ),
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             destinationParaId,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
         const bridgeHubImpl = await paraImplementation(bridgeHub)
         const assetHubImpl = await paraImplementation(assetHub)
@@ -98,7 +99,7 @@ export class PNAToParachain implements TransferInterface {
         // Delivery fee BridgeHub to AssetHub
         const deliveryFeeInDOT = await bridgeHubImpl.calculateDeliveryFeeInDOT(
             registry.assetHubParaId,
-            assetHubXcm
+            assetHubXcm,
         )
         // AssetHub execution fee
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
@@ -107,11 +108,11 @@ export class PNAToParachain implements TransferInterface {
             assetHub,
             DOT_LOCATION,
             ether,
-            deliveryFeeInDOT
+            deliveryFeeInDOT,
         )
         let assetHubExecutionFeeEther = padFeeByPercentage(
             await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, assetHubExecutionFeeDOT),
-            paddFeeByPercentage ?? 33n
+            paddFeeByPercentage ?? 33n,
         )
 
         // Destination fees
@@ -124,18 +125,19 @@ export class PNAToParachain implements TransferInterface {
             destParachain.info.accountType === "AccountId32"
                 ? "0x0000000000000000000000000000000000000000000000000000000000000000"
                 : "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            options?.customXcm,
         )
         const destinationImpl = await paraImplementation(destination)
         // Delivery fee AssetHub to Destination
         let destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
             destinationParaId,
-            destinationXcm
+            destinationXcm,
         )
         // Destination execution fee
         let destinationExecutionFeeDOT = await destinationImpl.calculateXcmFee(
             destinationXcm,
-            DOT_LOCATION
+            DOT_LOCATION,
         )
 
         // Swap to ether
@@ -143,11 +145,11 @@ export class PNAToParachain implements TransferInterface {
             assetHub,
             DOT_LOCATION,
             ether,
-            destinationDeliveryFeeDOT
+            destinationDeliveryFeeDOT,
         )
         let destinationExecutionFeeEther = padFeeByPercentage(
             await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, destinationExecutionFeeDOT),
-            paddFeeByPercentage ?? 33n
+            paddFeeByPercentage ?? 33n,
         )
 
         const totalFeeInWei = deliveryFeeInEther + assetHubExecutionFeeEther + relayerFee
@@ -176,7 +178,8 @@ export class PNAToParachain implements TransferInterface {
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
-        fee: DeliveryFee
+        fee: DeliveryFee,
+        customXcm?: any[],
     ): Promise<Transfer> {
         const { ethereum, assetHub, destination } =
             context instanceof Context
@@ -214,7 +217,7 @@ export class PNAToParachain implements TransferInterface {
             tokenAddress,
             beneficiaryAddressHex,
             amount,
-            accountNonce
+            accountNonce,
         )
 
         const xcm = hexToU8a(
@@ -226,8 +229,9 @@ export class PNAToParachain implements TransferInterface {
                 beneficiaryAddressHex,
                 amount,
                 fee.destinationExecutionFeeEther,
-                topic
-            ).toHex()
+                topic,
+                customXcm,
+            ).toHex(),
         )
         let assets = [encodeNativeAsset(tokenAddress, amount)]
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
@@ -243,7 +247,7 @@ export class PNAToParachain implements TransferInterface {
                 {
                     value,
                     from: sourceAccount,
-                }
+                },
             )
 
         return {
@@ -255,6 +259,7 @@ export class PNAToParachain implements TransferInterface {
                 destinationParaId,
                 amount,
                 fee,
+                customXcm,
             },
             computed: {
                 gatewayAddress: registry.gatewayAddress,
@@ -275,7 +280,7 @@ export class PNAToParachain implements TransferInterface {
 
     async validateTransfer(
         context: Context | Connections,
-        transfer: Transfer
+        transfer: Transfer,
     ): Promise<ValidationResult> {
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
@@ -321,7 +326,7 @@ export class PNAToParachain implements TransferInterface {
                 ethereum,
                 tokenAddress,
                 sourceAccount,
-                registry.gatewayAddress
+                registry.gatewayAddress,
             )
         } else {
             tokenBalance = {
@@ -406,12 +411,13 @@ export class PNAToParachain implements TransferInterface {
                 transfer.input.sourceAccount,
                 transfer.computed.beneficiaryAddressHex,
                 destinationParaId,
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                transfer.input.customXcm,
             )
             let result = await assetHubImpl.dryRunXcm(
                 registry.bridgeHubParaId,
                 xcm,
-                destinationParaId
+                destinationParaId,
             )
             dryRunAhSuccess = result.success
             assetHubDryRunError = result.errorMessage
@@ -434,7 +440,7 @@ export class PNAToParachain implements TransferInterface {
                 sovereignAccountId,
                 registry.ethChainId,
                 tokenAddress,
-                ahAssetMetadata
+                ahAssetMetadata,
             )
 
             if (!accountExists) {
@@ -511,7 +517,7 @@ export class PNAToParachain implements TransferInterface {
                     beneficiaryAddressHex,
                     registry.ethChainId,
                     tokenAddress,
-                    destAssetMetadata
+                    destAssetMetadata,
                 )
                 if (accountMaxConsumers) {
                     logs.push({

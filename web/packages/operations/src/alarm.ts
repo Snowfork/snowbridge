@@ -278,6 +278,23 @@ export const initializeAlarms = async () => {
         DatapointsToAlarm: AlarmEvaluationConfiguration.DatapointsToAlarm,
     }
 
+    // For alarms that need to trigger when an absolute value breaches a
+    // threshold. For this case dont wait for 3/4 datapoints in a 15 minute
+    // window(45 min) as it will take a minimum of 45 minutes before alarms are
+    // triggered. Use 5 minutes instead. Alarm uses maximum statistic because
+    // so that it alarms when the maximum value is breaching within a time
+    // window.
+    // e.g. bridge latency greater than x seconds.
+    // e.g. nonce difference greater than x messages.
+    let absoluteValueBreachingAlarmConfig: any = {
+        Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
+        TreatMissingData: "notBreaching",
+        Period: 60 * 5,
+        Statistic: "Maximum",
+        EvaluationPeriods: 1,
+        DatapointsToAlarm: 1,
+    }
+
     // Beefy stale
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
@@ -287,7 +304,7 @@ export const initializeAlarms = async () => {
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             Threshold: 3600 * 4, // 1 epoch = 4 hours
-        })
+        }),
     )
     // Beacon stale
     cloudWatchAlarms.push(
@@ -298,7 +315,7 @@ export const initializeAlarms = async () => {
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             Threshold: 1500, // 3 epochs = 3 * 6.4 mins ~= 20 mins
-        })
+        }),
     )
 
     // To Ethereum channel stale
@@ -314,9 +331,10 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            ...alarmCommandSharedInput,
+            ComparisonOperator: "GreaterThanThreshold",
+            ...absoluteValueBreachingAlarmConfig,
             Threshold: 5400, // 1.5 hours at most
-        })
+        }),
     )
 
     // To Polkadot channel stale
@@ -332,9 +350,10 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            ...alarmCommandSharedInput,
+            ComparisonOperator: "GreaterThanThreshold",
+            ...absoluteValueBreachingAlarmConfig,
             Threshold: 1800, // 0.5 hour
-        })
+        }),
     )
 
     // Insufficient balance in the relay account
@@ -381,7 +400,15 @@ export const initializeAlarms = async () => {
     cloudWatchAlarms.push(sovereignAccountBalanceAlarm)
 
     // Indexer service stale
-    for (const chain of ["assethub", "bridgehub", "ethereum", "kusama_assethub"]) {
+    for (const chain of [
+        "assethub",
+        "bridgehub",
+        "ethereum",
+        "kusama_assethub",
+        "hydration",
+        "neuroweb",
+        "mythos",
+    ]) {
         let indexerAlarm = new PutMetricAlarmCommand({
             AlarmName: AlarmReason.IndexServiceStale.toString() + "-" + name + "-" + chain,
             MetricName: "IndexerLatency",
@@ -393,7 +420,8 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: AlarmReason.IndexServiceStale.toString(),
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            ...alarmCommandSharedInput,
+            ComparisonOperator: "GreaterThanThreshold",
+            ...absoluteValueBreachingAlarmConfig,
             Threshold: IndexerLatencyThreshold,
         })
         cloudWatchAlarms.push(indexerAlarm)
@@ -421,7 +449,7 @@ export const initializeAlarms = async () => {
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             Threshold: 5400, // 1.5 hours at most
-        })
+        }),
     )
 
     // To Polkadot V2 stale
@@ -433,7 +461,7 @@ export const initializeAlarms = async () => {
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             Threshold: 1800, // 0.5 hour
-        })
+        }),
     )
 
     // Fisherman FutureBlockVoting equivocation alarm
@@ -448,7 +476,7 @@ export const initializeAlarms = async () => {
             EvaluationPeriods: 1,
             DatapointsToAlarm: 1,
             Threshold: 0,
-        })
+        }),
     )
     // Fisherman ForkVoting equivocation alarm
     cloudWatchAlarms.push(
@@ -462,7 +490,7 @@ export const initializeAlarms = async () => {
             EvaluationPeriods: 1,
             DatapointsToAlarm: 1,
             Threshold: 0,
-        })
+        }),
     )
 
     // Send all alarms

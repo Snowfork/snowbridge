@@ -21,7 +21,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ??
             "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
-        context.ethereum()
+        context.ethereum(),
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
@@ -63,7 +63,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
         const transferImpl = toPolkadotSnowbridgeV2.createTransferImplementation(
             destParaId,
             registry,
-            TOKEN_CONTRACT
+            TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
         let fee = await transferImpl.getDeliveryFee(
@@ -71,7 +71,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             registry,
             TOKEN_CONTRACT,
             destParaId,
-            relayerFee
+            relayerFee,
         )
 
         console.log("fee: ", fee)
@@ -91,7 +91,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             POLKADOT_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT,
             amount,
-            fee
+            fee,
         )
 
         // Step 3. Validate the transaction.
@@ -106,7 +106,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
                         ? await context.parachain(destParaId)
                         : undefined,
             },
-            transfer
+            transfer,
         )
         console.log("validation result", validation)
 
@@ -152,7 +152,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             console.log(
                 `Success message with nonce: ${message.nonce}
                 block number: ${message.blockNumber}
-                tx hash: ${message.txHash}`
+                tx hash: ${message.txHash}`,
             )
         }
     }

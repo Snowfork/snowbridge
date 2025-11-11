@@ -40,6 +40,8 @@
     "transferXQCYToEthereum": "npx ts-node src/transfer_from_p2e.ts 2313 xrqcy 1000000",
     "transferXQCYFromEthereumToAH": "npx ts-node src/transfer_from_e2p.ts 1000 xrqcy 100000",
     "registerWeth": "npx ts-node src/register_erc20.ts 0xb8ea8cb425d85536b158d661da1ef0895bb92f1d",
+    "createAgent": "npx ts-node src/create_agent.ts",
+    "registerTokenV2": "npx ts-node src/register_token_v2.ts 0xFa2B947eEc368f42195f24F36d2aF29f7c24CeC2",
     "transferWethToAH": "npx ts-node src/transfer_from_e2p.ts 1000 WETH 200000000000000",
     "transferWndToEthereumV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 WND 2000000000",
     "transferEtherFromAHV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 Eth 100000000000000",
@@ -61,7 +63,8 @@
     "transferWethToAHV2": "npx ts-node src/transfer_from_e2p_v2.ts 1000 WETH 100000000000000",
     "transferWndToAHV2": "npx ts-node src/transfer_from_e2p_v2.ts 1000 WND 1000000000",
     "transferEtherToPenpalV2": "npx ts-node src/transfer_from_e2p_v2.ts 2000 Eth 100000000000000",
-    "transferWndToPenpalV2": "npx ts-node src/transfer_from_e2p_v2.ts 2000 WND 1000000000"
+    "transferWndToPenpalV2": "npx ts-node src/transfer_from_e2p_v2.ts 2000 WND 1000000000",
+    "transactFromAHToEthereum": "npx ts-node src/transfer_from_p2e_v2_with_transact.ts 1000 Eth 100000000000000 0x31A6Dd971306bb72f2ffF771bF30b1B98dB8B2c5 0xf410fd0e0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001e48656c6c6f2066726f6d20656e642075736572206f6e2057657374656e640000 0 1000000"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.45.0",
@@ -70,7 +73,8 @@
     "eslint-config-prettier": "^10.1.8",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "prettier": "3.6.2"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch": "^3.901.0",

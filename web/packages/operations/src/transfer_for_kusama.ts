@@ -8,7 +8,7 @@ export const transferForKusama = async (
     transferName: string,
     direction: Direction,
     amount: bigint,
-    tokenName: string
+    tokenName: string,
 ) => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
@@ -89,7 +89,7 @@ export const transferForKusama = async (
             destAssetHub,
             direction,
             registry,
-            tokenAddress
+            tokenAddress,
         )
 
         // Step 2. Create a transfer tx
@@ -101,14 +101,14 @@ export const transferForKusama = async (
             DEST_ACCOUNT_PUBLIC,
             tokenAddress,
             amount,
-            fee
+            fee,
         )
 
         // Step 3. Validate
         const validation = await forKusama.validateTransfer(
             { sourceAssetHub, destAssetHub },
             direction,
-            transfer
+            transfer,
         )
 
         // Step 4. Check validation logs for errors

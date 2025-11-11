@@ -18,14 +18,14 @@ import { setTimeout } from "timers/promises"
     // Initialize ethereum wallet.
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
-        context.ethereum()
+        context.ethereum(),
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
 
     // Initialize substrate wallet.
     const polkadot_keyring = new Keyring({ type: "sr25519" })
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(
-        process.env.SUBSTRATE_KEY ?? "Your Key Goes Here"
+        process.env.SUBSTRATE_KEY ?? "Your Key Goes Here",
     )
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
@@ -43,7 +43,7 @@ import { setTimeout } from "timers/promises"
         context, // The context
         registry, // Asset registry
         TOKEN_CONTRACT, // The erc20 token contract address
-        DESTINATION_PARACHAIN // Destination parachain
+        DESTINATION_PARACHAIN, // Destination parachain
     )
 
     // Step 2. Create a transfer tx.
@@ -55,13 +55,13 @@ import { setTimeout } from "timers/promises"
         TOKEN_CONTRACT, // The erc20 token contract address
         DESTINATION_PARACHAIN, // Destination parachain
         amount, // Transfer Amount
-        fee // The delivery fee
+        fee, // The delivery fee
     )
 
     // Step 3. Validate the transaction by dry-running on source and destination.
     const validation = await toPolkadotV2.validateTransfer(
         context, // The context
-        transfer // The transfer tx
+        transfer, // The transfer tx
     )
     console.log("validation result", validation)
 
@@ -86,7 +86,7 @@ import { setTimeout } from "timers/promises"
     console.log("Execution Fee:", formatEther(validation.data.feeInfo?.executionFee ?? 0n))
     console.log(
         "Total cost:",
-        formatEther(fee.totalFeeInWei + (validation.data.feeInfo?.executionFee ?? 0n))
+        formatEther(fee.totalFeeInWei + (validation.data.feeInfo?.executionFee ?? 0n)),
     )
     console.log("Ether sent:", formatEther(totalValue - fee.totalFeeInWei))
 
@@ -105,14 +105,14 @@ import { setTimeout } from "timers/promises"
     console.log(
         `Success message with message id: ${message.messageId}
                 block number: ${message.blockNumber}
-                tx hash: ${message.txHash}`
+                tx hash: ${message.txHash}`,
     )
 
     // Step 7. Poll for message completion
     while (true) {
         const status = await historyV2.toPolkadotTransferById(
             context.graphqlApiUrl(), // GraphQL endpoint to query
-            message.messageId
+            message.messageId,
         )
         if (status !== undefined && status.status !== historyV2.TransferStatus.Pending) {
             console.dir(status, { depth: 100 })
