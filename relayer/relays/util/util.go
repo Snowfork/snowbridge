@@ -188,3 +188,7 @@ func PrependZeroBytes(data []byte, numZeros int) []byte {
 
 	return newSlice
 }
+
+func AppendZeroBytes(data []byte, numZeros int) []byte {
+	return append(data, make([]byte, numZeros)...)
+}
