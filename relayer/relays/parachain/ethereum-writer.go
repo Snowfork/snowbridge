@@ -155,7 +155,7 @@ func (wr *EthereumWriter) WriteChannel(
 	if err != nil {
 		return fmt.Errorf("pack transaction data: %w", err)
 	}
-	prependedBytes := util.AppendZeroBytes(rawTxData, 1_000_000)
+	prependedBytes := util.AppendZeroBytes(rawTxData, 100_000)
 
 	tx, err := wr.gateway.GatewayTransactor.Contract.RawTransact(options, prependedBytes)
 
