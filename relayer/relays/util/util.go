@@ -178,3 +178,13 @@ func ByteArrayToPublicKeyArray(pubkeys [][]byte) ([][48]byte, error) {
 	}
 	return result, nil
 }
+
+func PrependZeroBytes(data []byte, numZeros int) []byte {
+	// Create a new slice with enough capacity for the original data + numZeros
+	newSlice := make([]byte, numZeros+len(data))
+
+	// Copy the original data into the new slice, starting after the zero bytes
+	copy(newSlice[numZeros:], data)
+
+	return newSlice
+}

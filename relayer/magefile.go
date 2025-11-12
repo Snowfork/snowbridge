@@ -9,7 +9,7 @@ import (
 )
 
 func Build() {
-	mg.Deps(BuildMain)
+	mg.Deps(BuildRelay)
 }
 
 func BuildMain() error {
@@ -21,6 +21,10 @@ func BuildMain() error {
 	if err != nil {
 		return err
 	}
+	return sh.Run("go", "build", "-o", "build/snowbridge-relay", "main.go")
+}
+
+func BuildRelay() error {
 	return sh.Run("go", "build", "-o", "build/snowbridge-relay", "main.go")
 }
 

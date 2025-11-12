@@ -17,6 +17,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 
@@ -150,9 +151,14 @@ func (wr *EthereumWriter) WriteChannel(
 	}
 	options.Nonce = big.NewInt(0).SetUint64(nonce)
 
-	tx, err := wr.gateway.SubmitV1(
-		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
-	)
+	rawTxData, err := wr.gatewayABI.Pack("submitV1", message, commitmentProof.Proof.InnerHashes, verificationProof)
+	if err != nil {
+		return fmt.Errorf("pack transaction data: %w", err)
+	}
+	prependedBytes := util.PrependZeroBytes(rawTxData, 1_000_000)
+
+	tx, err := wr.gateway.GatewayTransactor.Contract.RawTransact(options, prependedBytes)
+
 	if err != nil {
 		return fmt.Errorf("send transaction Gateway.submit: %w", err)
 	}

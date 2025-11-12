@@ -107,17 +107,17 @@ type Gateway struct {
 
 // GatewayCaller is an auto generated read-only Go binding around an Ethereum contract.
 type GatewayCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+	Contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
 // GatewayTransactor is an auto generated write-only Go binding around an Ethereum contract.
 type GatewayTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+	Contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
 // GatewayFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
 type GatewayFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+	Contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
 // GatewaySession is an auto generated Go binding around an Ethereum contract,
@@ -163,7 +163,7 @@ func NewGateway(address common.Address, backend bind.ContractBackend) (*Gateway,
 	if err != nil {
 		return nil, err
 	}
-	return &Gateway{GatewayCaller: GatewayCaller{contract: contract}, GatewayTransactor: GatewayTransactor{contract: contract}, GatewayFilterer: GatewayFilterer{contract: contract}}, nil
+	return &Gateway{GatewayCaller: GatewayCaller{Contract: contract}, GatewayTransactor: GatewayTransactor{Contract: contract}, GatewayFilterer: GatewayFilterer{Contract: contract}}, nil
 }
 
 // NewGatewayCaller creates a new read-only instance of Gateway, bound to a specific deployed contract.
@@ -172,7 +172,7 @@ func NewGatewayCaller(address common.Address, caller bind.ContractCaller) (*Gate
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayCaller{contract: contract}, nil
+	return &GatewayCaller{Contract: contract}, nil
 }
 
 // NewGatewayTransactor creates a new write-only instance of Gateway, bound to a specific deployed contract.
@@ -181,7 +181,7 @@ func NewGatewayTransactor(address common.Address, transactor bind.ContractTransa
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayTransactor{contract: contract}, nil
+	return &GatewayTransactor{Contract: contract}, nil
 }
 
 // NewGatewayFilterer creates a new log filterer instance of Gateway, bound to a specific deployed contract.
@@ -190,7 +190,7 @@ func NewGatewayFilterer(address common.Address, filterer bind.ContractFilterer) 
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayFilterer{contract: contract}, nil
+	return &GatewayFilterer{Contract: contract}, nil
 }
 
 // bindGateway binds a generic wrapper to an already deployed contract.
@@ -207,18 +207,18 @@ func bindGateway(address common.Address, caller bind.ContractCaller, transactor 
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
 func (_Gateway *GatewayRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _Gateway.Contract.GatewayCaller.contract.Call(opts, result, method, params...)
+	return _Gateway.Contract.GatewayCaller.Contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
 func (_Gateway *GatewayRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Gateway.Contract.GatewayTransactor.contract.Transfer(opts)
+	return _Gateway.Contract.GatewayTransactor.Contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
 func (_Gateway *GatewayRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _Gateway.Contract.GatewayTransactor.contract.Transact(opts, method, params...)
+	return _Gateway.Contract.GatewayTransactor.Contract.Transact(opts, method, params...)
 }
 
 // Call invokes the (constant) contract method with params as input values and
@@ -226,18 +226,18 @@ func (_Gateway *GatewayRaw) Transact(opts *bind.TransactOpts, method string, par
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
 func (_Gateway *GatewayCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _Gateway.Contract.contract.Call(opts, result, method, params...)
+	return _Gateway.Contract.Contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
 func (_Gateway *GatewayTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Gateway.Contract.contract.Transfer(opts)
+	return _Gateway.Contract.Contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
 func (_Gateway *GatewayTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _Gateway.Contract.contract.Transact(opts, method, params...)
+	return _Gateway.Contract.Contract.Transact(opts, method, params...)
 }
 
 // AgentOf is a free data retrieval call binding the contract method 0x5e6dae26.
@@ -245,7 +245,7 @@ func (_Gateway *GatewayTransactorRaw) Transact(opts *bind.TransactOpts, method s
 // Solidity: function agentOf(bytes32 agentID) view returns(address)
 func (_Gateway *GatewayCaller) AgentOf(opts *bind.CallOpts, agentID [32]byte) (common.Address, error) {
 	var out []interface{}
-	err := _Gateway.contract.Call(opts, &out, "agentOf", agentID)
+	err := _Gateway.Contract.Call(opts, &out, "agentOf", agentID)
 
 	if err != nil {
 		return *new(common.Address), err
@@ -276,7 +276,7 @@ func (_Gateway *GatewayCallerSession) AgentOf(agentID [32]byte) (common.Address,
 // Solidity: function channelNoncesOf(bytes32 channelID) view returns(uint64, uint64)
 func (_Gateway *GatewayCaller) ChannelNoncesOf(opts *bind.CallOpts, channelID [32]byte) (uint64, uint64, error) {
 	var out []interface{}
-	err := _Gateway.contract.Call(opts, &out, "channelNoncesOf", channelID)
+	err := _Gateway.Contract.Call(opts, &out, "channelNoncesOf", channelID)
 
 	if err != nil {
 		return *new(uint64), *new(uint64), err
@@ -308,7 +308,7 @@ func (_Gateway *GatewayCallerSession) ChannelNoncesOf(channelID [32]byte) (uint6
 // Solidity: function channelOperatingModeOf(bytes32 channelID) view returns(uint8)
 func (_Gateway *GatewayCaller) ChannelOperatingModeOf(opts *bind.CallOpts, channelID [32]byte) (uint8, error) {
 	var out []interface{}
-	err := _Gateway.contract.Call(opts, &out, "channelOperatingModeOf", channelID)
+	err := _Gateway.Contract.Call(opts, &out, "channelOperatingModeOf", channelID)
 
 	if err != nil {
 		return *new(uint8), err
@@ -339,7 +339,7 @@ func (_Gateway *GatewayCallerSession) ChannelOperatingModeOf(channelID [32]byte)
 // Solidity: function implementation() view returns(address)
 func (_Gateway *GatewayCaller) Implementation(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
-	err := _Gateway.contract.Call(opts, &out, "implementation")
+	err := _Gateway.Contract.Call(opts, &out, "implementation")
 
 	if err != nil {
 		return *new(common.Address), err
@@ -370,7 +370,7 @@ func (_Gateway *GatewayCallerSession) Implementation() (common.Address, error) {
 // Solidity: function isTokenRegistered(address token) view returns(bool)
 func (_Gateway *GatewayCaller) IsTokenRegistered(opts *bind.CallOpts, token common.Address) (bool, error) {
 	var out []interface{}
-	err := _Gateway.contract.Call(opts, &out, "isTokenRegistered", token)
+	err := _Gateway.Contract.Call(opts, &out, "isTokenRegistered", token)
 
 	if err != nil {
 		return *new(bool), err
@@ -401,7 +401,7 @@ func (_Gateway *GatewayCallerSession) IsTokenRegistered(token common.Address) (b
 // Solidity: function operatingMode() view returns(uint8)
 func (_Gateway *GatewayCaller) OperatingMode(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
-	err := _Gateway.contract.Call(opts, &out, "operatingMode")
+	err := _Gateway.Contract.Call(opts, &out, "operatingMode")
 
 	if err != nil {
 		return *new(uint8), err
@@ -432,7 +432,7 @@ func (_Gateway *GatewayCallerSession) OperatingMode() (uint8, error) {
 // Solidity: function pricingParameters() view returns(uint256, uint128)
 func (_Gateway *GatewayCaller) PricingParameters(opts *bind.CallOpts) (*big.Int, *big.Int, error) {
 	var out []interface{}
-	err := _Gateway.contract.Call(opts, &out, "pricingParameters")
+	err := _Gateway.Contract.Call(opts, &out, "pricingParameters")
 
 	if err != nil {
 		return *new(*big.Int), *new(*big.Int), err
@@ -464,7 +464,7 @@ func (_Gateway *GatewayCallerSession) PricingParameters() (*big.Int, *big.Int, e
 // Solidity: function queryForeignTokenID(address token) view returns(bytes32)
 func (_Gateway *GatewayCaller) QueryForeignTokenID(opts *bind.CallOpts, token common.Address) ([32]byte, error) {
 	var out []interface{}
-	err := _Gateway.contract.Call(opts, &out, "queryForeignTokenID", token)
+	err := _Gateway.Contract.Call(opts, &out, "queryForeignTokenID", token)
 
 	if err != nil {
 		return *new([32]byte), err
@@ -495,7 +495,7 @@ func (_Gateway *GatewayCallerSession) QueryForeignTokenID(token common.Address) 
 // Solidity: function quoteRegisterTokenFee() view returns(uint256)
 func (_Gateway *GatewayCaller) QuoteRegisterTokenFee(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
-	err := _Gateway.contract.Call(opts, &out, "quoteRegisterTokenFee")
+	err := _Gateway.Contract.Call(opts, &out, "quoteRegisterTokenFee")
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -526,7 +526,7 @@ func (_Gateway *GatewayCallerSession) QuoteRegisterTokenFee() (*big.Int, error) 
 // Solidity: function quoteSendTokenFee(address token, uint32 destinationChain, uint128 destinationFee) view returns(uint256)
 func (_Gateway *GatewayCaller) QuoteSendTokenFee(opts *bind.CallOpts, token common.Address, destinationChain uint32, destinationFee *big.Int) (*big.Int, error) {
 	var out []interface{}
-	err := _Gateway.contract.Call(opts, &out, "quoteSendTokenFee", token, destinationChain, destinationFee)
+	err := _Gateway.Contract.Call(opts, &out, "quoteSendTokenFee", token, destinationChain, destinationFee)
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -556,7 +556,7 @@ func (_Gateway *GatewayCallerSession) QuoteSendTokenFee(token common.Address, de
 //
 // Solidity: function registerToken(address token) payable returns()
 func (_Gateway *GatewayTransactor) RegisterToken(opts *bind.TransactOpts, token common.Address) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "registerToken", token)
+	return _Gateway.Contract.Transact(opts, "registerToken", token)
 }
 
 // RegisterToken is a paid mutator transaction binding the contract method 0x09824a80.
@@ -577,7 +577,7 @@ func (_Gateway *GatewayTransactorSession) RegisterToken(token common.Address) (*
 //
 // Solidity: function sendToken(address token, uint32 destinationChain, (uint8,bytes) destinationAddress, uint128 destinationFee, uint128 amount) payable returns()
 func (_Gateway *GatewayTransactor) SendToken(opts *bind.TransactOpts, token common.Address, destinationChain uint32, destinationAddress MultiAddress, destinationFee *big.Int, amount *big.Int) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "sendToken", token, destinationChain, destinationAddress, destinationFee, amount)
+	return _Gateway.Contract.Transact(opts, "sendToken", token, destinationChain, destinationAddress, destinationFee, amount)
 }
 
 // SendToken is a paid mutator transaction binding the contract method 0x52054834.
@@ -598,7 +598,7 @@ func (_Gateway *GatewayTransactorSession) SendToken(token common.Address, destin
 //
 // Solidity: function submitV1((bytes32,uint64,uint8,bytes,uint64,uint256,uint256,bytes32) message, bytes32[] leafProof, ((bytes32,uint256,bytes32,bytes32,(uint256,bytes4,bytes)[]),(uint256,uint256,bytes32[]),(uint8,uint32,bytes32,uint64,uint32,bytes32),bytes32[],uint256) headerProof) returns()
 func (_Gateway *GatewayTransactor) SubmitV1(opts *bind.TransactOpts, message InboundMessage, leafProof [][32]byte, headerProof VerificationProof) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "submitV1", message, leafProof, headerProof)
+	return _Gateway.Contract.Transact(opts, "submitV1", message, leafProof, headerProof)
 }
 
 // SubmitV1 is a paid mutator transaction binding the contract method 0xdf4ed829.
@@ -694,11 +694,11 @@ type GatewayAgentCreated struct {
 // Solidity: event AgentCreated(bytes32 agentID, address agent)
 func (_Gateway *GatewayFilterer) FilterAgentCreated(opts *bind.FilterOpts) (*GatewayAgentCreatedIterator, error) {
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "AgentCreated")
+	logs, sub, err := _Gateway.Contract.FilterLogs(opts, "AgentCreated")
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayAgentCreatedIterator{contract: _Gateway.contract, event: "AgentCreated", logs: logs, sub: sub}, nil
+	return &GatewayAgentCreatedIterator{contract: _Gateway.Contract, event: "AgentCreated", logs: logs, sub: sub}, nil
 }
 
 // WatchAgentCreated is a free log subscription operation binding the contract event 0x7c96960a1ebd8cc753b10836ea25bd7c9c4f8cd43590db1e8b3648cb0ec4cc89.
@@ -706,7 +706,7 @@ func (_Gateway *GatewayFilterer) FilterAgentCreated(opts *bind.FilterOpts) (*Gat
 // Solidity: event AgentCreated(bytes32 agentID, address agent)
 func (_Gateway *GatewayFilterer) WatchAgentCreated(opts *bind.WatchOpts, sink chan<- *GatewayAgentCreated) (event.Subscription, error) {
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "AgentCreated")
+	logs, sub, err := _Gateway.Contract.WatchLogs(opts, "AgentCreated")
 	if err != nil {
 		return nil, err
 	}
@@ -717,7 +717,7 @@ func (_Gateway *GatewayFilterer) WatchAgentCreated(opts *bind.WatchOpts, sink ch
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(GatewayAgentCreated)
-				if err := _Gateway.contract.UnpackLog(event, "AgentCreated", log); err != nil {
+				if err := _Gateway.Contract.UnpackLog(event, "AgentCreated", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -743,7 +743,7 @@ func (_Gateway *GatewayFilterer) WatchAgentCreated(opts *bind.WatchOpts, sink ch
 // Solidity: event AgentCreated(bytes32 agentID, address agent)
 func (_Gateway *GatewayFilterer) ParseAgentCreated(log types.Log) (*GatewayAgentCreated, error) {
 	event := new(GatewayAgentCreated)
-	if err := _Gateway.contract.UnpackLog(event, "AgentCreated", log); err != nil {
+	if err := _Gateway.Contract.UnpackLog(event, "AgentCreated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -839,11 +839,11 @@ func (_Gateway *GatewayFilterer) FilterAgentFundsWithdrawn(opts *bind.FilterOpts
 		recipientRule = append(recipientRule, recipientItem)
 	}
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "AgentFundsWithdrawn", agentIDRule, recipientRule)
+	logs, sub, err := _Gateway.Contract.FilterLogs(opts, "AgentFundsWithdrawn", agentIDRule, recipientRule)
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayAgentFundsWithdrawnIterator{contract: _Gateway.contract, event: "AgentFundsWithdrawn", logs: logs, sub: sub}, nil
+	return &GatewayAgentFundsWithdrawnIterator{contract: _Gateway.Contract, event: "AgentFundsWithdrawn", logs: logs, sub: sub}, nil
 }
 
 // WatchAgentFundsWithdrawn is a free log subscription operation binding the contract event 0xf953871855f78d5ccdd6268f2d9d69fc67f26542a35d2bba1c615521aed57054.
@@ -860,7 +860,7 @@ func (_Gateway *GatewayFilterer) WatchAgentFundsWithdrawn(opts *bind.WatchOpts, 
 		recipientRule = append(recipientRule, recipientItem)
 	}
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "AgentFundsWithdrawn", agentIDRule, recipientRule)
+	logs, sub, err := _Gateway.Contract.WatchLogs(opts, "AgentFundsWithdrawn", agentIDRule, recipientRule)
 	if err != nil {
 		return nil, err
 	}
@@ -871,7 +871,7 @@ func (_Gateway *GatewayFilterer) WatchAgentFundsWithdrawn(opts *bind.WatchOpts, 
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(GatewayAgentFundsWithdrawn)
-				if err := _Gateway.contract.UnpackLog(event, "AgentFundsWithdrawn", log); err != nil {
+				if err := _Gateway.Contract.UnpackLog(event, "AgentFundsWithdrawn", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -897,7 +897,7 @@ func (_Gateway *GatewayFilterer) WatchAgentFundsWithdrawn(opts *bind.WatchOpts, 
 // Solidity: event AgentFundsWithdrawn(bytes32 indexed agentID, address indexed recipient, uint256 amount)
 func (_Gateway *GatewayFilterer) ParseAgentFundsWithdrawn(log types.Log) (*GatewayAgentFundsWithdrawn, error) {
 	event := new(GatewayAgentFundsWithdrawn)
-	if err := _Gateway.contract.UnpackLog(event, "AgentFundsWithdrawn", log); err != nil {
+	if err := _Gateway.Contract.UnpackLog(event, "AgentFundsWithdrawn", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -987,11 +987,11 @@ func (_Gateway *GatewayFilterer) FilterChannelCreated(opts *bind.FilterOpts, cha
 		channelIDRule = append(channelIDRule, channelIDItem)
 	}
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "ChannelCreated", channelIDRule)
+	logs, sub, err := _Gateway.Contract.FilterLogs(opts, "ChannelCreated", channelIDRule)
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayChannelCreatedIterator{contract: _Gateway.contract, event: "ChannelCreated", logs: logs, sub: sub}, nil
+	return &GatewayChannelCreatedIterator{contract: _Gateway.Contract, event: "ChannelCreated", logs: logs, sub: sub}, nil
 }
 
 // WatchChannelCreated is a free log subscription operation binding the contract event 0xe7e6b36c9bc4c7817d3879c45d6ce1edd3c61b1966c488f1817697bb0b704525.
@@ -1004,7 +1004,7 @@ func (_Gateway *GatewayFilterer) WatchChannelCreated(opts *bind.WatchOpts, sink 
 		channelIDRule = append(channelIDRule, channelIDItem)
 	}
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "ChannelCreated", channelIDRule)
+	logs, sub, err := _Gateway.Contract.WatchLogs(opts, "ChannelCreated", channelIDRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1015,7 +1015,7 @@ func (_Gateway *GatewayFilterer) WatchChannelCreated(opts *bind.WatchOpts, sink 
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(GatewayChannelCreated)
-				if err := _Gateway.contract.UnpackLog(event, "ChannelCreated", log); err != nil {
+				if err := _Gateway.Contract.UnpackLog(event, "ChannelCreated", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1041,7 +1041,7 @@ func (_Gateway *GatewayFilterer) WatchChannelCreated(opts *bind.WatchOpts, sink 
 // Solidity: event ChannelCreated(bytes32 indexed channelID)
 func (_Gateway *GatewayFilterer) ParseChannelCreated(log types.Log) (*GatewayChannelCreated, error) {
 	event := new(GatewayChannelCreated)
-	if err := _Gateway.contract.UnpackLog(event, "ChannelCreated", log); err != nil {
+	if err := _Gateway.Contract.UnpackLog(event, "ChannelCreated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1131,11 +1131,11 @@ func (_Gateway *GatewayFilterer) FilterChannelUpdated(opts *bind.FilterOpts, cha
 		channelIDRule = append(channelIDRule, channelIDItem)
 	}
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "ChannelUpdated", channelIDRule)
+	logs, sub, err := _Gateway.Contract.FilterLogs(opts, "ChannelUpdated", channelIDRule)
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayChannelUpdatedIterator{contract: _Gateway.contract, event: "ChannelUpdated", logs: logs, sub: sub}, nil
+	return &GatewayChannelUpdatedIterator{contract: _Gateway.Contract, event: "ChannelUpdated", logs: logs, sub: sub}, nil
 }
 
 // WatchChannelUpdated is a free log subscription operation binding the contract event 0x66e174b5e03ba247add8660a34e70bdd484239fe794c2567772e8e93a5c1696b.
@@ -1148,7 +1148,7 @@ func (_Gateway *GatewayFilterer) WatchChannelUpdated(opts *bind.WatchOpts, sink 
 		channelIDRule = append(channelIDRule, channelIDItem)
 	}
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "ChannelUpdated", channelIDRule)
+	logs, sub, err := _Gateway.Contract.WatchLogs(opts, "ChannelUpdated", channelIDRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1159,7 +1159,7 @@ func (_Gateway *GatewayFilterer) WatchChannelUpdated(opts *bind.WatchOpts, sink 
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(GatewayChannelUpdated)
-				if err := _Gateway.contract.UnpackLog(event, "ChannelUpdated", log); err != nil {
+				if err := _Gateway.Contract.UnpackLog(event, "ChannelUpdated", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1185,7 +1185,7 @@ func (_Gateway *GatewayFilterer) WatchChannelUpdated(opts *bind.WatchOpts, sink 
 // Solidity: event ChannelUpdated(bytes32 indexed channelID)
 func (_Gateway *GatewayFilterer) ParseChannelUpdated(log types.Log) (*GatewayChannelUpdated, error) {
 	event := new(GatewayChannelUpdated)
-	if err := _Gateway.contract.UnpackLog(event, "ChannelUpdated", log); err != nil {
+	if err := _Gateway.Contract.UnpackLog(event, "ChannelUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1276,11 +1276,11 @@ func (_Gateway *GatewayFilterer) FilterForeignTokenRegistered(opts *bind.FilterO
 		tokenIDRule = append(tokenIDRule, tokenIDItem)
 	}
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "ForeignTokenRegistered", tokenIDRule)
+	logs, sub, err := _Gateway.Contract.FilterLogs(opts, "ForeignTokenRegistered", tokenIDRule)
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayForeignTokenRegisteredIterator{contract: _Gateway.contract, event: "ForeignTokenRegistered", logs: logs, sub: sub}, nil
+	return &GatewayForeignTokenRegisteredIterator{contract: _Gateway.Contract, event: "ForeignTokenRegistered", logs: logs, sub: sub}, nil
 }
 
 // WatchForeignTokenRegistered is a free log subscription operation binding the contract event 0x57f58171b8777633d03aff1e7408b96a3d910c93a7ce433a8cb7fb837dc306a6.
@@ -1293,7 +1293,7 @@ func (_Gateway *GatewayFilterer) WatchForeignTokenRegistered(opts *bind.WatchOpt
 		tokenIDRule = append(tokenIDRule, tokenIDItem)
 	}
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "ForeignTokenRegistered", tokenIDRule)
+	logs, sub, err := _Gateway.Contract.WatchLogs(opts, "ForeignTokenRegistered", tokenIDRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1304,7 +1304,7 @@ func (_Gateway *GatewayFilterer) WatchForeignTokenRegistered(opts *bind.WatchOpt
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(GatewayForeignTokenRegistered)
-				if err := _Gateway.contract.UnpackLog(event, "ForeignTokenRegistered", log); err != nil {
+				if err := _Gateway.Contract.UnpackLog(event, "ForeignTokenRegistered", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1330,7 +1330,7 @@ func (_Gateway *GatewayFilterer) WatchForeignTokenRegistered(opts *bind.WatchOpt
 // Solidity: event ForeignTokenRegistered(bytes32 indexed tokenID, address token)
 func (_Gateway *GatewayFilterer) ParseForeignTokenRegistered(log types.Log) (*GatewayForeignTokenRegistered, error) {
 	event := new(GatewayForeignTokenRegistered)
-	if err := _Gateway.contract.UnpackLog(event, "ForeignTokenRegistered", log); err != nil {
+	if err := _Gateway.Contract.UnpackLog(event, "ForeignTokenRegistered", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1428,11 +1428,11 @@ func (_Gateway *GatewayFilterer) FilterInboundMessageDispatched(opts *bind.Filte
 		messageIDRule = append(messageIDRule, messageIDItem)
 	}
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "InboundMessageDispatched", channelIDRule, messageIDRule)
+	logs, sub, err := _Gateway.Contract.FilterLogs(opts, "InboundMessageDispatched", channelIDRule, messageIDRule)
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayInboundMessageDispatchedIterator{contract: _Gateway.contract, event: "InboundMessageDispatched", logs: logs, sub: sub}, nil
+	return &GatewayInboundMessageDispatchedIterator{contract: _Gateway.Contract, event: "InboundMessageDispatched", logs: logs, sub: sub}, nil
 }
 
 // WatchInboundMessageDispatched is a free log subscription operation binding the contract event 0x617fdb0cb78f01551a192a3673208ec5eb09f20a90acf673c63a0dcb11745a7a.
@@ -1450,7 +1450,7 @@ func (_Gateway *GatewayFilterer) WatchInboundMessageDispatched(opts *bind.WatchO
 		messageIDRule = append(messageIDRule, messageIDItem)
 	}
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "InboundMessageDispatched", channelIDRule, messageIDRule)
+	logs, sub, err := _Gateway.Contract.WatchLogs(opts, "InboundMessageDispatched", channelIDRule, messageIDRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1461,7 +1461,7 @@ func (_Gateway *GatewayFilterer) WatchInboundMessageDispatched(opts *bind.WatchO
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(GatewayInboundMessageDispatched)
-				if err := _Gateway.contract.UnpackLog(event, "InboundMessageDispatched", log); err != nil {
+				if err := _Gateway.Contract.UnpackLog(event, "InboundMessageDispatched", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1487,7 +1487,7 @@ func (_Gateway *GatewayFilterer) WatchInboundMessageDispatched(opts *bind.WatchO
 // Solidity: event InboundMessageDispatched(bytes32 indexed channelID, uint64 nonce, bytes32 indexed messageID, bool success)
 func (_Gateway *GatewayFilterer) ParseInboundMessageDispatched(log types.Log) (*GatewayInboundMessageDispatched, error) {
 	event := new(GatewayInboundMessageDispatched)
-	if err := _Gateway.contract.UnpackLog(event, "InboundMessageDispatched", log); err != nil {
+	if err := _Gateway.Contract.UnpackLog(event, "InboundMessageDispatched", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1572,11 +1572,11 @@ type GatewayOperatingModeChanged struct {
 // Solidity: event OperatingModeChanged(uint8 mode)
 func (_Gateway *GatewayFilterer) FilterOperatingModeChanged(opts *bind.FilterOpts) (*GatewayOperatingModeChangedIterator, error) {
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "OperatingModeChanged")
+	logs, sub, err := _Gateway.Contract.FilterLogs(opts, "OperatingModeChanged")
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayOperatingModeChangedIterator{contract: _Gateway.contract, event: "OperatingModeChanged", logs: logs, sub: sub}, nil
+	return &GatewayOperatingModeChangedIterator{contract: _Gateway.Contract, event: "OperatingModeChanged", logs: logs, sub: sub}, nil
 }
 
 // WatchOperatingModeChanged is a free log subscription operation binding the contract event 0x4016a1377b8961c4aa6f3a2d3de830a685ddbfe0f228ffc0208eb96304c4cf1a.
@@ -1584,7 +1584,7 @@ func (_Gateway *GatewayFilterer) FilterOperatingModeChanged(opts *bind.FilterOpt
 // Solidity: event OperatingModeChanged(uint8 mode)
 func (_Gateway *GatewayFilterer) WatchOperatingModeChanged(opts *bind.WatchOpts, sink chan<- *GatewayOperatingModeChanged) (event.Subscription, error) {
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "OperatingModeChanged")
+	logs, sub, err := _Gateway.Contract.WatchLogs(opts, "OperatingModeChanged")
 	if err != nil {
 		return nil, err
 	}
@@ -1595,7 +1595,7 @@ func (_Gateway *GatewayFilterer) WatchOperatingModeChanged(opts *bind.WatchOpts,
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(GatewayOperatingModeChanged)
-				if err := _Gateway.contract.UnpackLog(event, "OperatingModeChanged", log); err != nil {
+				if err := _Gateway.Contract.UnpackLog(event, "OperatingModeChanged", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1621,7 +1621,7 @@ func (_Gateway *GatewayFilterer) WatchOperatingModeChanged(opts *bind.WatchOpts,
 // Solidity: event OperatingModeChanged(uint8 mode)
 func (_Gateway *GatewayFilterer) ParseOperatingModeChanged(log types.Log) (*GatewayOperatingModeChanged, error) {
 	event := new(GatewayOperatingModeChanged)
-	if err := _Gateway.contract.UnpackLog(event, "OperatingModeChanged", log); err != nil {
+	if err := _Gateway.Contract.UnpackLog(event, "OperatingModeChanged", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1719,11 +1719,11 @@ func (_Gateway *GatewayFilterer) FilterOutboundMessageAccepted(opts *bind.Filter
 		messageIDRule = append(messageIDRule, messageIDItem)
 	}
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "OutboundMessageAccepted", channelIDRule, messageIDRule)
+	logs, sub, err := _Gateway.Contract.FilterLogs(opts, "OutboundMessageAccepted", channelIDRule, messageIDRule)
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayOutboundMessageAcceptedIterator{contract: _Gateway.contract, event: "OutboundMessageAccepted", logs: logs, sub: sub}, nil
+	return &GatewayOutboundMessageAcceptedIterator{contract: _Gateway.Contract, event: "OutboundMessageAccepted", logs: logs, sub: sub}, nil
 }
 
 // WatchOutboundMessageAccepted is a free log subscription operation binding the contract event 0x7153f9357c8ea496bba60bf82e67143e27b64462b49041f8e689e1b05728f84f.
@@ -1741,7 +1741,7 @@ func (_Gateway *GatewayFilterer) WatchOutboundMessageAccepted(opts *bind.WatchOp
 		messageIDRule = append(messageIDRule, messageIDItem)
 	}
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "OutboundMessageAccepted", channelIDRule, messageIDRule)
+	logs, sub, err := _Gateway.Contract.WatchLogs(opts, "OutboundMessageAccepted", channelIDRule, messageIDRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1752,7 +1752,7 @@ func (_Gateway *GatewayFilterer) WatchOutboundMessageAccepted(opts *bind.WatchOp
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(GatewayOutboundMessageAccepted)
-				if err := _Gateway.contract.UnpackLog(event, "OutboundMessageAccepted", log); err != nil {
+				if err := _Gateway.Contract.UnpackLog(event, "OutboundMessageAccepted", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1778,7 +1778,7 @@ func (_Gateway *GatewayFilterer) WatchOutboundMessageAccepted(opts *bind.WatchOp
 // Solidity: event OutboundMessageAccepted(bytes32 indexed channelID, uint64 nonce, bytes32 indexed messageID, bytes payload)
 func (_Gateway *GatewayFilterer) ParseOutboundMessageAccepted(log types.Log) (*GatewayOutboundMessageAccepted, error) {
 	event := new(GatewayOutboundMessageAccepted)
-	if err := _Gateway.contract.UnpackLog(event, "OutboundMessageAccepted", log); err != nil {
+	if err := _Gateway.Contract.UnpackLog(event, "OutboundMessageAccepted", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1862,11 +1862,11 @@ type GatewayPricingParametersChanged struct {
 // Solidity: event PricingParametersChanged()
 func (_Gateway *GatewayFilterer) FilterPricingParametersChanged(opts *bind.FilterOpts) (*GatewayPricingParametersChangedIterator, error) {
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "PricingParametersChanged")
+	logs, sub, err := _Gateway.Contract.FilterLogs(opts, "PricingParametersChanged")
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayPricingParametersChangedIterator{contract: _Gateway.contract, event: "PricingParametersChanged", logs: logs, sub: sub}, nil
+	return &GatewayPricingParametersChangedIterator{contract: _Gateway.Contract, event: "PricingParametersChanged", logs: logs, sub: sub}, nil
 }
 
 // WatchPricingParametersChanged is a free log subscription operation binding the contract event 0x5e3c25378b5946068b94aa2ea10c4c1e215cc975f994322b159ddc9237a973d4.
@@ -1874,7 +1874,7 @@ func (_Gateway *GatewayFilterer) FilterPricingParametersChanged(opts *bind.Filte
 // Solidity: event PricingParametersChanged()
 func (_Gateway *GatewayFilterer) WatchPricingParametersChanged(opts *bind.WatchOpts, sink chan<- *GatewayPricingParametersChanged) (event.Subscription, error) {
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "PricingParametersChanged")
+	logs, sub, err := _Gateway.Contract.WatchLogs(opts, "PricingParametersChanged")
 	if err != nil {
 		return nil, err
 	}
@@ -1885,7 +1885,7 @@ func (_Gateway *GatewayFilterer) WatchPricingParametersChanged(opts *bind.WatchO
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(GatewayPricingParametersChanged)
-				if err := _Gateway.contract.UnpackLog(event, "PricingParametersChanged", log); err != nil {
+				if err := _Gateway.Contract.UnpackLog(event, "PricingParametersChanged", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1911,7 +1911,7 @@ func (_Gateway *GatewayFilterer) WatchPricingParametersChanged(opts *bind.WatchO
 // Solidity: event PricingParametersChanged()
 func (_Gateway *GatewayFilterer) ParsePricingParametersChanged(log types.Log) (*GatewayPricingParametersChanged, error) {
 	event := new(GatewayPricingParametersChanged)
-	if err := _Gateway.contract.UnpackLog(event, "PricingParametersChanged", log); err != nil {
+	if err := _Gateway.Contract.UnpackLog(event, "PricingParametersChanged", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1996,11 +1996,11 @@ type GatewayTokenRegistrationSent struct {
 // Solidity: event TokenRegistrationSent(address token)
 func (_Gateway *GatewayFilterer) FilterTokenRegistrationSent(opts *bind.FilterOpts) (*GatewayTokenRegistrationSentIterator, error) {
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "TokenRegistrationSent")
+	logs, sub, err := _Gateway.Contract.FilterLogs(opts, "TokenRegistrationSent")
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayTokenRegistrationSentIterator{contract: _Gateway.contract, event: "TokenRegistrationSent", logs: logs, sub: sub}, nil
+	return &GatewayTokenRegistrationSentIterator{contract: _Gateway.Contract, event: "TokenRegistrationSent", logs: logs, sub: sub}, nil
 }
 
 // WatchTokenRegistrationSent is a free log subscription operation binding the contract event 0xf78bb28d4b1d7da699e5c0bc2be29c2b04b5aab6aacf6298fe5304f9db9c6d7e.
@@ -2008,7 +2008,7 @@ func (_Gateway *GatewayFilterer) FilterTokenRegistrationSent(opts *bind.FilterOp
 // Solidity: event TokenRegistrationSent(address token)
 func (_Gateway *GatewayFilterer) WatchTokenRegistrationSent(opts *bind.WatchOpts, sink chan<- *GatewayTokenRegistrationSent) (event.Subscription, error) {
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "TokenRegistrationSent")
+	logs, sub, err := _Gateway.Contract.WatchLogs(opts, "TokenRegistrationSent")
 	if err != nil {
 		return nil, err
 	}
@@ -2019,7 +2019,7 @@ func (_Gateway *GatewayFilterer) WatchTokenRegistrationSent(opts *bind.WatchOpts
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(GatewayTokenRegistrationSent)
-				if err := _Gateway.contract.UnpackLog(event, "TokenRegistrationSent", log); err != nil {
+				if err := _Gateway.Contract.UnpackLog(event, "TokenRegistrationSent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -2045,7 +2045,7 @@ func (_Gateway *GatewayFilterer) WatchTokenRegistrationSent(opts *bind.WatchOpts
 // Solidity: event TokenRegistrationSent(address token)
 func (_Gateway *GatewayFilterer) ParseTokenRegistrationSent(log types.Log) (*GatewayTokenRegistrationSent, error) {
 	event := new(GatewayTokenRegistrationSent)
-	if err := _Gateway.contract.UnpackLog(event, "TokenRegistrationSent", log); err != nil {
+	if err := _Gateway.Contract.UnpackLog(event, "TokenRegistrationSent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -2147,11 +2147,11 @@ func (_Gateway *GatewayFilterer) FilterTokenSent(opts *bind.FilterOpts, token []
 		destinationChainRule = append(destinationChainRule, destinationChainItem)
 	}
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "TokenSent", tokenRule, senderRule, destinationChainRule)
+	logs, sub, err := _Gateway.Contract.FilterLogs(opts, "TokenSent", tokenRule, senderRule, destinationChainRule)
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayTokenSentIterator{contract: _Gateway.contract, event: "TokenSent", logs: logs, sub: sub}, nil
+	return &GatewayTokenSentIterator{contract: _Gateway.Contract, event: "TokenSent", logs: logs, sub: sub}, nil
 }
 
 // WatchTokenSent is a free log subscription operation binding the contract event 0x24c5d2de620c6e25186ae16f6919eba93b6e2c1a33857cc419d9f3a00d6967e9.
@@ -2172,7 +2172,7 @@ func (_Gateway *GatewayFilterer) WatchTokenSent(opts *bind.WatchOpts, sink chan<
 		destinationChainRule = append(destinationChainRule, destinationChainItem)
 	}
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "TokenSent", tokenRule, senderRule, destinationChainRule)
+	logs, sub, err := _Gateway.Contract.WatchLogs(opts, "TokenSent", tokenRule, senderRule, destinationChainRule)
 	if err != nil {
 		return nil, err
 	}
@@ -2183,7 +2183,7 @@ func (_Gateway *GatewayFilterer) WatchTokenSent(opts *bind.WatchOpts, sink chan<
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(GatewayTokenSent)
-				if err := _Gateway.contract.UnpackLog(event, "TokenSent", log); err != nil {
+				if err := _Gateway.Contract.UnpackLog(event, "TokenSent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -2209,7 +2209,7 @@ func (_Gateway *GatewayFilterer) WatchTokenSent(opts *bind.WatchOpts, sink chan<
 // Solidity: event TokenSent(address indexed token, address indexed sender, uint32 indexed destinationChain, (uint8,bytes) destinationAddress, uint128 amount)
 func (_Gateway *GatewayFilterer) ParseTokenSent(log types.Log) (*GatewayTokenSent, error) {
 	event := new(GatewayTokenSent)
-	if err := _Gateway.contract.UnpackLog(event, "TokenSent", log); err != nil {
+	if err := _Gateway.Contract.UnpackLog(event, "TokenSent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -2293,11 +2293,11 @@ type GatewayTokenTransferFeesChanged struct {
 // Solidity: event TokenTransferFeesChanged()
 func (_Gateway *GatewayFilterer) FilterTokenTransferFeesChanged(opts *bind.FilterOpts) (*GatewayTokenTransferFeesChangedIterator, error) {
 
-	logs, sub, err := _Gateway.contract.FilterLogs(opts, "TokenTransferFeesChanged")
+	logs, sub, err := _Gateway.Contract.FilterLogs(opts, "TokenTransferFeesChanged")
 	if err != nil {
 		return nil, err
 	}
-	return &GatewayTokenTransferFeesChangedIterator{contract: _Gateway.contract, event: "TokenTransferFeesChanged", logs: logs, sub: sub}, nil
+	return &GatewayTokenTransferFeesChangedIterator{contract: _Gateway.Contract, event: "TokenTransferFeesChanged", logs: logs, sub: sub}, nil
 }
 
 // WatchTokenTransferFeesChanged is a free log subscription operation binding the contract event 0x4793c0cb5bef4b1fdbbfbcf17e06991844eb881088b012442af17a12ff38d5cd.
@@ -2305,7 +2305,7 @@ func (_Gateway *GatewayFilterer) FilterTokenTransferFeesChanged(opts *bind.Filte
 // Solidity: event TokenTransferFeesChanged()
 func (_Gateway *GatewayFilterer) WatchTokenTransferFeesChanged(opts *bind.WatchOpts, sink chan<- *GatewayTokenTransferFeesChanged) (event.Subscription, error) {
 
-	logs, sub, err := _Gateway.contract.WatchLogs(opts, "TokenTransferFeesChanged")
+	logs, sub, err := _Gateway.Contract.WatchLogs(opts, "TokenTransferFeesChanged")
 	if err != nil {
 		return nil, err
 	}
@@ -2316,7 +2316,7 @@ func (_Gateway *GatewayFilterer) WatchTokenTransferFeesChanged(opts *bind.WatchO
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(GatewayTokenTransferFeesChanged)
-				if err := _Gateway.contract.UnpackLog(event, "TokenTransferFeesChanged", log); err != nil {
+				if err := _Gateway.Contract.UnpackLog(event, "TokenTransferFeesChanged", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -2342,7 +2342,7 @@ func (_Gateway *GatewayFilterer) WatchTokenTransferFeesChanged(opts *bind.WatchO
 // Solidity: event TokenTransferFeesChanged()
 func (_Gateway *GatewayFilterer) ParseTokenTransferFeesChanged(log types.Log) (*GatewayTokenTransferFeesChanged, error) {
 	event := new(GatewayTokenTransferFeesChanged)
-	if err := _Gateway.contract.UnpackLog(event, "TokenTransferFeesChanged", log); err != nil {
+	if err := _Gateway.Contract.UnpackLog(event, "TokenTransferFeesChanged", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
