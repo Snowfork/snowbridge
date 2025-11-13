@@ -1,6 +1,6 @@
 import { Registry } from "@polkadot/types/types"
 import { beneficiaryMultiAddress } from "./utils"
-import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { ConcreteAsset, ETHER_TOKEN_ADDRESS } from "./assets_v2"
 
 export const HERE_LOCATION = { parents: 0, interior: "Here" }
 export const DOT_LOCATION = { parents: 1, interior: "Here" }
@@ -1401,7 +1401,7 @@ export function isEthereumAsset(location: any): boolean {
 }
 
 export function isRelaychainLocation(location: any) {
-    return location.parents == DOT_LOCATION.parents && location.interior == DOT_LOCATION.interior
+    return location?.parents == DOT_LOCATION.parents && location?.interior == DOT_LOCATION.interior
 }
 
 export function isParachainNative(location: any, parachainId: number) {
@@ -1847,7 +1847,7 @@ export function buildEthereumInstructions(
             depositAsset: {
                 assets: {
                     wild: {
-                        allCounted: 3,
+                        allCounted: 8,
                     },
                 },
                 beneficiary: {
@@ -1872,4 +1872,33 @@ export function buildEthereumInstructions(
         setTopic: topic,
     })
     return remoteXcm
+}
+
+export function containsEther(ethChainId: number, concreteAssets: ConcreteAsset[]): boolean {
+    for (const asset of concreteAssets) {
+        const tokenLocation = erc20Location(ethChainId, asset.id.token)
+        if (isEthereumNative(tokenLocation, ethChainId)) {
+            return true
+        }
+    }
+    return false
+}
+
+export function splitEtherAsset(
+    ethChainId: number,
+    concreteAssets: ConcreteAsset[],
+): { etherAsset?: ConcreteAsset; otherAssets: ConcreteAsset[] } {
+    let etherAsset: ConcreteAsset | undefined
+    const otherAssets: ConcreteAsset[] = []
+
+    for (const asset of concreteAssets) {
+        const tokenLocation = erc20Location(ethChainId, asset.id.token)
+        if (isEthereumNative(tokenLocation, ethChainId)) {
+            etherAsset = asset
+        } else {
+            otherAssets.push(asset)
+        }
+    }
+
+    return { etherAsset, otherAssets }
 }

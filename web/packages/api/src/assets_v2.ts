@@ -111,6 +111,23 @@ export type TransferLocation = {
     ethChain?: EthereumChain
 }
 
+export type AggregatedAsset = {
+    tokenErcMetadata: ERC20Metadata
+    ahAssetMetadata: Asset
+    sourceAssetMetadata: Asset
+    amount: bigint
+}
+
+export type ConcreteAsset = {
+    id: Asset
+    amount: bigint
+}
+
+export type ConcreteToken = {
+    address: string
+    amount: bigint
+}
+
 export const ETHER_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 export async function buildRegistry(options: RegistryOptions): Promise<AssetRegistry> {

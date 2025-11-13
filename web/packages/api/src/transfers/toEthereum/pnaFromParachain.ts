@@ -7,20 +7,13 @@ import { isRelaychainLocation, isParachainNative } from "../../xcmBuilder"
 import { buildExportXcm } from "../../xcmbuilders/toEthereum/pnaFromAH"
 import {
     buildResultXcmAssetHubPNATransferFromParachain,
-    buildParachainPNAReceivedXcmOnDestination,
     buildTransferXcmFromParachain,
 } from "../../xcmbuilders/toEthereum/pnaFromParachain"
 import { buildTransferXcmFromParachainWithDOTAsFee } from "../../xcmbuilders/toEthereum/pnaFromParachainWithDotAsFee"
 import { buildTransferXcmFromParachainWithNativeAssetFee } from "../../xcmbuilders/toEthereum/pnaFromParachainWithNativeAsFee"
 import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { paraImplementation } from "../../parachains"
-import {
-    buildMessageId,
-    DeliveryFee,
-    resolveInputs,
-    Transfer,
-    ValidationResult,
-} from "../../toEthereum_v2"
+import { buildMessageId, resolveInputs } from "../../toEthereum_v2"
 import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
 import {
@@ -28,14 +21,19 @@ import {
     estimateFeesFromParachains,
     MaxWeight,
     mockDeliveryFee,
-    validateTransferFromParachain,
+    validateTransfer,
+    DeliveryFeeV2,
+    TransferV2,
+    ValidationResultV2,
 } from "../../toEthereumSnowbridgeV2"
+import { ConcreteToken } from "../../assets_v2"
 
 export class PNAFromParachain implements TransferInterface {
     async getDeliveryFee(
-        source: { sourceParaId: number; context: Context },
+        context: Context,
+        sourceParaId: number,
         registry: AssetRegistry,
-        tokenAddress: string,
+        tokenAddresses: string[],
         options?: {
             padPercentage?: bigint
             slippagePadPercentage?: bigint
@@ -44,19 +42,14 @@ export class PNAFromParachain implements TransferInterface {
             claimerLocation?: any
             contractCall?: ContractCall
         },
-    ): Promise<DeliveryFee> {
-        const { assetHub, parachain } =
-            "sourceParaId" in source
-                ? {
-                      assetHub: await source.context.assetHub(),
-                      parachain: await source.context.parachain(source.sourceParaId),
-                  }
-                : source
+    ): Promise<DeliveryFeeV2> {
+        const assetHub = await context.assetHub()
+        const parachain = await context.parachain(sourceParaId)
 
         const sourceParachainImpl = await paraImplementation(parachain)
         const { sourceAssetMetadata } = resolveInputs(
             registry,
-            tokenAddress,
+            tokenAddresses[0],
             sourceParachainImpl.parachainId,
         )
 
@@ -73,15 +66,6 @@ export class PNAFromParachain implements TransferInterface {
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
-        )
-
-        returnToSenderXcm = buildParachainPNAReceivedXcmOnDestination(
-            parachain.registry,
-            sourceAssetMetadata.location,
-            340282366920938463463374607431768211455n,
-            340282366920938463463374607431768211455n,
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
 
         localXcm = buildTransferXcmFromParachain(
@@ -110,15 +94,14 @@ export class PNAFromParachain implements TransferInterface {
         )
 
         const fees = await estimateFeesFromParachains(
-            source.context,
-            source.sourceParaId,
+            context,
+            sourceParaId,
             registry,
-            tokenAddress,
+            tokenAddresses,
             {
                 localXcm,
                 forwardXcmToAH,
                 forwardedXcmToBH,
-                returnToSenderXcm,
             },
             options,
         )
@@ -126,43 +109,40 @@ export class PNAFromParachain implements TransferInterface {
     }
 
     async createTransfer(
-        source: { sourceParaId: number; context: Context },
+        context: Context,
+        sourceParaId: number,
         registry: AssetRegistry,
         sourceAccount: string,
         beneficiaryAccount: string,
-        tokenAddress: string,
-        amount: bigint,
-        fee: DeliveryFee,
+        tokens: ConcreteToken[],
+        fee: DeliveryFeeV2,
         options?: {
             claimerLocation?: any
             contractCall?: ContractCall
         },
-    ): Promise<Transfer> {
+    ): Promise<TransferV2> {
         const { ethChainId, assetHubParaId, environment } = registry
 
         let sourceAccountHex = sourceAccount
         if (!isHex(sourceAccountHex)) {
             sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
         }
-        const { parachain } =
-            "sourceParaId" in source
-                ? { parachain: await source.context.parachain(source.sourceParaId) }
-                : source
+        const parachain = await context.parachain(sourceParaId)
 
         const sourceParachainImpl = await paraImplementation(parachain)
         const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
-            resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
+            resolveInputs(registry, tokens[0].address, sourceParachainImpl.parachainId)
 
         let messageId: string | undefined = await buildMessageId(
             parachain,
             sourceParachainImpl.parachainId,
             sourceAccountHex,
-            tokenAddress,
+            tokens[0].address,
             beneficiaryAccount,
-            amount,
+            tokens[0].amount,
         )
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = await this.createTx(
-            source.context,
+            context,
             parachain,
             environment,
             ethChainId,
@@ -171,7 +151,7 @@ export class PNAFromParachain implements TransferInterface {
             sourceAccountHex,
             beneficiaryAccount,
             sourceAssetMetadata,
-            amount,
+            tokens[0].amount,
             messageId,
             fee,
             options,
@@ -182,26 +162,30 @@ export class PNAFromParachain implements TransferInterface {
                 registry,
                 sourceAccount,
                 beneficiaryAccount,
-                tokenAddress,
-                amount,
+                tokens,
                 fee,
                 contractCall: options?.contractCall,
             },
             computed: {
                 sourceParaId: sourceParachainImpl.parachainId,
                 sourceAccountHex,
-                tokenErcMetadata,
                 sourceParachain,
-                ahAssetMetadata,
-                sourceAssetMetadata,
+                aggregatedAssets: [
+                    {
+                        tokenErcMetadata,
+                        ahAssetMetadata,
+                        sourceAssetMetadata,
+                        amount: tokens[0].amount,
+                    },
+                ],
                 messageId,
             },
             tx,
         }
     }
 
-    async validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult> {
-        return validateTransferFromParachain(context, transfer)
+    async validateTransfer(context: Context, transfer: TransferV2): Promise<ValidationResultV2> {
+        return validateTransfer(context, transfer)
     }
 
     async createTx(
@@ -216,7 +200,7 @@ export class PNAFromParachain implements TransferInterface {
         asset: Asset,
         amount: bigint,
         messageId: string,
-        fee: DeliveryFee,
+        fee: DeliveryFeeV2,
         options?: {
             claimerLocation?: any
             contractCall?: ContractCall

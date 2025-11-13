@@ -10,260 +10,97 @@ import {
     isEthereumNative,
     buildAppendixInstructions,
     buildEthereumInstructions,
+    containsEther,
+    splitEtherAsset,
 } from "../../xcmBuilder"
-import { Asset } from "@snowbridge/base-types"
-import { DeliveryFee } from "../../toEthereum_v2"
-
-export function buildParachainERC20ReceivedXcmOnDestination(
-    registry: Registry,
-    ethChainId: number,
-    tokenAddress: string,
-    transferAmount: bigint,
-    feeInDot: bigint,
-    beneficiary: string,
-    topic: string,
-) {
-    let beneficiaryLocation = accountToLocation(beneficiary)
-    return registry.createType("XcmVersionedXcm", {
-        v5: [
-            {
-                reserveAssetDeposited: [
-                    {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: feeInDot,
-                        },
-                    },
-                    {
-                        id: erc20Location(ethChainId, tokenAddress),
-                        fun: {
-                            Fungible: transferAmount,
-                        },
-                    },
-                ],
-            },
-            { clearOrigin: null },
-            {
-                buyExecution: {
-                    fees: {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: feeInDot,
-                        },
-                    },
-                    weightLimit: "Unlimited",
-                },
-            },
-            {
-                depositAsset: {
-                    assets: {
-                        wild: {
-                            allCounted: 2,
-                        },
-                    },
-                    beneficiary: {
-                        parents: 0,
-                        interior: { x1: [beneficiaryLocation] },
-                    },
-                },
-            },
-            { setTopic: topic },
-        ],
-    })
-}
-
-function buildAssetHubXcmFromParachain(
-    ethChainId: number,
-    sourceAccount: string,
-    beneficiary: string,
-    tokenAddress: string,
-    topic: string,
-    sourceParachainId: number,
-    destinationFee: bigint,
-    feeAssetId: any,
-) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(sourceAccount)
-    let sourceAccountLocation
-    switch (kind) {
-        case 1:
-            // 32 byte addresses
-            sourceAccountLocation = { accountId32: { id: hexAddress } }
-            break
-        case 2:
-            // 20 byte addresses
-            sourceAccountLocation = { accountKey20: { key: hexAddress } }
-            break
-        default:
-            throw Error(`Could not parse source address ${sourceAccount}`)
-    }
-    return [
-        // Error Handling, return everything to sender on source parachain
-        {
-            setAppendix: [
-                {
-                    depositReserveAsset: {
-                        assets: {
-                            wild: "All",
-                        },
-                        dest: { parents: 1, interior: { x1: [{ parachain: sourceParachainId }] } },
-                        xcm: [
-                            {
-                                buyExecution: {
-                                    fees: {
-                                        id: feeAssetId,
-                                        fun: {
-                                            fungible: destinationFee,
-                                        },
-                                    },
-                                    weightLimit: "Unlimited",
-                                },
-                            },
-                            {
-                                depositAsset: {
-                                    assets: {
-                                        wild: "All",
-                                    },
-                                    beneficiary: {
-                                        parents: 0,
-                                        interior: { x1: [sourceAccountLocation] },
-                                    },
-                                },
-                            },
-                            { setTopic: topic },
-                        ],
-                    },
-                },
-            ],
-        },
-        // Initiate the bridged transfer
-        {
-            initiateReserveWithdraw: {
-                assets: {
-                    Wild: {
-                        AllOf: { id: erc20Location(ethChainId, tokenAddress), fun: "Fungible" },
-                    },
-                },
-                reserve: bridgeLocation(ethChainId),
-                xcm: [
-                    {
-                        buyExecution: {
-                            fees: {
-                                id: erc20LocationReanchored(tokenAddress), // CAUTION: Must use reanchored locations.
-                                fun: {
-                                    Fungible: "1", // Offering 1 unit as fee, but it is returned to the beneficiary address.
-                                },
-                            },
-                            weight_limit: "Unlimited",
-                        },
-                    },
-                    {
-                        depositAsset: {
-                            assets: {
-                                Wild: {
-                                    AllCounted: 1,
-                                },
-                            },
-                            beneficiary: {
-                                parents: 0,
-                                interior: { x1: [{ AccountKey20: { key: beneficiary } }] },
-                            },
-                        },
-                    },
-                    {
-                        setTopic: topic,
-                    },
-                ],
-            },
-        },
-        {
-            setTopic: topic,
-        },
-    ]
-}
-
-export function buildAssetHubERC20TransferFromParachain(
-    registry: Registry,
-    ethChainId: number,
-    sourceAccount: string,
-    beneficiary: string,
-    tokenAddress: string,
-    topic: string,
-    sourceParachainId: number,
-    returnToSenderFee: bigint,
-    feeAssetId: any,
-) {
-    return registry.createType("XcmVersionedXcm", {
-        v5: buildAssetHubXcmFromParachain(
-            ethChainId,
-            sourceAccount,
-            beneficiary,
-            tokenAddress,
-            topic,
-            sourceParachainId,
-            returnToSenderFee,
-            feeAssetId,
-        ),
-    })
-}
+import { ConcreteAsset } from "../../assets_v2"
+import { DeliveryFeeV2 } from "../../toEthereumSnowbridgeV2"
 
 export function buildResultXcmAssetHubERC20TransferFromParachain(
     registry: Registry,
     ethChainId: number,
+    sourceParachainId: number,
     sourceAccount: string,
     beneficiary: string,
-    tokenAddress: string,
     topic: string,
-    transferAmount: bigint,
-    totalFee: bigint,
-    destinationFee: bigint,
-    sourceParachainId: number,
-    returnToSenderFee: bigint,
-    feeAssetId: any,
-    feeAssetIdReanchored: any,
+    concreteAssets: ConcreteAsset[],
+    deliveryFee: DeliveryFeeV2,
 ) {
+    let assets: any[] = [
+        {
+            id: DOT_LOCATION,
+            fun: {
+                Fungible: deliveryFee.totalFeeInDot!,
+            },
+        },
+    ]
+    for (const asset of concreteAssets) {
+        assets.push({
+            id: erc20Location(ethChainId, asset.id.token),
+            fun: {
+                Fungible: asset.amount,
+            },
+        })
+    }
     return registry.createType("XcmVersionedXcm", {
         v5: [
             {
-                withdrawAsset: [
-                    {
-                        id: feeAssetIdReanchored,
-                        fun: {
-                            Fungible: totalFee,
-                        },
-                    },
-                    {
-                        id: erc20Location(ethChainId, tokenAddress),
-                        fun: {
-                            Fungible: transferAmount,
-                        },
-                    },
-                ],
+                withdrawAsset: assets,
             },
             { clearOrigin: null },
             {
                 buyExecution: {
                     fees: {
-                        id: feeAssetIdReanchored,
+                        id: DOT_LOCATION,
                         fun: {
-                            Fungible: destinationFee,
+                            Fungible: deliveryFee.assetHubExecutionFeeDOT!,
                         },
                     },
                     weightLimit: "Unlimited",
                 },
             },
-            ...buildAssetHubXcmFromParachain(
-                ethChainId,
-                sourceAccount,
-                beneficiary,
-                tokenAddress,
-                topic,
-                sourceParachainId,
-                returnToSenderFee,
-                feeAssetId,
-            ),
+            {
+                initiateReserveWithdraw: {
+                    assets: {
+                        Wild: {
+                            AllOf: { id: bridgeLocation(ethChainId), fun: "Fungible" },
+                        },
+                    },
+                    reserve: bridgeLocation(ethChainId),
+                    xcm: [
+                        {
+                            buyExecution: {
+                                fees: {
+                                    id: bridgeLocation(ethChainId), // CAUTION: Must use reanchored locations.
+                                    fun: {
+                                        Fungible: "1", // Offering 1 unit as fee, but it is returned to the beneficiary address.
+                                    },
+                                },
+                                weight_limit: "Unlimited",
+                            },
+                        },
+                        {
+                            depositAsset: {
+                                assets: {
+                                    Wild: {
+                                        AllCounted: 1,
+                                    },
+                                },
+                                beneficiary: {
+                                    parents: 0,
+                                    interior: { x1: [{ AccountKey20: { key: beneficiary } }] },
+                                },
+                            },
+                        },
+                        {
+                            setTopic: topic,
+                        },
+                    ],
+                },
+            },
+            {
+                setTopic: topic,
+            },
         ],
     })
 }
@@ -277,15 +114,13 @@ export function buildTransferXcmFromParachain(
     sourceAccount: string,
     beneficiary: string,
     topic: string,
-    asset: Asset,
-    tokenAmount: bigint,
-    fee: DeliveryFee,
+    concreteAssets: ConcreteAsset[],
+    fee: DeliveryFeeV2,
     claimerLocation?: any,
     callHex?: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = erc20Location(ethChainId, asset.token)
 
     let localDOTFeeAmount: bigint =
         fee.localExecutionFeeDOT! + fee.localDeliveryFeeDOT! + fee.returnToSenderExecutionFeeDOT
@@ -293,31 +128,63 @@ export function buildTransferXcmFromParachain(
     let remoteEtherFeeAmount: bigint = fee.ethereumExecutionFee!
 
     let assets = []
-
     assets.push({
         id: DOT_LOCATION,
         fun: {
             Fungible: totalDOTFeeAmount,
         },
     })
-    if (isEthereumNative(tokenLocation, ethChainId)) {
-        assets.push({
-            id: bridgeLocation(ethChainId),
-            fun: {
-                Fungible: remoteEtherFeeAmount + tokenAmount,
-            },
-        })
-    } else {
+    if (!containsEther(ethChainId, concreteAssets)) {
         assets.push({
             id: bridgeLocation(ethChainId),
             fun: {
                 Fungible: remoteEtherFeeAmount,
             },
         })
+        for (const asset of concreteAssets) {
+            const tokenLocation = erc20Location(ethChainId, asset.id.token)
+            const tokenAmount = asset.amount
+            assets.push({
+                id: tokenLocation,
+                fun: {
+                    Fungible: tokenAmount,
+                },
+            })
+        }
+    } else {
+        const { etherAsset, otherAssets } = splitEtherAsset(ethChainId, concreteAssets)
         assets.push({
-            id: tokenLocation,
+            id: bridgeLocation(ethChainId),
             fun: {
-                Fungible: tokenAmount,
+                Fungible: etherAsset!.amount + remoteEtherFeeAmount,
+            },
+        })
+        for (const asset of otherAssets) {
+            const tokenLocation = erc20Location(ethChainId, asset.id.token)
+            const tokenAmount = asset.amount
+            assets.push({
+                id: tokenLocation,
+                fun: {
+                    Fungible: tokenAmount,
+                },
+            })
+        }
+    }
+
+    let assetInstructions = []
+    for (const asset of concreteAssets) {
+        const tokenLocation = erc20Location(ethChainId, asset.id.token)
+        const tokenAmount = asset.amount
+        assetInstructions.push({
+            reserveWithdraw: {
+                definite: [
+                    {
+                        id: tokenLocation,
+                        fun: {
+                            Fungible: tokenAmount,
+                        },
+                    },
+                ],
             },
         })
     }
@@ -331,10 +198,35 @@ export function buildTransferXcmFromParachain(
 
     let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
 
+    let exchangeInstruction = fee.feeLocation
+        ? {
+              exchangeAsset: {
+                  give: {
+                      Wild: {
+                          AllOf: {
+                              id: fee.feeLocation,
+                              fun: "Fungible",
+                          },
+                      },
+                  },
+                  want: [
+                      {
+                          id: bridgeLocation(ethChainId),
+                          fun: {
+                              Fungible: remoteEtherFeeAmount,
+                          },
+                      },
+                  ],
+                  maximal: false,
+              },
+          }
+        : undefined
+
     let remoteInstructionsOnAH: any[] = [
         {
             setAppendix: appendixInstructions,
         },
+        ...(exchangeInstruction ? [exchangeInstruction] : []),
         {
             initiateTransfer: {
                 destination: bridgeLocation(ethChainId),
@@ -351,20 +243,7 @@ export function buildTransferXcmFromParachain(
                     },
                 },
                 preserveOrigin: true,
-                assets: [
-                    {
-                        reserveWithdraw: {
-                            definite: [
-                                {
-                                    id: tokenLocation,
-                                    fun: {
-                                        Fungible: tokenAmount,
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                ],
+                assets: assetInstructions,
                 remoteXcm: remoteXcm,
             },
         },
@@ -396,7 +275,7 @@ export function buildTransferXcmFromParachain(
                         depositAsset: {
                             assets: {
                                 wild: {
-                                    allCounted: 3,
+                                    allCounted: 8,
                                 },
                             },
                             beneficiary: {
@@ -416,7 +295,10 @@ export function buildTransferXcmFromParachain(
                                 {
                                     id: DOT_LOCATION,
                                     fun: {
-                                        Fungible: totalDOTFeeAmount - localDOTFeeAmount,
+                                        Fungible:
+                                            totalDOTFeeAmount -
+                                            localDOTFeeAmount -
+                                            remoteEtherFeeAmount,
                                     },
                                 },
                             ],
@@ -436,18 +318,7 @@ export function buildTransferXcmFromParachain(
                                 ],
                             },
                         },
-                        {
-                            reserveWithdraw: {
-                                definite: [
-                                    {
-                                        id: tokenLocation,
-                                        fun: {
-                                            Fungible: tokenAmount,
-                                        },
-                                    },
-                                ],
-                            },
-                        },
+                        ...assetInstructions,
                     ],
                     remoteXcm: remoteInstructionsOnAH,
                 },
