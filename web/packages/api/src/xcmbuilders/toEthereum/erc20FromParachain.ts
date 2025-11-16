@@ -203,20 +203,14 @@ export function buildTransferXcmFromParachain(
           }
         : undefined
 
-    let assetInstructions = []
+    let reserveWithdrawAssets: any[] = []
     for (const asset of concreteAssets) {
         const tokenLocation = erc20Location(ethChainId, asset.id.token)
         const tokenAmount = asset.amount
-        assetInstructions.push({
-            reserveWithdraw: {
-                definite: [
-                    {
-                        id: tokenLocation,
-                        fun: {
-                            Fungible: tokenAmount,
-                        },
-                    },
-                ],
+        reserveWithdrawAssets.push({
+            id: tokenLocation,
+            fun: {
+                Fungible: tokenAmount,
             },
         })
     }
@@ -242,7 +236,13 @@ export function buildTransferXcmFromParachain(
                     },
                 },
                 preserveOrigin: true,
-                assets: assetInstructions,
+                assets: [
+                    {
+                        reserveWithdraw: {
+                            definite: reserveWithdrawAssets,
+                        },
+                    },
+                ],
                 remoteXcm: remoteXcm,
             },
         },
@@ -321,10 +321,10 @@ export function buildTransferXcmFromParachain(
                                                   Fungible: remoteEtherFeeAmount,
                                               },
                                           },
+                                    ...reserveWithdrawAssets,
                                 ],
                             },
                         },
-                        ...assetInstructions,
                     ],
                     remoteXcm: remoteInstructionsOnAH,
                 },

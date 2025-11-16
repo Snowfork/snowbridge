@@ -35,7 +35,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
     let remoteEtherFeeNativeAmount = fee.ethereumExecutionFeeInNative!
 
     let assets = [],
-        assetInstructions = []
+        reserveWithdrawAssets = []
     assets.push({
         id: HERE_LOCATION,
         fun: {
@@ -51,16 +51,10 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                 Fungible: tokenAmount,
             },
         })
-        assetInstructions.push({
-            reserveWithdraw: {
-                definite: [
-                    {
-                        id: tokenLocation,
-                        fun: {
-                            Fungible: tokenAmount,
-                        },
-                    },
-                ],
+        reserveWithdrawAssets.push({
+            id: tokenLocation,
+            fun: {
+                Fungible: tokenAmount,
             },
         })
     }
@@ -141,7 +135,13 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                     },
                 },
                 preserveOrigin: true,
-                assets: assetInstructions,
+                assets: [
+                    {
+                        reserveWithdraw: {
+                            definite: reserveWithdrawAssets,
+                        },
+                    },
+                ],
                 remoteXcm: remoteXcm,
             },
         },
@@ -217,7 +217,11 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                                 ],
                             },
                         },
-                        ...assetInstructions,
+                        {
+                            reserveWithdraw: {
+                                definite: reserveWithdrawAssets,
+                            },
+                        },
                     ],
                     remoteXcm: remoteInstructionsOnAH,
                 },

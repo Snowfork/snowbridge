@@ -123,7 +123,7 @@ export function buildTransferXcmFromAssetHub(
     let remoteEtherFeeAmount = fee.ethereumExecutionFee!
 
     let assets = [],
-        assetInstructions = []
+        reserveWithdrawAssets: any[] = []
 
     assets.push({
         id: DOT_LOCATION,
@@ -172,16 +172,10 @@ export function buildTransferXcmFromAssetHub(
     for (const asset of concreteAssets) {
         const tokenLocation = erc20Location(ethChainId, asset.id.token)
         const tokenAmount = asset.amount
-        assetInstructions.push({
-            reserveWithdraw: {
-                definite: [
-                    {
-                        id: tokenLocation,
-                        fun: {
-                            Fungible: tokenAmount,
-                        },
-                    },
-                ],
+        reserveWithdrawAssets.push({
+            id: tokenLocation,
+            fun: {
+                Fungible: tokenAmount,
             },
         })
     }
@@ -263,7 +257,13 @@ export function buildTransferXcmFromAssetHub(
                     },
                 },
                 preserveOrigin: true,
-                assets: assetInstructions,
+                assets: [
+                    {
+                        reserveWithdraw: {
+                            definite: reserveWithdrawAssets,
+                        },
+                    },
+                ],
                 remoteXcm: remoteXcm,
             },
         },
