@@ -50,8 +50,6 @@ export type DeliveryFeeV2 = {
     snowbridgeDeliveryFeeDOT: bigint
     bridgeHubDeliveryFeeDOT: bigint
     assetHubExecutionFeeDOT: bigint
-    returnToSenderExecutionFeeDOT: bigint
-    returnToSenderDeliveryFeeDOT: bigint
     totalFeeInDot: bigint
     localExecutionFeeDOT?: bigint
     localDeliveryFeeDOT?: bigint
@@ -59,7 +57,6 @@ export type DeliveryFeeV2 = {
     feeLocation?: any
     totalFeeInNative?: bigint
     assetHubExecutionFeeNative?: bigint
-    returnToSenderExecutionFeeNative?: bigint
     localExecutionFeeInNative?: bigint
     localDeliveryFeeInNative?: bigint
     ethereumExecutionFeeInNative?: bigint
@@ -103,9 +100,9 @@ export type ValidationResultV2 = {
 export function createTransferImplementation(
     sourceParaId: number,
     registry: AssetRegistry,
-    tokenAddress: string,
+    tokenAddresses: string[],
 ): TransferInterface {
-    const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
+    const { sourceAssetMetadata } = resolveInputs(registry, tokenAddresses[0], sourceParaId)
 
     let transferImpl
     if (sourceParaId == registry.assetHubParaId) {
@@ -318,7 +315,6 @@ export const estimateFeesFromAssetHub = async (
     let localExecutionFeeDOT = 0n
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
-    let returnToSenderDeliveryFeeDOT = 0n
     let bridgeHubDeliveryFeeDOT = 0n
     let snowbridgeDeliveryFeeDOT = 0n
 
@@ -341,8 +337,6 @@ export const estimateFeesFromAssetHub = async (
         localExecutionFeeDOT +
         snowbridgeDeliveryFeeDOT +
         assetHubExecutionFeeDOT +
-        returnToSenderExecutionFeeDOT +
-        returnToSenderDeliveryFeeDOT +
         bridgeHubDeliveryFeeDOT
 
     let ethereumExecutionFee = await estimateEthereumExecutionFee(
@@ -381,13 +375,10 @@ export const estimateFeesFromAssetHub = async (
         snowbridgeDeliveryFeeDOT,
         assetHubExecutionFeeDOT,
         bridgeHubDeliveryFeeDOT,
-        returnToSenderDeliveryFeeDOT,
-        returnToSenderExecutionFeeDOT,
         totalFeeInDot,
         ethereumExecutionFee,
         feeLocation,
         assetHubExecutionFeeNative,
-        returnToSenderExecutionFeeNative,
         ethereumExecutionFeeInNative,
         localExecutionFeeInNative,
         totalFeeInNative,
@@ -420,8 +411,6 @@ export const estimateFeesFromParachains = async (
     let localExecutionFeeDOT = 0n
     let localDeliveryFeeDOT = 0n
     let assetHubExecutionFeeDOT = 0n
-    let returnToSenderExecutionFeeDOT = 0n
-    let returnToSenderDeliveryFeeDOT = 0n
     let bridgeHubDeliveryFeeDOT = 0n
     let snowbridgeDeliveryFeeDOT = 0n
 
@@ -474,8 +463,6 @@ export const estimateFeesFromParachains = async (
         localDeliveryFeeDOT +
         snowbridgeDeliveryFeeDOT +
         assetHubExecutionFeeDOT +
-        returnToSenderExecutionFeeDOT +
-        returnToSenderDeliveryFeeDOT +
         bridgeHubDeliveryFeeDOT
 
     let ethereumExecutionFee = await estimateEthereumExecutionFee(
@@ -545,13 +532,10 @@ export const estimateFeesFromParachains = async (
         snowbridgeDeliveryFeeDOT,
         assetHubExecutionFeeDOT,
         bridgeHubDeliveryFeeDOT,
-        returnToSenderDeliveryFeeDOT,
-        returnToSenderExecutionFeeDOT,
         totalFeeInDot,
         ethereumExecutionFee,
         feeLocation,
         assetHubExecutionFeeNative,
-        returnToSenderExecutionFeeNative,
         ethereumExecutionFeeInNative,
         localExecutionFeeInNative,
         localDeliveryFeeInNative,
@@ -762,8 +746,6 @@ export const mockDeliveryFee: DeliveryFeeV2 = {
     snowbridgeDeliveryFeeDOT: 1n,
     assetHubExecutionFeeDOT: 1n,
     bridgeHubDeliveryFeeDOT: 1n,
-    returnToSenderDeliveryFeeDOT: 1n,
-    returnToSenderExecutionFeeDOT: 1n,
     totalFeeInDot: 10n,
     ethereumExecutionFee: 1n,
 }

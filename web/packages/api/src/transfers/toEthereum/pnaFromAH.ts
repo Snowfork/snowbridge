@@ -8,7 +8,6 @@ import {
     buildExportXcm,
     buildTransferXcmFromAssetHub,
 } from "../../xcmbuilders/toEthereum/pnaFromAH"
-import { buildTransferXcmFromAssetHubWithDOTAsFee } from "../../xcmbuilders/toEthereum/pnaFromAHWithDotAsFee"
 import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { paraImplementation } from "../../parachains"
 import { buildMessageId, resolveInputs } from "../../toEthereum_v2"
@@ -177,37 +176,17 @@ export class PNAFromAH implements TransferInterface {
         if (options?.contractCall) {
             callHex = await buildContractCallHex(context, options.contractCall)
         }
-        let xcm: any
-        // If there is no fee specified, we assume that Ether is available in user's wallet on source chain,
-        // thus no swap required on Asset Hub.
-        if (!fee.feeLocation) {
-            xcm = buildTransferXcmFromAssetHub(
-                parachain.registry,
-                ethChainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                callHex,
-            )
-        } // If the fee asset is in DOT, we need to swap it to Ether on Asset Hub.
-        else if (isRelaychainLocation(fee.feeLocation)) {
-            xcm = buildTransferXcmFromAssetHubWithDOTAsFee(
-                parachain.registry,
-                ethChainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                callHex,
-            )
-        } else {
-            throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
-        }
+        const xcm = buildTransferXcmFromAssetHub(
+            parachain.registry,
+            ethChainId,
+            sourceAccount,
+            beneficiaryAccount,
+            messageId,
+            asset,
+            amount,
+            fee,
+            callHex,
+        )
         console.log("xcm on AH:", xcm.toHuman())
         return parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
     }

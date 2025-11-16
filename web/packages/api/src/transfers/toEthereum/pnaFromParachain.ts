@@ -9,7 +9,6 @@ import {
     buildResultXcmAssetHubPNATransferFromParachain,
     buildTransferXcmFromParachain,
 } from "../../xcmbuilders/toEthereum/pnaFromParachain"
-import { buildTransferXcmFromParachainWithDOTAsFee } from "../../xcmbuilders/toEthereum/pnaFromParachainWithDotAsFee"
 import { buildTransferXcmFromParachainWithNativeAssetFee } from "../../xcmbuilders/toEthereum/pnaFromParachainWithNativeAsFee"
 import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { paraImplementation } from "../../parachains"
@@ -231,7 +230,7 @@ export class PNAFromParachain implements TransferInterface {
             )
         } // One swap from DOT to Ether on Asset Hub.
         else if (isRelaychainLocation(fee.feeLocation)) {
-            xcm = buildTransferXcmFromParachainWithDOTAsFee(
+            xcm = buildTransferXcmFromParachain(
                 parachain.registry,
                 envName,
                 ethChainId,

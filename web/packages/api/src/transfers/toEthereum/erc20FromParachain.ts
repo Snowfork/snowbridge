@@ -3,16 +3,14 @@ import { SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
 import { decodeAddress } from "@polkadot/util-crypto"
-import { DOT_LOCATION, isRelaychainLocation, isParachainNative } from "../../xcmBuilder"
+import { isRelaychainLocation, isParachainNative } from "../../xcmBuilder"
 import { buildExportXcm } from "../../xcmbuilders/toEthereum/erc20FromAH"
 import {
     buildResultXcmAssetHubERC20TransferFromParachain,
     buildTransferXcmFromParachain,
 } from "../../xcmbuilders/toEthereum/erc20FromParachain"
-import { buildTransferXcmFromParachainWithDOTAsFee } from "../../xcmbuilders/toEthereum/erc20FromParachainWithDotAsFee"
 import { buildTransferXcmFromParachainWithNativeAssetFee } from "../../xcmbuilders/toEthereum/erc20FromParachainWithNativeAsFee"
-import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
-import { paraImplementation } from "../../parachains"
+import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { buildMessageId, resolveInputs } from "../../toEthereum_v2"
 import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"

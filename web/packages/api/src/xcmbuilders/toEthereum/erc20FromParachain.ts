@@ -1,13 +1,10 @@
 import { Registry } from "@polkadot/types/types"
-import { beneficiaryMultiAddress } from "../../utils"
 import {
     bridgeLocation,
     DOT_LOCATION,
     erc20Location,
-    erc20LocationReanchored,
     parachainLocation,
     accountToLocation,
-    isEthereumNative,
     buildAppendixInstructions,
     buildEthereumInstructions,
     containsEther,
@@ -122,10 +119,10 @@ export function buildTransferXcmFromParachain(
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
 
-    let localDOTFeeAmount: bigint =
-        fee.localExecutionFeeDOT! + fee.localDeliveryFeeDOT! + fee.returnToSenderExecutionFeeDOT
+    let localDOTFeeAmount: bigint = fee.localExecutionFeeDOT! + fee.localDeliveryFeeDOT!
     let totalDOTFeeAmount: bigint = fee.totalFeeInDot!
     let remoteEtherFeeAmount: bigint = fee.ethereumExecutionFee!
+    let remoteEtherFeeInDOTAmount: bigint = fee.ethereumExecutionFeeInNative!
 
     let assets = []
     assets.push({
@@ -135,12 +132,14 @@ export function buildTransferXcmFromParachain(
         },
     })
     if (!containsEther(ethChainId, concreteAssets)) {
-        assets.push({
-            id: bridgeLocation(ethChainId),
-            fun: {
-                Fungible: remoteEtherFeeAmount,
-            },
-        })
+        if (!fee.feeLocation) {
+            assets.push({
+                id: bridgeLocation(ethChainId),
+                fun: {
+                    Fungible: remoteEtherFeeAmount,
+                },
+            })
+        }
         for (const asset of concreteAssets) {
             const tokenLocation = erc20Location(ethChainId, asset.id.token)
             const tokenAmount = asset.amount
@@ -169,24 +168,6 @@ export function buildTransferXcmFromParachain(
                 },
             })
         }
-    }
-
-    let assetInstructions = []
-    for (const asset of concreteAssets) {
-        const tokenLocation = erc20Location(ethChainId, asset.id.token)
-        const tokenAmount = asset.amount
-        assetInstructions.push({
-            reserveWithdraw: {
-                definite: [
-                    {
-                        id: tokenLocation,
-                        fun: {
-                            Fungible: tokenAmount,
-                        },
-                    },
-                ],
-            },
-        })
     }
 
     let appendixInstructions = buildAppendixInstructions(
@@ -221,6 +202,24 @@ export function buildTransferXcmFromParachain(
               },
           }
         : undefined
+
+    let assetInstructions = []
+    for (const asset of concreteAssets) {
+        const tokenLocation = erc20Location(ethChainId, asset.id.token)
+        const tokenAmount = asset.amount
+        assetInstructions.push({
+            reserveWithdraw: {
+                definite: [
+                    {
+                        id: tokenLocation,
+                        fun: {
+                            Fungible: tokenAmount,
+                        },
+                    },
+                ],
+            },
+        })
+    }
 
     let remoteInstructionsOnAH: any[] = [
         {
@@ -298,7 +297,7 @@ export function buildTransferXcmFromParachain(
                                         Fungible:
                                             totalDOTFeeAmount -
                                             localDOTFeeAmount -
-                                            remoteEtherFeeAmount,
+                                            remoteEtherFeeInDOTAmount,
                                     },
                                 },
                             ],
@@ -309,12 +308,19 @@ export function buildTransferXcmFromParachain(
                         {
                             reserveWithdraw: {
                                 definite: [
-                                    {
-                                        id: bridgeLocation(ethChainId),
-                                        fun: {
-                                            Fungible: remoteEtherFeeAmount,
-                                        },
-                                    },
+                                    remoteEtherFeeInDOTAmount > 0
+                                        ? {
+                                              id: DOT_LOCATION,
+                                              fun: {
+                                                  Fungible: remoteEtherFeeInDOTAmount,
+                                              },
+                                          }
+                                        : {
+                                              id: bridgeLocation(ethChainId),
+                                              fun: {
+                                                  Fungible: remoteEtherFeeAmount,
+                                              },
+                                          },
                                 ],
                             },
                         },

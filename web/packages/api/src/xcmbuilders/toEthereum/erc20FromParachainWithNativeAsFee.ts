@@ -8,10 +8,8 @@ import {
     HERE_LOCATION,
     buildAppendixInstructions,
     buildEthereumInstructions,
-    containsEther,
-    splitEtherAsset,
 } from "../../xcmBuilder"
-import { DeliveryFee } from "../../toEthereum_v2"
+import { DeliveryFeeV2 } from "../../toEthereumSnowbridgeV2"
 import { ConcreteAsset } from "../../assets_v2"
 
 export function buildTransferXcmFromParachainWithNativeAssetFee(
@@ -24,69 +22,35 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
     beneficiary: string,
     topic: string,
     concreteAssets: ConcreteAsset[],
-    fee: DeliveryFee,
+    fee: DeliveryFeeV2,
     claimerLocation?: any,
     callHex?: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
 
-    let localNativeFeeAmount =
-        fee.localExecutionFeeInNative! +
-        fee.localDeliveryFeeInNative! +
-        fee.returnToSenderExecutionFeeNative!
+    let localNativeFeeAmount = fee.localExecutionFeeInNative! + fee.localDeliveryFeeInNative!
     let totalNativeFeeAmount = fee.totalFeeInNative!
     let remoteEtherFeeAmount = fee.ethereumExecutionFee!
     let remoteEtherFeeNativeAmount = fee.ethereumExecutionFeeInNative!
 
-    let assets = []
+    let assets = [],
+        assetInstructions = []
     assets.push({
         id: HERE_LOCATION,
         fun: {
             Fungible: totalNativeFeeAmount,
         },
     })
-    if (!containsEther(ethChainId, concreteAssets)) {
-        assets.push({
-            id: bridgeLocation(ethChainId),
-            fun: {
-                Fungible: remoteEtherFeeAmount,
-            },
-        })
-        for (const asset of concreteAssets) {
-            const tokenLocation = erc20Location(ethChainId, asset.id.token)
-            const tokenAmount = asset.amount
-            assets.push({
-                id: tokenLocation,
-                fun: {
-                    Fungible: tokenAmount,
-                },
-            })
-        }
-    } else {
-        const { etherAsset, otherAssets } = splitEtherAsset(ethChainId, concreteAssets)
-        assets.push({
-            id: bridgeLocation(ethChainId),
-            fun: {
-                Fungible: etherAsset!.amount + remoteEtherFeeAmount,
-            },
-        })
-        for (const asset of otherAssets) {
-            const tokenLocation = erc20Location(ethChainId, asset.id.token)
-            const tokenAmount = asset.amount
-            assets.push({
-                id: tokenLocation,
-                fun: {
-                    Fungible: tokenAmount,
-                },
-            })
-        }
-    }
-
-    let assetInstructions = []
     for (const asset of concreteAssets) {
         const tokenLocation = erc20Location(ethChainId, asset.id.token)
         const tokenAmount = asset.amount
+        assets.push({
+            id: tokenLocation,
+            fun: {
+                Fungible: tokenAmount,
+            },
+        })
         assetInstructions.push({
             reserveWithdraw: {
                 definite: [
@@ -210,7 +174,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                         depositAsset: {
                             assets: {
                                 wild: {
-                                    allCounted: 3,
+                                    allCounted: 8,
                                 },
                             },
                             beneficiary: {

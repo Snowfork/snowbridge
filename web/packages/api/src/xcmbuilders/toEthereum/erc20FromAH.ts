@@ -132,12 +132,14 @@ export function buildTransferXcmFromAssetHub(
         },
     })
     if (!containsEther(ethChainId, concreteAssets)) {
-        assets.push({
-            id: bridgeLocation(ethChainId),
-            fun: {
-                Fungible: remoteEtherFeeAmount,
-            },
-        })
+        if (!fee.feeLocation) {
+            assets.push({
+                id: bridgeLocation(ethChainId),
+                fun: {
+                    Fungible: remoteEtherFeeAmount,
+                },
+            })
+        }
         for (const asset of concreteAssets) {
             const tokenLocation = erc20Location(ethChainId, asset.id.token)
             const tokenAmount = asset.amount
