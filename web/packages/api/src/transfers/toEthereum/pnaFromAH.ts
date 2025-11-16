@@ -23,7 +23,7 @@ import {
     TransferV2,
     ValidationResultV2,
 } from "../../toEthereumSnowbridgeV2"
-import { ConcreteToken } from "src/assets_v2"
+import { ConcreteToken } from "../../assets_v2"
 
 export class PNAFromAH implements TransferInterface {
     async getDeliveryFee(

@@ -24,7 +24,7 @@ import {
     TransferV2,
     ValidationResultV2,
 } from "../../toEthereumSnowbridgeV2"
-import { AggregatedAsset, ConcreteAsset, ConcreteToken } from "src/assets_v2"
+import { AggregatedAsset, ConcreteAsset, ConcreteToken } from "../../assets_v2"
 
 export class ERC20FromParachain implements TransferInterface {
     async getDeliveryFee(
