@@ -156,11 +156,17 @@ add_liquidity_on_penpal() {
     send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
 }
 
+set_reserve_on_ah() {
+    local call="0x3521020109079edaa80204020109079edaa80200"
+    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
+}
+
 configure_on_ah() {
     register_weth_on_ah
     register_wnd_on_ethereum
     register_roc_on_ah
     add_liquidity_on_ah
+    set_reserve_on_ah
 }
 
 configure_on_penpal() {
