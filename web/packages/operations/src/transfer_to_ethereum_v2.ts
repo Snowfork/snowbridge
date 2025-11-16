@@ -54,13 +54,14 @@ export const transferToEthereum = async (
         const transferImpl = await toEthereumSnowbridgeV2.createTransferImplementation(
             sourceParaId,
             registry,
-            TOKEN_CONTRACT,
+            [TOKEN_CONTRACT],
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee: toEthereumV2.DeliveryFee = await transferImpl.getDeliveryFee(
-            { sourceParaId, context },
+        let fee: toEthereumSnowbridgeV2.DeliveryFeeV2 = await transferImpl.getDeliveryFee(
+            context,
+            sourceParaId,
             registry,
-            TOKEN_CONTRACT,
+            [TOKEN_CONTRACT],
             {
                 feeTokenLocation: options?.feeTokenLocation,
                 slippagePadPercentage: 20n,
@@ -70,12 +71,12 @@ export const transferToEthereum = async (
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            { sourceParaId, context },
+            context,
+            sourceParaId,
             registry,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
-            TOKEN_CONTRACT,
-            amount,
+            [{ address: TOKEN_CONTRACT, amount }],
             fee,
             options,
         )

@@ -9,8 +9,8 @@ import {
     buildAppendixInstructions,
     buildEthereumInstructions,
 } from "../../xcmBuilder"
-import { Asset } from "@snowbridge/base-types"
-import { DeliveryFee } from "../../toEthereum_v2"
+import { DeliveryFeeV2 } from "../../toEthereumSnowbridgeV2"
+import { ConcreteAsset } from "../../assets_v2"
 
 export function buildTransferXcmFromParachainWithNativeAssetFee(
     registry: Registry,
@@ -21,38 +21,49 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
     sourceAccount: string,
     beneficiary: string,
     topic: string,
-    asset: Asset,
-    tokenAmount: bigint,
-    fee: DeliveryFee,
+    concreteAssets: ConcreteAsset[],
+    fee: DeliveryFeeV2,
     claimerLocation?: any,
     callHex?: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = erc20Location(ethChainId, asset.token)
 
-    let localNativeFeeAmount =
-        fee.localExecutionFeeInNative! +
-        fee.localDeliveryFeeInNative! +
-        fee.returnToSenderExecutionFeeNative!
+    let localNativeFeeAmount = fee.localExecutionFeeInNative! + fee.localDeliveryFeeInNative!
     let totalNativeFeeAmount = fee.totalFeeInNative!
     let remoteEtherFeeAmount = fee.ethereumExecutionFee!
     let remoteEtherFeeNativeAmount = fee.ethereumExecutionFeeInNative!
 
-    let assets = [
-        {
-            id: HERE_LOCATION,
-            fun: {
-                Fungible: totalNativeFeeAmount,
-            },
+    let assets = [],
+        assetInstructions = []
+    assets.push({
+        id: HERE_LOCATION,
+        fun: {
+            Fungible: totalNativeFeeAmount,
         },
-        {
+    })
+    for (const asset of concreteAssets) {
+        const tokenLocation = erc20Location(ethChainId, asset.id.token)
+        const tokenAmount = asset.amount
+        assets.push({
             id: tokenLocation,
             fun: {
                 Fungible: tokenAmount,
             },
-        },
-    ]
+        })
+        assetInstructions.push({
+            reserveWithdraw: {
+                definite: [
+                    {
+                        id: tokenLocation,
+                        fun: {
+                            Fungible: tokenAmount,
+                        },
+                    },
+                ],
+            },
+        })
+    }
 
     let appendixInstructions = buildAppendixInstructions(
         envName,
@@ -130,20 +141,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                     },
                 },
                 preserveOrigin: true,
-                assets: [
-                    {
-                        reserveWithdraw: {
-                            definite: [
-                                {
-                                    id: tokenLocation,
-                                    fun: {
-                                        Fungible: tokenAmount,
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                ],
+                assets: assetInstructions,
                 remoteXcm: remoteXcm,
             },
         },
@@ -176,7 +174,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                         depositAsset: {
                             assets: {
                                 wild: {
-                                    allCounted: 3,
+                                    allCounted: 8,
                                 },
                             },
                             beneficiary: {
@@ -219,18 +217,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                                 ],
                             },
                         },
-                        {
-                            reserveWithdraw: {
-                                definite: [
-                                    {
-                                        id: tokenLocation,
-                                        fun: {
-                                            Fungible: tokenAmount,
-                                        },
-                                    },
-                                ],
-                            },
-                        },
+                        ...assetInstructions,
                     ],
                     remoteXcm: remoteInstructionsOnAH,
                 },

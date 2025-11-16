@@ -3,21 +3,12 @@ import { SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
 import { decodeAddress } from "@polkadot/util-crypto"
-import { isRelaychainLocation } from "../../xcmBuilder"
 import {
     buildExportXcm,
     buildTransferXcmFromAssetHub,
 } from "../../xcmbuilders/toEthereum/erc20FromAH"
-import { buildTransferXcmFromAssetHubWithDOTAsFee } from "../../xcmbuilders/toEthereum/erc20FromAHWithDotAsFee"
-import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
-import { paraImplementation } from "../../parachains"
-import {
-    buildMessageId,
-    DeliveryFee,
-    resolveInputs,
-    Transfer,
-    ValidationResult,
-} from "../../toEthereum_v2"
+import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
+import { buildMessageId, resolveInputs } from "../../toEthereum_v2"
 import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
 import {
@@ -25,14 +16,19 @@ import {
     estimateFeesFromAssetHub,
     MaxWeight,
     mockDeliveryFee,
-    validateTransferFromAssetHub,
+    validateTransfer,
+    DeliveryFeeV2,
+    TransferV2,
+    ValidationResultV2,
 } from "../../toEthereumSnowbridgeV2"
+import { AggregatedAsset, ConcreteAsset, ConcreteToken } from "../../assets_v2"
 
 export class ERC20FromAH implements TransferInterface {
     async getDeliveryFee(
-        source: { sourceParaId: number; context: Context },
+        context: Context,
+        sourceParaId: number,
         registry: AssetRegistry,
-        tokenAddress: string,
+        tokenAddresses: string[],
         options?: {
             padPercentage?: bigint
             slippagePadPercentage?: bigint
@@ -40,15 +36,18 @@ export class ERC20FromAH implements TransferInterface {
             feeTokenLocation?: any
             contractCall?: ContractCall
         },
-    ): Promise<DeliveryFee> {
-        const { assetHub } =
-            "sourceParaId" in source
-                ? {
-                      assetHub: await source.context.assetHub(),
-                  }
-                : source
+    ): Promise<DeliveryFeeV2> {
+        const assetHub = await context.assetHub()
 
-        const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, source.sourceParaId)
+        let concreteAssets: ConcreteAsset[] = []
+
+        for (const tokenAddress of tokenAddresses) {
+            const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
+            concreteAssets.push({
+                id: sourceAssetMetadata,
+                amount: 1n,
+            })
+        }
 
         let localXcm = buildTransferXcmFromAssetHub(
             assetHub.registry,
@@ -56,26 +55,24 @@ export class ERC20FromAH implements TransferInterface {
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            sourceAssetMetadata,
-            1n,
+            concreteAssets,
             mockDeliveryFee,
         )
 
         let forwardedXcmToBH = buildExportXcm(
             assetHub.registry,
             registry.ethChainId,
-            sourceAssetMetadata,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            1n,
-            1n,
+            concreteAssets,
+            mockDeliveryFee,
         )
 
         const fees = await estimateFeesFromAssetHub(
-            source.context,
+            context,
             registry,
-            tokenAddress,
+            tokenAddresses,
             {
                 localXcm,
                 forwardedXcmToBH,
@@ -86,50 +83,64 @@ export class ERC20FromAH implements TransferInterface {
     }
 
     async createTransfer(
-        source: { sourceParaId: number; context: Context },
+        context: Context,
+        sourceParaId: number,
         registry: AssetRegistry,
         sourceAccount: string,
         beneficiaryAccount: string,
-        tokenAddress: string,
-        amount: bigint,
-        fee: DeliveryFee,
+        tokens: ConcreteToken[],
+        fee: DeliveryFeeV2,
         options?: {
             claimerLocation?: any
             contractCall?: ContractCall
         },
-    ): Promise<Transfer> {
+    ): Promise<TransferV2> {
         const { ethChainId } = registry
 
         let sourceAccountHex = sourceAccount
         if (!isHex(sourceAccountHex)) {
             sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
         }
-        const { parachain } =
-            "sourceParaId" in source
-                ? { parachain: await source.context.parachain(source.sourceParaId) }
-                : source
+        const assetHub = await context.assetHub()
 
-        const sourceParachainImpl = await paraImplementation(parachain)
-        const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
-            resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
+        let sourceParachain = registry.parachains[sourceParaId.toString()]
+        let concreteAssets: ConcreteAsset[] = [],
+            aggregatedAssets: AggregatedAsset[] = []
 
-        let messageId: string | undefined = await buildMessageId(
-            parachain,
-            sourceParachainImpl.parachainId,
+        for (const token of tokens) {
+            const { tokenErcMetadata, ahAssetMetadata, sourceAssetMetadata } = resolveInputs(
+                registry,
+                token.address,
+                sourceParaId,
+            )
+            concreteAssets.push({
+                id: sourceAssetMetadata,
+                amount: token.amount,
+            })
+            aggregatedAssets.push({
+                tokenErcMetadata,
+                ahAssetMetadata,
+                sourceAssetMetadata,
+                amount: token.amount,
+            })
+        }
+
+        let messageId = await buildMessageId(
+            assetHub,
+            sourceParaId,
             sourceAccountHex,
-            tokenAddress,
+            tokens[0].address,
             beneficiaryAccount,
-            amount,
+            tokens[0].amount,
         )
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = await this.createTx(
-            source.context,
-            parachain,
+            context,
+            assetHub,
             ethChainId,
             sourceAccount,
             beneficiaryAccount,
-            ahAssetMetadata,
-            amount,
             messageId,
+            concreteAssets,
             fee,
             options,
         )
@@ -139,26 +150,23 @@ export class ERC20FromAH implements TransferInterface {
                 registry,
                 sourceAccount,
                 beneficiaryAccount,
-                tokenAddress,
-                amount,
+                tokens,
                 fee,
                 contractCall: options?.contractCall,
             },
             computed: {
-                sourceParaId: sourceParachainImpl.parachainId,
+                sourceParaId: sourceParaId,
                 sourceAccountHex,
-                tokenErcMetadata,
+                aggregatedAssets,
                 sourceParachain,
-                ahAssetMetadata,
-                sourceAssetMetadata,
                 messageId,
             },
             tx,
         }
     }
 
-    async validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult> {
-        return validateTransferFromAssetHub(context, transfer)
+    async validateTransfer(context: Context, transfer: TransferV2): Promise<ValidationResultV2> {
+        return validateTransfer(context, transfer)
     }
 
     async createTx(
@@ -167,10 +175,9 @@ export class ERC20FromAH implements TransferInterface {
         ethChainId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
-        asset: Asset,
-        amount: bigint,
         messageId: string,
-        fee: DeliveryFee,
+        concreteAssets: ConcreteAsset[],
+        fee: DeliveryFeeV2,
         options?: {
             claimerLocation?: any
             contractCall?: ContractCall
@@ -180,37 +187,16 @@ export class ERC20FromAH implements TransferInterface {
         if (options?.contractCall) {
             callHex = await buildContractCallHex(context, options.contractCall)
         }
-        let xcm: any
-        // If there is no fee specified, we assume that Ether is available in user's wallet on source chain,
-        // thus no swap required on Asset Hub.
-        if (!fee.feeLocation) {
-            xcm = buildTransferXcmFromAssetHub(
-                parachain.registry,
-                ethChainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                callHex,
-            )
-        } // If the fee asset is in DOT, we need to swap it to Ether on Asset Hub.
-        else if (isRelaychainLocation(fee.feeLocation)) {
-            xcm = buildTransferXcmFromAssetHubWithDOTAsFee(
-                parachain.registry,
-                ethChainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                callHex,
-            )
-        } else {
-            throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
-        }
+        const xcm = buildTransferXcmFromAssetHub(
+            parachain.registry,
+            ethChainId,
+            sourceAccount,
+            beneficiaryAccount,
+            messageId,
+            concreteAssets,
+            fee,
+            callHex,
+        )
         console.log("xcm on AH:", xcm.toHuman())
         return parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
     }
