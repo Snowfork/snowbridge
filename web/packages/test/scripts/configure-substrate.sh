@@ -56,6 +56,9 @@ configure_ah() {
     # Create Ether
     local call="0x28020c1f04020109079edaa802050000003501020109079edaa80200ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d01043513020109079edaa8021445746865721445746865721200"
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+    # Set reserve
+    local call="0x3521020109079edaa80204020109079edaa80200"
+    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
     # Mint Ether to Alice
     local call="0x3506020109079edaa80200d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d1300002cf61a24a229"
     send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"

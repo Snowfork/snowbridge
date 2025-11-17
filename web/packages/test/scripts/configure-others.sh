@@ -11,6 +11,9 @@ register_weth_on_ah() {
     # set metadata
     local call='0x3513020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d105745544810574554481200'
     send_governance_transact_from_relaychain $ASSET_HUB_PARAID "$call"
+    # set reserve
+    local call="0x3521020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d04020109079edaa80200"
+    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
     # Mint weth to Penpal Sovereign on AH
     local call="0x3506020209079edaa8020300b8ea8cb425d85536b158d661da1ef0895bb92f1d007369626cd00700000000000000000000000000000000000000000000000000001300002cf61a24a229"
     send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
@@ -156,17 +159,11 @@ add_liquidity_on_penpal() {
     send_transact_through_user_origin_from_relaychain $PENPAL_PARAID "$sudo_pubkey" "$call"
 }
 
-set_reserve_on_ah() {
-    local call="0x3521020109079edaa80204020109079edaa80200"
-    send_transact_through_bridge_from_relaychain $ASSET_HUB_PARAID "$call"
-}
-
 configure_on_ah() {
     register_weth_on_ah
     register_wnd_on_ethereum
     register_roc_on_ah
     add_liquidity_on_ah
-    set_reserve_on_ah
 }
 
 configure_on_penpal() {
