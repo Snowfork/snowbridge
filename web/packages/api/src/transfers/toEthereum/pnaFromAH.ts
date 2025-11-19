@@ -9,7 +9,7 @@ import {
     buildTransferXcmFromAssetHub,
 } from "../../xcmbuilders/toEthereum/pnaFromAH"
 import { buildTransferXcmFromAssetHubWithDOTAsFee } from "../../xcmbuilders/toEthereum/pnaFromAHWithDotAsFee"
-import { Asset, AssetRegistry } from "@snowbridge/base-types"
+import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { paraImplementation } from "../../parachains"
 import {
     buildMessageId,
@@ -21,8 +21,10 @@ import {
 import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
 import {
+    buildContractCallHex,
     estimateFeesFromAssetHub,
     MaxWeight,
+    mockDeliveryFee,
     validateTransferFromAssetHub,
 } from "../../toEthereumSnowbridgeV2"
 
@@ -36,7 +38,8 @@ export class PNAFromAH implements TransferInterface {
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
-        }
+            contractCall?: ContractCall
+        },
     ): Promise<DeliveryFee> {
         const { assetHub, parachain } =
             "sourceParaId" in source
@@ -50,7 +53,7 @@ export class PNAFromAH implements TransferInterface {
         const { sourceAssetMetadata } = resolveInputs(
             registry,
             tokenAddress,
-            sourceParachainImpl.parachainId
+            sourceParachainImpl.parachainId,
         )
 
         let forwardedXcmToBH, localXcm: any
@@ -63,8 +66,7 @@ export class PNAFromAH implements TransferInterface {
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             sourceAssetMetadata,
             1n,
-            1n,
-            1n
+            mockDeliveryFee,
         )
 
         forwardedXcmToBH = buildExportXcm(
@@ -75,7 +77,7 @@ export class PNAFromAH implements TransferInterface {
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             1n,
-            1n
+            1n,
         )
 
         const fees = await estimateFeesFromAssetHub(
@@ -86,19 +88,23 @@ export class PNAFromAH implements TransferInterface {
                 localXcm,
                 forwardedXcmToBH,
             },
-            options
+            options,
         )
         return fees
     }
 
     async createTransfer(
-        source: { sourceParaId: number; context: Context } | { parachain: ApiPromise },
+        source: { sourceParaId: number; context: Context },
         registry: AssetRegistry,
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
-        fee: DeliveryFee
+        fee: DeliveryFee,
+        options?: {
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
     ): Promise<Transfer> {
         const { ethChainId } = registry
 
@@ -121,9 +127,10 @@ export class PNAFromAH implements TransferInterface {
             sourceAccountHex,
             tokenAddress,
             beneficiaryAccount,
-            amount
+            amount,
         )
-        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = this.createTx(
+        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = await this.createTx(
+            source.context,
             parachain,
             ethChainId,
             sourceAccount,
@@ -131,7 +138,8 @@ export class PNAFromAH implements TransferInterface {
             ahAssetMetadata,
             amount,
             messageId,
-            fee
+            fee,
+            options,
         )
 
         return {
@@ -142,6 +150,7 @@ export class PNAFromAH implements TransferInterface {
                 tokenAddress,
                 amount,
                 fee,
+                contractCall: options?.contractCall,
             },
             computed: {
                 sourceParaId: sourceParachainImpl.parachainId,
@@ -160,7 +169,8 @@ export class PNAFromAH implements TransferInterface {
         return validateTransferFromAssetHub(context, transfer)
     }
 
-    createTx(
+    async createTx(
+        context: Context,
         parachain: ApiPromise,
         ethChainId: number,
         sourceAccount: string,
@@ -168,8 +178,16 @@ export class PNAFromAH implements TransferInterface {
         asset: Asset,
         amount: bigint,
         messageId: string,
-        fee: DeliveryFee
-    ): SubmittableExtrinsic<"promise", ISubmittableResult> {
+        fee: DeliveryFee,
+        options?: {
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
+    ): Promise<SubmittableExtrinsic<"promise", ISubmittableResult>> {
+        let callHex: string | undefined
+        if (options?.contractCall) {
+            callHex = await buildContractCallHex(context, options.contractCall)
+        }
         let xcm: any
         // If there is no fee specified, we assume that Ether is available in user's wallet on source chain,
         // thus no swap required on Asset Hub.
@@ -182,8 +200,8 @@ export class PNAFromAH implements TransferInterface {
                 messageId,
                 asset,
                 amount,
-                fee.totalFeeInDot,
-                fee.ethereumExecutionFee!
+                fee,
+                callHex,
             )
         } // If the fee asset is in DOT, we need to swap it to Ether on Asset Hub.
         else if (isRelaychainLocation(fee.feeLocation)) {
@@ -195,11 +213,8 @@ export class PNAFromAH implements TransferInterface {
                 messageId,
                 asset,
                 amount,
-                fee.localExecutionFeeDOT! +
-                    fee.bridgeHubDeliveryFeeDOT +
-                    fee.snowbridgeDeliveryFeeDOT,
-                fee.totalFeeInDot,
-                fee.ethereumExecutionFee!
+                fee,
+                callHex,
             )
         } else {
             throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)

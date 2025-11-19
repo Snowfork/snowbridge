@@ -85,7 +85,10 @@ contract BeefyClientTest is Test {
             randaoCommitDelay,
             randaoCommitExpiration,
             minNumRequiredSignatures,
-            fiatShamirRequiresSignatures
+            fiatShamirRequiresSignatures,
+            0,
+            BeefyClient.ValidatorSet(0, 0, 0x0),
+            BeefyClient.ValidatorSet(1, 0, 0x0)
         );
 
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
@@ -151,8 +154,8 @@ contract BeefyClientTest is Test {
         console.log("print initialBitField, length is: %d", bitfield.length);
         printBitArray(bitfield);
         prevRandao = uint32(vm.envOr("PREV_RANDAO", prevRandao));
-        finalBitfield = Bitfield.subsample(prevRandao, bitfield, numRequiredSignatures, setSize);
-        console.log("print finalBitField, length is: %d", finalBitfield.length);
+        finalBitfield = Bitfield.subsample(prevRandao, bitfield, setSize, numRequiredSignatures);
+        console.log("print finalBitField");
         printBitArray(finalBitfield);
 
         string memory finalBitFieldRaw = "";
@@ -778,7 +781,7 @@ contract BeefyClientTest is Test {
         uint256[] memory initialBits = beefyClient.createInitialBitfield(bitSetArray2, setSize);
         Bitfield.set(initialBits, finalValidatorProofs[0].index);
         printBitArray(initialBits);
-        vm.expectRevert(BeefyClient.NotEnoughClaims.selector);
+        vm.expectRevert(BeefyClient.InvalidBitfield.selector);
         beefyClient.submitInitial(commitment, initialBits, finalValidatorProofs[0]);
     }
 
@@ -818,7 +821,7 @@ contract BeefyClientTest is Test {
         );
 
         // Calculator 2/3 with flooring due to integer division plus 1.
-        uint256 twoThirdsMajority = uint256(validatorSetLen) * 2 / 3 + 1;
+        uint256 twoThirdsMajority = (uint256(validatorSetLen) * 2) / 3 + 1;
         assertLe(result, twoThirdsMajority, "result is less than or equal to quorum.");
         assertGe(result, minSignatures, "result is greater than or equal to minimum signatures.");
         assertLe(result, validatorSetLen, "result is less than validator set length.");

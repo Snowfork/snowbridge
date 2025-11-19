@@ -109,3 +109,10 @@ export type AssetRegistry = {
   parachains: ParachainMap;
   kusama: KusamaConfig | undefined;
 };
+
+export type ContractCall = {
+  target: string;
+  calldata: string;
+  value: bigint;
+  gas: bigint;
+};

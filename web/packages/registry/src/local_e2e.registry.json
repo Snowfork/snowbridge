@@ -42,16 +42,16 @@
           "decimals": 18,
           "deliveryGas": "bigint:80000"
         },
-        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
-          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
+        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
+          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
           "name": "roc",
           "symbol": "roc",
           "decimals": 12,
           "foreignId": "0xbcd4282ca0c30cbd9c578b5c790e88c803d80cd9cc91f28686f24ac25a61e06e",
           "deliveryGas": "bigint:80000"
         },
-        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
-          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
           "name": "wnd",
           "symbol": "wnd",
           "decimals": 12,
@@ -108,11 +108,11 @@
           "decimals": 18,
           "isSufficient": true
         },
-        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
-          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
+        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
+          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
           "name": "Roc",
           "symbol": "Roc",
-          "decimals": 12,
+          "decimals": 0,
           "locationOnEthereum": {
             "parents": 1,
             "interior": {
@@ -153,8 +153,8 @@
           "minimumBalance": "bigint:1",
           "isSufficient": true
         },
-        "0xde45448ca2d57797c0bec0ee15a1e42334744219": {
-          "token": "0xde45448ca2d57797c0bec0ee15a1e42334744219",
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
           "name": "",
           "symbol": "WND",
           "decimals": 12,
@@ -343,6 +343,35 @@
           "minimumBalance": "bigint:1000000000",
           "isSufficient": false,
           "assetId": "2"
+        },
+        "0xd8597eb7ef761e3315623edfee9defcbacd72e8b": {
+          "token": "0xd8597eb7ef761e3315623edfee9defcbacd72e8b",
+          "name": "",
+          "symbol": "WND",
+          "decimals": 12,
+          "locationOnEthereum": {
+            "parents": 1,
+            "interior": {
+              "x1": [
+                {
+                  "globalConsensus": {
+                    "byGenesis": "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
+                  }
+                }
+              ]
+            }
+          },
+          "location": {
+            "parents": 1,
+            "interior": "Here"
+          },
+          "locationOnAH": {
+            "parents": 1,
+            "interior": "Here"
+          },
+          "foreignId": "0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7",
+          "minimumBalance": "bigint:1000000000",
+          "isSufficient": true
         }
       },
       "estimatedExecutionFeeDOT": "bigint:3276800000",

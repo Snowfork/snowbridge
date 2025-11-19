@@ -2,7 +2,7 @@
 description: Set up a development environment and run the end to end test stack.
 ---
 
-# Quick Start Guide
+# Local Development Guide
 
 ### System Requirements
 
@@ -176,7 +176,7 @@ When this is complete `Testnet has been initialized` will be printed to the term
     pnpm test:integration --grep 'should transfer ETH from Substrate to Ethereum \(incentivized channel\)'
     ```
 
-    ####
+
 
 ## Inspecting the E2E environment
 

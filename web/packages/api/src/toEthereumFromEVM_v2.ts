@@ -104,7 +104,7 @@ export async function createTransferEvm(
     beneficiaryAccount: string,
     tokenAddress: string,
     amount: bigint,
-    fee: DeliveryFee
+    fee: DeliveryFee,
 ): Promise<TransferEvm> {
     const { ethChainId, assetHubParaId } = registry
 
@@ -132,7 +132,7 @@ export async function createTransferEvm(
     const ethChain = registry.ethereumChains[sourceParachain.info.evmChainId.toString()]
     if (!ethChain) {
         throw Error(
-            `Cannot find eth chain ${sourceParachain.info.evmChainId} for parachain ${sourceParachainImpl.parachainId}.`
+            `Cannot find eth chain ${sourceParachain.info.evmChainId} for parachain ${sourceParachainImpl.parachainId}.`,
         )
     }
     if (!ethChain.precompile) {
@@ -154,7 +154,7 @@ export async function createTransferEvm(
         sourceAccountHex,
         tokenAddress,
         beneficiaryAccount,
-        amount
+        amount,
     )
     const customXcm = buildAssetHubERC20TransferFromParachain(
         parachain.registry,
@@ -165,7 +165,7 @@ export async function createTransferEvm(
         messageId,
         sourceParachainImpl.parachainId,
         fee.returnToSenderExecutionFeeDOT,
-        DOT_LOCATION // TODO: Support Native fee for EVM chains
+        DOT_LOCATION, // TODO: Support Native fee for EVM chains
     )
 
     const tx = await contract[
@@ -184,7 +184,7 @@ export async function createTransferEvm(
         0,
         // The TransferType corresponding to fee asset
         2,
-        customXcm.toHex()
+        customXcm.toHex(),
     )
 
     tx.from = sourceAccountHex
@@ -237,7 +237,7 @@ export async function validateTransferEvm(
               gateway: IGateway
               bridgeHub: ApiPromise
           },
-    transfer: TransferEvm
+    transfer: TransferEvm,
 ): Promise<ValidationResultEvm> {
     const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
     const {
@@ -297,7 +297,7 @@ export async function validateTransferEvm(
 
     // Create a mock tx that calls the substrate extrinsic on pallet-xcm with the same parameters so that we can dry run.
     const mockTx = createERC20SourceParachainTx(
-        sourceParachain,
+        sourceParachainImpl,
         registry.ethChainId,
         registry.assetHubParaId,
         sourceAccountHex,
@@ -308,7 +308,7 @@ export async function validateTransferEvm(
         messageId,
         sourceParaId,
         fee.returnToSenderExecutionFeeDOT,
-        fee.totalFeeInNative !== undefined
+        fee.totalFeeInNative !== undefined,
     )
 
     let sourceDryRunError
@@ -320,7 +320,7 @@ export async function validateTransferEvm(
             registry.assetHubParaId,
             registry.bridgeHubParaId,
             mockTx,
-            sourceAccountHex
+            sourceAccountHex,
         )
         if (!dryRunSource.success) {
             logs.push({
@@ -336,14 +336,14 @@ export async function validateTransferEvm(
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.DryRunFailed,
-                    message: "Dry run call did not provide a forwared xcm.",
+                    message: "Dry run call did not provide a forwarded xcm.",
                 })
             } else {
                 const dryRunResultAssetHub = await dryRunAssetHub(
                     assetHub,
                     sourceParaId,
                     registry.bridgeHubParaId,
-                    dryRunSource.assetHubForwarded[1][0]
+                    dryRunSource.assetHubForwarded[1][0],
                 )
                 if (!dryRunResultAssetHub.success) {
                     logs.push({
@@ -379,8 +379,9 @@ export async function validateTransferEvm(
                     sourceParaId,
                     fee.returnToSenderExecutionFeeDOT,
                     DOT_LOCATION, // TODO: Support native fee for EVM
-                    DOT_LOCATION
-                )
+                    DOT_LOCATION,
+                    false,
+                ),
             )
             if (!dryRunResultAssetHub.success) {
                 logs.push({
@@ -490,7 +491,7 @@ export type MessageReceiptEvm = {
 
 export async function getMessageReceipt(
     source: { sourceParaId: number; context: Context } | { sourceParachain: ApiPromise },
-    receipt: TransactionReceipt
+    receipt: TransactionReceipt,
 ): Promise<MessageReceiptEvm> {
     const { sourceParachain } =
         "sourceParaId" in source
@@ -504,7 +505,7 @@ export async function getMessageReceipt(
     const eventTx = events.find(
         (e) =>
             sourceParachain.events.ethereum.Executed.is(e.event) &&
-            e.event.data[2].toPrimitive()?.toString().toLowerCase() === receipt.hash.toLowerCase()
+            e.event.data[2].toPrimitive()?.toString().toLowerCase() === receipt.hash.toLowerCase(),
     )
     if (!(eventTx && eventTx.phase.isApplyExtrinsic)) {
         throw Error(`Could not find tx hash ${receipt.hash} in block ${receipt.blockNumber}.`)
@@ -512,7 +513,7 @@ export async function getMessageReceipt(
     const matchedEvents: EventRecord[] = events.filter(
         (e) =>
             e.phase.isApplyExtrinsic &&
-            e.phase.asApplyExtrinsic.toNumber() === eventTx.phase.asApplyExtrinsic.toNumber()
+            e.phase.asApplyExtrinsic.toNumber() === eventTx.phase.asApplyExtrinsic.toNumber(),
     )
 
     for (const e of matchedEvents) {

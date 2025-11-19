@@ -57,8 +57,8 @@ export class FrequencyParachain extends ParachainBase {
         } else {
             throw Error(
                 `Cannot get balance for spec ${this.specName}. Location = ${JSON.stringify(
-                    location
-                )}`
+                    location,
+                )}`,
             )
         }
         return assets

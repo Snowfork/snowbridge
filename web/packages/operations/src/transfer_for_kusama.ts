@@ -8,7 +8,7 @@ export const transferForKusama = async (
     transferName: string,
     direction: Direction,
     amount: bigint,
-    tokenName: string
+    tokenName: string,
 ) => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
@@ -55,19 +55,26 @@ export const transferForKusama = async (
     }
 
     let tokenAddress
-    if (tokenName == "DOT" || tokenName == "KSM") {
+    if (tokenName == "ETH") {
+        tokenAddress = "0x0000000000000000000000000000000000000000"
+    } else {
+        // look for Ethereum assets
+        const assets = registry.ethereumChains[registry.ethChainId].assets
+        for (const [token, asset] of Object.entries(assets)) {
+            if (asset.symbol === tokenName) {
+                tokenAddress = token
+            }
+        }
+    }
+
+    if (!tokenAddress) {
+        // look for Parachain assets
         const assets = registry.parachains[registry.assetHubParaId].assets
         for (const [token, asset] of Object.entries(assets)) {
             if (asset.symbol === tokenName) {
                 tokenAddress = token
             }
         }
-    } else if (tokenName == "ETH") {
-        tokenAddress = "0x0000000000000000000000000000000000000000"
-    } else {
-        tokenAddress = snowbridgeEnv.locations[0].erc20tokensReceivable.find(
-            (t) => t.id === tokenName
-        )!.address
     }
 
     if (!tokenAddress) {
@@ -82,7 +89,7 @@ export const transferForKusama = async (
             destAssetHub,
             direction,
             registry,
-            tokenAddress
+            tokenAddress,
         )
 
         // Step 2. Create a transfer tx
@@ -94,14 +101,14 @@ export const transferForKusama = async (
             DEST_ACCOUNT_PUBLIC,
             tokenAddress,
             amount,
-            fee
+            fee,
         )
 
         // Step 3. Validate
         const validation = await forKusama.validateTransfer(
             { sourceAssetHub, destAssetHub },
             direction,
-            transfer
+            transfer,
         )
 
         // Step 4. Check validation logs for errors
