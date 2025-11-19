@@ -33,7 +33,7 @@ func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) err
 		return fmt.Errorf("initialize beefy listener: %w", err)
 	}
 
-	ticker := time.NewTicker(time.Second * 10)
+	ticker := time.NewTicker(time.Second * 60)
 
 	eg.Go(func() error {
 
