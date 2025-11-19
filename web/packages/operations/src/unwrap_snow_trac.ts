@@ -37,7 +37,7 @@ const unwrapSnowTRAC = async () => {
             parachain,
             neuroWebParaId,
             parachainInfo.specName,
-            parachainInfo.specVersion
+            parachainInfo.specVersion,
         )
 
         const fee = await neuroWeb.unwrapExecutionFeeInNative(parachain)
@@ -51,9 +51,9 @@ const unwrapSnowTRAC = async () => {
             process.exit(1)
         }
 
-        const wrapTx = neuroWeb.createUnwrapTx(parachain, balance)
+        const wrapTx = neuroWeb.createUnwrapTx(balance)
 
-       /* await wrapTx.signAndSend(POLKADOT_ACCOUNT, { nonce: -1 }, (result) => {
+        /* await wrapTx.signAndSend(POLKADOT_ACCOUNT, { nonce: -1 }, (result) => {
             console.log(`Transaction status: ${result.status}`)
             if (result.status.isInBlock) {
                 console.log(`Transaction included in block: ${result.status.asInBlock}`)

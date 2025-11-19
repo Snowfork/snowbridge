@@ -21,7 +21,13 @@ import {
 } from "./xcmBuilder"
 import { getAssetHubConversionPalletSwap } from "./assets_v2"
 import { getOperatingStatus, OperationStatus } from "./status"
-import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
+import {
+    Asset,
+    AssetRegistry,
+    ContractCall,
+    ERC20Metadata,
+    Parachain,
+} from "@snowbridge/base-types"
 import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
 import {
     CallDryRunEffects,
@@ -34,6 +40,7 @@ import { FeeData } from "ethers"
 import { paraImplementation } from "./parachains"
 import { padFeeByPercentage } from "./utils"
 import { Context } from "./index"
+import { ParachainBase } from "./parachains/parachainBase"
 
 export type Transfer = {
     input: {
@@ -43,6 +50,7 @@ export type Transfer = {
         tokenAddress: string
         amount: bigint
         fee: DeliveryFee
+        contractCall?: ContractCall
     }
     computed: {
         sourceParaId: number
@@ -89,7 +97,7 @@ export async function createTransfer(
     beneficiaryAccount: string,
     tokenAddress: string,
     amount: bigint,
-    fee: DeliveryFee
+    fee: DeliveryFee,
 ): Promise<Transfer> {
     const { ethChainId, assetHubParaId } = registry
 
@@ -117,7 +125,7 @@ export async function createTransfer(
                 ethChainId,
                 beneficiaryAccount,
                 amount,
-                ahAssetMetadata
+                ahAssetMetadata,
             )
         } else {
             tx = createAssetHubTx(
@@ -126,7 +134,7 @@ export async function createTransfer(
                 tokenAddress,
                 beneficiaryAccount,
                 amount,
-                ahAssetMetadata
+                ahAssetMetadata,
             )
         }
     } else {
@@ -136,11 +144,11 @@ export async function createTransfer(
             sourceAccountHex,
             tokenAddress,
             beneficiaryAccount,
-            amount
+            amount,
         )
         if (sourceAssetMetadata.location) {
             tx = createPNASourceParachainTx(
-                parachain,
+                sourceParachainImpl,
                 ethChainId,
                 assetHubParaId,
                 sourceAssetMetadata,
@@ -148,11 +156,11 @@ export async function createTransfer(
                 amount,
                 fee.totalFeeInNative ?? fee.totalFeeInDot,
                 messageId,
-                fee.totalFeeInNative !== undefined
+                fee.totalFeeInNative !== undefined,
             )
         } else {
             tx = createERC20SourceParachainTx(
-                parachain,
+                sourceParachainImpl,
                 ethChainId,
                 assetHubParaId,
                 sourceAccountHex,
@@ -163,7 +171,7 @@ export async function createTransfer(
                 messageId,
                 sourceParachainImpl.parachainId,
                 fee.returnToSenderExecutionFeeDOT,
-                fee.totalFeeInNative !== undefined
+                fee.totalFeeInNative !== undefined,
             )
         }
     }
@@ -199,7 +207,7 @@ export async function getDeliveryFee(
         padPercentage?: bigint
         slippagePadPercentage?: bigint
         defaultFee?: bigint
-    }
+    },
 ): Promise<DeliveryFee> {
     const { assetHub, source } =
         context instanceof Context
@@ -224,8 +232,9 @@ export async function getDeliveryFee(
     const { sourceAssetMetadata, sourceParachain } = resolveInputs(
         registry,
         tokenAddress,
-        parachain
+        parachain,
     )
+    const sourceParachainImpl = await paraImplementation(source)
 
     let xcm: any, forwardedXcm: any
 
@@ -240,7 +249,7 @@ export async function getDeliveryFee(
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
-            340282366920938463463374607431768211455n
+            340282366920938463463374607431768211455n,
         )
         forwardedXcm = buildExportXcmForPNA(
             assetHub.registry,
@@ -250,7 +259,7 @@ export async function getDeliveryFee(
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
-            1000
+            1000,
         )
     } else {
         if (sourceParachain.features.hasDotBalance) {
@@ -267,7 +276,8 @@ export async function getDeliveryFee(
                 parachain,
                 340282366920938463463374607431768211455n,
                 DOT_LOCATION,
-                DOT_LOCATION
+                DOT_LOCATION,
+                false,
             )
         } else {
             xcm = buildResultXcmAssetHubERC20TransferFromParachain(
@@ -282,8 +292,9 @@ export async function getDeliveryFee(
                 340282366920938463463374607431768211455n,
                 parachain,
                 340282366920938463463374607431768211455n,
-                HERE_LOCATION,
-                parachainLocation(sourceParachain.parachainId)
+                sourceParachainImpl.getNativeBalanceLocation("here"),
+                sourceParachainImpl.getNativeBalanceLocation("sibling"),
+                true,
             )
         }
         forwardedXcm = buildExportXcmForERC20(
@@ -294,18 +305,17 @@ export async function getDeliveryFee(
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
-            1000
+            1000,
         )
     }
 
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
     let returnToSenderDeliveryFeeDOT = 0n
-    const ahParachain = registry.parachains[registry.assetHubParaId]
     const assetHubImpl = await paraImplementation(assetHub)
     const bridgeHubDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
         registry.bridgeHubParaId,
-        forwardedXcm
+        forwardedXcm,
     )
     if (parachain !== registry.assetHubParaId) {
         let returnToSenderXcm: any
@@ -316,7 +326,7 @@ export async function getDeliveryFee(
                 340282366920938463463374607431768211455n,
                 340282366920938463463374607431768211455n,
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         } else {
             returnToSenderXcm = buildParachainERC20ReceivedXcmOnDestination(
@@ -326,22 +336,21 @@ export async function getDeliveryFee(
                 340282366920938463463374607431768211455n,
                 340282366920938463463374607431768211455n,
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         }
 
         returnToSenderDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
             parachain,
-            returnToSenderXcm
+            returnToSenderXcm,
         )
-        const sourceParachainImpl = await paraImplementation(source)
         returnToSenderExecutionFeeDOT = padFeeByPercentage(
             await sourceParachainImpl.calculateXcmFee(returnToSenderXcm, DOT_LOCATION),
-            feePadPercentage
+            feePadPercentage,
         )
         assetHubExecutionFeeDOT = padFeeByPercentage(
             await assetHubImpl.calculateXcmFee(xcm, DOT_LOCATION),
-            feePadPercentage
+            feePadPercentage,
         )
     }
 
@@ -361,30 +370,30 @@ export async function getDeliveryFee(
         totalFeeInDot =
             padFeeByPercentage(
                 snowbridgeDeliveryFeeDOT + bridgeHubDeliveryFeeDOT,
-                feeSlippagePadPercentage
+                feeSlippagePadPercentage,
             ) +
             assetHubExecutionFeeDOT +
             returnToSenderExecutionFeeDOT +
             returnToSenderDeliveryFeeDOT
 
-        const paraLoc = parachainLocation(parachain)
+        const nativeLocation = sourceParachainImpl.getNativeBalanceLocation("sibling")
         const [
             totalFeeInNativeRes,
             assetHubExecutionFeeNativeRes,
             returnToSenderExecutionFeeNativeRes,
         ] = await Promise.all([
-            getAssetHubConversionPalletSwap(assetHub, paraLoc, DOT_LOCATION, totalFeeInDot),
+            getAssetHubConversionPalletSwap(assetHub, nativeLocation, DOT_LOCATION, totalFeeInDot),
             getAssetHubConversionPalletSwap(
                 assetHub,
-                paraLoc,
+                nativeLocation,
                 DOT_LOCATION,
-                assetHubExecutionFeeDOT
+                assetHubExecutionFeeDOT,
             ),
             getAssetHubConversionPalletSwap(
                 assetHub,
-                paraLoc,
+                nativeLocation,
                 DOT_LOCATION,
-                returnToSenderExecutionFeeDOT
+                returnToSenderExecutionFeeDOT,
             ),
         ])
         totalFeeInNative = totalFeeInNativeRes
@@ -419,6 +428,7 @@ export enum ValidationReason {
     DryRunApiNotAvailable,
     DryRunFailed,
     InsufficientEtherBalance,
+    ContractCallInvalidTarget,
 }
 
 export type ValidationLog = {
@@ -438,6 +448,7 @@ export type ValidationResult = {
         tokenBalance: bigint
         sourceDryRunError: any
         assetHubDryRunError: any
+        bridgeHubDryRunError?: any
     }
     transfer: Transfer
 }
@@ -451,7 +462,7 @@ export async function validateTransfer(
               gateway: IGateway
               bridgeHub: ApiPromise
           },
-    transfer: Transfer
+    transfer: Transfer,
 ): Promise<ValidationResult> {
     const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
     const {
@@ -501,7 +512,7 @@ export async function validateTransfer(
                 sourceAccountHex,
                 registry.ethChainId,
                 tokenAddress,
-                sourceAssetMetadata
+                sourceAssetMetadata,
             )
         }
     }
@@ -527,6 +538,7 @@ export async function validateTransfer(
 
     let sourceDryRunError
     let assetHubDryRunError
+    let bridgeHubDryRunError
     if (source.features.hasDryRunApi) {
         // do the dry run, get the forwarded xcm and dry run that
         const dryRunSource = await dryRunOnSourceParachain(
@@ -534,7 +546,7 @@ export async function validateTransfer(
             registry.assetHubParaId,
             registry.bridgeHubParaId,
             transfer.tx,
-            sourceAccountHex
+            sourceAccountHex,
         )
         if (!dryRunSource.success) {
             logs.push({
@@ -545,27 +557,65 @@ export async function validateTransfer(
             sourceDryRunError = dryRunSource.error
         }
 
-        if (dryRunSource.success && sourceParaId !== registry.assetHubParaId) {
-            if (!dryRunSource.assetHubForwarded) {
-                logs.push({
-                    kind: ValidationKind.Error,
-                    reason: ValidationReason.DryRunFailed,
-                    message: "Dry run call did not provide a forwared xcm.",
-                })
-            } else {
-                const dryRunResultAssetHub = await dryRunAssetHub(
-                    assetHub,
-                    sourceParaId,
-                    registry.bridgeHubParaId,
-                    dryRunSource.assetHubForwarded[1][0]
-                )
-                if (!dryRunResultAssetHub.success) {
+        if (dryRunSource.success) {
+            if (sourceParaId == registry.assetHubParaId) {
+                if (!dryRunSource.bridgeHubForwarded) {
                     logs.push({
                         kind: ValidationKind.Error,
                         reason: ValidationReason.DryRunFailed,
-                        message: "Dry run failed on Asset Hub.",
+                        message: "Dry run call did not provide a forwarded xcm.",
                     })
-                    assetHubDryRunError = dryRunResultAssetHub.errorMessage
+                } else {
+                    const dryRunResultBridgeHub = await dryRunBridgeHub(
+                        bridgeHub,
+                        registry.assetHubParaId,
+                        dryRunSource.bridgeHubForwarded[1][0],
+                    )
+                    if (!dryRunResultBridgeHub.success) {
+                        logs.push({
+                            kind: ValidationKind.Error,
+                            reason: ValidationReason.DryRunFailed,
+                            message: "Dry run failed on Bridge Hub.",
+                        })
+                        bridgeHubDryRunError = dryRunResultBridgeHub.errorMessage
+                    }
+                }
+            } else {
+                if (!dryRunSource.assetHubForwarded) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.DryRunFailed,
+                        message: "Dry run call did not provide a forwarded xcm.",
+                    })
+                } else {
+                    const dryRunResultAssetHub = await dryRunAssetHub(
+                        assetHub,
+                        sourceParaId,
+                        registry.bridgeHubParaId,
+                        dryRunSource.assetHubForwarded[1][0],
+                    )
+                    if (dryRunResultAssetHub.success && dryRunResultAssetHub.bridgeHubForwarded) {
+                        const dryRunResultBridgeHub = await dryRunBridgeHub(
+                            bridgeHub,
+                            registry.assetHubParaId,
+                            dryRunResultAssetHub.bridgeHubForwarded[1][0],
+                        )
+                        if (!dryRunResultBridgeHub.success) {
+                            logs.push({
+                                kind: ValidationKind.Error,
+                                reason: ValidationReason.DryRunFailed,
+                                message: "Dry run failed on Bridge Hub.",
+                            })
+                            bridgeHubDryRunError = dryRunResultBridgeHub.errorMessage
+                        }
+                    } else {
+                        logs.push({
+                            kind: ValidationKind.Error,
+                            reason: ValidationReason.DryRunFailed,
+                            message: "Dry run call failed on Asset Hub.",
+                        })
+                        assetHubDryRunError = dryRunResultAssetHub.errorMessage
+                    }
                 }
             }
         }
@@ -592,8 +642,8 @@ export async function validateTransfer(
                         "0x0000000000000000000000000000000000000000000000000000000000000000",
                         amount,
                         fee.totalFeeInDot,
-                        fee.assetHubExecutionFeeDOT
-                    )
+                        fee.assetHubExecutionFeeDOT,
+                    ),
                 )
             } else {
                 if (!source.features.hasDotBalance && fee.totalFeeInNative) {
@@ -613,9 +663,10 @@ export async function validateTransfer(
                             fee.assetHubExecutionFeeNative ?? 0n,
                             sourceParaId,
                             fee.returnToSenderExecutionFeeNative ?? 0n,
-                            HERE_LOCATION,
-                            parachainLocation(sourceParaId)
-                        )
+                            sourceParachainImpl.getNativeBalanceLocation("here"),
+                            sourceParachainImpl.getNativeBalanceLocation("sibling"),
+                            true,
+                        ),
                     )
                 } else {
                     dryRunResultAssetHub = await dryRunAssetHub(
@@ -635,8 +686,9 @@ export async function validateTransfer(
                             sourceParaId,
                             fee.returnToSenderExecutionFeeDOT,
                             DOT_LOCATION,
-                            DOT_LOCATION
-                        )
+                            DOT_LOCATION,
+                            false,
+                        ),
                     )
                 }
             }
@@ -749,7 +801,7 @@ export async function signAndSend(
     context: Context | { sourceParachain: ApiPromise },
     transfer: Transfer,
     account: AddressOrPair,
-    options: Partial<SignerOptions>
+    options: Partial<SignerOptions>,
 ): Promise<MessageReceipt> {
     const { sourceParaId } = transfer.computed
     const { sourceParachain } =
@@ -841,7 +893,7 @@ function createAssetHubTx(
     tokenAddress: string,
     beneficiaryAccount: string,
     amount: bigint,
-    asset: Asset
+    asset: Asset,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     // Asset with location not null for PNA
     let assetLocation = asset.location || erc20Location(ethChainId, tokenAddress)
@@ -882,12 +934,12 @@ function createAssetHubTx(
         feeAsset,
         reserveType,
         customXcm,
-        "Unlimited"
+        "Unlimited",
     )
 }
 
 export function createERC20SourceParachainTx(
-    parachain: ApiPromise,
+    parachain: ParachainBase,
     ethChainId: number,
     assetHubParaId: number,
     sourceAccount: string,
@@ -898,9 +950,11 @@ export function createERC20SourceParachainTx(
     messageId: string,
     sourceParaId: number,
     returnToSenderFeeInDOT: bigint,
-    useNativeAssetAsFee: boolean
+    useNativeAssetAsFee: boolean,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
-    const feeAssetId = useNativeAssetAsFee ? HERE_LOCATION : DOT_LOCATION
+    const feeAssetId = useNativeAssetAsFee
+        ? parachain.getNativeBalanceLocation("here")
+        : DOT_LOCATION
     const assets = {
         v4: [
             {
@@ -921,7 +975,7 @@ export function createERC20SourceParachainTx(
     let customXcm
     if (useNativeAssetAsFee) {
         customXcm = buildAssetHubERC20TransferFromParachainWithNativeFee(
-            parachain.registry,
+            parachain.provider.registry,
             ethChainId,
             sourceAccount,
             beneficiaryAccount,
@@ -929,11 +983,12 @@ export function createERC20SourceParachainTx(
             messageId,
             sourceParaId,
             amount,
-            returnToSenderFeeInDOT
+            returnToSenderFeeInDOT,
+            parachain.getNativeBalanceLocation("sibling"),
         )
     } else {
         customXcm = buildAssetHubERC20TransferFromParachain(
-            parachain.registry,
+            parachain.provider.registry,
             ethChainId,
             sourceAccount,
             beneficiaryAccount,
@@ -941,17 +996,17 @@ export function createERC20SourceParachainTx(
             messageId,
             sourceParaId,
             returnToSenderFeeInDOT,
-            feeAssetId
+            feeAssetId,
         )
     }
-    return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
+    return parachain.provider.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
         assets,
         "DestinationReserve",
         feeAsset,
         useNativeAssetAsFee ? "Teleport" : "DestinationReserve",
         customXcm,
-        "Unlimited"
+        "Unlimited",
     )
 }
 
@@ -960,7 +1015,7 @@ export async function dryRunOnSourceParachain(
     assetHubParaId: number,
     bridgeHubParaId: number,
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>,
-    sourceAccount: string
+    sourceAccount: string,
 ) {
     const origin = { system: { signed: sourceAccount } }
     // To ensure compatibility, dryRunCall includes the version parameter in XCMv5.
@@ -983,7 +1038,7 @@ export async function dryRunOnSourceParachain(
             "Error during dry run on source parachain:",
             sourceAccount,
             tx.toHuman(),
-            result.toHuman()
+            result.toHuman(),
         )
     } else {
         bridgeHubForwarded =
@@ -1040,7 +1095,7 @@ export async function dryRunAssetHub(
     assetHub: ApiPromise,
     parachainId: number,
     bridgeHubParaId: number,
-    xcm: any
+    xcm: any,
 ) {
     const sourceParachain = { v4: { parents: 1, interior: { x1: [{ parachain: parachainId }] } } }
     const result = await assetHub.call.dryRunApi.dryRunXcm<
@@ -1089,7 +1144,7 @@ export async function buildMessageId(
     sourceAccountHex: string,
     tokenAddress: string,
     beneficiaryAccount: string,
-    amount: bigint
+    amount: bigint,
 ) {
     const [accountNextId] = await Promise.all([
         parachain.rpc.system.accountNextIndex(sourceAccountHex),
@@ -1106,7 +1161,7 @@ export async function buildMessageId(
 }
 
 function createPNASourceParachainTx(
-    parachain: ApiPromise,
+    parachain: ParachainBase,
     ethChainId: number,
     assetHubParaId: number,
     asset: Asset,
@@ -1114,9 +1169,11 @@ function createPNASourceParachainTx(
     amount: bigint,
     totalFee: bigint,
     messageId: string,
-    useNativeAssetAsFee: boolean
+    useNativeAssetAsFee: boolean,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
-    const feeAssetId = useNativeAssetAsFee ? HERE_LOCATION : DOT_LOCATION
+    const feeAssetId = useNativeAssetAsFee
+        ? parachain.getNativeBalanceLocation("here")
+        : DOT_LOCATION
     const assets = {
         v4: [
             {
@@ -1135,22 +1192,22 @@ function createPNASourceParachainTx(
         v4: feeAssetId,
     }
     const customXcm = buildAssetHubPNATransferFromParachain(
-        parachain.registry,
+        parachain.provider.registry,
         ethChainId,
         beneficiaryAccount,
         asset.locationOnAH,
         asset.locationOnEthereum,
-        messageId
+        messageId,
     )
 
-    return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
+    return parachain.provider.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
         assets,
         "Teleport",
         feeAsset,
         useNativeAssetAsFee ? "Teleport" : "DestinationReserve",
         customXcm,
-        "Unlimited"
+        "Unlimited",
     )
 }
 
@@ -1159,7 +1216,7 @@ function createAssetHubTxForPNAFromForeignConsensus(
     ethChainId: number,
     beneficiaryAccount: string,
     amount: bigint,
-    asset: Asset
+    asset: Asset,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     const assets = {
         v4: [
@@ -1197,6 +1254,27 @@ function createAssetHubTxForPNAFromForeignConsensus(
         feeAsset,
         "LocalReserve",
         customXcm,
-        "Unlimited"
+        "Unlimited",
     )
+}
+
+export async function dryRunBridgeHub(bridgeHub: ApiPromise, assetHubParaId: number, xcm: any) {
+    const sourceParachain = {
+        v5: { parents: 1, interior: { x1: [{ parachain: assetHubParaId }] } },
+    }
+    const result = await bridgeHub.call.dryRunApi.dryRunXcm<
+        Result<XcmDryRunEffects, XcmDryRunApiError>
+    >(sourceParachain, xcm)
+
+    const resultHuman = result.toHuman() as any
+
+    const success = result.isOk && result.asOk.executionResult.isComplete
+
+    if (!success) {
+        console.error("Error during dry run on bridge hub:", xcm.toHuman(), result.toHuman())
+    }
+    return {
+        success,
+        errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
+    }
 }

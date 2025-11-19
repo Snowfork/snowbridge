@@ -33,7 +33,7 @@ const sendBatchTransactions = async (
     wsPort: number,
     txs: TransactionConfig[],
     senderAddress?: string,
-    noSending?: boolean
+    noSending?: boolean,
 ) => {
     // Connect to node
     let api = await ApiPromise.create({
@@ -65,7 +65,7 @@ const sendBatchTransactions = async (
             : (function () {
                   const versionedLocation = api.createType("XcmVersionedLocation", authorizedAlias)
                   return api.tx.polkadotXcm.addAuthorizedAlias(versionedLocation, null)
-              })()
+              })(),
     )
     // Create a batch transaction
     const batchTx = api.tx.utility.batchAll(transactions)
@@ -92,7 +92,7 @@ const main = async () => {
     await sendBatchTransactions(
         9944,
         [{ recipient: "5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV" }],
-        "//Bob"
+        "//Bob",
     )
     // BridgeHub funding
     console.log("sending BridgeHub txs")
@@ -127,7 +127,7 @@ const main = async () => {
             { recipient: "1000", senderParaId: 2000 },
         ],
         sudoAccount,
-        true
+        true,
     ))!
 }
 
@@ -138,7 +138,7 @@ main()
         const unsub = await tx?.signAndSend(sender, ({ status }) => {
             if (status.isInBlock) {
                 console.log(
-                    `✅ Final Transaction included in block: ${status.asInBlock}, all transactions sent successfully.`
+                    `✅ Final Transaction included in block: ${status.asInBlock}, all transactions sent successfully.`,
                 )
                 unsub!()
                 process.exit(0)

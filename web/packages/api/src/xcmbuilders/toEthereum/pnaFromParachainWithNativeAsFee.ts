@@ -2,15 +2,18 @@ import { Registry } from "@polkadot/types/types"
 import {
     bridgeLocation,
     DOT_LOCATION,
-    erc20Location,
     parachainLocation,
     accountToLocation,
     HERE_LOCATION,
+    buildAppendixInstructions,
+    buildEthereumInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
+import { DeliveryFee } from "../../toEthereum_v2"
 
 export function buildTransferXcmFromParachainWithNativeAssetFee(
     registry: Registry,
+    envName: string,
     ethChainId: number,
     assetHubParaId: number,
     sourceParachainId: number,
@@ -19,14 +22,22 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
     topic: string,
     asset: Asset,
     tokenAmount: bigint,
-    localNativeFeeAmount: bigint,
-    totalNativeFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint,
-    remoteEtherFeeNativeAmount: bigint
+    fee: DeliveryFee,
+    claimerLocation?: any,
+    callHex?: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let tokenLocation = asset.location
+
+    let localNativeFeeAmount =
+        fee.localExecutionFeeInNative! +
+        fee.localDeliveryFeeInNative! +
+        fee.returnToSenderExecutionFeeNative!
+    let totalNativeFeeAmount = fee.totalFeeInNative!
+    let remoteEtherFeeAmount = fee.ethereumExecutionFee!
+    let remoteEtherFeeNativeAmount = fee.ethereumExecutionFeeInNative!
+
     let assets = []
     if (JSON.stringify(HERE_LOCATION) == JSON.stringify(tokenLocation)) {
         assets.push({
@@ -50,26 +61,18 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
         })
     }
 
+    let appendixInstructions = buildAppendixInstructions(
+        envName,
+        sourceParachainId,
+        sourceAccount,
+        claimerLocation,
+    )
+
+    let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
+
     let remoteInstructionsOnAH: any[] = [
         {
-            setAppendix: [
-                {
-                    refundSurplus: null,
-                },
-                {
-                    depositAsset: {
-                        assets: {
-                            wild: {
-                                allCounted: 3,
-                            },
-                        },
-                        beneficiary: {
-                            parents: 0,
-                            interior: { x1: [sourceLocation] },
-                        },
-                    },
-                },
-            ],
+            setAppendix: appendixInstructions,
         },
         // The first swap native asset to DOT
         {
@@ -148,24 +151,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                         },
                     },
                 ],
-                remoteXcm: [
-                    {
-                        depositAsset: {
-                            assets: {
-                                wild: {
-                                    allCounted: 3,
-                                },
-                            },
-                            beneficiary: {
-                                parents: 0,
-                                interior: { x1: [beneficiaryLocation] },
-                            },
-                        },
-                    },
-                    {
-                        setTopic: topic,
-                    },
-                ],
+                remoteXcm: remoteXcm,
             },
         },
         {

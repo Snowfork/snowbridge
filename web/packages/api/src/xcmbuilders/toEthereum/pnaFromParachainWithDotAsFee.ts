@@ -2,14 +2,17 @@ import { Registry } from "@polkadot/types/types"
 import {
     bridgeLocation,
     DOT_LOCATION,
-    erc20Location,
     parachainLocation,
     accountToLocation,
+    buildAppendixInstructions,
+    buildEthereumInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
+import { DeliveryFee } from "../../toEthereum_v2"
 
 export function buildTransferXcmFromParachainWithDOTAsFee(
     registry: Registry,
+    envName: string,
     ethChainId: number,
     assetHubParaId: number,
     sourceParachainId: number,
@@ -18,14 +21,20 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
     topic: string,
     asset: Asset,
     tokenAmount: bigint,
-    localDOTFeeAmount: bigint,
-    totalDOTFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint,
-    remoteEtherFeeInDOTAmount: bigint
+    fee: DeliveryFee,
+    claimerLocation?: any,
+    callHex?: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let tokenLocation = asset.location
+
+    let localDOTFeeAmount: bigint =
+        fee.localExecutionFeeDOT! + fee.localDeliveryFeeDOT! + fee.returnToSenderExecutionFeeDOT
+    let totalDOTFeeAmount: bigint = fee.totalFeeInDot
+    let remoteEtherFeeAmount: bigint = fee.ethereumExecutionFee!
+    let remoteEtherFeeInDOTAmount: bigint = fee.ethereumExecutionFeeInNative!
+
     let assets = [
         {
             id: tokenLocation,
@@ -40,26 +49,19 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
             },
         },
     ]
+
+    let appendixInstructions = buildAppendixInstructions(
+        envName,
+        sourceParachainId,
+        sourceAccount,
+        claimerLocation,
+    )
+
+    let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
+
     let remoteInstructionsOnAH: any[] = [
         {
-            setAppendix: [
-                {
-                    refundSurplus: null,
-                },
-                {
-                    depositAsset: {
-                        assets: {
-                            wild: {
-                                allCounted: 3,
-                            },
-                        },
-                        beneficiary: {
-                            parents: 0,
-                            interior: { x1: [sourceLocation] },
-                        },
-                    },
-                },
-            ],
+            setAppendix: appendixInstructions,
         },
         {
             exchangeAsset: {
@@ -112,24 +114,7 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
                         },
                     },
                 ],
-                remoteXcm: [
-                    {
-                        depositAsset: {
-                            assets: {
-                                wild: {
-                                    allCounted: 3,
-                                },
-                            },
-                            beneficiary: {
-                                parents: 0,
-                                interior: { x1: [beneficiaryLocation] },
-                            },
-                        },
-                    },
-                    {
-                        setTopic: topic,
-                    },
-                ],
+                remoteXcm: remoteXcm,
             },
         },
         {

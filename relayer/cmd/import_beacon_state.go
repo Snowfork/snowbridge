@@ -92,13 +92,16 @@ func importBeaconState(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("read finalized state data from file: %w", err)
 	}
 
-	afterDenebFork := (conf.Source.Beacon.Spec.ForkVersions.Deneb + 1) * 32
+	headerToDetermineFork, err := syncer.Client.GetHeaderAtHead()
+	if err != nil {
+		return fmt.Errorf("fetch header: %w", err)
+	}
 
-	attestedState, err := syncer.UnmarshalBeaconState(afterDenebFork, attestedData)
+	attestedState, err := syncer.UnmarshalBeaconState(headerToDetermineFork.Slot, attestedData)
 	if err != nil {
 		return fmt.Errorf("unmarshal attested beacon state: %w", err)
 	}
-	finalizedState, err := syncer.UnmarshalBeaconState(afterDenebFork, finalizedData)
+	finalizedState, err := syncer.UnmarshalBeaconState(headerToDetermineFork.Slot, finalizedData)
 	if err != nil {
 		return fmt.Errorf("unmarshal finalized beacon state: %w", err)
 	}

@@ -8,8 +8,11 @@ import {
     parachainLocation,
     accountToLocation,
     isEthereumNative,
+    buildAppendixInstructions,
+    buildEthereumInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
+import { DeliveryFee } from "../../toEthereum_v2"
 
 export function buildParachainERC20ReceivedXcmOnDestination(
     registry: Registry,
@@ -18,7 +21,7 @@ export function buildParachainERC20ReceivedXcmOnDestination(
     transferAmount: bigint,
     feeInDot: bigint,
     beneficiary: string,
-    topic: string
+    topic: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     return registry.createType("XcmVersionedXcm", {
@@ -77,7 +80,7 @@ function buildAssetHubXcmFromParachain(
     topic: string,
     sourceParachainId: number,
     destinationFee: bigint,
-    feeAssetId: any
+    feeAssetId: any,
 ) {
     let {
         hexAddress,
@@ -190,7 +193,7 @@ export function buildAssetHubERC20TransferFromParachain(
     topic: string,
     sourceParachainId: number,
     returnToSenderFee: bigint,
-    feeAssetId: any
+    feeAssetId: any,
 ) {
     return registry.createType("XcmVersionedXcm", {
         v5: buildAssetHubXcmFromParachain(
@@ -201,7 +204,7 @@ export function buildAssetHubERC20TransferFromParachain(
             topic,
             sourceParachainId,
             returnToSenderFee,
-            feeAssetId
+            feeAssetId,
         ),
     })
 }
@@ -219,7 +222,7 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
     sourceParachainId: number,
     returnToSenderFee: bigint,
     feeAssetId: any,
-    feeAssetIdReanchored: any
+    feeAssetIdReanchored: any,
 ) {
     return registry.createType("XcmVersionedXcm", {
         v5: [
@@ -259,7 +262,7 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
                 topic,
                 sourceParachainId,
                 returnToSenderFee,
-                feeAssetId
+                feeAssetId,
             ),
         ],
     })
@@ -267,6 +270,7 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
 
 export function buildTransferXcmFromParachain(
     registry: Registry,
+    envName: string,
     ethChainId: number,
     assetHubParaId: number,
     sourceParachainId: number,
@@ -275,13 +279,19 @@ export function buildTransferXcmFromParachain(
     topic: string,
     asset: Asset,
     tokenAmount: bigint,
-    localDOTFeeAmount: bigint,
-    totalDOTFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint
+    fee: DeliveryFee,
+    claimerLocation?: any,
+    callHex?: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let tokenLocation = erc20Location(ethChainId, asset.token)
+
+    let localDOTFeeAmount: bigint =
+        fee.localExecutionFeeDOT! + fee.localDeliveryFeeDOT! + fee.returnToSenderExecutionFeeDOT
+    let totalDOTFeeAmount: bigint = fee.totalFeeInDot!
+    let remoteEtherFeeAmount: bigint = fee.ethereumExecutionFee!
+
     let assets = []
 
     assets.push({
@@ -312,26 +322,18 @@ export function buildTransferXcmFromParachain(
         })
     }
 
+    let appendixInstructions = buildAppendixInstructions(
+        envName,
+        sourceParachainId,
+        sourceAccount,
+        claimerLocation,
+    )
+
+    let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
+
     let remoteInstructionsOnAH: any[] = [
         {
-            setAppendix: [
-                {
-                    refundSurplus: null,
-                },
-                {
-                    depositAsset: {
-                        assets: {
-                            wild: {
-                                allCounted: 3,
-                            },
-                        },
-                        beneficiary: {
-                            parents: 0,
-                            interior: { x1: [sourceLocation] },
-                        },
-                    },
-                },
-            ],
+            setAppendix: appendixInstructions,
         },
         {
             initiateTransfer: {
@@ -363,24 +365,7 @@ export function buildTransferXcmFromParachain(
                         },
                     },
                 ],
-                remoteXcm: [
-                    {
-                        depositAsset: {
-                            assets: {
-                                wild: {
-                                    allCounted: 3,
-                                },
-                            },
-                            beneficiary: {
-                                parents: 0,
-                                interior: { x1: [beneficiaryLocation] },
-                            },
-                        },
-                    },
-                    {
-                        setTopic: topic,
-                    },
-                ],
+                remoteXcm: remoteXcm,
             },
         },
         {

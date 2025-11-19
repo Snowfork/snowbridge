@@ -11,10 +11,10 @@ const ACCOUNT_BALANCE_SNS_TOPIC = process.env["ACCOUNT_BALANCE_SNS_TOPIC"] || ""
 
 const LatencyDashboard =
     process.env["LATENCY_DASHBOARD_URL"] ||
-    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Latency"
+    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Latency?start=PT168H&end=null"
 const BalanceDashboard =
     process.env["BALANCE_DASHBOARD_URL"] ||
-    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Balance"
+    "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#dashboards/dashboard/Balance?start=PT168H&end=null"
 
 export enum AlarmReason {
     BeefyStale = "BeefyStale",
@@ -25,6 +25,10 @@ export enum AlarmReason {
     SovereignAccountBalanceInsufficient = "SovereignAccountBalanceInsufficient",
     IndexServiceStale = "IndexServiceStale",
     HeartbeatLost = "HeartbeatLost",
+    ToPolkadotV2Stale = "ToPolkadotV2Stale",
+    ToEthereumV2Stale = "ToEthereumV2Stale",
+    FutureBlockVoting = "FutureBlockVoting",
+    ForkVoting = "ForkVoting",
 }
 
 export const InsufficientBalanceThreshold = {
@@ -218,10 +222,36 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
             Value: Number(status.latency),
         })
     }
+    // V2 metrics
+    if (metrics.v2Status?.toEthereum.estimatedDeliveryTime) {
+        metricData.push({
+            MetricName: "ToEthereumV2DeliveryEstimate",
+            Value: metrics.v2Status?.toEthereum.estimatedDeliveryTime,
+        })
+    }
+    if (metrics.v2Status?.toPolkadot.estimatedDeliveryTime) {
+        metricData.push({
+            MetricName: "ToPolkadotV2DeliveryEstimate",
+            Value: metrics.v2Status?.toPolkadot.estimatedDeliveryTime,
+        })
+    }
+    if (metrics.v2Status?.toEthereum.undeliveredTimeout) {
+        metricData.push({
+            MetricName: "ToEthereumV2UndeliveredTimeout",
+            Value: metrics.v2Status?.toEthereum.undeliveredTimeout,
+        })
+    }
+    if (metrics.v2Status?.toPolkadot.undeliveredTimeout) {
+        metricData.push({
+            MetricName: "ToPolkadotV2UndeliveredTimeout",
+            Value: metrics.v2Status?.toPolkadot.undeliveredTimeout,
+        })
+    }
     const command = new PutMetricDataCommand({
         MetricData: metricData,
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + metrics.name,
     })
+    console.log("Sent metrics:", JSON.stringify(metricData, null, 2))
     await client.send(command)
 }
 
@@ -248,6 +278,23 @@ export const initializeAlarms = async () => {
         DatapointsToAlarm: AlarmEvaluationConfiguration.DatapointsToAlarm,
     }
 
+    // For alarms that need to trigger when an absolute value breaches a
+    // threshold. For this case dont wait for 3/4 datapoints in a 15 minute
+    // window(45 min) as it will take a minimum of 45 minutes before alarms are
+    // triggered. Use 5 minutes instead. Alarm uses maximum statistic because
+    // so that it alarms when the maximum value is breaching within a time
+    // window.
+    // e.g. bridge latency greater than x seconds.
+    // e.g. nonce difference greater than x messages.
+    let absoluteValueBreachingAlarmConfig: any = {
+        Namespace: CLOUD_WATCH_NAME_SPACE + "-" + name,
+        TreatMissingData: "notBreaching",
+        Period: 60 * 5,
+        Statistic: "Maximum",
+        EvaluationPeriods: 1,
+        DatapointsToAlarm: 1,
+    }
+
     // Beefy stale
     cloudWatchAlarms.push(
         new PutMetricAlarmCommand({
@@ -257,7 +304,7 @@ export const initializeAlarms = async () => {
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             Threshold: 3600 * 4, // 1 epoch = 4 hours
-        })
+        }),
     )
     // Beacon stale
     cloudWatchAlarms.push(
@@ -268,7 +315,7 @@ export const initializeAlarms = async () => {
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             Threshold: 1500, // 3 epochs = 3 * 6.4 mins ~= 20 mins
-        })
+        }),
     )
 
     // To Ethereum channel stale
@@ -284,9 +331,10 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            ...alarmCommandSharedInput,
+            ComparisonOperator: "GreaterThanThreshold",
+            ...absoluteValueBreachingAlarmConfig,
             Threshold: 5400, // 1.5 hours at most
-        })
+        }),
     )
 
     // To Polkadot channel stale
@@ -302,14 +350,11 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: LatencyDashboard,
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            ...alarmCommandSharedInput,
+            ComparisonOperator: "GreaterThanThreshold",
+            ...absoluteValueBreachingAlarmConfig,
             Threshold: 1800, // 0.5 hour
-        })
+        }),
     )
-
-    for (let alarm of cloudWatchAlarms) {
-        await client.send(alarm)
-    }
 
     // Insufficient balance in the relay account
     for (const relayName of ["beacon", "execution-assethub"]) {
@@ -333,7 +378,7 @@ export const initializeAlarms = async () => {
             ComparisonOperator: "LessThanThreshold",
             Threshold: InsufficientBalanceThreshold.Substrate,
         })
-        await client.send(relayAccountBalanceAlarm)
+        cloudWatchAlarms.push(relayAccountBalanceAlarm)
     }
 
     // Insufficient balance in the sovereign account
@@ -352,10 +397,18 @@ export const initializeAlarms = async () => {
         ComparisonOperator: "LessThanThreshold",
         Threshold: InsufficientBalanceThreshold.Substrate,
     })
-    await client.send(sovereignAccountBalanceAlarm)
+    cloudWatchAlarms.push(sovereignAccountBalanceAlarm)
 
     // Indexer service stale
-    for (const chain of ["assethub", "bridgehub", "ethereum", "kusama_assethub"]) {
+    for (const chain of [
+        "assethub",
+        "bridgehub",
+        "ethereum",
+        "kusama_assethub",
+        "hydration",
+        "neuroweb",
+        "mythos",
+    ]) {
         let indexerAlarm = new PutMetricAlarmCommand({
             AlarmName: AlarmReason.IndexServiceStale.toString() + "-" + name + "-" + chain,
             MetricName: "IndexerLatency",
@@ -367,10 +420,11 @@ export const initializeAlarms = async () => {
             ],
             AlarmDescription: AlarmReason.IndexServiceStale.toString(),
             AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            ...alarmCommandSharedInput,
+            ComparisonOperator: "GreaterThanThreshold",
+            ...absoluteValueBreachingAlarmConfig,
             Threshold: IndexerLatencyThreshold,
         })
-        await client.send(indexerAlarm)
+        cloudWatchAlarms.push(indexerAlarm)
     }
 
     // Heartbeat lost
@@ -384,5 +438,86 @@ export const initializeAlarms = async () => {
         Threshold: 1,
         TreatMissingData: "breaching",
     })
-    await client.send(heartbeartAlarm)
+    cloudWatchAlarms.push(heartbeartAlarm)
+
+    // To Ethereum V2 stale
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.ToEthereumV2Stale.toString() + "-" + name,
+            MetricName: "ToEthereumV2UndeliveredTimeout",
+            AlarmDescription: LatencyDashboard,
+            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            ...alarmCommandSharedInput,
+            Threshold: 5400, // 1.5 hours at most
+        }),
+    )
+
+    // To Polkadot V2 stale
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.ToPolkadotV2Stale.toString() + "-" + name,
+            MetricName: "ToPolkadotV2UndeliveredTimeout",
+            AlarmDescription: LatencyDashboard,
+            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            ...alarmCommandSharedInput,
+            Threshold: 1800, // 0.5 hour
+        }),
+    )
+
+    // Fisherman FutureBlockVoting equivocation alarm
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.FutureBlockVoting.toString() + "-" + name,
+            MetricName: AlarmReason.FutureBlockVoting.toString(),
+            AlarmDescription: AlarmReason.FutureBlockVoting.toString(),
+            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            ...alarmCommandSharedInput,
+            Period: 120,
+            EvaluationPeriods: 1,
+            DatapointsToAlarm: 1,
+            Threshold: 0,
+        }),
+    )
+    // Fisherman ForkVoting equivocation alarm
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.ForkVoting.toString() + "-" + name,
+            MetricName: AlarmReason.ForkVoting.toString(),
+            AlarmDescription: AlarmReason.ForkVoting.toString(),
+            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
+            ...alarmCommandSharedInput,
+            Period: 120,
+            EvaluationPeriods: 1,
+            DatapointsToAlarm: 1,
+            Threshold: 0,
+        }),
+    )
+
+    // Send all alarms
+    for (let alarm of cloudWatchAlarms) {
+        await client.send(alarm)
+    }
+}
+
+const sendFishermanAlarm = async (nameSpace: string, reason: AlarmReason, blockNumber: number) => {
+    let client = new CloudWatchClient({})
+    let metricData = [] // Fisherman metrics
+    metricData.push({
+        MetricName: reason.toString(),
+        Value: blockNumber,
+    })
+    const command = new PutMetricDataCommand({
+        MetricData: metricData,
+        Namespace: CLOUD_WATCH_NAME_SPACE + "-" + nameSpace,
+    })
+    console.log("Sent fisherman alarm:", JSON.stringify(metricData, null, 2))
+    await client.send(command)
+}
+
+export const sendForkVotingAlarm = async (nameSpace: string, blockNumber: number) => {
+    await sendFishermanAlarm(nameSpace, AlarmReason.ForkVoting, blockNumber)
+}
+
+export const sendFutureBlockVotingAlarm = async (nameSpace: string, blockNumber: number) => {
+    await sendFishermanAlarm(nameSpace, AlarmReason.FutureBlockVoting, blockNumber)
 }

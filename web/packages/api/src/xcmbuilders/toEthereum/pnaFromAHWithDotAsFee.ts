@@ -2,11 +2,12 @@ import { Registry } from "@polkadot/types/types"
 import {
     bridgeLocation,
     DOT_LOCATION,
-    erc20Location,
     accountToLocation,
     isRelaychainLocation,
+    buildEthereumInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
+import { DeliveryFee } from "../../toEthereum_v2"
 
 export function buildTransferXcmFromAssetHubWithDOTAsFee(
     registry: Registry,
@@ -16,13 +17,18 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
     topic: string,
     asset: Asset,
     tokenAmount: bigint,
-    localDOTFeeAmount: bigint,
-    totalDOTFeeAmount: bigint,
-    remoteEtherFeeAmount: bigint
+    fee: DeliveryFee,
+    callHex?: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = asset.location || erc20Location(ethChainId, asset.token)
+    let tokenLocation = asset.location
+
+    let localDOTFeeAmount =
+        fee.localExecutionFeeDOT! + fee.bridgeHubDeliveryFeeDOT + fee.snowbridgeDeliveryFeeDOT
+    let totalDOTFeeAmount = fee.totalFeeInDot!
+    let remoteEtherFeeAmount = fee.ethereumExecutionFee!
+
     let assets = []
     if (isRelaychainLocation(tokenLocation)) {
         assets.push({
@@ -45,6 +51,9 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
             },
         })
     }
+
+    let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
+
     let instructions: any[] = [
         {
             withdrawAsset: assets,
@@ -130,21 +139,7 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
                         },
                     },
                 ],
-                remoteXcm: [
-                    {
-                        depositAsset: {
-                            assets: {
-                                wild: {
-                                    allCounted: 2,
-                                },
-                            },
-                            beneficiary: {
-                                parents: 0,
-                                interior: { x1: [beneficiaryLocation] },
-                            },
-                        },
-                    },
-                ],
+                remoteXcm: remoteXcm,
             },
         },
         {

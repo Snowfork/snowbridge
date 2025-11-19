@@ -1,9 +1,9 @@
 import { Context } from "./index"
 import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
-import { fetchEstimatedDeliveryTime } from "./subsquid"
+import { fetchEstimatedDeliveryTime, fetchV2EstimatedDeliveryTime } from "./subsquid"
 import { Relayer, SourceType } from "./environment"
 import { ApiPromise } from "@polkadot/api"
-import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
+import { IGatewayV1, IGatewayV2 } from "@snowbridge/contract-types"
 
 export type OperatingMode = "Normal" | "Halted"
 export type BridgeStatusInfo = {
@@ -58,11 +58,27 @@ export type ChannelStatusInfo = {
     }
 }
 
+export type V2StatusInfo = {
+    toEthereum: {
+        outbound: number
+        // The estimated average delivery time for the most recent 10 messages.
+        estimatedDeliveryTime?: number
+        // The timeout duration of the oldest undelivered message.
+        undeliveredTimeout?: number
+    }
+    toPolkadot: {
+        outbound: number
+        estimatedDeliveryTime?: number
+        undeliveredTimeout?: number
+    }
+}
+
 export type Sovereign = { name: string; account: string; balance: bigint; type: SourceType }
 
 export type IndexerServiceStatusInfo = {
     chain: string
     latency: number
+    paraid?: number
 }
 
 export type AllMetrics = {
@@ -72,6 +88,7 @@ export type AllMetrics = {
     sovereigns: Sovereign[]
     relayers: Relayer[]
     indexerStatus: IndexerServiceStatusInfo[]
+    v2Status?: V2StatusInfo
 }
 
 export type OperationStatus = {
@@ -88,7 +105,7 @@ export async function getOperatingStatus({
     gateway,
     bridgeHub,
 }: {
-    gateway: IGateway
+    gateway: IGatewayV1 | IGatewayV2
     bridgeHub: ApiPromise
 }): Promise<OperationStatus> {
     const ethereumOperatingMode = await gateway.operatingMode()
@@ -119,7 +136,7 @@ export const bridgeStatusInfo = async (
     options = {
         polkadotBlockTimeInSeconds: 6,
         ethereumBlockTimeInSeconds: 12,
-    }
+    },
 ): Promise<BridgeStatusInfo> => {
     const [bridgeHub, ethereum, gateway, beefyClient, relaychain] = await Promise.all([
         context.bridgeHub(),
@@ -132,10 +149,9 @@ export const bridgeStatusInfo = async (
     // Beefy status
     const latestBeefyBlock = Number(await beefyClient.latestBeefyBlock())
     const latestPolkadotBlock = (await relaychain.query.system.number()).toPrimitive() as number
-    const latestBeaconSlot = await ethereum.getBlockNumber()
     const latestFinalizedBeefyBlock = (
         await relaychain.rpc.chain.getHeader(
-            (await relaychain.rpc.beefy.getFinalizedHead()).toU8a()
+            (await relaychain.rpc.beefy.getFinalizedHead()).toU8a(),
         )
     ).number.toNumber()
     const beefyBlockLatency = latestFinalizedBeefyBlock - latestBeefyBlock
@@ -151,9 +167,10 @@ export const bridgeStatusInfo = async (
     ).toHex()
     const latestBeaconBlockOnPolkadot = Number(
         (await fetchBeaconSlot(context.config.ethereum.beacon_url, latestBeaconBlockRoot)).data
-            .message.slot
+            .message.slot,
     )
-    const beaconBlockLatency = latestBeaconBlock.data.message.slot - latestBeaconBlockOnPolkadot
+    const beaconBlockLatency =
+        latestFinalizedBeaconBlock.finalized_slot - latestBeaconBlockOnPolkadot
     const beaconLatencySeconds = beaconBlockLatency * options.ethereumBlockTimeInSeconds
 
     // Operating mode
@@ -181,7 +198,7 @@ export const bridgeStatusInfo = async (
 
 export const channelStatusInfo = async (
     context: Context,
-    channelId: string
+    channelId: string,
 ): Promise<ChannelStatusInfo> => {
     const [bridgeHub, ethereum, gateway] = await Promise.all([
         context.bridgeHub(),
@@ -207,7 +224,7 @@ export const channelStatusInfo = async (
         try {
             estimatedDeliveryTime = await fetchEstimatedDeliveryTime(
                 context.graphqlApiUrl(),
-                channelId
+                channelId,
             )
         } catch (e: any) {
             console.error("estimate api error:" + e.message)
@@ -219,7 +236,7 @@ export const channelStatusInfo = async (
             outbound: outbound_nonce_sub,
             inbound: Number(inbound_nonce_eth),
             estimatedDeliveryTime: Math.ceil(
-                Number(estimatedDeliveryTime?.toEthereumElapse?.elapse)
+                Number(estimatedDeliveryTime?.toEthereumElapse?.elapse),
             ),
         },
         toPolkadot: {
@@ -229,7 +246,44 @@ export const channelStatusInfo = async (
             outbound: Number(outbound_nonce_eth),
             inbound: inbound_nonce_sub,
             estimatedDeliveryTime: Math.ceil(
-                Number(estimatedDeliveryTime?.toPolkadotElapse?.elapse)
+                Number(estimatedDeliveryTime?.toPolkadotElapse?.elapse),
+            ),
+        },
+    }
+}
+
+export const v2Status = async (context: Context): Promise<V2StatusInfo> => {
+    const [bridgeHub, ethereum, gateway] = await Promise.all([
+        context.bridgeHub(),
+        context.ethereum(),
+        context.gatewayV2(),
+    ])
+
+    const outbound_nonce_eth = await gateway.v2_outboundNonce()
+    const outbound_nonce_sub = (
+        await bridgeHub.query.ethereumOutboundQueue.nonce()
+    ).toPrimitive() as number
+
+    let estimatedDeliveryTime: any
+    if (context.config.graphqlApiUrl) {
+        try {
+            estimatedDeliveryTime = await fetchV2EstimatedDeliveryTime(context.graphqlApiUrl())
+        } catch (e: any) {
+            console.error("estimate api error:" + e.message)
+        }
+    }
+
+    return {
+        toEthereum: {
+            outbound: outbound_nonce_sub,
+            estimatedDeliveryTime: Math.ceil(
+                Number(estimatedDeliveryTime?.toEthereumV2Elapse?.elapse),
+            ),
+        },
+        toPolkadot: {
+            outbound: Number(outbound_nonce_eth),
+            estimatedDeliveryTime: Math.ceil(
+                Number(estimatedDeliveryTime?.toPolkadotV2Elapse?.elapse),
             ),
         },
     }

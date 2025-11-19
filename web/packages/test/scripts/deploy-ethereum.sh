@@ -98,6 +98,7 @@ start_lodestar() {
         --params.CAPELLA_FORK_EPOCH 0 \
         --params.DENEB_FORK_EPOCH 0 \
         --params.ELECTRA_FORK_EPOCH 0 \
+        --params.FULU_FORK_EPOCH 50000000 \
         --rest.namespace="*" \
         --jwt-secret $config_dir/jwtsecret \
         --chain.archiveStateEpochFrequency 1 \

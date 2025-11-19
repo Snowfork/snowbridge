@@ -80,9 +80,7 @@ func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Gro
 					_, err := client.NetworkID(ctx)
 					if err != nil {
 						log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
-						return err
 					}
-					log.WithField("endpoint", co.endpoint).Info("Connection heartbeat received")
 				}
 			}
 		})
@@ -148,6 +146,8 @@ func (co *Connection) queryFailingError(ctx context.Context, hash common.Hash) e
 	return nil
 }
 
+const PollInterval uint64 = 12
+
 func (co *Connection) waitForTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
 	var cnt uint64
 	for {
@@ -163,11 +163,11 @@ func (co *Connection) waitForTransaction(ctx context.Context, tx *types.Transact
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case <-time.After(6 * time.Second):
+		case <-time.After(time.Duration(PollInterval) * time.Second):
 			if co.config.PendingTxTimeoutSecs > 0 {
 				cnt++
-				log.Info(fmt.Sprintf("waiting for receipt: %d seconds elapsed", cnt*6))
-				if cnt*6 > co.config.PendingTxTimeoutSecs {
+				log.Info(fmt.Sprintf("waiting for receipt: %d seconds elapsed", cnt*PollInterval))
+				if cnt*PollInterval > co.config.PendingTxTimeoutSecs {
 					return nil, fmt.Errorf("wait receipt timeout")
 				}
 			}
@@ -188,7 +188,7 @@ func (co *Connection) pollTransaction(ctx context.Context, tx *types.Transaction
 		return nil, err
 	}
 
-	if latestHeader.Number.Uint64()-receipt.BlockNumber.Uint64() >= confirmations {
+	if latestHeader != nil && receipt != nil && latestHeader.Number.Uint64()-receipt.BlockNumber.Uint64() >= confirmations {
 		return receipt, nil
 	}
 
@@ -248,4 +248,18 @@ func (co *Connection) MakeTxOpts(ctx context.Context) *bind.TransactOpts {
 	}
 
 	return &options
+}
+
+func (co *Connection) WaitForFutureBlock(ctx context.Context, blockNumber uint64, gap uint64) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Duration(PollInterval) * time.Second):
+			latestHeader, err := co.Client().HeaderByNumber(ctx, nil)
+			if err == nil && latestHeader != nil && latestHeader.Number.Uint64()-blockNumber >= gap {
+				return nil
+			}
+		}
+	}
 }

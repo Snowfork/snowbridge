@@ -4,8 +4,10 @@ import { AbstractProvider, JsonRpcProvider, WebSocketProvider } from "ethers"
 import {
     BeefyClient,
     BeefyClient__factory,
-    IGatewayV1 as IGateway,
-    IGatewayV1__factory as IGateway__factory,
+    IGatewayV1,
+    IGatewayV1__factory,
+    IGatewayV2,
+    IGatewayV2__factory,
 } from "@snowbridge/contract-types"
 import { SNOWBRIDGE_ENV } from "./environment"
 
@@ -24,6 +26,7 @@ export * as parachains from "./parachains"
 export * as xcmBuilder from "./xcmBuilder"
 export * as toEthereumSnowbridgeV2 from "./toEthereumSnowbridgeV2"
 export * as neuroWeb from "./parachains/neuroweb"
+export * as toPolkadotSnowbridgeV2 from "./toPolkadotSnowbridgeV2"
 
 interface Parachains {
     [paraId: string]: ApiPromise
@@ -55,6 +58,7 @@ interface Config {
         beefy: string
     }
     graphqlApiUrl: string
+    monitorChains?: number[]
 }
 
 export class Context {
@@ -62,7 +66,8 @@ export class Context {
 
     // Ethereum
     #ethChains: EthereumChains
-    #gateway?: IGateway
+    #gateway?: IGatewayV1
+    #gatewayV2?: IGatewayV2
     #beefyClient?: BeefyClient
 
     // Substrate
@@ -131,16 +136,27 @@ export class Context {
         if (paraIdKey in parachains) {
             const url = parachains[paraIdKey]
             console.log("Connecting to parachain ", paraIdKey, url)
-            const api = await ApiPromise.create({
+            let options: any = {
                 noInitWarn: true,
                 provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
-            })
+            }
+            if (paraId === this.config.polkadot.bridgeHubParaId) {
+                options.types = {
+                    ContractCall: {
+                        target: "[u8; 20]",
+                        calldata: "Vec<u8>",
+                        value: "u128",
+                        gas: "u64",
+                    },
+                }
+            }
+            const api = await ApiPromise.create(options)
             const onChainParaId = (
                 await api.query.parachainInfo.parachainId()
             ).toPrimitive() as number
             if (onChainParaId !== paraId) {
                 console.warn(
-                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`
+                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`,
                 )
             }
             this.#polkadotParachains[onChainParaId] = api
@@ -172,7 +188,7 @@ export class Context {
             ).toPrimitive() as number
             if (onChainParaId !== paraId) {
                 console.warn(
-                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`
+                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`,
                 )
             }
             this.#kusamaParachains[onChainParaId] = api
@@ -213,11 +229,18 @@ export class Context {
         return this.ethChain(this.config.ethereum.ethChainId)
     }
 
-    gateway(): IGateway {
+    gateway(): IGatewayV1 {
         if (this.#gateway) {
             return this.#gateway
         }
-        return IGateway__factory.connect(this.config.appContracts.gateway, this.ethereum())
+        return IGatewayV1__factory.connect(this.config.appContracts.gateway, this.ethereum())
+    }
+
+    gatewayV2(): IGatewayV2 {
+        if (this.#gatewayV2) {
+            return this.#gatewayV2
+        }
+        return IGatewayV2__factory.connect(this.config.appContracts.gateway, this.ethereum())
     }
 
     beefyClient(): BeefyClient {
@@ -231,10 +254,15 @@ export class Context {
         return this.config.graphqlApiUrl
     }
 
+    monitorChains(): number[] | undefined {
+        return this.config.monitorChains
+    }
+
     async destroyContext(): Promise<void> {
         // clean up contract listeners
         if (this.#beefyClient) await this.beefyClient().removeAllListeners()
         if (this.#gateway) await this.gateway().removeAllListeners()
+        if (this.#gatewayV2) await this.gatewayV2().removeAllListeners()
 
         // clean up etheruem
         for (const ethChainKey of Object.keys(this.config.ethereum.ethChains)) {
@@ -260,7 +288,7 @@ export class Context {
 }
 
 export function contextConfigFor(
-    env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {})
+    env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {}),
 ): Config {
     if (!(env in SNOWBRIDGE_ENV)) {
         throw Error(`Unknown environment '${env}'.`)
@@ -277,6 +305,7 @@ export function contextConfigFor(
             PARACHAINS,
             RELAY_CHAIN_URL,
             GRAPHQL_API_URL,
+            TO_MONITOR_PARACHAINS,
         },
         kusamaConfig,
     } = SNOWBRIDGE_ENV[env]
@@ -322,5 +351,6 @@ export function contextConfigFor(
             beefy: BEEFY_CONTRACT,
         },
         graphqlApiUrl: GRAPHQL_API_URL,
+        monitorChains: TO_MONITOR_PARACHAINS,
     }
 }
