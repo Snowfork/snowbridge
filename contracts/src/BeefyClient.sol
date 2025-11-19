@@ -459,12 +459,10 @@ contract BeefyClient {
         Commitment calldata commitment,
         uint256[] calldata bitfield
     ) external view returns (uint256[] memory) {
-        ValidatorSetState storage vset;
+        ValidatorSetState storage vset = currentValidatorSet;
         if (commitment.validatorSetID == nextValidatorSet.id) {
             vset = nextValidatorSet;
-        } else if (commitment.validatorSetID == currentValidatorSet.id) {
-            vset = currentValidatorSet;
-        } else {
+        } else if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
         }
 
@@ -475,7 +473,7 @@ contract BeefyClient {
         uint256 requiredSignatures =
             Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
         return
-            Bitfield.subsample(uint256(fiatShamirHash), bitfield, requiredSignatures, vset.length);
+            Bitfield.subsample(uint256(fiatShamirHash), bitfield, vset.length, requiredSignatures);
     }
 
     /**
@@ -501,13 +499,11 @@ contract BeefyClient {
         }
 
         bool is_next_session = false;
-        ValidatorSetState storage vset;
+        ValidatorSetState storage vset = currentValidatorSet;
         if (commitment.validatorSetID == nextValidatorSet.id) {
             is_next_session = true;
             vset = nextValidatorSet;
-        } else if (commitment.validatorSetID == currentValidatorSet.id) {
-            vset = currentValidatorSet;
-        } else {
+        } else if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
         }
 
@@ -650,7 +646,7 @@ contract BeefyClient {
         }
 
         uint256[] memory finalbitfield =
-            Bitfield.subsample(uint256(fiatShamirHash), bitfield, requiredSignatures, vset.length);
+            Bitfield.subsample(uint256(fiatShamirHash), bitfield, vset.length, requiredSignatures);
 
         for (uint256 i = 0; i < proofs.length; i++) {
             ValidatorProof calldata proof = proofs[i];
