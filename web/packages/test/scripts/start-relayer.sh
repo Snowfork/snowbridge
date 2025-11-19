@@ -139,6 +139,21 @@ config_relayer() {
 
       ' \
           config/execution-relay.json >$output_dir/execution-relay.json
+
+    # Configure reward relay
+      jq \
+          --arg eth_endpoint_ws $eth_endpoint_ws \
+          --arg k1 "$(address_for GatewayProxy)" \
+          --argjson electra_forked_epoch $electra_forked_epoch \
+          --argjson fulu_forked_epoch $fulu_forked_epoch \
+          '
+        .source.ethereum.endpoint = $eth_endpoint_ws
+      | .source.contracts.Gateway = $k1
+      | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
+      | .source.beacon.spec.forkVersions.fulu = $fulu_forked_epoch
+
+      ' \
+          config/reward-relay.json >$output_dir/reward-relay.json
 }
 
 start_relayer() {
@@ -218,6 +233,19 @@ start_relayer() {
                 --config $output_dir/execution-relay.json \
                 --substrate.private-key "//ExecutionRelayAssetHub" \
                 >>"$output_dir"/execution-relay-v2.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch reward relay
+    (
+        : >$output_dir/reward-relay.log
+        while :; do
+            echo "Starting reward relay at $(date)"
+            "${relayer_v2}" run reward \
+                --config $output_dir/reward-relay.json \
+                --substrate.private-key "//ExecutionRelayAssetHub" \
+                >>"$output_dir"/reward-relay.log 2>&1 || true
             sleep 20
         done
     ) &
