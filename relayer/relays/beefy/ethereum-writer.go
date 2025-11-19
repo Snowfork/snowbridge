@@ -416,17 +416,16 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task Request) er
 		params.LeafProofOrder,
 	)
 	if err != nil {
-		return fmt.Errorf("final submission: %w", err)
+		return fmt.Errorf("SubmitFiatShamir: %w", err)
 	}
 
 	log.WithField("txHash", tx.Hash().Hex()).
 		WithFields(logFields).
-		Info("Sent submitFiatShamir transaction")
+		Info("Sent SubmitFiatShamir transaction")
 
 	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
-		log.WithError(err).Error("Failed to submitFiatShamir")
-		return err
+		return fmt.Errorf("Wait receipt for SubmitFiatShamir: %w", err)
 	}
 
 	log.WithFields(logrus.Fields{

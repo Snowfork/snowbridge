@@ -766,7 +766,7 @@ func (relay *OnDemandRelay) syncFiatShamir(ctx context.Context, blockNumber uint
 	}
 	err = relay.ethereumWriter.submitFiatShamir(ctx, task)
 	if err != nil {
-		return fmt.Errorf("fail to submit beefy update: %w", err)
+		return fmt.Errorf("SubmitFiatShamir beefy update: %w", err)
 	}
 
 	updatedState, err := relay.ethereumWriter.queryBeefyClientState(ctx)
