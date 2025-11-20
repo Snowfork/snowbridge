@@ -1,4 +1,4 @@
-package parachain
+package reward
 
 import (
 	"context"
@@ -9,28 +9,24 @@ import (
 	"syscall"
 
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	para "github.com/snowfork/snowbridge/relayer/chain/parachain"
-	"github.com/snowfork/snowbridge/relayer/relays/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	"github.com/snowfork/snowbridge/relayer/relays/reward"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 )
 
 var (
-	configFile              string
-	privateKey              string
-	privateKeyFile          string
-	privateKeyID            string
-	parachainPrivateKey     string
-	parachainPrivateKeyFile string
-	parachainPrivateKeyID   string
+	configFile     string
+	privateKey     string
+	privateKeyFile string
+	privateKeyID   string
 )
 
 func Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "parachain",
-		Short: "Start the parachain relay",
+		Use:   "reward",
+		Short: "Start the reward relay",
 		Args:  cobra.ExactArgs(0),
 		RunE:  run,
 	}
@@ -38,13 +34,9 @@ func Command() *cobra.Command {
 	cmd.Flags().StringVar(&configFile, "config", "", "Path to configuration file")
 	cmd.MarkFlagRequired("config")
 
-	cmd.Flags().StringVar(&privateKey, "ethereum.private-key", "", "Ethereum private key")
-	cmd.Flags().StringVar(&privateKeyFile, "ethereum.private-key-file", "", "The file from which to read the private key")
-	cmd.Flags().StringVar(&privateKeyID, "ethereum.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
-
-	cmd.Flags().StringVar(&parachainPrivateKey, "substrate.private-key", "", "substrate private key")
-	cmd.Flags().StringVar(&parachainPrivateKeyFile, "substrate.private-key-file", "", "The file from which to read the private key")
-	cmd.Flags().StringVar(&parachainPrivateKeyID, "substrate.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
+	cmd.Flags().StringVar(&privateKey, "substrate.private-key", "", "Private key URI for Substrate")
+	cmd.Flags().StringVar(&privateKeyFile, "substrate.private-key-file", "", "The file from which to read the private key URI")
+	cmd.Flags().StringVar(&privateKeyID, "substrate.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
 
 	return cmd
 }
@@ -53,12 +45,14 @@ func run(_ *cobra.Command, _ []string) error {
 	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
 	logrus.SetLevel(logrus.DebugLevel)
 
+	logrus.Info("Reward relayer started up")
+
 	viper.SetConfigFile(configFile)
 	if err := viper.ReadInConfig(); err != nil {
 		return err
 	}
 
-	var config parachain.Config
+	var config reward.Config
 	err := viper.UnmarshalExact(&config)
 	if err != nil {
 		return err
@@ -69,22 +63,19 @@ func run(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("config file validation failed: %w", err)
 	}
 
-	keypair, err := ethereum.ResolvePrivateKey(privateKey, privateKeyFile, privateKeyID)
+	keypair, err := parachain.ResolvePrivateKey(privateKey, privateKeyFile, privateKeyID)
 	if err != nil {
 		return err
 	}
 
-	keypair2, err := para.ResolvePrivateKey(parachainPrivateKey, parachainPrivateKeyFile, parachainPrivateKeyID)
-	if err != nil {
-		return err
-	}
-
-	relay, err := parachain.NewRelay(&config, keypair, keypair2)
+	relay := reward.NewRelay(&config, keypair)
 	if err != nil {
 		return err
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	eg, ctx := errgroup.WithContext(ctx)
 
 	// Ensure clean termination upon SIGINT, SIGTERM
