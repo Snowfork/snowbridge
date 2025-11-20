@@ -612,6 +612,78 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
     return result
 }
 
+async function checkSnowbridgeV2Support(
+    parachain: ParachainBase,
+    parachainId: number,
+    info: ChainProperties,
+    hasDryRunApi: boolean,
+): Promise<boolean> {
+    console.log(`Checking Snowbridge V2 support for ${info.specName} (parachain ${parachainId})`)
+    if (!hasDryRunApi) {
+        console.error(`  No dry run API available`)
+        return false
+    }
+
+    try {
+        const testAddress = info.accountType === "AccountId32"
+            ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+            : "0x0000000000000000000000000000000000000000"
+
+        const origin = { system: { signed: testAddress } }
+
+        await parachain.provider.call.dryRunApi.dryRunCall(origin, "0x00", 5)
+        console.log(`  XCM V5 supported`)
+
+        if (!isFunction(parachain.provider.call.xcmPaymentApi?.queryXcmWeight)) {
+            console.error(`  XCM payment API not available`)
+            return false
+        }
+
+        const testAccount = info.accountType === "AccountId32"
+            ? { accountId32: { id: testAddress } }
+            : { accountKey20: { key: testAddress } }
+
+        const testXcm = parachain.provider.registry.createType("XcmVersionedXcm", {
+            v5: [
+                {
+                    aliasOrigin: {
+                        parents: 0,
+                        interior: {
+                            x1: [testAccount],
+                        },
+                    },
+                },
+            ],
+        })
+
+        const weightResult = (
+            await parachain.provider.call.xcmPaymentApi.queryXcmWeight(testXcm)
+        ).toPrimitive() as any
+
+        if (!weightResult.ok) {
+            console.error(`  Could not query AliasOrigin weight`)
+            return false
+        }
+
+        const refTime = BigInt(weightResult.ok.refTime.toString())
+        const MAX_REASONABLE_WEIGHT = 10n ** 15n
+        const supported = refTime < MAX_REASONABLE_WEIGHT
+
+        if (supported) {
+            console.log(`  AliasOrigin weight is reasonable: ${refTime}`)
+            console.log(`  Snowbridge V2 supported`)
+        } else {
+            console.error(`  AliasOrigin weight too high: ${refTime} (max: ${MAX_REASONABLE_WEIGHT})`)
+            console.error(`  Snowbridge V2 not supported`)
+        }
+
+        return supported
+    } catch (err) {
+        console.error(`  Error checking Snowbridge V2 support: ${err}`)
+        return false
+    }
+}
+
 async function indexParachain(
     parachain: ParachainBase,
     assetHub: ParachainBase,
@@ -646,6 +718,14 @@ async function indexParachain(
         isFunction(parachain.provider.call.dryRunApi?.dryRunCall) &&
         isFunction(parachain.provider.call.dryRunApi?.dryRunXcm)
     const hasTxPaymentApi = isFunction(parachain.provider.call.transactionPaymentApi?.queryInfo)
+
+    // Check if the chain supports Snowbridge V2 (XCM V5 with AliasOrigin)
+    const supportsSnowbridgeV2 = await checkSnowbridgeV2Support(
+        parachain,
+        parachainId,
+        info,
+        hasDryRunApi,
+    )
 
     // test getting balances
     let hasDotBalance = true
@@ -694,6 +774,7 @@ async function indexParachain(
             hasTxPaymentApi,
             hasDryRunRpc,
             hasDotBalance,
+            supportsSnowbridgeV2,
         },
         info,
         xcDOT,
