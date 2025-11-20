@@ -765,7 +765,7 @@ contract BeefyClientTest is Test {
         );
     }
 
-    function testRegenerateFiatShamirProofs() public returns (BeefyClient.Commitment memory) {
+    function testRegenerateFiatShamirProofs() public {
         BeefyClient.Commitment memory commitment = initialize(setId);
 
         fiatShamirFinalBitfield = beefyClient.createFiatShamirFinalBitfield(commitment, bitfield);
@@ -806,5 +806,42 @@ contract BeefyClientTest is Test {
             commitment, bitfield, fiatShamirValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
         );
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+    }
+
+    function testSubmitFiatShamirWithRaceCondition()
+        public
+        returns (BeefyClient.Commitment memory)
+    {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+
+        vm.roll(block.number + randaoCommitDelay);
+
+        commitPrevRandao();
+
+        createFinalProofs();
+
+        beefyClient.submitFiatShamir(
+            commitment,
+            bitfield,
+            fiatShamirValidatorProofs,
+            emptyLeaf,
+            emptyLeafProofs,
+            emptyLeafProofOrder
+        );
+
+        assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+
+        vm.expectRevert(BeefyClient.StaleCommitment.selector);
+        beefyClient.submitFinal(
+            commitment,
+            bitfield,
+            finalValidatorProofs,
+            emptyLeaf,
+            emptyLeafProofs,
+            emptyLeafProofOrder
+        );
+        return commitment;
     }
 }
