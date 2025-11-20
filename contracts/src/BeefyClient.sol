@@ -468,8 +468,7 @@ contract BeefyClient {
 
         bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
-        bytes32 fiatShamirHash =
-            sha256(bytes.concat(sha256(bytes.concat(commitmentHash, bitFieldHash, vset.root))));
+        bytes32 fiatShamirHash = fiatShamirHash(commitmentHash, bitFieldHash, vset.root);
         uint256 requiredSignatures =
             Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
         return
@@ -494,7 +493,6 @@ contract BeefyClient {
         uint256 leafProofOrder
     ) external {
         if (commitment.blockNumber <= latestBeefyBlock) {
-            // ticket is obsolete
             revert StaleCommitment();
         }
 
@@ -637,8 +635,7 @@ contract BeefyClient {
         ValidatorProof[] calldata proofs
     ) internal view {
         bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
-        bytes32 fiatShamirHash =
-            sha256(bytes.concat(sha256(bytes.concat(commitmentHash, bitFieldHash, vset.root))));
+        bytes32 fiatShamirHash = fiatShamirHash(commitmentHash, bitFieldHash, vset.root);
         uint256 requiredSignatures =
             Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
         if (proofs.length != requiredSignatures) {
@@ -669,6 +666,16 @@ contract BeefyClient {
             // Ensure no validator can appear more than once in bitfield
             Bitfield.unset(finalbitfield, proof.index);
         }
+    }
+
+    function fiatShamirHash(
+        bytes32 commitmentHash,
+        bytes32 bitFieldHash,
+        bytes32 validatorSetRoot
+    ) internal pure returns (bytes32) {
+        return sha256(
+            bytes.concat(sha256(bytes.concat(commitmentHash, bitFieldHash, validatorSetRoot)))
+        );
     }
 
     // Ensure that the commitment provides a new MMR root
