@@ -719,7 +719,6 @@ async function indexParachain(
         isFunction(parachain.provider.call.dryRunApi?.dryRunXcm)
     const hasTxPaymentApi = isFunction(parachain.provider.call.transactionPaymentApi?.queryInfo)
 
-    // Check if the chain supports Snowbridge V2 (XCM V5 with AliasOrigin)
     const supportsSnowbridgeV2 = await checkSnowbridgeV2Support(
         parachain,
         parachainId,
