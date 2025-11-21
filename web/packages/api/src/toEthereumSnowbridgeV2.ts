@@ -314,7 +314,6 @@ export const estimateFeesFromAssetHub = async (
 
     let localExecutionFeeDOT = 0n
     let assetHubExecutionFeeDOT = 0n
-    let returnToSenderExecutionFeeDOT = 0n
     let bridgeHubDeliveryFeeDOT = 0n
     let snowbridgeDeliveryFeeDOT = 0n
 
