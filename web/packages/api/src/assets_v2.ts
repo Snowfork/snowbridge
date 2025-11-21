@@ -641,7 +641,13 @@ async function checkSnowbridgeV2Support(
                     aliasOrigin: {
                         parents: 0,
                         interior: {
-                            x1: [{ accountId32: { id: "0x0000000000000000000000000000000000000000000000000000000000000000" } }],
+                            x1: [
+                                {
+                                    accountId32: {
+                                        id: "0x0000000000000000000000000000000000000000000000000000000000000000",
+                                    },
+                                },
+                            ],
                         },
                     },
                 },
@@ -663,10 +669,9 @@ async function checkSnowbridgeV2Support(
             }
 
             const feeResult = (
-                await parachain.provider.call.xcmPaymentApi.queryWeightToAssetFee(
-                    weightResult.ok,
-                    { v5: etherLocation },
-                )
+                await parachain.provider.call.xcmPaymentApi.queryWeightToAssetFee(weightResult.ok, {
+                    v5: etherLocation,
+                })
             ).toPrimitive() as any
 
             if (feeResult.ok) {
