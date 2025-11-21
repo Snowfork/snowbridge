@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-11-06T11:20:37.352Z",
+  "timestamp": "2025-11-21T06:41:33.326Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -13,7 +13,7 @@
     "accountType": "AccountId32",
     "name": "Polkadot",
     "specName": "polkadot",
-    "specVersion": 2000000
+    "specVersion": 2000001
   },
   "bridgeHub": {
     "tokenSymbols": "DOT",
@@ -383,7 +383,7 @@
         "accountType": "AccountId32",
         "name": "Polkadot Asset Hub",
         "specName": "statemint",
-        "specVersion": 2000000
+        "specVersion": 2000002
       },
       "assets": {
         "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -653,7 +653,8 @@
           },
           "foreignId": "0x4e241583d94b5d48a27a22064cd49b2ed6f5231d2d950e432f9b7c2e0ade52b2",
           "minimumBalance": "bigint:100000000",
-          "isSufficient": true
+          "isSufficient": true,
+          "isPNA": true
         },
         "0x21fab0ea070f162180447881d5873cf3d57200d6": {
           "token": "0x21fab0ea070f162180447881d5873cf3d57200d6",
@@ -710,7 +711,8 @@
           "foreignId": "0xad050334b66c8d3abaac7ef6667e97e3e6f4a25d9b7b4765133290f0dc19aa6e",
           "minimumBalance": "bigint:1000000000000",
           "isSufficient": false,
-          "assetId": "86"
+          "assetId": "86",
+          "isPNA": true
         },
         "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab": {
           "token": "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab",
@@ -755,7 +757,8 @@
           },
           "foreignId": "0x03b6054d0c576dd8391e34e1609cf398f68050c23009d19ce93c000922bcd852",
           "minimumBalance": "bigint:1000000000",
-          "isSufficient": true
+          "isSufficient": true,
+          "isPNA": true
         },
         "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5": {
           "token": "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
@@ -812,7 +815,8 @@
           "foreignId": "0x7ca757304cac2ff0881de18dc6a1dfa7f10e51b0cba0297e0e762f8072049c98",
           "minimumBalance": "bigint:10000000",
           "isSufficient": false,
-          "assetId": "31337"
+          "assetId": "31337",
+          "isPNA": true
         },
         "0xa37b046782518a80e2e69056009fbd0431d36e50": {
           "token": "0xa37b046782518a80e2e69056009fbd0431d36e50",
@@ -869,7 +873,8 @@
           "foreignId": "0xbc8785969587ef3d22739d3385cb519a9e0133dd5da8d320c376772468c19be6",
           "minimumBalance": "bigint:1",
           "isSufficient": false,
-          "assetId": "23"
+          "assetId": "23",
+          "isPNA": true
         },
         "0x769916a66fdac0e3d57363129caac59386ea622b": {
           "token": "0x769916a66fdac0e3d57363129caac59386ea622b",
@@ -913,7 +918,8 @@
           },
           "foreignId": "0x3b7f577715347bdcde4739a1bf1a7f1dec71e8ff4dbe23a6a49348ebf920c658",
           "minimumBalance": "bigint:1000000000",
-          "isSufficient": false
+          "isSufficient": false,
+          "isPNA": true
         },
         "0x92262680a8d6636bba9bffdf484c274ca2de6400": {
           "token": "0x92262680a8d6636bba9bffdf484c274ca2de6400",
@@ -970,7 +976,8 @@
           "foreignId": "0x536917d1276896038c09bb6499bd0d7197e609983ec22e9ca4e75b394b23752b",
           "minimumBalance": "bigint:1",
           "isSufficient": false,
-          "assetId": "30"
+          "assetId": "30",
+          "isPNA": true
         }
       },
       "estimatedExecutionFeeDOT": "bigint:0",
@@ -993,7 +1000,7 @@
         "accountType": "AccountId32",
         "name": "Acala",
         "specName": "acala",
-        "specVersion": 2310
+        "specVersion": 2320
       },
       "assets": {
         "0x0000000000000000000000000000000000000000": {
@@ -1115,7 +1122,7 @@
         "evmChainId": 996,
         "name": "Bifrost Polkadot",
         "specName": "bifrost_polkadot",
-        "specVersion": 22001
+        "specVersion": 22002
       },
       "assets": {
         "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
@@ -1135,7 +1142,7 @@
           "isSufficient": false
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:67408398",
+      "estimatedExecutionFeeDOT": "bigint:82916020",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2034": {
@@ -1156,7 +1163,7 @@
         "evmChainId": 222222,
         "name": "Hydration",
         "specName": "hydradx",
-        "specVersion": 347
+        "specVersion": 359
       },
       "assets": {
         "0x45804880de22913dafe09f4980848ece6ecbaf78": {
@@ -1312,7 +1319,7 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:1784885",
+      "estimatedExecutionFeeDOT": "bigint:1654487",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2043": {
@@ -1399,7 +1406,7 @@
           "accountType": "AccountId32",
           "name": "Kusama Asset Hub",
           "specName": "statemine",
-          "specVersion": 2000001
+          "specVersion": 2000002
         },
         "assets": {
           "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -1621,7 +1628,8 @@
             },
             "foreignId": "0x4e241583d94b5d48a27a22064cd49b2ed6f5231d2d950e432f9b7c2e0ade52b2",
             "minimumBalance": "bigint:10000000",
-            "isSufficient": true
+            "isSufficient": true,
+            "isPNA": true
           },
           "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab": {
             "token": "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab",
@@ -1650,7 +1658,8 @@
             },
             "foreignId": "0x03b6054d0c576dd8391e34e1609cf398f68050c23009d19ce93c000922bcd852",
             "minimumBalance": "bigint:3333333",
-            "isSufficient": true
+            "isSufficient": true,
+            "isPNA": true
           },
           "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5": {
             "token": "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
@@ -1722,7 +1731,8 @@
             },
             "foreignId": "0x7ca757304cac2ff0881de18dc6a1dfa7f10e51b0cba0297e0e762f8072049c98",
             "minimumBalance": "bigint:10000000",
-            "isSufficient": false
+            "isSufficient": false,
+            "isPNA": true
           }
         },
         "estimatedExecutionFeeDOT": "bigint:0",
