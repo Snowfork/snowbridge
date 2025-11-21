@@ -53,6 +53,7 @@ export class FrequencyParachain extends ParachainBase {
                 location: HERE_LOCATION,
                 locationOnAH: FREQUENCY_TOKEN_LOCATION_ON_WESTEND_AH,
                 locationOnEthereum: FREQUENCY_WESTEND_TOKEN_LOCATION_ON_ETHEREUM,
+                isPNA: true,
             }
         } else {
             throw Error(
