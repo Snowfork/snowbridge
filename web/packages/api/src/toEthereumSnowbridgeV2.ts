@@ -250,10 +250,6 @@ export async function dryRunAssetHub(
 
 export const MaxWeight = { refTime: 15_000_000_000n, proofSize: 800_000 }
 
-export const isFeeAllowed = (feeLocation: any, sourceParaId: number) => {
-    return isRelaychainLocation(feeLocation) || isParachainNative(feeLocation, sourceParaId)
-}
-
 export const getSnowbridgeDeliveryFee = async (assetHub: ApiPromise, defaultFee?: bigint) => {
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFeeV2:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)

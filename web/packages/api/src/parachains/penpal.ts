@@ -108,6 +108,7 @@ export class PenpalParachain extends ParachainBase {
                         minimumBalance: BigInt(assetInfo?.minBalance),
                         isSufficient: Boolean(assetInfo?.isSufficient),
                         assetId: String(assetId),
+                        isPNA: true,
                     }
                 }
             }
