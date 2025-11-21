@@ -1,9 +1,9 @@
-import {accountToLocation, bridgeLocation, erc20Location, ethereumNetwork} from "../../xcmBuilder"
-import {ETHER_TOKEN_ADDRESS} from "../../assets_v2"
-import {u8aToHex} from "@polkadot/util"
-import {blake2AsU8a} from "@polkadot/util-crypto"
-import {ApiPromise} from "@polkadot/api"
-import {claimerFromBeneficiary} from "../../toPolkadotSnowbridgeV2";
+import { accountToLocation, bridgeLocation, erc20Location, ethereumNetwork } from "../../xcmBuilder"
+import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { u8aToHex } from "@polkadot/util"
+import { blake2AsU8a } from "@polkadot/util-crypto"
+import { ApiPromise } from "@polkadot/api"
+import { claimerFromBeneficiary } from "../../toPolkadotSnowbridgeV2"
 
 // Constants from gas-estimator/src/config.rs
 export const MINIMUM_DEPOSIT = 1n
@@ -44,7 +44,7 @@ export function buildAssetHubRegisterTokenXcm(
     totalValue: bigint,
     executionFee: bigint,
     assetDepositDOT: bigint,
-    bridgeOwner: string
+    bridgeOwner: string,
 ) {
     const registry = assetHub.registry
     const ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -63,7 +63,7 @@ export function buildAssetHubRegisterTokenXcm(
     const createCall = assetHub.tx.foreignAssets.create(
         assetIdLocationTyped,
         adminMultiAddress,
-        MINIMUM_DEPOSIT
+        MINIMUM_DEPOSIT,
     )
 
     const callData = createCall.method.toU8a()
@@ -88,7 +88,9 @@ export function buildAssetHubRegisterTokenXcm(
         },
         {
             SetHints: {
-                hints: [{ AssetClaimer: { location: claimerFromBeneficiary(assetHub, bridgeOwner) } }],
+                hints: [
+                    { AssetClaimer: { location: claimerFromBeneficiary(assetHub, bridgeOwner) } },
+                ],
             },
         },
         {
@@ -154,7 +156,7 @@ export function buildAssetHubRegisterTokenXcm(
                 },
                 beneficiary: {
                     parents: 0,
-                    interior: { x1: [bridgeOwnerLocation] }
+                    interior: { x1: [bridgeOwnerLocation] },
                 },
             },
         },
@@ -191,7 +193,7 @@ export function buildAssetHubRegisterTokenXcm(
                     },
                 },
             },
-        }
+        },
     )
 
     return registry.createType("XcmVersionedXcm", {

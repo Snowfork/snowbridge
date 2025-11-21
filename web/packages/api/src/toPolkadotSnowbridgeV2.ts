@@ -217,7 +217,7 @@ export function createRegistrationImplementation() {
 
 export async function sendRegistration(
     registration: TokenRegistration,
-    wallet: Wallet
+    wallet: Wallet,
 ): Promise<TransactionReceipt> {
     const response = await wallet.sendTransaction(registration.tx)
     const receipt = await response.wait(1)

@@ -61,7 +61,7 @@ export interface RegistrationInterface {
         relayerFee: bigint,
         options?: {
             paddFeeByPercentage?: bigint
-        }
+        },
     ): Promise<RegistrationFee>
 
     createRegistration(
@@ -73,11 +73,11 @@ export interface RegistrationInterface {
         registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
-        fee: RegistrationFee
+        fee: RegistrationFee,
     ): Promise<TokenRegistration>
 
     validateRegistration(
         context: Context | Connections,
-        registration: TokenRegistration
+        registration: TokenRegistration,
     ): Promise<RegistrationValidationResult>
 }

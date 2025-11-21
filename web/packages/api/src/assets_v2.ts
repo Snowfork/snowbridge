@@ -620,21 +620,21 @@ async function checkSnowbridgeV2Support(
     ethChainId: number,
 ): Promise<{
     supportsXcmV5: boolean
-    supportsXcmPaymentApi: boolean
     supportsAliasOrigin: boolean
+    hasXcmPaymentApi: boolean
     hasEthBalance: boolean
 }> {
     let supportsXcmV5 = false
-    let supportsXcmPaymentApi = false
+    let hasXcmPaymentApi = false
     let supportsAliasOrigin = false
     let hasEthBalance = false
 
     if (!hasDryRunApi) {
-        return { supportsXcmV5, supportsXcmPaymentApi, supportsAliasOrigin, hasEthBalance }
+        return { supportsXcmV5, hasXcmPaymentApi, supportsAliasOrigin, hasEthBalance }
     }
 
     try {
-        supportsXcmPaymentApi = isFunction(parachain.provider.call.xcmPaymentApi?.queryXcmWeight)
+        hasXcmPaymentApi = isFunction(parachain.provider.call.xcmPaymentApi?.queryXcmWeight)
         const testXcm = parachain.provider.registry.createType("XcmVersionedXcm", {
             v5: [
                 {
@@ -684,7 +684,7 @@ async function checkSnowbridgeV2Support(
         supportsXcmV5 = false
     }
 
-    return { supportsXcmV5, supportsXcmPaymentApi, supportsAliasOrigin, hasEthBalance }
+    return { supportsXcmV5, supportsAliasOrigin, hasXcmPaymentApi, hasEthBalance }
 }
 
 async function indexParachain(
@@ -722,7 +722,7 @@ async function indexParachain(
         isFunction(parachain.provider.call.dryRunApi?.dryRunXcm)
     const hasTxPaymentApi = isFunction(parachain.provider.call.transactionPaymentApi?.queryInfo)
 
-    const { supportsXcmV5, supportsXcmPaymentApi, supportsAliasOrigin, hasEthBalance } =
+    const { supportsXcmV5, hasXcmPaymentApi, supportsAliasOrigin, hasEthBalance } =
         await checkSnowbridgeV2Support(parachain, parachainId, info, hasDryRunApi, ethChainId)
 
     // test getting balances
@@ -774,7 +774,7 @@ async function indexParachain(
             hasDotBalance,
             hasEthBalance,
             supportsXcmV5,
-            supportsXcmPaymentApi,
+            hasXcmPaymentApi,
             supportsAliasOrigin,
         },
         info,

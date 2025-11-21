@@ -78,8 +78,8 @@ export type Parachain = {
     hasDryRunRpc: boolean;
     hasDotBalance: boolean;
     hasEthBalance: boolean;
+    hasXcmPaymentApi: boolean;
     supportsXcmV5: boolean;
-    supportsXcmPaymentApi: boolean;
     supportsAliasOrigin: boolean;
   };
   assets: AssetMap;
