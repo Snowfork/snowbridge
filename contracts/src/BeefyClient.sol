@@ -506,9 +506,7 @@ contract BeefyClient {
         }
 
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
-
         verifyFiatShamirCommitment(commitmentHash, bitfield, vset, proofs);
-
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         if (is_next_session) {
