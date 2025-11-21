@@ -8,6 +8,7 @@ import {
     HERE_LOCATION,
     buildAppendixInstructions,
     buildEthereumInstructions,
+    splitEtherAsset,
 } from "../../xcmBuilder"
 import { DeliveryFeeV2 } from "../../toEthereumSnowbridgeV2"
 import { ConcreteAsset } from "../../assets_v2"
@@ -42,7 +43,22 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
             Fungible: totalNativeFeeAmount,
         },
     })
-    for (const asset of concreteAssets) {
+    const { etherAsset, otherAssets } = splitEtherAsset(ethChainId, concreteAssets)
+    if (etherAsset) {
+        assets.push({
+            id: bridgeLocation(ethChainId),
+            fun: {
+                Fungible: etherAsset.amount,
+            },
+        })
+        reserveWithdrawAssets.push({
+            id: bridgeLocation(ethChainId),
+            fun: {
+                Fungible: etherAsset.amount,
+            },
+        })
+    }
+    for (const asset of otherAssets) {
         const tokenLocation = erc20Location(ethChainId, asset.id.token)
         const tokenAmount = asset.amount
         assets.push({

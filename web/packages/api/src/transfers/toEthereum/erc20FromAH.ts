@@ -58,6 +58,7 @@ export class ERC20FromAH implements TransferInterface {
             concreteAssets,
             mockDeliveryFee,
         )
+        console.log("localXcm:", localXcm.toHuman())
 
         let forwardedXcmToBH = buildExportXcm(
             assetHub.registry,
@@ -68,6 +69,7 @@ export class ERC20FromAH implements TransferInterface {
             concreteAssets,
             mockDeliveryFee,
         )
+        console.log("forwardedXcmToBH:", forwardedXcmToBH.toHuman())
 
         const fees = await estimateFeesFromAssetHub(
             context,

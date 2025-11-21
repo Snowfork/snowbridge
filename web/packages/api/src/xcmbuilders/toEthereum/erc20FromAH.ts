@@ -25,12 +25,22 @@ export function buildExportXcm(
     let senderLocation = accountToLocation(sender)
     let beneficiaryLocation = accountToLocation(beneficiary)
     let assets = []
-    for (const asset of concreteAssets) {
-        const tokenLocation = erc20LocationReanchored(asset.id.token)
+    const { etherAsset, otherAssets } = splitEtherAsset(ethChainId, concreteAssets)
+    if (etherAsset) {
+        assets.push({
+            id: bridgeLocation(ethChainId),
+            fun: {
+                Fungible: etherAsset.amount,
+            },
+        })
+    }
+    for (const asset of otherAssets) {
+        const tokenLocation = erc20Location(ethChainId, asset.id.token)
+        const tokenAmount = asset.amount
         assets.push({
             id: tokenLocation,
             fun: {
-                Fungible: asset.amount,
+                Fungible: tokenAmount,
             },
         })
     }
@@ -169,7 +179,16 @@ export function buildTransferXcmFromAssetHub(
             })
         }
     }
-    for (const asset of concreteAssets) {
+    const { etherAsset, otherAssets } = splitEtherAsset(ethChainId, concreteAssets)
+    if (etherAsset) {
+        reserveWithdrawAssets.push({
+            id: bridgeLocation(ethChainId),
+            fun: {
+                Fungible: etherAsset.amount,
+            },
+        })
+    }
+    for (const asset of otherAssets) {
         const tokenLocation = erc20Location(ethChainId, asset.id.token)
         const tokenAmount = asset.amount
         reserveWithdrawAssets.push({

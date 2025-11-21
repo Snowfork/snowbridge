@@ -31,11 +31,22 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
             },
         },
     ]
-    for (const asset of concreteAssets) {
+    const { etherAsset, otherAssets } = splitEtherAsset(ethChainId, concreteAssets)
+    if (etherAsset) {
         assets.push({
-            id: erc20Location(ethChainId, asset.id.token),
+            id: bridgeLocation(ethChainId),
             fun: {
-                Fungible: asset.amount,
+                Fungible: etherAsset.amount,
+            },
+        })
+    }
+    for (const asset of otherAssets) {
+        const tokenLocation = erc20Location(ethChainId, asset.id.token)
+        const tokenAmount = asset.amount
+        assets.push({
+            id: tokenLocation,
+            fun: {
+                Fungible: tokenAmount,
             },
         })
     }
@@ -204,7 +215,16 @@ export function buildTransferXcmFromParachain(
         : undefined
 
     let reserveWithdrawAssets: any[] = []
-    for (const asset of concreteAssets) {
+    const { etherAsset, otherAssets } = splitEtherAsset(ethChainId, concreteAssets)
+    if (etherAsset) {
+        reserveWithdrawAssets.push({
+            id: bridgeLocation(ethChainId),
+            fun: {
+                Fungible: etherAsset.amount,
+            },
+        })
+    }
+    for (const asset of otherAssets) {
         const tokenLocation = erc20Location(ethChainId, asset.id.token)
         const tokenAmount = asset.amount
         reserveWithdrawAssets.push({
