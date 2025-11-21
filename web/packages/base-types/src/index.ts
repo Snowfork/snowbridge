@@ -77,7 +77,10 @@ export type Parachain = {
     hasTxPaymentApi: boolean;
     hasDryRunRpc: boolean;
     hasDotBalance: boolean;
-    supportsSnowbridgeV2: boolean;
+    hasEthBalance: boolean;
+    supportsXcmV5: boolean;
+    supportsXcmPaymentApi: boolean;
+    supportsAliasOrigin: boolean;
   };
   assets: AssetMap;
   estimatedExecutionFeeDOT: bigint;

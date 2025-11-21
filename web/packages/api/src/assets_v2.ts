@@ -617,39 +617,31 @@ async function checkSnowbridgeV2Support(
     parachainId: number,
     info: ChainProperties,
     hasDryRunApi: boolean,
-): Promise<boolean> {
-    console.log(`Checking Snowbridge V2 support for ${info.specName} (parachain ${parachainId})`)
+    ethChainId: number,
+): Promise<{
+    supportsXcmV5: boolean
+    supportsXcmPaymentApi: boolean
+    supportsAliasOrigin: boolean
+    hasEthBalance: boolean
+}> {
+    let supportsXcmV5 = false
+    let supportsXcmPaymentApi = false
+    let supportsAliasOrigin = false
+    let hasEthBalance = false
+
     if (!hasDryRunApi) {
-        console.error(`  No dry run API available`)
-        return false
+        return { supportsXcmV5, supportsXcmPaymentApi, supportsAliasOrigin, hasEthBalance }
     }
 
     try {
-        const testAddress = info.accountType === "AccountId32"
-            ? "0x0000000000000000000000000000000000000000000000000000000000000000"
-            : "0x0000000000000000000000000000000000000000"
-
-        const origin = { system: { signed: testAddress } }
-
-        await parachain.provider.call.dryRunApi.dryRunCall(origin, "0x00", 5)
-        console.log(`  XCM V5 supported`)
-
-        if (!isFunction(parachain.provider.call.xcmPaymentApi?.queryXcmWeight)) {
-            console.error(`  XCM payment API not available`)
-            return false
-        }
-
-        const testAccount = info.accountType === "AccountId32"
-            ? { accountId32: { id: testAddress } }
-            : { accountKey20: { key: testAddress } }
-
+        supportsXcmPaymentApi = isFunction(parachain.provider.call.xcmPaymentApi?.queryXcmWeight)
         const testXcm = parachain.provider.registry.createType("XcmVersionedXcm", {
             v5: [
                 {
                     aliasOrigin: {
                         parents: 0,
                         interior: {
-                            x1: [testAccount],
+                            x1: [{ accountId32: { id: "0x0000000000000000000000000000000000000000000000000000000000000000" } }],
                         },
                     },
                 },
@@ -660,28 +652,34 @@ async function checkSnowbridgeV2Support(
             await parachain.provider.call.xcmPaymentApi.queryXcmWeight(testXcm)
         ).toPrimitive() as any
 
-        if (!weightResult.ok) {
-            console.error(`  Could not query AliasOrigin weight`)
-            return false
+        if (weightResult.ok) {
+            const refTime = BigInt(weightResult.ok.refTime.toString())
+            const MAX_REASONABLE_WEIGHT = 10n ** 15n
+            supportsAliasOrigin = refTime < MAX_REASONABLE_WEIGHT
+
+            const etherLocation = {
+                parents: 2,
+                interior: { x1: [{ GlobalConsensus: { Ethereum: { chain_id: ethChainId } } }] },
+            }
+
+            const feeResult = (
+                await parachain.provider.call.xcmPaymentApi.queryWeightToAssetFee(
+                    weightResult.ok,
+                    { v5: etherLocation },
+                )
+            ).toPrimitive() as any
+
+            if (feeResult.ok) {
+                hasEthBalance = true
+            }
         }
 
-        const refTime = BigInt(weightResult.ok.refTime.toString())
-        const MAX_REASONABLE_WEIGHT = 10n ** 15n
-        const supported = refTime < MAX_REASONABLE_WEIGHT
-
-        if (supported) {
-            console.log(`  AliasOrigin weight is reasonable: ${refTime}`)
-            console.log(`  Snowbridge V2 supported`)
-        } else {
-            console.error(`  AliasOrigin weight too high: ${refTime} (max: ${MAX_REASONABLE_WEIGHT})`)
-            console.error(`  Snowbridge V2 not supported`)
-        }
-
-        return supported
-    } catch (err) {
-        console.error(`  Error checking Snowbridge V2 support: ${err}`)
-        return false
+        supportsXcmV5 = true
+    } catch {
+        supportsXcmV5 = false
     }
+
+    return { supportsXcmV5, supportsXcmPaymentApi, supportsAliasOrigin, hasEthBalance }
 }
 
 async function indexParachain(
@@ -719,12 +717,8 @@ async function indexParachain(
         isFunction(parachain.provider.call.dryRunApi?.dryRunXcm)
     const hasTxPaymentApi = isFunction(parachain.provider.call.transactionPaymentApi?.queryInfo)
 
-    const supportsSnowbridgeV2 = await checkSnowbridgeV2Support(
-        parachain,
-        parachainId,
-        info,
-        hasDryRunApi,
-    )
+    const { supportsXcmV5, supportsXcmPaymentApi, supportsAliasOrigin, hasEthBalance } =
+        await checkSnowbridgeV2Support(parachain, parachainId, info, hasDryRunApi, ethChainId)
 
     // test getting balances
     let hasDotBalance = true
@@ -773,7 +767,10 @@ async function indexParachain(
             hasTxPaymentApi,
             hasDryRunRpc,
             hasDotBalance,
-            supportsSnowbridgeV2,
+            hasEthBalance,
+            supportsXcmV5,
+            supportsXcmPaymentApi,
+            supportsAliasOrigin,
         },
         info,
         xcDOT,

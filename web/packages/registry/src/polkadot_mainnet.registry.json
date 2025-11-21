@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-11-20T07:29:48.239Z",
+  "timestamp": "2025-11-21T10:23:30.152Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -374,7 +374,10 @@
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
         "hasDotBalance": true,
-        "supportsSnowbridgeV2": true
+        "hasEthBalance": true,
+        "supportsXcmV5": true,
+        "supportsXcmPaymentApi": true,
+        "supportsAliasOrigin": true
       },
       "info": {
         "tokenSymbols": "DOT",
@@ -985,7 +988,10 @@
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
         "hasDotBalance": true,
-        "supportsSnowbridgeV2": true
+        "hasEthBalance": true,
+        "supportsXcmV5": true,
+        "supportsXcmPaymentApi": true,
+        "supportsAliasOrigin": true
       },
       "info": {
         "tokenSymbols": "ACA",
@@ -1018,7 +1024,10 @@
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
         "hasDotBalance": true,
-        "supportsSnowbridgeV2": false
+        "hasEthBalance": false,
+        "supportsXcmV5": true,
+        "supportsXcmPaymentApi": true,
+        "supportsAliasOrigin": false
       },
       "info": {
         "tokenSymbols": "GLMR",
@@ -1108,7 +1117,10 @@
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
         "hasDotBalance": true,
-        "supportsSnowbridgeV2": true
+        "hasEthBalance": true,
+        "supportsXcmV5": true,
+        "supportsXcmPaymentApi": true,
+        "supportsAliasOrigin": true
       },
       "info": {
         "tokenSymbols": "BNC",
@@ -1139,7 +1151,7 @@
           "isSufficient": false
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:77365201",
+      "estimatedExecutionFeeDOT": "bigint:83227129",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2034": {
@@ -1150,7 +1162,10 @@
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
         "hasDotBalance": true,
-        "supportsSnowbridgeV2": false
+        "hasEthBalance": false,
+        "supportsXcmV5": false,
+        "supportsXcmPaymentApi": true,
+        "supportsAliasOrigin": false
       },
       "info": {
         "tokenSymbols": "HDX",
@@ -1161,7 +1176,7 @@
         "evmChainId": 222222,
         "name": "Hydration",
         "specName": "hydradx",
-        "specVersion": 347
+        "specVersion": 359
       },
       "assets": {
         "0x45804880de22913dafe09f4980848ece6ecbaf78": {
@@ -1317,7 +1332,7 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:1633995",
+      "estimatedExecutionFeeDOT": "bigint:1667808",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2043": {
@@ -1328,7 +1343,10 @@
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
         "hasDotBalance": false,
-        "supportsSnowbridgeV2": false
+        "hasEthBalance": false,
+        "supportsXcmV5": false,
+        "supportsXcmPaymentApi": true,
+        "supportsAliasOrigin": false
       },
       "info": {
         "tokenSymbols": "NEURO",
@@ -1361,7 +1379,10 @@
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
         "hasDotBalance": false,
-        "supportsSnowbridgeV2": false
+        "hasEthBalance": false,
+        "supportsXcmV5": false,
+        "supportsXcmPaymentApi": false,
+        "supportsAliasOrigin": false
       },
       "info": {
         "tokenSymbols": "MYTH",
@@ -1397,7 +1418,10 @@
           "hasTxPaymentApi": true,
           "hasDryRunRpc": true,
           "hasDotBalance": true,
-          "supportsSnowbridgeV2": true
+          "hasEthBalance": false,
+          "supportsXcmV5": true,
+          "supportsXcmPaymentApi": true,
+          "supportsAliasOrigin": true
         },
         "info": {
           "tokenSymbols": "KSM",
