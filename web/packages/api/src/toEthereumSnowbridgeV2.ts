@@ -106,15 +106,27 @@ export function createTransferImplementation(
 
     let transferImpl
     if (sourceParaId == registry.assetHubParaId) {
-        if (sourceAssetMetadata.location) {
+        if (sourceAssetMetadata.isPNA) {
+            if (tokenAddresses.length !== 1) {
+                throw Error("PNA transfer from Asset Hub only supports single asset transfer.")
+            }
             transferImpl = new PNAFromAH()
         } else {
+            if (tokenAddresses.length > 5) {
+                throw Error("ERC20 transfer from Asset Hub only supports up to 5 assets.")
+            }
             transferImpl = new ERC20FromAH()
         }
     } else {
-        if (sourceAssetMetadata.location) {
+        if (sourceAssetMetadata.isPNA) {
+            if (tokenAddresses.length !== 1) {
+                throw Error("PNA transfer from Parachain only supports single asset transfer.")
+            }
             transferImpl = new PNAFromParachain()
         } else {
+            if (tokenAddresses.length > 5) {
+                throw Error("ERC20 transfer from Parachain only supports up to 5 assets.")
+            }
             transferImpl = new ERC20FromParachain()
         }
     }
