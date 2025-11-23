@@ -118,6 +118,10 @@ func (li *PolkadotListener) queryBeefyAuthorities(blockHash types.Hash) ([]subst
 	return authorities, nil
 }
 
+// Generate a Beefy update for a specific relay block.
+// If the relay block is set to zero, just return the latest update.
+// Loop until the specified relay block has been Beefy-finalized,
+// or return the next block that contains a Beefy justification.
 func (li *PolkadotListener) generateBeefyUpdate(relayBlockNumber uint64) (Request, error) {
 	api := li.conn.API()
 	meta := li.conn.Metadata()
@@ -148,66 +152,27 @@ func (li *PolkadotListener) generateBeefyUpdate(relayBlockNumber uint64) (Reques
 	return request, nil
 }
 
-func (li *PolkadotListener) findNextBeefyBlock(blockNumber uint64) (types.Hash, error) {
+func (li *PolkadotListener) findNextBeefyBlock(blockNumber uint64) (beefyBlockHash types.Hash, err error) {
 	api := li.conn.API()
-	var nextBeefyBlockHash, finalizedBeefyBlockHash types.Hash
-	var err error
-	nextBeefyBlockNumber := blockNumber
+	var finalizedBeefyBlockHash types.Hash
+	beefyBlockNumber := blockNumber
 	for {
 		finalizedBeefyBlockHash, err = api.RPC.Beefy.GetFinalizedHead()
 		if err != nil {
-			return nextBeefyBlockHash, fmt.Errorf("fetch beefy finalized head: %w", err)
+			return beefyBlockHash, fmt.Errorf("fetch beefy finalized head: %w", err)
 		}
 		finalizedBeefyBlockHeader, err := api.RPC.Chain.GetHeader(finalizedBeefyBlockHash)
 		if err != nil {
-			return nextBeefyBlockHash, fmt.Errorf("fetch block header: %w", err)
+			return beefyBlockHash, fmt.Errorf("fetch block header: %w", err)
 		}
 		latestBeefyBlockNumber := uint64(finalizedBeefyBlockHeader.Number)
-		if latestBeefyBlockNumber <= nextBeefyBlockNumber {
+		if latestBeefyBlockNumber <= beefyBlockNumber {
 			// The relay block not finalized yet, just wait and retry
 			time.Sleep(6 * time.Second)
-			continue
-		} else if latestBeefyBlockNumber <= nextBeefyBlockNumber+600 {
-			// The relay block has been finalized not long ago(1 hour), just return the finalized block
-			nextBeefyBlockHash = finalizedBeefyBlockHash
-			break
 		} else {
-			// The relay block has been finalized for a long time, in this case return the next block
-			// which contains a beefy justification
-			for {
-				if nextBeefyBlockNumber == latestBeefyBlockNumber {
-					nextBeefyBlockHash = finalizedBeefyBlockHash
-					break
-				}
-				nextBeefyBlockHash, err = api.RPC.Chain.GetBlockHash(nextBeefyBlockNumber)
-				if err != nil {
-					return nextBeefyBlockHash, fmt.Errorf("fetch block hash: %w", err)
-				}
-				block, err := api.RPC.Chain.GetBlock(nextBeefyBlockHash)
-				if err != nil {
-					return nextBeefyBlockHash, fmt.Errorf("fetch block: %w", err)
-				}
-
-				var commitment *types.SignedCommitment
-				for j := range block.Justifications {
-					sc := types.OptionalSignedCommitment{}
-					if block.Justifications[j].EngineID() == "BEEF" {
-						err := types.DecodeFromBytes(block.Justifications[j].Payload(), &sc)
-						if err != nil {
-							return nextBeefyBlockHash, fmt.Errorf("decode BEEFY signed commitment: %w", err)
-						}
-						ok, value := sc.Unwrap()
-						if ok {
-							commitment = &value
-						}
-					}
-				}
-				if commitment != nil {
-					return nextBeefyBlockHash, nil
-				}
-				nextBeefyBlockNumber++
-			}
+			beefyBlockHash = finalizedBeefyBlockHash
+			break
 		}
 	}
-	return nextBeefyBlockHash, nil
+	return beefyBlockHash, nil
 }

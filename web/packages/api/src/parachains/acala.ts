@@ -42,7 +42,7 @@ export class AcalaParachain extends ParachainBase {
                 continue
             }
 
-            const assetId: any = value.args.at(0)?.toPrimitive()
+            const assetId: any = value.args[0]?.toPrimitive()
             const asset: any = (
                 await this.provider.query.assetRegistry.assetMetadatas({ foreignAssetId: assetId })
             ).toPrimitive()
@@ -63,8 +63,8 @@ export class AcalaParachain extends ParachainBase {
     async calculateXcmFee(_destinationXcm: any, asset: any): Promise<bigint> {
         console.warn(
             `${this.specName} does not support calculating fee with asset '${JSON.stringify(
-                asset
-            )}'. Using default.`
+                asset,
+            )}'. Using default.`,
         )
 
         return 300_000_000n

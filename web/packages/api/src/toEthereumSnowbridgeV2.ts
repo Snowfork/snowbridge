@@ -1,11 +1,12 @@
 import { ApiPromise } from "@polkadot/api"
 import { SubmittableExtrinsic } from "@polkadot/api/types"
 import { Codec, ISubmittableResult } from "@polkadot/types/types"
-import { AssetRegistry } from "@snowbridge/base-types"
+import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import {
     DeliveryFee,
+    dryRunBridgeHub,
     resolveInputs,
     Transfer,
     ValidationKind,
@@ -26,19 +27,21 @@ import {
     bridgeLocation,
 } from "./xcmBuilder"
 import { xxhashAsHex } from "@polkadot/util-crypto"
-import { BN } from "@polkadot/util"
+import { BN, hexToU8a } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
 import { Context } from "./index"
 import { ETHER_TOKEN_ADDRESS, getAssetHubConversionPalletSwap } from "./assets_v2"
 import { getOperatingStatus } from "./status"
+import { AbstractProvider, ethers, Wallet, TransactionReceipt } from "ethers"
+import { CreateAgent } from "./registration/agent/createAgent"
 
 export { ValidationKind, signAndSend } from "./toEthereum_v2"
 
 export function createTransferImplementation(
     sourceParaId: number,
     registry: AssetRegistry,
-    tokenAddress: string
+    tokenAddress: string,
 ): TransferInterface {
     const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
 
@@ -64,7 +67,7 @@ export async function dryRunOnSourceParachain(
     assetHubParaId: number,
     bridgeHubParaId: number,
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>,
-    sourceAccount: string
+    sourceAccount: string,
 ) {
     const origin = { system: { signed: sourceAccount } }
     // To ensure compatibility, dryRunCall includes the version parameter in XCMv5.
@@ -87,7 +90,7 @@ export async function dryRunOnSourceParachain(
             "Error during dry run on source parachain:",
             sourceAccount,
             tx.toHuman(),
-            result.toHuman()
+            result.toHuman(),
         )
     } else {
         bridgeHubForwarded =
@@ -144,7 +147,7 @@ export async function dryRunAssetHub(
     assetHub: ApiPromise,
     parachainId: number,
     bridgeHubParaId: number,
-    xcm: any
+    xcm: any,
 ) {
     const sourceParachain = { v5: { parents: 1, interior: { x1: [{ parachain: parachainId }] } } }
     const result = await assetHub.call.dryRunApi.dryRunXcm<
@@ -186,27 +189,6 @@ export async function dryRunAssetHub(
     }
 }
 
-export async function dryRunBridgeHub(bridgeHub: ApiPromise, assetHubParaId: number, xcm: any) {
-    const sourceParachain = {
-        v5: { parents: 1, interior: { x1: [{ parachain: assetHubParaId }] } },
-    }
-    const result = await bridgeHub.call.dryRunApi.dryRunXcm<
-        Result<XcmDryRunEffects, XcmDryRunApiError>
-    >(sourceParachain, xcm)
-
-    const resultHuman = result.toHuman() as any
-
-    const success = result.isOk && result.asOk.executionResult.isComplete
-
-    if (!success) {
-        console.error("Error during dry run on bridge hub:", xcm.toHuman(), result.toHuman())
-    }
-    return {
-        success,
-        errorMessage: resultHuman.Ok.executionResult.Incomplete?.error,
-    }
-}
-
 export const MaxWeight = { refTime: 15_000_000_000n, proofSize: 800_000 }
 
 export const isFeeAllowed = (feeLocation: any, sourceParaId: number) => {
@@ -237,7 +219,8 @@ export const estimateEthereumExecutionFee = async (
     context: Context,
     registry: AssetRegistry,
     sourceParaId: number,
-    tokenAddress: string
+    tokenAddress: string,
+    contractCall?: ContractCall,
 ): Promise<bigint> => {
     const ethereum = await context.ethereum()
     const { tokenErcMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
@@ -247,7 +230,9 @@ export const estimateEthereumExecutionFee = async (
     let feeData = await ethereum.getFeeData()
     let ethereumExecutionFee =
         (feeData.gasPrice ?? 2_000_000_000n) *
-        ((tokenErcMetadata.deliveryGas ?? 80_000n) + (ethereumChain.baseDeliveryGas ?? 120_000n))
+        ((tokenErcMetadata.deliveryGas ?? 80_000n) +
+            (ethereumChain.baseDeliveryGas ?? 120_000n) +
+            (contractCall?.gas ?? 0n))
     return ethereumExecutionFee
 }
 
@@ -261,7 +246,8 @@ export const estimateFeesFromAssetHub = async (
         slippagePadPercentage?: bigint
         defaultFee?: bigint
         feeTokenLocation?: any
-    }
+        contractCall?: ContractCall
+    },
 ): Promise<DeliveryFee> => {
     const assetHub = await context.parachain(registry.assetHubParaId)
     const assetHubImpl = await paraImplementation(assetHub)
@@ -278,15 +264,15 @@ export const estimateFeesFromAssetHub = async (
 
     localExecutionFeeDOT = padFeeByPercentage(
         await assetHubImpl.calculateXcmFee(deliveryXcm.localXcm, DOT_LOCATION),
-        feePadPercentage
+        feePadPercentage,
     )
 
     bridgeHubDeliveryFeeDOT = padFeeByPercentage(
         await assetHubImpl.calculateDeliveryFeeInDOT(
             registry.bridgeHubParaId,
-            deliveryXcm.forwardedXcmToBH
+            deliveryXcm.forwardedXcmToBH,
         ),
-        feePadPercentage
+        feePadPercentage,
     )
 
     snowbridgeDeliveryFeeDOT = await getSnowbridgeDeliveryFee(assetHub, options?.defaultFee)
@@ -303,7 +289,8 @@ export const estimateFeesFromAssetHub = async (
         context,
         registry,
         registry.assetHubParaId,
-        tokenAddress
+        tokenAddress,
+        options?.contractCall,
     )
 
     // calculate the cost of swapping in native asset
@@ -320,7 +307,7 @@ export const estimateFeesFromAssetHub = async (
                 assetHub,
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
-                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage)
+                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
             )
             totalFeeInDot += ethereumExecutionFeeInNative
             totalFeeInNative = totalFeeInDot
@@ -358,7 +345,8 @@ export const estimateFeesFromParachains = async (
         slippagePadPercentage?: bigint
         defaultFee?: bigint
         feeTokenLocation?: any
-    }
+        contractCall?: ContractCall
+    },
 ): Promise<DeliveryFee> => {
     const sourceParachain = registry.parachains[sourceParaId.toString()]
     const sourceParachainImpl = await paraImplementation(await context.parachain(sourceParaId))
@@ -383,52 +371,52 @@ export const estimateFeesFromParachains = async (
     if (sourceParachain.features.hasDotBalance) {
         localExecutionFeeDOT = padFeeByPercentage(
             await sourceParachainImpl.calculateXcmFee(deliveryXcm.localXcm, DOT_LOCATION),
-            feePadPercentage
+            feePadPercentage,
         )
         localDeliveryFeeDOT = padFeeByPercentage(
             await sourceParachainImpl.calculateDeliveryFeeInDOT(
                 registry.assetHubParaId,
-                deliveryXcm.forwardXcmToAH
+                deliveryXcm.forwardXcmToAH,
             ),
-            feePadPercentage
+            feePadPercentage,
         )
         returnToSenderExecutionFeeDOT = padFeeByPercentage(
             await sourceParachainImpl.calculateXcmFee(deliveryXcm.returnToSenderXcm, DOT_LOCATION),
-            feePadPercentage
+            feePadPercentage,
         )
     } else {
         localExecutionFeeInNative = padFeeByPercentage(
             await sourceParachainImpl.calculateXcmFee(deliveryXcm.localXcm, HERE_LOCATION),
-            feePadPercentage
+            feePadPercentage,
         )
         localDeliveryFeeInNative = padFeeByPercentage(
             await sourceParachainImpl.calculateDeliveryFeeInNative(
                 registry.assetHubParaId,
-                deliveryXcm.forwardXcmToAH
+                deliveryXcm.forwardXcmToAH,
             ),
-            feePadPercentage
+            feePadPercentage,
         )
         returnToSenderExecutionFeeNative = padFeeByPercentage(
             await sourceParachainImpl.calculateXcmFee(deliveryXcm.returnToSenderXcm, HERE_LOCATION),
-            feePadPercentage
+            feePadPercentage,
         )
     }
 
     returnToSenderDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
         sourceParaId,
-        deliveryXcm.returnToSenderXcm
+        deliveryXcm.returnToSenderXcm,
     )
     assetHubExecutionFeeDOT = padFeeByPercentage(
         await assetHubImpl.calculateXcmFee(deliveryXcm.forwardXcmToAH, DOT_LOCATION),
-        feePadPercentage
+        feePadPercentage,
     )
 
     bridgeHubDeliveryFeeDOT = padFeeByPercentage(
         await assetHubImpl.calculateDeliveryFeeInDOT(
             registry.bridgeHubParaId,
-            deliveryXcm.forwardedXcmToBH
+            deliveryXcm.forwardedXcmToBH,
         ),
-        feePadPercentage
+        feePadPercentage,
     )
 
     snowbridgeDeliveryFeeDOT = await getSnowbridgeDeliveryFee(assetHub, options?.defaultFee)
@@ -446,7 +434,8 @@ export const estimateFeesFromParachains = async (
         context,
         registry,
         sourceParaId,
-        tokenAddress
+        tokenAddress,
+        options?.contractCall,
     )
 
     // calculate the cost of swapping in native asset
@@ -461,7 +450,7 @@ export const estimateFeesFromParachains = async (
                 assetHub,
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
-                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage)
+                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
             )
             totalFeeInDot += ethereumExecutionFeeInNative
             totalFeeInNative = totalFeeInDot
@@ -473,20 +462,20 @@ export const estimateFeesFromParachains = async (
                 assetHub,
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
-                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage)
+                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
             )
             ethereumExecutionFeeInNative = await getAssetHubConversionPalletSwap(
                 assetHub,
                 feeLocation,
                 DOT_LOCATION,
-                padFeeByPercentage(ethereumExecutionFeeInDOT, feeSlippagePadPercentage)
+                padFeeByPercentage(ethereumExecutionFeeInDOT, feeSlippagePadPercentage),
             )
             totalFeeInDot += ethereumExecutionFeeInDOT
             totalFeeInNative = await getAssetHubConversionPalletSwap(
                 assetHub,
                 feeLocation,
                 DOT_LOCATION,
-                padFeeByPercentage(totalFeeInDot, feeSlippagePadPercentage)
+                padFeeByPercentage(totalFeeInDot, feeSlippagePadPercentage),
             )
             if (localExecutionFeeInNative) {
                 totalFeeInNative += localExecutionFeeInNative
@@ -524,17 +513,18 @@ export const estimateFeesFromParachains = async (
 
 export const validateTransferFromAssetHub = async (
     context: Context,
-    transfer: Transfer
+    transfer: Transfer,
 ): Promise<ValidationResult> => {
     const { registry, fee, tokenAddress, amount } = transfer.input
     const { sourceAccountHex, sourceParaId, sourceAssetMetadata } = transfer.computed
     const { tx } = transfer
 
-    const { sourceParachain, gateway, bridgeHub } =
+    const { sourceParachain, gateway, ethereum, bridgeHub } =
         context instanceof Context
             ? {
                   sourceParachain: await context.parachain(sourceParaId),
                   gateway: context.gateway(),
+                  ethereum: context.ethereum(),
                   bridgeHub: await context.bridgeHub(),
               }
             : context
@@ -557,7 +547,7 @@ export const validateTransferFromAssetHub = async (
             sourceAccountHex,
             registry.ethChainId,
             tokenAddress,
-            sourceAssetMetadata
+            sourceAssetMetadata,
         )
     }
     if (isNativeBalance && fee.totalFeeInNative) {
@@ -583,7 +573,7 @@ export const validateTransferFromAssetHub = async (
         let etherBalance = await sourceParachainImpl.getTokenBalance(
             sourceAccountHex,
             registry.ethChainId,
-            ETHER_TOKEN_ADDRESS
+            ETHER_TOKEN_ADDRESS,
         )
 
         if (fee.ethereumExecutionFee! > etherBalance) {
@@ -591,6 +581,22 @@ export const validateTransferFromAssetHub = async (
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientEtherBalance,
                 message: "Insufficient ether balance to submit transaction.",
+            })
+        }
+    }
+    let contractCall = transfer.input.contractCall
+    if (contractCall) {
+        try {
+            await checkContractAddress(ethereum, contractCall.target)
+        } catch (error) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.ContractCallInvalidTarget,
+                message:
+                    "Contract call with invalid target address: " +
+                    contractCall.target +
+                    " error: " +
+                    String(error),
             })
         }
     }
@@ -604,13 +610,13 @@ export const validateTransferFromAssetHub = async (
         registry.assetHubParaId,
         registry.bridgeHubParaId,
         transfer.tx,
-        sourceAccountHex
+        sourceAccountHex,
     )
     if (dryRunResultAssetHub.success && dryRunResultAssetHub.bridgeHubForwarded) {
         const dryRunResultBridgeHub = await dryRunBridgeHub(
             bridgeHub,
             registry.assetHubParaId,
-            dryRunResultAssetHub.bridgeHubForwarded[1][0]
+            dryRunResultAssetHub.bridgeHubForwarded[1][0],
         )
         if (!dryRunResultBridgeHub.success) {
             logs.push({
@@ -679,7 +685,7 @@ export const validateTransferFromAssetHub = async (
 
 export const validateTransferFromParachain = async (
     context: Context,
-    transfer: Transfer
+    transfer: Transfer,
 ): Promise<ValidationResult> => {
     const { registry, fee, tokenAddress, amount } = transfer.input
     const {
@@ -690,11 +696,12 @@ export const validateTransferFromParachain = async (
     } = transfer.computed
     const { tx } = transfer
 
-    const { sourceParachain, gateway, bridgeHub, assetHub } =
+    const { sourceParachain, gateway, ethereum, bridgeHub, assetHub } =
         context instanceof Context
             ? {
                   sourceParachain: await context.parachain(sourceParaId),
                   gateway: context.gateway(),
+                  ethereum: context.ethereum(),
                   bridgeHub: await context.bridgeHub(),
                   assetHub: await context.assetHub(),
               }
@@ -720,7 +727,7 @@ export const validateTransferFromParachain = async (
             sourceAccountHex,
             registry.ethChainId,
             tokenAddress,
-            sourceAssetMetadata
+            sourceAssetMetadata,
         )
     }
 
@@ -746,7 +753,7 @@ export const validateTransferFromParachain = async (
         let etherBalance = await sourceParachainImpl.getTokenBalance(
             sourceAccountHex,
             registry.ethChainId,
-            ETHER_TOKEN_ADDRESS
+            ETHER_TOKEN_ADDRESS,
         )
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -755,6 +762,23 @@ export const validateTransferFromParachain = async (
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientEtherBalance,
                 message: "Insufficient ether balance to submit transaction.",
+            })
+        }
+    }
+
+    let contractCall = transfer.input.contractCall
+    if (contractCall) {
+        try {
+            await checkContractAddress(ethereum, contractCall.target)
+        } catch (error) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.ContractCallInvalidTarget,
+                message:
+                    "Contract call with invalid target address: " +
+                    contractCall.target +
+                    " error: " +
+                    String(error),
             })
         }
     }
@@ -769,7 +793,7 @@ export const validateTransferFromParachain = async (
             registry.assetHubParaId,
             registry.bridgeHubParaId,
             transfer.tx,
-            sourceAccountHex
+            sourceAccountHex,
         )
         if (!dryRunSource.success) {
             logs.push({
@@ -785,20 +809,20 @@ export const validateTransferFromParachain = async (
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.DryRunFailed,
-                    message: "Dry run call did not provide a forwared xcm.",
+                    message: "Dry run call did not provide a forwarded xcm.",
                 })
             } else {
                 const dryRunResultAssetHub = await dryRunAssetHub(
                     assetHub,
                     sourceParaId,
                     registry.bridgeHubParaId,
-                    dryRunSource.assetHubForwarded[1][0]
+                    dryRunSource.assetHubForwarded[1][0],
                 )
                 if (dryRunResultAssetHub.success && dryRunResultAssetHub.bridgeHubForwarded) {
                     const dryRunResultBridgeHub = await dryRunBridgeHub(
                         bridgeHub,
                         registry.assetHubParaId,
-                        dryRunResultAssetHub.bridgeHubForwarded[1][0]
+                        dryRunResultAssetHub.bridgeHubForwarded[1][0],
                     )
                     if (!dryRunResultBridgeHub.success) {
                         logs.push({
@@ -849,4 +873,67 @@ export const validateTransferFromParachain = async (
         },
         transfer,
     }
+}
+
+export async function buildContractCallHex(context: Context, contractCall: ContractCall) {
+    const bridgeHub = await context.bridgeHub()
+    const callHex = bridgeHub.createType("ContractCall", {
+        target: contractCall.target,
+        calldata: contractCall.calldata,
+        value: contractCall.value,
+        gas: contractCall.gas,
+    })
+    return "0x00" + callHex.toHex().slice(2)
+}
+
+export const mockDeliveryFee: DeliveryFee = {
+    localExecutionFeeDOT: 1n,
+    snowbridgeDeliveryFeeDOT: 1n,
+    assetHubExecutionFeeDOT: 1n,
+    bridgeHubDeliveryFeeDOT: 1n,
+    returnToSenderDeliveryFeeDOT: 1n,
+    returnToSenderExecutionFeeDOT: 1n,
+    totalFeeInDot: 10n,
+    ethereumExecutionFee: 1n,
+}
+
+export const checkContractAddress = async (ethereum: AbstractProvider, address: string) => {
+    if (!ethers.isAddress(address)) {
+        throw new Error("Invalid contract address: " + address)
+    }
+    try {
+        const code = await ethereum.getCode(address)
+        if (code == "0x") {
+            throw new Error(
+                "Contract call with invalid target address: no contract deployed at " + address,
+            )
+        }
+    } catch (error) {
+        throw new Error(
+            "Contract call with invalid target address: " + address + " error: " + String(error),
+        )
+    }
+}
+
+// Agent creation exports
+export type {
+    AgentCreation,
+    AgentCreationValidationResult,
+    AgentCreationInterface,
+} from "./registration/agent/agentInterface"
+
+export function createAgentCreationImplementation() {
+    return new CreateAgent()
+}
+
+export async function sendAgentCreation(
+    creation: any,
+    wallet: Wallet,
+): Promise<TransactionReceipt> {
+    const response = await wallet.sendTransaction(creation.tx)
+    const receipt = await response.wait(1)
+    if (!receipt) {
+        throw Error(`Transaction ${response.hash} not included.`)
+    }
+    return receipt
 }

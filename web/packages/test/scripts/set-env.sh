@@ -5,6 +5,8 @@ export contract_dir="$root_dir/contracts"
 test_helpers_dir="$web_dir/packages/test-helpers"
 relay_dir="$root_dir/relayer"
 relay_bin="$relay_dir/build/snowbridge-relay"
+gas_estimator_dir="$root_dir/gas-estimator"
+gas_estimator_bin="$root_dir/gas-estimator/target/release/snowbridge-gas-estimator "
 export output_dir="${OUTPUT_DIR:-/tmp/snowbridge-v2}"
 export output_bin_dir="$output_dir/bin"
 relayer_v1="$output_bin_dir/snowbridge-relay-v1"
@@ -14,13 +16,13 @@ zombienet_data_dir="$output_dir/zombienet"
 export PATH="$output_bin_dir:$PATH"
 polkadot_sdk_dir="${POLKADOT_SDK_DIR:-../polkadot-sdk}"
 
-export LODESTAR_VERSION=v1.31.0
+export GETH_VERSION=v1.16.4
+export LODESTAR_VERSION=v1.35.0
 export snowbridge_v1="${BUILD_V1:-false}"
 v1_root_dir="$root_dir/../snowbridge-v1"
 export v1_contract_dir="$v1_root_dir/contracts"
 v1_relay_dir="$v1_root_dir/relayer"
 rebuild_web_packages="${REBUILD_WEB_API:-false}"
-
 
 eth_network="${ETH_NETWORK:-localhost}"
 eth_endpoint_http="${ETH_RPC_ENDPOINT:-http://127.0.0.1:8545}/${INFURA_PROJECT_ID:-}"
@@ -91,8 +93,8 @@ export ETHERSCAN_API_KEY="${ETHERSCAN_API_KEY:-0x0}"
 # but for rococo-local each session is only 20 slots=120s
 # so relax somehow here just for quick test
 # for production deployment ETH_RANDAO_DELAY should be configured in a more reasonable sense
-export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-3}"
-export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-3}"
+export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-4}"
+export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-32}"
 export MINIMUM_REQUIRED_SIGNATURES="${MINIMUM_REQUIRED_SIGNATURES:-16}"
 
 ## Fee

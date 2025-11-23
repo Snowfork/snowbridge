@@ -33,17 +33,17 @@ export class PenpalParachain extends ParachainBase {
     async getAssetsFiltered(
         ethChainId: number,
         pnas: PNAMap,
-        pnaFilter: (location: any, paraId: number, env: string) => any
+        pnaFilter: (location: any, paraId: number, env: string) => any,
     ) {
         const assets: AssetMap = {}
         // ERC20
         {
             const entries = await this.provider.query.foreignAssets.asset.entries()
             for (const [key, value] of entries) {
-                const location: any = key.args.at(0)?.toJSON()
+                const location: any = key.args[0]?.toJSON()
                 if (!location) {
                     console.warn(
-                        `Could not convert ${key.toHuman()} to location for ${this.specName}.`
+                        `Could not convert ${key.toHuman()} to location for ${this.specName}.`,
                     )
                     continue
                 }
@@ -70,18 +70,18 @@ export class PenpalParachain extends ParachainBase {
         // PNA
         {
             for (const { token, foreignId, ethereumlocation } of Object.keys(pnas).map(
-                (p) => pnas[p]
+                (p) => pnas[p],
             )) {
                 const locationPair: any = pnaFilter(
                     ethereumlocation,
                     this.parachainId,
-                    this.specName
+                    this.specName,
                 )
                 if (!locationPair) {
                     console.warn(
                         `Location ${JSON.stringify(ethereumlocation)} is not bridgeable on ${
                             this.specName
-                        }`
+                        }`,
                     )
                     continue
                 }

@@ -55,7 +55,6 @@ contract HighGasToken is IERC20 {
     }
 
     function _transfer(address from, address to, uint256 amount) internal {
-        uint256 i;
         uint256 gasAmount = 1_010_000;
         uint256 counter = 0;
         uint256 startGas = gasleft();

@@ -68,7 +68,7 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 				// the beefy light client
 				task.ValidatorsRoot = state.NextValidatorSetRoot
 
-				err = wr.submit(ctx, task)
+				err = wr.submit(ctx, &task)
 				if err != nil {
 					return fmt.Errorf("submit request: %w", err)
 				}
@@ -115,20 +115,29 @@ func (wr *EthereumWriter) queryBeefyClientState(ctx context.Context) (*BeefyClie
 	}, nil
 }
 
-func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
+func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	// Initial submission
-	tx, initialBitfield, err := wr.doSubmitInitial(ctx, &task)
+	tx, initialBitfield, err := wr.doSubmitInitial(ctx, task)
 	if err != nil {
-		log.WithError(err).Error("Failed to send initial signature commitment")
-		return err
+		return fmt.Errorf("Failed to call submitInitial: %w", err)
 	}
+	// Wait for receipt of submitInitial
+	receipt, err := wr.conn.WatchTransaction(ctx, tx, 0)
+	if err != nil {
+		return fmt.Errorf("Failed to get receipt of submitInitial: %w", err)
+	}
+	log.WithFields(logrus.Fields{
+		"tx":      tx.Hash().Hex(),
+		"receipt": receipt.BlockNumber,
+	}).Debug("Transaction submitInitial succeeded")
+
+	log.Debug(fmt.Sprintf("Waiting RandaoCommitDelay by %d blocks", wr.blockWaitPeriod+1))
 
 	// Wait RandaoCommitDelay before submit CommitPrevRandao to prevent attacker from manipulating committee memberships
 	// Details in https://eth2book.info/altair/part3/config/preset/#max_seed_lookahead
-	_, err = wr.conn.WatchTransaction(ctx, tx, wr.blockWaitPeriod+1)
+	err = wr.conn.WaitForFutureBlock(ctx, receipt.BlockNumber.Uint64(), wr.blockWaitPeriod+1)
 	if err != nil {
-		log.WithError(err).Error("Failed to wait for RandaoCommitDelay")
-		return err
+		return fmt.Errorf("Failed to wait for RandaoCommitDelay: %w", err)
 	}
 
 	commitmentHash, err := task.CommitmentHash()
@@ -136,30 +145,42 @@ func (wr *EthereumWriter) submit(ctx context.Context, task Request) error {
 		return fmt.Errorf("generate commitment hash: %w", err)
 	}
 
+	if task.Skippable {
+		log.WithFields(logrus.Fields{
+			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("CommitPrevRandao is skipped, indicating that a newer update is already in progress.")
+		return nil
+	}
 	// Commit PrevRandao which will be used as seed to randomly select subset of validators
 	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L446-L447
 	tx, err = wr.contract.CommitPrevRandao(
 		wr.conn.MakeTxOpts(ctx),
 		*commitmentHash,
 	)
-
-	_, err = wr.conn.WatchTransaction(ctx, tx, 1)
 	if err != nil {
-		log.WithError(err).Error("Failed to CommitPrevRandao")
-		return err
-	}
-
-	// Final submission
-	tx, err = wr.doSubmitFinal(ctx, *commitmentHash, initialBitfield, &task)
-	if err != nil {
-		log.WithError(err).Error("Failed to send final signature commitment")
-		return err
+		return fmt.Errorf("Failed to call CommitPrevRandao: %w", err)
 	}
 
 	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
-		log.WithError(err).Error("Failed to submitFinal")
-		return err
+		return fmt.Errorf("Failed to get receipt of CommitPrevRandao: %w", err)
+	}
+
+	if task.Skippable {
+		log.WithFields(logrus.Fields{
+			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("SubmitFinal is skipped, indicating that a newer update is already in progress.")
+		return nil
+	}
+	// Final submission
+	tx, err = wr.doSubmitFinal(ctx, *commitmentHash, initialBitfield, task)
+	if err != nil {
+		return fmt.Errorf("Failed to call submitFinal: %w", err)
+	}
+
+	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
+	if err != nil {
+		return fmt.Errorf("Failed to get receipt of submitFinal: %w", err)
 	}
 
 	log.WithFields(logrus.Fields{

@@ -13,6 +13,7 @@ export type Config = {
     RELAYERS: Relayer[]
     PARACHAINS: { [paraId: string]: string }
     GRAPHQL_API_URL: string
+    TO_MONITOR_PARACHAINS?: number[]
 }
 
 export type KusamaConfig = {
@@ -503,20 +504,21 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                 "1": "https://ethereum-rpc.publicnode.com",
                 "1284": "https://rpc.api.moonbeam.network",
             },
-            RELAY_CHAIN_URL: "https://polkadot-rpc.dwellir.com",
+            RELAY_CHAIN_URL: "https://polkadot-rpc.n.dwellir.com",
             PARACHAINS: {
-                "1000": "wss://asset-hub-polkadot-rpc.dwellir.com",
-                "1002": "https://bridge-hub-polkadot-rpc.dwellir.com",
+                "1000": "wss://asset-hub-polkadot-rpc.n.dwellir.com",
+                "1002": "https://bridge-hub-polkadot-rpc.n.dwellir.com",
                 "3369": "wss://polkadot-mythos-rpc.polkadot.io",
                 "2034": "wss://hydration-rpc.n.dwellir.com",
                 "2030": "wss://bifrost-polkadot.ibp.network",
-                "2004": "wss://moonbeam-rpc.n.dwellir.com",
-                "2000": "wss://acala-rpc.dwellir.com",
+                "2004": "wss://moonbeam.ibp.network",
+                "2000": "wss://acala-rpc-0.aca-api.network",
+                "2043": "wss://parachain-rpc.origin-trail.network",
                 // TODO: Add back in jampton once we have an indexer in place.
                 //"3397": "wss://rpc.jamton.network",
             },
             GATEWAY_CONTRACT: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
-            BEEFY_CONTRACT: "0x6eD05bAa904df3DE117EcFa638d4CB84e1B8A00C",
+            BEEFY_CONTRACT: "0x1817874feAb3ce053d0F40AbC23870DB35C2AFfc",
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
             PRIMARY_GOVERNANCE_CHANNEL_ID:
@@ -535,13 +537,18 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
                     type: "ethereum",
                 },
                 {
+                    name: "beefy-on-demand",
+                    account: "0xF3D021D51a725F5DBDCE253248E826A8644Be3c1",
+                    type: "ethereum",
+                },
+                {
                     name: "parachain-primary-gov",
-                    account: "0x1F1819C3C68F9533adbB8E51C8E8428a818D693E",
+                    account: "0x0f51678Ac675C1abf2BeC1DAC9cA701cFcfFF5E2",
                     type: "ethereum",
                 },
                 {
                     name: "parachain-secondary-gov",
-                    account: "0x1F1819C3C68F9533adbB8E51C8E8428a818D693E",
+                    account: "0x0f51678Ac675C1abf2BeC1DAC9cA701cFcfFF5E2",
                     type: "ethereum",
                 },
                 {
@@ -557,13 +564,14 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ],
             GRAPHQL_API_URL:
                 "https://snowbridge.squids.live/snowbridge-subsquid-polkadot:production/api/graphql",
+            TO_MONITOR_PARACHAINS: [2034, 2043, 3369], // Hydration, OriginTrail, Mythos
         },
         kusamaConfig: {
             ASSET_HUB_PARAID: 1000,
             BRIDGE_HUB_PARAID: 1002,
             PARACHAINS: {
-                "1000": "wss://asset-hub-kusama-rpc.dwellir.com",
-                "1002": "https://bridge-hub-kusama-rpc.dwellir.com",
+                "1000": "wss://asset-hub-kusama-rpc.n.dwellir.com",
+                "1002": "https://bridge-hub-kusama-rpc.n.dwellir.com",
             },
         },
     },
@@ -611,10 +619,10 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ETHEREUM_CHAINS: {
                 "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
             },
-            RELAY_CHAIN_URL: "wss://westend-rpc.dwellir.com",
+            RELAY_CHAIN_URL: "wss://westend-rpc.n.dwellir.com",
             PARACHAINS: {
-                "1000": "wss://asset-hub-westend-rpc.dwellir.com",
-                "1002": "wss://bridge-hub-westend-rpc.dwellir.com",
+                "1000": "wss://asset-hub-westend-rpc.n.dwellir.com",
+                "1002": "wss://bridge-hub-westend-rpc.n.dwellir.com",
                 "2313": `wss://node-7330371704012918784.nv.onfinality.io/ws?apikey=${
                     process.env["FREQUENCY_NODE_KEY"] ||
                     process.env["NEXT_PUBLIC_FREQUENCY_NODE_KEY"]

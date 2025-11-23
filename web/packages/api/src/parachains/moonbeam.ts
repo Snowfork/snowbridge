@@ -21,7 +21,7 @@ export function toMoonbeamXC20(assetId: bigint) {
 export async function getMoonbeamEvmForeignAssetBalance(
     api: ApiPromise,
     token: string,
-    account: string
+    account: string,
 ) {
     const method = "balanceOf"
     const data = MOONBEAM_ERC20.encodeFunctionData(method, [account])
@@ -35,13 +35,14 @@ export async function getMoonbeamEvmForeignAssetBalance(
         null,
         null,
         false,
-        null
+        null,
+        null,
     )
     const resultJson = result.toPrimitive() as any
     if (!(resultJson?.ok?.exitReason?.succeed === "Returned")) {
         console.error(resultJson)
         throw Error(
-            `Could not fetch balance for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`
+            `Could not fetch balance for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`,
         )
     }
     const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)
@@ -60,13 +61,14 @@ export async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: strin
         null,
         null,
         false,
-        null
+        null,
+        null,
     )
     const resultJson = result.toPrimitive() as any
     if (!(resultJson?.ok?.exitReason?.succeed === "Returned")) {
         console.error(resultJson)
         throw Error(
-            `Could not fetch metadata for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`
+            `Could not fetch metadata for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`,
         )
     }
     const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)
@@ -111,7 +113,7 @@ export class MoonbeamParachain extends ParachainBase {
         for (const [key, value] of foreignEntries) {
             const location = value.toJSON() as any
 
-            const assetId = BigInt(key.args.at(0)?.toPrimitive() as any)
+            const assetId = BigInt(key.args[0]?.toPrimitive() as any)
             const xc20 = toMoonbeamXC20(assetId)
 
             if (location.parents === 1 && location.interior.here !== undefined) {
