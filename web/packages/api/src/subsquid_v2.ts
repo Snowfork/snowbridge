@@ -1,10 +1,12 @@
+import { queryByGraphQL } from "./subsquid"
+
 /**
  * Query the recent transfers from Ethereum to Polkadot
 
 ```
 curl -H 'Content-Type: application/json' \
 -X POST -d \
-'{ "query": "query { transferStatusToPolkadots(limit: 5, orderBy: blockNumber_DESC) { txHash status channelId destinationAddress messageId nonce senderAddress timestamp tokenAddress amount} }" }' \
+'{ "query": "query { transferStatusToPolkadotV2s(limit: 5, orderBy: blockNumber_DESC) { txHash status channelId destinationAddress messageId nonce senderAddress timestamp tokenAddress amount} }" }' \
 $graphqlApiUrl --no-progress-meter | jq "."
 ```
 
@@ -15,7 +17,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
 * @param toAssetHubMessageQueue - transfer received in message queue on asset hub
 * @param toDestination - transfer received in message queue on the destination chain, if destination is asset hub then same as toAssetHubMessageQueue
 *
-"transferStatusToPolkadots": [
+"transferStatusToPolkadotV2s": [
       {
 
         "txHash": "0x53597b6f98334a160f26182398ec3e7368be8ca7aea3eea41d288046f3a1999d",
@@ -36,7 +38,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
 ]
  **/
 export const fetchToPolkadotTransfers = async (graphqlApiUrl: string, graphqlQuerySize = 100) => {
-    let query = `query { transferStatusToPolkadots(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC) {
+    let query = `query { transferStatusToPolkadotV2s(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC) {
             id
             status
             blockNumber
@@ -78,7 +80,7 @@ export const fetchToPolkadotTransfers = async (graphqlApiUrl: string, graphqlQue
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result?.transferStatusToPolkadots
+    return result?.transferStatusToPolkadotV2s
 }
 
 /**
@@ -87,7 +89,7 @@ export const fetchToPolkadotTransfers = async (graphqlApiUrl: string, graphqlQue
 ```
 curl -H 'Content-Type: application/json' \
 -X POST -d \
-'{ "query": "query { transferStatusToEthereums(limit: 5, orderBy: blockNumber_DESC) { txHash status channelId destinationAddress messageId nonce senderAddress timestamp tokenAddress amount} }" }' \
+'{ "query": "query { transferStatusToEthereumV2s(limit: 5, orderBy: blockNumber_DESC) { txHash status channelId destinationAddress messageId nonce senderAddress timestamp tokenAddress amount} }" }' \
 $graphqlApiUrl --no-progress-meter | jq "."
 ```
 
@@ -99,7 +101,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
 * @param toBridgeHubOutboundQueue - transfer received in outbound queue on bridge hub
 * @param toDestination - transfer received on the destination chain(Ethereum)
 *
-"transferStatusToEthereums": [
+"transferStatusToEthereumV2s": [
       {
 
         "txHash": "0x53597b6f98334a160f26182398ec3e7368be8ca7aea3eea41d288046f3a1999d",
@@ -120,7 +122,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
 ]
  **/
 export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQuerySize = 100) => {
-    let query = `query { transferStatusToEthereums(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC) {
+    let query = `query { transferStatusToEthereumV2s(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC) {
             id
             status
             blockNumber
@@ -161,57 +163,7 @@ export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQue
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result?.transferStatusToEthereums
-}
-
-/**
- * Query the estimated delivery time for transfers to both directions
-
-curl -H 'Content-Type: application/json' \
--X POST -d \
-'{ "query": "query { toEthereumElapse { elapse } toPolkadotElapse { elapse } }" }' \
-$graphqlApiUrl --no-progress-meter | jq "."
-
-* @param elapse - the estimated delivery time of the transfer so far in average (in seconds)
-
-{
-  "data": {
-    "toEthereumElapse": {
-      "elapse": 7521.195804
-    },
-    "toPolkadotElapse": {
-      "elapse": 1197.827338
-    }
-  }
-}
-**/
-export const fetchEstimatedDeliveryTime = async (graphqlApiUrl: string, channelId: string) => {
-    let query = `query { toEthereumElapse(channelId:"${channelId}") { elapse } toPolkadotElapse(channelId:"${channelId}") { elapse } }`
-    let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result
-}
-
-
-/**
- * Query with a raw graphql
- **/
-export const queryByGraphQL = async (graphqlApiUrl: string, query: string) => {
-    let response = await fetch(graphqlApiUrl, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            query,
-        }),
-    })
-    // proper error checking
-    if (!response.ok) {
-        console.error(`${response.status} ${response.statusText}\nBody:`, await response.text())
-        throw Error(`Error querying graphql: ${response.status}: ${response.statusText}`)
-    }
-    let data = await response.json()
-    return data?.data
+    return result?.transferStatusToEthereumV2s
 }
 
 /**
@@ -220,7 +172,7 @@ export const queryByGraphQL = async (graphqlApiUrl: string, query: string) => {
 ```
 curl -H 'Content-Type: application/json' \
 -X POST -d \
-'{ "query": "query { transferStatusToPolkadots(where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) { txHash status channelId destinationAddress messageId nonce senderAddress timestamp tokenAddress amount} }" }' \
+'{ "query": "query { transferStatusToPolkadotV2s(where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) { txHash status channelId destinationAddress messageId nonce senderAddress timestamp tokenAddress amount} }" }' \
 $graphqlApiUrl --no-progress-meter | jq "."
 ```
 
@@ -231,7 +183,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
 * @param toAssetHubMessageQueue - transfer received in message queue on asset hub
 * @param toDestination - transfer received in message queue on the destination chain, if destination is asset hub then same as toAssetHubMessageQueue
 *
-"transferStatusToPolkadots": [
+"transferStatusToPolkadotV2s": [
       {
 
         "txHash": "0x53597b6f98334a160f26182398ec3e7368be8ca7aea3eea41d288046f3a1999d",
@@ -251,7 +203,8 @@ $graphqlApiUrl --no-progress-meter | jq "."
 ]
  **/
 export const fetchToPolkadotTransferById = async (graphqlApiUrl: string, id: string) => {
-    let query = `query { transferStatusToPolkadots(limit: 1, where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) {
+    let nonceFilter = !isNaN(Number(id)) ? `{nonce_eq: ${id}}` : ""
+    let query = `query { transferStatusToPolkadotV2s(limit: 1, where: { OR: [ {messageId_eq: "${id}"} {txHash_eq: "${id}"} ${nonceFilter} ] }) {
             id
             status
             blockNumber
@@ -290,7 +243,7 @@ export const fetchToPolkadotTransferById = async (graphqlApiUrl: string, id: str
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result?.transferStatusToPolkadots
+    return result?.transferStatusToPolkadotV2s
 }
 
 /**
@@ -299,7 +252,7 @@ export const fetchToPolkadotTransferById = async (graphqlApiUrl: string, id: str
 ```
 curl -H 'Content-Type: application/json' \
 -X POST -d \
-'{ "query": "query { transferStatusToEthereums(where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) { txHash status channelId destinationAddress messageId nonce senderAddress timestamp tokenAddress amount} }" }' \
+'{ "query": "query { transferStatusToEthereumV2s(where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) { txHash status channelId destinationAddress messageId nonce senderAddress timestamp tokenAddress amount} }" }' \
 $graphqlApiUrl --no-progress-meter | jq "."
 ```
 
@@ -311,7 +264,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
 * @param toBridgeHubOutboundQueue - transfer received in outbound queue on bridge hub
 * @param toDestination - transfer received on the destination chain(Ethereum)
 *
-"transferStatusToEthereums": [
+"transferStatusToEthereumV2s": [
       {
 
         "txHash": "0x53597b6f98334a160f26182398ec3e7368be8ca7aea3eea41d288046f3a1999d",
@@ -329,9 +282,10 @@ $graphqlApiUrl --no-progress-meter | jq "."
         "toDestination": {"messageId":"0x00d720d39256bab74c0be362005b9a50951a0909e6dabda588a5d319bfbedb65",...}
       }
 ]
-**/
+ **/
 export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: string) => {
-    let query = `query { transferStatusToEthereums(limit: 1, where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) {
+    let nonceFilter = !isNaN(Number(id)) ? `{nonce_eq: ${id}}` : ""
+    let query = `query { transferStatusToEthereumV2s(limit: 1, where: { OR: [ {messageId_eq: "${id}"} {txHash_eq: "${id}"} ${nonceFilter} ] }) {
             id
             status
             blockNumber
@@ -372,150 +326,49 @@ export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: str
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result?.transferStatusToEthereums
+    return result?.transferStatusToEthereumV2s
 }
 
 /**
- * Query the recent synced blockes on multiple chains
-
-curl -H 'Content-Type: application/json' \
--X POST -d \
-'{ "query": "query { latestBlocks { height name } }" }' \
-$graphqlApiUrl --no-progress-meter | jq "."
-
-{
-  "data": {
-    "latestBlocks": [
-      {
-        "height": 8245566,
-        "name": "assethub"
-      },
-      {
-        "height": 4561260,
-        "name": "bridgehub"
-      },
-      {
-        "height": 21878012,
-        "name": "ethereum"
-      }
-    ]
-  }
-}
-**/
-export const fetchLatestBlocksSynced = async (graphqlApiUrl: string, includePKBridge: boolean) => {
-    let query = `query { latestBlocks(withPKBridge: ${includePKBridge}) {
-                    height
-                    name
-                }}`
-    let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result && result.latestBlocks
-}
-
-/**
- * Query messages processed on parachains.
-
-```
-curl -H 'Content-Type: application/json' \
--X POST -d \
-'query { messageProcessedOnPolkadots(limit: 1, where: {messageId_eq: "${id}"}) { id blockNumber timestamp messageId paraId success eventId network } }' \
-$graphqlApiUrl --no-progress-meter | jq "."
-```
-
-* @param id - internal identifier for the message
-* @param status - true or false
-* @param messageId - a global index to trace the transfer in different chains
-* @param timestamp - When the message was processed.
-* @param paraId - The parachain the message was processed on.
-* @param eventId - The id of the message processed/failed event.
-* @param network - The chain it was received on.
-*
-"messageProcessedOnPolkadots": [
-    {
-    "id": "0007409855-e807a-000010",
-    "blockNumber": 7409855,
-    "timestamp": "2024-11-22T15:53:00.000000Z",
-    "messageId": "0x67f2e507665b5a22b302f8ed998ff6f40afd967c974457d6610e795776611c85",
-    "paraId": 2000,
-    "success": true,
-    "eventId": "7409855-10",
-    "network": null
-    }
-]
+ * Query the estimated delivery time for transfers to both directions (v2)
  **/
-export const fetchInterParachainMessageById = async (graphqlApiUrl: string, id: string) => {
-    let query = `query { messageProcessedOnPolkadots(limit: 1, where: {messageId_eq: "${id}"}) {
-                        id
-                        blockNumber
-                        timestamp
-                        messageId
-                        paraId
-                        success
-                        eventId
-                        network
-                    }
-                }`
+export const fetchEstimatedDeliveryTime = async (graphqlApiUrl: string) => {
+    let query = `query { toEthereumV2Elapse { elapse } toPolkadotV2Elapse { elapse } }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result?.messageProcessedOnPolkadots
+    return result
 }
 
 /*
- * Query the maximum latency of pending transfers from P->E.
+ * Query the maximum latency of pending transfers from V2 P->E.
  * {
-    "toEthereumUndeliveredTimeout": [
+    "toEthereumV2UndeliveredTimeout": [
       {
         "elapse": 1034.273011
       }
     ]
 }
 */
-export const fetchToEthereumUndelivedLatency = async (graphqlApiUrl: string) => {
-    let query = `query { toEthereumUndeliveredTimeout {
+export const fetchToEthereumUndeliveredLatency = async (graphqlApiUrl: string) => {
+    let query = `query { toEthereumV2UndeliveredTimeout {
                    elapse
                 }}`
     let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result?.toEthereumUndeliveredTimeout
+    return result?.toEthereumV2UndeliveredTimeout
 }
 
-/* Query the maximum latency of pending transfers from E->P.
+/* Query the maximum latency of pending transfers from V2 E->P.
  * {
-    "toPolkadotUndeliveredTimeout": [
+    "toPolkadotV2UndeliveredTimeout": [
       {
         "elapse": 1201.23
       }
     ]
 }
 */
-export const fetchToPolkadotUndelivedLatency = async (graphqlApiUrl: string) => {
-    let query = `query { toPolkadotUndeliveredTimeout {
+export const fetchToPolkadotUndeliveredLatency = async (graphqlApiUrl: string) => {
+    let query = `query { toPolkadotV2UndeliveredTimeout {
                    elapse
                 }}`
     let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result?.toPolkadotUndeliveredTimeout
-}
-
-/**
- * Query the recent synced blockes on one parachain
-
-curl -H 'Content-Type: application/json' \
--X POST -d \
-'{ "query": "query { latestBlocksOfParachain(paraid: $paraid) { height name paraid } }" }' \
-$graphqlApiUrl --no-progress-meter | jq "."
-
-{
-  "data": {
-    "latestBlocksOfParachain":  {
-        "height": 8245566,
-        "name": "hydration"
-    }
-  }
-}
-**/
-export const fetchSyncStatusOfParachain = async (graphqlApiUrl: string, paraid: number) => {
-    let query = `query { latestBlocksOfParachain(paraid: ${paraid}) {
-                    height
-                    name
-                    paraid
-                }}`
-    let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result && result.latestBlocksOfParachain && result.latestBlocksOfParachain[0]
+    return result?.toPolkadotV2UndeliveredTimeout
 }

@@ -1,6 +1,7 @@
 import { Context } from "./index"
 import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
-import { fetchEstimatedDeliveryTime, fetchV2EstimatedDeliveryTime } from "./subsquid"
+import { fetchEstimatedDeliveryTime } from "./subsquid"
+import { fetchEstimatedDeliveryTime as fetchV2EstimatedDeliveryTime } from "./subsquid_v2"
 import { Relayer, SourceType } from "./environment"
 import { ApiPromise } from "@polkadot/api"
 import { IGatewayV1, IGatewayV2 } from "@snowbridge/contract-types"
