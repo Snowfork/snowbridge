@@ -65,13 +65,6 @@ func (li *BeefyListener) getKeyOwnershipProof(meta *types.Metadata, latestHash t
 		return nil, fmt.Errorf("DEBUG: No value for SetIdSession key: %x", currentEpochIndexKey.Hex())
 	}
 
-	// if offenderSession != currentSession {
-	// epochDurationKey, err := types.CreateStorageKey(meta, "Babe", "EpochDuration")
-	// if err != nil {
-	// 	return err
-	// }
-	// var epochDuration uint64
-
 	epochDurationRaw, err := meta.FindConstantValue("Babe", "EpochDuration")
 	if err != nil {
 		return nil, fmt.Errorf("couldn't find const: %w", err)

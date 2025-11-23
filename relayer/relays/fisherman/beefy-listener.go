@@ -252,8 +252,6 @@ func (li *BeefyListener) parseSubmitFinalProofs(callData []byte) ([]contracts.Be
 		"raw proofs": decoded["proofs"],
 	}).Debug("Decoded proofs from submitFinal")
 
-	// bitfield := decoded["bitfield"].([]*big.Int)
-
 	// Extract validator proof
 	proofsRaw := decoded["proofs"].([]struct {
 		V       uint8          `json:"v"`
