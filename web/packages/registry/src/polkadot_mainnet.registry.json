@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-11-21T10:52:59.089Z",
+  "timestamp": "2025-11-24T11:57:28.867Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -376,8 +376,8 @@
         "hasDotBalance": true,
         "hasEthBalance": true,
         "hasXcmPaymentApi": true,
-        "supportsXcmV5": true,
-        "supportsAliasOrigin": true
+        "supportsAliasOrigin": true,
+        "xcmVersion": "v5"
       },
       "info": {
         "tokenSymbols": "DOT",
@@ -990,8 +990,8 @@
         "hasDotBalance": true,
         "hasEthBalance": true,
         "hasXcmPaymentApi": true,
-        "supportsXcmV5": true,
-        "supportsAliasOrigin": true
+        "supportsAliasOrigin": true,
+        "xcmVersion": "v5"
       },
       "info": {
         "tokenSymbols": "ACA",
@@ -1026,8 +1026,8 @@
         "hasDotBalance": true,
         "hasEthBalance": false,
         "hasXcmPaymentApi": true,
-        "supportsXcmV5": true,
-        "supportsAliasOrigin": false
+        "supportsAliasOrigin": false,
+        "xcmVersion": "v5"
       },
       "info": {
         "tokenSymbols": "GLMR",
@@ -1038,7 +1038,7 @@
         "evmChainId": 1284,
         "name": "Moonbeam",
         "specName": "moonbeam",
-        "specVersion": 3900
+        "specVersion": 3901
       },
       "xcDOT": "0xffffffff1fcacbd218edc0eba20fc2308c778080",
       "assets": {
@@ -1119,8 +1119,8 @@
         "hasDotBalance": true,
         "hasEthBalance": true,
         "hasXcmPaymentApi": true,
-        "supportsXcmV5": true,
-        "supportsAliasOrigin": true
+        "supportsAliasOrigin": true,
+        "xcmVersion": "v5"
       },
       "info": {
         "tokenSymbols": "BNC",
@@ -1151,7 +1151,7 @@
           "isSufficient": false
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:82754605",
+      "estimatedExecutionFeeDOT": "bigint:91177752",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2034": {
@@ -1164,8 +1164,8 @@
         "hasDotBalance": true,
         "hasEthBalance": false,
         "hasXcmPaymentApi": true,
-        "supportsXcmV5": false,
-        "supportsAliasOrigin": false
+        "supportsAliasOrigin": false,
+        "xcmVersion": "v4"
       },
       "info": {
         "tokenSymbols": "HDX",
@@ -1332,7 +1332,7 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:1670724",
+      "estimatedExecutionFeeDOT": "bigint:1740820",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2043": {
@@ -1345,8 +1345,8 @@
         "hasDotBalance": false,
         "hasEthBalance": false,
         "hasXcmPaymentApi": true,
-        "supportsXcmV5": false,
-        "supportsAliasOrigin": false
+        "supportsAliasOrigin": false,
+        "xcmVersion": "v4"
       },
       "info": {
         "tokenSymbols": "NEURO",
@@ -1381,8 +1381,8 @@
         "hasDotBalance": false,
         "hasEthBalance": false,
         "hasXcmPaymentApi": false,
-        "supportsXcmV5": false,
-        "supportsAliasOrigin": false
+        "supportsAliasOrigin": false,
+        "xcmVersion": "v4"
       },
       "info": {
         "tokenSymbols": "MYTH",
@@ -1420,8 +1420,8 @@
           "hasDotBalance": true,
           "hasEthBalance": false,
           "hasXcmPaymentApi": true,
-          "supportsXcmV5": true,
-          "supportsAliasOrigin": true
+          "supportsAliasOrigin": true,
+          "xcmVersion": "v5"
         },
         "info": {
           "tokenSymbols": "KSM",

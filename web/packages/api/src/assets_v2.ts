@@ -22,6 +22,7 @@ import {
     Parachain,
     ParachainMap,
     XC20TokenMap,
+    XcmVersion,
 } from "@snowbridge/base-types"
 
 export type ERC20MetadataOverride = {
@@ -616,13 +617,13 @@ async function checkSnowbridgeV2Support(
     parachain: ParachainBase,
     ethChainId: number,
 ): Promise<{
-    supportsXcmV5: boolean
+    xcmVersion: XcmVersion
     supportsAliasOrigin: boolean
     hasEthBalance: boolean
 }> {
-    let supportsXcmV5
     let supportsAliasOrigin = false
     let hasEthBalance = false
+    let xcmVersion: XcmVersion
 
     try {
         const testXcm = parachain.provider.registry.createType("XcmVersionedXcm", {
@@ -672,13 +673,13 @@ async function checkSnowbridgeV2Support(
             }
         }
 
-        supportsXcmV5 = true
+        xcmVersion = "v5"
     } catch {
         // If any call throws an error, XCM V5 is likely not supported.
-        supportsXcmV5 = false
+        xcmVersion = "v4"
     }
 
-    return { supportsXcmV5, supportsAliasOrigin, hasEthBalance }
+    return { xcmVersion, supportsAliasOrigin, hasEthBalance }
 }
 
 async function indexParachain(
@@ -717,7 +718,7 @@ async function indexParachain(
     const hasTxPaymentApi = isFunction(parachain.provider.call.transactionPaymentApi?.queryInfo)
     const hasXcmPaymentApi = isFunction(parachain.provider.call.xcmPaymentApi?.queryXcmWeight)
 
-    const { supportsXcmV5, supportsAliasOrigin, hasEthBalance } = await checkSnowbridgeV2Support(
+    const { xcmVersion, supportsAliasOrigin, hasEthBalance } = await checkSnowbridgeV2Support(
         parachain,
         ethChainId,
     )
@@ -771,8 +772,8 @@ async function indexParachain(
             hasDotBalance,
             hasEthBalance,
             hasXcmPaymentApi,
-            supportsXcmV5,
             supportsAliasOrigin,
+            xcmVersion,
         },
         info,
         xcDOT,

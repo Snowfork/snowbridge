@@ -1,5 +1,7 @@
 export type AccountType = "AccountId20" | "AccountId32";
 
+export type XcmVersion = "v4" | "v5";
+
 export interface XC20TokenMap {
   [xc20: string]: string;
 }
@@ -79,8 +81,8 @@ export type Parachain = {
     hasDotBalance: boolean;
     hasEthBalance: boolean;
     hasXcmPaymentApi: boolean;
-    supportsXcmV5: boolean;
     supportsAliasOrigin: boolean;
+    xcmVersion: XcmVersion;
   };
   assets: AssetMap;
   estimatedExecutionFeeDOT: bigint;
