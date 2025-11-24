@@ -75,6 +75,22 @@ const searchV2 = async (graphqlApiUrl: string) => {
 
     const latencyToPolkadot = await subsquidV2.fetchToPolkadotUndeliveredLatency(graphqlApiUrl)
     console.log("To Polkadot V2 undelivered latency:", latencyToPolkadot)
+
+    const pendingToEthereum = await subsquidV2.fetchToEthereumPendingTransfers(graphqlApiUrl)
+    console.log("To Ethereum V2 pending transfers:", pendingToEthereum)
+
+    const pendingToPolkadot = await subsquidV2.fetchToPolkadotPendingTransfers(graphqlApiUrl)
+    console.log("To Polkadot V2 pending transfers:", pendingToPolkadot)
+
+    const toEthereumBySenders = await historyV2.toEthereumTransfersBySenders(graphqlApiUrl, 100, [
+        "0x7279fcf9694718e1234d102825dccaf332f0ea36edf1ca7c0358c4b68260d24b",
+    ])
+    console.log("To Ethereum V2 transfers by senders:", toEthereumBySenders)
+
+    const toPolkadotBySenders = await historyV2.toPolkadotTransfersBySenders(graphqlApiUrl, 100, [
+        "0xf5bfb6b71d607c0afde874cced435ddd0ae736d1",
+    ])
+    console.log("To Polkadot V2 transfers by senders:", toPolkadotBySenders)
 }
 
 search()

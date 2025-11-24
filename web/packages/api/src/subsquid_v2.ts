@@ -52,6 +52,7 @@ export const fetchToPolkadotTransfers = async (graphqlApiUrl: string, graphqlQue
             tokenAddress
             txHash
             amount
+            fee
             sourceNetwork
             destinationNetwork
             sourceParaId
@@ -136,6 +137,7 @@ export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQue
             tokenAddress
             txHash
             amount
+            fee
             toAssetHubMessageQueue {
                 id
                 success
@@ -218,6 +220,7 @@ export const fetchToPolkadotTransferById = async (graphqlApiUrl: string, id: str
             tokenAddress
             txHash
             amount
+            fee
             toBridgeHubInboundQueue {
                 id
                 timestamp
@@ -299,6 +302,7 @@ export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: str
             tokenAddress
             txHash
             amount
+            fee
             toAssetHubMessageQueue {
                 id
                 success
@@ -371,4 +375,210 @@ export const fetchToPolkadotUndeliveredLatency = async (graphqlApiUrl: string) =
                 }}`
     let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.toPolkadotV2UndeliveredTimeout
+}
+
+// Fetch the pending transfers from Ethereum to Polkadot
+export const fetchToPolkadotPendingTransfers = async (
+    graphqlApiUrl: string,
+    graphqlQuerySize = 100,
+) => {
+    let query = `query { transferStatusToPolkadotV2s(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC,  where: {status_eq: 0}) {
+            id
+            status
+            blockNumber
+            channelId
+            destinationAddress
+            destinationParaId
+            messageId
+            nonce
+            senderAddress
+            timestamp
+            tokenAddress
+            txHash
+            amount
+            fee
+            sourceNetwork
+            destinationNetwork
+            sourceParaId
+            toBridgeHubInboundQueue {
+                id
+                timestamp
+                txHash
+                channelId
+                nonce
+                messageId
+            }
+            toAssetHubMessageQueue {
+                id
+                success
+                timestamp
+            }
+            toDestination {
+                id
+                eventId
+                messageId
+                timestamp
+                blockNumber
+                paraId
+                success
+            }
+        }
+    }`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.transferStatusToPolkadotV2s
+}
+
+// Fetch the pending transfers from Polkadot to Ethereum
+export const fetchToEthereumPendingTransfers = async (
+    graphqlApiUrl: string,
+    graphqlQuerySize = 100,
+) => {
+    let query = `query { transferStatusToEthereumV2s(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC,  where: {status_eq: 0}) {
+            id
+            status
+            blockNumber
+            channelId
+            destinationAddress
+            messageId
+            nonce
+            senderAddress
+            sourceParaId
+            timestamp
+            tokenAddress
+            txHash
+            amount
+            fee
+            toAssetHubMessageQueue {
+                id
+                success
+                timestamp
+            }
+            toBridgeHubMessageQueue {
+                id
+                success
+                timestamp
+            }
+            toBridgeHubOutboundQueue {
+                id
+                timestamp
+            }
+            toDestination {
+                id
+                blockNumber
+                timestamp
+                txHash
+                success
+                messageId
+                nonce
+                channelId
+            }
+        }
+    }`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.transferStatusToEthereumV2s
+}
+
+// Fetch the transfers from Ethereum to Polkadot filtered by a list of senders
+export const fetchToPolkadotTransfersBySenders = async (
+    graphqlApiUrl: string,
+    graphqlQuerySize = 100,
+    senders: string[],
+) => {
+    let senderFilter = senders.map((s) => `{senderAddress_eq: "${s}"}`).join(" ")
+    let query = `query { transferStatusToPolkadotV2s(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC, where: { OR: [ ${senderFilter} ] }) {
+            id
+            status
+            blockNumber
+            channelId
+            destinationAddress
+            destinationParaId
+            messageId
+            nonce
+            senderAddress
+            timestamp
+            tokenAddress
+            txHash
+            amount
+            fee
+            sourceNetwork
+            destinationNetwork
+            sourceParaId
+            toBridgeHubInboundQueue {
+                id
+                timestamp
+                txHash
+                channelId
+                nonce
+                messageId
+            }
+            toAssetHubMessageQueue {
+                id
+                success
+                timestamp
+            }
+            toDestination {
+                id
+                eventId
+                messageId
+                timestamp
+                blockNumber
+                paraId
+                success
+            }
+        }
+    }`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.transferStatusToPolkadotV2s
+}
+
+// Fetch the transfers from Polkadot to Ethereum filtered by a list of senders
+export const fetchToEthereumTransfersBySenders = async (
+    graphqlApiUrl: string,
+    graphqlQuerySize = 100,
+    senders: string[],
+) => {
+    let senderFilter = senders.map((s) => `{senderAddress_eq: "${s}"}`).join(" ")
+    let query = `query { transferStatusToEthereumV2s(limit: ${graphqlQuerySize}, orderBy: timestamp_DESC,  where: { OR: [ ${senderFilter} ] }) {
+            id
+            status
+            blockNumber
+            channelId
+            destinationAddress
+            messageId
+            nonce
+            senderAddress
+            sourceParaId
+            timestamp
+            tokenAddress
+            txHash
+            amount
+            fee
+            toAssetHubMessageQueue {
+                id
+                success
+                timestamp
+            }
+            toBridgeHubMessageQueue {
+                id
+                success
+                timestamp
+            }
+            toBridgeHubOutboundQueue {
+                id
+                timestamp
+            }
+            toDestination {
+                id
+                blockNumber
+                timestamp
+                txHash
+                success
+                messageId
+                nonce
+                channelId
+            }
+        }
+    }`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.transferStatusToEthereumV2s
 }

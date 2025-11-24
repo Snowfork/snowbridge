@@ -22,6 +22,7 @@ export type TransferInfo = {
     sourceNetwork?: string
     destinationNetwork?: string
     sourceParachain?: number
+    fee?: string
 }
 
 export type ToPolkadotTransferResult = {
@@ -64,6 +65,7 @@ export type ToPolkadotTransferResult = {
         block_timestamp: string
         blockNumber: number
     }
+    fee?: bigint
 }
 
 export type ToEthereumTransferResult = {
@@ -121,6 +123,7 @@ export type ToEthereumTransferResult = {
         nonce: number
         success: boolean
     }
+    fee?: bigint
 }
 
 export type InterParachainTransfer = {
@@ -160,6 +163,7 @@ export const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransfer
             tokenAddress: transfer.tokenAddress,
             destinationParachain: transfer.destinationParaId,
             amount: transfer.amount,
+            fee: transfer.fee,
             sourceNetwork: transfer.sourceNetwork,
             destinationNetwork: transfer.destinationNetwork,
             sourceParachain: transfer.sourceParaId,
@@ -227,6 +231,7 @@ export const buildToEthereumTransferResult = (transfer: any): ToEthereumTransfer
             tokenAddress: transfer.tokenAddress,
             beneficiaryAddress: transfer.destinationAddress,
             amount: transfer.amount,
+            fee: transfer.fee,
         },
         submitted: {
             sourceParachainId: transfer.sourceParaId,
