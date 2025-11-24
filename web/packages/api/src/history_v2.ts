@@ -14,6 +14,13 @@ import {
     fetchToPolkadotPendingTransfers,
     fetchToEthereumPendingTransfers,
 } from "./subsquid_v2"
+export {
+    TransferStatus,
+    TransferInfo,
+    ToPolkadotTransferResult,
+    ToEthereumTransferResult,
+    InterParachainTransfer,
+} from "./history"
 
 export const toPolkadotHistory = async (
     graphqlApiUrl: string,
