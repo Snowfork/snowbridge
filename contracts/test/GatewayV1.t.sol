@@ -66,10 +66,13 @@ import {
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 import "./mocks/HighGasToken.sol";
+import {FeeToken} from "./mocks/FeeToken.sol";
 
 contract GatewayV1Test is Test {
     // Emitted when token minted/burnt/transferred
     event Transfer(address indexed from, address indexed to, uint256 value);
+
+    error InvalidAmount();
 
     ParaID public bridgeHubParaID = ParaID.wrap(1013);
 
@@ -118,6 +121,7 @@ contract GatewayV1Test is Test {
 
     // tokenID for DOT
     bytes32 public dotTokenID;
+    FeeToken public feeToken;
 
     function setUp() public {
         token = new WETH9();
@@ -159,6 +163,9 @@ contract GatewayV1Test is Test {
         token.deposit{value: 500}();
 
         dotTokenID = bytes32(uint256(1));
+
+        feeToken = new FeeToken();
+        feeToken.deposit{value: 100 ether}();
     }
 
     function recipientAddress32() internal pure returns (MultiAddress memory) {
@@ -1372,5 +1379,34 @@ contract GatewayV1Test is Test {
         uint256 paddedGas3 = abi.decode(result2, (uint256));
 
         require(paddedGas3 == paddedGas2, "gas won't increased");
+    }
+
+    function test_Exploit_FeeOnTransfer() public {
+        address user = makeAddr("user");
+        deal(address(feeToken), user, 100 ether);
+        deal(address(user), 1 ether);
+        vm.startPrank(user);
+
+        // register token first
+        uint256 fee = IGatewayV1(address(gateway)).quoteRegisterTokenFee();
+        IGatewayV1(address(gateway)).registerToken{value: fee}(address(feeToken));
+
+        uint128 bridgeAmount = 1 ether;
+        feeToken.approve(address(gateway), bridgeAmount);
+
+        ParaID destChain = ParaID.wrap(uint32(1000));
+        MultiAddress memory destAddr = recipientAddress32();
+        fee = IGatewayV1(address(gateway)).quoteSendTokenFee(address(feeToken), destChain, 0);
+
+        vm.expectRevert(InvalidAmount.selector);
+        IGatewayV1(address(gateway)).sendToken{
+            value: fee
+        }(
+            address(feeToken),
+            destChain,
+            destAddr,
+            0, // Destination fee
+            bridgeAmount
+        );
     }
 }
