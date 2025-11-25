@@ -48,7 +48,6 @@ export class PNAToParachain implements TransferInterface {
         registry: AssetRegistry,
         tokenAddress: string,
         destinationParaId: number,
-        relayerFee: bigint,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -152,13 +151,13 @@ export class PNAToParachain implements TransferInterface {
             paddFeeByPercentage ?? 33n,
         )
 
-        const totalFeeInWei = deliveryFeeInEther + assetHubExecutionFeeEther + relayerFee
+        const totalFeeInWei = deliveryFeeInEther + assetHubExecutionFeeEther + 0n
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: destinationDeliveryFeeEther,
             destinationExecutionFeeEther: destinationExecutionFeeEther,
-            relayerFee: relayerFee,
+            relayerFee: 0n,
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
         }

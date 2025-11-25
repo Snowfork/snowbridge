@@ -44,7 +44,6 @@ export class PNAToAH implements TransferInterface {
         registry: AssetRegistry,
         tokenAddress: string,
         _destinationParaId: number,
-        relayerFee: bigint,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -109,13 +108,13 @@ export class PNAToAH implements TransferInterface {
             paddFeeByPercentage ?? 33n,
         )
 
-        const totalFeeInWei = deliveryFeeInEther + assetHubExecutionFeeEther + relayerFee
+        const totalFeeInWei = deliveryFeeInEther + assetHubExecutionFeeEther + 0n
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: 0n,
             destinationExecutionFeeEther: 0n,
-            relayerFee: relayerFee,
+            relayerFee: 0n,
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
         }

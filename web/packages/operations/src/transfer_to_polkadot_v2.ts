@@ -71,7 +71,6 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             registry,
             TOKEN_CONTRACT,
             destParaId,
-            relayerFee,
         )
 
         console.log("fee: ", fee)

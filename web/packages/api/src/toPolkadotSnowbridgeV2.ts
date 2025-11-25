@@ -228,3 +228,105 @@ export async function sendRegistration(
 
     return receipt
 }
+
+/**
+ * Calculate the relayer reward by estimating the extrinsic fee for submitting
+ * an EthereumInboundQueueV2.submit call to BridgeHub, and converting from DOT to Ether.
+ *
+ * @param bridgeHub - BridgeHub ApiPromise instance
+ * @param assetHub - AssetHub ApiPromise instance (needed for DOT-to-Ether conversion)
+ * @param ethChainId - Ethereum chain ID for creating the ether location
+ * @returns The extrinsic fee in Ether (wei)
+ */
+export async function calculateRelayerReward(
+    bridgeHub: ApiPromise,
+    assetHub: ApiPromise,
+    ethChainId: number,
+): Promise<bigint> {
+    // Import required utilities
+    const { DOT_LOCATION, erc20Location } = await import("./xcmBuilder")
+    const { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } = await import("./assets_v2")
+
+    // Create a minimal dummy EventProof for fee estimation
+    // The EventProof structure is complex, but for fee estimation we just need
+    // representative data sizes since the weight is mostly constant
+    const dummyEventProof = bridgeHub.registry.createType("EventProof", {
+        event_log: {
+            address: "0x0000000000000000000000000000000000000000",
+            topics: [
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            ],
+            data: "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        },
+        proof: {
+            receipt_proof: [
+                // Empty arrays are fine for estimation - the weight comes from the proof verification logic
+                [],
+                [],
+            ],
+            execution_proof: {
+                header: {
+                    slot: 0,
+                    proposer_index: 0,
+                    parent_root:
+                        "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    state_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    body_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+                },
+                ancestry_proof: null,
+                execution_header: {
+                    Deneb: {
+                        parent_hash:
+                            "0x0000000000000000000000000000000000000000000000000000000000000000",
+                        fee_recipient: "0x0000000000000000000000000000000000000000",
+                        state_root:
+                            "0x0000000000000000000000000000000000000000000000000000000000000000",
+                        receipts_root:
+                            "0x0000000000000000000000000000000000000000000000000000000000000000",
+                        logs_bloom: "0x" + "00".repeat(256),
+                        prev_randao:
+                            "0x0000000000000000000000000000000000000000000000000000000000000000",
+                        block_number: 0,
+                        gas_limit: 0,
+                        gas_used: 0,
+                        timestamp: 0,
+                        extra_data: "0x",
+                        base_fee_per_gas: 0,
+                        block_hash:
+                            "0x0000000000000000000000000000000000000000000000000000000000000000",
+                        transactions_root:
+                            "0x0000000000000000000000000000000000000000000000000000000000000000",
+                        withdrawals_root:
+                            "0x0000000000000000000000000000000000000000000000000000000000000000",
+                        blob_gas_used: 0,
+                        excess_blob_gas: 0,
+                    },
+                },
+                execution_branch: [],
+            },
+        },
+    })
+
+    // Create the submit extrinsic
+    const submitTx = bridgeHub.tx.ethereumInboundQueueV2.submit(dummyEventProof)
+
+    // Use a dummy account for fee estimation (Alice's account)
+    const dummyAccount = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
+    // Get the payment info which includes the partial fee in DOT
+    const paymentInfo = await submitTx.paymentInfo(dummyAccount)
+    const extrinsicFeeInDot = paymentInfo.partialFee.toBigInt()
+
+    // Convert DOT fee to Ether
+    const etherLocation = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
+    const extrinsicFeeInEther = await swapAsset1ForAsset2(
+        assetHub,
+        DOT_LOCATION,
+        etherLocation,
+        extrinsicFeeInDot,
+    )
+
+    console.log("EXTRINSIC FEE IN ETHER", extrinsicFeeInEther)
+    return extrinsicFeeInEther
+}
