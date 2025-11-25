@@ -121,7 +121,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
         console.log("tx:", tx)
         console.log("feeData:", feeData.toJSON())
         console.log("gas:", estimatedGas)
-        console.log("delivery cost:", formatEther(fee.totalFeeInWei))
+        console.log("relayer fee:", formatEther(fee.relayerFee))
         console.log("execution cost:", formatEther(executionFee))
         console.log("total cost:", formatEther(fee.totalFeeInWei + executionFee))
         console.log("ether sent:", formatEther(totalValue - fee.totalFeeInWei))
