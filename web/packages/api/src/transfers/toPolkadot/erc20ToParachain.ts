@@ -8,6 +8,7 @@ import {
 import { Context } from "../../index"
 import {
     buildMessageId,
+    calculateRelayerFee,
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
@@ -57,6 +58,7 @@ export class ERC20ToParachain implements TransferInterface {
             paddFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[]
+            overrideRelayerFee?: bigint
         },
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub, destination } =
@@ -166,13 +168,21 @@ export class ERC20ToParachain implements TransferInterface {
             paddFeeByPercentage ?? 33n,
         )
 
-        const totalFeeInWei = deliveryFeeInEther + assetHubExecutionFeeEther + 0n
+        const relayerFee = await calculateRelayerFee(
+            assetHub,
+            bridgeHub,
+            registry.ethChainId,
+            options?.overrideRelayerFee,
+            deliveryFeeInEther,
+        )
+
+        const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: destinationDeliveryFeeEther,
             destinationExecutionFeeEther: destinationExecutionFeeEther,
-            relayerFee: 0n,
+            relayerFee: relayerFee,
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
         }

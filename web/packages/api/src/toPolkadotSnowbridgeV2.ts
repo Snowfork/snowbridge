@@ -14,8 +14,10 @@ import { IGatewayV2__factory } from "@snowbridge/contract-types"
 import { OperationStatus } from "./status"
 import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
 import { ApiPromise } from "@polkadot/api"
-import { accountToLocation } from "./xcmBuilder"
+import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
+import { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "./assets_v2"
+import { padFeeByPercentage } from "./utils"
 export { ValidationKind } from "./toPolkadot_v2"
 
 export type DeliveryFee = {
@@ -229,92 +231,72 @@ export async function sendRegistration(
     return receipt
 }
 
-/**
- * Calculate the relayer reward by estimating the extrinsic fee for submitting
- * an EthereumInboundQueueV2.submit call to BridgeHub, and converting from DOT to Ether.
- *
- * @param bridgeHub - BridgeHub ApiPromise instance
- * @param assetHub - AssetHub ApiPromise instance (needed for DOT-to-Ether conversion)
- * @param ethChainId - Ethereum chain ID for creating the ether location
- * @returns The extrinsic fee in Ether (wei)
- */
-export async function calculateRelayerReward(
+export async function calculateInboundMessageExtrinsicFee(
     bridgeHub: ApiPromise,
     assetHub: ApiPromise,
     ethChainId: number,
 ): Promise<bigint> {
-    // Import required utilities
-    const { DOT_LOCATION, erc20Location } = await import("./xcmBuilder")
-    const { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } = await import("./assets_v2")
+    const dummyLog = {
+        address: "0x0000000000000000000000000000000000000000",
+        topics: [
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+        ],
+        data: "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    }
 
-    // Create a minimal dummy EventProof for fee estimation
-    // The EventProof structure is complex, but for fee estimation we just need
-    // representative data sizes since the weight is mostly constant
-    const dummyEventProof = bridgeHub.registry.createType("EventProof", {
-        event_log: {
-            address: "0x0000000000000000000000000000000000000000",
-            topics: [
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-            ],
-            data: "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        },
-        proof: {
-            receipt_proof: [
-                // Empty arrays are fine for estimation - the weight comes from the proof verification logic
-                [],
-                [],
-            ],
-            execution_proof: {
-                header: {
-                    slot: 0,
-                    proposer_index: 0,
-                    parent_root:
-                        "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    state_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    body_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
-                },
-                ancestry_proof: null,
-                execution_header: {
-                    Deneb: {
-                        parent_hash:
-                            "0x0000000000000000000000000000000000000000000000000000000000000000",
-                        fee_recipient: "0x0000000000000000000000000000000000000000",
-                        state_root:
-                            "0x0000000000000000000000000000000000000000000000000000000000000000",
-                        receipts_root:
-                            "0x0000000000000000000000000000000000000000000000000000000000000000",
-                        logs_bloom: "0x" + "00".repeat(256),
-                        prev_randao:
-                            "0x0000000000000000000000000000000000000000000000000000000000000000",
-                        block_number: 0,
-                        gas_limit: 0,
-                        gas_used: 0,
-                        timestamp: 0,
-                        extra_data: "0x",
-                        base_fee_per_gas: 0,
-                        block_hash:
-                            "0x0000000000000000000000000000000000000000000000000000000000000000",
-                        transactions_root:
-                            "0x0000000000000000000000000000000000000000000000000000000000000000",
-                        withdrawals_root:
-                            "0x0000000000000000000000000000000000000000000000000000000000000000",
-                        blob_gas_used: 0,
-                        excess_blob_gas: 0,
-                    },
-                },
-                execution_branch: [],
+    const dummyProof = {
+        receipt_proof: [[], []],
+        execution_proof: {
+            header: {
+                slot: 0,
+                proposer_index: 0,
+                parent_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+                state_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+                body_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
             },
+            ancestry_proof: null,
+            execution_header: {
+                Deneb: {
+                    parent_hash:
+                        "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    fee_recipient: "0x0000000000000000000000000000000000000000",
+                    state_root:
+                        "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    receipts_root:
+                        "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    logs_bloom: "0x" + "00".repeat(256),
+                    prev_randao:
+                        "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    block_number: 0,
+                    gas_limit: 0,
+                    gas_used: 0,
+                    timestamp: 0,
+                    extra_data: "0x",
+                    base_fee_per_gas: 0,
+                    block_hash:
+                        "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    transactions_root:
+                        "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    withdrawals_root:
+                        "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    blob_gas_used: 0,
+                    excess_blob_gas: 0,
+                },
+            },
+            execution_branch: [],
         },
-    })
+    }
 
-    // Create the submit extrinsic
+    const dummyEventProof = {
+        event_log: dummyLog,
+        proof: dummyProof,
+    }
+
     const submitTx = bridgeHub.tx.ethereumInboundQueueV2.submit(dummyEventProof)
 
-    // Use a dummy account for fee estimation (Alice's account)
     const dummyAccount = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
-    // Get the payment info which includes the partial fee in DOT
     const paymentInfo = await submitTx.paymentInfo(dummyAccount)
     const extrinsicFeeInDot = paymentInfo.partialFee.toBigInt()
 
@@ -327,6 +309,27 @@ export async function calculateRelayerReward(
         extrinsicFeeInDot,
     )
 
-    console.log("EXTRINSIC FEE IN ETHER", extrinsicFeeInEther)
     return extrinsicFeeInEther
+}
+
+export async function calculateRelayerFee(
+    assetHub: ApiPromise,
+    bridgeHub: ApiPromise,
+    ethChainId: number,
+    overrideRelayerFee: undefined | bigint,
+    deliveryFeeInEther: bigint,
+): Promise<bigint> {
+    let relayerFee
+    if (overrideRelayerFee !== undefined) {
+        relayerFee = overrideRelayerFee
+    } else {
+        const extrinsicFee = await calculateInboundMessageExtrinsicFee(
+            bridgeHub,
+            assetHub,
+            ethChainId,
+        )
+        relayerFee = extrinsicFee + deliveryFeeInEther
+        relayerFee = padFeeByPercentage(relayerFee, 30n)
+    }
+    return relayerFee
 }

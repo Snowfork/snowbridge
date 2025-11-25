@@ -8,6 +8,7 @@ import {
 import { Context } from "../../index"
 import {
     buildMessageId,
+    calculateRelayerFee,
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
@@ -48,6 +49,7 @@ export class PNAToAH implements TransferInterface {
             paddFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[]
+            overrideRelayerFee?: bigint
         },
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub } =
@@ -108,13 +110,21 @@ export class PNAToAH implements TransferInterface {
             paddFeeByPercentage ?? 33n,
         )
 
-        const totalFeeInWei = deliveryFeeInEther + assetHubExecutionFeeEther + 0n
+        const relayerFee = await calculateRelayerFee(
+            assetHub,
+            bridgeHub,
+            registry.ethChainId,
+            options?.overrideRelayerFee,
+            deliveryFeeInEther,
+        )
+
+        const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: 0n,
             destinationExecutionFeeEther: 0n,
-            relayerFee: 0n,
+            relayerFee: relayerFee,
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
         }

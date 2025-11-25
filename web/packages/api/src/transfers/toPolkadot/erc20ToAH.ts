@@ -7,7 +7,8 @@ import {
 } from "@snowbridge/contract-types"
 import { Context } from "../../index"
 import {
-    calculateRelayerReward,
+    calculateInboundMessageExtrinsicFee,
+    calculateRelayerFee,
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
@@ -105,14 +106,13 @@ export class ERC20ToAH implements TransferInterface {
             paddFeeByPercentage ?? 33n,
         )
 
-        let relayerFee
-        if (options?.overrideRelayerFee !== undefined) {
-            relayerFee = options?.overrideRelayerFee
-        }
-        else {
-            const extrinsicFee = await calculateRelayerReward(bridgeHub, assetHub, registry.ethChainId)
-            relayerFee = extrinsicFee + deliveryFeeInEther
-        }
+        const relayerFee = await calculateRelayerFee(
+            assetHub,
+            bridgeHub,
+            registry.ethChainId,
+            options?.overrideRelayerFee,
+            deliveryFeeInEther,
+        )
 
         const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
         return {

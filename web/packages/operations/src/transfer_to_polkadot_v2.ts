@@ -66,12 +66,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee = await transferImpl.getDeliveryFee(
-            context,
-            registry,
-            TOKEN_CONTRACT,
-            destParaId,
-        )
+        let fee = await transferImpl.getDeliveryFee(context, registry, TOKEN_CONTRACT, destParaId)
 
         console.log("fee: ", fee)
         // Step 2. Create a transfer tx
