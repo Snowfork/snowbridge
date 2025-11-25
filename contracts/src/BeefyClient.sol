@@ -191,10 +191,14 @@ contract BeefyClient {
 
     /**
      * @dev The lower bound on the number of signatures required to validate a new commitment. Note
-     * that the final number of signatures is calculated dynamically.
+     * that the final number of signatures is calculated dynamically with Randao randomness.
      */
     uint256 public immutable minNumRequiredSignatures;
 
+    /**
+     * @dev The lower bound on the number of signatures required to validate a new commitment. Note
+     * that the final number of signatures is calculated dynamically with the Fiat-Shamir transform.
+     */
     uint256 public immutable fiatShamirRequiredSignatures;
 
     /* Errors */
