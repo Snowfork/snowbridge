@@ -639,6 +639,17 @@ export const validateTransfer = async (
                 bridgeHubDryRunError = dryRunResultBridgeHub.errorMessage
             }
         } else {
+            if (
+                dryRunResultAssetHub.error &&
+                (dryRunResultAssetHub.error as any).error?.module?.index == 31 &&
+                (dryRunResultAssetHub.error as any).error?.module?.error == "0x1c000900"
+            ) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientTokenBalance,
+                    message: "Insufficient token balance to submit transaction.",
+                })
+            }
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.DryRunFailed,
@@ -657,6 +668,17 @@ export const validateTransfer = async (
                 sourceAccountHex,
             )
             if (!dryRunSource.success) {
+                if (
+                    dryRunSource.error &&
+                    (dryRunSource.error as any).error?.module?.index == 31 &&
+                    (dryRunSource.error as any).error?.module?.error == "0x1c000900"
+                ) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.InsufficientTokenBalance,
+                        message: "Insufficient token balance to submit transaction.",
+                    })
+                }
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.DryRunFailed,
