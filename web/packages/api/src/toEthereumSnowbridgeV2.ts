@@ -554,7 +554,7 @@ export const validateTransfer = async (
     context: Context,
     transfer: TransferV2,
 ): Promise<ValidationResultV2> => {
-    const { registry } = transfer.input
+    const { registry, fee } = transfer.input
     const {
         sourceAccountHex,
         sourceParaId,
@@ -592,6 +592,22 @@ export const validateTransfer = async (
             tokenBalances.push({
                 address: asset.sourceAssetMetadata.token,
                 amount: tokenAmount,
+            })
+        }
+    }
+    // No fee specified means that the fee.ethereumExecutionFee is paid in Ether on source chain.
+    if (!fee.feeLocation) {
+        let etherBalance = await sourceParachainImpl.getTokenBalance(
+            sourceAccountHex,
+            registry.ethChainId,
+            ETHER_TOKEN_ADDRESS,
+        )
+
+        if (fee.ethereumExecutionFee! > etherBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientEtherBalance,
+                message: "Insufficient ether balance to submit transaction.",
             })
         }
     }
@@ -730,6 +746,16 @@ export const validateTransfer = async (
 
     const paymentInfo = await tx.paymentInfo(sourceAccountHex)
     const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
+    if (
+        sourceParaId == registry.assetHubParaId &&
+        sourceExecutionFee + fee.totalFeeInDot > dotBalance
+    ) {
+        logs.push({
+            kind: ValidationKind.Error,
+            reason: ValidationReason.InsufficientDotFee,
+            message: "Insufficient DOT balance to submit transaction on the source parachain.",
+        })
+    }
 
     const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
     if (bridgeStatus.toEthereum.outbound !== "Normal") {
