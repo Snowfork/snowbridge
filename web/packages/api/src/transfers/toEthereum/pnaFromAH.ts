@@ -8,16 +8,9 @@ import {
     buildExportXcm,
     buildTransferXcmFromAssetHub,
 } from "../../xcmbuilders/toEthereum/pnaFromAH"
-import { buildTransferXcmFromAssetHubWithDOTAsFee } from "../../xcmbuilders/toEthereum/pnaFromAHWithDotAsFee"
 import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { paraImplementation } from "../../parachains"
-import {
-    buildMessageId,
-    DeliveryFee,
-    resolveInputs,
-    Transfer,
-    ValidationResult,
-} from "../../toEthereum_v2"
+import { buildMessageId, resolveInputs } from "../../toEthereum_v2"
 import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
 import {
@@ -25,14 +18,19 @@ import {
     estimateFeesFromAssetHub,
     MaxWeight,
     mockDeliveryFee,
-    validateTransferFromAssetHub,
+    validateTransfer,
+    DeliveryFeeV2,
+    TransferV2,
+    ValidationResultV2,
 } from "../../toEthereumSnowbridgeV2"
+import { ConcreteToken } from "../../assets_v2"
 
 export class PNAFromAH implements TransferInterface {
     async getDeliveryFee(
-        source: { sourceParaId: number; context: Context },
+        context: Context,
+        sourceParaId: number,
         registry: AssetRegistry,
-        tokenAddress: string,
+        tokenAddresses: string[],
         options?: {
             padPercentage?: bigint
             slippagePadPercentage?: bigint
@@ -40,21 +38,10 @@ export class PNAFromAH implements TransferInterface {
             feeTokenLocation?: any
             contractCall?: ContractCall
         },
-    ): Promise<DeliveryFee> {
-        const { assetHub, parachain } =
-            "sourceParaId" in source
-                ? {
-                      assetHub: await source.context.assetHub(),
-                      parachain: await source.context.parachain(source.sourceParaId),
-                  }
-                : source
+    ): Promise<DeliveryFeeV2> {
+        const assetHub = await context.assetHub()
 
-        const sourceParachainImpl = await paraImplementation(parachain)
-        const { sourceAssetMetadata } = resolveInputs(
-            registry,
-            tokenAddress,
-            sourceParachainImpl.parachainId,
-        )
+        const { sourceAssetMetadata } = resolveInputs(registry, tokenAddresses[0], sourceParaId)
 
         let forwardedXcmToBH, localXcm: any
 
@@ -81,9 +68,9 @@ export class PNAFromAH implements TransferInterface {
         )
 
         const fees = await estimateFeesFromAssetHub(
-            source.context,
+            context,
             registry,
-            tokenAddress,
+            tokenAddresses,
             {
                 localXcm,
                 forwardedXcmToBH,
@@ -94,49 +81,46 @@ export class PNAFromAH implements TransferInterface {
     }
 
     async createTransfer(
-        source: { sourceParaId: number; context: Context },
+        context: Context,
+        sourceParaId: number,
         registry: AssetRegistry,
         sourceAccount: string,
         beneficiaryAccount: string,
-        tokenAddress: string,
-        amount: bigint,
-        fee: DeliveryFee,
+        tokens: ConcreteToken[],
+        fee: DeliveryFeeV2,
         options?: {
             claimerLocation?: any
             contractCall?: ContractCall
         },
-    ): Promise<Transfer> {
+    ): Promise<TransferV2> {
         const { ethChainId } = registry
 
         let sourceAccountHex = sourceAccount
         if (!isHex(sourceAccountHex)) {
             sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
         }
-        const { parachain } =
-            "sourceParaId" in source
-                ? { parachain: await source.context.parachain(source.sourceParaId) }
-                : source
+        const parachain = await context.parachain(sourceParaId)
 
         const sourceParachainImpl = await paraImplementation(parachain)
         const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
-            resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
+            resolveInputs(registry, tokens[0].address, sourceParachainImpl.parachainId)
 
         let messageId: string | undefined = await buildMessageId(
             parachain,
             sourceParachainImpl.parachainId,
             sourceAccountHex,
-            tokenAddress,
+            tokens[0].address,
             beneficiaryAccount,
-            amount,
+            tokens[0].amount,
         )
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = await this.createTx(
-            source.context,
+            context,
             parachain,
             ethChainId,
             sourceAccount,
             beneficiaryAccount,
             ahAssetMetadata,
-            amount,
+            tokens[0].amount,
             messageId,
             fee,
             options,
@@ -147,26 +131,30 @@ export class PNAFromAH implements TransferInterface {
                 registry,
                 sourceAccount,
                 beneficiaryAccount,
-                tokenAddress,
-                amount,
+                tokens,
                 fee,
                 contractCall: options?.contractCall,
             },
             computed: {
                 sourceParaId: sourceParachainImpl.parachainId,
                 sourceAccountHex,
-                tokenErcMetadata,
                 sourceParachain,
-                ahAssetMetadata,
-                sourceAssetMetadata,
+                aggregatedAssets: [
+                    {
+                        tokenErcMetadata,
+                        ahAssetMetadata,
+                        sourceAssetMetadata,
+                        amount: tokens[0].amount,
+                    },
+                ],
                 messageId,
             },
             tx,
         }
     }
 
-    async validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult> {
-        return validateTransferFromAssetHub(context, transfer)
+    async validateTransfer(context: Context, transfer: TransferV2): Promise<ValidationResultV2> {
+        return validateTransfer(context, transfer)
     }
 
     async createTx(
@@ -178,7 +166,7 @@ export class PNAFromAH implements TransferInterface {
         asset: Asset,
         amount: bigint,
         messageId: string,
-        fee: DeliveryFee,
+        fee: DeliveryFeeV2,
         options?: {
             claimerLocation?: any
             contractCall?: ContractCall
@@ -188,37 +176,17 @@ export class PNAFromAH implements TransferInterface {
         if (options?.contractCall) {
             callHex = await buildContractCallHex(context, options.contractCall)
         }
-        let xcm: any
-        // If there is no fee specified, we assume that Ether is available in user's wallet on source chain,
-        // thus no swap required on Asset Hub.
-        if (!fee.feeLocation) {
-            xcm = buildTransferXcmFromAssetHub(
-                parachain.registry,
-                ethChainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                callHex,
-            )
-        } // If the fee asset is in DOT, we need to swap it to Ether on Asset Hub.
-        else if (isRelaychainLocation(fee.feeLocation)) {
-            xcm = buildTransferXcmFromAssetHubWithDOTAsFee(
-                parachain.registry,
-                ethChainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                callHex,
-            )
-        } else {
-            throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
-        }
+        const xcm = buildTransferXcmFromAssetHub(
+            parachain.registry,
+            ethChainId,
+            sourceAccount,
+            beneficiaryAccount,
+            messageId,
+            asset,
+            amount,
+            fee,
+            callHex,
+        )
         console.log("xcm on AH:", xcm.toHuman())
         return parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
     }

@@ -50,6 +50,7 @@ export type Asset = {
   decimals: number;
   isSufficient: boolean;
   xc20?: string;
+  isPNA?: boolean;
   // Location on source Parachain
   location?: any;
   // Location reanchored on AH

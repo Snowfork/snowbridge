@@ -9,7 +9,7 @@ import {
     buildEthereumInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
-import { DeliveryFee } from "../../toEthereum_v2"
+import { DeliveryFeeV2 } from "../../toEthereumSnowbridgeV2"
 
 export function buildTransferXcmFromParachainWithNativeAssetFee(
     registry: Registry,
@@ -22,7 +22,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
     topic: string,
     asset: Asset,
     tokenAmount: bigint,
-    fee: DeliveryFee,
+    fee: DeliveryFeeV2,
     claimerLocation?: any,
     callHex?: string,
 ) {
@@ -30,10 +30,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
     let sourceLocation = accountToLocation(sourceAccount)
     let tokenLocation = asset.location
 
-    let localNativeFeeAmount =
-        fee.localExecutionFeeInNative! +
-        fee.localDeliveryFeeInNative! +
-        fee.returnToSenderExecutionFeeNative!
+    let localNativeFeeAmount = fee.localExecutionFeeInNative! + fee.localDeliveryFeeInNative!
     let totalNativeFeeAmount = fee.totalFeeInNative!
     let remoteEtherFeeAmount = fee.ethereumExecutionFee!
     let remoteEtherFeeNativeAmount = fee.ethereumExecutionFeeInNative!

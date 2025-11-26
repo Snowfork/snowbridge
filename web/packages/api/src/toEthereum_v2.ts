@@ -41,6 +41,7 @@ import { paraImplementation } from "./parachains"
 import { padFeeByPercentage } from "./utils"
 import { Context } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
+import { TransferV2 } from "./toEthereumSnowbridgeV2"
 
 export type Transfer = {
     input: {
@@ -799,7 +800,7 @@ export type MessageReceipt = {
 
 export async function signAndSend(
     context: Context | { sourceParachain: ApiPromise },
-    transfer: Transfer,
+    transfer: Transfer | TransferV2,
     account: AddressOrPair,
     options: Partial<SignerOptions>,
 ): Promise<MessageReceipt> {

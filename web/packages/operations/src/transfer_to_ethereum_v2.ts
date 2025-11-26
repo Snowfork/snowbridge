@@ -1,14 +1,17 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toEthereumSnowbridgeV2, contextConfigFor, toEthereumV2 } from "@snowbridge/api"
+import { Context, toEthereumSnowbridgeV2, contextConfigFor } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
 import { assetRegistryFor } from "@snowbridge/registry"
 import { ContractCall } from "../../base-types"
+import { ConcreteToken } from "@snowbridge/api/dist/assets_v2"
 
 export const transferToEthereum = async (
     sourceParaId: number,
-    symbol: string,
-    amount: bigint,
+    tokens: {
+        address: string
+        amount: bigint
+    }[],
     options?: {
         feeTokenLocation?: any
         contractCall?: ContractCall
@@ -38,14 +41,27 @@ export const transferToEthereum = async (
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
     const registry = assetRegistryFor(env)
-
     const assets = registry.ethereumChains[registry.ethChainId].assets
-    const TOKEN_CONTRACT = Object.keys(assets)
-        .map((t) => assets[t])
-        .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
-    if (!TOKEN_CONTRACT) {
-        console.error("no token contract exists, check it and rebuild asset registry.")
-        throw Error(`No token found for ${symbol}`)
+
+    let tokenAddresses = [],
+        concreteTokens: ConcreteToken[] = []
+    for (const t of tokens) {
+        if (t.address.startsWith("0x") == false) {
+            const tokenAddress = Object.keys(assets)
+                .map((t) => assets[t])
+                .find((asset) =>
+                    asset.symbol.toLowerCase().startsWith(t.address.toLowerCase()),
+                )?.token
+            if (!tokenAddress) {
+                console.error("no token contract exists, check it and rebuild asset registry.")
+                throw Error(`No token found for ${t.address.toLowerCase()}`)
+            }
+            tokenAddresses.push(tokenAddress)
+            concreteTokens.push({ address: tokenAddress, amount: t.amount })
+        } else {
+            tokenAddresses.push(t.address)
+            concreteTokens.push({ address: t.address, amount: t.amount })
+        }
     }
 
     console.log("Asset Hub to Ethereum")
@@ -54,13 +70,14 @@ export const transferToEthereum = async (
         const transferImpl = await toEthereumSnowbridgeV2.createTransferImplementation(
             sourceParaId,
             registry,
-            TOKEN_CONTRACT,
+            tokenAddresses,
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee: toEthereumV2.DeliveryFee = await transferImpl.getDeliveryFee(
-            { sourceParaId, context },
+        let fee: toEthereumSnowbridgeV2.DeliveryFeeV2 = await transferImpl.getDeliveryFee(
+            context,
+            sourceParaId,
             registry,
-            TOKEN_CONTRACT,
+            tokenAddresses,
             {
                 feeTokenLocation: options?.feeTokenLocation,
                 slippagePadPercentage: 20n,
@@ -70,12 +87,12 @@ export const transferToEthereum = async (
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            { sourceParaId, context },
+            context,
+            sourceParaId,
             registry,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
-            TOKEN_CONTRACT,
-            amount,
+            concreteTokens,
             fee,
             options,
         )

@@ -115,6 +115,7 @@ export class AssetHubParachain extends ParachainBase {
                         minimumBalance: BigInt(assetInfo?.minBalance),
                         isSufficient: Boolean(assetInfo?.isSufficient),
                         assetId: String(assetId),
+                        isPNA: true,
                     }
                 } else if (
                     locationOnAH?.parents == DOT_LOCATION.parents &&
@@ -135,6 +136,7 @@ export class AssetHubParachain extends ParachainBase {
                         foreignId: foreignId,
                         minimumBalance: BigInt(existentialDeposit as any),
                         isSufficient: true,
+                        isPNA: true,
                     }
                 } else {
                     let assetType = this.provider.registry.createType(
@@ -181,6 +183,7 @@ export class AssetHubParachain extends ParachainBase {
                         foreignId: foreignId,
                         minimumBalance: BigInt(assetInfo?.minBalance),
                         isSufficient: Boolean(assetInfo?.isSufficient),
+                        isPNA: true,
                     }
                 }
             }

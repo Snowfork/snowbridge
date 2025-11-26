@@ -9,7 +9,7 @@ import {
     buildEthereumInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
-import { DeliveryFee } from "../../toEthereum_v2"
+import { DeliveryFeeV2 } from "../../toEthereumSnowbridgeV2"
 
 export function buildResultXcmAssetHubPNATransferFromParachain(
     registry: Registry,
@@ -57,270 +57,48 @@ export function buildResultXcmAssetHubPNATransferFromParachain(
                 ],
             },
             { clearOrigin: null },
-            ...buildAssetHubXcmForPNAFromParachain(
-                ethChainId,
-                beneficiary,
-                assetLocationOnAH,
-                assetLocationOnEthereum,
-                topic,
-            ),
-        ],
-    })
-}
-
-function buildAssetHubXcmForPNAFromParachain(
-    ethChainId: number,
-    beneficiary: string,
-    assetLocationOnAH: any,
-    assetLocationOnEthereum: any,
-    topic: string,
-) {
-    return [
-        // Initiate the bridged transfer
-        {
-            depositReserveAsset: {
-                assets: {
-                    Wild: {
-                        AllOf: { id: assetLocationOnAH, fun: "Fungible" },
-                    },
-                },
-                dest: bridgeLocation(ethChainId),
-                xcm: [
-                    {
-                        buyExecution: {
-                            fees: {
-                                id: assetLocationOnEthereum, // CAUTION: Must use reanchored locations.
-                                fun: {
-                                    Fungible: "1", // Offering 1 unit as fee, but it is returned to the beneficiary address.
-                                },
-                            },
-                            weight_limit: "Unlimited",
-                        },
-                    },
-                    {
-                        depositAsset: {
-                            assets: {
-                                Wild: {
-                                    AllCounted: 1,
-                                },
-                            },
-                            beneficiary: {
-                                parents: 0,
-                                interior: { x1: [{ AccountKey20: { key: beneficiary } }] },
-                            },
-                        },
-                    },
-                    {
-                        setTopic: topic,
-                    },
-                ],
-            },
-        },
-        {
-            setTopic: topic,
-        },
-    ]
-}
-
-export function buildParachainPNAReceivedXcmOnDestination(
-    registry: Registry,
-    assetLocation: any,
-    transferAmount: bigint,
-    feeInDot: bigint,
-    beneficiary: string,
-    topic: string,
-) {
-    let beneficiaryLocation = accountToLocation(beneficiary)
-    return registry.createType("XcmVersionedXcm", {
-        v5: [
             {
-                reserveAssetDeposited: [
-                    {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: feeInDot,
-                        },
-                    },
-                ],
-            },
-            {
-                buyExecution: {
-                    fees: {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: feeInDot,
-                        },
-                    },
-                    weightLimit: "Unlimited",
-                },
-            },
-            {
-                receiveTeleportedAsset: [
-                    {
-                        id: assetLocation,
-                        fun: {
-                            Fungible: transferAmount,
-                        },
-                    },
-                ],
-            },
-            { clearOrigin: null },
-            {
-                depositAsset: {
+                depositReserveAsset: {
                     assets: {
-                        wild: {
-                            allCounted: 2,
+                        Wild: {
+                            AllOf: { id: assetLocationOnAH, fun: "Fungible" },
                         },
                     },
-                    beneficiary: {
-                        parents: 0,
-                        interior: { x1: [beneficiaryLocation] },
-                    },
-                },
-            },
-            { setTopic: topic },
-        ],
-    })
-}
-
-export function buildAssetHubPNATransferFromParachain(
-    registry: Registry,
-    ethChainId: number,
-    beneficiary: string,
-    assetLocationOnAH: any,
-    assetLocationOnEthereum: any,
-    topic: string,
-) {
-    return registry.createType("XcmVersionedXcm", {
-        v5: buildAssetHubXcmForPNAFromParachain(
-            ethChainId,
-            beneficiary,
-            assetLocationOnAH,
-            assetLocationOnEthereum,
-            topic,
-        ),
-    })
-}
-
-export function buildParachainPNAReceivedXcmOnAssetHub(
-    registry: Registry,
-    ethChainId: number,
-    assetLocationOnAH: any,
-    destinationParaId: number,
-    transferAmount: bigint,
-    totalFeeInDot: bigint,
-    destinationFeeInDot: bigint,
-    beneficiary: string,
-    topic: string,
-) {
-    let beneficiaryLocation = accountToLocation(beneficiary)
-    return registry.createType("XcmVersionedXcm", {
-        v5: [
-            {
-                receiveTeleportedAsset: [
-                    {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: totalFeeInDot,
-                        },
-                    },
-                ],
-            },
-            {
-                buyExecution: {
-                    fees: {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: totalFeeInDot,
-                        },
-                    },
-                    weightLimit: "Unlimited",
-                },
-            },
-            {
-                descendOrigin: { x1: [{ PalletInstance: 80 }] },
-            },
-            {
-                universalOrigin: ethereumNetwork(ethChainId),
-            },
-            {
-                withdrawAsset: [
-                    {
-                        id: assetLocationOnAH,
-                        fun: {
-                            Fungible: transferAmount,
-                        },
-                    },
-                ],
-            },
-            { clearOrigin: null },
-            {
-                setAppendix: [
-                    {
-                        depositAsset: {
-                            assets: {
-                                wild: {
-                                    allCounted: 2,
-                                },
-                            },
-                            beneficiary: bridgeLocation(ethChainId),
-                        },
-                    },
-                ],
-            },
-            {
-                reserveAssetDeposited: [
-                    {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: destinationFeeInDot,
-                        },
-                    },
-                ],
-            },
-            {
-                initiateTeleport: {
-                    assets: {
-                        definite: [
-                            {
-                                id: assetLocationOnAH,
-                                fun: {
-                                    Fungible: transferAmount,
-                                },
-                            },
-                        ],
-                    },
-                    dest: { parents: 1, interior: { x1: [{ parachain: destinationParaId }] } },
+                    dest: bridgeLocation(ethChainId),
                     xcm: [
                         {
                             buyExecution: {
                                 fees: {
-                                    id: DOT_LOCATION,
+                                    id: assetLocationOnEthereum, // CAUTION: Must use reanchored locations.
                                     fun: {
-                                        Fungible: destinationFeeInDot,
+                                        Fungible: "1", // Offering 1 unit as fee, but it is returned to the beneficiary address.
                                     },
                                 },
-                                weightLimit: "Unlimited",
+                                weight_limit: "Unlimited",
                             },
                         },
                         {
                             depositAsset: {
                                 assets: {
-                                    wild: {
-                                        allCounted: 2,
+                                    Wild: {
+                                        AllCounted: 1,
                                     },
                                 },
                                 beneficiary: {
                                     parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
+                                    interior: { x1: [{ AccountKey20: { key: beneficiary } }] },
                                 },
                             },
                         },
-                        { setTopic: topic },
+                        {
+                            setTopic: topic,
+                        },
                     ],
                 },
             },
-            { setTopic: topic },
+            {
+                setTopic: topic,
+            },
         ],
     })
 }
@@ -336,7 +114,7 @@ export function buildTransferXcmFromParachain(
     topic: string,
     asset: Asset,
     tokenAmount: bigint,
-    fee: DeliveryFee,
+    fee: DeliveryFeeV2,
     claimerLocation?: any,
     callHex?: string,
 ) {
@@ -344,10 +122,10 @@ export function buildTransferXcmFromParachain(
     let sourceLocation = accountToLocation(sourceAccount)
     let tokenLocation = asset.location
 
-    let localDOTFeeAmount: bigint =
-        fee.localExecutionFeeDOT! + fee.localDeliveryFeeDOT! + fee.returnToSenderExecutionFeeDOT
+    let localDOTFeeAmount: bigint = fee.localExecutionFeeDOT! + fee.localDeliveryFeeDOT!
     let totalDOTFeeAmount: bigint = fee.totalFeeInDot!
     let remoteEtherFeeAmount: bigint = fee.ethereumExecutionFee!
+    let remoteEtherFeeInDOTAmount: bigint = fee.ethereumExecutionFeeInNative!
 
     let assets = []
     assets.push({
@@ -362,12 +140,14 @@ export function buildTransferXcmFromParachain(
             Fungible: totalDOTFeeAmount,
         },
     })
-    assets.push({
-        id: bridgeLocation(ethChainId),
-        fun: {
-            Fungible: remoteEtherFeeAmount,
-        },
-    })
+    if (!fee.feeLocation) {
+        assets.push({
+            id: bridgeLocation(ethChainId),
+            fun: {
+                Fungible: remoteEtherFeeAmount,
+            },
+        })
+    }
 
     let appendixInstructions = buildAppendixInstructions(
         envName,
@@ -378,10 +158,35 @@ export function buildTransferXcmFromParachain(
 
     let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
 
+    let exchangeInstruction = fee.feeLocation
+        ? {
+              exchangeAsset: {
+                  give: {
+                      Wild: {
+                          AllOf: {
+                              id: fee.feeLocation,
+                              fun: "Fungible",
+                          },
+                      },
+                  },
+                  want: [
+                      {
+                          id: bridgeLocation(ethChainId),
+                          fun: {
+                              Fungible: remoteEtherFeeAmount,
+                          },
+                      },
+                  ],
+                  maximal: false,
+              },
+          }
+        : undefined
+
     let remoteInstructionsOnAH: any[] = [
         {
             setAppendix: appendixInstructions,
         },
+        ...(exchangeInstruction ? [exchangeInstruction] : []),
         {
             initiateTransfer: {
                 destination: bridgeLocation(ethChainId),
@@ -463,7 +268,10 @@ export function buildTransferXcmFromParachain(
                                 {
                                     id: DOT_LOCATION,
                                     fun: {
-                                        Fungible: totalDOTFeeAmount - localDOTFeeAmount,
+                                        Fungible:
+                                            totalDOTFeeAmount -
+                                            localDOTFeeAmount -
+                                            remoteEtherFeeInDOTAmount,
                                     },
                                 },
                             ],
@@ -474,12 +282,19 @@ export function buildTransferXcmFromParachain(
                         {
                             reserveWithdraw: {
                                 definite: [
-                                    {
-                                        id: bridgeLocation(ethChainId),
-                                        fun: {
-                                            Fungible: remoteEtherFeeAmount,
-                                        },
-                                    },
+                                    remoteEtherFeeInDOTAmount > 0
+                                        ? {
+                                              id: DOT_LOCATION,
+                                              fun: {
+                                                  Fungible: remoteEtherFeeInDOTAmount,
+                                              },
+                                          }
+                                        : {
+                                              id: bridgeLocation(ethChainId),
+                                              fun: {
+                                                  Fungible: remoteEtherFeeAmount,
+                                              },
+                                          },
                                 ],
                             },
                         },

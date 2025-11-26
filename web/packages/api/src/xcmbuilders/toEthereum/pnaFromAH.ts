@@ -8,7 +8,7 @@ import {
     buildEthereumInstructions,
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
-import { DeliveryFee } from "../../toEthereum_v2"
+import { DeliveryFeeV2 } from "../../toEthereumSnowbridgeV2"
 
 export function buildExportXcm(
     registry: Registry,
@@ -109,14 +109,16 @@ export function buildTransferXcmFromAssetHub(
     topic: string,
     asset: Asset,
     tokenAmount: bigint,
-    fee: DeliveryFee,
+    fee: DeliveryFeeV2,
     callHex?: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
     let tokenLocation = asset.location
 
-    let totalDOTFeeAmount = fee.totalFeeInDot
+    let localDOTFeeAmount =
+        fee.localExecutionFeeDOT! + fee.bridgeHubDeliveryFeeDOT + fee.snowbridgeDeliveryFeeDOT
+    let totalDOTFeeAmount = fee.totalFeeInDot!
     let remoteEtherFeeAmount = fee.ethereumExecutionFee!
 
     let assets = []
@@ -127,12 +129,14 @@ export function buildTransferXcmFromAssetHub(
                 Fungible: totalDOTFeeAmount + tokenAmount,
             },
         })
-        assets.push({
-            id: bridgeLocation(ethChainId),
-            fun: {
-                Fungible: remoteEtherFeeAmount,
-            },
-        })
+        if (!fee.feeLocation) {
+            assets.push({
+                id: bridgeLocation(ethChainId),
+                fun: {
+                    Fungible: remoteEtherFeeAmount,
+                },
+            })
+        }
     } else {
         // native asset first
         if (tokenLocation.parents == 0) {
@@ -148,12 +152,14 @@ export function buildTransferXcmFromAssetHub(
                     Fungible: totalDOTFeeAmount,
                 },
             })
-            assets.push({
-                id: bridgeLocation(ethChainId),
-                fun: {
-                    Fungible: remoteEtherFeeAmount,
-                },
-            })
+            if (!fee.feeLocation) {
+                assets.push({
+                    id: bridgeLocation(ethChainId),
+                    fun: {
+                        Fungible: remoteEtherFeeAmount,
+                    },
+                })
+            }
         } // Parachain assets or KSM assets
         else if (tokenLocation.parents == 1 || tokenLocation.parents == 2) {
             assets.push({
@@ -168,15 +174,41 @@ export function buildTransferXcmFromAssetHub(
                     Fungible: tokenAmount,
                 },
             })
-            assets.push({
-                id: bridgeLocation(ethChainId),
-                fun: {
-                    Fungible: remoteEtherFeeAmount,
-                },
-            })
+            if (!fee.feeLocation) {
+                assets.push({
+                    id: bridgeLocation(ethChainId),
+                    fun: {
+                        Fungible: remoteEtherFeeAmount,
+                    },
+                })
+            }
         }
     }
     let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
+
+    let exchangeInstruction = fee.feeLocation
+        ? {
+              exchangeAsset: {
+                  give: {
+                      Wild: {
+                          AllOf: {
+                              id: fee.feeLocation,
+                              fun: "Fungible",
+                          },
+                      },
+                  },
+                  want: [
+                      {
+                          id: bridgeLocation(ethChainId),
+                          fun: {
+                              Fungible: remoteEtherFeeAmount,
+                          },
+                      },
+                  ],
+                  maximal: false,
+              },
+          }
+        : undefined
 
     let instructions: any[] = [
         {
@@ -187,7 +219,7 @@ export function buildTransferXcmFromAssetHub(
                 asset: {
                     id: DOT_LOCATION,
                     fun: {
-                        Fungible: totalDOTFeeAmount,
+                        Fungible: localDOTFeeAmount,
                     },
                 },
             },
@@ -201,7 +233,7 @@ export function buildTransferXcmFromAssetHub(
                     depositAsset: {
                         assets: {
                             wild: {
-                                allCounted: 2,
+                                allCounted: 8,
                             },
                         },
                         beneficiary: {
@@ -212,6 +244,7 @@ export function buildTransferXcmFromAssetHub(
                 },
             ],
         },
+        ...(exchangeInstruction ? [exchangeInstruction] : []),
         {
             initiateTransfer: {
                 destination: bridgeLocation(ethChainId),

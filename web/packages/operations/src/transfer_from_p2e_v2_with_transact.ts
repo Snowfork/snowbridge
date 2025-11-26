@@ -1,16 +1,16 @@
 import "dotenv/config"
 import { transferToEthereum } from "./transfer_to_ethereum_v2"
+import { ConcreteToken } from "@snowbridge/api/dist/assets_v2"
 
 const transact = async (
     sourceParaId: number,
-    symbol: string,
-    amount: bigint,
     target: string,
     calldata: string,
     value: bigint,
     gas: bigint,
+    tokens: ConcreteToken[],
 ) => {
-    await transferToEthereum(sourceParaId, symbol, amount, {
+    await transferToEthereum(sourceParaId, tokens, {
         feeTokenLocation: undefined,
         contractCall: {
             target,
@@ -21,21 +21,21 @@ const transact = async (
     })
 }
 
-if (process.argv.length != 9) {
-    console.error(
-        "Expected arguments: `destinationChainId, symbol, amount, target, calldata, value, gas`",
-    )
-    process.exit(1)
+let tokenPairs = (process.argv.length - 7) / 2
+let tokens: ConcreteToken[] = []
+for (let i = 0; i < tokenPairs; i++) {
+    const token = process.argv[7 + i * 2]
+    const amount = BigInt(process.argv[8 + i * 2])
+    tokens.push({ address: token, amount: amount })
 }
 
 transact(
     parseInt(process.argv[2]),
     process.argv[3],
-    BigInt(process.argv[4]),
-    process.argv[5],
-    process.argv[6],
-    BigInt(process.argv[7]),
-    BigInt(process.argv[8]),
+    process.argv[4],
+    BigInt(process.argv[5]),
+    BigInt(process.argv[6]),
+    tokens,
 )
     .then(() => process.exit(0))
     .catch((error) => {

@@ -6,31 +6,51 @@ import {
     erc20LocationReanchored,
     accountToLocation,
     HERE_LOCATION,
-    isEthereumNative,
     buildEthereumInstructions,
+    containsEther,
+    splitEtherAsset,
 } from "../../xcmBuilder"
-import { Asset } from "@snowbridge/base-types"
-import { DeliveryFee } from "../../toEthereum_v2"
+import { ConcreteAsset } from "../../assets_v2"
+import { DeliveryFeeV2 } from "../../toEthereumSnowbridgeV2"
 
 export function buildExportXcm(
     registry: Registry,
     ethChainId: number,
-    asset: Asset,
     sender: string,
     beneficiary: string,
     topic: string,
-    transferAmount: bigint,
-    feeInEther: bigint,
+    concreteAssets: ConcreteAsset[],
+    deliveryFee: DeliveryFeeV2,
 ) {
     let senderLocation = accountToLocation(sender)
     let beneficiaryLocation = accountToLocation(beneficiary)
+    let assets = []
+    const { etherAsset, otherAssets } = splitEtherAsset(ethChainId, concreteAssets)
+    if (etherAsset) {
+        assets.push({
+            id: bridgeLocation(ethChainId),
+            fun: {
+                Fungible: etherAsset.amount,
+            },
+        })
+    }
+    for (const asset of otherAssets) {
+        const tokenLocation = erc20Location(ethChainId, asset.id.token)
+        const tokenAmount = asset.amount
+        assets.push({
+            id: tokenLocation,
+            fun: {
+                Fungible: tokenAmount,
+            },
+        })
+    }
     let exportXcm: any[] = [
         {
             withdrawAsset: [
                 {
                     id: HERE_LOCATION,
                     fun: {
-                        Fungible: feeInEther,
+                        Fungible: deliveryFee.ethereumExecutionFee!,
                     },
                 },
             ],
@@ -40,20 +60,13 @@ export function buildExportXcm(
                 asset: {
                     id: HERE_LOCATION,
                     fun: {
-                        Fungible: feeInEther,
+                        Fungible: deliveryFee.ethereumExecutionFee!,
                     },
                 },
             },
         },
         {
-            withdrawAsset: [
-                {
-                    id: erc20LocationReanchored(asset.token),
-                    fun: {
-                        Fungible: transferAmount,
-                    },
-                },
-            ],
+            withdrawAsset: assets,
         },
         {
             aliasOrigin: {
@@ -109,40 +122,76 @@ export function buildTransferXcmFromAssetHub(
     sourceAccount: string,
     beneficiary: string,
     topic: string,
-    asset: Asset,
-    tokenAmount: bigint,
-    fee: DeliveryFee,
+    concreteAssets: ConcreteAsset[],
+    fee: DeliveryFeeV2,
     callHex?: string,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
-    let tokenLocation = erc20Location(ethChainId, asset.token)
 
     let totalDOTFeeAmount = fee.totalFeeInDot
     let remoteEtherFeeAmount = fee.ethereumExecutionFee!
 
-    let assets = []
+    let assets = [],
+        reserveWithdrawAssets: any[] = []
+
     assets.push({
         id: DOT_LOCATION,
         fun: {
             Fungible: totalDOTFeeAmount,
         },
     })
-    if (isEthereumNative(tokenLocation, ethChainId)) {
-        assets.push({
-            id: bridgeLocation(ethChainId),
-            fun: {
-                Fungible: tokenAmount + remoteEtherFeeAmount,
-            },
-        })
+    if (!containsEther(ethChainId, concreteAssets)) {
+        if (!fee.feeLocation) {
+            assets.push({
+                id: bridgeLocation(ethChainId),
+                fun: {
+                    Fungible: remoteEtherFeeAmount,
+                },
+            })
+        }
+        for (const asset of concreteAssets) {
+            const tokenLocation = erc20Location(ethChainId, asset.id.token)
+            const tokenAmount = asset.amount
+            assets.push({
+                id: tokenLocation,
+                fun: {
+                    Fungible: tokenAmount,
+                },
+            })
+        }
     } else {
+        const { etherAsset, otherAssets } = splitEtherAsset(ethChainId, concreteAssets)
         assets.push({
             id: bridgeLocation(ethChainId),
             fun: {
-                Fungible: remoteEtherFeeAmount,
+                Fungible: etherAsset!.amount + remoteEtherFeeAmount,
             },
         })
-        assets.push({
+        for (const asset of otherAssets) {
+            const tokenLocation = erc20Location(ethChainId, asset.id.token)
+            const tokenAmount = asset.amount
+            assets.push({
+                id: tokenLocation,
+                fun: {
+                    Fungible: tokenAmount,
+                },
+            })
+        }
+    }
+    const { etherAsset, otherAssets } = splitEtherAsset(ethChainId, concreteAssets)
+    if (etherAsset) {
+        reserveWithdrawAssets.push({
+            id: bridgeLocation(ethChainId),
+            fun: {
+                Fungible: etherAsset.amount,
+            },
+        })
+    }
+    for (const asset of otherAssets) {
+        const tokenLocation = erc20Location(ethChainId, asset.id.token)
+        const tokenAmount = asset.amount
+        reserveWithdrawAssets.push({
             id: tokenLocation,
             fun: {
                 Fungible: tokenAmount,
@@ -151,6 +200,30 @@ export function buildTransferXcmFromAssetHub(
     }
 
     let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
+
+    let exchangeInstruction = fee.feeLocation
+        ? {
+              exchangeAsset: {
+                  give: {
+                      Wild: {
+                          AllOf: {
+                              id: fee.feeLocation,
+                              fun: "Fungible",
+                          },
+                      },
+                  },
+                  want: [
+                      {
+                          id: bridgeLocation(ethChainId),
+                          fun: {
+                              Fungible: remoteEtherFeeAmount,
+                          },
+                      },
+                  ],
+                  maximal: false,
+              },
+          }
+        : undefined
 
     let instructions: any[] = [
         {
@@ -175,7 +248,7 @@ export function buildTransferXcmFromAssetHub(
                     depositAsset: {
                         assets: {
                             wild: {
-                                allCounted: 2,
+                                allCounted: 8,
                             },
                         },
                         beneficiary: {
@@ -186,6 +259,7 @@ export function buildTransferXcmFromAssetHub(
                 },
             ],
         },
+        ...(exchangeInstruction ? [exchangeInstruction] : []),
         {
             initiateTransfer: {
                 destination: bridgeLocation(ethChainId),
@@ -205,14 +279,7 @@ export function buildTransferXcmFromAssetHub(
                 assets: [
                     {
                         reserveWithdraw: {
-                            definite: [
-                                {
-                                    id: tokenLocation,
-                                    fun: {
-                                        Fungible: tokenAmount,
-                                    },
-                                },
-                            ],
+                            definite: reserveWithdrawAssets,
                         },
                     },
                 ],
