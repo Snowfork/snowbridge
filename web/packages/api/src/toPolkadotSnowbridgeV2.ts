@@ -14,8 +14,10 @@ import { IGatewayV2__factory } from "@snowbridge/contract-types"
 import { OperationStatus } from "./status"
 import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
 import { ApiPromise } from "@polkadot/api"
-import { accountToLocation } from "./xcmBuilder"
+import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
+import { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "./assets_v2"
+import { padFeeByPercentage } from "./utils"
 export { ValidationKind } from "./toPolkadot_v2"
 
 export type DeliveryFee = {
@@ -25,6 +27,8 @@ export type DeliveryFee = {
     destinationDeliveryFeeEther: bigint
     destinationExecutionFeeEther: bigint
     relayerFee: bigint
+    extrinsicFeeDot: bigint // Fee for submitting to BridgeHub in DOT (part of relayerFee)
+    extrinsicFeeEther: bigint // Fee for submitting to BridgeHub in Ether (part of relayerFee)
     totalFeeInWei: bigint
 }
 
@@ -217,7 +221,7 @@ export function createRegistrationImplementation() {
 
 export async function sendRegistration(
     registration: TokenRegistration,
-    wallet: Wallet
+    wallet: Wallet,
 ): Promise<TransactionReceipt> {
     const response = await wallet.sendTransaction(registration.tx)
     const receipt = await response.wait(1)
@@ -227,4 +231,48 @@ export async function sendRegistration(
     }
 
     return receipt
+}
+
+export async function inboundMessageExtrinsicFee(
+    assetHub: ApiPromise,
+    ethChainId: number,
+): Promise<{ extrinsicFeeDot: bigint; extrinsicFeeEther: bigint }> {
+    // Hardcoded because the EthereumInboundQueueV2::submit() extrinsic
+    // requires a valid proof to get an accurate weight. Sending an
+    // invalid proof underestimates the cost by 80%. Constructing a proof is
+    // complex and requires the message to be finalized, so not fit for purpose
+    // here. Consequently, DOT fee is hardcoded for now.
+    const extrinsicFeeDot = 250_000_000n
+
+    const etherLocation = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
+    const extrinsicFeeEther = await swapAsset1ForAsset2(
+        assetHub,
+        DOT_LOCATION,
+        etherLocation,
+        extrinsicFeeDot,
+    )
+
+    return { extrinsicFeeDot, extrinsicFeeEther }
+}
+
+export async function calculateRelayerFee(
+    assetHub: ApiPromise,
+    ethChainId: number,
+    overrideRelayerFee: undefined | bigint,
+    deliveryFeeInEther: bigint,
+): Promise<{ relayerFee: bigint; extrinsicFeeDot: bigint; extrinsicFeeEther: bigint }> {
+    let relayerFee
+    let extrinsicFeeDot = 0n
+    let extrinsicFeeEther = 0n
+
+    if (overrideRelayerFee !== undefined) {
+        relayerFee = overrideRelayerFee
+    } else {
+        const extrinsicFees = await inboundMessageExtrinsicFee(assetHub, ethChainId)
+        extrinsicFeeDot = extrinsicFees.extrinsicFeeDot
+        extrinsicFeeEther = extrinsicFees.extrinsicFeeEther
+        relayerFee = extrinsicFeeEther + deliveryFeeInEther
+        relayerFee = padFeeByPercentage(relayerFee, 30n)
+    }
+    return { relayerFee, extrinsicFeeDot, extrinsicFeeEther }
 }
