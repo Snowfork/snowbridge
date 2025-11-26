@@ -110,9 +110,8 @@ export class PNAToAH implements TransferInterface {
             paddFeeByPercentage ?? 33n,
         )
 
-        const relayerFee = await calculateRelayerFee(
+        const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
             assetHub,
-            bridgeHub,
             registry.ethChainId,
             options?.overrideRelayerFee,
             deliveryFeeInEther,
@@ -125,6 +124,8 @@ export class PNAToAH implements TransferInterface {
             destinationDeliveryFeeEther: 0n,
             destinationExecutionFeeEther: 0n,
             relayerFee: relayerFee,
+            extrinsicFeeDot: extrinsicFeeDot,
+            extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
         }

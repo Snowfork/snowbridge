@@ -27,6 +27,8 @@ export type DeliveryFee = {
     destinationDeliveryFeeEther: bigint
     destinationExecutionFeeEther: bigint
     relayerFee: bigint
+    extrinsicFeeDot: bigint // Fee for submitting to BridgeHub in DOT (part of relayerFee)
+    extrinsicFeeEther: bigint // Fee for submitting to BridgeHub in Ether (part of relayerFee)
     totalFeeInWei: bigint
 }
 
@@ -231,105 +233,46 @@ export async function sendRegistration(
     return receipt
 }
 
-export async function calculateInboundMessageExtrinsicFee(
-    bridgeHub: ApiPromise,
+export async function inboundMessageExtrinsicFee(
     assetHub: ApiPromise,
     ethChainId: number,
-): Promise<bigint> {
-    const dummyLog = {
-        address: "0x0000000000000000000000000000000000000000",
-        topics: [
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-        ],
-        data: "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    }
+): Promise<{ extrinsicFeeDot: bigint; extrinsicFeeEther: bigint }> {
+    // Hardcoded because the EthereumInboundQueueV2::submit() extrinsic
+    // requires a valid proof to get an accurate weight. Sending an
+    // invalid proof underestimates the cost by 80%. Constructing a proof is
+    // complex and requires the message to be finalized, so not fit for purpose
+    // here. Consequently, DOT fee is hardcoded for now.
+    const extrinsicFeeDot = 250_000_000n
 
-    const dummyProof = {
-        receipt_proof: [[], []],
-        execution_proof: {
-            header: {
-                slot: 0,
-                proposer_index: 0,
-                parent_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
-                state_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
-                body_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
-            },
-            ancestry_proof: null,
-            execution_header: {
-                Deneb: {
-                    parent_hash:
-                        "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    fee_recipient: "0x0000000000000000000000000000000000000000",
-                    state_root:
-                        "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    receipts_root:
-                        "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    logs_bloom: "0x" + "00".repeat(256),
-                    prev_randao:
-                        "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    block_number: 0,
-                    gas_limit: 0,
-                    gas_used: 0,
-                    timestamp: 0,
-                    extra_data: "0x",
-                    base_fee_per_gas: 0,
-                    block_hash:
-                        "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    transactions_root:
-                        "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    withdrawals_root:
-                        "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    blob_gas_used: 0,
-                    excess_blob_gas: 0,
-                },
-            },
-            execution_branch: [],
-        },
-    }
-
-    const dummyEventProof = {
-        event_log: dummyLog,
-        proof: dummyProof,
-    }
-
-    const submitTx = bridgeHub.tx.ethereumInboundQueueV2.submit(dummyEventProof)
-
-    const dummyAccount = "0x0000000000000000000000000000000000000000000000000000000000000000"
-
-    const paymentInfo = await submitTx.paymentInfo(dummyAccount)
-    const extrinsicFeeInDot = paymentInfo.partialFee.toBigInt()
-
-    // Convert DOT fee to Ether
     const etherLocation = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
-    const extrinsicFeeInEther = await swapAsset1ForAsset2(
+    const extrinsicFeeEther = await swapAsset1ForAsset2(
         assetHub,
         DOT_LOCATION,
         etherLocation,
-        extrinsicFeeInDot,
+        extrinsicFeeDot,
     )
 
-    return extrinsicFeeInEther
+    return { extrinsicFeeDot, extrinsicFeeEther }
 }
 
 export async function calculateRelayerFee(
     assetHub: ApiPromise,
-    bridgeHub: ApiPromise,
     ethChainId: number,
     overrideRelayerFee: undefined | bigint,
     deliveryFeeInEther: bigint,
-): Promise<bigint> {
+): Promise<{ relayerFee: bigint; extrinsicFeeDot: bigint; extrinsicFeeEther: bigint }> {
     let relayerFee
+    let extrinsicFeeDot = 0n
+    let extrinsicFeeEther = 0n
+
     if (overrideRelayerFee !== undefined) {
         relayerFee = overrideRelayerFee
     } else {
-        const extrinsicFee = await calculateInboundMessageExtrinsicFee(
-            bridgeHub,
-            assetHub,
-            ethChainId,
-        )
-        relayerFee = extrinsicFee + deliveryFeeInEther
+        const extrinsicFees = await inboundMessageExtrinsicFee(assetHub, ethChainId)
+        extrinsicFeeDot = extrinsicFees.extrinsicFeeDot
+        extrinsicFeeEther = extrinsicFees.extrinsicFeeEther
+        relayerFee = extrinsicFeeEther + deliveryFeeInEther
         relayerFee = padFeeByPercentage(relayerFee, 30n)
     }
-    return relayerFee
+    return { relayerFee, extrinsicFeeDot, extrinsicFeeEther }
 }
