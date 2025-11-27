@@ -50,7 +50,7 @@ export const addTipToMessage = async () => {
             : addTip.MessageDirection.Outbound,
         nonce: messageNonce,
         tipAsset: tipAsset === "ETH"
-            ? addTip.TipAsset.Ether
+            ? addTip.TipAsset.ETH
             : addTip.TipAsset.DOT,
         tipAmount,
     }
