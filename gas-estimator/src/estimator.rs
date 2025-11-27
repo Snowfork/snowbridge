@@ -45,6 +45,19 @@ sol! {
         address token;
         uint8 network;
     }
+
+    struct Command {
+        uint8 kind;
+        uint64 gas;
+        bytes payload;
+    }
+
+    struct InboundMessage {
+        bytes32 origin;
+        uint64 nonce;
+        bytes32 topic;
+        Command[] commands;
+    }
 }
 
 pub enum AssetHubConfig {}
@@ -113,6 +126,7 @@ pub struct Clients {
 pub struct BridgeHubInfo {
     pub delivery_fee_in_dot: u128,
     pub delivery_fee_in_ether: u128,
+    pub tip_in_ether: Option<u128>,
     pub dry_run_success: bool,
     pub dry_run_error: Option<String>,
 }
@@ -212,6 +226,10 @@ pub async fn estimate_gas(
     // Perform dry-run of the submit extrinsic on BridgeHub using the actual EventProof
     let dry_run_result = dry_run_submit_on_bridge_hub(clients, &event_proof, relayer_account).await?;
 
+    // Extract nonce from event data and query for tips
+    let nonce = extract_nonce_from_event_data(&event_proof.event_log.data)?;
+    let tip_in_ether = query_tip(clients, nonce).await?;
+
     // Extract beneficiary addresses for OFAC checks
     let beneficiaries = extract_beneficiaries(&destination_xcm);
 
@@ -221,6 +239,7 @@ pub async fn estimate_gas(
         bridge_hub: BridgeHubInfo {
             delivery_fee_in_dot,
             delivery_fee_in_ether,
+            tip_in_ether,
             dry_run_success: dry_run_result.success,
             dry_run_error: dry_run_result.error_message,
         },
@@ -627,4 +646,38 @@ pub fn extract_beneficiaries(xcm: &VersionedXcm) -> Vec<String> {
     beneficiaries.dedup();
 
     beneficiaries
+}
+
+fn extract_nonce_from_event_data(event_data: &[u8]) -> Result<u64, EstimatorError> {
+    let message = InboundMessage::abi_decode(event_data).map_err(|e| {
+        EstimatorError::InvalidCommand(format!("Failed to decode InboundMessage: {}", e))
+    })?;
+
+    Ok(message.nonce)
+}
+
+async fn query_tip(
+    clients: &Clients,
+    nonce: u64,
+) -> Result<Option<u128>, EstimatorError> {
+    // Query the Tips storage map
+    let storage_query = bridge_hub_runtime::storage()
+        .ethereum_inbound_queue_v2()
+        .tips(nonce);
+
+    let tip_in_ether = clients
+        .bridge_hub_client
+        .storage()
+        .at_latest()
+        .await
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to get latest block: {:?}", e))
+        })?
+        .fetch(&storage_query)
+        .await
+        .map_err(|e| {
+            EstimatorError::InvalidCommand(format!("Failed to query tips storage: {:?}", e))
+        })?;
+
+    Ok(tip_in_ether)
 }
