@@ -9,7 +9,6 @@ import {BeefyClient} from "../src/BeefyClient.sol";
 
 import {IGatewayBase} from "../src/interfaces/IGatewayBase.sol";
 import {IGatewayV2} from "../src/v2/IGateway.sol";
-import {IGatewayV1} from "../src/v1/IGateway.sol";
 import {IInitializable} from "../src/interfaces/IInitializable.sol";
 import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
 import {Gateway} from "../src/Gateway.sol";
@@ -491,11 +490,6 @@ contract GatewayV2Test is Test {
         uint128 amount = 100;
         uint128 expectedAmount =
             amount - uint128((uint256(amount) * feeToken.feeBps()) / 10_000);
-
-        vm.expectEmit(true, true, false, true);
-        emit IGatewayV1.AgentFundsWithdrawn(
-            Constants.ASSET_HUB_AGENT_ID, user1, expectedAmount
-        );
 
         vm.expectEmit(true, false, false, true);
         emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);

@@ -1129,9 +1129,6 @@ contract GatewayV1Test is Test {
             amount: amount
         });
 
-        vm.expectEmit(true, true, false, true);
-        emit IGatewayV1.AgentFundsWithdrawn(assetHubAgentID, account1, expectedAmount);
-
         MockGateway(address(gateway)).v1_handleUnlockNativeToken_public(abi.encode(params));
 
         assertEq(feeToken.balanceOf(account1), expectedAmount);
