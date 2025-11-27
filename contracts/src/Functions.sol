@@ -56,6 +56,7 @@ library Functions {
     /// @dev transfer tokens from the sender to the specified agent
     function transferToAgent(address agent, address token, address sender, uint128 amount)
         internal
+        returns (uint128 transferredAmount)
     {
         if (!token.isContract()) {
             revert InvalidToken();
@@ -65,7 +66,20 @@ library Functions {
             revert InvalidAmount();
         }
 
+        uint256 balanceBefore = IERC20(token).balanceOf(agent);
         IERC20(token).safeTransferFrom(sender, agent, amount);
+
+        uint256 balanceAfter = IERC20(token).balanceOf(agent);
+        if (balanceAfter < balanceBefore) {
+            revert InvalidAmount();
+        }
+
+        uint256 delta = balanceAfter - balanceBefore;
+        if (delta == 0 || delta > type(uint128).max) {
+            revert InvalidAmount();
+        }
+
+        transferredAmount = uint128(delta);
     }
 
     /// @dev Withdraw ether from an agent and transfer to a recipient
@@ -86,9 +100,22 @@ library Functions {
         address token,
         address recipient,
         uint128 amount
-    ) internal {
+    ) internal returns (uint128 transferredAmount) {
+        uint256 balanceBefore = IERC20(token).balanceOf(recipient);
         bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
         invokeOnAgent(agent, executor, call);
+
+        uint256 balanceAfter = IERC20(token).balanceOf(recipient);
+        if (balanceAfter < balanceBefore) {
+            revert InvalidAmount();
+        }
+
+        uint256 delta = balanceAfter - balanceBefore;
+        if (delta == 0 || delta > type(uint128).max) {
+            revert InvalidAmount();
+        }
+
+        transferredAmount = uint128(delta);
     }
 
     function registerNativeToken(address token) internal {

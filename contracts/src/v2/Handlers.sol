@@ -12,6 +12,7 @@ import {Functions} from "../Functions.sol";
 import {Constants} from "../Constants.sol";
 import {IGatewayV2} from "./IGateway.sol";
 import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
+import {IGatewayV1} from "../v1/IGateway.sol";
 
 import {
     UpgradeParams,
@@ -50,13 +51,18 @@ library HandlersV2 {
         UnlockNativeTokenParams memory params = abi.decode(data, (UnlockNativeTokenParams));
         address agent = Functions.ensureAgent(Constants.ASSET_HUB_AGENT_ID);
 
+        uint128 transferredAmount;
         if (params.token == address(0)) {
             Functions.withdrawEther(executor, agent, payable(params.recipient), params.amount);
+            transferredAmount = params.amount;
         } else {
-            Functions.withdrawNativeToken(
+            transferredAmount = Functions.withdrawNativeToken(
                 executor, agent, params.token, params.recipient, params.amount
             );
         }
+        emit IGatewayV1.AgentFundsWithdrawn(
+            Constants.ASSET_HUB_AGENT_ID, params.recipient, transferredAmount
+        );
     }
 
     function mintForeignToken(bytes calldata data) external {

@@ -53,11 +53,15 @@ library HandlersV1 {
         if (command == AgentExecuteCommand.TransferToken) {
             (address token, address recipient, uint128 amount) =
                 abi.decode(commandParams, (address, address, uint128));
+            uint128 transferredAmount;
             if (token == address(0)) {
                 Functions.withdrawEther(executor, agent, payable(recipient), amount);
+                transferredAmount = amount;
             } else {
-                Functions.withdrawNativeToken(executor, agent, token, recipient, amount);
+                transferredAmount =
+                    Functions.withdrawNativeToken(executor, agent, token, recipient, amount);
             }
+            emit IGatewayV1.AgentFundsWithdrawn(params.agentID, recipient, transferredAmount);
         }
     }
 
@@ -107,13 +111,16 @@ library HandlersV1 {
     function unlockNativeToken(address executor, bytes calldata data) external {
         UnlockNativeTokenParams memory params = abi.decode(data, (UnlockNativeTokenParams));
         address agent = Functions.ensureAgent(params.agentID);
+        uint128 transferredAmount;
         if (params.token == address(0)) {
             Functions.withdrawEther(executor, agent, payable(params.recipient), params.amount);
+            transferredAmount = params.amount;
         } else {
-            Functions.withdrawNativeToken(
+            transferredAmount = Functions.withdrawNativeToken(
                 executor, agent, params.token, params.recipient, params.amount
             );
         }
+        emit IGatewayV1.AgentFundsWithdrawn(params.agentID, params.recipient, transferredAmount);
     }
 
     // @dev Mint foreign token from polkadot
