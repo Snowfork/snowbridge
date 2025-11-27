@@ -334,18 +334,52 @@ export function contextConfigFor(
         }
     }
 
+    let injectedEthChains: { [ethChainId: string]: string | AbstractProvider } = {}
+    for (const ethChainIdKey of Object.keys(ETHEREUM_CHAINS)) {
+        if (
+            process.env[`ETHEREUM_RPC_URL_${ethChainIdKey}`] ||
+            process.env[`NEXT_PUBLIC_ETHEREUM_RPC_URL_${ethChainIdKey}`]
+        ) {
+            injectedEthChains[ethChainIdKey] =
+                process.env[`ETHEREUM_RPC_URL_${ethChainIdKey}`] ||
+                (process.env[`NEXT_PUBLIC_ETHEREUM_RPC_URL_${ethChainIdKey}`] as string)
+            continue
+        }
+        injectedEthChains[ethChainIdKey] = ETHEREUM_CHAINS[ethChainIdKey]
+    }
+
+    let injectedParachains: { [paraId: string]: string } = {}
+    for (const paraIdKey of Object.keys(PARACHAINS)) {
+        if (
+            process.env[`PARACHAIN_RPC_URL_${paraIdKey}`] ||
+            process.env[`NEXT_PUBLIC_PARACHAIN_RPC_URL_${paraIdKey}`]
+        ) {
+            injectedParachains[paraIdKey] =
+                process.env[`PARACHAIN_RPC_URL_${paraIdKey}`] ||
+                (process.env[`NEXT_PUBLIC_PARACHAIN_RPC_URL_${paraIdKey}`] as string)
+            continue
+        }
+        injectedParachains[paraIdKey] = PARACHAINS[paraIdKey]
+    }
+
     return {
         environment: env,
         ethereum: {
             ethChainId,
-            ethChains: ETHEREUM_CHAINS,
-            beacon_url: BEACON_HTTP_API,
+            ethChains: injectedEthChains,
+            beacon_url:
+                process.env["BEACON_RPC_URL"] ||
+                process.env["NEXT_PUBLIC_BEACON_RPC_URL"] ||
+                BEACON_HTTP_API,
         },
         polkadot: {
             assetHubParaId: ASSET_HUB_PARAID,
             bridgeHubParaId: BRIDGE_HUB_PARAID,
-            parachains: PARACHAINS,
-            relaychain: RELAY_CHAIN_URL,
+            parachains: injectedParachains,
+            relaychain:
+                process.env["RELAY_CHAIN_RPC_URL"] ||
+                process.env["NEXT_PUBLIC_RELAY_CHAIN_RPC_URL"] ||
+                RELAY_CHAIN_URL,
         },
         kusama,
         appContracts: {
