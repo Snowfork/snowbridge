@@ -1145,7 +1145,8 @@ export async function buildMessageId(
     tokenAddress: string,
     beneficiaryAccount: string,
     amount: bigint,
-) {
+    timestamp?: number,
+): Promise<string> {
     const [accountNextId] = await Promise.all([
         parachain.rpc.system.accountNextIndex(sourceAccountHex),
     ])
@@ -1156,6 +1157,7 @@ export async function buildMessageId(
         ...hexToU8a(tokenAddress),
         ...stringToU8a(beneficiaryAccount),
         ...stringToU8a(amount.toString()),
+        ...stringToU8a((timestamp || Date.now()).toString()),
     ])
     return blake2AsHex(entropy)
 }
