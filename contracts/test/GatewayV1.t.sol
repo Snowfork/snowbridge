@@ -66,6 +66,7 @@ import {
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 import "./mocks/HighGasToken.sol";
+import "./mocks/FeeOnTransferToken.sol";
 
 contract GatewayV1Test is Test {
     // Emitted when token minted/burnt/transferred
@@ -900,6 +901,51 @@ contract GatewayV1Test is Test {
         );
     }
 
+    function testSendTokenFeeOnTransferUsesReceivedAmount() public {
+        FeeOnTransferToken feeToken = new FeeOnTransferToken("FeeToken", "FEE", 500);
+
+        // Register token first
+        uint256 registerFee = IGatewayV1(address(gateway)).quoteRegisterTokenFee();
+        IGatewayV1(address(gateway)).registerToken{value: registerFee}(address(feeToken));
+
+        ParaID destPara = assetHubParaID;
+        uint128 destinationChainFee = 1;
+        uint128 amount = 100;
+
+        uint256 fee = IGatewayV1(address(gateway)).quoteSendTokenFee(
+            address(feeToken), destPara, destinationChainFee
+        );
+
+        feeToken.approve(address(gateway), amount);
+
+        uint128 expectedAmount =
+            amount - uint128((uint256(amount) * feeToken.feeBps()) / 10_000);
+        MultiAddress memory recipient = recipientAddress32();
+        bytes memory expectedPayload = SubstrateTypes.SendTokenToAssetHubAddress32(
+            address(feeToken), bytes32(recipient.data), sendTokenFee, expectedAmount
+        );
+        (, uint64 outboundNonceBefore) =
+            IGatewayV1(address(gateway)).channelNoncesOf(assetHubParaID.into());
+        bytes32 expectedMessageID =
+            keccak256(abi.encodePacked(assetHubParaID.into(), outboundNonceBefore + 1));
+
+        vm.expectEmit(true, true, true, true);
+        emit IGatewayV1.TokenSent(
+            address(feeToken), address(this), destPara, recipient, expectedAmount
+        );
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV1.OutboundMessageAccepted(
+            assetHubParaID.into(), outboundNonceBefore + 1, expectedMessageID, expectedPayload
+        );
+
+        IGatewayV1(address(gateway)).sendToken{value: fee}(
+            address(feeToken), destPara, recipient, destinationChainFee, amount
+        );
+
+        assertEq(feeToken.balanceOf(assetHubAgent), expectedAmount);
+    }
+
     /**
      * Operating Modes
      */
@@ -1066,6 +1112,26 @@ contract GatewayV1Test is Test {
 
         bytes memory encodedParams = abi.encode(params);
         MockGateway(address(gateway)).v1_handleUnlockNativeToken_public(encodedParams);
+    }
+
+    function testUnlockNativeTokenWithFeeOnTransferReceivesReducedAmount() public {
+        FeeOnTransferToken feeToken = new FeeOnTransferToken("FeeToken", "FEE", 500);
+        feeToken.mint(assetHubAgent, 200);
+
+        uint128 amount = 100;
+        uint128 expectedAmount =
+            amount - uint128((uint256(amount) * feeToken.feeBps()) / 10_000);
+
+        UnlockNativeTokenParams memory params = UnlockNativeTokenParams({
+            agentID: assetHubAgentID,
+            token: address(feeToken),
+            recipient: account1,
+            amount: amount
+        });
+
+        MockGateway(address(gateway)).v1_handleUnlockNativeToken_public(abi.encode(params));
+
+        assertEq(feeToken.balanceOf(account1), expectedAmount);
     }
 
     function testRegisterForeignToken() public {

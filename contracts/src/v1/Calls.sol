@@ -290,9 +290,10 @@ library CallsV1 {
     ) internal returns (Ticket memory ticket) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
 
+        uint128 bridgedAmount = amount;
         if (token != address(0)) {
             // Lock ERC20
-            Functions.transferToAgent($.assetHubAgent, token, sender, amount);
+            bridgedAmount = Functions.transferToAgent($.assetHubAgent, token, sender, amount);
             ticket.value = 0;
         } else {
             // Track the ether to bridge to Polkadot. This will be handled
@@ -309,7 +310,10 @@ library CallsV1 {
             if (destinationAddress.isAddress32()) {
                 // The receiver has a 32-byte account ID
                 ticket.payload = SubstrateTypes.SendTokenToAssetHubAddress32(
-                    token, destinationAddress.asAddress32(), $.assetHubReserveTransferFee, amount
+                    token,
+                    destinationAddress.asAddress32(),
+                    $.assetHubReserveTransferFee,
+                    bridgedAmount
                 );
             } else {
                 // AssetHub does not support 20-byte account IDs
@@ -330,7 +334,7 @@ library CallsV1 {
                     destinationAddress.asAddress32(),
                     $.assetHubReserveTransferFee,
                     destinationChainFee,
-                    amount
+                    bridgedAmount
                 );
             } else if (destinationAddress.isAddress20()) {
                 // The receiver has a 20-byte account ID
@@ -340,14 +344,14 @@ library CallsV1 {
                     destinationAddress.asAddress20(),
                     $.assetHubReserveTransferFee,
                     destinationChainFee,
-                    amount
+                    bridgedAmount
                 );
             } else {
                 revert Unsupported();
             }
         }
 
-        emit IGatewayV1.TokenSent(token, sender, destinationChain, destinationAddress, amount);
+        emit IGatewayV1.TokenSent(token, sender, destinationChain, destinationAddress, bridgedAmount);
     }
 
     // @dev Transfer Polkadot-native tokens back to Polkadot

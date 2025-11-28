@@ -144,8 +144,8 @@ library CallsV2 {
         require(amount > 0, IGatewayBase.InvalidAmount());
 
         if (tokenInfo.isNative()) {
-            Functions.transferToAgent($.assetHubAgent, token, msg.sender, amount);
-            return makeNativeAsset(token, amount);
+            uint128 received = Functions.transferToAgent($.assetHubAgent, token, msg.sender, amount);
+            return makeNativeAsset(token, received);
         } else if (tokenInfo.isForeign()) {
             Token(token).burn(msg.sender, amount);
             return makeForeignAsset(tokenInfo.foreignID, amount);
