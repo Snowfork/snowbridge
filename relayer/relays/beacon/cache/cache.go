@@ -2,7 +2,7 @@ package cache
 
 import (
 	"errors"
-	"sort"
+	"slices"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -139,7 +139,7 @@ func (b *BeaconCache) addSlot(slot uint64) {
 	if !addedAlready {
 		b.Finalized.Checkpoints.Slots = append(b.Finalized.Checkpoints.Slots, slot)
 	}
-	sort.Slice(b.Finalized.Checkpoints.Slots, func(i, j int) bool { return b.Finalized.Checkpoints.Slots[i] < b.Finalized.Checkpoints.Slots[j] })
+	slices.Sort(b.Finalized.Checkpoints.Slots)
 }
 
 func (b *BeaconCache) calculateClosestCheckpointSlot(slot uint64) (uint64, error) {
