@@ -9,7 +9,9 @@ export const addTipToMessage = async () => {
     // Parse command line arguments
     const args = process.argv.slice(2)
     if (args.length < 4) {
-        console.error("Expected arguments: `direction (Inbound/Outbound), nonce, tipAsset (ETH/DOT), tipAmount`")
+        console.error(
+            "Expected arguments: `direction (Inbound/Outbound), nonce, tipAsset (ETH/DOT), tipAmount`",
+        )
         process.exit(1)
     }
 
@@ -37,31 +39,20 @@ export const addTipToMessage = async () => {
 
     // Get user's Polkadot account
     const keyring = new Keyring({ type: "sr25519" })
-    const userAccount = keyring.addFromUri(
-        process.env.SUBSTRATE_KEY ?? "//Alice"
-    )
+    const userAccount = keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Alice")
     console.log("User account:", userAccount.address)
 
     const assetHub = await context.assetHub()
 
     const tipParams = {
-        direction: direction === "Inbound"
-            ? addTip.MessageDirection.Inbound
-            : addTip.MessageDirection.Outbound,
+        direction,
         nonce: messageNonce,
-        tipAsset: tipAsset === "ETH"
-            ? addTip.TipAsset.ETH
-            : addTip.TipAsset.DOT,
+        tipAsset,
         tipAmount,
     }
 
     // Step 1: Estimate the extrinsic fee
-    const estimatedFee = await addTip.getFee(
-        assetHub,
-        registry,
-        tipParams,
-        userAccount.address
-    )
+    const estimatedFee = await addTip.getFee(assetHub, registry, tipParams, userAccount.address)
     console.log("Estimated extrinsic fee:", estimatedFee, " DOT")
 
     // Step 2: Dry run the transaction
@@ -69,7 +60,7 @@ export const addTipToMessage = async () => {
         assetHub,
         registry,
         tipParams,
-        userAccount.address
+        userAccount.address,
     )
 
     if (!dryRunResult.success) {
@@ -78,11 +69,7 @@ export const addTipToMessage = async () => {
     console.log("Dry run successful")
 
     // Step 3: Create the tip transaction
-    const tipTx = await addTip.createAddTip(
-        assetHub,
-        registry,
-        tipParams
-    )
+    const tipTx = await addTip.createAddTip(assetHub, registry, tipParams)
 
     // Step 4: Sign and send if not a dry run
     if (process.env.DRY_RUN !== "true") {

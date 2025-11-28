@@ -7,15 +7,9 @@ import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { CallDryRunEffects, XcmDryRunApiError } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 
-export enum MessageDirection {
-    Inbound = "Inbound",
-    Outbound = "Outbound",
-}
+export type MessageDirection = "Inbound" | "Outbound"
 
-export enum TipAsset {
-    DOT = "DOT",
-    ETH = "ETH",
-}
+export type TipAsset = "DOT" | "ETH"
 
 export type AddTipParams = {
     direction: MessageDirection
@@ -40,9 +34,9 @@ export async function createAddTip(
     const { direction, nonce, tipAsset, tipAmount } = params
 
     let tipAssetLocation: any
-    if (tipAsset === TipAsset.DOT) {
+    if (tipAsset === "DOT") {
         tipAssetLocation = DOT_LOCATION
-    } else if (tipAsset === TipAsset.ETH) {
+    } else if (tipAsset === "ETH") {
         tipAssetLocation = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
     } else {
         throw new Error(`Unsupported tip asset: ${tipAsset}`)
@@ -57,14 +51,20 @@ export async function createAddTip(
 
     let tx: SubmittableExtrinsic<"promise">
 
-    if (direction === MessageDirection.Inbound) {
-        tx = assetHub.tx.snowbridgeSystemFrontend.addTip({
-            Inbound: nonce,
-        }, versionedAsset)
-    } else if (direction === MessageDirection.Outbound) {
-        tx = assetHub.tx.snowbridgeSystemFrontend.addTip({
-            Outbound: nonce,
-        }, versionedAsset)
+    if (direction === "Inbound") {
+        tx = assetHub.tx.snowbridgeSystemFrontend.addTip(
+            {
+                Inbound: nonce,
+            },
+            versionedAsset,
+        )
+    } else if (direction === "Outbound") {
+        tx = assetHub.tx.snowbridgeSystemFrontend.addTip(
+            {
+                Outbound: nonce,
+            },
+            versionedAsset,
+        )
     } else {
         throw new Error(`Invalid message direction: ${direction}`)
     }
@@ -155,26 +155,28 @@ export async function signAndSend(
     signer: any,
 ): Promise<AddTipResponse> {
     return new Promise((resolve, reject) => {
-        tipResult.tx.signAndSend(signer, (result: ISubmittableResult) => {
-            if (result.status.isFinalized) {
-                if (result.dispatchError) {
-                    if (result.dispatchError.isModule) {
-                        const decoded = assetHub.registry.findMetaError(
-                            result.dispatchError.asModule,
-                        )
-                        reject(new Error(`${decoded.section}.${decoded.name}: ${decoded.docs}`))
+        tipResult.tx
+            .signAndSend(signer, (result: ISubmittableResult) => {
+                if (result.status.isFinalized) {
+                    if (result.dispatchError) {
+                        if (result.dispatchError.isModule) {
+                            const decoded = assetHub.registry.findMetaError(
+                                result.dispatchError.asModule,
+                            )
+                            reject(new Error(`${decoded.section}.${decoded.name}: ${decoded.docs}`))
+                        } else {
+                            reject(new Error(result.dispatchError.toString()))
+                        }
                     } else {
-                        reject(new Error(result.dispatchError.toString()))
+                        resolve({
+                            blockHash: result.status.asFinalized.toHex(),
+                            txHash: result.txHash?.toHex() ?? "",
+                        })
                     }
-                } else {
-                    resolve({
-                        blockHash: result.status.asFinalized.toHex(),
-                        txHash: result.txHash?.toHex() ?? "",
-                    })
                 }
-            }
-        }).catch((error) => {
-            reject(error)
-        })
+            })
+            .catch((error) => {
+                reject(error)
+            })
     })
 }
