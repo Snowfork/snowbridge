@@ -191,7 +191,6 @@ export const fetchEstimatedDeliveryTime = async (graphqlApiUrl: string, channelI
     return result
 }
 
-
 /**
  * Query with a raw graphql
  **/
