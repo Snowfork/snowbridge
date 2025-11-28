@@ -1114,7 +1114,7 @@ contract GatewayV1Test is Test {
         MockGateway(address(gateway)).v1_handleUnlockNativeToken_public(encodedParams);
     }
 
-    function testUnlockNativeTokenWithFeeOnTransferEmitsActualAmount() public {
+    function testUnlockNativeTokenWithFeeOnTransferReceivesReducedAmount() public {
         FeeOnTransferToken feeToken = new FeeOnTransferToken("FeeToken", "FEE", 500);
         feeToken.mint(assetHubAgent, 200);
 
