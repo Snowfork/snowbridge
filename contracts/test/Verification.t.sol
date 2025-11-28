@@ -19,7 +19,13 @@ contract VerificationTest is Test {
 
     function setUp() public {
         beefyClient = new BeefyClientMock(
-            3, 8, 16, 0, BeefyClient.ValidatorSet(0, 0, 0x0), BeefyClient.ValidatorSet(1, 0, 0x0)
+            3,
+            8,
+            16,
+            101,
+            0,
+            BeefyClient.ValidatorSet(0, 0, 0x0),
+            BeefyClient.ValidatorSet(1, 0, 0x0)
         );
         encodedParachainID = ScaleCodec.encodeU32(BRIDGE_HUB_PARA_ID);
         v = new VerificationWrapper();
