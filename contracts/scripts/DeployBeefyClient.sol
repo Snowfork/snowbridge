@@ -13,12 +13,13 @@ contract DeployBeefyClient is Script {
         uint256 randaoCommitDelay;
         uint256 randaoCommitExpiration;
         uint256 minimumSignatures;
+        uint256 fiatShamirRequiredSignatures;
     }
 
     function readConfig() internal pure returns (Config memory config) {
         // Checkpoint generated using the script `./beefy-checkpoint.js` script in Polkadot-JS.
         config = Config({
-            startBlock: 27895089,
+            startBlock: 27_895_089,
             current: BeefyClient.ValidatorSet({
                 id: 3494,
                 length: 600,
@@ -31,7 +32,8 @@ contract DeployBeefyClient is Script {
             }),
             randaoCommitDelay: 128,
             randaoCommitExpiration: 24,
-            minimumSignatures: 17
+            minimumSignatures: 17,
+            fiatShamirRequiredSignatures: 101
         });
     }
 
@@ -43,6 +45,7 @@ contract DeployBeefyClient is Script {
             config.randaoCommitDelay,
             config.randaoCommitExpiration,
             config.minimumSignatures,
+            config.fiatShamirRequiredSignatures,
             config.startBlock,
             config.current,
             config.next

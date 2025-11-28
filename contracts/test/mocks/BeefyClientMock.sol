@@ -10,6 +10,7 @@ contract BeefyClientMock is BeefyClient {
         uint256 _randaoCommitDelay,
         uint256 _randaoCommitExpiration,
         uint256 _minNumRequiredSignatures,
+        uint256 _fiatShamirRequiredSignatures,
         uint64 _initialBeefyBlock,
         ValidatorSet memory _initialValidatorSet,
         ValidatorSet memory _nextValidatorSet
@@ -18,6 +19,7 @@ contract BeefyClientMock is BeefyClient {
             _randaoCommitDelay,
             _randaoCommitExpiration,
             _minNumRequiredSignatures,
+            _fiatShamirRequiredSignatures,
             _initialBeefyBlock,
             _initialValidatorSet,
             _nextValidatorSet
@@ -54,7 +56,6 @@ contract BeefyClientMock is BeefyClient {
         nextValidatorSet.length = _nextValidatorSet.length;
         nextValidatorSet.root = _nextValidatorSet.root;
         nextValidatorSet.usageCounters = createUint16Array(nextValidatorSet.length);
-        console.log(currentValidatorSet.usageCounters.data.length);
     }
 
     // Used to verify integrity of storage to storage copies
