@@ -43,6 +43,11 @@ contract BeefyClient {
      */
     event NewTicket(address relayer, uint64 blockNumber);
 
+    /**
+     * @dev Interactive session has expired
+     */
+    event TicketExpired();
+
     /* Types */
 
     /**
@@ -216,7 +221,6 @@ contract BeefyClient {
     error PrevRandaoAlreadyCaptured();
     error PrevRandaoNotCaptured();
     error StaleCommitment();
-    error TicketExpired();
     error WaitPeriodNotOver();
 
     constructor(
@@ -340,7 +344,7 @@ contract BeefyClient {
         // relayer can capture within `randaoCommitExpiration` blocks
         if (block.number > ticket.blockNumber + randaoCommitDelay + randaoCommitExpiration) {
             delete tickets[ticketID];
-            revert TicketExpired();
+            emit TicketExpired();
         }
 
         // Post-merge, the difficulty opcode now returns PREVRANDAO
