@@ -118,7 +118,8 @@ const scanNewTicket = async (
         endBlock,
     )
     for (let event of pastEvents) {
-        logger.info("Past NewTicket: %o", event.args)
+        const blockNumber = event.blockNumber
+        logger.info("Past NewTicket: %d", blockNumber)
         let tx = await ethereum.getTransaction(event.transactionHash)
         const parseTransaction = beefyClient.interface.parseTransaction({
             data: tx?.data || "",
@@ -132,11 +133,11 @@ const scanNewTicket = async (
         logger.info("Canonical MMR Root: %s", canonicalMMRRoot.toHex())
         if (canonicalMMRRoot.toHex() != beefyMMRRoot) {
             logger.fatal("MMR Root mismatch!")
-            await sendForkVotingAlarm(network, beefyBlockNumber)
+            await sendForkVotingAlarm(network, blockNumber)
         }
         if (beefyBlockNumber > latestBlock) {
             logger.fatal("Voting on a future block!")
-            await sendFutureBlockVotingAlarm(network, beefyBlockNumber)
+            await sendFutureBlockVotingAlarm(network, blockNumber)
         }
     }
 }
@@ -156,6 +157,8 @@ const scanNewMMRRoot = async (
         endBlock,
     )
     for (let event of pastEvents) {
+        const blockNumber = event.blockNumber
+        logger.info("Past NewMMRRoot: %d", blockNumber)
         const beefyMMRRoot = event.args.mmrRoot
         const beefyBlockNumber = event.args.blockNumber
         logger.info("Past NewMMRRoot: %o", event.args)
@@ -164,11 +167,11 @@ const scanNewMMRRoot = async (
         logger.info("Canonical MMR Root: %s", canonicalMMRRoot.toHex())
         if (canonicalMMRRoot.toHex() != beefyMMRRoot) {
             logger.fatal("MMR Root mismatch!")
-            await sendForkVotingAlarm(network, Number(beefyBlockNumber))
+            await sendForkVotingAlarm(network, blockNumber)
         }
         if (beefyBlockNumber > latestBlock) {
             logger.fatal("Voting on a future block!")
-            await sendFutureBlockVotingAlarm(network, Number(beefyBlockNumber))
+            await sendFutureBlockVotingAlarm(network, blockNumber)
         }
     }
 }

@@ -19,6 +19,9 @@ tests=(
   # Transact
   transact_e2p
   transact_p2e
+
+  # Equivocation
+  malicious_payload
 )
 
 for test in ${tests[@]}; do 
