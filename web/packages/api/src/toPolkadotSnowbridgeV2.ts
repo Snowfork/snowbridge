@@ -150,6 +150,7 @@ export function buildMessageId(
     beneficiaryAccount: string,
     amount: bigint,
     accountNonce: number,
+    timestamp?: number,
 ) {
     const entropy = new Uint8Array([
         ...stringToU8a(destParaId.toString()),
@@ -158,6 +159,7 @@ export function buildMessageId(
         ...stringToU8a(beneficiaryAccount),
         ...stringToU8a(amount.toString()),
         ...stringToU8a(accountNonce.toString()),
+        ...stringToU8a((timestamp || Date.now()).toString()),
     ])
     return blake2AsHex(entropy)
 }

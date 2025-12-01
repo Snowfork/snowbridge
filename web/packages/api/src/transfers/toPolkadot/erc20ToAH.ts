@@ -169,7 +169,7 @@ export class ERC20ToAH implements TransferInterface {
         }
         const ifce = IGateway__factory.createInterface()
         const con = new Contract(registry.gatewayAddress, ifce)
-        const accountNonce = await ethereum.getTransactionCount(sourceAccount)
+        const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
 
         const topic = buildMessageId(
             destinationParaId,

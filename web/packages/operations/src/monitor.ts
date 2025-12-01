@@ -1,6 +1,14 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
-import { Context, environment, status, utils, subsquid, contextConfigFor } from "@snowbridge/api"
+import {
+    Context,
+    environment,
+    status,
+    utils,
+    subsquid,
+    contextConfigFor,
+    contextConfigOverrides,
+} from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
 import { Config } from "@snowbridge/api/dist/environment"
 
@@ -16,7 +24,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const { config, name } = snowbridgeEnv
 
-    const context = new Context(contextConfigFor(env))
+    const context = new Context(contextConfigOverrides(contextConfigFor(env)))
 
     const bridgeStatus = await status.bridgeStatusInfo(context, {
         polkadotBlockTimeInSeconds: 6,

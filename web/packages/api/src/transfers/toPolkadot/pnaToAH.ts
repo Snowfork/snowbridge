@@ -174,7 +174,7 @@ export class PNAToAH implements TransferInterface {
             throw Error("asset foreign ID not set in metadata")
         }
 
-        const accountNonce = await ethereum.getTransactionCount(sourceAccount)
+        const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
         const topic = buildMessageId(
             destinationParaId,
             sourceAccount,
