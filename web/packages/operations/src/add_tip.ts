@@ -73,7 +73,9 @@ export const addTipToMessage = async () => {
 
     // Step 4: Sign and send if not a dry run
     if (process.env.DRY_RUN !== "true") {
-        const response = await addTip.signAndSend(assetHub, tipTx, userAccount)
+        const response = await addTip.signAndSend(assetHub, tipTx, userAccount, {
+            withSignedTransaction: true,
+        })
         if (!response) {
             throw Error(`Transaction ${response} not included.`)
         }
