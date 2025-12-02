@@ -1,5 +1,5 @@
 import { ApiPromise } from "@polkadot/api"
-import { SubmittableExtrinsic } from "@polkadot/api/types"
+import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
 import { AssetRegistry } from "@snowbridge/base-types"
 import { DOT_LOCATION, erc20Location } from "./xcmBuilder"
@@ -152,11 +152,12 @@ export type AddTipResponse = {
 export async function signAndSend(
     assetHub: ApiPromise,
     tipResult: AddTipResult,
-    signer: any,
+    account: AddressOrPair,
+    options: Partial<SignerOptions>,
 ): Promise<AddTipResponse> {
     return new Promise((resolve, reject) => {
         tipResult.tx
-            .signAndSend(signer, (result: ISubmittableResult) => {
+            .signAndSend(account, options, (result: ISubmittableResult) => {
                 if (result.status.isFinalized) {
                     if (result.dispatchError) {
                         if (result.dispatchError.isModule) {
