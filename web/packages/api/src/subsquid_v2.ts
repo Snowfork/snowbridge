@@ -205,7 +205,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
 ]
  **/
 export const fetchToPolkadotTransferById = async (graphqlApiUrl: string, id: string) => {
-    let nonceFilter = !isNaN(Number(id)) ? `{nonce_eq: ${id}}` : ""
+    let nonceFilter = id.length > 0 && !id.startsWith("0x") && !isNaN(Number(id)) ? `{nonce_eq: ${id}}` : ""
     let query = `query { transferStatusToPolkadotV2s(limit: 1, where: { OR: [ {messageId_eq: "${id}"} {txHash_eq: "${id}"} ${nonceFilter} ] }) {
             id
             status
@@ -287,7 +287,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
 ]
  **/
 export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: string) => {
-    let nonceFilter = !isNaN(Number(id)) ? `{nonce_eq: ${id}}` : ""
+    let nonceFilter = id.length > 0 && !id.startsWith("0x") && !isNaN(Number(id)) ? `{nonce_eq: ${id}}` : ""
     let query = `query { transferStatusToEthereumV2s(limit: 1, where: { OR: [ {messageId_eq: "${id}"} {txHash_eq: "${id}"} ${nonceFilter} ] }) {
             id
             status
