@@ -115,6 +115,7 @@ contract MockERC20 {
 contract PayableRecipient {
     receive() external payable {}
 }
+import "./mocks/FeeOnTransferToken.sol";
 
 contract GatewayV2Test is Test {
     // Emitted when token minted/burnt/transferred
@@ -229,8 +230,16 @@ contract GatewayV2Test is Test {
     }
 
     function makeUnlockWethCommand(uint128 value) public view returns (CommandV2[] memory) {
+        return makeUnlockTokenCommand(address(weth), relayer, value);
+    }
+
+    function makeUnlockTokenCommand(address token, address recipient, uint128 amount)
+        public
+        pure
+        returns (CommandV2[] memory)
+    {
         UnlockNativeTokenParams memory params =
-            UnlockNativeTokenParams({token: address(weth), recipient: relayer, amount: value});
+            UnlockNativeTokenParams({token: token, recipient: recipient, amount: amount});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -472,6 +481,28 @@ contract GatewayV2Test is Test {
         assertEq(IGatewayV2(address(gateway)).v2_outboundNonce(), 1);
     }
 
+    function testSendMessageWithFeeOnTransferTokenReverts() public {
+        FeeOnTransferToken feeToken = new FeeOnTransferToken("FeeToken", "FEE", 500);
+        feeToken.mint(user1, 1 ether);
+        MockGateway(address(gateway)).prank_registerNativeToken(address(feeToken));
+
+        uint128 amount = 1 ether;
+
+        bytes[] memory assets = new bytes[](1);
+        assets[0] = abi.encode(0, address(feeToken), amount);
+
+        hoax(user1);
+        feeToken.approve(address(gateway), amount);
+
+        vm.expectRevert();
+        hoax(user1);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
+            "", assets, "", 0.1 ether, 0.4 ether
+        );
+
+        assertEq(feeToken.balanceOf(assetHubAgent), 0);
+    }
+
     function testSendMessageFailsWithInsufficentValue() public {
         vm.expectRevert(IGatewayV2.InsufficientValue.selector);
         hoax(user1, 1 ether);
@@ -510,6 +541,35 @@ contract GatewayV2Test is Test {
                 makeMockProof(),
                 relayerRewardAddress
             );
+    }
+
+    function testUnlockFeeOnTransferTokenFails() public {
+        FeeOnTransferToken feeToken = new FeeOnTransferToken("FeeToken", "FEE", 500);
+        feeToken.mint(assetHubAgent, 200);
+
+        bytes32 topic = keccak256("topic");
+        uint128 amount = 100;
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway)).v2_submit(
+            InboundMessageV2({
+                origin: Constants.ASSET_HUB_AGENT_ID,
+                nonce: 1,
+                topic: topic,
+                commands: makeUnlockTokenCommand(address(feeToken), user1, amount)
+            }),
+            proof,
+            makeMockProof(),
+            relayerRewardAddress
+        );
+
+        assertEq(feeToken.balanceOf(user1), 0);
     }
 
     function testRegisterForeignToken() public {
