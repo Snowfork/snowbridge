@@ -1,0 +1,24 @@
+{
+  "name": "snowbridge-contracts-devDependencies",
+  "scripts": {
+    "clean": "forge clean",
+    "build": "forge build",
+    "test": "forge test -vvv",
+    "test:coverage": "forge coverage",
+    "bridge-l2": "make eta"
+  },
+  "devDependencies": {
+    "forge-std": "github:foundry-rs/forge-std#v1.9.4",
+    "prettier": "^2.8.8",
+    "prettier-plugin-solidity": "^1.1.3",
+    "solhint": "^3.6.2",
+    "solhint-plugin-prettier": "^0.0.5"
+  },
+  "dependencies": {
+    "@layerzerolabs/lz-evm-messagelib-v2": "3.0.36",
+    "@layerzerolabs/lz-evm-oapp-v2": "3.0.36",
+    "@layerzerolabs/lz-evm-protocol-v2": "3.0.36",
+    "@layerzerolabs/toolbox-foundry": "^0.1.10",
+    "@stargatefinance/stg-evm-v2": "^1.3.1"
+  }
+}
