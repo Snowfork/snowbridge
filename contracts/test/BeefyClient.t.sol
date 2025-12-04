@@ -117,12 +117,6 @@ contract BeefyClientTest is Test {
         return BeefyClient.Commitment(blockNumber, setId, payload);
     }
 
-    function printBitArray(uint256[] memory bits) private view {
-        for (uint256 i = 0; i < bits.length; i++) {
-            console.log("bits index at %d is %d", i, bits[i]);
-        }
-    }
-
     function loadFinalProofs(
         string memory finalProofRaw,
         BeefyClient.ValidatorProof[] storage finalProofs
@@ -151,12 +145,8 @@ contract BeefyClientTest is Test {
     function regenerateBitField(string memory bitfieldFile, uint256 numRequiredSignatures)
         internal
     {
-        console.log("print initialBitField, length is: %d", bitfield.length);
-        printBitArray(bitfield);
         prevRandao = uint32(vm.envOr("PREV_RANDAO", prevRandao));
         finalBitfield = Bitfield.subsample(prevRandao, bitfield, setSize, numRequiredSignatures);
-        console.log("print finalBitField");
-        printBitArray(finalBitfield);
 
         string memory finalBitFieldRaw = "";
         finalBitFieldRaw =
@@ -549,7 +539,6 @@ contract BeefyClientTest is Test {
         initialize(setId);
         uint256[] memory initialBitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
         assertTrue(initialBitfield.length == (setSize + 255) / 256);
-        printBitArray(initialBitfield);
     }
 
     function testCreateInitialBitfieldInvalid() public {
@@ -691,20 +680,19 @@ contract BeefyClientTest is Test {
         }
         uint256[] memory initialBits = beefyClient.createInitialBitfield(bitSetArray2, setSize);
         Bitfield.set(initialBits, finalValidatorProofs[0].index);
-        printBitArray(initialBits);
         vm.expectRevert(BeefyClient.InvalidBitfield.selector);
         beefyClient.submitInitial(commitment, initialBits, finalValidatorProofs[0]);
     }
 
     function testRegenerateBitField() public {
-        console.log("validator set size: %d", setSize);
-        console.log("minimum required signatures: %d", minNumRequiredSignatures);
-        console.log("signature usage count: %d", signatureUsageCount);
+        console.log("validator set size:", setSize);
+        console.log("minimum required signatures:", minNumRequiredSignatures);
+        console.log("signature usage count:", signatureUsageCount);
         // Generate a bitfield for initialized signature count.
         uint256 numRequiredSignatures = beefyClient.computeNumRequiredSignatures_public(
             setSize, signatureUsageCount, minNumRequiredSignatures
         );
-        console.log("computed required signatures: %d", numRequiredSignatures);
+        console.log("computed required signatures", numRequiredSignatures);
         regenerateBitField(bitFieldFile, numRequiredSignatures);
     }
 
