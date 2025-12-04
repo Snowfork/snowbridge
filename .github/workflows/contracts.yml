@@ -22,9 +22,18 @@ jobs:
           fetch-depth: 2
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          registry-url: "https://registry.npmjs.org"
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
       - name: Test
         working-directory: contracts
-        run: forge test
+        run: pnpm install && forge test
       - name: Coverage
         working-directory: contracts
         run: forge coverage --report=lcov
