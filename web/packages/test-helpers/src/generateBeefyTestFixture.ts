@@ -44,7 +44,7 @@ const run = async () => {
     const fiatShamirBitFieldFile = path.join(basedir, "test/data/beefy-fiat-shamir-bitfield.json")
     const fiatShamirValidatorProofFile = path.join(
         basedir,
-        "test/data/beefy-fiat-shamir-proof.json"
+        "test/data/beefy-fiat-shamir-proof.json",
     )
 
     const command = process.argv[2]
@@ -53,8 +53,8 @@ const run = async () => {
         process.env["FIX_SET_SIZE"] == "true"
             ? accounts.length
             : process.env["VALIDATOR_SET_SIZE"]
-            ? parseInt(process.env["VALIDATOR_SET_SIZE"])
-            : 600
+              ? parseInt(process.env["VALIDATOR_SET_SIZE"])
+              : 600
     const commitHash = fixtureData.commitmentHash
     let validatorSet: ValidatorSet
     if (process.env["FixedSet"] == "true") {
