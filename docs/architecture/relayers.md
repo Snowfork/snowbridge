@@ -1,6 +1,6 @@
 # Relayers
 
-{% hint style="info" %}
+{% hint style="success" %}
 Relayers are **permissionless and trustless**. This means that anyone can operate a relayer for channels they are interested in.
 {% endhint %}
 

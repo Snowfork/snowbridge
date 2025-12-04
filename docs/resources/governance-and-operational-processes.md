@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The purpose of this document is to outline the governance structure and operational processes for Snowbridge. We aim to ensure that members of the fellowship understand and are comfortable with the proposed model, in case of an emergency, for the interventions to be whitelisted by the fellowship.&#x20;
+The purpose of this document is to outline the governance structure and operational processes for Snowbridge. We aim to ensure that members of the fellowship understand and are comfortable with the proposed model, in case of an emergency, for the interventions to be whitelisted by the fellowship.
 
 ## Cross-chain Governance
 
@@ -78,8 +78,6 @@ Although unlikely, there may be scenarios where the emergency can only be resolv
 
 The Polkadot side of our bridge can be easily upgraded using forkless runtime upgrades. The process is more complex on the Ethereum side. The gateway contract on Ethereum consists of a proxy and an implementation contract. Polkadot governance can send a cross-chain message to the gateway, instructing it to upgrade to a new implementation contract.
 
-For any emergencies that can be handled via Polkadot governance, the team aims to use a **Whitelisted Caller Track to fix any bugs**. This will allow the bridge to be updated in a speedy manner with the authorisation of Polkadot Fellowship (as both support and approval thresholds are lower than Root track) - we aim for the Fellowship members to ratify the use of Whitelisted Caller track for any emergency situation with Snowbridge: always taking into account an analysis on a case-by-case basis linked to each submission.&#x20;
+For any emergencies that can be handled via Polkadot governance, the team aims to use a **Whitelisted Caller Track to fix any bugs**. This will allow the bridge to be updated in a speedy manner with the authorisation of Polkadot Fellowship (as both support and approval thresholds are lower than Root track) - we aim for the Fellowship members to ratify the use of Whitelisted Caller track for any emergency situation with Snowbridge: always taking into account an analysis on a case-by-case basis linked to each submission.
 
 On the Ethereum side, the design intentionally avoids fallback / backdoor governance mechanisms to maintain the bridge's integrity and security. Although there are early-stage ideas for fallback governance that don't involve backdoors, they are not likely to be implemented short term.
-
-\

@@ -8,7 +8,7 @@ Uses the `@snowbridge/api` [toEthereumSnowbridgeV2](../../../../web/packages/api
 
 ### Agent Setup
 
-To execute arbitrary contracts on Ethereum and L2s, you need to register an agent for your calling parachain or user. More details can be found in the [Agents section](../../../architecture/components.md#agent).&#x20;
+To execute arbitrary contracts on Ethereum and L2s, you need to register an agent for your calling parachain or user. More details can be found in the [Agents section](/broken/pages/gZd0UprOH4eSA5EYNy2H#agent).&#x20;
 
 ### SDK Usage
 

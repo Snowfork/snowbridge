@@ -2,15 +2,13 @@
 description: How to integrate with Snowbridge V1 or V2.
 ---
 
-# Snowbridge Integration Guides
-
-Hey there! Welcome to our technical docs. :)
+# Integration Guides
 
 ### Snowbridge V2
 
 Snowbridge V2 was just released, so if you are doing a new integration, we'd recommend you start with our V2 docs:
 
-* [V2 SDK (Beta)](snowbridge-v2/typescript-sdk/)
+* [V2 SDK](snowbridge-v2/typescript-sdk/)
 * [V2 Parachain Integration](snowbridge-v2/parachain-integration.md)
 
 ### Snowbridge V1
@@ -26,4 +24,4 @@ To get in touch, please log an [issue on our Github repo](https://github.com/Sno
 
 ### Examples
 
-We have a wide range of scripts using the Snowbridge SDK at [https://github.com/Snowfork/snowbridge/tree/main/web/packages/operations/src](https://github.com/Snowfork/snowbridge/tree/main/web/packages/operations/src), as examples of how to use the SDK and the bridge.
+We have a wide range of [example scripts](https://github.com/Snowfork/snowbridge/tree/main/web/packages/operations/src) demonstrating how to use the Snowbridge SDK.

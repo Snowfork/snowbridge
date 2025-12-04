@@ -2,9 +2,9 @@
 description: A guide for parachain integraters.
 ---
 
-# V2 Parachain Integration
+# Parachain Integration
 
-### Snowbridge V2 Protocol
+### V2 Protocol
 
 Snowbridge V2 is a generalized messaging protocol, that supports token transfers (ERC-20s and Polkadot native assets), as well as arbitrary contract execution in both directions.
 
@@ -18,13 +18,13 @@ Snowbridge V2 protocol improves upon V1 with better fee handling, batching of me
 4. Allow paying for execution with Ether.
 5. XCM instruction `AliasOrigin` should be supported (check XCM weights are not set to MAX)
 
-#### ERC20 Token Bridge  (ENA)&#x20;
+#### ERC20 Token Bridge (ENA)
 
-1. Register the ERC20 token contract with the [Snowbridge Gateway.](../../rococo-testnet/rococo-sepolia-token-transfers.md#registering-tokens) This process will automatically set the ERC20 on Asset Hub as well.
+1. Register the ERC20 token contract with the [Snowbridge Gateway.](/broken/pages/pnzQlWeYRVy0L4FrWVoz#registering-tokens) This process will automatically set the ERC20 on Asset Hub as well.
 2. Your parachain must support a pallet which can register assets such as `orml-tokens` or `pallet-xcm`. The ERC20 token must be registered with that pallet.
 3. You can reach out to the Snowbridge team on Github to enable your token in our UI and SDK.
 
-#### Polkadot Native Assets Token Bridge  (PNA)&#x20;
+#### Polkadot Native Assets Token Bridge (PNA)
 
 1. Your asset must first be registered on Asset Hub in the `ForeignAssets` Pallet.
 2. Your asset must be able to `Teleport` to Asset Hub.
@@ -37,7 +37,7 @@ In order to pass messages arbitrary message calls between Ethereum you require t
 
 **Polkadot to Ethereum**
 
-The origin that sends messages will need to an Agent created on Ethereum to act on that origins behalf on Ethereum. An agent is simply a contract on Ethereum that is associated with an origin on the Polkadot side. Only messages from that origin can dispatch messages to the Agent. [See more on agents.](../../architecture/components.md#agent)
+The origin that sends messages will need to an Agent created on Ethereum to act on that origins behalf on Ethereum. An agent is simply a contract on Ethereum that is associated with an origin on the Polkadot side. Only messages from that origin can dispatch messages to the Agent. [See more on agents.](/broken/pages/gZd0UprOH4eSA5EYNy2H#agent)
 
 1. Design your pallet or extrinsic carefully and choose the origin that will be used to dispatch to Ethereum.
 2. Create an Agent with that origin on Bridge Hub.
@@ -56,3 +56,4 @@ Asset Hub contains a built-in DEX and since all Snowbridge messages are router t
 1. The Asset must be registered on Asset Hub.
 2. There must be a pool created with enough liquidity to make fee prices stable.
 3. There must be monitoring of the pool in place to make sure its not drained of liquidity.
+

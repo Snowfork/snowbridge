@@ -8,7 +8,7 @@ The bridge currently supports sending ERC20 tokens from Ethereum to any Polkadot
 
 The bridged tokens are minted in `ForeignAssets` pallet of the AssetHub parachain, and then transferred to the final destination using a [reserve transfer](https://wiki.polkadot.network/docs/learn-xcm-usecases#reserve-asset-transfer).
 
-A token transfer can be initiated with a single transaction to our [Gateway](../../contracts/src/interfaces/IGateway.sol) contract.
+A token transfer can be initiated with a single transaction to our [Gateway](../../../contracts/src/interfaces/IGateway.sol) contract.
 
 ## How to send tokens to a parachain
 
@@ -40,4 +40,3 @@ function sendToken(address token, ParaID destinationChain, MultiAddress destinat
 ```
 
 This function will charge a fee in Ether that can be retrieved ahead of time by calling `quoteSendTokenFee`.
-

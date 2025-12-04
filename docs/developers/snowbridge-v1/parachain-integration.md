@@ -2,7 +2,7 @@
 description: A guide for parachain integraters for Snowbridge V1.
 ---
 
-# V1 Parachain Integration
+# Parachain Integration
 
 ### Snowbridge V1 Protocol
 
@@ -20,13 +20,13 @@ Snowbridge V1 is a token bridge which supports ERC20 assets and Polkadot assets.
 8. Accept DOT as payment for XCM execution.
 9. Allow Asset Hub to be a reserve for bridged Assets. [Hydration Parachain](https://github.com/galacticcouncil/hydration-node/pull/784)
 
-#### ERC20 Token Bridge  (ENA)&#x20;
+#### ERC20 Token Bridge (ENA)
 
-1. Register the ERC20 token contract with the [Snowbridge Gateway.](../../rococo-testnet/rococo-sepolia-token-transfers.md#registering-tokens) This process will automatically set the ERC20 on Asset Hub as well.
+1. Register the ERC20 token contract with the [Snowbridge Gateway.](/broken/pages/pnzQlWeYRVy0L4FrWVoz#registering-tokens) This process will automatically set the ERC20 on Asset Hub as well.
 2. Your parachain must support a pallet which can register assets such as `orml-tokens` or `pallet-xcm`. The ERC20 token must be registered with that pallet.
 3. You can reach out to the Snowbridge team on github to enable your token in our UI and SDK.
 
-#### Polkadot Native Assets Token Bridge  (PNA)&#x20;
+#### Polkadot Native Assets Token Bridge (PNA)
 
 1. Your asset must first be registered on Asset Hub in the `ForeignAssets` Pallet.
 2. Your asset must be able to `Teleport` to Asset Hub.

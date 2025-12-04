@@ -1,10 +1,10 @@
 ---
-description: A guide on using the Snowbridge V2 TypeScript SDK for integration.
+description: A guide on using the SDK for integration.
 ---
 
-# V2 SDK (BETA)
+# SDK
 
-The Snowbridge V2 SDK is very similar to the Snowbridge V1 SDK. It adds new parameters such as `customXcm` (to execute XCMs on AssetHub or parachains) `feeLocation` (to specify which fee asset should be used).
+The V2 SDK is very similar to the V1 SDK. It adds new parameters such as `customXcm` (to execute XCMs on AssetHub or parachains) `feeLocation` (to specify which fee asset should be used).
 
 ## Packages
 
@@ -22,3 +22,4 @@ Here are guides to integrate with Snowbridge V2:
 * [Token transfer Polkadot -> Ethereum](e2p-1.md)
 * [Transact on AssetHub & Parachain](transact-ah.md)
 * [Transact on Ethereum & L2s](transact-ethereum.md)
+
