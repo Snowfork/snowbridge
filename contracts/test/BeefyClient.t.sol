@@ -378,10 +378,11 @@ contract BeefyClientTest is Test {
         vm.expectRevert(BeefyClient.WaitPeriodNotOver.selector);
         commitPrevRandao();
 
-        // reverted for commit PrevRandao too late
+        // ticket deleted if PrevRandao commit is submitted too late
         vm.roll(block.number + randaoCommitDelay + randaoCommitExpiration + 1);
-        vm.expectRevert(BeefyClient.TicketExpired.selector);
         commitPrevRandao();
+        BeefyClient.Ticket memory ticket = beefyClient.getTicket(commitHash);
+        assertEq(ticket.blockNumber, 0);
     }
 
     function testSubmitFailForPrevRandaoCapturedMoreThanOnce() public {
