@@ -19,9 +19,12 @@ ignored_error_codes = [
     2394,
 ]
 
+no_match_test = "testRegenerate*"
+
 [profile.production]
 via_ir = true
 
 [fmt]
 number_underscore = "thousands"
 line_length = 99
+
