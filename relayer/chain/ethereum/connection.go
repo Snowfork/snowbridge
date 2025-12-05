@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum"
-	goEthereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -22,8 +21,6 @@ import (
 
 	"github.com/snowfork/snowbridge/relayer/config"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Connection struct {
@@ -59,7 +56,7 @@ func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Gro
 		return err
 	}
 
-	log.WithFields(logrus.Fields{
+	logrus.WithFields(logrus.Fields{
 		"endpoint": co.endpoint,
 		"chainID":  chainID,
 	}).Info("Connected to chain")
@@ -79,7 +76,7 @@ func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Gro
 				case <-ticker.C:
 					_, err := client.NetworkID(ctx)
 					if err != nil {
-						log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
+						logrus.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
 					}
 				}
 			}
@@ -127,7 +124,7 @@ func (co *Connection) queryFailingError(ctx context.Context, hash common.Hash) e
 		Data:     tx.Data(),
 	}
 
-	log.WithFields(logrus.Fields{
+	logrus.WithFields(logrus.Fields{
 		"From":     from,
 		"To":       tx.To(),
 		"Gas":      tx.Gas(),
@@ -166,7 +163,7 @@ func (co *Connection) waitForTransaction(ctx context.Context, tx *types.Transact
 		case <-time.After(time.Duration(PollInterval) * time.Second):
 			if co.config.PendingTxTimeoutSecs > 0 {
 				cnt++
-				log.Info(fmt.Sprintf("waiting for receipt: %d seconds elapsed", cnt*PollInterval))
+				logrus.Info(fmt.Sprintf("waiting for receipt: %d seconds elapsed", cnt*PollInterval))
 				if cnt*PollInterval > co.config.PendingTxTimeoutSecs {
 					return nil, fmt.Errorf("wait receipt timeout")
 				}
@@ -178,7 +175,7 @@ func (co *Connection) waitForTransaction(ctx context.Context, tx *types.Transact
 func (co *Connection) pollTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
 	receipt, err := co.Client().TransactionReceipt(ctx, tx.Hash())
 	if err != nil {
-		if errors.Is(err, goEthereum.NotFound) {
+		if errors.Is(err, ethereum.NotFound) {
 			return nil, nil
 		}
 	}
@@ -202,7 +199,7 @@ func (co *Connection) WatchTransaction(ctx context.Context, tx *types.Transactio
 	}
 	if receipt.Status != 1 {
 		err = co.queryFailingError(ctx, receipt.TxHash)
-		logFields := log.Fields{
+		logFields := logrus.Fields{
 			"txHash": tx.Hash().Hex(),
 		}
 		if err != nil {
@@ -213,7 +210,7 @@ func (co *Connection) WatchTransaction(ctx context.Context, tx *types.Transactio
 				logFields["code"] = errorCode
 			}
 		}
-		log.WithFields(logFields).Error("Failed to send transaction")
+		logrus.WithFields(logFields).Error("Failed to send transaction")
 		return receipt, err
 	}
 	return receipt, nil
