@@ -66,6 +66,7 @@ import {
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 import "./mocks/HighGasToken.sol";
+import "./mocks/FeeOnTransferToken.sol";
 
 contract GatewayV1Test is Test {
     // Emitted when token minted/burnt/transferred
@@ -900,6 +901,31 @@ contract GatewayV1Test is Test {
         );
     }
 
+    function testSendTokenFeeOnTransferReverts() public {
+        FeeOnTransferToken feeToken = new FeeOnTransferToken("FeeToken", "FEE", 500);
+
+        // Register token first
+        uint256 registerFee = IGatewayV1(address(gateway)).quoteRegisterTokenFee();
+        IGatewayV1(address(gateway)).registerToken{value: registerFee}(address(feeToken));
+
+        ParaID destPara = assetHubParaID;
+        uint128 destinationChainFee = 1;
+        uint128 amount = 100;
+
+        uint256 fee = IGatewayV1(address(gateway)).quoteSendTokenFee(
+            address(feeToken), destPara, destinationChainFee
+        );
+
+        feeToken.approve(address(gateway), amount);
+
+        vm.expectRevert();
+        IGatewayV1(address(gateway)).sendToken{value: fee}(
+            address(feeToken), destPara, recipientAddress32(), destinationChainFee, amount
+        );
+
+        assertEq(feeToken.balanceOf(assetHubAgent), 0);
+    }
+
     /**
      * Operating Modes
      */
@@ -1066,6 +1092,23 @@ contract GatewayV1Test is Test {
 
         bytes memory encodedParams = abi.encode(params);
         MockGateway(address(gateway)).v1_handleUnlockNativeToken_public(encodedParams);
+    }
+
+    function testUnlockNativeTokenWithFeeOnTransferReverts() public {
+        FeeOnTransferToken feeToken = new FeeOnTransferToken("FeeToken", "FEE", 500);
+        feeToken.mint(assetHubAgent, 200);
+
+        UnlockNativeTokenParams memory params = UnlockNativeTokenParams({
+            agentID: assetHubAgentID,
+            token: address(feeToken),
+            recipient: account1,
+            amount: 100
+        });
+
+        vm.expectRevert();
+        MockGateway(address(gateway)).v1_handleUnlockNativeToken_public(abi.encode(params));
+
+        assertEq(feeToken.balanceOf(account1), 0);
     }
 
     function testRegisterForeignToken() public {
