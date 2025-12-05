@@ -224,7 +224,8 @@ pub async fn estimate_gas(
     .await?;
 
     // Perform dry-run of the submit extrinsic on BridgeHub using the actual EventProof
-    let dry_run_result = dry_run_submit_on_bridge_hub(clients, &event_proof, relayer_account).await?;
+    let dry_run_result =
+        dry_run_submit_on_bridge_hub(clients, &event_proof, relayer_account).await?;
 
     // Extract nonce from event data and query for tips
     let nonce = extract_nonce_from_event_data(&event_proof.event_log.data)?;
@@ -295,7 +296,23 @@ async fn calculate_delivery_fee_in_dot(
 
     let versioned_destination = BridgeHubVersionedLocation::V5(destination);
 
-    // Query delivery fees using XCM Payment API
+    // Query delivery fees using XCM Payment API, latest API specifies the fee asset
+    #[cfg(feature = "local")]
+    let runtime_api_call = {
+        let dot_asset = BridgeHubLocation {
+            parents: 1,
+            interior: BridgeHubJunctions::Here,
+        };
+        bridge_hub_runtime::apis()
+            .xcm_payment_api()
+            .query_delivery_fees(
+                versioned_destination,
+                bridge_hub_xcm,
+                VersionedAssetId::V5(BridgeHubAssetId(dot_asset)),
+            )
+    };
+
+    #[cfg(not(feature = "local"))]
     let runtime_api_call = bridge_hub_runtime::apis()
         .xcm_payment_api()
         .query_delivery_fees(versioned_destination, bridge_hub_xcm);
@@ -656,10 +673,7 @@ fn extract_nonce_from_event_data(event_data: &[u8]) -> Result<u64, EstimatorErro
     Ok(message.nonce)
 }
 
-async fn query_tip(
-    clients: &Clients,
-    nonce: u64,
-) -> Result<Option<u128>, EstimatorError> {
+async fn query_tip(clients: &Clients, nonce: u64) -> Result<Option<u128>, EstimatorError> {
     // Query the Tips storage map
     let storage_query = bridge_hub_runtime::storage()
         .ethereum_inbound_queue_v2()
