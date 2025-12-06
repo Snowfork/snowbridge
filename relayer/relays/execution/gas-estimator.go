@@ -152,6 +152,7 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 		"--relayer-fee", relayerFee,
 		"--assets", assetsHex,
 		"--relayer-account", relayerPublicKey,
+		"--nonce", fmt.Sprintf("%d", ev.Nonce),
 	}
 
 	cmd := exec.CommandContext(ctx, g.config.BinaryPath, args...)

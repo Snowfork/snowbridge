@@ -70,13 +70,13 @@ pub use bridge_hub_westend_local_runtime::{
         frame_support::dispatch::RawOrigin,
         snowbridge_verification_primitives::{EventProof, Log, Proof},
         staging_xcm::v5::{
-            asset::Fungibility as BridgeHubFungibility,
+            asset::{AssetId as BridgeHubAssetId, Fungibility as BridgeHubFungibility},
             junction::{Junction as BridgeHubJunction, Junction::Parachain as BridgeHubParachain},
             junctions::Junctions as BridgeHubJunctions,
             location::Location as BridgeHubLocation,
         },
         xcm::{
-            VersionedAssets as BridgeHubVersionedAssets,
+            v5 as V5, VersionedAssetId, VersionedAssets as BridgeHubVersionedAssets,
             VersionedLocation as BridgeHubVersionedLocation, VersionedXcm as BridgeHubVersionedXcm,
         },
     },
@@ -90,13 +90,13 @@ pub use bridge_hub_westend_runtime::{
         frame_support::dispatch::RawOrigin,
         snowbridge_verification_primitives::{EventProof, Log, Proof},
         staging_xcm::v5::{
-            asset::Fungibility as BridgeHubFungibility,
+            asset::{AssetId as BridgeHubAssetId, Fungibility as BridgeHubFungibility},
             junction::{Junction as BridgeHubJunction, Junction::Parachain as BridgeHubParachain},
             junctions::Junctions as BridgeHubJunctions,
             location::Location as BridgeHubLocation,
         },
         xcm::{
-            VersionedAssets as BridgeHubVersionedAssets,
+            v5 as V5, VersionedAssetId, VersionedAssets as BridgeHubVersionedAssets,
             VersionedLocation as BridgeHubVersionedLocation, VersionedXcm as BridgeHubVersionedXcm,
         },
     },
@@ -110,13 +110,13 @@ pub use bridge_hub_paseo_runtime::{
         frame_support::dispatch::RawOrigin,
         snowbridge_verification_primitives::{EventProof, Log, Proof},
         staging_xcm::v5::{
-            asset::Fungibility as BridgeHubFungibility,
+            asset::{AssetId as BridgeHubAssetId, Fungibility as BridgeHubFungibility},
             junction::{Junction as BridgeHubJunction, Junction::Parachain as BridgeHubParachain},
             junctions::Junctions as BridgeHubJunctions,
             location::Location as BridgeHubLocation,
         },
         xcm::{
-            VersionedAssets as BridgeHubVersionedAssets,
+            v5 as V5, VersionedAssetId, VersionedAssets as BridgeHubVersionedAssets,
             VersionedLocation as BridgeHubVersionedLocation, VersionedXcm as BridgeHubVersionedXcm,
         },
     },
@@ -130,13 +130,13 @@ pub use bridge_hub_polkadot_runtime::{
         frame_support::dispatch::RawOrigin,
         snowbridge_verification_primitives::{EventProof, Log, Proof},
         staging_xcm::v5::{
-            asset::Fungibility as BridgeHubFungibility,
+            asset::{AssetId as BridgeHubAssetId, Fungibility as BridgeHubFungibility},
             junction::{Junction as BridgeHubJunction, Junction::Parachain as BridgeHubParachain},
             junctions::Junctions as BridgeHubJunctions,
             location::Location as BridgeHubLocation,
         },
         xcm::{
-            VersionedAssets as BridgeHubVersionedAssets,
+            v5 as V5, VersionedAssetId, VersionedAssets as BridgeHubVersionedAssets,
             VersionedLocation as BridgeHubVersionedLocation, VersionedXcm as BridgeHubVersionedXcm,
         },
     },
