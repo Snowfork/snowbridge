@@ -45,19 +45,6 @@ sol! {
         address token;
         uint8 network;
     }
-
-    struct Command {
-        uint8 kind;
-        uint64 gas;
-        bytes payload;
-    }
-
-    struct InboundMessage {
-        bytes32 origin;
-        uint64 nonce;
-        bytes32 topic;
-        Command[] commands;
-    }
 }
 
 pub enum AssetHubConfig {}
@@ -168,6 +155,7 @@ pub async fn estimate_gas(
     _relayer_fee: u128,
     assets: &[BridgeAsset],
     relayer_account: [u8; 32],
+    nonce: u64,
 ) -> Result<GasEstimation, EstimatorError> {
     // Construct EventProof from the provided parameters
     let event_proof = construct_event_proof(
@@ -227,8 +215,7 @@ pub async fn estimate_gas(
     let dry_run_result =
         dry_run_submit_on_bridge_hub(clients, &event_proof, relayer_account).await?;
 
-    // Extract nonce from event data and query for tips
-    let nonce = extract_nonce_from_event_data(&event_proof.event_log.data)?;
+    // Query for tips using the provided nonce
     let tip_in_ether = query_tip(clients, nonce).await?;
 
     // Extract beneficiary addresses for OFAC checks
@@ -663,14 +650,6 @@ pub fn extract_beneficiaries(xcm: &VersionedXcm) -> Vec<String> {
     beneficiaries.dedup();
 
     beneficiaries
-}
-
-fn extract_nonce_from_event_data(event_data: &[u8]) -> Result<u64, EstimatorError> {
-    let message = InboundMessage::abi_decode(event_data).map_err(|e| {
-        EstimatorError::InvalidCommand(format!("Failed to decode InboundMessage: {}", e))
-    })?;
-
-    Ok(message.nonce)
 }
 
 async fn query_tip(clients: &Clients, nonce: u64) -> Result<Option<u128>, EstimatorError> {
