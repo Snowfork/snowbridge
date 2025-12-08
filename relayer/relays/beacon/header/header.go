@@ -15,6 +15,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
+	"github.com/snowfork/snowbridge/relayer/relays/error_tracking"
 
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
@@ -99,6 +100,8 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 				log.WithFields(logFields).WithError(err).Warn("beacon state not available for finalized state yet")
 			case errors.Is(err, syncer.ErrSyncCommitteeNotSuperMajority):
 				log.WithFields(logFields).WithError(err).Warn("update received was not signed by supermajority")
+			case error_tracking.IsTransientError(err):
+				log.WithFields(logFields).WithError(err).Warn("sync beacon with transient error")
 			case err != nil:
 				return err
 			}

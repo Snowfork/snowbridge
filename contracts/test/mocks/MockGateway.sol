@@ -81,4 +81,8 @@ contract MockGateway is Gateway {
             return commitmentsAreVerified;
         }
     }
+
+    function transactionBaseGas() public pure returns (uint256) {
+        return super.v1_transactionBaseGas();
+    }
 }

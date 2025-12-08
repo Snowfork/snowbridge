@@ -6,6 +6,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/cmd/run/execution"
 	"github.com/snowfork/snowbridge/relayer/cmd/run/fisherman"
 	"github.com/snowfork/snowbridge/relayer/cmd/run/parachain"
+	"github.com/snowfork/snowbridge/relayer/cmd/run/reward"
 	"github.com/spf13/cobra"
 )
 
@@ -20,6 +21,7 @@ func Command() *cobra.Command {
 	cmd.AddCommand(parachain.Command())
 	cmd.AddCommand(beacon.Command())
 	cmd.AddCommand(execution.Command())
+	cmd.AddCommand(reward.Command())
 	cmd.AddCommand(fisherman.Command())
 
 	return cmd

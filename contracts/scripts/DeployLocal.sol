@@ -16,6 +16,7 @@ import {SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
 import {HelloWorld} from "../test/mocks/HelloWorld.sol";
+import {Token} from "../src/Token.sol";
 
 contract DeployLocal is Script {
     using SafeNativeTransfer for address payable;
@@ -49,8 +50,15 @@ contract DeployLocal is Script {
         uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
         uint256 randaoCommitExpiration = vm.envUint("RANDAO_COMMIT_EXP");
         uint256 minimumSignatures = vm.envUint("MINIMUM_REQUIRED_SIGNATURES");
+        uint256 fiatShamirRequiredSignatures = vm.envUint("FIAT_SHAMIR_REQUIRED_SIGNATURES");
         BeefyClient beefyClient = new BeefyClient(
-            randaoCommitDelay, randaoCommitExpiration, minimumSignatures, startBlock, current, next
+            randaoCommitDelay,
+            randaoCommitExpiration,
+            minimumSignatures,
+            fiatShamirRequiredSignatures,
+            startBlock,
+            current,
+            next
         );
 
         uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
@@ -74,10 +82,20 @@ contract DeployLocal is Script {
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
 
         // Deploy WETH for testing
-        new WETH9();
+        WETH9 weth = new WETH9();
+
+        // Mint 10 ether worth of WETH to the deployer
+        weth.deposit{value: 10 ether}();
+
+        // Transfer WETH to the user
+        address user = 0x90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe;
+        weth.transfer(user, 10 ether);
 
         // For testing call contract
         new HelloWorld();
+
+        // Deploy test token for registration testing  
+        new Token("Test Token", "TEST", 18);
 
         // Fund the gateway proxy contract. Used to reward relayers
         uint256 initialDeposit = vm.envUint("GATEWAY_PROXY_INITIAL_DEPOSIT");

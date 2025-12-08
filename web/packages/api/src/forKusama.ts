@@ -8,7 +8,6 @@ import {
     kusamaAssetHubLocation,
     buildAssetHubERC20TransferToKusama,
     polkadotAssetHubLocation,
-    isDOTOnOtherConsensusSystem,
     isKSMOnOtherConsensusSystem,
     isRelaychainLocation,
     NATIVE_TOKEN_LOCATION,
@@ -23,7 +22,7 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import { getAssetHubConversionPalletSwap } from "./assets_v2"
+import { getAssetHubConversionPalletSwap, validateAccount } from "./assets_v2"
 import { Asset, AssetRegistry, Parachain, AssetMap } from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
@@ -78,7 +77,7 @@ function resolveInputs(
     registry: AssetRegistry,
     tokenAddress: string,
     sourceParaId: number,
-    destParaId: number
+    destParaId: number,
 ) {
     const sourceParachain = registry.parachains[sourceParaId.toString()]
     if (!sourceParachain) {
@@ -107,7 +106,7 @@ export async function getDeliveryFee(
     destAssetHub: ApiPromise,
     direction: Direction,
     registry: AssetRegistry,
-    tokenAddress: string
+    tokenAddress: string,
 ): Promise<DeliveryFee> {
     // Get base bridge fee
     // https://github.com/polkadot-fellows/runtimes/blob/main/system-parachains/asset-hubs/asset-hub-polkadot/src/xcm_config.rs#L546
@@ -130,7 +129,7 @@ export async function getDeliveryFee(
     let xcmFeePerByte: bigint
     if (feePerByteInStorage.eqn(0)) {
         console.warn(
-            "Asset Hub onchain XcmBridgeHubRouterByteFee not set. Using default fee per byte."
+            "Asset Hub onchain XcmBridgeHubRouterByteFee not set. Using default fee per byte.",
         )
         if (direction == Direction.ToPolkadot) {
             xcmFeePerByte = KUSAMA_FEE_PER_BYTE
@@ -159,7 +158,7 @@ export async function getDeliveryFee(
             registry.assetHubParaId,
             100000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
     } else {
         forwardedXcm = buildTransferPolkadotToKusamaExportXCM(
@@ -171,7 +170,7 @@ export async function getDeliveryFee(
             registry.kusama?.assetHubParaId,
             100000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
     }
 
@@ -192,7 +191,7 @@ export async function getDeliveryFee(
             tokenLocation,
             100000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
     } else {
         destXcm = buildPolkadotToKusamaDestAssetHubXCM(
@@ -202,7 +201,7 @@ export async function getDeliveryFee(
             tokenLocation,
             100000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
     }
     const destAssetHubImpl = await paraImplementation(destAssetHub)
@@ -211,7 +210,7 @@ export async function getDeliveryFee(
     const sourceAssetHubImpl = await paraImplementation(sourceAssetHub)
     let bridgeHubDeliveryFee = await sourceAssetHubImpl.calculateDeliveryFeeInDOT(
         registry.bridgeHubParaId,
-        forwardedXcm
+        forwardedXcm,
     )
 
     let feeAssetOnDest
@@ -220,20 +219,20 @@ export async function getDeliveryFee(
         feeAssetOnDest = ksmLocationOnPolkadotAssetHub
         minBalanceFeeDest = getDestFeeAssetMinimumBalance(
             registry.parachains[registry.assetHubParaId].assets,
-            "kusama"
+            "kusama",
         )
     } else {
         feeAssetOnDest = dotLocationOnKusamaAssetHub
         minBalanceFeeDest = getDestFeeAssetMinimumBalance(
             registry.kusama.parachains[registry.kusama.assetHubParaId].assets,
-            "polkadot"
+            "polkadot",
         )
     }
     let destinationFee = await getAssetHubConversionPalletSwap(
         destAssetHub,
         feeAssetOnDest,
         NATIVE_TOKEN_LOCATION,
-        destinationFeeInDestNative
+        destinationFeeInDestNative,
     )
     // pad destination XCM fee
     destinationFee = padFeeByPercentage(destinationFee, 33n)
@@ -262,7 +261,7 @@ export async function createTransfer(
     beneficiaryAccount: string,
     tokenAddress: string,
     amount: bigint,
-    fee: DeliveryFee
+    fee: DeliveryFee,
 ): Promise<Transfer> {
     const { assetHubParaId } = registry
     const destParaId = registry.kusama?.assetHubParaId
@@ -283,7 +282,7 @@ export async function createTransfer(
         registry,
         tokenAddress,
         sourceParaId,
-        destParaId
+        destParaId,
     )
     let messageId = await buildMessageId(
         parachain,
@@ -291,30 +290,30 @@ export async function createTransfer(
         sourceAccountHex,
         tokenAddress,
         beneficiaryAccount,
-        amount
+        amount,
     )
 
-    let tokenLocation = getTokenLocation(registry, direction, tokenAddress)
+    let tokenLocationOnSource = getTokenLocation(registry, direction, tokenAddress)
     let tx
     if (direction == Direction.ToPolkadot) {
         tx = createERC20ToPolkadotTx(
             sourceParaId,
             parachain,
-            tokenLocation,
+            tokenLocationOnSource,
             beneficiaryAddressHex,
             amount,
             fee.destinationFee,
-            messageId
+            messageId,
         )
     } else {
         tx = createERC20ToKusamaTx(
             destParaId,
             parachain,
-            tokenLocation,
+            tokenLocationOnSource,
             beneficiaryAddressHex,
             amount,
             fee.destinationFee,
-            messageId
+            messageId,
         )
     }
 
@@ -377,7 +376,7 @@ export async function validateTransfer(
         destAssetHub: ApiPromise
     },
     direction: Direction,
-    transfer: Transfer
+    transfer: Transfer,
 ): Promise<ValidationResult> {
     let sourceAssetHub = connections.sourceAssetHub
     let destAssetHub = connections.destAssetHub
@@ -406,7 +405,7 @@ export async function validateTransfer(
             sourceAccountHex,
             registry.ethChainId,
             tokenAddress,
-            tokenAsset
+            tokenAsset,
         )
     }
 
@@ -427,7 +426,7 @@ export async function validateTransfer(
         registry.assetHubParaId,
         registry.bridgeHubParaId,
         transfer.tx,
-        sourceAccountHex
+        sourceAccountHex,
     )
     if (!dryRunSource.success) {
         logs.push({
@@ -461,7 +460,7 @@ export async function validateTransfer(
             tokenLocation,
             transfer.input.amount,
             transfer.computed.beneficiaryAddressHex,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
     } else {
         destAssetHubXCM = buildPolkadotToKusamaDestAssetHubXCM(
@@ -471,14 +470,14 @@ export async function validateTransfer(
             tokenLocation,
             transfer.input.amount,
             transfer.computed.beneficiaryAddressHex,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
     }
 
     const dryRunAssetHubDest = await dryRunDestAssetHub(
         destAssetHub,
         registry.bridgeHubParaId,
-        destAssetHubXCM
+        destAssetHubXCM,
     )
     if (!dryRunAssetHubDest.success) {
         logs.push({
@@ -495,7 +494,7 @@ export async function validateTransfer(
             beneficiaryAddressHex,
             registry.ethChainId,
             tokenAddress,
-            destAssetMetadata
+            destAssetMetadata,
         )
         if (accountMaxConsumers) {
             logs.push({
@@ -544,7 +543,7 @@ export async function signAndSend(
     parachain: ApiPromise,
     transfer: Transfer,
     account: AddressOrPair,
-    options: Partial<SignerOptions>
+    options: Partial<SignerOptions>,
 ): Promise<MessageReceipt> {
     const result = await new Promise<MessageReceipt>((resolve, reject) => {
         try {
@@ -605,10 +604,11 @@ export function createERC20ToKusamaTx(
     beneficiaryAccount: string,
     amount: bigint,
     destFeeInSourceNative: bigint,
-    topic: string
+    topic: string,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any
-    if (isDOT(Direction.ToKusama, tokenLocation)) {
+    // is DOT
+    if (isRelaychainLocation(tokenLocation)) {
         assets = {
             v4: [
                 {
@@ -644,7 +644,7 @@ export function createERC20ToKusamaTx(
     const customXcm = buildAssetHubERC20TransferToKusama(
         parachain.registry,
         beneficiaryAccount,
-        topic
+        topic,
     )
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
@@ -653,7 +653,7 @@ export function createERC20ToKusamaTx(
         feeAsset,
         "LocalReserve",
         customXcm,
-        "Unlimited"
+        "Unlimited",
     )
 }
 
@@ -664,11 +664,12 @@ export function createERC20ToPolkadotTx(
     beneficiaryAccount: string,
     amount: bigint,
     destFeeInSourceNative: bigint,
-    topic: string
+    topic: string,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any
     let reserveTypeAsset = "DestinationReserve"
-    if (isKSM(Direction.ToPolkadot, tokenLocation)) {
+    // is KSM
+    if (isRelaychainLocation(tokenLocation)) {
         assets = {
             v4: [
                 {
@@ -701,7 +702,7 @@ export function createERC20ToPolkadotTx(
     const customXcm = buildAssetHubERC20TransferToKusama(
         parachain.registry,
         beneficiaryAccount,
-        topic
+        topic,
     )
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
@@ -710,7 +711,7 @@ export function createERC20ToPolkadotTx(
         feeAsset,
         "LocalReserve",
         customXcm,
-        "Unlimited"
+        "Unlimited",
     )
 }
 
@@ -719,14 +720,14 @@ export async function dryRunSourceAssetHub(
     assetHubParaId: number,
     bridgeHubParaId: number,
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>,
-    sourceAccount: string
+    sourceAccount: string,
 ) {
     const origin = { system: { signed: sourceAccount } }
     let result: Result<CallDryRunEffects, XcmDryRunApiError>
     result = await source.call.dryRunApi.dryRunCall<Result<CallDryRunEffects, XcmDryRunApiError>>(
         origin,
         tx,
-        4
+        4,
     )
 
     let assetHubForwarded
@@ -737,7 +738,7 @@ export async function dryRunSourceAssetHub(
             "Error during dry run on source parachain:",
             sourceAccount,
             tx.toHuman(),
-            result.toHuman(true)
+            result.toHuman(true),
         )
         let err =
             result.isOk && result.asOk.executionResult.isErr
@@ -793,37 +794,13 @@ async function dryRunDestAssetHub(assetHub: ApiPromise, parachainId: number, xcm
     }
 }
 
-async function validateAccount(
-    parachainImpl: ParachainBase,
-    beneficiaryAddress: string,
-    ethChainId: number,
-    tokenAddress: string,
-    assetMetadata?: Asset,
-    maxConsumers?: bigint
-) {
-    // Check if the account is created
-    const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
-        parachainImpl.getNativeAccount(beneficiaryAddress),
-        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
-    ])
-    return {
-        accountExists: !(
-            beneficiaryAccount.consumers === 0n &&
-            beneficiaryAccount.providers === 0n &&
-            beneficiaryAccount.sufficients === 0n
-        ),
-        accountMaxConsumers:
-            beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n,
-    }
-}
-
 async function buildMessageId(
     parachain: ApiPromise,
     sourceParaId: number,
     sourceAccountHex: string,
     tokenAddress: string,
     beneficiaryAccount: string,
-    amount: bigint
+    amount: bigint,
 ) {
     const [accountNextId] = await Promise.all([
         parachain.rpc.system.accountNextIndex(sourceAccountHex),
@@ -856,14 +833,6 @@ function getTokenLocation(registry: AssetRegistry, direction: Direction, tokenAd
     }
 
     return location
-}
-
-function isDOT(direction: Direction, location: any) {
-    if (direction == Direction.ToPolkadot) {
-        return isDOTOnOtherConsensusSystem(location)
-    } else {
-        return isRelaychainLocation(location)
-    }
 }
 
 function isKSM(direction: Direction, location: any) {

@@ -28,8 +28,8 @@ export class MythosParachain extends ParachainBase {
         } else {
             throw Error(
                 `Cannot get balance for spec ${this.specName}. Location = ${JSON.stringify(
-                    location
-                )}`
+                    location,
+                )}`,
             )
         }
     }
@@ -61,8 +61,8 @@ export class MythosParachain extends ParachainBase {
         } else {
             throw Error(
                 `Cannot get balance for spec ${this.specName}. Location = ${JSON.stringify(
-                    location
-                )}`
+                    location,
+                )}`,
             )
         }
         return assets
@@ -72,10 +72,10 @@ export class MythosParachain extends ParachainBase {
         if (JSON.stringify(asset) == JSON.stringify(DOT_LOCATION)) {
             console.warn(
                 `${this.specName} does not support calculating fee for asset '${JSON.stringify(
-                    asset
-                )}'. Using default.`
+                    asset,
+                )}'. Using default.`,
             )
-            return this.specName === "muse" ? 200_000_000_000n : 1_000_000_000n
+            return 1_000_000_000n
         }
         return await this.calculateXcmFee(destinationXcm, asset)
     }

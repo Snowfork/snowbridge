@@ -22,6 +22,7 @@ import {
     Parachain,
     ParachainMap,
     XC20TokenMap,
+    XcmVersion,
 } from "@snowbridge/base-types"
 
 export type ERC20MetadataOverride = {
@@ -173,7 +174,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
                 }
                 const network = await provider.getNetwork()
                 return { chainId: Number(network.chainId), provider, managed, name: network.name }
-            })
+            }),
         )) {
             ethProviders[result.chainId.toString()] = result
         }
@@ -200,7 +201,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         pnaAssets = await getRegisteredPnas(
             provider,
             ethProviders[ethChainId].provider,
-            gatewayAddress
+            gatewayAddress,
         )
 
         if (typeof bridgeHub === "string") {
@@ -230,13 +231,13 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
                 }
                 const accessor = await paraImplementation(provider)
                 return { parachainId: accessor.parachainId, accessor, managed }
-            })
+            }),
         )) {
             providers[parachainId.toString()] = { parachainId, accessor, managed }
         }
         if (!(assetHubParaId.toString() in providers)) {
             throw Error(
-                `Could not resolve asset hub para id ${assetHubParaId} in the list of parachains provided.`
+                `Could not resolve asset hub para id ${assetHubParaId} in the list of parachains provided.`,
             )
         }
     }
@@ -253,10 +254,10 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
                 parachainId,
                 assetHubParaId,
                 pnaAssets,
-                assetOverrides ?? {}
+                assetOverrides ?? {},
             )
             return { parachainId, para }
-        })
+        }),
     )) {
         paras[parachainId.toString()] = para
     }
@@ -274,9 +275,9 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
                 assetHubParaId,
                 paras,
                 precompiles ?? {},
-                metadataOverrides ?? {}
+                metadataOverrides ?? {},
             )
-        })
+        }),
     )) {
         ethChains[ethChainInfo.chainId.toString()] = ethChainInfo
     }
@@ -305,7 +306,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
             accessor.parachainId,
             assetHubParaId,
             pnaAssets,
-            assetOverrides ?? {}
+            assetOverrides ?? {},
         )
 
         const kusamaParas: ParachainMap = {}
@@ -326,8 +327,9 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         Object.keys(providers)
             .filter((parachainKey) => providers[parachainKey].managed)
             .map(
-                async (parachainKey) => await providers[parachainKey].accessor.provider.disconnect()
-            )
+                async (parachainKey) =>
+                    await providers[parachainKey].accessor.provider.disconnect(),
+            ),
     )
 
     // Dispose all eth connections
@@ -352,7 +354,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
 
 export function getEthereumTransferLocation(
     registry: AssetRegistry,
-    ethChain: EthereumChain
+    ethChain: EthereumChain,
 ): TransferLocation {
     if (!ethChain.evmParachainId) {
         return {
@@ -388,7 +390,7 @@ export function getSubstrateTransferLocation(parachain: Parachain): TransferLoca
 export function getTransferLocation(
     registry: AssetRegistry,
     sourceType: string,
-    sourceKey: string
+    sourceKey: string,
 ): TransferLocation {
     if (sourceType === "ethereum") {
         return getEthereumTransferLocation(registry, registry.ethereumChains[sourceKey])
@@ -400,7 +402,7 @@ export function getTransferLocation(
 export function getTransferLocationKusama(
     registry: AssetRegistry,
     network: string,
-    parachainId: string
+    parachainId: string,
 ): TransferLocation {
     if (network === "kusama" && registry.kusama) {
         return getSubstrateTransferLocation(registry.kusama?.parachains[parachainId])
@@ -411,7 +413,7 @@ export function getTransferLocationKusama(
 
 export function getTransferLocations(
     registry: AssetRegistry,
-    filter?: (path: Path) => boolean
+    filter?: (path: Path) => boolean,
 ): Source[] {
     const ethChain = registry.ethereumChains[registry.ethChainId]
     const parachains = Object.keys(registry.parachains)
@@ -427,7 +429,7 @@ export function getTransferLocations(
     for (const parachain of parachains) {
         const destinationAssets = Object.keys(parachain.assets)
         const commonAssets = new Set(
-            ethAssets.filter((sa) => destinationAssets.find((da) => da === sa))
+            ethAssets.filter((sa) => destinationAssets.find((da) => da === sa)),
         )
         for (const asset of commonAssets) {
             const p1: Path = {
@@ -480,8 +482,8 @@ export function getTransferLocations(
             ethAssets.filter(
                 (sa) =>
                     assetHubAssets.find((da) => da === sa) &&
-                    destinationAssets.find((da) => da === sa)
-            )
+                    destinationAssets.find((da) => da === sa),
+            ),
         )
         for (const asset of commonAssets) {
             const p1: Path = {
@@ -515,7 +517,7 @@ export function getTransferLocations(
             (s) =>
                 s.type === location.type &&
                 s.id === location.id &&
-                s.key === location.source.toString()
+                s.key === location.source.toString(),
         )
         if (!source) {
             source = {
@@ -578,7 +580,7 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
             context
                 .parachains()
                 .filter((paraId) => paraId !== context.config.polkadot.bridgeHubParaId)
-                .map((paraId) => context.parachain(paraId))
+                .map((paraId) => context.parachain(paraId)),
         ),
     ])
 
@@ -611,6 +613,75 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
     return result
 }
 
+async function checkSnowbridgeV2Support(
+    parachain: ParachainBase,
+    ethChainId: number,
+): Promise<{
+    xcmVersion: XcmVersion
+    supportsAliasOrigin: boolean
+    hasEthBalance: boolean
+}> {
+    let supportsAliasOrigin = false
+    let hasEthBalance = false
+    let xcmVersion: XcmVersion
+
+    try {
+        const testXcm = parachain.provider.registry.createType("XcmVersionedXcm", {
+            v5: [
+                {
+                    aliasOrigin: {
+                        parents: 0,
+                        interior: {
+                            x1: [
+                                {
+                                    accountId32: {
+                                        id: "0x0000000000000000000000000000000000000000000000000000000000000000",
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                },
+            ],
+        })
+
+        const weightResult = (
+            await parachain.provider.call.xcmPaymentApi.queryXcmWeight(testXcm)
+        ).toPrimitive() as any
+
+        if (weightResult.ok) {
+            const refTime = BigInt(weightResult.ok.refTime.toString())
+            const MAX_REASONABLE_WEIGHT = 10n ** 15n
+            // Check if AliasOrigin is supported. Often, the XCM instruction
+            // weight is set to MAX to make it unusable
+            supportsAliasOrigin = refTime < MAX_REASONABLE_WEIGHT
+
+            const etherLocation = {
+                parents: 2,
+                interior: { x1: [{ GlobalConsensus: { Ethereum: { chain_id: ethChainId } } }] },
+            }
+
+            // Check if ether is supported as a fee asset
+            const feeResult = (
+                await parachain.provider.call.xcmPaymentApi.queryWeightToAssetFee(weightResult.ok, {
+                    v5: etherLocation,
+                })
+            ).toPrimitive() as any
+
+            if (feeResult.ok) {
+                hasEthBalance = true
+            }
+        }
+
+        xcmVersion = "v5"
+    } catch {
+        // If any call throws an error, XCM V5 is likely not supported.
+        xcmVersion = "v4"
+    }
+
+    return { xcmVersion, supportsAliasOrigin, hasEthBalance }
+}
+
 async function indexParachain(
     parachain: ParachainBase,
     assetHub: ParachainBase,
@@ -618,7 +689,7 @@ async function indexParachain(
     parachainId: number,
     assetHubParaId: number,
     pnaAssets: PNAMap,
-    assetOverrides: AssetOverrideMap
+    assetOverrides: AssetOverrideMap,
 ): Promise<Parachain> {
     const info = await parachain.chainProperties()
 
@@ -633,18 +704,24 @@ async function indexParachain(
 
     if (Object.keys(assets).length === 0) {
         console.warn(
-            `Cannot discover assets for ${info.specName} (parachain ${parachainId}). Please add a handler for that runtime or add overrides.`
+            `Cannot discover assets for ${info.specName} (parachain ${parachainId}). Please add a handler for that runtime or add overrides.`,
         )
     }
 
     const hasPalletXcm = isFunction(
-        parachain.provider.tx.polkadotXcm.transferAssetsUsingTypeAndThen
+        parachain.provider.tx.polkadotXcm.transferAssetsUsingTypeAndThen,
     )
     const hasDryRunRpc = isFunction(parachain.provider.rpc.system?.dryRun)
     const hasDryRunApi =
         isFunction(parachain.provider.call.dryRunApi?.dryRunCall) &&
         isFunction(parachain.provider.call.dryRunApi?.dryRunXcm)
     const hasTxPaymentApi = isFunction(parachain.provider.call.transactionPaymentApi?.queryInfo)
+    const hasXcmPaymentApi = isFunction(parachain.provider.call.xcmPaymentApi?.queryXcmWeight)
+
+    const { xcmVersion, supportsAliasOrigin, hasEthBalance } = await checkSnowbridgeV2Support(
+        parachain,
+        ethChainId,
+    )
 
     // test getting balances
     let hasDotBalance = true
@@ -652,7 +729,7 @@ async function indexParachain(
         await parachain.getDotBalance(
             info.accountType === "AccountId32"
                 ? "0x0000000000000000000000000000000000000000000000000000000000000000"
-                : "0x0000000000000000000000000000000000000000"
+                : "0x0000000000000000000000000000000000000000",
         )
     } catch (err) {
         console.warn(`Spec ${info.specName} does not support dot ${err}`)
@@ -662,7 +739,7 @@ async function indexParachain(
     await parachain.getNativeBalance(
         info.accountType === "AccountId32"
             ? "0x0000000000000000000000000000000000000000000000000000000000000000"
-            : "0x0000000000000000000000000000000000000000"
+            : "0x0000000000000000000000000000000000000000",
     )
 
     let estimatedExecutionFeeDOT = 0n
@@ -677,11 +754,11 @@ async function indexParachain(
             info.accountType === "AccountId32"
                 ? "0x0000000000000000000000000000000000000000000000000000000000000000"
                 : "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
         estimatedDeliveryFeeDOT = await assetHub.calculateDeliveryFeeInDOT(
             parachainId,
-            destinationXcm
+            destinationXcm,
         )
         estimatedExecutionFeeDOT = await parachain.calculateXcmFee(destinationXcm, DOT_LOCATION)
     }
@@ -693,6 +770,10 @@ async function indexParachain(
             hasTxPaymentApi,
             hasDryRunRpc,
             hasDotBalance,
+            hasEthBalance,
+            hasXcmPaymentApi,
+            supportsAliasOrigin,
+            xcmVersion,
         },
         info,
         xcDOT,
@@ -711,7 +792,7 @@ async function indexEthChain(
     assetHubParaId: number,
     parachains: ParachainMap,
     precompiles: PrecompileMap,
-    metadataOverrides: ERC20MetadataOverrideMap
+    metadataOverrides: ERC20MetadataOverrideMap,
 ): Promise<EthereumChain> {
     const id = networkName !== "unknown" ? networkName : undefined
     if (networkChainId == ethChainId) {
@@ -765,7 +846,7 @@ async function indexEthChain(
         }
         if ((await provider.getCode(gatewayAddress)) === undefined) {
             throw Error(
-                `Could not fetch code for gatway address ${gatewayAddress} on ethereum chain ${networkChainId}.`
+                `Could not fetch code for gateway address ${gatewayAddress} on ethereum chain ${networkChainId}.`,
             )
         }
         return {
@@ -800,13 +881,13 @@ async function indexEthChain(
         const paraId = evmParachainChain.parachainId.toString()
         if (!(paraId in precompiles)) {
             throw Error(
-                `No precompile configured for parachain ${paraId} (ethereum chain ${networkChainId}).`
+                `No precompile configured for parachain ${paraId} (ethereum chain ${networkChainId}).`,
             )
         }
         const precompile = precompiles[paraId]
         if ((await provider.getCode(precompile)) === undefined) {
             throw Error(
-                `Could not fetch code for ${precompile} on parachain ${paraId} (ethereum chain ${networkChainId}).`
+                `Could not fetch code for ${precompile} on parachain ${paraId} (ethereum chain ${networkChainId}).`,
             )
         }
         if (!evmParachainChain.xcDOT) {
@@ -814,7 +895,7 @@ async function indexEthChain(
         }
         const xc20DOTAsset: ERC20Metadata = await assetErc20Metadata(
             provider,
-            evmParachainChain.xcDOT
+            evmParachainChain.xcDOT,
         )
         assets[evmParachainChain.xcDOT] = xc20DOTAsset
 
@@ -875,7 +956,7 @@ const ERC20_METADATA_ABI = [
 async function assetErc20Metadata(
     provider: AbstractProvider,
     token: string,
-    foreignId?: string
+    foreignId?: string,
 ): Promise<ERC20Metadata> {
     const erc20Metadata = new Contract(token, ERC20_METADATA_ABI, provider)
     const [name, symbol, decimals] = await Promise.all([
@@ -910,7 +991,7 @@ function addOverrides(envName: string, result: RegistryOptions) {
             // Change the name of TRAC
             result.metadataOverrides["0xef32abea56beff54f61da319a7311098d6fbcea9".toLowerCase()] = {
                 name: "OriginTrail TRAC",
-                symbol: "TRAC"
+                symbol: "TRAC",
             }
             break
         }
@@ -959,11 +1040,13 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                     return false
                 }
 
-                // Disable TRAC from going to any but hydration
+                // Allow TRAC to go to Hydration (2034) and Neuroweb (2043) only
                 if (
                     path.asset === "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f" &&
-                    ((path.destination !== 2034 && path.type === "ethereum") ||
-                        (path.source !== 2034 && path.type === "substrate"))
+                    ((path.destination !== 2034 &&
+                        path.destination !== 2043 &&
+                        path.type === "ethereum") ||
+                        (path.source !== 2034 && path.source !== 2043 && path.type === "substrate"))
                 ) {
                     return false
                 }
@@ -999,7 +1082,7 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
 async function getRegisteredPnas(
     bridgehub: ApiPromise,
     ethereum: AbstractProvider,
-    gatewayAddress: string
+    gatewayAddress: string,
 ): Promise<PNAMap> {
     let gateway = IGateway__factory.connect(gatewayAddress, ethereum)
     const entries = await bridgehub.query.ethereumSystem.foreignToNativeId.entries()
@@ -1011,7 +1094,7 @@ async function getRegisteredPnas(
             console.warn(`Could not convert ${key.toHuman()} to location`)
             continue
         }
-        const tokenId = (key.args.at(0)?.toPrimitive() as string).toLowerCase()
+        const tokenId = (key.args[0]?.toPrimitive() as string).toLowerCase()
         const token = await gateway.tokenAddressOf(tokenId)
         pnas[token.toLowerCase()] = {
             token: token.toLowerCase(),
@@ -1026,43 +1109,85 @@ export async function getAssetHubConversionPalletSwap(
     assetHub: ApiPromise,
     asset1: any,
     asset2: any,
-    exactAsset2Balance: bigint
+    exactAsset2Balance: bigint,
 ) {
     const result = await assetHub.call.assetConversionApi.quotePriceTokensForExactTokens(
         asset1,
         asset2,
         exactAsset2Balance,
-        true
+        true,
     )
     const asset1Balance = result.toPrimitive() as any
     if (asset1Balance == null) {
         throw Error(
             `No pool set up in asset conversion pallet for '${JSON.stringify(
-                asset1
-            )}' and '${JSON.stringify(asset2)}'.`
+                asset1,
+            )}' and '${JSON.stringify(asset2)}'.`,
         )
     }
     return BigInt(asset1Balance)
 }
 
-export const assetErc20Balance = async (
-    context: Context,
-    token: string,
-    owner: string
-): Promise<{
-    balance: bigint
-    gatewayAllowance: bigint
-}> => {
-    const [ethereum, gateway] = await Promise.all([context.ethereum(), context.gateway()])
-
-    const tokenContract = IERC20__factory.connect(token, ethereum)
-    const gatewayAddress = await gateway.getAddress()
+export async function erc20Balance(
+    ethereum: AbstractProvider,
+    tokenAddress: string,
+    owner: string,
+    spender: string,
+) {
+    const tokenContract = IERC20__factory.connect(tokenAddress, ethereum)
     const [balance, gatewayAllowance] = await Promise.all([
         tokenContract.balanceOf(owner),
-        tokenContract.allowance(owner, gatewayAddress),
+        tokenContract.allowance(owner, spender),
     ])
     return {
         balance,
         gatewayAllowance,
+    }
+}
+
+export async function swapAsset1ForAsset2(
+    assetHub: ApiPromise,
+    asset1: any,
+    asset2: any,
+    exactAsset1Balance: bigint,
+) {
+    const result = await assetHub.call.assetConversionApi.quotePriceExactTokensForTokens(
+        asset1,
+        asset2,
+        exactAsset1Balance,
+        true,
+    )
+    const asset2Balance = result.toPrimitive() as any
+    if (asset2Balance == null) {
+        throw Error(
+            `No pool set up in asset conversion pallet for '${JSON.stringify(
+                asset1,
+            )}' and '${JSON.stringify(asset2)}'.`,
+        )
+    }
+    return BigInt(asset2Balance)
+}
+
+export async function validateAccount(
+    parachainImpl: ParachainBase,
+    beneficiaryAddress: string,
+    ethChainId: number,
+    tokenAddress: string,
+    assetMetadata?: Asset,
+    maxConsumers?: bigint,
+) {
+    // Check if the account is created
+    const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
+        parachainImpl.getNativeAccount(beneficiaryAddress),
+        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
+    ])
+    return {
+        accountExists: !(
+            beneficiaryAccount.consumers === 0n &&
+            beneficiaryAccount.providers === 0n &&
+            beneficiaryAccount.sufficients === 0n
+        ),
+        accountMaxConsumers:
+            beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n,
     }
 }

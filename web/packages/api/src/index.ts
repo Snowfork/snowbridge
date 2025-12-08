@@ -4,8 +4,8 @@ import { AbstractProvider, JsonRpcProvider, WebSocketProvider } from "ethers"
 import {
     BeefyClient,
     BeefyClient__factory,
-    IGatewayV1 as IGateway,
-    IGatewayV1__factory as IGateway__factory,
+    IGatewayV1,
+    IGatewayV1__factory,
     IGatewayV2,
     IGatewayV2__factory,
 } from "@snowbridge/contract-types"
@@ -17,8 +17,10 @@ export * as utils from "./utils"
 export * as status from "./status"
 export * as assetsV2 from "./assets_v2"
 export * as environment from "./environment"
-export * as historyV2 from "./history_v2"
+export * as history from "./history"
 export * as subsquid from "./subsquid"
+export * as historyV2 from "./history_v2"
+export * as subsquidV2 from "./subsquid_v2"
 export * as forKusama from "./forKusama"
 export * as forInterParachain from "./forInterParachain"
 export * as toEthereumFromEVMV2 from "./toEthereumFromEVM_v2"
@@ -26,6 +28,8 @@ export * as parachains from "./parachains"
 export * as xcmBuilder from "./xcmBuilder"
 export * as toEthereumSnowbridgeV2 from "./toEthereumSnowbridgeV2"
 export * as neuroWeb from "./parachains/neuroweb"
+export * as toPolkadotSnowbridgeV2 from "./toPolkadotSnowbridgeV2"
+export * as addTip from "./addTip"
 
 interface Parachains {
     [paraId: string]: ApiPromise
@@ -57,6 +61,7 @@ interface Config {
         beefy: string
     }
     graphqlApiUrl: string
+    monitorChains?: number[]
 }
 
 export class Context {
@@ -64,7 +69,7 @@ export class Context {
 
     // Ethereum
     #ethChains: EthereumChains
-    #gateway?: IGateway
+    #gateway?: IGatewayV1
     #gatewayV2?: IGatewayV2
     #beefyClient?: BeefyClient
 
@@ -134,16 +139,27 @@ export class Context {
         if (paraIdKey in parachains) {
             const url = parachains[paraIdKey]
             console.log("Connecting to parachain ", paraIdKey, url)
-            const api = await ApiPromise.create({
+            let options: any = {
                 noInitWarn: true,
                 provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
-            })
+            }
+            if (paraId === this.config.polkadot.bridgeHubParaId) {
+                options.types = {
+                    ContractCall: {
+                        target: "[u8; 20]",
+                        calldata: "Vec<u8>",
+                        value: "u128",
+                        gas: "u64",
+                    },
+                }
+            }
+            const api = await ApiPromise.create(options)
             const onChainParaId = (
                 await api.query.parachainInfo.parachainId()
             ).toPrimitive() as number
             if (onChainParaId !== paraId) {
                 console.warn(
-                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`
+                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`,
                 )
             }
             this.#polkadotParachains[onChainParaId] = api
@@ -175,7 +191,7 @@ export class Context {
             ).toPrimitive() as number
             if (onChainParaId !== paraId) {
                 console.warn(
-                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`
+                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`,
                 )
             }
             this.#kusamaParachains[onChainParaId] = api
@@ -216,11 +232,11 @@ export class Context {
         return this.ethChain(this.config.ethereum.ethChainId)
     }
 
-    gateway(): IGateway {
+    gateway(): IGatewayV1 {
         if (this.#gateway) {
             return this.#gateway
         }
-        return IGateway__factory.connect(this.config.appContracts.gateway, this.ethereum())
+        return IGatewayV1__factory.connect(this.config.appContracts.gateway, this.ethereum())
     }
 
     gatewayV2(): IGatewayV2 {
@@ -239,6 +255,10 @@ export class Context {
 
     graphqlApiUrl(): string {
         return this.config.graphqlApiUrl
+    }
+
+    monitorChains(): number[] | undefined {
+        return this.config.monitorChains
     }
 
     async destroyContext(): Promise<void> {
@@ -271,7 +291,7 @@ export class Context {
 }
 
 export function contextConfigFor(
-    env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {})
+    env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {}),
 ): Config {
     if (!(env in SNOWBRIDGE_ENV)) {
         throw Error(`Unknown environment '${env}'.`)
@@ -288,6 +308,7 @@ export function contextConfigFor(
             PARACHAINS,
             RELAY_CHAIN_URL,
             GRAPHQL_API_URL,
+            TO_MONITOR_PARACHAINS,
         },
         kusamaConfig,
     } = SNOWBRIDGE_ENV[env]
@@ -333,5 +354,48 @@ export function contextConfigFor(
             beefy: BEEFY_CONTRACT,
         },
         graphqlApiUrl: GRAPHQL_API_URL,
+        monitorChains: TO_MONITOR_PARACHAINS,
     }
+}
+
+export function contextConfigOverrides(input: Config): Config {
+    let config = { ...input }
+    let injectedEthChains: { [ethChainId: string]: string | AbstractProvider } = {}
+    for (const ethChainIdKey of Object.keys(input.ethereum.ethChains)) {
+        if (
+            process.env[`ETHEREUM_RPC_URL_${ethChainIdKey}`] ||
+            process.env[`NEXT_PUBLIC_ETHEREUM_RPC_URL_${ethChainIdKey}`]
+        ) {
+            injectedEthChains[ethChainIdKey] =
+                process.env[`ETHEREUM_RPC_URL_${ethChainIdKey}`] ||
+                (process.env[`NEXT_PUBLIC_ETHEREUM_RPC_URL_${ethChainIdKey}`] as string)
+            continue
+        }
+        injectedEthChains[ethChainIdKey] = input.ethereum.ethChains[ethChainIdKey]
+    }
+    config.ethereum.ethChains = injectedEthChains
+    config.ethereum.beacon_url =
+        process.env["BEACON_RPC_URL"] ||
+        process.env["NEXT_PUBLIC_BEACON_RPC_URL"] ||
+        input.ethereum.beacon_url
+
+    let injectedParachains: { [paraId: string]: string } = {}
+    for (const paraIdKey of Object.keys(input.polkadot.parachains)) {
+        if (
+            process.env[`PARACHAIN_RPC_URL_${paraIdKey}`] ||
+            process.env[`NEXT_PUBLIC_PARACHAIN_RPC_URL_${paraIdKey}`]
+        ) {
+            injectedParachains[paraIdKey] = (process.env[`PARACHAIN_RPC_URL_${paraIdKey}`] ||
+                process.env[`NEXT_PUBLIC_PARACHAIN_RPC_URL_${paraIdKey}`]) as string
+            continue
+        }
+        injectedParachains[paraIdKey] = input.polkadot.parachains[paraIdKey]
+    }
+    config.polkadot.parachains = injectedParachains
+    config.polkadot.relaychain =
+        process.env["RELAY_CHAIN_RPC_URL"] ||
+        process.env["NEXT_PUBLIC_RELAY_CHAIN_RPC_URL"] ||
+        input.polkadot.relaychain
+
+    return config
 }

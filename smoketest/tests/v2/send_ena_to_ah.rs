@@ -36,6 +36,20 @@ async fn send_ena_to_ah() {
 	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
+	// Register WETH token  (Weth is already pre-registered in the Westend genesis config,
+	// but it is not registered on Ethereum).
+	let register_receipt = gateway
+		.v2_registerToken(*weth.address(), 0, 1_500_000_000_000u128, 1_500_000_000_000u128)
+		.value(U256::from(13_000_000_000_000u128))
+		.gas_price(GAS_PRICE)
+		.send()
+		.await
+		.unwrap()
+		.get_receipt()
+		.await
+		.expect("register WETH");
+	assert_eq!(register_receipt.status(), true);
+
 	// Mint WETH tokens
 	let value = parse_units("0.01", "ether").unwrap().get_absolute();
 	let mut receipt = weth
@@ -64,7 +78,7 @@ async fn send_ena_to_ah() {
 	assert_eq!(receipt.status(), true);
 
 	let execution_fee = 2_000_000_000_000u128;
-	let relayer_fee = 2_000_000_000u128;
+	let relayer_fee = 200_000_000_000u128;
 	let fee = 9_000_000_000_000u128;
 
 	let weth_addr: Address = (*WETH_CONTRACT).into();
@@ -143,6 +157,9 @@ async fn send_ena_to_ah() {
 		let events = block.events().await.unwrap();
 		for issued in events.find::<Issued>() {
 			let issued = issued.unwrap();
+			if issued.asset_id.encode() != expected_weth_id.encode() { // skip unrelated events
+				continue
+			}
 			// Issued weth token
 			assert_eq!(issued.asset_id.encode(), expected_weth_id.encode());
 			assert_eq!(issued.owner, expected_owner);

@@ -20,6 +20,7 @@ type SpecSettings struct {
 type ForkVersions struct {
 	Deneb   uint64 `mapstructure:"deneb"`
 	Electra uint64 `mapstructure:"electra"`
+	Fulu    uint64 `mapstructure:"fulu"`
 }
 
 type SourceConfig struct {
