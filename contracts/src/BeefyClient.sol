@@ -474,6 +474,13 @@ contract BeefyClient {
             revert InvalidCommitment();
         }
 
+        if (
+            bitfield.length != Bitfield.containerLength(vset.length)
+                || Bitfield.countSetBits(bitfield, vset.length) < computeQuorum(vset.length)
+        ) {
+            revert InvalidBitfield();
+        }
+
         bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
         bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset.root);
@@ -512,6 +519,13 @@ contract BeefyClient {
             vset = nextValidatorSet;
         } else if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
+        }
+
+        if (
+            bitfield.length != Bitfield.containerLength(vset.length)
+                || Bitfield.countSetBits(bitfield, vset.length) < computeQuorum(vset.length)
+        ) {
+            revert InvalidBitfield();
         }
 
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));

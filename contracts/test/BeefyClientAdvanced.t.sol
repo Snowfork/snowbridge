@@ -176,8 +176,7 @@ contract BeefyClientAdvancedTest is Test {
         (BeefyClient.Commitment memory commitment, bytes32 commitmentHash) =
             _buildCommitment(1, VSET_ID, MMRRoot);
 
-        uint256 quorum =
-            Math.min(FIAT_SHAMIR_REQUIRED_SIGNATURES, beefyClient.computeQuorum_public(VSET_LEN));
+        uint256 quorum = beefyClient.computeQuorum_public(VSET_LEN);
         uint256[] memory bitfield = new uint256[](Bitfield.containerLength(VSET_LEN));
         for (uint256 i = 0; i < quorum; i++) {
             Bitfield.set(bitfield, i); // claim 0..quorum-1 signed
@@ -186,33 +185,93 @@ contract BeefyClientAdvancedTest is Test {
         // MMR leaf/proof params are ignored when validatorSetID == current set; we pass dummies
         BeefyClient.MMRLeaf memory dummyLeaf2;
 
-        console.log("submit proof with insufficient signatures");
-        BeefyClient.ValidatorProof[] memory finalProofs = _generateFiatShamirProofs(
-            commitment, commitmentHash, bitfield, FIAT_SHAMIR_REQUIRED_SIGNATURES - 1
-        );
-        vm.expectRevert(BeefyClient.InvalidValidatorProofLength.selector);
-        beefyClient.submitFiatShamir(
-            commitment, bitfield, finalProofs, dummyLeaf2, new bytes32[](0), 0
-        );
-
-        console.log("submit proof with wrong signatures");
-        finalProofs = _generateFiatShamirProofs(
-            commitment, commitmentHash, bitfield, FIAT_SHAMIR_REQUIRED_SIGNATURES
-        );
-        finalProofs[0].account = address(0x1234); // invalidate one proof
-        vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
-        beefyClient.submitFiatShamir(
-            commitment, bitfield, finalProofs, dummyLeaf2, new bytes32[](0), 0
-        );
-
         console.log("submit final proof with sufficient signatures");
-        finalProofs = _generateFiatShamirProofs(
+        BeefyClient.ValidatorProof[] memory finalProofs = _generateFiatShamirProofs(
             commitment, commitmentHash, bitfield, FIAT_SHAMIR_REQUIRED_SIGNATURES
         );
         beefyClient.submitFiatShamir(
             commitment, bitfield, finalProofs, dummyLeaf2, new bytes32[](0), 0
         );
         assertEq(beefyClient.latestMMRRoot(), MMRRoot, "MMR root updated");
+    }
+
+    function testFiatShamirCommitWithInsufficientSignatures() public {
+        (BeefyClient.Commitment memory commitment, bytes32 commitmentHash) =
+            _buildCommitment(1, VSET_ID, MMRRoot);
+
+        uint256 quorum = beefyClient.computeQuorum_public(VSET_LEN);
+        uint256[] memory bitfield = new uint256[](Bitfield.containerLength(VSET_LEN));
+        for (uint256 i = 0; i < quorum; i++) {
+            Bitfield.set(bitfield, i);
+        }
+
+        BeefyClient.MMRLeaf memory dummyLeaf2;
+
+        console.log("submit proof with insufficient signatures");
+        // Insufficient signatures
+        uint256 insufficientSignatures = FIAT_SHAMIR_REQUIRED_SIGNATURES - 1;
+        BeefyClient.ValidatorProof[] memory finalProofs = _generateFiatShamirProofs(
+            commitment, commitmentHash, bitfield, insufficientSignatures
+        );
+        vm.expectRevert(BeefyClient.InvalidValidatorProofLength.selector);
+        beefyClient.submitFiatShamir(
+            commitment, bitfield, finalProofs, dummyLeaf2, new bytes32[](0), 0
+        );
+    }
+
+    function testFiatShamirCommitWithErrorSignatures() public {
+        (BeefyClient.Commitment memory commitment, bytes32 commitmentHash) =
+            _buildCommitment(1, VSET_ID, MMRRoot);
+
+        // Insufficient quorum
+        uint256 quorum = beefyClient.computeQuorum_public(VSET_LEN);
+        uint256[] memory bitfield = new uint256[](Bitfield.containerLength(VSET_LEN));
+        for (uint256 i = 0; i < quorum; i++) {
+            Bitfield.set(bitfield, i);
+        }
+
+        BeefyClient.MMRLeaf memory dummyLeaf2;
+
+        console.log("submit proof with wrong signatures");
+        BeefyClient.ValidatorProof[] memory finalProofs = _generateFiatShamirProofs(
+            commitment, commitmentHash, bitfield, FIAT_SHAMIR_REQUIRED_SIGNATURES
+        );
+        // invalidate one proof
+        finalProofs[0].account = address(0x1234);
+        vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
+        beefyClient.submitFiatShamir(
+            commitment, bitfield, finalProofs, dummyLeaf2, new bytes32[](0), 0
+        );
+    }
+
+    function testFiatShamirCommitWithInsufficientQuorum() public {
+        (BeefyClient.Commitment memory commitment, bytes32 commitmentHash) =
+            _buildCommitment(1, VSET_ID, MMRRoot);
+
+        uint256 quorum = beefyClient.computeQuorum_public(VSET_LEN);
+        uint256[] memory bitfield = new uint256[](Bitfield.containerLength(VSET_LEN));
+        for (uint256 i = 0; i < quorum; i++) {
+            Bitfield.set(bitfield, i);
+        }
+
+        BeefyClient.MMRLeaf memory dummyLeaf2;
+
+        console.log("submit final proof with sufficient signatures");
+        BeefyClient.ValidatorProof[] memory finalProofs = _generateFiatShamirProofs(
+            commitment, commitmentHash, bitfield, FIAT_SHAMIR_REQUIRED_SIGNATURES
+        );
+
+        // Insufficient quorum
+        uint256 quorum2 = quorum - 1;
+        uint256[] memory bitfield2 = new uint256[](Bitfield.containerLength(VSET_LEN));
+        for (uint256 i = 0; i < quorum2; i++) {
+            Bitfield.set(bitfield2, i);
+        }
+
+        vm.expectRevert(BeefyClient.InvalidBitfield.selector);
+        beefyClient.submitFiatShamir(
+            commitment, bitfield2, finalProofs, dummyLeaf2, new bytes32[](0), 0
+        );
     }
 
     // ---------------------- Helpers ----------------------
