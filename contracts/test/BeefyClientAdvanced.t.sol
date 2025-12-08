@@ -195,7 +195,7 @@ contract BeefyClientAdvancedTest is Test {
         assertEq(beefyClient.latestMMRRoot(), MMRRoot, "MMR root updated");
     }
 
-    function testFiatShamirCommitWithInsufficientSignatures() public {
+    function testFiatShamirCommitRevertsOnInsufficientSignatures() public {
         (BeefyClient.Commitment memory commitment, bytes32 commitmentHash) =
             _buildCommitment(1, VSET_ID, MMRRoot);
 
@@ -219,7 +219,7 @@ contract BeefyClientAdvancedTest is Test {
         );
     }
 
-    function testFiatShamirCommitWithErrorSignatures() public {
+    function testFiatShamirCommitRevertsOnInvalidProof() public {
         (BeefyClient.Commitment memory commitment, bytes32 commitmentHash) =
             _buildCommitment(1, VSET_ID, MMRRoot);
 
@@ -244,7 +244,7 @@ contract BeefyClientAdvancedTest is Test {
         );
     }
 
-    function testFiatShamirCommitWithInsufficientQuorum() public {
+    function testFiatShamirCommitRevertsWithInsufficientInitialBitfieldQuorum() public {
         (BeefyClient.Commitment memory commitment, bytes32 commitmentHash) =
             _buildCommitment(1, VSET_ID, MMRRoot);
 
