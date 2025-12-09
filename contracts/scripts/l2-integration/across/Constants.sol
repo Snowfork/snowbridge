@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity 0.8.28;
+
+// Sepolia addressess
+address constant SPOKE_POOL = 0x5ef6C01E11889d86803e0B23e3cB3F9E9d97B662;
+address constant MULTI_CALL_HANDLER = 0x924a9f036260DdD5808007E1AA95f08eD08aA569;
+address constant USDC = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
+uint32 constant CHAIN_ID = 11_155_111;
+
+// Base Sepolia addresses
+address constant BASE_SPOKE_POOL = 0x82B564983aE7274c86695917BBf8C99ECb6F0F8F;
+address constant BASE_MULTI_CALL_HANDLER = 0x0F7Ae28dE1C8532170AD4ee566B5801485c13a0E;
+address constant BASE_USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+uint32 constant BASE_CHAIN_ID = 84_532;
