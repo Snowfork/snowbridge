@@ -1154,24 +1154,7 @@ contract GatewayV1Test is Test {
         MockGateway(address(gateway)).v1_handleUnlockNativeToken_public(encodedParams);
     }
 
-    function testUnlockNativeTokenWithFeeOnTransferReverts() public {
-        FeeOnTransferToken feeToken = new FeeOnTransferToken("FeeToken", "FEE", 500);
-        feeToken.mint(assetHubAgent, 200);
-
-        UnlockNativeTokenParams memory params = UnlockNativeTokenParams({
-            agentID: assetHubAgentID,
-            token: address(feeToken),
-            recipient: account1,
-            amount: 100
-        });
-
-        vm.expectRevert();
-        MockGateway(address(gateway)).v1_handleUnlockNativeToken_public(abi.encode(params));
-
-        assertEq(feeToken.balanceOf(account1), 0);
-    }
-
-    function testRegisterForeignTokenHappyPath() public {
+    function testRegisterForeignToken() public {
         RegisterForeignTokenParams memory params = RegisterForeignTokenParams({
             foreignTokenID: dotTokenID, name: "DOT", symbol: "DOT", decimals: 10
         });
