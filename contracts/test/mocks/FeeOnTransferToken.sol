@@ -16,13 +16,13 @@ contract FeeOnTransferToken is ERC20 {
         _mint(to, amount);
     }
 
-    function _transfer(address from, address to, uint256 amount) internal override {
+    function _update(address from, address to, uint256 amount) internal override {
         uint256 fee = (amount * feeBps) / 10_000;
         uint256 amountAfterFee = amount - fee;
 
-        super._transfer(from, to, amountAfterFee);
-        if (fee > 0) {
-            _burn(from, fee);
-        }
+        // Burn fee from sender.
+        super._update(from, address(0), fee);
+        // Transfer remaining amount from sender to receiver.
+        super._update(from, to, amountAfterFee);
     }
 }

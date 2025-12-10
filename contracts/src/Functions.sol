@@ -25,7 +25,6 @@ library Functions {
     error AgentDoesNotExist();
     error InvalidToken();
     error InvalidAmount();
-    error TransferAmountMismatch();
     error ChannelDoesNotExist();
 
     /// Looks up an agent contract address, failing if no such mapping exists
@@ -69,9 +68,9 @@ library Functions {
         uint256 balanceBefore = IERC20(token).balanceOf(agent);
         IERC20(token).safeTransferFrom(sender, agent, amount);
 
-        uint256 balanceAfter = IERC20(token).balanceOf(agent);
-        if (balanceAfter != balanceBefore + amount) {
-            revert TransferAmountMismatch();
+        if (IERC20(token).balanceOf(agent) != balanceBefore + amount) {
+            // Tokens with Fee-On-Transfer behaviour are not supported
+            revert InvalidToken();
         }
     }
 
@@ -94,14 +93,8 @@ library Functions {
         address recipient,
         uint128 amount
     ) internal {
-        uint256 balanceBefore = IERC20(token).balanceOf(recipient);
         bytes memory call = abi.encodeCall(AgentExecutor.transferToken, (token, recipient, amount));
         invokeOnAgent(agent, executor, call);
-
-        uint256 balanceAfter = IERC20(token).balanceOf(recipient);
-        if (balanceAfter != balanceBefore + amount) {
-            revert TransferAmountMismatch();
-        }
     }
 
     function registerNativeToken(address token) internal {
