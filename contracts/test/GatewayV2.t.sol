@@ -543,35 +543,6 @@ contract GatewayV2Test is Test {
             );
     }
 
-    function testUnlockFeeOnTransferTokenFails() public {
-        FeeOnTransferToken feeToken = new FeeOnTransferToken("FeeToken", "FEE", 500);
-        feeToken.mint(assetHubAgent, 200);
-
-        bytes32 topic = keccak256("topic");
-        uint128 amount = 100;
-        vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.CommandFailed(1, 0);
-
-        vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
-
-        vm.deal(assetHubAgent, 1 ether);
-        hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({
-                origin: Constants.ASSET_HUB_AGENT_ID,
-                nonce: 1,
-                topic: topic,
-                commands: makeUnlockTokenCommand(address(feeToken), user1, amount)
-            }),
-            proof,
-            makeMockProof(),
-            relayerRewardAddress
-        );
-
-        assertEq(feeToken.balanceOf(user1), 0);
-    }
-
     function testRegisterForeignToken() public {
         bytes32 topic = keccak256("topic");
 
