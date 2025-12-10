@@ -174,6 +174,11 @@ contract BeefyClient {
     /* Constants */
 
     /**
+     * @dev Fiat-Shamir domain separator ID
+     */
+    bytes public constant FIAT_SHAMIR_DOMAIN_ID = bytes("SNOWBRIDGE-FIAT-SHAMIR-v1");
+
+    /**
      * @dev Beefy payload id for MMR Root payload items:
      * https://github.com/paritytech/substrate/blob/fe1f8ba1c4f23931ae89c1ada35efb3d908b50f5/primitives/consensus/beefy/src/payload.rs#L33
      */
@@ -681,6 +686,7 @@ contract BeefyClient {
     ) internal view returns (bytes32) {
         return sha256(
             bytes.concat(
+                FIAT_SHAMIR_DOMAIN_ID,
                 sha256(
                     bytes.concat(
                         commitmentHash,
