@@ -476,7 +476,7 @@ contract BeefyClient {
 
         bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
-        bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset.root);
+        bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset);
         uint256 requiredSignatures =
             Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
         return
@@ -641,7 +641,7 @@ contract BeefyClient {
         ValidatorProof[] calldata proofs
     ) internal view {
         bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
-        bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset.root);
+        bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset);
         uint256 requiredSignatures =
             Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
         if (proofs.length != requiredSignatures) {
@@ -677,10 +677,20 @@ contract BeefyClient {
     function createFiatShamirHash(
         bytes32 commitmentHash,
         bytes32 bitFieldHash,
-        bytes32 validatorSetRoot
-    ) internal pure returns (bytes32) {
+        ValidatorSetState storage vset
+    ) internal view returns (bytes32) {
         return sha256(
-            bytes.concat(sha256(bytes.concat(commitmentHash, bitFieldHash, validatorSetRoot)))
+            bytes.concat(
+                sha256(
+                    bytes.concat(
+                        commitmentHash,
+                        bitFieldHash,
+                        vset.root,
+                        bytes32(uint256(vset.id)),
+                        bytes32(uint256(vset.length))
+                    )
+                )
+            )
         );
     }
 
