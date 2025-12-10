@@ -11,5 +11,11 @@ l2-deploy-greeter:
 l1-set-remote:
 	forge script SetRemote --chain $(SEPOLIA_CHAIN) --rpc-url $(SEPOLIA_RPC_URL) --etherscan-api-key $(ETHERSCAN_API_KEY) --verifier $(VERIFIER) --verify --retries 10 --broadcast -vvvv
 
+l2-set-remote:
+	IS_L1=false forge script SetRemote --chain $(BASE_CHAIN) --rpc-url $(BASE_RPC_URL) --etherscan-api-key $(ETHERSCAN_API_KEY) --verifier $(VERIFIER) --verify --retries 10 --broadcast -vvvv
+
 l1-swap-and-greeting:
 	forge script SendGreeting --chain $(SEPOLIA_CHAIN) --rpc-url $(SEPOLIA_RPC_URL) --etherscan-api-key $(ETHERSCAN_API_KEY) --verifier $(VERIFIER) --verify --retries 10 --broadcast -vvvv
+
+l2-swap-and-greeting:
+	IS_L1=false forge script SendGreeting --chain $(BASE_CHAIN) --rpc-url $(BASE_RPC_URL) --etherscan-api-key $(ETHERSCAN_API_KEY) --verifier $(VERIFIER) --verify --retries 10 --broadcast -vvvv

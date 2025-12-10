@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {Greeter} from "./Greeter.sol";
-import {USDC, BASE_USDC, BASE_CHAIN_ID} from "./Constants.sol";
+import {USDC, BASE_USDC, CHAIN_ID, BASE_CHAIN_ID} from "./Constants.sol";
 
 contract SendGreeting is Script {
     uint256 internal deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
@@ -15,19 +15,36 @@ contract SendGreeting is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         address l1Greeter = vm.envAddress("L1_GREETER_ADDRESS");
+        address l2Greeter = vm.envAddress("L2_GREETER_ADDRESS");
+        bool isL1 = vm.envBool("IS_L1");
+        if (isL1) {
+            console.log("Sending greeting from L1 Sepolia to L2 Base");
+            //Todo: adjust outputAmount based on fee calculations from Across SDK
+            Greeter.SwapParams memory params = Greeter.SwapParams({
+                inputToken: USDC,
+                outputToken: BASE_USDC,
+                inputAmount: 110_000, // 0.11 USDC
+                outputAmount: 100_000, // 0.1 USDC
+                destinationChainId: BASE_CHAIN_ID
+            });
 
-        //Todo: adjust outputAmount based on fee calculations from Across SDK
-        Greeter.SwapParams memory params = Greeter.SwapParams({
-            inputToken: USDC,
-            outputToken: BASE_USDC,
-            inputAmount: 110_000, // 0.11 USDC
-            outputAmount: 100_000, // 0.1 USDC
-            destinationChainId: BASE_CHAIN_ID
-        });
+            IERC20(params.inputToken).transfer(l1Greeter, params.inputAmount);
 
-        IERC20(params.inputToken).transfer(l1Greeter, params.inputAmount);
+            Greeter(l1Greeter).swapTokenAndGreeting(params, "Hello from L1 Sepolia!", deployerAddr);
+        } else {
+            console.log("Sending greeting from L2 Base to L1 Sepolia");
+            Greeter.SwapParams memory params = Greeter.SwapParams({
+                inputToken: BASE_USDC,
+                outputToken: USDC,
+                inputAmount: 110_000, // 0.11 USDC
+                outputAmount: 100_000, // 0.1 USDC
+                destinationChainId: CHAIN_ID
+            });
 
-        Greeter(l1Greeter).swapTokenAndGreeting(params, "Hello from L1 Sepolia!", deployerAddr);
+            IERC20(params.inputToken).transfer(l2Greeter, params.inputAmount);
+
+            Greeter(l2Greeter).swapTokenAndGreeting(params, "Hello from L2 Base!", deployerAddr);
+        }
 
         vm.stopBroadcast();
         return;

@@ -17,7 +17,12 @@ contract SetRemote is Script {
 
         address l2Greeter = vm.envAddress("L2_GREETER_ADDRESS");
 
-        Greeter(l1Greeter).setRemoteEndpoint(l2Greeter);
+        bool isL1 = vm.envBool("IS_L1");
+        if (isL1) {
+            Greeter(l1Greeter).setRemoteEndpoint(l2Greeter);
+        } else {
+            Greeter(l2Greeter).setRemoteEndpoint(l1Greeter);
+        }
 
         vm.stopBroadcast();
         return;
