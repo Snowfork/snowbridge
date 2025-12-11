@@ -212,8 +212,9 @@ contract BeefyClient {
     uint256 public immutable minNumRequiredSignatures;
 
     /**
-     * @dev The lower bound on the number of signatures required to validate a new commitment. Note
-     * that the final number of signatures is calculated dynamically with the Fiat-Shamir transform.
+     * @dev The signatures required to validate a new commitment using Fiat-Shamir transform. Note
+     * that Fiat-shamir comes from the assumption on the hash-power of adversary
+     * and its not a crypto-economic argument.
      */
     uint256 public immutable fiatShamirRequiredSignatures;
 
