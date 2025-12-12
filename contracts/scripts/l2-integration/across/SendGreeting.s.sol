@@ -4,6 +4,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {Greeter} from "./Greeter.sol";
 import {USDC, BASE_USDC, CHAIN_ID, BASE_CHAIN_ID} from "./Constants.sol";
+import {ISpokePool, IMessageHandler, SwapParams, Instructions, Call} from "./Interfaces.sol";
 
 contract SendGreeting is Script {
     uint256 internal deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
@@ -20,7 +21,7 @@ contract SendGreeting is Script {
         if (isL1) {
             console.log("Sending greeting from L1 Sepolia to L2 Base");
             //Todo: adjust outputAmount based on fee calculations from Across SDK
-            Greeter.SwapParams memory params = Greeter.SwapParams({
+            SwapParams memory params = SwapParams({
                 inputToken: USDC,
                 outputToken: BASE_USDC,
                 inputAmount: 110_000, // 0.11 USDC
@@ -33,7 +34,7 @@ contract SendGreeting is Script {
             Greeter(l1Greeter).swapTokenAndGreeting(params, "Hello from L1 Sepolia!", deployerAddr);
         } else {
             console.log("Sending greeting from L2 Base to L1 Sepolia");
-            Greeter.SwapParams memory params = Greeter.SwapParams({
+            SwapParams memory params = SwapParams({
                 inputToken: BASE_USDC,
                 outputToken: USDC,
                 inputAmount: 110_000, // 0.11 USDC
