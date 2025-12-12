@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
-use alloy::{
-	primitives::{Address, Bytes, U256},
-	providers::{DynProvider, Provider, ProviderBuilder, WsConnect},
-	signers::local::PrivateKeySigner,
-};
+use alloy::primitives::{Address, Bytes, U256};
+use alloy::providers::{DynProvider, Provider, ProviderBuilder, WsConnect};
+use alloy::signers::local::PrivateKeySigner;
 use codec::{DecodeAll, Encode};
 use futures::StreamExt;
-use jsonrpsee::{core::client::ClientT, ws_client::WsClientBuilder};
+use jsonrpsee::core::client::ClientT;
+use jsonrpsee::ws_client::WsClientBuilder;
 use serde_json::Value;
 
 use alloy::primitives::FixedBytes;
@@ -15,8 +14,8 @@ use k256::ecdsa::VerifyingKey;
 use snowbridge_smoketest::{
 	constants::*,
 	contracts::beefy_client::{
-		BeefyClient,
-		BeefyClient::{Commitment, MMRLeaf, PayloadItem, ValidatorProof},
+		BeefyClient, BeefyClient::Commitment, BeefyClient::MMRLeaf, BeefyClient::PayloadItem,
+		BeefyClient::ValidatorProof,
 	},
 	parachains::relaychain::{
 		self,
@@ -49,7 +48,6 @@ use subxt::{
 	config::substrate::{BlakeTwo256, SubstrateHeader},
 	OnlineClient, PolkadotConfig,
 };
-use tokio::time::{sleep, Duration};
 
 fn create_ticket_id(account: Address, commitment_hash: [u8; 32]) -> [u8; 32] {
 	let mut buf = [0u8; 64];
@@ -201,7 +199,6 @@ async fn malicious_payload() {
 			&mut blocks_sub_best,
 		)
 		.await;
-		sleep(Duration::from_secs(30)).await;
 	}
 
 	let mut slashed_event_count = 0;

@@ -617,30 +617,16 @@ export function createERC20ToKusamaTx(
                 },
             ],
         }
-        // Hack for https://github.com/polkadot-js/api/issues/6214.
-    } else if (isKSM(Direction.ToKusama, tokenLocation)) {
-        assets = {
-            v4: [
-                {
-                    id: NATIVE_TOKEN_LOCATION,
-                    fun: { Fungible: destFeeInSourceNative },
-                },
-                {
-                    id: tokenLocation,
-                    fun: { Fungible: amount },
-                },
-            ],
-        }
     } else {
         assets = {
             v4: [
                 {
-                    id: tokenLocation,
-                    fun: { Fungible: amount },
-                },
-                {
                     id: NATIVE_TOKEN_LOCATION,
                     fun: { Fungible: destFeeInSourceNative },
+                },
+                {
+                    id: tokenLocation,
+                    fun: { Fungible: amount },
                 },
             ],
         }

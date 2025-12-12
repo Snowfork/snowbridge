@@ -192,15 +192,6 @@ export const fetchEstimatedDeliveryTime = async (graphqlApiUrl: string, channelI
 }
 
 /**
- * Query the estimated delivery time for transfers to both directions (v2)
- **/
-export const fetchV2EstimatedDeliveryTime = async (graphqlApiUrl: string) => {
-    let query = `query { toEthereumV2Elapse { elapse } toPolkadotV2Elapse { elapse } }`
-    let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result
-}
-
-/**
  * Query with a raw graphql
  **/
 export const queryByGraphQL = async (graphqlApiUrl: string, query: string) => {
@@ -337,7 +328,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
         "toDestination": {"messageId":"0x00d720d39256bab74c0be362005b9a50951a0909e6dabda588a5d319bfbedb65",...}
       }
 ]
- **/
+**/
 export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: string) => {
     let query = `query { transferStatusToEthereums(limit: 1, where: {messageId_eq: "${id}", OR: {txHash_eq: "${id}"}}) {
             id
@@ -499,41 +490,6 @@ export const fetchToPolkadotUndelivedLatency = async (graphqlApiUrl: string) => 
                 }}`
     let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.toPolkadotUndeliveredTimeout
-}
-
-/*
- * Query the maximum latency of pending transfers from V2 P->E.
- * {
-    "toEthereumV2UndeliveredTimeout": [
-      {
-        "elapse": 1034.273011
-      }
-    ]
-}
-*/
-export const fetchToEthereumV2UndelivedLatency = async (graphqlApiUrl: string) => {
-    let query = `query { toEthereumV2UndeliveredTimeout {
-                   elapse
-                }}`
-    let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result?.toEthereumV2UndeliveredTimeout
-}
-
-/* Query the maximum latency of pending transfers from V2 E->P.
- * {
-    "toPolkadotV2UndeliveredTimeout": [
-      {
-        "elapse": 1201.23
-      }
-    ]
-}
-*/
-export const fetchToPolkadotV2UndelivedLatency = async (graphqlApiUrl: string) => {
-    let query = `query { toPolkadotV2UndeliveredTimeout {
-                   elapse
-                }}`
-    let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result?.toPolkadotV2UndeliveredTimeout
 }
 
 /**

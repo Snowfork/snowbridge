@@ -19,14 +19,12 @@ ignored_error_codes = [
     2394,
 ]
 
-evm_version = 'Cancun'
+no_match_test = "testRegenerate*"
 
 [profile.production]
 via_ir = true
 
-[profile.production.etherscan]
-mainnet = { key = "${ETHERSCAN_API_KEY}" }
-
 [fmt]
 number_underscore = "thousands"
 line_length = 99
+

@@ -45,3 +45,12 @@ cargo install cargo-fuzz
 echo "Installing web packages"
 (cd web && pnpm install)
 
+echo "Installing forge dependencies"
+pushd contracts
+  forge install foundry-rs/forge-std --no-git
+  forge install https://github.com/dapphub/ds-test --no-git
+  forge install https://github.com/Snowfork/canonical-weth --no-git
+  forge install https://github.com/PaulRBerg/prb-math --no-git
+  forge install https://github.com/OpenZeppelin/openzeppelin-contracts --no-git
+popd
+

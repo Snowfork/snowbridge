@@ -38,7 +38,7 @@ export class RegisterToken implements RegistrationInterface {
         relayerFee: bigint,
         options?: {
             paddFeeByPercentage?: bigint
-        }
+        },
     ): Promise<RegistrationFee> {
         const { assetHub, bridgeHub } =
             context instanceof Context
@@ -59,39 +59,40 @@ export class RegisterToken implements RegistrationInterface {
             1_000_000_000_000n, // dummy total value
             100_000_000_000n, // dummy execution fee
             assetDepositDOT,
-            getBridgeOwnerAccount(registry.ethChainId)
+            getBridgeOwnerAccount(registry.ethChainId),
         )
 
         // Delivery fee BridgeHub to AssetHub
         const bridgeHubImpl = await paraImplementation(bridgeHub)
         const deliveryFeeInDOT = await bridgeHubImpl.calculateDeliveryFeeInDOT(
             registry.assetHubParaId,
-            assetHubXcm
+            assetHubXcm,
         )
 
         const deliveryFeeInEther = await swapAsset1ForAsset2(
             assetHub,
             DOT_LOCATION,
             ether,
-            deliveryFeeInDOT
+            deliveryFeeInDOT,
         )
 
         // AssetHub Execution fee
         const assetHubImpl = await paraImplementation(assetHub)
-        const assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
+        const assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(
+            assetHubXcm,
+            DOT_LOCATION,
+        )
 
         const assetHubExecutionFeeEther = padFeeByPercentage(
             await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, assetHubExecutionFeeDOT),
-            paddFeeByPercentage
+            paddFeeByPercentage,
         )
 
         // Convert asset deposit from DOT to Ether
-        const assetDepositEther = padFeeByPercentage(await swapAsset1ForAsset2(
-            assetHub,
-            DOT_LOCATION,
-            ether,
-            assetDepositDOT
-        ), 10n)
+        const assetDepositEther = padFeeByPercentage(
+            await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, assetDepositDOT),
+            10n,
+        )
 
         const totalFeeInWei =
             deliveryFeeInEther + assetHubExecutionFeeEther + assetDepositEther + relayerFee
@@ -115,7 +116,7 @@ export class RegisterToken implements RegistrationInterface {
         registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
-        fee: RegistrationFee
+        fee: RegistrationFee,
     ): Promise<TokenRegistration> {
         const ifce = IGateway__factory.createInterface()
         const con = new Contract(registry.gatewayAddress, ifce)
@@ -126,17 +127,23 @@ export class RegisterToken implements RegistrationInterface {
 
         const tx = await con
             .getFunction("v2_registerToken")
-            .populateTransaction(tokenAddress, network, fee.assetHubExecutionFeeEther, fee.relayerFee, {
-                value: totalValue,
-                from: sourceAccount,
-            })
+            .populateTransaction(
+                tokenAddress,
+                network,
+                fee.assetHubExecutionFeeEther,
+                fee.relayerFee,
+                {
+                    value: totalValue,
+                    from: sourceAccount,
+                },
+            )
 
         return {
             input: {
                 registry,
                 sourceAccount,
                 tokenAddress,
-                fee
+                fee,
             },
             computed: {
                 gatewayAddress: registry.gatewayAddress,
@@ -148,7 +155,7 @@ export class RegisterToken implements RegistrationInterface {
 
     async validateRegistration(
         context: Context | Connections,
-        registration: TokenRegistration
+        registration: TokenRegistration,
     ): Promise<RegistrationValidationResult> {
         const { tx } = registration
         const { sourceAccount, tokenAddress, registry } = registration.input
@@ -238,7 +245,7 @@ export class RegisterToken implements RegistrationInterface {
                     totalValue,
                     registration.input.fee.assetHubDeliveryFeeEther,
                     registration.input.fee.assetDepositDOT,
-                    getBridgeOwnerAccount(registry.ethChainId)
+                    getBridgeOwnerAccount(registry.ethChainId),
                 )
 
                 const assetHubImpl = await paraImplementation(assetHub)

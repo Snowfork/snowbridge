@@ -8,6 +8,7 @@ import {
 import { Context } from "../../index"
 import {
     buildMessageId,
+    calculateRelayerFee,
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
@@ -44,11 +45,11 @@ export class PNAToAH implements TransferInterface {
         registry: AssetRegistry,
         tokenAddress: string,
         _destinationParaId: number,
-        relayerFee: bigint,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[]
+            overrideRelayerFee?: bigint
         },
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub } =
@@ -109,13 +110,22 @@ export class PNAToAH implements TransferInterface {
             paddFeeByPercentage ?? 33n,
         )
 
-        const totalFeeInWei = deliveryFeeInEther + assetHubExecutionFeeEther + relayerFee
+        const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
+            assetHub,
+            registry.ethChainId,
+            options?.overrideRelayerFee,
+            deliveryFeeInEther,
+        )
+
+        const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: 0n,
             destinationExecutionFeeEther: 0n,
             relayerFee: relayerFee,
+            extrinsicFeeDot: extrinsicFeeDot,
+            extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
         }
@@ -164,7 +174,7 @@ export class PNAToAH implements TransferInterface {
             throw Error("asset foreign ID not set in metadata")
         }
 
-        const accountNonce = await ethereum.getTransactionCount(sourceAccount)
+        const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
         const topic = buildMessageId(
             destinationParaId,
             sourceAccount,
