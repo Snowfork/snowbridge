@@ -36,8 +36,10 @@
                     tree
                     # ps for zombienet, required in pure shells on Linux
                     ps
+                    # convenience for developing relayer
+                    killall
 
-                    # typescript
+                    typescript
                     python311
                     nodePackages.pnpm
                     nodejs_22
@@ -53,7 +55,9 @@
                     go
                     gotools
                     gopls
+                    go-ethereum
                     go-outline
+                    go-ethereum
                     gopkgs
                     godef
                     golint
@@ -69,8 +73,14 @@
                     # NOTE: when upgrading rustup, check for a command to install the version in the toolchain file:
                     # https://github.com/rust-lang/rustup/issues/2686
                     rustup
+                    # convenience for clearing unused build outputs
+                    cargo-sweep
 
                     cowsay
+
+                    # smoketest
+                    openssl.dev
+                    pkg-config
                 ];
 
                 shellHook = ''

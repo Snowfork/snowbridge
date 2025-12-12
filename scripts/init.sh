@@ -32,7 +32,8 @@ rustup default stable
 rustup target add wasm32-unknown-unknown
 rustup install --profile minimal $RUST_NIGHTLY_VERSION
 rustup component add --toolchain $RUST_NIGHTLY_VERSION rustfmt
-rustup component add --toolchain stable rust-src
+rustup component add --toolchain stable rust-src rust-analyzer rustfmt
+rustup update
 rustup show
 
 echo "Installing sszgen"
@@ -43,4 +44,13 @@ cargo install cargo-fuzz
 
 echo "Installing web packages"
 (cd web && pnpm install)
+
+echo "Installing forge dependencies"
+pushd contracts
+  forge install foundry-rs/forge-std --no-git
+  forge install https://github.com/dapphub/ds-test --no-git
+  forge install https://github.com/Snowfork/canonical-weth --no-git
+  forge install https://github.com/PaulRBerg/prb-math --no-git
+  forge install https://github.com/OpenZeppelin/openzeppelin-contracts --no-git
+popd
 
