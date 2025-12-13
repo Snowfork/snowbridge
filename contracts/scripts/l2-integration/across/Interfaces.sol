@@ -26,25 +26,3 @@ interface IMessageHandler {
         bytes memory message
     ) external;
 }
-
-struct Call {
-    address target;
-    bytes callData;
-    uint256 value;
-}
-
-struct Instructions {
-    // Calls that will be attempted
-    Call[] calls;
-    // Where the tokens go if any part of the call fails
-    // Leftover tokens are sent here as well if the action succeeds
-    address fallbackRecipient;
-}
-
-struct SwapParams {
-    address inputToken;
-    address outputToken;
-    uint256 inputAmount;
-    uint256 outputAmount;
-    uint256 destinationChainId;
-}

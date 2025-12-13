@@ -4,7 +4,8 @@ pragma solidity 0.8.28;
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "openzeppelin/access/Ownable.sol";
-import {ISpokePool, IMessageHandler, SwapParams, Instructions, Call} from "./Interfaces.sol";
+import {ISpokePool, IMessageHandler} from "./Interfaces.sol";
+import {SwapParams, Instructions, Call} from "./Types.sol";
 
 contract Greeter is Ownable {
     using SafeERC20 for IERC20;
