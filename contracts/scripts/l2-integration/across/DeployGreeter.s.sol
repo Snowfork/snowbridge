@@ -23,9 +23,9 @@ contract DeployGreeter is Script {
 
         bool isL1 = vm.envBool("IS_L1");
         if (isL1) {
-            greeter = new Greeter(SPOKE_POOL, MULTI_CALL_HANDLER);
+            greeter = new Greeter(SPOKE_POOL, BASE_MULTI_CALL_HANDLER);
         } else {
-            greeter = new Greeter(BASE_SPOKE_POOL, BASE_MULTI_CALL_HANDLER);
+            greeter = new Greeter(BASE_SPOKE_POOL, MULTI_CALL_HANDLER);
         }
         vm.stopBroadcast();
         return;
