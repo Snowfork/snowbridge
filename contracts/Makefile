@@ -20,12 +20,6 @@ l1-swap-and-greeting:
 l2-swap-and-greeting:
 	IS_L1=false forge script SendGreeting --chain $(BASE_CHAIN) --rpc-url $(BASE_RPC_URL) --broadcast -vvvv
 
-l2-deploy-snowbridge-frontend:
-	forge script DeploySnowbridgeFrontend --chain $(BASE_CHAIN) --rpc-url $(BASE_RPC_URL) --etherscan-api-key $(ETHERSCAN_API_KEY) --verifier $(VERIFIER) --verify --retries 10 --broadcast -vvvv
-
-l2-send-token-from-snowbridge-frontend:
-	forge script SendTokenBySnowbridgeFrontend --chain $(BASE_CHAIN) --rpc-url $(BASE_RPC_URL) --etherscan-api-key $(ETHERSCAN_API_KEY) --verifier $(VERIFIER) --verify --retries 10 --broadcast -vvvv
-
 deploy-snowbridge-l1-adaptor:
 	forge script DeploySnowbridgeL1Adaptor --chain $(SEPOLIA_CHAIN) --rpc-url $(SEPOLIA_RPC_URL)  --etherscan-api-key $(ETHERSCAN_API_KEY) --verifier $(VERIFIER) --verify --retries 10 --broadcast -vvvv 
 
