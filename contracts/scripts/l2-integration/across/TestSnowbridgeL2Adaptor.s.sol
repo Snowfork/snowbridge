@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.28;
+
 import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
-import {SnowbridgeFrontend} from "./SnowbridgeFrontend.sol";
+import {SnowbridgeL2Adaptor} from "./SnowbridgeL2Adaptor.sol";
 import {USDC, BASE_USDC, CHAIN_ID, BASE_CHAIN_ID} from "./Constants.sol";
 import {ISpokePool, IMessageHandler} from "./Interfaces.sol";
 import {SwapParams, SendParams} from "./Types.sol";
 
-contract SendTokenBySnowbridgeFrontend is Script {
+contract TestSnowbridgeL2Adaptor is Script {
     uint256 internal deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
 
@@ -16,8 +17,8 @@ contract SendTokenBySnowbridgeFrontend is Script {
     function run() public {
         vm.startBroadcast(deployerPrivateKey);
 
-        address payable l2SnowbridgeFrontend =
-            payable(vm.envAddress("L2_SNOWBRIDGE_FRONTEND_ADDRESS"));
+        address payable l2SnowbridgeAdaptor =
+            payable(vm.envAddress("L2_SNOWBRIDGE_ADAPTOR_ADDRESS"));
         SwapParams memory params = SwapParams({
             inputToken: BASE_USDC,
             outputToken: USDC,
@@ -37,10 +38,10 @@ contract SendTokenBySnowbridgeFrontend is Script {
         uint256 nativeFeeAmount =
             sendParams.relayerFee + sendParams.executionFee + 10_000_000_000_000; // adding extra 0.00001 ETH to cover any fee changes
 
-        IERC20(params.inputToken).transfer(l2SnowbridgeFrontend, params.inputAmount);
-        payable(l2SnowbridgeFrontend).transfer(nativeFeeAmount);
+        IERC20(params.inputToken).transfer(l2SnowbridgeAdaptor, params.inputAmount);
+        payable(l2SnowbridgeAdaptor).transfer(nativeFeeAmount);
 
-        SnowbridgeFrontend(payable(l2SnowbridgeFrontend))
+        SnowbridgeL2Adaptor(l2SnowbridgeAdaptor)
             .swapTokenAndCall(params, sendParams, nativeFeeAmount, deployerAddr);
 
         vm.stopBroadcast();

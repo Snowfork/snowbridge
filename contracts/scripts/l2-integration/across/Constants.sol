@@ -18,3 +18,5 @@ address constant BASE_WETH9 = 0x4200000000000000000000000000000000000006;
 
 uint32 constant WESTEND_CHAIN_ID = 420_420_421;
 address constant XCM_PRECOMPILE = address(0xA0000);
+
+uint32 constant WAIT_TIME = 600; // 10 minutes

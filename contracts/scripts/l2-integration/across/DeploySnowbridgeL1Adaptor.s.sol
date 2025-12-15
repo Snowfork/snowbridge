@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity 0.8.28;
+
+import {Script, console} from "forge-std/Script.sol";
+import {SPOKE_POOL, WAIT_TIME} from "./Constants.sol";
+import {SnowbridgeL1Adaptor} from "./SnowbridgeL1Adaptor.sol";
+
+contract DeploySnowbridgeL1Adaptor is Script {
+    SnowbridgeL1Adaptor public snowbridgeL1Adaptor;
+
+    uint256 internal deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
+    address deployerAddr = vm.addr(deployerPrivateKey);
+
+    function setUp() public {}
+
+    function run() public {
+        vm.startBroadcast(deployerPrivateKey);
+
+        snowbridgeL1Adaptor = new SnowbridgeL1Adaptor(SPOKE_POOL, WAIT_TIME);
+        console.log("Snowbridge L1 Adaptor deployed at:", address(snowbridgeL1Adaptor));
+        vm.stopBroadcast();
+        return;
+    }
+}
