@@ -10,7 +10,7 @@ import {
     GatewayV2,
     WETH9,
     BASE_WETH9,
-    WAIT_TIME
+    TIME_BUFFER
 } from "./Constants.sol";
 import {SnowbridgeL2Adaptor} from "./SnowbridgeL2Adaptor.sol";
 
@@ -26,7 +26,7 @@ contract DeploySnowbridgeL2Adaptor is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         snowbridgeL2Adaptor = new SnowbridgeL2Adaptor(
-            BASE_SPOKE_POOL, MULTI_CALL_HANDLER, GatewayV2, WETH9, BASE_WETH9, WAIT_TIME
+            BASE_SPOKE_POOL, MULTI_CALL_HANDLER, GatewayV2, WETH9, BASE_WETH9, TIME_BUFFER
         );
         console.log("Snowbridge L2 Adaptor deployed at:", address(snowbridgeL2Adaptor));
         vm.stopBroadcast();

@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Script, console} from "forge-std/Script.sol";
-import {SPOKE_POOL, WAIT_TIME} from "./Constants.sol";
+import {SPOKE_POOL, TIME_BUFFER} from "./Constants.sol";
 import {SnowbridgeL1Adaptor} from "./SnowbridgeL1Adaptor.sol";
 
 contract DeploySnowbridgeL1Adaptor is Script {
@@ -16,7 +16,7 @@ contract DeploySnowbridgeL1Adaptor is Script {
     function run() public {
         vm.startBroadcast(deployerPrivateKey);
 
-        snowbridgeL1Adaptor = new SnowbridgeL1Adaptor(SPOKE_POOL, WAIT_TIME);
+        snowbridgeL1Adaptor = new SnowbridgeL1Adaptor(SPOKE_POOL, TIME_BUFFER);
         console.log("Snowbridge L1 Adaptor deployed at:", address(snowbridgeL1Adaptor));
         vm.stopBroadcast();
         return;
