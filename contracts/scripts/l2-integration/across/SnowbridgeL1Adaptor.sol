@@ -10,11 +10,11 @@ contract SnowbridgeL1Adaptor {
     using SafeERC20 for IERC20;
 
     ISpokePool public immutable SPOKE_POOL;
-    uint32 public waitTime;
+    uint32 public TIME_BUFFER;
 
-    constructor(address _spokePool, uint32 _waitTime) {
+    constructor(address _spokePool, uint32 _timeBuffer) {
         SPOKE_POOL = ISpokePool(_spokePool);
-        waitTime = _waitTime;
+        TIME_BUFFER = _timeBuffer;
     }
 
     // Swap ERC20 token on L1 to get other token on L2, the fee should be calculated off-chain
@@ -31,8 +31,8 @@ contract SnowbridgeL1Adaptor {
             params.outputAmount,
             params.destinationChainId,
             bytes32(0), // exclusiveRelayer, zero means any relayer can fill
-            uint32(block.timestamp - waitTime), // quoteTimestamp set to 10 minutes before now
-            uint32(block.timestamp + waitTime), // fillDeadline set to 10 minutes after now
+            uint32(block.timestamp - TIME_BUFFER), // quoteTimestamp set to 10 minutes before now
+            uint32(block.timestamp + TIME_BUFFER), // fillDeadline set to 10 minutes after now
             0, // exclusivityDeadline, zero means no exclusivity
             "" // empty message
         );

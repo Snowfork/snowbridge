@@ -7,7 +7,7 @@ import {USDC, BASE_USDC, CHAIN_ID, BASE_CHAIN_ID} from "./Constants.sol";
 import {ISpokePool, IMessageHandler} from "./Interfaces.sol";
 import {SwapParams} from "./Types.sol";
 
-contract SendGreeting is Script {
+contract TestGreeting is Script {
     uint256 internal deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
 
@@ -25,8 +25,8 @@ contract SendGreeting is Script {
             SwapParams memory params = SwapParams({
                 inputToken: USDC,
                 outputToken: BASE_USDC,
-                inputAmount: 110_000, // 0.11 USDC
-                outputAmount: 100_000, // 0.1 USDC
+                inputAmount: 1_100_000, // 1.1 USDC
+                outputAmount: 1_050_000, // 1.05 BASE USDC
                 destinationChainId: BASE_CHAIN_ID
             });
 
@@ -38,7 +38,7 @@ contract SendGreeting is Script {
             SwapParams memory params = SwapParams({
                 inputToken: BASE_USDC,
                 outputToken: USDC,
-                inputAmount: 110_000, // 0.11 USDC
+                inputAmount: 110_000, // 0.11 Base USDC
                 outputAmount: 100_000, // 0.1 USDC
                 destinationChainId: CHAIN_ID
             });

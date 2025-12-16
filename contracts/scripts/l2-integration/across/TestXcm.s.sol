@@ -5,7 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {XCM_PRECOMPILE} from "./Constants.sol";
 import {IXcm} from "./Interfaces.sol";
 
-contract SendXcm is Script {
+contract TestXcm is Script {
     uint256 internal deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
 

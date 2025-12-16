@@ -29,4 +29,6 @@ struct SendParams {
     bytes claimer;
     uint128 executionFee;
     uint128 relayerFee;
+    // Fee to be paid on L2 in native token
+    uint128 l2Fee;
 }
