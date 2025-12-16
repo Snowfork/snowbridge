@@ -13,7 +13,7 @@ fi
 
 # Generate Rust bindings for contracts
 forge bind --module --overwrite \
-    --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token|HelloWorld|Greeter|SnowbridgeL1Adaptor|SnowbridgeL2Adaptor' \
+    --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token|HelloWorld|Greeter|BeefyClient|SnowbridgeL1Adaptor|SnowbridgeL2Adaptor' \
     --bindings-path src/contracts \
     --root $contracts_root
 

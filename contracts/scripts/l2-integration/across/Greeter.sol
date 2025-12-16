@@ -15,7 +15,7 @@ contract Greeter is Ownable {
     address public remoteGreeter;
     mapping(address => string) public greetings;
 
-    constructor(address _spokePool, address _handler) Ownable() {
+    constructor(address _spokePool, address _handler) Ownable(msg.sender) {
         SPOKE_POOL = ISpokePool(_spokePool);
         HANDLER = IMessageHandler(_handler);
     }

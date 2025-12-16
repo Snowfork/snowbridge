@@ -50,7 +50,7 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 
 	url, _ := cmd.Flags().GetString("url")
-	conn := relaychain.NewConnection(url)
+	conn := relaychain.NewConnection(url, nil)
 	err := conn.Connect(ctx)
 	if err != nil {
 		log.WithError(err).Error("Cannot connect.")
