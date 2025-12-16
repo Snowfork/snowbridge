@@ -175,7 +175,7 @@ export function buildTransferXcmFromAssetHub(
                     depositAsset: {
                         assets: {
                             wild: {
-                                allCounted: 2,
+                                allCounted: 3,
                             },
                         },
                         beneficiary: {

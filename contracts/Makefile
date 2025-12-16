@@ -34,6 +34,3 @@ test-snowbridge-l1-adaptor:
 
 test-snowbridge-l2-adaptor:
 	forge script TestSnowbridgeL2Adaptor --chain $(BASE_CHAIN) --rpc-url $(BASE_RPC_URL) --broadcast -vvvv
-
-send-xcm-to-ethereum:
-	forge script SendXcm --chain $(WESTEND_CHAIN_ID) --rpc-url $(WESTEND_ASSET_HUB_RPC_URL) --broadcast -vvvv
