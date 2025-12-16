@@ -1,16 +1,20 @@
 package fisherman
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	ancestryTypes "github.com/lederstrumpf/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/go-substrate-rpc-client/v4/client"
 	"github.com/snowfork/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/snowfork/go-substrate-rpc-client/v4/signature"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	ancestryTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
@@ -60,13 +64,6 @@ func (li *BeefyListener) getKeyOwnershipProof(meta *types.Metadata, latestHash t
 	if !ok {
 		return nil, fmt.Errorf("DEBUG: No value for SetIdSession key: %x", currentEpochIndexKey.Hex())
 	}
-
-	// if offenderSession != currentSession {
-	// epochDurationKey, err := types.CreateStorageKey(meta, "Babe", "EpochDuration")
-	// if err != nil {
-	// 	return err
-	// }
-	// var epochDuration uint64
 
 	epochDurationRaw, err := meta.FindConstantValue("Babe", "EpochDuration")
 	if err != nil {
@@ -212,7 +209,7 @@ func (li *BeefyListener) constructAncestryProofPayload(commitment contracts.Beef
 	return payload, nil
 }
 
-func (li *BeefyListener) getLatestBlockInfo() (types.Hash, *types.SignedBlock, error) {
+func (li *BeefyListener) getLatestBeefyBlock() (types.Hash, *types.SignedBlock, error) {
 	latestHash, err := li.relaychainConn.API().RPC.Chain.GetFinalizedHead()
 	if err != nil {
 		return types.Hash{}, nil, fmt.Errorf("get finalized head: %w", err)
@@ -233,7 +230,7 @@ func (li *BeefyListener) signedExtrinsicFromCall(meta *types.Metadata, call type
 		return ext, fmt.Errorf("get signer info: %w", err)
 	}
 
-	latestHash, latestBlock, err := li.getLatestBlockInfo()
+	latestHash, latestBlock, err := li.getLatestBeefyBlock()
 	if err != nil {
 		return ext, fmt.Errorf("get latest block info: %w", err)
 	}
@@ -272,7 +269,6 @@ func (li *BeefyListener) signedExtrinsicFromCall(meta *types.Metadata, call type
 func (li *BeefyListener) watchExtrinsicSubscription(sub *author.ExtrinsicStatusSubscription) error {
 	for {
 		status := <-sub.Chan()
-		fmt.Printf("Transaction status: %#v\n", status)
 
 		if status.IsDropped || status.IsInvalid || status.IsUsurped || status.IsFinalityTimeout {
 			sub.Unsubscribe()
@@ -283,9 +279,6 @@ func (li *BeefyListener) watchExtrinsicSubscription(sub *author.ExtrinsicStatusS
 			return fmt.Errorf("extrinsic removed from the transaction pool")
 		}
 
-		if status.IsInBlock {
-			log.Info("Completed at block hash ", status.AsInBlock.Hex())
-		}
 		if status.IsFinalized {
 			log.Info("Finalized at block hash ", status.AsFinalized.Hex())
 			sub.Unsubscribe()
@@ -293,4 +286,44 @@ func (li *BeefyListener) watchExtrinsicSubscription(sub *author.ExtrinsicStatusS
 		}
 	}
 	return nil
+}
+
+func decodeTransactionCallData(callData []byte) (string, map[string]interface{}, error) {
+	// Parse the ABI
+	parsedABI, err := abi.JSON(strings.NewReader(contracts.BeefyClientMetaData.ABI))
+	if err != nil {
+		return "", nil, fmt.Errorf("parse ABI: %w", err)
+	}
+
+	// Get the method signature from the first 4 bytes
+	methodSig := callData[:4]
+	method, err := parsedABI.MethodById(methodSig)
+	if err != nil {
+		return "", nil, fmt.Errorf("get method from signature: %w", err)
+	}
+
+	// Decode the parameters
+	params, err := method.Inputs.Unpack(callData[4:])
+	if err != nil {
+		return "", nil, fmt.Errorf("unpack parameters: %w", err)
+	}
+
+	// Convert to map for handling
+	decoded := make(map[string]interface{})
+	for i, param := range params {
+		decoded[method.Inputs[i].Name] = param
+	}
+
+	return method.Name, decoded, nil
+}
+
+func (li *BeefyListener) getTransactionCallData(ctx context.Context, txHash common.Hash) ([]byte, error) {
+	// Get the transaction
+	tx, _, err := li.ethereumConn.Client().TransactionByHash(ctx, txHash)
+	if err != nil {
+		return nil, fmt.Errorf("get transaction: %w", err)
+	}
+
+	// Get the input data
+	return tx.Data(), nil
 }

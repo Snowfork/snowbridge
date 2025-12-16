@@ -32,7 +32,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 	log.Info("Creating worker")
 
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
-	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint, keypair2.AsKeyringPair())
+	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint, nil)
 
 	ethereumConnWriter := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
 	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)

@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -76,275 +74,102 @@ func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 		case err := <-sub.Err():
 			return fmt.Errorf("header subscription: %w", err)
 		case gethheader := <-headers:
-			// TODO: for slashing, we may want to
-			// 1. scan older blocks as well if the latest BEEFY commitment stored on Ethereum doesn't match the commitment at that block # on the relay chain
-			// 2. potentially scan older blocks even if latest BEEFY commitment is sound (honest relayers may have saved the day, but the adversaries should still be slashed)
-			// 3. scan older tickets as well, since they may have optimistically tried their luck on the subsampling without a `submitFinal` call
-			// in all cases, this scan should not go past the slashability horizon, i.e. only be performed where the validators are still bonded
-			// this may also have to query the relay chain for any reported equivocations
 			blockNumber := gethheader.Number.Uint64()
-			contractNewMMRRootEvents, err := li.queryNewMMRRootEvents(ctx, blockNumber, &blockNumber)
+			err := li.checkSubmitInitialEquivocation(ctx, blockNumber)
 			if err != nil {
-				return fmt.Errorf("query NewMMRRoot event logs in block %v: %w", blockNumber, err)
+				return fmt.Errorf("report submit initial equivocation %v: %w", blockNumber, err)
 			}
-
-			if len(contractNewMMRRootEvents) > 0 {
-				log.Info(fmt.Sprintf("Found %d BeefyLightClient.NewMMRRoot events in block %d", len(contractNewMMRRootEvents), blockNumber))
-				// Only process the last emitted event in the block
-				event := contractNewMMRRootEvents[len(contractNewMMRRootEvents)-1]
-				log.WithFields(log.Fields{
-					"beefyBlockNumber":    event.BlockNumber,
-					"ethereumBlockNumber": event.Raw.BlockNumber,
-					"ethereumTxHash":      event.Raw.TxHash.Hex(),
-				}).Info("Witnessed a new MMRRoot event")
-			}
-
-			contractNewTicketEvents, err := li.queryNewTicketEvents(ctx, blockNumber, &blockNumber)
+			err = li.checkSubmitFinalEquivocation(ctx, blockNumber)
 			if err != nil {
-				return fmt.Errorf("query NewTicket event logs in block %v: %w", blockNumber, err)
-			}
-
-			if len(contractNewTicketEvents) > 0 {
-				log.Info(fmt.Sprintf("Found %d BeefyLightClient.NewTicket events in block %d", len(contractNewTicketEvents), blockNumber))
-				// Iterate over all NewTicket events in the block
-				for _, event := range contractNewTicketEvents {
-
-					callData, err := li.getTransactionCallData(ctx, event.Raw.TxHash)
-					if err != nil {
-						return fmt.Errorf("get transaction call data: %w", err)
-					}
-
-					log.WithFields(log.Fields{
-						"beefyBlockNumber":    event.BlockNumber,
-						"ethereumBlockNumber": event.Raw.BlockNumber,
-						"ethereumTxHash":      event.Raw.TxHash.Hex(),
-						"ethereumTxIndex":     event.Raw.TxHash.Hex(),
-						"rawEvent":            event.Raw,
-					}).Debug("Witnessed a new Ticket event")
-
-					commitment, err := li.parseSubmitInitialCommitment(callData)
-					if err != nil {
-						log.WithError(err).Warning("Failed to decode transaction call data")
-					}
-					latestHash, latestBlock, err := li.getLatestBlockInfo()
-					if err != nil {
-						return fmt.Errorf("get latest block info: %w", err)
-					}
-					latestBlockNumber := uint64(latestBlock.Block.Header.Number)
-
-					if event.BlockNumber > uint64(latestBlockNumber) {
-						// Future block equivocation handling
-						validatorProof, err := li.parseSubmitInitialProof(callData)
-						if err != nil {
-							log.WithError(err).Warning("Failed to decode transaction call data")
-						}
-						// Future block equivocation handling
-						log.WithFields(log.Fields{
-							"commitment.payload.data": fmt.Sprintf("%#x", commitment.Payload[0].Data),
-							"latestBlock":             latestBlockNumber,
-						}).Warning("Detected submitInitial for future block")
-
-						meta, err := li.relaychainConn.API().RPC.State.GetMetadataLatest()
-						if err != nil {
-							return fmt.Errorf("get metadata: %w", err)
-						}
-
-						extrinsicName := "Beefy.report_future_block_voting"
-						// call: c805
-						// build vote payload for equivocation proof
-						offenderPubKeyCompressed, offenderSig, err := getOffenderPubKeyAndSig(commitment, validatorProof)
-						if err != nil {
-							return fmt.Errorf("get offender pubkey and sig: %w", err)
-						}
-
-						payload1 := constructVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
-
-						// keyOwnership Proof
-						keyOwnershipProof, err := li.getKeyOwnershipProof(meta, latestHash, latestBlockNumber, offenderPubKeyCompressed, commitment.ValidatorSetID)
-						if err != nil {
-							return fmt.Errorf("get key ownership proof: %w", err)
-						}
-
-						payload2 := keyOwnershipProof[3:]
-						// payload := []interface{}{types.NewBytes(payload1), types.NewBytes(payload2)}
-						// combine payload1 and payload2
-						payload := []interface{}{types.NewData(append(payload1, payload2...))}
-						c, err := types.NewCall(meta, extrinsicName, payload...)
-						// c, err := types.NewCall(meta, extrinsicName, types.NewBytes(payload1), types.NewBytes(payload2))
-						if err != nil {
-							return fmt.Errorf("create call: %w", err)
-						}
-
-						ext, err := li.signedExtrinsicFromCall(meta, c)
-
-						// Send the extrinsic
-						sub, err := li.relaychainConn.API().RPC.Author.SubmitAndWatchExtrinsic(ext)
-						// res, err := li.relaychainConn.API().RPC.Author.SubmitExtrinsic(ext)
-						if err != nil {
-							log.Error("Failed to submit extrinsic: ", err, sub)
-						} else {
-							err := li.watchExtrinsicSubscription(sub)
-							log.Info("Extrinsic submitted: ", sub)
-							if err != nil {
-								log.Error("Extrinsic submission failed: ", err)
-							} else {
-								log.Info("Equivocation report complete")
-							}
-						}
-
-					} else {
-						canonicalBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(event.BlockNumber)
-						if err != nil {
-							return fmt.Errorf("fetch block hash: %w", err)
-						}
-						canonicalMmrRootHash, err := li.relaychainConn.GetMMRRootHash(canonicalBlockHash)
-						if err != nil {
-							return fmt.Errorf("retrieve MMR root hash at block %v: %w", canonicalBlockHash.Hex(), err)
-						} else {
-							validatorProof, err := li.parseSubmitInitialProof(callData)
-							if err != nil {
-								log.WithError(err).Warning("Failed to decode transaction call data")
-							}
-							log.WithFields(log.Fields{
-								"commitment":               commitment,
-								"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
-								"correspondingMMRRootHash": canonicalMmrRootHash,
-							}).Debug("Decoded transaction call data for NewTicket event")
-							if canonicalMmrRootHash != types.NewHash(commitment.Payload[0].Data) {
-								log.WithFields(log.Fields{
-									"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
-									"proof":                    validatorProof,
-									"correspondingMMRRootHash": canonicalMmrRootHash,
-								}).Warning("MMR root hash does NOT match the commitment payload")
-
-								meta, err := li.relaychainConn.API().RPC.State.GetMetadataLatest()
-								if err != nil {
-									return fmt.Errorf("get metadata: %w", err)
-								}
-
-								extrinsicName := "Beefy.report_fork_voting"
-								// call: c803
-								// build vote payload for equivocation proof
-								offenderPubKeyCompressed, offenderSig, err := getOffenderPubKeyAndSig(commitment, validatorProof)
-								if err != nil {
-									return fmt.Errorf("get offender pubkey and sig: %w", err)
-								}
-
-								payload1 := constructVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
-
-								// Ancestry Proof
-								payload2, err := li.constructAncestryProofPayload(commitment, latestHash)
-								if err != nil {
-									return fmt.Errorf("build ancestry proof payload: %w", err)
-								}
-
-								// Header
-								payload3, err := types.EncodeToBytes(latestBlock.Block.Header)
-
-								// Key Ownership Proof
-								keyOwnershipProof, err := li.getKeyOwnershipProof(meta, latestHash, latestBlockNumber, offenderPubKeyCompressed, commitment.ValidatorSetID)
-								if err != nil {
-									return fmt.Errorf("get key ownership proof: %w", err)
-								}
-
-								payload4 := keyOwnershipProof[3:]
-								// payload := []interface{}{types.NewBytes(payload1), types.NewBytes(payload2)}
-								// combine payload1 and payload2
-								payloadEquivocationProof := append(payload1, payload2...)
-								payloadEquivocationProof = append(payloadEquivocationProof, payload3...)
-								payload := []interface{}{types.NewData(append(payloadEquivocationProof, payload4...))}
-								c, err := types.NewCall(meta, extrinsicName, payload...)
-								// c, err := types.NewCall(meta, extrinsicName, types.NewBytes(payload1), types.NewBytes(payload2))
-								if err != nil {
-									return fmt.Errorf("create call: %w", err)
-								}
-
-								ext, err := li.signedExtrinsicFromCall(meta, c)
-
-								// Send the extrinsic
-								sub, err := li.relaychainConn.API().RPC.Author.SubmitAndWatchExtrinsic(ext)
-								if err != nil {
-									log.Error("Failed to submit extrinsic: ", err, sub)
-								} else {
-									err := li.watchExtrinsicSubscription(sub)
-									if err != nil {
-										log.Error("Extrinsic submission failed: ", err)
-									} else {
-										log.Info("Equivocation report complete")
-									}
-								}
-
-							} else {
-								log.Debug("MMR root hash DOES match the commitment payload")
-							}
-						}
-					}
-				}
+				return fmt.Errorf("report submit final equivocation %v: %w", blockNumber, err)
 			}
 		}
 	}
 }
 
-func (li *BeefyListener) getTransactionCallData(ctx context.Context, txHash common.Hash) ([]byte, error) {
-	// Get the transaction
-	tx, _, err := li.ethereumConn.Client().TransactionByHash(ctx, txHash)
+// handles checking submitInitial and reporting of equivocations for a given block number
+func (li *BeefyListener) checkSubmitInitialEquivocation(ctx context.Context, blockNumber uint64) error {
+
+	latestBeefyHash, _, err := li.getLatestBeefyBlock()
 	if err != nil {
-		return nil, fmt.Errorf("get transaction: %w", err)
+		return fmt.Errorf("get latest Beefy block: %w", err)
 	}
 
-	// Get the input data
-	return tx.Data(), nil
+	// Check NewTicket events for equivocation
+	contractNewTicketEvents, err := li.queryNewTicketEvents(ctx, blockNumber, &blockNumber)
+	if err != nil {
+		return fmt.Errorf("query NewTicket event logs in block %v: %w", blockNumber, err)
+	}
+
+	if len(contractNewTicketEvents) == 0 {
+		return nil
+	}
+
+	log.Info(fmt.Sprintf("Found %d BeefyLightClient.NewTicket events in block %d", len(contractNewTicketEvents), blockNumber))
+	// Iterate over all NewTicket events in the block
+	for _, event := range contractNewTicketEvents {
+		commitment, validatorProof, err := li.parseSubmitInitial(ctx, event.Raw)
+		err = li.reportFutureBlockEquivocation(ctx, commitment, validatorProof, latestBeefyHash)
+		if err != nil {
+			return fmt.Errorf("report future block equivocation: %w", err)
+		}
+		err = li.reportForkEquivocation(ctx, commitment, validatorProof, latestBeefyHash)
+		if err != nil {
+			return fmt.Errorf("report fork equivocation: %w", err)
+		}
+	}
+	return nil
 }
 
-func (li *BeefyListener) decodeTransactionCallData(callData []byte) (string, map[string]interface{}, error) {
-	// Parse the ABI
-	parsedABI, err := abi.JSON(strings.NewReader(contracts.BeefyClientMetaData.ABI))
+// handles checking submitFinal and reporting of equivocations for a given block number
+func (li *BeefyListener) checkSubmitFinalEquivocation(ctx context.Context, blockNumber uint64) error {
+	latestBeefyHash, _, err := li.getLatestBeefyBlock()
 	if err != nil {
-		return "", nil, fmt.Errorf("parse ABI: %w", err)
+		return fmt.Errorf("get latest Beefy block: %w", err)
 	}
 
-	// Get the method signature from the first 4 bytes
-	methodSig := callData[:4]
-	method, err := parsedABI.MethodById(methodSig)
+	// Also check NewMMRRoot events for equivocation
+	contractNewMMRRootEvents, err := li.queryNewMMRRootEvents(ctx, blockNumber, &blockNumber)
 	if err != nil {
-		return "", nil, fmt.Errorf("get method from signature: %w", err)
+		return fmt.Errorf("query NewMMRRoot event logs in block %v: %w", blockNumber, err)
 	}
 
-	// Decode the parameters
-	params, err := method.Inputs.Unpack(callData[4:])
-	if err != nil {
-		return "", nil, fmt.Errorf("unpack parameters: %w", err)
+	if len(contractNewMMRRootEvents) == 0 {
+		return nil
 	}
-
-	// Convert to map for handling
-	decoded := make(map[string]interface{})
-	for i, param := range params {
-		log.WithFields(log.Fields{
-			"name":      method.Inputs[i].Name,
-			"param":     param,
-			"param raw": param,
-		}).Debug("Decoded transaction call data for NewTicket event")
-		decoded[method.Inputs[i].Name] = param
+	log.Info(fmt.Sprintf("Found %d BeefyLightClient.NewMMRRoot events in block %d", len(contractNewMMRRootEvents), blockNumber))
+	// Iterate over all NewMMRRoot events in the block
+	for _, event := range contractNewMMRRootEvents {
+		commitment, validatorProofs, err := li.parseSubmitFinal(ctx, event.Raw)
+		for _, validatorProof := range validatorProofs {
+			err = li.reportFutureBlockEquivocation(ctx, commitment, validatorProof, latestBeefyHash)
+			if err != nil {
+				return fmt.Errorf("report future block equivocation: %w", err)
+			}
+			err = li.reportForkEquivocation(ctx, commitment, validatorProof, latestBeefyHash)
+			if err != nil {
+				return fmt.Errorf("report fork equivocation: %w", err)
+			}
+		}
 	}
-
-	return method.Name, decoded, nil
+	return nil
 }
 
-// decodes the commitment in a submitInitial call
-// only need to parse the commitment initially to get blocknumber & payload, and then if those do not match the relay chain's canonical payload, the validator proof is parsed in `parseSubmitInitialRemainder` to extract signature and validator who authored the signature
-func (li *BeefyListener) parseSubmitInitialCommitment(callData []byte) (contracts.BeefyClientCommitment, error) {
+// decodes the commitment in submitInitial or submitFinal call
+func (li *BeefyListener) parseCommitment(callData []byte) (contracts.BeefyClientCommitment, error) {
 	// decode the callData
-	methodName, decoded, err := li.decodeTransactionCallData(callData)
+	methodName, decoded, err := decodeTransactionCallData(callData)
 	if err != nil {
 		return contracts.BeefyClientCommitment{}, err
 	}
-	if methodName != "submitInitial" {
+	if methodName != "submitInitial" && methodName != "submitFinal" {
 		return contracts.BeefyClientCommitment{}, fmt.Errorf("unexpected method name: %s", methodName)
 	}
 
 	log.WithFields(log.Fields{
 		"raw commitment": decoded["commitment"],
-	}).Debug("Decoded transaction call data for NewTicket event")
+		"method":         methodName,
+	}).Debug("Decoded transaction call data")
 
 	// Extract the commitment
 	commitmentRaw := decoded["commitment"].(struct {
@@ -376,20 +201,18 @@ func (li *BeefyListener) parseSubmitInitialCommitment(callData []byte) (contract
 // decodes the remainder of a submitInitial call - only needed if equivocation detected
 func (li *BeefyListener) parseSubmitInitialProof(callData []byte) (contracts.BeefyClientValidatorProof, error) {
 	// decode the callData
-	methodName, decoded, err := li.decodeTransactionCallData(callData)
+	methodName, decoded, err := decodeTransactionCallData(callData)
 	if err != nil {
 		return contracts.BeefyClientValidatorProof{}, err
 	}
 	if methodName != "submitInitial" {
 		return contracts.BeefyClientValidatorProof{}, fmt.Errorf("unexpected method name: %s", methodName)
 	}
-
+	// bitfield := decoded["bitfield"].([]*big.Int)
 	log.WithFields(log.Fields{
 		// "raw commitment": decoded["commitment"],
 		"raw proof": decoded["proof"],
-	}).Debug("Decoded transaction call data for NewTicket event")
-
-	// bitfield := decoded["bitfield"].([]*big.Int)
+	}).Debug("Decoded proof from submitInitial")
 
 	// Extract validator proof
 	proofRaw := decoded["proof"].(struct {
@@ -411,6 +234,50 @@ func (li *BeefyListener) parseSubmitInitialProof(callData []byte) (contracts.Bee
 	}
 
 	return proof, nil
+}
+
+// decodes the remainder of a submitFinal call - only needed if equivocation detected
+func (li *BeefyListener) parseSubmitFinalProofs(callData []byte) ([]contracts.BeefyClientValidatorProof, error) {
+	// decode the callData
+	methodName, decoded, err := decodeTransactionCallData(callData)
+	if err != nil {
+		return nil, fmt.Errorf("decodeTransactionCallData: %w", err)
+	}
+	if methodName != "submitFinal" {
+		return nil, fmt.Errorf("unexpected method name: %s", methodName)
+	}
+
+	log.WithFields(log.Fields{
+		// "raw commitment": decoded["commitment"],
+		"raw proofs": decoded["proofs"],
+	}).Debug("Decoded proofs from submitFinal")
+
+	// Extract validator proof
+	proofsRaw := decoded["proofs"].([]struct {
+		V       uint8          `json:"v"`
+		R       [32]byte       `json:"r"`
+		S       [32]byte       `json:"s"`
+		Index   *big.Int       `json:"index"`
+		Account common.Address `json:"account"`
+		Proof   [][32]byte     `json:"proof"`
+	})
+
+	proofs := make([]contracts.BeefyClientValidatorProof, len(proofsRaw))
+
+	for i, pr := range proofsRaw {
+
+		proof := contracts.BeefyClientValidatorProof{
+			V:       pr.V,
+			R:       pr.R,
+			S:       pr.S,
+			Index:   pr.Index,
+			Account: pr.Account,
+			Proof:   pr.Proof,
+		}
+		proofs[i] = proof
+	}
+
+	return proofs, nil
 }
 
 // queryNewMMRRootEvents queries NewMMRRoot events from the BeefyClient contract
@@ -468,20 +335,188 @@ func (li *BeefyListener) queryNewTicketEvents(
 	return events, nil
 }
 
-// Fetch the latest verified beefy block number and hash from Ethereum
-func (li *BeefyListener) fetchLatestBeefyBlock(ctx context.Context) (uint64, types.Hash, error) {
-	number, err := li.beefyClientContract.LatestBeefyBlock(&bind.CallOpts{
-		Pending: false,
-		Context: ctx,
-	})
+// handles reporting of future block equivocations
+func (li *BeefyListener) reportFutureBlockEquivocation(ctx context.Context, commitment contracts.BeefyClientCommitment, validatorProof contracts.BeefyClientValidatorProof, latestHash types.Hash) error {
+	latestBlock, err := li.relaychainConn.API().RPC.Chain.GetBlock(latestHash)
 	if err != nil {
-		return 0, types.Hash{}, fmt.Errorf("fetch latest beefy block from light client: %w", err)
+		return fmt.Errorf("get block: %w", err)
+	}
+	latestBlockNumber := uint64(latestBlock.Block.Header.Number)
+
+	if uint64(commitment.BlockNumber) > uint64(latestBlockNumber) {
+		// Future block equivocation handling
+		log.WithFields(log.Fields{
+			"commitment.payload.data": fmt.Sprintf("%#x", commitment.Payload[0].Data),
+			"latestBlock":             latestBlockNumber,
+		}).Warning("Detected submitInitial for future block")
+
+		meta, err := li.relaychainConn.API().RPC.State.GetMetadataLatest()
+		if err != nil {
+			return fmt.Errorf("get metadata: %w", err)
+		}
+
+		extrinsicName := "Beefy.report_future_block_voting"
+		// call: c805
+		// build vote payload for equivocation proof
+		offenderPubKeyCompressed, offenderSig, err := getOffenderPubKeyAndSig(commitment, validatorProof)
+		if err != nil {
+			return fmt.Errorf("get offender pubkey and sig: %w", err)
+		}
+
+		payload1 := constructVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
+
+		// keyOwnership Proof
+		keyOwnershipProof, err := li.getKeyOwnershipProof(meta, latestHash, latestBlockNumber, offenderPubKeyCompressed, commitment.ValidatorSetID)
+		if err != nil {
+			return fmt.Errorf("get key ownership proof: %w", err)
+		}
+
+		payload2 := keyOwnershipProof[3:]
+		// payload := []interface{}{types.NewBytes(payload1), types.NewBytes(payload2)}
+		// combine payload1 and payload2
+		payload := []interface{}{types.NewData(append(payload1, payload2...))}
+		c, err := types.NewCall(meta, extrinsicName, payload...)
+		// c, err := types.NewCall(meta, extrinsicName, types.NewBytes(payload1), types.NewBytes(payload2))
+		if err != nil {
+			return fmt.Errorf("create call: %w", err)
+		}
+
+		ext, err := li.signedExtrinsicFromCall(meta, c)
+
+		// Send the extrinsic
+		sub, err := li.relaychainConn.API().RPC.Author.SubmitAndWatchExtrinsic(ext)
+		if err != nil {
+			return fmt.Errorf("submit and watch extrinsic: %w", err)
+		}
+		err = li.watchExtrinsicSubscription(sub)
+		if err != nil {
+			return fmt.Errorf("Extrinsic submission failed: %w", err)
+		}
+		log.Info("Future block equivocation report complete")
 	}
 
-	hash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(number)
+	return nil
+}
+
+// handles reporting of fork equivocations
+func (li *BeefyListener) reportForkEquivocation(ctx context.Context, commitment contracts.BeefyClientCommitment, validatorProof contracts.BeefyClientValidatorProof, latestHash types.Hash) error {
+	latestBlock, err := li.relaychainConn.API().RPC.Chain.GetBlock(latestHash)
 	if err != nil {
-		return 0, types.Hash{}, fmt.Errorf("fetch block hash: %w", err)
+		return fmt.Errorf("get block: %w", err)
+	}
+	latestBlockNumber := uint64(latestBlock.Block.Header.Number)
+
+	canonicalBlockHash, err := li.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(commitment.BlockNumber))
+	if err != nil {
+		return fmt.Errorf("fetch block hash: %w", err)
+	}
+	canonicalMmrRootHash, err := li.relaychainConn.GetMMRRootHash(canonicalBlockHash)
+
+	if err != nil {
+		return fmt.Errorf("retrieve MMR root hash at block %v: %w", canonicalBlockHash.Hex(), err)
 	}
 
-	return number, hash, nil
+	if canonicalMmrRootHash != types.NewHash(commitment.Payload[0].Data) {
+		// Fork equivocation handling
+		log.WithFields(log.Fields{
+			"commitment":               commitment,
+			"commitment.payload.data":  fmt.Sprintf("%#x", commitment.Payload[0].Data),
+			"proof":                    validatorProof,
+			"correspondingMMRRootHash": canonicalMmrRootHash,
+		}).Warning("MMR root hash does NOT match the commitment payload")
+
+		meta, err := li.relaychainConn.API().RPC.State.GetMetadataLatest()
+		if err != nil {
+			return fmt.Errorf("get metadata: %w", err)
+		}
+
+		extrinsicName := "Beefy.report_fork_voting"
+		// call: c803
+		// build vote payload for equivocation proof
+		offenderPubKeyCompressed, offenderSig, err := getOffenderPubKeyAndSig(commitment, validatorProof)
+		if err != nil {
+			return fmt.Errorf("get offender pubkey and sig: %w", err)
+		}
+
+		payload1 := constructVotePayload(commitment, offenderPubKeyCompressed, offenderSig)
+
+		// Ancestry Proof
+		payload2, err := li.constructAncestryProofPayload(commitment, latestHash)
+		if err != nil {
+			return fmt.Errorf("build ancestry proof payload: %w", err)
+		}
+
+		// Header
+		payload3, err := types.EncodeToBytes(latestBlock.Block.Header)
+
+		// Key Ownership Proof
+		keyOwnershipProof, err := li.getKeyOwnershipProof(meta, latestHash, latestBlockNumber, offenderPubKeyCompressed, commitment.ValidatorSetID)
+		if err != nil {
+			return fmt.Errorf("get key ownership proof: %w", err)
+		}
+
+		payload4 := keyOwnershipProof[3:]
+		// payload := []interface{}{types.NewBytes(payload1), types.NewBytes(payload2)}
+		// combine payload1 and payload2
+		payloadEquivocationProof := append(payload1, payload2...)
+		payloadEquivocationProof = append(payloadEquivocationProof, payload3...)
+		payload := []interface{}{types.NewData(append(payloadEquivocationProof, payload4...))}
+		c, err := types.NewCall(meta, extrinsicName, payload...)
+		// c, err := types.NewCall(meta, extrinsicName, types.NewBytes(payload1), types.NewBytes(payload2))
+		if err != nil {
+			return fmt.Errorf("create call: %w", err)
+		}
+
+		ext, err := li.signedExtrinsicFromCall(meta, c)
+
+		// Send the extrinsic
+		sub, err := li.relaychainConn.API().RPC.Author.SubmitAndWatchExtrinsic(ext)
+		if err != nil {
+			return fmt.Errorf("submit and watch extrinsic: %w", err)
+		}
+		err = li.watchExtrinsicSubscription(sub)
+		if err != nil {
+			return fmt.Errorf("Extrinsic submission failed: %w", err)
+		}
+		log.Info("Fork equivocation report complete")
+	}
+	return nil
+}
+
+// decodes the submitInitial call
+func (li *BeefyListener) parseSubmitInitial(ctx context.Context, eventLog gethTypes.Log) (commitment contracts.BeefyClientCommitment, validatorProof contracts.BeefyClientValidatorProof, err error) {
+	callData, err := li.getTransactionCallData(ctx, eventLog.TxHash)
+	if err != nil {
+		return commitment, validatorProof, fmt.Errorf("get transaction call data: %w", err)
+	}
+
+	commitment, err = li.parseCommitment(callData)
+	if err != nil {
+		return commitment, validatorProof, fmt.Errorf("parse submit initial commitment: %w", err)
+	}
+
+	validatorProof, err = li.parseSubmitInitialProof(callData)
+	if err != nil {
+		return commitment, validatorProof, fmt.Errorf("get transaction call data: %w", err)
+	}
+	return commitment, validatorProof, nil
+}
+
+// decodes the submitFinal call
+func (li *BeefyListener) parseSubmitFinal(ctx context.Context, eventLog gethTypes.Log) (commitment contracts.BeefyClientCommitment, validatorProofs []contracts.BeefyClientValidatorProof, err error) {
+	callData, err := li.getTransactionCallData(ctx, eventLog.TxHash)
+	if err != nil {
+		return commitment, validatorProofs, fmt.Errorf("get transaction call data: %w", err)
+	}
+
+	commitment, err = li.parseCommitment(callData)
+	if err != nil {
+		return commitment, validatorProofs, fmt.Errorf("parse submit initial commitment: %w", err)
+	}
+
+	validatorProofs, err = li.parseSubmitFinalProofs(callData)
+	if err != nil {
+		return commitment, validatorProofs, fmt.Errorf("get transaction call data: %w", err)
+	}
+	return commitment, validatorProofs, nil
 }
