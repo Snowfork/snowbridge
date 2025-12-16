@@ -345,6 +345,7 @@ contract BeefyClient {
         if (block.number > ticket.blockNumber + randaoCommitDelay + randaoCommitExpiration) {
             delete tickets[ticketID];
             emit TicketExpired();
+            return;
         }
 
         // Post-merge, the difficulty opcode now returns PREVRANDAO
