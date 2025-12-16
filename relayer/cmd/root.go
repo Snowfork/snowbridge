@@ -38,6 +38,7 @@ func init() {
 	rootCmd.AddCommand(listBeaconStateCmd())
 	rootCmd.AddCommand(generateDeliveryProofFixtureCmd())
 	rootCmd.AddCommand(syncBeefyCommitmentCmd())
+	rootCmd.AddCommand(reportEquivocationCmd())
 }
 
 func Execute() {
