@@ -27,14 +27,17 @@ contract TestSnowbridgeL2Adaptor is Script {
             outputAmount: 100_000, // 0.1 USDC
             destinationChainId: CHAIN_ID
         });
-        //Parameter from https://sepolia.etherscan.io/tx/0xe666671edd1559666990d685b53d5982b2b752444a3652d7f90fc5a6c33b2c09
+        // Send the 0.1 USDC to Polkadot, tx from https://sepolia.etherscan.io/tx/0x7068be9a9fecd2d3fbdca0e28bf1a84d4c05789dacd34cc46eef0d2a4fdd43fb
+        bytes[] memory assets = new bytes[](1);
+        assets[0] =
+            hex"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000001c7d4b196cb0c7b01d743fbc6116a902379c723800000000000000000000000000000000000000000000000000000000000186a0";
         SendParams memory sendParams = SendParams({
-            xcm: hex"050c140d010208000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a2c6f501789818b10452a5835054d3fd74c288d611ec97f194a997bef41f68fdb40",
-            assets: new bytes[](0),
+            xcm: hex"050c140d010208000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a2cfdbcb5bc4870d25ce6b36b2d6d927b00a1373ebe803d5fd20fcbe8c5c3c866bb",
+            assets: assets,
             claimer: hex"000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a",
-            executionFee: 33_258_626_953_769, // 0.000033258626953769 ETH
-            relayerFee: 552_354_417_681_961, // 0.000552354417681961 ETH
-            l2Fee: 10_000_000_000_000
+            executionFee: 33_329_707_255_987,
+            relayerFee: 559_885_563_730_065,
+            l2Fee: 20_000_000_000_000
         });
 
         uint256 nativeFeeAmount =

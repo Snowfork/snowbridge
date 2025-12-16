@@ -77,8 +77,13 @@ contract SnowbridgeL2Adaptor {
         );
 
         // A second deposit for the actual token swap and cross-chain call
-        calls = new Call[](1);
+        calls = new Call[](2);
         calls[0] = Call({
+            target: address(params.outputToken),
+            callData: abi.encodeCall(IERC20.approve, (address(GATEWAY), params.outputAmount)),
+            value: 0
+        });
+        calls[1] = Call({
             target: address(GATEWAY),
             callData: abi.encodeCall(
                 IGatewayV2.v2_sendMessage,

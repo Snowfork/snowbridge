@@ -3,7 +3,7 @@ import { Asset, AssetMap, ChainProperties } from "@snowbridge/base-types"
 import { PNAMap, SubstrateAccount } from "../assets_v2"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
-import { erc20Location, HERE_LOCATION, parachainLocation } from "../xcmBuilder"
+import { DOT_LOCATION, erc20Location, HERE_LOCATION, parachainLocation } from "../xcmBuilder"
 
 export abstract class ParachainBase {
     provider: ApiPromise
@@ -131,12 +131,23 @@ export abstract class ParachainBase {
     }
 
     async calculateDeliveryFeeInDOT(destParachainId: number, xcm: any): Promise<bigint> {
-        const result = (
-            await this.provider.call.xcmPaymentApi.queryDeliveryFees(
-                { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
-                xcm,
-            )
-        ).toPrimitive() as any
+        let result
+        try {
+            result = (
+                await this.provider.call.xcmPaymentApi.queryDeliveryFees(
+                    { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
+                    xcm,
+                )
+            ).toPrimitive() as any
+        } catch (e) {
+            result = (
+                await this.provider.call.xcmPaymentApi.queryDeliveryFees(
+                    { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
+                    xcm,
+                    { v4: DOT_LOCATION },
+                )
+            ).toPrimitive() as any
+        }
         if (!result.ok) {
             console.error(result)
             throw Error(`Can not query XCM Weight.`)
