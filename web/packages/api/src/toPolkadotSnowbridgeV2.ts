@@ -30,6 +30,8 @@ export type DeliveryFee = {
     extrinsicFeeDot: bigint // Fee for submitting to BridgeHub in DOT (part of relayerFee)
     extrinsicFeeEther: bigint // Fee for submitting to BridgeHub in Ether (part of relayerFee)
     totalFeeInWei: bigint
+    l2BridgeFeeInEther?: bigint // Fee for the call to fund the L1 handler is paid in native Ether.
+    l2BridgeFeeInL2Token?: bigint // Fee for the actual token swap on L2 is paid in the input token.
 }
 
 export type Transfer = {
@@ -42,6 +44,7 @@ export type Transfer = {
         amount: bigint
         fee: DeliveryFee
         customXcm?: any[] // Optional custom XCM instructions
+        l2TokenAddress?: string
     }
     computed: {
         gatewayAddress: string
@@ -55,6 +58,7 @@ export type Transfer = {
         minimalBalance: bigint
         claimer: any
         topic: string
+        l2AdapterAddress?: string
     }
     tx: ContractTransaction
 }
@@ -72,6 +76,7 @@ export type ValidationResult = {
         bridgeStatus: OperationStatus
         assetHubDryRunError?: string
         destinationParachainDryRunError?: string
+        l2BridgeDryRunError?: string
     }
     transfer: Transfer
 }
