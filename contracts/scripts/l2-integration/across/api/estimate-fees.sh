@@ -29,3 +29,6 @@ curl -L \
 # Depositor: 0xA4d353BBc130cbeF1811f27ac70989F9d568CeAB
 curl -L \
   'https://testnet.across.to/api/swap/approval?tradeType=minOutput&inputToken=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238&outputToken=0x036CbD53842c5426634e7929541eC2318f3dCF7e&originChainId=11155111&destinationChainId=84532&amount=1000000&&depositor=0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd' | jq .
+
+
+
