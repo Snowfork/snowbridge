@@ -97,7 +97,7 @@ contract SnowbridgeL2Adaptor {
             ),
             value: sendFeeAmount
         });
-        instructions = Instructions({calls: calls, fallbackRecipient: address(MULTI_CALL_HANDLER)});
+        instructions = Instructions({calls: calls, fallbackRecipient: recipient});
         SPOKE_POOL.deposit(
             bytes32(uint256(uint160(recipient))),
             bytes32(uint256(uint160(address(MULTI_CALL_HANDLER)))),
