@@ -24,7 +24,6 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const { config, name } = snowbridgeEnv
 
-    
     const context = new Context(contextConfigOverrides(environmentFor(env)))
 
     const bridgeStatus = await status.bridgeStatusInfo(context, {

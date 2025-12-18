@@ -1,4 +1,3 @@
-
 /** @deprecated Use `Environment` from base-types */
 export type Config = {
     BEACON_HTTP_API: string
