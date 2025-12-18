@@ -1,8 +1,8 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toEthereumSnowbridgeV2, contextConfigFor, toEthereumV2 } from "@snowbridge/api"
+import { Context, toEthereumSnowbridgeV2, toEthereumV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
-import { assetRegistryFor } from "@snowbridge/registry"
+import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
 import { ContractCall } from "../../base-types"
 
 export const transferToEthereum = async (
@@ -22,7 +22,7 @@ export const transferToEthereum = async (
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(contextConfigFor(env))
+    const context = new Context(environmentFor(env))
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 

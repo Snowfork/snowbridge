@@ -1,5 +1,6 @@
 import "dotenv/config"
-import { environment, assetsV2 } from "@snowbridge/api"
+import { assetsV2 } from "@snowbridge/api"
+import { environmentFor } from "@snowbridge/registry"
 import { writeFile } from "fs/promises"
 
 const run = async () => {
@@ -8,8 +9,7 @@ const run = async () => {
         env = process.env.NODE_ENV
     }
 
-    const options = assetsV2.fromEnvironment(environment.SNOWBRIDGE_ENV[env])
-    const registry = await assetsV2.buildRegistry(options)
+    const registry = await assetsV2.buildRegistry(environmentFor(env))
     const json = JSON.stringify(
         registry,
         (_, value) => {

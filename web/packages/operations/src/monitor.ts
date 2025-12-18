@@ -6,11 +6,11 @@ import {
     status,
     utils,
     subsquid,
-    contextConfigFor,
     contextConfigOverrides,
 } from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
 import { Config } from "@snowbridge/api/dist/environment"
+import { environmentFor } from "@snowbridge/registry"
 
 export const monitor = async (): Promise<status.AllMetrics> => {
     let env = "local_e2e"
@@ -24,7 +24,8 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const { config, name } = snowbridgeEnv
 
-    const context = new Context(contextConfigOverrides(contextConfigFor(env)))
+    
+    const context = new Context(contextConfigOverrides(environmentFor(env)))
 
     const bridgeStatus = await status.bridgeStatusInfo(context, {
         polkadotBlockTimeInSeconds: 6,
@@ -35,7 +36,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const { relayers, sovereigns } = await fetchBalances(context, config)
 
-    let indexerStatus = await fetchIndexerStatus(context, env)
+    let indexerStatus = await fetchIndexerStatus(context, config, env)
 
     let v2Status = await status.v2Status(context)
 
@@ -155,7 +156,7 @@ const fetchBalances = async (context: Context, config: any) => {
     return { relayers, sovereigns }
 }
 
-export const fetchIndexerStatus = async (context: Context, env: string) => {
+export const fetchIndexerStatus = async (context: Context, config: Config, env: string) => {
     const [assetHub, bridgeHub, ethereum] = await Promise.all([
         context.assetHub(),
         context.bridgeHub(),
@@ -185,7 +186,7 @@ export const fetchIndexerStatus = async (context: Context, env: string) => {
         }
         indexerInfos.push(info)
     }
-    let monitorChains = context.monitorChains()
+    let monitorChains = config.TO_MONITOR_PARACHAINS
     if (monitorChains && monitorChains.length) {
         for (const paraid of monitorChains) {
             let chain = await context.parachain(paraid)
