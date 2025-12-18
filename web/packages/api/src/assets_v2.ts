@@ -49,7 +49,20 @@ export interface PNAMap {
 export const ETHER_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 export async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
-    const { relaychainUrl, ethereumChains, ethChainId, assetHubParaId, bridgeHubParaId, parachains, gatewayContract, assetOverrides, precompiles, metadataOverrides, kusama, name } = environment
+    const {
+        relaychainUrl,
+        ethereumChains,
+        ethChainId,
+        assetHubParaId,
+        bridgeHubParaId,
+        parachains,
+        gatewayContract,
+        assetOverrides,
+        precompiles,
+        metadataOverrides,
+        kusama,
+        name,
+    } = environment
 
     let relayInfo: ChainProperties
     {
@@ -112,7 +125,7 @@ export async function buildRegistry(environment: Environment): Promise<AssetRegi
 
     // Connect to all substrate parachains.
     const providers: {
-        [paraIdKey: string]: { parachainId: number; accessor: ParachainBase; }
+        [paraIdKey: string]: { parachainId: number; accessor: ParachainBase }
     } = {}
     {
         for (const { parachainId, accessor } of await Promise.all(
@@ -181,11 +194,11 @@ export async function buildRegistry(environment: Environment): Promise<AssetRegi
     if (kusama) {
         const assetHubUrl = kusama.parachains[kusama.assetHubParaId.toString()]
         let provider = await ApiPromise.create({
-                noInitWarn: true,
-                provider: assetHubUrl.startsWith("http")
-                    ? new HttpProvider(assetHubUrl)
-                    : new WsProvider(assetHubUrl),
-            })
+            noInitWarn: true,
+            provider: assetHubUrl.startsWith("http")
+                ? new HttpProvider(assetHubUrl)
+                : new WsProvider(assetHubUrl),
+        })
         const accessor = await paraImplementation(provider)
 
         const para = await indexParachain(
@@ -211,16 +224,15 @@ export async function buildRegistry(environment: Environment): Promise<AssetRegi
     }
     // Dispose of all substrate connections
     await Promise.all(
-        Object.keys(providers)
-            .map(
-                async (parachainKey) =>
-                    await providers[parachainKey].accessor.provider.disconnect(),
-            ),
+        Object.keys(providers).map(
+            async (parachainKey) => await providers[parachainKey].accessor.provider.disconnect(),
+        ),
     )
 
     // Dispose all eth connections
-    Object.keys(ethProviders)
-        .forEach((parachainKey) => ethProviders[parachainKey].provider.destroy())
+    Object.keys(ethProviders).forEach((parachainKey) =>
+        ethProviders[parachainKey].provider.destroy(),
+    )
 
     return {
         timestamp: new Date().toISOString(),
@@ -446,7 +458,7 @@ async function indexEthChain(
                     ...asset,
                     foreignId:
                         foreignId !=
-                            "0x0000000000000000000000000000000000000000000000000000000000000000"
+                        "0x0000000000000000000000000000000000000000000000000000000000000000"
                             ? foreignId
                             : undefined,
                     // LDO gas from https://etherscan.io/tx/0x4e984250beacf693e7407c6cfdcb51229f6a549aa857d601db868b572ee2364b

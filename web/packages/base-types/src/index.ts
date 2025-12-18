@@ -117,71 +117,73 @@ export type KusamaConfig = {
 };
 
 export type Environment = {
-    name: string;
-    ethChainId: number;
-    beaconApiUrl: string;
-    ethereumChains: {
-        [chainId: string]: string;
-    };
-    relaychainUrl: string;
-    parachains: {
-        [paraId: string]: string;
-    };
-    gatewayContract: string;
-    beefyContract: string;
+  name: string;
+  ethChainId: number;
+  beaconApiUrl: string;
+  ethereumChains: {
+    [chainId: string]: string;
+  };
+  relaychainUrl: string;
+  parachains: {
+    [paraId: string]: string;
+  };
+  gatewayContract: string;
+  beefyContract: string;
+  assetHubParaId: number;
+  bridgeHubParaId: number;
+  indexerGraphQlUrl: string;
+  kusama?: {
     assetHubParaId: number;
     bridgeHubParaId: number;
-    indexerGraphQlUrl: string;
-    kusama?: {
-        assetHubParaId: number
-        bridgeHubParaId: number
-        parachains: { [paraId: string]: string }
-    }
-    assetOverrides?: AssetOverrideMap,
-    precompiles?: PrecompileMap,
-    metadataOverrides? : ERC20MetadataOverrideMap,
+    parachains: { [paraId: string]: string };
+  };
+  assetOverrides?: AssetOverrideMap;
+  precompiles?: PrecompileMap;
+  metadataOverrides?: ERC20MetadataOverrideMap;
 };
 
-export type SourceType = "substrate" | "ethereum"
+export type SourceType = "substrate" | "ethereum";
 
 export type Path = {
-    type: SourceType
-    id: string
-    source: number
-    destinationType: SourceType
-    destination: number
-    asset: string
-}
+  type: SourceType;
+  id: string;
+  source: number;
+  destinationType: SourceType;
+  destination: number;
+  asset: string;
+};
 
 export type Source = {
-    type: SourceType
-    id: string
-    key: string
-    destinations: { [destination: string]: { type: SourceType; assets: string[] } }
-}
+  type: SourceType;
+  id: string;
+  key: string;
+  destinations: {
+    [destination: string]: { type: SourceType; assets: string[] };
+  };
+};
 
 export type TransferLocation = {
-    id: string
-    name: string
-    key: string
-    type: SourceType
-    parachain?: Parachain
-    ethChain?: EthereumChain
-}
+  id: string;
+  name: string;
+  key: string;
+  type: SourceType;
+  parachain?: Parachain;
+  ethChain?: EthereumChain;
+};
 export interface AssetOverrideMap {
-    [paraId: string]: Asset[]
+  [paraId: string]: Asset[];
 }
 
 export interface ERC20MetadataOverrideMap {
   [token: string]: {
-    name?: string
-    symbol?: string
-    decimals?: number
-  }
+    name?: string;
+    symbol?: string;
+    decimals?: number;
+  };
 }
 
 export interface PrecompileMap {
-    [chainId: string]: `0x${string}`
+  [chainId: string]: `0x${string}`;
 }
 
 export type AssetRegistry = {

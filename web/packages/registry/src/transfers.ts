@@ -1,4 +1,13 @@
-import { AssetRegistry, Environment, EthereumChain, Parachain, Path, Source, SourceType, TransferLocation } from "@snowbridge/base-types"
+import {
+    AssetRegistry,
+    Environment,
+    EthereumChain,
+    Parachain,
+    Path,
+    Source,
+    SourceType,
+    TransferLocation,
+} from "@snowbridge/base-types"
 import { environmentFor } from "./environment"
 import { assetRegistryFor } from "./registry"
 

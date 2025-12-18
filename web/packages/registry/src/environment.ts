@@ -1,4 +1,4 @@
-import { Environment } from "@snowbridge/base-types";
+import { Environment } from "@snowbridge/base-types"
 
 export function environmentFor(
     env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {}),
@@ -52,7 +52,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "0xef32abea56beff54f61da319a7311098d6fbcea9": {
                 name: "OriginTrail TRAC",
                 symbol: "TRAC",
-            }
+            },
         },
     },
     polkadot_mainnet: {
@@ -92,13 +92,13 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         },
         precompiles: {
             // Add override for mythos token and add precompile for moonbeam
-            "2004": "0x000000000000000000000000000000000000081a"
+            "2004": "0x000000000000000000000000000000000000081a",
         },
         metadataOverrides: {
             // Change the name of TRAC
             "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f": {
                 name: "OriginTrail TRAC",
-            }
+            },
         },
     },
     westend_sepolia: {
