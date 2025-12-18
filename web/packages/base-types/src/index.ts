@@ -14,6 +14,8 @@ export type ERC20Metadata = {
   foreignId?: string;
   // The gas cost of a local transfer, which involves unlocking for ENA and minting for PNA.
   deliveryGas?: bigint;
+  // For ERC-20 tokens on L2 chains that have a corresponding mapped L1 token address.
+  swapTokenAddress?: string;
 };
 
 export interface ERC20MetadataMap {
@@ -130,6 +132,9 @@ export type AssetRegistry = {
   };
   parachains: ParachainMap;
   kusama: KusamaConfig | undefined;
+  l2Chains?: {
+    [chainId: string]: EthereumChain;
+  };
 };
 
 export type ContractCall = {

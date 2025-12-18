@@ -8,8 +8,12 @@ import {
     IGatewayV1__factory,
     IGatewayV2,
     IGatewayV2__factory,
+    SnowbridgeL1Adaptor,
+    SnowbridgeL1Adaptor__factory,
+    SnowbridgeL2Adaptor,
+    SnowbridgeL2Adaptor__factory,
 } from "@snowbridge/contract-types"
-import { SNOWBRIDGE_ENV } from "./environment"
+import { L2BridgeConfig, SNOWBRIDGE_ENV } from "./environment"
 
 export * as toPolkadotV2 from "./toPolkadot_v2"
 export * as toEthereumV2 from "./toEthereum_v2"
@@ -62,6 +66,7 @@ interface Config {
     }
     graphqlApiUrl: string
     monitorChains?: number[]
+    l2Bridge?: L2BridgeConfig
 }
 
 export class Context {
@@ -72,6 +77,8 @@ export class Context {
     #gateway?: IGatewayV1
     #gatewayV2?: IGatewayV2
     #beefyClient?: BeefyClient
+    #l1Adapter?: SnowbridgeL1Adaptor
+    #l2Adapters: { [l2ChainId: number]: SnowbridgeL2Adaptor } = {}
 
     // Substrate
     #polkadotParachains: Parachains
@@ -236,21 +243,56 @@ export class Context {
         if (this.#gateway) {
             return this.#gateway
         }
-        return IGatewayV1__factory.connect(this.config.appContracts.gateway, this.ethereum())
+        this.#gateway = IGatewayV1__factory.connect(
+            this.config.appContracts.gateway,
+            this.ethereum(),
+        )
+        return this.#gateway
     }
 
     gatewayV2(): IGatewayV2 {
         if (this.#gatewayV2) {
             return this.#gatewayV2
         }
-        return IGatewayV2__factory.connect(this.config.appContracts.gateway, this.ethereum())
+        this.#gatewayV2 = IGatewayV2__factory.connect(
+            this.config.appContracts.gateway,
+            this.ethereum(),
+        )
+        return this.#gatewayV2
     }
 
     beefyClient(): BeefyClient {
         if (this.#beefyClient) {
             return this.#beefyClient
         }
-        return BeefyClient__factory.connect(this.config.appContracts.beefy, this.ethereum())
+        this.#beefyClient = BeefyClient__factory.connect(
+            this.config.appContracts.beefy,
+            this.ethereum(),
+        )
+        return this.#beefyClient
+    }
+
+    l1Adapter(): SnowbridgeL1Adaptor {
+        if (this.#l1Adapter) {
+            return this.#l1Adapter
+        }
+        this.#l1Adapter = SnowbridgeL1Adaptor__factory.connect(
+            this.config.l2Bridge?.L1_ADAPTER_CONTRACT as string,
+            this.ethereum(),
+        )
+        return this.#l1Adapter
+    }
+
+    l2Adapter(l2ChainId: number): SnowbridgeL2Adaptor {
+        if (this.#l2Adapters[l2ChainId]) {
+            return this.#l2Adapters[l2ChainId]
+        }
+        const adapter = SnowbridgeL2Adaptor__factory.connect(
+            this.config.l2Bridge?.CHAINS[l2ChainId.toString()] as string,
+            this.ethChain(l2ChainId),
+        )
+        this.#l2Adapters[l2ChainId] = adapter
+        return adapter
     }
 
     graphqlApiUrl(): string {
@@ -311,6 +353,7 @@ export function contextConfigFor(
             TO_MONITOR_PARACHAINS,
         },
         kusamaConfig,
+        l2BridgeConfig,
     } = SNOWBRIDGE_ENV[env]
 
     let kusama:
@@ -355,6 +398,7 @@ export function contextConfigFor(
         },
         graphqlApiUrl: GRAPHQL_API_URL,
         monitorChains: TO_MONITOR_PARACHAINS,
+        l2Bridge: l2BridgeConfig,
     }
 }
 

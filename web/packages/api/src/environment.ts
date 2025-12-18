@@ -47,6 +47,13 @@ export type TransferLocation = {
     erc20tokensReceivable: TransferToken[]
 }
 
+export type L2_ADAPTER_CONTRACT = string
+
+export type L2BridgeConfig = {
+    L1_ADAPTER_CONTRACT: string
+    CHAINS: { [chain: string]: L2_ADAPTER_CONTRACT }
+}
+
 export type SnowbridgeEnvironment = {
     config: Config
     kusamaConfig?: KusamaConfig
@@ -54,6 +61,7 @@ export type SnowbridgeEnvironment = {
     ethChainId: number
     /** @deprecated Use `assetsV2.getTransferLocations` instead */
     locations: TransferLocation[]
+    l2BridgeConfig?: L2BridgeConfig
 }
 
 export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
@@ -618,6 +626,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
             ETHEREUM_CHAINS: {
                 "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
+                "84532": "https://base-sepolia-rpc.publicnode.com",
             },
             RELAY_CHAIN_URL: "wss://westend-rpc.n.dwellir.com",
             PARACHAINS: {
@@ -670,6 +679,12 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
             ],
             GRAPHQL_API_URL:
                 "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
+        },
+        l2BridgeConfig: {
+            L1_ADAPTER_CONTRACT: "0xb3D06e33Cc77c03968aeFECDeD91B5236BDa1983",
+            CHAINS: {
+                "84532": "0xef3C3054C2a7cF69E2F96ba50768ffd655689bF7",
+            },
         },
     },
 }
