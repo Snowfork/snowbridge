@@ -1,7 +1,7 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, contextConfigFor } from "@snowbridge/api"
+import { Context } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import { assetRegistryFor } from "@snowbridge/registry"
+import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
 import { NeurowebParachain } from "@snowbridge/api/dist/parachains/neuroweb"
 
 const wrapSnowTRAC = async () => {
@@ -13,7 +13,7 @@ const wrapSnowTRAC = async () => {
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(contextConfigFor(env))
+    const context = new Context(environmentFor(env))
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 

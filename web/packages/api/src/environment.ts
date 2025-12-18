@@ -1,5 +1,5 @@
-import { MUSE_TOKEN_ID, MYTHOS_TOKEN_ID } from "./parachains/mythos"
 
+/** @deprecated Use `Environment` from base-types */
 export type Config = {
     BEACON_HTTP_API: string
     ETHEREUM_CHAINS: { [chain: string]: string }
@@ -22,101 +22,22 @@ export type KusamaConfig = {
     PARACHAINS: { [paraId: string]: string }
 }
 
-export type AddressType = "20byte" | "32byte" | "both"
 export type SourceType = "substrate" | "ethereum"
 export type Relayer = { name: string; account: string; type: SourceType; balance?: bigint }
-export type ParachainInfo = {
-    paraId: number
-    destinationFeeDOT: bigint
-    skipExistentialDepositCheck: boolean
-    addressType: AddressType
-    decimals: number
-    maxConsumers: number
-}
-export type TransferToken = {
-    id: string
-    address: string
-    minimumTransferAmount: bigint
-}
-export type TransferLocation = {
-    id: string
-    name: string
-    type: SourceType
-    destinationIds: string[]
-    paraInfo?: ParachainInfo
-    erc20tokensReceivable: TransferToken[]
-}
 
+/** @deprecated Use `Environment` from base-types */
 export type SnowbridgeEnvironment = {
     config: Config
     kusamaConfig?: KusamaConfig
     name: string
     ethChainId: number
-    /** @deprecated Use `assetsV2.getTransferLocations` instead */
-    locations: TransferLocation[]
 }
 
+/** @deprecated Use `environmentFor` from asset-registry */
 export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
     local_e2e: {
         name: "local_e2e",
         ethChainId: 11155111,
-        locations: [
-            {
-                id: "ethereum",
-                name: "Ethereum",
-                type: "ethereum",
-                destinationIds: ["assethub", "penpal"],
-                erc20tokensReceivable: [
-                    {
-                        id: "WETH",
-                        address: "0xb8ea8cb425d85536b158d661da1ef0895bb92f1d",
-                        minimumTransferAmount: 15_000_000_000_000n,
-                    },
-                ],
-            },
-            {
-                id: "assethub",
-                name: "Asset Hub",
-                type: "substrate",
-                destinationIds: ["ethereum"],
-                paraInfo: {
-                    paraId: 1000,
-                    destinationFeeDOT: 0n,
-                    skipExistentialDepositCheck: false,
-                    addressType: "32byte",
-                    decimals: 12,
-                    maxConsumers: 16,
-                },
-                erc20tokensReceivable: [
-                    {
-                        id: "WETH",
-                        address: "0xb8ea8cb425d85536b158d661da1ef0895bb92f1d",
-                        minimumTransferAmount: 15_000_000_000_000n,
-                    },
-                ],
-            },
-            {
-                id: "penpal",
-                name: "Penpal",
-                type: "substrate",
-                destinationIds: ["ethereum"],
-                paraInfo: {
-                    paraId: 2000,
-                    destinationFeeDOT: 4_000_000_000n,
-                    skipExistentialDepositCheck: false,
-                    addressType: "32byte",
-                    decimals: 12,
-                    maxConsumers: 16,
-                },
-                erc20tokensReceivable: [
-                    {
-                        id: "WETH",
-                        address: "0xb8ea8cb425d85536b158d661da1ef0895bb92f1d",
-                        minimumTransferAmount: 1n,
-                    },
-                ],
-            },
-        ],
         config: {
             BEACON_HTTP_API: "http://127.0.0.1:9596",
             ETHEREUM_CHAINS: {
@@ -184,73 +105,6 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
     paseo_sepolia: {
         name: "paseo_sepolia",
         ethChainId: 11155111,
-        locations: [
-            {
-                id: "ethereum",
-                name: "Ethereum",
-                type: "ethereum",
-                destinationIds: ["assethub", "muse"],
-                erc20tokensReceivable: [
-                    {
-                        id: "WETH",
-                        address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
-                        minimumTransferAmount: 15_000_000_000_000n,
-                    },
-                    {
-                        id: "PILT",
-                        address: "0x99E743964C036bc28931Fb564817db428Aa7f752",
-                        minimumTransferAmount: 1n,
-                    },
-                ],
-            },
-            {
-                id: "assethub",
-                name: "Asset Hub",
-                type: "substrate",
-                destinationIds: ["ethereum"],
-                paraInfo: {
-                    paraId: 1000,
-                    destinationFeeDOT: 0n,
-                    skipExistentialDepositCheck: false,
-                    addressType: "32byte",
-                    decimals: 10,
-                    maxConsumers: 16,
-                },
-                erc20tokensReceivable: [
-                    {
-                        id: "WETH",
-                        address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
-                        minimumTransferAmount: 15_000_000_000_000n,
-                    },
-                    {
-                        id: "PILT",
-                        address: "0x99E743964C036bc28931Fb564817db428Aa7f752",
-                        minimumTransferAmount: 1n,
-                    },
-                ],
-            },
-            {
-                id: "muse",
-                name: "Muse",
-                type: "substrate",
-                destinationIds: [],
-                paraInfo: {
-                    paraId: 3369,
-                    destinationFeeDOT: 200_000_000_000n,
-                    skipExistentialDepositCheck: true,
-                    addressType: "20byte",
-                    decimals: 18,
-                    maxConsumers: 16,
-                },
-                erc20tokensReceivable: [
-                    {
-                        id: "MUSE",
-                        address: MUSE_TOKEN_ID,
-                        minimumTransferAmount: 10_000_000_000_000_000n,
-                    },
-                ],
-            },
-        ],
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
             ETHEREUM_CHAINS: {
@@ -310,194 +164,6 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
     polkadot_mainnet: {
         name: "polkadot_mainnet",
         ethChainId: 1,
-        locations: [
-            {
-                id: "ethereum",
-                name: "Ethereum",
-                type: "ethereum",
-                destinationIds: ["assethub", "mythos", "bifrost"],
-                erc20tokensReceivable: [
-                    {
-                        id: "WETH",
-                        address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                        minimumTransferAmount: 15_000_000_000_000n,
-                    },
-                    {
-                        id: "WBTC",
-                        address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "SHIB",
-                        address: "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "PEPE",
-                        address: "0x6982508145454ce325ddbe47a25d4ec3d2311933",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "TON",
-                        address: "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "wstETH",
-                        address: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "tBTC",
-                        address: "0x18084fba666a33d37592fa2633fd49a74dd93a88",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "USDC",
-                        address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "USDT",
-                        address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "DAI",
-                        address: "0x6b175474e89094c44da98b954eedeac495271d0f",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "KILT",
-                        address: "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "AAVE",
-                        address: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
-                        minimumTransferAmount: 1n,
-                    },
-                ],
-            },
-            {
-                id: "assethub",
-                name: "Asset Hub",
-                type: "substrate",
-                destinationIds: ["ethereum"],
-                paraInfo: {
-                    paraId: 1000,
-                    destinationFeeDOT: 0n,
-                    skipExistentialDepositCheck: false,
-                    addressType: "32byte",
-                    decimals: 10,
-                    maxConsumers: 64,
-                },
-                erc20tokensReceivable: [
-                    {
-                        id: "WETH",
-                        address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                        minimumTransferAmount: 15_000_000_000_000n,
-                    },
-                    {
-                        id: "WBTC",
-                        address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "SHIB",
-                        address: "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "PEPE",
-                        address: "0x6982508145454ce325ddbe47a25d4ec3d2311933",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "TON",
-                        address: "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "wstETH",
-                        address: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "tBTC",
-                        address: "0x18084fba666a33d37592fa2633fd49a74dd93a88",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "USDC",
-                        address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "USDT",
-                        address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "DAI",
-                        address: "0x6b175474e89094c44da98b954eedeac495271d0f",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "KILT",
-                        address: "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
-                        minimumTransferAmount: 1n,
-                    },
-                    {
-                        id: "AAVE",
-                        address: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
-                        minimumTransferAmount: 1n,
-                    },
-                ],
-            },
-            {
-                id: "mythos",
-                name: "Mythos",
-                type: "substrate",
-                destinationIds: [],
-                paraInfo: {
-                    paraId: 3369,
-                    destinationFeeDOT: 500_000_000n,
-                    skipExistentialDepositCheck: true,
-                    addressType: "20byte",
-                    decimals: 18,
-                    maxConsumers: 16,
-                },
-                erc20tokensReceivable: [
-                    {
-                        id: "MYTH",
-                        address: MYTHOS_TOKEN_ID,
-                        minimumTransferAmount: 10_000_000_000_000_000n,
-                    },
-                ],
-            },
-            {
-                id: "bifrost",
-                name: "Bifrost",
-                type: "substrate",
-                destinationIds: [],
-                paraInfo: {
-                    paraId: 2030,
-                    destinationFeeDOT: 20_000_000n,
-                    skipExistentialDepositCheck: false,
-                    addressType: "32byte",
-                    decimals: 12,
-                    maxConsumers: 16,
-                },
-                erc20tokensReceivable: [
-                    {
-                        id: "WETH",
-                        address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                        minimumTransferAmount: 15_000_000_000_000n,
-                    },
-                ],
-            },
-        ],
         config: {
             BEACON_HTTP_API: "https://lodestar-mainnet.chainsafe.io",
             ETHEREUM_CHAINS: {
@@ -578,42 +244,6 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
     westend_sepolia: {
         name: "westend_sepolia",
         ethChainId: 11155111,
-        locations: [
-            {
-                id: "ethereum",
-                name: "Ethereum",
-                type: "ethereum",
-                destinationIds: ["assethub"],
-                erc20tokensReceivable: [
-                    {
-                        id: "WETH",
-                        address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
-                        minimumTransferAmount: 1_000_000_000_000n,
-                    },
-                ],
-            },
-            {
-                id: "assethub",
-                name: "Asset Hub",
-                type: "substrate",
-                destinationIds: ["ethereum"],
-                paraInfo: {
-                    paraId: 1000,
-                    destinationFeeDOT: 0n,
-                    skipExistentialDepositCheck: false,
-                    addressType: "32byte",
-                    decimals: 12,
-                    maxConsumers: 16,
-                },
-                erc20tokensReceivable: [
-                    {
-                        id: "WETH",
-                        address: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
-                        minimumTransferAmount: 15_000_000_000_000n,
-                    },
-                ],
-            },
-        ],
         config: {
             BEACON_HTTP_API: "https://lodestar-sepolia.chainsafe.io",
             ETHEREUM_CHAINS: {

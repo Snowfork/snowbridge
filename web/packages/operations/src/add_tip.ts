@@ -1,7 +1,7 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, contextConfigFor, addTip } from "@snowbridge/api"
+import { Context, addTip } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import { assetRegistryFor } from "@snowbridge/registry"
+import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
 
 export const addTipToMessage = async () => {
     await cryptoWaitReady()
@@ -34,7 +34,7 @@ export const addTipToMessage = async () => {
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(contextConfigFor(env))
+    const context = new Context(environmentFor(env))
     const registry = assetRegistryFor(env)
 
     // Get user's Polkadot account

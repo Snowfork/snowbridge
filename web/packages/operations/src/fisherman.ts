@@ -1,4 +1,4 @@
-import { Context, contextConfigFor, environment } from "@snowbridge/api"
+import { Context, environment } from "@snowbridge/api"
 import { BeefyClient } from "@snowbridge/contract-types"
 import { AbstractProvider } from "ethers"
 import { existsSync } from "fs"
@@ -6,6 +6,7 @@ import { readFile, writeFile } from "fs/promises"
 import { ApiPromise } from "@polkadot/api"
 import { sendForkVotingAlarm, sendFutureBlockVotingAlarm } from "./alarm"
 import { pino, type Logger } from "pino"
+import { environmentFor } from "@snowbridge/registry"
 
 const CheckpointFilepath = `checkpoint.json`
 const CheckpointInterval = process.env["FISHERMAN_CHECKPOINT_INTERVAL"] || "5000" // blocks
@@ -36,7 +37,7 @@ export const run = async (): Promise<void> => {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const ctx = new Context(contextConfigFor(env))
+    const ctx = new Context(environmentFor(env))
 
     const relaychain = await ctx.relaychain()
     await relaychain.isReady
