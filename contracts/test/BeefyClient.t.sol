@@ -714,7 +714,7 @@ contract BeefyClientTest is Test {
         // There must be atleast 1 validator.
         vm.assume(validatorSetLen > 0);
         // Min signatures must be less than the amount of validators.
-        vm.assume(beefyClient.computeQuorum_public(validatorSetLen) > minSignatures);
+        vm.assume(beefyClient.computeCheckQuorum_public(validatorSetLen) > minSignatures);
 
         uint256 result = beefyClient.computeNumRequiredSignatures_public(
             validatorSetLen, signatureUsageCount, minSignatures
