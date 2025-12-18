@@ -153,19 +153,21 @@ export async function buildRegistry(environment: Environment): Promise<AssetRegi
     // Index parachains
     const paras: ParachainMap = {}
     for (const { parachainId, para } of await Promise.all(
-        Object.keys(providers).map(async (parachainIdKey) => {
-            const { parachainId, accessor } = providers[parachainIdKey]
-            const para = await indexParachain(
-                accessor,
-                providers[assetHubParaId.toString()].accessor,
-                ethChainId,
-                parachainId,
-                assetHubParaId,
-                pnaAssets,
-                assetOverrides ?? {},
-            )
-            return { parachainId, para }
-        }),
+        Object.keys(providers)
+            .filter((parachainIdKey) => parachainIdKey !== bridgeHubParaId.toString())
+            .map(async (parachainIdKey) => {
+                const { parachainId, accessor } = providers[parachainIdKey]
+                const para = await indexParachain(
+                    accessor,
+                    providers[assetHubParaId.toString()].accessor,
+                    ethChainId,
+                    parachainId,
+                    assetHubParaId,
+                    pnaAssets,
+                    assetOverrides ?? {},
+                )
+                return { parachainId, para }
+            }),
     )) {
         paras[parachainId.toString()] = para
     }
