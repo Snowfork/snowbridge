@@ -1,8 +1,9 @@
-import { assetsV2, environment } from "@snowbridge/api"
+import { assetsV2 } from "@snowbridge/api"
 import { writeFile } from "fs/promises"
+import { environmentFor } from "./src"
 
-async function buildRegistry(env: string, options: assetsV2.RegistryOptions) {
-    const registry = await assetsV2.buildRegistry(options)
+async function buildRegistry(env: string) {
+    const registry = await assetsV2.buildRegistry(environmentFor(env))
     const json = JSON.stringify(
         registry,
         (key, value) => {
@@ -23,6 +24,5 @@ async function buildRegistry(env: string, options: assetsV2.RegistryOptions) {
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const options = assetsV2.fromEnvironment(environment.SNOWBRIDGE_ENV[env])
-    await buildRegistry(env, options)
+    await buildRegistry(env)
 })()
