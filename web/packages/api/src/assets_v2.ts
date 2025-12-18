@@ -75,7 +75,7 @@ export async function buildRegistry(environment: Environment): Promise<AssetRegi
     {
         for (const result of await Promise.all(
             Object.keys(ethereumChains).map(async (ethChain) => {
-                let provider = ethers.getDefaultProvider(ethChain)
+                let provider = ethers.getDefaultProvider(ethereumChains[ethChain])
                 const network = await provider.getNetwork()
                 return { chainId: Number(network.chainId), provider, name: network.name }
             }),
