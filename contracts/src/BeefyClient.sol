@@ -590,7 +590,7 @@ contract BeefyClient {
         // Add signatures based on the signature usage count.
         numRequiredSignatures += 1 + (2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil));
         // Never require more signatures than a 1/3 + 1 majority
-        return Math.min(numRequiredSignatures, computeCheckQuorum(validatorSetLen));
+        return Math.min(numRequiredSignatures, computeMaxRequiredSignatures(validatorSetLen));
     }
 
     /**
@@ -605,7 +605,7 @@ contract BeefyClient {
      * @dev We have 2/3rd +1 honesty assumption on polkadot validators. Hence it is sufficient (for both random sampling and Fiat Shamir) to check 1/3rd +1 validator signatures to ensure at least 1 honest validator signed the payload.
      * @param numValidators The number of validators in the validator set.
      */
-    function computeCheckQuorum(uint256 numValidators) internal pure returns (uint256) {
+    function computeMaxRequiredSignatures(uint256 numValidators) internal pure returns (uint256) {
         return numValidators / 3 + 1;
     }
 
@@ -665,7 +665,7 @@ contract BeefyClient {
         bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
         bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset.root);
         uint256 requiredSignatures =
-            Math.min(fiatShamirRequiredSignatures, computeCheckQuorum(vset.length));
+            Math.min(fiatShamirRequiredSignatures, computeMaxRequiredSignatures(vset.length));
         if (proofs.length != requiredSignatures) {
             revert InvalidValidatorProofLength();
         }

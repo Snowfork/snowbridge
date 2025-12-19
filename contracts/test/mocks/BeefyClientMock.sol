@@ -98,8 +98,12 @@ contract BeefyClientMock is BeefyClient {
         return computeQuorum(numValidators);
     }
 
-    function computeCheckQuorum_public(uint256 numValidators) public pure returns (uint256) {
-        return computeCheckQuorum(numValidators);
+    function computeMaxRequiredSignatures_public(uint256 numValidators)
+        public
+        pure
+        returns (uint256)
+    {
+        return computeMaxRequiredSignatures(numValidators);
     }
 
     function getTicket(bytes32 commitmentHash) public view returns (Ticket memory) {
