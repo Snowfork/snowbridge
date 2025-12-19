@@ -14,7 +14,7 @@
     "build": "tsc --build --force && tsc -p tsconfig.scripts.json",
     "build-registry": "npx ts-node scripts/buildRegistry.ts",
     "lint": "eslint .",
-    "format": "prettier src --write"
+    "format": "prettier src --write && prettier scripts --write"
   },
   "devDependencies": {
     "@snowbridge/api": "workspace:*",

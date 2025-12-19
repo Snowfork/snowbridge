@@ -1,4 +1,20 @@
-import { AssetOverrideMap, AssetRegistry, ChainProperties, Environment, ERC20Metadata, ERC20MetadataMap, ERC20MetadataOverrideMap, EthereumChain, KusamaConfig, Parachain, ParachainMap, PNAMap, PrecompileMap, XC20TokenMap, XcmVersion } from "@snowbridge/base-types"
+import {
+    AssetOverrideMap,
+    AssetRegistry,
+    ChainProperties,
+    Environment,
+    ERC20Metadata,
+    ERC20MetadataMap,
+    ERC20MetadataOverrideMap,
+    EthereumChain,
+    KusamaConfig,
+    Parachain,
+    ParachainMap,
+    PNAMap,
+    PrecompileMap,
+    XC20TokenMap,
+    XcmVersion,
+} from "@snowbridge/base-types"
 import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api"
 import { isFunction } from "@polkadot/util"
 import { writeFile } from "fs/promises"
@@ -357,7 +373,10 @@ async function indexParachain(
             parachainId,
             destinationXcm,
         )
-        estimatedExecutionFeeDOT = await parachain.calculateXcmFee(destinationXcm, xcmBuilder.DOT_LOCATION)
+        estimatedExecutionFeeDOT = await parachain.calculateXcmFee(
+            destinationXcm,
+            xcmBuilder.DOT_LOCATION,
+        )
     }
     return {
         parachainId,
@@ -610,7 +629,7 @@ async function getRegisteredPnas(
             }
             return value
         },
-        2
+        2,
     )
 
     const filepath = `src/${env}.registry.json`

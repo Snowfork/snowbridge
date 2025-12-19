@@ -210,21 +210,21 @@ export type ContractCall = {
 };
 
 export type SubstrateAccount = {
-    nonce: bigint
-    consumers: bigint
-    providers: bigint
-    sufficients: bigint
-    data: {
-        free: bigint
-        reserved: bigint
-        frozen: bigint
-    }
-}
+  nonce: bigint;
+  consumers: bigint;
+  providers: bigint;
+  sufficients: bigint;
+  data: {
+    free: bigint;
+    reserved: bigint;
+    frozen: bigint;
+  };
+};
 
 export interface PNAMap {
-    [token: string]: {
-        token: string
-        foreignId: string
-        ethereumlocation: any
-    }
+  [token: string]: {
+    token: string;
+    foreignId: string;
+    ethereumlocation: any;
+  };
 }
