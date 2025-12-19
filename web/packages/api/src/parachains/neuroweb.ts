@@ -1,7 +1,6 @@
 import { ParachainBase } from "./parachainBase"
 import { DOT_LOCATION, erc20Location } from "../xcmBuilder"
-import { PNAMap } from "../assets_v2"
-import { AssetMap } from "@snowbridge/base-types"
+import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { ApiPromise } from "@polkadot/api"
 import { SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
