@@ -1,5 +1,6 @@
+export * from "./parachainBase"
+
 import { ApiPromise } from "@polkadot/api"
-import { ParachainBase } from "./parachainBase"
 import { HydrationParachain } from "./hydration"
 import { AssetHubParachain } from "./assethub"
 import { BifrostParachain } from "./bifrost"
@@ -12,6 +13,7 @@ import { FrequencyParachain } from "./frequency"
 import { PenpalParachain } from "./penpal"
 import { JamtonParachain } from "./jamton"
 import { NeurowebParachain } from "./neuroweb"
+import { ParachainBase } from "./parachainBase"
 
 export async function paraImplementation(provider: ApiPromise): Promise<ParachainBase> {
     let parachainId = 0
