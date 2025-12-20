@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-12-16T11:40:36.319Z",
+  "timestamp": "2025-12-20T10:21:37.849Z",
   "environment": "westend_sepolia",
   "ethChainId": 11155111,
   "gatewayAddress": "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
@@ -23,9 +23,22 @@
     "accountType": "AccountId32",
     "name": "Westend BridgeHub",
     "specName": "bridge-hub-westend",
-    "specVersion": 1020002
+    "specVersion": 1021000
   },
   "ethereumChains": {
+    "84532": {
+      "chainId": 84532,
+      "assets": {
+        "0x036CbD53842c5426634e7929541eC2318f3dCF7e": {
+          "token": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "name": "USDC",
+          "symbol": "USDC",
+          "decimals": 6,
+          "swapTokenAddress": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+        }
+      },
+      "id": "base-sepolia"
+    },
     "11155111": {
       "chainId": 11155111,
       "assets": {
@@ -107,7 +120,7 @@
         "accountType": "AccountId32",
         "name": "Westend Asset Hub",
         "specName": "westmint",
-        "specVersion": 1020005
+        "specVersion": 1021000
       },
       "assets": {
         "0x0000000000000000000000000000000000000000": {
