@@ -1,5 +1,7 @@
 import { TransferInterface } from "./transfers/toPolkadot/transferInterface"
+import { TransferInterface as L2TransferInterface } from "./transfers/l2ToPolkadot/transferInterface"
 import { ERC20ToAH } from "./transfers/toPolkadot/erc20ToAH"
+import { ERC20ToAH as ERC20FromL2ToAH } from "./transfers/l2ToPolkadot/erc20ToAH"
 import { RegisterToken } from "./registration/toPolkadot/registerToken"
 import { TokenRegistration } from "./registration/toPolkadot/registrationInterface"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
@@ -45,6 +47,7 @@ export type Transfer = {
         fee: DeliveryFee
         customXcm?: any[] // Optional custom XCM instructions
         l2TokenAddress?: string
+        sourceChainId?: number
     }
     computed: {
         gatewayAddress: string
@@ -119,6 +122,27 @@ export function createTransferImplementation(
             transferImpl = new ERC20ToParachain()
         }
     }
+    return transferImpl
+}
+
+export function createL2TransferImplementation(
+    l2ChainId: number,
+    destinationParaId: number,
+    registry: AssetRegistry,
+    l2TokenAddress: string,
+): L2TransferInterface {
+    const assets = registry.ethereumChains[l2ChainId].assets
+    const tokenMetadata = assets[l2TokenAddress]
+    if (!tokenMetadata) {
+        throw Error(`No token ${l2TokenAddress} registered on ethereum chain ${l2ChainId}.`)
+    }
+    const tokenAddress = tokenMetadata.swapTokenAddress
+    if (!tokenAddress) {
+        throw Error(`No swap token address for ${l2TokenAddress} on ethereum chain ${l2ChainId}.`)
+    }
+
+    // Todo: Resolve inputs based on the token address and support non-system destination parachain
+    let transferImpl: L2TransferInterface = new ERC20FromL2ToAH()
     return transferImpl
 }
 

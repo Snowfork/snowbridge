@@ -132,9 +132,6 @@ export type AssetRegistry = {
   };
   parachains: ParachainMap;
   kusama: KusamaConfig | undefined;
-  l2Chains?: {
-    [chainId: string]: EthereumChain;
-  };
 };
 
 export type ContractCall = {

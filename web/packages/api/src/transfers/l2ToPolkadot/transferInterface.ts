@@ -6,7 +6,7 @@ export interface TransferInterface {
     getDeliveryFee(
         context: Context,
         registry: AssetRegistry,
-        l2TokenAddress: string,
+        l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
         destinationParaId: number,
@@ -22,7 +22,7 @@ export interface TransferInterface {
     createTransfer(
         context: Context,
         registry: AssetRegistry,
-        l2TokenAddress: string,
+        l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
         destinationParaId: number,

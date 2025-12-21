@@ -683,7 +683,7 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         l2BridgeConfig: {
             L1_ADAPTER_CONTRACT: "0xb3D06e33Cc77c03968aeFECDeD91B5236BDa1983",
             CHAINS: {
-                "84532": "0xef3C3054C2a7cF69E2F96ba50768ffd655689bF7",
+                "84532": "0x40d021B665eF56ccAf9c30575E4113c960515EE7",
             },
         },
     },

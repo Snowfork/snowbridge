@@ -29,12 +29,12 @@
     "84532": {
       "chainId": 84532,
       "assets": {
-        "0x036CbD53842c5426634e7929541eC2318f3dCF7e": {
-          "token": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        "0x036cbd53842c5426634e7929541ec2318f3dcf7e": {
+          "token": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
           "name": "USDC",
           "symbol": "USDC",
           "decimals": 6,
-          "swapTokenAddress": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+          "swapTokenAddress": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238"
         }
       },
       "id": "base-sepolia"
