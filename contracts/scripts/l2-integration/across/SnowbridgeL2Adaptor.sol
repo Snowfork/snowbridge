@@ -18,6 +18,12 @@ contract SnowbridgeL2Adaptor {
     WETH9 public immutable L2_WETH9;
     uint32 public TIME_BUFFER;
 
+    /**************************************
+     *              EVENTS                *
+     **************************************/
+
+    event L2CallInvoked(bytes32 topic, uint256 depositId);
+
     constructor(
         address _spokePool,
         address _handler,
@@ -38,13 +44,14 @@ contract SnowbridgeL2Adaptor {
     function swapTokenAndCall(
         SwapParams calldata params,
         SendParams calldata sendParams,
-        address recipient
-    ) public {
+        address recipient,
+        bytes32 topic
+    ) public payable {
         uint256 sendFeeAmount =
             sendParams.relayerFee + sendParams.executionFee;
         uint256 totalFeeAmount = sendFeeAmount + sendParams.l2Fee;
 
-        IERC20(params.inputToken).safeTransfer(address(this), params.inputAmount);
+        IERC20(params.inputToken).safeTransferFrom(msg.sender, address(this), params.inputAmount);
         IERC20(params.inputToken).approve(address(SPOKE_POOL), params.inputAmount);
 
         L2_WETH9.deposit{value: totalFeeAmount}();
@@ -112,9 +119,9 @@ contract SnowbridgeL2Adaptor {
             0,
             abi.encode(instructions)
         );
+        uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
+        emit L2CallInvoked(topic, depositId);
     }
 
-    /// @dev Agents can receive ether permissionlessly.
-    /// This is important, as agents are used to lock ether.
     receive() external payable {}
 }

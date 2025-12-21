@@ -43,10 +43,12 @@ contract TestSnowbridgeL2Adaptor is Script {
         uint256 nativeFeeAmount =
             sendParams.relayerFee + sendParams.executionFee + sendParams.l2Fee;
 
-        IERC20(params.inputToken).transfer(l2SnowbridgeAdaptor, params.inputAmount);
-        payable(l2SnowbridgeAdaptor).transfer(nativeFeeAmount);
+        IERC20(params.inputToken).approve(l2SnowbridgeAdaptor, params.inputAmount);
 
-        SnowbridgeL2Adaptor(l2SnowbridgeAdaptor).swapTokenAndCall(params, sendParams, deployerAddr);
+        SnowbridgeL2Adaptor(l2SnowbridgeAdaptor)
+        .swapTokenAndCall{
+            value: nativeFeeAmount
+        }(params, sendParams, deployerAddr, keccak256("TestSnowbridgeL2AdaptorTopicId"));
 
         vm.stopBroadcast();
         return;

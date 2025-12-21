@@ -16,6 +16,8 @@ interface ISpokePool {
         uint32 exclusivityDeadline,
         bytes calldata message
     ) external payable;
+
+    function numberOfDeposits() external view returns (uint256);
 }
 
 interface IMessageHandler {
