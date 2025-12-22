@@ -97,7 +97,7 @@ contract GatewayV1Test is Test {
     address public account1;
     address public account2;
 
-    uint64 public maxDispatchGas = 800_000;
+    uint64 public maxDispatchGas = 1_200_000;
     uint256 public maxRefund = 1 ether;
     uint256 public reward = 1 ether;
     bytes32 public messageID = keccak256("cabbage");
