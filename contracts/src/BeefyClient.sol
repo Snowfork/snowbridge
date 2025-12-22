@@ -345,6 +345,7 @@ contract BeefyClient {
         if (block.number > ticket.blockNumber + randaoCommitDelay + randaoCommitExpiration) {
             delete tickets[ticketID];
             emit TicketExpired();
+            return;
         }
 
         // Post-merge, the difficulty opcode now returns PREVRANDAO
@@ -481,13 +482,9 @@ contract BeefyClient {
             revert InvalidBitfield();
         }
 
-        bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
-        bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset.root);
-        uint256 requiredSignatures =
-            Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
-        return
-            Bitfield.subsample(uint256(fiatShamirHash), bitfield, vset.length, requiredSignatures);
+
+        return fiatShamirFinalBitfield(commitmentHash, bitfield, vset.length, vset.root);
     }
 
     /**
@@ -507,7 +504,6 @@ contract BeefyClient {
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
     ) external {
-        bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
         if (commitment.blockNumber <= latestBeefyBlock) {
             revert StaleCommitment();
         }
@@ -527,6 +523,7 @@ contract BeefyClient {
         ) {
             revert InvalidBitfield();
         }
+        bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
         verifyFiatShamirCommitment(commitmentHash, bitfield, vset, proofs);
@@ -662,16 +659,15 @@ contract BeefyClient {
         ValidatorSetState storage vset,
         ValidatorProof[] calldata proofs
     ) internal view {
-        bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
-        bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset.root);
-        uint256 requiredSignatures =
-            Math.min(fiatShamirRequiredSignatures, computeMaxRequiredSignatures(vset.length));
+        uint256 requiredSignatures = Math.min(
+            fiatShamirRequiredSignatures, computeMaxRequiredSignatures(vset.length)
+        );
         if (proofs.length != requiredSignatures) {
             revert InvalidValidatorProofLength();
         }
 
         uint256[] memory finalbitfield =
-            Bitfield.subsample(uint256(fiatShamirHash), bitfield, vset.length, requiredSignatures);
+            fiatShamirFinalBitfield(commitmentHash, bitfield, vset.length, vset.root);
 
         for (uint256 i = 0; i < proofs.length; i++) {
             ValidatorProof calldata proof = proofs[i];
@@ -706,22 +702,41 @@ contract BeefyClient {
         );
     }
 
+    /**
+     * @dev Helper to create a final bitfield with subsampled validator selections using the Fiat-Shamir approach
+     * @param commitmentHash the hash of the full commitment that was used for the commitmentHash
+     * @param bitfield claiming which validators have signed the commitment
+     * @param vsetLength length of the validator set
+     * @param vsetRoot merkle root of the validator set
+     */
+    function fiatShamirFinalBitfield(
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
+        uint256 vsetLength,
+        bytes32 vsetRoot
+    ) internal view returns (uint256[] memory) {
+        bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
+        bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vsetRoot);
+        uint256 requiredSignatures =
+            Math.min(fiatShamirRequiredSignatures, computeQuorum(vsetLength));
+        return
+            Bitfield.subsample(uint256(fiatShamirHash), bitfield, vsetLength, requiredSignatures);
+    }
+
     // Ensure that the commitment provides a new MMR root
     function ensureProvidesMMRRoot(Commitment calldata commitment)
         internal
         pure
         returns (bytes32)
     {
-        for (uint256 i = 0; i < commitment.payload.length; i++) {
-            if (commitment.payload[i].payloadID == MMR_ROOT_ID) {
-                if (commitment.payload[i].data.length != 32) {
-                    revert InvalidMMRRootLength();
-                } else {
-                    return bytes32(commitment.payload[i].data);
-                }
-            }
+        if (commitment.payload.length != 1) {
+            revert CommitmentNotRelevant();
         }
-        revert CommitmentNotRelevant();
+        PayloadItem memory payload = commitment.payload[0];
+        if (payload.payloadID != MMR_ROOT_ID || payload.data.length != 32) {
+            revert CommitmentNotRelevant();
+        }
+        return bytes32(payload.data);
     }
 
     function encodeCommitment(Commitment calldata commitment)
