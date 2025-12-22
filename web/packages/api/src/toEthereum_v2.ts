@@ -81,6 +81,7 @@ export type DeliveryFee = {
     localExecutionFeeInNative?: bigint
     localDeliveryFeeInNative?: bigint
     ethereumExecutionFeeInNative?: bigint
+    l2BridgeFeeInL1Token?: bigint // Fee for the actual token bridge to L2 is paid in the L1 input token.
 }
 
 export type FeeInfo = {
@@ -449,6 +450,7 @@ export type ValidationResult = {
         sourceDryRunError: any
         assetHubDryRunError: any
         bridgeHubDryRunError?: any
+        l2BridgeDryRunError?: string
     }
     transfer: Transfer
 }

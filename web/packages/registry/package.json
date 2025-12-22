@@ -26,7 +26,8 @@
     "prettier": "3.6.2",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "dotenv": "^17.2.3"
   },
   "dependencies": {
     "@snowbridge/base-types": "workspace:*"

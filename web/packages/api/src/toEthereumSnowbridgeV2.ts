@@ -189,7 +189,7 @@ export async function dryRunAssetHub(
     }
 }
 
-export const MaxWeight = { refTime: 15_000_000_000n, proofSize: 800_000 }
+export const MaxWeight = { refTime: 30_000_000_000n, proofSize: 1_000_000 }
 
 export const isFeeAllowed = (feeLocation: any, sourceParaId: number) => {
     return isRelaychainLocation(feeLocation) || isParachainNative(feeLocation, sourceParaId)

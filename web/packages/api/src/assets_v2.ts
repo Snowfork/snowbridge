@@ -43,6 +43,17 @@ export type SubstrateAccount = {
     }
 }
 
+export type AssetSwapRoute = {
+    token: string
+    swapToken: string
+}
+
+export type L2ChainMetadata = {
+    adapterAddress: string
+    feeTokenAddress: string
+    routes: AssetSwapRoute[]
+}
+
 export type RegistryOptions = {
     environment: string
     gatewayAddress: string
@@ -57,6 +68,8 @@ export type RegistryOptions = {
     precompiles?: PrecompileMap
     assetOverrides?: AssetOverrideMap
     metadataOverrides?: ERC20MetadataOverrideMap
+    l1AdapterAddress?: string
+    l2ChainOverrides?: { [l2ChainId: string]: L2ChainMetadata }
 }
 
 export type KusamaOptions = {
@@ -129,6 +142,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
         precompiles,
         assetOverrides,
         metadataOverrides,
+        l2ChainOverrides,
     } = options
 
     let relayInfo: ChainProperties
@@ -276,6 +290,7 @@ export async function buildRegistry(options: RegistryOptions): Promise<AssetRegi
                 paras,
                 precompiles ?? {},
                 metadataOverrides ?? {},
+                l2ChainOverrides ?? {},
             )
         }),
     )) {
@@ -544,6 +559,7 @@ export function fromEnvironment({
     config,
     kusamaConfig,
     ethChainId,
+    l2BridgeConfig,
 }: SnowbridgeEnvironment): RegistryOptions {
     let result: RegistryOptions = {
         environment: name,
@@ -563,6 +579,17 @@ export function fromEnvironment({
             assetHubParaId: kusamaConfig.ASSET_HUB_PARAID,
             bridgeHubParaId: kusamaConfig.BRIDGE_HUB_PARAID,
             assetHub: kusamaConfig.PARACHAINS[config.ASSET_HUB_PARAID.toString()],
+        }
+    }
+    if (l2BridgeConfig) {
+        result.l1AdapterAddress = l2BridgeConfig.L1_ADAPTER_CONTRACT
+        result.l2ChainOverrides = {}
+        for (const l2ChainId of Object.keys(l2BridgeConfig.CHAINS)) {
+            result.l2ChainOverrides[l2ChainId] = {
+                adapterAddress: l2BridgeConfig.CHAINS[l2ChainId].L2_ADAPTER_CONTRACT,
+                feeTokenAddress: l2BridgeConfig.CHAINS[l2ChainId].FEE_ASSET_CONTRACT,
+                routes: [],
+            }
         }
     }
     addOverrides(name, result)
@@ -793,6 +820,7 @@ async function indexEthChain(
     parachains: ParachainMap,
     precompiles: PrecompileMap,
     metadataOverrides: ERC20MetadataOverrideMap,
+    l2ChainOverrides: { [l2ChainId: string]: L2ChainMetadata } = {},
 ): Promise<EthereumChain> {
     const id = networkName !== "unknown" ? networkName : undefined
     if (networkChainId == ethChainId) {
@@ -854,6 +882,20 @@ async function indexEthChain(
             assets,
             id: id ?? `chain_${networkChainId}`,
             baseDeliveryGas: 120_000n,
+        }
+    } else if (networkChainId in l2ChainOverrides) {
+        const assets: ERC20MetadataMap = {}
+        for (const route of l2ChainOverrides[networkChainId].routes) {
+            let asset = await assetErc20Metadata(provider, route.token)
+            assets[route.token] = {
+                ...asset,
+                swapTokenAddress: route.swapToken,
+            }
+        }
+        return {
+            chainId: networkChainId,
+            assets,
+            id: id ?? `l2_${networkChainId}`,
         }
     } else {
         let evmParachainChain: Parachain | undefined
@@ -995,6 +1037,21 @@ function addOverrides(envName: string, result: RegistryOptions) {
             }
             break
         }
+        case "westend_sepolia":
+            {
+                result.l2ChainOverrides = result.l2ChainOverrides || {}
+                result.l2ChainOverrides["84532"]["routes"] = [
+                    {
+                        token: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+                        swapToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                    },
+                    {
+                        token: "0x4200000000000000000000000000000000000006",
+                        swapToken: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+                    },
+                ]
+            }
+            break
     }
 }
 

@@ -1,3 +1,4 @@
+import "dotenv/config"
 import { assetsV2, environment } from "@snowbridge/api"
 import { writeFile } from "fs/promises"
 
@@ -11,7 +12,7 @@ async function buildRegistry(env: string, options: assetsV2.RegistryOptions) {
             }
             return value
         },
-        2
+        2,
     )
 
     const filepath = `src/${env}.registry.json`

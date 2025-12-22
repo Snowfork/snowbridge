@@ -7,17 +7,22 @@ export RANDAO_COMMIT_DELAY=3
 export RANDAO_COMMIT_EXP=8
 export MINIMUM_REQUIRED_SIGNATURES=17
 export PREV_RANDAO=377
-export ValidatorSetSize=300
+export ValidatorSetSize=600
 
-## ParachainClient
-export PARAID=1000
+## L2 Integration
+DEPLOYER_KEY=0xprivate_key_here
+SEPOLIA_CHAIN=sepolia
+BASE_CHAIN=base-sepolia
+SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/your-api-key-here
+BASE_RPC_URL=https://base-sepolia.g.alchemy.com/v2/your-api-key-here
+ETHERSCAN_API_KEY=your-etherscan-api-key-here
+VERIFIER=etherscan
+IS_L1=true
+WESTEND_ASSET_HUB_RPC_URL=https://westend-asset-hub-eth-rpc.polkadot.io
+WESTEND_CHAIN_ID=420420421
 
-## OutboundQueue
-export RELAYER_FEE=100
+L1_GREETER_ADDRESS=0xdE05b01cd2c353D7c9d47fF8af7F0dFc77b88120
+L2_GREETER_ADDRESS=0x071C5CA2529cb802b92B7E49cbc6879223800bb6
 
-## InboundChannel
-export RELAYER_REWARD=100
-
-## NativeTokens
-export STATEMINT_LOCATION=0x09b636bf387d256bd35ebf301c2da34fdee53b42f6a4648ad126156034d4a2db
-export CREATE_TOKEN_FEE="1000000000000000000"
+L1_SNOWBRIDGE_ADAPTOR_ADDRESS=0xb3D06e33Cc77c03968aeFECDeD91B5236BDa1983
+L2_SNOWBRIDGE_ADAPTOR_ADDRESS=0x40d021B665eF56ccAf9c30575E4113c960515EE7
