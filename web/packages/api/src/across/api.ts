@@ -1,5 +1,5 @@
 export const estimateFees = async (
-    feeEndpoint: string,
+    apiEndpoint: string,
     inputToken: string,
     outputToken: string,
     originChainId: number,
@@ -13,8 +13,8 @@ export const estimateFees = async (
         destinationChainId: destinationChainId.toString(),
         amount: amount.toString(),
     }
-    feeEndpoint += "?" + new URLSearchParams(params)
-    let response = await fetch(feeEndpoint)
+    apiEndpoint += "/suggested-fees?" + new URLSearchParams(params)
+    let response = await fetch(apiEndpoint)
     let data = await response.json()
-    return BigInt(data.fee)
+    return BigInt(data.totalRelayFee.total)
 }

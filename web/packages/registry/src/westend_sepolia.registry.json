@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-12-20T10:21:37.849Z",
+  "timestamp": "2025-12-21T17:10:34.541Z",
   "environment": "westend_sepolia",
   "ethChainId": 11155111,
   "gatewayAddress": "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
@@ -35,6 +35,13 @@
           "symbol": "USDC",
           "decimals": 6,
           "swapTokenAddress": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238"
+        },
+        "0x4200000000000000000000000000000000000006": {
+          "token": "0x4200000000000000000000000000000000000006",
+          "name": "Wrapped Ether",
+          "symbol": "WETH",
+          "decimals": 18,
+          "swapTokenAddress": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14"
         }
       },
       "id": "base-sepolia"

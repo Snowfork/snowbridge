@@ -288,11 +288,15 @@ export class Context {
             return this.#l2Adapters[l2ChainId]
         }
         const adapter = SnowbridgeL2Adaptor__factory.connect(
-            this.config.l2Bridge?.CHAINS[l2ChainId.toString()] as string,
+            this.config.l2Bridge?.CHAINS[l2ChainId.toString()]?.L2_ADAPTER_CONTRACT as string,
             this.ethChain(l2ChainId),
         )
         this.#l2Adapters[l2ChainId] = adapter
         return adapter
+    }
+
+    acrossApiUrl(): string {
+        return this.config.l2Bridge?.ACROSS_API_URL as string
     }
 
     graphqlApiUrl(): string {

@@ -30,6 +30,7 @@ import {
     SwapParamsStruct,
     SendParamsStruct,
 } from "@snowbridge/contract-types/dist/SnowbridgeL2Adaptor"
+import { estimateFees } from "../../across/api"
 
 export class ERC20ToAH implements TransferInterface {
     async getDeliveryFee(
@@ -108,13 +109,38 @@ export class ERC20ToAH implements TransferInterface {
             deliveryFeeInEther,
         )
 
-        // Todo: calculate fee with Across SDK
-        const l2BridgeFeeInEther = padFeeByPercentage(
-            (assetHubExecutionFeeEther + relayerFee) / 10n,
+        // Calculate fee with Across SDK
+        let l2BridgeFeeInL2Token = await estimateFees(
+            context.acrossApiUrl(),
+            l2TokenAddress,
+            tokenAddress,
+            l2ChainId,
+            registry.ethChainId,
+            amount,
+        )
+        l2BridgeFeeInL2Token = padFeeByPercentage(
+            l2BridgeFeeInL2Token,
             options?.l2PadFeeByPercentage ?? 33n,
         )
-        const l2BridgeFeeInL2Token = padFeeByPercentage(
-            amount / 10n,
+
+        const nativeFeeTokenAddress =
+            context.config.l2Bridge?.CHAINS[l2ChainId]?.FEE_ASSET_CONTRACT || ETHER_TOKEN_ADDRESS
+        const l1FeeTokenAddress =
+            registry.ethereumChains?.[l2ChainId]?.assets[nativeFeeTokenAddress]?.swapTokenAddress
+        if (!l1FeeTokenAddress) {
+            throw new Error("Token is not registered on Ethereum")
+        }
+
+        let l2BridgeFeeInEther = await estimateFees(
+            context.acrossApiUrl(),
+            nativeFeeTokenAddress,
+            l1FeeTokenAddress,
+            l2ChainId,
+            registry.ethChainId,
+            assetHubExecutionFeeEther + relayerFee,
+        )
+        l2BridgeFeeInEther = padFeeByPercentage(
+            l2BridgeFeeInEther,
             options?.l2PadFeeByPercentage ?? 33n,
         )
 

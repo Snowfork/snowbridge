@@ -50,6 +50,7 @@ export type AssetSwapRoute = {
 
 export type L2ChainMetadata = {
     adapterAddress: string
+    feeTokenAddress: string
     routes: AssetSwapRoute[]
 }
 
@@ -585,7 +586,8 @@ export function fromEnvironment({
         result.l2ChainOverrides = {}
         for (const l2ChainId of Object.keys(l2BridgeConfig.CHAINS)) {
             result.l2ChainOverrides[l2ChainId] = {
-                adapterAddress: l2BridgeConfig.CHAINS[l2ChainId],
+                adapterAddress: l2BridgeConfig.CHAINS[l2ChainId].L2_ADAPTER_CONTRACT,
+                feeTokenAddress: l2BridgeConfig.CHAINS[l2ChainId].FEE_ASSET_CONTRACT,
                 routes: [],
             }
         }
@@ -1042,6 +1044,10 @@ function addOverrides(envName: string, result: RegistryOptions) {
                     {
                         token: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
                         swapToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                    },
+                    {
+                        token: "0x4200000000000000000000000000000000000006",
+                        swapToken: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
                     },
                 ]
             }
