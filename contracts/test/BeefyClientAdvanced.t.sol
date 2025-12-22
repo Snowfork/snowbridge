@@ -8,6 +8,7 @@ import {Bitfield} from "../src/utils/Bitfield.sol";
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
 import {SubstrateMerkleProof} from "../src/utils/SubstrateMerkleProof.sol";
 import {Math} from "../src/utils/Math.sol";
+import {MerkleLib, MerkleLibSubstrate} from "./MerkleLib.sol";
 
 contract BeefyClientAdvancedTest is Test {
     using stdJson for string;
@@ -50,7 +51,7 @@ contract BeefyClientAdvancedTest is Test {
         }
 
         // substrate-compatible merkle root & per-leaf proofs
-        (vsetRoot, vProofs) = _buildSubstrateBinaryMerkle(vLeaves);
+        (vsetRoot, vProofs) = MerkleLibSubstrate.buildBinaryMerkleTree(vLeaves);
         proofIndex0 = vProofs[0];
 
         BeefyClient.ValidatorSet memory cur =
@@ -280,6 +281,58 @@ contract BeefyClientAdvancedTest is Test {
         );
     }
 
+    function testFiatShamirCommitWithNextValidatorSet() public {
+        // Construct a MMRLeaf that advances the validator set: nextAuthoritySetID = nextValidatorSet.id + 1
+        BeefyClient.MMRLeaf memory leaf;
+        leaf.version = 0;
+        leaf.parentNumber = 0;
+        leaf.parentHash = bytes32(0);
+        // nextValidatorSet.id == VSET_ID + 1, so set leaf.nextAuthoritySetID = VSET_ID + 2
+        leaf.nextAuthoritySetID = VSET_ID + 2;
+        leaf.nextAuthoritySetLen = uint32(VSET_LEN);
+        leaf.nextAuthoritySetRoot = keccak256(abi.encodePacked("next-authority-root"));
+        leaf.parachainHeadsRoot = bytes32(0);
+
+        // Compute the MMR leaf hash for this leaf and build a Merkle fixture
+        bytes memory encodedLeaf = bytes.concat(
+            ScaleCodec.encodeU8(leaf.version),
+            ScaleCodec.encodeU32(leaf.parentNumber),
+            leaf.parentHash,
+            ScaleCodec.encodeU64(leaf.nextAuthoritySetID),
+            ScaleCodec.encodeU32(leaf.nextAuthoritySetLen),
+            leaf.nextAuthoritySetRoot,
+            leaf.parachainHeadsRoot
+        );
+        bytes32 leafHash = keccak256(encodedLeaf);
+
+        // Build a small Merkle tree (power-of-two leaves) where one leaf equals our leafHash
+        // and extract a non-empty proof for that leaf using the shared MerkleLib.
+        (bytes32 mmrRoot, bytes32[] memory leafProof, uint256 leafProofOrder) =
+            MerkleLib.buildMerkleWithTargetLeaf(16, 3, leafHash);
+
+        // Now build a commitment that contains the Merkle root and generate proofs
+        (BeefyClient.Commitment memory commitment, bytes32 commitmentHash) =
+            _buildCommitment(1, VSET_ID + 1, mmrRoot);
+
+        uint256 quorum = beefyClient.computeQuorum_public(VSET_LEN);
+        uint256[] memory bitfield = new uint256[](Bitfield.containerLength(VSET_LEN));
+        for (uint256 i = 0; i < quorum; i++) {
+            Bitfield.set(bitfield, i);
+        }
+
+        // Generate Fiat-Shamir proofs (will sample from nextValidatorSet)
+        BeefyClient.ValidatorProof[] memory finalProofs = _generateFiatShamirProofs(
+            commitment, commitmentHash, bitfield, FIAT_SHAMIR_REQUIRED_SIGNATURES
+        );
+
+        // Submit using Fiat-Shamir path with a real non-empty leaf proof
+        beefyClient.submitFiatShamir(
+            commitment, bitfield, finalProofs, leaf, leafProof, leafProofOrder
+        );
+        assertEq(beefyClient.latestMMRRoot(), mmrRoot, "MMR root updated");
+        assertEq(beefyClient.latestBeefyBlock(), uint64(1), "beefy block updated");
+    }
+
     // ---------------------- Helpers ----------------------
 
     function _buildCommitment(uint32 blockNumber, uint64 validatorSetID, bytes32 mmrRoot)
@@ -293,74 +346,6 @@ contract BeefyClientAdvancedTest is Test {
             blockNumber: blockNumber, validatorSetID: validatorSetID, payload: payload
         });
         commitmentHash = keccak256(beefyClient.encodeCommitment_public(commitment));
-    }
-
-    // a Substrate-style binary merkle tree (duplicate last node when width is odd),
-    // and produce per-leaf proofs compatible with SubstrateMerkleProof.verify()
-    function _buildSubstrateBinaryMerkle(bytes32[] memory leaves)
-        internal
-        pure
-        returns (bytes32 root, bytes32[][] memory outProofs)
-    {
-        uint256 n = leaves.length;
-        require(n > 0, "no leaves");
-
-        // number of levels (excluding leaf level)
-        uint256 levels = 0;
-        for (uint256 w = n; w > 1; w = (w + 1) >> 1) {
-            levels++;
-        }
-
-        outProofs = new bytes32[][](n);
-        for (uint256 i = 0; i < n; i++) {
-            outProofs[i] = new bytes32[](levels);
-        }
-
-        // for each leaf independently, compute its proof by walking up levels
-        for (uint256 leafIdx = 0; leafIdx < n; leafIdx++) {
-            uint256 pos = leafIdx;
-            uint256 width = n;
-            bytes32[] memory layer = new bytes32[](width);
-            for (uint256 i = 0; i < width; i++) {
-                layer[i] = leaves[i];
-            }
-
-            uint256 step = 0;
-            while (width > 1) {
-                // proof sibling at this level
-                bytes32 sibling;
-                if (pos & 1 == 1) {
-                    // right child -> sibling is left (pos-1)
-                    sibling = layer[pos - 1];
-                } else if (pos + 1 == width) {
-                    // last element with no right sibling -> duplicate self
-                    sibling = layer[pos];
-                } else {
-                    // left child with right sibling
-                    sibling = layer[pos + 1];
-                }
-                outProofs[leafIdx][step] = sibling;
-
-                // next layer with duplication of last when odd
-                uint256 nextW = (width + 1) >> 1;
-                bytes32[] memory nextLayer = new bytes32[](nextW);
-                for (uint256 i = 0; i < width; i += 2) {
-                    bytes32 left = layer[i];
-                    bytes32 right = (i + 1 < width) ? layer[i + 1] : layer[i];
-                    nextLayer[i >> 1] = keccak256(abi.encodePacked(left, right));
-                }
-
-                // move up one level
-                pos >>= 1;
-                width = nextW;
-                layer = nextLayer;
-                step++;
-            }
-
-            if (leafIdx == 0) {
-                root = layer[0];
-            }
-        }
     }
 
     function _generateFinalProofs(
