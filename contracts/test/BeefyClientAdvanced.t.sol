@@ -249,25 +249,31 @@ contract BeefyClientAdvancedTest is Test {
             _buildCommitment(1, VSET_ID, MMRRoot);
 
         uint256 quorum = beefyClient.computeQuorum_public(VSET_LEN);
+        // Should revert when creating final bitfield with insufficient quorum
+        uint256 quorum2 = quorum - 1;
         uint256[] memory bitfield = new uint256[](Bitfield.containerLength(VSET_LEN));
+        for (uint256 i = 0; i < quorum2; i++) {
+            Bitfield.set(bitfield, i);
+        }
+        vm.expectRevert(BeefyClient.InvalidBitfield.selector);
+        beefyClient.createFiatShamirFinalBitfield(commitment, bitfield);
+
+        // Generate final proof with sufficient quorum
+        bitfield = new uint256[](Bitfield.containerLength(VSET_LEN));
         for (uint256 i = 0; i < quorum; i++) {
             Bitfield.set(bitfield, i);
         }
-
         BeefyClient.MMRLeaf memory dummyLeaf2;
-
         console.log("submit final proof with sufficient signatures");
         BeefyClient.ValidatorProof[] memory finalProofs = _generateFiatShamirProofs(
             commitment, commitmentHash, bitfield, FIAT_SHAMIR_REQUIRED_SIGNATURES
         );
 
-        // Insufficient quorum
-        uint256 quorum2 = quorum - 1;
+        // Should revert when submitting with insufficient quorum
         uint256[] memory bitfield2 = new uint256[](Bitfield.containerLength(VSET_LEN));
         for (uint256 i = 0; i < quorum2; i++) {
             Bitfield.set(bitfield2, i);
         }
-
         vm.expectRevert(BeefyClient.InvalidBitfield.selector);
         beefyClient.submitFiatShamir(
             commitment, bitfield2, finalProofs, dummyLeaf2, new bytes32[](0), 0
