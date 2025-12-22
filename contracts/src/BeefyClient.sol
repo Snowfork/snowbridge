@@ -174,6 +174,11 @@ contract BeefyClient {
     /* Constants */
 
     /**
+     * @dev Fiat-Shamir domain separator ID
+     */
+    bytes public constant FIAT_SHAMIR_DOMAIN_ID = bytes("SNOWBRIDGE-FIAT-SHAMIR-v1");
+
+    /**
      * @dev Beefy payload id for MMR Root payload items:
      * https://github.com/paritytech/substrate/blob/fe1f8ba1c4f23931ae89c1ada35efb3d908b50f5/primitives/consensus/beefy/src/payload.rs#L33
      */
@@ -484,7 +489,7 @@ contract BeefyClient {
 
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
 
-        return fiatShamirFinalBitfield(commitmentHash, bitfield, vset.length, vset.root);
+        return fiatShamirFinalBitfield(commitmentHash, bitfield, vset);
     }
 
     /**
@@ -666,8 +671,7 @@ contract BeefyClient {
             revert InvalidValidatorProofLength();
         }
 
-        uint256[] memory finalbitfield =
-            fiatShamirFinalBitfield(commitmentHash, bitfield, vset.length, vset.root);
+        uint256[] memory finalbitfield = fiatShamirFinalBitfield(commitmentHash, bitfield, vset);
 
         for (uint256 i = 0; i < proofs.length; i++) {
             ValidatorProof calldata proof = proofs[i];
@@ -695,10 +699,21 @@ contract BeefyClient {
     function createFiatShamirHash(
         bytes32 commitmentHash,
         bytes32 bitFieldHash,
-        bytes32 validatorSetRoot
-    ) internal pure returns (bytes32) {
+        ValidatorSetState storage vset
+    ) internal view returns (bytes32) {
         return sha256(
-            bytes.concat(sha256(bytes.concat(commitmentHash, bitFieldHash, validatorSetRoot)))
+            bytes.concat(
+                FIAT_SHAMIR_DOMAIN_ID,
+                sha256(
+                    bytes.concat(
+                        commitmentHash,
+                        bitFieldHash,
+                        vset.root,
+                        bytes32(uint256(vset.id)),
+                        bytes32(uint256(vset.length))
+                    )
+                )
+            )
         );
     }
 
@@ -706,21 +721,19 @@ contract BeefyClient {
      * @dev Helper to create a final bitfield with subsampled validator selections using the Fiat-Shamir approach
      * @param commitmentHash the hash of the full commitment that was used for the commitmentHash
      * @param bitfield claiming which validators have signed the commitment
-     * @param vsetLength length of the validator set
-     * @param vsetRoot merkle root of the validator set
+     * @param vset the validator set state
      */
     function fiatShamirFinalBitfield(
         bytes32 commitmentHash,
         uint256[] calldata bitfield,
-        uint256 vsetLength,
-        bytes32 vsetRoot
+        ValidatorSetState storage vset
     ) internal view returns (uint256[] memory) {
         bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
-        bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vsetRoot);
+        bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset);
         uint256 requiredSignatures =
-            Math.min(fiatShamirRequiredSignatures, computeQuorum(vsetLength));
+            Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
         return
-            Bitfield.subsample(uint256(fiatShamirHash), bitfield, vsetLength, requiredSignatures);
+            Bitfield.subsample(uint256(fiatShamirHash), bitfield, vset.length, requiredSignatures);
     }
 
     // Ensure that the commitment provides a new MMR root
