@@ -97,7 +97,7 @@ contract GatewayV1Test is Test {
     address public account1;
     address public account2;
 
-    uint64 public maxDispatchGas = 500_000;
+    uint64 public maxDispatchGas = 800_000;
     uint256 public maxRefund = 1 ether;
     uint256 public reward = 1 ether;
     bytes32 public messageID = keccak256("cabbage");
@@ -733,8 +733,21 @@ contract GatewayV1Test is Test {
         vm.expectEmit(true, false, false, false);
         emit IUpgradable.Upgraded(address(newLogic));
 
-        MockGateway(address(gateway)).v1_handleUpgrade_public(abi.encode(params));
-
+        IGatewayV1(address(gateway))
+            .submitV1(
+                InboundMessage(
+                    assetHubParaID.into(),
+                    1,
+                    CommandV1.Upgrade,
+                    abi.encode(params),
+                    maxDispatchGas,
+                    maxRefund,
+                    reward,
+                    messageID
+                ),
+                proof,
+                makeMockProof()
+            );
         // Verify that the MockGatewayV2.initialize was called
         assertEq(MockGatewayV2(address(gateway)).getValue(), 42);
     }
@@ -770,7 +783,21 @@ contract GatewayV1Test is Test {
         OperatingMode mode = IGatewayV1(address(gateway)).operatingMode();
         assertEq(uint256(mode), 0);
 
-        MockGateway(address(gateway)).v1_handleSetOperatingMode_public(abi.encode(params));
+        IGatewayV1(address(gateway))
+            .submitV1(
+                InboundMessage(
+                    assetHubParaID.into(),
+                    1,
+                    CommandV1.SetOperatingMode,
+                    abi.encode(params),
+                    maxDispatchGas,
+                    maxRefund,
+                    reward,
+                    messageID
+                ),
+                proof,
+                makeMockProof()
+            );
 
         mode = IGatewayV1(address(gateway)).operatingMode();
         assertEq(uint256(mode), 1);
@@ -970,15 +997,26 @@ contract GatewayV1Test is Test {
         uint256 fee = IGatewayV1(address(gateway)).quoteRegisterTokenFee();
         assertEq(fee, 5_000_000_000_000_000);
         // Double the assetHubCreateAssetFee
-        MockGateway(address(gateway))
-            .v1_handleSetTokenTransferFees_public(
-                abi.encode(
-                    SetTokenTransferFeesParams({
-                        assetHubCreateAssetFee: createTokenFee * 2,
-                        registerTokenFee: registerTokenFee,
-                        assetHubReserveTransferFee: sendTokenFee * 3
-                    })
-                )
+        IGatewayV1(address(gateway))
+            .submitV1(
+                InboundMessage(
+                    assetHubParaID.into(),
+                    1,
+                    CommandV1.SetTokenTransferFees,
+                    abi.encode(
+                        SetTokenTransferFeesParams({
+                            assetHubCreateAssetFee: createTokenFee * 2,
+                            registerTokenFee: registerTokenFee,
+                            assetHubReserveTransferFee: sendTokenFee * 3
+                        })
+                    ),
+                    maxDispatchGas,
+                    maxRefund,
+                    reward,
+                    messageID
+                ),
+                proof,
+                makeMockProof()
             );
         fee = IGatewayV1(address(gateway)).quoteRegisterTokenFee();
         // since deliveryCost not changed, so the total fee increased only by 50%
@@ -997,16 +1035,27 @@ contract GatewayV1Test is Test {
     function testSetPricingParameters() public {
         uint256 fee = IGatewayV1(address(gateway)).quoteRegisterTokenFee();
         assertEq(fee, 5_000_000_000_000_000);
-        // Double both the exchangeRate and multiplier. Should lead to an 4x fee increase
-        MockGateway(address(gateway))
-            .v1_handleSetPricingParameters_public(
-                abi.encode(
-                    SetPricingParametersParams({
-                        exchangeRate: exchangeRate.mul(convert(2)),
-                        multiplier: multiplier.mul(convert(2)),
-                        deliveryCost: outboundFee
-                    })
-                )
+        // Double the exchange rate and multiplier
+        IGatewayV1(address(gateway))
+            .submitV1(
+                InboundMessage(
+                    assetHubParaID.into(),
+                    1,
+                    CommandV1.SetPricingParameters,
+                    abi.encode(
+                        SetPricingParametersParams({
+                            exchangeRate: exchangeRate.mul(convert(2)),
+                            multiplier: multiplier.mul(convert(2)),
+                            deliveryCost: outboundFee
+                        })
+                    ),
+                    maxDispatchGas,
+                    maxRefund,
+                    reward,
+                    messageID
+                ),
+                proof,
+                makeMockProof()
             );
         // Should expect 4x fee increase
         fee = IGatewayV1(address(gateway)).quoteRegisterTokenFee();
@@ -1071,8 +1120,21 @@ contract GatewayV1Test is Test {
         vm.expectEmit(true, true, false, false);
         emit IGatewayBase.ForeignTokenRegistered(bytes32(uint256(1)), address(0));
 
-        MockGateway(address(gateway)).v1_handleRegisterForeignToken_public(abi.encode(params));
-
+        IGatewayV1(address(gateway))
+            .submitV1(
+                InboundMessage(
+                    assetHubParaID.into(),
+                    1,
+                    CommandV1.RegisterForeignToken,
+                    abi.encode(params),
+                    maxDispatchGas,
+                    maxRefund,
+                    reward,
+                    messageID
+                ),
+                proof,
+                makeMockProof()
+            );
         address tokenAddress = MockGateway(address(gateway)).tokenAddressOf(dotTokenID);
         assertTrue(tokenAddress != address(0));
         bytes32 tokenId = IGatewayV1(address(gateway)).queryForeignTokenID(tokenAddress);
