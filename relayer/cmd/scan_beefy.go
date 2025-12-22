@@ -40,7 +40,7 @@ func ScanBeefyFn(cmd *cobra.Command, _ []string) error {
 	logrus.SetLevel(logrus.DebugLevel)
 
 	polkadotUrl, _ := cmd.Flags().GetString("polkadot-url")
-	relaychainConn := relaychain.NewConnection(polkadotUrl)
+	relaychainConn := relaychain.NewConnection(polkadotUrl, nil)
 	relaychainConn.Connect(ctx)
 
 	config := beefy.SourceConfig{}
@@ -119,7 +119,7 @@ func ScanSingleBeefyBlockFn(cmd *cobra.Command, _ []string) error {
 	logrus.SetLevel(logrus.DebugLevel)
 
 	polkadotUrl, _ := cmd.Flags().GetString("polkadot-url")
-	relaychainConn := relaychain.NewConnection(polkadotUrl)
+	relaychainConn := relaychain.NewConnection(polkadotUrl, nil)
 	err := relaychainConn.Connect(ctx)
 	if err != nil {
 		fmt.Errorf("connect: %w", err)
