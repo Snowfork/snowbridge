@@ -501,7 +501,6 @@ contract BeefyClient {
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
     ) external {
-        bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
         if (commitment.blockNumber <= latestBeefyBlock) {
             revert StaleCommitment();
         }
@@ -514,6 +513,8 @@ contract BeefyClient {
         } else if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
         }
+
+        bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
         verifyFiatShamirCommitment(commitmentHash, bitfield, vset, proofs);
