@@ -475,6 +475,13 @@ contract BeefyClient {
             revert InvalidCommitment();
         }
 
+        if (
+            bitfield.length != Bitfield.containerLength(vset.length)
+                || Bitfield.countSetBits(bitfield, vset.length) < computeQuorum(vset.length)
+        ) {
+            revert InvalidBitfield();
+        }
+
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
 
         return fiatShamirFinalBitfield(commitmentHash, bitfield, vset.length, vset.root);
@@ -510,6 +517,12 @@ contract BeefyClient {
             revert InvalidCommitment();
         }
 
+        if (
+            bitfield.length != Bitfield.containerLength(vset.length)
+                || Bitfield.countSetBits(bitfield, vset.length) < computeQuorum(vset.length)
+        ) {
+            revert InvalidBitfield();
+        }
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
@@ -573,15 +586,23 @@ contract BeefyClient {
         numRequiredSignatures += Math.log2(validatorSetLen, Math.Rounding.Ceil);
         // Add signatures based on the signature usage count.
         numRequiredSignatures += 1 + (2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil));
-        // Never require more signatures than a 2/3 majority
-        return Math.min(numRequiredSignatures, computeQuorum(validatorSetLen));
+        // Never require more signatures than a 1/3 + 1 majority
+        return Math.min(numRequiredSignatures, computeMaxRequiredSignatures(validatorSetLen));
+    }
+
+    /**
+     * @dev Calculates 2/3 majority required for quorum for a given number of validators.
+     * @param numValidators The number of validators in the validator set.
+     */
+    function computeQuorum(uint256 numValidators) internal pure returns (uint256) {
+        return numValidators - (numValidators - 1) / 3;
     }
 
     /**
      * @dev We have 2/3rd +1 honesty assumption on polkadot validators. Hence it is sufficient (for both random sampling and Fiat Shamir) to check 1/3rd +1 validator signatures to ensure at least 1 honest validator signed the payload.
      * @param numValidators The number of validators in the validator set.
      */
-    function computeQuorum(uint256 numValidators) internal pure returns (uint256) {
+    function computeMaxRequiredSignatures(uint256 numValidators) internal pure returns (uint256) {
         return numValidators / 3 + 1;
     }
 
@@ -639,7 +660,7 @@ contract BeefyClient {
         ValidatorProof[] calldata proofs
     ) internal view {
         uint256 requiredSignatures = Math.min(
-            fiatShamirRequiredSignatures, computeQuorum(vset.length)
+            fiatShamirRequiredSignatures, computeMaxRequiredSignatures(vset.length)
         );
         if (proofs.length != requiredSignatures) {
             revert InvalidValidatorProofLength();
