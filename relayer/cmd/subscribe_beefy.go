@@ -40,7 +40,7 @@ func SubBeefyFn(cmd *cobra.Command, _ []string) error {
 func subBeefyJustifications(ctx context.Context, cmd *cobra.Command) error {
 	url, _ := cmd.Flags().GetString("url")
 
-	conn := relaychain.NewConnection(url)
+	conn := relaychain.NewConnection(url, nil)
 	err := conn.Connect(ctx)
 	if err != nil {
 		log.Error(err)
