@@ -280,6 +280,36 @@ contract GatewayV2Test is Test {
         return commands;
     }
 
+    function makeCallContractCommandWithFunctionNotExists(uint256 value)
+        public
+        view
+        returns (CommandV2[] memory)
+    {
+        bytes memory data = abi.encodeWithSignature("sayHelloNotExists(string)", "World");
+        CallContractParams memory params =
+            CallContractParams({target: address(helloWorld), data: data, value: value});
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] = CommandV2({kind: CommandKind.CallContract, gas: 500_000, payload: payload});
+        return commands;
+    }
+
+    function makeCallContractCommandWithInsufficientGas(uint256 value)
+        public
+        view
+        returns (CommandV2[] memory)
+    {
+        bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
+        CallContractParams memory params =
+            CallContractParams({target: address(helloWorld), data: data, value: value});
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] = CommandV2({kind: CommandKind.CallContract, gas: 1, payload: payload});
+        return commands;
+    }
+
     /**
      * Message Verification
      */
@@ -946,5 +976,51 @@ contract GatewayV2Test is Test {
 
         // assert recipient got tokens
         assertEq(token.balanceOf(address(this)), tAmt);
+    }
+
+    function testAgentCallContractRevertedForFunctionNotExists() public {
+        bytes32 topic = keccak256("topic");
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractCommandWithFunctionNotExists(0.1 ether)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentCallContractRevertedForInsufficientGas() public {
+        bytes32 topic = keccak256("topic");
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractCommandWithInsufficientGas(0.1 ether)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
     }
 }
