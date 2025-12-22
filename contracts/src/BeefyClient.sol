@@ -475,13 +475,9 @@ contract BeefyClient {
             revert InvalidCommitment();
         }
 
-        bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
-        bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset.root);
-        uint256 requiredSignatures =
-            Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
-        return
-            Bitfield.subsample(uint256(fiatShamirHash), bitfield, vset.length, requiredSignatures);
+
+        return fiatShamirFinalBitfield(commitmentHash, bitfield, vset.length, vset.root);
     }
 
     /**
@@ -642,16 +638,15 @@ contract BeefyClient {
         ValidatorSetState storage vset,
         ValidatorProof[] calldata proofs
     ) internal view {
-        bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
-        bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset.root);
-        uint256 requiredSignatures =
-            Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
+        uint256 requiredSignatures = Math.min(
+            fiatShamirRequiredSignatures, computeQuorum(vset.length)
+        );
         if (proofs.length != requiredSignatures) {
             revert InvalidValidatorProofLength();
         }
 
         uint256[] memory finalbitfield =
-            Bitfield.subsample(uint256(fiatShamirHash), bitfield, vset.length, requiredSignatures);
+            fiatShamirFinalBitfield(commitmentHash, bitfield, vset.length, vset.root);
 
         for (uint256 i = 0; i < proofs.length; i++) {
             ValidatorProof calldata proof = proofs[i];
@@ -684,6 +679,27 @@ contract BeefyClient {
         return sha256(
             bytes.concat(sha256(bytes.concat(commitmentHash, bitFieldHash, validatorSetRoot)))
         );
+    }
+
+    /**
+     * @dev Helper to create a final bitfield with subsampled validator selections using the Fiat-Shamir approach
+     * @param commitmentHash the hash of the full commitment that was used for the commitmentHash
+     * @param bitfield claiming which validators have signed the commitment
+     * @param vsetLength length of the validator set
+     * @param vsetRoot merkle root of the validator set
+     */
+    function fiatShamirFinalBitfield(
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
+        uint256 vsetLength,
+        bytes32 vsetRoot
+    ) internal view returns (uint256[] memory) {
+        bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
+        bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vsetRoot);
+        uint256 requiredSignatures =
+            Math.min(fiatShamirRequiredSignatures, computeQuorum(vsetLength));
+        return
+            Bitfield.subsample(uint256(fiatShamirHash), bitfield, vsetLength, requiredSignatures);
     }
 
     // Ensure that the commitment provides a new MMR root
