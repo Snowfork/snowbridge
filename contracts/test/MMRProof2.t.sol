@@ -6,7 +6,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {MMRProof} from "../src/utils/MMRProof.sol";
 import {MMRProofWrapper} from "./mocks/MMRProofWrapper.sol";
-import {MerkleLib} from "./MerkleLib.sol";
+import {MerkleLib} from "./utils/MerkleLib.sol";
 
 contract MMRProofTest is Test {
     // using stdJson for string;

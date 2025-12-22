@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {SubstrateMerkleProof} from "../src/utils/SubstrateMerkleProof.sol";
-import {MerkleLibSubstrate} from "./MerkleLib.sol";
+import {MerkleLibSubstrate} from "./utils/MerkleLib.sol";
 
 contract SubstrateMerkleProofWrapper {
     function verify(

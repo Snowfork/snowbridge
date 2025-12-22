@@ -14,7 +14,7 @@ import {
     SetOperatingModeParams as SetOperatingModeParamsV1
 } from "../src/v1/Types.sol";
 import {OperatingMode} from "../src/types/Common.sol";
-import {MerkleLib} from "./MerkleLib.sol";
+import {MerkleLib} from "./utils/MerkleLib.sol";
 import {Verification} from "../src/Verification.sol";
 import {MockGateway} from "./mocks/MockGateway.sol";
 
