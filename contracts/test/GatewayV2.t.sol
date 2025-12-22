@@ -468,6 +468,8 @@ contract GatewayV2Test is Test {
         assertEq(assetHubAgent.balance, 1 ether);
         assertEq(IERC20(nativeToken).balanceOf(assetHubAgent), 1 ether);
         assertEq(IERC20(foreignToken).totalSupply(), foreignTokenSupplyPre - 1 ether);
+
+        assertEq(IGatewayV2(address(gateway)).v2_outboundNonce(), 1);
     }
 
     function testSendMessageFailsWithInsufficentValue() public {

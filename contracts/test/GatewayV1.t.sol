@@ -752,6 +752,19 @@ contract GatewayV1Test is Test {
         assertEq(MockGatewayV2(address(gateway)).getValue(), 42);
     }
 
+    function testUpgradeFailOnlySelfInvoke() public {
+        MockGatewayV2 newLogic = new MockGatewayV2();
+
+        UpgradeParams memory params = UpgradeParams({
+            impl: address(newLogic),
+            implCodeHash: address(newLogic).codehash,
+            initParams: abi.encode(666)
+        });
+
+        vm.expectRevert(IGatewayBase.Unauthorized.selector);
+        MockGateway(address(gateway)).v1_handleUpgrade(abi.encode(params));
+    }
+
     function testUpgradeFailOnInitializationFailure() public {
         MockGatewayV2 newLogic = new MockGatewayV2();
 
