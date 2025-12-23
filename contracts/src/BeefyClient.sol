@@ -310,6 +310,10 @@ contract BeefyClient {
             revert InvalidBitfield();
         }
 
+        // Validate that all padding bits (beyond vset.length) are zero
+        // This ensures the bitfield was created by createInitialBitfield or equivalent
+        validateBitfieldPadding(bitfield, vset.length);
+
         tickets[createTicketID(msg.sender, commitmentHash)] = Ticket({
             blockNumber: uint64(block.number),
             validatorSetLen: uint32(vset.length),
@@ -386,6 +390,10 @@ contract BeefyClient {
         } else if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
         }
+
+        // Validate that all padding bits (beyond vset.length) are zero
+        // This ensures the bitfield was created by createInitialBitfield or equivalent
+        validateBitfieldPadding(bitfield, vset.length);
 
         verifyCommitment(commitmentHash, ticketID, bitfield, vset, proofs);
 
@@ -528,6 +536,10 @@ contract BeefyClient {
         ) {
             revert InvalidBitfield();
         }
+        // Validate that all padding bits (beyond vset.length) are zero
+        // This ensures the bitfield was created by createInitialBitfield or equivalent
+        validateBitfieldPadding(bitfield, vset.length);
+
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
@@ -734,6 +746,32 @@ contract BeefyClient {
             Math.min(fiatShamirRequiredSignatures, computeMaxRequiredSignatures(vset.length));
         return
             Bitfield.subsample(uint256(fiatShamirHash), bitfield, vset.length, requiredSignatures);
+    }
+
+    /**
+     * @dev Validate that all padding bits in the bitfield (beyond length) are zero.
+     * @param bitfield The bitfield to validate
+     * @param length The number of valid bits (padding starts after this)
+     */
+    function validateBitfieldPadding(uint256[] memory bitfield, uint256 length) internal pure {
+        uint256 containerLen = Bitfield.containerLength(length);
+        if (containerLen == 0 || bitfield.length == 0) {
+            return;
+        }
+
+        // Check if there are padding bits in the last element
+        uint256 validBitsInLastElement = length % 256;
+        if (validBitsInLastElement == 0) {
+            // All bits in last element are valid, no padding
+            return;
+        }
+
+        // Create a mask for padding bits: all bits from validBitsInLastElement to 255
+        uint256 paddingMask = type(uint256).max << validBitsInLastElement;
+        uint256 lastElement = bitfield[containerLen - 1];
+        if ((lastElement & paddingMask) != 0) {
+            revert InvalidBitfield();
+        }
     }
 
     // Ensure that the commitment provides a new MMR root

@@ -353,6 +353,30 @@ contract BeefyClientTest is Test {
         );
     }
 
+    function testSubmitInitialFailWithPaddingBitsSet() public {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+
+        // Create a bitfield with padding bits set
+        // If setSize requires fewer than 256 bits (e.g., 100 validators),
+        // the bitfield array will have length 1, but bits 100-255 are padding and must be zero
+        uint256[] memory bitfieldWithPadding = new uint256[](1);
+        bitfieldWithPadding[0] = 0; // Start clean
+
+        // Set valid bits (0 to setSize-1)
+        for (uint256 i = 0; i < setSize; i++) {
+            bitfieldWithPadding[0] |= (uint256(1) << i);
+        }
+
+        // Now set a padding bit (beyond setSize)
+        if (setSize < 256) {
+            bitfieldWithPadding[0] |= (uint256(1) << setSize);
+        }
+
+        // submitInitial should revert due to padding bits being set
+        vm.expectRevert(BeefyClient.InvalidBitfield.selector);
+        beefyClient.submitInitial(commitment, bitfieldWithPadding, finalValidatorProofs[0]);
+    }
+
     function testSubmitFailWithoutPrevRandao() public {
         BeefyClient.Commitment memory commitment = initialize(setId);
 
