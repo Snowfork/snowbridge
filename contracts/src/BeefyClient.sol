@@ -591,7 +591,7 @@ contract BeefyClient {
         numRequiredSignatures += Math.log2(validatorSetLen, Math.Rounding.Ceil);
         // Add signatures based on the signature usage count.
         numRequiredSignatures += 1 + (2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil));
-        // Never require more signatures than a 1/3 + 1 majority
+        // Never require more signatures than a 1/3 + 1 which is sufficient to ensure at least one honest validator.
         return Math.min(numRequiredSignatures, computeMaxRequiredSignatures(validatorSetLen));
     }
 
@@ -731,7 +731,7 @@ contract BeefyClient {
         bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
         bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset);
         uint256 requiredSignatures =
-            Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
+            Math.min(fiatShamirRequiredSignatures, computeMaxRequiredSignatures(vset.length));
         return
             Bitfield.subsample(uint256(fiatShamirHash), bitfield, vset.length, requiredSignatures);
     }
