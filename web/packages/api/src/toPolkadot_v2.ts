@@ -591,7 +591,7 @@ export const approveTokenSpend = (
 ): Promise<ContractTransaction> =>
     IERC20__factory.connect(tokenAddress)
         .getFunction("approve")
-        .populateTransaction(context.config.appContracts.gateway, amount, {
+        .populateTransaction(context.environment.gatewayContract, amount, {
             from: sourceAddress,
         })
 

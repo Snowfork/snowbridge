@@ -160,14 +160,14 @@ export const bridgeStatusInfo = async (
 
     // Beacon status
     const [latestFinalizedBeaconBlock, latestBeaconBlock] = await Promise.all([
-        fetchFinalityUpdate(context.config.ethereum.beacon_url),
-        fetchBeaconSlot(context.config.ethereum.beacon_url, "head"),
+        fetchFinalityUpdate(context.environment.beaconApiUrl),
+        fetchBeaconSlot(context.environment.beaconApiUrl, "head"),
     ])
     const latestBeaconBlockRoot = (
         await bridgeHub.query.ethereumBeaconClient.latestFinalizedBlockRoot()
     ).toHex()
     const latestBeaconBlockOnPolkadot = Number(
-        (await fetchBeaconSlot(context.config.ethereum.beacon_url, latestBeaconBlockRoot)).data
+        (await fetchBeaconSlot(context.environment.beaconApiUrl, latestBeaconBlockRoot)).data
             .message.slot,
     )
     const beaconBlockLatency =

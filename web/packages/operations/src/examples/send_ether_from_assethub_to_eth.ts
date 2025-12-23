@@ -1,8 +1,8 @@
 import { Keyring } from "@polkadot/keyring"
-import { assetsV2, Context, contextConfigFor, historyV2, toEthereumV2 } from "@snowbridge/api"
+import { assetsV2, Context, historyV2, toEthereumV2 } from "@snowbridge/api"
 import { formatUnits, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import { assetRegistryFor } from "@snowbridge/registry"
+import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
 import { setTimeout } from "timers/promises"
 ;(async () => {
     // Initialize polkadot-js crypto
@@ -13,7 +13,7 @@ import { setTimeout } from "timers/promises"
     const registry = assetRegistryFor(environment)
 
     // Initialize the context which establishes and pool connections
-    const context = new Context(contextConfigFor(environment))
+    const context = new Context(environmentFor(environment))
 
     // Initialize ethereum wallet.
     const ETHEREUM_ACCOUNT = new Wallet(
