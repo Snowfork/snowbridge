@@ -110,8 +110,8 @@ contract FiatShamirPaddingBitsGrindTest is Test {
         emit log_named_uint("Found padding nonce", nonce);
         emit log_named_bytes32("Baseline bitfieldHash", h0);
         emit log_named_bytes32("Grinded bitfieldHash", h1);
-        // with the added validateBitfieldPadding check, submission will revert for the attacker-controlled grindedBitfield signatures
-        vm.expectRevert(BeefyClient.InvalidBitfield.selector);
+        // with the added validatePadding check, submission will revert for the attacker-controlled grindedBitfield signatures
+        vm.expectRevert(Bitfield.InvalidBitfieldPadding.selector);
         beefy.submitFiatShamir(
             commitment,
             grindedBitfield,
