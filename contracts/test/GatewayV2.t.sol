@@ -59,6 +59,7 @@ import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
 import {HelloWorld} from "./mocks/HelloWorld.sol";
+import "./mocks/FeeOnTransferToken.sol";
 
 contract GatewayV2Test is Test {
     // Emitted when token minted/burnt/transferred
@@ -167,8 +168,16 @@ contract GatewayV2Test is Test {
     }
 
     function makeUnlockWethCommand(uint128 value) public view returns (CommandV2[] memory) {
+        return makeUnlockTokenCommand(address(weth), relayer, value);
+    }
+
+    function makeUnlockTokenCommand(address token, address recipient, uint128 amount)
+        public
+        pure
+        returns (CommandV2[] memory)
+    {
         UnlockNativeTokenParams memory params =
-            UnlockNativeTokenParams({token: address(weth), recipient: relayer, amount: value});
+            UnlockNativeTokenParams({token: token, recipient: recipient, amount: amount});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -390,6 +399,28 @@ contract GatewayV2Test is Test {
         assertEq(assetHubAgent.balance, 1 ether);
         assertEq(IERC20(nativeToken).balanceOf(assetHubAgent), 1 ether);
         assertEq(IERC20(foreignToken).totalSupply(), foreignTokenSupplyPre - 1 ether);
+    }
+
+    function testSendMessageWithFeeOnTransferTokenReverts() public {
+        FeeOnTransferToken feeToken = new FeeOnTransferToken("FeeToken", "FEE", 500);
+        feeToken.mint(user1, 1 ether);
+        MockGateway(address(gateway)).prank_registerNativeToken(address(feeToken));
+
+        uint128 amount = 1 ether;
+
+        bytes[] memory assets = new bytes[](1);
+        assets[0] = abi.encode(0, address(feeToken), amount);
+
+        hoax(user1);
+        feeToken.approve(address(gateway), amount);
+
+        vm.expectRevert();
+        hoax(user1);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
+            "", assets, "", 0.1 ether, 0.4 ether
+        );
+
+        assertEq(feeToken.balanceOf(assetHubAgent), 0);
     }
 
     function testSendMessageFailsWithInsufficentValue() public {
