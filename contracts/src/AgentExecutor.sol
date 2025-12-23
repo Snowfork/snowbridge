@@ -29,6 +29,4 @@ contract AgentExecutor {
             revert();
         }
     }
-
-    function deposit() external payable {}
 }

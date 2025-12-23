@@ -322,6 +322,10 @@ contract BeefyClient {
             revert InvalidBitfield();
         }
 
+        // Validate that all padding bits (beyond vset.length) are zero
+        // This ensures the bitfield was created by createInitialBitfield or equivalent
+        Bitfield.validatePadding(bitfield, vset.length);
+
         tickets[createTicketID(msg.sender, commitmentHash)] = Ticket({
             blockNumber: uint64(block.number),
             validatorSetLen: uint32(vset.length),
@@ -398,6 +402,10 @@ contract BeefyClient {
         } else if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
         }
+
+        // Validate that all padding bits (beyond vset.length) are zero
+        // This ensures the bitfield was created by createInitialBitfield or equivalent
+        Bitfield.validatePadding(bitfield, vset.length);
 
         verifyCommitment(commitmentHash, ticketID, bitfield, vset, proofs);
 
@@ -540,6 +548,10 @@ contract BeefyClient {
         ) {
             revert InvalidBitfield();
         }
+        // Validate that all padding bits (beyond vset.length) are zero
+        // This ensures the bitfield was created by createInitialBitfield or equivalent
+        Bitfield.validatePadding(bitfield, vset.length);
+
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
@@ -603,7 +615,7 @@ contract BeefyClient {
         numRequiredSignatures += Math.log2(validatorSetLen, Math.Rounding.Ceil);
         // Add signatures based on the signature usage count.
         numRequiredSignatures += 1 + (2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil));
-        // Never require more signatures than a 1/3 + 1 majority
+        // Never require more signatures than a 1/3 + 1 which is sufficient to ensure at least one honest validator.
         return Math.min(numRequiredSignatures, computeMaxRequiredSignatures(validatorSetLen));
     }
 
@@ -743,7 +755,7 @@ contract BeefyClient {
         bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
         bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset);
         uint256 requiredSignatures =
-            Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
+            Math.min(fiatShamirRequiredSignatures, computeMaxRequiredSignatures(vset.length));
         return
             Bitfield.subsample(uint256(fiatShamirHash), bitfield, vset.length, requiredSignatures);
     }
