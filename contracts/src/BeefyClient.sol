@@ -12,16 +12,27 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
 /**
  * @title BeefyClient
+ * @dev This is a client for verifying BEEFY commitments from the Polkadot network.
+ * it contains two ways to verify BEEFY commitments from a Substrate-based chain,
+ * one through an interactive protocol, and one through Fiat-Shamir transformation.
  *
- * The BEEFY protocol is defined in https://eprint.iacr.org/2025/057.pdf. Higher level documentation
+ * The interactive protocol is defined in https://eprint.iacr.org/2025/057.pdf. Higher level documentation
  * is available at https://docs.snowbridge.network/architecture/verification/polkadot.
  *
  * To submit new commitments, relayers must call the following methods sequentially:
- * 1. submitInitial: Setup the session for the interactive submission
+ * 1. submitInitial: Initializes the session for interactive submission and waits for the Randao delay period
  * 2. commitPrevRandao: Commit to a random seed for generating a validator subsampling
  * 3. createFinalBitfield: Generate the validator subsampling
  * 4. submitFinal: Complete submission after providing the request validator signatures
  *
+ *
+ * The non-interactive protocol eliminates the need for interaction by applying Fiat-Shamir transform.
+ * It is defined in Section 6 of https://eprint.iacr.org/2025/057.pdf, with higher-level documentation
+ * available at https://hackmd.io/8Jd7V74iSSeeHOIG76REWw
+ *
+ * To submit new commitments using the Fiat-Shamir approach, relayers call the following methods sequentially:
+ * 1. createFiatShamirFinalBitfield: Generate the validator subsampling using Fiat-Shamir
+ * 2. submitFiatShamir: Complete submission after providing the request validator signatures
  */
 contract BeefyClient {
     using Math for uint16;
@@ -206,8 +217,9 @@ contract BeefyClient {
     uint256 public immutable minNumRequiredSignatures;
 
     /**
-     * @dev The lower bound on the number of signatures required to validate a new commitment. Note
-     * that the final number of signatures is calculated dynamically with the Fiat-Shamir transform.
+     * @dev The signatures required to validate a new commitment using Fiat-Shamir transform. Note
+     * that Fiat-shamir comes from the assumption on the hash-power of adversary
+     * and its not a crypto-economic argument.
      */
     uint256 public immutable fiatShamirRequiredSignatures;
 
