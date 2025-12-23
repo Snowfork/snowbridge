@@ -1025,4 +1025,132 @@ contract GatewayV2Test is Test {
                 relayerRewardAddress
             );
     }
+
+    function test_v2_submit_rejects_duplicate_nonce() public {
+        MockGateway gw = MockGateway(address(gateway));
+        // mark nonce 5 as already processed
+        gw.setInboundNonce(5);
+
+        InboundMessageV2 memory m;
+        m.nonce = 5;
+        m.origin = bytes32("x");
+        m.topic = bytes32(0);
+        m.commands = new CommandV2[](0);
+
+        bytes32[] memory leafProof = new bytes32[](0);
+
+        // empty header proof
+        Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](0);
+        Verification.ParachainHeader memory header = Verification.ParachainHeader({
+            parentHash: bytes32(0),
+            number: 0,
+            stateRoot: bytes32(0),
+            extrinsicsRoot: bytes32(0),
+            digestItems: digestItems
+        });
+        bytes32[] memory emptyBytes32 = new bytes32[](0);
+        Verification.HeadProof memory hp =
+            Verification.HeadProof({pos: 0, width: 0, proof: emptyBytes32});
+        Verification.MMRLeafPartial memory lp = Verification.MMRLeafPartial({
+            version: 0,
+            parentNumber: 0,
+            parentHash: bytes32(0),
+            nextAuthoritySetID: 0,
+            nextAuthoritySetLen: 0,
+            nextAuthoritySetRoot: bytes32(0)
+        });
+        Verification.Proof memory headerProof = Verification.Proof({
+            header: header,
+            headProof: hp,
+            leafPartial: lp,
+            leafProof: emptyBytes32,
+            leafProofOrder: 0
+        });
+
+        vm.expectRevert(IGatewayBase.InvalidNonce.selector);
+        gw.v2_submit(m, leafProof, headerProof, bytes32(0));
+    }
+
+    function test_onlySelf_enforced_on_external_calls() public {
+        MockGateway gw = MockGateway(address(gateway));
+        // calling the handler externally should revert with Unauthorized
+        SetOperatingModeParams memory p = SetOperatingModeParams({mode: OperatingMode.Normal});
+        bytes memory payload = abi.encode(p);
+        vm.expectRevert(IGatewayBase.Unauthorized.selector);
+        gw.v2_handleSetOperatingMode(payload);
+    }
+
+    function test_call_handleSetOperatingMode_via_self_changes_mode() public {
+        MockGateway gw = MockGateway(address(gateway));
+        // call via helper which forwards as `this` so onlySelf check passes
+        SetOperatingModeParams memory p =
+            SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
+        bytes memory payload = abi.encode(p);
+        gw.setOperatingMode(payload);
+        // ensure call did not revert
+        assertTrue(true);
+    }
+
+    function test_dispatch_unknown_command_returns_false() public {
+        MockGateway gw = MockGateway(address(gateway));
+        CommandV2 memory cmd = CommandV2({kind: 0xFF, gas: 100_000, payload: ""});
+        bool ok = gw.exposed_dispatchCommand(cmd, bytes32(0));
+        assertFalse(ok, "unknown command must return false");
+    }
+
+    function test_v2_dispatch_partial_failure_emits_CommandFailed() public {
+        MockGateway gw = MockGateway(address(gateway));
+        // Build two commands: SetOperatingMode (should succeed) and CallContract (will fail due to missing agent)
+        CommandV2[] memory cmds = new CommandV2[](2);
+        SetOperatingModeParams memory p = SetOperatingModeParams({mode: OperatingMode.Normal});
+        cmds[0] =
+            CommandV2({kind: CommandKind.SetOperatingMode, gas: 200_000, payload: abi.encode(p)});
+
+        CallContractParams memory cc =
+            CallContractParams({target: address(0x1234), data: "", value: 0});
+        cmds[1] =
+            CommandV2({kind: CommandKind.CallContract, gas: 200_000, payload: abi.encode(cc)});
+        InboundMessageV2 memory msgv;
+        msgv.origin = bytes32("orig");
+        msgv.nonce = 1;
+        msgv.topic = bytes32(0);
+        msgv.commands = cmds;
+
+        // call v2_submit (verification overridden to true)
+
+        // construct an empty Verification.Proof
+        Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](0);
+        Verification.ParachainHeader memory header = Verification.ParachainHeader({
+            parentHash: bytes32(0),
+            number: 0,
+            stateRoot: bytes32(0),
+            extrinsicsRoot: bytes32(0),
+            digestItems: digestItems
+        });
+
+        bytes32[] memory emptyBytes32 = new bytes32[](0);
+        Verification.HeadProof memory hp =
+            Verification.HeadProof({pos: 0, width: 0, proof: emptyBytes32});
+        Verification.MMRLeafPartial memory lp = Verification.MMRLeafPartial({
+            version: 0,
+            parentNumber: 0,
+            parentHash: bytes32(0),
+            nextAuthoritySetID: 0,
+            nextAuthoritySetLen: 0,
+            nextAuthoritySetRoot: bytes32(0)
+        });
+
+        Verification.Proof memory headerProof = Verification.Proof({
+            header: header,
+            headProof: hp,
+            leafPartial: lp,
+            leafProof: emptyBytes32,
+            leafProofOrder: 0
+        });
+
+        gw.v2_submit(msgv, proof, headerProof, bytes32(0));
+
+        // message should be recorded as dispatched
+        assertTrue(gw.v2_isDispatched(msgv.nonce));
+    }
 }

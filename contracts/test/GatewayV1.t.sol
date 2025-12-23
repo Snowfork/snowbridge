@@ -70,6 +70,9 @@ import "./mocks/HighGasToken.sol";
 contract GatewayV1Test is Test {
     // Emitted when token minted/burnt/transferred
     event Transfer(address indexed from, address indexed to, uint256 value);
+    event InboundMessageDispatched(
+        ChannelID indexed channelID, uint64 nonce, bytes32 indexed messageID, bool success
+    );
 
     ParaID public bridgeHubParaID = ParaID.wrap(1013);
 
@@ -1432,5 +1435,123 @@ contract GatewayV1Test is Test {
         uint256 paddedGas3 = abi.decode(result2, (uint256));
 
         require(paddedGas3 == paddedGas2, "gas won't increased");
+    }
+
+    function test_submitV1_notEnoughGas_reverts() public {
+        MockGateway gw = MockGateway(address(gateway));
+        // prepare channel so Functions.ensureChannel doesn't revert
+        ChannelID cid = ChannelID.wrap(bytes32(uint256(0x10)));
+        gw.setChannelAgent(cid, address(0x1234));
+
+        // craft a message with maxDispatchGas too large to satisfy gas check
+        InboundMessageV1 memory msgv = InboundMessageV1({
+            channelID: cid,
+            nonce: 1,
+            command: CommandV1.SetOperatingMode,
+            params: abi.encode(SetOperatingModeParams({mode: OperatingMode.Normal})),
+            maxDispatchGas: type(uint64).max / 2,
+            maxFeePerGas: 0,
+            reward: 0,
+            id: bytes32(0)
+        });
+
+        bytes32[] memory leafProof = new bytes32[](0);
+
+        // construct an empty header proof
+        Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](0);
+        Verification.ParachainHeader memory header = Verification.ParachainHeader({
+            parentHash: bytes32(0),
+            number: 0,
+            stateRoot: bytes32(0),
+            extrinsicsRoot: bytes32(0),
+            digestItems: digestItems
+        });
+        bytes32[] memory emptyBytes32 = new bytes32[](0);
+        Verification.HeadProof memory hp =
+            Verification.HeadProof({pos: 0, width: 0, proof: emptyBytes32});
+        Verification.MMRLeafPartial memory lp = Verification.MMRLeafPartial({
+            version: 0,
+            parentNumber: 0,
+            parentHash: bytes32(0),
+            nextAuthoritySetID: 0,
+            nextAuthoritySetLen: 0,
+            nextAuthoritySetRoot: bytes32(0)
+        });
+        Verification.Proof memory headerProof = Verification.Proof({
+            header: header,
+            headProof: hp,
+            leafPartial: lp,
+            leafProof: emptyBytes32,
+            leafProofOrder: 0
+        });
+
+        vm.expectRevert(IGatewayBase.NotEnoughGas.selector);
+        gw.submitV1(msgv, leafProof, headerProof);
+    }
+
+    function test_submitV1_handler_revert_is_caught_and_emits_false() public {
+        MockGateway gw = MockGateway(address(gateway));
+
+        ChannelID cid = ChannelID.wrap(bytes32(uint256(0x20)));
+        gw.setChannelAgent(cid, address(0x1234));
+
+        // Prepare mint params; using a channel that is NOT AssetHub so handler will revert
+        MintForeignTokenParams memory m = MintForeignTokenParams({
+            foreignTokenID: bytes32(uint256(0xdead)), recipient: address(0xbeef), amount: 1
+        });
+
+        InboundMessage memory msgv = InboundMessage({
+            channelID: cid,
+            nonce: 1,
+            command: CommandV1.MintForeignToken,
+            params: abi.encode(m),
+            maxDispatchGas: 200_000,
+            maxFeePerGas: 0,
+            reward: 0,
+            id: bytes32(uint256(0x42))
+        });
+
+        bytes32[] memory leafProof = new bytes32[](0);
+
+        // empty header proof
+        Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](0);
+        Verification.ParachainHeader memory header = Verification.ParachainHeader({
+            parentHash: bytes32(0),
+            number: 0,
+            stateRoot: bytes32(0),
+            extrinsicsRoot: bytes32(0),
+            digestItems: digestItems
+        });
+        bytes32[] memory emptyBytes32 = new bytes32[](0);
+        Verification.HeadProof memory hp =
+            Verification.HeadProof({pos: 0, width: 0, proof: emptyBytes32});
+        Verification.MMRLeafPartial memory lp = Verification.MMRLeafPartial({
+            version: 0,
+            parentNumber: 0,
+            parentHash: bytes32(0),
+            nextAuthoritySetID: 0,
+            nextAuthoritySetLen: 0,
+            nextAuthoritySetRoot: bytes32(0)
+        });
+        Verification.Proof memory headerProof = Verification.Proof({
+            header: header,
+            headProof: hp,
+            leafPartial: lp,
+            leafProof: emptyBytes32,
+            leafProofOrder: 0
+        });
+
+        // Expect event with success == false
+        vm.expectEmit(true, true, true, true);
+        emit InboundMessageDispatched(cid, msgv.nonce, msgv.id, false);
+
+        gw.submitV1(msgv, leafProof, headerProof);
+    }
+
+    function test_exposed_v1_transactionBaseGas_respects_msgdata_length() public {
+        MockGateway gw = MockGateway(address(gateway));
+        // call the exposed function; this will compute base gas based on calldata length
+        uint256 v = gw.exposed_v1_transactionBaseGas();
+        assertGt(v, 21_000);
     }
 }
