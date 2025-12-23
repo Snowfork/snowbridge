@@ -187,8 +187,17 @@ contract BeefyClientAdvancedTest is Test {
         BeefyClient.MMRLeaf memory dummyLeaf2;
 
         console.log("submit final proof with sufficient signatures");
-        BeefyClient.ValidatorProof[] memory finalProofs = _generateFiatShamirProofs(
+        (uint256[] memory finalBitfield, BeefyClient.ValidatorProof[] memory finalProofs) = _generateFiatShamirProofs(
             commitment, commitmentHash, bitfield, FIAT_SHAMIR_REQUIRED_SIGNATURES
+        );
+        require(
+            Bitfield.countSetBits(finalBitfield) < Bitfield.countSetBits(bitfield),
+            "final bitfield should be smaller than initial bitfield"
+        );
+        require(
+            Bitfield.countSetBits(finalBitfield)
+                < beefyClient.computeMaxRequiredSignatures_public(VSET_LEN),
+            "final bitfield has insufficient set bits"
         );
         beefyClient.submitFiatShamir(
             commitment, bitfield, finalProofs, dummyLeaf2, new bytes32[](0), 0
@@ -211,9 +220,8 @@ contract BeefyClientAdvancedTest is Test {
         console.log("submit proof with insufficient signatures");
         // Insufficient signatures
         uint256 insufficientSignatures = FIAT_SHAMIR_REQUIRED_SIGNATURES - 1;
-        BeefyClient.ValidatorProof[] memory finalProofs = _generateFiatShamirProofs(
-            commitment, commitmentHash, bitfield, insufficientSignatures
-        );
+        (, BeefyClient.ValidatorProof[] memory finalProofs) =
+            _generateFiatShamirProofs(commitment, commitmentHash, bitfield, insufficientSignatures);
         vm.expectRevert(BeefyClient.InvalidValidatorProofLength.selector);
         beefyClient.submitFiatShamir(
             commitment, bitfield, finalProofs, dummyLeaf2, new bytes32[](0), 0
@@ -234,7 +242,7 @@ contract BeefyClientAdvancedTest is Test {
         BeefyClient.MMRLeaf memory dummyLeaf2;
 
         console.log("submit proof with wrong signatures");
-        BeefyClient.ValidatorProof[] memory finalProofs = _generateFiatShamirProofs(
+        (, BeefyClient.ValidatorProof[] memory finalProofs) = _generateFiatShamirProofs(
             commitment, commitmentHash, bitfield, FIAT_SHAMIR_REQUIRED_SIGNATURES
         );
         // invalidate one proof
@@ -266,7 +274,7 @@ contract BeefyClientAdvancedTest is Test {
         }
         BeefyClient.MMRLeaf memory dummyLeaf2;
         console.log("submit final proof with sufficient signatures");
-        BeefyClient.ValidatorProof[] memory finalProofs = _generateFiatShamirProofs(
+        (, BeefyClient.ValidatorProof[] memory finalProofs) = _generateFiatShamirProofs(
             commitment, commitmentHash, bitfield, FIAT_SHAMIR_REQUIRED_SIGNATURES
         );
 
@@ -321,7 +329,7 @@ contract BeefyClientAdvancedTest is Test {
         }
 
         // Generate Fiat-Shamir proofs (will sample from nextValidatorSet)
-        BeefyClient.ValidatorProof[] memory finalProofs = _generateFiatShamirProofs(
+        (, BeefyClient.ValidatorProof[] memory finalProofs) = _generateFiatShamirProofs(
             commitment, commitmentHash, bitfield, FIAT_SHAMIR_REQUIRED_SIGNATURES
         );
 
@@ -384,14 +392,19 @@ contract BeefyClientAdvancedTest is Test {
         bytes32 commitmentHash,
         uint256[] memory bitfield,
         uint256 minimRequireSigs
-    ) internal view returns (BeefyClient.ValidatorProof[] memory) {
+    )
+        internal
+        view
+        returns (uint256[] memory finalBitfield, BeefyClient.ValidatorProof[] memory finalProofs)
+    {
         uint256 quorum = beefyClient.computeQuorum_public(VSET_LEN);
 
-        uint256 quorum2 = Math.min(minimRequireSigs, quorum);
+        uint256 quorum2 =
+            Math.min(minimRequireSigs, beefyClient.computeMaxRequiredSignatures_public(VSET_LEN));
 
-        uint256[] memory finalBitfield =
-            beefyClient.createFiatShamirFinalBitfield(commitment, bitfield);
-        BeefyClient.ValidatorProof[] memory finalProofs = new BeefyClient.ValidatorProof[](quorum2);
+        finalBitfield = beefyClient.createFiatShamirFinalBitfield(commitment, bitfield);
+
+        finalProofs = new BeefyClient.ValidatorProof[](quorum2);
         uint256 j = 0;
         for (uint256 i = 0; i < quorum; i++) {
             if (Bitfield.isSet(finalBitfield, i)) {
@@ -410,6 +423,6 @@ contract BeefyClientAdvancedTest is Test {
                 }
             }
         }
-        return finalProofs;
+        return (finalBitfield, finalProofs);
     }
 }

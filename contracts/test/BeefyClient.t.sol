@@ -557,7 +557,13 @@ contract BeefyClientTest is Test {
         commitPrevRandao();
 
         uint256[] memory finalBits = beefyClient.createFinalBitfield(commitHash, bitfield);
+        console.log("initial bitfield set bits:", Bitfield.countSetBits(bitfield));
+        console.log("final bitfield set bits:", Bitfield.countSetBits(finalBits));
         assertTrue(Bitfield.countSetBits(finalBits) < Bitfield.countSetBits(bitfield));
+        assertTrue(
+            Bitfield.countSetBits(finalBits)
+                < beefyClient.computeMaxRequiredSignatures_public(setSize)
+        );
     }
 
     function testCreateFinalBitfieldInvalid() public {
