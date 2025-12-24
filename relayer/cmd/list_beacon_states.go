@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"

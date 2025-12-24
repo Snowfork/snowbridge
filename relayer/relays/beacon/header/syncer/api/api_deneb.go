@@ -52,4 +52,3 @@ func DenebExecutionPayloadToScale(e *state.ExecutionPayloadDeneb) (scale.Executi
 		ExcessBlobGas:    types.NewU64(e.ExcessBlobGas),
 	}, nil
 }
-
