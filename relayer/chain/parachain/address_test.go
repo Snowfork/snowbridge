@@ -1,8 +1,9 @@
 package parachain
 
 import (
-	assert "github.com/stretchr/testify/require"
 	"testing"
+
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestSS58Prefix(t *testing.T) {
