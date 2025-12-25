@@ -2,6 +2,8 @@ package header
 
 import (
 	"context"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -13,7 +15,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 const MaxRedundancy = 20

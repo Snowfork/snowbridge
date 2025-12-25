@@ -2,12 +2,13 @@ package store
 
 import (
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/testutil"
 	"github.com/stretchr/testify/require"
-	"os"
-	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
 )
