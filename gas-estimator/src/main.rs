@@ -78,6 +78,9 @@ enum EstimateCommands {
         /// Relayer account public key (hex string, 32 bytes)
         #[arg(long)]
         relayer_account: String,
+        /// Message nonce from the event
+        #[arg(long)]
+        nonce: u64,
     },
 }
 
@@ -116,6 +119,7 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                 execution_fee,
                 relayer_fee,
                 relayer_account,
+                nonce,
             } => {
                 let claimer = parse_claimer(&claimer)?;
                 let origin = parse_origin(&origin)?;
@@ -152,6 +156,7 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                     relayer_fee,
                     &assets,
                     relayer_account,
+                    nonce,
                 )
                 .await?;
 
