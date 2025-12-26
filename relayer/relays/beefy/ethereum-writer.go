@@ -135,7 +135,8 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 
 	// Wait RandaoCommitDelay before submit CommitPrevRandao to prevent attacker from manipulating committee memberships
 	// Details in https://eth2book.info/altair/part3/config/preset/#max_seed_lookahead
-	err = wr.conn.WaitForFutureBlock(ctx, receipt.BlockNumber.Uint64(), wr.blockWaitPeriod+1)
+	// waiting additional 2 blocks to ensure we are past the delay
+	err = wr.conn.WaitForFutureBlock(ctx, receipt.BlockNumber.Uint64(), wr.blockWaitPeriod+2)
 	if err != nil {
 		return fmt.Errorf("Failed to wait for RandaoCommitDelay: %w", err)
 	}
