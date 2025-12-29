@@ -34,3 +34,10 @@ test-snowbridge-l1-adaptor:
 
 test-snowbridge-l2-adaptor:
 	forge script TestSnowbridgeL2Adaptor --chain $(BASE_CHAIN) --rpc-url $(BASE_RPC_URL) --broadcast -vvvv
+
+
+##############################################################
+# Uniswap Sepolia Swap
+
+test-uniswap-sepolia-swap:
+	forge script SwapScript --chain $(SEPOLIA_CHAIN) --rpc-url $(SEPOLIA_RPC_URL) --sender $(SEPOLIA_SENDER) --private-key $(DEPLOYER_KEY) --etherscan-api-key $(ETHERSCAN_API_KEY) --verifier $(VERIFIER) --verify --retries 10 --broadcast -vvvv
