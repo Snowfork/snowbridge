@@ -6,8 +6,9 @@ export interface TransferInterface {
     getDeliveryFee(
         context: Context,
         registry: AssetRegistry,
+        l2ChainId: number,
         tokenAddress: string,
-        l2TokenAddress: string,
+        amount: bigint,
         options?: {
             padPercentage?: bigint
             slippagePadPercentage?: bigint
@@ -22,11 +23,11 @@ export interface TransferInterface {
     createTransfer(
         context: Context,
         registry: AssetRegistry,
+        l2ChainId: number,
+        tokenAddress: string,
+        amount: bigint,
         sourceAccount: string,
         beneficiaryAccount: string,
-        tokenAddress: string,
-        l2TokenAddress: string,
-        amount: bigint,
         fee: DeliveryFee,
         options?: {
             claimerLocation?: any

@@ -60,6 +60,7 @@ export type Transfer = {
         sourceAssetMetadata: Asset
         sourceParachain: Parachain
         messageId?: string
+        contractCall?: ContractCall
     }
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>
 }

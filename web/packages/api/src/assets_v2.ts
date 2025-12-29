@@ -1248,3 +1248,17 @@ export async function validateAccount(
             beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n,
     }
 }
+
+export function findL2TokenAddress(
+    registry: AssetRegistry,
+    l2ChainId: number,
+    tokenAddress: string,
+): string | undefined {
+    const l2Chain = registry.ethereumChains[l2ChainId]
+    for (const [l2TokenAddress, asset] of Object.entries(l2Chain.assets)) {
+        if (asset.swapTokenAddress?.toLowerCase() === tokenAddress.toLowerCase()) {
+            return l2TokenAddress
+        }
+    }
+    return undefined
+}

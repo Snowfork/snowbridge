@@ -31,10 +31,15 @@ import { BN, hexToU8a } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
 import { Context } from "./index"
-import { ETHER_TOKEN_ADDRESS, getAssetHubConversionPalletSwap } from "./assets_v2"
+import {
+    ETHER_TOKEN_ADDRESS,
+    findL2TokenAddress,
+    getAssetHubConversionPalletSwap,
+} from "./assets_v2"
 import { getOperatingStatus } from "./status"
 import { AbstractProvider, ethers, Wallet, TransactionReceipt } from "ethers"
 import { CreateAgent } from "./registration/agent/createAgent"
+import { estimateFees } from "./across/api"
 
 export { ValidationKind, signAndSend } from "./toEthereum_v2"
 
@@ -247,7 +252,11 @@ export const estimateFeesFromAssetHub = async (
         defaultFee?: bigint
         feeTokenLocation?: any
         contractCall?: ContractCall
+        l2PadFeeByPercentage?: bigint
+        l2TransferGasLimit?: bigint
     },
+    l2ChainId?: number,
+    tokenAmount?: bigint,
 ): Promise<DeliveryFee> => {
     const assetHub = await context.parachain(registry.assetHubParaId)
     const assetHubImpl = await paraImplementation(assetHub)
@@ -285,6 +294,21 @@ export const estimateFeesFromAssetHub = async (
         returnToSenderDeliveryFeeDOT +
         bridgeHubDeliveryFeeDOT
 
+    // Calculate L2 bridge fee
+    let l2BridgeFeeInL1Token = 0n
+    if (l2ChainId) {
+        let callInfo = await buildL2Call(
+            context,
+            registry,
+            tokenAddress,
+            l2ChainId,
+            tokenAmount!,
+            "0x0000000000000000000000000000000000000000",
+        )
+        options = options || {}
+        options.contractCall = options.contractCall || callInfo.l2Call
+        l2BridgeFeeInL1Token = callInfo.fee
+    }
     let ethereumExecutionFee = await estimateEthereumExecutionFee(
         context,
         registry,
@@ -331,6 +355,7 @@ export const estimateFeesFromAssetHub = async (
         ethereumExecutionFeeInNative,
         localExecutionFeeInNative,
         totalFeeInNative,
+        l2BridgeFeeInL1Token,
     }
 }
 
@@ -936,4 +961,52 @@ export async function sendAgentCreation(
         throw Error(`Transaction ${response.hash} not included.`)
     }
     return receipt
+}
+
+export async function buildL2Call(
+    context: Context,
+    registry: AssetRegistry,
+    tokenAddress: string,
+    l2ChainId: number,
+    tokenAmount: bigint,
+    destinationAddress: string,
+    options?: {
+        l2TransferGasLimit?: bigint
+        l2PadFeeByPercentage?: bigint
+    },
+): Promise<{ fee: bigint; l2Call: ContractCall }> {
+    // Calculate fee with Across SDK
+    const l2TokenAddress = findL2TokenAddress(registry, l2ChainId, tokenAddress)!
+    let l2BridgeFeeInL1Token = await estimateFees(
+        context.acrossApiUrl(),
+        tokenAddress,
+        l2TokenAddress,
+        registry.ethChainId,
+        l2ChainId,
+        tokenAmount,
+    )
+    l2BridgeFeeInL1Token = padFeeByPercentage(
+        l2BridgeFeeInL1Token,
+        options?.l2PadFeeByPercentage ?? 33n,
+    )
+
+    const l1Adapter = context.l1Adapter()
+    let calldata = l1Adapter.interface.encodeFunctionData("swapToken", [
+        {
+            inputToken: tokenAddress,
+            outputToken: l2TokenAddress,
+            inputAmount: tokenAmount,
+            outputAmount: tokenAmount - l2BridgeFeeInL1Token,
+            destinationChainId: l2ChainId,
+        },
+        destinationAddress,
+    ])
+    let l1AdapterAddress = await l1Adapter.getAddress()
+    let l2Call: ContractCall = {
+        target: l1AdapterAddress,
+        value: 0n,
+        gas: options?.l2TransferGasLimit || 1_000_000n,
+        calldata,
+    }
+    return { l2Call, fee: l2BridgeFeeInL1Token }
 }
