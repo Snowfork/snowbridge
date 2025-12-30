@@ -16,7 +16,9 @@ import {
 } from "./toEthereum_v2"
 import { PNAFromAH } from "./transfers/toEthereum/pnaFromAH"
 import { TransferInterface } from "./transfers/toEthereum/transferInterface"
+import { TransferInterface as TransferInterfaceToL2 } from "./transfers/polkadotToL2/transferInterface"
 import { ERC20FromAH } from "./transfers/toEthereum/erc20FromAH"
+import { ERC20FromAH as ERC20FromAHToL2 } from "./transfers/polkadotToL2/erc20ToL2"
 import { PNAFromParachain } from "./transfers/toEthereum/pnaFromParachain"
 import { ERC20FromParachain } from "./transfers/toEthereum/erc20FromParachain"
 import {
@@ -64,6 +66,19 @@ export function createTransferImplementation(
             transferImpl = new ERC20FromParachain()
         }
     }
+    return transferImpl
+}
+
+export function createL2TransferImplementation(
+    sourceParaId: number,
+    registry: AssetRegistry,
+    tokenAddress: string,
+): TransferInterfaceToL2 {
+    // Todo: Support PNA transfers to L2
+    const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
+
+    let transferImpl = new ERC20FromAHToL2()
+
     return transferImpl
 }
 

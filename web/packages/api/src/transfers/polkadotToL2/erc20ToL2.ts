@@ -124,24 +124,25 @@ export class ERC20FromAH implements TransferInterface {
             amount,
         )
 
-        if (l2ChainId) {
-            let callInfo = await buildL2Call(
-                context,
-                registry,
-                tokenAddress,
-                l2ChainId,
-                amount,
-                beneficiaryAccount,
-            )
-            options = options || {}
-            options.contractCall = options.contractCall || callInfo.l2Call
-        }
+        let callInfo = await buildL2Call(
+            context,
+            registry,
+            tokenAddress,
+            l2ChainId,
+            amount,
+            beneficiaryAccount,
+        )
+        options = options || {}
+        options.contractCall = options.contractCall || callInfo.l2Call
+
+        const l1AdapterAddress = await context.l1Adapter().getAddress()
+
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = await this.createTx(
             context,
             parachain,
             ethChainId,
             sourceAccount,
-            beneficiaryAccount,
+            l1AdapterAddress, // send to L1 adapter
             ahAssetMetadata,
             amount,
             messageId,
