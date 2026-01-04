@@ -33,7 +33,7 @@ const run = async (
         l1AdaptorAddress,
         context.ethereum(),
     )
-    let call = await l1Adaptor.interface.encodeFunctionData("swapToken", [
+    let call = await l1Adaptor.interface.encodeFunctionData("depositToken", [
         {
             inputToken: inputToken,
             outputToken: outputToken,

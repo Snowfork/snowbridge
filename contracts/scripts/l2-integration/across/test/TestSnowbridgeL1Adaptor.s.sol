@@ -31,7 +31,7 @@ contract TestSnowbridgeL1Adaptor is Script {
 
         IERC20(params.inputToken).transfer(l1SnowbridgeAdaptor, params.inputAmount);
 
-        SnowbridgeL1Adaptor(l1SnowbridgeAdaptor).swapToken(params, deployerAddr);
+        SnowbridgeL1Adaptor(l1SnowbridgeAdaptor).depositToken(params, deployerAddr);
 
         vm.stopBroadcast();
         return;

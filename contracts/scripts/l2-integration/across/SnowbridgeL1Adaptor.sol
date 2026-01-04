@@ -16,7 +16,7 @@ contract SnowbridgeL1Adaptor {
 
     // Swap ERC20 token on L1 to get other token on L2, the fee should be calculated off-chain
     // following https://docs.across.to/reference/api-reference#get-swap-approval
-    function swapToken(SwapParams calldata params, address recipient) public {
+    function depositToken(SwapParams calldata params, address recipient) public {
         IERC20(params.inputToken).approve(address(SPOKE_POOL), params.inputAmount);
 
         SPOKE_POOL.deposit(

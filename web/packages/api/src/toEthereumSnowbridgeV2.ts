@@ -1006,7 +1006,7 @@ export async function buildL2Call(
     )
 
     const l1Adapter = context.l1Adapter()
-    let calldata = l1Adapter.interface.encodeFunctionData("swapToken", [
+    let calldata = l1Adapter.interface.encodeFunctionData("depositToken", [
         {
             inputToken: tokenAddress,
             outputToken: l2TokenAddress,

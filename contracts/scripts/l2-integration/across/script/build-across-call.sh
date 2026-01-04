@@ -35,7 +35,7 @@ echo "$calldata"
 recipient_raw="0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd"
 inputToken_raw="0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14"
 outputToken_raw="0x4200000000000000000000000000000000000006"
-calldata=$(cast calldata "swapToken((address,address,uint256,uint256,uint256),address)" \
+calldata=$(cast calldata "depositToken((address,address,uint256,uint256,uint256),address)" \
 "($inputToken_raw,$outputToken_raw,$inputAmount,$minOutputAmount,$destinationChainId)" $recipient_raw
 )
 echo "Calldata for SnowbridgeL1Adaptor:"
