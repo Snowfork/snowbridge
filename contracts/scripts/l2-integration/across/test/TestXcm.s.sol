@@ -2,8 +2,8 @@
 pragma solidity 0.8.28;
 
 import {Script} from "forge-std/Script.sol";
-import {XCM_PRECOMPILE} from "./Constants.sol";
-import {IXcm} from "./Interfaces.sol";
+import {XCM_PRECOMPILE} from "../constants/Sepolia.sol";
+import {IXcm} from "../interfaces/IXcm.sol";
 
 contract TestXcm is Script {
     uint256 internal deployerPrivateKey = vm.envUint("DEPLOYER_KEY");

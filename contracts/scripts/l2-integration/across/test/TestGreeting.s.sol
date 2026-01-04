@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {Greeter} from "./Greeter.sol";
-import {USDC, BASE_USDC, CHAIN_ID, BASE_CHAIN_ID} from "./Constants.sol";
-import {ISpokePool, IMessageHandler} from "./Interfaces.sol";
-import {SwapParams} from "./Types.sol";
+import {USDC, BASE_USDC, CHAIN_ID, BASE_CHAIN_ID} from "../constants/Sepolia.sol";
+import {ISpokePool, IMessageHandler} from "../interfaces/ISpokePool.sol";
+import {SwapParams} from "../Types.sol";
 
 contract TestGreeting is Script {
     uint256 internal deployerPrivateKey = vm.envUint("DEPLOYER_KEY");

@@ -234,7 +234,7 @@ export class ERC20ToAH implements TransferInterface {
         }
 
         const tx = await l2Adapter
-            .getFunction("swapTokenAndCall")
+            .getFunction("sendTokenAndCall")
             .populateTransaction(swapParams, sendParams, sourceAccount, topic, {
                 value: value,
                 from: sourceAccount,

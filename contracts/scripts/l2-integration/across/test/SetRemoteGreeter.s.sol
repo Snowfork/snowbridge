@@ -2,9 +2,9 @@
 pragma solidity 0.8.28;
 import {Script, console} from "forge-std/Script.sol";
 import {Greeter} from "./Greeter.sol";
-import {USDC, BASE_USDC, BASE_CHAIN_ID} from "./Constants.sol";
+import {USDC, BASE_USDC, BASE_CHAIN_ID} from "../constants/Sepolia.sol";
 
-contract SetRemote is Script {
+contract SetRemoteGreeter is Script {
     uint256 internal deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
 

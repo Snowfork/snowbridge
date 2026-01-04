@@ -2,13 +2,10 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
-import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
-import {ISpokePool} from "./Interfaces.sol";
+import {ISpokePool} from "./interfaces/ISpokePool.sol";
 import {SwapParams} from "./Types.sol";
 
 contract SnowbridgeL1Adaptor {
-    using SafeERC20 for IERC20;
-
     ISpokePool public immutable SPOKE_POOL;
     uint32 public TIME_BUFFER;
 
