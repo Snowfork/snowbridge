@@ -28,7 +28,7 @@ const run = async (
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
 
     let l1AdaptorAddress =
-        process.env["L1_ADAPTOR_ADDRESS"] ?? "0xb3D06e33Cc77c03968aeFECDeD91B5236BDa1983" // replace with actual address
+        process.env["L1_ADAPTOR_ADDRESS"] ?? "0x7cB1089AB4Dbd946e4d03C33De868E590dC2D866" // replace with actual address
     const l1Adaptor: SnowbridgeL1Adaptor = SnowbridgeL1Adaptor__factory.connect(
         l1AdaptorAddress,
         context.ethereum(),

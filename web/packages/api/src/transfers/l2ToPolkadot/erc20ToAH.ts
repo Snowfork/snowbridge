@@ -124,7 +124,7 @@ export class ERC20ToAH implements TransferInterface {
         )
 
         const nativeFeeTokenAddress =
-            context.config.l2Bridge?.CHAINS[l2ChainId]?.FEE_ASSET_CONTRACT || ETHER_TOKEN_ADDRESS
+            context.config.l2Bridge?.CHAINS[l2ChainId]?.FEE_ASSET || ETHER_TOKEN_ADDRESS
         const l1FeeTokenAddress =
             registry.ethereumChains?.[l2ChainId]?.assets[nativeFeeTokenAddress]?.swapTokenAddress
         if (!l1FeeTokenAddress) {

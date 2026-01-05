@@ -587,7 +587,7 @@ export function fromEnvironment({
         for (const l2ChainId of Object.keys(l2BridgeConfig.CHAINS)) {
             result.l2ChainOverrides[l2ChainId] = {
                 adapterAddress: l2BridgeConfig.CHAINS[l2ChainId].L2_ADAPTER_CONTRACT,
-                feeTokenAddress: l2BridgeConfig.CHAINS[l2ChainId].FEE_ASSET_CONTRACT,
+                feeTokenAddress: l2BridgeConfig.CHAINS[l2ChainId].FEE_ASSET,
                 routes: [],
             }
         }
