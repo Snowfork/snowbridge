@@ -182,7 +182,7 @@ export const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransfer
     let inboundMessageReceived = transfer.toBridgeHubInboundQueue
     if (inboundMessageReceived) {
         result.inboundMessageReceived = {
-            event_index: getEventIndex(inboundMessageReceived.id),
+            event_index: getEventIndex(inboundMessageReceived.eventId),
             block_timestamp: inboundMessageReceived.timestamp,
             messageId: inboundMessageReceived.messageId,
             channelId: inboundMessageReceived.channelId,
@@ -192,7 +192,7 @@ export const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransfer
 
     if (transfer.toAssetHubMessageQueue) {
         result.assetHubMessageProcessed = {
-            event_index: getEventIndex(transfer.toAssetHubMessageQueue.id),
+            event_index: getEventIndex(transfer.toAssetHubMessageQueue.eventId),
             block_timestamp: transfer.toAssetHubMessageQueue.timestamp,
             success: transfer.toAssetHubMessageQueue.success,
         }

@@ -58,6 +58,7 @@ export const fetchToPolkadotTransfers = async (graphqlApiUrl: string, graphqlQue
             sourceParaId
             toBridgeHubInboundQueue {
                 id
+                eventId
                 timestamp
                 txHash
                 channelId
@@ -66,6 +67,7 @@ export const fetchToPolkadotTransfers = async (graphqlApiUrl: string, graphqlQue
             }
             toAssetHubMessageQueue {
                 id
+                eventId
                 success
                 timestamp
             }
@@ -223,6 +225,7 @@ export const fetchToPolkadotTransferById = async (graphqlApiUrl: string, id: str
             fee
             toBridgeHubInboundQueue {
                 id
+                eventId
                 timestamp
                 txHash
                 channelId
@@ -231,6 +234,7 @@ export const fetchToPolkadotTransferById = async (graphqlApiUrl: string, id: str
             }
             toAssetHubMessageQueue {
                 id
+                eventId
                 success
                 timestamp
             }
@@ -402,6 +406,7 @@ export const fetchToPolkadotPendingTransfers = async (
             sourceParaId
             toBridgeHubInboundQueue {
                 id
+                eventId
                 timestamp
                 txHash
                 channelId
@@ -410,6 +415,7 @@ export const fetchToPolkadotPendingTransfers = async (
             }
             toAssetHubMessageQueue {
                 id
+                eventId
                 success
                 timestamp
             }
@@ -505,6 +511,7 @@ export const fetchToPolkadotTransfersBySenders = async (
             sourceParaId
             toBridgeHubInboundQueue {
                 id
+                eventId
                 timestamp
                 txHash
                 channelId
@@ -513,6 +520,7 @@ export const fetchToPolkadotTransfersBySenders = async (
             }
             toAssetHubMessageQueue {
                 id
+                eventId
                 success
                 timestamp
             }
