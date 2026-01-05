@@ -204,7 +204,7 @@ export const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransfer
 
     if (transfer.toDestination) {
         result.destinationReceived = {
-            event_index: getEventIndex(transfer.toDestination.id),
+            event_index: getEventIndex(transfer.toDestination.eventId),
             block_timestamp: transfer.toDestination.timestamp,
             blockNumber: transfer.toDestination.blockNumber,
             paraId: transfer.toDestination.paraId,
