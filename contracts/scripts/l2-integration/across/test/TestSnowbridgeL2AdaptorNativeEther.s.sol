@@ -10,7 +10,7 @@ import {USDC, BASE_USDC, CHAIN_ID, BASE_CHAIN_ID, BASE_WETH9} from "../constants
 import {ISpokePool, IMessageHandler} from "../interfaces/ISpokePool.sol";
 import {SwapParams, SendParams} from "../Types.sol";
 
-contract TestSnowbridgeL2AdaptorNativeEth is Script {
+contract TestSnowbridgeL2AdaptorNativeEther is Script {
     uint256 internal deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
 

@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import {WETH9} from "canonical-weth/WETH9.sol";
 import {ISpokePool, IMessageHandler} from "./interfaces/ISpokePool.sol";
 import {IGatewayV2} from "../../../src/v2/IGateway.sol";
 import {SwapParams, Instructions, Call, SendParams} from "./Types.sol";
-import {WETH9} from "canonical-weth/WETH9.sol";
 
 contract SnowbridgeL2Adaptor {
     using SafeERC20 for IERC20;
@@ -166,7 +166,7 @@ contract SnowbridgeL2Adaptor {
             value: totalOutputAmount
         });
         Instructions memory instructions =
-            Instructions({calls: calls, fallbackRecipient: address(MULTI_CALL_HANDLER)});
+            Instructions({calls: calls, fallbackRecipient: recipient});
         SPOKE_POOL.deposit(
             bytes32(uint256(uint160(recipient))),
             bytes32(uint256(uint160(address(MULTI_CALL_HANDLER)))),

@@ -12,11 +12,14 @@ deploy-snowbridge-l2-adaptor:
 test-snowbridge-l1-adaptor:
 	forge script TestSnowbridgeL1Adaptor --chain $(SEPOLIA_CHAIN) --rpc-url $(SEPOLIA_RPC_URL) --broadcast -vvvv
 
+test-snowbridge-l1-adaptor-native-ether:
+	forge script TestSnowbridgeL1AdaptorNativeEther --chain $(SEPOLIA_CHAIN) --rpc-url $(SEPOLIA_RPC_URL) --broadcast -vvvv
+
 test-snowbridge-l2-adaptor:
 	forge script TestSnowbridgeL2Adaptor --chain $(BASE_CHAIN) --rpc-url $(BASE_RPC_URL) --broadcast -vvvv
 
-test-snowbridge-l2-adaptor-native-eth:
-	forge script TestSnowbridgeL2AdaptorNativeEth --chain $(BASE_CHAIN) --rpc-url $(BASE_RPC_URL) --broadcast -vvvv
+test-snowbridge-l2-adaptor-native-ether:
+	forge script TestSnowbridgeL2AdaptorNativeEther --chain $(BASE_CHAIN) --rpc-url $(BASE_RPC_URL) --broadcast -vvvv
 
 
 ##############################################################
