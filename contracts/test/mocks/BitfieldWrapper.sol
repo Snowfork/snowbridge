@@ -23,4 +23,8 @@ contract BitfieldWrapper {
     function countSetBits(uint256[] memory self, uint256 maxBits) public pure returns (uint256) {
         return Bitfield.countSetBits(self, maxBits);
     }
+
+    function validatePadding(uint256[] memory bitfield, uint256 length) public pure {
+        return Bitfield.validatePadding(bitfield, length);
+    }
 }

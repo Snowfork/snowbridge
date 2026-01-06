@@ -353,6 +353,30 @@ contract BeefyClientTest is Test {
         );
     }
 
+    function testSubmitInitialFailWithPaddingBitsSet() public {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+
+        // Create a bitfield with padding bits set
+        // If setSize requires fewer than 256 bits (e.g., 100 validators),
+        // the bitfield array will have length 1, but bits 100-255 are padding and must be zero
+        uint256[] memory bitfieldWithPadding = new uint256[](1);
+        bitfieldWithPadding[0] = 0; // Start clean
+
+        // Set valid bits (0 to setSize-1)
+        for (uint256 i = 0; i < setSize; i++) {
+            bitfieldWithPadding[0] |= (uint256(1) << i);
+        }
+
+        // Now set a padding bit (beyond setSize)
+        if (setSize < 256) {
+            bitfieldWithPadding[0] |= (uint256(1) << setSize);
+        }
+
+        // submitInitial should revert due to padding bits being set
+        vm.expectRevert(BeefyClient.InvalidBitfield.selector);
+        beefyClient.submitInitial(commitment, bitfieldWithPadding, finalValidatorProofs[0]);
+    }
+
     function testSubmitFailWithoutPrevRandao() public {
         BeefyClient.Commitment memory commitment = initialize(setId);
 
@@ -382,7 +406,9 @@ contract BeefyClientTest is Test {
         vm.roll(block.number + randaoCommitDelay + randaoCommitExpiration + 1);
         commitPrevRandao();
         BeefyClient.Ticket memory ticket = beefyClient.getTicket(commitHash);
+        assertEq(ticket.prevRandao, 0);
         assertEq(ticket.blockNumber, 0);
+        assertEq(ticket.bitfieldHash, bytes32(0));
     }
 
     function testSubmitFailForPrevRandaoCapturedMoreThanOnce() public {
@@ -555,7 +581,13 @@ contract BeefyClientTest is Test {
         commitPrevRandao();
 
         uint256[] memory finalBits = beefyClient.createFinalBitfield(commitHash, bitfield);
+        console.log("initial bitfield set bits:", Bitfield.countSetBits(bitfield));
+        console.log("final bitfield set bits:", Bitfield.countSetBits(finalBits));
         assertTrue(Bitfield.countSetBits(finalBits) < Bitfield.countSetBits(bitfield));
+        assertTrue(
+            Bitfield.countSetBits(finalBits)
+                < beefyClient.computeMaxRequiredSignatures_public(setSize)
+        );
     }
 
     function testCreateFinalBitfieldInvalid() public {
@@ -714,7 +746,7 @@ contract BeefyClientTest is Test {
         // There must be atleast 1 validator.
         vm.assume(validatorSetLen > 0);
         // Min signatures must be less than the amount of validators.
-        vm.assume(beefyClient.computeQuorum_public(validatorSetLen) > minSignatures);
+        vm.assume(beefyClient.computeMaxRequiredSignatures_public(validatorSetLen) > minSignatures);
 
         uint256 result = beefyClient.computeNumRequiredSignatures_public(
             validatorSetLen, signatureUsageCount, minSignatures
@@ -832,5 +864,19 @@ contract BeefyClientTest is Test {
             emptyLeafProofOrder
         );
         return commitment;
+    }
+
+    function testSubmitFiatShamirWithInvalidCommitment() public {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+
+        commitment.validatorSetID = setId - 1;
+
+        vm.expectRevert(BeefyClient.InvalidCommitment.selector);
+        beefyClient.createFiatShamirFinalBitfield(commitment, bitfield);
+
+        vm.expectRevert(BeefyClient.InvalidCommitment.selector);
+        beefyClient.submitFiatShamir(
+            commitment, bitfield, fiatShamirValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
     }
 }

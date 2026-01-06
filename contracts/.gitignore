@@ -18,4 +18,5 @@ lcov.info
 tenderly.yaml
 docs/
 lib/
+report/
 .env

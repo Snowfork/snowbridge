@@ -8,6 +8,7 @@ library Bitfield {
     using Bits for uint256;
 
     error InvalidSamplingParams();
+    error InvalidBitfieldPadding();
 
     /**
      * @dev Constants used to efficiently calculate the hamming weight of a bitfield. See
@@ -47,8 +48,10 @@ library Bitfield {
         uint256 priorBitfieldSize,
         uint256 n
     ) internal pure returns (uint256[] memory outputBitfield) {
-        if (priorBitfield.length != Bitfield.containerLength(priorBitfieldSize)
-            || n > countSetBits(priorBitfield, priorBitfieldSize)) {
+        if (
+            priorBitfield.length != Bitfield.containerLength(priorBitfieldSize)
+                || n > countSetBits(priorBitfield, priorBitfieldSize)
+        ) {
             revert InvalidSamplingParams();
         }
 
@@ -130,11 +133,7 @@ library Bitfield {
      * @param maxBits The maximum number of bits to count (counting from bit 0)
      * @return count The number of set bits in the first `maxBits` positions
      */
-    function countSetBits(uint256[] memory self, uint256 maxBits)
-        internal
-        pure
-        returns (uint256)
-    {
+    function countSetBits(uint256[] memory self, uint256 maxBits) internal pure returns (uint256) {
         if (maxBits == 0 || self.length == 0) {
             return 0;
         }
@@ -212,5 +211,31 @@ library Bitfield {
     // Calculate length of uint256 bitfield array based on rounding up to number of uint256 needed
     function containerLength(uint256 bitfieldSize) internal pure returns (uint256) {
         return (bitfieldSize + 255) / 256;
+    }
+
+    /**
+     * @dev Validate that all padding bits in the bitfield (beyond length) are zero.
+     * @param bitfield The bitfield to validate
+     * @param length The number of valid bits (padding starts after this)
+     */
+    function validatePadding(uint256[] memory bitfield, uint256 length) internal pure {
+        uint256 containerLen = containerLength(length);
+        if (containerLen == 0 || bitfield.length == 0) {
+            return;
+        }
+
+        // Check if there are padding bits in the last element
+        uint256 validBitsInLastElement = length % 256;
+        if (validBitsInLastElement == 0) {
+            // All bits in last element are valid, no padding
+            return;
+        }
+
+        // Create a mask for padding bits: all bits from validBitsInLastElement to 255
+        uint256 paddingMask = type(uint256).max << validBitsInLastElement;
+        uint256 lastElement = bitfield[containerLen - 1];
+        if ((lastElement & paddingMask) != 0) {
+            revert InvalidBitfieldPadding();
+        }
     }
 }
