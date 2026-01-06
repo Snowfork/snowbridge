@@ -1057,3 +1057,22 @@ export async function buildL2Call(
     }
     return { l2Call, fee: l2BridgeFeeInL1Token }
 }
+
+export async function getSourceAgentAddress(
+    context: Context,
+    parachainId: number,
+    sourceAccountHex: string,
+): Promise<string> {
+    const bridgeHub = await context.bridgeHub()
+    const gateway = context.gateway()
+    let sourceLocation = {
+        parents: 1,
+        interior: { x2: [{ parachain: parachainId }, { accountId32: { id: sourceAccountHex } }] },
+    }
+    let versionedLocation = bridgeHub.registry.createType("XcmVersionedLocation", {
+        v5: sourceLocation,
+    })
+    let agentID = (await bridgeHub.call.controlV2Api.agentId(versionedLocation)).toHex()
+    let agentAddress = await gateway.agentOf(agentID)
+    return agentAddress
+}

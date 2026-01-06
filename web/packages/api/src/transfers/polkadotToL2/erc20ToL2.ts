@@ -24,10 +24,12 @@ import {
     buildContractCallHex,
     buildL2Call,
     estimateFeesFromAssetHub,
+    getSourceAgentAddress,
     MaxWeight,
     mockDeliveryFee,
     validateTransferFromAssetHub,
 } from "../../toEthereumSnowbridgeV2"
+import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 
 export class ERC20FromAH implements TransferInterface {
     async getDeliveryFee(
@@ -137,12 +139,28 @@ export class ERC20FromAH implements TransferInterface {
 
         const l1AdapterAddress = await context.l1Adapter().getAddress()
 
-        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = await this.createTx(
+        let l1ReceiverAddress = l1AdapterAddress
+
+        // For Ether transfers, use the source agent address as L1 receiver,
+        // which swaps Ether to WETH on L1 and then swaps it back to Ether on L2.
+        if (tokenAddress === ETHER_TOKEN_ADDRESS) {
+            const sourceAgentAddress = await getSourceAgentAddress(
+                context,
+                registry.assetHubParaId,
+                sourceAccountHex,
+            )
+            console.log("Source Agent Address:", sourceAgentAddress)
+            l1ReceiverAddress = sourceAgentAddress
+        }
+
+        let tx: SubmittableExtrinsic<"promise", ISubmittableResult>
+
+        tx = await this.createTx(
             context,
             parachain,
             ethChainId,
             sourceAccount,
-            l1AdapterAddress, // send to L1 adapter
+            l1ReceiverAddress,
             ahAssetMetadata,
             amount,
             messageId,
