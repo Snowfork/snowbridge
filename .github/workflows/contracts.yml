@@ -36,7 +36,7 @@ jobs:
         run: forge test
       - name: Coverage
         working-directory: contracts
-        run: forge coverage --report=lcov
+        run: forge coverage --exclude-tests --report=lcov
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v5
         with:

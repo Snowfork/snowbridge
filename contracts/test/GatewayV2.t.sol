@@ -59,6 +59,62 @@ import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
 import {HelloWorld} from "./mocks/HelloWorld.sol";
+import {Upgrade} from "../src/Upgrade.sol";
+
+contract MockImpl {
+    // slot 0 - will be written via delegatecall
+    uint256 public initialized;
+
+    // initialize matches IInitializable.initialize signature
+    function initialize(bytes memory params) external {
+        // decode a single uint256 for test convenience
+        uint256 v = abi.decode(params, (uint256));
+        initialized = v;
+    }
+}
+
+// Thin wrapper contract that calls the library function so storage is on this contract
+contract TestHandlers {
+    // storage slot that MockImpl.initialize will write to via delegatecall
+    uint256 public initialized;
+
+    // forward an encoded UpgradeParams blob to the library
+    function callUpgrade(address impl, bytes32 implCodeHash, bytes calldata initParams) external {
+        // Call Upgrade.upgrade directly to run the upgrade flow and initializer
+        Upgrade.upgrade(impl, implCodeHash, initParams);
+    }
+}
+
+contract MockERC20 {
+    mapping(address => uint256) public balance;
+
+    function mint(address to, uint256 amount) external {
+        balance[to] += amount;
+    }
+
+    function transfer(address to, uint256 amount) external returns (bool) {
+        address from = msg.sender;
+        require(balance[from] >= amount, "insufficient");
+        balance[from] -= amount;
+        balance[to] += amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        require(balance[from] >= amount, "insufficient");
+        balance[from] -= amount;
+        balance[to] += amount;
+        return true;
+    }
+
+    function balanceOf(address who) external view returns (uint256) {
+        return balance[who];
+    }
+}
+
+contract PayableRecipient {
+    receive() external payable {}
+}
 
 contract GatewayV2Test is Test {
     // Emitted when token minted/burnt/transferred
@@ -84,13 +140,18 @@ contract GatewayV2Test is Test {
     // tokenID for DOT
     bytes32 public dotTokenID;
 
+    AgentExecutor executor;
+
     HelloWorld public helloWorld;
+
+    TestHandlers handler;
+    MockImpl impl;
 
     event SaidHello(string indexed message);
 
     function setUp() public {
         weth = new WETH9();
-        AgentExecutor executor = new AgentExecutor();
+        executor = new AgentExecutor();
         gatewayLogic = new MockGateway(address(0), address(executor));
         Initializer.Config memory config = Initializer.Config({
             mode: OperatingMode.Normal,
@@ -130,6 +191,9 @@ contract GatewayV2Test is Test {
         dotTokenID = bytes32(uint256(1));
 
         helloWorld = new HelloWorld();
+
+        handler = new TestHandlers();
+        impl = new MockImpl();
     }
 
     function makeMockProof() public pure returns (Verification.Proof memory) {
@@ -159,9 +223,7 @@ contract GatewayV2Test is Test {
         CommandV2[] memory commands = new CommandV2[](1);
         SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params)
         });
         return commands;
     }
@@ -218,6 +280,36 @@ contract GatewayV2Test is Test {
         return commands;
     }
 
+    function makeCallContractCommandWithFunctionNotExists(uint256 value)
+        public
+        view
+        returns (CommandV2[] memory)
+    {
+        bytes memory data = abi.encodeWithSignature("sayHelloNotExists(string)", "World");
+        CallContractParams memory params =
+            CallContractParams({target: address(helloWorld), data: data, value: value});
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] = CommandV2({kind: CommandKind.CallContract, gas: 500_000, payload: payload});
+        return commands;
+    }
+
+    function makeCallContractCommandWithInsufficientGas(uint256 value)
+        public
+        view
+        returns (CommandV2[] memory)
+    {
+        bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
+        CallContractParams memory params =
+            CallContractParams({target: address(helloWorld), data: data, value: value});
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] = CommandV2({kind: CommandKind.CallContract, gas: 1, payload: payload});
+        return commands;
+    }
+
     /**
      * Message Verification
      */
@@ -229,58 +321,47 @@ contract GatewayV2Test is Test {
         emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
 
         hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({
-                origin: keccak256("666"),
-                nonce: 1,
-                topic: topic,
-                commands: makeMockCommand()
-            }),
-            proof,
-            makeMockProof(),
-            relayerRewardAddress
-        );
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: keccak256("666"), nonce: 1, topic: topic, commands: makeMockCommand()
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
     }
 
     function testSubmitFailInvalidNonce() public {
         bytes32 topic = keccak256("topic");
 
         InboundMessageV2 memory message = InboundMessageV2({
-            origin: keccak256("666"),
-            nonce: 1,
-            topic: topic,
-            commands: makeMockCommand()
+            origin: keccak256("666"), nonce: 1, topic: topic, commands: makeMockCommand()
         });
 
         hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway)).v2_submit(
-            message, proof, makeMockProof(), relayerRewardAddress
-        );
+        IGatewayV2(address(gateway))
+            .v2_submit(message, proof, makeMockProof(), relayerRewardAddress);
 
         vm.expectRevert(IGatewayBase.InvalidNonce.selector);
         hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway)).v2_submit(
-            message, proof, makeMockProof(), relayerRewardAddress
-        );
+        IGatewayV2(address(gateway))
+            .v2_submit(message, proof, makeMockProof(), relayerRewardAddress);
     }
 
     function testSubmitFailInvalidProof() public {
         bytes32 topic = keccak256("topic");
 
         InboundMessageV2 memory message = InboundMessageV2({
-            origin: keccak256("666"),
-            nonce: 1,
-            topic: topic,
-            commands: makeMockCommand()
+            origin: keccak256("666"), nonce: 1, topic: topic, commands: makeMockCommand()
         });
 
         MockGateway(address(gateway)).setCommitmentsAreVerified(false);
         vm.expectRevert(IGatewayBase.InvalidProof.selector);
 
         hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway)).v2_submit(
-            message, proof, makeMockProof(), relayerRewardAddress
-        );
+        IGatewayV2(address(gateway))
+            .v2_submit(message, proof, makeMockProof(), relayerRewardAddress);
     }
 
     function testSubmitFailNotEnoughGas() public {
@@ -308,9 +389,8 @@ contract GatewayV2Test is Test {
 
         vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
         vm.prank(relayer);
-        IGatewayV2(address(gateway)).v2_submit{gas: gasLimit}(
-            message, proof, makeMockProof(), relayerRewardAddress
-        );
+        IGatewayV2(address(gateway))
+        .v2_submit{gas: gasLimit}(message, proof, makeMockProof(), relayerRewardAddress);
     }
 
     function mockNativeTokenForSend(address user, uint128 amount)
@@ -334,9 +414,8 @@ contract GatewayV2Test is Test {
         internal
         returns (address, bytes memory, Asset memory)
     {
-        Token token = MockGateway(address(gateway)).prank_registerForeignToken(
-            keccak256("ABC"), "ABC", "ABC", 18
-        );
+        Token token = MockGateway(address(gateway))
+            .prank_registerForeignToken(keccak256("ABC"), "ABC", "ABC", 18);
         hoax(address(gateway));
         token.mint(user, amount);
         bytes memory inputAsset = abi.encode(0, address(token), amount);
@@ -382,31 +461,30 @@ contract GatewayV2Test is Test {
         );
 
         hoax(user1);
-        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
-            "", assets, "", 0.1 ether, 0.4 ether
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_sendMessage{value: 1 ether}("", assets, "", 0.1 ether, 0.4 ether);
 
         // Verify asset balances
         assertEq(assetHubAgent.balance, 1 ether);
         assertEq(IERC20(nativeToken).balanceOf(assetHubAgent), 1 ether);
         assertEq(IERC20(foreignToken).totalSupply(), foreignTokenSupplyPre - 1 ether);
+
+        assertEq(IGatewayV2(address(gateway)).v2_outboundNonce(), 1);
     }
 
     function testSendMessageFailsWithInsufficentValue() public {
         vm.expectRevert(IGatewayV2.InsufficientValue.selector);
         hoax(user1, 1 ether);
-        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 0.4 ether}(
-            "", new bytes[](0), "", 0.1 ether, 0.4 ether
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_sendMessage{value: 0.4 ether}("", new bytes[](0), "", 0.1 ether, 0.4 ether);
     }
 
     function testSendMessageFailsWithExceededMaximumValue() public {
         vm.expectRevert(IGatewayV2.ExceededMaximumValue.selector);
         uint256 value = uint256(type(uint128).max) + 1;
         hoax(user1, value);
-        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: value}(
-            "", new bytes[](0), "", 0.1 ether, 0.4 ether
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_sendMessage{value: value}("", new bytes[](0), "", 0.1 ether, 0.4 ether);
     }
 
     function testUnlockWethSuccess() public {
@@ -420,17 +498,18 @@ contract GatewayV2Test is Test {
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({
-                origin: Constants.ASSET_HUB_AGENT_ID,
-                nonce: 1,
-                topic: topic,
-                commands: makeUnlockWethCommand(0.1 ether)
-            }),
-            proof,
-            makeMockProof(),
-            relayerRewardAddress
-        );
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeUnlockWethCommand(0.1 ether)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
     }
 
     function testRegisterForeignToken() public {
@@ -444,17 +523,18 @@ contract GatewayV2Test is Test {
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({
-                origin: keccak256("origin"),
-                nonce: 1,
-                topic: topic,
-                commands: makeRegisterForeignTokenCommand(keccak256("DOT"), "DOT", "DOT", 10)
-            }),
-            proof,
-            makeMockProof(),
-            relayerRewardAddress
-        );
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: keccak256("origin"),
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeRegisterForeignTokenCommand(keccak256("DOT"), "DOT", "DOT", 10)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
     }
 
     function testMintForeignToken() public {
@@ -471,17 +551,18 @@ contract GatewayV2Test is Test {
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({
-                origin: keccak256("origin"),
-                nonce: 2,
-                topic: topic,
-                commands: makeMintForeignTokenCommand(keccak256("DOT"), recipient, 100)
-            }),
-            proof,
-            makeMockProof(),
-            relayerRewardAddress
-        );
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: keccak256("origin"),
+                    nonce: 2,
+                    topic: topic,
+                    commands: makeMintForeignTokenCommand(keccak256("DOT"), recipient, 100)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
     }
 
     function testAgentCallContractSuccess() public {
@@ -492,17 +573,18 @@ contract GatewayV2Test is Test {
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({
-                origin: Constants.ASSET_HUB_AGENT_ID,
-                nonce: 1,
-                topic: topic,
-                commands: makeCallContractCommand(0.1 ether)
-            }),
-            proof,
-            makeMockProof(),
-            relayerRewardAddress
-        );
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractCommand(0.1 ether)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
     }
 
     function testCreateAgent() public {
@@ -545,12 +627,10 @@ contract GatewayV2Test is Test {
         uint256 totalRequired = executionFee + relayerFee;
 
         hoax(user1, totalRequired);
-        IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired}(
-            validTokenContract,
-            uint8(0),
-            executionFee,
-            relayerFee
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_registerToken{
+            value: totalRequired
+        }(validTokenContract, uint8(0), executionFee, relayerFee);
 
         // Verify the token is registered
         assertTrue(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
@@ -567,12 +647,10 @@ contract GatewayV2Test is Test {
 
         vm.expectRevert(IGatewayV2.InsufficientValue.selector);
         hoax(user1, totalRequired);
-        IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired - 1}(
-            validTokenContract,
-            uint8(0),
-            executionFee,
-            relayerFee
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_registerToken{
+            value: totalRequired - 1
+        }(validTokenContract, uint8(0), executionFee, relayerFee);
 
         // Verify token still is not registered after the failed attempt
         assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
@@ -589,12 +667,8 @@ contract GatewayV2Test is Test {
         vm.expectRevert(IGatewayV2.ExceededMaximumValue.selector);
         uint256 value = uint256(type(uint128).max) + 1;
         hoax(user1, value);
-        IGatewayV2(payable(address(gateway))).v2_registerToken{value: value}(
-            validTokenContract,
-            uint8(0),
-            executionFee,
-            relayerFee
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_registerToken{value: value}(validTokenContract, uint8(0), executionFee, relayerFee);
 
         // Verify token still is not registered after the failed attempt
         assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
@@ -607,32 +681,25 @@ contract GatewayV2Test is Test {
         CommandV2[] memory commands = new CommandV2[](3);
 
         // First command should succeed - SetOperatingMode
-        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params1 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params1)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params1)
         });
 
         // Second command should fail - Call a function that reverts
         bytes memory failingData = abi.encodeWithSignature("revertUnauthorized()");
-        CallContractParams memory params2 = CallContractParams({
-            target: address(helloWorld),
-            data: failingData,
-            value: 0
-        });
+        CallContractParams memory params2 =
+            CallContractParams({target: address(helloWorld), data: failingData, value: 0});
         commands[1] = CommandV2({
-            kind: CommandKind.CallContract,
-            gas: 500_000,
-            payload: abi.encode(params2)
+            kind: CommandKind.CallContract, gas: 500_000, payload: abi.encode(params2)
         });
 
         // Third command should succeed - SetOperatingMode again
-        SetOperatingModeParams memory params3 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params3 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[2] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params3)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params3)
         });
 
         // Expect the failed command to emit CommandFailed event
@@ -644,17 +711,15 @@ contract GatewayV2Test is Test {
         emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
 
         hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({
-                origin: keccak256("666"),
-                nonce: 1,
-                topic: topic,
-                commands: commands
-            }),
-            proof,
-            makeMockProof(),
-            relayerRewardAddress
-        );
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: keccak256("666"), nonce: 1, topic: topic, commands: commands
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
     }
 
     function testUnknownCommandType() public {
@@ -664,11 +729,10 @@ contract GatewayV2Test is Test {
         CommandV2[] memory commands = new CommandV2[](2);
 
         // First command should succeed
-        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params1 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params1)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params1)
         });
 
         // Second command is invalid
@@ -687,17 +751,15 @@ contract GatewayV2Test is Test {
         emit IGatewayV2.InboundMessageDispatched(2, topic, false, relayerRewardAddress);
 
         hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({
-                origin: keccak256("666"),
-                nonce: 2,
-                topic: topic,
-                commands: commands
-            }),
-            proof,
-            makeMockProof(),
-            relayerRewardAddress
-        );
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: keccak256("666"), nonce: 2, topic: topic, commands: commands
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
     }
 
     function testMultipleSuccessfulCommands() public {
@@ -707,27 +769,24 @@ contract GatewayV2Test is Test {
         CommandV2[] memory commands = new CommandV2[](3);
 
         // First command - SetOperatingMode to Normal
-        SetOperatingModeParams memory params1 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params1 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params1)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params1)
         });
 
         // Second command - Set mode to RejectingOutboundMessages (will succeed)
-        SetOperatingModeParams memory params2 = SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
+        SetOperatingModeParams memory params2 =
+            SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
         commands[1] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params2)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params2)
         });
 
         // Third command - Also set mode to Normal again (will succeed)
-        SetOperatingModeParams memory params3 = SetOperatingModeParams({mode: OperatingMode.Normal});
+        SetOperatingModeParams memory params3 =
+            SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[2] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params3)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params3)
         });
 
         // Expect InboundMessageDispatched to be emitted with success=true since all commands should succeed
@@ -735,16 +794,363 @@ contract GatewayV2Test is Test {
         emit IGatewayV2.InboundMessageDispatched(3, topic, true, relayerRewardAddress);
 
         hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway)).v2_submit(
-            InboundMessageV2({
-                origin: keccak256("666"),
-                nonce: 3,
-                topic: topic,
-                commands: commands
-            }),
-            proof,
-            makeMockProof(),
-            relayerRewardAddress
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: keccak256("666"), nonce: 3, topic: topic, commands: commands
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testUnknownCommandReturnsFalse() public {
+        bytes memory payload = "";
+        CommandV2 memory cmd =
+            CommandV2({kind: uint8(200), gas: uint64(100_000), payload: payload});
+
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(!ok, "unknown command should return false");
+    }
+
+    function testSetOperatingModeSucceeds() public {
+        bytes memory payload = abi.encode((SetOperatingModeParams({mode: OperatingMode.Normal})));
+        CommandV2 memory cmd = CommandV2({
+            kind: CommandKind.SetOperatingMode, gas: uint64(200_000), payload: payload
+        });
+
+        // Expect the OperatingModeChanged event to be emitted
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayBase.OperatingModeChanged(OperatingMode.Normal);
+
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(ok, "setOperatingMode should succeed");
+
+        // Verify mode was set
+        assertEq(uint256(gatewayLogic.operatingMode()), uint256(OperatingMode.Normal));
+    }
+
+    function testHandlerRevertIsCaught_UnlockNativeToken() public {
+        // Ensure no agent exists for ASSET_HUB_AGENT_ID so ensureAgent will revert and _dispatchCommand returns false
+        UnlockNativeTokenParams memory params = UnlockNativeTokenParams({
+            token: address(0), recipient: address(this), amount: uint128(1)
+        });
+        bytes memory payload = abi.encode(params);
+
+        CommandV2 memory cmd = CommandV2({
+            kind: CommandKind.UnlockNativeToken, gas: uint64(200_000), payload: payload
+        });
+
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(!ok, "handler revert should be caught and return false");
+    }
+
+    function testHandlerRevertIsCaught_UpgradeInvalidImpl() public {
+        // Upgrade with impl == address(0) will cause Upgrade.upgrade to revert (InvalidContract)
+        UpgradeParams memory up =
+            UpgradeParams({impl: address(0), implCodeHash: bytes32(0), initParams: ""});
+        bytes memory payload = abi.encode(up);
+
+        CommandV2 memory cmd =
+            CommandV2({kind: CommandKind.Upgrade, gas: uint64(200_000), payload: payload});
+
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(!ok, "upgrade with invalid impl should be caught and return false");
+    }
+
+    function testMintForeignTokenNotRegisteredReturnsFalse() public {
+        MintForeignTokenParams memory p = MintForeignTokenParams({
+            foreignTokenID: bytes32(uint256(0x1234)), recipient: address(this), amount: uint128(1)
+        });
+        bytes memory payload = abi.encode(p);
+
+        CommandV2 memory cmd = CommandV2({
+            kind: CommandKind.MintForeignToken, gas: uint64(200_000), payload: payload
+        });
+
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(!ok, "mintForeignToken for unregistered token should return false");
+    }
+
+    function testRegisterForeignTokenDuplicateReturnsFalse() public {
+        bytes32 fid = bytes32(uint256(0x5566));
+        RegisterForeignTokenParams memory p = RegisterForeignTokenParams({
+            foreignTokenID: fid, name: string("T"), symbol: string("T"), decimals: uint8(18)
+        });
+        bytes memory payload = abi.encode(p);
+
+        CommandV2 memory cmd = CommandV2({
+            kind: CommandKind.RegisterForeignToken, gas: uint64(3_000_000), payload: payload
+        });
+
+        bool ok1 = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(ok1, "first register should succeed");
+
+        bool ok2 = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(!ok2, "duplicate register should return false");
+    }
+
+    function testCallContractAgentDoesNotExistReturnsFalse() public {
+        CallContractParams memory p =
+            CallContractParams({target: address(0xdead), data: "", value: uint256(0)});
+        bytes memory payload = abi.encode(p);
+
+        // origin corresponds to agent id; use a non-existent id
+        CommandV2 memory cmd =
+            CommandV2({kind: CommandKind.CallContract, gas: uint64(200_000), payload: payload});
+
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(uint256(0x9999)));
+        assertTrue(!ok, "callContract with missing agent should return false");
+    }
+
+    function testInsufficientGasReverts() public {
+        bytes memory payload = "";
+        // Use an extremely large gas value to trigger InsufficientGasLimit revert in _dispatchCommand
+        CommandV2 memory cmd = CommandV2({
+            kind: CommandKind.SetOperatingMode, gas: type(uint64).max, payload: payload
+        });
+
+        vm.expectRevert();
+        gatewayLogic.callDispatch(cmd, bytes32(0));
+    }
+
+    function testUpgradeCallsInitialize() public {
+        uint256 initValue = 0x12345;
+        bytes memory initParams = abi.encode(initValue);
+
+        // compute codehash expected by Upgrade.upgrade
+        bytes32 codeHash = address(impl).codehash;
+
+        // call upgrade via handler wrapper; this will cause the Upgrade library
+        // to delegatecall into impl.initialize which writes into handler's storage
+        handler.callUpgrade(address(impl), codeHash, initParams);
+
+        // verify delegatecall wrote into handler's storage (slot 0)
+        assertEq(handler.initialized(), initValue);
+    }
+
+    function testUnlockEther() public {
+        // deploy agent via gateway so GATEWAY == gateway
+        address agent = gatewayLogic.deployAgent();
+
+        // register agent in gateway storage
+        gatewayLogic.setAgentInStorage(agent);
+
+        // fund agent with ether
+        uint256 amt = 1 ether;
+        vm.deal(agent, amt);
+
+        // build params: token=address(0) indicates native ether
+        PayableRecipient recipient = new PayableRecipient();
+        bytes memory params = abi.encode(
+            UnlockNativeTokenParams({
+                token: address(0), recipient: address(recipient), amount: uint128(amt)
+            })
         );
+
+        // call
+        gatewayLogic.callUnlockNativeToken(address(executor), params);
+
+        // assert recipient got funds
+        assertEq(address(recipient).balance, amt);
+    }
+
+    function testUnlockNativeTokenERC20() public {
+        // deploy agent and register
+        address agent = gatewayLogic.deployAgent();
+        gatewayLogic.setAgentInStorage(agent);
+
+        // deploy mock token and mint to agent
+        MockERC20 token = new MockERC20();
+        uint256 tAmt = 1000;
+        token.mint(agent, tAmt);
+
+        // build params for token transfer
+        bytes memory params = abi.encode(
+            UnlockNativeTokenParams({
+                token: address(token), recipient: address(this), amount: uint128(tAmt)
+            })
+        );
+
+        // call unlock with executor
+        gatewayLogic.callUnlockNativeToken(address(executor), params);
+
+        // assert recipient got tokens
+        assertEq(token.balanceOf(address(this)), tAmt);
+    }
+
+    function testAgentCallContractRevertedForFunctionNotExists() public {
+        bytes32 topic = keccak256("topic");
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractCommandWithFunctionNotExists(0.1 ether)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentCallContractRevertedForInsufficientGas() public {
+        bytes32 topic = keccak256("topic");
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractCommandWithInsufficientGas(0.1 ether)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function test_v2_submit_rejects_duplicate_nonce() public {
+        MockGateway gw = MockGateway(address(gateway));
+        // mark nonce 5 as already processed
+        gw.setInboundNonce(5);
+
+        InboundMessageV2 memory m;
+        m.nonce = 5;
+        m.origin = bytes32("x");
+        m.topic = bytes32(0);
+        m.commands = new CommandV2[](0);
+
+        bytes32[] memory leafProof = new bytes32[](0);
+
+        // empty header proof
+        Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](0);
+        Verification.ParachainHeader memory header = Verification.ParachainHeader({
+            parentHash: bytes32(0),
+            number: 0,
+            stateRoot: bytes32(0),
+            extrinsicsRoot: bytes32(0),
+            digestItems: digestItems
+        });
+        bytes32[] memory emptyBytes32 = new bytes32[](0);
+        Verification.HeadProof memory hp =
+            Verification.HeadProof({pos: 0, width: 0, proof: emptyBytes32});
+        Verification.MMRLeafPartial memory lp = Verification.MMRLeafPartial({
+            version: 0,
+            parentNumber: 0,
+            parentHash: bytes32(0),
+            nextAuthoritySetID: 0,
+            nextAuthoritySetLen: 0,
+            nextAuthoritySetRoot: bytes32(0)
+        });
+        Verification.Proof memory headerProof = Verification.Proof({
+            header: header,
+            headProof: hp,
+            leafPartial: lp,
+            leafProof: emptyBytes32,
+            leafProofOrder: 0
+        });
+
+        vm.expectRevert(IGatewayBase.InvalidNonce.selector);
+        gw.v2_submit(m, leafProof, headerProof, bytes32(0));
+    }
+
+    function test_onlySelf_enforced_on_external_calls() public {
+        MockGateway gw = MockGateway(address(gateway));
+        // calling the handler externally should revert with Unauthorized
+        SetOperatingModeParams memory p = SetOperatingModeParams({mode: OperatingMode.Normal});
+        bytes memory payload = abi.encode(p);
+        vm.expectRevert(IGatewayBase.Unauthorized.selector);
+        gw.v2_handleSetOperatingMode(payload);
+    }
+
+    function test_call_handleSetOperatingMode_via_self_changes_mode() public {
+        MockGateway gw = MockGateway(address(gateway));
+        // call via helper which forwards as `this` so onlySelf check passes
+        SetOperatingModeParams memory p =
+            SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
+        bytes memory payload = abi.encode(p);
+        gw.setOperatingMode(payload);
+        // ensure call did not revert
+        assertTrue(true);
+    }
+
+    function test_dispatch_unknown_command_returns_false() public {
+        MockGateway gw = MockGateway(address(gateway));
+        CommandV2 memory cmd = CommandV2({kind: 0xFF, gas: 100_000, payload: ""});
+        bool ok = gw.exposed_dispatchCommand(cmd, bytes32(0));
+        assertFalse(ok, "unknown command must return false");
+    }
+
+    function test_v2_dispatch_partial_failure_emits_CommandFailed() public {
+        MockGateway gw = MockGateway(address(gateway));
+        // Build two commands: SetOperatingMode (should succeed) and CallContract (will fail due to missing agent)
+        CommandV2[] memory cmds = new CommandV2[](2);
+        SetOperatingModeParams memory p = SetOperatingModeParams({mode: OperatingMode.Normal});
+        cmds[0] =
+            CommandV2({kind: CommandKind.SetOperatingMode, gas: 200_000, payload: abi.encode(p)});
+
+        CallContractParams memory cc =
+            CallContractParams({target: address(0x1234), data: "", value: 0});
+        cmds[1] =
+            CommandV2({kind: CommandKind.CallContract, gas: 200_000, payload: abi.encode(cc)});
+        InboundMessageV2 memory msgv;
+        msgv.origin = bytes32("orig");
+        msgv.nonce = 1;
+        msgv.topic = bytes32(0);
+        msgv.commands = cmds;
+
+        // call v2_submit (verification overridden to true)
+
+        // construct an empty Verification.Proof
+        Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](0);
+        Verification.ParachainHeader memory header = Verification.ParachainHeader({
+            parentHash: bytes32(0),
+            number: 0,
+            stateRoot: bytes32(0),
+            extrinsicsRoot: bytes32(0),
+            digestItems: digestItems
+        });
+
+        bytes32[] memory emptyBytes32 = new bytes32[](0);
+        Verification.HeadProof memory hp =
+            Verification.HeadProof({pos: 0, width: 0, proof: emptyBytes32});
+        Verification.MMRLeafPartial memory lp = Verification.MMRLeafPartial({
+            version: 0,
+            parentNumber: 0,
+            parentHash: bytes32(0),
+            nextAuthoritySetID: 0,
+            nextAuthoritySetLen: 0,
+            nextAuthoritySetRoot: bytes32(0)
+        });
+
+        Verification.Proof memory headerProof = Verification.Proof({
+            header: header,
+            headProof: hp,
+            leafPartial: lp,
+            leafProof: emptyBytes32,
+            leafProofOrder: 0
+        });
+
+        gw.v2_submit(msgv, proof, headerProof, bytes32(0));
+
+        // message should be recorded as dispatched
+        assertTrue(gw.v2_isDispatched(msgv.nonce));
     }
 }

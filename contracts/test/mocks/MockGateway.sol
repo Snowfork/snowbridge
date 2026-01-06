@@ -12,6 +12,12 @@ import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
+import {Command as CommandV2} from "../../src/v2/Types.sol";
+import {Agent} from "../../src/Agent.sol";
+import {AgentExecutor} from "../../src/AgentExecutor.sol";
+import {Constants} from "../../src/Constants.sol";
+import {HandlersV2} from "../../src/v2/Handlers.sol";
+
 contract MockGateway is Gateway {
     bool public commitmentsAreVerified;
 
@@ -84,5 +90,49 @@ contract MockGateway is Gateway {
 
     function transactionBaseGas() public pure returns (uint256) {
         return super.v1_transactionBaseGas();
+    }
+
+    function callDispatch(CommandV2 calldata command, bytes32 origin) external returns (bool) {
+        return super._dispatchCommand(command, origin);
+    }
+
+    function deployAgent() external returns (address) {
+        Agent a = new Agent(Constants.ASSET_HUB_AGENT_ID);
+        return address(a);
+    }
+
+    function setAgentInStorage(address agent) external {
+        CoreStorage.layout().agents[Constants.ASSET_HUB_AGENT_ID] = agent;
+    }
+
+    function callUnlockNativeToken(address executor, bytes calldata data) external {
+        HandlersV2.unlockNativeToken(executor, data);
+    }
+
+    // Expose internal helper for testing
+    function exposed_v1_transactionBaseGas() external pure returns (uint256) {
+        return v1_transactionBaseGas();
+    }
+
+    // Wrapper to call an internal dispatch and return the boolean result
+    function exposed_dispatchCommand(CommandV2 calldata cmd, bytes32 origin)
+        external
+        returns (bool)
+    {
+        return _dispatchCommand(cmd, origin);
+    }
+
+    // Helper to call vulnerable-onlySelf handler from within the contract (so msg.sender == this)
+    function setOperatingMode(bytes calldata data) external {
+        HandlersV2.setOperatingMode(data);
+    }
+
+    // Test helpers to manipulate storage for this gateway instance
+    function setChannelAgent(ChannelID cid, address agent) external {
+        CoreStorage.layout().channels[cid].agent = agent;
+    }
+
+    function setInboundNonce(uint64 n) external {
+        CoreStorage.layout().inboundNonce.set(n);
     }
 }
