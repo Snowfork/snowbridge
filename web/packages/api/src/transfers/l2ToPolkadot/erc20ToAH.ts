@@ -268,6 +268,7 @@ export class ERC20ToAH implements TransferInterface {
             value = fee.totalFeeInWei
             outputAmount = amount - fee.l2BridgeFeeInL2Token!
             assets = [encodeNativeAsset(tokenAddress, outputAmount)]
+            sendParams.assets = assets
             swapParams = {
                 inputToken: l2TokenAddress,
                 outputToken: tokenAddress,
