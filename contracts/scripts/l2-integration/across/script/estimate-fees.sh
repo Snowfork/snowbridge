@@ -11,6 +11,10 @@ set -eux
 curl -L \
   'https://testnet.across.to/api/suggested-fees?inputToken=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238&outputToken=0x036CbD53842c5426634e7929541eC2318f3dCF7e&originChainId=11155111&destinationChainId=84532&amount=1000000' | jq .
 
+# Estimate fees for transferring 1 USDC from Base to Sepolia via Across
+curl -L \
+  'https://testnet.across.to/api/suggested-fees?inputToken=0x036CbD53842c5426634e7929541eC2318f3dCF7e&outputToken=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238&originChainId=84532&destinationChainId=11155111&amount=1000000' | jq .
+
 # Estimate fees for transferring 0.001 WETH from Sepolia to Base via Across
 # Input token: Sepolia WETH (0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14)
 # Output token: Base WETH (0x4200000000000000000000000000000000000006)

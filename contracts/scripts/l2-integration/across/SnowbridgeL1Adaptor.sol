@@ -53,9 +53,9 @@ contract SnowbridgeL1Adaptor {
         require(params.inputToken == address(0));
         require(params.inputAmount > params.outputAmount, "Input and output amount mismatch");
 
-        require(msg.value == params.inputAmount, "Incorrect ETH amount sent");
+        require(msg.value >= params.inputAmount, "Insufficient ETH amount sent");
 
-        L1_WETH9.deposit{value: params.inputAmount}();
+        L1_WETH9.deposit{value: msg.value}();
         IERC20(address(L1_WETH9)).approve(address(SPOKE_POOL), params.inputAmount);
 
         Call[] memory calls = new Call[](2);
@@ -83,4 +83,6 @@ contract SnowbridgeL1Adaptor {
             abi.encode(instructions)
         );
     }
+
+    receive() external payable {}
 }

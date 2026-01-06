@@ -137,9 +137,9 @@ contract SnowbridgeL2Adaptor {
             "Input and output amount mismatch"
         );
         uint256 totalAmount = params.inputAmount + sendParams.relayerFee + sendParams.executionFee;
-        require(msg.value == totalAmount, "Incorrect ETH amount sent");
+        require(msg.value >= totalAmount, "Insufficient ETH amount sent");
 
-        L2_WETH9.deposit{value: totalAmount}();
+        L2_WETH9.deposit{value: msg.value}();
         IERC20(address(L2_WETH9)).approve(address(SPOKE_POOL), totalAmount);
 
         // The deposit is used to fund the handler contract on the destination chain with WETH,

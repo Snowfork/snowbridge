@@ -69,6 +69,7 @@ export type RegistryOptions = {
     assetOverrides?: AssetOverrideMap
     metadataOverrides?: ERC20MetadataOverrideMap
     l1AdapterAddress?: string
+    l1FeeTokenAddress?: string
     l2ChainOverrides?: { [l2ChainId: string]: L2ChainMetadata }
 }
 
@@ -583,6 +584,7 @@ export function fromEnvironment({
     }
     if (l2BridgeConfig) {
         result.l1AdapterAddress = l2BridgeConfig.L1_ADAPTER_CONTRACT
+        result.l1FeeTokenAddress = l2BridgeConfig.L1_FEE_ASSET
         result.l2ChainOverrides = {}
         for (const l2ChainId of Object.keys(l2BridgeConfig.CHAINS)) {
             result.l2ChainOverrides[l2ChainId] = {
@@ -632,6 +634,19 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
                 assetHubParaId,
                 bridgeHubParaId,
                 assetHub: kusamaAssetHub,
+            }
+        }
+    }
+
+    if (context.config.l2Bridge) {
+        result.l1AdapterAddress = context.config.l2Bridge.L1_ADAPTER_CONTRACT
+        result.l1FeeTokenAddress = context.config.l2Bridge.L1_FEE_ASSET
+        result.l2ChainOverrides = {}
+        for (const l2ChainId of Object.keys(context.config.l2Bridge.CHAINS)) {
+            result.l2ChainOverrides[l2ChainId] = {
+                adapterAddress: context.config.l2Bridge.CHAINS[l2ChainId].L2_ADAPTER_CONTRACT,
+                feeTokenAddress: context.config.l2Bridge.CHAINS[l2ChainId].FEE_ASSET,
+                routes: [],
             }
         }
     }
@@ -891,6 +906,13 @@ async function indexEthChain(
                 ...asset,
                 swapTokenAddress: route.swapToken,
             }
+        }
+        assets["0x0000000000000000000000000000000000000000"] = {
+            token: "0x0000000000000000000000000000000000000000",
+            name: "Ether",
+            symbol: "Ether",
+            decimals: 18,
+            swapTokenAddress: "0x0000000000000000000000000000000000000000",
         }
         return {
             chainId: networkChainId,

@@ -992,36 +992,68 @@ export async function buildL2Call(
 ): Promise<{ fee: bigint; l2Call: ContractCall }> {
     // Calculate fee with Across SDK
     const l2TokenAddress = findL2TokenAddress(registry, l2ChainId, tokenAddress)!
-    let l2BridgeFeeInL1Token = await estimateFees(
-        context.acrossApiUrl(),
-        tokenAddress,
-        l2TokenAddress,
-        registry.ethChainId,
-        l2ChainId,
-        tokenAmount,
-    )
-    l2BridgeFeeInL1Token = padFeeByPercentage(
-        l2BridgeFeeInL1Token,
-        options?.l2PadFeeByPercentage ?? 33n,
-    )
-
     const l1Adapter = context.l1Adapter()
-    let calldata = l1Adapter.interface.encodeFunctionData("depositToken", [
-        {
-            inputToken: tokenAddress,
-            outputToken: l2TokenAddress,
-            inputAmount: tokenAmount,
-            outputAmount: tokenAmount - l2BridgeFeeInL1Token,
-            destinationChainId: l2ChainId,
-        },
-        destinationAddress,
-    ])
     let l1AdapterAddress = await l1Adapter.getAddress()
-    let l2Call: ContractCall = {
-        target: l1AdapterAddress,
-        value: 0n,
-        gas: options?.l2TransferGasLimit || 1_000_000n,
-        calldata,
+    let l2BridgeFeeInL1Token = 0n
+    let l2Call: ContractCall
+    if (tokenAddress === ETHER_TOKEN_ADDRESS) {
+        let l1FeeTokenAddress = context.l1FeeTokenAddress()
+        let l2FeeTokenAddress = context.l2FeeTokenAddress(l2ChainId)
+        l2BridgeFeeInL1Token = padFeeByPercentage(
+            await estimateFees(
+                context.acrossApiUrl(),
+                l1FeeTokenAddress,
+                l2FeeTokenAddress,
+                registry.ethChainId,
+                l2ChainId,
+                tokenAmount,
+            ),
+            options?.l2PadFeeByPercentage ?? 33n,
+        )
+        let calldata = l1Adapter.interface.encodeFunctionData("depositNativeEther", [
+            {
+                inputToken: tokenAddress,
+                outputToken: l2TokenAddress,
+                inputAmount: tokenAmount,
+                outputAmount: tokenAmount - l2BridgeFeeInL1Token,
+                destinationChainId: l2ChainId,
+            },
+            destinationAddress,
+        ])
+        l2Call = {
+            target: l1AdapterAddress,
+            value: tokenAmount,
+            gas: options?.l2TransferGasLimit || 1_000_000n,
+            calldata,
+        }
+    } else {
+        l2BridgeFeeInL1Token = padFeeByPercentage(
+            await estimateFees(
+                context.acrossApiUrl(),
+                tokenAddress,
+                l2TokenAddress,
+                registry.ethChainId,
+                l2ChainId,
+                tokenAmount,
+            ),
+            options?.l2PadFeeByPercentage ?? 33n,
+        )
+        let calldata = l1Adapter.interface.encodeFunctionData("depositToken", [
+            {
+                inputToken: tokenAddress,
+                outputToken: l2TokenAddress,
+                inputAmount: tokenAmount,
+                outputAmount: tokenAmount - l2BridgeFeeInL1Token,
+                destinationChainId: l2ChainId,
+            },
+            destinationAddress,
+        ])
+        l2Call = {
+            target: l1AdapterAddress,
+            value: 0n,
+            gas: options?.l2TransferGasLimit || 1_000_000n,
+            calldata,
+        }
     }
     return { l2Call, fee: l2BridgeFeeInL1Token }
 }

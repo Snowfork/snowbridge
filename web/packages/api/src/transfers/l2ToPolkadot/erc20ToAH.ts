@@ -31,6 +31,7 @@ import {
     SendParamsStruct,
 } from "@snowbridge/contract-types/dist/SnowbridgeL2Adaptor"
 import { estimateFees } from "../../across/api"
+import { ContractTransaction } from "ethers/lib.commonjs/contract/types"
 
 export class ERC20ToAH implements TransferInterface {
     async getDeliveryFee(
@@ -52,12 +53,16 @@ export class ERC20ToAH implements TransferInterface {
             assetHub: await context.assetHub(),
             bridgeHub: await context.bridgeHub(),
         }
-        const tokenAddress =
-            registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
+        let tokenAddress: string | undefined
+        if (l2TokenAddress == ETHER_TOKEN_ADDRESS) {
+            tokenAddress = ETHER_TOKEN_ADDRESS
+        } else {
+            tokenAddress =
+                registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
+        }
         if (!tokenAddress) {
             throw new Error("Token is not registered on Ethereum")
         }
-
         let assetHubXcm = buildAssetHubERC20ReceivedXcm(
             assetHub.registry,
             registry.ethChainId,
@@ -110,19 +115,23 @@ export class ERC20ToAH implements TransferInterface {
         )
 
         // Calculate fee with Across SDK
-        let l2BridgeFeeInL2Token = await estimateFees(
-            context.acrossApiUrl(),
-            l2TokenAddress,
-            tokenAddress,
-            l2ChainId,
-            registry.ethChainId,
-            amount,
-        )
-        l2BridgeFeeInL2Token = padFeeByPercentage(
-            l2BridgeFeeInL2Token,
-            options?.l2PadFeeByPercentage ?? 33n,
-        )
+        let l2BridgeFeeInL2Token = 0n
+        if (l2TokenAddress != ETHER_TOKEN_ADDRESS) {
+            l2BridgeFeeInL2Token = await estimateFees(
+                context.acrossApiUrl(),
+                l2TokenAddress,
+                tokenAddress,
+                l2ChainId,
+                registry.ethChainId,
+                amount,
+            )
+            l2BridgeFeeInL2Token = padFeeByPercentage(
+                l2BridgeFeeInL2Token,
+                options?.l2PadFeeByPercentage ?? 33n,
+            )
+        }
 
+        let l2BridgeFeeInEther = 0n
         const nativeFeeTokenAddress =
             context.config.l2Bridge?.CHAINS[l2ChainId]?.FEE_ASSET || ETHER_TOKEN_ADDRESS
         const l1FeeTokenAddress =
@@ -131,14 +140,25 @@ export class ERC20ToAH implements TransferInterface {
             throw new Error("Token is not registered on Ethereum")
         }
 
-        let l2BridgeFeeInEther = await estimateFees(
-            context.acrossApiUrl(),
-            nativeFeeTokenAddress,
-            l1FeeTokenAddress,
-            l2ChainId,
-            registry.ethChainId,
-            assetHubExecutionFeeEther + relayerFee,
-        )
+        if (l2TokenAddress === ETHER_TOKEN_ADDRESS) {
+            l2BridgeFeeInEther = await estimateFees(
+                context.acrossApiUrl(),
+                nativeFeeTokenAddress,
+                l1FeeTokenAddress,
+                l2ChainId,
+                registry.ethChainId,
+                assetHubExecutionFeeEther + relayerFee + amount,
+            )
+        } else {
+            l2BridgeFeeInEther = await estimateFees(
+                context.acrossApiUrl(),
+                nativeFeeTokenAddress,
+                l1FeeTokenAddress,
+                l2ChainId,
+                registry.ethChainId,
+                assetHubExecutionFeeEther + relayerFee,
+            )
+        }
         l2BridgeFeeInEther = padFeeByPercentage(
             l2BridgeFeeInEther,
             options?.l2PadFeeByPercentage ?? 33n,
@@ -176,8 +196,13 @@ export class ERC20ToAH implements TransferInterface {
         const assetHub = await context.assetHub()
         const l2Chain = context.ethChain(l2ChainId)
 
-        const tokenAddress =
-            registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
+        let tokenAddress: string | undefined
+        if (l2TokenAddress == ETHER_TOKEN_ADDRESS) {
+            tokenAddress = ETHER_TOKEN_ADDRESS
+        } else {
+            tokenAddress =
+                registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
+        }
         if (!tokenAddress) {
             throw new Error("Token is not registered on Ethereum")
         }
@@ -191,14 +216,10 @@ export class ERC20ToAH implements TransferInterface {
 
         let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
             beneficiaryMultiAddress(beneficiaryAccount)
-        let value = fee.totalFeeInWei
-        let outputAmount = amount - fee.l2BridgeFeeInL2Token!
-        let assets: any = []
-        if (tokenAddress === ETHER_TOKEN_ADDRESS) {
-            value += amount
-        } else {
-            assets = [encodeNativeAsset(tokenAddress, outputAmount)]
-        }
+
+        let assets: any = [],
+            value = 0n,
+            outputAmount = 0n
 
         const l2Adapter = context.l2Adapter(l2ChainId)
         const accountNonce = await l2Chain.getTransactionCount(sourceAccount, "pending")
@@ -217,14 +238,9 @@ export class ERC20ToAH implements TransferInterface {
         )
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
-        let swapParams: SwapParamsStruct = {
-            inputToken: l2TokenAddress,
-            outputToken: tokenAddress,
-            inputAmount: amount,
-            outputAmount: outputAmount,
-            destinationChainId: BigInt(registry.ethChainId),
-        }
-        let sendParams: SendParamsStruct = {
+        let swapParams: SwapParamsStruct, tx: ContractTransaction
+
+        let sendParams = {
             xcm: xcm,
             assets: assets,
             claimer: claimerLocationToBytes(claimer),
@@ -233,12 +249,39 @@ export class ERC20ToAH implements TransferInterface {
             l2Fee: fee.l2BridgeFeeInEther!,
         }
 
-        const tx = await l2Adapter
-            .getFunction("sendTokenAndCall")
-            .populateTransaction(swapParams, sendParams, sourceAccount, topic, {
-                value: value,
-                from: sourceAccount,
-            })
+        if (l2TokenAddress === ETHER_TOKEN_ADDRESS) {
+            value = fee.totalFeeInWei + amount
+            swapParams = {
+                inputToken: l2TokenAddress,
+                outputToken: tokenAddress,
+                inputAmount: amount + fee.l2BridgeFeeInEther!,
+                outputAmount: amount,
+                destinationChainId: BigInt(registry.ethChainId),
+            }
+            tx = await l2Adapter
+                .getFunction("sendNativeEtherAndCall")
+                .populateTransaction(swapParams, sendParams, sourceAccount, topic, {
+                    value: value,
+                    from: sourceAccount,
+                })
+        } else {
+            value = fee.totalFeeInWei
+            outputAmount = amount - fee.l2BridgeFeeInL2Token!
+            assets = [encodeNativeAsset(tokenAddress, outputAmount)]
+            swapParams = {
+                inputToken: l2TokenAddress,
+                outputToken: tokenAddress,
+                inputAmount: amount,
+                outputAmount: outputAmount,
+                destinationChainId: BigInt(registry.ethChainId),
+            }
+            tx = await l2Adapter
+                .getFunction("sendTokenAndCall")
+                .populateTransaction(swapParams, sendParams, sourceAccount, topic, {
+                    value: value,
+                    from: sourceAccount,
+                })
+        }
 
         return {
             input: {
@@ -327,10 +370,8 @@ export class ERC20ToAH implements TransferInterface {
         }
         let feeInfo: FeeInfo | undefined
         if (logs.length === 0) {
-            const [estimatedGas, feeData] = await Promise.all([
-                l2Chain.estimateGas(tx),
-                l2Chain.getFeeData(),
-            ])
+            const estimatedGas = await l2Chain.estimateGas(tx)
+            const feeData = await l2Chain.getFeeData()
             const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
             if (executionFee === 0n) {
                 logs.push({

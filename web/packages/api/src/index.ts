@@ -283,6 +283,10 @@ export class Context {
         return this.#l1Adapter
     }
 
+    l1FeeTokenAddress(): string {
+        return this.config.l2Bridge?.L1_FEE_ASSET as string
+    }
+
     l2Adapter(l2ChainId: number): SnowbridgeL2Adaptor {
         if (this.#l2Adapters[l2ChainId]) {
             return this.#l2Adapters[l2ChainId]
@@ -293,6 +297,10 @@ export class Context {
         )
         this.#l2Adapters[l2ChainId] = adapter
         return adapter
+    }
+
+    l2FeeTokenAddress(l2ChainId: number): string {
+        return this.config.l2Bridge?.CHAINS[l2ChainId.toString()]?.FEE_ASSET as string
     }
 
     acrossApiUrl(): string {

@@ -50,6 +50,7 @@ export type TransferLocation = {
 export type L2BridgeConfig = {
     ACROSS_API_URL: string
     L1_ADAPTER_CONTRACT: string
+    L1_FEE_ASSET: string
     CHAINS: { [chain: string]: { L2_ADAPTER_CONTRACT: string; FEE_ASSET: string } }
 }
 
@@ -681,10 +682,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         },
         l2BridgeConfig: {
             ACROSS_API_URL: "https://testnet.across.to/api",
-            L1_ADAPTER_CONTRACT: "0x7cB1089AB4Dbd946e4d03C33De868E590dC2D866",
+            L1_ADAPTER_CONTRACT: "0xf50FE3BA4306829a96A2d1E9d9518929E47753a6",
+            L1_FEE_ASSET: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
             CHAINS: {
                 "84532": {
-                    L2_ADAPTER_CONTRACT: "0xE70eaaF7618e77e9B8df0D4d691d678c0c9d67B4",
+                    L2_ADAPTER_CONTRACT: "0x5a7C107757ce0EDB72d65E4aa02e9cc40f5FcEC3",
                     FEE_ASSET: "0x4200000000000000000000000000000000000006",
                 },
             },

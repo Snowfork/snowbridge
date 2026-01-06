@@ -67,7 +67,9 @@
     "transferWndToPenpalV2": "npx ts-node src/transfer_from_e2p_v2.ts 2000 WND 1000000000",
     "transferUSDCToAHV2": "npx ts-node src/transfer_from_e2p_v2.ts 1000 USDC 100000",
     "transferUSDCFromL2ToAH": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 84532 1000 USDC 110000",
-    "transferUSDCFromAHToL2": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 84532 USDC 110000"
+    "transferUSDCFromAHToL2": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 84532 USDC 110000",
+    "transferEtherFromL2ToAH": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 84532 1000 Eth 1000000000000000",
+    "transferEtherFromAHToL2": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 84532 Eth 1000000000000000"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.45.0",
