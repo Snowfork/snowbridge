@@ -1154,7 +1154,7 @@ contract GatewayV1Test is Test {
         MockGateway(address(gateway)).v1_handleUnlockNativeToken_public(encodedParams);
     }
 
-    function testRegisterForeignToken() public {
+    function testRegisterForeignTokenHappyPath() public {
         RegisterForeignTokenParams memory params = RegisterForeignTokenParams({
             foreignTokenID: dotTokenID, name: "DOT", symbol: "DOT", decimals: 10
         });
