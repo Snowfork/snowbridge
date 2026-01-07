@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -26,6 +27,7 @@ type EthereumWriter struct {
 	config          *SinkConfig
 	conn            *ethereum.Connection
 	contract        *contracts.BeefyClient
+	wrapper         *contracts.BeefyClientWrapper
 	blockWaitPeriod uint64
 }
 
@@ -62,6 +64,12 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 						"latestBeefyBlock": state.LatestBeefyBlock,
 					}).Info("Commitment already synced")
 					continue
+				}
+
+				// Wait until we're eligible to submit (turn-based scheduling)
+				err = wr.waitForTurnEligibility(ctx)
+				if err != nil {
+					return fmt.Errorf("wait for turn eligibility: %w", err)
 				}
 
 				// Mandatory commitments are always signed by the next validator set recorded in
@@ -300,6 +308,77 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 	return tx, nil
 }
 
+func (wr *EthereumWriter) waitForTurnEligibility(ctx context.Context) error {
+	for {
+		eligible, err := wr.checkTurnEligibility(ctx)
+		if err != nil {
+			return err
+		}
+		if eligible {
+			return nil
+		}
+
+		// Wait before checking again
+		log.Debug("Not eligible yet, waiting 12 seconds before rechecking...")
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(12 * time.Second):
+			// Check again
+		}
+	}
+}
+
+func (wr *EthereumWriter) checkTurnEligibility(ctx context.Context) (bool, error) {
+	// If no wrapper configured, always eligible (backwards compatible)
+	if wr.wrapper == nil {
+		return true, nil
+	}
+
+	callOpts := bind.CallOpts{
+		Context: ctx,
+	}
+
+	myAddress := wr.conn.Keypair().CommonAddress()
+
+	// Check if it's our turn
+	currentTurnRelayer, err := wr.wrapper.GetCurrentTurnRelayer(&callOpts)
+	if err != nil {
+		return false, fmt.Errorf("get current turn relayer: %w", err)
+	}
+
+	if currentTurnRelayer == myAddress {
+		log.WithFields(logrus.Fields{
+			"currentTurnRelayer": currentTurnRelayer.Hex(),
+			"myAddress":          myAddress.Hex(),
+		}).Debug("It's our turn to submit")
+		return true, nil
+	}
+
+	// Not our turn, check if grace period is active
+	gracePeriodActive, err := wr.wrapper.IsGracePeriodActive(&callOpts)
+	if err != nil {
+		return false, fmt.Errorf("check grace period: %w", err)
+	}
+
+	if gracePeriodActive {
+		log.WithFields(logrus.Fields{
+			"currentTurnRelayer": currentTurnRelayer.Hex(),
+			"myAddress":          myAddress.Hex(),
+			"gracePeriodActive":  true,
+		}).Debug("Not our turn, but grace period is active - proceeding")
+		return true, nil
+	}
+
+	log.WithFields(logrus.Fields{
+		"currentTurnRelayer": currentTurnRelayer.Hex(),
+		"myAddress":          myAddress.Hex(),
+		"gracePeriodActive":  false,
+	}).Info("Not our turn and grace period not active - skipping submission")
+
+	return false, nil
+}
+
 func (wr *EthereumWriter) initialize(ctx context.Context) error {
 	address := common.HexToAddress(wr.config.Contracts.BeefyClient)
 	contract, err := contracts.NewBeefyClient(address, wr.conn.Client())
@@ -307,6 +386,17 @@ func (wr *EthereumWriter) initialize(ctx context.Context) error {
 		return fmt.Errorf("create beefy client: %w", err)
 	}
 	wr.contract = contract
+
+	// Also create wrapper bindings for turn-checking functions
+	// This works whether BeefyClient points to the wrapper or the original contract
+	wrapper, err := contracts.NewBeefyClientWrapper(address, wr.conn.Client())
+	if err != nil {
+		// If wrapper bindings fail, it means we're using the original BeefyClient
+		// which doesn't have turn-checking - that's fine, we'll skip eligibility checks
+		log.Debug("BeefyClientWrapper bindings not available - turn checking disabled")
+	} else {
+		wr.wrapper = wrapper
+	}
 
 	callOpts := bind.CallOpts{
 		Context: ctx,
