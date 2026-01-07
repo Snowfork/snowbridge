@@ -177,6 +177,14 @@ export class Context {
         }
     }
 
+    setEthProvider(ethChainId: number, provider: AbstractProvider) {
+        const ethChainKey = ethChainId.toString()
+        if(ethChainKey in this.#ethChains) {
+            this.#ethChains[ethChainKey].destroy()
+        }
+        this.#ethChains[ethChainKey] = provider
+    }
+
     ethChain(ethChainId: number): AbstractProvider {
         const ethChainKey = ethChainId.toString()
         if (ethChainKey in this.#ethChains) {
