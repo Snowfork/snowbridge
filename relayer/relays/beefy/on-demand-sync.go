@@ -424,7 +424,7 @@ func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber u
 
 	log.Info("Performing sync")
 
-	err = relay.sync(ctx, beefyBlockNumber)
+	err = relay.syncFiatShamir(ctx, beefyBlockNumber)
 	if err != nil {
 		return fmt.Errorf("Sync failed: %w", err)
 	}
