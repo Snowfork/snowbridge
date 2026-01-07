@@ -2,7 +2,6 @@ import { Context, subsquid, subsquidV2 } from "./index"
 import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
 import { fetchEstimatedDeliveryTime } from "./subsquid"
 import { fetchEstimatedDeliveryTime as fetchV2EstimatedDeliveryTime } from "./subsquid_v2"
-import { Relayer, SourceType } from "./environment"
 import { ApiPromise } from "@polkadot/api"
 import { IGatewayV1, IGatewayV2 } from "@snowbridge/contract-types"
 
@@ -74,6 +73,8 @@ export type V2StatusInfo = {
     }
 }
 
+type SourceType = "substrate" | "ethereum"
+
 export type Sovereign = { name: string; account: string; balance: bigint; type: SourceType }
 
 export type IndexerServiceStatusInfo = {
@@ -81,6 +82,8 @@ export type IndexerServiceStatusInfo = {
     latency: number
     paraid?: number
 }
+
+type Relayer = { name: string; account: string; type: SourceType; balance?: bigint }
 
 export type AllMetrics = {
     name: string

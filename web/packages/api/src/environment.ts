@@ -9,25 +9,20 @@ export type Config = {
     BRIDGE_HUB_PARAID: number
     PRIMARY_GOVERNANCE_CHANNEL_ID: string
     SECONDARY_GOVERNANCE_CHANNEL_ID: string
-    RELAYERS: Relayer[]
+    RELAYERS: { name: string; account: string; type: "substrate" | "ethereum"; balance?: bigint }[]
     PARACHAINS: { [paraId: string]: string }
     GRAPHQL_API_URL: string
     TO_MONITOR_PARACHAINS?: number[]
 }
 
-export type KusamaConfig = {
-    ASSET_HUB_PARAID: number
-    BRIDGE_HUB_PARAID: number
-    PARACHAINS: { [paraId: string]: string }
-}
-
-export type SourceType = "substrate" | "ethereum"
-export type Relayer = { name: string; account: string; type: SourceType; balance?: bigint }
-
 /** @deprecated Use `Environment` from base-types */
 export type SnowbridgeEnvironment = {
     config: Config
-    kusamaConfig?: KusamaConfig
+    kusamaConfig?: {
+        ASSET_HUB_PARAID: number
+        BRIDGE_HUB_PARAID: number
+        PARACHAINS: { [paraId: string]: string }
+    }
     name: string
     ethChainId: number
 }
