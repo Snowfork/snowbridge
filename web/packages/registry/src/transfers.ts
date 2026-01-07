@@ -18,7 +18,7 @@ export function transferSourcesFor(
     if (env in cache) {
         return cache[env]
     }
-    return getTransferLocations(environmentFor(env), assetRegistryFor(env))
+    return getTransferLocations(assetRegistryFor(env))
 }
 
 export function getEthereumTransferLocation(
@@ -81,13 +81,12 @@ export function getTransferLocationKusama(
 }
 
 export function getTransferLocations(
-    environment: Environment,
     registry: AssetRegistry,
     filter?: (path: Path) => boolean,
 ): Source[] {
-    const ethChain = registry.ethereumChains[environment.ethChainId]
+    const ethChain = registry.ethereumChains[registry.ethChainId]
     const parachains = Object.keys(registry.parachains)
-        .filter((p) => p !== environment.bridgeHubParaId.toString())
+        .filter((p) => p !== registry.bridgeHubParaId.toString())
         .map((p) => registry.parachains[p])
 
     const pathFilter = filter ?? defaultPathFilter(registry.environment)
@@ -141,7 +140,7 @@ export function getTransferLocations(
     }
 
     // Local paths
-    const assetHub = registry.parachains[environment.assetHubParaId]
+    const assetHub = registry.parachains[registry.assetHubParaId]
     for (const parachain of parachains) {
         if (parachain.parachainId === assetHub.parachainId) continue
         const assetHubAssets = Object.keys(assetHub.assets)
