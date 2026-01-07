@@ -42,6 +42,7 @@ const run = async (
             destinationChainId: destinationChainId,
         },
         ETHEREUM_ACCOUNT_PUBLIC,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
     ])
     console.log("Calldata for SnowbridgeL1Adaptor:")
     console.log(call)

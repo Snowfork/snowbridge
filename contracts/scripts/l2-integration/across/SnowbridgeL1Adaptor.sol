@@ -13,6 +13,12 @@ contract SnowbridgeL1Adaptor {
     WETH9 public immutable L2_WETH9;
     uint32 public TIME_BUFFER;
 
+    /**************************************
+     *              EVENTS                *
+     **************************************/
+
+    event DepositCallInvoked(bytes32 topic, uint256 depositId);
+
     constructor(
         address _spokePool,
         address _handler,
@@ -29,7 +35,7 @@ contract SnowbridgeL1Adaptor {
 
     // Send ERC20 token on L1 to L2, the fee should be calculated off-chain
     // following https://docs.across.to/reference/api-reference#get-swap-approval
-    function depositToken(SwapParams calldata params, address recipient) public {
+    function depositToken(SwapParams calldata params, address recipient, bytes32 topic) public {
         IERC20(params.inputToken).approve(address(SPOKE_POOL), params.inputAmount);
 
         SPOKE_POOL.deposit(
@@ -46,10 +52,16 @@ contract SnowbridgeL1Adaptor {
             0, // exclusivityDeadline, zero means no exclusivity
             "" // empty message
         );
+        // Emit event with the depositId of the second deposit
+        uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
+        emit DepositCallInvoked(topic, depositId);
     }
 
     // Send native Ether on L1 to L2
-    function depositNativeEther(SwapParams calldata params, address recipient) public payable {
+    function depositNativeEther(SwapParams calldata params, address recipient, bytes32 topic)
+        public
+        payable
+    {
         require(params.inputToken == address(0));
         require(params.inputAmount > params.outputAmount, "Input and output amount mismatch");
 
@@ -82,6 +94,8 @@ contract SnowbridgeL1Adaptor {
             0, // exclusivityDeadline, zero means no exclusivity
             abi.encode(instructions)
         );
+        uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
+        emit DepositCallInvoked(topic, depositId);
     }
 
     receive() external payable {}

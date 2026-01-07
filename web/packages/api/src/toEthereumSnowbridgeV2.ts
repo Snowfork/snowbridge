@@ -319,6 +319,7 @@ export const estimateFeesFromAssetHub = async (
             l2ChainId,
             tokenAmount!,
             "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
         options = options || {}
         options.contractCall = options.contractCall || callInfo.l2Call
@@ -985,6 +986,7 @@ export async function buildL2Call(
     l2ChainId: number,
     tokenAmount: bigint,
     destinationAddress: string,
+    topic: string,
     options?: {
         l2TransferGasLimit?: bigint
         l2PadFeeByPercentage?: bigint
@@ -1019,6 +1021,7 @@ export async function buildL2Call(
                 destinationChainId: l2ChainId,
             },
             destinationAddress,
+            topic,
         ])
         l2Call = {
             target: l1AdapterAddress,
@@ -1047,6 +1050,7 @@ export async function buildL2Call(
                 destinationChainId: l2ChainId,
             },
             destinationAddress,
+            topic,
         ])
         l2Call = {
             target: l1AdapterAddress,

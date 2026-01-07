@@ -22,7 +22,7 @@ contract SnowbridgeL2Adaptor {
      *              EVENTS                *
      **************************************/
 
-    event L2CallInvoked(bytes32 topic, uint256 depositId);
+    event DepositCallInvoked(bytes32 topic, uint256 depositId);
 
     constructor(
         address _spokePool,
@@ -121,7 +121,7 @@ contract SnowbridgeL2Adaptor {
         );
         // Emit event with the depositId of the second deposit
         uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
-        emit L2CallInvoked(topic, depositId);
+        emit DepositCallInvoked(topic, depositId);
     }
 
     // Send native Ether to Polkadot, the fee should be calculated off-chain
@@ -182,7 +182,7 @@ contract SnowbridgeL2Adaptor {
             abi.encode(instructions)
         );
         uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
-        emit L2CallInvoked(topic, depositId);
+        emit DepositCallInvoked(topic, depositId);
     }
 
     receive() external payable {}

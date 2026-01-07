@@ -133,6 +133,7 @@ export class ERC20FromAH implements TransferInterface {
             l2ChainId,
             amount,
             beneficiaryAccount,
+            messageId,
         )
         options = options || {}
         options.contractCall = options.contractCall || callInfo.l2Call

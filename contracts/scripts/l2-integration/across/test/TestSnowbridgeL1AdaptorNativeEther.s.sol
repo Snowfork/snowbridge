@@ -30,7 +30,9 @@ contract TestSnowbridgeL1AdaptorNativeEther is Script {
         });
 
         SnowbridgeL1Adaptor(l1SnowbridgeAdaptor)
-        .depositNativeEther{value: params.inputAmount}(params, deployerAddr);
+        .depositNativeEther{
+            value: params.inputAmount
+        }(params, deployerAddr, keccak256("TestSnowbridgeL1AdaptorTopicId"));
 
         vm.stopBroadcast();
         return;
