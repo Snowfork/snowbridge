@@ -1,5 +1,59 @@
 # Audits
 
-Snowbridge has undergone comprehensive audits of the code currently deployed on chain.
+Snowbridge continually commissions incremental audits of the protocol implementation.
 
-<table><thead><tr><th width="159">Auditing Team</th><th width="265">Link</th></tr></thead><tbody><tr><td>Oak Security</td><td><a href="https://github.com/oak-security/audit-reports/blob/main/Snowbridge/2024-05-24%20Audit%20Report%20-%20Snowbridge%20v1.1.pdf">Snowbridge V1.1</a></td></tr><tr><td>Oak Security</td><td><a href="https://github.com/oak-security/audit-reports/blob/main/Snowbridge/2024-02-12%20Audit%20Report%20-%20Snowbridge%20Extension%20v1.1.pdf">Snowbridge V1.1 Extension</a></td></tr><tr><td>CommonPrefix</td><td><a href="https://www.commonprefix.com/static/clients/snowfork/snowfork_beefy_client_v2_audit.pdf">BEEFY Client V2</a></td></tr></tbody></table>
+Our main auditor, [Oak Security](https://oaksecurity.io/), uses a [blinded](https://oaksecurity.io/security-audits) approach, which emphasises redundancy, wherein multiple auditors work independently and only reveal their findings in a final consensus meeting.
+
+## CommonPrefix
+
+#### 2023-11-17
+
+Audit of BEEFY light client sampling protocol
+
+{% file src="../.gitbook/assets/snowfork_beefy_client_v2_audit.pdf" %}
+
+## Oak Security
+
+Auditor-hosted document archive: [https://github.com/oak-security/audit-reports/tree/main/Snowbridge](https://github.com/oak-security/audit-reports/tree/main/Snowbridge)
+
+#### 2025-05-29
+
+Audit of new Snowbridge V2 functionality
+
+{% file src="../.gitbook/assets/2025-05-29 Audit Report - Snowbridge v2 v1.0.pdf" %}
+
+#### 2025-01-07
+
+Incremental audit
+
+{% file src="../.gitbook/assets/2025-01-07 Audit Report - Snowbridge Updates 3 v1.0.pdf" %}
+
+#### 2024-08-16
+
+Incremental audit
+
+{% file src="../.gitbook/assets/2024-08-16 Audit Report - Snowbridge Updates v1.0.pdf" %}
+
+#### 2024-08-10
+
+Incremental audit
+
+{% file src="../.gitbook/assets/2024-08-10 Audit Report - Snowbridge Updates 2 v1.0.pdf" %}
+
+#### 2024-05-06
+
+Incremental audit
+
+{% file src="../.gitbook/assets/2025-05-06 Audit Report - Snowbridge Updates 4 v1.0.pdf" %}
+
+#### 2024-05-24
+
+Finalized audit for the initial v1.1 codebase
+
+{% file src="../.gitbook/assets/2024-05-24 Audit Report - Snowbridge v1.1.pdf" %}
+
+#### 2024-02-12
+
+Auditing Team: [Oak Security](https://oaksecurity.io/)
+
+{% file src="../.gitbook/assets/2024-02-12 Audit Report - Snowbridge Extension v1.1.pdf" %}

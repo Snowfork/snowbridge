@@ -49,7 +49,7 @@ func LeafFn(cmd *cobra.Command, _ []string) error {
 
 	ctx := cmd.Context()
 
-	conn := relaychain.NewConnection(url)
+	conn := relaychain.NewConnection(url, nil)
 	err := conn.Connect(ctx)
 	if err != nil {
 		log.Error(err)

@@ -18,7 +18,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ??
             "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
-        context.ethereum()
+        context.ethereum(),
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
 
@@ -48,7 +48,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
             registry,
             ETHEREUM_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT,
-            fee
+            fee,
         )
 
         // Step 3. Validate the transaction.
@@ -59,7 +59,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
                 bridgeHub: await context.bridgeHub(),
                 assetHub: await context.assetHub(),
             },
-            registration
+            registration,
         )
 
         // Check validation logs for errors
@@ -93,7 +93,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
             console.log(
                 `Success message with nonce: ${message.nonce}
                 block number: ${message.blockNumber}
-                tx hash: ${message.txHash}`
+                tx hash: ${message.txHash}`,
             )
         }
     }

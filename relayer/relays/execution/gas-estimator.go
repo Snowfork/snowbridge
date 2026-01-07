@@ -24,10 +24,11 @@ type GasEstimate struct {
 	ExtrinsicFeeInDot   big.Int `json:"extrinsic_fee_in_dot"`
 	ExtrinsicFeeInEther big.Int `json:"extrinsic_fee_in_ether"`
 	BridgeHub           struct {
-		DeliveryFeeInDot   big.Int `json:"delivery_fee_in_dot"`
-		DeliveryFeeInEther big.Int `json:"delivery_fee_in_ether"`
-		DryRunSuccess      bool    `json:"dry_run_success"`
-		DryRunError        *string `json:"dry_run_error"`
+		DeliveryFeeInDot   big.Int  `json:"delivery_fee_in_dot"`
+		DeliveryFeeInEther big.Int  `json:"delivery_fee_in_ether"`
+		TipInEther         *big.Int `json:"tip_in_ether"`
+		DryRunSuccess      bool     `json:"dry_run_success"`
+		DryRunError        *string  `json:"dry_run_error"`
 	} `json:"bridge_hub"`
 	Beneficiaries []string `json:"beneficiaries"`
 }
@@ -183,18 +184,22 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 		return nil, fmt.Errorf("failed to parse gas estimation response: %w", err)
 	}
 
-	log.WithFields(log.Fields{
+	logFields := log.Fields{
 		"extrinsic_fee_dot":   estimate.ExtrinsicFeeInDot.String(),
 		"extrinsic_fee_ether": estimate.ExtrinsicFeeInEther.String(),
 		"delivery_fee_dot":    estimate.BridgeHub.DeliveryFeeInDot.String(),
 		"delivery_fee_ether":  estimate.BridgeHub.DeliveryFeeInEther.String(),
 		"dry_run_success":     estimate.BridgeHub.DryRunSuccess,
-	}).Debug("gas estimation completed")
+	}
+	if estimate.BridgeHub.TipInEther != nil {
+		logFields["tip_in_ether"] = estimate.BridgeHub.TipInEther.String()
+	}
+	log.WithFields(logFields).Debug("gas estimation completed")
 
 	return &estimate, nil
 }
 
-// IsProfitable checks if the relayer fee is sufficient to cover the costs paid on Polkadot.
+// IsProfitable checks if the relayer fee (plus any tip) is sufficient to cover the costs paid on Polkadot.
 func (g *GasEstimator) IsProfitable(estimate *GasEstimate, ev *contracts.GatewayOutboundMessageAccepted) error {
 	if !g.config.Enabled {
 		return nil // If estimation is disabled, accept all messages
@@ -210,9 +215,16 @@ func (g *GasEstimator) IsProfitable(estimate *GasEstimate, ev *contracts.Gateway
 	totalFeeInEther.Set(&estimate.ExtrinsicFeeInEther)
 	totalFeeInEther.Add(&totalFeeInEther, &estimate.BridgeHub.DeliveryFeeInEther)
 
-	// Check profitability: relayer fee (reward in ETH) must exceed total costs (in ETH equivalent)
-	if ev.Payload.RelayerFee.Cmp(&totalFeeInEther) <= 0 {
-		return fmt.Errorf("message is not profitable: relayer fee %s <= total fee %s", ev.Payload.RelayerFee.String(), totalFeeInEther.String())
+	// Calculate total reward (relayer fee + tip if present)
+	var totalReward big.Int
+	totalReward.Set(ev.Payload.RelayerFee)
+	if estimate.BridgeHub.TipInEther != nil {
+		totalReward.Add(&totalReward, estimate.BridgeHub.TipInEther)
+	}
+
+	// Check profitability: total reward (relayer fee + tip) must exceed total costs (in ETH equivalent)
+	if totalReward.Cmp(&totalFeeInEther) <= 0 {
+		return fmt.Errorf("message is not profitable: total reward %s <= total fee %s", totalReward.String(), totalFeeInEther.String())
 	}
 
 	return nil

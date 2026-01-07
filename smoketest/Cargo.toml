@@ -13,13 +13,19 @@ scale-info = { features = ["derive"], version = "2.11.6", default-features = fal
 hex = "0.4.3"
 hex-literal = "0.4.1"
 serde = { version = "1.0.210", features = ["derive"] }
-subxt = { version = "0.43.0" }
-subxt-signer = { version = "0.43.0" }
+subxt = { version = "0.44.0" }
+subxt-signer = { version = "0.44.0" }
 alloy = { version = "1.0.9", features = ["full"] }
 lazy_static = "1.4.0"
-sp-core = { version = "36.1.0" }
+sp-core = { version = "38.1.0" }
 sp-crypto-hashing = { version = "0.1.0" }
-sp-runtime = { version = "41.1.0" }
+sp-runtime = { version = "44.0.0" }
+sp-consensus-beefy = "27.0.0"
+sp-application-crypto = "43.0.0"
+sp-mmr-primitives = { git = "https://github.com/paritytech/polkadot-sdk", rev = "058b5e7dafc964423b02baac24c8196d6047ea77" }
+jsonrpsee = { version = "0.25.1", features = ["client"] }
+serde_json = "1.0"
+k256 = { version = "0.13.4", features = ["serde"] }
 chrono = "0.4.42"
 
 [features]

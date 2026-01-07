@@ -14,10 +14,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 
 	"github.com/snowfork/snowbridge/relayer/ofac"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -30,16 +26,13 @@ type Relay struct {
 	ethereumConnBeefy     *ethereum.Connection
 	ethereumChannelWriter *EthereumWriter
 	beefyListener         *BeefyListener
-	parachainWriter       *parachain.ParachainWriter
-	beaconHeader          *header.Header
-	headerCache           *ethereum.HeaderCache
 }
 
 func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keypair) (*Relay, error) {
 	log.Info("Creating worker")
 
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
-	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
+	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint, nil)
 
 	ethereumConnWriter := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
 	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
@@ -69,30 +62,6 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 		tasks,
 	)
 
-	parachainWriterConn := parachain.NewConnection(config.Source.Parachain.Endpoint, keypair2.AsKeyringPair())
-
-	parachainWriter := parachain.NewParachainWriter(
-		parachainWriterConn,
-		8,
-	)
-	headerCache, err := ethereum.NewHeaderBlockCache(
-		&ethereum.DefaultBlockLoader{Conn: ethereumConnWriter},
-	)
-	if err != nil {
-		return nil, err
-	}
-	p := protocol.New(config.Source.Beacon.Spec, 20)
-	store := store.New(config.Source.Beacon.DataStore.Location, config.Source.Beacon.DataStore.MaxEntries, *p)
-	store.Connect()
-	beaconAPI := api.NewBeaconClient(config.Source.Beacon.Endpoint, config.Source.Beacon.StateEndpoint)
-	beaconHeader := header.New(
-		parachainWriter,
-		beaconAPI,
-		config.Source.Beacon.Spec,
-		&store,
-		p,
-		0, // setting is not used in the execution relay
-	)
 	return &Relay{
 		config:                config,
 		parachainConn:         parachainConn,
@@ -101,9 +70,6 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 		ethereumConnBeefy:     ethereumConnBeefy,
 		ethereumChannelWriter: ethereumChannelWriter,
 		beefyListener:         beefyListener,
-		parachainWriter:       parachainWriter,
-		beaconHeader:          &beaconHeader,
-		headerCache:           headerCache,
 	}, nil
 }
 
@@ -136,16 +102,6 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	log.Info("Starting ethereum writer")
 	err = relay.ethereumChannelWriter.Start(ctx, eg)
-	if err != nil {
-		return err
-	}
-
-	err = relay.parachainWriter.Start(ctx, eg)
-	if err != nil {
-		return err
-	}
-
-	err = relay.startDeliverProof(ctx, eg)
 	if err != nil {
 		return err
 	}

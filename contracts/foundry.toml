@@ -19,11 +19,7 @@ ignored_error_codes = [
     2394,
 ]
 
-# To clean up, we disabled 3 signature tests. You can regenerate the test fixtures by setting the environment variable 
-# SIGNATURE_USAGE_COUNT=3 and enabling these tests again.
-no_match_test = "testSubmitWith3SignatureCount*"
-
-evm_version = 'Cancun'
+no_match_test = "testRegenerate*"
 
 [profile.production]
 via_ir = true
@@ -31,3 +27,4 @@ via_ir = true
 [fmt]
 number_underscore = "thousands"
 line_length = 99
+

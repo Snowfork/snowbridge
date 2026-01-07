@@ -1,5 +1,7 @@
 export type AccountType = "AccountId20" | "AccountId32";
 
+export type XcmVersion = "v4" | "v5";
+
 export interface XC20TokenMap {
   [xc20: string]: string;
 }
@@ -77,6 +79,10 @@ export type Parachain = {
     hasTxPaymentApi: boolean;
     hasDryRunRpc: boolean;
     hasDotBalance: boolean;
+    hasEthBalance: boolean;
+    hasXcmPaymentApi: boolean;
+    supportsAliasOrigin: boolean;
+    xcmVersion: XcmVersion;
   };
   assets: AssetMap;
   estimatedExecutionFeeDOT: bigint;
@@ -86,6 +92,22 @@ export type Parachain = {
 
 export interface ParachainMap {
   [paraId: string]: Parachain;
+}
+
+export function supportsEthereumToPolkadotV2(parachain: Parachain): boolean {
+  return (
+    parachain.features.hasXcmPaymentApi &&
+    parachain.features.xcmVersion === "v5"
+  );
+}
+
+export function supportsPolkadotToEthereumV2(parachain: Parachain): boolean {
+  return (
+    parachain.features.hasEthBalance &&
+    parachain.features.hasXcmPaymentApi &&
+    parachain.features.supportsAliasOrigin &&
+    parachain.features.xcmVersion === "v5"
+  );
 }
 
 export type KusamaConfig = {

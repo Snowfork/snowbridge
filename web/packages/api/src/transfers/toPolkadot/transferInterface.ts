@@ -21,11 +21,11 @@ export interface TransferInterface {
         registry: AssetRegistry,
         tokenAddress: string,
         destinationParaId: number,
-        relayerFee: bigint,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[] // Optional custom XCM instructions to append
+            overrideRelayerFee?: bigint
         },
     ): Promise<DeliveryFee>
 

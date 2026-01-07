@@ -17,8 +17,10 @@ export * as utils from "./utils"
 export * as status from "./status"
 export * as assetsV2 from "./assets_v2"
 export * as environment from "./environment"
-export * as historyV2 from "./history_v2"
+export * as history from "./history"
 export * as subsquid from "./subsquid"
+export * as historyV2 from "./history_v2"
+export * as subsquidV2 from "./subsquid_v2"
 export * as forKusama from "./forKusama"
 export * as forInterParachain from "./forInterParachain"
 export * as toEthereumFromEVMV2 from "./toEthereumFromEVM_v2"
@@ -27,6 +29,7 @@ export * as xcmBuilder from "./xcmBuilder"
 export * as toEthereumSnowbridgeV2 from "./toEthereumSnowbridgeV2"
 export * as neuroWeb from "./parachains/neuroweb"
 export * as toPolkadotSnowbridgeV2 from "./toPolkadotSnowbridgeV2"
+export * as addTip from "./addTip"
 
 interface Parachains {
     [paraId: string]: ApiPromise
@@ -353,4 +356,46 @@ export function contextConfigFor(
         graphqlApiUrl: GRAPHQL_API_URL,
         monitorChains: TO_MONITOR_PARACHAINS,
     }
+}
+
+export function contextConfigOverrides(input: Config): Config {
+    let config = { ...input }
+    let injectedEthChains: { [ethChainId: string]: string | AbstractProvider } = {}
+    for (const ethChainIdKey of Object.keys(input.ethereum.ethChains)) {
+        if (
+            process.env[`ETHEREUM_RPC_URL_${ethChainIdKey}`] ||
+            process.env[`NEXT_PUBLIC_ETHEREUM_RPC_URL_${ethChainIdKey}`]
+        ) {
+            injectedEthChains[ethChainIdKey] =
+                process.env[`ETHEREUM_RPC_URL_${ethChainIdKey}`] ||
+                (process.env[`NEXT_PUBLIC_ETHEREUM_RPC_URL_${ethChainIdKey}`] as string)
+            continue
+        }
+        injectedEthChains[ethChainIdKey] = input.ethereum.ethChains[ethChainIdKey]
+    }
+    config.ethereum.ethChains = injectedEthChains
+    config.ethereum.beacon_url =
+        process.env["BEACON_RPC_URL"] ||
+        process.env["NEXT_PUBLIC_BEACON_RPC_URL"] ||
+        input.ethereum.beacon_url
+
+    let injectedParachains: { [paraId: string]: string } = {}
+    for (const paraIdKey of Object.keys(input.polkadot.parachains)) {
+        if (
+            process.env[`PARACHAIN_RPC_URL_${paraIdKey}`] ||
+            process.env[`NEXT_PUBLIC_PARACHAIN_RPC_URL_${paraIdKey}`]
+        ) {
+            injectedParachains[paraIdKey] = (process.env[`PARACHAIN_RPC_URL_${paraIdKey}`] ||
+                process.env[`NEXT_PUBLIC_PARACHAIN_RPC_URL_${paraIdKey}`]) as string
+            continue
+        }
+        injectedParachains[paraIdKey] = input.polkadot.parachains[paraIdKey]
+    }
+    config.polkadot.parachains = injectedParachains
+    config.polkadot.relaychain =
+        process.env["RELAY_CHAIN_RPC_URL"] ||
+        process.env["NEXT_PUBLIC_RELAY_CHAIN_RPC_URL"] ||
+        input.polkadot.relaychain
+
+    return config
 }

@@ -22,6 +22,7 @@ import {
     Parachain,
     ParachainMap,
     XC20TokenMap,
+    XcmVersion,
 } from "@snowbridge/base-types"
 
 export type ERC20MetadataOverride = {
@@ -612,6 +613,75 @@ export async function fromContext(context: Context): Promise<RegistryOptions> {
     return result
 }
 
+async function checkSnowbridgeV2Support(
+    parachain: ParachainBase,
+    ethChainId: number,
+): Promise<{
+    xcmVersion: XcmVersion
+    supportsAliasOrigin: boolean
+    hasEthBalance: boolean
+}> {
+    let supportsAliasOrigin = false
+    let hasEthBalance = false
+    let xcmVersion: XcmVersion
+
+    try {
+        const testXcm = parachain.provider.registry.createType("XcmVersionedXcm", {
+            v5: [
+                {
+                    aliasOrigin: {
+                        parents: 0,
+                        interior: {
+                            x1: [
+                                {
+                                    accountId32: {
+                                        id: "0x0000000000000000000000000000000000000000000000000000000000000000",
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                },
+            ],
+        })
+
+        const weightResult = (
+            await parachain.provider.call.xcmPaymentApi.queryXcmWeight(testXcm)
+        ).toPrimitive() as any
+
+        if (weightResult.ok) {
+            const refTime = BigInt(weightResult.ok.refTime.toString())
+            const MAX_REASONABLE_WEIGHT = 10n ** 15n
+            // Check if AliasOrigin is supported. Often, the XCM instruction
+            // weight is set to MAX to make it unusable
+            supportsAliasOrigin = refTime < MAX_REASONABLE_WEIGHT
+
+            const etherLocation = {
+                parents: 2,
+                interior: { x1: [{ GlobalConsensus: { Ethereum: { chain_id: ethChainId } } }] },
+            }
+
+            // Check if ether is supported as a fee asset
+            const feeResult = (
+                await parachain.provider.call.xcmPaymentApi.queryWeightToAssetFee(weightResult.ok, {
+                    v5: etherLocation,
+                })
+            ).toPrimitive() as any
+
+            if (feeResult.ok) {
+                hasEthBalance = true
+            }
+        }
+
+        xcmVersion = "v5"
+    } catch {
+        // If any call throws an error, XCM V5 is likely not supported.
+        xcmVersion = "v4"
+    }
+
+    return { xcmVersion, supportsAliasOrigin, hasEthBalance }
+}
+
 async function indexParachain(
     parachain: ParachainBase,
     assetHub: ParachainBase,
@@ -646,6 +716,12 @@ async function indexParachain(
         isFunction(parachain.provider.call.dryRunApi?.dryRunCall) &&
         isFunction(parachain.provider.call.dryRunApi?.dryRunXcm)
     const hasTxPaymentApi = isFunction(parachain.provider.call.transactionPaymentApi?.queryInfo)
+    const hasXcmPaymentApi = isFunction(parachain.provider.call.xcmPaymentApi?.queryXcmWeight)
+
+    const { xcmVersion, supportsAliasOrigin, hasEthBalance } = await checkSnowbridgeV2Support(
+        parachain,
+        ethChainId,
+    )
 
     // test getting balances
     let hasDotBalance = true
@@ -694,6 +770,10 @@ async function indexParachain(
             hasTxPaymentApi,
             hasDryRunRpc,
             hasDotBalance,
+            hasEthBalance,
+            hasXcmPaymentApi,
+            supportsAliasOrigin,
+            xcmVersion,
         },
         info,
         xcDOT,

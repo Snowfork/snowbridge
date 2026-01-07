@@ -94,6 +94,18 @@ config_relayer() {
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay.json
 
+    # Configure fisherman relay
+    jq \
+        --arg k2 "$(address_for BeefyClient)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
+        --arg eth_gas_limit $eth_gas_limit \
+        '
+      .source.contracts.BeefyClient = $k2
+    | .source.ethereum.endpoint = $eth_endpoint_ws
+    ' \
+        config/fisherman-relay.json >$output_dir/fisherman-relay.json
+
     # Configure beacon relay
     jq \
         --arg beacon_endpoint_http $beacon_endpoint_http \
@@ -139,6 +151,21 @@ config_relayer() {
 
       ' \
           config/execution-relay.json >$output_dir/execution-relay.json
+
+    # Configure reward relay
+      jq \
+          --arg eth_endpoint_ws $eth_endpoint_ws \
+          --arg k1 "$(address_for GatewayProxy)" \
+          --argjson electra_forked_epoch $electra_forked_epoch \
+          --argjson fulu_forked_epoch $fulu_forked_epoch \
+          '
+        .source.ethereum.endpoint = $eth_endpoint_ws
+      | .source.contracts.Gateway = $k1
+      | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
+      | .source.beacon.spec.forkVersions.fulu = $fulu_forked_epoch
+
+      ' \
+          config/reward-relay.json >$output_dir/reward-relay.json
 }
 
 start_relayer() {
@@ -183,6 +210,20 @@ start_relayer() {
         done
     ) &
 
+    # Launch equivocation fisherman
+    (
+        : >"$output_dir"/equivocation-fisherman.log
+        while :; do
+            echo "Starting equivocation fisherman at $(date)"
+            "${relayer_v2}" run fisherman \
+                --config "$output_dir/fisherman-relay.json" \
+                --ethereum.private-key $parachain_relay_primary_gov_eth_key \
+                --substrate.private-key "//ExecutionRelayAssetHub" \
+                >>"$output_dir"/equivocation-fisherman.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
     # Launch beacon relay
     (
         : >"$output_dir"/beacon-relay.log
@@ -218,6 +259,19 @@ start_relayer() {
                 --config $output_dir/execution-relay.json \
                 --substrate.private-key "//ExecutionRelayAssetHub" \
                 >>"$output_dir"/execution-relay-v2.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch reward relay
+    (
+        : >$output_dir/reward-relay.log
+        while :; do
+            echo "Starting reward relay at $(date)"
+            "${relayer_v2}" run reward \
+                --config $output_dir/reward-relay.json \
+                --substrate.private-key "//ExecutionRelayAssetHub" \
+                >>"$output_dir"/reward-relay.log 2>&1 || true
             sleep 20
         done
     ) &

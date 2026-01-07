@@ -2,16 +2,12 @@ package parachain
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"reflect"
-	"strings"
 	"syscall"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	para "github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -71,7 +67,7 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	var config parachain.Config
-	err := viper.UnmarshalExact(&config, viper.DecodeHook(HexHookFunc()))
+	err := viper.UnmarshalExact(&config)
 	if err != nil {
 		return err
 	}
@@ -151,50 +147,4 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
-}
-
-func HexHookFunc() mapstructure.DecodeHookFuncType {
-	return func(
-		f reflect.Type,
-		t reflect.Type,
-		data interface{},
-	) (interface{}, error) {
-		// Check that the data is string
-		if f.Kind() != reflect.String {
-			return data, nil
-		}
-
-		// Check that the target type is our custom type
-		if t != reflect.TypeOf(parachain.ChannelID{}) {
-			return data, nil
-		}
-
-		foo, err := HexDecodeString(data.(string))
-		if err != nil {
-			return nil, err
-		}
-
-		var out [32]byte
-		copy(out[:], foo)
-
-		// Return the parsed value
-		return parachain.ChannelID(out), nil
-	}
-}
-
-// HexDecodeString decodes bytes from a hex string. Contrary to hex.DecodeString, this function does not error if "0x"
-// is prefixed, and adds an extra 0 if the hex string has an odd length.
-func HexDecodeString(s string) ([]byte, error) {
-	s = strings.TrimPrefix(s, "0x")
-
-	if len(s)%2 != 0 {
-		s = "0" + s
-	}
-
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
 }

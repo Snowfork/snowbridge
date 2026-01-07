@@ -138,7 +138,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 			return fmt.Errorf("scan for sync tasks bounded by BEEFY block %v: %w", beefyBlockNumber, err)
 		}
 
-		err = li.subscribeNewMMRRoots(ctx)
+		err = li.subscribeNewBEEFYEvents(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return nil
@@ -152,7 +152,7 @@ func (li *BeefyListener) Start(ctx context.Context, eg *errgroup.Group) error {
 	return nil
 }
 
-func (li *BeefyListener) subscribeNewMMRRoots(ctx context.Context) error {
+func (li *BeefyListener) subscribeNewBEEFYEvents(ctx context.Context) error {
 	headers := make(chan *gethTypes.Header, 1)
 
 	sub, err := li.ethereumConn.Client().SubscribeNewHead(ctx, headers)
@@ -169,15 +169,15 @@ func (li *BeefyListener) subscribeNewMMRRoots(ctx context.Context) error {
 			return fmt.Errorf("header subscription: %w", err)
 		case gethheader := <-headers:
 			blockNumber := gethheader.Number.Uint64()
-			contractEvents, err := li.queryBeefyClientEvents(ctx, blockNumber, &blockNumber)
+			contractNewMMRRootEvents, err := li.queryNewMMRRootEvents(ctx, blockNumber, &blockNumber)
 			if err != nil {
 				return fmt.Errorf("query NewMMRRoot event logs in block %v: %w", blockNumber, err)
 			}
 
-			if len(contractEvents) > 0 {
-				log.Info(fmt.Sprintf("Found %d BeefyLightClient.NewMMRRoot events in block %d", len(contractEvents), blockNumber))
+			if len(contractNewMMRRootEvents) > 0 {
+				log.Info(fmt.Sprintf("Found %d BeefyLightClient.NewMMRRoot events in block %d", len(contractNewMMRRootEvents), blockNumber))
 				// Only process the last emitted event in the block
-				event := contractEvents[len(contractEvents)-1]
+				event := contractNewMMRRootEvents[len(contractNewMMRRootEvents)-1]
 				log.WithFields(log.Fields{
 					"beefyBlockNumber":    event.BlockNumber,
 					"ethereumBlockNumber": event.Raw.BlockNumber,
@@ -210,8 +210,8 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 	return nil
 }
 
-// queryBeefyClientEvents queries ContractNewMMRRoot events from the BeefyClient contract
-func (li *BeefyListener) queryBeefyClientEvents(
+// queryNewMMRRootEvents queries NewMMRRoot events from the BeefyClient contract
+func (li *BeefyListener) queryNewMMRRootEvents(
 	ctx context.Context, start uint64,
 	end *uint64,
 ) ([]*contracts.BeefyClientNewMMRRoot, error) {
