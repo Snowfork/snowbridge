@@ -81,7 +81,7 @@ export class Context {
         if (!this.environment.kusama) {
             throw Error(`Kusama config is not set.`)
         }
-        return this.kusamaParachain(this.environment.kusama.assetHubParaId)
+        return this.kusamaParachain(assetHubParaId)
     }
 
     bridgeHub(): Promise<ApiPromise> {
