@@ -60,4 +60,21 @@ interface IBeefyClient {
         external
         view
         returns (uint256[] memory);
+
+    function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
+        external
+        pure
+        returns (uint256[] memory);
+
+    function randaoCommitDelay() external view returns (uint256);
+
+    function currentValidatorSet()
+        external
+        view
+        returns (uint128 id, uint128 length, bytes32 root);
+
+    function nextValidatorSet()
+        external
+        view
+        returns (uint128 id, uint128 length, bytes32 root);
 }

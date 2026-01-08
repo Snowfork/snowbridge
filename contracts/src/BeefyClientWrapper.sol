@@ -15,7 +15,8 @@ import {ERC1967} from "./utils/ERC1967.sol";
 contract BeefyClientWrapper is IInitializable, IUpgradable {
     event RelayerAdded(address indexed relayer);
     event RelayerRemoved(address indexed relayer);
-    event SubmissionRefunded(address indexed relayer, uint256 amount, uint256 gasUsed);
+    event GasCredited(address indexed relayer, bytes32 indexed commitmentHash, uint256 gasUsed);
+    event SubmissionRefunded(address indexed relayer, uint256 amount, uint256 totalGasUsed);
     event TurnAdvanced(uint256 indexed newTurnIndex, address indexed nextRelayer);
     event FundsDeposited(address indexed depositor, uint256 amount);
     event FundsWithdrawn(address indexed recipient, uint256 amount);
@@ -47,6 +48,7 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
     uint256 public minBlockIncrement;
     mapping(bytes32 => address) public ticketOwner;
     mapping(address => bytes32) public activeTicket;
+    mapping(bytes32 => uint256) public creditedGas;
     bool private initialized;
 
     function initialize(bytes calldata data) external override {
@@ -98,7 +100,7 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
         ticketOwner[commitmentHash] = msg.sender;
         activeTicket[msg.sender] = commitmentHash;
 
-        _refundGas(startGas);
+        _creditGas(startGas, commitmentHash);
     }
 
     function commitPrevRandao(bytes32 commitmentHash) external {
@@ -110,7 +112,7 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
 
         beefyClient.commitPrevRandao(commitmentHash);
 
-        _refundGas(startGas);
+        _creditGas(startGas, commitmentHash);
     }
 
     function submitFinal(
@@ -130,10 +132,13 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
 
         beefyClient.submitFinal(commitment, bitfield, proofs, leaf, leafProof, leafProofOrder);
 
+        uint256 previousGas = creditedGas[commitmentHash];
+        delete creditedGas[commitmentHash];
         delete ticketOwner[commitmentHash];
         delete activeTicket[msg.sender];
+
         _advanceTurn();
-        _refundGas(startGas);
+        _refundGas(startGas, previousGas);
     }
 
     function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield)
@@ -148,12 +153,42 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
         return beefyClient.latestBeefyBlock();
     }
 
+    function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        return beefyClient.createInitialBitfield(bitsToSet, length);
+    }
+
+    function randaoCommitDelay() external view returns (uint256) {
+        return beefyClient.randaoCommitDelay();
+    }
+
+    function currentValidatorSet()
+        external
+        view
+        returns (uint128 id, uint128 length, bytes32 root)
+    {
+        return beefyClient.currentValidatorSet();
+    }
+
+    function nextValidatorSet()
+        external
+        view
+        returns (uint128 id, uint128 length, bytes32 root)
+    {
+        return beefyClient.nextValidatorSet();
+    }
+
     function clearTicket() external {
         bytes32 commitmentHash = activeTicket[msg.sender];
         if (commitmentHash == bytes32(0)) {
             revert InvalidTicket();
         }
 
+        // Credited gas is forfeited when clearing a ticket
+        delete creditedGas[commitmentHash];
         delete ticketOwner[commitmentHash];
         delete activeTicket[msg.sender];
     }
@@ -182,15 +217,22 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
         }
     }
 
-    function _refundGas(uint256 startGas) internal {
+    function _creditGas(uint256 startGas, bytes32 commitmentHash) internal {
         uint256 gasUsed = startGas - gasleft() + 21000;
+        creditedGas[commitmentHash] += gasUsed;
+        emit GasCredited(msg.sender, commitmentHash, gasUsed);
+    }
+
+    function _refundGas(uint256 startGas, uint256 previousGas) internal {
+        uint256 currentGas = startGas - gasleft() + 21000;
+        uint256 totalGasUsed = currentGas + previousGas;
         uint256 effectiveGasPrice = tx.gasprice < maxGasPrice ? tx.gasprice : maxGasPrice;
-        uint256 refundAmount = gasUsed * effectiveGasPrice;
+        uint256 refundAmount = totalGasUsed * effectiveGasPrice;
 
         if (address(this).balance >= refundAmount) {
             (bool success,) = payable(msg.sender).call{value: refundAmount}("");
             if (success) {
-                emit SubmissionRefunded(msg.sender, refundAmount, gasUsed);
+                emit SubmissionRefunded(msg.sender, refundAmount, totalGasUsed);
             }
         }
     }
@@ -327,6 +369,10 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
 
     function getBalance() external view returns (uint256) {
         return address(this).balance;
+    }
+
+    function getCreditedGas(bytes32 commitmentHash) external view returns (uint256) {
+        return creditedGas[commitmentHash];
     }
 
     receive() external payable {
