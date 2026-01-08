@@ -1,4 +1,4 @@
-import { Context, environment } from "@snowbridge/api"
+import { Context } from "@snowbridge/api"
 import { BeefyClient } from "@snowbridge/contract-types"
 import { AbstractProvider } from "ethers"
 import { existsSync } from "fs"
@@ -32,12 +32,12 @@ export const run = async (): Promise<void> => {
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snowbridgeEnv = environment.SNOWBRIDGE_ENV[env]
+    const snowbridgeEnv = environmentFor(env)
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const ctx = new Context(environmentFor(env))
+    const ctx = new Context(snowbridgeEnv)
 
     const relaychain = await ctx.relaychain()
     await relaychain.isReady

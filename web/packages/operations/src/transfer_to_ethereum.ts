@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment, toEthereumV2 } from "@snowbridge/api"
+import { Context, toEthereumV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
 import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
@@ -9,7 +9,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snwobridgeEnv = environment.SNOWBRIDGE_ENV[env]
+    const snwobridgeEnv = environmentFor(env)
     if (snwobridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
@@ -17,7 +17,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
 
     await cryptoWaitReady()
 
-    const context = new Context(environmentFor(env))
+    const context = new Context(snwobridgeEnv)
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
