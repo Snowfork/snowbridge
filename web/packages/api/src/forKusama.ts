@@ -22,7 +22,6 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import { getAssetHubConversionPalletSwap, validateAccount } from "./assets_v2"
 import { Asset, AssetRegistry, Parachain, AssetMap } from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
@@ -33,7 +32,6 @@ import {
 import { Result } from "@polkadot/types"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
-import { ParachainBase } from "./parachains/parachainBase"
 
 export type Transfer = {
     input: {
@@ -228,8 +226,7 @@ export async function getDeliveryFee(
             "polkadot",
         )
     }
-    let destinationFee = await getAssetHubConversionPalletSwap(
-        destAssetHub,
+    let destinationFee = await destAssetHubImpl.getAssetHubConversionPalletSwap(
         feeAssetOnDest,
         NATIVE_TOKEN_LOCATION,
         destinationFeeInDestNative,
@@ -489,8 +486,7 @@ export async function validateTransfer(
 
         // Only run the account validation if the dry run failed.
         const destAssetHubImpl = await paraImplementation(destAssetHub)
-        const { accountMaxConsumers, accountExists } = await validateAccount(
-            destAssetHubImpl,
+        const { accountMaxConsumers, accountExists } = await destAssetHubImpl.validateAccount(
             beneficiaryAddressHex,
             registry.ethChainId,
             tokenAddress,
