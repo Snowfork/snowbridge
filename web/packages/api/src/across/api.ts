@@ -15,6 +15,9 @@ export const estimateFees = async (
     }
     apiEndpoint += "/suggested-fees?" + new URLSearchParams(params)
     let response = await fetch(apiEndpoint)
+    if (!response.ok) {
+        throw new Error(`Failed to fetch suggested fees: ${response.status} ${response.statusText}`)
+    }
     let data = await response.json()
     return BigInt(data.totalRelayFee.total)
 }
