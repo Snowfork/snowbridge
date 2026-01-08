@@ -20,7 +20,6 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
     event TurnAdvanced(uint256 indexed newTurnIndex, address indexed nextRelayer);
     event FundsDeposited(address indexed depositor, uint256 amount);
     event FundsWithdrawn(address indexed recipient, uint256 amount);
-    event ConfigUpdated(string parameter, uint256 value);
 
     error Unauthorized();
     error NotARelayer();
@@ -49,6 +48,7 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
     mapping(bytes32 => address) public ticketOwner;
     mapping(address => bytes32) public activeTicket;
     mapping(bytes32 => uint256) public creditedGas;
+    uint256 public maxRefundAmount;
     bool private initialized;
 
     function initialize(bytes calldata data) external override {
@@ -62,8 +62,9 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
             address _owner,
             uint256 _maxGasPrice,
             uint256 _gracePeriodBlocks,
-            uint256 _minBlockIncrement
-        ) = abi.decode(data, (address, address, uint256, uint256, uint256));
+            uint256 _minBlockIncrement,
+            uint256 _maxRefundAmount
+        ) = abi.decode(data, (address, address, uint256, uint256, uint256, uint256));
 
         if (_beefyClient == address(0) || _owner == address(0)) {
             revert InvalidAddress();
@@ -74,6 +75,7 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
         maxGasPrice = _maxGasPrice;
         gracePeriodBlocks = _gracePeriodBlocks;
         minBlockIncrement = _minBlockIncrement;
+        maxRefundAmount = _maxRefundAmount;
     }
 
     /* Beefy Client Proxy Functions */
@@ -229,6 +231,11 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
         uint256 effectiveGasPrice = tx.gasprice < maxGasPrice ? tx.gasprice : maxGasPrice;
         uint256 refundAmount = totalGasUsed * effectiveGasPrice;
 
+        // Cap the refund to prevent draining the contract
+        if (refundAmount > maxRefundAmount) {
+            refundAmount = maxRefundAmount;
+        }
+
         if (address(this).balance >= refundAmount) {
             (bool success,) = payable(msg.sender).call{value: refundAmount}("");
             if (success) {
@@ -290,19 +297,21 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
     function setMaxGasPrice(uint256 _maxGasPrice) external {
         _checkOwner();
         maxGasPrice = _maxGasPrice;
-        emit ConfigUpdated("maxGasPrice", _maxGasPrice);
     }
 
     function setGracePeriod(uint256 _gracePeriodBlocks) external {
         _checkOwner();
         gracePeriodBlocks = _gracePeriodBlocks;
-        emit ConfigUpdated("gracePeriodBlocks", _gracePeriodBlocks);
     }
 
     function setMinBlockIncrement(uint256 _minBlockIncrement) external {
         _checkOwner();
         minBlockIncrement = _minBlockIncrement;
-        emit ConfigUpdated("minBlockIncrement", _minBlockIncrement);
+    }
+
+    function setMaxRefundAmount(uint256 _maxRefundAmount) external {
+        _checkOwner();
+        maxRefundAmount = _maxRefundAmount;
     }
 
     function withdrawFunds(address payable recipient, uint256 amount) external {

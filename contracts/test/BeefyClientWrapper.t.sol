@@ -89,6 +89,7 @@ contract BeefyClientWrapperTest is Test {
     uint256 constant MAX_GAS_PRICE = 100 gwei;
     uint256 constant GRACE_PERIOD_BLOCKS = 10;
     uint256 constant MIN_BLOCK_INCREMENT = 100;
+    uint256 constant MAX_REFUND_AMOUNT = 1 ether;
     uint256 constant INITIAL_BEEFY_BLOCK = 1000;
 
     function setUp() public {
@@ -104,7 +105,8 @@ contract BeefyClientWrapperTest is Test {
             owner,
             MAX_GAS_PRICE,
             GRACE_PERIOD_BLOCKS,
-            MIN_BLOCK_INCREMENT
+            MIN_BLOCK_INCREMENT,
+            MAX_REFUND_AMOUNT
         );
 
         // Deploy proxy
@@ -158,6 +160,7 @@ contract BeefyClientWrapperTest is Test {
         assertEq(wrapper.maxGasPrice(), MAX_GAS_PRICE);
         assertEq(wrapper.gracePeriodBlocks(), GRACE_PERIOD_BLOCKS);
         assertEq(wrapper.minBlockIncrement(), MIN_BLOCK_INCREMENT);
+        assertEq(wrapper.maxRefundAmount(), MAX_REFUND_AMOUNT);
     }
 
     function test_cannotReinitialize() public {
@@ -166,7 +169,8 @@ contract BeefyClientWrapperTest is Test {
             owner,
             MAX_GAS_PRICE,
             GRACE_PERIOD_BLOCKS,
-            MIN_BLOCK_INCREMENT
+            MIN_BLOCK_INCREMENT,
+            MAX_REFUND_AMOUNT
         );
 
         // The proxy blocks initialize() calls with Unauthorized() error
@@ -457,6 +461,35 @@ contract BeefyClientWrapperTest is Test {
         assertEq(mockBeefyClient.submitFinalCount(), 1); // Submission succeeded
     }
 
+    function test_refundCappedAtMaxRefundAmount() public {
+        // Set a very low maxRefundAmount to test capping
+        vm.prank(owner);
+        wrapper.setMaxRefundAmount(0.0001 ether);
+
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + MIN_BLOCK_INCREMENT + 1);
+        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint256[] memory bitfield = new uint256[](1);
+        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        bytes32[] memory leafProof = new bytes32[](0);
+
+        uint256 relayerBalanceBefore = relayer1.balance;
+
+        vm.startPrank(relayer1);
+        vm.txGasPrice(100 gwei);
+        wrapper.submitInitial(commitment, bitfield, proof);
+        bytes32 commitmentHash = keccak256(abi.encode(commitment));
+        wrapper.commitPrevRandao(commitmentHash);
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
+        vm.stopPrank();
+
+        uint256 refundAmount = relayer1.balance - relayerBalanceBefore;
+
+        // Refund should be capped at maxRefundAmount
+        assertEq(refundAmount, 0.0001 ether);
+    }
+
     function test_creditedGasForfeitedOnClearTicket() public {
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + MIN_BLOCK_INCREMENT + 1);
         IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
@@ -498,6 +531,13 @@ contract BeefyClientWrapperTest is Test {
         assertEq(wrapper.minBlockIncrement(), 200);
     }
 
+    function test_setMaxRefundAmount() public {
+        vm.prank(owner);
+        wrapper.setMaxRefundAmount(2 ether);
+
+        assertEq(wrapper.maxRefundAmount(), 2 ether);
+    }
+
     function test_withdrawFunds() public {
         uint256 ownerBalanceBefore = owner.balance;
         uint256 withdrawAmount = 10 ether;
@@ -528,6 +568,9 @@ contract BeefyClientWrapperTest is Test {
 
         vm.expectRevert(BeefyClientWrapper.Unauthorized.selector);
         wrapper.setMinBlockIncrement(1);
+
+        vm.expectRevert(BeefyClientWrapper.Unauthorized.selector);
+        wrapper.setMaxRefundAmount(1);
 
         vm.expectRevert(BeefyClientWrapper.Unauthorized.selector);
         wrapper.withdrawFunds(payable(nonRelayer), 1);
