@@ -14,19 +14,15 @@ import {SnowbridgeL1Adaptor} from "../SnowbridgeL1Adaptor.sol";
 contract DeploySnowbridgeL1Adaptor is Script {
     SnowbridgeL1Adaptor public snowbridgeL1Adaptor;
 
-    uint256 internal deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
-    address deployerAddr = vm.addr(deployerPrivateKey);
-
     function setUp() public {}
 
     function run() public {
-        vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
 
         snowbridgeL1Adaptor = new SnowbridgeL1Adaptor(
             SPOKE_POOL, BASE_MULTI_CALL_HANDLER, WETH9, BASE_WETH9, TIME_BUFFER
         );
         console.log("Snowbridge L1 Adaptor deployed at:", address(snowbridgeL1Adaptor));
-        vm.stopBroadcast();
         return;
     }
 }

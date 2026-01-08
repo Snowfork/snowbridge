@@ -10,16 +10,13 @@ import {ISpokePool, IMessageHandler} from "../interfaces/ISpokePool.sol";
 import {SwapParams, SendParams} from "../Types.sol";
 
 contract TestSnowbridgeL1AdaptorNativeEther is Script {
-    uint256 internal deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
-    address deployerAddr = vm.addr(deployerPrivateKey);
-
-    function setUp() public {}
-
     function run() public {
-        vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
 
         address payable l1SnowbridgeAdaptor =
             payable(vm.envAddress("L1_SNOWBRIDGE_ADAPTOR_ADDRESS"));
+
+        address recipient = vm.envAddress("RECIPIENT_ADDRESS");
 
         SwapParams memory params = SwapParams({
             inputToken: address(0),
@@ -32,9 +29,8 @@ contract TestSnowbridgeL1AdaptorNativeEther is Script {
         SnowbridgeL1Adaptor(l1SnowbridgeAdaptor)
         .depositNativeEther{
             value: params.inputAmount
-        }(params, deployerAddr, keccak256("TestSnowbridgeL1AdaptorTopicId"));
+        }(params, recipient, keccak256("TestSnowbridgeL1AdaptorTopicId"));
 
-        vm.stopBroadcast();
         return;
     }
 }

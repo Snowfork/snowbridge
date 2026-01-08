@@ -2,11 +2,13 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
+import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {ISpokePool, IMessageHandler} from "./interfaces/ISpokePool.sol";
 import {SwapParams, Instructions, Call} from "./Types.sol";
 
 contract SnowbridgeL1Adaptor {
+    using SafeERC20 for IERC20;
     ISpokePool public immutable SPOKE_POOL;
     IMessageHandler public immutable MULTI_CALL_HANDLER;
     WETH9 public immutable L1_WETH9;
@@ -36,7 +38,13 @@ contract SnowbridgeL1Adaptor {
     // Send ERC20 token on L1 to L2, the fee should be calculated off-chain
     // following https://docs.across.to/reference/api-reference#get-swap-approval
     function depositToken(SwapParams calldata params, address recipient, bytes32 topic) public {
-        IERC20(params.inputToken).approve(address(SPOKE_POOL), params.inputAmount);
+        require(params.inputAmount > 0, "Input amount must be greater than zero");
+        require(params.outputAmount > 0, "Output amount must be greater than zero");
+        require(recipient != address(0), "Recipient cannot be zero address");
+        require(params.outputAmount <= params.inputAmount, "Output amount exceeds input amount");
+
+        IERC20(params.inputToken).safeTransferFrom(msg.sender, address(this), params.inputAmount);
+        IERC20(params.inputToken).forceApprove(address(SPOKE_POOL), params.inputAmount);
 
         SPOKE_POOL.deposit(
             bytes32(uint256(uint160(recipient))),
@@ -47,12 +55,12 @@ contract SnowbridgeL1Adaptor {
             params.outputAmount,
             params.destinationChainId,
             bytes32(0), // exclusiveRelayer, zero means any relayer can fill
-            uint32(block.timestamp - TIME_BUFFER), // quoteTimestamp set to 10 minutes before now
-            uint32(block.timestamp + TIME_BUFFER), // fillDeadline set to 10 minutes after now
+            uint32(block.timestamp), // quoteTimestamp set to current block timestamp
+            uint32(block.timestamp + TIME_BUFFER), // fillDeadline set to TIME_BUFFER seconds in the future
             0, // exclusivityDeadline, zero means no exclusivity
             "" // empty message
         );
-        // Emit event with the depositId of the second deposit
+        // Emit event with the depositId of the deposit
         uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
         emit DepositCallInvoked(topic, depositId);
     }
@@ -62,14 +70,25 @@ contract SnowbridgeL1Adaptor {
         public
         payable
     {
-        require(params.inputToken == address(0), "Input token must be zero address for native ETH deposits");
-        require(params.inputAmount > params.outputAmount, "Input amount must be greater than output amount");
+        require(
+            params.inputToken == address(0),
+            "Input token must be zero address for native ETH deposits"
+        );
+        require(params.inputAmount > 0, "Input amount must be greater than zero");
+        require(params.outputAmount > 0, "Output amount must be greater than zero");
+        require(
+            params.inputAmount > params.outputAmount,
+            "Input amount must be greater than output amount (to cover fees)"
+        );
+        require(recipient != address(0), "Recipient cannot be zero address");
+        require(msg.value >= params.inputAmount, "Sent value must equal input amount");
 
-        require(msg.value >= params.inputAmount, "Insufficient ETH amount sent");
+        L1_WETH9.deposit{value: params.inputAmount}();
+        IERC20(address(L1_WETH9)).forceApprove(address(SPOKE_POOL), params.inputAmount);
 
-        L1_WETH9.deposit{value: msg.value}();
-        IERC20(address(L1_WETH9)).approve(address(SPOKE_POOL), params.inputAmount);
-
+        // Prepare the calls to be executed on L2 upon deposit fulfillment
+        // First, withdraw the output amount of WETH on L2
+        // Then, send the withdrawn ETH to the recipient
         Call[] memory calls = new Call[](2);
         calls[0] = Call({
             target: address(L2_WETH9),
@@ -89,11 +108,15 @@ contract SnowbridgeL1Adaptor {
             params.outputAmount,
             params.destinationChainId,
             bytes32(0), // exclusiveRelayer, zero means any relayer can fill
-            uint32(block.timestamp - TIME_BUFFER), // quoteTimestamp set to 10 minutes before now
-            uint32(block.timestamp + TIME_BUFFER), // fillDeadline set to 10 minutes after now
+            uint32(block.timestamp), // quoteTimestamp set to current block timestamp
+            uint32(block.timestamp + TIME_BUFFER), // fillDeadline set to TIME_BUFFER seconds in the future
             0, // exclusivityDeadline, zero means no exclusivity
             abi.encode(instructions)
         );
+        // Refund any excess ETH sent
+        if (msg.value > params.inputAmount) {
+            payable(msg.sender).transfer(msg.value - params.inputAmount);
+        }
         uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
         emit DepositCallInvoked(topic, depositId);
     }

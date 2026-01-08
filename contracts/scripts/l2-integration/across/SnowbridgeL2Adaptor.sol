@@ -47,15 +47,26 @@ contract SnowbridgeL2Adaptor {
         address recipient,
         bytes32 topic
     ) public payable {
-        uint256 sendFeeAmount =
-            sendParams.relayerFee + sendParams.executionFee;
+        require(params.inputToken != address(0), "Input token cannot be zero address");
+        require(params.inputAmount > 0, "Input amount must be greater than zero");
+        require(params.outputAmount > 0, "Output amount must be greater than zero");
+        require(params.outputAmount <= params.inputAmount, "Output amount exceeds input amount");
+        require(recipient != address(0), "Recipient cannot be zero address");
+        require(sendParams.relayerFee > 0, "Relayer fee must be greater than zero");
+        require(sendParams.executionFee > 0, "Execution fee must be greater than zero");
+
+        // Calculate total fees: cross-chain fees + L2 fee
+        uint256 sendFeeAmount = sendParams.relayerFee + sendParams.executionFee;
         uint256 totalFeeAmount = sendFeeAmount + sendParams.l2Fee;
+        require(
+            msg.value >= totalFeeAmount,
+            "Sent value must be greater than or equal to total fee amount"
+        );
 
         IERC20(params.inputToken).safeTransferFrom(msg.sender, address(this), params.inputAmount);
-        IERC20(params.inputToken).approve(address(SPOKE_POOL), params.inputAmount);
-
+        IERC20(params.inputToken).forceApprove(address(SPOKE_POOL), params.inputAmount);
         L2_WETH9.deposit{value: totalFeeAmount}();
-        IERC20(address(L2_WETH9)).approve(address(SPOKE_POOL), totalFeeAmount);
+        IERC20(address(L2_WETH9)).forceApprove(address(SPOKE_POOL), totalFeeAmount);
 
         // The first deposit is used to fund the handler contract on Ethereum with WETH,
         // which is then converted to ETH to cover the cross-chain fees from Ethereum to Polkadot
@@ -77,20 +88,26 @@ contract SnowbridgeL2Adaptor {
             sendFeeAmount,
             params.destinationChainId,
             bytes32(0), // exclusiveRelayer, zero means any relayer can fill
-            uint32(block.timestamp - TIME_BUFFER), // quoteTimestamp set to 10 minutes before now
-            uint32(block.timestamp + TIME_BUFFER), // fillDeadline set to 10 minutes after now
+            uint32(block.timestamp), // quoteTimestamp set to current block timestamp
+            uint32(block.timestamp + TIME_BUFFER), // fillDeadline set to TIME_BUFFER seconds in the future
             0, // exclusivityDeadline, zero means no exclusivity
             abi.encode(instructions)
         );
 
-        // A second deposit for the actual token swap and cross-chain call
-        calls = new Call[](2);
+        // Second deposit for the actual token swap and cross-chain call to Polkadot
+        // For USDT, we need to reset allowance to zero before setting it to a new value
+        calls = new Call[](3);
         calls[0] = Call({
+            target: address(params.outputToken),
+            callData: abi.encodeCall(IERC20.approve, (address(GATEWAY), 0)),
+            value: 0
+        });
+        calls[1] = Call({
             target: address(params.outputToken),
             callData: abi.encodeCall(IERC20.approve, (address(GATEWAY), params.outputAmount)),
             value: 0
         });
-        calls[1] = Call({
+        calls[2] = Call({
             target: address(GATEWAY),
             callData: abi.encodeCall(
                 IGatewayV2.v2_sendMessage,
@@ -114,11 +131,15 @@ contract SnowbridgeL2Adaptor {
             params.outputAmount,
             params.destinationChainId,
             bytes32(0),
-            uint32(block.timestamp - TIME_BUFFER),
+            uint32(block.timestamp),
             uint32(block.timestamp + TIME_BUFFER),
             0,
             abi.encode(instructions)
         );
+        // Refund any excess ETH sent
+        if (msg.value > totalFeeAmount) {
+            payable(msg.sender).transfer(msg.value - totalFeeAmount);
+        }
         // Emit event with the depositId of the second deposit
         uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
         emit DepositCallInvoked(topic, depositId);
@@ -131,16 +152,28 @@ contract SnowbridgeL2Adaptor {
         address recipient,
         bytes32 topic
     ) public payable {
-        require(params.inputToken == address(0));
+        require(
+            params.inputToken == address(0),
+            "Input token must be zero address for native ETH deposits"
+        );
+        require(params.inputAmount > 0, "Input amount must be greater than zero");
+        require(params.outputAmount > 0, "Output amount must be greater than zero");
+        require(recipient != address(0), "Recipient cannot be zero address");
+        require(sendParams.relayerFee > 0, "Relayer fee must be greater than zero");
+        require(sendParams.executionFee > 0, "Execution fee must be greater than zero");
+        require(sendParams.l2Fee > 0, "L2 fee must be greater than zero");
         require(
             params.inputAmount == params.outputAmount + sendParams.l2Fee,
-            "Input and output amount mismatch"
+            "Input amount must equal output amount plus L2 fee"
         );
+        // Calculate total amount: input ETH + cross-chain relay and execution fees
         uint256 totalAmount = params.inputAmount + sendParams.relayerFee + sendParams.executionFee;
-        require(msg.value >= totalAmount, "Insufficient ETH amount sent");
+        require(
+            msg.value >= totalAmount, "Sent value must be greater than or equal to total amount"
+        );
 
-        L2_WETH9.deposit{value: msg.value}();
-        IERC20(address(L2_WETH9)).approve(address(SPOKE_POOL), totalAmount);
+        L2_WETH9.deposit{value: totalAmount}();
+        IERC20(address(L2_WETH9)).forceApprove(address(SPOKE_POOL), totalAmount);
 
         // The deposit is used to fund the handler contract on the destination chain with WETH,
         // which is then converted to ETH to cover the cross-chain fees from Ethereum to Polkadot
@@ -176,11 +209,15 @@ contract SnowbridgeL2Adaptor {
             totalOutputAmount,
             params.destinationChainId,
             bytes32(0), // exclusiveRelayer, zero means any relayer can fill
-            uint32(block.timestamp - TIME_BUFFER), // quoteTimestamp set to 10 minutes before now
-            uint32(block.timestamp + TIME_BUFFER), // fillDeadline set to 10 minutes after now
+            uint32(block.timestamp), // quoteTimestamp set to current block timestamp
+            uint32(block.timestamp + TIME_BUFFER), // fillDeadline set to TIME_BUFFER seconds in the future
             0, // exclusivityDeadline, zero means no exclusivity
             abi.encode(instructions)
         );
+        // Refund any excess ETH sent
+        if (msg.value > totalAmount) {
+            payable(msg.sender).transfer(msg.value - totalAmount);
+        }
         uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
         emit DepositCallInvoked(topic, depositId);
     }
