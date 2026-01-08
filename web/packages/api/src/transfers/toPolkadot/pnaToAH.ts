@@ -19,12 +19,7 @@ import {
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import {
-    erc20Balance,
-    ETHER_TOKEN_ADDRESS,
-    swapAsset1ForAsset2,
-    validateAccount,
-} from "../../assets_v2"
+import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { AbstractProvider, Contract } from "ethers"
@@ -96,8 +91,7 @@ export class PNAToAH implements TransferInterface {
         )
 
         const assetHubImpl = await paraImplementation(assetHub)
-        const deliveryFeeInEther = await swapAsset1ForAsset2(
-            assetHub,
+        const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
             DOT_LOCATION,
             ether,
             deliveryFeeInDOT,
@@ -106,12 +100,12 @@ export class PNAToAH implements TransferInterface {
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
 
         let assetHubExecutionFeeEther = padFeeByPercentage(
-            await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, assetHubExecutionFeeDOT),
+            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
             paddFeeByPercentage ?? 33n,
         )
 
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
-            assetHub,
+            assetHubImpl,
             registry.ethChainId,
             options?.overrideRelayerFee,
             deliveryFeeInEther,
@@ -367,8 +361,7 @@ export class PNAToAH implements TransferInterface {
         }
 
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
-            const { accountMaxConsumers, accountExists } = await validateAccount(
-                assetHubImpl,
+            const { accountMaxConsumers, accountExists } = await assetHubImpl.validateAccount(
                 beneficiaryAddressHex,
                 registry.ethChainId,
                 tokenAddress,

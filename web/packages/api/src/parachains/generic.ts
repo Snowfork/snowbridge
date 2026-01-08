@@ -15,4 +15,14 @@ export class GenericChain extends ParachainBase {
     getAssets(_ethChainId: number, _pnas: PNAMap): Promise<AssetMap> {
         throw new Error("Method not implemented.")
     }
+    swapAsset1ForAsset2(_asset1: any, _asset2: any, _exactAsset1Balance: bigint): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
+    }
+    getAssetHubConversionPalletSwap(
+        asset1: any,
+        asset2: any,
+        exactAsset2Balance: bigint,
+    ): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
+    }
 }

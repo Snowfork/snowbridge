@@ -18,10 +18,11 @@ import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
 import { ApiPromise } from "@polkadot/api"
 import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
-import { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "./assets_v2"
+import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
 import { Context } from "./index"
 export { ValidationKind } from "./toPolkadot_v2"
+import { ParachainBase } from "./parachains/parachainBase"
 
 export type DeliveryFee = {
     feeAsset: any
@@ -266,7 +267,7 @@ export async function sendRegistration(
 }
 
 export async function inboundMessageExtrinsicFee(
-    assetHub: ApiPromise,
+    assetHub: ParachainBase,
     ethChainId: number,
 ): Promise<{ extrinsicFeeDot: bigint; extrinsicFeeEther: bigint }> {
     // Hardcoded because the EthereumInboundQueueV2::submit() extrinsic
@@ -277,8 +278,7 @@ export async function inboundMessageExtrinsicFee(
     const extrinsicFeeDot = 250_000_000n
 
     const etherLocation = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
-    const extrinsicFeeEther = await swapAsset1ForAsset2(
-        assetHub,
+    const extrinsicFeeEther = await assetHub.swapAsset1ForAsset2(
         DOT_LOCATION,
         etherLocation,
         extrinsicFeeDot,
@@ -288,7 +288,7 @@ export async function inboundMessageExtrinsicFee(
 }
 
 export async function calculateRelayerFee(
-    assetHub: ApiPromise,
+    assetHub: ParachainBase,
     ethChainId: number,
     overrideRelayerFee: undefined | bigint,
     deliveryFeeInEther: bigint,
