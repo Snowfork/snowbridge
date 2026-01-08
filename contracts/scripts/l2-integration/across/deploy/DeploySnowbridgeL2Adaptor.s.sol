@@ -9,8 +9,7 @@ import {
     BASE_MULTI_CALL_HANDLER,
     GatewayV2,
     WETH9,
-    BASE_WETH9,
-    TIME_BUFFER
+    BASE_WETH9
 } from "../constants/Sepolia.sol";
 import {SnowbridgeL2Adaptor} from "../SnowbridgeL2Adaptor.sol";
 
@@ -23,7 +22,7 @@ contract DeploySnowbridgeL2Adaptor is Script {
         vm.startBroadcast();
 
         snowbridgeL2Adaptor = new SnowbridgeL2Adaptor(
-            BASE_SPOKE_POOL, MULTI_CALL_HANDLER, GatewayV2, WETH9, BASE_WETH9, TIME_BUFFER
+            BASE_SPOKE_POOL, MULTI_CALL_HANDLER, GatewayV2, WETH9, BASE_WETH9
         );
         console.log("Snowbridge L2 Adaptor deployed at:", address(snowbridgeL2Adaptor));
         return;

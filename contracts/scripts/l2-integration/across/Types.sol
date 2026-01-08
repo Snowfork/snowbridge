@@ -21,6 +21,7 @@ struct SwapParams {
     uint256 inputAmount;
     uint256 outputAmount;
     uint256 destinationChainId;
+    uint32 fillDeadlineBuffer;
 }
 
 struct SendParams {

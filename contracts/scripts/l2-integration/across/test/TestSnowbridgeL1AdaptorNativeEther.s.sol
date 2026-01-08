@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 
 import {SnowbridgeL1Adaptor} from "../SnowbridgeL1Adaptor.sol";
-import {USDC, BASE_USDC, CHAIN_ID, BASE_CHAIN_ID} from "../constants/Sepolia.sol";
+import {USDC, BASE_USDC, CHAIN_ID, BASE_CHAIN_ID, TIME_BUFFER} from "../constants/Sepolia.sol";
 import {ISpokePool, IMessageHandler} from "../interfaces/ISpokePool.sol";
 import {SwapParams, SendParams} from "../Types.sol";
 
@@ -23,7 +23,8 @@ contract TestSnowbridgeL1AdaptorNativeEther is Script {
             outputToken: address(0),
             inputAmount: 11_000_000_000_000_000, // 0.011 ETH
             outputAmount: 10_000_000_000_000_000, // 0.01 ETH
-            destinationChainId: BASE_CHAIN_ID
+            destinationChainId: BASE_CHAIN_ID,
+            fillDeadlineBuffer: TIME_BUFFER
         });
 
         SnowbridgeL1Adaptor(l1SnowbridgeAdaptor)

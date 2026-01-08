@@ -6,7 +6,14 @@ import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
 
 import {SnowbridgeL2Adaptor} from "../SnowbridgeL2Adaptor.sol";
-import {USDC, BASE_USDC, CHAIN_ID, BASE_CHAIN_ID, BASE_WETH9} from "../constants/Sepolia.sol";
+import {
+    USDC,
+    BASE_USDC,
+    CHAIN_ID,
+    BASE_CHAIN_ID,
+    BASE_WETH9,
+    TIME_BUFFER
+} from "../constants/Sepolia.sol";
 import {ISpokePool, IMessageHandler} from "../interfaces/ISpokePool.sol";
 import {SwapParams, SendParams} from "../Types.sol";
 
@@ -22,7 +29,8 @@ contract TestSnowbridgeL2AdaptorNativeEther is Script {
             outputToken: address(0),
             inputAmount: 11_000_000_000_000_000, // 0.011 ETH
             outputAmount: 10_000_000_000_000_000, // 0.01 ETH
-            destinationChainId: CHAIN_ID
+            destinationChainId: CHAIN_ID,
+            fillDeadlineBuffer: TIME_BUFFER
         });
         // Send 0.01 ETH to Polkadot, tx from https://sepolia.etherscan.io/tx/0x7e1668a805d24e0e51a04a51f6d6dc0a4b87dfe85f04eb76328c206700567d2b
         bytes[] memory assets = new bytes[](0);
