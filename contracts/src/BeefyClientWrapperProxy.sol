@@ -37,15 +37,6 @@ contract BeefyClientWrapperProxy is IInitializable {
         }
     }
 
-    // Accept ETH deposits to fund relayer refunds
-    receive() external payable {
-        address implementation = ERC1967.load();
-        assembly {
-            let result := delegatecall(gas(), implementation, 0, 0, 0, 0)
-            returndatacopy(0, 0, returndatasize())
-            switch result
-            case 0 { revert(0, returndatasize()) }
-            default { return(0, returndatasize()) }
-        }
-    }
+    // Note: No receive() needed - fallback() handles plain ETH transfers
+    // by delegating to the implementation's receive() function
 }
