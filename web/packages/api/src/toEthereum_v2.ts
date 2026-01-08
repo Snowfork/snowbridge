@@ -19,7 +19,6 @@ import {
     HERE_LOCATION,
     buildAssetHubERC20TransferFromParachainWithNativeFee,
 } from "./xcmBuilder"
-import { getAssetHubConversionPalletSwap } from "./assets_v2"
 import { getOperatingStatus, OperationStatus } from "./status"
 import {
     Asset,
@@ -384,15 +383,17 @@ export async function getDeliveryFee(
             assetHubExecutionFeeNativeRes,
             returnToSenderExecutionFeeNativeRes,
         ] = await Promise.all([
-            getAssetHubConversionPalletSwap(assetHub, nativeLocation, DOT_LOCATION, totalFeeInDot),
-            getAssetHubConversionPalletSwap(
-                assetHub,
+            assetHubImpl.getAssetHubConversionPalletSwap(
+                nativeLocation,
+                DOT_LOCATION,
+                totalFeeInDot,
+            ),
+            assetHubImpl.getAssetHubConversionPalletSwap(
                 nativeLocation,
                 DOT_LOCATION,
                 assetHubExecutionFeeDOT,
             ),
-            getAssetHubConversionPalletSwap(
-                assetHub,
+            assetHubImpl.getAssetHubConversionPalletSwap(
                 nativeLocation,
                 DOT_LOCATION,
                 returnToSenderExecutionFeeDOT,
