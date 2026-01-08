@@ -62,8 +62,8 @@ contract SnowbridgeL1Adaptor {
         public
         payable
     {
-        require(params.inputToken == address(0));
-        require(params.inputAmount > params.outputAmount, "Input and output amount mismatch");
+        require(params.inputToken == address(0), "Input token must be zero address for native ETH deposits");
+        require(params.inputAmount > params.outputAmount, "Input amount must be greater than output amount");
 
         require(msg.value >= params.inputAmount, "Insufficient ETH amount sent");
 
