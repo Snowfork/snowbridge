@@ -1277,6 +1277,9 @@ export function findL2TokenAddress(
     tokenAddress: string,
 ): string | undefined {
     const l2Chain = registry.ethereumChains[l2ChainId]
+    if (!l2Chain) {
+        return undefined
+    }
     for (const [l2TokenAddress, asset] of Object.entries(l2Chain.assets)) {
         if (asset.swapTokenAddress?.toLowerCase() === tokenAddress.toLowerCase()) {
             return l2TokenAddress
