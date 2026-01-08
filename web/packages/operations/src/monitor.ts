@@ -1,11 +1,6 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
-import {
-    Context,
-    status,
-    utils,
-    subsquid,
-} from "@snowbridge/api"
+import { Context, status, utils, subsquid } from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
 import { environmentFor } from "@snowbridge/registry"
 import { Environment } from "../../base-types/dist"
@@ -14,7 +9,12 @@ export const monitorParams: {
     [id: string]: {
         PRIMARY_GOVERNANCE_CHANNEL_ID: string
         SECONDARY_GOVERNANCE_CHANNEL_ID: string
-        RELAYERS: { name: string; account: string; type: "substrate" | "ethereum"; balance?: bigint }[]
+        RELAYERS: {
+            name: string
+            account: string
+            type: "substrate" | "ethereum"
+            balance?: bigint
+        }[]
         TO_MONITOR_PARACHAINS?: number[]
     }
 } = {
@@ -230,7 +230,6 @@ function contextConfigOverrides(input: Environment): Environment {
     return config
 }
 
-
 export const monitor = async (): Promise<status.AllMetrics> => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
@@ -295,7 +294,10 @@ const fetchChannelStatus = async (context: Context, env: Environment) => {
     )
     assethubChannelStatus.name = status.ChannelKind.AssetHub
 
-    const primaryGov = await status.channelStatusInfo(context, monitorParams[env.name].PRIMARY_GOVERNANCE_CHANNEL_ID)
+    const primaryGov = await status.channelStatusInfo(
+        context,
+        monitorParams[env.name].PRIMARY_GOVERNANCE_CHANNEL_ID,
+    )
     primaryGov.name = status.ChannelKind.Primary
 
     const secondaryGov = await status.channelStatusInfo(
