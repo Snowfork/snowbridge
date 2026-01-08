@@ -20,6 +20,8 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
     event TurnAdvanced(uint256 indexed newTurnIndex, address indexed nextRelayer);
     event FundsDeposited(address indexed depositor, uint256 amount);
     event FundsWithdrawn(address indexed recipient, uint256 amount);
+    event TipAdded(address indexed tipper, uint32 indexed beefyBlockNumber, uint256 amount);
+    event TipsClaimed(address indexed relayer, uint256 totalAmount);
 
     error Unauthorized();
     error NotARelayer();
@@ -49,6 +51,7 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
     mapping(address => bytes32) public activeTicket;
     mapping(bytes32 => uint256) public creditedGas;
     uint256 public maxRefundAmount;
+    mapping(uint32 => uint256) public tips;
     bool private initialized;
 
     function initialize(bytes calldata data) external override {
@@ -123,9 +126,11 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
         IBeefyClient.ValidatorProof[] calldata proofs,
         IBeefyClient.MMRLeaf calldata leaf,
         bytes32[] calldata leafProof,
-        uint256 leafProofOrder
+        uint256 leafProofOrder,
+        uint32[] calldata claimTipBlocks
     ) external {
         uint256 startGas = gasleft();
+        uint32 blockNumber = commitment.blockNumber;
 
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
         if (ticketOwner[commitmentHash] != msg.sender) {
@@ -140,7 +145,7 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
         delete activeTicket[msg.sender];
 
         _advanceTurn();
-        _refundGas(startGas, previousGas);
+        _refundGas(startGas, previousGas, _claimTips(claimTipBlocks, blockNumber));
     }
 
     function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield)
@@ -195,6 +200,15 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
         delete activeTicket[msg.sender];
     }
 
+    function addTip(uint32 beefyBlockNumber) external payable {
+        tips[beefyBlockNumber] += msg.value;
+        emit TipAdded(msg.sender, beefyBlockNumber, msg.value);
+    }
+
+    function getTip(uint32 beefyBlockNumber) external view returns (uint256) {
+        return tips[beefyBlockNumber];
+    }
+
     /* Internal Functions */
 
     function _checkOwner() internal view {
@@ -225,7 +239,23 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
         emit GasCredited(msg.sender, commitmentHash, gasUsed);
     }
 
-    function _refundGas(uint256 startGas, uint256 previousGas) internal {
+    function _claimTips(uint32[] calldata claimTipBlocks, uint32 newBeefyBlock) internal returns (uint256) {
+        uint256 totalTips = 0;
+        for (uint256 i = 0; i < claimTipBlocks.length; i++) {
+            uint32 tipBlock = claimTipBlocks[i];
+            // Only claim tips for blocks that are now covered by this submission
+            if (tipBlock <= newBeefyBlock && tips[tipBlock] > 0) {
+                totalTips += tips[tipBlock];
+                delete tips[tipBlock];
+            }
+        }
+        if (totalTips > 0) {
+            emit TipsClaimed(msg.sender, totalTips);
+        }
+        return totalTips;
+    }
+
+    function _refundGas(uint256 startGas, uint256 previousGas, uint256 tipAmount) internal {
         uint256 currentGas = startGas - gasleft() + 21000;
         uint256 totalGasUsed = currentGas + previousGas;
         uint256 effectiveGasPrice = tx.gasprice < maxGasPrice ? tx.gasprice : maxGasPrice;
@@ -236,10 +266,13 @@ contract BeefyClientWrapper is IInitializable, IUpgradable {
             refundAmount = maxRefundAmount;
         }
 
-        if (address(this).balance >= refundAmount) {
-            (bool success,) = payable(msg.sender).call{value: refundAmount}("");
+        // Add tips to refund
+        uint256 totalPayout = refundAmount + tipAmount;
+
+        if (address(this).balance >= totalPayout) {
+            (bool success,) = payable(msg.sender).call{value: totalPayout}("");
             if (success) {
-                emit SubmissionRefunded(msg.sender, refundAmount, totalGasUsed);
+                emit SubmissionRefunded(msg.sender, totalPayout, totalGasUsed);
             }
         }
     }

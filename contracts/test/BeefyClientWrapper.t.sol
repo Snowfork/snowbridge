@@ -283,7 +283,7 @@ contract BeefyClientWrapperTest is Test {
 
         // Step 3: submitFinal
         vm.prank(relayer1);
-        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0, new uint32[](0));
         assertEq(mockBeefyClient.submitFinalCount(), 1);
 
         // Verify turn advanced
@@ -327,7 +327,7 @@ contract BeefyClientWrapperTest is Test {
         // relayer2 tries to submit final (should fail)
         vm.prank(relayer2);
         vm.expectRevert(BeefyClientWrapper.NotTicketOwner.selector);
-        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0, new uint32[](0));
     }
 
     /* Anti-Spam Tests */
@@ -399,7 +399,7 @@ contract BeefyClientWrapperTest is Test {
         wrapper.commitPrevRandao(commitmentHash);
         assertEq(relayer1.balance, relayerBalanceBefore);
 
-        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0, new uint32[](0));
         assertGt(relayer1.balance, relayerBalanceBefore);
 
         vm.stopPrank();
@@ -425,7 +425,7 @@ contract BeefyClientWrapperTest is Test {
         wrapper.submitInitial(commitment, bitfield, proof);
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
         wrapper.commitPrevRandao(commitmentHash);
-        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0, new uint32[](0));
         vm.stopPrank();
 
         uint256 refundAmount = relayer1.balance - relayerBalanceBefore;
@@ -454,7 +454,7 @@ contract BeefyClientWrapperTest is Test {
         wrapper.submitInitial(commitment, bitfield, proof);
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
         wrapper.commitPrevRandao(commitmentHash);
-        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0, new uint32[](0));
         vm.stopPrank();
 
         assertEq(relayer1.balance, relayerBalanceBefore); // No refund
@@ -481,7 +481,7 @@ contract BeefyClientWrapperTest is Test {
         wrapper.submitInitial(commitment, bitfield, proof);
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
         wrapper.commitPrevRandao(commitmentHash);
-        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0, new uint32[](0));
         vm.stopPrank();
 
         uint256 refundAmount = relayer1.balance - relayerBalanceBefore;
@@ -718,7 +718,7 @@ contract BeefyClientWrapperTest is Test {
 
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
         wrapper.commitPrevRandao(commitmentHash);
-        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0, new uint32[](0));
         vm.stopPrank();
 
         // Verify activeTicket is cleared
@@ -751,5 +751,153 @@ contract BeefyClientWrapperTest is Test {
         // After submission, activeTicket should be set
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
         assertEq(wrapper.activeTicket(relayer1), commitmentHash);
+    }
+
+    function test_addTip() public {
+        uint32 targetBlock = uint32(INITIAL_BEEFY_BLOCK + MIN_BLOCK_INCREMENT + 1);
+
+        vm.deal(address(this), 1 ether);
+        wrapper.addTip{value: 0.5 ether}(targetBlock);
+
+        assertEq(wrapper.getTip(targetBlock), 0.5 ether);
+    }
+
+    function test_addTip_accumulates() public {
+        uint32 targetBlock = uint32(INITIAL_BEEFY_BLOCK + MIN_BLOCK_INCREMENT + 1);
+
+        vm.deal(address(this), 2 ether);
+        wrapper.addTip{value: 0.5 ether}(targetBlock);
+        wrapper.addTip{value: 0.3 ether}(targetBlock);
+
+        assertEq(wrapper.getTip(targetBlock), 0.8 ether);
+    }
+
+    function test_claimTips_singleBlock() public {
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + MIN_BLOCK_INCREMENT + 1);
+
+        // Add a tip for the target block
+        vm.deal(address(this), 1 ether);
+        wrapper.addTip{value: 0.5 ether}(newBlockNumber);
+
+        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint256[] memory bitfield = new uint256[](1);
+        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        bytes32[] memory leafProof = new bytes32[](0);
+
+        uint256 relayerBalanceBefore = relayer1.balance;
+
+        vm.startPrank(relayer1);
+        vm.txGasPrice(50 gwei);
+        wrapper.submitInitial(commitment, bitfield, proof);
+        bytes32 commitmentHash = keccak256(abi.encode(commitment));
+        wrapper.commitPrevRandao(commitmentHash);
+
+        // Claim the tip for the block we're submitting
+        uint32[] memory claimBlocks = new uint32[](1);
+        claimBlocks[0] = newBlockNumber;
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0, claimBlocks);
+        vm.stopPrank();
+
+        // Relayer should have received refund + tip
+        uint256 relayerBalanceAfter = relayer1.balance;
+        assertGt(relayerBalanceAfter - relayerBalanceBefore, 0.5 ether);
+
+        // Tip should be cleared
+        assertEq(wrapper.getTip(newBlockNumber), 0);
+    }
+
+    function test_claimTips_multipleBlocks() public {
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + MIN_BLOCK_INCREMENT + 1);
+        uint32 tipBlock1 = uint32(INITIAL_BEEFY_BLOCK + 50);
+        uint32 tipBlock2 = uint32(INITIAL_BEEFY_BLOCK + 75);
+
+        // Add tips for blocks that will be covered by the submission
+        vm.deal(address(this), 2 ether);
+        wrapper.addTip{value: 0.3 ether}(tipBlock1);
+        wrapper.addTip{value: 0.2 ether}(tipBlock2);
+
+        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint256[] memory bitfield = new uint256[](1);
+        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        bytes32[] memory leafProof = new bytes32[](0);
+
+        uint256 relayerBalanceBefore = relayer1.balance;
+
+        vm.startPrank(relayer1);
+        vm.txGasPrice(50 gwei);
+        wrapper.submitInitial(commitment, bitfield, proof);
+        bytes32 commitmentHash = keccak256(abi.encode(commitment));
+        wrapper.commitPrevRandao(commitmentHash);
+
+        // Claim tips for both blocks
+        uint32[] memory claimBlocks = new uint32[](2);
+        claimBlocks[0] = tipBlock1;
+        claimBlocks[1] = tipBlock2;
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0, claimBlocks);
+        vm.stopPrank();
+
+        // Relayer should have received refund + both tips
+        uint256 relayerBalanceAfter = relayer1.balance;
+        assertGt(relayerBalanceAfter - relayerBalanceBefore, 0.5 ether);
+
+        // Tips should be cleared
+        assertEq(wrapper.getTip(tipBlock1), 0);
+        assertEq(wrapper.getTip(tipBlock2), 0);
+    }
+
+    function test_claimTips_ignoresFutureBlocks() public {
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + MIN_BLOCK_INCREMENT + 1);
+        uint32 futureBlock = uint32(newBlockNumber + 100); // Block after submission
+
+        // Add tip for a future block
+        vm.deal(address(this), 1 ether);
+        wrapper.addTip{value: 0.5 ether}(futureBlock);
+
+        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint256[] memory bitfield = new uint256[](1);
+        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        bytes32[] memory leafProof = new bytes32[](0);
+
+        vm.startPrank(relayer1);
+        wrapper.submitInitial(commitment, bitfield, proof);
+        bytes32 commitmentHash = keccak256(abi.encode(commitment));
+        wrapper.commitPrevRandao(commitmentHash);
+
+        // Try to claim the future block tip
+        uint32[] memory claimBlocks = new uint32[](1);
+        claimBlocks[0] = futureBlock;
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0, claimBlocks);
+        vm.stopPrank();
+
+        // Tip should NOT be claimed (block is in the future)
+        assertEq(wrapper.getTip(futureBlock), 0.5 ether);
+    }
+
+    function test_claimTips_emptyArray() public {
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + MIN_BLOCK_INCREMENT + 1);
+
+        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint256[] memory bitfield = new uint256[](1);
+        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        bytes32[] memory leafProof = new bytes32[](0);
+
+        vm.startPrank(relayer1);
+        wrapper.submitInitial(commitment, bitfield, proof);
+        bytes32 commitmentHash = keccak256(abi.encode(commitment));
+        wrapper.commitPrevRandao(commitmentHash);
+
+        // Submit with empty claim array (should work fine)
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0, new uint32[](0));
+        vm.stopPrank();
+
+        assertEq(mockBeefyClient.submitFinalCount(), 1);
     }
 }
