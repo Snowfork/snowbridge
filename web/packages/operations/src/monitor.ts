@@ -5,7 +5,6 @@ import {
     status,
     utils,
     subsquid,
-    contextConfigOverrides,
 } from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
 import { environmentFor } from "@snowbridge/registry"
@@ -188,6 +187,49 @@ export const monitorParams: {
         ],
     },
 }
+
+function contextConfigOverrides(input: Environment): Environment {
+    let config = { ...input }
+    let injectedEthChains: { [ethChainId: string]: string } = {}
+    for (const ethChainIdKey of Object.keys(input.ethereumChains)) {
+        if (
+            process.env[`ETHEREUM_RPC_URL_${ethChainIdKey}`] ||
+            process.env[`NEXT_PUBLIC_ETHEREUM_RPC_URL_${ethChainIdKey}`]
+        ) {
+            injectedEthChains[ethChainIdKey] =
+                process.env[`ETHEREUM_RPC_URL_${ethChainIdKey}`] ||
+                (process.env[`NEXT_PUBLIC_ETHEREUM_RPC_URL_${ethChainIdKey}`] as string)
+            continue
+        }
+        injectedEthChains[ethChainIdKey] = input.ethereumChains[ethChainIdKey]
+    }
+    config.ethereumChains = injectedEthChains
+    config.beaconApiUrl =
+        process.env["BEACON_RPC_URL"] ||
+        process.env["NEXT_PUBLIC_BEACON_RPC_URL"] ||
+        input.beaconApiUrl
+
+    let injectedParachains: { [paraId: string]: string } = {}
+    for (const paraIdKey of Object.keys(input.parachains)) {
+        if (
+            process.env[`PARACHAIN_RPC_URL_${paraIdKey}`] ||
+            process.env[`NEXT_PUBLIC_PARACHAIN_RPC_URL_${paraIdKey}`]
+        ) {
+            injectedParachains[paraIdKey] = (process.env[`PARACHAIN_RPC_URL_${paraIdKey}`] ||
+                process.env[`NEXT_PUBLIC_PARACHAIN_RPC_URL_${paraIdKey}`]) as string
+            continue
+        }
+        injectedParachains[paraIdKey] = input.parachains[paraIdKey]
+    }
+    config.parachains = injectedParachains
+    config.relaychainUrl =
+        process.env["RELAY_CHAIN_RPC_URL"] ||
+        process.env["NEXT_PUBLIC_RELAY_CHAIN_RPC_URL"] ||
+        input.relaychainUrl
+
+    return config
+}
+
 
 export const monitor = async (): Promise<status.AllMetrics> => {
     let env = "local_e2e"
