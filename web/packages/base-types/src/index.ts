@@ -118,28 +118,32 @@ export type KusamaConfig = {
 
 export type Environment = {
   name: string;
+  // Ethereum
   ethChainId: number;
+  gatewayContract: string;
+  beefyContract: string;
   beaconApiUrl: string;
   ethereumChains: {
     [chainId: string]: string;
   };
+  // Substrate
+  assetHubParaId: number;
+  bridgeHubParaId: number;
   relaychainUrl: string;
   parachains: {
     [paraId: string]: string;
   };
-  gatewayContract: string;
-  beefyContract: string;
-  assetHubParaId: number;
-  bridgeHubParaId: number;
-  indexerGraphQlUrl: string;
   kusama?: {
     assetHubParaId: number;
     bridgeHubParaId: number;
     parachains: { [paraId: string]: string };
   };
+  // Assets
   assetOverrides?: AssetOverrideMap;
   precompiles?: PrecompileMap;
   metadataOverrides?: ERC20MetadataOverrideMap;
+  // Indexer
+  indexerGraphQlUrl: string;
 };
 
 export type SourceType = "substrate" | "ethereum";
