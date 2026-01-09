@@ -1,5 +1,4 @@
-import { PNAMap } from "../assets_v2"
-import { AssetMap } from "@snowbridge/base-types"
+import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { dotLocationOnKusamaAssetHub } from "../xcmBuilder"
 import { AssetHubParachain } from "./assethub"
 

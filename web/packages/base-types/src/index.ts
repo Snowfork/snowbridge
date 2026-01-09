@@ -116,6 +116,80 @@ export type KusamaConfig = {
   parachains: ParachainMap;
 };
 
+export type Environment = {
+  name: string;
+  // Ethereum
+  ethChainId: number;
+  gatewayContract: string;
+  beefyContract: string;
+  beaconApiUrl: string;
+  ethereumChains: {
+    [chainId: string]: string;
+  };
+  // Substrate
+  assetHubParaId: number;
+  bridgeHubParaId: number;
+  relaychainUrl: string;
+  parachains: {
+    [paraId: string]: string;
+  };
+  kusama?: {
+    assetHubParaId: number;
+    bridgeHubParaId: number;
+    parachains: { [paraId: string]: string };
+  };
+  // Assets
+  assetOverrides?: AssetOverrideMap;
+  precompiles?: PrecompileMap;
+  metadataOverrides?: ERC20MetadataOverrideMap;
+  // Indexer
+  indexerGraphQlUrl: string;
+};
+
+export type SourceType = "substrate" | "ethereum";
+
+export type Path = {
+  type: SourceType;
+  id: string;
+  source: number;
+  destinationType: SourceType;
+  destination: number;
+  asset: string;
+};
+
+export type Source = {
+  type: SourceType;
+  id: string;
+  key: string;
+  destinations: {
+    [destination: string]: { type: SourceType; assets: string[] };
+  };
+};
+
+export type TransferLocation = {
+  id: string;
+  name: string;
+  key: string;
+  type: SourceType;
+  parachain?: Parachain;
+  ethChain?: EthereumChain;
+};
+export interface AssetOverrideMap {
+  [paraId: string]: Asset[];
+}
+
+export interface ERC20MetadataOverrideMap {
+  [token: string]: {
+    name?: string;
+    symbol?: string;
+    decimals?: number;
+  };
+}
+
+export interface PrecompileMap {
+  [chainId: string]: `0x${string}`;
+}
+
 export type AssetRegistry = {
   timestamp: string;
   environment: string;
@@ -129,7 +203,7 @@ export type AssetRegistry = {
     [chainId: string]: EthereumChain;
   };
   parachains: ParachainMap;
-  kusama: KusamaConfig | undefined;
+  kusama?: KusamaConfig;
 };
 
 export type ContractCall = {
@@ -138,3 +212,23 @@ export type ContractCall = {
   value: bigint;
   gas: bigint;
 };
+
+export type SubstrateAccount = {
+  nonce: bigint;
+  consumers: bigint;
+  providers: bigint;
+  sufficients: bigint;
+  data: {
+    free: bigint;
+    reserved: bigint;
+    frozen: bigint;
+  };
+};
+
+export interface PNAMap {
+  [token: string]: {
+    token: string;
+    foreignId: string;
+    ethereumlocation: any;
+  };
+}

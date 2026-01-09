@@ -1,9 +1,10 @@
-import { status, environment } from "@snowbridge/api"
+import { status } from "@snowbridge/api"
 import {
     CloudWatchClient,
     PutMetricDataCommand,
     PutMetricAlarmCommand,
 } from "@aws-sdk/client-cloudwatch"
+import { environmentFor } from "@snowbridge/registry"
 
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
 const BRIDGE_STALE_SNS_TOPIC = process.env["BRIDGE_STALE_SNS_TOPIC"] || ""
@@ -259,7 +260,7 @@ export const initializeAlarms = async () => {
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snowbridgeEnv = environment.SNOWBRIDGE_ENV[env]
+    const snowbridgeEnv = environmentFor(env)
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }

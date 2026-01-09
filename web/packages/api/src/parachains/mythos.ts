@@ -1,6 +1,5 @@
 import { DOT_LOCATION, erc20Location } from "../xcmBuilder"
-import { PNAMap } from "../assets_v2"
-import { AssetMap } from "@snowbridge/base-types"
+import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
 
 export const MUSE_CHAIN_ID = 11155111 // Sepolia
