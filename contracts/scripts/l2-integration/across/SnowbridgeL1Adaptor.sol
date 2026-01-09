@@ -32,7 +32,6 @@ contract SnowbridgeL1Adaptor {
     function depositToken(SwapParams calldata params, address recipient, bytes32 topic) public {
         require(params.inputToken != address(0), "Input token cannot be zero address");
         checkInputs(params, recipient);
-        IERC20(params.inputToken).safeTransferFrom(msg.sender, address(this), params.inputAmount);
         IERC20(params.inputToken).forceApprove(address(SPOKE_POOL), params.inputAmount);
 
         SPOKE_POOL.deposit(
