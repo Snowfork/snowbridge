@@ -682,11 +682,11 @@ export const SNOWBRIDGE_ENV: { [id: string]: SnowbridgeEnvironment } = {
         },
         l2BridgeConfig: {
             ACROSS_API_URL: "https://testnet.across.to/api",
-            L1_ADAPTER_CONTRACT: "0xa429563669439307255a6fE3f1535B334A31cA9B",
+            L1_ADAPTER_CONTRACT: "0x6FF17B674f3721ed28Fa1152D0428A2adE6d092D",
             L1_FEE_ASSET: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
             CHAINS: {
                 "84532": {
-                    L2_ADAPTER_CONTRACT: "0x800Bac8d8A2dEf1d88036310073D52f65Ec3D51D",
+                    L2_ADAPTER_CONTRACT: "0x2F846925814a5E6FB5795Af6e49158391F379440",
                     FEE_ASSET: "0x4200000000000000000000000000000000000006",
                 },
             },

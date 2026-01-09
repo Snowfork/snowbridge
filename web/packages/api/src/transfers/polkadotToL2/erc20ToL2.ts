@@ -44,6 +44,8 @@ export class ERC20FromAH implements TransferInterface {
             defaultFee?: bigint
             feeTokenLocation?: any
             contractCall?: ContractCall
+            l2PadFeeByPercentage?: bigint
+            fillDeadlineBuffer?: bigint
         },
     ): Promise<DeliveryFee> {
         const assetHub = await context.assetHub()

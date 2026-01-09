@@ -47,6 +47,7 @@ export class ERC20ToAH implements TransferInterface {
             customXcm?: any[]
             overrideRelayerFee?: bigint
             l2PadFeeByPercentage?: bigint
+            fillDeadlineBuffer?: bigint
         },
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub } = {
@@ -191,7 +192,10 @@ export class ERC20ToAH implements TransferInterface {
         sourceAccount: string,
         beneficiaryAccount: string,
         fee: DeliveryFee,
-        customXcm?: any[],
+        options?: {
+            customXcm?: any[]
+            fillDeadlineBuffer?: bigint
+        },
     ): Promise<Transfer> {
         const assetHub = await context.assetHub()
         const l2Chain = context.ethChain(l2ChainId)
@@ -234,7 +238,12 @@ export class ERC20ToAH implements TransferInterface {
         )
 
         const xcm = hexToU8a(
-            sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic, customXcm).toHex(),
+            sendMessageXCM(
+                assetHub.registry,
+                beneficiaryAddressHex,
+                topic,
+                options?.customXcm,
+            ).toHex(),
         )
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
@@ -257,6 +266,7 @@ export class ERC20ToAH implements TransferInterface {
                 inputAmount: amount + fee.l2BridgeFeeInEther!,
                 outputAmount: amount,
                 destinationChainId: BigInt(registry.ethChainId),
+                fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
             }
             tx = await l2Adapter
                 .getFunction("sendNativeEtherAndCall")
@@ -275,6 +285,7 @@ export class ERC20ToAH implements TransferInterface {
                 inputAmount: amount,
                 outputAmount: outputAmount,
                 destinationChainId: BigInt(registry.ethChainId),
+                fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
             }
             tx = await l2Adapter
                 .getFunction("sendTokenAndCall")
@@ -293,7 +304,7 @@ export class ERC20ToAH implements TransferInterface {
                 destinationParaId,
                 amount,
                 fee,
-                customXcm,
+                customXcm: options?.customXcm,
                 l2TokenAddress,
                 sourceChainId: l2ChainId,
             },
@@ -319,8 +330,7 @@ export class ERC20ToAH implements TransferInterface {
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, l2TokenAddress, sourceChainId } =
             transfer.input
-        const { ethereum, gateway, bridgeHub, assetHub, l2Chain } = {
-            ethereum: context.ethereum(),
+        const { gateway, bridgeHub, assetHub, l2Chain } = {
             gateway: context.gateway(),
             bridgeHub: await context.bridgeHub(),
             assetHub: await context.assetHub(),
@@ -371,7 +381,17 @@ export class ERC20ToAH implements TransferInterface {
         }
         let feeInfo: FeeInfo | undefined
         if (logs.length === 0) {
-            const estimatedGas = await l2Chain.estimateGas(tx)
+            let estimatedGas: bigint
+            try {
+                estimatedGas = await l2Chain.estimateGas(tx)
+            } catch (e) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.FeeEstimationError,
+                    message: "Could not estimate gas for l2 transaction." + (e as Error).message,
+                })
+                estimatedGas = 0n
+            }
             const feeData = await l2Chain.getFeeData()
             const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
             if (executionFee === 0n) {

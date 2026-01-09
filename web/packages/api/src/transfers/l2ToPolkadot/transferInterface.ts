@@ -16,6 +16,7 @@ export interface TransferInterface {
             customXcm?: any[] // Optional custom XCM instructions to append
             overrideRelayerFee?: bigint
             l2PadFeeByPercentage?: bigint
+            fillDeadlineBuffer?: bigint // Optional buffer added to the relay fill deadline for L2 calls.
         },
     ): Promise<DeliveryFee>
 
@@ -29,7 +30,10 @@ export interface TransferInterface {
         sourceAccount: string,
         beneficiaryAccount: string,
         fee: DeliveryFee,
-        customXcm?: any[], // Optional custom XCM instructions to append
+        options?: {
+            customXcm?: any[] // Optional custom XCM instructions to append
+            fillDeadlineBuffer?: bigint // Optional buffer added to the relay fill deadline for L2 calls.
+        },
     ): Promise<Transfer>
 
     validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult>

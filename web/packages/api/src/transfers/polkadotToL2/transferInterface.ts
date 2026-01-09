@@ -17,6 +17,7 @@ export interface TransferInterface {
             claimerLocation?: any
             contractCall?: ContractCall
             l2PadFeeByPercentage?: bigint
+            fillDeadlineBuffer?: bigint // Optional buffer added to the relay fill deadline for L2 calls.
         },
     ): Promise<DeliveryFee>
 
@@ -32,6 +33,7 @@ export interface TransferInterface {
         options?: {
             claimerLocation?: any
             contractCall?: ContractCall
+            fillDeadlineBuffer?: bigint
         },
     ): Promise<Transfer>
 

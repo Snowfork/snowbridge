@@ -240,7 +240,10 @@ export const estimateEthereumExecutionFee = async (
     registry: AssetRegistry,
     sourceParaId: number,
     tokenAddress: string,
-    contractCall?: ContractCall,
+    options?: {
+        contractCall?: ContractCall
+        fillDeadlineBuffer?: bigint
+    },
 ): Promise<bigint> => {
     const ethereum = await context.ethereum()
     const { tokenErcMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
@@ -252,7 +255,7 @@ export const estimateEthereumExecutionFee = async (
         (feeData.gasPrice ?? 2_000_000_000n) *
         ((tokenErcMetadata.deliveryGas ?? 80_000n) +
             (ethereumChain.baseDeliveryGas ?? 120_000n) +
-            (contractCall?.gas ?? 0n))
+            (options?.contractCall?.gas ?? 0n))
     return ethereumExecutionFee
 }
 
@@ -269,6 +272,7 @@ export const estimateFeesFromAssetHub = async (
         contractCall?: ContractCall
         l2PadFeeByPercentage?: bigint
         l2TransferGasLimit?: bigint
+        fillDeadlineBuffer?: bigint
     },
     l2ChainId?: number,
     tokenAmount?: bigint,
@@ -320,6 +324,7 @@ export const estimateFeesFromAssetHub = async (
             tokenAmount!,
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
+            options,
         )
         options = options || {}
         options.contractCall = options.contractCall || callInfo.l2Call
@@ -330,7 +335,7 @@ export const estimateFeesFromAssetHub = async (
         registry,
         registry.assetHubParaId,
         tokenAddress,
-        options?.contractCall,
+        options,
     )
 
     // calculate the cost of swapping in native asset
@@ -476,7 +481,7 @@ export const estimateFeesFromParachains = async (
         registry,
         sourceParaId,
         tokenAddress,
-        options?.contractCall,
+        options,
     )
 
     // calculate the cost of swapping in native asset
@@ -990,6 +995,7 @@ export async function buildL2Call(
     options?: {
         l2TransferGasLimit?: bigint
         l2PadFeeByPercentage?: bigint
+        fillDeadlineBuffer?: bigint
     },
 ): Promise<{ fee: bigint; l2Call: ContractCall }> {
     // Calculate fee with Across SDK
@@ -1019,6 +1025,7 @@ export async function buildL2Call(
                 inputAmount: tokenAmount,
                 outputAmount: tokenAmount - l2BridgeFeeInL1Token,
                 destinationChainId: l2ChainId,
+                fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
             },
             destinationAddress,
             topic,
@@ -1048,6 +1055,7 @@ export async function buildL2Call(
                 inputAmount: tokenAmount,
                 outputAmount: tokenAmount - l2BridgeFeeInL1Token,
                 destinationChainId: l2ChainId,
+                fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
             },
             destinationAddress,
             topic,

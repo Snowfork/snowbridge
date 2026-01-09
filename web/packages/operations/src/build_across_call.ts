@@ -39,6 +39,7 @@ const run = async (
             inputAmount: inputAmount,
             outputAmount: outputAmount,
             destinationChainId: destinationChainId,
+            fillDeadlineBuffer: 600n,
         },
         ETHEREUM_ACCOUNT_PUBLIC,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
