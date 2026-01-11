@@ -63,25 +63,13 @@ contract SnowbridgeL1Adaptor {
             "Input token must be zero address for native ETH deposits"
         );
         checkInputs(params, recipient);
-        require(msg.value >= params.inputAmount, "Sent value must be at least input amount");
 
-        L1_WETH9.deposit{value: params.inputAmount}();
-        IERC20(address(L1_WETH9)).forceApprove(address(SPOKE_POOL), params.inputAmount);
-
-        // Prepare the calls to be executed on L2 upon deposit fulfillment
-        // First, withdraw the output amount of WETH on L2
-        // Then, send the withdrawn ETH to the recipient
-        Call[] memory calls = new Call[](2);
-        calls[0] = Call({
-            target: address(L2_WETH9),
-            callData: abi.encodeCall(L2_WETH9.withdraw, (params.outputAmount)),
-            value: 0
-        });
-        calls[1] = Call({target: recipient, callData: "", value: params.outputAmount});
-        Instructions memory instructions =
-            Instructions({calls: calls, fallbackRecipient: recipient});
-
-        SPOKE_POOL.deposit(
+        // Prepare the message (encoded instructions) to be executed on L2 upon deposit fulfillment
+        // (constructed via helper to avoid 'stack too deep' compiler errors)
+        bytes memory message = _encodeNativeEtherInstructions(recipient, params.outputAmount);
+        SPOKE_POOL.deposit{
+            value: params.inputAmount
+        }(
             bytes32(uint256(uint160(recipient))),
             bytes32(uint256(uint160(address(MULTI_CALL_HANDLER)))),
             bytes32(uint256(uint160(address(L1_WETH9)))),
@@ -93,12 +81,8 @@ contract SnowbridgeL1Adaptor {
             uint32(block.timestamp), // quoteTimestamp set to current block timestamp
             uint32(block.timestamp + params.fillDeadlineBuffer), // fillDeadline set to fillDeadlineBuffer seconds in the future
             0, // exclusivityDeadline, zero means no exclusivity
-            abi.encode(instructions)
+            message
         );
-        // Refund any excess ETH sent
-        if (msg.value > params.inputAmount) {
-            payable(msg.sender).transfer(msg.value - params.inputAmount);
-        }
         uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
         emit DepositCallInvoked(topic, depositId);
     }
@@ -110,6 +94,23 @@ contract SnowbridgeL1Adaptor {
         require(params.fillDeadlineBuffer > 0, "Fill deadline buffer must be greater than zero");
         require(params.destinationChainId != 0, "Destination chain ID cannot be zero");
         require(recipient != address(0), "Recipient cannot be zero address");
+    }
+
+    function _encodeNativeEtherInstructions(address recipient, uint256 outputAmount)
+        internal
+        view
+        returns (bytes memory)
+    {
+        Call[] memory calls = new Call[](2);
+        calls[0] = Call({
+            target: address(L2_WETH9),
+            callData: abi.encodeCall(L2_WETH9.withdraw, (outputAmount)),
+            value: 0
+        });
+        calls[1] = Call({target: recipient, callData: "", value: outputAmount});
+        Instructions memory instructions =
+            Instructions({calls: calls, fallbackRecipient: recipient});
+        return abi.encode(instructions);
     }
 
     receive() external payable {}

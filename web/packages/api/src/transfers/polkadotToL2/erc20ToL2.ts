@@ -144,18 +144,6 @@ export class ERC20FromAH implements TransferInterface {
 
         let l1ReceiverAddress = l1AdapterAddress
 
-        // For Ether transfers, use the source agent address as L1 receiver,
-        // which swaps Ether to WETH on L1 and then swaps it back to Ether on L2.
-        if (tokenAddress === ETHER_TOKEN_ADDRESS) {
-            const sourceAgentAddress = await getSourceAgentAddress(
-                context,
-                registry.assetHubParaId,
-                sourceAccountHex,
-            )
-            console.log("Source Agent Address:", sourceAgentAddress)
-            l1ReceiverAddress = sourceAgentAddress
-        }
-
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult>
 
         tx = await this.createTx(
