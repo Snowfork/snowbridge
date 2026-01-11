@@ -218,9 +218,18 @@ importers:
         specifier: workspace:*
         version: link:../base-types
     devDependencies:
+      '@polkadot/api':
+        specifier: 16.4.8
+        version: 16.4.8
+      '@polkadot/util':
+        specifier: 13.5.6
+        version: 13.5.6
       '@snowbridge/api':
         specifier: workspace:*
         version: link:../api
+      '@snowbridge/contract-types':
+        specifier: workspace:*
+        version: link:../contract-types
       '@types/node':
         specifier: 24.6.2
         version: 24.6.2
@@ -239,6 +248,9 @@ importers:
       eslint-config-prettier:
         specifier: 10.1.8
         version: 10.1.8(eslint@9.37.0)
+      ethers:
+        specifier: 6.15.0
+        version: 6.15.0
       prettier:
         specifier: 3.6.2
         version: 3.6.2

@@ -65,7 +65,13 @@ library Functions {
             revert InvalidAmount();
         }
 
+        uint256 balanceBefore = IERC20(token).balanceOf(agent);
         IERC20(token).safeTransferFrom(sender, agent, amount);
+
+        if (IERC20(token).balanceOf(agent) != balanceBefore + amount) {
+            // Tokens with Fee-On-Transfer behaviour are not supported
+            revert InvalidToken();
+        }
     }
 
     /// @dev Withdraw ether from an agent and transfer to a recipient

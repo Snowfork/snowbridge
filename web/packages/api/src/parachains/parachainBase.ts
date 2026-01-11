@@ -1,6 +1,5 @@
 import { ApiPromise } from "@polkadot/api"
-import { Asset, AssetMap, ChainProperties } from "@snowbridge/base-types"
-import { PNAMap, SubstrateAccount } from "../assets_v2"
+import { Asset, AssetMap, ChainProperties, PNAMap, SubstrateAccount } from "@snowbridge/base-types"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { DOT_LOCATION, erc20Location, HERE_LOCATION, parachainLocation } from "../xcmBuilder"

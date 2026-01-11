@@ -13,14 +13,13 @@ import {
     SnowbridgeL2Adaptor,
     SnowbridgeL2Adaptor__factory,
 } from "@snowbridge/contract-types"
-import { L2BridgeConfig, SNOWBRIDGE_ENV } from "./environment"
+import { Environment } from "@snowbridge/base-types"
 
 export * as toPolkadotV2 from "./toPolkadot_v2"
 export * as toEthereumV2 from "./toEthereum_v2"
 export * as utils from "./utils"
 export * as status from "./status"
 export * as assetsV2 from "./assets_v2"
-export * as environment from "./environment"
 export * as history from "./history"
 export * as subsquid from "./subsquid"
 export * as historyV2 from "./history_v2"
@@ -42,35 +41,8 @@ interface EthereumChains {
     [ethChainId: string]: AbstractProvider
 }
 
-interface Config {
-    environment: string
-    ethereum: {
-        ethChainId: number
-        ethChains: { [ethChainId: string]: string | AbstractProvider }
-        beacon_url: string
-    }
-    polkadot: {
-        relaychain: string
-        assetHubParaId: number
-        bridgeHubParaId: number
-        parachains: { [paraId: string]: string }
-    }
-    kusama?: {
-        assetHubParaId: number
-        bridgeHubParaId: number
-        parachains: { [paraId: string]: string }
-    }
-    appContracts: {
-        gateway: string
-        beefy: string
-    }
-    graphqlApiUrl: string
-    monitorChains?: number[]
-    l2Bridge?: L2BridgeConfig
-}
-
 export class Context {
-    config: Config
+    environment: Environment
 
     // Ethereum
     #ethChains: EthereumChains
@@ -85,8 +57,8 @@ export class Context {
     #kusamaParachains: Parachains
     #relaychain?: ApiPromise
 
-    constructor(config: Config) {
-        this.config = config
+    constructor(environment: Environment) {
+        this.environment = environment
         this.#polkadotParachains = {}
         this.#kusamaParachains = {}
         this.#ethChains = {}
@@ -96,7 +68,7 @@ export class Context {
         if (this.#relaychain) {
             return this.#relaychain
         }
-        const url = this.config.polkadot.relaychain
+        const url = this.environment.relaychainUrl
         console.log("Connecting to the relaychain.")
         this.#relaychain = await ApiPromise.create({
             noInitWarn: true,
@@ -107,34 +79,35 @@ export class Context {
     }
 
     assetHub(): Promise<ApiPromise> {
-        return this.parachain(this.config.polkadot.assetHubParaId)
+        return this.parachain(this.environment.assetHubParaId)
     }
 
-    kusamaAssetHub(): Promise<ApiPromise> | undefined {
-        const assetHubParaId = this.config.kusama?.assetHubParaId
-        if (assetHubParaId) {
-            return this.kusamaParachain(assetHubParaId)
+    kusamaAssetHub(): Promise<ApiPromise> {
+        if (!this.environment.kusama) {
+            throw Error(`Kusama config is not set.`)
         }
+        const assetHubParaId = this.environment.kusama.assetHubParaId
+        return this.kusamaParachain(assetHubParaId)
     }
 
     bridgeHub(): Promise<ApiPromise> {
-        return this.parachain(this.config.polkadot.bridgeHubParaId)
+        return this.parachain(this.environment.bridgeHubParaId)
     }
 
     hasParachain(paraId: number): boolean {
-        return paraId.toString() in this.config.polkadot.parachains
+        return paraId.toString() in this.environment.parachains
     }
 
     hasEthChain(ethChainId: number): boolean {
-        return ethChainId.toString() in this.config.ethereum.ethChains
+        return ethChainId.toString() in this.environment.ethereumChains
     }
 
     parachains(): number[] {
-        return Object.keys(this.config.polkadot.parachains).map((key) => Number(key))
+        return Object.keys(this.environment.parachains).map((key) => Number(key))
     }
 
     ethChains(): number[] {
-        return Object.keys(this.config.ethereum.ethChains).map((key) => Number(key))
+        return Object.keys(this.environment.ethereumChains).map((key) => Number(key))
     }
 
     async parachain(paraId: number): Promise<ApiPromise> {
@@ -142,7 +115,7 @@ export class Context {
         if (paraIdKey in this.#polkadotParachains) {
             return this.#polkadotParachains[paraIdKey]
         }
-        const { parachains } = this.config.polkadot
+        const { parachains } = this.environment
         if (paraIdKey in parachains) {
             const url = parachains[paraIdKey]
             console.log("Connecting to parachain ", paraIdKey, url)
@@ -150,7 +123,7 @@ export class Context {
                 noInitWarn: true,
                 provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
             }
-            if (paraId === this.config.polkadot.bridgeHubParaId) {
+            if (paraId === this.environment.bridgeHubParaId) {
                 options.types = {
                     ContractCall: {
                         target: "[u8; 20]",
@@ -182,10 +155,10 @@ export class Context {
         if (paraIdKey in this.#kusamaParachains) {
             return this.#kusamaParachains[paraIdKey]
         }
-        if (!this.config.kusama) {
+        if (!this.environment.kusama) {
             throw Error(`Kusama config is not set.`)
         }
-        const { parachains } = this.config.kusama
+        const { parachains } = this.environment.kusama
         if (paraIdKey in parachains) {
             const url = parachains[paraIdKey]
             console.log("Connecting to Kusama parachain ", paraIdKey, url)
@@ -209,15 +182,23 @@ export class Context {
         }
     }
 
+    setEthProvider(ethChainId: number, provider: AbstractProvider) {
+        const ethChainKey = ethChainId.toString()
+        if (ethChainKey in this.#ethChains) {
+            this.#ethChains[ethChainKey].destroy()
+        }
+        this.#ethChains[ethChainKey] = provider
+    }
+
     ethChain(ethChainId: number): AbstractProvider {
         const ethChainKey = ethChainId.toString()
         if (ethChainKey in this.#ethChains) {
             return this.#ethChains[ethChainKey]
         }
 
-        const { ethChains } = this.config.ethereum
-        if (ethChainKey in ethChains) {
-            const url = ethChains[ethChainKey]
+        const { ethereumChains } = this.environment
+        if (ethChainKey in ethereumChains) {
+            const url = ethereumChains[ethChainKey]
             let provider: AbstractProvider
             if (typeof url === "string") {
                 if (url.startsWith("http")) {
@@ -236,7 +217,7 @@ export class Context {
     }
 
     ethereum(): AbstractProvider {
-        return this.ethChain(this.config.ethereum.ethChainId)
+        return this.ethChain(this.environment.ethChainId)
     }
 
     gateway(): IGatewayV1 {
@@ -244,7 +225,7 @@ export class Context {
             return this.#gateway
         }
         this.#gateway = IGatewayV1__factory.connect(
-            this.config.appContracts.gateway,
+            this.environment.gatewayContract,
             this.ethereum(),
         )
         return this.#gateway
@@ -255,7 +236,7 @@ export class Context {
             return this.#gatewayV2
         }
         this.#gatewayV2 = IGatewayV2__factory.connect(
-            this.config.appContracts.gateway,
+            this.environment.gatewayContract,
             this.ethereum(),
         )
         return this.#gatewayV2
@@ -266,53 +247,14 @@ export class Context {
             return this.#beefyClient
         }
         this.#beefyClient = BeefyClient__factory.connect(
-            this.config.appContracts.beefy,
+            this.environment.beefyContract,
             this.ethereum(),
         )
         return this.#beefyClient
     }
 
-    l1Adapter(): SnowbridgeL1Adaptor {
-        if (this.#l1Adapter) {
-            return this.#l1Adapter
-        }
-        this.#l1Adapter = SnowbridgeL1Adaptor__factory.connect(
-            this.config.l2Bridge?.L1_ADAPTER_CONTRACT as string,
-            this.ethereum(),
-        )
-        return this.#l1Adapter
-    }
-
-    l1FeeTokenAddress(): string {
-        return this.config.l2Bridge?.L1_FEE_ASSET as string
-    }
-
-    l2Adapter(l2ChainId: number): SnowbridgeL2Adaptor {
-        if (this.#l2Adapters[l2ChainId]) {
-            return this.#l2Adapters[l2ChainId]
-        }
-        const adapter = SnowbridgeL2Adaptor__factory.connect(
-            this.config.l2Bridge?.CHAINS[l2ChainId.toString()]?.L2_ADAPTER_CONTRACT as string,
-            this.ethChain(l2ChainId),
-        )
-        this.#l2Adapters[l2ChainId] = adapter
-        return adapter
-    }
-
-    l2FeeTokenAddress(l2ChainId: number): string {
-        return this.config.l2Bridge?.CHAINS[l2ChainId.toString()]?.FEE_ASSET as string
-    }
-
-    acrossApiUrl(): string {
-        return this.config.l2Bridge?.ACROSS_API_URL as string
-    }
-
     graphqlApiUrl(): string {
-        return this.config.graphqlApiUrl
-    }
-
-    monitorChains(): number[] | undefined {
-        return this.config.monitorChains
+        return this.environment.indexerGraphQlUrl
     }
 
     async destroyContext(): Promise<void> {
@@ -322,9 +264,9 @@ export class Context {
         if (this.#gatewayV2) await this.gatewayV2().removeAllListeners()
 
         // clean up etheruem
-        for (const ethChainKey of Object.keys(this.config.ethereum.ethChains)) {
+        for (const ethChainKey of Object.keys(this.environment.ethereumChains)) {
             if (
-                typeof this.config.ethereum.ethChains[ethChainKey] === "string" &&
+                typeof this.environment.ethereumChains[ethChainKey] === "string" &&
                 this.#ethChains[ethChainKey]
             ) {
                 this.#ethChains[ethChainKey].destroy()
@@ -342,116 +284,39 @@ export class Context {
             await this.#kusamaParachains[Number(paraId)].disconnect()
         }
     }
-}
 
-export function contextConfigFor(
-    env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {}),
-): Config {
-    if (!(env in SNOWBRIDGE_ENV)) {
-        throw Error(`Unknown environment '${env}'.`)
-    }
-    const {
-        ethChainId,
-        config: {
-            ASSET_HUB_PARAID,
-            BEACON_HTTP_API,
-            BEEFY_CONTRACT,
-            BRIDGE_HUB_PARAID,
-            ETHEREUM_CHAINS,
-            GATEWAY_CONTRACT,
-            PARACHAINS,
-            RELAY_CHAIN_URL,
-            GRAPHQL_API_URL,
-            TO_MONITOR_PARACHAINS,
-        },
-        kusamaConfig,
-        l2BridgeConfig,
-    } = SNOWBRIDGE_ENV[env]
-
-    let kusama:
-        | {
-              assetHubParaId: number
-              bridgeHubParaId: number
-              parachains: { [paraId: string]: string }
-          }
-        | undefined = undefined
-
-    if (kusamaConfig) {
-        const kusamaParachains: { [paraId: string]: string } = {}
-        kusamaParachains[kusamaConfig?.BRIDGE_HUB_PARAID.toString()] =
-            kusamaConfig?.PARACHAINS[BRIDGE_HUB_PARAID.toString()]
-        kusamaParachains[kusamaConfig?.ASSET_HUB_PARAID.toString()] =
-            kusamaConfig?.PARACHAINS[ASSET_HUB_PARAID.toString()]
-
-        kusama = {
-            assetHubParaId: kusamaConfig.ASSET_HUB_PARAID,
-            bridgeHubParaId: kusamaConfig.BRIDGE_HUB_PARAID,
-            parachains: kusamaParachains,
+    l1Adapter(): SnowbridgeL1Adaptor {
+        if (this.#l1Adapter) {
+            return this.#l1Adapter
         }
+        this.#l1Adapter = SnowbridgeL1Adaptor__factory.connect(
+            this.environment.l2Bridge?.l1AdapterAddress as string,
+            this.ethereum(),
+        )
+        return this.#l1Adapter
     }
 
-    return {
-        environment: env,
-        ethereum: {
-            ethChainId,
-            ethChains: ETHEREUM_CHAINS,
-            beacon_url: BEACON_HTTP_API,
-        },
-        polkadot: {
-            assetHubParaId: ASSET_HUB_PARAID,
-            bridgeHubParaId: BRIDGE_HUB_PARAID,
-            parachains: PARACHAINS,
-            relaychain: RELAY_CHAIN_URL,
-        },
-        kusama,
-        appContracts: {
-            gateway: GATEWAY_CONTRACT,
-            beefy: BEEFY_CONTRACT,
-        },
-        graphqlApiUrl: GRAPHQL_API_URL,
-        monitorChains: TO_MONITOR_PARACHAINS,
-        l2Bridge: l2BridgeConfig,
+    l1FeeTokenAddress(): string {
+        return this.environment.l2Bridge?.l1FeeTokenAddress as string
     }
-}
 
-export function contextConfigOverrides(input: Config): Config {
-    let config = { ...input }
-    let injectedEthChains: { [ethChainId: string]: string | AbstractProvider } = {}
-    for (const ethChainIdKey of Object.keys(input.ethereum.ethChains)) {
-        if (
-            process.env[`ETHEREUM_RPC_URL_${ethChainIdKey}`] ||
-            process.env[`NEXT_PUBLIC_ETHEREUM_RPC_URL_${ethChainIdKey}`]
-        ) {
-            injectedEthChains[ethChainIdKey] =
-                process.env[`ETHEREUM_RPC_URL_${ethChainIdKey}`] ||
-                (process.env[`NEXT_PUBLIC_ETHEREUM_RPC_URL_${ethChainIdKey}`] as string)
-            continue
+    l2Adapter(l2ChainId: number): SnowbridgeL2Adaptor {
+        if (this.#l2Adapters[l2ChainId]) {
+            return this.#l2Adapters[l2ChainId]
         }
-        injectedEthChains[ethChainIdKey] = input.ethereum.ethChains[ethChainIdKey]
+        const adapter = SnowbridgeL2Adaptor__factory.connect(
+            this.environment.l2Bridge?.l2Chains[l2ChainId]?.adapterAddress as string,
+            this.ethChain(l2ChainId),
+        )
+        this.#l2Adapters[l2ChainId] = adapter
+        return adapter
     }
-    config.ethereum.ethChains = injectedEthChains
-    config.ethereum.beacon_url =
-        process.env["BEACON_RPC_URL"] ||
-        process.env["NEXT_PUBLIC_BEACON_RPC_URL"] ||
-        input.ethereum.beacon_url
 
-    let injectedParachains: { [paraId: string]: string } = {}
-    for (const paraIdKey of Object.keys(input.polkadot.parachains)) {
-        if (
-            process.env[`PARACHAIN_RPC_URL_${paraIdKey}`] ||
-            process.env[`NEXT_PUBLIC_PARACHAIN_RPC_URL_${paraIdKey}`]
-        ) {
-            injectedParachains[paraIdKey] = (process.env[`PARACHAIN_RPC_URL_${paraIdKey}`] ||
-                process.env[`NEXT_PUBLIC_PARACHAIN_RPC_URL_${paraIdKey}`]) as string
-            continue
-        }
-        injectedParachains[paraIdKey] = input.polkadot.parachains[paraIdKey]
+    l2FeeTokenAddress(l2ChainId: number): string {
+        return this.environment.l2Bridge?.l2Chains[l2ChainId]?.feeTokenAddress as string
     }
-    config.polkadot.parachains = injectedParachains
-    config.polkadot.relaychain =
-        process.env["RELAY_CHAIN_RPC_URL"] ||
-        process.env["NEXT_PUBLIC_RELAY_CHAIN_RPC_URL"] ||
-        input.polkadot.relaychain
 
-    return config
+    acrossApiUrl(): string {
+        return this.environment.l2Bridge?.acrossAPIUrl as string
+    }
 }
