@@ -122,7 +122,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
         l2Bridge: {
             acrossAPIUrl: "https://testnet.across.to/api",
-            l1AdapterAddress: "0xF5E39B17c03514a4dd162f59397b2779d18bb065",
+            l1AdapterAddress: "0x33Fe409089c8AAd8Af119a8Dacd1ea6be3A3cbd5",
             l1FeeTokenAddress: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
             l2Chains: {
                 "84532": {
