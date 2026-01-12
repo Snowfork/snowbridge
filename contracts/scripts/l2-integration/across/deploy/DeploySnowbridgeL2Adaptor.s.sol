@@ -11,7 +11,7 @@ import {
     WETH9,
     BASE_WETH9
 } from "../constants/Sepolia.sol";
-import {SnowbridgeL2Adaptor} from "../SnowbridgeL2Adaptor.sol";
+import {SnowbridgeL2Adaptor} from "../../../../src/l2-integration/SnowbridgeL2Adaptor.sol";
 
 contract DeploySnowbridgeL2Adaptor is Script {
     SnowbridgeL2Adaptor public snowbridgeL2Adaptor;

@@ -5,7 +5,7 @@ import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {ISpokePool, IMessageHandler} from "./interfaces/ISpokePool.sol";
-import {IGatewayV2} from "../../../src/v2/IGateway.sol";
+import {IGatewayV2} from "../v2/IGateway.sol";
 import {SwapParams, Instructions, Call, SendParams} from "./Types.sol";
 
 contract SnowbridgeL2Adaptor {

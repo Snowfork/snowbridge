@@ -4,10 +4,10 @@ pragma solidity 0.8.28;
 import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 
-import {SnowbridgeL1Adaptor} from "../SnowbridgeL1Adaptor.sol";
+import {SnowbridgeL1Adaptor} from "../../../../src/l2-integration/SnowbridgeL1Adaptor.sol";
 import {USDC, BASE_USDC, CHAIN_ID, BASE_CHAIN_ID, TIME_BUFFER} from "../constants/Sepolia.sol";
-import {ISpokePool, IMessageHandler} from "../interfaces/ISpokePool.sol";
-import {SwapParams, SendParams} from "../Types.sol";
+import {ISpokePool} from "../../../../src/l2-integration/interfaces/ISpokePool.sol";
+import {SwapParams, SendParams} from "../../../../src/l2-integration/Types.sol";
 
 contract TestSnowbridgeL1AdaptorNativeEther is Script {
     function run() public {

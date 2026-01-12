@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 import "forge-std/console.sol";
 import "openzeppelin/token/ERC20/IERC20.sol";
 
-import {ISwapRouter} from "../interfaces/ISwapRouter.sol";
+import {ISwapRouter} from "../../../../src/l2-integration/interfaces/ISwapRouter.sol";
 
 contract SwapScript is Script {
     function run() external {

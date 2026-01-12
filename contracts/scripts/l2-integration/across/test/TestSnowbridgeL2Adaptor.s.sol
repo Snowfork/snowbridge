@@ -5,10 +5,17 @@ import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
 
-import {SnowbridgeL2Adaptor} from "../SnowbridgeL2Adaptor.sol";
-import {USDC, BASE_USDC, CHAIN_ID, BASE_CHAIN_ID, BASE_WETH9, TIME_BUFFER} from "../constants/Sepolia.sol";
-import {ISpokePool, IMessageHandler} from "../interfaces/ISpokePool.sol";
-import {SwapParams, SendParams} from "../Types.sol";
+import {SnowbridgeL2Adaptor} from "../../../../src/l2-integration/SnowbridgeL2Adaptor.sol";
+import {
+    USDC,
+    BASE_USDC,
+    CHAIN_ID,
+    BASE_CHAIN_ID,
+    BASE_WETH9,
+    TIME_BUFFER
+} from "../constants/Sepolia.sol";
+import {ISpokePool} from "../../../../src/l2-integration/interfaces/ISpokePool.sol";
+import {SwapParams, SendParams} from "../../../../src/l2-integration/Types.sol";
 
 contract TestSnowbridgeL2Adaptor is Script {
     function run() public {
