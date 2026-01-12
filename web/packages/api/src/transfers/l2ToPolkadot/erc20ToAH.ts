@@ -381,15 +381,18 @@ export class ERC20ToAH implements TransferInterface {
             })
         }
         let feeInfo: FeeInfo | undefined
+        let l2BridgeDryRunError: string | undefined
         if (logs.length === 0) {
             let estimatedGas: bigint
             try {
                 estimatedGas = await l2Chain.estimateGas(tx)
             } catch (e) {
+                l2BridgeDryRunError =
+                    "Could not estimate gas for l2 transaction." + (e as Error).message
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.FeeEstimationError,
-                    message: "Could not estimate gas for l2 transaction." + (e as Error).message,
+                    message: l2BridgeDryRunError,
                 })
                 estimatedGas = 0n
             }
@@ -508,6 +511,7 @@ export class ERC20ToAH implements TransferInterface {
                 feeInfo,
                 bridgeStatus,
                 assetHubDryRunError,
+                l2BridgeDryRunError,
             },
             transfer,
         }

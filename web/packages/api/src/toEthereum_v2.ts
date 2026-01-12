@@ -451,7 +451,6 @@ export type ValidationResult = {
         sourceDryRunError: any
         assetHubDryRunError: any
         bridgeHubDryRunError?: any
-        l2BridgeDryRunError?: string
     }
     transfer: Transfer
 }
