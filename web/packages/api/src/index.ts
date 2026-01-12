@@ -78,7 +78,7 @@ export class Context {
 
     kusamaAssetHub(): Promise<ApiPromise> {
         const assetHubParaId = this.environment.kusama?.assetHubParaId
-        if (!this.environment.kusama) {
+        if (!assetHubParaId) {
             throw Error(`Kusama config is not set.`)
         }
         return this.kusamaParachain(assetHubParaId)
