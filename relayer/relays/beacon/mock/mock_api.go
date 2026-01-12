@@ -2,6 +2,7 @@ package mock
 
 import (
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/testutil"
