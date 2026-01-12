@@ -600,7 +600,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     ///         if (ERC1967.load() == address(0)) {
     ///             revert Unauthorized();
     ///         }
-    ///         # Initialization routines here...
+    ///         // Initialization routines here...
     ///     }
     /// }
     /// ```
