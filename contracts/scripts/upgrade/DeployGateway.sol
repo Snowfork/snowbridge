@@ -20,8 +20,13 @@ contract DeployGateway is Script {
         vm.startBroadcast();
 
         AgentExecutor executor = new AgentExecutor();
-        Gateway gatewayLogic = new Gateway202509(address(beefyClient), address(executor));
+        Gateway gatewayLogic;
         if (
+            keccak256(abi.encodePacked(vm.envString("NODE_ENV")))
+                == keccak256(abi.encodePacked("polkadot_mainnet"))
+        ) {
+            gatewayLogic = new Gateway202509(address(beefyClient), address(executor));
+        } else if (
             keccak256(abi.encodePacked(vm.envString("NODE_ENV")))
                 == keccak256(abi.encodePacked("westend_sepolia"))
         ) {
