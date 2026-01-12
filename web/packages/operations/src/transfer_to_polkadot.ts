@@ -1,8 +1,8 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, contextConfigFor, environment, toPolkadotV2 } from "@snowbridge/api"
+import { Context, toPolkadotV2 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import { assetRegistryFor } from "@snowbridge/registry"
+import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
 import { IERC20__factory, WETH9__factory } from "@snowbridge/contract-types"
 
 export const transferToPolkadot = async (
@@ -18,7 +18,7 @@ export const transferToPolkadot = async (
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(contextConfigFor(env))
+    const context = new Context(environmentFor(env))
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ??
@@ -51,7 +51,7 @@ export const transferToPolkadot = async (
             const depositResult = await weth9.deposit({ value: amount })
             const depositReceipt = await depositResult.wait()
 
-            const approveResult = await weth9.approve(context.config.appContracts.gateway, amount)
+            const approveResult = await weth9.approve(context.environment.gatewayContract, amount)
             const approveReceipt = await approveResult.wait()
 
             console.log("deposit tx", depositReceipt?.hash, "approve tx", approveReceipt?.hash)
@@ -67,28 +67,28 @@ export const transferToPolkadot = async (
         if (allowance < amount) {
             // Step 1: Reset allowance to 0 (required by this ERC20 implementation)
             console.log("Resetting allowance to 0...")
-            const resetTx = await erc20.approve(context.config.appContracts.gateway, 0n)
+            const resetTx = await erc20.approve(context.environment.gatewayContract, 0n)
             await resetTx.wait()
 
             // Step 2: Set new allowance (higher than transfer amount for gateway fees)
             const approveAmount = amount * 5n // 5x buffer for gateway operations
             console.log("Setting new allowance to", approveAmount.toString())
             const approveTx = await erc20.approve(
-                context.config.appContracts.gateway,
+                context.environment.gatewayContract,
                 approveAmount,
             )
             await approveTx.wait()
 
             const newAllowance = await erc20.allowance(
                 ETHEREUM_ACCOUNT_PUBLIC,
-                context.config.appContracts.gateway,
+                context.environment.gatewayContract,
             )
             console.log("newAllowance", newAllowance.toString())
         }
 
         console.log("token", TOKEN_CONTRACT)
         console.log("gateway", registry.gatewayAddress)
-        console.log("context gateway", context.config.appContracts.gateway)
+        console.log("context gateway", context.environment.gatewayContract)
         console.log("owner", ETHEREUM_ACCOUNT_PUBLIC)
         console.log("balance", balance.toString())
         console.log("allowance", allowance.toString())
