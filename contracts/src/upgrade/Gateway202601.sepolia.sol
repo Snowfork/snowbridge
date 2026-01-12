@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.28;
 
-import "../../src/Gateway.sol";
+import "../Gateway.sol";
 
 // New Gateway logic contract with an fee initializer
-contract Gateway202601 is Gateway {
+contract GatewaySepolia202601 is Gateway {
     constructor(address beefyClient, address agentExecutor) Gateway(beefyClient, agentExecutor) {}
 
     // Override parent initializer to prevent re-initialization of storage.
