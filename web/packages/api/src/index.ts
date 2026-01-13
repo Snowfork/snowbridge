@@ -245,7 +245,7 @@ export class Context {
         if (this.#gateway) await this.gateway().removeAllListeners()
         if (this.#gatewayV2) await this.gatewayV2().removeAllListeners()
 
-        // clean up etheruem
+        // clean up ethereum
         for (const ethChainKey of Object.keys(this.environment.ethereumChains)) {
             if (
                 typeof this.environment.ethereumChains[ethChainKey] === "string" &&

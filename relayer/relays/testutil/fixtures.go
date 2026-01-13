@@ -3,10 +3,11 @@ package testutil
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 )
 
 func GetSyncCommitteeUpdate(period uint64) (api.SyncCommitteePeriodUpdateResponse, error) {
