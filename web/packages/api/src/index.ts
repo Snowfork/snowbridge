@@ -286,26 +286,35 @@ export class Context {
     }
 
     l1Adapter(): SnowbridgeL1Adaptor {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
         if (this.#l1Adapter) {
             return this.#l1Adapter
         }
         this.#l1Adapter = SnowbridgeL1Adaptor__factory.connect(
-            this.environment.l2Bridge?.l1AdapterAddress as string,
+            this.environment.l2Bridge.l1AdapterAddress as string,
             this.ethereum(),
         )
         return this.#l1Adapter
     }
 
     l1FeeTokenAddress(): string {
-        return this.environment.l2Bridge?.l1FeeTokenAddress as string
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        return this.environment.l2Bridge.l1FeeTokenAddress as string
     }
 
     l2Adapter(l2ChainId: number): SnowbridgeL2Adaptor {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
         if (this.#l2Adapters[l2ChainId]) {
             return this.#l2Adapters[l2ChainId]
         }
         const adapter = SnowbridgeL2Adaptor__factory.connect(
-            this.environment.l2Bridge?.l2Chains[l2ChainId]?.adapterAddress as string,
+            this.environment.l2Bridge.l2Chains[l2ChainId].adapterAddress as string,
             this.ethChain(l2ChainId),
         )
         this.#l2Adapters[l2ChainId] = adapter
@@ -313,10 +322,19 @@ export class Context {
     }
 
     l2FeeTokenAddress(l2ChainId: number): string {
-        return this.environment.l2Bridge?.l2Chains[l2ChainId]?.feeTokenAddress as string
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        if (!this.environment.l2Bridge.l2Chains[l2ChainId]) {
+            throw new Error("L2 chain configuration is missing.")
+        }
+        return this.environment.l2Bridge.l2Chains[l2ChainId].feeTokenAddress as string
     }
 
     acrossApiUrl(): string {
-        return this.environment.l2Bridge?.acrossAPIUrl as string
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        return this.environment.l2Bridge.acrossAPIUrl as string
     }
 }
