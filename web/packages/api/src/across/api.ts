@@ -13,20 +13,20 @@ export const estimateFees = async (
         destinationChainId: destinationChainId.toString(),
         amount: amount.toString(),
     }
-    apiEndpoint += "/suggested-fees?" + new URLSearchParams(params)
-    let response = await fetch(apiEndpoint)
-    if (!response.ok) {
-        throw new Error(`Failed to fetch suggested fees: ${response.status} ${response.statusText}`)
+
+    const url = apiEndpoint + "/suggested-fees?" + new URLSearchParams(params)
 
     let response: Response
     try {
-        response = await fetch(apiEndpoint)
+        response = await fetch(url)
     } catch (error) {
-        throw new Error(`Failed to fetch suggested fees from ${apiEndpoint}: ${String(error)}`)
+        throw new Error(`Failed to fetch suggested fees from ${url}: ${String(error)}`)
     }
 
     if (!response.ok) {
-        throw new Error(`Failed to fetch suggested fees from ${apiEndpoint}: HTTP ${response.status}`)
+        throw new Error(
+            `Failed to fetch suggested fees from ${url}: HTTP ${response.status} ${response.statusText}`,
+        )
     }
 
     let data: any
@@ -48,7 +48,11 @@ export const estimateFees = async (
     }
 
     const totalValue = (data as any).totalRelayFee.total
-    if (typeof totalValue !== "string" && typeof totalValue !== "number" && typeof totalValue !== "bigint") {
+    if (
+        typeof totalValue !== "string" &&
+        typeof totalValue !== "number" &&
+        typeof totalValue !== "bigint"
+    ) {
         throw new Error("Invalid type for totalRelayFee.total in suggested fees response")
     }
 
