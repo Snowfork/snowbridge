@@ -138,14 +138,20 @@ export abstract class ParachainBase {
                     xcm,
                 )
             ).toPrimitive() as any
-        } catch (e) {
-            result = (
-                await this.provider.call.xcmPaymentApi.queryDeliveryFees(
-                    { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
-                    xcm,
-                    { v4: DOT_LOCATION },
-                )
-            ).toPrimitive() as any
+        } catch (primaryError) {
+            try {
+                result = (
+                    await this.provider.call.xcmPaymentApi.queryDeliveryFees(
+                        { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
+                        xcm,
+                        { v4: DOT_LOCATION },
+                    )
+                ).toPrimitive() as any
+            } catch (fallbackError) {
+                console.error("Primary queryDeliveryFees call failed:", primaryError)
+                console.error("Fallback queryDeliveryFees call also failed:", fallbackError)
+                throw fallbackError
+            }
         }
         if (!result.ok) {
             console.error(result)
