@@ -999,7 +999,10 @@ export async function buildL2Call(
     },
 ): Promise<{ fee: bigint; l2Call: ContractCall }> {
     // Calculate fee with Across SDK
-    const l2TokenAddress = findL2TokenAddress(registry, l2ChainId, tokenAddress)!
+    const l2TokenAddress = findL2TokenAddress(registry, l2ChainId, tokenAddress)
+    if (!l2TokenAddress) {
+        throw new Error("L2 token address not found")
+    }
     const l1Adapter = context.l1Adapter()
     let l1AdapterAddress = await l1Adapter.getAddress()
     let l2BridgeFeeInL1Token = 0n
