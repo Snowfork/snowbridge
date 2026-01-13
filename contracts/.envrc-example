@@ -10,16 +10,13 @@ export PREV_RANDAO=377
 export ValidatorSetSize=600
 
 ## L2 Integration
-DEPLOYER_KEY=0xprivate_key_here
+PRIVATE_KEY=0xprivate_key_here
 SEPOLIA_CHAIN=sepolia
 BASE_CHAIN=base-sepolia
 SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/your-api-key-here
 BASE_RPC_URL=https://base-sepolia.g.alchemy.com/v2/your-api-key-here
 ETHERSCAN_API_KEY=your-etherscan-api-key-here
 VERIFIER=etherscan
-IS_L1=true
-WESTEND_ASSET_HUB_RPC_URL=https://westend-asset-hub-eth-rpc.polkadot.io
-WESTEND_CHAIN_ID=420420421
 
-L1_SNOWBRIDGE_ADAPTOR_ADDRESS=0xa429563669439307255a6fE3f1535B334A31cA9B
-L2_SNOWBRIDGE_ADAPTOR_ADDRESS=0x800Bac8d8A2dEf1d88036310073D52f65Ec3D51D
+export L1_SNOWBRIDGE_ADAPTOR_ADDRESS=0x33Fe409089c8AAd8Af119a8Dacd1ea6be3A3cbd5
+export L2_SNOWBRIDGE_ADAPTOR_ADDRESS=0x2F846925814a5E6FB5795Af6e49158391F379440
