@@ -27,8 +27,9 @@ contract SnowbridgeL1Adaptor {
         L2_WETH9 = WETH9(payable(_l2weth9));
     }
 
-    // Send ERC20 token on L1 to L2, the fee should be calculated off-chain
+    // Send ERC20 token on L1 to L2, the fee (params.inputAmount - params.outputAmount) should be calculated off-chain
     // following https://docs.across.to/reference/api-reference#get-swap-approval
+    // The function assumes that tokens have been pre-funded and transferred to this contract via Snowbridge unlock prior to invocation.
     function depositToken(SwapParams calldata params, address recipient, bytes32 topic) public {
         require(params.inputToken != address(0), "Input token cannot be zero address");
         checkInputs(params, recipient);
@@ -53,7 +54,8 @@ contract SnowbridgeL1Adaptor {
         emit DepositCallInvoked(topic, depositId);
     }
 
-    // Send native Ether on L1 to L2
+    // Send native Ether on L1 to L2, the function assumes that native ETH has been pre-funded
+    // and transferred to this contract via Snowbridge unlock prior to invocation.
     function depositNativeEther(SwapParams calldata params, address recipient, bytes32 topic)
         public
         payable
