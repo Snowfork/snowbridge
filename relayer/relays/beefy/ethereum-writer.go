@@ -68,7 +68,11 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 				// the beefy light client
 				task.ValidatorsRoot = state.NextValidatorSetRoot
 
-				err = wr.submit(ctx, &task)
+				if wr.config.EnableFiatShamir {
+					err = wr.submitFiatShamir(ctx, &task)
+				} else {
+					err = wr.submit(ctx, &task)
+				}
 				if err != nil {
 					return fmt.Errorf("submit request: %w", err)
 				}
@@ -151,6 +155,16 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		}).Info("CommitPrevRandao is skipped, indicating that a newer update is already in progress.")
 		return nil
 	}
+	isTaskOutdated, err := wr.isTaskOutdated(ctx, task)
+	if err != nil {
+		return fmt.Errorf("check if task is outdated: %w", err)
+	}
+	if isTaskOutdated {
+		log.WithFields(logrus.Fields{
+			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Commitment already synced")
+		return nil
+	}
 	// Commit PrevRandao which will be used as seed to randomly select subset of validators
 	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L446-L447
 	tx, err = wr.contract.CommitPrevRandao(
@@ -170,6 +184,16 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		log.WithFields(logrus.Fields{
 			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
 		}).Info("SubmitFinal is skipped, indicating that a newer update is already in progress.")
+		return nil
+	}
+	isTaskOutdated, err = wr.isTaskOutdated(ctx, task)
+	if err != nil {
+		return fmt.Errorf("check if task is outdated: %w", err)
+	}
+	if isTaskOutdated {
+		log.WithFields(logrus.Fields{
+			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Commitment already synced")
 		return nil
 	}
 	// Final submission
@@ -319,4 +343,103 @@ func (wr *EthereumWriter) initialize(ctx context.Context) error {
 	log.WithField("randaoCommitDelay", wr.blockWaitPeriod).Trace("Fetched randaoCommitDelay")
 
 	return nil
+}
+
+func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) error {
+	signedValidators := []*big.Int{}
+	for i, signature := range task.SignedCommitment.Signatures {
+		if signature.IsSome() {
+			signedValidators = append(signedValidators, big.NewInt(int64(i)))
+		}
+	}
+	validatorCount := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
+
+	// Pick a random validator who signs beefy commitment
+	chosenValidator := signedValidators[rand.Intn(len(signedValidators))].Int64()
+
+	log.WithFields(logrus.Fields{
+		"validatorCount":       validatorCount,
+		"signedValidators":     signedValidators,
+		"signedValidatorCount": len(signedValidators),
+		"chosenValidator":      chosenValidator,
+	}).Info("Creating initial bitfield")
+
+	initialBitfield, err := wr.contract.CreateInitialBitfield(
+		&bind.CallOpts{
+			Pending: true,
+			From:    wr.conn.Keypair().CommonAddress(),
+		},
+		signedValidators, validatorCount,
+	)
+	if err != nil {
+		return fmt.Errorf("create initial bitfield: %w", err)
+	}
+
+	commitment := toBeefyClientCommitment(&task.SignedCommitment.Commitment)
+
+	finalBitfield, err := wr.contract.CreateFiatShamirFinalBitfield(
+		&bind.CallOpts{
+			Pending: true,
+			From:    wr.conn.Keypair().CommonAddress(),
+		},
+		*commitment,
+		initialBitfield,
+	)
+
+	if err != nil {
+		return fmt.Errorf("create validator final bitfield: %w", err)
+	}
+
+	validatorIndices := bitfield.New(finalBitfield).Members()
+
+	params, err := task.MakeSubmitFinalParams(validatorIndices, initialBitfield)
+	if err != nil {
+		return fmt.Errorf("make submit final params: %w", err)
+	}
+
+	logFields, err := wr.makeSubmitFinalLogFields(task, params)
+	if err != nil {
+		return fmt.Errorf("logging params: %w", err)
+	}
+
+	tx, err := wr.contract.SubmitFiatShamir(
+		wr.conn.MakeTxOpts(ctx),
+		params.Commitment,
+		params.Bitfield,
+		params.Proofs,
+		params.Leaf,
+		params.LeafProof,
+		params.LeafProofOrder,
+	)
+	if err != nil {
+		return fmt.Errorf("SubmitFiatShamir: %w", err)
+	}
+
+	log.WithField("txHash", tx.Hash().Hex()).
+		WithFields(logFields).
+		Info("Sent SubmitFiatShamir transaction")
+
+	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
+	if err != nil {
+		return fmt.Errorf("Wait receipt for SubmitFiatShamir: %w", err)
+	}
+
+	log.WithFields(logrus.Fields{
+		"tx":          tx.Hash().Hex(),
+		"blockNumber": task.SignedCommitment.Commitment.BlockNumber,
+	}).Debug("Transaction submitFiatShamir succeeded")
+
+	return nil
+}
+
+func (wr *EthereumWriter) isTaskOutdated(ctx context.Context, task *Request) (bool, error) {
+	state, err := wr.queryBeefyClientState(ctx)
+	if err != nil {
+		return false, fmt.Errorf("query beefy client state: %w", err)
+	}
+
+	if task.SignedCommitment.Commitment.BlockNumber <= uint32(state.LatestBeefyBlock) {
+		return true, nil
+	}
+	return false, nil
 }

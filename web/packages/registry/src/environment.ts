@@ -114,7 +114,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "1002": "wss://bridge-hub-westend-rpc.n.dwellir.com",
         },
         gatewayContract: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
-        beefyContract: "0x6DFaD3D73A28c48E4F4c616ECda80885b415283a",
+        beefyContract: "0xA04460B1D8bBef33F54edB2C3115e3E4D41237A6",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         indexerGraphQlUrl:
