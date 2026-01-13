@@ -314,7 +314,7 @@ export const estimateFeesFromAssetHub = async (
         bridgeHubDeliveryFeeDOT
 
     // Calculate L2 bridge fee
-    let l2BridgeFeeInL1Token = 0n
+    let l2BridgeFeeInL1Token: bigint = 0n
     if (l2ChainId) {
         let callInfo = await buildL2Call(
             context,
@@ -1005,7 +1005,7 @@ export async function buildL2Call(
     }
     const l1Adapter = context.l1Adapter()
     let l1AdapterAddress = await l1Adapter.getAddress()
-    let l2BridgeFeeInL1Token = 0n
+    let l2BridgeFeeInL1Token: bigint
     let l2Call: ContractCall
     if (tokenAddress === ETHER_TOKEN_ADDRESS) {
         let l1FeeTokenAddress = context.l1FeeTokenAddress()

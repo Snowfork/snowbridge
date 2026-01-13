@@ -26,10 +26,7 @@ import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../t
 import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
-import {
-    SwapParamsStruct,
-    SendParamsStruct,
-} from "@snowbridge/contract-types/dist/SnowbridgeL2Adaptor"
+import { SwapParamsStruct } from "@snowbridge/contract-types/dist/SnowbridgeL2Adaptor"
 import { estimateFees } from "../../across/api"
 import { ContractTransaction } from "ethers/lib.commonjs/contract/types"
 
@@ -132,7 +129,7 @@ export class ERC20ToAH implements TransferInterface {
             )
         }
 
-        let l2BridgeFeeInEther = 0n
+        let l2BridgeFeeInEther: bigint
         const nativeFeeTokenAddress =
             context.environment.l2Bridge?.l2Chains[l2ChainId]?.feeTokenAddress ||
             ETHER_TOKEN_ADDRESS
@@ -222,9 +219,8 @@ export class ERC20ToAH implements TransferInterface {
         let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
             beneficiaryMultiAddress(beneficiaryAccount)
 
-        let assets: any = [],
-            value = 0n,
-            outputAmount = 0n
+        let assets: any = []
+        let value: bigint, outputAmount: bigint
 
         const l2Adapter = context.l2Adapter(l2ChainId)
         const accountNonce = await l2Chain.getTransactionCount(sourceAccount, "pending")
