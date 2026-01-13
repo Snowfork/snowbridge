@@ -420,7 +420,7 @@ func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber u
 
 	log.Info("Performing sync")
 
-	err = relay.sync(ctx, beefyBlockNumber)
+	err = relay.syncFiatShamir(ctx, beefyBlockNumber)
 	if err != nil {
 		return fmt.Errorf("Sync failed: %w", err)
 	}
@@ -714,5 +714,69 @@ func (relay *OnDemandRelay) queueAll(ctx context.Context) error {
 	if err := relay.queueV2(ctx); err != nil {
 		return fmt.Errorf("Queue V2 parachain block failed: %w", err)
 	}
+	return nil
+}
+
+func (relay *OnDemandRelay) syncFiatShamir(ctx context.Context, blockNumber uint64) error {
+	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
+	if err != nil {
+		return fmt.Errorf("query beefy client state: %w", err)
+	}
+	// Ignore relay block already synced
+	if blockNumber <= state.LatestBeefyBlock {
+		log.WithFields(log.Fields{
+			"validatorSetID": state.CurrentValidatorSetID,
+			"beefyBlock":     state.LatestBeefyBlock,
+			"relayBlock":     blockNumber,
+		}).Info("Relay block already synced, just ignore")
+		return nil
+	}
+
+	// generate beefy update for that specific relay block
+	task, err := relay.polkadotListener.generateBeefyUpdate(blockNumber)
+	if err != nil {
+		return fmt.Errorf("fail to generate next beefy request: %w", err)
+	}
+
+	// Ignore commitment earlier than LatestBeefyBlock which is outdated
+	if task.SignedCommitment.Commitment.BlockNumber <= uint32(state.LatestBeefyBlock) {
+		log.WithFields(log.Fields{
+			"latestBeefyBlock":      state.LatestBeefyBlock,
+			"currentValidatorSetID": state.CurrentValidatorSetID,
+			"nextValidatorSetID":    state.NextValidatorSetID,
+			"blockNumberToSync":     task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Commitment outdated, just ignore")
+		return nil
+	}
+	if task.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
+		log.WithFields(log.Fields{
+			"latestBeefyBlock":      state.LatestBeefyBlock,
+			"currentValidatorSetID": state.CurrentValidatorSetID,
+			"nextValidatorSetID":    state.NextValidatorSetID,
+			"validatorSetIDToSync":  task.SignedCommitment.Commitment.ValidatorSetID,
+		}).Warn("Task unexpected, wait for mandatory updates to catch up first")
+		return nil
+	}
+
+	// Submit the task
+	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
+		task.ValidatorsRoot = state.CurrentValidatorSetRoot
+	} else {
+		task.ValidatorsRoot = state.NextValidatorSetRoot
+	}
+	err = relay.ethereumWriter.submitFiatShamir(ctx, task)
+	if err != nil {
+		return fmt.Errorf("SubmitFiatShamir beefy update: %w", err)
+	}
+
+	updatedState, err := relay.ethereumWriter.queryBeefyClientState(ctx)
+	if err != nil {
+		return fmt.Errorf("query beefy client state: %w", err)
+	}
+	log.WithFields(log.Fields{
+		"latestBeefyBlock":      updatedState.LatestBeefyBlock,
+		"currentValidatorSetID": updatedState.CurrentValidatorSetID,
+		"nextValidatorSetID":    updatedState.NextValidatorSetID,
+	}).Info("Sync beefy update success")
 	return nil
 }
