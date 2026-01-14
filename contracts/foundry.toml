@@ -1,5 +1,5 @@
 [profile.default]
-solc_version = "0.8.28"
+solc_version = "0.8.33"
 optimizer = true
 optimizer_runs = 20000
 via_ir = false
@@ -21,10 +21,11 @@ ignored_error_codes = [
 
 no_match_test = "testRegenerate*"
 
+# Production profile, ForkUpgrade tests cause stack too deep errors with via_ir enabled, so we exclude it here
 [profile.production]
+no_match_contract = "ForkUpgradeTest"
 via_ir = true
 
 [fmt]
 number_underscore = "thousands"
 line_length = 99
-

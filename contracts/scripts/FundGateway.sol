@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity ^0.8.33;
 
 import {Script} from "forge-std/Script.sol";
 import {IGatewayV1} from "../src/v1/IGateway.sol";

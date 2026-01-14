@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity ^0.8.33;
 
 import {Channel, OperatingMode, ChannelID} from "../v1/Types.sol";
 import {SparseBitmap} from "../utils/SparseBitmap.sol";
