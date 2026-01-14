@@ -60,10 +60,10 @@ contract SnowbridgeL2Adaptor {
         IERC20(params.inputToken).forceApprove(address(SPOKE_POOL), params.inputAmount);
 
         // deposit: token swap and cross-chain call
-        _depositTokenAndSendMessage(params, swapParams, sendParams, recipient);
+        uint256 depositId = _depositTokenAndSendMessage(params, swapParams, sendParams, recipient);
 
         // Emit event with the depositId of the second deposit
-        emit DepositCallInvoked(topic, SPOKE_POOL.numberOfDeposits() - 1);
+        emit DepositCallInvoked(topic, depositId);
     }
 
     // Send native Ether to Polkadot, the fee should be calculated off-chain
@@ -108,7 +108,7 @@ contract SnowbridgeL2Adaptor {
         SwapParams calldata swapParams,
         SendParams calldata sendParams,
         address recipient
-    ) internal {
+    ) internal returns (uint256 depositId) {
         uint32 fillDeadline = uint32(block.timestamp + params.fillDeadlineBuffer);
         Call[] memory calls = new Call[](7);
         calls[0] = Call({
@@ -188,6 +188,7 @@ contract SnowbridgeL2Adaptor {
             0,
             abi.encode(instructions)
         );
+        depositId = SPOKE_POOL.numberOfDeposits() - 1;
     }
 
     function _depositNativeEtherAndSendMessage(
