@@ -16,16 +16,16 @@ import (
 )
 
 type InitialRequestParams struct {
-	Commitment contracts.BeefyClientCommitment
+	Commitment contracts.IBeefyClientCommitment
 	Bitfield   []*big.Int
-	Proof      contracts.BeefyClientValidatorProof
+	Proof      contracts.IBeefyClientValidatorProof
 }
 
 type FinalRequestParams struct {
-	Commitment     contracts.BeefyClientCommitment
+	Commitment     contracts.IBeefyClientCommitment
 	Bitfield       []*big.Int
-	Proofs         []contracts.BeefyClientValidatorProof
-	Leaf           contracts.BeefyClientMMRLeaf
+	Proofs         []contracts.IBeefyClientValidatorProof
+	Leaf           contracts.IBeefyClientMMRLeaf
 	LeafProof      [][32]byte
 	LeafProofOrder *big.Int
 }
@@ -72,7 +72,7 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 	msg := InitialRequestParams{
 		Commitment: *commitment,
 		Bitfield:   initialBitfield,
-		Proof: contracts.BeefyClientValidatorProof{
+		Proof: contracts.IBeefyClientValidatorProof{
 			V:       v,
 			R:       _r,
 			S:       s,
@@ -85,8 +85,8 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 	return &msg, nil
 }
 
-func toBeefyClientCommitment(c *types.Commitment) *contracts.BeefyClientCommitment {
-	return &contracts.BeefyClientCommitment{
+func toBeefyClientCommitment(c *types.Commitment) *contracts.IBeefyClientCommitment {
+	return &contracts.IBeefyClientCommitment{
 		BlockNumber:    c.BlockNumber,
 		ValidatorSetID: c.ValidatorSetID,
 		Payload:        toBeefyPayload(c.Payload),
@@ -158,7 +158,7 @@ func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byt
 }
 
 func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfield []*big.Int) (*FinalRequestParams, error) {
-	validatorProofs := []contracts.BeefyClientValidatorProof{}
+	validatorProofs := []contracts.IBeefyClientValidatorProof{}
 
 	for _, validatorIndex := range validatorIndices {
 		ok, beefySig := r.SignedCommitment.Signatures[validatorIndex].Unwrap()
@@ -180,7 +180,7 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 			return nil, err
 		}
 
-		validatorProofs = append(validatorProofs, contracts.BeefyClientValidatorProof{
+		validatorProofs = append(validatorProofs, contracts.IBeefyClientValidatorProof{
 			V:       v,
 			R:       _r,
 			S:       s,
@@ -190,18 +190,18 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 		})
 	}
 
-	commitment := contracts.BeefyClientCommitment{
+	commitment := contracts.IBeefyClientCommitment{
 		Payload:        toBeefyPayload(r.SignedCommitment.Commitment.Payload),
 		BlockNumber:    r.SignedCommitment.Commitment.BlockNumber,
 		ValidatorSetID: r.SignedCommitment.Commitment.ValidatorSetID,
 	}
 
-	inputLeaf := contracts.BeefyClientMMRLeaf{}
+	inputLeaf := contracts.IBeefyClientMMRLeaf{}
 
 	var merkleProofItems [][32]byte
 
 	proofOrder := new(big.Int)
-	inputLeaf = contracts.BeefyClientMMRLeaf{
+	inputLeaf = contracts.IBeefyClientMMRLeaf{
 		Version:              uint8(r.Proof.Leaf.Version),
 		ParentNumber:         uint32(r.Proof.Leaf.ParentNumberAndHash.ParentNumber),
 		ParentHash:           r.Proof.Leaf.ParentNumberAndHash.Hash,
@@ -227,10 +227,10 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 	return &msg, nil
 }
 
-func toBeefyPayload(items []types.PayloadItem) []contracts.BeefyClientPayloadItem {
-	beefyItems := make([]contracts.BeefyClientPayloadItem, len(items))
+func toBeefyPayload(items []types.PayloadItem) []contracts.IBeefyClientPayloadItem {
+	beefyItems := make([]contracts.IBeefyClientPayloadItem, len(items))
 	for i, item := range items {
-		beefyItems[i] = contracts.BeefyClientPayloadItem{
+		beefyItems[i] = contracts.IBeefyClientPayloadItem{
 			PayloadID: item.ID,
 			Data:      item.Data,
 		}
@@ -239,7 +239,7 @@ func toBeefyPayload(items []types.PayloadItem) []contracts.BeefyClientPayloadIte
 	return beefyItems
 }
 
-func commitmentToLog(commitment contracts.BeefyClientCommitment) logrus.Fields {
+func commitmentToLog(commitment contracts.IBeefyClientCommitment) logrus.Fields {
 	payloadFields := make([]logrus.Fields, len(commitment.Payload))
 	for i, payloadItem := range commitment.Payload {
 		payloadFields[i] = logrus.Fields{
@@ -264,7 +264,7 @@ func bitfieldToStrings(bitfield []*big.Int) []string {
 	return strings
 }
 
-func proofToLog(proof contracts.BeefyClientValidatorProof) logrus.Fields {
+func proofToLog(proof contracts.IBeefyClientValidatorProof) logrus.Fields {
 	hexProof := make([]string, len(proof.Proof))
 	for i, proof := range proof.Proof {
 		hexProof[i] = Hex(proof[:])

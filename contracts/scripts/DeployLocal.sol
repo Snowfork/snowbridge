@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
+import {BeefyClientWrapper} from "../src/BeefyClientWrapper.sol";
 import {IGatewayV1} from "../src/v1/IGateway.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Gateway} from "../src/Gateway.sol";
@@ -61,6 +62,19 @@ contract DeployLocal is Script {
             next
         );
 
+        // Deploy BeefyClientWrapper
+        BeefyClientWrapper beefyClientWrapper = new BeefyClientWrapper(
+            address(beefyClient),
+            deployer,
+            vm.envUint("BEEFY_WRAPPER_MAX_GAS_PRICE"),
+            vm.envUint("BEEFY_WRAPPER_MAX_REFUND_AMOUNT"),
+            vm.envUint("BEEFY_WRAPPER_REFUND_TARGET"),
+            vm.envUint("BEEFY_WRAPPER_REWARD_TARGET")
+        );
+
+        // Fund wrapper for refunds
+        payable(address(beefyClientWrapper)).call{value: vm.envUint("BEEFY_WRAPPER_INITIAL_DEPOSIT")}("");
+
         uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
         uint128 maxDestinationFee = uint128(vm.envUint("RESERVE_TRANSFER_MAX_DESTINATION_FEE"));
 
@@ -94,7 +108,7 @@ contract DeployLocal is Script {
         // For testing call contract
         new HelloWorld();
 
-        // Deploy test token for registration testing  
+        // Deploy test token for registration testing
         new Token("Test Token", "TEST", 18);
 
         // Fund the gateway proxy contract. Used to reward relayers

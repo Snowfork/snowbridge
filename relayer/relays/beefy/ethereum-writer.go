@@ -26,8 +26,7 @@ import (
 type EthereumWriter struct {
 	config          *SinkConfig
 	conn            *ethereum.Connection
-	contract        *contracts.BeefyClient
-	wrapper         *contracts.BeefyClientWrapper
+	contract        *contracts.BeefyClientWrapper
 	blockWaitPeriod uint64
 }
 
@@ -296,6 +295,7 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 		params.Leaf,
 		params.LeafProof,
 		params.LeafProofOrder,
+		[]uint32{}, // claimTipBlocks - empty for now, can be populated to claim tips
 	)
 	if err != nil {
 		return nil, fmt.Errorf("final submission: %w", err)
@@ -330,19 +330,13 @@ func (wr *EthereumWriter) waitForTurnEligibility(ctx context.Context) error {
 }
 
 func (wr *EthereumWriter) checkTurnEligibility(ctx context.Context) (bool, error) {
-	// If no wrapper configured, always eligible (backwards compatible)
-	if wr.wrapper == nil {
-		return true, nil
-	}
-
 	callOpts := bind.CallOpts{
 		Context: ctx,
 	}
 
 	myAddress := wr.conn.Keypair().CommonAddress()
 
-	// Check if it's our turn
-	currentTurnRelayer, err := wr.wrapper.GetCurrentTurnRelayer(&callOpts)
+	currentTurnRelayer, err := wr.contract.GetCurrentTurnRelayer(&callOpts)
 	if err != nil {
 		return false, fmt.Errorf("get current turn relayer: %w", err)
 	}
@@ -355,8 +349,7 @@ func (wr *EthereumWriter) checkTurnEligibility(ctx context.Context) (bool, error
 		return true, nil
 	}
 
-	// Not our turn, check if grace period is active
-	gracePeriodActive, err := wr.wrapper.IsGracePeriodActive(&callOpts)
+	gracePeriodActive, err := wr.contract.IsGracePeriodActive(&callOpts)
 	if err != nil {
 		return false, fmt.Errorf("check grace period: %w", err)
 	}
@@ -374,36 +367,26 @@ func (wr *EthereumWriter) checkTurnEligibility(ctx context.Context) (bool, error
 		"currentTurnRelayer": currentTurnRelayer.Hex(),
 		"myAddress":          myAddress.Hex(),
 		"gracePeriodActive":  false,
-	}).Info("Not our turn and grace period not active - skipping submission")
+	}).Info("Not our turn and grace period not active - waiting")
 
 	return false, nil
 }
 
 func (wr *EthereumWriter) initialize(ctx context.Context) error {
 	address := common.HexToAddress(wr.config.Contracts.BeefyClient)
-	contract, err := contracts.NewBeefyClient(address, wr.conn.Client())
+
+	contract, err := contracts.NewBeefyClientWrapper(address, wr.conn.Client())
 	if err != nil {
-		return fmt.Errorf("create beefy client: %w", err)
+		return fmt.Errorf("create beefy client wrapper: %w", err)
 	}
 	wr.contract = contract
-
-	// Also create wrapper bindings for turn-checking functions
-	// This works whether BeefyClient points to the wrapper or the original contract
-	wrapper, err := contracts.NewBeefyClientWrapper(address, wr.conn.Client())
-	if err != nil {
-		// If wrapper bindings fail, it means we're using the original BeefyClient
-		// which doesn't have turn-checking - that's fine, we'll skip eligibility checks
-		log.Debug("BeefyClientWrapper bindings not available - turn checking disabled")
-	} else {
-		wr.wrapper = wrapper
-	}
 
 	callOpts := bind.CallOpts{
 		Context: ctx,
 	}
 	blockWaitPeriod, err := wr.contract.RandaoCommitDelay(&callOpts)
 	if err != nil {
-		return fmt.Errorf("create randao commit delay: %w", err)
+		return fmt.Errorf("get randao commit delay: %w", err)
 	}
 	wr.blockWaitPeriod = blockWaitPeriod.Uint64()
 	log.WithField("randaoCommitDelay", wr.blockWaitPeriod).Trace("Fetched randaoCommitDelay")

@@ -65,7 +65,7 @@ type IBeefyClientValidatorProof struct {
 
 // BeefyClientWrapperMetaData contains all meta data concerning the BeefyClientWrapper contract.
 var BeefyClientWrapperMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"receive\",\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"activeTicket\",\"inputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"addRelayer\",\"inputs\":[{\"name\":\"relayer\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"beefyClient\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"contractIBeefyClient\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"clearTicket\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"commitPrevRandao\",\"inputs\":[{\"name\":\"commitmentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"createFinalBitfield\",\"inputs\":[{\"name\":\"commitmentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"bitfield\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"currentTurnIndex\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getBalance\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCurrentTurnRelayer\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRelayerCount\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRelayers\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"gracePeriodBlocks\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"implementation\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initialize\",\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"isGracePeriodActive\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isRelayer\",\"inputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"lastSubmissionBlock\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"latestBeefyBlock\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"maxGasPrice\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"minBlockIncrement\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"relayers\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"removeRelayer\",\"inputs\":[{\"name\":\"relayer\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setGracePeriod\",\"inputs\":[{\"name\":\"_gracePeriodBlocks\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setMaxGasPrice\",\"inputs\":[{\"name\":\"_maxGasPrice\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setMinBlockIncrement\",\"inputs\":[{\"name\":\"_minBlockIncrement\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"submitFinal\",\"inputs\":[{\"name\":\"commitment\",\"type\":\"tuple\",\"internalType\":\"structIBeefyClient.Commitment\",\"components\":[{\"name\":\"blockNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"validatorSetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"payload\",\"type\":\"tuple[]\",\"internalType\":\"structIBeefyClient.PayloadItem[]\",\"components\":[{\"name\":\"payloadID\",\"type\":\"bytes2\",\"internalType\":\"bytes2\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"bitfield\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"proofs\",\"type\":\"tuple[]\",\"internalType\":\"structIBeefyClient.ValidatorProof[]\",\"components\":[{\"name\":\"v\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"r\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"s\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"index\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]},{\"name\":\"leaf\",\"type\":\"tuple\",\"internalType\":\"structIBeefyClient.MMRLeaf\",\"components\":[{\"name\":\"version\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"parentNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"leafProofOrder\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"submitInitial\",\"inputs\":[{\"name\":\"commitment\",\"type\":\"tuple\",\"internalType\":\"structIBeefyClient.Commitment\",\"components\":[{\"name\":\"blockNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"validatorSetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"payload\",\"type\":\"tuple[]\",\"internalType\":\"structIBeefyClient.PayloadItem[]\",\"components\":[{\"name\":\"payloadID\",\"type\":\"bytes2\",\"internalType\":\"bytes2\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"bitfield\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"proof\",\"type\":\"tuple\",\"internalType\":\"structIBeefyClient.ValidatorProof\",\"components\":[{\"name\":\"v\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"r\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"s\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"index\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"ticketOwner\",\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"transferOwnership\",\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"upgradeTo\",\"inputs\":[{\"name\":\"newImplementation\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"expectedCodeHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawFunds\",\"inputs\":[{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"addresspayable\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"ConfigUpdated\",\"inputs\":[{\"name\":\"parameter\",\"type\":\"string\",\"indexed\":false,\"internalType\":\"string\"},{\"name\":\"value\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"FundsDeposited\",\"inputs\":[{\"name\":\"depositor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"FundsWithdrawn\",\"inputs\":[{\"name\":\"recipient\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RelayerAdded\",\"inputs\":[{\"name\":\"relayer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RelayerRemoved\",\"inputs\":[{\"name\":\"relayer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"SubmissionRefunded\",\"inputs\":[{\"name\":\"relayer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"gasUsed\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TurnAdvanced\",\"inputs\":[{\"name\":\"newTurnIndex\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"nextRelayer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Upgraded\",\"inputs\":[{\"name\":\"implementation\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AlreadyInitialized\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InsufficientBlockIncrement\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidCodeHash\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidContract\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidTicket\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NoRelayers\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotARelayer\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotTicketOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotYourTurn\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"RelayerAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"RelayerNotFound\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TicketAlreadyActive\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferFailed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Unauthorized\",\"inputs\":[]}]",
+	ABI: "[{\"type\":\"receive\",\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"activeTicket\",\"inputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"addRelayer\",\"inputs\":[{\"name\":\"relayer\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"addTip\",\"inputs\":[{\"name\":\"beefyBlockNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"beefyClient\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"contractIBeefyClient\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"clearTicket\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"commitPrevRandao\",\"inputs\":[{\"name\":\"commitmentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"createFinalBitfield\",\"inputs\":[{\"name\":\"commitmentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"bitfield\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"createInitialBitfield\",\"inputs\":[{\"name\":\"bitsToSet\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"length\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"creditedGas\",\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"currentTurnIndex\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"currentValidatorSet\",\"inputs\":[],\"outputs\":[{\"name\":\"id\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"length\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"root\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getBalance\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCreditedGas\",\"inputs\":[{\"name\":\"commitmentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCurrentTurnRelayer\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRelayerCount\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRelayers\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getTip\",\"inputs\":[{\"name\":\"beefyBlockNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"gracePeriodBlocks\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"implementation\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initialize\",\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"isGracePeriodActive\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isRelayer\",\"inputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"lastSubmissionBlock\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"latestBeefyBlock\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"maxGasPrice\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"maxRefundAmount\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"minBlockIncrement\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"nextValidatorSet\",\"inputs\":[],\"outputs\":[{\"name\":\"id\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"length\",\"type\":\"uint128\",\"internalType\":\"uint128\"},{\"name\":\"root\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"randaoCommitDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"relayers\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"removeRelayer\",\"inputs\":[{\"name\":\"relayer\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setGracePeriod\",\"inputs\":[{\"name\":\"_gracePeriodBlocks\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setMaxGasPrice\",\"inputs\":[{\"name\":\"_maxGasPrice\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setMaxRefundAmount\",\"inputs\":[{\"name\":\"_maxRefundAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setMinBlockIncrement\",\"inputs\":[{\"name\":\"_minBlockIncrement\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"submitFinal\",\"inputs\":[{\"name\":\"commitment\",\"type\":\"tuple\",\"internalType\":\"structIBeefyClient.Commitment\",\"components\":[{\"name\":\"blockNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"validatorSetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"payload\",\"type\":\"tuple[]\",\"internalType\":\"structIBeefyClient.PayloadItem[]\",\"components\":[{\"name\":\"payloadID\",\"type\":\"bytes2\",\"internalType\":\"bytes2\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"bitfield\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"proofs\",\"type\":\"tuple[]\",\"internalType\":\"structIBeefyClient.ValidatorProof[]\",\"components\":[{\"name\":\"v\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"r\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"s\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"index\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]},{\"name\":\"leaf\",\"type\":\"tuple\",\"internalType\":\"structIBeefyClient.MMRLeaf\",\"components\":[{\"name\":\"version\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"parentNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"parentHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"nextAuthoritySetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"nextAuthoritySetLen\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"nextAuthoritySetRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"parachainHeadsRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"name\":\"leafProof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"},{\"name\":\"leafProofOrder\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"claimTipBlocks\",\"type\":\"uint32[]\",\"internalType\":\"uint32[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"submitInitial\",\"inputs\":[{\"name\":\"commitment\",\"type\":\"tuple\",\"internalType\":\"structIBeefyClient.Commitment\",\"components\":[{\"name\":\"blockNumber\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"validatorSetID\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"payload\",\"type\":\"tuple[]\",\"internalType\":\"structIBeefyClient.PayloadItem[]\",\"components\":[{\"name\":\"payloadID\",\"type\":\"bytes2\",\"internalType\":\"bytes2\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]},{\"name\":\"bitfield\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"proof\",\"type\":\"tuple\",\"internalType\":\"structIBeefyClient.ValidatorProof\",\"components\":[{\"name\":\"v\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"r\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"s\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"index\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"proof\",\"type\":\"bytes32[]\",\"internalType\":\"bytes32[]\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"ticketOwner\",\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"tips\",\"inputs\":[{\"name\":\"\",\"type\":\"uint32\",\"internalType\":\"uint32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"transferOwnership\",\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"upgradeTo\",\"inputs\":[{\"name\":\"newImplementation\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"expectedCodeHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawFunds\",\"inputs\":[{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"addresspayable\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"FundsDeposited\",\"inputs\":[{\"name\":\"depositor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"FundsWithdrawn\",\"inputs\":[{\"name\":\"recipient\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"GasCredited\",\"inputs\":[{\"name\":\"relayer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"commitmentHash\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"gasUsed\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RelayerAdded\",\"inputs\":[{\"name\":\"relayer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RelayerRemoved\",\"inputs\":[{\"name\":\"relayer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"SubmissionRefunded\",\"inputs\":[{\"name\":\"relayer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"totalGasUsed\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TipAdded\",\"inputs\":[{\"name\":\"tipper\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"beefyBlockNumber\",\"type\":\"uint32\",\"indexed\":true,\"internalType\":\"uint32\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TipsClaimed\",\"inputs\":[{\"name\":\"relayer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"totalAmount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TurnAdvanced\",\"inputs\":[{\"name\":\"newTurnIndex\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"nextRelayer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Upgraded\",\"inputs\":[{\"name\":\"implementation\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AlreadyInitialized\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InsufficientBlockIncrement\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidCodeHash\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidContract\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidTicket\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NoRelayers\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotARelayer\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotTicketOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotYourTurn\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"RelayerAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"RelayerNotFound\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TicketAlreadyActive\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferFailed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Unauthorized\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"UnsupportedCompactEncoding\",\"inputs\":[]}]",
 }
 
 // BeefyClientWrapperABI is the input ABI used to generate the binding from.
@@ -307,6 +307,68 @@ func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) CreateFinalBitfield(
 	return _BeefyClientWrapper.Contract.CreateFinalBitfield(&_BeefyClientWrapper.CallOpts, commitmentHash, bitfield)
 }
 
+// CreateInitialBitfield is a free data retrieval call binding the contract method 0x5da57fe9.
+//
+// Solidity: function createInitialBitfield(uint256[] bitsToSet, uint256 length) view returns(uint256[])
+func (_BeefyClientWrapper *BeefyClientWrapperCaller) CreateInitialBitfield(opts *bind.CallOpts, bitsToSet []*big.Int, length *big.Int) ([]*big.Int, error) {
+	var out []interface{}
+	err := _BeefyClientWrapper.contract.Call(opts, &out, "createInitialBitfield", bitsToSet, length)
+
+	if err != nil {
+		return *new([]*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
+
+	return out0, err
+
+}
+
+// CreateInitialBitfield is a free data retrieval call binding the contract method 0x5da57fe9.
+//
+// Solidity: function createInitialBitfield(uint256[] bitsToSet, uint256 length) view returns(uint256[])
+func (_BeefyClientWrapper *BeefyClientWrapperSession) CreateInitialBitfield(bitsToSet []*big.Int, length *big.Int) ([]*big.Int, error) {
+	return _BeefyClientWrapper.Contract.CreateInitialBitfield(&_BeefyClientWrapper.CallOpts, bitsToSet, length)
+}
+
+// CreateInitialBitfield is a free data retrieval call binding the contract method 0x5da57fe9.
+//
+// Solidity: function createInitialBitfield(uint256[] bitsToSet, uint256 length) view returns(uint256[])
+func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) CreateInitialBitfield(bitsToSet []*big.Int, length *big.Int) ([]*big.Int, error) {
+	return _BeefyClientWrapper.Contract.CreateInitialBitfield(&_BeefyClientWrapper.CallOpts, bitsToSet, length)
+}
+
+// CreditedGas is a free data retrieval call binding the contract method 0x660b2928.
+//
+// Solidity: function creditedGas(bytes32 ) view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperCaller) CreditedGas(opts *bind.CallOpts, arg0 [32]byte) (*big.Int, error) {
+	var out []interface{}
+	err := _BeefyClientWrapper.contract.Call(opts, &out, "creditedGas", arg0)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// CreditedGas is a free data retrieval call binding the contract method 0x660b2928.
+//
+// Solidity: function creditedGas(bytes32 ) view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperSession) CreditedGas(arg0 [32]byte) (*big.Int, error) {
+	return _BeefyClientWrapper.Contract.CreditedGas(&_BeefyClientWrapper.CallOpts, arg0)
+}
+
+// CreditedGas is a free data retrieval call binding the contract method 0x660b2928.
+//
+// Solidity: function creditedGas(bytes32 ) view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) CreditedGas(arg0 [32]byte) (*big.Int, error) {
+	return _BeefyClientWrapper.Contract.CreditedGas(&_BeefyClientWrapper.CallOpts, arg0)
+}
+
 // CurrentTurnIndex is a free data retrieval call binding the contract method 0x50efd268.
 //
 // Solidity: function currentTurnIndex() view returns(uint256)
@@ -338,6 +400,56 @@ func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) CurrentTurnIndex() (
 	return _BeefyClientWrapper.Contract.CurrentTurnIndex(&_BeefyClientWrapper.CallOpts)
 }
 
+// CurrentValidatorSet is a free data retrieval call binding the contract method 0x2cdea717.
+//
+// Solidity: function currentValidatorSet() view returns(uint128 id, uint128 length, bytes32 root)
+func (_BeefyClientWrapper *BeefyClientWrapperCaller) CurrentValidatorSet(opts *bind.CallOpts) (struct {
+	Id     *big.Int
+	Length *big.Int
+	Root   [32]byte
+}, error) {
+	var out []interface{}
+	err := _BeefyClientWrapper.contract.Call(opts, &out, "currentValidatorSet")
+
+	outstruct := new(struct {
+		Id     *big.Int
+		Length *big.Int
+		Root   [32]byte
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.Id = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.Length = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.Root = *abi.ConvertType(out[2], new([32]byte)).(*[32]byte)
+
+	return *outstruct, err
+
+}
+
+// CurrentValidatorSet is a free data retrieval call binding the contract method 0x2cdea717.
+//
+// Solidity: function currentValidatorSet() view returns(uint128 id, uint128 length, bytes32 root)
+func (_BeefyClientWrapper *BeefyClientWrapperSession) CurrentValidatorSet() (struct {
+	Id     *big.Int
+	Length *big.Int
+	Root   [32]byte
+}, error) {
+	return _BeefyClientWrapper.Contract.CurrentValidatorSet(&_BeefyClientWrapper.CallOpts)
+}
+
+// CurrentValidatorSet is a free data retrieval call binding the contract method 0x2cdea717.
+//
+// Solidity: function currentValidatorSet() view returns(uint128 id, uint128 length, bytes32 root)
+func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) CurrentValidatorSet() (struct {
+	Id     *big.Int
+	Length *big.Int
+	Root   [32]byte
+}, error) {
+	return _BeefyClientWrapper.Contract.CurrentValidatorSet(&_BeefyClientWrapper.CallOpts)
+}
+
 // GetBalance is a free data retrieval call binding the contract method 0x12065fe0.
 //
 // Solidity: function getBalance() view returns(uint256)
@@ -367,6 +479,37 @@ func (_BeefyClientWrapper *BeefyClientWrapperSession) GetBalance() (*big.Int, er
 // Solidity: function getBalance() view returns(uint256)
 func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) GetBalance() (*big.Int, error) {
 	return _BeefyClientWrapper.Contract.GetBalance(&_BeefyClientWrapper.CallOpts)
+}
+
+// GetCreditedGas is a free data retrieval call binding the contract method 0xfd635f1c.
+//
+// Solidity: function getCreditedGas(bytes32 commitmentHash) view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperCaller) GetCreditedGas(opts *bind.CallOpts, commitmentHash [32]byte) (*big.Int, error) {
+	var out []interface{}
+	err := _BeefyClientWrapper.contract.Call(opts, &out, "getCreditedGas", commitmentHash)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetCreditedGas is a free data retrieval call binding the contract method 0xfd635f1c.
+//
+// Solidity: function getCreditedGas(bytes32 commitmentHash) view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperSession) GetCreditedGas(commitmentHash [32]byte) (*big.Int, error) {
+	return _BeefyClientWrapper.Contract.GetCreditedGas(&_BeefyClientWrapper.CallOpts, commitmentHash)
+}
+
+// GetCreditedGas is a free data retrieval call binding the contract method 0xfd635f1c.
+//
+// Solidity: function getCreditedGas(bytes32 commitmentHash) view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) GetCreditedGas(commitmentHash [32]byte) (*big.Int, error) {
+	return _BeefyClientWrapper.Contract.GetCreditedGas(&_BeefyClientWrapper.CallOpts, commitmentHash)
 }
 
 // GetCurrentTurnRelayer is a free data retrieval call binding the contract method 0x5664b04f.
@@ -460,6 +603,37 @@ func (_BeefyClientWrapper *BeefyClientWrapperSession) GetRelayers() ([]common.Ad
 // Solidity: function getRelayers() view returns(address[])
 func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) GetRelayers() ([]common.Address, error) {
 	return _BeefyClientWrapper.Contract.GetRelayers(&_BeefyClientWrapper.CallOpts)
+}
+
+// GetTip is a free data retrieval call binding the contract method 0xa7e7353c.
+//
+// Solidity: function getTip(uint32 beefyBlockNumber) view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperCaller) GetTip(opts *bind.CallOpts, beefyBlockNumber uint32) (*big.Int, error) {
+	var out []interface{}
+	err := _BeefyClientWrapper.contract.Call(opts, &out, "getTip", beefyBlockNumber)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetTip is a free data retrieval call binding the contract method 0xa7e7353c.
+//
+// Solidity: function getTip(uint32 beefyBlockNumber) view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperSession) GetTip(beefyBlockNumber uint32) (*big.Int, error) {
+	return _BeefyClientWrapper.Contract.GetTip(&_BeefyClientWrapper.CallOpts, beefyBlockNumber)
+}
+
+// GetTip is a free data retrieval call binding the contract method 0xa7e7353c.
+//
+// Solidity: function getTip(uint32 beefyBlockNumber) view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) GetTip(beefyBlockNumber uint32) (*big.Int, error) {
+	return _BeefyClientWrapper.Contract.GetTip(&_BeefyClientWrapper.CallOpts, beefyBlockNumber)
 }
 
 // GracePeriodBlocks is a free data retrieval call binding the contract method 0xde2daaff.
@@ -679,6 +853,37 @@ func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) MaxGasPrice() (*big.
 	return _BeefyClientWrapper.Contract.MaxGasPrice(&_BeefyClientWrapper.CallOpts)
 }
 
+// MaxRefundAmount is a free data retrieval call binding the contract method 0x28bbc5c1.
+//
+// Solidity: function maxRefundAmount() view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperCaller) MaxRefundAmount(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _BeefyClientWrapper.contract.Call(opts, &out, "maxRefundAmount")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// MaxRefundAmount is a free data retrieval call binding the contract method 0x28bbc5c1.
+//
+// Solidity: function maxRefundAmount() view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperSession) MaxRefundAmount() (*big.Int, error) {
+	return _BeefyClientWrapper.Contract.MaxRefundAmount(&_BeefyClientWrapper.CallOpts)
+}
+
+// MaxRefundAmount is a free data retrieval call binding the contract method 0x28bbc5c1.
+//
+// Solidity: function maxRefundAmount() view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) MaxRefundAmount() (*big.Int, error) {
+	return _BeefyClientWrapper.Contract.MaxRefundAmount(&_BeefyClientWrapper.CallOpts)
+}
+
 // MinBlockIncrement is a free data retrieval call binding the contract method 0x4bfcad80.
 //
 // Solidity: function minBlockIncrement() view returns(uint256)
@@ -710,6 +915,56 @@ func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) MinBlockIncrement() 
 	return _BeefyClientWrapper.Contract.MinBlockIncrement(&_BeefyClientWrapper.CallOpts)
 }
 
+// NextValidatorSet is a free data retrieval call binding the contract method 0x36667513.
+//
+// Solidity: function nextValidatorSet() view returns(uint128 id, uint128 length, bytes32 root)
+func (_BeefyClientWrapper *BeefyClientWrapperCaller) NextValidatorSet(opts *bind.CallOpts) (struct {
+	Id     *big.Int
+	Length *big.Int
+	Root   [32]byte
+}, error) {
+	var out []interface{}
+	err := _BeefyClientWrapper.contract.Call(opts, &out, "nextValidatorSet")
+
+	outstruct := new(struct {
+		Id     *big.Int
+		Length *big.Int
+		Root   [32]byte
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.Id = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.Length = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.Root = *abi.ConvertType(out[2], new([32]byte)).(*[32]byte)
+
+	return *outstruct, err
+
+}
+
+// NextValidatorSet is a free data retrieval call binding the contract method 0x36667513.
+//
+// Solidity: function nextValidatorSet() view returns(uint128 id, uint128 length, bytes32 root)
+func (_BeefyClientWrapper *BeefyClientWrapperSession) NextValidatorSet() (struct {
+	Id     *big.Int
+	Length *big.Int
+	Root   [32]byte
+}, error) {
+	return _BeefyClientWrapper.Contract.NextValidatorSet(&_BeefyClientWrapper.CallOpts)
+}
+
+// NextValidatorSet is a free data retrieval call binding the contract method 0x36667513.
+//
+// Solidity: function nextValidatorSet() view returns(uint128 id, uint128 length, bytes32 root)
+func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) NextValidatorSet() (struct {
+	Id     *big.Int
+	Length *big.Int
+	Root   [32]byte
+}, error) {
+	return _BeefyClientWrapper.Contract.NextValidatorSet(&_BeefyClientWrapper.CallOpts)
+}
+
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
 //
 // Solidity: function owner() view returns(address)
@@ -739,6 +994,37 @@ func (_BeefyClientWrapper *BeefyClientWrapperSession) Owner() (common.Address, e
 // Solidity: function owner() view returns(address)
 func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) Owner() (common.Address, error) {
 	return _BeefyClientWrapper.Contract.Owner(&_BeefyClientWrapper.CallOpts)
+}
+
+// RandaoCommitDelay is a free data retrieval call binding the contract method 0x591d99ee.
+//
+// Solidity: function randaoCommitDelay() view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperCaller) RandaoCommitDelay(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _BeefyClientWrapper.contract.Call(opts, &out, "randaoCommitDelay")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// RandaoCommitDelay is a free data retrieval call binding the contract method 0x591d99ee.
+//
+// Solidity: function randaoCommitDelay() view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperSession) RandaoCommitDelay() (*big.Int, error) {
+	return _BeefyClientWrapper.Contract.RandaoCommitDelay(&_BeefyClientWrapper.CallOpts)
+}
+
+// RandaoCommitDelay is a free data retrieval call binding the contract method 0x591d99ee.
+//
+// Solidity: function randaoCommitDelay() view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) RandaoCommitDelay() (*big.Int, error) {
+	return _BeefyClientWrapper.Contract.RandaoCommitDelay(&_BeefyClientWrapper.CallOpts)
 }
 
 // Relayers is a free data retrieval call binding the contract method 0x9a48e7f9.
@@ -803,6 +1089,37 @@ func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) TicketOwner(arg0 [32
 	return _BeefyClientWrapper.Contract.TicketOwner(&_BeefyClientWrapper.CallOpts, arg0)
 }
 
+// Tips is a free data retrieval call binding the contract method 0x1756fe14.
+//
+// Solidity: function tips(uint32 ) view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperCaller) Tips(opts *bind.CallOpts, arg0 uint32) (*big.Int, error) {
+	var out []interface{}
+	err := _BeefyClientWrapper.contract.Call(opts, &out, "tips", arg0)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// Tips is a free data retrieval call binding the contract method 0x1756fe14.
+//
+// Solidity: function tips(uint32 ) view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperSession) Tips(arg0 uint32) (*big.Int, error) {
+	return _BeefyClientWrapper.Contract.Tips(&_BeefyClientWrapper.CallOpts, arg0)
+}
+
+// Tips is a free data retrieval call binding the contract method 0x1756fe14.
+//
+// Solidity: function tips(uint32 ) view returns(uint256)
+func (_BeefyClientWrapper *BeefyClientWrapperCallerSession) Tips(arg0 uint32) (*big.Int, error) {
+	return _BeefyClientWrapper.Contract.Tips(&_BeefyClientWrapper.CallOpts, arg0)
+}
+
 // AddRelayer is a paid mutator transaction binding the contract method 0xdd39f00d.
 //
 // Solidity: function addRelayer(address relayer) returns()
@@ -822,6 +1139,27 @@ func (_BeefyClientWrapper *BeefyClientWrapperSession) AddRelayer(relayer common.
 // Solidity: function addRelayer(address relayer) returns()
 func (_BeefyClientWrapper *BeefyClientWrapperTransactorSession) AddRelayer(relayer common.Address) (*types.Transaction, error) {
 	return _BeefyClientWrapper.Contract.AddRelayer(&_BeefyClientWrapper.TransactOpts, relayer)
+}
+
+// AddTip is a paid mutator transaction binding the contract method 0x9f404590.
+//
+// Solidity: function addTip(uint32 beefyBlockNumber) payable returns()
+func (_BeefyClientWrapper *BeefyClientWrapperTransactor) AddTip(opts *bind.TransactOpts, beefyBlockNumber uint32) (*types.Transaction, error) {
+	return _BeefyClientWrapper.contract.Transact(opts, "addTip", beefyBlockNumber)
+}
+
+// AddTip is a paid mutator transaction binding the contract method 0x9f404590.
+//
+// Solidity: function addTip(uint32 beefyBlockNumber) payable returns()
+func (_BeefyClientWrapper *BeefyClientWrapperSession) AddTip(beefyBlockNumber uint32) (*types.Transaction, error) {
+	return _BeefyClientWrapper.Contract.AddTip(&_BeefyClientWrapper.TransactOpts, beefyBlockNumber)
+}
+
+// AddTip is a paid mutator transaction binding the contract method 0x9f404590.
+//
+// Solidity: function addTip(uint32 beefyBlockNumber) payable returns()
+func (_BeefyClientWrapper *BeefyClientWrapperTransactorSession) AddTip(beefyBlockNumber uint32) (*types.Transaction, error) {
+	return _BeefyClientWrapper.Contract.AddTip(&_BeefyClientWrapper.TransactOpts, beefyBlockNumber)
 }
 
 // ClearTicket is a paid mutator transaction binding the contract method 0x15738ab4.
@@ -950,6 +1288,27 @@ func (_BeefyClientWrapper *BeefyClientWrapperTransactorSession) SetMaxGasPrice(_
 	return _BeefyClientWrapper.Contract.SetMaxGasPrice(&_BeefyClientWrapper.TransactOpts, _maxGasPrice)
 }
 
+// SetMaxRefundAmount is a paid mutator transaction binding the contract method 0x2efbeccd.
+//
+// Solidity: function setMaxRefundAmount(uint256 _maxRefundAmount) returns()
+func (_BeefyClientWrapper *BeefyClientWrapperTransactor) SetMaxRefundAmount(opts *bind.TransactOpts, _maxRefundAmount *big.Int) (*types.Transaction, error) {
+	return _BeefyClientWrapper.contract.Transact(opts, "setMaxRefundAmount", _maxRefundAmount)
+}
+
+// SetMaxRefundAmount is a paid mutator transaction binding the contract method 0x2efbeccd.
+//
+// Solidity: function setMaxRefundAmount(uint256 _maxRefundAmount) returns()
+func (_BeefyClientWrapper *BeefyClientWrapperSession) SetMaxRefundAmount(_maxRefundAmount *big.Int) (*types.Transaction, error) {
+	return _BeefyClientWrapper.Contract.SetMaxRefundAmount(&_BeefyClientWrapper.TransactOpts, _maxRefundAmount)
+}
+
+// SetMaxRefundAmount is a paid mutator transaction binding the contract method 0x2efbeccd.
+//
+// Solidity: function setMaxRefundAmount(uint256 _maxRefundAmount) returns()
+func (_BeefyClientWrapper *BeefyClientWrapperTransactorSession) SetMaxRefundAmount(_maxRefundAmount *big.Int) (*types.Transaction, error) {
+	return _BeefyClientWrapper.Contract.SetMaxRefundAmount(&_BeefyClientWrapper.TransactOpts, _maxRefundAmount)
+}
+
 // SetMinBlockIncrement is a paid mutator transaction binding the contract method 0x3f358a76.
 //
 // Solidity: function setMinBlockIncrement(uint256 _minBlockIncrement) returns()
@@ -971,25 +1330,25 @@ func (_BeefyClientWrapper *BeefyClientWrapperTransactorSession) SetMinBlockIncre
 	return _BeefyClientWrapper.Contract.SetMinBlockIncrement(&_BeefyClientWrapper.TransactOpts, _minBlockIncrement)
 }
 
-// SubmitFinal is a paid mutator transaction binding the contract method 0x623b223d.
+// SubmitFinal is a paid mutator transaction binding the contract method 0xfafd0631.
 //
-// Solidity: function submitFinal((uint32,uint64,(bytes2,bytes)[]) commitment, uint256[] bitfield, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proofs, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, bytes32[] leafProof, uint256 leafProofOrder) returns()
-func (_BeefyClientWrapper *BeefyClientWrapperTransactor) SubmitFinal(opts *bind.TransactOpts, commitment IBeefyClientCommitment, bitfield []*big.Int, proofs []IBeefyClientValidatorProof, leaf IBeefyClientMMRLeaf, leafProof [][32]byte, leafProofOrder *big.Int) (*types.Transaction, error) {
-	return _BeefyClientWrapper.contract.Transact(opts, "submitFinal", commitment, bitfield, proofs, leaf, leafProof, leafProofOrder)
+// Solidity: function submitFinal((uint32,uint64,(bytes2,bytes)[]) commitment, uint256[] bitfield, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proofs, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, bytes32[] leafProof, uint256 leafProofOrder, uint32[] claimTipBlocks) returns()
+func (_BeefyClientWrapper *BeefyClientWrapperTransactor) SubmitFinal(opts *bind.TransactOpts, commitment IBeefyClientCommitment, bitfield []*big.Int, proofs []IBeefyClientValidatorProof, leaf IBeefyClientMMRLeaf, leafProof [][32]byte, leafProofOrder *big.Int, claimTipBlocks []uint32) (*types.Transaction, error) {
+	return _BeefyClientWrapper.contract.Transact(opts, "submitFinal", commitment, bitfield, proofs, leaf, leafProof, leafProofOrder, claimTipBlocks)
 }
 
-// SubmitFinal is a paid mutator transaction binding the contract method 0x623b223d.
+// SubmitFinal is a paid mutator transaction binding the contract method 0xfafd0631.
 //
-// Solidity: function submitFinal((uint32,uint64,(bytes2,bytes)[]) commitment, uint256[] bitfield, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proofs, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, bytes32[] leafProof, uint256 leafProofOrder) returns()
-func (_BeefyClientWrapper *BeefyClientWrapperSession) SubmitFinal(commitment IBeefyClientCommitment, bitfield []*big.Int, proofs []IBeefyClientValidatorProof, leaf IBeefyClientMMRLeaf, leafProof [][32]byte, leafProofOrder *big.Int) (*types.Transaction, error) {
-	return _BeefyClientWrapper.Contract.SubmitFinal(&_BeefyClientWrapper.TransactOpts, commitment, bitfield, proofs, leaf, leafProof, leafProofOrder)
+// Solidity: function submitFinal((uint32,uint64,(bytes2,bytes)[]) commitment, uint256[] bitfield, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proofs, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, bytes32[] leafProof, uint256 leafProofOrder, uint32[] claimTipBlocks) returns()
+func (_BeefyClientWrapper *BeefyClientWrapperSession) SubmitFinal(commitment IBeefyClientCommitment, bitfield []*big.Int, proofs []IBeefyClientValidatorProof, leaf IBeefyClientMMRLeaf, leafProof [][32]byte, leafProofOrder *big.Int, claimTipBlocks []uint32) (*types.Transaction, error) {
+	return _BeefyClientWrapper.Contract.SubmitFinal(&_BeefyClientWrapper.TransactOpts, commitment, bitfield, proofs, leaf, leafProof, leafProofOrder, claimTipBlocks)
 }
 
-// SubmitFinal is a paid mutator transaction binding the contract method 0x623b223d.
+// SubmitFinal is a paid mutator transaction binding the contract method 0xfafd0631.
 //
-// Solidity: function submitFinal((uint32,uint64,(bytes2,bytes)[]) commitment, uint256[] bitfield, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proofs, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, bytes32[] leafProof, uint256 leafProofOrder) returns()
-func (_BeefyClientWrapper *BeefyClientWrapperTransactorSession) SubmitFinal(commitment IBeefyClientCommitment, bitfield []*big.Int, proofs []IBeefyClientValidatorProof, leaf IBeefyClientMMRLeaf, leafProof [][32]byte, leafProofOrder *big.Int) (*types.Transaction, error) {
-	return _BeefyClientWrapper.Contract.SubmitFinal(&_BeefyClientWrapper.TransactOpts, commitment, bitfield, proofs, leaf, leafProof, leafProofOrder)
+// Solidity: function submitFinal((uint32,uint64,(bytes2,bytes)[]) commitment, uint256[] bitfield, (uint8,bytes32,bytes32,uint256,address,bytes32[])[] proofs, (uint8,uint32,bytes32,uint64,uint32,bytes32,bytes32) leaf, bytes32[] leafProof, uint256 leafProofOrder, uint32[] claimTipBlocks) returns()
+func (_BeefyClientWrapper *BeefyClientWrapperTransactorSession) SubmitFinal(commitment IBeefyClientCommitment, bitfield []*big.Int, proofs []IBeefyClientValidatorProof, leaf IBeefyClientMMRLeaf, leafProof [][32]byte, leafProofOrder *big.Int, claimTipBlocks []uint32) (*types.Transaction, error) {
+	return _BeefyClientWrapper.Contract.SubmitFinal(&_BeefyClientWrapper.TransactOpts, commitment, bitfield, proofs, leaf, leafProof, leafProofOrder, claimTipBlocks)
 }
 
 // SubmitInitial is a paid mutator transaction binding the contract method 0xbb51f1eb.
@@ -1095,141 +1454,6 @@ func (_BeefyClientWrapper *BeefyClientWrapperSession) Receive() (*types.Transact
 // Solidity: receive() payable returns()
 func (_BeefyClientWrapper *BeefyClientWrapperTransactorSession) Receive() (*types.Transaction, error) {
 	return _BeefyClientWrapper.Contract.Receive(&_BeefyClientWrapper.TransactOpts)
-}
-
-// BeefyClientWrapperConfigUpdatedIterator is returned from FilterConfigUpdated and is used to iterate over the raw logs and unpacked data for ConfigUpdated events raised by the BeefyClientWrapper contract.
-type BeefyClientWrapperConfigUpdatedIterator struct {
-	Event *BeefyClientWrapperConfigUpdated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *BeefyClientWrapperConfigUpdatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(BeefyClientWrapperConfigUpdated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(BeefyClientWrapperConfigUpdated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *BeefyClientWrapperConfigUpdatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *BeefyClientWrapperConfigUpdatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// BeefyClientWrapperConfigUpdated represents a ConfigUpdated event raised by the BeefyClientWrapper contract.
-type BeefyClientWrapperConfigUpdated struct {
-	Parameter string
-	Value     *big.Int
-	Raw       types.Log // Blockchain specific contextual infos
-}
-
-// FilterConfigUpdated is a free log retrieval operation binding the contract event 0x12c9dccd129ff783f1c8228eacdfa8e334ddecb7ec5c9a79ec662a4aed3d012a.
-//
-// Solidity: event ConfigUpdated(string parameter, uint256 value)
-func (_BeefyClientWrapper *BeefyClientWrapperFilterer) FilterConfigUpdated(opts *bind.FilterOpts) (*BeefyClientWrapperConfigUpdatedIterator, error) {
-
-	logs, sub, err := _BeefyClientWrapper.contract.FilterLogs(opts, "ConfigUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return &BeefyClientWrapperConfigUpdatedIterator{contract: _BeefyClientWrapper.contract, event: "ConfigUpdated", logs: logs, sub: sub}, nil
-}
-
-// WatchConfigUpdated is a free log subscription operation binding the contract event 0x12c9dccd129ff783f1c8228eacdfa8e334ddecb7ec5c9a79ec662a4aed3d012a.
-//
-// Solidity: event ConfigUpdated(string parameter, uint256 value)
-func (_BeefyClientWrapper *BeefyClientWrapperFilterer) WatchConfigUpdated(opts *bind.WatchOpts, sink chan<- *BeefyClientWrapperConfigUpdated) (event.Subscription, error) {
-
-	logs, sub, err := _BeefyClientWrapper.contract.WatchLogs(opts, "ConfigUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(BeefyClientWrapperConfigUpdated)
-				if err := _BeefyClientWrapper.contract.UnpackLog(event, "ConfigUpdated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseConfigUpdated is a log parse operation binding the contract event 0x12c9dccd129ff783f1c8228eacdfa8e334ddecb7ec5c9a79ec662a4aed3d012a.
-//
-// Solidity: event ConfigUpdated(string parameter, uint256 value)
-func (_BeefyClientWrapper *BeefyClientWrapperFilterer) ParseConfigUpdated(log types.Log) (*BeefyClientWrapperConfigUpdated, error) {
-	event := new(BeefyClientWrapperConfigUpdated)
-	if err := _BeefyClientWrapper.contract.UnpackLog(event, "ConfigUpdated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
 }
 
 // BeefyClientWrapperFundsDepositedIterator is returned from FilterFundsDeposited and is used to iterate over the raw logs and unpacked data for FundsDeposited events raised by the BeefyClientWrapper contract.
@@ -1516,6 +1740,160 @@ func (_BeefyClientWrapper *BeefyClientWrapperFilterer) WatchFundsWithdrawn(opts 
 func (_BeefyClientWrapper *BeefyClientWrapperFilterer) ParseFundsWithdrawn(log types.Log) (*BeefyClientWrapperFundsWithdrawn, error) {
 	event := new(BeefyClientWrapperFundsWithdrawn)
 	if err := _BeefyClientWrapper.contract.UnpackLog(event, "FundsWithdrawn", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BeefyClientWrapperGasCreditedIterator is returned from FilterGasCredited and is used to iterate over the raw logs and unpacked data for GasCredited events raised by the BeefyClientWrapper contract.
+type BeefyClientWrapperGasCreditedIterator struct {
+	Event *BeefyClientWrapperGasCredited // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BeefyClientWrapperGasCreditedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BeefyClientWrapperGasCredited)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BeefyClientWrapperGasCredited)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BeefyClientWrapperGasCreditedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BeefyClientWrapperGasCreditedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BeefyClientWrapperGasCredited represents a GasCredited event raised by the BeefyClientWrapper contract.
+type BeefyClientWrapperGasCredited struct {
+	Relayer        common.Address
+	CommitmentHash [32]byte
+	GasUsed        *big.Int
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterGasCredited is a free log retrieval operation binding the contract event 0xa96627e523aafcce96e4a95478ed8181042d6fcd32fd0892e1743408da8948e2.
+//
+// Solidity: event GasCredited(address indexed relayer, bytes32 indexed commitmentHash, uint256 gasUsed)
+func (_BeefyClientWrapper *BeefyClientWrapperFilterer) FilterGasCredited(opts *bind.FilterOpts, relayer []common.Address, commitmentHash [][32]byte) (*BeefyClientWrapperGasCreditedIterator, error) {
+
+	var relayerRule []interface{}
+	for _, relayerItem := range relayer {
+		relayerRule = append(relayerRule, relayerItem)
+	}
+	var commitmentHashRule []interface{}
+	for _, commitmentHashItem := range commitmentHash {
+		commitmentHashRule = append(commitmentHashRule, commitmentHashItem)
+	}
+
+	logs, sub, err := _BeefyClientWrapper.contract.FilterLogs(opts, "GasCredited", relayerRule, commitmentHashRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BeefyClientWrapperGasCreditedIterator{contract: _BeefyClientWrapper.contract, event: "GasCredited", logs: logs, sub: sub}, nil
+}
+
+// WatchGasCredited is a free log subscription operation binding the contract event 0xa96627e523aafcce96e4a95478ed8181042d6fcd32fd0892e1743408da8948e2.
+//
+// Solidity: event GasCredited(address indexed relayer, bytes32 indexed commitmentHash, uint256 gasUsed)
+func (_BeefyClientWrapper *BeefyClientWrapperFilterer) WatchGasCredited(opts *bind.WatchOpts, sink chan<- *BeefyClientWrapperGasCredited, relayer []common.Address, commitmentHash [][32]byte) (event.Subscription, error) {
+
+	var relayerRule []interface{}
+	for _, relayerItem := range relayer {
+		relayerRule = append(relayerRule, relayerItem)
+	}
+	var commitmentHashRule []interface{}
+	for _, commitmentHashItem := range commitmentHash {
+		commitmentHashRule = append(commitmentHashRule, commitmentHashItem)
+	}
+
+	logs, sub, err := _BeefyClientWrapper.contract.WatchLogs(opts, "GasCredited", relayerRule, commitmentHashRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BeefyClientWrapperGasCredited)
+				if err := _BeefyClientWrapper.contract.UnpackLog(event, "GasCredited", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseGasCredited is a log parse operation binding the contract event 0xa96627e523aafcce96e4a95478ed8181042d6fcd32fd0892e1743408da8948e2.
+//
+// Solidity: event GasCredited(address indexed relayer, bytes32 indexed commitmentHash, uint256 gasUsed)
+func (_BeefyClientWrapper *BeefyClientWrapperFilterer) ParseGasCredited(log types.Log) (*BeefyClientWrapperGasCredited, error) {
+	event := new(BeefyClientWrapperGasCredited)
+	if err := _BeefyClientWrapper.contract.UnpackLog(event, "GasCredited", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1879,15 +2257,15 @@ func (it *BeefyClientWrapperSubmissionRefundedIterator) Close() error {
 
 // BeefyClientWrapperSubmissionRefunded represents a SubmissionRefunded event raised by the BeefyClientWrapper contract.
 type BeefyClientWrapperSubmissionRefunded struct {
-	Relayer common.Address
-	Amount  *big.Int
-	GasUsed *big.Int
-	Raw     types.Log // Blockchain specific contextual infos
+	Relayer      common.Address
+	Amount       *big.Int
+	TotalGasUsed *big.Int
+	Raw          types.Log // Blockchain specific contextual infos
 }
 
 // FilterSubmissionRefunded is a free log retrieval operation binding the contract event 0x103cb711554967fbeea0c6394a6dfedc44d0e729191e719d0976438783912f52.
 //
-// Solidity: event SubmissionRefunded(address indexed relayer, uint256 amount, uint256 gasUsed)
+// Solidity: event SubmissionRefunded(address indexed relayer, uint256 amount, uint256 totalGasUsed)
 func (_BeefyClientWrapper *BeefyClientWrapperFilterer) FilterSubmissionRefunded(opts *bind.FilterOpts, relayer []common.Address) (*BeefyClientWrapperSubmissionRefundedIterator, error) {
 
 	var relayerRule []interface{}
@@ -1904,7 +2282,7 @@ func (_BeefyClientWrapper *BeefyClientWrapperFilterer) FilterSubmissionRefunded(
 
 // WatchSubmissionRefunded is a free log subscription operation binding the contract event 0x103cb711554967fbeea0c6394a6dfedc44d0e729191e719d0976438783912f52.
 //
-// Solidity: event SubmissionRefunded(address indexed relayer, uint256 amount, uint256 gasUsed)
+// Solidity: event SubmissionRefunded(address indexed relayer, uint256 amount, uint256 totalGasUsed)
 func (_BeefyClientWrapper *BeefyClientWrapperFilterer) WatchSubmissionRefunded(opts *bind.WatchOpts, sink chan<- *BeefyClientWrapperSubmissionRefunded, relayer []common.Address) (event.Subscription, error) {
 
 	var relayerRule []interface{}
@@ -1946,10 +2324,309 @@ func (_BeefyClientWrapper *BeefyClientWrapperFilterer) WatchSubmissionRefunded(o
 
 // ParseSubmissionRefunded is a log parse operation binding the contract event 0x103cb711554967fbeea0c6394a6dfedc44d0e729191e719d0976438783912f52.
 //
-// Solidity: event SubmissionRefunded(address indexed relayer, uint256 amount, uint256 gasUsed)
+// Solidity: event SubmissionRefunded(address indexed relayer, uint256 amount, uint256 totalGasUsed)
 func (_BeefyClientWrapper *BeefyClientWrapperFilterer) ParseSubmissionRefunded(log types.Log) (*BeefyClientWrapperSubmissionRefunded, error) {
 	event := new(BeefyClientWrapperSubmissionRefunded)
 	if err := _BeefyClientWrapper.contract.UnpackLog(event, "SubmissionRefunded", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BeefyClientWrapperTipAddedIterator is returned from FilterTipAdded and is used to iterate over the raw logs and unpacked data for TipAdded events raised by the BeefyClientWrapper contract.
+type BeefyClientWrapperTipAddedIterator struct {
+	Event *BeefyClientWrapperTipAdded // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BeefyClientWrapperTipAddedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BeefyClientWrapperTipAdded)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BeefyClientWrapperTipAdded)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BeefyClientWrapperTipAddedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BeefyClientWrapperTipAddedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BeefyClientWrapperTipAdded represents a TipAdded event raised by the BeefyClientWrapper contract.
+type BeefyClientWrapperTipAdded struct {
+	Tipper           common.Address
+	BeefyBlockNumber uint32
+	Amount           *big.Int
+	Raw              types.Log // Blockchain specific contextual infos
+}
+
+// FilterTipAdded is a free log retrieval operation binding the contract event 0x534f476b78e1964cad3783848d29e18156e2e9a2a3cfe8f93735b141d8c1285a.
+//
+// Solidity: event TipAdded(address indexed tipper, uint32 indexed beefyBlockNumber, uint256 amount)
+func (_BeefyClientWrapper *BeefyClientWrapperFilterer) FilterTipAdded(opts *bind.FilterOpts, tipper []common.Address, beefyBlockNumber []uint32) (*BeefyClientWrapperTipAddedIterator, error) {
+
+	var tipperRule []interface{}
+	for _, tipperItem := range tipper {
+		tipperRule = append(tipperRule, tipperItem)
+	}
+	var beefyBlockNumberRule []interface{}
+	for _, beefyBlockNumberItem := range beefyBlockNumber {
+		beefyBlockNumberRule = append(beefyBlockNumberRule, beefyBlockNumberItem)
+	}
+
+	logs, sub, err := _BeefyClientWrapper.contract.FilterLogs(opts, "TipAdded", tipperRule, beefyBlockNumberRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BeefyClientWrapperTipAddedIterator{contract: _BeefyClientWrapper.contract, event: "TipAdded", logs: logs, sub: sub}, nil
+}
+
+// WatchTipAdded is a free log subscription operation binding the contract event 0x534f476b78e1964cad3783848d29e18156e2e9a2a3cfe8f93735b141d8c1285a.
+//
+// Solidity: event TipAdded(address indexed tipper, uint32 indexed beefyBlockNumber, uint256 amount)
+func (_BeefyClientWrapper *BeefyClientWrapperFilterer) WatchTipAdded(opts *bind.WatchOpts, sink chan<- *BeefyClientWrapperTipAdded, tipper []common.Address, beefyBlockNumber []uint32) (event.Subscription, error) {
+
+	var tipperRule []interface{}
+	for _, tipperItem := range tipper {
+		tipperRule = append(tipperRule, tipperItem)
+	}
+	var beefyBlockNumberRule []interface{}
+	for _, beefyBlockNumberItem := range beefyBlockNumber {
+		beefyBlockNumberRule = append(beefyBlockNumberRule, beefyBlockNumberItem)
+	}
+
+	logs, sub, err := _BeefyClientWrapper.contract.WatchLogs(opts, "TipAdded", tipperRule, beefyBlockNumberRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BeefyClientWrapperTipAdded)
+				if err := _BeefyClientWrapper.contract.UnpackLog(event, "TipAdded", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTipAdded is a log parse operation binding the contract event 0x534f476b78e1964cad3783848d29e18156e2e9a2a3cfe8f93735b141d8c1285a.
+//
+// Solidity: event TipAdded(address indexed tipper, uint32 indexed beefyBlockNumber, uint256 amount)
+func (_BeefyClientWrapper *BeefyClientWrapperFilterer) ParseTipAdded(log types.Log) (*BeefyClientWrapperTipAdded, error) {
+	event := new(BeefyClientWrapperTipAdded)
+	if err := _BeefyClientWrapper.contract.UnpackLog(event, "TipAdded", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BeefyClientWrapperTipsClaimedIterator is returned from FilterTipsClaimed and is used to iterate over the raw logs and unpacked data for TipsClaimed events raised by the BeefyClientWrapper contract.
+type BeefyClientWrapperTipsClaimedIterator struct {
+	Event *BeefyClientWrapperTipsClaimed // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BeefyClientWrapperTipsClaimedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BeefyClientWrapperTipsClaimed)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BeefyClientWrapperTipsClaimed)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BeefyClientWrapperTipsClaimedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BeefyClientWrapperTipsClaimedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BeefyClientWrapperTipsClaimed represents a TipsClaimed event raised by the BeefyClientWrapper contract.
+type BeefyClientWrapperTipsClaimed struct {
+	Relayer     common.Address
+	TotalAmount *big.Int
+	Raw         types.Log // Blockchain specific contextual infos
+}
+
+// FilterTipsClaimed is a free log retrieval operation binding the contract event 0xf5e7a62133aaed5c8783583a823343c7c0c0f51f0e2e8c76ec50feffc002b1f3.
+//
+// Solidity: event TipsClaimed(address indexed relayer, uint256 totalAmount)
+func (_BeefyClientWrapper *BeefyClientWrapperFilterer) FilterTipsClaimed(opts *bind.FilterOpts, relayer []common.Address) (*BeefyClientWrapperTipsClaimedIterator, error) {
+
+	var relayerRule []interface{}
+	for _, relayerItem := range relayer {
+		relayerRule = append(relayerRule, relayerItem)
+	}
+
+	logs, sub, err := _BeefyClientWrapper.contract.FilterLogs(opts, "TipsClaimed", relayerRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BeefyClientWrapperTipsClaimedIterator{contract: _BeefyClientWrapper.contract, event: "TipsClaimed", logs: logs, sub: sub}, nil
+}
+
+// WatchTipsClaimed is a free log subscription operation binding the contract event 0xf5e7a62133aaed5c8783583a823343c7c0c0f51f0e2e8c76ec50feffc002b1f3.
+//
+// Solidity: event TipsClaimed(address indexed relayer, uint256 totalAmount)
+func (_BeefyClientWrapper *BeefyClientWrapperFilterer) WatchTipsClaimed(opts *bind.WatchOpts, sink chan<- *BeefyClientWrapperTipsClaimed, relayer []common.Address) (event.Subscription, error) {
+
+	var relayerRule []interface{}
+	for _, relayerItem := range relayer {
+		relayerRule = append(relayerRule, relayerItem)
+	}
+
+	logs, sub, err := _BeefyClientWrapper.contract.WatchLogs(opts, "TipsClaimed", relayerRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BeefyClientWrapperTipsClaimed)
+				if err := _BeefyClientWrapper.contract.UnpackLog(event, "TipsClaimed", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTipsClaimed is a log parse operation binding the contract event 0xf5e7a62133aaed5c8783583a823343c7c0c0f51f0e2e8c76ec50feffc002b1f3.
+//
+// Solidity: event TipsClaimed(address indexed relayer, uint256 totalAmount)
+func (_BeefyClientWrapper *BeefyClientWrapperFilterer) ParseTipsClaimed(log types.Log) (*BeefyClientWrapperTipsClaimed, error) {
+	event := new(BeefyClientWrapperTipsClaimed)
+	if err := _BeefyClientWrapper.contract.UnpackLog(event, "TipsClaimed", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

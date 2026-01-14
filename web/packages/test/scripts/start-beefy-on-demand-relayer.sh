@@ -4,9 +4,9 @@ set -eu
 source scripts/set-env.sh
 
 config_relayer() {
-    # Configure beefy relay
+    # Configure beefy relay (uses wrapper address)
     jq \
-        --arg k1 "$(address_for BeefyClient)" \
+        --arg k1 "$(address_for BeefyClientWrapperProxy)" \
         --arg k2 "$(address_for GatewayProxy)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg eth_gas_limit $eth_gas_limit \
