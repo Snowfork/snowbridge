@@ -7,7 +7,7 @@ import {WETH9} from "canonical-weth/WETH9.sol";
 
 import {SnowbridgeL2Adaptor} from "../../../../src/l2-integration/SnowbridgeL2Adaptor.sol";
 import {ISpokePool} from "../../../../src/l2-integration/interfaces/ISpokePool.sol";
-import {SwapParams, SendParams} from "../../../../src/l2-integration/Types.sol";
+import {DepositParams, SendParams, SwapParams} from "../../../../src/l2-integration/Types.sol";
 
 import {
     USDC as SEPOLIA_USDC,
@@ -53,13 +53,18 @@ contract TestSnowbridgeL2Adaptor is Script {
             revert("Unsupported L1 network");
         }
 
-        SwapParams memory params = SwapParams({
+        DepositParams memory params = DepositParams({
             inputToken: BASE_USDC_ADDRESS,
             outputToken: USDC_ADDRESS,
-            inputAmount: 110_000, // 0.11 USDC
-            outputAmount: 100_000, // 0.1 USDC
+            inputAmount: 1_000_000, // 1 USDC
+            outputAmount: 200_000, // 0.2 USDC
             destinationChainId: CHAIN_ID,
             fillDeadlineBuffer: TIME_BUFFER
+        });
+        SwapParams memory swapParams = SwapParams({
+            inputAmountForFee: 500_000, // 0.5 USDC for fees
+            poolFee: 500,
+            sqrtPriceLimitX96: 0
         });
         SendParams memory sendParams;
         // Send the 0.1 USDC to Polkadot
@@ -73,8 +78,7 @@ contract TestSnowbridgeL2Adaptor is Script {
                 assets: assets,
                 claimer: hex"0001010054d82b42bcd22b175d71d62ef2114defcf14344c4b88acf0eb4356737d7fdb4a",
                 executionFee: 5_688_737_408_032,
-                relayerFee: 50_187_270_355_445,
-                l2Fee: 20_000_000_000_000
+                relayerFee: 50_187_270_355_445
             });
         } else if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))) {
             // tx from https://sepolia.etherscan.io/tx/0x7068be9a9fecd2d3fbdca0e28bf1a84d4c05789dacd34cc46eef0d2a4fdd43fb
@@ -85,22 +89,22 @@ contract TestSnowbridgeL2Adaptor is Script {
                 assets: assets,
                 claimer: hex"000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a",
                 executionFee: 33_329_707_255_987,
-                relayerFee: 559_885_563_730_065,
-                l2Fee: 20_000_000_000_000
+                relayerFee: 559_885_563_730_065
             });
         } else {
             revert("Unsupported L1 network");
         }
 
-        uint256 nativeFeeAmount =
-            sendParams.relayerFee + sendParams.executionFee + sendParams.l2Fee;
-
         IERC20(params.inputToken).approve(l2SnowbridgeAdaptor, params.inputAmount);
 
         SnowbridgeL2Adaptor(l2SnowbridgeAdaptor)
-        .sendTokenAndCall{
-            value: nativeFeeAmount
-        }(params, sendParams, recipient, keccak256("TestSnowbridgeL2AdaptorTopicId"));
+            .sendTokenAndCall(
+                params,
+                swapParams,
+                sendParams,
+                recipient,
+                keccak256("TestSnowbridgeL2AdaptorTopicId")
+            );
 
         return;
     }

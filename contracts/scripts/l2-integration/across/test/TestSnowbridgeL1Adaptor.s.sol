@@ -6,7 +6,7 @@ import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 
 import {SnowbridgeL1Adaptor} from "../../../../src/l2-integration/SnowbridgeL1Adaptor.sol";
 import {ISpokePool} from "../../../../src/l2-integration/interfaces/ISpokePool.sol";
-import {SwapParams, SendParams} from "../../../../src/l2-integration/Types.sol";
+import {DepositParams, SendParams} from "../../../../src/l2-integration/Types.sol";
 
 import {
     USDC as SEPOLIA_USDC,
@@ -53,7 +53,7 @@ contract TestSnowbridgeL1Adaptor is Script {
             revert("Unsupported L1 network");
         }
 
-        SwapParams memory params = SwapParams({
+        DepositParams memory params = DepositParams({
             inputToken: USDC_ADDRESS,
             outputToken: BASE_USDC_ADDRESS,
             inputAmount: 1_100_000, // 1.1 USDC

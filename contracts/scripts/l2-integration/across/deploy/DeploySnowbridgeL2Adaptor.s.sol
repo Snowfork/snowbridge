@@ -10,7 +10,8 @@ import {
     BASE_MULTI_CALL_HANDLER as SEPOLIA_BASE_MULTI_CALL_HANDLER,
     WETH9 as SEPOLIA_WETH9,
     BASE_WETH9 as SEPOLIA_BASE_WETH9,
-    GatewayV2 as SEPOLIA_GatewayV2
+    GATEWAY as SEPOLIA_GATEWAY,
+    UNISWAP_ROUTER as SEPOLIA_UNISWAP_ROUTER
 } from "../constants/Sepolia.sol";
 import {
     SPOKE_POOL as MAINNET_SPOKE_POOL,
@@ -19,7 +20,8 @@ import {
     BASE_MULTI_CALL_HANDLER as MAINNET_BASE_MULTI_CALL_HANDLER,
     WETH9 as MAINNET_WETH9,
     BASE_WETH9 as MAINNET_BASE_WETH9,
-    GatewayV2 as MAINNET_GatewayV2
+    GATEWAY as MAINNET_GATEWAY,
+    UNISWAP_ROUTER as MAINNET_UNISWAP_ROUTER
 } from "../constants/Mainnet.sol";
 import {SnowbridgeL2Adaptor} from "../../../../src/l2-integration/SnowbridgeL2Adaptor.sol";
 
@@ -36,19 +38,22 @@ contract DeploySnowbridgeL2Adaptor is Script {
         address GATEWAY_V2_ADDRESS;
         address WETH9_ADDRESS;
         address BASE_WETH9_ADDRESS;
+        address UNISWAP_ROUTER_ADDRESS;
 
         if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))) {
             BASE_SPOKE_POOL_ADDRESS = MAINNET_BASE_SPOKE_POOL;
             MULTI_CALL_HANDLER_ADDRESS = MAINNET_MULTI_CALL_HANDLER;
-            GATEWAY_V2_ADDRESS = MAINNET_GatewayV2;
+            GATEWAY_V2_ADDRESS = MAINNET_GATEWAY;
             WETH9_ADDRESS = MAINNET_WETH9;
             BASE_WETH9_ADDRESS = MAINNET_BASE_WETH9;
+            UNISWAP_ROUTER_ADDRESS = MAINNET_UNISWAP_ROUTER;
         } else if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))) {
             BASE_SPOKE_POOL_ADDRESS = SEPOLIA_BASE_SPOKE_POOL;
             MULTI_CALL_HANDLER_ADDRESS = SEPOLIA_MULTI_CALL_HANDLER;
-            GATEWAY_V2_ADDRESS = SEPOLIA_GatewayV2;
+            GATEWAY_V2_ADDRESS = SEPOLIA_GATEWAY;
             WETH9_ADDRESS = SEPOLIA_WETH9;
             BASE_WETH9_ADDRESS = SEPOLIA_BASE_WETH9;
+            UNISWAP_ROUTER_ADDRESS = SEPOLIA_UNISWAP_ROUTER;
         } else {
             revert("Unsupported L1 network");
         }
@@ -58,7 +63,8 @@ contract DeploySnowbridgeL2Adaptor is Script {
             MULTI_CALL_HANDLER_ADDRESS,
             GATEWAY_V2_ADDRESS,
             WETH9_ADDRESS,
-            BASE_WETH9_ADDRESS
+            BASE_WETH9_ADDRESS,
+            UNISWAP_ROUTER_ADDRESS
         );
         console.log("Snowbridge L2 Adaptor deployed at:", address(snowbridgeL2Adaptor));
         return;

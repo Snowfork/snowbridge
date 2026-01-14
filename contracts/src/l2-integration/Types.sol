@@ -16,7 +16,7 @@ struct Instructions {
 }
 
 // Parameters for performing a swap
-struct SwapParams {
+struct DepositParams {
     //input token address on source chain
     address inputToken;
     //output token address on destination chain
@@ -31,14 +31,20 @@ struct SwapParams {
     uint32 fillDeadlineBuffer;
 }
 
-// The first five parameters correspond to the same parameters in Gateway.sol's v2_sendMessage function. See Gateway.sol for more details.
-// The final parameter is specific to the seperated call used to prefund both the execution fee and the relayer fee.
+// The parameters correspond to the same parameters in Gateway.sol's v2_sendMessage function. See Gateway.sol for more details.
 struct SendParams {
     bytes xcm;
     bytes[] assets;
     bytes claimer;
     uint128 executionFee;
     uint128 relayerFee;
-    // Fees are paid on L2 in the native token
-    uint128 l2Fee;
+}
+
+struct SwapParams {
+    // amount of input token to swap in order to cover the Ether fees when calling Gateway.v2_sendMessage
+    uint256 inputAmountForFee;
+    // fee tier of the Uniswap V3 pool to use for the swap
+    uint24 poolFee;
+    // sqrtPriceLimitX96 to be used in Uniswap V3 swaps
+    uint160 sqrtPriceLimitX96;
 }

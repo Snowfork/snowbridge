@@ -19,3 +19,9 @@ test-snowbridge-l2-adaptor:
 
 test-snowbridge-l2-adaptor-native-ether:
 	forge script TestSnowbridgeL2AdaptorNativeEther --chain $(L2_NETWORK) --rpc-url $(L2_RPC_URL) --private-key ${PRIVATE_KEY} --broadcast -vvvv
+
+##############################################################
+# Uniswap exactOutputSingle
+
+test-swap:
+	forge script SwapScript --chain $(L1_NETWORK) --rpc-url $(L1_RPC_URL) --private-key $(PRIVATE_KEY) --broadcast -vvvv

@@ -6,7 +6,7 @@ import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 
 import {SnowbridgeL1Adaptor} from "../../../../src/l2-integration/SnowbridgeL1Adaptor.sol";
 import {ISpokePool} from "../../../../src/l2-integration/interfaces/ISpokePool.sol";
-import {SwapParams, SendParams} from "../../../../src/l2-integration/Types.sol";
+import {DepositParams, SendParams} from "../../../../src/l2-integration/Types.sol";
 import {
     BASE_CHAIN_ID as SEPOLIA_BASE_CHAIN_ID,
     TIME_BUFFER as SEPOLIA_TIME_BUFFER
@@ -37,7 +37,7 @@ contract TestSnowbridgeL1AdaptorNativeEther is Script {
             revert("Unsupported L1 network");
         }
 
-        SwapParams memory params = SwapParams({
+        DepositParams memory params = DepositParams({
             inputToken: address(0),
             outputToken: address(0),
             inputAmount: 1_100_000_000_000_000, // 0.0011 ETH

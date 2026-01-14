@@ -5,7 +5,7 @@ import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {ISpokePool, IMessageHandler} from "./interfaces/ISpokePool.sol";
-import {SwapParams, Instructions, Call} from "./Types.sol";
+import {DepositParams, Instructions, Call} from "./Types.sol";
 
 contract SnowbridgeL1Adaptor {
     using SafeERC20 for IERC20;
@@ -30,7 +30,7 @@ contract SnowbridgeL1Adaptor {
     // Send ERC20 token on L1 to L2, the fee (params.inputAmount - params.outputAmount) should be calculated off-chain
     // following https://docs.across.to/reference/api-reference#get-swap-approval
     // The function assumes that tokens have been pre-funded and transferred to this contract via Snowbridge unlock prior to invocation.
-    function depositToken(SwapParams calldata params, address recipient, bytes32 topic) public {
+    function depositToken(DepositParams calldata params, address recipient, bytes32 topic) public {
         require(params.inputToken != address(0), "Input token cannot be zero address");
         checkInputs(params, recipient);
         IERC20(params.inputToken).forceApprove(address(SPOKE_POOL), params.inputAmount);
@@ -56,7 +56,7 @@ contract SnowbridgeL1Adaptor {
 
     // Send native Ether on L1 to L2, the function assumes that native ETH has been pre-funded
     // and transferred to this contract via Snowbridge unlock prior to invocation.
-    function depositNativeEther(SwapParams calldata params, address recipient, bytes32 topic)
+    function depositNativeEther(DepositParams calldata params, address recipient, bytes32 topic)
         public
         payable
     {
@@ -89,7 +89,7 @@ contract SnowbridgeL1Adaptor {
         emit DepositCallInvoked(topic, depositId);
     }
 
-    function checkInputs(SwapParams calldata params, address recipient) internal pure {
+    function checkInputs(DepositParams calldata params, address recipient) internal pure {
         require(params.inputAmount > 0, "Input amount must be greater than zero");
         require(params.outputAmount > 0, "Output amount must be greater than zero");
         require(params.outputAmount <= params.inputAmount, "Output amount exceeds input amount");
